@@ -2,6 +2,13 @@
 
 import { BarChart3, CalendarDays, Receipt, Star, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  BentoCard,
+  BentoGrid,
+  DashboardPageShell,
+  SoftCard,
+  StatPill,
+} from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
 import { ORDERS_KEY, mockCafeOrders, type CafeOrder } from "@/lib/mock/orders";
 import { CUSTOMER_KEY, type CustomerProfile } from "@/lib/mock/customer-activity";
@@ -43,51 +50,61 @@ export function ReportsPageClient() {
   ];
 
   return (
-    <div dir="rtl" className="min-h-screen px-6 py-8 text-[#2B1710]">
-      <header className="mb-8">
-        <p className="font-black text-[#8B5E3C]">لوحة برندة</p>
-        <h1 className="mt-2 text-4xl font-black text-[#3A2117]">التقارير</h1>
-        <p className="mt-2 text-[#7A6255]">نظرة شاملة على أداء الكوفي والمبيعات والعملاء والتقييمات.</p>
-      </header>
+    <div dir="rtl">
+      <DashboardPageShell
+        title="التقارير"
+        subtitle="نظرة شاملة على أداء الكوفي والمبيعات والعملاء والتقييمات."
+      >
+        <BentoGrid className="mb-6">
+          {stats.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <BentoCard
+                key={item.title}
+                variant="white"
+                span={index === 0 ? "2" : "1"}
+              >
+                <Icon className="mb-4 h-7 w-7 text-[#6B3A25]" />
+                <StatPill label={item.title} value={item.value} />
+              </BentoCard>
+            );
+          })}
+        </BentoGrid>
 
-      <section className="mb-8 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-        {stats.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div key={item.title} className="rounded-3xl border border-[#E5D8CD] bg-white p-6 shadow-sm">
-              <Icon className="mb-4 h-7 w-7 text-[#8B5E3C]" />
-              <p className="font-black text-[#7A6255]">{item.title}</p>
-              <h2 className="mt-3 text-3xl font-black text-[#3A2117]">{item.value}</h2>
+        <BentoGrid>
+          <BentoCard variant="white" span="row2">
+            <h2 className="text-2xl font-black text-[#3A2117]">أداء المبيعات</h2>
+            <div className="mt-8 flex h-80 items-end gap-4 rounded-3xl bg-[#F8F4EF] p-6">
+              {[45, 72, 58, 88, 64, 79, 51].map((height, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t-3xl bg-[#6B3A25]"
+                  style={{ height: `${height}%` }}
+                />
+              ))}
             </div>
-          );
-        })}
-      </section>
+          </BentoCard>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <div className="rounded-3xl border border-[#E5D8CD] bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-[#3A2117]">أداء المبيعات</h2>
-          <div className="mt-8 flex h-80 items-end gap-4 rounded-3xl bg-[#F8F4EF] p-6">
-            {[45, 72, 58, 88, 64, 79, 51].map((height, i) => (
-              <div key={i} className="flex-1 rounded-t-3xl bg-[#6B3A25]" style={{ height: `${height}%` }} />
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-[#E5D8CD] bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-[#3A2117]">أحدث الطلبات</h2>
-          <div className="mt-5 space-y-3">
-            {orders.slice(0, 5).map((order) => (
-              <div key={order.id} className="rounded-2xl bg-[#F8F4EF] p-4">
-                <div className="flex justify-between gap-3">
-                  <h3 className="font-black">{order.customerName}</h3>
-                  <span className="font-black text-[#6B3A25]">{formatSar(order.total)}</span>
-                </div>
-                <p className="mt-2 text-sm font-bold text-[#7A6255]">{order.status} • {order.createdAt}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <BentoCard variant="white" span="2">
+            <h2 className="text-2xl font-black text-[#3A2117]">أحدث الطلبات</h2>
+            <div className="mt-5 space-y-3">
+              {orders.slice(0, 5).map((order) => (
+                <SoftCard key={order.id} className="p-4">
+                  <div className="flex justify-between gap-3">
+                    <h3 className="font-black">{order.customerName}</h3>
+                    <span className="font-black text-[#6B3A25]">
+                      {formatSar(order.total)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold text-[#7A6255]">
+                    {order.status} • {order.createdAt}
+                  </p>
+                </SoftCard>
+              ))}
+            </div>
+          </BentoCard>
+        </BentoGrid>
+      </DashboardPageShell>
     </div>
   );
 }

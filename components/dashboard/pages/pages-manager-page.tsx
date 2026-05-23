@@ -3,10 +3,15 @@
 import { Eye, FileText, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  CAFE_PAGES_KEY,
-  mockCafePages,
-  type CafeInfoPage,
-} from "@/lib/mock/cafe-pages";
+  BentoCard,
+  BentoGrid,
+  DashboardPageShell,
+  NeumoInput,
+  NeumoTextarea,
+  PrimaryButton,
+  SoftCard,
+} from "@/components/ui/design-system";
+import { CAFE_PAGES_KEY, mockCafePages, type CafeInfoPage } from "@/lib/mock/cafe-pages";
 
 export function PagesManagerPageClient() {
   const [pages, setPages] = useState<CafeInfoPage[]>(mockCafePages);
@@ -83,146 +88,127 @@ export function PagesManagerPageClient() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen px-6 py-8 text-[#2B1710]">
-      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="font-black text-[#8B5E3C]">لوحة برندة</p>
-          <h1 className="mt-2 text-4xl font-black text-[#3A2117]">
-            الصفحات التعريفية
-          </h1>
-          <p className="mt-2 text-[#7A6255]">
-            أنشئ صفحات تظهر للعميل مثل: من نحن، سياسة الحجز، الأسئلة الشائعة.
-          </p>
-        </div>
+    <div dir="rtl">
+      <DashboardPageShell
+        title="الصفحات التعريفية"
+        subtitle="أنشئ صفحات تظهر للعميل مثل: من نحن، سياسة الحجز، الأسئلة الشائعة."
+        action={
+          <PrimaryButton onClick={newPage} className="inline-flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            صفحة جديدة
+          </PrimaryButton>
+        }
+      >
+        <BentoGrid>
+          <BentoCard variant="white" span="1">
+            <h2 className="mb-5 text-2xl font-black text-[#3A2117]">الصفحات</h2>
 
-        <button
-          onClick={newPage}
-          className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-6 py-4 font-black text-[#F8E8D2]"
-        >
-          <Plus className="h-5 w-5" />
-          صفحة جديدة
-        </button>
-      </header>
-
-      <section className="grid gap-6 xl:grid-cols-[390px_1fr]">
-        <aside className="rounded-3xl border border-[#E5D8CD] bg-white p-5 shadow-sm">
-          <h2 className="mb-5 text-2xl font-black text-[#3A2117]">
-            الصفحات
-          </h2>
-
-          <div className="space-y-3">
-            {pages.map((page) => (
-              <button
-                key={page.id}
-                onClick={() => setSelectedId(page.id)}
-                className={`w-full rounded-3xl border p-4 text-right transition ${
-                  selectedId === page.id
-                    ? "border-[#3A2117] bg-[#F8F4EF]"
-                    : "border-[#E5D8CD] bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-black text-[#3A2117]">{page.title}</h3>
-                    <p className="mt-1 text-sm font-bold text-[#7A6255]">
-                      /{page.slug}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${
-                      page.visible
-                        ? "bg-green-50 text-green-700"
-                        : "bg-red-50 text-red-700"
-                    }`}
-                  >
-                    {page.visible ? "ظاهر" : "مخفي"}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="rounded-3xl border border-[#E5D8CD] bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3A2117] text-[#F8E8D2]">
-              <FileText className="h-7 w-7" />
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-black text-[#3A2117]">
-                تحرير الصفحة
-              </h2>
-              <p className="text-sm font-bold text-[#7A6255]">
-                المحتوى هنا يستخدم لاحقًا في صفحة الكوفي.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Input label="عنوان الصفحة" value={title} onChange={setTitle} />
-            <Input label="الرابط المختصر" value={slug} onChange={setSlug} />
-          </div>
-
-          <label className="mt-4 block">
-            <span className="text-xs font-black text-[#7A6255]">
-              وصف مختصر
-            </span>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-2 h-14 w-full rounded-2xl border border-[#E5D8CD] px-4 text-right font-bold outline-none"
-            />
-          </label>
-
-          <label className="mt-4 block">
-            <span className="text-xs font-black text-[#7A6255]">
-              محتوى الصفحة
-            </span>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="mt-2 h-72 w-full resize-none rounded-2xl border border-[#E5D8CD] p-4 text-right font-bold leading-8 outline-none"
-            />
-          </label>
-
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <button
-              onClick={() => setVisible((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
-            >
-              <Eye className="h-5 w-5" />
-              {visible ? "الصفحة ظاهرة" : "الصفحة مخفية"}
-            </button>
-
-            <div className="flex gap-2">
-              {selectedId ? (
+            <div className="space-y-3">
+              {pages.map((page) => (
                 <button
-                  onClick={() => deletePage(selectedId)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 font-black text-red-700"
+                  key={page.id}
+                  onClick={() => setSelectedId(page.id)}
+                  className={`w-full rounded-3xl border p-4 text-right transition ${
+                    selectedId === page.id
+                      ? "border-[#3A2117] bg-[#F8F4EF]"
+                      : "border-[#E5D8CD] bg-white"
+                  }`}
                 >
-                  <Trash2 className="h-5 w-5" />
-                  حذف
-                </button>
-              ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-black text-[#3A2117]">{page.title}</h3>
+                      <p className="mt-1 text-sm font-bold text-[#7A6255]">/{page.slug}</p>
+                    </div>
 
-              <button
-                onClick={savePage}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-6 py-3 font-black text-[#F8E8D2]"
-              >
-                <Save className="h-5 w-5" />
-                حفظ الصفحة
-              </button>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-black ${
+                        page.visible
+                          ? "bg-green-50 text-green-700"
+                          : "bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {page.visible ? "ظاهر" : "مخفي"}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
-          </div>
-        </section>
-      </section>
+          </BentoCard>
+
+          <BentoCard variant="white" span="3">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3A2117] text-[#F8F4EF]">
+                <FileText className="h-7 w-7" />
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-black text-[#3A2117]">تحرير الصفحة</h2>
+                <p className="text-sm font-bold text-[#7A6255]">
+                  المحتوى هنا يستخدم لاحقًا في صفحة الكوفي.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="عنوان الصفحة" value={title} onChange={setTitle} />
+              <Field label="الرابط المختصر" value={slug} onChange={setSlug} />
+            </div>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-black text-[#7A6255]">وصف مختصر</span>
+              <NeumoInput
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-2"
+              />
+            </label>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-black text-[#7A6255]">محتوى الصفحة</span>
+              <NeumoTextarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="mt-2 h-72"
+              />
+            </label>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={() => setVisible((prev) => !prev)}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+              >
+                <Eye className="h-5 w-5" />
+                {visible ? "الصفحة ظاهرة" : "الصفحة مخفية"}
+              </button>
+
+              <div className="flex gap-2">
+                {selectedId ? (
+                  <button
+                    onClick={() => deletePage(selectedId)}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 font-black text-red-700"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    حذف
+                  </button>
+                ) : null}
+
+                <PrimaryButton
+                  onClick={savePage}
+                  className="inline-flex items-center gap-2 px-6 py-3"
+                >
+                  <Save className="h-5 w-5" />
+                  حفظ الصفحة
+                </PrimaryButton>
+              </div>
+            </div>
+          </BentoCard>
+        </BentoGrid>
+      </DashboardPageShell>
     </div>
   );
 }
 
-function Input({
+function Field({
   label,
   value,
   onChange,
@@ -234,10 +220,10 @@ function Input({
   return (
     <label className="block">
       <span className="text-xs font-black text-[#7A6255]">{label}</span>
-      <input
+      <NeumoInput
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 h-14 w-full rounded-2xl border border-[#E5D8CD] px-4 text-right font-bold outline-none"
+        className="mt-2"
       />
     </label>
   );

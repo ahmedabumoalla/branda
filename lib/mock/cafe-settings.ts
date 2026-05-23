@@ -1,3 +1,5 @@
+import type { CafeDomainLinkStatus } from "@/lib/platform/cafe-domain";
+
 export type CafeSettings = {
   cafeSlug: string;
   cafeName: string;
@@ -11,6 +13,8 @@ export type CafeSettings = {
   instagram?: string;
   whatsapp?: string;
   description?: string;
+  customDomain?: string;
+  domainStatus?: CafeDomainLinkStatus;
 };
 
 export const CAFE_SETTINGS_KEY = "branda_qatrah_settings";
@@ -22,4 +26,5 @@ export const mockCafeSettings: CafeSettings = {
   ownerEmail: "owner@qatrah.com",
   ownerPhone: "0550000000",
   description: "كوفي مختص يقدم القهوة والحلويات بتجربة رقمية عبر برندة.",
+  domainStatus: "غير مربوط",
 };

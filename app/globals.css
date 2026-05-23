@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --branda-brown: #3a2117;
+  --branda-brown-dark: #241610;
+  --branda-brown-luxury: #6b3a25;
+  --branda-cream: #f8f4ef;
+  --branda-cream-secondary: #efe2d3;
+  --branda-gold: #f6c35b;
+  --branda-muted: #7a6255;
+  --branda-border: #e5d8cd;
+  --branda-cream-text: #f8e8d2;
+  --background: var(--branda-cream);
+  --foreground: #2b1710;
 }
 
 @theme inline {
@@ -12,17 +21,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 .sidebar-scroll {
@@ -34,3 +36,80 @@ body {
   display: none;
 }
 
+.branda-glow-gold {
+  box-shadow: 0 0 32px rgba(246, 195, 91, 0.15);
+}
+
+.branda-neumo {
+  box-shadow:
+    8px 8px 24px rgba(58, 33, 23, 0.06),
+    -6px -6px 20px rgba(255, 255, 255, 0.9);
+}
+
+.branda-neumo-inset {
+  box-shadow:
+    inset 3px 3px 8px rgba(58, 33, 23, 0.06),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95);
+}
+
+@keyframes branda-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-branda-fade {
+  animation: branda-fade 0.45s ease-out forwards;
+}
+
+@keyframes branda-slide {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-branda-slide {
+  animation: branda-slide 0.5s ease-out forwards;
+}
+
+/* Admin / dark panels — readable fields */
+.branda-admin-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.branda-admin-fields select,
+.branda-admin-fields textarea {
+  background-color: #211711 !important;
+  color: #f8e8d2 !important;
+  border-color: rgba(246, 195, 91, 0.25) !important;
+}
+
+.branda-admin-fields input::placeholder,
+.branda-admin-fields textarea::placeholder {
+  color: rgba(203, 178, 156, 0.75) !important;
+}
+
+.branda-admin-fields select option {
+  background-color: #211711;
+  color: #f8e8d2;
+}
+
+.branda-cafe-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.branda-cafe-fields select,
+.branda-cafe-fields textarea {
+  background-color: #fdfbf8;
+  color: #241610;
+  border-color: #e5d8cd;
+}
+
+.branda-cafe-fields input::placeholder,
+.branda-cafe-fields textarea::placeholder {
+  color: #9b8173;
+}

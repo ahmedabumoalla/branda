@@ -1,0 +1,146 @@
+"use client";
+
+import { Save, Settings2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BrandaLogo } from "@/components/ui/branda-logo";
+import {
+  AdminPageShell,
+  BentoCard,
+  BentoGrid,
+  GoldButton,
+  AdminInput,
+  AdminSelect,
+  StatusBadge,
+} from "@/components/ui/design-system";
+import {
+  PLATFORM_OPTIONS_KEY,
+  PLATFORM_PLANS_KEY,
+  mockPlatformOptions,
+  mockPlatformPlans,
+  type PlatformPlan,
+} from "@/lib/platform/admin-data";
+
+const softPanel =
+  "rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+
+export function AdminOptionsPage() {
+  const [options, setOptions] = useState(mockPlatformOptions);
+  const [plans, setPlans] = useState<PlatformPlan[]>(mockPlatformPlans);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(PLATFORM_OPTIONS_KEY);
+    const savedPlans = localStorage.getItem(PLATFORM_PLANS_KEY);
+    if (saved) setOptions(JSON.parse(saved));
+    if (savedPlans) setPlans(JSON.parse(savedPlans));
+  }, []);
+
+  function save() {
+    localStorage.setItem(PLATFORM_OPTIONS_KEY, JSON.stringify(options));
+    alert("تم حفظ خيارات المنصة");
+  }
+
+  return (
+    <AdminPageShell
+      title="خيارات المنصة العامة"
+      subtitle="تحكم في التسجيل، الموافقات، العمولة، والباقات الافتراضية."
+      action={
+        <div className="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
+          <BrandaLogo variant="dark" width={120} height={48} />
+          <GoldButton onClick={save} className="inline-flex items-center gap-2">
+            <Save className="h-5 w-5" />
+            حفظ الخيارات
+          </GoldButton>
+        </div>
+      }
+    >
+      <BentoGrid className="xl:grid-cols-2">
+        <BentoCard variant="cyber" span="2">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B] shadow-[0_0_20px_rgba(246,195,91,0.15)]">
+              <Settings2 className="h-7 w-7" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-[#F8F4EF]">إعدادات التسجيل والموافقة</h2>
+              <p className="text-sm font-bold text-[#CBB29C]">تحكم في سياسات انضمام الكوفيهات الجديدة.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Toggle
+              title="السماح بتسجيل كوفيهات جديدة"
+              active={options.allowCafeSignup}
+              onClick={() => setOptions((p) => ({ ...p, allowCafeSignup: !p.allowCafeSignup }))}
+            />
+
+            <Toggle
+              title="مراجعة الكوفي قبل التفعيل"
+              active={options.requireCafeApproval}
+              onClick={() => setOptions((p) => ({ ...p, requireCafeApproval: !p.requireCafeApproval }))}
+            />
+          </div>
+        </BentoCard>
+
+        <BentoCard variant="dark">
+          <h3 className="mb-4 text-lg font-black text-[#F8F4EF]">عمولة المنصة</h3>
+          <label>
+            <span className="text-xs font-black text-[#CBB29C]">عمولة المنصة %</span>
+            <AdminInput
+              value={options.platformCommissionPercent}
+              onChange={(e) =>
+                setOptions((p) => ({
+                  ...p,
+                  platformCommissionPercent: Number(e.target.value) || 0,
+                }))
+              }
+              className="mt-2"
+            />
+          </label>
+        </BentoCard>
+
+        <BentoCard variant="gold">
+          <h3 className="mb-4 text-lg font-black text-[#F8F4EF]">الدعم والتواصل</h3>
+          <label>
+            <span className="text-xs font-black text-[#CBB29C]/90">إيميل الدعم</span>
+            <AdminInput
+              value={options.supportEmail}
+              onChange={(e) => setOptions((p) => ({ ...p, supportEmail: e.target.value }))}
+              className="mt-2"
+            />
+          </label>
+        </BentoCard>
+
+        <BentoCard variant="cyber" span="2">
+          <h3 className="mb-4 text-lg font-black text-[#F8F4EF]">الباقة الافتراضية</h3>
+          <p className="mb-4 text-sm font-bold text-[#CBB29C]">
+            تُعيَّن تلقائياً لأي كوفي جديد يسجّل في المنصة.
+          </p>
+          <AdminSelect
+            value={options.defaultPlanId}
+            onChange={(e) => setOptions((p) => ({ ...p, defaultPlanId: e.target.value }))}
+            className="mt-2"
+          >
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.name} {plan.active ? "" : "(متوقفة)"}
+              </option>
+            ))}
+          </AdminSelect>
+        </BentoCard>
+      </BentoGrid>
+    </AdminPageShell>
+  );
+}
+
+function Toggle({ title, active, onClick }: { title: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full flex-col items-start gap-3 text-right transition hover:border-[#F6C35B]/30 ${softPanel}`}
+    >
+      <span className="font-black text-[#F8F4EF]">{title}</span>
+      <StatusBadge tone={active ? "success" : "danger"}>
+        {active ? "مفعل" : "متوقف"}
+      </StatusBadge>
+    </button>
+  );
+}

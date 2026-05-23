@@ -1,145 +1,195 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
   CalendarDays,
+  CreditCard,
   Gift,
   Home,
+  MapPin,
   Megaphone,
   MessageSquareText,
   Newspaper,
   Package,
+  Palette,
+  Settings,
+  LogOut,
   Share2,
-  MapPin,
   ShoppingBag,
   Star,
   Users,
-  Palette, Settings,
 } from "lucide-react";
-
+import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { BrandaLogo } from "@/components/ui/branda-logo";
+import { logoutBrandaAuth } from "@/lib/platform/auth";
+import { CAFE_SETTINGS_KEY, mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
+import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
+import {
+  cafeHasFeature,
+  getActiveCafePlanId,
+  getPlatformPlans,
+} from "@/lib/platform/permissions";
+import type { PlatformFeature } from "@/lib/platform/admin-data";
 const cafeSlug = "qatrah";
 
-const links = [
-  ["الرئيسية", "/dashboard", Home],
-  ["المنيو", "/dashboard/menu", Package],
-  ["العروض", "/dashboard/offers", Gift],
-  ["الحجوزات", "/dashboard/reservations", CalendarDays],
-  ["العملاء", "/dashboard/customers", Users],
-  ["الولاء", "/dashboard/loyalty", Star],
-  ["التقارير", "/dashboard/reports", BarChart3],
-  ["الأسئلة والتقييمات", "/dashboard/reviews", MessageSquareText],
-  ["الصفحات التعريفية", "/dashboard/pages", Newspaper],
-  ["الأدوات التسويقية", "/dashboard/marketing", Megaphone],
-  ["طلبات الكوفي", "/dashboard/orders", ShoppingBag],
-  ["إعدادات الكوفي", "/dashboard/settings", Settings],
-  ["ثيم الكوفي", "/dashboard/theme", Palette],
-  ["الفروع", "/dashboard/branches", MapPin],
-] as const;
+const links: {
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  feature: PlatformFeature;
+  badge?: string;
+}[] = [
+  { title: "الرئيسية", href: "/dashboard", icon: Home, feature: "menu" },
+  { title: "المنيو", href: "/dashboard/menu", icon: Package, feature: "menu" },
+  { title: "العروض", href: "/dashboard/offers", icon: Gift, feature: "offers" },
+  { title: "الحجوزات", href: "/dashboard/reservations", icon: CalendarDays, feature: "reservations" },
+  { title: "العملاء", href: "/dashboard/customers", icon: Users, feature: "customers" },
+  { title: "الولاء", href: "/dashboard/loyalty", icon: Star, feature: "loyalty" },
+  { title: "الفروع", href: "/dashboard/branches", icon: MapPin, feature: "branches" },
+  { title: "التقارير", href: "/dashboard/reports", icon: BarChart3, feature: "reports" },
+  { title: "الأسئلة والتقييمات", href: "/dashboard/reviews", icon: MessageSquareText, feature: "reviews" },
+  { title: "الصفحات التعريفية", href: "/dashboard/pages", icon: Newspaper, feature: "pages" },
+  { title: "الأدوات التسويقية", href: "/dashboard/marketing", icon: Megaphone, feature: "marketing" },
+  { title: "طلبات الكوفي", href: "/dashboard/orders", icon: ShoppingBag, feature: "orders", badge: "جديد" },
+  { title: "إعدادات الكوفي", href: "/dashboard/settings", icon: Settings, feature: "settings" },
+  { title: "ثيم الكوفي", href: "/dashboard/theme", icon: Palette, feature: "theme" },
+  { title: "الاشتراك والباقات", href: "/dashboard/subscription", icon: CreditCard, feature: "settings" },
+];
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogout() {
+    logoutBrandaAuth();
+    router.push("/login");
+  }
+  const [activePlanId, setActivePlanId] = useState("pro");
+  const [planName, setPlanName] = useState("Pro");
+  const [cafeName, setCafeName] = useState(mockCafeSettings.cafeName);
+  const [cafeLogo, setCafeLogo] = useState<string | undefined>();
+  const [cafeSettings, setCafeSettings] = useState<CafeSettings>(mockCafeSettings);
+
+  useEffect(() => {
+    setActivePlanId(getActiveCafePlanId());
+    const plans = getPlatformPlans();
+    const plan = plans.find((p) => p.id === getActiveCafePlanId());
+    if (plan) setPlanName(plan.name);
+
+    const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
+    if (saved) {
+      const settings = JSON.parse(saved) as CafeSettings;
+      setCafeSettings(settings);
+      setCafeName(settings.cafeName || mockCafeSettings.cafeName);
+      setCafeLogo(settings.logoDataUrl);
+    }
+  }, []);
 
   function isActive(href: string) {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-
+    if (href === "/dashboard") return pathname === "/dashboard";
     return pathname === href || pathname.startsWith(`${href}/`);
   }
+
+  const visibleLinks = links.filter((link) => cafeHasFeature(link.feature));
 
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll fixed right-0 top-0 z-40 h-screen w-72 overflow-y-auto bg-[#3A2117] text-[#F8E8D2] shadow-2xl"
+      className="sidebar-scroll fixed right-0 top-0 z-40 flex h-screen w-[280px] flex-col overflow-y-auto border-l border-[#E5D8CD]/60 bg-gradient-to-b from-[#3A2117] via-[#2f1b13] to-[#241610] text-[#F8E8D2] shadow-[-12px_0_40px_rgba(36,22,16,0.35)]"
     >
-      <div className="min-h-full px-6 py-6">
-        <div className="mb-10 text-right">
-          <h1 className="text-3xl font-black leading-none">برندة</h1>
-          <p className="mt-2 text-sm font-bold text-[#CBB29C]">
-            لوحة تحكم الكوفي
-          </p>
-        </div>
+      <div className="border-b border-white/10 px-6 py-7">
+        <BrandaLogo variant="dark" width={160} height={64} priority className="mx-auto" />
+        <p className="mt-3 text-center text-xs font-bold text-[#CBB29C]">
+          لوحة تحكم الكوفي
+        </p>
+      </div>
 
-        <div className="mb-10 rounded-[28px] bg-white/10 p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-right">
-              <p className="text-sm font-bold text-[#CBB29C]">الكوفي الحالي</p>
-              <h2 className="mt-2 text-3xl font-black text-[#F8E8D2]">
-                قطرة
-              </h2>
-            </div>
-
-            <div className="relative">
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#F8E8D2] shadow-lg">
-                <span className="text-3xl font-black text-[#3A2117]">ق</span>
-              </div>
-
-              <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-xl bg-[#CBB29C] px-3 py-1 text-xs font-black text-[#3A2117]">
-                كوفي
-              </span>
-            </div>
+      <div className="mx-5 mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm">
+        <div className="flex items-center gap-4">
+          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#F8F4EF] shadow-lg">
+            <CafeLogo name={cafeName} logoUrl={cafeLogo} size="md" className="!shadow-none" />
           </div>
 
-          <div className="mt-7 flex items-center gap-2">
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#CBB29C] text-[#3A2117]"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-xs font-bold text-[#CBB29C]">الكوفي الحالي</p>
+            <h2 className="mt-1 truncate text-xl font-black">{cafeName}</h2>
+            <span className="mt-2 inline-flex rounded-xl bg-[#F6C35B]/20 px-3 py-1 text-xs font-black text-[#F6C35B]">
+              {planName}
+            </span>
+          </div>
+        </div>
 
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-[#F6C35B] transition hover:bg-white/10"
+            aria-label="مشاركة"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+
+          <Link
+            href={getCafePublicUrl(cafeSettings.cafeSlug || cafeSlug)}
+            target="_blank"
+            className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[#F6C35B]/30 bg-[#F6C35B]/15 text-sm font-black text-[#F6C35B] transition hover:bg-[#F6C35B]/25"
+          >
+            زيارة الكوفي
+          </Link>
+        </div>
+
+        <p className="mt-3 text-center text-[10px] font-bold text-[#7A6255]">
+          {getCafeDisplayDomain(cafeSettings.cafeSlug || cafeSlug, cafeSettings)}
+        </p>
+      </div>
+
+      <nav className="flex-1 space-y-1.5 px-4 py-6">
+        {visibleLinks.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+
+          return (
             <Link
-              href={`/c/${cafeSlug}`}
-              target="_blank"
-              className="flex h-10 flex-1 items-center justify-center rounded-full border border-[#CBB29C] bg-[#3A2117] px-4 text-sm font-black text-[#F8E8D2] transition hover:bg-[#2B1710]"
+              key={item.href}
+              href={item.href}
+              className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
+                active
+                  ? "bg-gradient-to-l from-[#F6C35B]/25 to-white/10 text-[#F6C35B] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                  : "text-[#E5D8CD] hover:bg-white/5 hover:text-[#F8F4EF]"
+              }`}
             >
-              زيارة الكوفي
+              <span className="flex items-center gap-2">
+                {item.badge ? (
+                  <span className="rounded-full bg-[#F6C35B] px-2 py-0.5 text-[10px] font-black text-[#241610]">
+                    {item.badge}
+                  </span>
+                ) : (
+                  <span className="w-8" />
+                )}
+              </span>
+
+              <span className="flex items-center gap-3">
+                <span>{item.title}</span>
+                <Icon
+                  className={`h-5 w-5 ${active ? "text-[#F6C35B]" : "text-[#CBB29C] group-hover:text-[#F8F4EF]"}`}
+                />
+              </span>
             </Link>
-          </div>
+          );
+        })}
+      </nav>
 
-          <p className="mt-4 text-center text-xs font-bold text-[#CBB29C]">
-            qatrah.branda.com
-          </p>
-        </div>
-
-        <nav className="space-y-3 pb-10">
-          {links.map(([title, href, Icon]) => {
-            const active = isActive(href);
-
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center justify-between rounded-2xl px-4 py-4 text-[16px] font-black transition ${
-                  active
-                    ? "bg-white/10 text-[#F8E8D2] shadow-inner"
-                    : "text-[#F8E8D2] hover:bg-white/10"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  {title === "طلبات الكوفي" ? (
-                    <span className="rounded-full bg-[#CBB29C] px-3 py-1 text-xs font-black text-[#3A2117]">
-                      جديد
-                    </span>
-                  ) : (
-                    <span />
-                  )}
-                </span>
-
-                <span className="flex items-center gap-4">
-                  <span>{title}</span>
-                  <Icon
-                    className={`h-6 w-6 ${
-                      active ? "text-[#CBB29C]" : "text-[#F8E8D2]"
-                    }`}
-                  />
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+      <div className="border-t border-white/10 px-4 py-5">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center justify-between rounded-2xl border border-[#F6C35B]/20 bg-white/5 px-4 py-3.5 text-sm font-black text-[#F8E8D2] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200"
+        >
+          <span>تسجيل الخروج</span>
+          <LogOut className="h-5 w-5" />
+        </button>
       </div>
     </aside>
   );
