@@ -18,7 +18,9 @@ export function MagazineEditorialTheme(props: CafeThemePageProps) {
         <div className="mx-auto flex max-w-6xl items-end justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Issue · 2026</p>
-            <h1 className="mt-1 text-4xl font-black md:text-6xl">{cafeSettings.cafeName}</h1>
+            <h1 className="mt-1 break-words text-3xl font-black sm:text-4xl lg:text-6xl">
+              {cafeSettings.cafeName}
+            </h1>
           </div>
           <nav className="hidden gap-6 text-sm font-black md:flex">
             {buildCafeNavItems(slug).map(({ href, label }) => (

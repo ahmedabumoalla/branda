@@ -1,4 +1,4 @@
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DashboardAppLayout } from "@/components/dashboard/dashboard-app-layout";
 
 export default function DashboardLayout({
   children,
@@ -6,9 +6,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main dir="rtl" className="min-h-screen bg-[#F8F4EF] text-[#2B1710]">
-      <DashboardSidebar />
-      <section className="mr-[280px] min-h-screen">{children}</section>
+    <main dir="rtl" className="min-h-screen overflow-x-hidden bg-[#F8F4EF] text-[#2B1710]">
+      <DashboardAppLayout>{children}</DashboardAppLayout>
     </main>
   );
 }

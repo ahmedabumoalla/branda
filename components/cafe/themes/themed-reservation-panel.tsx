@@ -59,7 +59,7 @@ export function ThemedReservationPanel({
           </div>
         </div>
         <div
-          className={`mt-6 grid gap-3 ${reserve === "kiosk" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-3"}`}
+          className={`mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 ${reserve === "kiosk" ? "lg:grid-cols-3" : "lg:grid-cols-3"}`}
         >
           {[
             [MapPin, "فروع", branchCount],

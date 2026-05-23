@@ -271,7 +271,7 @@ export function SettingsPageClient() {
               مستندات حكومية اختيارية
             </h2>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field
                 label="الرقم الضريبي"
                 value={settings.taxNumber || ""}

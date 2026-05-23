@@ -26,7 +26,11 @@ const links = [
   ["خيارات المنصة", "/admin/options", Settings2],
 ] as const;
 
-export function AdminSidebar() {
+type AdminSidebarProps = {
+  onNavigate?: () => void;
+};
+
+export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -38,7 +42,7 @@ export function AdminSidebar() {
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll fixed right-0 top-0 z-40 flex h-screen w-[280px] flex-col overflow-y-auto border-l border-white/10 bg-gradient-to-b from-[#0f0c0a] via-[#1a1210] to-[#241610] text-[#F8F4EF] shadow-[-16px_0_48px_rgba(0,0,0,0.5)]"
+      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-white/10 bg-gradient-to-b from-[#0f0c0a] via-[#1a1210] to-[#241610] text-[#F8F4EF] shadow-[-16px_0_48px_rgba(0,0,0,0.5)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
         <BrandaLogo variant="dark" width={168} height={68} priority className="mx-auto" />
@@ -70,6 +74,7 @@ export function AdminSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 font-black transition ${
                 active
                   ? "bg-[#F6C35B]/15 text-[#F6C35B] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_20px_rgba(246,195,91,0.12)]"

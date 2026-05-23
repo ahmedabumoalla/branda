@@ -113,7 +113,7 @@ export function AdminCafesPage() {
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
-        <div className="relative min-w-[240px] flex-1">
+        <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">
           <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#CBB29C]" />
           <AdminInput
             value={query}
@@ -131,7 +131,7 @@ export function AdminCafesPage() {
           <option value="نشط">نشط فقط</option>
           <option value="موقوف">موقوف فقط</option>
         </AdminSelect>
-        <div className={`min-w-[160px] ${softPanel}`}>
+        <div className={`w-full min-w-0 sm:w-auto sm:min-w-[140px] ${softPanel}`}>
           <AdminStatPill label="النتائج" value={filtered.length} />
         </div>
       </AdminFilterBar>
@@ -152,13 +152,13 @@ export function AdminCafesPage() {
                   span="4"
                   className={`transition ${active ? "ring-2 ring-[#F6C35B]/50" : "hover:border-[#F6C35B]/30"}`}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B]">
                         <Building2 className="h-7 w-7" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-black">{cafe.name}</h2>
+                        <h2 className="break-words text-xl font-black sm:text-2xl">{cafe.name}</h2>
                         <p className="mt-1 text-sm font-bold text-[#CBB29C]">
                           {cafe.ownerName} • /c/{cafe.slug}
                         </p>

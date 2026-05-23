@@ -32,7 +32,9 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
   }, [slug]);
 
   const { theme, experience, settings, themeId, previewThemeId, isPreview } = ctx;
-  const pb = experience.showMobileBottomNav ? "pb-24" : "";
+  const pb = experience.showMobileBottomNav
+    ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
+    : "";
 
   const navItems = [
     { href: getCafePath(slug, "products/offers", previewThemeId), icon: Gift, label: "العروض" },
@@ -59,7 +61,9 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
       >
         {children}
       </div>
-      <div className={`mx-auto ${maxWidth} px-4 sm:px-5`}>
+      <div
+        className={`mx-auto ${maxWidth} px-4 sm:px-5 ${experience.showMobileBottomNav ? "mb-4" : ""}`}
+      >
         <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId={themeId} />
       </div>
 

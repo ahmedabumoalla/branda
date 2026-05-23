@@ -23,11 +23,11 @@ export default function RegisterPage() {
         </p>
       </section>
 
-      <section className="flex items-center justify-center bg-white px-6 py-10">
-        <div className="w-full max-w-[620px]">
+      <section className="flex min-w-0 items-center justify-center bg-white px-4 py-8 sm:px-6 sm:py-10">
+        <div className="w-full min-w-0 max-w-[620px]">
           <div className="mb-10 flex flex-col items-center text-center">
             <BrandaLogo variant="brown" width={180} height={72} />
-            <h1 className="mt-6 text-4xl font-black text-[#3A2117]">إنشاء حساب</h1>
+            <h1 className="mt-6 text-3xl font-black text-[#3A2117] sm:text-4xl">إنشاء حساب</h1>
             <p className="mt-2 font-bold text-[#7A6255]">أنشئ حساب الكوفي وابدأ التحكم</p>
           </div>
 

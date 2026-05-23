@@ -141,7 +141,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <label className="block">
                 <span className="text-xs font-black text-[#7A6255]">
                   النقاط لكل 1 ريال
@@ -275,7 +275,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-2xl bg-[#F8F4EF] p-4">
                   <p className="text-xs font-black text-[#7A6255]">النقاط المطلوبة</p>
                   <h3 className="mt-1 text-2xl font-black text-[#3A2117]">

@@ -69,7 +69,7 @@ export function ThemeBannerCarousel({
     variant === "strip"
       ? "rounded-xl overflow-hidden"
       : variant === "cinematic"
-        ? "rounded-none overflow-hidden min-h-[320px]"
+        ? "rounded-none overflow-hidden min-h-[220px] sm:min-h-[280px] lg:min-h-[320px]"
         : variant === "neon"
           ? "rounded-lg border border-[#00e676]/20 overflow-hidden"
           : variant === "editorial"

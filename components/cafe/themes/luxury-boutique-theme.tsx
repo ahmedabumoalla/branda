@@ -33,7 +33,9 @@ export function LuxuryBoutiqueTheme(props: CafeThemePageProps) {
       <section className={`relative min-h-[70vh] pt-24 ${theme.hero}`}>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-6 py-20 text-center">
           <p className={`text-xs tracking-[0.3em] uppercase ${theme.accent}`}>تجربة حصرية</p>
-          <h1 className="mt-6 font-serif text-5xl font-light md:text-7xl">{cafeSettings.cafeName}</h1>
+          <h1 className="mt-6 break-words font-serif text-3xl font-light sm:text-5xl lg:text-7xl">
+            {cafeSettings.cafeName}
+          </h1>
           <p className={`mt-6 max-w-2xl text-lg leading-relaxed ${theme.muted}`}>
             {cafeSettings.description || "قصة كل كوب تبدأ هنا."}
           </p>

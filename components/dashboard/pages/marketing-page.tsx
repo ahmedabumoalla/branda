@@ -204,7 +204,7 @@ export function MarketingPageClient() {
                       </span>
                     </div>
 
-                    <div className="mt-5 grid gap-3 md:grid-cols-4">
+                    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <Info label="الجمهور" value={campaign.audience} />
                       <Info label="الكود" value={campaign.code || "بدون"} />
                       <Info

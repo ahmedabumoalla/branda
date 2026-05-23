@@ -38,7 +38,7 @@ export function ThemedFilterBar({
 
   const inner = (
     <div className={isSidebar ? "space-y-3" : "flex flex-1 flex-wrap gap-3"}>
-      <div className={`relative ${isSidebar ? "" : "min-w-[200px] flex-1"}`}>
+      <div className={`relative min-w-0 ${isSidebar ? "" : "w-full flex-1 sm:min-w-[160px]"}`}>
         <Search className={`absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 ${theme.muted}`} />
         <input
           value={state.query}

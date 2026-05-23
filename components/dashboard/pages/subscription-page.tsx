@@ -252,7 +252,7 @@ export function SubscriptionPageClient() {
                 <PrimaryButton
                   onClick={payAndActivate}
                   disabled={paying}
-                  className="inline-flex flex-1 items-center justify-center gap-2 min-w-[200px]"
+                  className="inline-flex w-full min-w-0 flex-1 items-center justify-center gap-2 sm:min-w-[200px]"
                 >
                   <CreditCard className="h-5 w-5" />
                   {paying ? "جاري الدفع..." : "الدفع وتفعيل الباقة"}

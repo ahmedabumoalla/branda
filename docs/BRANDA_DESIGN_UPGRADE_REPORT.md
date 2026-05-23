@@ -642,3 +642,92 @@ npm run build
 ### Build (هذه الجولة)
 
 `npm run build` — **ناجح** (Next.js 16.2.6).
+
+---
+
+## 21. Responsive & Device Compatibility Audit
+
+> **النطاق:** 360px → 1536px+ لكل المسارات المطلوبة (`/`, `/login`, `/register`, `/dashboard/*`, `/admin/*`, `/c/[slug]/*`) ومكوّنات `components/ui`, `dashboard`, `admin`, `cafe/themes`.
+
+### الملفات الجديدة
+
+| الملف | الوظيفة |
+|-------|---------|
+| `components/ui/responsive-app-shell.tsx` | غلاف موحّد: شريط علوي + drawer جانبي على الجوال، sidebar ثابتة `280px` من `lg`، قفل scroll للجسم عند فتح القائمة |
+| `components/dashboard/dashboard-app-layout.tsx` | Client wrapper يربط `ResponsiveAppShell` + `DashboardSidebar` (لتجنب تمرير functions من Server Layout) |
+| `components/admin/admin-app-layout.tsx` | نفس النمط لـ Admin |
+
+### الملفات المعدّلة (أساسية)
+
+| الملف | التعديل |
+|-------|---------|
+| `app/dashboard/layout.tsx`, `app/admin/layout.tsx` | استخدام `*AppLayout` client بدل تمرير render prop من Server Component |
+| `components/dashboard/DashboardSidebar.tsx` | `onNavigate` لإغلاق drawer؛ عرض كامل داخل الدرج بدون `fixed` مزدوج |
+| `components/admin/AdminSidebar.tsx` | نفس النمط |
+| `components/ui/design-system.tsx` | `DashboardPageShell` / `AdminPageShell`: `px-4 sm:px-6 lg:px-8`, عناوين `text-2xl→4xl`, `BentoCard` padding أصغر على الجوال، `FilterBar` / `AdminFilterBar` مع `min-w-0` |
+| `app/globals.css` | `html, body { overflow-x: hidden; max-width: 100% }` |
+| `app/login/page.tsx`, `app/register/page.tsx` | padding متدرج؛ إخفاء لوحة التعريف على الجوال في login؛ عناوين أصغر |
+| `app/dashboard/page.tsx` | أرقام إيرادات `text-3xl sm:text-4xl lg:text-5xl` |
+| `components/dashboard/pages/theme-page.tsx` | معاينة الثيم: `scale-[0.52]→0.85` + `max-h-[min(70vh,640px)]` قابلة للتمرير |
+| `components/dashboard/pages/*` | شبكات `md:grid-cols-3/4` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3/4` (marketing, offers, reservations, loyalty, settings, subscription) |
+| `components/dashboard/offers/offer-card.tsx` | نفس نمط الشبكة |
+| `components/admin/pages/admin-cafes-page.tsx` | فلاتر `min-w-0`؛ بطاقات قائمة `flex-col` على الجوال؛ panel التفاصيل أسفل القائمة تحت `xl` (جانبي sticky من `xl`) |
+| `components/admin/pages/admin-customers-page.tsx`, `admin-operations-page.tsx` | فلاتر بدون `min-w-[240px]` ثابت |
+| `components/cafe/themes/themed-cafe-shell.tsx` | `pb` مع `safe-area` لـ bottom nav؛ هامش للفوتر |
+| `components/cafe/themes/themed-account-panel.tsx` | عناوين وشبكة إحصاءات متجاوبة |
+| `components/cafe/themes/themed-reservation-panel.tsx` | حقول الحجز عمود واحد على الجوال |
+| `components/cafe/themes/themed-filter-bar.tsx` | `min-w-0` للبحث |
+| `components/cafe/themes/theme-shared.tsx` | بانر cinematic بارتفاع متدرج؛ صور `object-contain` |
+| `components/cafe/product-collection-page.tsx` | عناوين `text-3xl sm:text-4xl lg:text-5xl` |
+| `components/cafe/themes/magazine-editorial-theme.tsx`, `luxury-boutique-theme.tsx`, `reservation-lounge-theme.tsx` | عناوين كوفي مع `break-words` وتدرج أحجام |
+
+### 1) القوائم الجانبية (Dashboard / Admin)
+
+- **Desktop (`lg+`):** sidebar ثابتة يمينًا بعرض `280px`؛ المحتوى `lg:mr-[280px]` بدون `pt` علوي.
+- **Mobile / Tablet (&lt;lg):**
+  - شريط علوي `h-14` مع زر قائمة (☰) وعنوان مختصر.
+  - drawer من اليمين بعرض `min(280px, 88vw)` — لا يأخذ الشاشة كاملة.
+  - overlay للإغلاق؛ زر ✕ داخل الدرج.
+  - إغلاق تلقائي عند تغيير `pathname` أو النقر على رابط (`onNavigate`).
+  - `body overflow: hidden` أثناء فتح الدرج.
+- **لا** يبدأ المحتوى تحت sidebar على الجوال (`pt-14` للمحتوى فقط).
+
+### 2) Grids / Cards / Forms
+
+- نمط موحّد: `grid-cols-1` → `sm:grid-cols-2` → `lg/xl:grid-cols-3/4`.
+- إزالة/تخفيف `min-w-[240px]` في شريط فلاتر الأدمن.
+- `BentoCard` / shells: `min-w-0`, `break-words`, padding `p-4 sm:p-6`.
+- حقول الإدخال تبقى `w-full` عبر `inputLightClass` / `inputDarkClass` (لم تُضف مكتبات).
+
+### 3) صفحات الكوفي والثيمات العشرة
+
+- كل الصفحات الداخلية تمر عبر `ThemedCafeShell` (padding `px-4 sm:px-5`, `max-w-6xl`).
+- **`mobile-first-cafe`:** bottom nav ثابت + `pb-[calc(5.75rem+env(safe-area-inset-bottom))]` حتى لا يغطي الفوتر/المحتوى.
+- **`/c/qatrah?previewTheme=THEME_ID`:** يعمل عبر `useCafeThemePage` + روابط `getCafePath` (لم يُغيّر منطق المعاينة).
+- بانرات carousel: نقاط تنقل بدون أسهم تغطي النص؛ صور `object-contain`.
+- ثيمات بعناوين ضخمة (magazine, luxury, lounge) صُغّرت على 360px.
+
+### 4) جداول / تفاصيل الأدمن
+
+- `admin/cafes`: قائمة + panel؛ على الجوال التفاصيل section أسفل البطاقات؛ زر إغلاق `xl:hidden`؛ لا جدول عريض — بطاقات + `overflow-y-auto` داخل panel على الديسكتوب.
+
+### 5) Typography & Spacing
+
+- عناوين لوحات: `text-2xl sm:text-3xl lg:text-4xl`.
+- مسافات صفحات: `px-4 sm:px-6 lg:px-8`, `py-6 sm:py-8`.
+- RTL محفوظ (`dir="rtl"`) مع `break-words` حيث يلزم.
+
+### 6) Helpers / Classes جديدة (بدون مكتبات)
+
+- `ResponsiveAppShell` + `DashboardAppLayout` / `AdminAppLayout`.
+- استخدام `min-w-0`, `overflow-x-hidden`, `100dvh`, `env(safe-area-inset-bottom)`, `lg:!translate-x-0` للدرج.
+
+### 7) ملاحظات للجوال
+
+- اختبر يدويًا على 360 / 390 / 768 / 1024 / 1280 / 1536 — البناء يمر لكن المعاينة البصرية على جهاز حقيقي موصى بها لـ carousel وtheme preview scale.
+- صفحة `/` تُخفي العمود الأيسر (carousel) تحت `lg` — المحتوى الرئيسي يبقى قابل للاستخدام.
+- `grid-cols-2` في marketplace/noon للمنتجات مقصود (تجربة متجر)؛ باقي الشبكات 3–4 أعمدة تنهار لعمود واحد.
+
+### Build
+
+`npm run build` — **ناجح** (Next.js 16.2.6، TypeScript بدون أخطاء، 28 route).

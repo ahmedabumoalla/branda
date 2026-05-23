@@ -149,7 +149,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                 حساب العميل
               </div>
               <h1
-                className={`font-black leading-tight ${account === "kiosk-big" ? "text-5xl" : "text-4xl md:text-5xl"} ${experience.headingTracking}`}
+                className={`break-words font-black leading-tight ${
+                  account === "kiosk-big"
+                    ? "text-3xl sm:text-4xl lg:text-5xl"
+                    : "text-3xl sm:text-4xl lg:text-5xl"
+                } ${experience.headingTracking}`}
               >
                 أهلًا {customer.fullName}
               </h1>
@@ -184,7 +188,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div
-          className={`mb-8 grid gap-4 ${account === "kiosk-big" ? "sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-4"}`}
+          className={`mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${account === "kiosk-big" ? "lg:grid-cols-2" : "xl:grid-cols-4"}`}
         >
           <StatCard experience={experience} icon={ClipboardList} title="الطلبات" value={props.myOrders.length} />
           <StatCard experience={experience} icon={CalendarDays} title="الحجوزات" value={props.myReservations.length} highlight={account === "lounge-reservations"} />
@@ -303,7 +307,9 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           <aside className="space-y-6">
             <div className={`p-6 ${theme.hero}`}>
               <p className={`text-sm font-bold opacity-80`}>رصيد الولاء</p>
-              <h2 className="mt-2 text-5xl font-black">{props.loyaltyBalance}</h2>
+              <h2 className="mt-2 text-3xl font-black sm:text-4xl lg:text-5xl">
+                {props.loyaltyBalance}
+              </h2>
               <p className={`mt-3 text-sm leading-7 opacity-80`}>
                 يُحتسب تلقائيًا من عملياتك المسجلة.
               </p>

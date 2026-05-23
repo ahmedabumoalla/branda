@@ -59,7 +59,11 @@ const links: {
   { title: "الاشتراك والباقات", href: "/dashboard/subscription", icon: CreditCard, feature: "settings" },
 ];
 
-export function DashboardSidebar() {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+
+export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -98,7 +102,7 @@ export function DashboardSidebar() {
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll fixed right-0 top-0 z-40 flex h-screen w-[280px] flex-col overflow-y-auto border-l border-[#E5D8CD]/60 bg-gradient-to-b from-[#3A2117] via-[#2f1b13] to-[#241610] text-[#F8E8D2] shadow-[-12px_0_40px_rgba(36,22,16,0.35)]"
+      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5D8CD]/60 bg-gradient-to-b from-[#3A2117] via-[#2f1b13] to-[#241610] text-[#F8E8D2] shadow-[-12px_0_40px_rgba(36,22,16,0.35)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
         <BrandaLogo variant="dark" width={160} height={64} priority className="mx-auto" />
@@ -154,6 +158,7 @@ export function DashboardSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
                 active
                   ? "bg-gradient-to-l from-[#F6C35B]/25 to-white/10 text-[#F6C35B] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"

@@ -144,7 +144,7 @@ export function ReservationsPageClient({ initialReservations }: Props) {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-4">
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-2xl bg-[#F8F4EF] p-4">
                   <p className="text-xs font-black text-[#7A6255]">نوع الحجز</p>
                   <h3 className="mt-1 font-black text-[#3A2117]">{r.type}</h3>

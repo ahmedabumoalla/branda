@@ -57,7 +57,7 @@ export function BentoCard({
 }) {
   return (
     <article
-      className={`rounded-[32px] border p-6 transition ${bentoVariants[variant]} ${spanClasses[span]} ${className}`}
+      className={`min-w-0 rounded-[24px] border p-4 transition sm:rounded-[32px] sm:p-6 ${bentoVariants[variant]} ${spanClasses[span]} ${className}`}
     >
       {children}
     </article>
@@ -78,11 +78,13 @@ export function DashboardPageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen px-6 py-8 lg:px-8">
-      <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="font-black text-[#8B5E3C]">لوحة برندة</p>
-          <h1 className="mt-2 text-4xl font-black text-[#3A2117]">{title}</h1>
+          <h1 className="mt-2 break-words text-2xl font-black text-[#3A2117] sm:text-3xl lg:text-4xl">
+            {title}
+          </h1>
           {subtitle ? (
             <p className="mt-2 max-w-2xl font-bold text-[#7A6255]">{subtitle}</p>
           ) : null}
@@ -106,11 +108,13 @@ export function AdminPageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen px-6 py-8 lg:px-8">
-      <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <p className="font-black text-[#F6C35B]">Branda Admin</p>
-          <h1 className="mt-2 text-4xl font-black text-[#F8F4EF]">{title}</h1>
+          <h1 className="mt-2 break-words text-2xl font-black text-[#F8F4EF] sm:text-3xl lg:text-4xl">
+            {title}
+          </h1>
           {subtitle ? (
             <p className="mt-2 max-w-2xl font-bold text-[#CBB29C]">{subtitle}</p>
           ) : null}
@@ -214,7 +218,7 @@ export function FilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex flex-col gap-4 rounded-[28px] border border-[#E5D8CD] bg-white p-5 shadow-[8px_8px_24px_rgba(58,33,23,0.05)] lg:flex-row lg:items-center ${className}`}
+      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-[#E5D8CD] bg-white p-4 shadow-[8px_8px_24px_rgba(58,33,23,0.05)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>
@@ -230,7 +234,7 @@ export function AdminFilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#1a1210]/80 p-5 shadow-[0_0_24px_rgba(246,195,91,0.06)] lg:flex-row lg:items-center ${className}`}
+      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-white/10 bg-[#1a1210]/80 p-4 shadow-[0_0_24px_rgba(246,195,91,0.06)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>

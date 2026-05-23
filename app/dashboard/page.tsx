@@ -97,7 +97,9 @@ export default function DashboardPage() {
           <div className="flex h-full flex-col justify-between">
             <div>
               <p className="text-sm font-black text-[#F6C35B]/90">إيرادات الطلبات</p>
-              <p className="mt-3 text-5xl font-black">{formatSar(revenueFromOrders)}</p>
+              <p className="mt-3 text-3xl font-black sm:text-4xl lg:text-5xl">
+                {formatSar(revenueFromOrders)}
+              </p>
               <p className="mt-2 text-sm font-bold text-[#CBB29C]">
                 {cafeOrders.length} طلب مسجل
               </p>

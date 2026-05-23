@@ -192,7 +192,9 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
         <div className={filterLayout === "sidebar" ? "order-1 lg:order-2" : ""}>
           <p className={`font-black ${theme.accent}`}>{viewInfo[view]?.title || "المنتجات"}</p>
-          <h1 className={`mt-2 text-4xl font-black md:text-5xl ${experience.headingTracking}`}>
+          <h1
+            className={`mt-2 break-words text-3xl font-black sm:text-4xl lg:text-5xl ${experience.headingTracking}`}
+          >
             {viewInfo[view]?.title || "منتجات الكوفي"}
           </h1>
           <p className={`mt-3 max-w-2xl font-bold ${theme.muted}`}>

@@ -166,8 +166,8 @@ function ThemePageInner() {
               </div>
             </div>
             <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-[#F8F4EF]">
-              <div className="max-h-[640px] overflow-y-auto overscroll-contain">
-                <div className="pointer-events-none origin-top scale-[0.72] md:scale-[0.85]">
+              <div className="max-h-[min(70vh,640px)] overflow-x-hidden overflow-y-auto overscroll-contain">
+                <div className="pointer-events-none origin-top scale-[0.52] sm:scale-[0.62] md:scale-[0.75] lg:scale-[0.85]">
                   <CafeThemeRenderer {...previewProps} />
                 </div>
               </div>

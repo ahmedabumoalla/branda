@@ -26,7 +26,9 @@ export function ReservationLoungeTheme(props: CafeThemePageProps) {
       <section className={`${theme.hero} px-6 py-16 md:py-20`}>
         <div className="mx-auto max-w-4xl text-center">
           <p className="text-sm font-bold opacity-80">احجز تجربتك</p>
-          <h1 className="mt-3 text-4xl font-black md:text-5xl">{cafeSettings.cafeName}</h1>
+          <h1 className="mt-3 break-words text-3xl font-black sm:text-4xl lg:text-5xl">
+            {cafeSettings.cafeName}
+          </h1>
           <p className="mx-auto mt-4 max-w-lg text-base opacity-90">
             {cafeSettings.description || "جلسات هادئة، طاولات مريحة، وحجز بخطوة واحدة."}
           </p>
