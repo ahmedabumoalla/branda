@@ -13,6 +13,7 @@ import { SoftCream3dTheme } from "./soft-cream-3d-theme";
 import { MagazineEditorialTheme } from "./magazine-editorial-theme";
 import { FastOrderKioskTheme } from "./fast-order-kiosk-theme";
 import { ReservationLoungeTheme } from "./reservation-lounge-theme";
+import { BrandIdentityCustomTheme } from "./brand-identity-custom-theme";
 
 const THEME_COMPONENTS: Record<CafeThemeId, ComponentType<CafeThemePageProps>> = {
   "marketplace-amazon": MarketplaceAmazonTheme,
@@ -25,6 +26,7 @@ const THEME_COMPONENTS: Record<CafeThemeId, ComponentType<CafeThemePageProps>> =
   "magazine-editorial": MagazineEditorialTheme,
   "fast-order-kiosk": FastOrderKioskTheme,
   "reservation-lounge": ReservationLoungeTheme,
+  "brand-identity-custom": BrandIdentityCustomTheme,
 };
 
 export function CafeThemeRenderer(props: CafeThemePageProps) {

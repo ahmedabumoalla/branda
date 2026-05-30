@@ -8,6 +8,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
 } from "./theme-shared";
 
 export function ReservationLoungeTheme(props: CafeThemePageProps) {
@@ -18,7 +19,7 @@ export function ReservationLoungeTheme(props: CafeThemePageProps) {
       <CafeHeader
         slug={slug}
         cafeName={cafeSettings.cafeName}
-        logoUrl={cafeSettings.logoDataUrl}
+        logoUrl={props.cafeLogoUrl}
         themeId={themeId}
         customer={props.customer}
       />
@@ -50,6 +51,10 @@ export function ReservationLoungeTheme(props: CafeThemePageProps) {
           </div>
         </div>
       </section>
+
+      <div className="mx-auto max-w-5xl px-4">
+        <ThemeCategoryStrip slug={slug} theme={theme} className="py-4" />
+      </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8">
         {bannerOffers.length > 0 ? (

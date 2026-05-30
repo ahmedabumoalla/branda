@@ -66,8 +66,11 @@ export default function DashboardPage() {
         .reduce((sum, invoice) => sum + invoice.amount, 0),
     [invoices]
   );
-  const revenueFromOrders = useMemo(
-    () => cafeOrders.reduce((sum, o) => sum + o.total, 0),
+  const revenueFromAcceptedOrders = useMemo(
+    () =>
+      cafeOrders
+        .filter((o) => o.status === "مقبول")
+        .reduce((sum, o) => sum + o.total, 0),
     [cafeOrders]
   );
 
@@ -96,12 +99,12 @@ export default function DashboardPage() {
         <BentoCard variant="gold" span="2" className="md:row-span-2">
           <div className="flex h-full flex-col justify-between">
             <div>
-              <p className="text-sm font-black text-[#F6C35B]/90">إيرادات الطلبات</p>
+              <p className="text-sm font-black text-[#F6C35B]/90">قيمة الطلبات المقبولة المتوقعة</p>
               <p className="mt-3 text-3xl font-black sm:text-4xl lg:text-5xl">
-                {formatSar(revenueFromOrders)}
+                {formatSar(revenueFromAcceptedOrders)}
               </p>
               <p className="mt-2 text-sm font-bold text-[#CBB29C]">
-                {cafeOrders.length} طلب مسجل
+                {cafeOrders.filter((o) => o.status === "مقبول").length} طلب مقبول — الدفع عند الاستلام
               </p>
             </div>
             <div className="mt-8 flex h-40 items-end gap-2 sm:h-48">

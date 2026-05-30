@@ -1,6 +1,6 @@
 "use client";
 
-import { Receipt, UserRound } from "lucide-react";
+import { Receipt, UserRound, Check, X, Clock, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   BentoCard,
@@ -10,13 +10,26 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
-import { ORDERS_KEY, mockCafeOrders, type CafeOrder, type OrderStatus } from "@/lib/mock/orders";
+import {
+  ORDERS_KEY,
+  mockCafeOrders,
+  type CafeOrder,
+  type OrderStatus,
+} from "@/lib/mock/orders";
+import { acceptPickupOrder, rejectPickupOrder } from "@/lib/platform/order-flow";
 
-const statuses: OrderStatus[] = ["جديد", "قيد التجهيز", "جاهز", "مكتمل", "ملغي"];
+const statusStyle: Record<OrderStatus, string> = {
+  "بانتظار موافقة الكوفي": "bg-amber-50 text-amber-700",
+  مقبول: "bg-green-50 text-green-700",
+  مرفوض: "bg-red-50 text-red-700",
+  "ملغي من العميل": "bg-[#F8F4EF] text-[#7A6255]",
+};
 
 export function OrdersPageClient() {
   const [orders, setOrders] = useState<CafeOrder[]>(mockCafeOrders);
   const [selected, setSelected] = useState<CafeOrder | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(ORDERS_KEY);
@@ -27,29 +40,61 @@ export function OrdersPageClient() {
     localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
   }, [orders]);
 
-  function updateStatus(id: string, status: OrderStatus) {
-    setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
-    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+  function refreshOrders() {
+    const saved = localStorage.getItem(ORDERS_KEY);
+    if (saved) setOrders(JSON.parse(saved));
   }
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const newOrders = orders.filter((o) => o.status === "جديد").length;
+  function handleAccept(orderId: string) {
+    const result = acceptPickupOrder(orderId);
+    if (!result.ok) {
+      alert(result.error);
+      return;
+    }
+    refreshOrders();
+    setSelected((prev) => (prev?.id === orderId ? result.order : prev));
+  }
+
+  function handleReject(orderId: string) {
+    if (!rejectReason.trim()) {
+      alert("اكتب سبب الرفض");
+      return;
+    }
+    const result = rejectPickupOrder(orderId, rejectReason);
+    if (!result.ok) {
+      alert(result.error);
+      return;
+    }
+    setRejectReason("");
+    setShowRejectForm(null);
+    refreshOrders();
+    setSelected((prev) => (prev?.id === orderId ? result.order : prev));
+  }
+
+  const pendingOrders = orders.filter((o) => o.status === "بانتظار موافقة الكوفي").length;
+  const acceptedOrders = orders.filter((o) => o.status === "مقبول").length;
+  const acceptedRevenue = orders
+    .filter((o) => o.status === "مقبول")
+    .reduce((sum, o) => sum + o.total, 0);
 
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="طلبات الكوفي"
-        subtitle="كل تفاصيل الطلب والعميل والدفع واضحة في مكان واحد."
+        title="طلبات الاستلام"
+        subtitle="طلبات الاستلام من صفحة الكوفي — قبول أو رفض مع سبب واضح."
       >
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="إجمالي الطلبات" value={orders.length} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="طلبات جديدة" value={newOrders} />
+            <StatPill label="بانتظار الموافقة" value={pendingOrders} />
           </BentoCard>
-          <BentoCard variant="white" span="2">
-            <StatPill label="إجمالي الإيرادات" value={formatSar(totalRevenue)} />
+          <BentoCard variant="white">
+            <StatPill label="طلبات مقبولة" value={acceptedOrders} />
+          </BentoCard>
+          <BentoCard variant="white">
+            <StatPill label="قيمة الطلبات المقبولة المتوقعة" value={formatSar(acceptedRevenue)} />
           </BentoCard>
         </BentoGrid>
 
@@ -64,7 +109,14 @@ export function OrdersPageClient() {
                         <Receipt className="h-7 w-7" />
                       </div>
                       <div>
-                        <h2 className="text-2xl font-black">{order.id}</h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-2xl font-black">{order.id}</h2>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${statusStyle[order.status]}`}
+                          >
+                            {order.status}
+                          </span>
+                        </div>
                         <p className="mt-1 font-bold text-[#7A6255]">
                           {order.customerName} • {order.customerPhone}
                         </p>
@@ -84,21 +136,76 @@ export function OrdersPageClient() {
                     </div>
                   </div>
 
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {statuses.map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => updateStatus(order.id, status)}
-                        className={`rounded-2xl px-4 py-2 text-sm font-black ${
-                          order.status === status
-                            ? "bg-[#3A2117] text-[#F8F4EF]"
-                            : "bg-[#F8F4EF] text-[#3A2117]"
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
+                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-[#F8F4EF] p-4">
+                      <p className="flex items-center gap-1 text-xs font-black text-[#7A6255]">
+                        <MapPin className="h-4 w-4" />
+                        الفرع
+                      </p>
+                      <p className="mt-1 font-black">{order.branchName || "غير محدد"}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F8F4EF] p-4">
+                      <p className="flex items-center gap-1 text-xs font-black text-[#7A6255]">
+                        <Clock className="h-4 w-4" />
+                        وقت الاستلام
+                      </p>
+                      <p className="mt-1 font-black">{order.pickupAt || "غير محدد"}</p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F8F4EF] p-4">
+                      <p className="text-xs font-black text-[#7A6255]">الدفع</p>
+                      <p className="mt-1 font-black">{order.paymentStatus}</p>
+                    </div>
+                  </div>
 
+                  {order.status === "بانتظار موافقة الكوفي" ? (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleAccept(order.id)}
+                        className="flex items-center gap-2 rounded-2xl bg-green-50 px-5 py-3 text-sm font-black text-green-700"
+                      >
+                        <Check className="h-4 w-4" />
+                        قبول الطلب
+                      </button>
+                      <button
+                        onClick={() =>
+                          setShowRejectForm((prev) => (prev === order.id ? null : order.id))
+                        }
+                        className="flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-black text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                        رفض الطلب
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {showRejectForm === order.id ? (
+                    <div className="mt-4 rounded-2xl bg-red-50/50 p-4">
+                      <label className="block">
+                        <span className="text-xs font-black text-[#7A6255]">سبب الرفض</span>
+                        <textarea
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          rows={2}
+                          placeholder="مثال: المنتج غير متوفر حاليًا"
+                          className="mt-2 w-full resize-none rounded-2xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold outline-none"
+                        />
+                      </label>
+                      <button
+                        onClick={() => handleReject(order.id)}
+                        className="mt-3 rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white"
+                      >
+                        تأكيد الرفض
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {order.rejectionReason ? (
+                    <div className="mt-4 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
+                      سبب الرفض: {order.rejectionReason}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-5">
                     <button
                       onClick={() => setSelected(order)}
                       className="rounded-2xl bg-[#F8F4EF] px-5 py-2 font-black text-[#3A2117]"
@@ -108,6 +215,13 @@ export function OrdersPageClient() {
                   </div>
                 </SoftCard>
               ))}
+
+              {orders.length === 0 ? (
+                <SoftCard className="text-center">
+                  <h2 className="text-2xl font-black">لا توجد طلبات</h2>
+                  <p className="mt-2 text-[#7A6255]">ستظهر طلبات الاستلام هنا عند إنشائها.</p>
+                </SoftCard>
+              ) : null}
             </div>
           </BentoCard>
 
@@ -128,6 +242,14 @@ export function OrdersPageClient() {
                   </p>
                 </SoftCard>
 
+                <SoftCard className="mt-5 p-4">
+                  <p className="font-black">تفاصيل الاستلام</p>
+                  <p className="mt-2 text-[#7A6255]">الفرع: {selected.branchName || "—"}</p>
+                  <p className="text-[#7A6255]">وقت الاستلام: {selected.pickupAt || "—"}</p>
+                  <p className="text-[#7A6255]">الدفع: {selected.paymentStatus}</p>
+                  <p className="text-[#7A6255]">الحالة: {selected.status}</p>
+                </SoftCard>
+
                 <div className="mt-5 space-y-3">
                   {selected.items.map((item) => (
                     <SoftCard key={item.id} className="p-4">
@@ -138,6 +260,11 @@ export function OrdersPageClient() {
                       <p className="mt-1 text-sm text-[#7A6255]">
                         {formatSar(item.unitPrice)}
                       </p>
+                      {item.notes ? (
+                        <p className="mt-2 text-xs font-bold text-[#7A6255]">
+                          ملاحظات: {item.notes}
+                        </p>
+                      ) : null}
                     </SoftCard>
                   ))}
                 </div>
@@ -153,7 +280,7 @@ export function OrdersPageClient() {
 
                 {selected.notes ? (
                   <div className="mt-5 rounded-2xl bg-[#FFF8EF] p-4 font-bold text-[#7A6255]">
-                    ملاحظات: {selected.notes}
+                    ملاحظات الطلب: {selected.notes}
                   </div>
                 ) : null}
               </>

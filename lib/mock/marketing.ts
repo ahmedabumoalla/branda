@@ -17,6 +17,8 @@ export type MarketingCampaign = {
   visits: number;
   conversions: number;
   createdAt: string;
+  /** IndexedDB reference — mock only */
+  imageAssetId?: string;
 };
 
 export const MARKETING_KEY = "branda_qatrah_marketing";

@@ -3,11 +3,13 @@
 import {
   Gift,
   Plus,
-  Power,
   Save,
   Sparkles,
   Star,
   Trash2,
+  ToggleLeft,
+  ToggleRight,
+  UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -15,98 +17,163 @@ import {
   BentoGrid,
   DashboardPageShell,
   NeumoInput,
+  NeumoSelect,
   NeumoTextarea,
   PrimaryButton,
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
-
-const SETTINGS_KEY = "branda_qatrah_loyalty_settings";
-const REWARDS_KEY = "branda_qatrah_loyalty_rewards";
+import {
+  LOYALTY_REWARDS_KEY,
+  LOYALTY_SETTINGS_KEY,
+  mockLoyaltyRewards,
+  type LoyaltyEarnRule,
+  type LoyaltyRedemptionRule,
+  type LoyaltyReward,
+  type LoyaltySettings,
+} from "@/lib/mock/loyalty";
 
 type Props = {
   initialSettings: LoyaltySettings;
   initialRewards: LoyaltyReward[];
 };
 
+const EXAMPLE_BALANCE = 150;
+
+function redemptionRulesToRewards(rules: LoyaltyRedemptionRule[]): LoyaltyReward[] {
+  return rules
+    .filter((r) => r.enabled)
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      points: r.pointsCost,
+      description: r.description || r.title,
+      active: true,
+    }));
+}
+
 export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
   const [settings, setSettings] = useState<LoyaltySettings>(initialSettings);
-  const [rewards, setRewards] = useState<LoyaltyReward[]>(initialRewards);
-
-  const [title, setTitle] = useState("");
-  const [points, setPoints] = useState("50");
-  const [description, setDescription] = useState("");
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    const savedRewards = localStorage.getItem(REWARDS_KEY);
-
+    const savedSettings = localStorage.getItem(LOYALTY_SETTINGS_KEY);
     if (savedSettings) setSettings(JSON.parse(savedSettings));
-    if (savedRewards) setRewards(JSON.parse(savedRewards));
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-  useEffect(() => {
-    localStorage.setItem(REWARDS_KEY, JSON.stringify(rewards));
-  }, [rewards]);
-
-  const activeRewards = useMemo(
-    () => rewards.filter((reward) => reward.active).length,
-    [rewards]
+  const activeEarnRules = useMemo(
+    () => settings.earnRules.filter((r) => r.enabled).length,
+    [settings.earnRules]
   );
 
-  const minReward = useMemo(() => {
-    if (rewards.length === 0) return 0;
-    return Math.min(...rewards.map((reward) => reward.points));
-  }, [rewards]);
+  const activeRedemptionRules = useMemo(
+    () => settings.redemptionRules.filter((r) => r.enabled),
+    [settings.redemptionRules]
+  );
 
-  function addReward() {
-    if (!title.trim() || !points) return;
+  const affordableRedemptions = useMemo(
+    () => activeRedemptionRules.filter((r) => r.pointsCost <= EXAMPLE_BALANCE),
+    [activeRedemptionRules]
+  );
 
-    const reward: LoyaltyReward = {
+  function toggleEarnRule(id: string) {
+    setSettings((prev) => ({
+      ...prev,
+      earnRules: prev.earnRules.map((r) =>
+        r.id === id ? { ...r, enabled: !r.enabled } : r
+      ),
+    }));
+  }
+
+  function updateEarnRule(id: string, patch: Partial<LoyaltyEarnRule>) {
+    setSettings((prev) => ({
+      ...prev,
+      earnRules: prev.earnRules.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+    }));
+  }
+
+  function addEarnRule() {
+    const rule: LoyaltyEarnRule = {
       id: crypto.randomUUID(),
-      title: title.trim(),
-      points: Number(points) || 50,
-      description:
-        description.trim() ||
-        "مكافأة ولاء يمكن للعميل استبدالها من صفحة الكوفي.",
-      active: true,
+      type: "product_bonus",
+      title: "مكافأة منتج",
+      enabled: true,
+      bonusPoints: 10,
     };
-
-    setRewards((prev) => [reward, ...prev]);
-    setTitle("");
-    setPoints("50");
-    setDescription("");
+    setSettings((prev) => ({
+      ...prev,
+      earnRules: [...prev.earnRules, rule],
+    }));
   }
 
-  function toggleReward(id: string) {
-    setRewards((prev) =>
-      prev.map((reward) =>
-        reward.id === id ? { ...reward, active: !reward.active } : reward
-      )
+  function removeEarnRule(id: string) {
+    setSettings((prev) => ({
+      ...prev,
+      earnRules: prev.earnRules.filter((r) => r.id !== id),
+    }));
+  }
+
+  function toggleRedemptionRule(id: string) {
+    setSettings((prev) => ({
+      ...prev,
+      redemptionRules: prev.redemptionRules.map((r) =>
+        r.id === id ? { ...r, enabled: !r.enabled } : r
+      ),
+    }));
+  }
+
+  function updateRedemptionRule(id: string, patch: Partial<LoyaltyRedemptionRule>) {
+    setSettings((prev) => ({
+      ...prev,
+      redemptionRules: prev.redemptionRules.map((r) =>
+        r.id === id ? { ...r, ...patch } : r
+      ),
+    }));
+  }
+
+  function addRedemptionRule() {
+    const rule: LoyaltyRedemptionRule = {
+      id: crypto.randomUUID(),
+      type: "percent_discount",
+      title: "خصم جديد",
+      enabled: true,
+      pointsCost: 75,
+      discountPercent: 5,
+      description: "يستبدل العميل 75 نقطة ويحصل على خصم 5%.",
+    };
+    setSettings((prev) => ({
+      ...prev,
+      redemptionRules: [...prev.redemptionRules, rule],
+    }));
+  }
+
+  function removeRedemptionRule(id: string) {
+    setSettings((prev) => ({
+      ...prev,
+      redemptionRules: prev.redemptionRules.filter((r) => r.id !== id),
+    }));
+  }
+
+  function saveAll() {
+    localStorage.setItem(LOYALTY_SETTINGS_KEY, JSON.stringify(settings));
+    const rewards = redemptionRulesToRewards(settings.redemptionRules);
+    localStorage.setItem(
+      LOYALTY_REWARDS_KEY,
+      JSON.stringify(rewards.length ? rewards : mockLoyaltyRewards)
     );
-  }
-
-  function deleteReward(id: string) {
-    setRewards((prev) => prev.filter((reward) => reward.id !== id));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   return (
     <div dir="rtl">
       <DashboardPageShell
         title="نقاط الولاء"
-        subtitle="تحكم في احتساب النقاط والمكافآت التي تظهر للعملاء في صفحة الكوفي."
+        subtitle="بناء قواعد الكسب والاستبدال — مع معاينة لما يراه العميل."
         action={
-          <PrimaryButton
-            onClick={() => alert("تم حفظ إعدادات الولاء وتحديث صفحة الكوفي")}
-            className="inline-flex items-center gap-2"
-          >
+          <PrimaryButton onClick={saveAll} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
-            حفظ الإعدادات
+            {saved ? "تم الحفظ" : "حفظ الإعدادات"}
           </PrimaryButton>
         }
       >
@@ -118,10 +185,10 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
             <StatPill label="نقاط الترحيب" value={settings.welcomePoints} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="مكافآت نشطة" value={activeRewards} />
+            <StatPill label="قواعد كسب" value={activeEarnRules} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="أقل استبدال" value={minReward} />
+            <StatPill label="قواعد استبدال" value={activeRedemptionRules.length} />
           </BentoCard>
         </BentoGrid>
 
@@ -132,20 +199,16 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
                 <Star className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-[#3A2117]">
-                  إعدادات احتساب النقاط
-                </h2>
+                <h2 className="text-2xl font-black text-[#3A2117]">إعدادات عامة</h2>
                 <p className="text-sm font-bold text-[#7A6255]">
-                  هذه الإعدادات تنعكس مباشرة في صفحة الكوفي.
+                  النقاط الأساسية ونقاط الترحيب وحالة البرنامج.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className="block">
-                <span className="text-xs font-black text-[#7A6255]">
-                  النقاط لكل 1 ريال
-                </span>
+                <span className="text-xs font-black text-[#7A6255]">النقاط لكل 1 ر.س</span>
                 <NeumoInput
                   value={settings.pointsPerSar}
                   onChange={(e) =>
@@ -157,11 +220,8 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
                   className="mt-2"
                 />
               </label>
-
               <label className="block">
-                <span className="text-xs font-black text-[#7A6255]">
-                  نقاط ترحيبية للعميل
-                </span>
+                <span className="text-xs font-black text-[#7A6255]">نقاط ترحيبية</span>
                 <NeumoInput
                   value={settings.welcomePoints}
                   onChange={(e) =>
@@ -173,140 +233,224 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
                   className="mt-2"
                 />
               </label>
+              <button
+                onClick={() =>
+                  setSettings((prev) => ({ ...prev, enabled: !prev.enabled }))
+                }
+                className={`mt-6 rounded-2xl px-4 py-3 font-black ${
+                  settings.enabled ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                }`}
+              >
+                {settings.enabled ? "البرنامج مفعل" : "البرنامج متوقف"}
+              </button>
+            </div>
+          </BentoCard>
 
-              <div className="rounded-2xl bg-[#F8F4EF] p-4">
-                <p className="text-xs font-black text-[#7A6255]">حالة البرنامج</p>
-                <button
-                  onClick={() =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      enabled: !prev.enabled,
-                    }))
-                  }
-                  className={`mt-3 w-full rounded-2xl px-4 py-3 font-black ${
-                    settings.enabled
-                      ? "bg-green-50 text-green-700"
-                      : "bg-red-50 text-red-700"
-                  }`}
-                >
-                  {settings.enabled ? "مفعل" : "متوقف"}
-                </button>
+          <BentoCard variant="gold" span="2">
+            <div className="flex items-start gap-4">
+              <UserRound className="mt-1 h-7 w-7 text-[#F6C35B]" />
+              <div className="flex-1">
+                <h2 className="text-2xl font-black">معاينة العميل</h2>
+                <p className="mt-2 text-[#E5D8CD]">
+                  رصيد تجريبي:{" "}
+                  <span className="text-[#F6C35B]">{EXAMPLE_BALANCE} نقطة</span>
+                </p>
+                <div className="mt-4 space-y-2">
+                  {affordableRedemptions.length > 0 ? (
+                    affordableRedemptions.map((r) => (
+                      <div
+                        key={r.id}
+                        className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold"
+                      >
+                        <span className="text-[#F6C35B]">{r.pointsCost} نقطة</span>
+                        {" — "}
+                        {r.description || r.title}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-bold text-[#CBB29C]">
+                      لا توجد مكافآت متاحة بهذا الرصيد — أضف قواعد استبدال أقل.
+                    </p>
+                  )}
+                </div>
+                <p className="mt-4 text-xs font-bold text-[#CBB29C]">
+                  قواعد الكسب النشطة:{" "}
+                  {settings.earnRules
+                    .filter((r) => r.enabled)
+                    .map((r) => r.title)
+                    .join(" • ") || "لا يوجد"}
+                </p>
               </div>
+            </div>
+          </BentoCard>
+        </BentoGrid>
+
+        <BentoGrid className="mb-6">
+          <BentoCard variant="white" span="2">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-black">قواعد كسب النقاط</h2>
+              <button
+                onClick={addEarnRule}
+                className="inline-flex items-center gap-1 rounded-2xl bg-[#F8F4EF] px-4 py-2 text-sm font-black"
+              >
+                <Plus className="h-4 w-4" />
+                إضافة
+              </button>
+            </div>
+            <div className="space-y-3">
+              {settings.earnRules.map((rule) => (
+                <SoftCard key={rule.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 space-y-2">
+                      <NeumoInput
+                        value={rule.title}
+                        onChange={(e) => updateEarnRule(rule.id, { title: e.target.value })}
+                      />
+                      <NeumoSelect
+                        value={rule.type}
+                        onChange={(e) =>
+                          updateEarnRule(rule.id, {
+                            type: e.target.value as LoyaltyEarnRule["type"],
+                          })
+                        }
+                      >
+                        <option value="purchase_per_sar">لكل ريال</option>
+                        <option value="product_bonus">مكافأة منتج</option>
+                        <option value="first_order_bonus">أول طلب</option>
+                        <option value="experience_bonus">وثّق تجربتك</option>
+                      </NeumoSelect>
+                      {rule.type === "purchase_per_sar" ? (
+                        <NeumoInput
+                          value={rule.pointsPerSar ?? 1}
+                          onChange={(e) =>
+                            updateEarnRule(rule.id, {
+                              pointsPerSar: Number(e.target.value) || 1,
+                            })
+                          }
+                          placeholder="نقاط لكل ريال"
+                        />
+                      ) : (
+                        <NeumoInput
+                          value={rule.bonusPoints ?? 0}
+                          onChange={(e) =>
+                            updateEarnRule(rule.id, {
+                              bonusPoints: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="نقاط المكافأة"
+                        />
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => toggleEarnRule(rule.id)} aria-label="تفعيل">
+                        {rule.enabled ? (
+                          <ToggleRight className="h-8 w-8 text-green-600" />
+                        ) : (
+                          <ToggleLeft className="h-8 w-8 text-gray-400" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => removeEarnRule(rule.id)}
+                        className="rounded-xl bg-red-50 p-2 text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </SoftCard>
+              ))}
             </div>
           </BentoCard>
 
           <BentoCard variant="white" span="2">
-            <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
-              <Plus className="h-5 w-5" />
-              إضافة مكافأة
-            </h2>
-
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-black">قواعد الاستبدال</h2>
+              <button
+                onClick={addRedemptionRule}
+                className="inline-flex items-center gap-1 rounded-2xl bg-[#F8F4EF] px-4 py-2 text-sm font-black"
+              >
+                <Plus className="h-4 w-4" />
+                إضافة
+              </button>
+            </div>
             <div className="space-y-3">
-              <NeumoInput
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="اسم المكافأة"
-              />
-              <NeumoInput
-                value={points}
-                onChange={(e) => setPoints(e.target.value)}
-                placeholder="عدد النقاط المطلوبة"
-              />
-              <NeumoTextarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="وصف المكافأة"
-                className="h-24"
-              />
-              <PrimaryButton onClick={addReward} className="w-full">
-                إضافة المكافأة
-              </PrimaryButton>
+              {settings.redemptionRules.map((rule) => (
+                <SoftCard key={rule.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 space-y-2">
+                      <NeumoInput
+                        value={rule.title}
+                        onChange={(e) =>
+                          updateRedemptionRule(rule.id, { title: e.target.value })
+                        }
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <NeumoInput
+                          value={rule.pointsCost}
+                          onChange={(e) =>
+                            updateRedemptionRule(rule.id, {
+                              pointsCost: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="تكلفة النقاط"
+                        />
+                        {rule.type === "percent_discount" ? (
+                          <NeumoInput
+                            value={rule.discountPercent ?? 0}
+                            onChange={(e) =>
+                              updateRedemptionRule(rule.id, {
+                                discountPercent: Number(e.target.value) || 0,
+                              })
+                            }
+                            placeholder="نسبة الخصم %"
+                          />
+                        ) : null}
+                      </div>
+                      <NeumoTextarea
+                        value={rule.description ?? ""}
+                        onChange={(e) =>
+                          updateRedemptionRule(rule.id, { description: e.target.value })
+                        }
+                        placeholder="نص يظهر للعميل عند الاستبدال"
+                        className="h-20"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => toggleRedemptionRule(rule.id)}>
+                        {rule.enabled ? (
+                          <ToggleRight className="h-8 w-8 text-green-600" />
+                        ) : (
+                          <ToggleLeft className="h-8 w-8 text-gray-400" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => removeRedemptionRule(rule.id)}
+                        className="rounded-xl bg-red-50 p-2 text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </SoftCard>
+              ))}
             </div>
           </BentoCard>
         </BentoGrid>
 
         <BentoGrid>
-          <BentoCard variant="white" span="4">
-            <section className="grid gap-5">
-              {rewards.map((reward) => (
-                <SoftCard key={reward.id} className="transition hover:-translate-y-0.5">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F8F4EF] text-[#6B3A25]">
-                    <Gift className="h-7 w-7" />
-                  </div>
-
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-2xl font-black text-[#3A2117]">
-                        {reward.title}
-                      </h2>
-                      <span
-                        className={`rounded-full px-4 py-2 text-xs font-black ${
-                          reward.active
-                            ? "bg-green-50 text-green-700"
-                            : "bg-red-50 text-red-700"
-                        }`}
-                      >
-                        {reward.active ? "نشطة" : "متوقفة"}
-                      </span>
-                    </div>
-                    <p className="mt-2 max-w-xl font-bold leading-7 text-[#7A6255]">
-                      {reward.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => toggleReward(reward.id)}
-                    className="flex items-center gap-2 rounded-2xl bg-[#3A2117]/10 px-5 py-3 text-sm font-black text-[#3A2117]"
-                  >
-                    <Power className="h-4 w-4" />
-                    {reward.active ? "إيقاف" : "تفعيل"}
-                  </button>
-                  <button
-                    onClick={() => deleteReward(reward.id)}
-                    className="flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-black text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    حذف
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-2xl bg-[#F8F4EF] p-4">
-                  <p className="text-xs font-black text-[#7A6255]">النقاط المطلوبة</p>
-                  <h3 className="mt-1 text-2xl font-black text-[#3A2117]">
-                    {reward.points}
-                  </h3>
-                </div>
-                <div className="rounded-2xl bg-[#F8F4EF] p-4">
-                  <p className="text-xs font-black text-[#7A6255]">نوع المكافأة</p>
-                  <h3 className="mt-1 font-black text-[#3A2117]">استبدال نقاط</h3>
-                </div>
-                <div className="rounded-2xl bg-[#F8F4EF] p-4">
-                  <p className="text-xs font-black text-[#7A6255]">الظهور للعميل</p>
-                  <h3 className="mt-1 font-black text-[#3A2117]">
-                    {reward.active ? "ظاهر" : "مخفي"}
-                  </h3>
-                </div>
-              </div>
-                </SoftCard>
-              ))}
-            </section>
-          </BentoCard>
-
           <BentoCard variant="gold" span="4">
           <div className="flex items-start gap-4">
             <Sparkles className="mt-1 h-7 w-7 text-[#F6C35B]" />
             <div>
-              <h2 className="text-2xl font-black">تظهر المكافآت مباشرة في صفحة الكوفي</h2>
+              <h2 className="text-2xl font-black">تظهر المكافآت في صفحة الكوفي</h2>
               <p className="mt-2 text-[#E5D8CD]">
-                أي تعديل في النقاط أو المكافآت يتم حفظه محليًا وينعكس في صفحة العميل.
+                عند الحفظ تُخزَّن الإعدادات في{" "}
+                <code className="text-[#F6C35B]">{LOYALTY_SETTINGS_KEY}</code> وتُحدَّث
+                المكافآت في{" "}
+                <code className="text-[#F6C35B]">{LOYALTY_REWARDS_KEY}</code>.
               </p>
             </div>
+            <Gift className="ml-auto h-10 w-10 text-[#F6C35B]/50" />
           </div>
           </BentoCard>
         </BentoGrid>

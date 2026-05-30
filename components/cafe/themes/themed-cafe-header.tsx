@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { CustomerNotifications } from "@/components/cafe/customer-notifications";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import type { BrandaCustomerSession } from "@/lib/customer/session";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
@@ -54,13 +55,20 @@ export function ThemedCafeHeader({
         </Link>
 
         {customer ? (
-          <Link
-            href={account}
-            className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black ${theme.button}`}
-          >
-            <UserRound className="h-4 w-4" />
-            حسابي
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <CustomerNotifications
+              slug={slug}
+              customerId={customer.id}
+              experience={experience}
+            />
+            <Link
+              href={account}
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black ${theme.button}`}
+            >
+              <UserRound className="h-4 w-4" />
+              حسابي
+            </Link>
+          </div>
         ) : (
           <div className="flex shrink-0 gap-2">
             <Link

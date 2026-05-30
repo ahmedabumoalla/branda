@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ProductCollectionPage } from "@/components/cafe/product-collection-page";
 
 type Props = {
@@ -10,5 +11,9 @@ type Props = {
 export default async function CafeProductCollection({ params }: Props) {
   const { slug, view } = await params;
 
-  return <ProductCollectionPage slug={slug} view={view} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <ProductCollectionPage slug={slug} view={view} />
+    </Suspense>
+  );
 }

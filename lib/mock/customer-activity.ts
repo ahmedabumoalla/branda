@@ -7,15 +7,25 @@ export type CustomerProfile = {
   createdAt: string;
 };
 
+export type CustomerOrderStatus =
+  | "بانتظار موافقة الكوفي"
+  | "مقبول"
+  | "مرفوض"
+  | "ملغي من العميل";
+
 export type CustomerOrder = {
   id: string;
   cafeSlug: string;
   customerId: string;
   customerName: string;
-  status: "جديد" | "قيد التجهيز" | "جاهز" | "مكتمل" | "ملغي";
+  status: CustomerOrderStatus;
   items: string[];
   total: number;
   createdAt: string;
+  branchName?: string;
+  pickupAt?: string;
+  notes?: string;
+  rejectionReason?: string;
 };
 
 export type CustomerInvoice = {

@@ -2,11 +2,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import { LOGO } from "@/lib/ui/brand";
+import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
 export default function RegisterPage() {
   return (
-    <main dir="rtl" className="min-h-screen grid lg:grid-cols-2 bg-[#F8F4EF] text-[#2B1710]">
-      <section className="relative hidden flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#EFE2D3] to-[#F8F4EF] px-12 lg:flex">
+    <main
+      dir="rtl"
+      className="min-h-screen grid lg:grid-cols-2"
+      style={{ background: C.creamBase, color: C.espressoDark }}
+    >
+      <section
+        className="relative hidden flex-col items-center justify-center overflow-hidden px-12 lg:flex"
+        style={{
+          background: `linear-gradient(to bottom right, ${C.warmSand}, ${C.creamBase})`,
+        }}
+      >
         <Image
           src={LOGO.brownBg}
           alt=""
@@ -15,10 +25,13 @@ export default function RegisterPage() {
           className="pointer-events-none absolute opacity-15 object-contain"
         />
         <BrandaLogo variant="brown" width={220} height={88} priority className="relative" />
-        <h1 className="relative mt-10 text-center text-4xl font-black leading-tight text-[#3A2117]">
+        <h1
+          className="relative mt-10 text-center text-4xl font-black leading-tight"
+          style={{ color: C.coffeeBrown }}
+        >
           ابدأ كوفيك الرقمي مع برندة
         </h1>
-        <p className="relative mt-4 text-center text-lg font-bold text-[#7A6255]">
+        <p className="relative mt-4 text-center text-lg font-bold" style={{ color: C.mutedText }}>
           منيو، حجوزات، عروض، ونقاط ولاء في لوحة واحدة.
         </p>
       </section>
@@ -27,18 +40,29 @@ export default function RegisterPage() {
         <div className="w-full min-w-0 max-w-[620px]">
           <div className="mb-10 flex flex-col items-center text-center">
             <BrandaLogo variant="brown" width={180} height={72} />
-            <h1 className="mt-6 text-3xl font-black text-[#3A2117] sm:text-4xl">إنشاء حساب</h1>
-            <p className="mt-2 font-bold text-[#7A6255]">أنشئ حساب الكوفي وابدأ التحكم</p>
+            <h1 className="mt-6 text-3xl font-black sm:text-4xl" style={{ color: C.coffeeBrown }}>
+              إنشاء حساب
+            </h1>
+            <p className="mt-2 font-bold" style={{ color: C.mutedText }}>
+              أنشئ حساب الكوفي وابدأ التحكم
+            </p>
           </div>
 
-          <div className="mb-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-[#E5D8CD] shadow-[4px_6px_16px_rgba(58,33,23,0.06)]">
+          <div
+            className="mb-8 grid grid-cols-2 overflow-hidden rounded-2xl border shadow-[4px_6px_16px_rgba(49,25,18,0.06)]"
+            style={{ borderColor: C.borderSand }}
+          >
             <Link
               href="/login"
-              className="bg-white py-4 text-center font-black text-[#7A6255] transition hover:bg-[#F8F4EF]"
+              className="bg-white py-4 text-center font-black transition hover:opacity-90"
+              style={{ color: C.mutedText }}
             >
               تسجيل الدخول
             </Link>
-            <span className="bg-[#3A2117] py-4 text-center font-black text-[#F8E8D2]">
+            <span
+              className="py-4 text-center font-black"
+              style={{ background: C.coffeeBrown, color: C.creamBase }}
+            >
               إنشاء حساب
             </span>
           </div>
@@ -55,13 +79,18 @@ export default function RegisterPage() {
                 key={placeholder}
                 type={i === 2 ? "email" : i === 4 ? "password" : "text"}
                 placeholder={placeholder}
-                className="branda-neumo-inset h-14 w-full rounded-2xl border border-[#E5D8CD] bg-[#FDFBF8] px-5 text-right font-bold outline-none focus:border-[#6B3A25]/40"
+                className="branda-neumo-inset h-14 w-full rounded-2xl border px-5 text-right font-bold outline-none focus:border-[#6B3A25]/40"
+                style={{
+                  borderColor: C.borderSand,
+                  background: C.creamBase,
+                }}
               />
             ))}
 
             <Link
               href="/dashboard"
-              className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#3A2117] text-lg font-black text-[#F8E8D2] shadow-[6px_8px_24px_rgba(58,33,23,0.25)]"
+              className="flex h-16 w-full items-center justify-center rounded-2xl text-lg font-black shadow-[6px_8px_24px_rgba(49,25,18,0.25)]"
+              style={{ background: C.coffeeBrown, color: C.creamBase }}
             >
               تسجيل
             </Link>

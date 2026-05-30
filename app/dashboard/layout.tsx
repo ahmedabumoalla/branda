@@ -6,7 +6,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main dir="rtl" className="min-h-screen overflow-x-hidden bg-[#F8F4EF] text-[#2B1710]">
+    <main dir="rtl" className="min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]">
       <DashboardAppLayout>{children}</DashboardAppLayout>
     </main>
   );

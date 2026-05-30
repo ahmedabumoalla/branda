@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, MapPin } from "lucide-react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import {
   ThemedFilterBar,
+  defaultProductFilters,
   type FilterBarState,
 } from "@/components/cafe/themes/themed-filter-bar";
 import {
@@ -15,7 +17,18 @@ import {
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { formatSar } from "@/lib/format";
 import { BRANCHES_KEY, mockBranches } from "@/lib/mock/branches";
+import {
+  getCustomerCategoryFilterOptions,
+  productMatchesCategory,
+  productMatchesPriceRange,
+  resolveProductCategoryLabel,
+} from "@/lib/cafe/menu-category-utils";
+import { subscribeBrandaStorageEvents } from "@/lib/cafe/theme-storage-sync";
 import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
+import {
+  loadMenuCategories,
+  type MenuCategoryRecord,
+} from "@/lib/mock/menu-categories";
 import { mockOffers, type CafeOffer } from "@/lib/mock/offers";
 
 const MENU_KEY = "branda_qatrah_menu";
@@ -50,19 +63,29 @@ function getScore(product: MenuProduct, index: number) {
 }
 
 export function ProductCollectionPage({ slug, view }: Props) {
+  const searchParams = useSearchParams();
   const { theme, settings, experience, path, previewThemeId } = useCafePageContext(slug);
   const [products, setProducts] = useState<MenuProduct[]>(mockMenuProducts);
   const [offers, setOffers] = useState<CafeOffer[]>(mockOffers);
   const [branches, setBranches] = useState(mockBranches);
+  const [menuCategories, setMenuCategories] = useState<MenuCategoryRecord[]>([]);
 
-  const [filters, setFilters] = useState<FilterBarState>({
-    query: "",
-    category: "الكل",
-    minPrice: "",
-    maxPrice: "",
-    onlyOffers: false,
-    sort: view === "popular" ? "popular" : "latest",
-  });
+  const [filters, setFilters] = useState<FilterBarState>(() =>
+    defaultProductFilters({
+      category: searchParams.get("category") ?? "الكل",
+      sort: view === "popular" ? "popular" : view === "latest" ? "latest" : "popular",
+      onlyOffers: view === "offers",
+    })
+  );
+
+  const refreshCategories = () => setMenuCategories(loadMenuCategories());
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("category");
+    if (fromUrl) {
+      setFilters((prev) => ({ ...prev, category: fromUrl }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const savedMenu = localStorage.getItem(MENU_KEY);
@@ -71,14 +94,27 @@ export function ProductCollectionPage({ slug, view }: Props) {
     if (savedOffers) setOffers(JSON.parse(savedOffers));
     const savedBranches = localStorage.getItem(BRANCHES_KEY);
     if (savedBranches) setBranches(JSON.parse(savedBranches));
+    refreshCategories();
+
+    return subscribeBrandaStorageEvents({
+      onMenuCategoriesUpdated: refreshCategories,
+    });
   }, []);
 
   const availableProducts = products.filter((product) => product.available);
 
   const categories = useMemo(
-    () => ["الكل", ...Array.from(new Set(availableProducts.map((p) => p.category)))],
-    [availableProducts]
+    () => getCustomerCategoryFilterOptions(availableProducts, menuCategories),
+    [availableProducts, menuCategories]
   );
+
+  function resetFilters() {
+    setFilters(
+      defaultProductFilters({
+        sort: view === "popular" ? "popular" : view === "latest" ? "latest" : "popular",
+      })
+    );
+  }
 
   const offerProductIds = useMemo(
     () =>
@@ -99,29 +135,37 @@ export function ProductCollectionPage({ slug, view }: Props) {
     if (view === "offers") list = list.filter((item) => offerProductIds.has(item.id));
 
     list = list.filter((product) => {
+      const categoryLabel = resolveProductCategoryLabel(product);
       const matchesQuery =
         product.name.includes(filters.query) ||
         product.description.includes(filters.query) ||
-        product.category.includes(filters.query);
-      const matchesCategory = filters.category === "الكل" || product.category === filters.category;
-      const matchesMin = filters.minPrice ? product.price >= Number(filters.minPrice) : true;
-      const matchesMax = filters.maxPrice ? product.price <= Number(filters.maxPrice) : true;
-      const matchesOffer = filters.onlyOffers ? offerProductIds.has(product.id) : true;
-      return matchesQuery && matchesCategory && matchesMin && matchesMax && matchesOffer;
+        categoryLabel.includes(filters.query);
+      const matchesCategory = productMatchesCategory(
+        product,
+        filters.category,
+        menuCategories
+      );
+      const matchesPrice = productMatchesPriceRange(product, filters.priceRange);
+      const matchesOffer =
+        filters.onlyOffers || filters.sort === "offers"
+          ? offerProductIds.has(product.id)
+          : true;
+      return matchesQuery && matchesCategory && matchesPrice && matchesOffer;
     });
 
+    if (filters.sort === "offers") {
+      list = list.filter((item) => offerProductIds.has(item.id));
+    }
     if (filters.sort === "popular") list = list.sort((a, b) => getScore(b, 0) - getScore(a, 0));
     if (filters.sort === "price-low") list = list.sort((a, b) => a.price - b.price);
     if (filters.sort === "price-high") list = list.sort((a, b) => b.price - a.price);
     if (filters.sort === "latest") list = [...list].reverse();
 
     return list;
-  }, [availableProducts, view, filters, offerProductIds]);
+  }, [availableProducts, view, filters, offerProductIds, menuCategories]);
 
   const activeOffers = offers.filter((o) => o.status === "نشط" && o.visibleInCafe);
   const activeBranches = branches.filter((b: { active?: boolean }) => b.active !== false);
-  const filterLayout =
-    experience.collection === "sidebar-grid" ? "sidebar" : "horizontal";
   const gridClass = getCollectionGridClass(experience.collection);
 
   if (view === "branches") {
@@ -173,24 +217,8 @@ export function ProductCollectionPage({ slug, view }: Props) {
         رجوع للكوفي
       </Link>
 
-      <div
-        className={
-          filterLayout === "sidebar"
-            ? "grid gap-8 lg:grid-cols-[360px_1fr]"
-            : "space-y-8"
-        }
-      >
-        <div className={filterLayout === "sidebar" ? "order-2 lg:order-1" : ""}>
-          <ThemedFilterBar
-            experience={experience}
-            categories={categories}
-            state={filters}
-            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-            layout={filterLayout}
-          />
-        </div>
-
-        <div className={filterLayout === "sidebar" ? "order-1 lg:order-2" : ""}>
+      <div className="space-y-8">
+        <div>
           <p className={`font-black ${theme.accent}`}>{viewInfo[view]?.title || "المنتجات"}</p>
           <h1
             className={`mt-2 break-words text-3xl font-black sm:text-4xl lg:text-5xl ${experience.headingTracking}`}
@@ -200,8 +228,17 @@ export function ProductCollectionPage({ slug, view }: Props) {
           <p className={`mt-3 max-w-2xl font-bold ${theme.muted}`}>
             {viewInfo[view]?.desc || "استعرض منتجات الكوفي."}
           </p>
+        </div>
 
-          {view === "offers" && activeOffers.length > 0 ? (
+        <ThemedFilterBar
+          experience={experience}
+          categories={categories}
+          state={filters}
+          onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+          onReset={resetFilters}
+        />
+
+        {view === "offers" && activeOffers.length > 0 ? (
             <section className="mt-8">
               <h2 className="mb-4 text-2xl font-black">العروض النشطة</h2>
               <div className="grid gap-4 md:grid-cols-2">
@@ -243,12 +280,18 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
             {!orderedProducts.length ? (
               <div className={`mt-8 p-10 text-center ${theme.card}`}>
-                <h3 className="text-2xl font-black">لا توجد نتائج</h3>
-                <p className={`mt-2 ${theme.muted}`}>جرّب تغيير الفلاتر.</p>
+                <h3 className="text-2xl font-black">لا توجد منتجات مطابقة للفلاتر الحالية</h3>
+                <p className={`mt-2 ${theme.muted}`}>جرّب تغيير التصنيف أو مسح الفلاتر.</p>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className={`mt-5 rounded-2xl px-6 py-3 text-sm font-black ${theme.button}`}
+                >
+                  إعادة ضبط الفلاتر
+                </button>
               </div>
             ) : null}
           </section>
-        </div>
       </div>
     </CafeLayout>
   );

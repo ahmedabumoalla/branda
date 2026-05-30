@@ -1,10 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import { CalendarDays, MapPin, PartyPopper, Users } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import {
+  isSpecialReservationEvent,
+  RESERVATION_EVENT_TYPES,
+  type ReservationEventType,
+} from "@/lib/mock/reservations";
+import { ThemedInput } from "./themed-auth-panel";
 
 type Props = {
   settings: CafeSettings;
@@ -22,6 +29,7 @@ export function ThemedReservationPanel({
   loginPromptSlot,
 }: Props) {
   const { theme, reserve } = experience;
+  const logoUrl = useResolvedCafeLogoUrl(settings);
 
   const heroClass =
     reserve === "lounge"
@@ -41,7 +49,7 @@ export function ThemedReservationPanel({
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <CafeLogo
             name={settings.cafeName}
-            logoUrl={settings.logoDataUrl}
+            logoUrl={logoUrl}
             size={reserve === "kiosk" ? "md" : "lg"}
           />
           <div>
@@ -54,7 +62,7 @@ export function ThemedReservationPanel({
               احجز في {settings.cafeName}
             </h1>
             <p className={`mt-2 font-bold ${theme.muted}`}>
-              اختر الفرع، نوع الجلسة، والوقت المناسب.
+              اختر نوع المناسبة، الفرع، والوقت المناسب — من طاولة عادية إلى حفلات خاصة.
             </p>
           </div>
         </div>
@@ -63,8 +71,8 @@ export function ThemedReservationPanel({
         >
           {[
             [MapPin, "فروع", branchCount],
-            [CalendarDays, "حجز", "سريع"],
-            [Users, "جلسات", "3"],
+            [CalendarDays, "أنواع", RESERVATION_EVENT_TYPES.length],
+            [Users, "مناسبات", "خاصة"],
           ].map(([Icon, label, val]) => {
             const I = Icon as React.ElementType;
             return (
@@ -91,6 +99,80 @@ export function ThemedReservationPanel({
         </div>
       </div>
     </>
+  );
+}
+
+type EventFieldsProps = {
+  experience: ThemeExperience;
+  theme: ThemeExperience["theme"];
+  reservationType: ReservationEventType;
+  eventTitle: string;
+  onEventTitleChange: (v: string) => void;
+  needsDecoration: boolean;
+  onNeedsDecorationChange: (v: boolean) => void;
+  needsCatering: boolean;
+  onNeedsCateringChange: (v: boolean) => void;
+  budgetEstimate: string;
+  onBudgetEstimateChange: (v: string) => void;
+};
+
+export function ReservationEventFields({
+  experience,
+  theme,
+  reservationType,
+  eventTitle,
+  onEventTitleChange,
+  needsDecoration,
+  onNeedsDecorationChange,
+  needsCatering,
+  onNeedsCateringChange,
+  budgetEstimate,
+  onBudgetEstimateChange,
+}: EventFieldsProps) {
+  if (!isSpecialReservationEvent(reservationType)) return null;
+
+  return (
+    <div className={`md:col-span-2 rounded-2xl border p-4 ${theme.card}`}>
+      <div className="mb-3 flex items-center gap-2">
+        <PartyPopper className={`h-5 w-5 ${theme.accent}`} />
+        <p className="font-black">تفاصيل المناسبة — {reservationType}</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <ThemedInput
+          experience={experience}
+          value={eventTitle}
+          onChange={(e) => onEventTitleChange(e.target.value)}
+          placeholder="عنوان المناسبة (مثال: عيد ميلاد أحمد)"
+          className="md:col-span-2"
+        />
+        <ThemedInput
+          experience={experience}
+          value={budgetEstimate}
+          onChange={(e) => onBudgetEstimateChange(e.target.value)}
+          placeholder="الميزانية التقديرية (ر.س)"
+          type="number"
+          min={0}
+        />
+        <label className={`flex items-center gap-2 rounded-2xl px-4 py-3 font-bold ${theme.muted}`}>
+          <input
+            type="checkbox"
+            checked={needsDecoration}
+            onChange={(e) => onNeedsDecorationChange(e.target.checked)}
+            className="h-4 w-4"
+          />
+          أحتاج تنسيق/ديكور
+        </label>
+        <label className={`flex items-center gap-2 rounded-2xl px-4 py-3 font-bold ${theme.muted}`}>
+          <input
+            type="checkbox"
+            checked={needsCatering}
+            onChange={(e) => onNeedsCateringChange(e.target.checked)}
+            className="h-4 w-4"
+          />
+          أحتاج ضيافة/تموين
+        </label>
+      </div>
+    </div>
   );
 }
 

@@ -10,7 +10,8 @@ export type CafeThemeId =
   | "soft-cream-3d"
   | "magazine-editorial"
   | "fast-order-kiosk"
-  | "reservation-lounge";
+  | "reservation-lounge"
+  | "brand-identity-custom";
 
 export type StyleFamily =
   | "marketplace"
@@ -305,6 +306,26 @@ const THEME_CLASS_MAP: Record<CafeThemeId, ThemeClasses> = {
     badge: "bg-[#8b6914] text-white",
     link: "text-[#5c4a3d]",
   },
+  "brand-identity-custom": {
+    page: "bg-[var(--ci-page-bg,#FCF8F3)] text-[var(--ci-page-fg,#311912)]",
+    header:
+      "bg-[var(--ci-primary-bg,#6B3A25)] text-[var(--ci-primary-fg,#FCF8F3)] border-b border-[var(--ci-border,#4A281D)]/25",
+    card: "bg-[var(--ci-surface-bg,#FFFFFF)] text-[var(--ci-surface-fg,#311912)] border border-[var(--ci-border,#E5D8CD)] rounded-2xl shadow-sm",
+    cardHover: "hover:border-[var(--ci-accent-bg,#D9A33F)]/40 hover:shadow-md",
+    button:
+      "bg-[var(--ci-button-bg,#6B3A25)] hover:opacity-90 text-[var(--ci-button-fg,#FCF8F3)] font-semibold rounded-2xl",
+    buttonOutline:
+      "border border-[var(--ci-primary-bg,#6B3A25)] text-[var(--ci-primary-bg,#6B3A25)] hover:bg-[var(--ci-primary-bg,#6B3A25)]/5 rounded-2xl",
+    accent: "text-[var(--ci-accent-bg,#D9A33F)]",
+    muted: "text-[var(--ci-muted-fg,#7A6255)]",
+    input:
+      "bg-[var(--ci-input-bg,#FFFFFF)] border border-[var(--ci-input-border,#E5D8CD)] text-[var(--ci-input-fg,#241610)] placeholder:text-[var(--ci-input-placeholder,#9B8173)] rounded-2xl",
+    nav: "bg-[var(--ci-primary-bg,#6B3A25)] text-[var(--ci-primary-fg,#FCF8F3)]",
+    hero: "bg-[var(--ci-primary-bg,#6B3A25)]/10 text-[var(--ci-page-fg,#311912)] rounded-3xl",
+    footer: "bg-[var(--ci-secondary-bg,#4A281D)] text-[var(--ci-secondary-fg,#FCF8F3)]",
+    badge: "bg-[var(--ci-accent-bg,#D9A33F)] text-[var(--ci-accent-fg,#241610)]",
+    link: "text-[var(--ci-primary-bg,#6B3A25)] hover:text-[var(--ci-accent-bg,#D9A33F)]",
+  },
 };
 
 export const cafeThemes: CafeThemeDefinition[] = [
@@ -557,6 +578,32 @@ export const cafeThemes: CafeThemeDefinition[] = [
     density: "balanced",
     supportsDarkMode: false,
     recommendedFor: "حجوزات وطاولات",
+  },
+  {
+    id: "brand-identity-custom",
+    name: "هوية كوفيك",
+    description:
+      "ألوان وخلفية ولوجو من هويتك — ثيم يُبنى من لوحة التحكم ويُطبَّق على صفحة الكوفي.",
+    styleFamily: "neumorphic",
+    layoutType: "soft-3d",
+    previewGradient: "from-[#6B3A25] via-[#FCF8F3] to-[#D9A33F]",
+    colors: {
+      primary: "#6B3A25",
+      secondary: "#4A281D",
+      accent: "#D9A33F",
+      background: "#FCF8F3",
+      surface: "#FCF8F3",
+      text: "#311912",
+      muted: "#7A6255",
+    },
+    typographyMood: "cozy",
+    productCardStyle: "neumo-pill",
+    heroStyle: "soft-hero",
+    navigationStyle: "floating-pill",
+    bannerStyle: "soft-banner",
+    density: "balanced",
+    supportsDarkMode: false,
+    recommendedFor: "هوية بصرية خاصة بالكوفي",
   },
 ];
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Coffee, Flame } from "lucide-react";
+import { ProductImage } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
@@ -24,11 +25,12 @@ export function ThemedProductCard({ product, experience, href }: Props) {
       >
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-black/5">
-            {product.imageDataUrl ? (
-              <img src={product.imageDataUrl} alt="" className="max-h-full object-contain" />
-            ) : (
-              <Flame className="h-8 w-8 opacity-30" />
-            )}
+            <ProductImage
+              product={product}
+              alt=""
+              className="max-h-full object-contain"
+              fallback={<Flame className="h-8 w-8 opacity-30" />}
+            />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-black">{product.name}</h3>
@@ -49,11 +51,12 @@ export function ThemedProductCard({ product, experience, href }: Props) {
         className={`flex w-36 shrink-0 flex-col items-center p-3 ${theme.card} ${theme.cardHover} rounded-2xl`}
       >
         <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow">
-          {product.imageDataUrl ? (
-            <img src={product.imageDataUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <Coffee className="h-8 w-8 opacity-30" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="h-full w-full object-cover"
+            fallback={<Coffee className="h-8 w-8 opacity-30" />}
+          />
         </div>
         <h3 className="mt-2 line-clamp-2 text-center text-sm font-black">{product.name}</h3>
         <p className={`text-xs font-black ${theme.accent}`}>{formatSar(product.price)}</p>
@@ -68,15 +71,12 @@ export function ThemedProductCard({ product, experience, href }: Props) {
         className={`group block p-6 ${theme.card} ${theme.cardHover} rounded-3xl`}
       >
         <div className="flex h-56 items-center justify-center">
-          {product.imageDataUrl ? (
-            <img
-              src={product.imageDataUrl}
-              alt=""
-              className="max-h-full object-contain transition group-hover:scale-105"
-            />
-          ) : (
-            <Coffee className="h-16 w-16 opacity-20" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="max-h-full object-contain transition group-hover:scale-105"
+            fallback={<Coffee className="h-16 w-16 opacity-20" />}
+          />
         </div>
         <p className={`mt-4 text-sm ${theme.muted}`}>{product.category}</p>
         <h3 className="mt-1 text-2xl font-semibold">{product.name}</h3>
@@ -89,11 +89,12 @@ export function ThemedProductCard({ product, experience, href }: Props) {
     return (
       <Link href={href} className={`grid gap-4 md:grid-cols-2 ${theme.card} ${theme.cardHover}`}>
         <div className="flex min-h-[180px] items-center justify-center p-4">
-          {product.imageDataUrl ? (
-            <img src={product.imageDataUrl} alt="" className="max-h-[200px] object-contain" />
-          ) : (
-            <Coffee className="h-12 w-12 opacity-30" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="max-h-[200px] object-contain"
+            fallback={<Coffee className="h-12 w-12 opacity-30" />}
+          />
         </div>
         <div className="flex flex-col justify-center border-t p-6 md:border-t-0 md:border-r border-inherit">
           <p className={`text-xs font-black uppercase ${theme.accent}`}>{product.category}</p>
@@ -118,15 +119,12 @@ export function ThemedProductCard({ product, experience, href }: Props) {
           compact ? "h-40" : "h-52"
         } rounded-2xl bg-black/5`}
       >
-        {product.imageDataUrl ? (
-          <img
-            src={product.imageDataUrl}
-            alt=""
-            className="max-h-full w-full object-contain p-3 transition group-hover:scale-[1.03]"
-          />
-        ) : (
-          <Coffee className="h-12 w-12 opacity-30" />
-        )}
+        <ProductImage
+          product={product}
+          alt=""
+          className="max-h-full w-full object-contain p-3 transition group-hover:scale-[1.03]"
+          fallback={<Coffee className="h-12 w-12 opacity-30" />}
+        />
       </div>
       <p className={`mt-3 text-xs font-black ${theme.accent}`}>{product.category}</p>
       <h3 className={`line-clamp-1 font-black ${compact ? "text-base" : "text-xl"}`}>

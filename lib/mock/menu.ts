@@ -22,12 +22,20 @@ export type MenuProduct = {
   id: string;
   name: string;
   category: MenuCategory;
+  categoryId?: string;
   description: string;
   imageDataUrl?: string | null;
+  /** IndexedDB reference — mock only; production → Storage URL */
+  imageAssetId?: string;
   imageVariant: MenuImageVariant;
   price: number;
   calories?: number;
   loyaltyPoints: number;
+  preparationTimeMinutes?: number;
+  redeemableWithPoints?: boolean;
+  redemptionPoints?: number;
+  availableForPickup?: boolean;
+  pickupLeadTimeMinutes?: number;
   ingredients: string[];
   available: boolean;
   promo?: ProductPromo | null;
@@ -64,7 +72,11 @@ export const mockMenuProducts: MenuProduct[] = [
     id: "1",
     name: "لاتيه فانيلا",
     category: "قهوة",
+    categoryId: "cat_hot",
     description: "قهوة ناعمة بطعم الفانيلا مع حليب مبخر وقوام كريمي.",
+    preparationTimeMinutes: 5,
+    availableForPickup: true,
+    pickupLeadTimeMinutes: 15,
     imageDataUrl:
       "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1200&auto=format&fit=crop",
     imageVariant: "latte",
@@ -84,7 +96,11 @@ export const mockMenuProducts: MenuProduct[] = [
     id: "2",
     name: "آيس سبانش لاتيه",
     category: "بارد",
+    categoryId: "cat_cold",
     description: "مشروب بارد بطعم متوازن ومناسب لعشاق القهوة الحلوة.",
+    preparationTimeMinutes: 4,
+    availableForPickup: true,
+    pickupLeadTimeMinutes: 10,
     imageDataUrl:
       "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=1200&auto=format&fit=crop",
     imageVariant: "cold",
@@ -99,7 +115,13 @@ export const mockMenuProducts: MenuProduct[] = [
     id: "3",
     name: "كوكيز شوكولاتة",
     category: "حلويات",
+    categoryId: "cat_sweets",
     description: "كوكيز طازج ومخبوز يوميًا داخل الكوفي.",
+    preparationTimeMinutes: 2,
+    redeemableWithPoints: true,
+    redemptionPoints: 120,
+    availableForPickup: true,
+    pickupLeadTimeMinutes: 5,
     imageDataUrl:
       "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=1200&auto=format&fit=crop",
     imageVariant: "cake",

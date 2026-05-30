@@ -34,6 +34,8 @@ export type CafeOffer = {
 
   linkedProductId?: string;
   bannerImageUrl?: string;
+  /** IndexedDB reference for uploaded banner — mock only */
+  bannerAssetId?: string;
   ctaText?: string;
 
   promoProductName?: string;

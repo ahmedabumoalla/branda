@@ -3,6 +3,21 @@
 import { Copy, ExternalLink, Globe, ImagePlus, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { saveCafeSettingsToStorage } from "@/lib/cafe/cafe-settings-storage";
+import {
+  ImagePipelineError,
+  optimizeImageForStorage,
+  type OptimizedImageResult,
+} from "@/lib/cafe/image-asset-pipeline";
+import {
+  deleteLocalAsset,
+  FIXED_ASSET_IDS,
+  saveOptimizedImageAsset,
+  revokeObjectUrl,
+} from "@/lib/cafe/local-asset-store";
+import { AppToast, useAppToast } from "@/components/ui/app-toast";
+import { runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import {
   BentoCard,
   BentoGrid,
@@ -18,53 +33,376 @@ import {
 import { CAFE_SETTINGS_KEY, mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CafeDomainLinkStatus } from "@/lib/platform/cafe-domain";
 import {
+  CAFE_DOMAIN_SETTINGS_KEY,
   getCafeDisplayDomain,
   getCafePublicUrl,
   getCafeSubdomainHost,
   getDomainSetupInstructions,
   normalizeCafeDomainInput,
+  resolveCafeDomainSource,
   VERCEL_CNAME_TARGET,
 } from "@/lib/platform/cafe-domain";
+import {
+  DOMAIN_PURCHASES_KEY,
+  DOMAIN_PURCHASE_ACTIVE_KEY,
+  DOMAIN_SEARCHES_KEY,
+  buildDomainOperation,
+  normalizeDomain,
+  type CafePurchasedDomain,
+  type DomainAvailabilityResult,
+  type DomainPriceResult,
+} from "@/lib/platform/domain-purchase";
+import {
+  PLATFORM_CAFES_KEY,
+  PLATFORM_OPERATIONS_KEY,
+  type PlatformCafe,
+  type PlatformOperation,
+} from "@/lib/platform/admin-data";
 
 export function SettingsPageClient() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<CafeSettings>(mockCafeSettings);
+  const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const { toast, showToast, setToast } = useAppToast();
+  const [domainQuery, setDomainQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [domainYears, setDomainYears] = useState(1);
+  const [autoRenew, setAutoRenew] = useState(true);
+  const [availability, setAvailability] = useState<DomainAvailabilityResult | null>(null);
+  const [pricing, setPricing] = useState<DomainPriceResult | null>(null);
+  const [purchase, setPurchase] = useState<CafePurchasedDomain | null>(null);
+  const [domainMessage, setDomainMessage] = useState<string>("");
+
+  const [pendingLogo, setPendingLogo] = useState<OptimizedImageResult | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>();
+  const resolvedLogoUrl = useResolvedCafeLogoUrl(settings, logoPreviewUrl);
+  const displayLogoUrl = logoPreviewUrl ?? resolvedLogoUrl;
 
   useEffect(() => {
-    const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
-    if (saved) setSettings(JSON.parse(saved));
+    void runCustomIdentityMigrationOnce().then(() => {
+      const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
+      if (saved) setSettings(JSON.parse(saved));
+    });
+    const activePurchase = localStorage.getItem(DOMAIN_PURCHASE_ACTIVE_KEY);
+    if (activePurchase) setPurchase(JSON.parse(activePurchase));
   }, []);
 
-  function save() {
-    localStorage.setItem(CAFE_SETTINGS_KEY, JSON.stringify(settings));
-    alert("تم حفظ إعدادات الكوفي");
+  useEffect(() => {
+    return () => revokeObjectUrl(logoPreviewUrl);
+  }, [logoPreviewUrl]);
+
+  async function save() {
+    try {
+      setSaving(true);
+      setToast({ type: "loading", message: "جاري الحفظ..." });
+      const next: CafeSettings = { ...settings };
+      delete next.logoDataUrl;
+
+      if (pendingLogo) {
+        next.logoAssetId = await saveOptimizedImageAsset("cafe-logo", pendingLogo);
+        setPendingLogo(null);
+        revokeObjectUrl(logoPreviewUrl);
+        setLogoPreviewUrl(undefined);
+      }
+
+      saveCafeSettingsToStorage(next);
+      setSettings(next);
+      localStorage.setItem(
+        CAFE_DOMAIN_SETTINGS_KEY,
+        JSON.stringify({
+          customDomain: next.customDomain || "",
+          domainStatus: next.domainStatus || "غير مربوط",
+          purchasedDomain: next.purchasedDomain || "",
+          purchasedDomainStatus: next.purchasedDomainStatus || "غير مربوط",
+        })
+      );
+      showToast({ type: "success", message: "تم حفظ إعدادات الكوفي بنجاح" });
+    } catch (err) {
+      const quota =
+        err instanceof DOMException &&
+        (err.name === "QuotaExceededError" || err.code === 22);
+      showToast({
+        type: "error",
+        message: quota
+          ? "تعذر الحفظ محليًا. جرّب إصلاح وتحسين الصور القديمة من صفحة الثيم."
+          : err instanceof Error
+            ? err.message
+            : "تعذر حفظ الإعدادات، حاول مرة أخرى",
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   const slug = settings.cafeSlug || "qatrah";
   const displayDomain = getCafeDisplayDomain(slug, settings);
+  const domainSource = resolveCafeDomainSource(settings);
   const publicUrl =
     typeof window !== "undefined"
-      ? getCafePublicUrl(slug, { origin: window.location.origin })
-      : getCafePublicUrl(slug);
+      ? getCafePublicUrl(slug, { origin: window.location.origin, settings })
+      : getCafePublicUrl(slug, { settings });
   const subdomainPreview = getCafeSubdomainHost(slug);
 
   function copyPublicUrl() {
     void navigator.clipboard.writeText(publicUrl);
-    alert("تم نسخ رابط الكوفي");
+    showToast({ type: "success", message: "تم نسخ رابط الكوفي" });
   }
 
-  function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
+  async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setSettings((prev) => ({ ...prev, logoDataUrl: reader.result as string }));
-      }
-    };
-    reader.readAsDataURL(file);
+    if (!file) return;
     e.target.value = "";
+
+    setLogoUploading(true);
+    showToast({ type: "loading", message: "جاري تحسين الصورة..." });
+    try {
+      const optimized = await optimizeImageForStorage(file, "cafe-logo");
+      revokeObjectUrl(logoPreviewUrl);
+      setLogoPreviewUrl(URL.createObjectURL(optimized.blob));
+      setPendingLogo(optimized);
+      showToast({
+        type: "success",
+        message: "تم تجهيز الصورة بنجاح — اضغط حفظ الإعدادات لتثبيتها",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        message:
+          err instanceof ImagePipelineError
+            ? err.message
+            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+      });
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function removeLogo() {
+    await deleteLocalAsset(FIXED_ASSET_IDS["cafe-logo"]!);
+    revokeObjectUrl(logoPreviewUrl);
+    setLogoPreviewUrl(undefined);
+    setPendingLogo(null);
+    setSettings((prev) => {
+      const next = { ...prev };
+      delete next.logoDataUrl;
+      delete next.logoAssetId;
+      return next;
+    });
+    showToast({
+      type: "success",
+      message: "تم حذف اللوجو، اضغط حفظ الإعدادات لتثبيت الحذف",
+    });
+  }
+
+  async function checkDomainAvailability() {
+    const candidate = normalizeDomain(domainQuery);
+    if (!candidate) {
+      setDomainMessage("اكتب دومين صحيح مثل qatrah.sa");
+      return;
+    }
+    setSearching(true);
+    setDomainMessage("");
+    try {
+      const [availabilityRes, priceRes] = await Promise.all([
+        fetch("/api/domains/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain: candidate }),
+        }),
+        fetch("/api/domains/price", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain: candidate, years: domainYears }),
+        }),
+      ]);
+
+      const availabilityData = (await availabilityRes.json()) as DomainAvailabilityResult & {
+        error?: string;
+      };
+      const priceData = (await priceRes.json()) as DomainPriceResult & { error?: string };
+      if (!availabilityRes.ok) throw new Error(availabilityData.error || "تعذر فحص التوفر");
+      if (!priceRes.ok) throw new Error(priceData.error || "تعذر قراءة السعر");
+
+      setAvailability(availabilityData);
+      setPricing(priceData);
+
+      const historyRaw = localStorage.getItem(DOMAIN_SEARCHES_KEY);
+      const history = historyRaw ? (JSON.parse(historyRaw) as Array<Record<string, unknown>>) : [];
+      history.unshift({
+        domain: candidate,
+        checkedAt: new Date().toISOString(),
+        available: availabilityData.available,
+      });
+      localStorage.setItem(DOMAIN_SEARCHES_KEY, JSON.stringify(history.slice(0, 20)));
+
+      if (availabilityData.message) {
+        setDomainMessage(availabilityData.message);
+      } else if (availabilityData.available) {
+        setDomainMessage("الدومين متاح. يمكنك المتابعة للدفع والشراء.");
+      } else {
+        setDomainMessage("الدومين غير متاح حاليًا.");
+      }
+    } catch (error) {
+      setDomainMessage(error instanceof Error ? error.message : "حدث خطأ أثناء الفحص");
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function updatePlatformRecords(domain: CafePurchasedDomain, status: "purchased" | "connected") {
+    const cafesRaw = localStorage.getItem(PLATFORM_CAFES_KEY);
+    const cafes = cafesRaw ? (JSON.parse(cafesRaw) as PlatformCafe[]) : [];
+    let found = false;
+    const nextCafes = cafes.map((cafe) => {
+      if (cafe.slug !== slug) return cafe;
+      found = true;
+      return {
+        ...cafe,
+        purchasedDomain: domain.domain,
+        purchasedDomainStatus: status === "connected" ? "مربوط" : "بانتظار التحقق",
+        purchasedDomainCreatedAt: domain.createdAt,
+        purchasedDomainConnectedAt:
+          status === "connected" ? new Date().toISOString() : cafe.purchasedDomainConnectedAt,
+      };
+    });
+    if (!found) {
+      nextCafes.push({
+        id: "cafe_qatrah",
+        slug,
+        name: settings.cafeName,
+        ownerName: settings.ownerName,
+        ownerEmail: settings.ownerEmail,
+        ownerPhone: settings.ownerPhone,
+        planId: "pro",
+        status: "نشط",
+        totalRevenue: 0,
+        totalOrders: 0,
+        customersCount: 0,
+        createdAt: new Date().toISOString().slice(0, 10),
+        purchasedDomain: domain.domain,
+        purchasedDomainStatus: status === "connected" ? "مربوط" : "بانتظار التحقق",
+        purchasedDomainCreatedAt: domain.createdAt,
+        purchasedDomainConnectedAt: status === "connected" ? new Date().toISOString() : undefined,
+      });
+    }
+    localStorage.setItem(PLATFORM_CAFES_KEY, JSON.stringify(nextCafes));
+
+    const opsRaw = localStorage.getItem(PLATFORM_OPERATIONS_KEY);
+    const operations = opsRaw ? (JSON.parse(opsRaw) as PlatformOperation[]) : [];
+    const op =
+      status === "connected"
+        ? buildDomainOperation({
+            cafeId: "cafe_qatrah",
+            cafeName: settings.cafeName,
+            type: "ربط دومين",
+            title: `ربط الدومين ${domain.domain} بصفحة كوفي ${settings.cafeName}`,
+            status: "connected",
+          })
+        : buildDomainOperation({
+            cafeId: "cafe_qatrah",
+            cafeName: settings.cafeName,
+            type: "شراء دومين",
+            title: `شراء دومين ${domain.domain}`,
+            amount: domain.price,
+            status: "purchased",
+          });
+    localStorage.setItem(PLATFORM_OPERATIONS_KEY, JSON.stringify([op, ...operations]));
+  }
+
+  async function payAndBuyDomain() {
+    if (!availability?.available || !pricing) return;
+    setBuying(true);
+    setDomainMessage("");
+    try {
+      const res = await fetch("/api/domains/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cafeSlug: slug,
+          domain: availability.domain,
+          years: domainYears,
+          autoRenew,
+          price: pricing.price,
+          currency: pricing.currency,
+        }),
+      });
+      const data = (await res.json()) as CafePurchasedDomain & { error?: string };
+      if (!res.ok) throw new Error(data.error || "فشل شراء الدومين");
+      setPurchase(data);
+
+      const purchasesRaw = localStorage.getItem(DOMAIN_PURCHASES_KEY);
+      const purchases = purchasesRaw ? (JSON.parse(purchasesRaw) as CafePurchasedDomain[]) : [];
+      localStorage.setItem(DOMAIN_PURCHASES_KEY, JSON.stringify([data, ...purchases]));
+      localStorage.setItem(DOMAIN_PURCHASE_ACTIVE_KEY, JSON.stringify(data));
+
+      setSettings((prev) => ({
+        ...prev,
+        purchasedDomain: data.domain,
+        purchasedDomainStatus: "بانتظار التحقق",
+        purchasedDomainCreatedAt: data.createdAt,
+      }));
+      setDomainMessage(
+        data.vercelOrderId?.startsWith("mock_order_")
+          ? "تم شراء الدومين تجريبيًا (Mock mode)."
+          : "تم تنفيذ شراء الدومين. انتقل الآن إلى خطوة الربط بالمشروع."
+      );
+      updatePlatformRecords(data, "purchased");
+    } catch (error) {
+      setDomainMessage(error instanceof Error ? error.message : "فشل شراء الدومين");
+    } finally {
+      setBuying(false);
+    }
+  }
+
+  async function connectPurchasedDomain() {
+    if (!purchase) return;
+    setConnecting(true);
+    setDomainMessage("");
+    try {
+      const res = await fetch("/api/domains/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: purchase.domain }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "فشل ربط الدومين");
+      const connectedAt = new Date().toISOString();
+      const nextPurchase: CafePurchasedDomain = {
+        ...purchase,
+        status: "connected",
+        purchasedAt: purchase.purchasedAt || connectedAt,
+      };
+      setPurchase(nextPurchase);
+      localStorage.setItem(DOMAIN_PURCHASE_ACTIVE_KEY, JSON.stringify(nextPurchase));
+      setSettings((prev) => ({
+        ...prev,
+        purchasedDomain: purchase.domain,
+        purchasedDomainStatus: "مربوط",
+        domainStatus: prev.domainStatus === "مربوط" ? "بانتظار التحقق" : prev.domainStatus,
+        purchasedDomainConnectedAt: connectedAt,
+      }));
+      setDomainMessage("تم ربط الدومين بصفحة الكوفي بنجاح.");
+      updatePlatformRecords(nextPurchase, "connected");
+    } catch (error) {
+      setDomainMessage(error instanceof Error ? error.message : "فشل ربط الدومين");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  function copyDisplayDomain() {
+    const source =
+      domainSource === "purchased_domain"
+        ? settings.purchasedDomain
+        : domainSource === "external_custom_domain"
+          ? settings.customDomain
+          : subdomainPreview;
+    if (!source) return;
+    void navigator.clipboard.writeText(`https://${source}`);
+    showToast({ type: "success", message: "تم نسخ الرابط" });
   }
 
   return (
@@ -77,9 +415,13 @@ export function SettingsPageClient() {
             <LinkButton href="/c/qatrah" variant="outline">
               معاينة الكوفي
             </LinkButton>
-            <PrimaryButton onClick={save} className="inline-flex items-center gap-2">
+            <PrimaryButton
+              onClick={save}
+              disabled={saving || logoUploading}
+              className="inline-flex items-center gap-2"
+            >
               <Save className="h-5 w-5" />
-              حفظ الإعدادات
+              {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
             </PrimaryButton>
           </div>
         }
@@ -106,9 +448,9 @@ export function SettingsPageClient() {
 
             <SoftCard className="mt-6 text-center">
               <div className="mx-auto flex h-32 w-full max-w-[220px] items-center justify-center overflow-hidden rounded-3xl bg-[#F8F4EF]">
-                {settings.logoDataUrl ? (
+                {displayLogoUrl ? (
                   <img
-                    src={settings.logoDataUrl}
+                    src={displayLogoUrl}
                     alt=""
                     className="h-full w-full object-contain p-3"
                   />
@@ -127,11 +469,21 @@ export function SettingsPageClient() {
 
               <PrimaryButton
                 onClick={() => fileRef.current?.click()}
+                disabled={logoUploading}
                 className="mt-5 inline-flex items-center gap-2"
               >
                 <ImagePlus className="h-5 w-5" />
-                رفع لوجو الكوفي
+                {logoUploading ? "جاري رفع اللوجو..." : "رفع لوجو الكوفي"}
               </PrimaryButton>
+              {displayLogoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => void removeLogo()}
+                  className="mt-3 inline-flex rounded-2xl border border-[#E5D8CD] px-5 py-3 text-sm font-black text-[#7A6255] hover:bg-[#F8F4EF]"
+                >
+                  حذف اللوجو
+                </button>
+              ) : null}
             </SoftCard>
           </BentoCard>
 
@@ -241,6 +593,14 @@ export function SettingsPageClient() {
 
             <SoftCard className="mt-5 space-y-3 p-5 text-sm font-bold text-[#7A6255]">
               <p>
+                <span className="text-[#3A2117]">مصدر الدومين:</span>{" "}
+                {domainSource === "purchased_domain"
+                  ? "Purchased domain"
+                  : domainSource === "external_custom_domain"
+                    ? "External custom domain"
+                    : "Platform subdomain"}
+              </p>
+              <p>
                 <span className="text-[#3A2117]">يعرض للعميل:</span> {displayDomain}
               </p>
               <p>
@@ -258,10 +618,140 @@ export function SettingsPageClient() {
                 <Copy className="h-4 w-4" />
                 نسخ رابط الكوفي
               </PrimaryButton>
+              <PrimaryButton type="button" onClick={copyDisplayDomain} className="inline-flex items-center gap-2">
+                <Copy className="h-4 w-4" />
+                نسخ الدومين المعروض
+              </PrimaryButton>
               <LinkButton href={publicUrl} target="_blank" variant="outline" className="inline-flex items-center gap-2">
                 <ExternalLink className="h-4 w-4" />
                 فتح صفحة الكوفي
               </LinkButton>
+            </div>
+
+            <div className="mt-8 grid gap-5 border-t border-[#E5D8CD] pt-6">
+              <div className="rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] p-4">
+                <p className="text-sm font-black text-[#3A2117]">1) الرابط الافتراضي</p>
+                <p className="mt-1 text-sm font-bold text-[#7A6255]">{subdomainPreview}</p>
+              </div>
+
+              <div className="rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] p-4">
+                <p className="text-sm font-black text-[#3A2117]">2) ربط دومين يملكه الكوفي</p>
+                <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                  أضف CNAME/A Records ثم غيّر الحالة إلى مربوط بعد التحقق.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[#E5D8CD] bg-white p-4">
+                <h3 className="text-xl font-black text-[#3A2117]">3) شراء دومين من برندة</h3>
+                <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                  ابحث عن دومين، افحص توفره، ثم أكمل الدفع والشراء والربط.
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <NeumoInput
+                    value={domainQuery}
+                    onChange={(e) => setDomainQuery(e.target.value)}
+                    placeholder="qatrah.sa أو qatrah.com"
+                  />
+                  <PrimaryButton onClick={checkDomainAvailability} disabled={searching}>
+                    {searching ? "جاري الفحص..." : "فحص التوفر"}
+                  </PrimaryButton>
+                </div>
+
+                {availability ? (
+                  <div className="mt-4 rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] p-4">
+                    <p className="font-black text-[#3A2117]">{availability.domain}</p>
+                    <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                      الحالة: {availability.available ? "متاح" : "غير متاح"}
+                    </p>
+                    {!availability.supportedTld ? (
+                      <p className="mt-2 text-sm font-black text-amber-700">
+                        هذا الامتداد غير مدعوم للشراء المباشر حاليًا، يمكنك ربطه يدويًا من خيار
+                        الدومين الخارجي.
+                      </p>
+                    ) : null}
+
+                    {availability.available && pricing ? (
+                      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-xs font-black text-[#7A6255]">سنوات التسجيل</span>
+                          <NeumoSelect
+                            value={String(domainYears)}
+                            onChange={(e) => setDomainYears(Number(e.target.value))}
+                            className="mt-2"
+                          >
+                            <option value="1">سنة</option>
+                            <option value="2">سنتان</option>
+                            <option value="3">3 سنوات</option>
+                          </NeumoSelect>
+                        </label>
+
+                        <div className="flex items-center gap-3 pt-6">
+                          <input
+                            id="autoRenew"
+                            type="checkbox"
+                            checked={autoRenew}
+                            onChange={(e) => setAutoRenew(e.target.checked)}
+                            className="h-4 w-4"
+                          />
+                          <label htmlFor="autoRenew" className="text-sm font-black text-[#3A2117]">
+                            تجديد تلقائي
+                          </label>
+                        </div>
+
+                        <div className="sm:col-span-2 rounded-xl border border-[#E5D8CD] bg-white p-3 text-sm font-bold text-[#7A6255]">
+                          <p>
+                            ملخص الدفع: {pricing.price} {pricing.currency} لمدة {domainYears} سنة
+                          </p>
+                          <p>رسوم برندة: 0 (Placeholder)</p>
+                        </div>
+
+                        <div className="sm:col-span-2 flex flex-wrap gap-3">
+                          <PrimaryButton onClick={payAndBuyDomain} disabled={buying}>
+                            {buying ? "جاري الشراء..." : "الدفع وشراء الدومين"}
+                          </PrimaryButton>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {purchase ? (
+                  <div className="mt-4 rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] p-4">
+                    <p className="font-black text-[#3A2117]">
+                      الدومين: {purchase.domain} ({purchase.status})
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                      رقم الطلب: {purchase.vercelOrderId || "—"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <PrimaryButton
+                        onClick={connectPurchasedDomain}
+                        disabled={connecting || purchase.status === "connected"}
+                      >
+                        {purchase.status === "connected"
+                          ? "تم الربط"
+                          : connecting
+                            ? "جاري الربط..."
+                            : "ربط الدومين بصفحة الكوفي"}
+                      </PrimaryButton>
+                      <LinkButton
+                        href={`https://${purchase.domain}`}
+                        target="_blank"
+                        variant="outline"
+                        className="inline-flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        فتح الدومين
+                      </LinkButton>
+                    </div>
+                  </div>
+                ) : null}
+
+                {domainMessage ? (
+                  <p className="mt-3 text-sm font-black text-[#6B3A25]">{domainMessage}</p>
+                ) : null}
+              </div>
             </div>
           </BentoCard>
 
@@ -291,6 +781,7 @@ export function SettingsPageClient() {
           </BentoCard>
         </BentoGrid>
       </DashboardPageShell>
+      <AppToast toast={toast} />
     </div>
   );
 }

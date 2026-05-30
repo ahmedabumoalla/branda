@@ -1,40 +1,56 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CAFE_THEME_KEY,
+  DEFAULT_CAFE_THEME_ID,
   getThemeClasses,
   isValidCafeThemeId,
-  normalizeThemeId,
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
+import {
+  readSavedCafeThemeIdFromStorage,
+  subscribeBrandaStorageEvents,
+} from "@/lib/cafe/theme-storage-sync";
 
 export function readSavedCafeThemeId(): CafeThemeId | null {
-  if (typeof window === "undefined") return null;
-  return normalizeThemeId(localStorage.getItem(CAFE_THEME_KEY));
+  return readSavedCafeThemeIdFromStorage();
 }
 
 export function useResolvedCafeTheme() {
   const searchParams = useSearchParams();
   const previewParam = searchParams.get("previewTheme");
 
-  const themeId = useMemo(() => {
-    if (previewParam && isValidCafeThemeId(previewParam)) {
-      return previewParam;
-    }
-    if (typeof window === "undefined") return normalizeThemeId(null);
-    return normalizeThemeId(localStorage.getItem(CAFE_THEME_KEY));
-  }, [previewParam]);
+  const [savedThemeId, setSavedThemeId] = useState<CafeThemeId>(DEFAULT_CAFE_THEME_ID);
+  const [hydrated, setHydrated] = useState(false);
 
+  useEffect(() => {
+    setSavedThemeId(readSavedCafeThemeIdFromStorage());
+    setHydrated(true);
+
+    return subscribeBrandaStorageEvents({
+      onThemeUpdated: () => {
+        setSavedThemeId(readSavedCafeThemeIdFromStorage());
+      },
+    });
+  }, []);
+
+  const previewThemeId =
+    previewParam && isValidCafeThemeId(previewParam) ? previewParam : null;
+
+  const themeId: CafeThemeId = previewThemeId ?? savedThemeId;
+
+  const savedId = hydrated ? savedThemeId : DEFAULT_CAFE_THEME_ID;
   const isPreview = Boolean(
-    previewParam && isValidCafeThemeId(previewParam) && previewParam !== readSavedCafeThemeId()
+    previewThemeId && previewThemeId !== savedId
   );
 
   return {
     themeId,
     theme: getThemeClasses(themeId),
-    isPreview: Boolean(previewParam && isValidCafeThemeId(previewParam)),
-    previewThemeId: previewParam && isValidCafeThemeId(previewParam) ? previewParam : null,
+    isPreview,
+    previewThemeId,
+    hydrated,
   };
 }

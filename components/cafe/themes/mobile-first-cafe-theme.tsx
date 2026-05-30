@@ -8,6 +8,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -21,7 +22,7 @@ export function MobileFirstCafeTheme(props: CafeThemePageProps) {
       <header className={`${theme.header} px-4 py-4`}>
         <div className="mx-auto flex max-w-lg items-center justify-between">
           <div className="flex items-center gap-3">
-            <CafeLogo name={cafeSettings.cafeName} logoUrl={cafeSettings.logoDataUrl} size="sm" />
+            <CafeLogo name={cafeSettings.cafeName} logoUrl={props.cafeLogoUrl} size="sm" />
             <div>
               <h1 className="font-black">{cafeSettings.cafeName}</h1>
               <p className={`text-xs ${theme.muted}`}>مرحبًا بك</p>
@@ -51,6 +52,8 @@ export function MobileFirstCafeTheme(props: CafeThemePageProps) {
         {bannerOffers.length > 0 ? (
           <ThemeBannerCarousel slug={slug} offers={bannerOffers} theme={theme} variant="strip" />
         ) : null}
+
+        <ThemeCategoryStrip slug={slug} theme={theme} className="mt-4" />
 
         {popularProducts.length > 0 ? (
           <section className="mt-6">

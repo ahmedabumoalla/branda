@@ -1,4 +1,5 @@
 import { CUSTOMER_KEY, type CustomerProfile } from "@/lib/mock/customer-activity";
+import { sanitizeCustomerSession } from "@/lib/cafe/entity-storage-sanitize";
 
 export type BrandaCustomerSession = {
   id: string;
@@ -7,6 +8,8 @@ export type BrandaCustomerSession = {
   phone: string;
   email?: string;
   avatarUrl?: string;
+  /** IndexedDB reference — mock only */
+  avatarAssetId?: string;
   createdAt: string;
 };
 
@@ -44,7 +47,7 @@ export function updateCustomerSession(
     ...updates,
   };
 
-  setCustomerSession(slug, next);
+  setCustomerSession(slug, sanitizeCustomerSession(next));
   return next;
 }
 

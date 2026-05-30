@@ -34,7 +34,8 @@ export function BrandaLogo({
       width={width}
       height={height}
       priority={priority}
-      className={`object-contain ${className}`}
+      className={`h-auto w-auto max-w-full object-contain ${className}`}
+      style={{ width, height: "auto" }}
     />
   );
 }

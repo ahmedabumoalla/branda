@@ -13,8 +13,13 @@ import {
 } from "lucide-react";
 import { formatSar } from "@/lib/format";
 import { CafeFooter } from "@/components/cafe/cafe-footer";
+import { OfferBannerImage } from "@/components/cafe/offer-banner-image";
+import { ProductImage } from "@/components/cafe/product-image";
+import { resolveProductCategoryLabel, getVisibleCategoryNames } from "@/lib/cafe/menu-category-utils";
+import { subscribeBrandaStorageEvents } from "@/lib/cafe/theme-storage-sync";
+import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
+import { loadMenuCategories } from "@/lib/mock/menu-categories";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
-import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { CafeThemeId, ThemeClasses } from "@/lib/mock/cafe-theme";
 import { getCafePath } from "@/lib/cafe/theme-links";
@@ -90,13 +95,10 @@ export function ThemeBannerCarousel({
             variant === "strip" ? "sm:w-40 shrink-0" : "min-h-[180px]"
           }`}
         >
-          <img
-            src={
-              current.bannerImageUrl ||
-              "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop"
-            }
-            alt=""
+          <OfferBannerImage
+            offer={current}
             className="max-h-[200px] w-full object-contain"
+            fallbackSrc="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop"
           />
         </div>
         <div className="flex flex-col justify-center p-4 md:p-6">
@@ -156,6 +158,7 @@ export function ThemeProductCard({
   size = "compact",
 }: ProductCardProps) {
   const productHref = getCafePath(slug, `product/${product.id}`, previewThemeId);
+  const categoryLabel = resolveProductCategoryLabel(product);
   const base = `${theme.card} ${theme.cardHover} group block overflow-hidden transition ${className}`;
 
   if (size === "kiosk") {
@@ -163,11 +166,12 @@ export function ThemeProductCard({
       <Link href={productHref} className={`${base} rounded-lg p-4`}>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f5]">
-            {product.imageDataUrl ? (
-              <img src={product.imageDataUrl} alt="" className="max-h-full object-contain" />
-            ) : (
-              <Flame className="h-8 w-8 opacity-30" />
-            )}
+            <ProductImage
+              product={product}
+              alt=""
+              className="max-h-full object-contain"
+              fallback={<Flame className="h-8 w-8 opacity-30" />}
+            />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-black">{product.name}</h3>
@@ -185,17 +189,14 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} rounded-3xl p-6`}>
         <div className="flex h-56 items-center justify-center">
-          {product.imageDataUrl ? (
-            <img
-              src={product.imageDataUrl}
-              alt=""
-              className="max-h-full object-contain transition group-hover:scale-105"
-            />
-          ) : (
-            <Flame className="h-16 w-16 opacity-20" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="max-h-full object-contain transition group-hover:scale-105"
+            fallback={<Flame className="h-16 w-16 opacity-20" />}
+          />
         </div>
-        <p className={`mt-4 text-sm ${theme.muted}`}>{product.category}</p>
+        <p className={`mt-4 text-sm ${theme.muted}`}>{categoryLabel}</p>
         <h3 className="mt-1 text-2xl font-semibold tracking-tight">{product.name}</h3>
         <p className={`mt-2 text-lg ${theme.accent}`}>{formatSar(product.price)}</p>
       </Link>
@@ -206,11 +207,12 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} flex flex-col items-center rounded-2xl p-3 text-center`}>
         <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow-md">
-          {product.imageDataUrl ? (
-            <img src={product.imageDataUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <Flame className="h-8 w-8 opacity-30" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="h-full w-full object-cover"
+            fallback={<Flame className="h-8 w-8 opacity-30" />}
+          />
         </div>
         <h3 className="mt-2 line-clamp-2 text-sm font-black">{product.name}</h3>
         <p className={`text-xs font-black ${theme.accent}`}>{formatSar(product.price)}</p>
@@ -222,15 +224,16 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} grid gap-4 md:grid-cols-2`}>
         <div className="flex min-h-[200px] items-center justify-center p-4">
-          {product.imageDataUrl ? (
-            <img src={product.imageDataUrl} alt="" className="max-h-[220px] object-contain" />
-          ) : (
-            <Flame className="h-12 w-12 opacity-30" />
-          )}
+          <ProductImage
+            product={product}
+            alt=""
+            className="max-h-[220px] object-contain"
+            fallback={<Flame className="h-12 w-12 opacity-30" />}
+          />
         </div>
         <div className="flex flex-col justify-center border-t border-[#e5e5e5] p-6 md:border-t-0 md:border-r">
           <p className={`text-xs font-black uppercase tracking-widest ${theme.accent}`}>
-            {product.category}
+            {categoryLabel}
           </p>
           <h3 className="mt-2 text-3xl font-black leading-tight">{product.name}</h3>
           <p className={`mt-3 text-sm ${theme.muted}`}>
@@ -245,17 +248,14 @@ export function ThemeProductCard({
   return (
     <Link href={productHref} className={`${base} rounded-2xl p-4`}>
       <div className="flex h-36 items-center justify-center">
-        {product.imageDataUrl ? (
-          <img
-            src={product.imageDataUrl}
-            alt=""
-            className="max-h-full object-contain transition group-hover:scale-[1.03]"
-          />
-        ) : (
-          <Flame className="h-10 w-10 opacity-30" />
-        )}
+        <ProductImage
+          product={product}
+          alt=""
+          className="max-h-full object-contain transition group-hover:scale-[1.03]"
+          fallback={<Flame className="h-10 w-10 opacity-30" />}
+        />
       </div>
-      <p className={`mt-2 text-xs font-black ${theme.accent}`}>{product.category}</p>
+      <p className={`mt-2 text-xs font-black ${theme.accent}`}>{categoryLabel}</p>
       <h3 className="line-clamp-1 font-black">{product.name}</h3>
       <div className="mt-2 flex items-center justify-between">
         <span className="font-black">{formatSar(product.price)}</span>
@@ -264,6 +264,57 @@ export function ThemeProductCard({
         </span>
       </div>
     </Link>
+  );
+}
+
+export function ThemeCategoryStrip({
+  slug,
+  theme,
+  previewThemeId,
+  className = "",
+  variant = "chips",
+}: {
+  slug: string;
+  theme: ThemeClasses;
+  previewThemeId?: string | null;
+  className?: string;
+  variant?: "chips" | "cards";
+}) {
+  const [names, setNames] = useState<string[]>([]);
+
+  const refresh = () => {
+    setNames(getVisibleCategoryNames(loadMenuCategories()));
+  };
+
+  useEffect(() => {
+    refresh();
+    return subscribeBrandaStorageEvents({
+      onMenuCategoriesUpdated: refresh,
+    });
+  }, []);
+
+  if (!names.length) return null;
+
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {names.map((name) => (
+        <Link
+          key={name}
+          href={getCafePath(
+            slug,
+            `products/popular?category=${encodeURIComponent(name)}`,
+            previewThemeId
+          )}
+          className={
+            variant === "cards"
+              ? `min-w-[7rem] rounded-2xl px-4 py-3 text-center text-sm font-black ${theme.card} ${theme.cardHover}`
+              : `rounded-full px-4 py-2 text-sm font-black ${theme.badge} ${theme.cardHover}`
+          }
+        >
+          {name}
+        </Link>
+      ))}
+    </div>
   );
 }
 

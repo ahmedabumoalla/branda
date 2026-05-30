@@ -731,3 +731,718 @@ npm run build
 ### Build
 
 `npm run build` — **ناجح** (Next.js 16.2.6، TypeScript بدون أخطاء، 28 route).
+
+---
+
+## 22. Domain Purchase via Vercel Registrar API
+
+> **قرار المنتج:** برندة تدعم الآن شراء الدومين من داخل لوحة الكوفي (وليس فقط ربط دومين خارجي).
+
+### Env Vars
+
+```bash
+VERCEL_TOKEN=
+VERCEL_TEAM_ID=
+VERCEL_PROJECT_ID=
+VERCEL_DOMAIN_PURCHASE_LIVE=false
+NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
+```
+
+- `VERCEL_TOKEN` يُستخدم فقط في server routes ضمن `app/api/domains/*`.
+- `VERCEL_DOMAIN_PURCHASE_LIVE=false` = **Mock checkout** (افتراضي وآمن للتطوير).
+- عند `VERCEL_DOMAIN_PURCHASE_LIVE=true` يتم استدعاء Vercel Registrar API فعليًا.
+
+### الملفات الجديدة
+
+| الملف | الغرض |
+|------|------|
+| `lib/platform/domain-purchase.ts` | الأنواع + مفاتيح localStorage + helpers للـ mock |
+| `lib/platform/domain-purchase-server.ts` | منطق server-only للاتصال بـ Vercel API وfallback mock |
+| `app/api/domains/availability/route.ts` | فحص توفر الدومين |
+| `app/api/domains/price/route.ts` | تسعير الدومين |
+| `app/api/domains/search/route.ts` | endpoint مركّب (توفر + سعر) |
+| `app/api/domains/buy/route.ts` | تنفيذ شراء (mock/live gated) |
+| `app/api/domains/connect/route.ts` | ربط الدومين بمشروع Vercel |
+| `app/api/domains/status/route.ts` | فحص الحالة (purchased/connected) |
+
+### الملفات المعدّلة
+
+- `components/dashboard/pages/settings-page.tsx`
+- `lib/platform/cafe-domain.ts`
+- `lib/mock/cafe-settings.ts`
+- `lib/platform/admin-data.ts`
+- `components/admin/pages/admin-cafes-page.tsx`
+- `README.md`
+
+### Domain Types / Keys (Mock)
+
+- النوع الأساسي: `CafePurchasedDomain`
+- الحالات: `DomainPurchaseStatus` (`available`, `mock_paid`, `purchased`, `connected`, ...)
+- مفاتيح localStorage:
+  - `branda_qatrah_domain_searches`
+  - `branda_qatrah_domain_purchases`
+  - `branda_qatrah_purchased_domain_active`
+
+### API Flow
+
+1. `POST /api/domains/availability` → تحقق صيغة + TLD + توفر.
+2. `POST /api/domains/price` → السعر/العملة/السنوات.
+3. `POST /api/domains/buy` → شراء:
+   - **Mock mode**: `orderId` وهمي + `status=purchased`.
+   - **Live mode**: `POST https://api.vercel.com/v1/registrar/domains/{domain}/buy`.
+4. `POST /api/domains/connect` → ربط الدومين بمشروع Vercel.
+5. `POST /api/domains/status` → حالة الدومين.
+
+### واجهة `/dashboard/settings`
+
+داخل "رابط الكوفي" أصبح لدينا 3 خيارات واضحة:
+
+1. **الرابط الافتراضي** (`qatrah.{NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN}`).
+2. **ربط دومين يملكه الكوفي** (manual DNS).
+3. **شراء دومين من برندة**:
+   - بحث الدومين
+   - فحص التوفر
+   - عرض السعر + سنوات التسجيل + auto renew
+   - ملخص الدفع
+   - زر `الدفع وشراء الدومين`
+   - زر `ربط الدومين بصفحة الكوفي`
+   - أزرار نسخ/فتح الرابط
+
+رسالة TLD غير المدعوم:
+
+> "هذا الامتداد غير مدعوم للشراء المباشر حاليًا، يمكنك ربطه يدويًا من خيار الدومين الخارجي."
+
+### التمييز بين مصادر الدومين
+
+تمت إضافة `CafeDomainSource`:
+
+- `platform_subdomain`
+- `external_custom_domain`
+- `purchased_domain`
+
+منطق العرض:
+
+- `getCafeDisplayDomain`:
+  1) `purchased_domain` إذا حالته `مربوط`
+  2) ثم `custom_domain` إذا حالته `مربوط`
+  3) ثم subdomain الافتراضي
+
+- `getCafePublicUrl`:
+  - في local dev: fallback `/c/[slug]`
+  - في production: يستخدم purchased/custom domain عند الاتصال، وإلا fallback.
+
+### Admin Updates
+
+- `/admin/cafes` detail panel:
+  - subdomain
+  - custom domain
+  - purchased domain
+  - status / source
+  - createdAt / verifiedAt
+  - فتح الدومين + إعادة تحقق (Mock)
+
+- `/admin/operations`:
+  - تظهر تلقائيًا عمليات:
+    - `شراء دومين`
+    - `ربط دومين`
+  لأن الشراء/الربط يكتبان إلى `branda_platform_operations`.
+
+### Audit / Security
+
+- لا يوجد أي استدعاء Vercel API من المتصفح.
+- `VERCEL_TOKEN` يبقى server-side فقط.
+- الشراء الحقيقي مقيّد بـ `VERCEL_DOMAIN_PURCHASE_LIVE=true`.
+- قبل الإنتاج: الشراء يجب أن يرتبط بـ payment webhook مؤكد (`paid`) وليس من الزر مباشرة.
+- تم تجهيز audit trail mock في `platform_operations` لكل شراء وربط.
+- يجب حفظ سجلات ownership/purchase وربطها بالمستخدم/الكوفي في DB.
+- يلزم policy واضحة لـ renewals/refunds/domain transfer قبل الإطلاق.
+- دعم TLDs (خصوصًا `.sa`) يجب التحقق منه من Vercel Registrar قبل إظهار خيار الشراء.
+
+### DB Tables المقترحة
+
+- `cafe_domains`
+- `domain_orders`
+- `domain_payments`
+- `domain_events`
+
+### RLS (مستقبلي)
+
+- `admin`: يرى كل الدومينات والطلبات.
+- `cafe_owner`: يرى دومينات كوفيه فقط.
+- منع أي شراء فعلي بدون دفع مؤكد (`payment_status = paid`).
+
+### Live vs Mock
+
+- **Mock (افتراضي):**
+  - لا يوجد شراء فعلي.
+  - checkout/order IDs وهمية.
+  - مناسب للتطوير المحلي بدون تكلفة.
+
+- **Live:**
+  - يستخدم Vercel Registrar API فعليًا.
+  - يتطلب `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`, و`VERCEL_DOMAIN_PURCHASE_LIVE=true`.
+
+### خطوات الإنتاج
+
+1. دمج بوابة الدفع وربطها بـ webhook موثّق.
+2. تنفيذ شرط server-side: لا buy إلا بعد `paid`.
+3. إضافة retries + idempotency keys لعمليات الشراء/الربط.
+4. إضافة شاشة renewals/refunds/transfer policy في لوحة الكوفي.
+5. مراقبة failures من Vercel Registrar + تنبيهات تشغيلية.
+
+### Build (هذه الجولة)
+
+- `next build` (Turbopack): يمرّ على compile + TypeScript ثم يتوقف في بيئة التطوير الحالية بخطأ ذاكرة `Zone Allocation failed - process out of memory` أثناء `Collecting page data`.
+- `next build --webpack`: يتجاوز خطأ الذاكرة لكنه يفشل في هذه البيئة بسبب شهادة TLS عند جلب خطوط Google (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`).
+- لا توجد أخطاء TypeScript/Lint في الملفات المعدّلة الخاصة بنظام شراء الدومين.
+
+---
+
+## 23. Full Database, Storage, Security & RLS Audit
+
+> هذا القسم مبني على مراجعة فعلية للملفات ضمن: `app/`, `components/`, `lib/`, `docs/`, `public/brand` + كل `app/api/*`.
+
+### نطاق المراجعة (Coverage)
+
+- `app/`: 41 ملف
+- `components/`: 62 ملف
+- `lib/`: 29 ملف
+- `docs/`: 1 ملف
+- `public/brand`: 3 ملفات
+- **الإجمالي المفحوص:** 136 ملف
+
+### النتائج العليا
+
+- النظام الحالي يعمل بنمط **Mock + localStorage** لمعظم البيانات التشغيلية.
+- `app/api/*` الحالي يقتصر على domain routes (6 routes) ولا يغطي باقي CRUD.
+- المخاطر الأعلى: اعتماد العميل على localStorage للهوية والبيانات التشغيلية والمنطق المالي.
+- توجد قابلية تداخل بيانات multi-tenant بسبب مفاتيح hardcoded مثل `branda_qatrah_*`.
+
+### جرد مفاتيح localStorage الفعلية في الكود
+
+| Key | القراءة | الكتابة | النوع | النطاق | جدول DB مقترح | سياسة RLS/أمن |
+|---|---|---|---|---|---|---|
+| `branda_auth_session` | `lib/platform/auth.ts`, صفحات login guards | `lib/platform/auth.ts` | session object | platform | `sessions`/auth claims | لا client authority; cookie/JWT فقط |
+| `branda_admin_session` | logout cleanup | logout cleanup | session flag | admin | auth claims | لا localStorage role |
+| `branda_cafe_session` | logout cleanup | logout cleanup | session flag | cafe | auth claims | لا localStorage role |
+| `branda_customer_session_{slug}` | `lib/customer/session.ts` + صفحات `/c/[slug]/*` | `lib/customer/session.ts` | customer session | customer/cafe | `customer_sessions` | customer self only |
+| `branda_qatrah_settings` | settings/theme/cafe public/sidebar | settings page save | `CafeSettings` | cafe | `cafe_settings` | owner/staff by `cafe_id` |
+| `branda_qatrah_domain_settings` | domain display logic | settings page save | custom/purchased domain flags | cafe | `cafe_domains` | owner read/write own cafe |
+| `branda_qatrah_domain_searches` | settings page | settings page | array history | cafe | `domain_events` | optional analytics, owner only |
+| `branda_qatrah_domain_purchases` | settings page | settings page | `CafePurchasedDomain[]` | cafe | `domain_orders` | owner read own; backend writes status |
+| `branda_qatrah_purchased_domain_active` | settings page | settings page | active purchase | cafe | `cafe_domains` + `domain_orders` | backend source of truth |
+| `branda_qatrah_theme` | theme hooks/public pages | theme page adopt | theme id | cafe/public | `cafe_settings.theme_id` | owner write, public read effective |
+| `branda_qatrah_menu` | dashboard/cafe public | menu page | products array | cafe/public | `menu_products` | owner write, public read available |
+| `branda_qatrah_offers` | dashboard/cafe public | offers page | offers array | cafe/public | `offers` | owner write, public read visible |
+| `branda_qatrah_orders` | dashboard/customer/account/reports | orders page + order-flow | orders array | cafe/customer | `orders`, `order_items` | customer own + cafe scope |
+| `branda_qatrah_invoices` | customer pages/reports | order-flow | invoices array | customer/cafe | `invoices` | customer own + cafe scope |
+| `branda_qatrah_customer_transactions` | account/customers/reports | order-flow/reservation-flow | transaction array | customer/cafe | `customer_transactions` | customer own + cafe scope |
+| `branda_qatrah_reservations` | dashboard/account/reports | reservations page + reservation-flow | reservations array | cafe/customer | `reservations` | customer own + cafe scope |
+| `branda_qatrah_reviews` | dashboard/product reviews/reports | reviews pages | reviews array | cafe/public | `reviews`, `review_replies` | public visible subset only |
+| `branda_qatrah_branches` | dashboard/cafe reserve | branches page | branches array | cafe/public | `branches` | owner write; public read active |
+| `branda_qatrah_loyalty_settings` | loyalty pages | loyalty page | object | cafe | `loyalty_settings` | cafe scope |
+| `branda_qatrah_loyalty_rewards` | loyalty pages/public | loyalty page | array | cafe/public | `loyalty_rewards` | cafe scope/public active subset |
+| `branda_qatrah_pages` | pages manager | pages manager | pages array | cafe/public | `cafe_pages` | public read published only |
+| `branda_qatrah_marketing` | marketing page | marketing page | campaigns array | cafe | `marketing_campaigns`, `campaign_codes` | cafe scope |
+| `branda_qatrah_active_plan` | permissions/subscription/admin | subscription/permissions/admin | string plan id | cafe/platform | `cafe_subscriptions` | webhook/admin authoritative |
+| `branda_qatrah_subscription_history` | subscription page | subscription module | array | cafe | `subscription_payments` | owner read; backend write |
+| `branda_qatrah_pending_subscription` | subscription module | subscription module | pending payment object | cafe | `payment_events`/checkout sessions | backend/webhook only updates final |
+| `branda_platform_plans` | admin + permissions + subscription | admin plans | platform plans array | platform | `platform_plans`, `platform_plan_features` | admin write only |
+| `branda_platform_cafes` | admin pages + settings sync | admin/settings flows | platform cafes array | platform | `cafes` | admin write only |
+| `branda_platform_customers` | admin pages/order/reservation flows | admin + flows | platform customers array | platform | `cafe_customers`/admin views | admin read/write, cafe scoped views |
+| `branda_platform_operations` | admin ops/home/cafes | order/reservation/settings flows | ops array | platform | `platform_operations`, `audit_logs` | backend writes trusted events |
+| `branda_platform_options` | admin options | admin options | platform options object | platform | `platform_options` | admin write only |
+| `branda_customers_qatrah` | customers dashboard/session helper | customer session + order/reservation flow | customer profiles | cafe | `cafe_customers` | cafe scoped, no cross-tenant |
+
+### جرد الملفات: وظيفة كل جزء وما يحتاج DB/API/RLS
+
+#### App layer
+- `app/page.tsx`, `app/login/page.tsx`, `app/register/page.tsx`: واجهات عامة/دخول mock. تحتاج Auth server-side حقيقي.
+- `app/dashboard/**`, `app/admin/**`: wrappers لصفحات تعتمد على مكونات client-heavy مع localStorage.
+- `app/c/[slug]/**`: تجربة العميل (عرض/حساب/حجز/منتجات) تقرأ بيانات mock من localStorage.
+- `app/api/domains/*`: routes server-side موجودة للدومينات فقط؛ تحتاج auth, ownership checks, rate limit, idempotency.
+
+#### Components layer
+- `components/dashboard/pages/*`: إدارة المنتجات/العروض/الحجوزات/العملاء/التقارير/الإعدادات/الثيم/الاشتراك — معظمها CRUD على localStorage.
+- `components/admin/pages/*`: إدارة المنصة (cafes/customers/plans/options/operations/revenue) تعتمد على localStorage ويمكن تزويرها.
+- `components/cafe/*` + `components/cafe/themes/*`: storefront rendering؛ البيانات تأتي من localStorage ويجب تحويلها إلى APIs عامة ومحمية.
+- `components/ui/*`: UI primitives (لا تخزين مباشر غالبًا)؛ آمنة نسبيًا.
+
+#### Lib layer
+- `lib/platform/auth.ts`: مصادقة mock client-side (خطر عالي).
+- `lib/platform/order-flow.ts`, `reservation-flow.ts`, `subscription.ts`, `permissions.ts`: منطق تشغيلي/مالي على العميل.
+- `lib/platform/cafe-domain.ts`, `domain-purchase*.ts`: تجهيز جيد لبنية الدومين، لكن التوثيق/التحقق يجب أن يكون server-authoritative.
+- `lib/mock/*`: تعريفات بيانات mock ومفاتيح localStorage.
+- `lib/customer/session.ts`: جلسة عميل per-slug لكن تخزين client-side.
+- `lib/cafe/*`: منطق تجربة الثيم/الروابط؛ جيد كطبقة view لكن مصدر البيانات يجب نقله للـ API.
+
+### المخاطر الأمنية الواضحة في الوضع الحالي
+
+1. مصادقة mock client-side مع مفاتيح قابلة للتزوير.
+2. خطط الاشتراك/الميزات قابلة للتعديل عبر localStorage.
+3. الطلبات/الإيرادات/العمليات التشغيلية قابلة للتلاعب من العميل.
+4. شراء/ربط الدومين يمكن استدعاؤه دون توثيق ملكية كوفي داخل routes.
+5. PII محفوظة في localStorage (owner/customer fields).
+6. بيانات شبه مالية/هوية تسويقية ضمن client state.
+7. مفاتيح tenant hardcoded (`qatrah`) تسبب مخاطر تداخل.
+8. لا يوجد audit log server-enforced موحد.
+9. لا يوجد webhook-authoritative flow للدفع/تفعيل الاشتراك.
+10. logo/base64 على العميل بدل Storage URL.
+
+### منع تداخل البيانات (Multi-Tenant Security Plan)
+
+- كل جدول متعلق بالكوفي يجب أن يحتوي `cafe_id`.
+- أي طلب cafe_owner/staff يتحقق من `cafe_members`.
+- عدم استخدام `slug` للحماية؛ يستخدم فقط lookup عام ثم يتحول داخليًا إلى `cafe_id`.
+- customer يرى بياناته داخل `cafe_id` فقط.
+- cafe_owner لا يرى كوفي آخر.
+- admin يرى الكل عبر دور منفصل.
+- public/anon يرى فقط:
+  - cafes active
+  - menu_products available
+  - offers visible
+  - cafe_pages published
+  - branches active
+- public لا يرى العملاء/الطلبات/الفواتير/الدفعات/المستندات الحكومية/الإعدادات الداخلية.
+
+### خطة RLS حسب الدور
+
+- `admin`: full read/write tables الإدارية + read audit logs.
+- `cafe_owner`: read/write rows حيث `cafe_id` ضمن عضويته.
+- `cafe_staff`: حسب permissions granular + `cafe_id`.
+- `customer`: own orders/reservations/invoices/transactions only.
+- `anon/public`: read-only storefront filtered by status/visibility.
+
+**Pseudo SQL مختصر:**
+```sql
+allow select on menu_products
+where cafe_id in (select id from cafes where status='active') and available = true;
+
+allow update on menu_products
+where cafe_id in (select cafe_id from cafe_members where user_id = auth.uid() and active = true);
+
+allow select on orders
+where customer_id in (select id from cafe_customers where user_id = auth.uid());
+```
+
+### API/Server-side Migration Map (منطق يجب نقله من العميل)
+
+| العملية | الملف الحالي | الخطر | API مقترح | جداول |
+|---|---|---|---|---|
+| login mock | `lib/platform/auth.ts` + `app/login/page.tsx` | spoofed role/session | `/api/auth/*` + Supabase Auth | `profiles`, `user_roles`, sessions |
+| save cafe settings | `settings-page.tsx` | tamper + PII in browser | `PATCH /api/cafes/:id/settings` | `cafe_settings` |
+| menu/offers CRUD | dashboard pages | forged catalog/pricing | `/api/cafes/:id/menu`, `/offers` | `menu_products`, `offers` |
+| create order | `order-flow.ts` | amount/order forgery | `POST /api/orders` server-calculated totals | `orders`, `order_items`, `payments` |
+| create reservation | `reservation-flow.ts` | fake reservation/events | `POST /api/reservations` | `reservations`, history |
+| subscription activation | `subscription.ts` | paid status tampering | `/api/subscriptions/checkout` + `/api/payments/webhook` | `cafe_subscriptions`, `subscription_payments`, `payment_events` |
+| theme adopt | `theme-page.tsx` | client truth only | `PATCH /api/cafes/:id/theme` | `cafe_settings`, `cafe_theme_history` |
+| domain buy/connect | `app/api/domains/*` + settings | missing auth ownership | keep routes + enforce auth/ownership | `cafe_domains`, `domain_orders`, `domain_events` |
+| logo/docs upload | `FileReader base64` | oversized/tampered payload | `POST /api/uploads/sign` | storage metadata tables |
+
+### Storage Audit
+
+- `public/brand/*`: أصول PNG كبيرة؛ يفضل WebP/AVIF variants.
+- `logoDataUrl` في settings يُخزن client-side (base64) ويجب تحويله إلى signed upload + URL.
+- buckets المقترحة:
+  - `brand-assets`, `cafe-logos`, `product-images`, `offer-banners`, `customer-avatars`,
+    `government-documents`, `review-attachments`, `cafe-page-assets`, `marketing-assets`.
+- قواعد: MIME allowlist, max size, signed URLs, optional malware scan, retention/versioning.
+
+### Domain & Vercel Security Audit
+
+- **Mock الآن:** `VERCEL_DOMAIN_PURCHASE_LIVE=false` يفعل checkout/order mock.
+- **Live لاحقًا:** استدعاءات Vercel Registrar API من السيرفر فقط عبر `domain-purchase-server.ts`.
+- env vars المطلوبة:
+  - `VERCEL_TOKEN`
+  - `VERCEL_TEAM_ID`
+  - `VERCEL_PROJECT_ID`
+  - `VERCEL_DOMAIN_PURCHASE_LIVE`
+  - `NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN`
+- `VERCEL_TOKEN` يجب أن يبقى server-only.
+- لا شراء دومين قبل دفع مؤكد (webhook verified).
+- validate TLD + ownership + domain status transitions داخل backend.
+- إضافة refunds/renewals/transfer policy قبل الإنتاج.
+
+### Payments & Subscription Security Audit
+
+- لا يمكن الاعتماد على localStorage لتفعيل الباقة.
+- تدفق الإنتاج:
+  1) إنشاء checkout server-side
+  2) provider payment
+  3) webhook signature verify
+  4) update payment/subscription status
+  5) apply plan entitlements
+- الجداول: `cafe_subscriptions`, `subscription_payments`, `payment_events`.
+- RLS: cafe_owner read only; status updates privileged backend/admin/webhook.
+
+### Audit Logs المطلوبة
+
+عمليات يجب تسجيلها:
+- admin: إيقاف كوفي/عميل، تغيير باقة/خيارات منصة.
+- cafe: شراء/ربط دومين، تغيير ثيم، تعديل إعدادات حساسة، رفع مستند حكومي.
+- commerce: طلب جديد، حجز جديد، حذف منتج، تعديل سعر، رد على تقييم.
+
+الحقول القياسية:
+- `actor_id`, `actor_role`, `cafe_id`, `entity_type`, `entity_id`, `action`, `before`, `after`, `ip_address`, `user_agent`, `created_at`.
+
+### مخرجات هذه الجولة
+
+- تم إضافة ملف مرجعي تفصيلي: `docs/BRANDA_DATABASE_BLUEPRINT.md`.
+- لم يتم تغيير منطق التطبيق في هذه الجولة (تعديلات توثيق فقط).
+
+---
+
+## 24. Platform Upgrade v2
+
+> **تاريخ:** 2026-05-30  
+> **النطاق:** هوية بصرية موحّدة، تجربة عميل موسّعة، طلبات استلام، فئات منيو، ثيم مخصص، حملات تجربة، إشعارات، وشبكة اشتراك محسّنة.
+
+### أ) لوحة الألوان الرسمية
+
+| Token | Hex | الاستخدام |
+|-------|-----|-----------|
+| `espressoDark` | `#311912` | نصوص رئيسية، خلفيات داكنة |
+| `coffeeBrown` | `#4A281D` | أزرار، تدرجات sidebar |
+| `brandBrown` | `#6B3A25` | عناوين، روابط، focus |
+| `goldAccent` | `#D9A33F` | تمييز، badges، rings |
+| `softGold` | `#F0C568` | نص ذهبي على داكن |
+| `creamBase` | `#FCF8F3` | خلفية لوحة الكوفي والصفحات الفاتحة |
+| `warmSand` | `#F2E7D9` | خلفيات ثانوية، hints |
+| `borderSand` | `#E7D7C6` | حدود الكروت والحقول |
+| `mutedText` | `#806A5E` | نصوص ثانوية |
+
+**المصدر:** `lib/ui/brand-colors.ts` — يُستورد في الصفحة الرئيسية (`app/page.tsx`) وصفحات الدخول/التسجيل.
+
+### ب) الصفحة الرئيسية (`/`)
+
+- إعادة بناء كاملة بهوية القهوة/الذهب الجديدة.
+- هيدر sticky، أقسام مزايا، حلول، باقات، CTA.
+- عنصر ولاء دائري (540 نقطة) بألوان `goldAccent` / `softGold`.
+- روابط `/login` و `/register` بأزرار `coffeeBrown`.
+
+### ج) منصة الدخول والتسجيل
+
+| الملف | التحديث |
+|-------|---------|
+| `app/login/page.tsx` | خلفية `creamBase`، بانل hero بتدرج `coffeeBrown→espressoDark`، حقول Neumo |
+| `app/register/page.tsx` | hero `warmSand→creamBase`، تبويب نشط `coffeeBrown` |
+| `app/dashboard/layout.tsx` | خلفية `#FCF8F3` |
+| `components/ui/design-system.tsx` | Bento white/gold، Shells، SoftCard، FilterBar، أزرار — ألوان v2 للوحة الكوفي؛ **Admin يبقى dark/cyber** |
+| `components/dashboard/DashboardSidebar.tsx` | تدرج espresso/coffee/gold؛ badge الباقة **رابط** إلى `/dashboard/subscription` |
+
+### د) ثيم الهوية المخصصة (`brand-identity-custom`)
+
+- **ثيم رقم 11** في كatalog الثيمات — يسمح للكوفي ببناء هوية بصرية خاصة.
+- **المفتاح:** `branda_qatrah_custom_identity_theme` (`CUSTOM_IDENTITY_THEME_KEY`).
+- **الحقول:** `palette` (6 ألوان)، `logoDataUrl`، `backgroundImageDataUrl`، `backgroundScope`، `backgroundFit`، `overlayStrength`، `featuredSectionMode`، `featuredCategoryId`.
+- **الملفات:** `lib/mock/custom-identity-theme.ts`, `components/dashboard/theme/custom-identity-builder.tsx`, `components/cafe/themes/brand-identity-custom-theme.tsx`.
+- **استخراج ألوان من الشعار:** `lib/cafe/color-extract.ts`.
+
+### هـ) فئات المنيو (Menu Categories)
+
+- **المفتاح:** `branda_qatrah_menu_categories` (`MENU_CATEGORIES_KEY`).
+- **النوع:** `MenuCategoryRecord` — اسم، وصف، صورة، أيقونة، `sortOrder`, `visible`, `featured`.
+- **الإدارة:** `components/dashboard/pages/menu-page.tsx` + `product-modal.tsx`.
+- **العرض:** صفحة الكوفي العامة، ثيم الهوية المخصصة، مجموعات المنتجات.
+
+### و) طلبات الاستلام (Pickup Orders)
+
+- **المفتاح:** `branda_qatrah_orders` (محدّث — نوع `استلام` فقط).
+- **الحقول الجديدة:** `pickupAt`, `status` (بانتظار/مقبول/مرفوض/ملغي), `paymentStatus` («الدفع عند الاستلام»), `rejectionReason`, `cafeResponseAt`.
+- **من العميل:** `product-detail-client.tsx` — اختيار وقت الاستلام، بدون دفع إلكتروني.
+- **من الكوفي:** `components/dashboard/pages/orders-page.tsx` — قبول/رفض/إلغاء.
+- **التدفق:** `lib/platform/order-flow.ts` + إشعار `new_pickup_order`.
+
+### ز) الحجوزات (Reservations)
+
+- تدفق موجود مُحسّن مع ربط إشعارات `new_reservation`, `reservation_accepted`, `reservation_rejected`.
+- **المفتاح:** `branda_qatrah_reservations` (بدون تغيير اسم).
+- **الواجهة:** `ThemedReservationPanel` + لوحة `/dashboard/reservations`.
+
+### ح) الولاء (Loyalty)
+
+- إعدادات ومكافآت موجودة + ربط نقاط الطلبات والحملات.
+- **المفاتيح:** `branda_qatrah_loyalty_settings`, `branda_qatrah_loyalty_rewards`.
+- إشعار `loyalty_points` عند منح نقاط.
+
+### ط) حملات التجربة (Experience Campaigns)
+
+- **المفاتيح:**
+  - `branda_qatrah_experience_campaigns` — تعريف الحملة (منصات TikTok/Instagram/Snapchat/YouTube Shorts/X، نقاط، شروط).
+  - `branda_qatrah_experience_submissions` — فيديوهات العملاء + حالة (`pending|approved|rejected`) + نقاط مُقترحة/ممنوحة.
+- **الإدارة:** `components/dashboard/pages/marketing-page.tsx`.
+- **الإشعارات:** `experience_submission`, `experience_approved`.
+
+### ي) الإشعارات (Notifications)
+
+- **المفتاح:** `branda_qatrah_notifications` (`NOTIFICATIONS_KEY`).
+- **النوع:** `AppNotification` — `audience` (customer|cafe), `type`, `read`, `meta`.
+- **أنواع:** `new_pickup_order`, `new_reservation`, `order_accepted/rejected`, `reservation_accepted/rejected`, `loyalty_points`, `experience_*`, `new_review`.
+- **الملف:** `lib/mock/notifications.ts`.
+
+### ك) شبكة الاشتراك (`/dashboard/subscription`)
+
+| قبل | بعد |
+|-----|-----|
+| Bento spans متفاوتة | شبكة `1 → sm:2 → lg:3 → xl:4` أعمدة |
+| `max-h-40 overflow-y-auto` + 6 ميزات فقط | **كل** الميزات ظاهرة بدون scroll داخلي |
+| تمييز بسيط | الباقة الحالية: gradient gold + ring + badge «الباقة الحالية» |
+| — | checkmarks لكل ميزة (✓ أو —) |
+
+**الملف:** `components/dashboard/pages/subscription-page.tsx`.
+
+### ل) ملفات v2 الجديدة/المحدّثة (مختصر)
+
+| ملف | الغرض |
+|-----|--------|
+| `lib/ui/brand-colors.ts` | لوحة الألوان الرسمية |
+| `lib/mock/menu-categories.ts` | فئات المنيو |
+| `lib/mock/custom-identity-theme.ts` | ثيم الهوية المخصصة |
+| `lib/mock/experience-campaigns.ts` | حملات التجربة + التقديمات |
+| `lib/mock/notifications.ts` | إشعارات الكوفي/العميل |
+| `lib/mock/orders.ts` | طلبات استلام |
+| `lib/cafe/color-extract.ts` | استخراج ألوان من الشعار |
+| `lib/cafe/custom-identity-featured.ts` | منطق القسم المميز |
+| `components/dashboard/theme/custom-identity-builder.tsx` | بناء الثيم المخصص |
+| `components/cafe/themes/brand-identity-custom-theme.tsx` | عرض الثيم المخصص |
+
+### م) Admin
+
+- **`app/admin/layout.tsx`:** بدون تغيير جوهري — خلفية `#0f0c0a` (Cyber-Eco dark).
+- **`design-system`:** `AdminPageShell`, `AdminFilterBar`, `AdminInput` — dark theme محفوظ؛ gold accent محدّث إلى `#D9A33F` حيث يلزم.
+
+### Build
+
+`npm run build` — يُنصح بتشغيله بعد دمج v2.
+
+---
+
+## 25. Custom Identity Persistence, Category Visibility & Customer Filtering Fix
+
+### أ) سبب مشكلة عدم حفظ/تطبيق الثيم
+
+1. **`useResolvedCafeTheme`** كان يقرأ `localStorage` داخل `useMemo` يعتمد فقط على `previewTheme`. أثناء SSR يُرجع الثيم الافتراضي `soft-cream-3d` ولا يُعاد حسابه بعد hydration إذا لم يتغيّر query param — فتبقى `/c/qatrah` على الثيم الافتراضي حتى بعد حفظ `brand-identity-custom`.
+2. **زر «حفظ واعتماد»** كان يدمج الحفظ والاعتماد دون feedback واضح، وبدون فصل بين حفظ الهوية (`custom_identity_theme`) وتفعيل الثيم (`cafe_theme`).
+3. **صفحات العميل الداخلية** (login/products/…) لم تكن تحقن متغيرات CSS `--ci-*` من الهوية المخصصة — فقط الصفحة الرئيسية عبر `brand-identity-custom-theme.tsx`.
+
+### ب) الإصلاح
+
+| الملف | التغيير |
+|-------|---------|
+| `lib/cafe/theme-storage-sync.ts` | **جديد** — `adoptCafeTheme`, `persistCustomIdentityTheme`, أحداث `branda:theme-updated` و`branda:custom-identity-updated` |
+| `lib/cafe/use-resolved-cafe-theme.ts` | `useState` + `useEffect` + الاستماع للأحداث/storage |
+| `lib/cafe/use-cafe-theme-page.ts` | نفس منطق إعادة القراءة |
+| `components/dashboard/theme/custom-identity-builder.tsx` | زرّان منفصلان: **حفظ إعدادات الهوية** / **اعتماد الثيم وتطبيقه** + Toast + loading + badge «تغييرات غير محفوظة» |
+| `components/ui/app-toast.tsx` | **جديد** — Toast موحد (success/error/loading) |
+| `components/cafe/themes/themed-cafe-shell.tsx` | حقن `--ci-*` + خلفية + شعار الهوية على كل صفحات العميل |
+| `components/cafe/themes/brand-identity-custom-theme.tsx` | الاستماع لتحديثات الهوية والتصنيفات |
+
+### ج) مفاتيح localStorage
+
+| المفتاح | الغرض | الكتابة | القراءة |
+|---------|--------|---------|---------|
+| `branda_qatrah_theme` | الثيم المعتمد (`CAFE_THEME_KEY`) | `adoptCafeTheme`, `theme-page`, `custom-identity-builder` | `use-resolved-cafe-theme`, `use-cafe-theme-page` |
+| `branda_qatrah_custom_identity_theme` | palette/logo/background/featured | `persistCustomIdentityTheme` | `brand-identity-custom-theme`, `themed-cafe-shell` |
+| `branda_qatrah_menu_categories` | تصنيفات المنيو | `menu-page` → `saveMenuCategories` | `menu-category-utils`, `ThemeCategoryStrip`, `product-collection-page` |
+
+### د) التصنيفات — ظهور كامل + fallback
+
+- **`getVisibleCategoryNames`**: كل تصنيف `visible=true` مرتّب بـ `sortOrder` — **featured لا يخفي الباقي**.
+- **`resolveProductCategoryId`**: `categoryId` أولًا، ثم مطابقة اسم `category` النصي، وإلا «غير مصنف».
+- **`ThemeCategoryStrip`**: يعرض كل التصنيفات المرئية في **كل الثيمات** (11 ثيمًا).
+- Toast «تم حفظ تصنيفات المنيو» من `/dashboard/menu`.
+
+### هـ) فلاتر العميل — Dropdowns
+
+- **`ThemedFilterBar`** أُعيد تصميمه: بحث + dropdown تصنيف + dropdown ترتيب + dropdown سعر + toggle عروض + «مسح الفilters».
+- **`product-collection-page`**: شريط فلترة موحّد أعلى المنتجات (بدون sidebar inputs).
+- empty state: «لا توجد منتجات مطابقة للفلاتر الحالية» + زر إعادة ضبط.
+
+### Build
+
+`npm run build` — **✅ ناجح** بعد هذا الإصلاح.
+
+---
+
+## 26. Local Image Asset Storage Fix & Future Storage Migration
+
+### أ) سبب `QuotaExceededError`
+
+- كان يتم تخزين `logoDataUrl` و`backgroundImageDataUrl` كـ **Base64 / Data URL** داخل `localStorage` تحت المفتاح `branda_qatrah_custom_identity_theme` (وأحيانًا `branda_qatrah_settings` للوجو العام).
+- حد `localStorage` (~5MB) يُتجاوز بسرعة مع صورة خلفية أو شعار بحجم كبير → `QuotaExceededError` عند `setItem`.
+
+### ب) الحل الحالي (mock بدون DB)
+
+| الطبقة | ما يُخزَّن |
+|--------|-----------|
+| **localStorage** | palette، scope، fit، overlay، featured mode، **`logoAssetId`**، **`backgroundAssetId`** فقط — بدون أي `data:image` |
+| **IndexedDB** (`branda-local-assets` / store `assets`) | Blobs للصور |
+
+**معرّفات الأصول الثابتة (استبدال in-place):**
+
+| Kind | Asset ID |
+|------|----------|
+| شعار الهوية المخصصة | `branda-qatrah-custom-theme-logo` |
+| خلفية الهوية | `branda-qatrah-custom-theme-background` |
+| لوجو الكوفي (إعدادات) | `branda-qatrah-cafe-logo` |
+
+### ج) الملفات الجديدة / المحدّثة
+
+| ملف | الغرض |
+|-----|--------|
+| `lib/cafe/local-asset-store.ts` | **جديد** — IndexedDB API: `saveLocalAsset`, `replaceLocalAsset`, `getLocalAssetObjectUrl`, … |
+| `lib/cafe/local-storage-repair.ts` | **جديد** — migration + `repairLocalImageStorage` + زر «إصلاح التخزين المحلي» |
+| `lib/cafe/cafe-settings-storage.ts` | **جديد** — حفظ إعدادات بدون base64 |
+| `lib/cafe/use-custom-identity-visuals.ts` | **جديد** — resolve logo/background من IndexedDB |
+| `lib/cafe/use-resolved-cafe-logo.ts` | **جديد** — resolve لوجو الكوفي |
+| `lib/mock/custom-identity-theme.ts` | references فقط + guard يمنع `data:image` في JSON |
+| `components/dashboard/theme/custom-identity-builder.tsx` | رفع → Blob preview → IndexedDB عند الحفظ |
+| `components/cafe/themes/brand-identity-custom-theme.tsx` | عرض من asset IDs |
+| `components/cafe/themes/themed-cafe-shell.tsx` | خلفية/شعار الهوية على كل صفحات العميل |
+| `components/dashboard/pages/settings-page.tsx` | لوجو الكوفي → IndexedDB |
+| `components/ui/branda-logo.tsx` | إصلاح تحذير Next.js Image (aspect ratio) |
+
+### د) Migration & Cleanup
+
+- **`migrateLegacyCustomIdentityAssets()`** — عند فتح `/dashboard/theme` أو صفحات العميل: يحوّل base64 قديم إلى Blob في IndexedDB ويستبدله بـ asset IDs.
+- **`repairLocalImageStorage()`** — زر «إصلاح التخزين المحلي» يظهر عند اكتشاف base64 أو خطأ quota؛ **لا** يستخدم `localStorage.clear()` — يمسح فقط المفاتيح المتضخمة (`branda_qatrah_custom_identity_theme`, `branda_qatrah_settings` إن احتوت base64).
+
+### هـ) الانتقال لاحقًا إلى Supabase Storage
+
+| Mock | Production |
+|------|------------|
+| IndexedDB blob | Supabase Storage URL |
+| `logoAssetId` | `cafe_settings.logo_url` / `cafe_brand_identities.logo_url` |
+| `backgroundAssetId` | `cafe_theme_assets.background_url` |
+
+**Buckets:**
+
+- `cafe-logos` — شعار الكوفي العام
+- `cafe-theme-assets` — شعار/خلفية الهوية المخصصة
+
+**RLS:** `cafe_owner` يرفع داخل مسار كوفيهه فقط؛ `public` يقرأ assets المعتمدة؛ `admin` يراجع عند الحاجة. **لا Base64 في DB أو localStorage في الإنتاج.**
+
+### Build
+
+`npm run build` — يُشغَّل بعد هذا الإصلاح.
+
+---
+
+## 27. Global Image Upload Pipeline & Asset Storage Final Fix
+
+### أ) لماذا منع 2MB/6MB ليس حلًا مقبولًا
+
+- القيود السابقة (`LOGO_MAX_BYTES` / `BACKGROUND_MAX_BYTES`) كانت ترفض صورًا صالحة قبل المعالجة.
+- صاحب الكوفي يجب أن يرفع صورته بأي حجم منطقي؛ النظام يضغطها تلقائيًا.
+
+### ب) Pipeline موحد — `lib/cafe/image-asset-pipeline.ts`
+
+- **`optimizeImageForStorage(file, purpose)`** — Canvas/`createImageBitmap` → WebP (fallback JPEG).
+- **حد أمان فقط:** 40MB للملف الأصلي.
+- **أهداف الحجم المحسّن (ليست حد رفض):**
+  - شعار/لوجو: ~500KB
+  - خلفية/بانر/حملة: ~1.8MB
+  - منتج/تصنيف: ~900KB
+  - صورة شخصية: ~350KB
+- SVG مرفوع من المستخدم: رسالة «ارفع PNG أو JPG أو WEBP».
+
+### ج) IndexedDB — كل صور المشروع
+
+| Kind | Asset ID pattern |
+|------|------------------|
+| ثيم شعار/خلفية، لوجو كوفي | IDs ثابتة (استبدال in-place) |
+| منتج | `branda-qatrah-product-{id}-image` |
+| تصنيف | `branda-qatrah-category-{id}-image` |
+| عرض | `branda-qatrah-offer-{id}-banner` |
+| حملة | `branda-qatrah-marketing-{id}-image` |
+| عميل | `branda-customer-{id}-avatar` |
+
+### د) حقول Entity (Data URL → Asset ID)
+
+| Entity | حقل جديد | legacy (migration فقط) |
+|--------|----------|------------------------|
+| Custom identity | `logoAssetId`, `backgroundAssetId` | `legacyLogoDataUrl`, … |
+| Cafe settings | `logoAssetId` | `logoDataUrl` |
+| MenuProduct | `imageAssetId` | `imageDataUrl` (http أو migration) |
+| MenuCategory | `imageAssetId` | `imageDataUrl` |
+| CafeOffer | `bannerAssetId` | `bannerImageUrl` (http) |
+| Customer session | `avatarAssetId` | `avatarUrl` |
+
+### هـ) الملفات الجديدة/المحدّثة
+
+- **جديد:** `image-asset-pipeline.ts`, `entity-storage-sanitize.ts`, `menu-storage.ts`, `use-local-asset-url.ts`, `components/ui/local-asset-image.tsx`, `components/cafe/product-image.tsx`, `components/cafe/offer-banner-image.tsx`
+- **محدّث:** `local-asset-store.ts`, `local-storage-repair.ts` (`migrateAllLegacyImageDataUrls`), builder ثيم، settings، product-modal، menu-page، offers-page، account avatar، كل بطاقات المنتجات
+
+### و) Migration شامل
+
+- **`migrateAllLegacyImageDataUrls()`** — يفحص: `custom_identity_theme`, `settings`, `menu`, `menu_categories`, `offers`, `marketing`, `branda_customer_session_*`.
+- زر **«إصلاح وتحسين الصور القديمة»** في `/dashboard/theme`.
+- **لا** `localStorage.clear()`.
+
+### ز) Supabase (لاحقًا)
+
+Buckets: `cafe-logos`, `cafe-theme-assets`, `product-images`, `category-images`, `offer-banners`, `marketing-assets`, `customer-avatars`.
+
+### Build
+
+`npm run build` — **✅ ناجح** بعد pipeline الشامل.
+
+---
+
+## 28. Custom Identity Contrast System & Form Readability Fix
+
+### سبب المشكلة
+
+1. **`--ci-text` من لوحة العميل** كان يُطبَّق مباشرة على الصفحة والبطاقات والحقول دون حساب تباين — اختيار لون نص فاتح على خلفية فاتحة = نص غير مرئي.
+2. **`BentoCard variant="gold"`** في `/dashboard/theme` يفرض `text-[#FCF8F3]` على كل المحتوى؛ الـ `<select>` داخل `SoftCard` كان يورث لونًا كريميًا على `bg-white`.
+3. **بطاقات الثيم** استخدمت `--ci-background` + `--ci-text` نفسهما للصفحة والسطح، فلم تكن هناك tokens منفصلة للحقول والقوائم المنسدلة.
+
+### الملفات المعدّلة
+
+| ملف | دور |
+|-----|-----|
+| `lib/cafe/color-contrast.ts` | **جديد** — luminance WCAG، `buildCustomIdentityContrastTokens`, CSS vars |
+| `lib/mock/custom-identity-theme.ts` | `buildCustomIdentityCssVars` يصدّر tokens كاملة |
+| `lib/mock/cafe-theme.ts` | classes ثيم `brand-identity-custom` تستخدم `--ci-page-*`, `--ci-surface-*`, … |
+| `lib/cafe/theme-experience.ts` | `formInput` للهوية المخصصة عبر `--ci-input-*` |
+| `components/cafe/themes/themed-cafe-shell.tsx` | class `brand-identity-custom-theme` + حقن vars |
+| `components/cafe/themes/brand-identity-custom-theme.tsx` | نفس class على الصفحة الرئيسية |
+| `components/cafe/themes/themed-filter-bar.tsx` | حقول + `option` مقروءة |
+| `components/dashboard/theme/custom-identity-builder.tsx` | `theme-builder-form-fields` + «فحص وضوح الهوية» |
+| `app/globals.css` | قواعد scoped للحقول والـ options |
+
+### حساب لون النص
+
+- **`getLuminance(hex)`** — WCAG relative luminance.
+- **`getContrastText(bg)`** — يقارن `#241610` vs `#FFF8F1` ويختار الأعلى contrast ratio (هدف AA قدر الإمكان).
+- **`getReadableMutedText` / `getBorderForSurface`** — مشتقات آمنة لكل سطح.
+- **`buildCustomIdentityContrastTokens(palette)`** — يشتق page/surface/primary/button/accent/input/dropdown tokens من ألوان العميل الأساسية فقط.
+
+### CSS variables الجديدة
+
+`--ci-page-bg/fg`, `--ci-surface-bg/fg`, `--ci-elevated-bg/fg`, `--ci-primary-bg/fg`, `--ci-secondary-bg/fg`, `--ci-button-bg/fg`, `--ci-accent-bg/fg`, `--ci-input-bg/fg/placeholder/border`, `--ci-muted-fg`, `--ci-border`, `--ci-dropdown-bg/fg/hover-bg`.
+
+Legacy `--ci-text` = `pageForeground` المحسوب (ليس `palette.text` الخام).
+
+### الحقول والقوائم المنسدلة
+
+- كل سطح له foreground مستقل؛ لا `color: white` على root.
+- `.brand-identity-custom-theme .brand-cafe-fields` يفرض tokens الحقول + `select option` صريحة.
+- `.theme-builder-form-fields` يعزل builder عن نص gold BentoCard.
+- فلترة `/c/*/products/*` تستخدم `experience.formInput` المحدّث + `brand-cafe-form-select`.
+
+### palette العميل vs القراءة
+
+- يُخزَّن `palette` الأصلية (HEX validated) في localStorage.
+- **tokens المشتقة تُحسب عند العرض** — لا يلزم تخزينها في DB.
+- «فحص وضوح الهوية» في builder يعرض معاينة حية + رسالة «تم تحسين لون النص تلقائيًا…» عند `paletteTextWasAutoCorrected`.
+
+### اعتبارات الأمان (DB لاحقًا)
+
+- لا CSS مخصص من المستخدم — **HEX فقط** مع `isValidHex`.
+- palette الأصلية في DB؛ tokens مشتقة server-side أو client-side عند render.
+- رفض أي payload يحتوي `data:image` أو قيم غير hex في حقول الألوان.
+
+### Build
+
+`npm run build` — **✅ ناجح** بعد نظام contrast.

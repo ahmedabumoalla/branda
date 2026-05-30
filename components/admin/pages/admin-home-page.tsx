@@ -50,7 +50,7 @@ export function AdminHomePage() {
   return (
     <AdminPageShell
       title="لوحة تحكم المنصة"
-      subtitle="مراقبة كاملة للكوفيهات والعملاء والإيرادات والعمليات."
+      subtitle="مراقبة كاملة للكوفيهات والعملاء وقيمة الطلبات والعمليات."
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
       <BentoGrid>
@@ -58,10 +58,10 @@ export function AdminHomePage() {
           <div className="flex h-full flex-col justify-between">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black text-[#F6C35B]/90">الإيرادات العامة</p>
+                <p className="text-sm font-black text-[#F6C35B]/90">قيمة الطلبات المتوقعة</p>
                 <p className="mt-3 text-4xl font-black text-[#F8F4EF] sm:text-5xl">{formatSar(revenue)}</p>
                 <p className="mt-2 text-sm font-bold text-[#CBB29C]">
-                  مجموع إيرادات كل الكوفيهات المسجلة
+                  مجموع قيمة طلبات الاستلام المقبولة — الدفع عند الاستلام
                 </p>
               </div>
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B] shadow-[0_0_24px_rgba(246,195,91,0.25)]">

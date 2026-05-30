@@ -14,6 +14,14 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
+import { assertNoBase64Images, sanitizeCafeOffers } from "@/lib/cafe/entity-storage-sanitize";
+import {
+  ImagePipelineError,
+  isHttpImageUrl,
+  optimizeImageForStorage,
+  type OptimizedImageResult,
+} from "@/lib/cafe/image-asset-pipeline";
+import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import { formatSar } from "@/lib/format";
 import {
   type CafeOffer,
@@ -67,6 +75,9 @@ export function OffersPageClient({ initialOffers }: Props) {
 
   const [linkedProductId, setLinkedProductId] = useState("");
   const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [pendingBanner, setPendingBanner] = useState<OptimizedImageResult | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | undefined>();
+  const [optimizingBanner, setOptimizingBanner] = useState(false);
   const [ctaText, setCtaText] = useState("");
 
   const [promoProductName, setPromoProductName] = useState("");
@@ -83,7 +94,10 @@ export function OffersPageClient({ initialOffers }: Props) {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(OFFERS_KEY, JSON.stringify(offers));
+    const payload = sanitizeCafeOffers(offers);
+    const json = JSON.stringify(payload);
+    assertNoBase64Images(json, "Offers");
+    localStorage.setItem(OFFERS_KEY, json);
   }, [offers]);
 
   const filtered = useMemo(() => {
@@ -120,6 +134,9 @@ export function OffersPageClient({ initialOffers }: Props) {
     setCodeOwnerCommissionPercent("");
     setLinkedProductId("");
     setBannerImageUrl("");
+    if (bannerPreviewUrl?.startsWith("blob:")) revokeObjectUrl(bannerPreviewUrl);
+    setBannerPreviewUrl(undefined);
+    setPendingBanner(null);
     setCtaText("");
     setPromoProductName("");
     setPromoProductPrice("");
@@ -127,16 +144,31 @@ export function OffersPageClient({ initialOffers }: Props) {
     setPromoProductDescription("");
   }
 
-  function addOffer() {
+  async function addOffer() {
     if (!title.trim()) {
       alert("اكتب عنوان العرض");
       return;
     }
 
     const linkedProduct = products.find((product) => product.id === linkedProductId);
+    const offerId = crypto.randomUUID();
+
+    let bannerAssetId: string | undefined;
+    if (pendingBanner) {
+      try {
+        bannerAssetId = await saveOptimizedImageAsset(
+          "offer-banner",
+          pendingBanner,
+          offerId
+        );
+      } catch {
+        alert("تعذر حفظ صورة البانر");
+        return;
+      }
+    }
 
     const offer: CafeOffer = {
-      id: crypto.randomUUID(),
+      id: offerId,
       title: title.trim(),
       description:
         description.trim() ||
@@ -162,10 +194,13 @@ export function OffersPageClient({ initialOffers }: Props) {
         : undefined,
 
       linkedProductId: linkedProductId || undefined,
+      bannerAssetId,
       bannerImageUrl:
-        bannerImageUrl.trim() ||
-        linkedProduct?.imageDataUrl ||
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
+        bannerImageUrl.trim() && isHttpImageUrl(bannerImageUrl.trim())
+          ? bannerImageUrl.trim()
+          : linkedProduct?.imageDataUrl && isHttpImageUrl(linkedProduct.imageDataUrl)
+            ? linkedProduct.imageDataUrl
+            : "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
       ctaText: ctaText.trim() || "شاهد المنتج",
 
       promoProductName:
@@ -499,8 +534,51 @@ export function OffersPageClient({ initialOffers }: Props) {
                   <NeumoInput
                     value={bannerImageUrl}
                     onChange={(e) => setBannerImageUrl(e.target.value)}
-                    placeholder="رابط صورة البانر"
+                    placeholder="رابط صورة البانر (اختياري)"
                   />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="offer-banner-file"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      e.target.value = "";
+                      setOptimizingBanner(true);
+                      try {
+                        const optimized = await optimizeImageForStorage(file, "offer-banner");
+                        if (bannerPreviewUrl?.startsWith("blob:")) {
+                          revokeObjectUrl(bannerPreviewUrl);
+                        }
+                        setBannerPreviewUrl(URL.createObjectURL(optimized.blob));
+                        setPendingBanner(optimized);
+                        setBannerImageUrl("");
+                      } catch (err) {
+                        alert(
+                          err instanceof ImagePipelineError
+                            ? err.message
+                            : "تعذر قراءة الصورة"
+                        );
+                      } finally {
+                        setOptimizingBanner(false);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="offer-banner-file"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]"
+                  >
+                    <ImagePlus className="h-5 w-5" />
+                    {optimizingBanner ? "جاري تحسين الصورة..." : "رفع صورة بانر"}
+                  </label>
+                  {bannerPreviewUrl ? (
+                    <img
+                      src={bannerPreviewUrl}
+                      alt=""
+                      className="h-20 w-full rounded-2xl object-cover"
+                    />
+                  ) : null}
                   <NeumoInput
                     value={ctaText}
                     onChange={(e) => setCtaText(e.target.value)}

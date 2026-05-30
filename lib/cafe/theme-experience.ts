@@ -143,6 +143,17 @@ const EXPERIENCE_MAP: Record<CafeThemeId, Omit<ThemeExperience, "themeId" | "the
     formInput: "rounded-xl border border-[#e8e2db] bg-white px-4 py-3",
     headingTracking: "tracking-normal",
   },
+  "brand-identity-custom": {
+    account: "neumo",
+    auth: "standard",
+    collection: "neumo-grid",
+    detail: "split",
+    reserve: "standard",
+    showMobileBottomNav: false,
+    formInput:
+      "rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-[var(--ci-input-bg,#FFFFFF)] px-4 py-3 text-[var(--ci-input-fg,#241610)] placeholder:text-[var(--ci-input-placeholder,#9B8173)] outline-none transition focus:border-[var(--ci-primary-bg,#6B3A25)] focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30",
+    headingTracking: "tracking-normal",
+  },
 };
 
 export function getThemeExperience(themeId: CafeThemeId): ThemeExperience {

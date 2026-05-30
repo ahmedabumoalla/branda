@@ -9,6 +9,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -20,7 +21,7 @@ export function SoftCream3dTheme(props: CafeThemePageProps) {
       <CafeHeader
         slug={slug}
         cafeName={cafeSettings.cafeName}
-        logoUrl={cafeSettings.logoDataUrl}
+        logoUrl={props.cafeLogoUrl}
         themeId={themeId}
         customer={props.customer}
       />
@@ -29,7 +30,7 @@ export function SoftCream3dTheme(props: CafeThemePageProps) {
         <section className={`rounded-3xl p-8 ${theme.hero}`}>
           <CafeIdentityBlock
             cafeName={cafeSettings.cafeName}
-            logoUrl={cafeSettings.logoDataUrl}
+            logoUrl={props.cafeLogoUrl}
             description={cafeSettings.description}
             theme={theme}
           />
@@ -54,6 +55,13 @@ export function SoftCream3dTheme(props: CafeThemePageProps) {
             </Link>
           ))}
         </nav>
+
+        <ThemeCategoryStrip
+          slug={slug}
+          theme={theme}
+          previewThemeId={previewThemeId}
+          className="mt-6"
+        />
 
         {bannerOffers.length > 0 ? (
           <ThemeBannerCarousel slug={slug} offers={bannerOffers} theme={theme} previewThemeId={previewThemeId} variant="soft" />

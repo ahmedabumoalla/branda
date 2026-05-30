@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { CafeThemeRenderer } from "@/components/cafe/themes/cafe-theme-renderer";
+import { runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { useResolvedCafeTheme } from "@/lib/cafe/use-resolved-cafe-theme";
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
 import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
@@ -36,6 +38,7 @@ function CafePageInner({ slug }: { slug: string }) {
   );
 
   useEffect(() => {
+    void runCustomIdentityMigrationOnce();
     setCustomer(getCustomerSession(slug));
     const savedMenu = localStorage.getItem(MENU_KEY);
     const savedOffers = localStorage.getItem(OFFERS_KEY);
@@ -45,6 +48,8 @@ function CafePageInner({ slug }: { slug: string }) {
     if (savedOffers) setOffers(JSON.parse(savedOffers));
     if (savedSettings) setCafeSettings(JSON.parse(savedSettings));
   }, [slug]);
+
+  const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
 
   const availableProducts = products.filter((p) => p.available);
 
@@ -74,6 +79,7 @@ function CafePageInner({ slug }: { slug: string }) {
       <CafeThemeRenderer
         slug={slug}
         cafeSettings={cafeSettings}
+        cafeLogoUrl={cafeLogoUrl}
         themeId={themeId}
         theme={theme}
         previewThemeId={previewThemeId}

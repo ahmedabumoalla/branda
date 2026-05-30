@@ -6,6 +6,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -37,6 +38,10 @@ export function MagazineEditorialTheme(props: CafeThemePageProps) {
           {cafeSettings.description || "تحرير خاص بقهوة المختصين."}
         </p>
       </section>
+
+      <div className="mx-auto max-w-6xl px-6 pb-8">
+        <ThemeCategoryStrip slug={slug} theme={theme} className="justify-center" variant="cards" />
+      </div>
 
       <div className="mx-auto max-w-6xl px-4 pb-12">
         {bannerOffers.length > 0 ? (

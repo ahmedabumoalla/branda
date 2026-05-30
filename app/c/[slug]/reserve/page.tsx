@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { ThemedInput } from "@/components/cafe/themes/themed-auth-panel";
 import {
-  ThemedInput,
-} from "@/components/cafe/themes/themed-auth-panel";
-import {
+  ReservationEventFields,
   ThemedReservationPanel,
   ThemedSelect,
   ThemedTextarea,
 } from "@/components/cafe/themes/themed-reservation-panel";
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
 import { BRANCHES_KEY, mockBranches, type CafeBranch } from "@/lib/mock/branches";
-import type { CafeReservation } from "@/lib/mock/reservations";
+import {
+  RESERVATION_EVENT_TYPES,
+  type ReservationEventType,
+} from "@/lib/mock/reservations";
 import { createReservationFlow } from "@/lib/platform/reservation-flow";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 
@@ -27,10 +29,17 @@ function ReserveForm() {
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
   const [branches, setBranches] = useState<CafeBranch[]>(mockBranches);
   const [branchId, setBranchId] = useState("");
-  const [reservationType, setReservationType] = useState<CafeReservation["type"]>("طاولة");
+  const [reservationType, setReservationType] =
+    useState<ReservationEventType>("طاولة عادية");
   const [guests, setGuests] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [spaceType, setSpaceType] = useState("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [needsDecoration, setNeedsDecoration] = useState(false);
+  const [needsCatering, setNeedsCatering] = useState(false);
+  const [budgetEstimate, setBudgetEstimate] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -41,6 +50,12 @@ function ReserveForm() {
 
   const activeBranches = branches.filter((b) => b.active);
   const selectedBranch = activeBranches.find((b) => b.id === branchId);
+
+  const isSpecialEvent = useMemo(
+    () =>
+      reservationType !== "طاولة عادية" && reservationType !== "اجتماع",
+    [reservationType]
+  );
 
   function submitReservation() {
     if (!customer) {
@@ -62,6 +77,12 @@ function ReserveForm() {
       guests: Number(guests) || 1,
       date,
       time,
+      durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
+      spaceType,
+      eventTitle: isSpecialEvent ? eventTitle : undefined,
+      needsDecoration: isSpecialEvent ? needsDecoration : undefined,
+      needsCatering: isSpecialEvent ? needsCatering : undefined,
+      budgetEstimate: budgetEstimate ? Number(budgetEstimate) : undefined,
       notes,
     });
     alert("تم إرسال طلب الحجز بنجاح");
@@ -90,34 +111,77 @@ function ReserveForm() {
           </option>
         ))}
       </ThemedSelect>
+
       <ThemedSelect
         experience={experience}
         value={reservationType}
-        onChange={(e) => setReservationType(e.target.value as CafeReservation["type"])}
+        onChange={(e) => setReservationType(e.target.value as ReservationEventType)}
       >
-        <option value="طاولة">طاولة</option>
-        <option value="جلسة خارجية">جلسة خارجية</option>
-        <option value="غرفة خاصة">غرفة خاصة</option>
+        {RESERVATION_EVENT_TYPES.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
       </ThemedSelect>
+
       <ThemedInput
         experience={experience}
         value={guests}
         onChange={(e) => setGuests(e.target.value)}
         placeholder="عدد الأشخاص"
+        type="number"
+        min={1}
       />
-      <ThemedInput experience={experience} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <ThemedInput
+        experience={experience}
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+      />
       <ThemedInput
         experience={experience}
         type="time"
         value={time}
         onChange={(e) => setTime(e.target.value)}
-        className="md:col-span-2"
       />
+      <ThemedInput
+        experience={experience}
+        value={durationMinutes}
+        onChange={(e) => setDurationMinutes(e.target.value)}
+        placeholder="مدة الجلسة (دقيقة) — اختياري"
+        type="number"
+        min={30}
+      />
+
+      {reservationType === "اجتماع" ? (
+        <ThemedInput
+          experience={experience}
+          value={spaceType}
+          onChange={(e) => setSpaceType(e.target.value)}
+          placeholder="نوع المساحة (قاعة، طاولة طويلة...)"
+          className="md:col-span-2"
+        />
+      ) : null}
+
+      <ReservationEventFields
+        experience={experience}
+        theme={theme}
+        reservationType={reservationType}
+        eventTitle={eventTitle}
+        onEventTitleChange={setEventTitle}
+        needsDecoration={needsDecoration}
+        onNeedsDecorationChange={setNeedsDecoration}
+        needsCatering={needsCatering}
+        onNeedsCateringChange={setNeedsCatering}
+        budgetEstimate={budgetEstimate}
+        onBudgetEstimateChange={setBudgetEstimate}
+      />
+
       <ThemedTextarea
         experience={experience}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="ملاحظات"
+        placeholder="ملاحظات إضافية"
         className="md:col-span-2 min-h-24"
       />
       <button

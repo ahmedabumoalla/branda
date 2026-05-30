@@ -1,17 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --branda-brown: #3a2117;
-  --branda-brown-dark: #241610;
-  --branda-brown-luxury: #6b3a25;
-  --branda-cream: #f8f4ef;
-  --branda-cream-secondary: #efe2d3;
-  --branda-gold: #f6c35b;
-  --branda-muted: #7a6255;
-  --branda-border: #e5d8cd;
-  --branda-cream-text: #f8e8d2;
-  --background: var(--branda-cream);
-  --foreground: #2b1710;
+  /* Official palette */
+  --branda-espresso-dark: #311912;
+  --branda-coffee-brown: #4a281d;
+  --branda-brand-brown: #6b3a25;
+  --branda-gold-accent: #d9a33f;
+  --branda-soft-gold: #f0c568;
+  --branda-cream-base: #fcf8f3;
+  --branda-warm-sand: #f2e7d9;
+  --branda-border-sand: #e7d7c6;
+  --branda-muted-text: #806a5e;
+
+  /* Backward-compat aliases */
+  --branda-brown: var(--branda-coffee-brown);
+  --branda-brown-dark: var(--branda-espresso-dark);
+  --branda-brown-luxury: var(--branda-brand-brown);
+  --branda-cream: var(--branda-cream-base);
+  --branda-cream-secondary: var(--branda-warm-sand);
+  --branda-gold: var(--branda-gold-accent);
+  --branda-muted: var(--branda-muted-text);
+  --branda-border: var(--branda-border-sand);
+  --branda-cream-text: var(--branda-soft-gold);
+  --background: var(--branda-cream-base);
+  --foreground: var(--branda-espresso-dark);
 }
 
 @theme inline {
@@ -43,18 +55,18 @@ body {
 }
 
 .branda-glow-gold {
-  box-shadow: 0 0 32px rgba(246, 195, 91, 0.15);
+  box-shadow: 0 0 32px rgba(217, 163, 63, 0.15);
 }
 
 .branda-neumo {
   box-shadow:
-    8px 8px 24px rgba(58, 33, 23, 0.06),
+    8px 8px 24px rgba(49, 25, 18, 0.06),
     -6px -6px 20px rgba(255, 255, 255, 0.9);
 }
 
 .branda-neumo-inset {
   box-shadow:
-    inset 3px 3px 8px rgba(58, 33, 23, 0.06),
+    inset 3px 3px 8px rgba(49, 25, 18, 0.06),
     inset -2px -2px 6px rgba(255, 255, 255, 0.95);
 }
 
@@ -107,15 +119,45 @@ body {
   color: #f8e8d2;
 }
 
-.branda-cafe-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-.branda-cafe-fields select,
-.branda-cafe-fields textarea {
-  background-color: #fdfbf8;
-  color: #241610;
-  border-color: #e5d8cd;
+/* Custom identity — readable fields via contrast tokens inherited from <main> */
+.brand-identity-custom-theme .brand-cafe-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.brand-identity-custom-theme .brand-cafe-fields select,
+.brand-identity-custom-theme .brand-cafe-fields textarea {
+  background-color: var(--ci-input-bg, #ffffff);
+  color: var(--ci-input-fg, #241610);
+  border-color: var(--ci-input-border, #e5d8cd);
 }
 
-.branda-cafe-fields input::placeholder,
-.branda-cafe-fields textarea::placeholder {
-  color: #9b8173;
+.brand-identity-custom-theme .brand-cafe-fields input::placeholder,
+.brand-identity-custom-theme .brand-cafe-fields textarea::placeholder {
+  color: var(--ci-input-placeholder, #9b8173);
+}
+
+.brand-identity-custom-theme .brand-cafe-fields select option,
+.brand-identity-custom-theme .brand-cafe-form-select option {
+  background-color: var(--ci-dropdown-bg, #ffffff);
+  color: var(--ci-dropdown-fg, #241610);
+}
+
+/* Dashboard theme builder — isolate light surfaces from gold BentoCard text */
+.theme-builder-form-fields {
+  color: #3a2117;
+}
+
+.theme-builder-form-fields select,
+.theme-builder-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+.theme-builder-form-fields textarea {
+  background-color: #ffffff !important;
+  color: #241610 !important;
+  border-color: #e5d8cd !important;
+}
+
+.theme-builder-form-fields select option {
+  background-color: #ffffff;
+  color: #241610;
+}
+
+.theme-builder-form-fields input::placeholder,
+.theme-builder-form-fields textarea::placeholder {
+  color: #9b8173 !important;
 }

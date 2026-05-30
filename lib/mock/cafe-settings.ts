@@ -7,6 +7,8 @@ export type CafeSettings = {
   ownerEmail: string;
   ownerPhone: string;
   logoDataUrl?: string;
+  /** IndexedDB asset reference — mock only; production → Storage URL */
+  logoAssetId?: string;
   taxNumber?: string;
   commercialRegister?: string;
   maroofCertificate?: string;
@@ -15,6 +17,10 @@ export type CafeSettings = {
   description?: string;
   customDomain?: string;
   domainStatus?: CafeDomainLinkStatus;
+  purchasedDomain?: string;
+  purchasedDomainStatus?: CafeDomainLinkStatus;
+  purchasedDomainCreatedAt?: string;
+  purchasedDomainConnectedAt?: string;
 };
 
 export const CAFE_SETTINGS_KEY = "branda_qatrah_settings";

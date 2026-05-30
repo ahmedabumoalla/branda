@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LocalAssetImage } from "@/components/ui/local-asset-image";
 import type { ElementType, ReactNode } from "react";
 import {
   ArrowRight,
@@ -70,7 +71,8 @@ export type ThemedAccountPanelProps = {
   onCloseSettings: () => void;
   editName: string;
   editEmail: string;
-  editAvatar: string;
+  editAvatarPreview: string;
+  avatarAssetId?: string;
   onEditName: (v: string) => void;
   onEditEmail: (v: string) => void;
   onPickAvatar: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -167,13 +169,17 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                 <div
                   className={`flex h-24 w-24 overflow-hidden ${account === "boutique" ? "rounded-none" : "rounded-3xl"} ${theme.button}`}
                 >
-                  {customer.avatarUrl ? (
-                    <img src={customer.avatarUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <UserRound className="h-11 w-11" />
-                    </div>
-                  )}
+                  <LocalAssetImage
+                    assetId={customer.avatarAssetId}
+                    fallbackSrc={customer.avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    fallback={
+                      <div className="flex h-full w-full items-center justify-center">
+                        <UserRound className="h-11 w-11" />
+                      </div>
+                    }
+                  />
                 </div>
                 <div>
                   <p className={`text-sm font-black ${theme.accent}`}>بيانات الحساب</p>
@@ -350,13 +356,17 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
             <div className="space-y-5">
               <div className={`flex items-center gap-4 p-4 ${theme.buttonOutline}`}>
                 <div className={`h-24 w-24 overflow-hidden ${theme.button}`}>
-                  {props.editAvatar ? (
-                    <img src={props.editAvatar} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <UserRound className="h-10 w-10" />
-                    </div>
-                  )}
+                  <LocalAssetImage
+                    assetId={props.avatarAssetId}
+                    previewUrl={props.editAvatarPreview || undefined}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    fallback={
+                      <div className="flex h-full w-full items-center justify-center">
+                        <UserRound className="h-10 w-10" />
+                      </div>
+                    }
+                  />
                 </div>
                 <div>
                   <input

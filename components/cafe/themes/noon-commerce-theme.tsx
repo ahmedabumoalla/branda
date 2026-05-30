@@ -7,6 +7,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -19,7 +20,7 @@ export function NoonCommerceTheme(props: CafeThemePageProps) {
       <CafeHeader
         slug={slug}
         cafeName={cafeSettings.cafeName}
-        logoUrl={cafeSettings.logoDataUrl}
+        logoUrl={props.cafeLogoUrl}
         themeId={themeId}
         customer={props.customer}
       />
@@ -59,6 +60,8 @@ export function NoonCommerceTheme(props: CafeThemePageProps) {
             </Link>
           ))}
         </div>
+
+        <ThemeCategoryStrip slug={slug} theme={theme} className="mt-4" variant="cards" />
 
         {bannerOffers.length > 0 ? (
           <ThemeBannerCarousel slug={slug} offers={bannerOffers} theme={theme} variant="strip" />

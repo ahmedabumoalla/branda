@@ -8,6 +8,7 @@ import {
   ThemePageFooter,
   ThemeProductCard,
   ThemeSearchBar,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -20,7 +21,7 @@ export function CyberEcoDarkTheme(props: CafeThemePageProps) {
       <CafeHeader
         slug={slug}
         cafeName={cafeSettings.cafeName}
-        logoUrl={cafeSettings.logoDataUrl}
+        logoUrl={props.cafeLogoUrl}
         themeId={themeId}
         customer={props.customer}
       />
@@ -46,6 +47,8 @@ export function CyberEcoDarkTheme(props: CafeThemePageProps) {
             </Link>
           ))}
         </div>
+
+        <ThemeCategoryStrip slug={slug} theme={theme} className="mt-4" />
 
         {bannerOffers.length > 0 ? (
           <ThemeBannerCarousel slug={slug} offers={bannerOffers} theme={theme} variant="neon" />

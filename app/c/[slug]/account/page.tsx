@@ -3,8 +3,15 @@
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { ExperienceCampaignSection } from "@/components/cafe/experience-campaign-section";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
+import {
+  ImagePipelineError,
+  optimizeImageForStorage,
+  type OptimizedImageResult,
+} from "@/lib/cafe/image-asset-pipeline";
+import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
   getCustomerSession,
@@ -62,7 +69,10 @@ function AccountPageInner() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editAvatar, setEditAvatar] = useState("");
+  const [editAvatarPreview, setEditAvatarPreview] = useState("");
+  const [pendingAvatar, setPendingAvatar] = useState<OptimizedImageResult | null>(null);
+  const [avatarAssetId, setAvatarAssetId] = useState<string | undefined>();
+  const [optimizingAvatar, setOptimizingAvatar] = useState(false);
 
   useEffect(() => {
     const session = getCustomerSession(slug);
@@ -76,7 +86,8 @@ function AccountPageInner() {
     setCustomer(session);
     setEditName(session.fullName);
     setEditEmail(session.email || "");
-    setEditAvatar(session.avatarUrl || "");
+    setEditAvatarPreview(session.avatarUrl || "");
+    setAvatarAssetId(session.avatarAssetId);
 
     const savedOrders = localStorage.getItem(ORDERS_KEY);
     const savedInvoices = localStorage.getItem(INVOICES_KEY);
@@ -159,29 +170,58 @@ function AccountPageInner() {
     router.push(path());
   }
 
-  function pickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+  async function pickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setEditAvatar(reader.result);
-    };
-    reader.readAsDataURL(file);
+    if (!file) return;
     e.target.value = "";
+
+    setOptimizingAvatar(true);
+    try {
+      const optimized = await optimizeImageForStorage(file, "customer-avatar");
+      if (editAvatarPreview.startsWith("blob:")) revokeObjectUrl(editAvatarPreview);
+      setEditAvatarPreview(URL.createObjectURL(optimized.blob));
+      setPendingAvatar(optimized);
+    } catch (err) {
+      alert(
+        err instanceof ImagePipelineError
+          ? err.message
+          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP"
+      );
+    } finally {
+      setOptimizingAvatar(false);
+    }
   }
 
-  function saveSettings() {
+  async function saveSettings() {
     if (!editName.trim()) {
       alert("اكتب الاسم");
       return;
     }
+    if (!customer) return;
+
+    let nextAssetId = avatarAssetId;
+    if (pendingAvatar) {
+      try {
+        nextAssetId = await saveOptimizedImageAsset(
+          "customer-avatar",
+          pendingAvatar,
+          customer.id
+        );
+      } catch {
+        alert("تعذر حفظ الصورة الشخصية");
+        return;
+      }
+    }
+
     const next = updateCustomerSession(slug, {
       fullName: editName.trim(),
       email: editEmail.trim() || undefined,
-      avatarUrl: editAvatar || undefined,
+      avatarAssetId: nextAssetId,
+      avatarUrl: undefined,
     });
     if (next) {
       setCustomer(next);
+      setPendingAvatar(null);
       setSettingsOpen(false);
       alert("تم حفظ بيانات الحساب");
     }
@@ -190,40 +230,51 @@ function AccountPageInner() {
   if (!customer) return null;
 
   return (
-    <ThemedAccountPanel
-      slug={slug}
-      experience={experience}
-      cafeName={settings.cafeName}
-      homeHref={path()}
-      customer={customer}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      myOrders={myOrders}
-      myReservations={myReservations}
-      myTransactions={myTransactions}
-      myInvoices={myInvoices}
-      loyaltyBalance={loyaltyBalance}
-      totalInvoices={totalInvoices}
-      latestActivity={latestActivity}
-      onLogout={logout}
-      onOpenSettings={() => {
-        setEditName(customer.fullName);
-        setEditEmail(customer.email || "");
-        setEditAvatar(customer.avatarUrl || "");
-        setSettingsOpen(true);
-      }}
-      settingsOpen={settingsOpen}
-      onCloseSettings={() => setSettingsOpen(false)}
-      editName={editName}
-      editEmail={editEmail}
-      editAvatar={editAvatar}
-      onEditName={setEditName}
-      onEditEmail={setEditEmail}
-      onPickAvatar={pickAvatar}
-      onClearAvatar={() => setEditAvatar("")}
-      onSaveSettings={saveSettings}
-      fileRef={fileRef}
-    />
+    <>
+      <ThemedAccountPanel
+        slug={slug}
+        experience={experience}
+        cafeName={settings.cafeName}
+        homeHref={path()}
+        customer={customer}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        myOrders={myOrders}
+        myReservations={myReservations}
+        myTransactions={myTransactions}
+        myInvoices={myInvoices}
+        loyaltyBalance={loyaltyBalance}
+        totalInvoices={totalInvoices}
+        latestActivity={latestActivity}
+        onLogout={logout}
+        onOpenSettings={() => {
+          setEditName(customer.fullName);
+          setEditEmail(customer.email || "");
+          setEditAvatarPreview("");
+          setAvatarAssetId(customer.avatarAssetId);
+          setPendingAvatar(null);
+          setSettingsOpen(true);
+        }}
+        settingsOpen={settingsOpen}
+        onCloseSettings={() => setSettingsOpen(false)}
+        editName={editName}
+        editEmail={editEmail}
+        editAvatarPreview={editAvatarPreview}
+        avatarAssetId={avatarAssetId}
+        onEditName={setEditName}
+        onEditEmail={setEditEmail}
+        onPickAvatar={pickAvatar}
+        onClearAvatar={() => {
+          if (editAvatarPreview.startsWith("blob:")) revokeObjectUrl(editAvatarPreview);
+          setEditAvatarPreview("");
+          setPendingAvatar(null);
+          setAvatarAssetId(undefined);
+        }}
+        onSaveSettings={() => void saveSettings()}
+        fileRef={fileRef}
+      />
+      <ExperienceCampaignSection slug={slug} compact />
+    </>
   );
 }
 

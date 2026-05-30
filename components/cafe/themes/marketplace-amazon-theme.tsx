@@ -10,6 +10,7 @@ import {
   ThemePageFooter,
   ThemeProductCard,
   ThemeSearchBar,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -23,7 +24,7 @@ export function MarketplaceAmazonTheme(props: CafeThemePageProps) {
       <header className={`${theme.header} sticky top-0 z-50`}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href={getCafePath(slug, "", previewThemeId)} className="flex items-center gap-3">
-            <CafeLogo name={cafeSettings.cafeName} logoUrl={cafeSettings.logoDataUrl} size="sm" />
+            <CafeLogo name={cafeSettings.cafeName} logoUrl={props.cafeLogoUrl} size="sm" />
             <span className="font-black">{cafeSettings.cafeName}</span>
           </Link>
           <Link
@@ -59,6 +60,8 @@ export function MarketplaceAmazonTheme(props: CafeThemePageProps) {
             ))}
           </div>
         </section>
+
+        <ThemeCategoryStrip slug={slug} theme={theme} className="mt-6" variant="cards" />
 
         {bannerOffers.length > 0 ? (
           <ThemeBannerCarousel slug={slug} offers={bannerOffers} theme={theme} previewThemeId={previewThemeId} variant="wide" />

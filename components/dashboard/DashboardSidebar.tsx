@@ -23,9 +23,16 @@ import {
   Users,
 } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import { logoutBrandaAuth } from "@/lib/platform/auth";
-import { CAFE_SETTINGS_KEY, mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
+import { runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
+import {
+  CAFE_SETTINGS_KEY,
+  mockCafeSettings,
+  type CafeSettings,
+} from "@/lib/mock/cafe-settings";
 import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
 import {
   cafeHasFeature,
@@ -74,8 +81,8 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const [activePlanId, setActivePlanId] = useState("pro");
   const [planName, setPlanName] = useState("Pro");
   const [cafeName, setCafeName] = useState(mockCafeSettings.cafeName);
-  const [cafeLogo, setCafeLogo] = useState<string | undefined>();
   const [cafeSettings, setCafeSettings] = useState<CafeSettings>(mockCafeSettings);
+  const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
 
   useEffect(() => {
     setActivePlanId(getActiveCafePlanId());
@@ -83,13 +90,14 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     const plan = plans.find((p) => p.id === getActiveCafePlanId());
     if (plan) setPlanName(plan.name);
 
-    const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
-    if (saved) {
-      const settings = JSON.parse(saved) as CafeSettings;
-      setCafeSettings(settings);
-      setCafeName(settings.cafeName || mockCafeSettings.cafeName);
-      setCafeLogo(settings.logoDataUrl);
-    }
+    void runCustomIdentityMigrationOnce().then(() => {
+      const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
+      if (saved) {
+        const settings = JSON.parse(saved) as CafeSettings;
+        setCafeSettings(settings);
+        setCafeName(settings.cafeName || mockCafeSettings.cafeName);
+      }
+    });
   }, []);
 
   function isActive(href: string) {
@@ -102,34 +110,39 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5D8CD]/60 bg-gradient-to-b from-[#3A2117] via-[#2f1b13] to-[#241610] text-[#F8E8D2] shadow-[-12px_0_40px_rgba(36,22,16,0.35)]"
+      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E7D7C6]/60 bg-gradient-to-b from-[#4A281D] via-[#311912] to-[#311912] text-[#FCF8F3] shadow-[-12px_0_40px_rgba(49,25,18,0.35)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
         <BrandaLogo variant="dark" width={160} height={64} priority className="mx-auto" />
-        <p className="mt-3 text-center text-xs font-bold text-[#CBB29C]">
+        <p className="mt-3 text-center text-xs font-bold text-[#F2E7D9]">
           لوحة تحكم الكوفي
         </p>
       </div>
 
       <div className="mx-5 mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#F8F4EF] shadow-lg">
-            <CafeLogo name={cafeName} logoUrl={cafeLogo} size="md" className="!shadow-none" />
+          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FCF8F3] shadow-lg">
+            <CafeLogo name={cafeName} logoUrl={cafeLogoUrl} size="md" className="!shadow-none" />
           </div>
 
           <div className="min-w-0 flex-1 text-right">
-            <p className="text-xs font-bold text-[#CBB29C]">الكوفي الحالي</p>
+            <p className="text-xs font-bold text-[#F2E7D9]">الكوفي الحالي</p>
             <h2 className="mt-1 truncate text-xl font-black">{cafeName}</h2>
-            <span className="mt-2 inline-flex rounded-xl bg-[#F6C35B]/20 px-3 py-1 text-xs font-black text-[#F6C35B]">
+            <Link
+              href="/dashboard/subscription"
+              onClick={onNavigate}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[#D9A33F]/20 px-3 py-1 text-xs font-black text-[#F0C568] transition hover:bg-[#D9A33F]/30"
+            >
               {planName}
-            </span>
+            </Link>
           </div>
         </div>
 
         <div className="mt-5 flex gap-2">
+          <NotificationsPanel />
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-[#F6C35B] transition hover:bg-white/10"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-[#F0C568] transition hover:bg-white/10"
             aria-label="مشاركة"
           >
             <Share2 className="h-4 w-4" />
@@ -138,13 +151,13 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
           <Link
             href={getCafePublicUrl(cafeSettings.cafeSlug || cafeSlug)}
             target="_blank"
-            className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[#F6C35B]/30 bg-[#F6C35B]/15 text-sm font-black text-[#F6C35B] transition hover:bg-[#F6C35B]/25"
+            className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[#D9A33F]/30 bg-[#D9A33F]/15 text-sm font-black text-[#F0C568] transition hover:bg-[#D9A33F]/25"
           >
             زيارة الكوفي
           </Link>
         </div>
 
-        <p className="mt-3 text-center text-[10px] font-bold text-[#7A6255]">
+        <p className="mt-3 text-center text-[10px] font-bold text-[#806A5E]">
           {getCafeDisplayDomain(cafeSettings.cafeSlug || cafeSlug, cafeSettings)}
         </p>
       </div>
@@ -161,13 +174,13 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
               onClick={onNavigate}
               className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
                 active
-                  ? "bg-gradient-to-l from-[#F6C35B]/25 to-white/10 text-[#F6C35B] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
-                  : "text-[#E5D8CD] hover:bg-white/5 hover:text-[#F8F4EF]"
+                  ? "bg-gradient-to-l from-[#D9A33F]/25 to-white/10 text-[#F0C568] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                  : "text-[#F2E7D9] hover:bg-white/5 hover:text-[#FCF8F3]"
               }`}
             >
               <span className="flex items-center gap-2">
                 {item.badge ? (
-                  <span className="rounded-full bg-[#F6C35B] px-2 py-0.5 text-[10px] font-black text-[#241610]">
+                  <span className="rounded-full bg-[#D9A33F] px-2 py-0.5 text-[10px] font-black text-[#311912]">
                     {item.badge}
                   </span>
                 ) : (
@@ -178,7 +191,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
               <span className="flex items-center gap-3">
                 <span>{item.title}</span>
                 <Icon
-                  className={`h-5 w-5 ${active ? "text-[#F6C35B]" : "text-[#CBB29C] group-hover:text-[#F8F4EF]"}`}
+                  className={`h-5 w-5 ${active ? "text-[#F0C568]" : "text-[#F2E7D9] group-hover:text-[#FCF8F3]"}`}
                 />
               </span>
             </Link>
@@ -190,7 +203,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center justify-between rounded-2xl border border-[#F6C35B]/20 bg-white/5 px-4 py-3.5 text-sm font-black text-[#F8E8D2] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200"
+          className="flex w-full items-center justify-between rounded-2xl border border-[#D9A33F]/20 bg-white/5 px-4 py-3.5 text-sm font-black text-[#FCF8F3] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200"
         >
           <span>تسجيل الخروج</span>
           <LogOut className="h-5 w-5" />

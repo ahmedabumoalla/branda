@@ -9,6 +9,7 @@ import {
   Power,
   Trash2,
 } from "lucide-react";
+import { ProductImage } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
@@ -27,6 +28,7 @@ const variantGradient: Record<MenuImageVariant, string> = {
 
 type Props = {
   product: MenuProduct;
+  categoryLabel?: string;
   freeProductLabel?: string;
   onEdit: () => void;
   onToggleAvailability: () => void;
@@ -35,6 +37,7 @@ type Props = {
 
 export function MenuProductCard({
   product,
+  categoryLabel,
   freeProductLabel,
   onEdit,
   onToggleAvailability,
@@ -45,19 +48,18 @@ export function MenuProductCard({
   return (
     <article className="overflow-hidden rounded-3xl border border-white bg-white/80 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
-        {product.imageDataUrl ? (
-          <img
-            src={product.imageDataUrl}
-            alt=""
-            className="h-full w-full object-contain bg-[#F8F4EF]"
-          />
-        ) : (
-          <div
-            className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[product.imageVariant]}`}
-          >
-            <Coffee className="h-14 w-14 text-white/85" />
-          </div>
-        )}
+        <ProductImage
+          product={product}
+          alt=""
+          className="h-full w-full object-contain bg-[#F8F4EF]"
+          fallback={
+            <div
+              className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[product.imageVariant]}`}
+            >
+              <Coffee className="h-14 w-14 text-white/85" />
+            </div>
+          }
+        />
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#3A2117]/55 via-transparent to-transparent" />
 
@@ -85,7 +87,7 @@ export function MenuProductCard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-black text-[#8B5E3C]">
-              {product.category}
+              {categoryLabel ?? product.category}
             </p>
 
             <h3 className="mt-1 text-lg font-black text-[#3A2117]">

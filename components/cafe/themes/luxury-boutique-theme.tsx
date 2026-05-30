@@ -7,6 +7,7 @@ import {
   ThemeBannerCarousel,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -17,7 +18,7 @@ export function LuxuryBoutiqueTheme(props: CafeThemePageProps) {
   return (
     <main dir="rtl" className={`min-h-screen ${theme.page}`}>
       <nav className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-5 ${theme.nav}`}>
-        <CafeLogo name={cafeSettings.cafeName} logoUrl={cafeSettings.logoDataUrl} size="sm" />
+        <CafeLogo name={cafeSettings.cafeName} logoUrl={props.cafeLogoUrl} size="sm" />
         <div className="flex gap-6 text-sm font-medium tracking-wide">
           {buildCafeNavItems(slug).slice(0, 3).map(({ href, label }) => (
             <Link key={href} href={href} className={theme.link}>
@@ -49,6 +50,10 @@ export function LuxuryBoutiqueTheme(props: CafeThemePageProps) {
           ) : null}
         </div>
       </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <ThemeCategoryStrip slug={slug} theme={theme} className="py-8 justify-center" variant="cards" />
+      </div>
 
       <div className="mx-auto max-w-6xl px-6 py-12">
         {bannerOffers.length > 0 ? (

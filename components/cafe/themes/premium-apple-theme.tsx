@@ -7,6 +7,7 @@ import {
   CafeIdentityBlock,
   ThemePageFooter,
   ThemeProductCard,
+  ThemeCategoryStrip,
   buildCafeNavItems,
 } from "./theme-shared";
 
@@ -18,7 +19,7 @@ export function PremiumAppleTheme(props: CafeThemePageProps) {
       <CafeHeader
         slug={slug}
         cafeName={cafeSettings.cafeName}
-        logoUrl={cafeSettings.logoDataUrl}
+        logoUrl={props.cafeLogoUrl}
         themeId={themeId}
         customer={props.customer}
       />
@@ -27,7 +28,7 @@ export function PremiumAppleTheme(props: CafeThemePageProps) {
         <section className={`text-center ${theme.hero} rounded-3xl px-6 py-20`}>
           <CafeIdentityBlock
             cafeName={cafeSettings.cafeName}
-            logoUrl={cafeSettings.logoDataUrl}
+            logoUrl={props.cafeLogoUrl}
             description={cafeSettings.description}
             theme={theme}
             size="lg"
@@ -47,6 +48,13 @@ export function PremiumAppleTheme(props: CafeThemePageProps) {
             </Link>
           ))}
         </nav>
+
+        <ThemeCategoryStrip
+          slug={slug}
+          theme={theme}
+          previewThemeId={props.previewThemeId}
+          className="mt-8 justify-center"
+        />
 
         {popularProducts.length > 0 ? (
           <section className="mt-20 space-y-12">

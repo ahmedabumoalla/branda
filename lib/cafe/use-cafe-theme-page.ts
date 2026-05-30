@@ -9,8 +9,12 @@ import {
 } from "@/lib/cafe/theme-links";
 import { getThemeExperience, type ThemeExperience } from "@/lib/cafe/theme-experience";
 import {
-  CAFE_THEME_KEY,
-  normalizeThemeId,
+  readSavedCafeThemeIdFromStorage,
+  runCustomIdentityMigrationOnce,
+  subscribeBrandaStorageEvents,
+} from "@/lib/cafe/theme-storage-sync";
+import {
+  DEFAULT_CAFE_THEME_ID,
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
 import {
@@ -22,20 +26,29 @@ import {
 export function useCafeThemePage(slug: string) {
   const searchParams = useSearchParams();
   const previewThemeId = readPreviewThemeFromSearch(searchParams);
-  const [savedThemeId, setSavedThemeId] = useState<CafeThemeId>(() =>
-    normalizeThemeId(null)
-  );
+  const [savedThemeId, setSavedThemeId] = useState<CafeThemeId>(DEFAULT_CAFE_THEME_ID);
   const [settings, setSettings] = useState<CafeSettings>(mockCafeSettings);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setSavedThemeId(normalizeThemeId(localStorage.getItem(CAFE_THEME_KEY)));
+    void runCustomIdentityMigrationOnce();
+    setSavedThemeId(readSavedCafeThemeIdFromStorage());
     const savedSettings = localStorage.getItem(CAFE_SETTINGS_KEY);
     if (savedSettings) setSettings(JSON.parse(savedSettings));
+    setHydrated(true);
+
+    return subscribeBrandaStorageEvents({
+      onThemeUpdated: () => {
+        setSavedThemeId(readSavedCafeThemeIdFromStorage());
+      },
+    });
   }, [slug]);
 
   const themeId = previewThemeId ?? savedThemeId;
   const experience = getThemeExperience(themeId);
-  const isPreview = Boolean(previewThemeId);
+  const isPreview = Boolean(
+    previewThemeId && previewThemeId !== (hydrated ? savedThemeId : DEFAULT_CAFE_THEME_ID)
+  );
 
   function path(subpath = "") {
     return getCafePath(slug, subpath, previewThemeId);
@@ -55,5 +68,6 @@ export function useCafeThemePage(slug: string) {
     isPreview,
     path,
     nextPath,
+    hydrated,
   };
 }

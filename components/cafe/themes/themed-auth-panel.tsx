@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 
@@ -28,6 +29,7 @@ export function ThemedAuthPanel({
   submitLabel,
 }: Props) {
   const { theme, auth } = experience;
+  const logoUrl = useResolvedCafeLogoUrl(settings);
 
   const panelClass =
     auth === "minimal"
@@ -50,7 +52,7 @@ export function ThemedAuthPanel({
       <div className="mb-8 flex flex-col items-center text-center">
         <CafeLogo
           name={settings.cafeName}
-          logoUrl={settings.logoDataUrl}
+          logoUrl={logoUrl}
           size={auth === "kiosk" ? "md" : "lg"}
         />
         <h1

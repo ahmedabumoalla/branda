@@ -10,25 +10,40 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ProductImage } from "@/components/cafe/product-image";
+import {
+  ImagePipelineError,
+  isHttpImageUrl,
+  optimizeImageForStorage,
+  type OptimizedImageResult,
+} from "@/lib/cafe/image-asset-pipeline";
+import {
+  revokeObjectUrl,
+  saveOptimizedImageAsset,
+} from "@/lib/cafe/local-asset-store";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
-  MENU_CATEGORIES,
   PROMO_KINDS,
   promoBadgeText,
-  type MenuCategory,
   type MenuImageVariant,
   type MenuProduct,
   type ProductPromo,
   type PromoKind,
 } from "@/lib/mock/menu";
+import {
+  getCategoryNameById,
+  type MenuCategoryRecord,
+} from "@/lib/mock/menu-categories";
 
 type Props = {
   open: boolean;
   mode: "add" | "edit";
   editingProduct: MenuProduct | null;
   productList: MenuProduct[];
+  categories: MenuCategoryRecord[];
+  onCategoriesChange: (categories: MenuCategoryRecord[]) => void;
   onClose: () => void;
   onSave: (product: MenuProduct) => void;
 };
@@ -83,21 +98,33 @@ export function MenuProductFormModal({
   mode,
   editingProduct,
   productList,
+  categories,
+  onCategoriesChange,
   onClose,
   onSave,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState<MenuCategory>("قهوة");
-  const [customCategory, setCustomCategory] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [description, setDescription] = useState("");
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageAssetId, setImageAssetId] = useState<string | undefined>();
+  const [legacyExternalImageUrl, setLegacyExternalImageUrl] = useState<string | null>(null);
+  const [pendingOptimized, setPendingOptimized] = useState<OptimizedImageResult | null>(null);
+  const [optimizingImage, setOptimizingImage] = useState(false);
   const [imageVariant, setImageVariant] = useState<MenuImageVariant>("latte");
 
   const [calories, setCalories] = useState("");
   const [price, setPrice] = useState("18");
   const [loyaltyPoints, setLoyaltyPoints] = useState("18");
+  const [preparationTimeMinutes, setPreparationTimeMinutes] = useState("");
+  const [redeemableWithPoints, setRedeemableWithPoints] = useState(false);
+  const [redemptionPoints, setRedemptionPoints] = useState("");
+  const [availableForPickup, setAvailableForPickup] = useState(true);
+  const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState("");
 
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [ingredientDraft, setIngredientDraft] = useState("");
@@ -115,19 +142,40 @@ export function MenuProductFormModal({
     if (!open) return;
 
     if (mode === "edit" && editingProduct) {
-      const isKnownCategory = MENU_CATEGORIES.includes(editingProduct.category);
-
       setName(editingProduct.name);
-      setCategory(isKnownCategory ? editingProduct.category : "أخرى");
-      setCustomCategory(isKnownCategory ? "" : editingProduct.category);
+      setCategoryId(editingProduct.categoryId ?? "");
+      setCreatingCategory(false);
+      setNewCategoryName("");
       setDescription(editingProduct.description);
-      setImageDataUrl(editingProduct.imageDataUrl ?? null);
+      setImagePreviewUrl(null);
+      setImageAssetId(editingProduct.imageAssetId);
+      setLegacyExternalImageUrl(
+        isHttpImageUrl(editingProduct.imageDataUrl) ? editingProduct.imageDataUrl! : null
+      );
+      setPendingOptimized(null);
       setImageVariant(editingProduct.imageVariant);
       setPrice(String(editingProduct.price));
       setCalories(
         editingProduct.calories === undefined ? "" : String(editingProduct.calories)
       );
       setLoyaltyPoints(String(editingProduct.loyaltyPoints));
+      setPreparationTimeMinutes(
+        editingProduct.preparationTimeMinutes === undefined
+          ? ""
+          : String(editingProduct.preparationTimeMinutes)
+      );
+      setRedeemableWithPoints(!!editingProduct.redeemableWithPoints);
+      setRedemptionPoints(
+        editingProduct.redemptionPoints === undefined
+          ? ""
+          : String(editingProduct.redemptionPoints)
+      );
+      setAvailableForPickup(editingProduct.availableForPickup !== false);
+      setPickupLeadTimeMinutes(
+        editingProduct.pickupLeadTimeMinutes === undefined
+          ? ""
+          : String(editingProduct.pickupLeadTimeMinutes)
+      );
       setIngredients([...editingProduct.ingredients]);
       setAvailable(editingProduct.available);
 
@@ -144,14 +192,23 @@ export function MenuProductFormModal({
       }
     } else {
       setName("");
-      setCategory("قهوة");
-      setCustomCategory("");
+      setCategoryId(categories[0]?.id ?? "");
+      setCreatingCategory(false);
+      setNewCategoryName("");
       setDescription("");
-      setImageDataUrl(null);
+      setImagePreviewUrl(null);
+      setImageAssetId(undefined);
+      setLegacyExternalImageUrl(null);
+      setPendingOptimized(null);
       setImageVariant("latte");
       setPrice("18");
       setCalories("");
       setLoyaltyPoints("18");
+      setPreparationTimeMinutes("");
+      setRedeemableWithPoints(false);
+      setRedemptionPoints("");
+      setAvailableForPickup(true);
+      setPickupLeadTimeMinutes("");
       setIngredients([]);
       setIngredientDraft("");
       setAvailable(true);
@@ -163,7 +220,30 @@ export function MenuProductFormModal({
       setPromoStart("2026-05-10");
       setPromoEnd("2026-05-31");
     }
-  }, [open, mode, editingProduct]);
+  }, [open, mode, editingProduct, categories]);
+
+  const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  function resolveCategoryId(): string | undefined {
+    if (creatingCategory) {
+      if (!newCategoryName.trim()) return undefined;
+      const now = new Date().toISOString().slice(0, 10);
+      const maxOrder = categories.reduce((max, c) => Math.max(max, c.sortOrder), 0);
+      const newCat: MenuCategoryRecord = {
+        id: `cat_${Date.now()}`,
+        cafeSlug: "qatrah",
+        name: newCategoryName.trim(),
+        sortOrder: maxOrder + 1,
+        visible: true,
+        featured: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      onCategoriesChange([...categories, newCat]);
+      return newCat.id;
+    }
+    return categoryId || undefined;
+  }
 
   function addIngredient() {
     const value = ingredientDraft.trim();
@@ -173,23 +253,37 @@ export function MenuProductFormModal({
     setIngredientDraft("");
   }
 
-  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setImageDataUrl(reader.result);
-      }
-    };
-
-    reader.readAsDataURL(file);
+    if (!file) return;
     e.target.value = "";
+
+    setOptimizingImage(true);
+    try {
+      const optimized = await optimizeImageForStorage(file, "product-image");
+      if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+      setImagePreviewUrl(URL.createObjectURL(optimized.blob));
+      setPendingOptimized(optimized);
+      setLegacyExternalImageUrl(null);
+    } catch (err) {
+      alert(
+        err instanceof ImagePipelineError
+          ? err.message
+          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP"
+      );
+    } finally {
+      setOptimizingImage(false);
+    }
   }
 
-  const finalCategory =
-    category === "أخرى" ? customCategory.trim() || "أخرى" : category;
+  const resolvedCategoryId = creatingCategory
+    ? undefined
+    : categoryId || undefined;
+  const displayCategory = getCategoryNameById(
+    categories,
+    resolvedCategoryId,
+    creatingCategory ? newCategoryName.trim() || "أخرى" : "أخرى"
+  );
 
   const previewProduct: MenuProduct = useMemo(() => {
     const promo = buildPromoFromForm(
@@ -205,26 +299,49 @@ export function MenuProductFormModal({
     return {
       id: "preview",
       name: name.trim() || "اسم المنتج",
-      category: finalCategory,
+      category: displayCategory,
+      categoryId: resolvedCategoryId,
       description: description.trim() || "وصف مختصر يظهر للعميل في صفحة المنتج.",
-      imageDataUrl,
+      imageAssetId,
+      imageDataUrl: legacyExternalImageUrl,
       imageVariant,
       price: Number(price) || 0,
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: Number(loyaltyPoints) || 0,
+      preparationTimeMinutes: preparationTimeMinutes.trim()
+        ? Number(preparationTimeMinutes) || undefined
+        : undefined,
+      redeemableWithPoints,
+      redemptionPoints:
+        redeemableWithPoints && redemptionPoints.trim()
+          ? Number(redemptionPoints) || undefined
+          : undefined,
+      availableForPickup,
+      pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
+        ? Number(pickupLeadTimeMinutes) || undefined
+        : undefined,
       ingredients: ingredients.length ? ingredients : ["مكون"],
       available,
       promo,
     };
   }, [
     name,
-    finalCategory,
+    displayCategory,
+    resolvedCategoryId,
     description,
-    imageDataUrl,
+    imageAssetId,
+    legacyExternalImageUrl,
+    imagePreviewUrl,
+    pendingOptimized,
     imageVariant,
     price,
     calories,
     loyaltyPoints,
+    preparationTimeMinutes,
+    redeemableWithPoints,
+    redemptionPoints,
+    availableForPickup,
+    pickupLeadTimeMinutes,
     ingredients,
     available,
     promoLinked,
@@ -240,7 +357,7 @@ export function MenuProductFormModal({
     (product) => product.id !== editingProduct?.id
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -263,10 +380,27 @@ export function MenuProductFormModal({
       return;
     }
 
-    if (category === "أخرى" && !customCategory.trim()) {
-      alert("اكتب اسم التصنيف المخصص");
+    if (creatingCategory && !newCategoryName.trim()) {
+      alert("اكتب اسم التصنيف الجديد");
       return;
     }
+
+    if (!creatingCategory && !categoryId) {
+      alert("اختر تصنيفًا للمنتج");
+      return;
+    }
+
+    const nextCategoryId = resolveCategoryId();
+    if (!nextCategoryId) {
+      alert("تعذر حفظ التصنيف");
+      return;
+    }
+
+    const categoryName = getCategoryNameById(
+      categories,
+      nextCategoryId,
+      newCategoryName.trim() || "أخرى"
+    );
 
     if (promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
       alert("اختر المنتج المجاني");
@@ -283,22 +417,53 @@ export function MenuProductFormModal({
       promoEnd
     );
 
+    const productId = editingProduct?.id || crypto.randomUUID();
+    let finalAssetId = imageAssetId;
+
+    try {
+      if (pendingOptimized) {
+        finalAssetId = await saveOptimizedImageAsset(
+          "product-image",
+          pendingOptimized,
+          productId
+        );
+      }
+    } catch {
+      alert("تعذر حفظ صورة المنتج محليًا");
+      return;
+    }
+
     const payload: MenuProduct = {
-      id: editingProduct?.id ?? "",
+      id: productId,
       name: name.trim(),
-      category: finalCategory,
+      category: categoryName,
+      categoryId: nextCategoryId,
       description: description.trim(),
-      imageDataUrl,
+      imageAssetId: finalAssetId,
+      imageDataUrl: legacyExternalImageUrl,
       imageVariant,
       price: Number(price),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: Number(loyaltyPoints) || 0,
+      preparationTimeMinutes: preparationTimeMinutes.trim()
+        ? Number(preparationTimeMinutes) || undefined
+        : undefined,
+      redeemableWithPoints: redeemableWithPoints || undefined,
+      redemptionPoints:
+        redeemableWithPoints && redemptionPoints.trim()
+          ? Number(redemptionPoints) || undefined
+          : undefined,
+      availableForPickup: availableForPickup || undefined,
+      pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
+        ? Number(pickupLeadTimeMinutes) || undefined
+        : undefined,
       ingredients,
       available,
       promo,
     };
 
     onSave(payload);
+    if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
     onClose();
   }
 
@@ -360,26 +525,35 @@ export function MenuProductFormModal({
           <label className="block">
             <span className="text-xs font-black text-[#7A6255]">التصنيف</span>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as MenuCategory)}
+              value={creatingCategory ? "__new__" : categoryId}
+              onChange={(e) => {
+                if (e.target.value === "__new__") {
+                  setCreatingCategory(true);
+                  setCategoryId("");
+                } else {
+                  setCreatingCategory(false);
+                  setCategoryId(e.target.value);
+                }
+              }}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             >
-              {MENU_CATEGORIES.map((item) => (
-                <option key={item} value={item}>
-                  {item}
+              {sortedCategories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
                 </option>
               ))}
+              <option value="__new__">+ إنشاء تصنيف جديد</option>
             </select>
           </label>
 
-          {category === "أخرى" ? (
+          {creatingCategory ? (
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                اسم التصنيف المخصص
+                اسم التصنيف الجديد
               </span>
               <input
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="اكتب اسم التصنيف"
                 className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
               />
@@ -415,16 +589,23 @@ export function MenuProductFormModal({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]"
+                disabled={optimizingImage}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117] disabled:opacity-60"
               >
                 <ImagePlus className="h-5 w-5" />
-                اختيار صورة
+                {optimizingImage ? "جاري تحسين الصورة..." : "اختيار صورة"}
               </button>
 
-              {imageDataUrl ? (
+              {imagePreviewUrl || imageAssetId || legacyExternalImageUrl ? (
                 <button
                   type="button"
-                  onClick={() => setImageDataUrl(null)}
+                  onClick={() => {
+                    if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+                    setImagePreviewUrl(null);
+                    setPendingOptimized(null);
+                    setImageAssetId(undefined);
+                    setLegacyExternalImageUrl(null);
+                  }}
                   className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -495,6 +676,71 @@ export function MenuProductFormModal({
               />
             </label>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                وقت التحضير (دقيقة) اختياري
+              </span>
+              <input
+                inputMode="numeric"
+                value={preparationTimeMinutes}
+                onChange={(e) => setPreparationTimeMinutes(e.target.value)}
+                placeholder="مثال: 5"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                مهلة الاستلام (دقيقة) اختياري
+              </span>
+              <input
+                inputMode="numeric"
+                value={pickupLeadTimeMinutes}
+                onChange={(e) => setPickupLeadTimeMinutes(e.target.value)}
+                placeholder="مثال: 15"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+          </div>
+
+          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+            <legend className="px-2 text-xs font-black text-[#3A2117]">
+              الاستلام والاستبدال بالنقاط
+            </legend>
+
+            <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
+              <input
+                type="checkbox"
+                checked={availableForPickup}
+                onChange={(e) => setAvailableForPickup(e.target.checked)}
+              />
+              متاح للاستلام
+            </label>
+
+            <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
+              <input
+                type="checkbox"
+                checked={redeemableWithPoints}
+                onChange={(e) => setRedeemableWithPoints(e.target.checked)}
+              />
+              قابل للاستبدال بالنقاط
+            </label>
+
+            {redeemableWithPoints ? (
+              <label className="mt-4 block">
+                <span className="text-xs font-black text-[#7A6255]">نقاط الاستبدال</span>
+                <input
+                  inputMode="numeric"
+                  value={redemptionPoints}
+                  onChange={(e) => setRedemptionPoints(e.target.value)}
+                  placeholder="مثال: 120"
+                  className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                />
+              </label>
+            ) : null}
+          </fieldset>
 
           <div>
             <span className="text-xs font-black text-[#7A6255]">
@@ -679,19 +925,19 @@ export function MenuProductFormModal({
 
           <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-white shadow-xl">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
-              {previewProduct.imageDataUrl ? (
-                <img
-                  src={previewProduct.imageDataUrl}
-                  alt=""
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <div
-                  className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[previewProduct.imageVariant]}`}
-                >
-                  <Coffee className="h-12 w-12 text-white/85" />
-                </div>
-              )}
+              <ProductImage
+                product={previewProduct}
+                previewUrl={imagePreviewUrl ?? undefined}
+                alt=""
+                className="h-full w-full object-contain"
+                fallback={
+                  <div
+                    className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[previewProduct.imageVariant]}`}
+                  >
+                    <Coffee className="h-12 w-12 text-white/85" />
+                  </div>
+                }
+              />
 
               {previewProduct.promo ? (
                 <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-[#3A2117] shadow">

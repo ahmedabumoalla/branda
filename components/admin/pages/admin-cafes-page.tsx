@@ -15,8 +15,10 @@ import {
   StatusBadge,
 } from "@/components/ui/design-system";
 import {
+  getCafeSubdomainHost,
   getCafeDisplayDomain,
   getCafePublicUrl,
+  resolveCafeDomainSource,
 } from "@/lib/platform/cafe-domain";
 import {
   PLATFORM_CAFES_KEY,
@@ -81,6 +83,15 @@ export function AdminCafesPage() {
   }, [cafes, query, statusFilter]);
 
   const selected = cafes.find((c) => c.id === selectedId) ?? null;
+  const selectedDomainSettings = selected
+    ? {
+        customDomain: selected.customDomain,
+        domainStatus: selected.customDomainStatus || "غير مربوط",
+        purchasedDomain: selected.purchasedDomain,
+        purchasedDomainStatus: selected.purchasedDomainStatus || "غير مربوط",
+      }
+    : null;
+  const selectedDomainSource = resolveCafeDomainSource(selectedDomainSettings);
   const selectedPlan = plans.find((p) => p.id === selected?.planId);
 
   const cafeCustomers = useMemo(
@@ -204,7 +215,7 @@ export function AdminCafesPage() {
                 <DetailRow label="Slug" value={selected.slug} />
                 <DetailRow
                   label="رابط الكوفي"
-                  value={getCafeDisplayDomain(selected.slug)}
+                  value={getCafeDisplayDomain(selected.slug, selectedDomainSettings)}
                 />
                 <DetailRow
                   label="مسار fallback"
@@ -216,8 +227,51 @@ export function AdminCafesPage() {
                 <DetailRow label="تاريخ التسجيل" value={selected.createdAt} />
               </div>
 
+              <div className="mt-6">
+                <h3 className="mb-3 font-black text-[#F8F4EF]">الدومينات</h3>
+                <div className="space-y-2 text-sm font-bold">
+                  <DetailRow label="Subdomain" value={getCafeSubdomainHost(selected.slug)} />
+                  <DetailRow label="Custom Domain" value={selected.customDomain || "—"} />
+                  <DetailRow label="Purchased Domain" value={selected.purchasedDomain || "—"} />
+                  <DetailRow
+                    label="Status"
+                    value={
+                      selected.purchasedDomainStatus ||
+                      selected.customDomainStatus ||
+                      "غير مربوط"
+                    }
+                  />
+                  <DetailRow label="Source" value={selectedDomainSource} />
+                  <DetailRow
+                    label="CreatedAt"
+                    value={selected.purchasedDomainCreatedAt || selected.createdAt}
+                  />
+                  <DetailRow
+                    label="Verified/PurchasedAt"
+                    value={selected.purchasedDomainConnectedAt || "—"}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={getCafePublicUrl(selected.slug, { settings: selectedDomainSettings })}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-[#F8E8D2]"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    فتح الدومين
+                  </a>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-[#CBB29C]"
+                  >
+                    إعادة التحقق (Mock)
+                  </button>
+                </div>
+              </div>
+
               <div className="mt-6 grid grid-cols-2 gap-3">
-                <StatMini label="الإيرادات" value={formatSar(selected.totalRevenue)} highlight />
+                <StatMini label="قيمة الطلبات المتوقعة" value={formatSar(selected.totalRevenue)} highlight />
                 <StatMini label="الطلبات" value={String(selected.totalOrders)} />
                 <StatMini label="العملاء" value={String(selected.customersCount)} />
                 <StatMini label="الباقة" value={selectedPlan?.name ?? selected.planId} />

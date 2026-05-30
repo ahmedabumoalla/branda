@@ -1,7 +1,12 @@
 import type { BrandaCustomerSession } from "@/lib/customer/session";
 import { TRANSACTIONS_KEY, type CustomerTransaction } from "@/lib/mock/customer-activity";
 import type { CafeBranch } from "@/lib/mock/branches";
-import type { CafeReservation } from "@/lib/mock/reservations";
+import {
+  RESERVATIONS_KEY,
+  type CafeReservation,
+  type ReservationEventType,
+  type ReservationStatus,
+} from "@/lib/mock/reservations";
 import {
   PLATFORM_CUSTOMERS_KEY,
   PLATFORM_OPERATIONS_KEY,
@@ -10,6 +15,7 @@ import {
   type PlatformCustomer,
   type PlatformOperation,
 } from "@/lib/platform/admin-data";
+import { notifyCafe, notifyCustomer } from "@/lib/platform/notification-flow";
 
 const CAFE_ID = "cafe_qatrah";
 const CAFE_NAME = "كوفي قطرة";
@@ -18,19 +24,47 @@ export type CreateReservationInput = {
   slug: string;
   customer: BrandaCustomerSession;
   branch: CafeBranch;
-  reservationType: CafeReservation["type"];
+  reservationType: ReservationEventType;
   guests: number;
   date: string;
   time: string;
+  durationMinutes?: number;
+  spaceType?: string;
+  eventTitle?: string;
+  needsDecoration?: boolean;
+  needsCatering?: boolean;
+  budgetEstimate?: number;
   notes?: string;
 };
 
+function readJson<T>(key: string, fallback: T): T {
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : fallback;
+}
+
+function writeJson<T>(key: string, value: T) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
 export function createReservationFlow(input: CreateReservationInput) {
-  const { slug, customer, branch, reservationType, guests, date, time, notes } =
-    input;
+  const {
+    slug,
+    customer,
+    branch,
+    reservationType,
+    guests,
+    date,
+    time,
+    durationMinutes,
+    spaceType,
+    eventTitle,
+    needsDecoration,
+    needsCatering,
+    budgetEstimate,
+    notes,
+  } = input;
 
   const createdAt = new Date().toISOString().slice(0, 10);
-  const branchNote = `الفرع: ${branch.name}`;
 
   const newReservation: CafeReservation = {
     id: crypto.randomUUID(),
@@ -41,7 +75,14 @@ export function createReservationFlow(input: CreateReservationInput) {
     guests,
     date,
     time,
-    notes: notes?.trim() ? `${notes.trim()} • ${branchNote}` : branchNote,
+    durationMinutes,
+    branchName: branch.name,
+    spaceType: spaceType?.trim() || undefined,
+    eventTitle: eventTitle?.trim() || undefined,
+    needsDecoration,
+    needsCatering,
+    budgetEstimate,
+    notes: notes?.trim() || undefined,
     status: "بانتظار الرد",
     createdAt,
   };
@@ -67,54 +108,141 @@ export function createReservationFlow(input: CreateReservationInput) {
     createdAt,
   };
 
-  const savedReservations = localStorage.getItem("branda_qatrah_reservations");
-  const reservations: CafeReservation[] = savedReservations
-    ? JSON.parse(savedReservations)
-    : [];
-  localStorage.setItem(
-    "branda_qatrah_reservations",
-    JSON.stringify([newReservation, ...reservations])
-  );
+  const reservations = readJson<CafeReservation[]>(RESERVATIONS_KEY, []);
+  writeJson(RESERVATIONS_KEY, [newReservation, ...reservations]);
 
-  const savedTx = localStorage.getItem(TRANSACTIONS_KEY);
-  const transactions: CustomerTransaction[] = savedTx ? JSON.parse(savedTx) : [];
-  localStorage.setItem(
-    TRANSACTIONS_KEY,
-    JSON.stringify([newTransaction, ...transactions])
-  );
+  const transactions = readJson<CustomerTransaction[]>(TRANSACTIONS_KEY, []);
+  writeJson(TRANSACTIONS_KEY, [newTransaction, ...transactions]);
 
-  const savedOps = localStorage.getItem(PLATFORM_OPERATIONS_KEY);
-  const operations: PlatformOperation[] = savedOps
-    ? JSON.parse(savedOps)
-    : mockPlatformOperations;
-  localStorage.setItem(
+  const operations = readJson<PlatformOperation[]>(
     PLATFORM_OPERATIONS_KEY,
-    JSON.stringify([operation, ...operations])
+    mockPlatformOperations
   );
+  writeJson(PLATFORM_OPERATIONS_KEY, [operation, ...operations]);
 
-  const savedCustomers = localStorage.getItem(PLATFORM_CUSTOMERS_KEY);
-  const customers: PlatformCustomer[] = savedCustomers
-    ? JSON.parse(savedCustomers)
-    : mockPlatformCustomers;
+  const customers = readJson<PlatformCustomer[]>(
+    PLATFORM_CUSTOMERS_KEY,
+    mockPlatformCustomers
+  );
 
   if (!customers.some((c) => c.id === customer.id)) {
-    const linked: PlatformCustomer = {
-      id: customer.id,
-      fullName: customer.fullName,
-      phone: customer.phone,
-      email: customer.email,
-      cafeId: CAFE_ID,
-      cafeName: CAFE_NAME,
-      status: "نشط",
-      totalSpent: 0,
-      loyaltyPoints: 0,
-      createdAt,
-    };
-    localStorage.setItem(
-      PLATFORM_CUSTOMERS_KEY,
-      JSON.stringify([linked, ...customers])
-    );
+    writeJson(PLATFORM_CUSTOMERS_KEY, [
+      {
+        id: customer.id,
+        fullName: customer.fullName,
+        phone: customer.phone,
+        email: customer.email,
+        cafeId: CAFE_ID,
+        cafeName: CAFE_NAME,
+        status: "نشط",
+        totalSpent: 0,
+        loyaltyPoints: 0,
+        createdAt,
+      },
+      ...customers,
+    ]);
   }
 
+  notifyCafe({
+    cafeSlug: slug,
+    title: "طلب حجز جديد",
+    body: `${customer.fullName} — ${reservationType} • ${guests} أشخاص • ${date} ${time}`,
+    type: "new_reservation",
+    meta: { reservationId: newReservation.id },
+  });
+
+  notifyCustomer({
+    cafeSlug: slug,
+    customerId: customer.id,
+    title: "تم إرسال طلب الحجز",
+    body: `طلبك (${reservationType}) بانتظار رد الكوفي. سنبلغك عند القبول أو الرفض.`,
+    type: "new_reservation",
+    meta: { reservationId: newReservation.id },
+  });
+
   return newReservation;
+}
+
+export function updateReservationStatus(
+  reservationId: string,
+  status: ReservationStatus,
+  options?: {
+    cafeSlug?: string;
+    cafeMessage?: string;
+    rejectionReason?: string;
+  }
+) {
+  const cafeSlug = options?.cafeSlug || "qatrah";
+  const reservations = readJson<CafeReservation[]>(RESERVATIONS_KEY, []);
+  const reservation = reservations.find((r) => r.id === reservationId);
+  if (!reservation) {
+    return { ok: false as const, error: "الحجز غير موجود" };
+  }
+
+  const patch: Partial<CafeReservation> = { status };
+  if (options?.cafeMessage?.trim()) patch.cafeMessage = options.cafeMessage.trim();
+  if (options?.rejectionReason?.trim()) patch.rejectionReason = options.rejectionReason.trim();
+
+  const next = reservations.map((r) =>
+    r.id === reservationId ? { ...r, ...patch } : r
+  );
+  writeJson(RESERVATIONS_KEY, next);
+
+  const operations = readJson<PlatformOperation[]>(
+    PLATFORM_OPERATIONS_KEY,
+    mockPlatformOperations
+  );
+  writeJson(
+    PLATFORM_OPERATIONS_KEY,
+    operations.map((op) =>
+      op.title.includes(reservation.type) &&
+      op.customerName === reservation.customerName &&
+      op.status === "بانتظار الرد"
+        ? { ...op, status }
+        : op
+    )
+  );
+
+  if (reservation.customerId) {
+    if (status === "مقبول") {
+      notifyCustomer({
+        cafeSlug,
+        customerId: reservation.customerId,
+        title: "تم قبول حجزك",
+        body:
+          options?.cafeMessage?.trim() ||
+          `حجزك (${reservation.type}) مقبول — ${reservation.date} الساعة ${reservation.time}.`,
+        type: "reservation_accepted",
+        meta: { reservationId },
+      });
+    } else if (status === "مرفوض") {
+      notifyCustomer({
+        cafeSlug,
+        customerId: reservation.customerId,
+        title: "تم رفض حجزك",
+        body:
+          options?.rejectionReason?.trim() ||
+          options?.cafeMessage?.trim() ||
+          "عذرًا، لم نتمكن من قبول حجزك في الوقت المطلوب.",
+        type: "reservation_rejected",
+        meta: { reservationId },
+      });
+    } else if (status === "طلب تعديل") {
+      notifyCustomer({
+        cafeSlug,
+        customerId: reservation.customerId,
+        title: "طلب تعديل على حجزك",
+        body:
+          options?.cafeMessage?.trim() ||
+          "يرجى مراجعة تفاصيل الحجز والتواصل مع الكوفي.",
+        type: "reservation_rejected",
+        meta: { reservationId },
+      });
+    }
+  }
+
+  return {
+    ok: true as const,
+    reservation: next.find((r) => r.id === reservationId)!,
+  };
 }

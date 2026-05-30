@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -12,6 +12,17 @@ import {
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { getCafePath } from "@/lib/cafe/theme-links";
+import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
+import {
+  runCustomIdentityMigrationOnce,
+  subscribeBrandaStorageEvents,
+} from "@/lib/cafe/theme-storage-sync";
+import {
+  buildCustomIdentityCssVars,
+  loadCustomIdentityTheme,
+  OVERLAY_OPACITY,
+} from "@/lib/mock/custom-identity-theme";
 import { ThemedPreviewBanner } from "./themed-preview-banner";
 import { ThemedCafeHeader } from "./themed-cafe-header";
 import { ThemedCafeFooter } from "./themed-cafe-footer";
@@ -26,15 +37,52 @@ type Props = {
 function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
   const ctx = useCafeThemePage(slug);
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [identityStyle, setIdentityStyle] = useState<CSSProperties>({});
+  const [identityConfig, setIdentityConfig] = useState(() => loadCustomIdentityTheme());
+
+  const { theme, experience, settings, themeId, previewThemeId, isPreview } = ctx;
+  const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
+  const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(
+    identityConfig
+  );
+
+  useEffect(() => {
+    void runCustomIdentityMigrationOnce();
+  }, []);
 
   useEffect(() => {
     setCustomer(getCustomerSession(slug));
   }, [slug]);
 
-  const { theme, experience, settings, themeId, previewThemeId, isPreview } = ctx;
+  useEffect(() => {
+    if (themeId !== "brand-identity-custom") {
+      setIdentityStyle({});
+      return;
+    }
+
+    const refreshIdentity = () => {
+      const identity = loadCustomIdentityTheme();
+      setIdentityConfig(identity);
+      setIdentityStyle(buildCustomIdentityCssVars(identity.palette) as CSSProperties);
+    };
+
+    refreshIdentity();
+    return subscribeBrandaStorageEvents({
+      onCustomIdentityUpdated: refreshIdentity,
+    });
+  }, [themeId]);
+
+  const isCustomIdentity = themeId === "brand-identity-custom";
+
   const pb = experience.showMobileBottomNav
     ? "pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
     : "";
+
+  const showPageBackground =
+    themeId === "brand-identity-custom" &&
+    backgroundUrl &&
+    (identityConfig.backgroundScope === "all-customer-pages" ||
+      identityConfig.backgroundScope === "home-only");
 
   const navItems = [
     { href: getCafePath(slug, "products/offers", previewThemeId), icon: Gift, label: "العروض" },
@@ -45,44 +93,70 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
   ];
 
   return (
-    <main dir="rtl" className={`min-h-screen ${theme.page} ${pb}`}>
-      <ThemedPreviewBanner themeId={themeId} visible={isPreview} />
-      <ThemedCafeHeader
-        slug={slug}
-        cafeName={settings.cafeName}
-        logoUrl={settings.logoDataUrl}
-        themeId={themeId}
-        experience={experience}
-        customer={customer}
-        previewThemeId={previewThemeId}
-      />
-      <div
-        className={`brand-cafe-fields mx-auto ${maxWidth} px-4 py-6 sm:px-5 sm:py-8 ${className}`}
-      >
-        {children}
-      </div>
-      <div
-        className={`mx-auto ${maxWidth} px-4 sm:px-5 ${experience.showMobileBottomNav ? "mb-4" : ""}`}
-      >
-        <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId={themeId} />
-      </div>
-
-      {experience.showMobileBottomNav ? (
-        <nav
-          className={`fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 gap-1 border-t px-2 py-2 ${theme.nav}`}
-        >
-          {navItems.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex flex-col items-center gap-0.5 py-2 text-[10px] font-black"
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </Link>
-          ))}
-        </nav>
+    <main
+      dir="rtl"
+      className={`relative min-h-screen ${isCustomIdentity ? "brand-identity-custom-theme" : ""} ${theme.page} ${pb}`}
+      style={identityStyle}
+    >
+      {showPageBackground ? (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url(${backgroundUrl})`,
+              backgroundSize: identityConfig.backgroundFit,
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0"
+            style={{
+              backgroundColor: `rgba(0,0,0,${OVERLAY_OPACITY[identityConfig.overlayStrength]})`,
+            }}
+          />
+        </>
       ) : null}
+
+      <div className="relative z-10">
+        <ThemedPreviewBanner themeId={themeId} visible={isPreview} />
+        <ThemedCafeHeader
+          slug={slug}
+          cafeName={settings.cafeName}
+          logoUrl={identityLogoUrl ?? cafeLogoUrl}
+          themeId={themeId}
+          experience={experience}
+          customer={customer}
+          previewThemeId={previewThemeId}
+        />
+        <div
+          className={`brand-cafe-fields mx-auto ${maxWidth} px-4 py-6 sm:px-5 sm:py-8 ${className}`}
+        >
+          {children}
+        </div>
+        <div
+          className={`mx-auto ${maxWidth} px-4 sm:px-5 ${experience.showMobileBottomNav ? "mb-4" : ""}`}
+        >
+          <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId={themeId} />
+        </div>
+
+        {experience.showMobileBottomNav ? (
+          <nav
+            className={`fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 gap-1 border-t px-2 py-2 ${theme.nav}`}
+          >
+            {navItems.map(({ href, icon: Icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex flex-col items-center gap-0.5 py-2 text-[10px] font-black"
+              >
+                <Icon className="h-5 w-5" />
+                {label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
     </main>
   );
 }

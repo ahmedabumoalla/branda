@@ -19,11 +19,11 @@ type BentoVariant = "white" | "gold" | "cyber" | "dark";
 
 const bentoVariants: Record<BentoVariant, string> = {
   white:
-    "bg-[#FDFBF8] border-[#E5D8CD] text-[#3A2117] shadow-[8px_8px_24px_rgba(58,33,23,0.06),-6px_-6px_20px_rgba(255,255,255,0.9)]",
+    "bg-[#FCF8F3] border-[#E7D7C6] text-[#311912] shadow-[8px_8px_24px_rgba(49,25,18,0.06),-6px_-6px_20px_rgba(255,255,255,0.9)]",
   gold:
-    "bg-gradient-to-br from-[#3A2117] via-[#6B3A25] to-[#241610] border-[#F6C35B]/25 text-[#F8F4EF] shadow-[0_0_40px_rgba(246,195,91,0.12),inset_0_1px_0_rgba(255,255,255,0.08)]",
+    "bg-gradient-to-br from-[#4A281D] via-[#6B3A25] to-[#311912] border-[#D9A33F]/25 text-[#FCF8F3] shadow-[0_0_40px_rgba(217,163,63,0.12),inset_0_1px_0_rgba(255,255,255,0.08)]",
   cyber:
-    "bg-[#1a1210]/90 border-white/10 text-[#F8F4EF] shadow-[0_0_32px_rgba(246,195,91,0.08),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm",
+    "bg-[#1a1210]/90 border-white/10 text-[#F8F4EF] shadow-[0_0_32px_rgba(217,163,63,0.08),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm",
   dark:
     "bg-[#0f0c0a] border-white/10 text-[#F8F4EF] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),4px_8px_28px_rgba(0,0,0,0.45)]",
 };
@@ -81,12 +81,12 @@ export function DashboardPageShell({
     <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-[#8B5E3C]">لوحة برندة</p>
-          <h1 className="mt-2 break-words text-2xl font-black text-[#3A2117] sm:text-3xl lg:text-4xl">
+          <p className="font-black text-[#6B3A25]">لوحة برندة</p>
+          <h1 className="mt-2 break-words text-2xl font-black text-[#311912] sm:text-3xl lg:text-4xl">
             {title}
           </h1>
           {subtitle ? (
-            <p className="mt-2 max-w-2xl font-bold text-[#7A6255]">{subtitle}</p>
+            <p className="mt-2 max-w-2xl font-bold text-[#806A5E]">{subtitle}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -111,7 +111,7 @@ export function AdminPageShell({
     <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-[#F6C35B]">Branda Admin</p>
+          <p className="font-black text-[#D9A33F]">Branda Admin</p>
           <h1 className="mt-2 break-words text-2xl font-black text-[#F8F4EF] sm:text-3xl lg:text-4xl">
             {title}
           </h1>
@@ -139,9 +139,9 @@ export function StatPill({
 }) {
   return (
     <div>
-      <p className="text-sm font-black text-[#7A6255]">{label}</p>
-      <p className="mt-2 text-3xl font-black text-[#3A2117]">{value}</p>
-      {hint ? <p className="mt-1 text-xs font-bold text-[#8A7062]">{hint}</p> : null}
+      <p className="text-sm font-black text-[#806A5E]">{label}</p>
+      <p className="mt-2 text-3xl font-black text-[#311912]">{value}</p>
+      {hint ? <p className="mt-1 text-xs font-bold text-[#806A5E]">{hint}</p> : null}
     </div>
   );
 }
@@ -167,7 +167,7 @@ export function AdminStatPill({
 type BadgeTone = "gold" | "success" | "danger" | "muted" | "warning" | "neutral";
 
 const badgeTones: Record<BadgeTone, string> = {
-  gold: "bg-[#F6C35B]/20 text-[#F6C35B] border-[#F6C35B]/30",
+  gold: "bg-[#D9A33F]/20 text-[#D9A33F] border-[#D9A33F]/30",
   success: "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
   danger: "bg-red-500/15 text-red-300 border-red-500/25",
   muted: "bg-white/10 text-[#CBB29C] border-white/15",
@@ -202,7 +202,7 @@ export function SoftCard({
 }) {
   return (
     <div
-      className={`rounded-[24px] border border-[#E5D8CD] bg-[#F8F4EF] p-5 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.9),6px_8px_20px_rgba(58,33,23,0.06)] ${className}`}
+      className={`rounded-[24px] border border-[#E7D7C6] bg-[#FCF8F3] p-5 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.9),6px_8px_20px_rgba(49,25,18,0.06)] ${className}`}
     >
       {children}
     </div>
@@ -218,7 +218,7 @@ export function FilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-[#E5D8CD] bg-white p-4 shadow-[8px_8px_24px_rgba(58,33,23,0.05)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
+      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-[#E7D7C6] bg-white p-4 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>
@@ -234,7 +234,7 @@ export function AdminFilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-white/10 bg-[#1a1210]/80 p-4 shadow-[0_0_24px_rgba(246,195,91,0.06)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
+      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-white/10 bg-[#1a1210]/80 p-4 shadow-[0_0_24px_rgba(217,163,63,0.06)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>
@@ -244,16 +244,16 @@ export function AdminFilterBar({
 /* ─── Inputs (unified light / dark) ─── */
 
 export const inputLightClass =
-  "h-14 w-full rounded-2xl border border-[#E5D8CD] bg-[#FDFBF8] px-4 text-right font-bold text-[#241610] outline-none placeholder:text-[#9B8173] shadow-[inset_3px_3px_8px_rgba(58,33,23,0.06),inset_-2px_-2px_6px_rgba(255,255,255,0.95)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
+  "h-14 w-full rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 text-right font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06),inset_-2px_-2px_6px_rgba(255,255,255,0.95)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
 
 export const inputDarkClass =
-  "h-14 w-full rounded-2xl border border-[#F6C35B]/25 bg-[#211711] px-4 text-right font-bold text-[#F8E8D2] outline-none placeholder:text-[#CBB29C]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#F6C35B]/55 focus:ring-2 focus:ring-[#F6C35B]/25 [&_option]:bg-[#211711] [&_option]:text-[#F8E8D2]";
+  "h-14 w-full rounded-2xl border border-[#D9A33F]/25 bg-[#211711] px-4 text-right font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25 [&_option]:bg-[#211711] [&_option]:text-[#FCF8F3]";
 
 export const textareaLightClass =
-  "min-h-28 w-full resize-none rounded-2xl border border-[#E5D8CD] bg-[#FDFBF8] px-4 py-3 text-right font-bold text-[#241610] outline-none placeholder:text-[#9B8173] shadow-[inset_3px_3px_8px_rgba(58,33,23,0.06)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
+  "min-h-28 w-full resize-none rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 py-3 text-right font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
 
 export const textareaDarkClass =
-  "min-h-28 w-full resize-none rounded-2xl border border-[#F6C35B]/25 bg-[#211711] px-4 py-3 text-right font-bold text-[#F8E8D2] outline-none placeholder:text-[#CBB29C]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#F6C35B]/55 focus:ring-2 focus:ring-[#F6C35B]/25";
+  "min-h-28 w-full resize-none rounded-2xl border border-[#D9A33F]/25 bg-[#211711] px-4 py-3 text-right font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25";
 
 type FieldTone = "light" | "dark";
 
@@ -341,7 +341,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className={`rounded-2xl bg-[#3A2117] px-6 py-4 font-black text-[#F8E8D2] shadow-[6px_8px_20px_rgba(58,33,23,0.25),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:bg-[#241610] disabled:opacity-50 ${className}`}
+      className={`rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-[#FCF8F3] shadow-[6px_8px_20px_rgba(49,25,18,0.25),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:bg-[#311912] disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
@@ -356,7 +356,7 @@ export function GoldButton({
   return (
     <button
       {...props}
-      className={`rounded-2xl bg-gradient-to-l from-[#F6C35B] to-[#d4a84a] px-6 py-4 font-black text-[#241610] shadow-[0_0_24px_rgba(246,195,91,0.35)] transition hover:brightness-105 disabled:opacity-50 ${className}`}
+      className={`rounded-2xl bg-gradient-to-l from-[#D9A33F] to-[#F0C568] px-6 py-4 font-black text-[#311912] shadow-[0_0_24px_rgba(217,163,63,0.35)] transition hover:brightness-105 disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
@@ -380,8 +380,8 @@ export function LinkButton({
 }) {
   const styles =
     variant === "outline"
-      ? "border border-[#E5D8CD] bg-white text-[#3A2117] shadow-[4px_6px_16px_rgba(58,33,23,0.06)]"
-      : "bg-[#3A2117] text-[#F8E8D2] shadow-[6px_8px_20px_rgba(58,33,23,0.2)]";
+      ? "border border-[#E7D7C6] bg-white text-[#311912] shadow-[4px_6px_16px_rgba(49,25,18,0.06)]"
+      : "bg-[#4A281D] text-[#FCF8F3] shadow-[6px_8px_20px_rgba(49,25,18,0.2)]";
 
   return (
     <Link

@@ -36,14 +36,14 @@ export function AdminRevenuePage() {
 
   return (
     <AdminPageShell
-      title="إيرادات الكوفيهات"
-      subtitle="متابعة إيرادات كل كوفي ونسبة المنصة التقديرية."
+      title="قيمة الطلبات المتوقعة"
+      subtitle="متابعة قيمة طلبات الاستلام المقبولة (الدفع عند الاستلام — غير مؤكد داخل النظام)."
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
       <BentoGrid className="mb-6">
         <BentoCard variant="gold" span="2">
           <div className="flex items-start justify-between gap-4">
-            <AdminStatPill label="إجمالي إيرادات الكوفيهات" value={formatSar(totalRevenue)} />
+            <AdminStatPill label="إجمالي قيمة الطلبات المتوقعة" value={formatSar(totalRevenue)} />
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B]">
               <CircleDollarSign className="h-7 w-7" />
             </div>
@@ -80,7 +80,7 @@ export function AdminRevenuePage() {
                 </StatusBadge>
               </div>
 
-              <AdminStatPill label="إيرادات الكوفي" value={formatSar(cafe.totalRevenue)} />
+              <AdminStatPill label="قيمة الطلبات المتوقعة" value={formatSar(cafe.totalRevenue)} />
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-4">
                 <div className="flex items-center justify-between text-sm font-bold text-[#CBB29C]">

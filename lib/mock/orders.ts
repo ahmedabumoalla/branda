@@ -1,5 +1,11 @@
-export type OrderStatus = "جديد" | "قيد التجهيز" | "جاهز" | "مكتمل" | "ملغي";
-export type PaymentStatus = "غير مدفوع" | "مدفوع" | "مسترجع";
+/** Pickup-only flow: pay at cafe, no in-platform payment */
+export type OrderStatus =
+  | "بانتظار موافقة الكوفي"
+  | "مقبول"
+  | "مرفوض"
+  | "ملغي من العميل";
+
+export type PaymentStatus = "الدفع عند الاستلام";
 
 export type CafeOrderItem = {
   id: string;
@@ -18,9 +24,12 @@ export type CafeOrder = {
   customerPhone: string;
   customerEmail?: string;
   branchName?: string;
-  type: "استلام" | "داخل الكوفي" | "توصيل";
+  type: "استلام";
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  pickupAt?: string;
+  rejectionReason?: string;
+  cafeResponseAt?: string;
   items: CafeOrderItem[];
   subtotal: number;
   discountAmount: number;
@@ -42,9 +51,10 @@ export const mockCafeOrders: CafeOrder[] = [
     customerPhone: "0550000001",
     customerEmail: "customer@email.com",
     branchName: "فرع التحلية",
-    type: "داخل الكوفي",
-    status: "جديد",
-    paymentStatus: "مدفوع",
+    type: "استلام",
+    status: "بانتظار موافقة الكوفي",
+    paymentStatus: "الدفع عند الاستلام",
+    pickupAt: "2026-05-22 18:00",
     items: [
       { id: "1", productId: "1", name: "لاتيه فانيلا", quantity: 2, unitPrice: 18 },
       { id: "2", productId: "3", name: "كوكيز شوكولاتة", quantity: 1, unitPrice: 12 },

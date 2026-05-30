@@ -31,6 +31,9 @@ import {
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
 import { getCafePublicUrl } from "@/lib/platform/cafe-domain";
+import { adoptCafeTheme, runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
+import { CustomIdentityBuilder } from "@/components/dashboard/theme/custom-identity-builder";
 
 const CAFE_SLUG = "qatrah";
 const MENU_KEY = "branda_qatrah_menu";
@@ -45,6 +48,7 @@ function ThemePageInner() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    void runCustomIdentityMigrationOnce();
     const savedTheme = localStorage.getItem(CAFE_THEME_KEY);
     setActiveTheme(normalizeThemeId(savedTheme));
     const s = localStorage.getItem(CAFE_SETTINGS_KEY);
@@ -58,6 +62,7 @@ function ThemePageInner() {
   const selected = previewTheme ?? activeTheme;
   const theme = getThemeClasses(selected);
   const definition = getThemeDefinition(selected);
+  const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
 
   const availableProducts = products.filter((p) => p.available);
   const popularProducts = useMemo(
@@ -77,7 +82,7 @@ function ThemePageInner() {
   );
 
   function adoptTheme(id: CafeThemeId) {
-    localStorage.setItem(CAFE_THEME_KEY, id);
+    adoptCafeTheme(id);
     setActiveTheme(id);
     setPreviewTheme(null);
     setSaved(true);
@@ -87,6 +92,7 @@ function ThemePageInner() {
   const previewProps = {
     slug: CAFE_SLUG,
     cafeSettings,
+    cafeLogoUrl,
     themeId: selected,
     theme,
     customer: null,
@@ -137,6 +143,27 @@ function ThemePageInner() {
             />
           </BentoCard>
         </BentoGrid>
+
+        <CustomIdentityBuilder
+          preview={{
+            slug: CAFE_SLUG,
+            cafeSettings,
+            products,
+            offers,
+            availableProducts,
+            popularProducts,
+            latestProducts,
+            bannerOffers,
+            activeRewards: mockLoyaltyRewards.filter((r) => r.active),
+            loyaltySettings: mockLoyaltySettings,
+          }}
+          onAdopted={(id) => {
+            setActiveTheme(id);
+            setPreviewTheme(null);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+          }}
+        />
 
         {previewTheme ? (
           <BentoCard variant="white" span="4" className="mb-6">

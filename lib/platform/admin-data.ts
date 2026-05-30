@@ -35,6 +35,12 @@ export type PlatformCafe = {
   totalOrders: number;
   customersCount: number;
   createdAt: string;
+  customDomain?: string;
+  customDomainStatus?: "غير مربوط" | "بانتظار التحقق" | "مربوط";
+  purchasedDomain?: string;
+  purchasedDomainStatus?: "غير مربوط" | "بانتظار التحقق" | "مربوط";
+  purchasedDomainCreatedAt?: string;
+  purchasedDomainConnectedAt?: string;
 };
 
 export type PlatformCustomer = {
@@ -55,7 +61,15 @@ export type PlatformOperation = {
   cafeId: string;
   cafeName: string;
   customerName?: string;
-  type: "طلب" | "حجز" | "دفع" | "تقييم" | "تسجيل كوفي" | "تغيير باقة";
+  type:
+    | "طلب"
+    | "حجز"
+    | "دفع"
+    | "تقييم"
+    | "تسجيل كوفي"
+    | "تغيير باقة"
+    | "شراء دومين"
+    | "ربط دومين";
   title: string;
   amount?: number;
   status: string;
@@ -150,6 +164,10 @@ export const mockPlatformCafes: PlatformCafe[] = [
     totalOrders: 286,
     customersCount: 92,
     createdAt: "2026-05-22",
+    customDomain: "",
+    customDomainStatus: "غير مربوط",
+    purchasedDomain: "",
+    purchasedDomainStatus: "غير مربوط",
   },
 ];
 
