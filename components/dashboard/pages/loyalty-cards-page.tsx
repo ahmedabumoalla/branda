@@ -116,9 +116,9 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
           cardAccent,
         },
       }));
-      setMessage("طھظ… ط­ظپط¸ ط¥ط¹ط¯ط§ط¯ط§طھ ط¨ط·ط§ظ‚ط© ط§ظ„ظˆظ„ط§ط،");
+      setMessage("تم حفظ إعدادات بطاقة الولاء");
     } catch {
-      setMessage("طھط¹ط°ط± ط­ظپط¸ ط¥ط¹ط¯ط§ط¯ط§طھ ط¨ط·ط§ظ‚ط© ط§ظ„ظˆظ„ط§ط،");
+      setMessage("تعذر حفظ إعدادات بطاقة الولاء");
     } finally {
       setSaving(false);
     }
@@ -126,7 +126,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
   async function addCashier() {
     if (!cashierName.trim() || !cashierEmail.trim()) {
-      setMessage("ط§ط³ظ… ط§ظ„ظƒط§ط´ظٹط± ظˆط§ظ„ط¨ط±ظٹط¯ ط¥ظ„ط²ط§ظ…ظٹط©");
+      setMessage("اسم الكاشير والبريد إلزامية");
       return;
     }
 
@@ -139,12 +139,12 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
         employeeNumber: employeeNumber || undefined,
       });
       setNewPassword(password);
-      setMessage("طھظ… ط¥ظ†ط´ط§ط، ط­ط³ط§ط¨ ط§ظ„ظƒط§ط´ظٹط±");
+      setMessage("تم إنشاء حساب الكاشير");
       setCashierName("");
       setCashierEmail("");
       setEmployeeNumber("");
     } catch {
-      setMessage("طھط¹ط°ط± ط¥ظ†ط´ط§ط، ط­ط³ط§ط¨ ط§ظ„ظƒط§ط´ظٹط±");
+      setMessage("تعذر إنشاء حساب الكاشير");
     } finally {
       setProcessing(false);
     }
@@ -152,7 +152,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
   async function runScan() {
     if (!cardCode.trim() || !invoiceBarcode.trim()) {
-      setMessage("ط£ط¯ط®ظ„ ط¨ط§ط±ظƒظˆط¯ ط§ظ„ط¨ط·ط§ظ‚ط© ظˆط¨ط§ط±ظƒظˆط¯ ط§ظ„ظپط§طھظˆط±ط©");
+      setMessage("أدخل باركود البطاقة وباركود الفاتورة");
       return;
     }
 
@@ -165,12 +165,12 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
         invoiceAmount: Number(invoiceAmount || 0),
         operation,
       });
-      setMessage(operation === "stamp" ? `طھظ… طھط£ظƒظٹط¯ ط§ظ„ط¹ظ…ظ„ظٹط© ظ„ظ„ط¹ظ…ظٹظ„ ${String(result.customerName)}` : `طھظ… طµط±ظپ ط§ظ„ظ…ظƒط§ظپط£ط© ظ„ظ„ط¹ظ…ظٹظ„ ${String(result.customerName)}`);
+      setMessage(operation === "stamp" ? `تم تأكيد العملية للعميل ${String(result.customerName)}` : `تم صرف المكافأة للعميل ${String(result.customerName)}`);
       setCardCode("");
       setInvoiceBarcode("");
       setInvoiceAmount("");
     } catch {
-      setMessage(operation === "stamp" ? "طھط¹ط°ط± طھط£ظƒظٹط¯ ط§ظ„ط®طھظ… ط£ظˆ ط§ظ„ط¹ظ…ظ„ظٹط©" : "طھط¹ط°ط± طµط±ظپ ط§ظ„ظ…ظƒط§ظپط£ط©");
+      setMessage(operation === "stamp" ? "تعذر تأكيد الختم أو العملية" : "تعذر صرف المكافأة");
     } finally {
       setProcessing(false);
     }
@@ -178,36 +178,36 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
   return (
     <DashboardPageShell
-      title="ط¨ط·ط§ظ‚ط§طھ ط§ظ„ظˆظ„ط§ط،"
-      subtitle="ظ…ظ†ط¸ظˆظ…ط© ط¨ط·ط§ظ‚ط© ط§ظ„ط¹ظ„ط§ظ…ط© ظˆط§ظ„ظƒط§ط´ظٹط± ظˆط§ظ„ط¨ط§ط±ظƒظˆط¯ ظˆط³ط¬ظ„ ط§ظ„ط¹ظ…ظ„ظٹط§طھ"
-      action={<a href="#cashier-tracking" className="rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white">ظ…طھط§ط¨ط¹ط© ط§ظ„ظƒط§ط´ظٹط±</a>}
+      title="بطاقات الولاء"
+      subtitle="منظومة بطاقة العلامة والكاشير والباركود وسجل العمليات"
+      action={<a href="#cashier-tracking" className="rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white">متابعة الكاشير</a>}
     >
       {configError ? <SoftCard className="mb-6 p-4 font-black text-amber-700">{configError}</SoftCard> : null}
       {message ? <SoftCard className="mb-6 p-4 font-black text-[#6B3A25]">{message}</SoftCard> : null}
-      {newPassword ? <SoftCard className="mb-6 p-4 font-black text-emerald-700">ظƒظ„ظ…ط© ظ…ط±ظˆط± ط§ظ„ظƒط§ط´ظٹط± ط§ظ„ط¯ط§ط¦ظ…ط© {newPassword}</SoftCard> : null}
+      {newPassword ? <SoftCard className="mb-6 p-4 font-black text-emerald-700">كلمة مرور الكاشير الدائمة {newPassword}</SoftCard> : null}
 
       <BentoGrid className="mb-6">
-        <BentoCard variant="white"><CreditCard className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط،" value={dashboard.cards.length} hint="ط¯ط§ط®ظ„ ظ‡ط°ظ‡ ط§ظ„ط¹ظ„ط§ظ…ط©" /></BentoCard>
-        <BentoCard variant="white"><ShoppingBag className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="ط¹ظ…ظ„ظٹط§طھ ط§ظ„ط´ط±ط§ط،" value={totalPurchases} hint="ظ…ط¤ظƒط¯ط© ط¨ط§ظ„ط¨ط§ط±ظƒظˆط¯" /></BentoCard>
-        <BentoCard variant="white"><Gift className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="ظ…ظƒط§ظپط¢طھ ظ…طھط§ط­ط©" value={activeRewards} hint="ط¬ط§ظ‡ط²ط© ظ„ظ„طµط±ظپ" /></BentoCard>
-        <BentoCard variant="white"><UserRound className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="ط§ظ„ظƒط§ط´ظٹط±ط§طھ" value={dashboard.cashiers.length} hint="ط­ط³ط§ط¨ط§طھ طھط´ط؛ظٹظ„ ظ…ط­ط¯ظˆط¯ط©" /></BentoCard>
+        <BentoCard variant="white"><CreditCard className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="بطاقات العملاء" value={dashboard.cards.length} hint="داخل هذه العلامة" /></BentoCard>
+        <BentoCard variant="white"><ShoppingBag className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="عمليات الشراء" value={totalPurchases} hint="مؤكدة بالباركود" /></BentoCard>
+        <BentoCard variant="white"><Gift className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="مكافآت متاحة" value={activeRewards} hint="جاهزة للصرف" /></BentoCard>
+        <BentoCard variant="white"><UserRound className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="الكاشيرات" value={dashboard.cashiers.length} hint="حسابات تشغيل محدودة" /></BentoCard>
       </BentoGrid>
 
       <BentoGrid className="mb-6">
         <BentoCard variant="white" span="2">
-          <h2 className="text-xl font-black text-[#311912]">ط¥ط¹ط¯ط§ط¯ ط¨ط·ط§ظ‚ط© ط§ظ„ظˆظ„ط§ط،</h2>
+          <h2 className="text-xl font-black text-[#311912]">إعداد بطاقة الولاء</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ط§ظ„ط­ط§ظ„ط©</span><NeumoSelect value={enabled ? "on" : "off"} onChange={(e) => setEnabled(e.target.value === "on")}><option value="on">ظ…ظپط¹ظ„</option><option value="off">ظ…ظˆظ‚ظˆظپ</option></NeumoSelect></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ط¹ط¯ط¯ ط§ظ„ط¹ظ…ظ„ظٹط§طھ ظ„ظ„ظ…ظƒط§ظپط£ط©</span><NeumoInput type="number" value={purchasesRequired} onChange={(e) => setPurchasesRequired(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ط¹ظ†ظˆط§ظ† ط§ظ„ط¨ط·ط§ظ‚ط©</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ظˆطµظپ ط§ظ„ط¨ط·ط§ظ‚ط©</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ط§ظ„ظ…ظ†طھط¬ ط§ظ„ظ…ط¬ط§ظ†ظٹ</span><NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}><option value="">ط¨ط¯ظˆظ† ط±ط¨ط· ظ…ظ†طھط¬</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</NeumoSelect></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ط§ط³ظ… ط§ظ„ظ…ظƒط§ظپط£ط©</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ظ„ظˆظ† ط§ظ„ط¨ط·ط§ظ‚ط©</span><NeumoInput value={cardBackground} onChange={(e) => setCardBackground(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">ظ„ظˆظ† ط§ظ„طھظ…ظٹظٹط²</span><NeumoInput value={cardAccent} onChange={(e) => setCardAccent(e.target.value)} /></label>
-            <label className="space-y-2 sm:col-span-2"><span className="text-sm font-black text-[#6B3A25]">ط§ظ„ط´ط±ظˆط·</span><NeumoTextarea value={terms} onChange={(e) => setTerms(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">الحالة</span><NeumoSelect value={enabled ? "on" : "off"} onChange={(e) => setEnabled(e.target.value === "on")}><option value="on">مفعل</option><option value="off">موقوف</option></NeumoSelect></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عدد العمليات للمكافأة</span><NeumoInput type="number" value={purchasesRequired} onChange={(e) => setPurchasesRequired(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عنوان البطاقة</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">وصف البطاقة</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">المنتج المجاني</span><NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}><option value="">بدون ربط منتج</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</NeumoSelect></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">اسم المكافأة</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون البطاقة</span><NeumoInput value={cardBackground} onChange={(e) => setCardBackground(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون التمييز</span><NeumoInput value={cardAccent} onChange={(e) => setCardAccent(e.target.value)} /></label>
+            <label className="space-y-2 sm:col-span-2"><span className="text-sm font-black text-[#6B3A25]">الشروط</span><NeumoTextarea value={terms} onChange={(e) => setTerms(e.target.value)} /></label>
           </div>
-          <PrimaryButton className="mt-5" onClick={saveProgram} disabled={saving}><Save className="h-4 w-4" />{saving ? "ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸" : "ط­ظپط¸ ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¨ط·ط§ظ‚ط©"}</PrimaryButton>
+          <PrimaryButton className="mt-5" onClick={saveProgram} disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ" : "حفظ إعدادات البطاقة"}</PrimaryButton>
         </BentoCard>
 
         <BentoCard variant="gold" span="2">
@@ -226,28 +226,28 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
       <BentoGrid className="mb-6">
         <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />ظ‚ط§ط±ط¦ ط§ظ„ط¨ط·ط§ظ‚ط© ظˆط§ظ„ظپط§طھظˆط±ط©</h2>
+          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />قارئ البطاقة والفاتورة</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <NeumoInput placeholder="ط¨ط§ط±ظƒظˆط¯ ط¨ط·ط§ظ‚ط© ط§ظ„ط¹ظ…ظٹظ„" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
-            <NeumoInput placeholder="ط¨ط§ط±ظƒظˆط¯ ط§ظ„ظپط§طھظˆط±ط©" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
-            <NeumoInput type="number" placeholder="ظ‚ظٹظ…ط© ط§ظ„ظپط§طھظˆط±ط© ط§ط®طھظٹط§ط±ظٹ" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
-            <NeumoSelect value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">طھط£ظƒظٹط¯ ط®طھظ… ط£ظˆ ط¹ظ…ظ„ظٹط© ط´ط±ط§ط،</option><option value="redeem">طµط±ظپ ظ…ظƒط§ظپط£ط©</option></NeumoSelect>
+            <NeumoInput placeholder="باركود بطاقة العميل" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
+            <NeumoInput placeholder="باركود الفاتورة" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
+            <NeumoInput type="number" placeholder="قيمة الفاتورة اختياري" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
+            <NeumoSelect value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">تأكيد ختم أو عملية شراء</option><option value="redeem">صرف مكافأة</option></NeumoSelect>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <BarcodeCameraScanner label="ظ‚ط±ط§ط،ط© ط¨ط·ط§ظ‚ط© ط§ظ„ط¹ظ…ظٹظ„" onDetected={(value) => setCardCode(value.toUpperCase())} />
-            <BarcodeCameraScanner label="ظ‚ط±ط§ط،ط© ط¨ط§ط±ظƒظˆط¯ ط§ظ„ظپط§طھظˆط±ط©" onDetected={setInvoiceBarcode} />
-            <PrimaryButton onClick={runScan} disabled={processing}><BadgeCheck className="h-4 w-4" />طھظ†ظپظٹط° ط§ظ„ط¹ظ…ظ„ظٹط©</PrimaryButton>
+            <BarcodeCameraScanner label="قراءة بطاقة العميل" onDetected={(value) => setCardCode(value.toUpperCase())} />
+            <BarcodeCameraScanner label="قراءة باركود الفاتورة" onDetected={setInvoiceBarcode} />
+            <PrimaryButton onClick={runScan} disabled={processing}><BadgeCheck className="h-4 w-4" />تنفيذ العملية</PrimaryButton>
           </div>
         </BentoCard>
 
         <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><KeyRound className="h-6 w-6 text-[#6B3A25]" />ط¥ط¶ط§ظپط© ظƒط§ط´ظٹط±</h2>
+          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><KeyRound className="h-6 w-6 text-[#6B3A25]" />إضافة كاشير</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            <NeumoInput placeholder="ط§ط³ظ… ط§ظ„ظƒط§ط´ظٹط± ط¥ظ„ط²ط§ظ…ظٹ" value={cashierName} onChange={(e) => setCashierName(e.target.value)} />
-            <NeumoInput type="email" placeholder="ط¨ط±ظٹط¯ ط§ظ„ظƒط§ط´ظٹط± ط¥ظ„ط²ط§ظ…ظٹ" value={cashierEmail} onChange={(e) => setCashierEmail(e.target.value)} />
-            <NeumoInput placeholder="ط§ظ„ط±ظ‚ظ… ط§ظ„ظˆط¸ظٹظپظٹ ط§ط®طھظٹط§ط±ظٹ" value={employeeNumber} onChange={(e) => setEmployeeNumber(e.target.value)} />
+            <NeumoInput placeholder="اسم الكاشير إلزامي" value={cashierName} onChange={(e) => setCashierName(e.target.value)} />
+            <NeumoInput type="email" placeholder="بريد الكاشير إلزامي" value={cashierEmail} onChange={(e) => setCashierEmail(e.target.value)} />
+            <NeumoInput placeholder="الرقم الوظيفي اختياري" value={employeeNumber} onChange={(e) => setEmployeeNumber(e.target.value)} />
           </div>
-          <PrimaryButton className="mt-5" onClick={addCashier} disabled={processing}><Plus className="h-4 w-4" />ط¥ط¶ط§ظپط© ظƒط§ط´ظٹط±</PrimaryButton>
+          <PrimaryButton className="mt-5" onClick={addCashier} disabled={processing}><Plus className="h-4 w-4" />إضافة كاشير</PrimaryButton>
           <div className="mt-5 space-y-3">
             {dashboard.cashiers.map((cashier) => (
               <SoftCard key={cashier.id} className="p-4">
@@ -257,9 +257,9 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                   <button className="rounded-xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#6B3A25]" onClick={async () => {
                     await setLoyaltyCashierStatusAction(cashier.id, !cashier.active);
                     setDashboard((current) => ({...current, cashiers: current.cashiers.map((item) => item.id === cashier.id ? { ...item, active: !item.active } : item)}));
-                  }}>{cashier.active ? "طھط¹ط·ظٹظ„" : "طھظپط¹ظٹظ„"}</button>
+                  }}>{cashier.active ? "تعطيل" : "تفعيل"}</button>
                 </div>
-                <p className="mt-2 text-xs font-bold text-[#806A5E]">ط±ظ‚ظ… ظˆط¸ظٹظپظٹ {cashier.employeeNumber || "-"} ط¢ط®ط± ط¯ط®ظˆظ„ {cashier.lastLoginAt || "-"}</p>
+                <p className="mt-2 text-xs font-bold text-[#806A5E]">رقم وظيفي {cashier.employeeNumber || "-"} آخر دخول {cashier.lastLoginAt || "-"}</p>
               </SoftCard>
             ))}
           </div>
@@ -268,7 +268,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
       <div id="cashier-tracking"><BentoGrid>
         <BentoCard variant="white" span="2">
-          <h2 className="text-xl font-black text-[#311912]">ط¨ط·ط§ظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ط§ط،</h2>
+          <h2 className="text-xl font-black text-[#311912]">بطاقات العملاء</h2>
           <div className="mt-5 space-y-3">
             {dashboard.cards.map((card) => (
               <SoftCard key={card.id} className="p-4">
@@ -277,14 +277,14 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                   <div className="text-left text-sm font-black text-[#6B3A25]">{card.stampsInCycle} / {dashboard.program.purchasesRequired}</div>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E7D7C6]"><div className="h-full rounded-full bg-[#D9A33F]" style={{ width: `${Math.min(100, (card.stampsInCycle / dashboard.program.purchasesRequired) * 100)}%` }} /></div>
-                <p className="mt-2 text-xs font-bold text-[#806A5E]">ظ…ظƒط§ظپط¢طھ {card.availableRewards} ط¹ظ…ظ„ظٹط§طھ {card.totalPurchases}</p>
+                <p className="mt-2 text-xs font-bold text-[#806A5E]">مكافآت {card.availableRewards} عمليات {card.totalPurchases}</p>
               </SoftCard>
             ))}
           </div>
         </BentoCard>
 
         <BentoCard variant="white" span="2">
-          <h2 className="text-xl font-black text-[#311912]">ظ…طھط§ط¨ط¹ط© ط§ظ„ظƒط§ط´ظٹط± ط¨ط§ظ„طھظپطµظٹظ„</h2>
+          <h2 className="text-xl font-black text-[#311912]">متابعة الكاشير بالتفصيل</h2>
           <div className="mt-5 space-y-3">
             {dashboard.activities.map((activity) => (
               <SoftCard key={activity.id} className="p-4">
@@ -293,7 +293,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                   <span className="rounded-full bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#6B3A25]">{activity.actionType}</span>
                 </div>
                 <p className="mt-2 text-xs font-bold text-[#806A5E]">{activity.createdAt}</p>
-                <p className="mt-1 text-sm font-bold text-[#806A5E]">ط§ظ„ظ‡ط¯ظپ {activity.targetType || "-"} ط§ظ„ظپط§طھظˆط±ط© {activity.invoiceBarcode || "-"}</p>
+                <p className="mt-1 text-sm font-bold text-[#806A5E]">الهدف {activity.targetType || "-"} الفاتورة {activity.invoiceBarcode || "-"}</p>
                 <pre className="mt-3 max-h-28 overflow-auto rounded-xl bg-[#17100d] p-3 text-left text-xs text-[#FCF8F3]">{JSON.stringify(activity.details, null, 2)}</pre>
               </SoftCard>
             ))}
