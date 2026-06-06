@@ -131,9 +131,19 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       .eq("id", parsed.id)
       .eq("cafe_id", cafe.id)
       .select("*")
-      .single();
+      .maybeSingle();
+
     if (error) throw error;
-    return data as DbMenuProduct;
+    if (data) return data as DbMenuProduct;
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("menu_products")
+      .insert({ ...payload, id: parsed.id })
+      .select("*")
+      .single();
+
+    if (insertError) throw insertError;
+    return inserted as DbMenuProduct;
   }
 
   const { data, error } = await supabase
@@ -141,6 +151,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     .insert(payload)
     .select("*")
     .single();
+
   if (error) throw error;
   return data as DbMenuProduct;
 }

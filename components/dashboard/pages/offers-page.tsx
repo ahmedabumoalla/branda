@@ -421,62 +421,86 @@ export function OffersPageClient({ initialOffers, initialProducts, configError }
             </h2>
 
             <div className="space-y-3">
-              <NeumoInput
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="عنوان العرض"
-              />
-              <NeumoTextarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="وصف العرض"
-                className="h-24"
-              />
+              <label className="block">
+                <span className="mb-2 block text-xs font-black text-[#7A6255]">عنوان العرض الذي يظهر للعميل</span>
+                <NeumoInput
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="مثال خصم 20% على القهوة المختصة"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-black text-[#7A6255]">وصف العرض وتفاصيله</span>
+                <NeumoTextarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="اكتب تفاصيل العرض وشروطه المختصرة"
+                  className="h-24"
+                />
+              </label>
 
               <div className="grid grid-cols-2 gap-2">
-                <NeumoSelect
-                  value={offerType}
-                  onChange={(e) => setOfferType(e.target.value as OfferType)}
-                >
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">نوع العرض</span>
+                  <NeumoSelect
+                    value={offerType}
+                    onChange={(e) => setOfferType(e.target.value as OfferType)}
+                  >
                   {OFFER_TYPES.map((item) => (
                     <option key={item}>{item}</option>
                   ))}
-                </NeumoSelect>
+                  </NeumoSelect>
+                </label>
 
-                <NeumoSelect
-                  value={placement}
-                  onChange={(e) => setPlacement(e.target.value as OfferPlacement)}
-                >
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">مكان ظهور العرض</span>
+                  <NeumoSelect
+                    value={placement}
+                    onChange={(e) => setPlacement(e.target.value as OfferPlacement)}
+                  >
                   {PLACEMENTS.map((item) => (
                     <option key={item}>{item}</option>
                   ))}
-                </NeumoSelect>
+                  </NeumoSelect>
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <NeumoInput
-                  value={discountPercent}
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">نسبة الخصم</span>
+                  <NeumoInput
+                    value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
-                  placeholder="نسبة الخصم"
-                />
-                <NeumoInput
-                  value={code}
+                    placeholder="مثال 15"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">كود الخصم اختياري</span>
+                  <NeumoInput
+                    value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="كود الخصم"
-                />
+                    placeholder="مثال WELCOME15"
+                  />
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <NeumoInput
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-                <NeumoInput
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">تاريخ بداية العرض</span>
+                  <NeumoInput
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black text-[#7A6255]">تاريخ نهاية العرض</span>
+                  <NeumoInput
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </label>
               </div>
 
               <SoftCard className="p-4">

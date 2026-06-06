@@ -1,3 +1,4 @@
+
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,20 +27,14 @@ function normalizeConsolePayload(data: unknown): CashierConsole | null {
 
 export async function loginCashierWithPassword(email: string, password: string) {
   const supabase = await createClient();
-
   const { data, error } = await supabase.rpc("login_cafe_cashier", {
     p_email: email.trim().toLowerCase(),
     p_password: password,
   });
-
-  if (error || !Array.isArray(data) || !data[0]?.token) {
-    console.error("[loginCashierWithPassword]", error);
-    return null;
-  }
+  if (error || !Array.isArray(data) || !data[0]?.token) return null;
 
   const token = String(data[0].token);
   const store = await cookies();
-
   store.set(cashierSessionCookie, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -47,7 +42,6 @@ export async function loginCashierWithPassword(email: string, password: string) 
     path: "/",
     maxAge: 60 * 60 * 8,
   });
-
   return {
     token,
     cafeId: String(data[0].cafe_id),
@@ -65,72 +59,49 @@ export async function getCashierToken() {
 
 export async function getCashierConsole(): Promise<CashierConsole | null> {
   const token = await getCashierToken();
-
-  if (!token) {
-    console.error("[getCashierConsole] no cashier token");
-    return null;
-  }
-
+  if (!token) return null;
   const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("get_cashier_console", {
-    p_session_token: token,
-  });
-
-  if (error || !data) {
-    console.error("[getCashierConsole]", error);
-    return null;
-  }
-
+  const { data, error } = await supabase.rpc("get_cashier_console", { p_session_token: token });
+  if (error || !data) return null;
   return normalizeConsolePayload(data);
 }
 
 export async function logoutCashier() {
   const token = await getCashierToken();
   const store = await cookies();
-
   if (token) {
     const supabase = await createClient();
-    await supabase.rpc("logout_cafe_cashier", {
-      p_session_token: token,
-    });
+    await supabase.rpc("logout_cafe_cashier", { p_session_token: token });
   }
-
   store.delete(cashierSessionCookie);
 }
 
 export async function cashierAcceptOrder(orderId: string) {
   const token = await getCashierToken();
-
-  if (!token) {
-    throw new Error("جلسة الكاشير منتهية");
-  }
-
+  if (!token) throw new Error("جلسة الكاشير منتهية");
   const supabase = await createClient();
-
-  const { error } = await supabase.rpc("cashier_accept_order", {
-    p_session_token: token,
-    p_order_id: orderId,
-  });
-
+  const { error } = await supabase.rpc("cashier_accept_order", { p_session_token: token, p_order_id: orderId });
   if (error) throw error;
 }
 
 export async function cashierAcceptReservation(reservationId: string) {
   const token = await getCashierToken();
-
-  if (!token) {
-    throw new Error("جلسة الكاشير منتهية");
-  }
-
+  if (!token) throw new Error("جلسة الكاشير منتهية");
   const supabase = await createClient();
-
-  const { error } = await supabase.rpc("cashier_accept_reservation", {
-    p_session_token: token,
-    p_reservation_id: reservationId,
-  });
-
+  const { error } = await supabase.rpc("cashier_accept_reservation", { p_session_token: token, p_reservation_id: reservationId });
   if (error) throw error;
+}
+
+export async function cashierConfirmReservationCode(code: string) {
+  const token = await getCashierToken();
+  if (!token) throw new Error("جلسة الكاشير منتهية");
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("confirm_reservation_code", {
+    p_session_token: token,
+    p_code: code,
+  });
+  if (error) throw error;
+  return data as Record<string, unknown>;
 }
 
 export async function cashierScanLoyalty(input: {
@@ -141,13 +112,8 @@ export async function cashierScanLoyalty(input: {
   operation: "stamp" | "redeem";
 }) {
   const token = await getCashierToken();
-
-  if (!token) {
-    throw new Error("جلسة الكاشير منتهية");
-  }
-
+  if (!token) throw new Error("جلسة الكاشير منتهية");
   const supabase = await createClient();
-
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
     p_cafe_id: input.cafeId,
     p_card_code: input.cardCode,
@@ -156,8 +122,6 @@ export async function cashierScanLoyalty(input: {
     p_operation: input.operation,
     p_cashier_session_token: token,
   });
-
   if (error) throw error;
-
   return data as Record<string, unknown>;
 }

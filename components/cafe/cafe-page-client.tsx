@@ -9,6 +9,8 @@ import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/s
 import type { MenuProduct } from "@/lib/mock/menu";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { PublicLoyaltyCardSection } from "@/components/cafe/public-loyalty-card-section";
+import { PublicInfoPagesSection } from "@/components/cafe/public-info-pages-section";
+import { trackCafeVisitAction } from "@/app/actions/platform-upgrade";
 
 function productScore(product: MenuProduct, index: number) {
   return Number(product.price || 0) + (100 - index);
@@ -22,6 +24,8 @@ function CafePageInner({ slug }: { slug: string }) {
     offers,
     loyaltySettings,
     loyaltyRewards,
+    pages,
+    reservationServices,
     loading,
     error: menuError,
   } = usePublicCafeMenu(slug);
@@ -29,6 +33,21 @@ function CafePageInner({ slug }: { slug: string }) {
 
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
+  }, [slug]);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const key = `branda_visit_session_${slug}`;
+    let sessionId = sessionStorage.getItem(key);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      sessionStorage.setItem(key, sessionId);
+    }
+    void trackCafeVisitAction({ slug, sessionId, path: window.location.pathname, referrer: document.referrer || undefined });
+    return () => {
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+      void trackCafeVisitAction({ slug, sessionId: sessionId || "anonymous", path: window.location.pathname, referrer: document.referrer || undefined, durationSeconds });
+    };
   }, [slug]);
 
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
@@ -94,6 +113,7 @@ function CafePageInner({ slug }: { slug: string }) {
         loyaltySettings={loyaltySettings}
         isPreview={isPreview}
       />
+      <PublicInfoPagesSection pages={pages} />
       <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} />
       <PublicLoyaltyCardSection
         slug={slug}

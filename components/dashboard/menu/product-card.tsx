@@ -14,6 +14,7 @@ import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
   promoBadgeText,
+  productFinalPrice,
   type MenuImageVariant,
   type MenuProduct,
 } from "@/lib/mock/menu";
@@ -44,6 +45,8 @@ export function MenuProductCard({
   onDelete,
 }: Props) {
   const promoOn = product.promo != null && isPromoActive(product.promo);
+  const finalPrice = productFinalPrice(product.price, product.promo);
+  const hasDiscountedPrice = promoOn && finalPrice < product.price;
 
   return (
     <article className="overflow-hidden rounded-3xl border border-white bg-white/80 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
@@ -119,8 +122,13 @@ export function MenuProductCard({
           <div>
             <p className="text-[10px] font-black text-[#7A6255]">السعر</p>
             <p className="font-black text-[#3A2117]">
-              {formatSar(product.price)}
+              {hasDiscountedPrice ? formatSar(finalPrice) : formatSar(product.price)}
             </p>
+            {hasDiscountedPrice ? (
+              <p className="text-[10px] font-black text-[#9B8B7B] line-through">
+                {formatSar(product.price)}
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -143,6 +151,12 @@ export function MenuProductCard({
             </p>
           </div>
         </div>
+
+        {product.promo ? (
+          <p className="rounded-2xl bg-[#FFF3C4] px-3 py-2 text-xs font-bold text-[#7A5725]">
+            فترة العرض {product.promo.startDate} إلى {product.promo.endDate}
+          </p>
+        ) : null}
 
         {product.promo?.kind === "منتج مجاني مع الطلب" && freeProductLabel ? (
           <p className="rounded-2xl bg-[#2E7D5B]/10 px-3 py-2 text-xs font-bold text-[#2E7D5B]">

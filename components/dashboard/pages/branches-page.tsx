@@ -3,7 +3,6 @@
 import { ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { deleteBranchAction, saveBranchAction } from "@/app/actions/branches";
-import { GoogleMapPicker } from "@/components/maps/google-map-picker";
 import {
   BentoCard,
   BentoGrid,
@@ -34,6 +33,24 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
   const [message, setMessage] = useState("");
 
   const handleMapChange = useCallback((value: LocationValue) => setLocation(value), []);
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setMessage("المتصفح لا يدعم تحديد الموقع");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: Number(position.coords.latitude.toFixed(6)),
+          lng: Number(position.coords.longitude.toFixed(6)),
+        });
+        setMessage("تم تحديد الموقع الحالي");
+      },
+      () => setMessage("تعذر قراءة الموقع الحالي")
+    );
+  }
 
   async function addBranch() {
     if (!name.trim() || !address.trim() || !city.trim() || !location) {
@@ -196,7 +213,56 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
 
               <SoftCard className="p-4">
                 <p className="mb-3 font-black text-[#3A2117]">موقع الفرع على الخريطة</p>
-                <GoogleMapPicker value={location} onChange={handleMapChange} heightClassName="h-[280px]" />
+                <div className="rounded-[28px] border border-[#E5D8CD] bg-white p-4">
+                    <p className="font-black text-[#3A2117]">موقع الفرع</p>
+                    <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                      استخدم الموقع الحالي أو أدخل الإحداثيات يدويًا ثم افتحها في Google Maps للتأكد
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <NeumoInput
+                        type="number"
+                        step="any"
+                        value={location?.lat ?? ""}
+                        onChange={(e) =>
+                          setLocation((current) => ({
+                            lat: Number(e.target.value),
+                            lng: current?.lng ?? 0,
+                          }))
+                        }
+                        placeholder="خط العرض"
+                      />
+                      <NeumoInput
+                        type="number"
+                        step="any"
+                        value={location?.lng ?? ""}
+                        onChange={(e) =>
+                          setLocation((current) => ({
+                            lat: current?.lat ?? 0,
+                            lng: Number(e.target.value),
+                          }))
+                        }
+                        placeholder="خط الطول"
+                      />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={useCurrentLocation}
+                        className="rounded-2xl bg-[#3A2117] px-4 py-3 text-sm font-black text-white"
+                      >
+                        تحديد موقعي الحالي
+                      </button>
+                      {location ? (
+                        <a
+                          href={buildGoogleMapsUrl(location.lat, location.lng)}
+                          target="_blank"
+                          className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]"
+                        >
+                          فتح في Google Maps
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
               </SoftCard>
 
               <PrimaryButton type="button" onClick={() => void addBranch()} disabled={saving} className="w-full">

@@ -1,9 +1,11 @@
+
 "use server";
 
 import { redirect } from "next/navigation";
 import {
   cashierAcceptOrder,
   cashierAcceptReservation,
+  cashierConfirmReservationCode,
   cashierScanLoyalty,
   getCashierConsole,
   loginCashierWithPassword,
@@ -12,20 +14,8 @@ import {
 
 export async function loginCashierAction(email: string, password: string) {
   const result = await loginCashierWithPassword(email, password);
-
-  if (!result) {
-    return {
-      ok: false as const,
-      message: "بيانات الكاشير غير صحيحة",
-      redirectTo: null,
-    };
-  }
-
-  return {
-    ok: true as const,
-    message: "تم تسجيل الدخول",
-    redirectTo: "/cashier",
-  };
+  if (!result) return { ok: false as const, message: "بيانات الكاشير غير صحيحة", redirectTo: null };
+  return { ok: true as const, message: "تم تسجيل الدخول", redirectTo: "/cashier" };
 }
 
 export async function logoutCashierAction() {
@@ -43,6 +33,10 @@ export async function acceptCashierOrderAction(orderId: string) {
 
 export async function acceptCashierReservationAction(reservationId: string) {
   await cashierAcceptReservation(reservationId);
+}
+
+export async function confirmReservationCodeAction(code: string) {
+  return cashierConfirmReservationCode(code);
 }
 
 export async function cashierScanLoyaltyAction(input: {

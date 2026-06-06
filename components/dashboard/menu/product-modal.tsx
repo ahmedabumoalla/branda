@@ -59,7 +59,9 @@ const VARIANT_OPTIONS: { id: MenuImageVariant; label: string }[] = [
 function buildPromoFromForm(
   linked: boolean,
   kind: PromoKind,
+  discountMode: "percent" | "fixed_price",
   discountPercent: string,
+  discountedPrice: string,
   freeProductId: string,
   customText: string,
   startDate: string,
@@ -70,7 +72,9 @@ function buildPromoFromForm(
   if (kind === "خصم") {
     return {
       kind,
-      discountPercent: Number(discountPercent) || 10,
+      discountMode,
+      discountPercent: discountMode === "percent" ? Number(discountPercent) || 10 : undefined,
+      discountedPrice: discountMode === "fixed_price" ? Number(discountedPrice) || 0 : undefined,
       startDate,
       endDate,
     };
@@ -129,7 +133,9 @@ export function MenuProductFormModal({
 
   const [promoLinked, setPromoLinked] = useState(false);
   const [promoKind, setPromoKind] = useState<PromoKind>("خصم");
+  const [promoDiscountMode, setPromoDiscountMode] = useState<"percent" | "fixed_price">("percent");
   const [promoDiscount, setPromoDiscount] = useState("10");
+  const [promoDiscountedPrice, setPromoDiscountedPrice] = useState("");
   const [promoFreeId, setPromoFreeId] = useState("");
   const [promoCustom, setPromoCustom] = useState("");
   const [promoStart, setPromoStart] = useState("2026-05-10");
@@ -174,7 +180,9 @@ export function MenuProductFormModal({
 
       if (promo) {
         setPromoKind(promo.kind);
+        setPromoDiscountMode(promo.discountMode ?? "percent");
         setPromoDiscount(String(promo.discountPercent ?? 10));
+        setPromoDiscountedPrice(promo.discountedPrice == null ? "" : String(promo.discountedPrice));
         setPromoFreeId(promo.freeProductId ?? "");
         setPromoCustom(promo.customText ?? "");
         setPromoStart(promo.startDate);
@@ -201,7 +209,9 @@ export function MenuProductFormModal({
       setAvailable(true);
       setPromoLinked(false);
       setPromoKind("خصم");
+      setPromoDiscountMode("percent");
       setPromoDiscount("10");
+      setPromoDiscountedPrice("");
       setPromoFreeId("");
       setPromoCustom("");
       setPromoStart("2026-05-10");
@@ -276,7 +286,9 @@ export function MenuProductFormModal({
     const promo = buildPromoFromForm(
       promoLinked,
       promoKind,
+      promoDiscountMode,
       promoDiscount,
+      promoDiscountedPrice,
       promoFreeId,
       promoCustom,
       promoStart,
@@ -327,7 +339,9 @@ export function MenuProductFormModal({
     available,
     promoLinked,
     promoKind,
+    promoDiscountMode,
     promoDiscount,
+    promoDiscountedPrice,
     promoFreeId,
     promoCustom,
     promoStart,
@@ -386,7 +400,9 @@ export function MenuProductFormModal({
     const promo = buildPromoFromForm(
       promoLinked,
       promoKind,
+      promoDiscountMode,
       promoDiscount,
+      promoDiscountedPrice,
       promoFreeId,
       promoCustom,
       promoStart,
@@ -805,12 +821,45 @@ export function MenuProductFormModal({
                 </label>
 
                 {promoKind === "خصم" ? (
-                  <input
-                    value={promoDiscount}
-                    onChange={(e) => setPromoDiscount(e.target.value)}
-                    placeholder="نسبة الخصم"
-                    className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
-                  />
+                  <div className="space-y-3 rounded-2xl bg-[#F8F4EF] p-3">
+                    <p className="text-xs font-black text-[#7A6255]">
+                      طريقة الخصم
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="flex items-center gap-2 rounded-xl bg-white p-3 text-sm font-black text-[#3A2117]">
+                        <input
+                          type="radio"
+                          checked={promoDiscountMode === "percent"}
+                          onChange={() => setPromoDiscountMode("percent")}
+                        />
+                        نسبة مئوية تطبق على السعر الأساسي
+                      </label>
+                      <label className="flex items-center gap-2 rounded-xl bg-white p-3 text-sm font-black text-[#3A2117]">
+                        <input
+                          type="radio"
+                          checked={promoDiscountMode === "fixed_price"}
+                          onChange={() => setPromoDiscountMode("fixed_price")}
+                        />
+                        سعر المنتج بعد الخصم
+                      </label>
+                    </div>
+
+                    {promoDiscountMode === "percent" ? (
+                      <input
+                        value={promoDiscount}
+                        onChange={(e) => setPromoDiscount(e.target.value)}
+                        placeholder="نسبة الخصم مثل 15"
+                        className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                      />
+                    ) : (
+                      <input
+                        value={promoDiscountedPrice}
+                        onChange={(e) => setPromoDiscountedPrice(e.target.value)}
+                        placeholder="السعر بعد الخصم مثل 19"
+                        className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                      />
+                    )}
+                  </div>
                 ) : null}
 
                 {promoKind === "منتج مجاني مع الطلب" ? (
@@ -838,19 +887,25 @@ export function MenuProductFormModal({
                 ) : null}
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <input
-                    type="date"
-                    value={promoStart}
-                    onChange={(e) => setPromoStart(e.target.value)}
-                    className="rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
-                  />
+                  <label className="block">
+                    <span className="text-xs font-black text-[#7A6255]">تاريخ بداية العرض</span>
+                    <input
+                      type="date"
+                      value={promoStart}
+                      onChange={(e) => setPromoStart(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
+                    />
+                  </label>
 
-                  <input
-                    type="date"
-                    value={promoEnd}
-                    onChange={(e) => setPromoEnd(e.target.value)}
-                    className="rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
-                  />
+                  <label className="block">
+                    <span className="text-xs font-black text-[#7A6255]">تاريخ نهاية العرض</span>
+                    <input
+                      type="date"
+                      value={promoEnd}
+                      onChange={(e) => setPromoEnd(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
+                    />
+                  </label>
                 </div>
               </div>
             ) : null}

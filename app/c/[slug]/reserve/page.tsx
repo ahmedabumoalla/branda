@@ -26,12 +26,13 @@ function ReserveForm() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { settings, experience, path, previewThemeId, theme } = useCafePageContext(slug);
-  const { branches, loading, error } = usePublicCafeMenu(slug);
+  const { branches, reservationServices, loading, error } = usePublicCafeMenu(slug);
 
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
   const [branchId, setBranchId] = useState("");
   const [reservationType, setReservationType] =
     useState<ReservationEventType>("طاولة عادية");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [guests, setGuests] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");

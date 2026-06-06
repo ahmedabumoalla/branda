@@ -1,115 +1,34 @@
+
 "use client";
 
-import { BarChart3, CalendarDays, Receipt, Star, Users } from "lucide-react";
+import { Activity, BarChart3, CalendarDays, Clock, Receipt, Repeat, TrendingUp, Users, WalletCards } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-  BentoCard,
-  BentoGrid,
-  DashboardPageShell,
-  SoftCard,
-  StatPill,
-} from "@/components/ui/design-system";
+import { BentoCard, BentoGrid, DashboardPageShell, SoftCard, StatPill } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
 import { type CafeOrder } from "@/lib/mock/orders";
 import { type CustomerProfile } from "@/lib/mock/customer-activity";
 import { type CafeReview } from "@/lib/mock/reviews";
 import { type CafeReservation } from "@/lib/mock/reservations";
+import type { VisitAnalytics } from "@/lib/data/platform-upgrade";
 
-type Props = {
-  initialOrders: CafeOrder[];
-  initialCustomers: CustomerProfile[];
-  initialReviews: CafeReview[];
-  initialReservations: CafeReservation[];
-  configError?: string;
-};
+type Props = { initialOrders: CafeOrder[]; initialCustomers: CustomerProfile[]; initialReviews: CafeReview[]; initialReservations: CafeReservation[]; visitAnalytics?: VisitAnalytics | null; configError?: string };
 
-export function ReportsPageClient({
-  initialOrders,
-  initialCustomers,
-  initialReviews,
-  initialReservations,
-  configError,
-}: Props) {
-  const [orders] = useState<CafeOrder[]>(initialOrders);
-  const [customers] = useState<CustomerProfile[]>(initialCustomers);
-  const [reviews] = useState<CafeReview[]>(initialReviews);
-  const [reservations] = useState<CafeReservation[]>(initialReservations);
+function monthKey(date: string) { return (date || new Date().toISOString()).slice(0, 7); }
 
-  const totalSales = useMemo(() => orders.reduce((sum, order) => sum + order.total, 0), [orders]);
-  const avgRating = useMemo(() => {
-    if (!reviews.length) return 0;
-    return reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
-  }, [reviews]);
+export function ReportsPageClient({ initialOrders, initialCustomers, initialReservations, visitAnalytics, configError }: Props) {
+  const [orders] = useState(initialOrders); const [customers] = useState(initialCustomers); const [reservations] = useState(initialReservations);
+  const acceptedOrders = useMemo(() => orders.filter((order) => order.status === "مقبول"), [orders]);
+  const totalSales = acceptedOrders.reduce((sum, order) => sum + order.total, 0);
+  const conversionRate = orders.length ? Math.round((acceptedOrders.length / orders.length) * 100) : 0;
+  const avgOrder = acceptedOrders.length ? totalSales / acceptedOrders.length : 0;
+  const monthly = useMemo(() => { const map = new Map<string, { revenue: number; orders: number }>(); for (const order of acceptedOrders) { const key = monthKey(order.createdAt); const current = map.get(key) ?? { revenue: 0, orders: 0 }; current.revenue += order.total; current.orders += 1; map.set(key, current); } return [...map.entries()].sort(([a],[b]) => a.localeCompare(b)).slice(-6).map(([month, value]) => ({ month, ...value })); }, [acceptedOrders]);
+  const maxRevenue = Math.max(...monthly.map((item) => item.revenue), 1);
+  const visits = visitAnalytics ?? { totalVisits: 0, uniqueSessions: 0, repeatedVisits: 0, averageDurationSeconds: 0, orderConversions: 0, reservationConversions: 0, recent: [] };
 
-  const stats = [
-    { title: "إجمالي المبيعات", value: formatSar(totalSales), icon: Receipt },
-    { title: "عدد الطلبات", value: orders.length, icon: BarChart3 },
-    { title: "العملاء", value: customers.length, icon: Users },
-    { title: "الحجوزات", value: reservations.length, icon: CalendarDays },
-    { title: "متوسط التقييم", value: avgRating.toFixed(1), icon: Star },
-  ];
-
-  return (
-    <div dir="rtl">
-      <DashboardPageShell
-        title="التقارير"
-        subtitle="نظرة شاملة على أداء الكوفي والمبيعات والعملاء والتقييمات."
-      >
-        {configError ? (
-          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
-            {configError}
-          </div>
-        ) : null}
-        <BentoGrid className="mb-6">
-          {stats.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <BentoCard
-                key={item.title}
-                variant="white"
-                span={index === 0 ? "2" : "1"}
-              >
-                <Icon className="mb-4 h-7 w-7 text-[#6B3A25]" />
-                <StatPill label={item.title} value={item.value} />
-              </BentoCard>
-            );
-          })}
-        </BentoGrid>
-
-        <BentoGrid>
-          <BentoCard variant="white" span="row2">
-            <h2 className="text-2xl font-black text-[#3A2117]">أداء المبيعات</h2>
-            <div className="mt-8 flex h-80 items-end gap-4 rounded-3xl bg-[#F8F4EF] p-6">
-              {[45, 72, 58, 88, 64, 79, 51].map((height, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t-3xl bg-[#6B3A25]"
-                  style={{ height: `${height}%` }}
-                />
-              ))}
-            </div>
-          </BentoCard>
-
-          <BentoCard variant="white" span="2">
-            <h2 className="text-2xl font-black text-[#3A2117]">أحدث الطلبات</h2>
-            <div className="mt-5 space-y-3">
-              {orders.slice(0, 5).map((order) => (
-                <SoftCard key={order.id} className="p-4">
-                  <div className="flex justify-between gap-3">
-                    <h3 className="font-black">{order.customerName}</h3>
-                    <span className="font-black text-[#6B3A25]">
-                      {formatSar(order.total)}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm font-bold text-[#7A6255]">
-                    {order.status} • {order.createdAt}
-                  </p>
-                </SoftCard>
-              ))}
-            </div>
-          </BentoCard>
-        </BentoGrid>
-      </DashboardPageShell>
-    </div>
-  );
+  return <div dir="rtl"><DashboardPageShell title="التقارير" subtitle="لوحة مؤشرات متقدمة للطلبات والحجوزات وزيارات الفرع الإلكتروني">
+    {configError ? <SoftCard className="mb-4 p-4 font-black text-amber-700">{configError}</SoftCard> : null}
+    <BentoGrid className="mb-6"><BentoCard variant="gold" span="2"><Receipt className="mb-4 h-7 w-7" /><StatPill label="إيراد الطلبات المقبولة" value={formatSar(totalSales)} hint="لا يشمل المرفوض" /></BentoCard><BentoCard variant="white"><TrendingUp className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="معدل القبول" value={`${conversionRate}%`} /></BentoCard><BentoCard variant="white"><WalletCards className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="متوسط الطلب" value={formatSar(avgOrder)} /></BentoCard><BentoCard variant="white"><Users className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="العملاء" value={customers.length} /></BentoCard><BentoCard variant="white"><CalendarDays className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="الحجوزات" value={reservations.length} /></BentoCard></BentoGrid>
+    <BentoGrid className="mb-6"><BentoCard variant="white"><Activity className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="زيارات الفرع الإلكتروني" value={visits.totalVisits} /></BentoCard><BentoCard variant="white"><Users className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="زوار فريدون" value={visits.uniqueSessions} /></BentoCard><BentoCard variant="white"><Repeat className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="زيارات متكررة" value={visits.repeatedVisits} /></BentoCard><BentoCard variant="white"><Clock className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="متوسط مدة الزيارة" value={`${visits.averageDurationSeconds} ث`} /></BentoCard></BentoGrid>
+    <BentoGrid><BentoCard variant="white" span="2"><h2 className="mb-5 text-xl font-black">إيرادات آخر أشهر</h2><div className="space-y-4">{monthly.map((item) => <div key={item.month}><div className="mb-2 flex justify-between text-sm font-black"><span>{item.month}</span><span>{formatSar(item.revenue)}</span></div><div className="h-4 overflow-hidden rounded-full bg-[#F8F4EF]"><div className="h-full rounded-full bg-[#D9A33F]" style={{ width: `${Math.max(6, (item.revenue / maxRevenue) * 100)}%` }} /></div></div>)}</div></BentoCard><BentoCard variant="white" span="2"><h2 className="mb-5 text-xl font-black">آخر زيارات الفرع الإلكتروني</h2><div className="space-y-3">{visits.recent.slice(0, 8).map((visit) => <div key={visit.id} className="rounded-2xl bg-[#F8F4EF] p-4"><p className="font-black">{visit.path}</p><p className="text-xs font-bold text-[#7A6255]">{visit.createdAt} • {visit.durationSeconds ?? 0} ثانية</p></div>)}</div></BentoCard></BentoGrid>
+  </DashboardPageShell></div>;
 }

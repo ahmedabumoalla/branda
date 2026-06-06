@@ -11,7 +11,10 @@ export type PromoKind = "خصم" | "منتج مجاني مع الطلب" | "عر
 
 export type ProductPromo = {
   kind: PromoKind;
+  /** percent = خصم مئوي من السعر الأساسي, fixed_price = سعر نهائي بعد الخصم */
+  discountMode?: "percent" | "fixed_price";
   discountPercent?: number;
+  discountedPrice?: number;
   freeProductId?: string;
   customText?: string;
   startDate: string;
@@ -62,9 +65,23 @@ export function isPromoActive(promo: ProductPromo) {
 }
 
 export function promoBadgeText(promo: ProductPromo) {
-  if (promo.kind === "خصم") return `خصم ${promo.discountPercent ?? 10}%`;
+  if (promo.kind === "خصم") {
+    if (promo.discountMode === "fixed_price" && promo.discountedPrice != null) {
+      return `السعر بعد الخصم ${promo.discountedPrice.toLocaleString("ar-SA")} ر.س`;
+    }
+    return `خصم ${promo.discountPercent ?? 10}%`;
+  }
   if (promo.kind === "منتج مجاني مع الطلب") return "منتج مجاني مع الطلب";
   return promo.customText || "عرض خاص";
+}
+
+export function productFinalPrice(price: number, promo?: ProductPromo | null) {
+  if (!promo || promo.kind !== "خصم" || !isPromoActive(promo)) return price;
+  if (promo.discountMode === "fixed_price" && promo.discountedPrice != null) {
+    return Math.max(0, Number(promo.discountedPrice));
+  }
+  const percent = Math.min(100, Math.max(0, Number(promo.discountPercent ?? 0)));
+  return Math.max(0, price - price * (percent / 100));
 }
 
 export const mockMenuProducts: MenuProduct[] = [
