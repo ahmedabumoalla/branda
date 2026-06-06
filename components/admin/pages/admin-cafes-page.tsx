@@ -1,7 +1,11 @@
 "use client";
 
 import { Building2, Eye, ExternalLink, Power, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  updateCafePlanAction,
+  updateCafeStatusAction,
+} from "@/app/actions/admin";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
   AdminFilterBar,
@@ -21,16 +25,7 @@ import {
   resolveCafeDomainSource,
 } from "@/lib/platform/cafe-domain";
 import {
-  PLATFORM_CAFES_KEY,
-  PLATFORM_CUSTOMERS_KEY,
-  PLATFORM_OPERATIONS_KEY,
-  PLATFORM_PLANS_KEY,
-  ACTIVE_CAFE_PLAN_KEY,
   allPlatformFeatures,
-  mockPlatformCafes,
-  mockPlatformCustomers,
-  mockPlatformOperations,
-  mockPlatformPlans,
   type PlatformCafe,
   type PlatformCustomer,
   type PlatformOperation,
@@ -41,31 +36,29 @@ import { formatSar } from "@/lib/format";
 const softPanel =
   "rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
-export function AdminCafesPage() {
-  const [cafes, setCafes] = useState<PlatformCafe[]>(mockPlatformCafes);
-  const [plans, setPlans] = useState<PlatformPlan[]>(mockPlatformPlans);
-  const [customers, setCustomers] = useState<PlatformCustomer[]>(mockPlatformCustomers);
-  const [operations, setOperations] = useState<PlatformOperation[]>(mockPlatformOperations);
+type Props = {
+  initialCafes: PlatformCafe[];
+  initialPlans: PlatformPlan[];
+  initialCustomers: PlatformCustomer[];
+  initialOperations: PlatformOperation[];
+  configError?: string;
+};
+
+export function AdminCafesPage({
+  initialCafes,
+  initialPlans,
+  initialCustomers,
+  initialOperations,
+  configError,
+}: Props) {
+  const [cafes, setCafes] = useState<PlatformCafe[]>(initialCafes);
+  const [plans] = useState<PlatformPlan[]>(initialPlans);
+  const [customers] = useState<PlatformCustomer[]>(initialCustomers);
+  const [operations] = useState<PlatformOperation[]>(initialOperations);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "نشط" | "موقوف">("all");
-  const [selectedId, setSelectedId] = useState<string | null>(mockPlatformCafes[0]?.id ?? null);
-
-  useEffect(() => {
-    const savedCafes = localStorage.getItem(PLATFORM_CAFES_KEY);
-    const savedPlans = localStorage.getItem(PLATFORM_PLANS_KEY);
-    const savedCustomers = localStorage.getItem(PLATFORM_CUSTOMERS_KEY);
-    const savedOps = localStorage.getItem(PLATFORM_OPERATIONS_KEY);
-
-    if (savedCafes) setCafes(JSON.parse(savedCafes));
-    if (savedPlans) setPlans(JSON.parse(savedPlans));
-    if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-    if (savedOps) setOperations(JSON.parse(savedOps));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(PLATFORM_CAFES_KEY, JSON.stringify(cafes));
-  }, [cafes]);
+  const [selectedId, setSelectedId] = useState<string | null>(initialCafes[0]?.id ?? null);
 
   const filtered = useMemo(() => {
     return cafes.filter((cafe) => {
@@ -104,17 +97,29 @@ export function AdminCafesPage() {
     [operations, selected]
   );
 
-  function toggleCafe(id: string) {
-    setCafes((prev) =>
-      prev.map((cafe) =>
-        cafe.id === id ? { ...cafe, status: cafe.status === "نشط" ? "موقوف" : "نشط" } : cafe
-      )
-    );
+  async function toggleCafe(id: string) {
+    const cafe = cafes.find((item) => item.id === id);
+    if (!cafe) return;
+    const nextActive = cafe.status !== "نشط";
+    try {
+      await updateCafeStatusAction(id, nextActive);
+      setCafes((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: nextActive ? "نشط" : "موقوف" } : item
+        )
+      );
+    } catch {
+      alert("تعذر تحديث حالة الكوفي");
+    }
   }
 
-  function updatePlan(id: string, planId: string) {
-    setCafes((prev) => prev.map((cafe) => (cafe.id === id ? { ...cafe, planId } : cafe)));
-    if (id === "cafe_qatrah") localStorage.setItem(ACTIVE_CAFE_PLAN_KEY, planId);
+  async function updatePlan(id: string, planId: string) {
+    try {
+      await updateCafePlanAction(id, planId);
+      setCafes((prev) => prev.map((cafe) => (cafe.id === id ? { ...cafe, planId } : cafe)));
+    } catch {
+      alert("تعذر تحديث الباقة");
+    }
   }
 
   return (
@@ -123,6 +128,11 @@ export function AdminCafesPage() {
       subtitle="اضغط على أي كوفي لعرض التفاصيل الكاملة والتحكم بالباقة والحالة."
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
+      {configError ? (
+        <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center font-black text-amber-200">
+          {configError}
+        </div>
+      ) : null}
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">
           <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#CBB29C]" />

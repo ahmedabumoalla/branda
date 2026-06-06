@@ -11,7 +11,8 @@ import {
   ToggleRight,
   UserRound,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { saveLoyaltySettingsAction } from "@/app/actions/loyalty";
 import {
   BentoCard,
   BentoGrid,
@@ -24,9 +25,6 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import {
-  LOYALTY_REWARDS_KEY,
-  LOYALTY_SETTINGS_KEY,
-  mockLoyaltyRewards,
   type LoyaltyEarnRule,
   type LoyaltyRedemptionRule,
   type LoyaltyReward,
@@ -36,6 +34,7 @@ import {
 type Props = {
   initialSettings: LoyaltySettings;
   initialRewards: LoyaltyReward[];
+  configError?: string;
 };
 
 const EXAMPLE_BALANCE = 150;
@@ -52,14 +51,11 @@ function redemptionRulesToRewards(rules: LoyaltyRedemptionRule[]): LoyaltyReward
     }));
 }
 
-export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
+export function LoyaltyPageClient({ initialSettings, initialRewards, configError }: Props) {
   const [settings, setSettings] = useState<LoyaltySettings>(initialSettings);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    const savedSettings = localStorage.getItem(LOYALTY_SETTINGS_KEY);
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
-  }, []);
+  const [saving, setSaving] = useState(false);
+  void initialRewards;
 
   const activeEarnRules = useMemo(
     () => settings.earnRules.filter((r) => r.enabled).length,
@@ -154,15 +150,17 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
     }));
   }
 
-  function saveAll() {
-    localStorage.setItem(LOYALTY_SETTINGS_KEY, JSON.stringify(settings));
-    const rewards = redemptionRulesToRewards(settings.redemptionRules);
-    localStorage.setItem(
-      LOYALTY_REWARDS_KEY,
-      JSON.stringify(rewards.length ? rewards : mockLoyaltyRewards)
-    );
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  async function saveAll() {
+    setSaving(true);
+    try {
+      await saveLoyaltySettingsAction(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      alert("تعذر حفظ إعدادات الولاء");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -444,10 +442,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards }: Props) {
             <div>
               <h2 className="text-2xl font-black">تظهر المكافآت في صفحة الكوفي</h2>
               <p className="mt-2 text-[#E5D8CD]">
-                عند الحفظ تُخزَّن الإعدادات في{" "}
-                <code className="text-[#F6C35B]">{LOYALTY_SETTINGS_KEY}</code> وتُحدَّث
-                المكافآت في{" "}
-                <code className="text-[#F6C35B]">{LOYALTY_REWARDS_KEY}</code>.
+                عند الحفظ تُخزَّن الإعدادات في Supabase وتُحدَّث المكافآت في جدول loyalty_rewards.
               </p>
             </div>
             <Gift className="ml-auto h-10 w-10 text-[#F6C35B]/50" />

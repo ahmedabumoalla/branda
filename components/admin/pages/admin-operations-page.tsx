@@ -1,7 +1,7 @@
 "use client";
 
 import { ClipboardList, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
   AdminFilterBar,
@@ -12,11 +12,7 @@ import {
   AdminInput,
   StatusBadge,
 } from "@/components/ui/design-system";
-import {
-  PLATFORM_OPERATIONS_KEY,
-  mockPlatformOperations,
-  type PlatformOperation,
-} from "@/lib/platform/admin-data";
+import { mockPlatformOperations, type PlatformOperation } from "@/lib/platform/admin-data";
 import { formatSar } from "@/lib/format";
 
 const softPanel =
@@ -29,14 +25,14 @@ function operationTone(status: string): "success" | "warning" | "danger" | "neut
   return "neutral";
 }
 
-export function AdminOperationsPage() {
-  const [operations, setOperations] = useState<PlatformOperation[]>(mockPlatformOperations);
-  const [query, setQuery] = useState("");
+type Props = {
+  initialOperations: PlatformOperation[];
+  configError?: string;
+};
 
-  useEffect(() => {
-    const saved = localStorage.getItem(PLATFORM_OPERATIONS_KEY);
-    if (saved) setOperations(JSON.parse(saved));
-  }, []);
+export function AdminOperationsPage({ initialOperations, configError }: Props) {
+  const [operations] = useState<PlatformOperation[]>(initialOperations);
+  const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     return operations.filter(

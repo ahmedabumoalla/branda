@@ -31,4 +31,5 @@ export type CafeThemePageProps = {
   };
   /** Resolved cafe logo from IndexedDB (not base64 in settings) */
   cafeLogoUrl?: string;
+  menuCategories?: import("@/lib/mock/menu-categories").MenuCategoryRecord[];
 };

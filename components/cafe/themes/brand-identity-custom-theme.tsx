@@ -8,20 +8,15 @@ import {
   resolveFeaturedProducts,
 } from "@/lib/cafe/custom-identity-featured";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
-import {
-  runCustomIdentityMigrationOnce,
-  subscribeBrandaStorageEvents,
-} from "@/lib/cafe/theme-storage-sync";
 import { CafeHeader } from "@/components/cafe/cafe-header";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import {
   buildCustomIdentityCssVars,
   defaultCustomIdentityTheme,
-  loadCustomIdentityTheme,
   OVERLAY_OPACITY,
   type CustomIdentityTheme,
 } from "@/lib/mock/custom-identity-theme";
-import { loadMenuCategories } from "@/lib/mock/menu-categories";
+import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import {
   CafeIdentityBlock,
   ThemeBannerCarousel,
@@ -97,31 +92,16 @@ export function BrandIdentityCustomTheme(props: CafeThemePageProps) {
   const [identity, setIdentity] = useState(
     () => props.customIdentityOverride ?? defaultCustomIdentityTheme()
   );
-  const [categories, setCategories] = useState(loadMenuCategories);
-
-  useEffect(() => {
-    void runCustomIdentityMigrationOnce();
-  }, []);
+  const [categories, setCategories] = useState(() => props.menuCategories ?? []);
 
   useEffect(() => {
     if (props.customIdentityOverride) {
       setIdentity(props.customIdentityOverride);
-    } else {
-      setIdentity(loadCustomIdentityTheme());
     }
-    setCategories(loadMenuCategories());
-
-    return subscribeBrandaStorageEvents({
-      onCustomIdentityUpdated: () => {
-        if (!props.customIdentityOverride) {
-          setIdentity(loadCustomIdentityTheme());
-        }
-      },
-      onMenuCategoriesUpdated: () => {
-        setCategories(loadMenuCategories());
-      },
-    });
-  }, [props.customIdentityOverride]);
+    if (props.menuCategories) {
+      setCategories(props.menuCategories);
+    }
+  }, [props.customIdentityOverride, props.menuCategories]);
 
   const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(
     identity,

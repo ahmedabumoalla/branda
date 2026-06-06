@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleDollarSign } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
   AdminPageShell,
@@ -10,20 +10,16 @@ import {
   BentoGrid,
   StatusBadge,
 } from "@/components/ui/design-system";
-import {
-  PLATFORM_CAFES_KEY,
-  mockPlatformCafes,
-  type PlatformCafe,
-} from "@/lib/platform/admin-data";
+import { type PlatformCafe } from "@/lib/platform/admin-data";
 import { formatSar } from "@/lib/format";
 
-export function AdminRevenuePage() {
-  const [cafes, setCafes] = useState<PlatformCafe[]>(mockPlatformCafes);
+type Props = {
+  initialCafes: PlatformCafe[];
+  configError?: string;
+};
 
-  useEffect(() => {
-    const saved = localStorage.getItem(PLATFORM_CAFES_KEY);
-    if (saved) setCafes(JSON.parse(saved));
-  }, []);
+export function AdminRevenuePage({ initialCafes, configError }: Props) {
+  const [cafes] = useState<PlatformCafe[]>(initialCafes);
 
   const totalRevenue = useMemo(() => cafes.reduce((sum, cafe) => sum + cafe.totalRevenue, 0), [cafes]);
   const platformCommission = totalRevenue * 0.03;

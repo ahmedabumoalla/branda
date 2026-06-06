@@ -81,20 +81,11 @@ export const defaultMenuCategories: MenuCategoryRecord[] = [
 ];
 
 export function loadMenuCategories(): MenuCategoryRecord[] {
-  if (typeof window === "undefined") return defaultMenuCategories;
-  const saved = localStorage.getItem(MENU_CATEGORIES_KEY);
-  return saved ? (JSON.parse(saved) as MenuCategoryRecord[]) : defaultMenuCategories;
+  throw new Error("Use Supabase — fetch via lib/data/menu or /api/public/cafe/[slug]/menu");
 }
 
-export function saveMenuCategories(categories: MenuCategoryRecord[]) {
-  const payload = categories.map((category) => {
-    const next = { ...category };
-    if (next.imageDataUrl?.startsWith("data:image")) {
-      delete next.imageDataUrl;
-    }
-    return next;
-  });
-  localStorage.setItem(MENU_CATEGORIES_KEY, JSON.stringify(payload));
+export function saveMenuCategories(_categories: MenuCategoryRecord[]) {
+  throw new Error("Use Supabase — save via app/actions/menu");
 }
 
 export function getCategoryNameById(

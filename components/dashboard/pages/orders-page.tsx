@@ -1,7 +1,12 @@
 "use client";
 
 import { Receipt, UserRound, Check, X, Clock, MapPin } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  acceptPickupOrderAction,
+  fetchOwnerOrdersAction,
+  rejectPickupOrderAction,
+} from "@/app/actions/orders";
 import {
   BentoCard,
   BentoGrid,
@@ -10,13 +15,7 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
-import {
-  ORDERS_KEY,
-  mockCafeOrders,
-  type CafeOrder,
-  type OrderStatus,
-} from "@/lib/mock/orders";
-import { acceptPickupOrder, rejectPickupOrder } from "@/lib/platform/order-flow";
+import { type CafeOrder, type OrderStatus } from "@/lib/mock/orders";
 
 const statusStyle: Record<OrderStatus, string> = {
   "بانتظار موافقة الكوفي": "bg-amber-50 text-amber-700",
@@ -25,50 +24,61 @@ const statusStyle: Record<OrderStatus, string> = {
   "ملغي من العميل": "bg-[#F8F4EF] text-[#7A6255]",
 };
 
-export function OrdersPageClient() {
-  const [orders, setOrders] = useState<CafeOrder[]>(mockCafeOrders);
+type Props = {
+  initialOrders: CafeOrder[];
+  configError?: string;
+};
+
+export function OrdersPageClient({ initialOrders, configError }: Props) {
+  const [orders, setOrders] = useState<CafeOrder[]>(initialOrders);
   const [selected, setSelected] = useState<CafeOrder | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(ORDERS_KEY);
-    if (saved) setOrders(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  }, [orders]);
-
-  function refreshOrders() {
-    const saved = localStorage.getItem(ORDERS_KEY);
-    if (saved) setOrders(JSON.parse(saved));
-  }
-
-  function handleAccept(orderId: string) {
-    const result = acceptPickupOrder(orderId);
-    if (!result.ok) {
-      alert(result.error);
-      return;
+  async function refreshOrders() {
+    try {
+      const next = await fetchOwnerOrdersAction();
+      setOrders(next);
+    } catch {
+      /* keep current list */
     }
-    refreshOrders();
-    setSelected((prev) => (prev?.id === orderId ? result.order : prev));
   }
 
-  function handleReject(orderId: string) {
+  async function handleAccept(orderId: string) {
+    setBusy(true);
+    try {
+      const result = await acceptPickupOrderAction(orderId);
+      if (!result.ok) {
+        alert(result.error);
+        return;
+      }
+      await refreshOrders();
+      setSelected((prev) => (prev?.id === orderId ? result.order : prev));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReject(orderId: string) {
     if (!rejectReason.trim()) {
       alert("اكتب سبب الرفض");
       return;
     }
-    const result = rejectPickupOrder(orderId, rejectReason);
-    if (!result.ok) {
-      alert(result.error);
-      return;
+    setBusy(true);
+    try {
+      const result = await rejectPickupOrderAction(orderId, rejectReason);
+      if (!result.ok) {
+        alert(result.error);
+        return;
+      }
+      setRejectReason("");
+      setShowRejectForm(null);
+      await refreshOrders();
+      setSelected((prev) => (prev?.id === orderId ? result.order : prev));
+    } finally {
+      setBusy(false);
     }
-    setRejectReason("");
-    setShowRejectForm(null);
-    refreshOrders();
-    setSelected((prev) => (prev?.id === orderId ? result.order : prev));
   }
 
   const pendingOrders = orders.filter((o) => o.status === "بانتظار موافقة الكوفي").length;
@@ -83,6 +93,11 @@ export function OrdersPageClient() {
         title="طلبات الاستلام"
         subtitle="طلبات الاستلام من صفحة الكوفي — قبول أو رفض مع سبب واضح."
       >
+        {configError ? (
+          <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            {configError}
+          </SoftCard>
+        ) : null}
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="إجمالي الطلبات" value={orders.length} />
@@ -160,7 +175,8 @@ export function OrdersPageClient() {
                   {order.status === "بانتظار موافقة الكوفي" ? (
                     <div className="mt-5 flex flex-wrap gap-2">
                       <button
-                        onClick={() => handleAccept(order.id)}
+                        onClick={() => void handleAccept(order.id)}
+                        disabled={busy}
                         className="flex items-center gap-2 rounded-2xl bg-green-50 px-5 py-3 text-sm font-black text-green-700"
                       >
                         <Check className="h-4 w-4" />
@@ -191,7 +207,8 @@ export function OrdersPageClient() {
                         />
                       </label>
                       <button
-                        onClick={() => handleReject(order.id)}
+                        onClick={() => void handleReject(order.id)}
+                        disabled={busy}
                         className="mt-3 rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white"
                       >
                         تأكيد الرفض

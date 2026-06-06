@@ -1,10 +1,10 @@
 export type BrandaUserRole = "admin" | "cafe_owner";
 
+/** @deprecated Use Supabase Auth via loginOwnerAction */
 export type BrandaAuthUser = {
   id: string;
   fullName: string;
   email: string;
-  password: string;
   role: BrandaUserRole;
   cafeSlug?: string;
   cafeId?: string;
@@ -13,90 +13,40 @@ export type BrandaAuthUser = {
 
 export const BRANDA_AUTH_SESSION_KEY = "branda_auth_session";
 
-export const mockAuthUsers: BrandaAuthUser[] = [
-  {
-    id: "admin_1",
-    fullName: "مدير منصة برندة",
-    email: "admin@branda.com",
-    password: "admin123",
-    role: "admin",
-    status: "نشط",
-  },
-  {
-    id: "cafe_owner_1",
-    fullName: "مالك كوفي قطرة",
-    email: "owner@qatrah.com",
-    password: "123456",
-    role: "cafe_owner",
-    cafeId: "cafe_qatrah",
-    cafeSlug: "qatrah",
-    status: "نشط",
-  },
-];
+/** Mock users removed — use Supabase Auth + development seed */
+export const mockAuthUsers: BrandaAuthUser[] = [];
 
-export function loginWithRole(email: string, password: string) {
-  const user = mockAuthUsers.find(
-    (item) =>
-      item.email.toLowerCase() === email.toLowerCase() &&
-      item.password === password
-  );
+export async function loginWithRole(email: string, password: string) {
+  const { loginOwnerAction } = await import("@/app/actions/auth");
+  return loginOwnerAction(email, password);
+}
 
-  if (!user) {
-    return {
-      ok: false,
-      message: "بيانات الدخول غير صحيحة",
-      redirectTo: null,
-      user: null,
-    };
-  }
+export async function getBrandaAuthSession() {
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  if (user.status !== "نشط") {
-    return {
-      ok: false,
-      message: "هذا الحساب موقوف، تواصل مع إدارة المنصة",
-      redirectTo: null,
-      user: null,
-    };
-  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email, role, status")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  const session = {
-    id: user.id,
-    fullName: user.fullName,
-    email: user.email,
-    role: user.role,
-    cafeId: user.cafeId,
-    cafeSlug: user.cafeSlug,
-    loginAt: new Date().toISOString(),
-  };
-
-  localStorage.setItem(BRANDA_AUTH_SESSION_KEY, JSON.stringify(session));
+  if (!profile) return null;
 
   return {
-    ok: true,
-    message: "تم تسجيل الدخول بنجاح",
-    redirectTo: user.role === "admin" ? "/admin" : "/dashboard",
-    user: session,
+    id: user.id,
+    fullName: profile.full_name,
+    email: profile.email ?? user.email,
+    role: profile.role === "platform_admin" ? "admin" : "cafe_owner",
+    loginAt: user.last_sign_in_at ?? new Date().toISOString(),
   };
 }
 
-export function getBrandaAuthSession() {
-  if (typeof window === "undefined") return null;
-
-  const saved = localStorage.getItem(BRANDA_AUTH_SESSION_KEY);
-  if (!saved) return null;
-
-  try {
-    return JSON.parse(saved);
-  } catch {
-    return null;
-  }
-}
-
-export const BRANDA_ADMIN_SESSION_KEY = "branda_admin_session";
-export const BRANDA_CAFE_SESSION_KEY = "branda_cafe_session";
-
-export function logoutBrandaAuth() {
-  localStorage.removeItem(BRANDA_AUTH_SESSION_KEY);
-  localStorage.removeItem(BRANDA_ADMIN_SESSION_KEY);
-  localStorage.removeItem(BRANDA_CAFE_SESSION_KEY);
+export async function logoutBrandaAuth() {
+  const { logoutAction } = await import("@/app/actions/auth");
+  await logoutAction();
 }

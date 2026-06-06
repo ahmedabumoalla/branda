@@ -162,50 +162,46 @@ export async function purchaseDomain(input: {
   currency?: string;
 }): Promise<CafePurchasedDomain> {
   const { domain, tld } = validateDomainInput(input.domain);
-  const now = new Date().toISOString();
+  const { createDomainOrderRequest } = await import("@/lib/data/domain-orders");
 
   if (!isLiveDomainPurchaseEnabled()) {
-    return {
-      id: `dom_${Date.now()}`,
+    return createDomainOrderRequest({
       cafeSlug: input.cafeSlug,
       domain,
       tld,
       years: input.years,
       autoRenew: input.autoRenew,
-      price: input.price,
-      currency: input.currency || "SAR",
-      status: "purchased",
-      vercelOrderId: createMockOrderId(domain),
-      createdAt: now,
-      paidAt: now,
-      purchasedAt: now,
-    };
+    });
   }
 
-  const payload = await vercelFetch(`/v1/registrar/domains/${encodeURIComponent(domain)}/buy`, {
-    method: "POST",
-    body: JSON.stringify({
-      years: input.years,
-      autoRenew: input.autoRenew,
-    }),
-  });
-
-  return {
-    id: `dom_${Date.now()}`,
+  const processing = await createDomainOrderRequest({
     cafeSlug: input.cafeSlug,
     domain,
     tld,
     years: input.years,
     autoRenew: input.autoRenew,
-    price: input.price,
-    currency: input.currency || "USD",
-    status: "purchased",
-    vercelOrderId: String(payload.orderId ?? payload.id ?? ""),
-    vercelDomainId: typeof payload.domainId === "string" ? payload.domainId : undefined,
-    createdAt: now,
-    paidAt: now,
-    purchasedAt: now,
-  };
+  });
+
+  try {
+    const payload = await vercelFetch(`/v1/registrar/domains/${encodeURIComponent(domain)}/buy`, {
+      method: "POST",
+      body: JSON.stringify({
+        years: input.years,
+        autoRenew: input.autoRenew,
+      }),
+    });
+
+    return {
+      ...processing,
+      status: "purchased",
+      vercelOrderId: String(payload.orderId ?? payload.id ?? ""),
+      vercelDomainId: typeof payload.domainId === "string" ? payload.domainId : undefined,
+      paidAt: new Date().toISOString(),
+      purchasedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function connectDomainToProject(domainInput: string) {

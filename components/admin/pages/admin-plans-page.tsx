@@ -1,307 +1,439 @@
 "use client";
 
-import { Check, Layers3, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Check, Clock3, Layers3, Plus, Receipt, Save, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  approveSubscriptionRequestAction,
+  rejectSubscriptionRequestAction,
+  savePlatformPlansAction,
+} from "@/app/actions/admin";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
+  AdminInput,
   AdminPageShell,
+  AdminSelect,
   AdminStatPill,
+  AdminTextarea,
   BentoCard,
   BentoGrid,
   GoldButton,
-  AdminInput,
-  AdminTextarea,
   StatusBadge,
 } from "@/components/ui/design-system";
 import {
-  PLATFORM_PLANS_KEY,
   allPlatformFeatures,
-  mockPlatformPlans,
   type PlatformFeature,
   type PlatformPlan,
+  type PlanDurationUnit,
 } from "@/lib/platform/admin-data";
+import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 
-const softPanel =
-  "rounded-2xl border border-white/10 bg-[#0f0c0a]/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),4px_6px_20px_rgba(0,0,0,0.35)]";
+type Props = {
+  initialPlans: PlatformPlan[];
+  initialRequests: SubscriptionPaymentRequest[];
+  configError?: string;
+};
 
-const planVariants: Array<"cyber" | "dark" | "gold"> = ["gold", "cyber", "dark"];
+const durationLabels: Record<PlanDurationUnit, string> = {
+  day: "يوم",
+  month: "شهر",
+  year: "سنة",
+};
 
-export function AdminPlansPage() {
-  const [plans, setPlans] = useState<PlatformPlan[]>(mockPlatformPlans);
+const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
+  awaiting_receipt: "بانتظار الإيصال",
+  pending_review: "بانتظار المراجعة",
+  approved: "مقبول",
+  rejected: "مرفوض",
+  cancelled: "ملغي",
+};
 
-  const [name, setName] = useState("");
-  const [priceMonthly, setPriceMonthly] = useState("");
-  const [description, setDescription] = useState("");
-  const [features, setFeatures] = useState<PlatformFeature[]>(["menu", "settings"]);
+function createPlan(): PlatformPlan {
+  return {
+    id: `plan-${crypto.randomUUID().slice(0, 8)}`,
+    name: "باقة جديدة",
+    priceMonthly: 0,
+    offerEnabled: false,
+    durationUnit: "month",
+    durationCount: 1,
+    description: "",
+    active: true,
+    isDefault: false,
+    features: ["menu", "settings"],
+  };
+}
 
-  useEffect(() => {
-    const saved = localStorage.getItem(PLATFORM_PLANS_KEY);
-    if (saved) setPlans(JSON.parse(saved));
-  }, []);
+export function AdminPlansPage({
+  initialPlans,
+  initialRequests,
+  configError,
+}: Props) {
+  const [plans, setPlans] = useState(initialPlans);
+  const [requests, setRequests] = useState(initialRequests);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(PLATFORM_PLANS_KEY, JSON.stringify(plans));
-  }, [plans]);
+  const activeCount = useMemo(() => plans.filter((plan) => plan.active).length, [plans]);
+  const pendingCount = useMemo(
+    () => requests.filter((request) => request.status === "pending_review").length,
+    [requests]
+  );
 
-  const activeCount = useMemo(() => plans.filter((p) => p.active).length, [plans]);
-
-  function toggleFeature(planId: string, feature: PlatformFeature) {
-    setPlans((prev) =>
-      prev.map((plan) => {
-        if (plan.id !== planId) return plan;
-
-        const exists = plan.features.includes(feature);
-
-        return {
-          ...plan,
-          features: exists
-            ? plan.features.filter((item) => item !== feature)
-            : [...plan.features, feature],
-        };
-      })
+  function updatePlan(planId: string, patch: Partial<PlatformPlan>) {
+    setPlans((current) =>
+      current.map((plan) => (plan.id === planId ? { ...plan, ...patch } : plan))
     );
+    setDirty(true);
   }
 
-  function toggleNewFeature(feature: PlatformFeature) {
-    setFeatures((prev) =>
-      prev.includes(feature)
-        ? prev.filter((item) => item !== feature)
-        : [...prev, feature]
+  function selectDefault(planId: string) {
+    setPlans((current) =>
+      current.map((plan) => ({
+        ...plan,
+        active: plan.id === planId ? true : plan.active,
+        isDefault: plan.id === planId,
+      }))
     );
+    setDirty(true);
+  }
+
+  function toggleFeature(planId: string, feature: PlatformFeature) {
+    const plan = plans.find((item) => item.id === planId);
+    if (!plan) return;
+    const features = plan.features.includes(feature)
+      ? plan.features.filter((item) => item !== feature)
+      : [...plan.features, feature];
+    updatePlan(planId, { features });
   }
 
   function addPlan() {
-    if (!name.trim()) {
-      alert("اكتب اسم الباقة");
+    setPlans((current) => [createPlan(), ...current]);
+    setDirty(true);
+  }
+
+  function removePlan(planId: string) {
+    const plan = plans.find((item) => item.id === planId);
+    if (!plan || plan.isDefault) {
+      alert("لا يمكن حذف الباقة الأساسية");
       return;
     }
-
-    const id = name
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w-]/g, "");
-
-    const plan: PlatformPlan = {
-      id: id || crypto.randomUUID(),
-      name: name.trim(),
-      priceMonthly: Number(priceMonthly) || 0,
-      description: description.trim() || "باقة مخصصة من إدارة منصة برندة.",
-      active: true,
-      features,
-    };
-
-    setPlans((prev) => [plan, ...prev]);
-
-    setName("");
-    setPriceMonthly("");
-    setDescription("");
-    setFeatures(["menu", "settings"]);
+    setPlans((current) => current.filter((item) => item.id !== planId));
+    setDirty(true);
   }
 
-  function updatePlanField(
-    planId: string,
-    field: "name" | "description" | "priceMonthly",
-    value: string
-  ) {
-    setPlans((prev) =>
-      prev.map((plan) =>
-        plan.id === planId
-          ? {
-              ...plan,
-              [field]: field === "priceMonthly" ? Number(value) || 0 : value,
-            }
-          : plan
-      )
-    );
-  }
-
-  function togglePlanActive(planId: string) {
-    setPlans((prev) =>
-      prev.map((plan) =>
-        plan.id === planId ? { ...plan, active: !plan.active } : plan
-      )
-    );
-  }
-
-  function deletePlan(planId: string) {
-    if (["starter", "growth", "pro"].includes(planId)) {
-      alert("لا تحذف الباقات الأساسية، تقدر توقفها بدل الحذف");
-      return;
+  async function savePlans() {
+    setSaving(true);
+    try {
+      const savedPlans = await savePlatformPlansAction(plans);
+      setPlans(savedPlans);
+      setDirty(false);
+      alert("تم حفظ الباقات وتحديد الباقة الأساسية");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "تعذر حفظ الباقات");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    setPlans((prev) => prev.filter((plan) => plan.id !== planId));
+  async function approveRequest(requestId: string) {
+    try {
+      setRequests(await approveSubscriptionRequestAction(requestId));
+      alert("تم اعتماد الطلب وتفعيل الباقة");
+    } catch {
+      alert("تعذر اعتماد الطلب");
+    }
+  }
+
+  async function rejectRequest(requestId: string) {
+    const response = window.prompt("اكتب سبب الرفض", "تعذر اعتماد الدفع") ?? "";
+    if (!response.trim()) return;
+    try {
+      setRequests(await rejectSubscriptionRequestAction(requestId, response));
+      alert("تم رفض الطلب");
+    } catch {
+      alert("تعذر رفض الطلب");
+    }
   }
 
   return (
     <AdminPageShell
-      title="الباقات وخيارات الكوفيهات"
-      subtitle="أنشئ باقات جديدة وحدد الخدمات المتاحة داخل كل باقة. أي خيار تلغيه من الباقة يختفي مباشرة من لوحة الكوفي."
+      title="الباقات والاشتراكات"
+      subtitle="إدارة الباقة الأساسية والأسعار والعروض وطلبات الدفع اليدوي."
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
+      {configError ? (
+        <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">
+          {configError}
+        </div>
+      ) : null}
+
       <BentoGrid className="mb-6">
-        <BentoCard variant="cyber" span="2">
+        <BentoCard variant="cyber">
           <AdminStatPill label="إجمالي الباقات" value={plans.length} />
         </BentoCard>
-        <BentoCard variant="gold">
+        <BentoCard variant="cyber">
           <AdminStatPill label="الباقات المفعلة" value={activeCount} />
+        </BentoCard>
+        <BentoCard variant="gold">
+          <AdminStatPill label="طلبات بانتظار المراجعة" value={pendingCount} />
         </BentoCard>
         <BentoCard variant="dark">
           <AdminStatPill
-            label="المميزات المتاحة"
-            value={allPlatformFeatures.length}
-            hint="خيارات قابلة للتخصيص"
+            label="الباقة الأساسية"
+            value={plans.find((plan) => plan.isDefault)?.name ?? "غير محددة"}
           />
         </BentoCard>
       </BentoGrid>
 
-      <BentoGrid className="mb-6 xl:grid-cols-1">
-        <BentoCard variant="cyber" span="4">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B] shadow-[0_0_20px_rgba(246,195,91,0.2)]">
-              <Plus className="h-7 w-7" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-[#F8F4EF]">إنشاء باقة جديدة</h2>
-              <p className="text-sm font-bold text-[#CBB29C]">
-                سمّ الباقة وحدد السعر والمميزات المتاحة فيها.
-              </p>
-            </div>
-          </div>
+      <div className="mb-6 flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={addPlan}
+          className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-4 font-black text-[#F8F4EF]"
+        >
+          <Plus className="h-5 w-5" />
+          إضافة باقة
+        </button>
+        <GoldButton
+          type="button"
+          onClick={savePlans}
+          disabled={saving || !dirty}
+          className="inline-flex items-center gap-2"
+        >
+          <Save className="h-5 w-5" />
+          {saving ? "جاري الحفظ..." : "حفظ جميع التعديلات"}
+        </GoldButton>
+      </div>
 
-          <div className={`grid gap-4 p-4 md:grid-cols-3 ${softPanel}`}>
-            <AdminInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="اسم الباقة"
-            />
-            <AdminInput
-              value={priceMonthly}
-              onChange={(e) => setPriceMonthly(e.target.value)}
-              placeholder="السعر الشهري"
-            />
-            <AdminInput
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="وصف الباقة"
-            />
-          </div>
-
-          <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {allPlatformFeatures.map((feature) => {
-              const active = features.includes(feature.id);
-
-              return (
-                <button
-                  key={feature.id}
-                  onClick={() => toggleNewFeature(feature.id)}
-                  className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
-                    active
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.15)]"
-                      : `${softPanel} text-[#CBB29C] hover:border-[#F6C35B]/30`
-                  }`}
-                >
-                  {feature.title}
-                </button>
-              );
-            })}
-          </div>
-
-          <GoldButton onClick={addPlan} className="mt-5 inline-flex items-center gap-2">
-            <Save className="h-5 w-5" />
-            حفظ الباقة
-          </GoldButton>
-        </BentoCard>
-      </BentoGrid>
-
-      <BentoGrid className="xl:grid-cols-3">
-        {plans.map((plan, index) => (
-          <BentoCard
-            key={plan.id}
-            variant={planVariants[index % planVariants.length]}
-            className="shadow-[inset_0_1px_0_rgba(255,255,255,0.06),8px_10px_28px_rgba(0,0,0,0.4)]"
-          >
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                <Layers3 className="h-7 w-7" />
+      <BentoGrid className="mb-7 xl:grid-cols-3">
+        {plans.map((plan) => (
+          <BentoCard key={plan.id} variant={plan.isDefault ? "gold" : "cyber"}>
+            <div className="mb-5 flex items-center justify-between gap-2">
+              <Layers3 className="h-7 w-7 text-[#F6C35B]" />
+              <div className="flex flex-wrap gap-2">
+                {plan.isDefault ? <StatusBadge tone="gold">الأساسية</StatusBadge> : null}
+                <StatusBadge tone={plan.active ? "success" : "danger"}>
+                  {plan.active ? "مفعلة" : "متوقفة"}
+                </StatusBadge>
               </div>
-              <StatusBadge tone={plan.active ? "success" : "danger"}>
-                {plan.active ? "مفعلة" : "متوقفة"}
-              </StatusBadge>
             </div>
 
-            <div className={`space-y-4 p-4 ${softPanel}`}>
-              <label className="block">
-                <span className="text-xs font-black text-[#CBB29C]">اسم الباقة</span>
-                <AdminInput
-                  value={plan.name}
-                  onChange={(e) => updatePlanField(plan.id, "name", e.target.value)}
-                  className="mt-2 text-2xl font-black"
-                />
-              </label>
+            <div className="space-y-4">
+              <AdminInput
+                value={plan.name}
+                placeholder="اسم الباقة"
+                onChange={(event) => updatePlan(plan.id, { name: event.target.value })}
+              />
+              <AdminTextarea
+                value={plan.description}
+                placeholder="وصف الباقة"
+                className="h-20"
+                onChange={(event) =>
+                  updatePlan(plan.id, { description: event.target.value })
+                }
+              />
 
-              <label className="block">
-                <span className="text-xs font-black text-[#CBB29C]">الوصف</span>
-                <AdminTextarea
-                  value={plan.description}
-                  onChange={(e) => updatePlanField(plan.id, "description", e.target.value)}
-                  className="mt-2 h-24 text-sm leading-7"
-                />
-              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">
+                    السعر الأساسي
+                  </span>
+                  <AdminInput
+                    type="number"
+                    min="0"
+                    value={plan.priceMonthly}
+                    onChange={(event) =>
+                      updatePlan(plan.id, { priceMonthly: Number(event.target.value) || 0 })
+                    }
+                  />
+                </label>
+                <label>
+                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">
+                    سعر العرض
+                  </span>
+                  <AdminInput
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="أدخل سعر العرض"
+                    value={plan.offerPrice ?? ""}
+                    className="text-[#FCF8F3] placeholder:text-[#CBB29C]"
+                    onChange={(event) => {
+                      const value = event.target.value;
 
-              <label className="block">
-                <span className="text-xs font-black text-[#CBB29C]">السعر الشهري</span>
+                      if (value === "") {
+                        updatePlan(plan.id, { offerPrice: undefined });
+                        return;
+                      }
+
+                      updatePlan(plan.id, {
+                        offerEnabled: true,
+                        offerPrice: Number(value),
+                      });
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <AdminInput
-                  value={plan.priceMonthly}
-                  onChange={(e) => updatePlanField(plan.id, "priceMonthly", e.target.value)}
-                  className="mt-2 text-2xl font-black text-[#F6C35B]"
+                  type="number"
+                  min="1"
+                  value={plan.durationCount}
+                  onChange={(event) =>
+                    updatePlan(plan.id, {
+                      durationCount: Math.max(1, Number(event.target.value) || 1),
+                    })
+                  }
                 />
-              </label>
+                <AdminSelect
+                  value={plan.durationUnit}
+                  onChange={(event) =>
+                    updatePlan(plan.id, {
+                      durationUnit: event.target.value as PlanDurationUnit,
+                    })
+                  }
+                >
+                  <option value="day">يوم</option>
+                  <option value="month">شهر</option>
+                  <option value="year">سنة</option>
+                </AdminSelect>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => updatePlan(plan.id, { active: !plan.active })}
+                  className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-black text-[#F8F4EF]"
+                >
+                  {plan.active ? "إيقاف الباقة" : "تفعيل الباقة"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updatePlan(plan.id, {
+                      offerEnabled: !plan.offerEnabled,
+                      offerPrice: plan.offerEnabled ? undefined : plan.offerPrice,
+                    })
+                  }
+                  className="rounded-xl border border-[#D9A33F]/30 bg-[#D9A33F]/10 px-3 py-2 text-xs font-black text-[#F6C35B]"
+                >
+                  {plan.offerEnabled ? "إلغاء العرض" : "تفعيل عرض"}
+                </button>
+                {!plan.isDefault ? (
+                  <button
+                    type="button"
+                    onClick={() => selectDefault(plan.id)}
+                    className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-300"
+                  >
+                    جعلها الأساسية
+                  </button>
+                ) : null}
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-2">
+            <div className="mt-5 grid gap-2">
               {allPlatformFeatures.map((feature) => {
-                const active = plan.features.includes(feature.id);
-
+                const enabled = plan.features.includes(feature.id);
                 return (
                   <button
+                    type="button"
                     key={feature.id}
                     onClick={() => toggleFeature(plan.id, feature.id)}
-                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 font-black transition ${
-                      active
-                        ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                        : `${softPanel} text-[#CBB29C] hover:border-[#F6C35B]/25`
+                    className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-black ${
+                      enabled
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                        : "border-white/10 bg-white/5 text-[#CBB29C]"
                     }`}
                   >
                     <span>{feature.title}</span>
-                    {active ? <Check className="h-5 w-5" /> : <span>—</span>}
+                    {enabled ? <Check className="h-4 w-4" /> : <span>—</span>}
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-6 flex gap-2">
+            {!plan.isDefault ? (
               <button
-                onClick={() => togglePlanActive(plan.id)}
-                className={`flex-1 rounded-2xl border px-4 py-3 font-black transition ${
-                  plan.active
-                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                    : "border-red-500/40 bg-red-500/15 text-red-300"
-                }`}
+                type="button"
+                onClick={() => removePlan(plan.id)}
+                className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-300"
               >
-                {plan.active ? "الباقة مفعلة" : "الباقة متوقفة"}
+                <Trash2 className="h-4 w-4" />
+                حذف من القائمة
               </button>
+            ) : null}
 
-              <button
-                onClick={() => deletePlan(plan.id)}
-                className="rounded-2xl border border-red-500/40 bg-red-500/15 px-4 py-3 font-black text-red-300"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </div>
+            <p className="mt-4 text-xs font-bold text-[#CBB29C]">
+              المدة: {plan.durationCount} {durationLabels[plan.durationUnit]}
+            </p>
           </BentoCard>
         ))}
       </BentoGrid>
+
+      <BentoCard variant="dark" span="4">
+        <div className="mb-5 flex items-center gap-3">
+          <Receipt className="h-7 w-7 text-[#F6C35B]" />
+          <div>
+            <h2 className="text-xl font-black text-[#F8F4EF]">طلبات الدفع اليدوي</h2>
+            <p className="text-sm font-bold text-[#CBB29C]">
+              اعتماد الحوالات البنكية وطلبات تحصيل الكاش.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {requests.map((request) => (
+            <div
+              key={request.id}
+              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-black text-[#F8F4EF]">
+                    {request.cafeName} — {request.planName}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-[#CBB29C]">
+                    {request.paymentMethod === "cash" ? "تحصيل كاش" : "حوالة بنكية"}
+                    {request.branchName ? ` • ${request.branchName}` : ""}
+                    {" • "}
+                    {request.amount} ر.س
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-xs font-bold text-[#CBB29C]">
+                    <Clock3 className="h-4 w-4" />
+                    {new Date(request.createdAt).toLocaleString("ar-SA")}
+                  </p>
+                </div>
+                <StatusBadge
+                  tone={request.status === "approved" ? "success" : request.status === "rejected" ? "danger" : "gold"}
+                >
+                  {requestStatusLabels[request.status]}
+                </StatusBadge>
+              </div>
+
+              {request.status === "pending_review" ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <GoldButton type="button" onClick={() => approveRequest(request.id)}>
+                    اعتماد وتفعيل الباقة
+                  </GoldButton>
+                  <button
+                    type="button"
+                    onClick={() => rejectRequest(request.id)}
+                    className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-black text-red-300"
+                  >
+                    رفض الطلب
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+
+          {!requests.length ? (
+            <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center font-bold text-[#CBB29C]">
+              لا توجد طلبات اشتراك بعد.
+            </p>
+          ) : null}
+        </div>
+      </BentoCard>
     </AdminPageShell>
   );
 }

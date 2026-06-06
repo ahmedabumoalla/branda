@@ -25,21 +25,17 @@ import {
 import {
   deleteLocalAsset,
   FIXED_ASSET_IDS,
-  saveOptimizedImageAsset,
   revokeObjectUrl,
 } from "@/lib/cafe/local-asset-store";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
+import { uploadImageAction } from "@/app/actions/upload";
 import {
   adoptCafeTheme,
-  anyLegacyBase64InProjectStorage,
   persistCustomIdentityTheme,
-  repairLocalImageStorage,
-  runCustomIdentityMigrationOnce,
   subscribeBrandaStorageEvents,
 } from "@/lib/cafe/theme-storage-sync";
 import {
-  CAFE_THEME_KEY,
   getThemeClasses,
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
@@ -49,11 +45,9 @@ import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import {
   buildCustomIdentityCssVars,
-  CUSTOM_IDENTITY_THEME_KEY,
   defaultCustomIdentityTheme,
   FEATURED_SECTION_LABELS,
   isValidHex,
-  loadCustomIdentityTheme,
   type BackgroundFit,
   type BackgroundScope,
   type CustomIdentityPalette,
@@ -61,7 +55,7 @@ import {
   type FeaturedSectionMode,
   type OverlayStrength,
 } from "@/lib/mock/custom-identity-theme";
-import { loadMenuCategories, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
+import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 
 const BRAND_THEME_ID: CafeThemeId = "brand-identity-custom";
 const CAFE_PUBLIC_PATH = "/c/qatrah";
@@ -113,6 +107,9 @@ type PreviewBundle = {
 
 type Props = {
   preview: PreviewBundle;
+  initialIdentity: CustomIdentityTheme;
+  initialCategories: MenuCategoryRecord[];
+  initialIsActiveTheme?: boolean;
   onAdopted?: (themeId: CafeThemeId) => void;
 };
 
@@ -148,12 +145,18 @@ function isQuotaError(err: unknown) {
   );
 }
 
-export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
-  const [draft, setDraft] = useState<CustomIdentityTheme>(() => defaultCustomIdentityTheme());
-  const [savedSnapshot, setSavedSnapshot] = useState<CustomIdentityTheme>(() =>
-    defaultCustomIdentityTheme()
+export function CustomIdentityBuilder({
+  preview,
+  initialIdentity,
+  initialCategories,
+  initialIsActiveTheme = false,
+  onAdopted,
+}: Props) {
+  const [draft, setDraft] = useState<CustomIdentityTheme>(() => initialIdentity);
+  const [savedSnapshot, setSavedSnapshot] = useState<CustomIdentityTheme>(() => initialIdentity);
+  const [categories, setCategories] = useState<MenuCategoryRecord[]>(() =>
+    initialCategories.filter((c) => c.visible)
   );
-  const [categories, setCategories] = useState<MenuCategoryRecord[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
   const [flowStatus, setFlowStatus] = useState<FlowStatus>("idle");
@@ -169,27 +172,23 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
   const [showRepair, setShowRepair] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const { toast, showToast, setToast } = useAppToast();
-  const [isActiveTheme, setIsActiveTheme] = useState(false);
+  const [isActiveTheme, setIsActiveTheme] = useState(initialIsActiveTheme);
   const cafeLogoFallback = useResolvedCafeLogoUrl(preview.cafeSettings);
   const { logoUrl: savedIdentityLogoUrl, backgroundUrl: savedBackgroundUrl } =
     useCustomIdentityVisuals(draft);
 
   useEffect(() => {
-    void runCustomIdentityMigrationOnce().then(() => {
-      const loaded = loadCustomIdentityTheme();
-      setDraft(loaded);
-      setSavedSnapshot(loaded);
-    });
-    setCategories(loadMenuCategories().filter((c) => c.visible));
-    setIsActiveTheme(localStorage.getItem(CAFE_THEME_KEY) === BRAND_THEME_ID);
-    setShowRepair(anyLegacyBase64InProjectStorage());
+    setDraft(initialIdentity);
+    setSavedSnapshot(initialIdentity);
+    setCategories(initialCategories.filter((c) => c.visible));
+    setIsActiveTheme(initialIsActiveTheme);
 
     return subscribeBrandaStorageEvents({
       onThemeUpdated: () => {
-        setIsActiveTheme(localStorage.getItem(CAFE_THEME_KEY) === BRAND_THEME_ID);
+        setIsActiveTheme(initialIsActiveTheme);
       },
     });
-  }, []);
+  }, [initialIdentity, initialCategories, initialIsActiveTheme]);
 
   useEffect(() => {
     return () => {
@@ -350,23 +349,10 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
   }
 
   async function handleRepairStorage() {
-    setRepairing(true);
-    try {
-      const result = await repairLocalImageStorage(true);
-      const loaded = loadCustomIdentityTheme();
-      setDraft(loaded);
-      setSavedSnapshot(loaded);
-      setShowRepair(false);
-      showToast({
-        type: "success",
-        message: result.message ?? "تم إصلاح التخزين. أعد رفع الشعار أو الخلفية ثم احفظ الثيم.",
-      });
-    } catch (err) {
-      console.error("[custom-identity] repair failed", err);
-      showToast({ type: "error", message: "تعذر إصلاح التخزين المحلي" });
-    } finally {
-      setRepairing(false);
-    }
+    showToast({
+      type: "success",
+      message: "لا حاجة لإصلاح التخزين — البيانات محفوظة في Supabase",
+    });
   }
 
   async function persistDraft(showMessages = true): Promise<boolean> {
@@ -390,15 +376,28 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
       const next: CustomIdentityTheme = { ...draft };
 
       if (pendingLogo) {
-        next.logoAssetId = await saveOptimizedImageAsset("custom-theme-logo", pendingLogo);
+        const formData = new FormData();
+        formData.append("file", pendingLogo.blob, "logo.webp");
+        const uploaded = await uploadImageAction(
+          "cafe-logos",
+          formData,
+          "logo",
+          "custom-identity/logo"
+        );
+        next.logoAssetId = uploaded.storagePath;
         delete next.legacyLogoDataUrl;
       }
 
       if (pendingBackground) {
-        next.backgroundAssetId = await saveOptimizedImageAsset(
-          "custom-theme-background",
-          pendingBackground
+        const formData = new FormData();
+        formData.append("file", pendingBackground.blob, "background.webp");
+        const uploaded = await uploadImageAction(
+          "cafe-backgrounds",
+          formData,
+          "background",
+          "custom-identity/background"
         );
+        next.backgroundAssetId = uploaded.storagePath;
         delete next.legacyBackgroundImageDataUrl;
       }
 
@@ -407,10 +406,9 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
         setToast({ type: "loading", message: "جاري حفظ الهوية..." });
       }
 
-      persistCustomIdentityTheme(next);
-      const reloaded = loadCustomIdentityTheme();
-      setDraft(reloaded);
-      setSavedSnapshot(reloaded);
+      await persistCustomIdentityTheme(next);
+      setDraft(next);
+      setSavedSnapshot(next);
       setPendingLogo(null);
       setPendingBackground(null);
       setShowRepair(false);
@@ -457,7 +455,7 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
         return;
       }
 
-      adoptCafeTheme(BRAND_THEME_ID);
+      await adoptCafeTheme(BRAND_THEME_ID);
       onAdopted?.(BRAND_THEME_ID);
       setIsActiveTheme(true);
       setFlowStatus("success");
@@ -523,7 +521,7 @@ export function CustomIdentityBuilder({ preview, onAdopted }: Props) {
             <h2 className="mt-1 text-2xl font-black">أنشئ ثيم بهوية كوفيك</h2>
             <p className="mt-2 max-w-2xl text-sm font-bold text-[#E5D8CD]/90">
               الألوان والإعدادات في{" "}
-              <span className="font-mono text-xs">{CUSTOM_IDENTITY_THEME_KEY}</span> — الصور
+              <span className="font-mono text-xs">cafe_custom_identity</span> — الصور
               في IndexedDB محليًا (mock) وليس base64.
             </p>
           </div>

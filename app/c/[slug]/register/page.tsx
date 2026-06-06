@@ -8,7 +8,7 @@ import {
   ThemedInput,
 } from "@/components/cafe/themes/themed-auth-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
-import { setCustomerSession } from "@/lib/customer/session";
+import { registerCustomerAction } from "@/app/actions/auth";
 
 function RegisterForm() {
   const router = useRouter();
@@ -21,21 +21,29 @@ function RegisterForm() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function register() {
-    if (!fullName.trim() || !phone.trim()) {
-      alert("اكتب الاسم ورقم الجوال");
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !password.trim()) {
+      alert("اكتب الاسم ورقم الجوال والبريد وكلمة المرور");
       return;
     }
-    setCustomerSession(slug, {
-      id: crypto.randomUUID(),
-      cafeSlug: slug,
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      email: email.trim() || undefined,
-      createdAt: new Date().toISOString(),
-    });
-    router.push(appendPreviewToNextPath(rawNext, previewThemeId));
+    if (password.length < 8) {
+      alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+      return;
+    }
+    setLoading(true);
+    void registerCustomerAction(slug, email.trim(), password, fullName.trim(), phone.trim()).then(
+      (result) => {
+        setLoading(false);
+        if (!result.ok) {
+          alert(result.message);
+          return;
+        }
+        router.push(appendPreviewToNextPath(rawNext, previewThemeId));
+      }
+    );
   }
 
   const nextForLogin = appendPreviewToNextPath(rawNext, previewThemeId);
@@ -48,7 +56,7 @@ function RegisterForm() {
       registerHref={path("register")}
       loginHref={`${path("login")}?next=${encodeURIComponent(nextForLogin)}`}
       onSubmit={register}
-      submitLabel="إنشاء الحساب"
+      submitLabel={loading ? "جاري التسجيل..." : "إنشاء الحساب"}
     >
       <ThemedInput
         experience={experience}
@@ -66,8 +74,15 @@ function RegisterForm() {
         experience={experience}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="البريد (اختياري)"
+        placeholder="البريد الإلكتروني"
         type="email"
+      />
+      <ThemedInput
+        experience={experience}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="كلمة المرور (8 أحرف على الأقل)"
+        type="password"
       />
     </ThemedAuthPanel>
   );

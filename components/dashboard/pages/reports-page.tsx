@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3, CalendarDays, Receipt, Star, Users } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BentoCard,
   BentoGrid,
@@ -10,30 +10,30 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
-import { ORDERS_KEY, mockCafeOrders, type CafeOrder } from "@/lib/mock/orders";
-import { CUSTOMER_KEY, type CustomerProfile } from "@/lib/mock/customer-activity";
-import { REVIEWS_KEY, mockReviews, type CafeReview } from "@/lib/mock/reviews";
-import { mockReservations, type CafeReservation } from "@/lib/mock/reservations";
+import { type CafeOrder } from "@/lib/mock/orders";
+import { type CustomerProfile } from "@/lib/mock/customer-activity";
+import { type CafeReview } from "@/lib/mock/reviews";
+import { type CafeReservation } from "@/lib/mock/reservations";
 
-const RESERVATIONS_KEY = "branda_qatrah_reservations";
+type Props = {
+  initialOrders: CafeOrder[];
+  initialCustomers: CustomerProfile[];
+  initialReviews: CafeReview[];
+  initialReservations: CafeReservation[];
+  configError?: string;
+};
 
-export function ReportsPageClient() {
-  const [orders, setOrders] = useState<CafeOrder[]>(mockCafeOrders);
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
-  const [reviews, setReviews] = useState<CafeReview[]>(mockReviews);
-  const [reservations, setReservations] = useState<CafeReservation[]>(mockReservations);
-
-  useEffect(() => {
-    const savedOrders = localStorage.getItem(ORDERS_KEY);
-    const savedCustomers = localStorage.getItem(CUSTOMER_KEY);
-    const savedReviews = localStorage.getItem(REVIEWS_KEY);
-    const savedReservations = localStorage.getItem(RESERVATIONS_KEY);
-
-    if (savedOrders) setOrders(JSON.parse(savedOrders));
-    if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-    if (savedReviews) setReviews(JSON.parse(savedReviews));
-    if (savedReservations) setReservations(JSON.parse(savedReservations));
-  }, []);
+export function ReportsPageClient({
+  initialOrders,
+  initialCustomers,
+  initialReviews,
+  initialReservations,
+  configError,
+}: Props) {
+  const [orders] = useState<CafeOrder[]>(initialOrders);
+  const [customers] = useState<CustomerProfile[]>(initialCustomers);
+  const [reviews] = useState<CafeReview[]>(initialReviews);
+  const [reservations] = useState<CafeReservation[]>(initialReservations);
 
   const totalSales = useMemo(() => orders.reduce((sum, order) => sum + order.total, 0), [orders]);
   const avgRating = useMemo(() => {
@@ -55,6 +55,11 @@ export function ReportsPageClient() {
         title="التقارير"
         subtitle="نظرة شاملة على أداء الكوفي والمبيعات والعملاء والتقييمات."
       >
+        {configError ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
+            {configError}
+          </div>
+        ) : null}
         <BentoGrid className="mb-6">
           {stats.map((item, index) => {
             const Icon = item.icon;

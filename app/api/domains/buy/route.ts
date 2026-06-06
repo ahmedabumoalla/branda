@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { purchaseDomain } from "@/lib/platform/domain-purchase-server";
+import { requireCafeOwnerForSlug } from "@/lib/data/domain-orders";
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +17,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "cafeSlug and domain are required" }, { status: 400 });
     }
 
+    await requireCafeOwnerForSlug(body.cafeSlug);
+
     const result = await purchaseDomain({
       cafeSlug: body.cafeSlug,
       domain: body.domain,
@@ -26,9 +29,8 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "failed to buy domain" },
-      { status: 400 }
-    );
+    const message = error instanceof Error ? error.message : "failed to buy domain";
+    const status = message.includes("Unauthorized") || message.includes("Forbidden") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -1,7 +1,9 @@
 "use client";
 
-import { ExternalLink, LocateFixed, MapPin, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { deleteBranchAction, saveBranchAction } from "@/app/actions/branches";
+import { GoogleMapPicker } from "@/components/maps/google-map-picker";
 import {
   BentoCard,
   BentoGrid,
@@ -11,118 +13,104 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import {
-  BRANCHES_KEY,
-  buildGoogleMapsUrl,
-  mockBranches,
-  type CafeBranch,
-} from "@/lib/mock/branches";
+import { buildGoogleMapsUrl, type CafeBranch } from "@/lib/mock/branches";
 
-export function BranchesPageClient() {
-  const [branches, setBranches] = useState<CafeBranch[]>(mockBranches);
+type Props = {
+  initialBranches: CafeBranch[];
+  configError?: string;
+};
 
+type LocationValue = { lat: number; lng: number };
+
+export function BranchesPageClient({ initialBranches, configError }: Props) {
+  const [branches, setBranches] = useState<CafeBranch[]>(initialBranches);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("جدة");
-  const [distanceKm, setDistanceKm] = useState("");
+  const [city, setCity] = useState("");
   const [phone, setPhone] = useState("");
   const [workingHours, setWorkingHours] = useState("");
-  const [mapUrl, setMapUrl] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
+  const [location, setLocation] = useState<LocationValue | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    const saved = localStorage.getItem(BRANCHES_KEY);
-    if (saved) setBranches(JSON.parse(saved));
-  }, []);
+  const handleMapChange = useCallback((value: LocationValue) => setLocation(value), []);
 
-  useEffect(() => {
-    localStorage.setItem(BRANCHES_KEY, JSON.stringify(branches));
-  }, [branches]);
-
-  function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      alert("المتصفح لا يدعم تحديد الموقع");
+  async function addBranch() {
+    if (!name.trim() || !address.trim() || !city.trim() || !location) {
+      setMessage("اكتب بيانات الفرع وحدد موقعه على الخريطة");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLat = position.coords.latitude.toFixed(7);
-        const nextLng = position.coords.longitude.toFixed(7);
-        const nextUrl = buildGoogleMapsUrl(Number(nextLat), Number(nextLng));
+    setSaving(true);
+    setMessage("");
 
-        setLat(nextLat);
-        setLng(nextLng);
-        setMapUrl(nextUrl);
+    try {
+      const saved = await saveBranchAction({
+        name: name.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        phone: phone.trim() || undefined,
+        workingHours: workingHours.trim() || "غير محدد",
+        lat: location.lat,
+        lng: location.lng,
+        mapUrl: buildGoogleMapsUrl(location.lat, location.lng),
+        active: true,
+        id: crypto.randomUUID(),
+      });
 
-        window.open(nextUrl, "_blank");
-      },
-      () => {
-        alert("لم يتم السماح بالوصول للموقع");
-      },
-      {
-        enableHighAccuracy: true,
-      }
-    );
-  }
-
-  function openGoogleMapsPicker() {
-    const query = address || name || "Jeddah cafe";
-    const url =
-      lat && lng
-        ? buildGoogleMapsUrl(Number(lat), Number(lng))
-        : `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
-
-    window.open(url, "_blank");
-  }
-
-  function addBranch() {
-    if (!name.trim() || !address.trim()) {
-      alert("اكتب اسم الفرع والعنوان");
-      return;
+      setBranches((current) => [saved, ...current]);
+      setName("");
+      setAddress("");
+      setCity("");
+      setPhone("");
+      setWorkingHours("");
+      setLocation(null);
+      setMessage("تم حفظ الفرع");
+    } catch {
+      setMessage("تعذر حفظ الفرع");
+    } finally {
+      setSaving(false);
     }
-
-    const finalLat = lat ? Number(lat) : undefined;
-    const finalLng = lng ? Number(lng) : undefined;
-    const finalMapUrl =
-      mapUrl.trim() || buildGoogleMapsUrl(finalLat, finalLng, undefined);
-
-    const branch: CafeBranch = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      address: address.trim(),
-      city: city.trim() || "جدة",
-      distanceKm: distanceKm ? Number(distanceKm) : undefined,
-      phone: phone.trim() || undefined,
-      workingHours: workingHours.trim() || "غير محدد",
-      lat: finalLat,
-      lng: finalLng,
-      mapUrl: finalMapUrl,
-      active: true,
-    };
-
-    setBranches((prev) => [branch, ...prev]);
-
-    setName("");
-    setAddress("");
-    setCity("جدة");
-    setDistanceKm("");
-    setPhone("");
-    setWorkingHours("");
-    setMapUrl("");
-    setLat("");
-    setLng("");
   }
 
-  const activeCount = branches.filter((b) => b.active).length;
+  async function toggleVisibility(branch: CafeBranch) {
+    try {
+      const saved = await saveBranchAction({ ...branch, active: !branch.active });
+      setBranches((current) => current.map((item) => (item.id === branch.id ? saved : item)));
+    } catch {
+      setMessage("تعذر تحديث حالة الفرع");
+    }
+  }
+
+  async function removeBranch(branchId: string) {
+    try {
+      await deleteBranchAction(branchId);
+      setBranches((current) => current.filter((item) => item.id !== branchId));
+    } catch {
+      setMessage("تعذر حذف الفرع");
+    }
+  }
+
+  const activeCount = branches.filter((branch) => branch.active).length;
 
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="فروع الكوفي"
-        subtitle="حدّد موقع الفرع من خرائط قوقل، واحفظه ليظهر للعميل في صفحة الحجز والفروع."
+        title="الفروع والمواقع"
+        subtitle="حدد مواقع الفروع على الخريطة لتظهر للعملاء في تطبيق برندة والفرع الالكتروني"
       >
+        {configError ? (
+          <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            {configError}
+          </SoftCard>
+        ) : null}
+
+        {message ? (
+          <SoftCard className="mb-6 border border-[#D9A33F]/25 bg-[#FFF8EF] p-4 text-sm font-black text-[#6B3A25]">
+            {message}
+          </SoftCard>
+        ) : null}
+
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="إجمالي الفروع" value={branches.length} />
@@ -133,8 +121,8 @@ export function BranchesPageClient() {
           <BentoCard variant="white" span="2">
             <StatPill
               label="مدن مغطاة"
-              value={new Set(branches.map((b) => b.city)).size}
-              hint="فروع متعددة المدن"
+              value={new Set(branches.map((branch) => branch.city)).size}
+              hint="مواقع متاحة للعملاء"
             />
           </BentoCard>
         </BentoGrid>
@@ -142,71 +130,54 @@ export function BranchesPageClient() {
         <BentoGrid>
           <BentoCard variant="white" span="2">
             <div className="grid gap-5">
-              {branches.map((branch) => {
-                const url = branch.mapUrl || buildGoogleMapsUrl(branch.lat, branch.lng);
-
-                return (
-                  <SoftCard key={branch.id}>
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3A2117] text-[#F8F4EF]">
-                          <MapPin className="h-7 w-7" />
-                        </div>
-
-                        <div>
-                          <h2 className="text-2xl font-black text-[#3A2117]">
-                            {branch.name}
-                          </h2>
-                          <p className="mt-2 font-bold text-[#7A6255]">{branch.address}</p>
-                          <p className="mt-1 text-sm font-bold text-[#7A6255]">
-                            {branch.city} • {branch.workingHours}
-                          </p>
-                          {branch.lat && branch.lng ? (
-                            <p className="mt-2 text-xs font-black text-[#6B3A25]">
-                              {branch.lat}, {branch.lng}
-                            </p>
-                          ) : null}
-                        </div>
+              {branches.map((branch) => (
+                <SoftCard key={branch.id}>
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3A2117] text-[#F8F4EF]">
+                        <MapPin className="h-7 w-7" />
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <a
-                          href={url}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-[#F8F4EF]"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          فتح الخريطة
-                        </a>
-                        <button
-                          onClick={() =>
-                            setBranches((prev) =>
-                              prev.map((item) =>
-                                item.id === branch.id
-                                  ? { ...item, active: !item.active }
-                                  : item
-                              )
-                            )
-                          }
-                          className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
-                        >
-                          {branch.active ? "إخفاء" : "إظهار"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            setBranches((prev) =>
-                              prev.filter((item) => item.id !== branch.id)
-                            )
-                          }
-                          className="rounded-2xl bg-red-50 px-5 py-3 font-black text-red-700"
-                        >
-                          <Trash2 className="inline h-4 w-4" /> حذف
-                        </button>
+                      <div>
+                        <h2 className="text-2xl font-black text-[#3A2117]">{branch.name}</h2>
+                        <p className="mt-2 font-bold text-[#7A6255]">{branch.address}</p>
+                        <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                          {branch.city} {branch.workingHours ? ` ${branch.workingHours}` : ""}
+                        </p>
                       </div>
                     </div>
-                  </SoftCard>
-                );
-              })}
+
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={branch.mapUrl || buildGoogleMapsUrl(branch.lat, branch.lng)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-[#F8F4EF]"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        فتح الخريطة
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => void toggleVisibility(branch)}
+                        className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+                      >
+                        {branch.active ? "إخفاء" : "إظهار"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void removeBranch(branch.id)}
+                        className="rounded-2xl bg-red-50 px-5 py-3 font-black text-red-700"
+                      >
+                        <Trash2 className="inline h-4 w-4" /> حذف
+                      </button>
+                    </div>
+                  </div>
+                </SoftCard>
+              ))}
+
+              {!branches.length ? (
+                <p className="py-8 text-center font-bold text-[#7A6255]">لا توجد فروع بعد</p>
+              ) : null}
             </div>
           </BentoCard>
 
@@ -217,85 +188,19 @@ export function BranchesPageClient() {
             </h2>
 
             <div className="space-y-3">
-              <NeumoInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="اسم الفرع"
-              />
-              <NeumoInput
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="العنوان"
-              />
-              <NeumoInput
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="المدينة"
-              />
-              <NeumoInput
-                value={distanceKm}
-                onChange={(e) => setDistanceKm(e.target.value)}
-                placeholder="المسافة كم اختياري"
-              />
-              <NeumoInput
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="رقم الفرع"
-              />
-              <NeumoInput
-                value={workingHours}
-                onChange={(e) => setWorkingHours(e.target.value)}
-                placeholder="أوقات العمل"
-              />
+              <NeumoInput value={name} onChange={(event) => setName(event.target.value)} placeholder="اسم الفرع" />
+              <NeumoInput value={address} onChange={(event) => setAddress(event.target.value)} placeholder="العنوان" />
+              <NeumoInput value={city} onChange={(event) => setCity(event.target.value)} placeholder="المدينة" />
+              <NeumoInput value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="رقم الفرع اختياري" />
+              <NeumoInput value={workingHours} onChange={(event) => setWorkingHours(event.target.value)} placeholder="أوقات العمل اختياري" />
 
               <SoftCard className="p-4">
-                <p className="mb-3 font-black text-[#3A2117]">موقع الفرع</p>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <NeumoInput
-                    value={lat}
-                    onChange={(e) => setLat(e.target.value)}
-                    placeholder="Latitude"
-                  />
-                  <NeumoInput
-                    value={lng}
-                    onChange={(e) => setLng(e.target.value)}
-                    placeholder="Longitude"
-                  />
-                </div>
-
-                <NeumoInput
-                  value={mapUrl}
-                  onChange={(e) => setMapUrl(e.target.value)}
-                  placeholder="رابط Google Maps يتولد تلقائيًا أو الصقه هنا"
-                  className="mt-2"
-                />
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <PrimaryButton
-                    onClick={useCurrentLocation}
-                    className="inline-flex h-12 items-center justify-center gap-2"
-                  >
-                    <LocateFixed className="h-4 w-4" />
-                    موقعي الحالي
-                  </PrimaryButton>
-                  <button
-                    onClick={openGoogleMapsPicker}
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#E5D8CD] bg-white font-black text-[#3A2117]"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    فتح قوقل ماب
-                  </button>
-                </div>
-
-                <p className="mt-3 text-xs font-bold leading-6 text-[#7A6255]">
-                  الأفضل: اضغط موقعي الحالي إذا كنت داخل الفرع. أو افتح قوقل ماب وحدد
-                  الدبوس ثم انسخ الرابط والصقه.
-                </p>
+                <p className="mb-3 font-black text-[#3A2117]">موقع الفرع على الخريطة</p>
+                <GoogleMapPicker value={location} onChange={handleMapChange} heightClassName="h-[280px]" />
               </SoftCard>
 
-              <PrimaryButton onClick={addBranch} className="w-full">
-                حفظ الفرع والموقع
+              <PrimaryButton type="button" onClick={() => void addBranch()} disabled={saving} className="w-full">
+                {saving ? "جاري الحفظ" : "حفظ الفرع والموقع"}
               </PrimaryButton>
             </div>
           </BentoCard>

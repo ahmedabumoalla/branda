@@ -1,7 +1,7 @@
 "use client";
 
 import { Receipt, Search, ShoppingBag, Star, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BentoCard,
   BentoGrid,
@@ -13,52 +13,28 @@ import {
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
 import {
-  CUSTOMER_KEY,
-  INVOICES_KEY,
-  ORDERS_KEY,
-  TRANSACTIONS_KEY,
-  type CustomerInvoice,
   type CustomerOrder,
   type CustomerProfile,
-  type CustomerTransaction,
 } from "@/lib/mock/customer-activity";
+import { type CafeReservation } from "@/lib/mock/reservations";
 
-const RESERVATIONS_KEY = "branda_qatrah_reservations";
-
-type Reservation = {
-  id: string;
-  customerId?: string;
-  customerName: string;
-  phone: string;
-  type: string;
-  guests: number;
-  date: string;
-  time: string;
-  status: string;
-  createdAt: string;
+type Props = {
+  initialCustomers: CustomerProfile[];
+  initialOrders: CustomerOrder[];
+  initialReservations: CafeReservation[];
+  configError?: string;
 };
 
-export function CustomersPageClient() {
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
-  const [orders, setOrders] = useState<CustomerOrder[]>([]);
-  const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
-  const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+export function CustomersPageClient({
+  initialCustomers,
+  initialOrders,
+  initialReservations,
+  configError,
+}: Props) {
+  const [customers] = useState<CustomerProfile[]>(initialCustomers);
+  const [orders] = useState<CustomerOrder[]>(initialOrders);
+  const [reservations] = useState<CafeReservation[]>(initialReservations);
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const savedCustomers = localStorage.getItem(CUSTOMER_KEY);
-    const savedOrders = localStorage.getItem(ORDERS_KEY);
-    const savedInvoices = localStorage.getItem(INVOICES_KEY);
-    const savedTransactions = localStorage.getItem(TRANSACTIONS_KEY);
-    const savedReservations = localStorage.getItem(RESERVATIONS_KEY);
-
-    if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
-    if (savedOrders) setOrders(JSON.parse(savedOrders));
-    if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    if (savedReservations) setReservations(JSON.parse(savedReservations));
-  }, []);
 
   const filtered = useMemo(() => {
     return customers.filter(
@@ -71,27 +47,20 @@ export function CustomersPageClient() {
 
   function getCustomerData(customer: CustomerProfile) {
     const customerOrders = orders.filter((o) => o.customerId === customer.id);
-    const customerInvoices = invoices.filter((i) => i.customerId === customer.id);
-    const customerTransactions = transactions.filter((t) => t.customerId === customer.id);
     const customerReservations = reservations.filter(
       (r) => r.customerId === customer.id || r.phone === customer.phone
     );
 
-    const points = customerTransactions.reduce(
-      (sum, item) => sum + (item.points || 0),
-      0
-    );
-
-    const totalSpent = customerInvoices
-      .filter((invoice) => invoice.status === "مدفوعة")
-      .reduce((sum, invoice) => sum + invoice.amount, 0);
+    const totalSpent = customerOrders
+      .filter((order) => order.status === "مقبول")
+      .reduce((sum, order) => sum + order.total, 0);
 
     return {
       orders: customerOrders,
-      invoices: customerInvoices,
-      transactions: customerTransactions,
+      invoices: [] as { id: string }[],
+      transactions: [] as { id: string; title: string; createdAt: string; points?: number }[],
       reservations: customerReservations,
-      points,
+      points: 0,
       totalSpent,
     };
   }
@@ -102,6 +71,16 @@ export function CustomersPageClient() {
         title="عملاء الكوفي"
         subtitle="هنا تشوف كل عميل، طلباته، حجوزاته، نقاطه، عملياته، وفواتيره."
       >
+        {configError ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
+            {configError}
+          </div>
+        ) : null}
+        {!customers.length && !configError ? (
+          <div className="mb-6 rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] px-4 py-8 text-center font-bold text-[#7A6255]">
+            لا يوجد عملاء مسجلون بعد.
+          </div>
+        ) : null}
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="عدد العملاء" value={customers.length} />
@@ -113,7 +92,7 @@ export function CustomersPageClient() {
             <StatPill label="إجمالي الحجوزات" value={reservations.length} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="الفواتير" value={invoices.length} />
+            <StatPill label="الفواتير" value={0} />
           </BentoCard>
         </BentoGrid>
 

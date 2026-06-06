@@ -1,7 +1,7 @@
 "use client";
 
 import { Power, Search, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
   AdminFilterBar,
@@ -13,28 +13,20 @@ import {
   AdminInput,
   StatusBadge,
 } from "@/components/ui/design-system";
-import {
-  PLATFORM_CUSTOMERS_KEY,
-  mockPlatformCustomers,
-  type PlatformCustomer,
-} from "@/lib/platform/admin-data";
+import { type PlatformCustomer } from "@/lib/platform/admin-data";
 import { formatSar } from "@/lib/format";
 
 const softPanel =
   "rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
-export function AdminCustomersPage() {
-  const [customers, setCustomers] = useState<PlatformCustomer[]>(mockPlatformCustomers);
+type Props = {
+  initialCustomers: PlatformCustomer[];
+  configError?: string;
+};
+
+export function AdminCustomersPage({ initialCustomers, configError }: Props) {
+  const [customers, setCustomers] = useState<PlatformCustomer[]>(initialCustomers);
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const saved = localStorage.getItem(PLATFORM_CUSTOMERS_KEY);
-    if (saved) setCustomers(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(PLATFORM_CUSTOMERS_KEY, JSON.stringify(customers));
-  }, [customers]);
 
   const filtered = useMemo(() => {
     return customers.filter(

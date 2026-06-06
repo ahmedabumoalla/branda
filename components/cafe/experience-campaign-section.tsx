@@ -8,16 +8,16 @@ import { useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedInput } from "@/components/cafe/themes/themed-auth-panel";
 import { ThemedSelect } from "@/components/cafe/themes/themed-reservation-panel";
 import {
-  EXPERIENCE_CAMPAIGNS_KEY,
-  EXPERIENCE_SUBMISSIONS_KEY,
-  mockExperienceCampaigns,
   platformLabels,
   type ExperienceCampaign,
   type ExperiencePlatform,
   type ExperienceSubmission,
 } from "@/lib/mock/experience-campaigns";
+import {
+  fetchPublicExperienceCampaignsAction,
+  submitExperienceCampaignAction,
+} from "@/app/actions/customer";
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
-import { submitExperienceCampaign } from "@/lib/platform/experience-flow";
 
 type Props = {
   slug?: string;
@@ -30,19 +30,17 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
   const { experience, theme, path } = useCafePageContext(slug);
 
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
-  const [campaigns, setCampaigns] = useState<ExperienceCampaign[]>(mockExperienceCampaigns);
+  const [campaigns, setCampaigns] = useState<ExperienceCampaign[]>([]);
   const [submissions, setSubmissions] = useState<ExperienceSubmission[]>([]);
   const [platform, setPlatform] = useState<ExperiencePlatform>("tiktok");
   const [videoUrl, setVideoUrl] = useState("");
   const [platformUsername, setPlatformUsername] = useState("");
   const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setCustomer(getCustomerSession(slug));
-    const savedCampaigns = localStorage.getItem(EXPERIENCE_CAMPAIGNS_KEY);
-    const savedSubmissions = localStorage.getItem(EXPERIENCE_SUBMISSIONS_KEY);
-    if (savedCampaigns) setCampaigns(JSON.parse(savedCampaigns));
-    if (savedSubmissions) setSubmissions(JSON.parse(savedSubmissions));
+    void getCustomerSession(slug).then(setCustomer);
+    void fetchPublicExperienceCampaignsAction(slug).then(setCampaigns);
   }, [slug]);
 
   const activeCampaign = useMemo(
@@ -60,7 +58,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
 
   if (!activeCampaign) return null;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!customer) {
       alert("سجّل دخولك أولاً");
       return;
@@ -70,24 +68,29 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
       return;
     }
 
-    const result = submitExperienceCampaign({
-      slug,
-      customer,
-      campaignId: activeCampaign!.id,
-      platform,
-      videoUrl,
-      platformUsername,
-      note,
-    });
+    setSubmitting(true);
+    try {
+      const result = await submitExperienceCampaignAction({
+        slug,
+        customer,
+        campaignId: activeCampaign!.id,
+        platform,
+        videoUrl,
+        platformUsername,
+        note,
+      });
 
-    if (result.ok) {
-      setSubmissions((prev) => [result.submission, ...prev]);
-      setVideoUrl("");
-      setPlatformUsername("");
-      setNote("");
-      alert("تم إرسال مشاركتك — بانتظار مراجعة الكوفي");
-    } else {
-      alert(result.error);
+      if (result.ok) {
+        setSubmissions((prev) => [result.submission, ...prev]);
+        setVideoUrl("");
+        setPlatformUsername("");
+        setNote("");
+        alert("تم إرسال مشاركتك — بانتظار مراجعة الكوفي");
+      }
+    } catch {
+      alert("تعذر إرسال المشاركة");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -112,8 +115,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
 
       <div className={`mt-4 rounded-2xl p-4 text-sm font-bold ${theme.hero}`}>
         <Sparkles className={`mb-2 inline h-4 w-4 ${theme.accent}`} />{" "}
-        {activeCampaign.basePoints} نقطة أساسية + مكافآت حسب المشاهدات والتفاعل (حد{" "}
-        {activeCampaign.maxPointsPerSubmission} نقطة)
+        شارك تجربتك المصورة مع العلامة التجارية
       </div>
 
       {!customer ? (
@@ -182,7 +184,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
               {s.status === "pending"
                 ? "بانتظار المراجعة"
                 : s.status === "approved"
-                  ? `مقبولة (+${s.awardedPoints ?? 0} نقطة)`
+                  ? "مقبولة"
                   : "مرفوضة"}
             </div>
           ))}

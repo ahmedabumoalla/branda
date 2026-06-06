@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, Megaphone, Plus, Search, TicketPercent, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BentoCard,
   BentoGrid,
@@ -14,14 +14,15 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import { assertNoBase64Images, sanitizeCafeOffers } from "@/lib/cafe/entity-storage-sanitize";
+import { deleteOfferAction, saveOfferAction } from "@/app/actions/offers";
+import { uploadImageAction } from "@/app/actions/upload";
 import {
   ImagePipelineError,
   isHttpImageUrl,
   optimizeImageForStorage,
   type OptimizedImageResult,
 } from "@/lib/cafe/image-asset-pipeline";
-import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset-store";
+import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import { formatSar } from "@/lib/format";
 import {
   type CafeOffer,
@@ -29,13 +30,12 @@ import {
   type OfferStatus,
   type OfferType,
 } from "@/lib/mock/offers";
-import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
-
-const OFFERS_KEY = "branda_qatrah_offers";
-const MENU_KEY = "branda_qatrah_menu";
+import { type MenuProduct } from "@/lib/mock/menu";
 
 type Props = {
   initialOffers: CafeOffer[];
+  initialProducts: MenuProduct[];
+  configError?: string;
 };
 
 const OFFER_TYPES: OfferType[] = [
@@ -50,9 +50,9 @@ const OFFER_TYPES: OfferType[] = [
 
 const PLACEMENTS: OfferPlacement[] = ["قائمة العروض", "بانر الكوفي", "كلاهما"];
 
-export function OffersPageClient({ initialOffers }: Props) {
+export function OffersPageClient({ initialOffers, initialProducts, configError }: Props) {
   const [offers, setOffers] = useState<CafeOffer[]>(initialOffers);
-  const [products, setProducts] = useState<MenuProduct[]>(mockMenuProducts);
+  const [products] = useState<MenuProduct[]>(initialProducts);
 
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<OfferType | "الكل">("الكل");
@@ -84,21 +84,6 @@ export function OffersPageClient({ initialOffers }: Props) {
   const [promoProductPrice, setPromoProductPrice] = useState("");
   const [promoProductCategory, setPromoProductCategory] = useState("");
   const [promoProductDescription, setPromoProductDescription] = useState("");
-
-  useEffect(() => {
-    const savedOffers = localStorage.getItem(OFFERS_KEY);
-    const savedMenu = localStorage.getItem(MENU_KEY);
-
-    if (savedOffers) setOffers(JSON.parse(savedOffers));
-    if (savedMenu) setProducts(JSON.parse(savedMenu));
-  }, []);
-
-  useEffect(() => {
-    const payload = sanitizeCafeOffers(offers);
-    const json = JSON.stringify(payload);
-    assertNoBase64Images(json, "Offers");
-    localStorage.setItem(OFFERS_KEY, json);
-  }, [offers]);
 
   const filtered = useMemo(() => {
     return offers.filter((offer) => {
@@ -156,11 +141,15 @@ export function OffersPageClient({ initialOffers }: Props) {
     let bannerAssetId: string | undefined;
     if (pendingBanner) {
       try {
-        bannerAssetId = await saveOptimizedImageAsset(
+        const formData = new FormData();
+        formData.append("file", pendingBanner.blob, "banner.webp");
+        const uploaded = await uploadImageAction(
+          "offer-banners",
+          formData,
           "offer-banner",
-          pendingBanner,
           offerId
         );
+        bannerAssetId = uploaded.storagePath;
       } catch {
         alert("تعذر حفظ صورة البانر");
         return;
@@ -214,32 +203,49 @@ export function OffersPageClient({ initialOffers }: Props) {
         promoProductDescription.trim() || linkedProduct?.description || undefined,
     };
 
-    setOffers((prev) => [offer, ...prev]);
-    resetForm();
+    try {
+      const saved = await saveOfferAction(offer);
+      setOffers((prev) => [saved, ...prev]);
+      resetForm();
+    } catch {
+      alert("تعذر حفظ العرض");
+    }
   }
 
-  function toggleStatus(id: string) {
-    setOffers((prev) =>
-      prev.map((offer) =>
-        offer.id === id
-          ? { ...offer, status: offer.status === "نشط" ? "متوقف" : "نشط" }
-          : offer
-      )
-    );
+  async function toggleStatus(id: string) {
+    const offer = offers.find((item) => item.id === id);
+    if (!offer) return;
+    const next = {
+      ...offer,
+      status: offer.status === "نشط" ? ("متوقف" as const) : ("نشط" as const),
+    };
+    try {
+      const saved = await saveOfferAction(next);
+      setOffers((prev) => prev.map((item) => (item.id === id ? saved : item)));
+    } catch {
+      alert("تعذر تحديث حالة العرض");
+    }
   }
 
-  function toggleVisible(id: string) {
-    setOffers((prev) =>
-      prev.map((offer) =>
-        offer.id === id
-          ? { ...offer, visibleInCafe: !offer.visibleInCafe }
-          : offer
-      )
-    );
+  async function toggleVisible(id: string) {
+    const offer = offers.find((item) => item.id === id);
+    if (!offer) return;
+    const next = { ...offer, visibleInCafe: !offer.visibleInCafe };
+    try {
+      const saved = await saveOfferAction(next);
+      setOffers((prev) => prev.map((item) => (item.id === id ? saved : item)));
+    } catch {
+      alert("تعذر تحديث ظهور العرض");
+    }
   }
 
-  function deleteOffer(id: string) {
-    setOffers((prev) => prev.filter((offer) => offer.id !== id));
+  async function deleteOffer(id: string) {
+    try {
+      await deleteOfferAction(id);
+      setOffers((prev) => prev.filter((offer) => offer.id !== id));
+    } catch {
+      alert("تعذر حذف العرض");
+    }
   }
 
   return (

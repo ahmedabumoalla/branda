@@ -11,25 +11,23 @@ import {
   optimizeImageForStorage,
   type OptimizedImageResult,
 } from "@/lib/cafe/image-asset-pipeline";
-import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset-store";
+import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
   getCustomerSession,
-  updateCustomerSession,
   type BrandaCustomerSession,
 } from "@/lib/customer/session";
 import {
-  INVOICES_KEY,
-  ORDERS_KEY,
-  TRANSACTIONS_KEY,
+  updateCustomerProfileAction,
+  uploadCustomerAvatarAction,
+} from "@/app/actions/customer-media";
+import {
   type CustomerInvoice,
   type CustomerOrder,
   type CustomerTransaction,
 } from "@/lib/mock/customer-activity";
 import { formatSar } from "@/lib/format";
 import { getThemeExperience } from "@/lib/cafe/theme-experience";
-
-const RESERVATIONS_KEY = "branda_qatrah_reservations";
 
 type Reservation = {
   id: string;
@@ -75,29 +73,70 @@ function AccountPageInner() {
   const [optimizingAvatar, setOptimizingAvatar] = useState(false);
 
   useEffect(() => {
-    const session = getCustomerSession(slug);
+    let cancelled = false;
 
-    if (!session) {
-      const next = appendPreviewToNextPath(`/c/${slug}/account`, previewThemeId);
-      router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
-      return;
+    async function load() {
+      const session = await getCustomerSession(slug);
+      if (cancelled) return;
+
+      if (!session) {
+        const next = appendPreviewToNextPath(`/c/${slug}/account`, previewThemeId);
+        router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
+        return;
+      }
+
+      setCustomer(session);
+      setEditName(session.fullName);
+      setEditEmail(session.email || "");
+      setEditAvatarPreview(session.avatarUrl || "");
+      setAvatarAssetId(session.avatarAssetId);
+
+      const { fetchCustomerOrdersAction, fetchCustomerReservationsAction } = await import(
+        "@/app/actions/customer"
+      );
+      const [cafeOrders, cafeReservations] = await Promise.all([
+        fetchCustomerOrdersAction(slug),
+        fetchCustomerReservationsAction(slug),
+      ]);
+
+      if (cancelled) return;
+
+      setOrders(
+        cafeOrders.map((o) => ({
+          id: o.id,
+          cafeSlug: slug,
+          customerId: o.customerId,
+          customerName: o.customerName,
+          status: o.status,
+          items: o.items.map((item) => `${item.name} × ${item.quantity}`),
+          total: o.total,
+          createdAt: o.createdAt,
+          branchName: o.branchName,
+          pickupAt: o.pickupAt,
+          notes: o.notes,
+        }))
+      );
+      setReservations(
+        cafeReservations.map((r) => ({
+          id: r.id,
+          customerName: r.customerName,
+          phone: r.phone,
+          customerId: r.customerId,
+          type: r.type,
+          guests: r.guests,
+          date: r.date,
+          time: r.time,
+          status: r.status,
+          notes: r.notes,
+          createdAt: r.createdAt,
+        }))
+      );
     }
 
-    setCustomer(session);
-    setEditName(session.fullName);
-    setEditEmail(session.email || "");
-    setEditAvatarPreview(session.avatarUrl || "");
-    setAvatarAssetId(session.avatarAssetId);
-
-    const savedOrders = localStorage.getItem(ORDERS_KEY);
-    const savedInvoices = localStorage.getItem(INVOICES_KEY);
-    const savedTransactions = localStorage.getItem(TRANSACTIONS_KEY);
-    const savedReservations = localStorage.getItem(RESERVATIONS_KEY);
-
-    if (savedOrders) setOrders(JSON.parse(savedOrders));
-    if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
-    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-    if (savedReservations) setReservations(JSON.parse(savedReservations));
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [router, slug, path, previewThemeId]);
 
   const myOrders = useMemo(
@@ -199,31 +238,26 @@ function AccountPageInner() {
     }
     if (!customer) return;
 
-    let nextAssetId = avatarAssetId;
-    if (pendingAvatar) {
-      try {
-        nextAssetId = await saveOptimizedImageAsset(
-          "customer-avatar",
-          pendingAvatar,
-          customer.id
-        );
-      } catch {
-        alert("تعذر حفظ الصورة الشخصية");
-        return;
-      }
-    }
+    try {
+      let session = customer;
 
-    const next = updateCustomerSession(slug, {
-      fullName: editName.trim(),
-      email: editEmail.trim() || undefined,
-      avatarAssetId: nextAssetId,
-      avatarUrl: undefined,
-    });
-    if (next) {
-      setCustomer(next);
+      if (pendingAvatar) {
+        const formData = new FormData();
+        formData.append("file", pendingAvatar.blob, "avatar.webp");
+        session = await uploadCustomerAvatarAction(slug, formData);
+      }
+
+      session = await updateCustomerProfileAction(slug, {
+        fullName: editName.trim(),
+        email: editEmail.trim() || undefined,
+      });
+
+      setCustomer(session);
       setPendingAvatar(null);
       setSettingsOpen(false);
       alert("تم حفظ بيانات الحساب");
+    } catch {
+      alert("تعذر حفظ بيانات الحساب");
     }
   }
 

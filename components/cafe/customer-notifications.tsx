@@ -1,13 +1,13 @@
 "use client";
 
 import { Bell, Check, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  fetchCustomerNotificationsAction,
+  markCustomerNotificationReadAction,
+} from "@/app/actions/customer";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
-import {
-  getNotificationsForAudience,
-  markNotificationRead,
-} from "@/lib/platform/notification-flow";
 
 type Props = {
   slug: string;
@@ -20,29 +20,27 @@ export function CustomerNotifications({ slug, customerId, experience }: Props) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  function refresh() {
-    setNotifications(getNotificationsForAudience("customer", slug, customerId));
-  }
-
-  useEffect(() => {
-    refresh();
-    const onStorage = () => refresh();
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+  const refresh = useCallback(async () => {
+    const list = await fetchCustomerNotificationsAction(slug);
+    setNotifications(list);
   }, [slug, customerId]);
 
   useEffect(() => {
-    if (open) refresh();
-  }, [open]);
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (open) void refresh();
+  }, [open, refresh]);
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications]
   );
 
-  function handleMarkRead(id: string) {
-    markNotificationRead(id);
-    refresh();
+  async function handleMarkRead(id: string) {
+    await markCustomerNotificationReadAction(slug, id);
+    await refresh();
   }
 
   return (
@@ -93,7 +91,7 @@ export function CustomerNotifications({ slug, customerId, experience }: Props) {
                       </div>
                       {!n.read ? (
                         <button
-                          onClick={() => handleMarkRead(n.id)}
+                          onClick={() => void handleMarkRead(n.id)}
                           className="shrink-0 rounded-lg p-1.5 opacity-80"
                           aria-label="قراءة"
                         >

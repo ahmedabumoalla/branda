@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  BriefcaseBusiness,
   Building2,
   CircleDollarSign,
   ClipboardList,
   Home,
   Layers3,
   LogOut,
+  Megaphone,
+  UserRoundCog,
   Settings2,
   Users,
 } from "lucide-react";
@@ -23,6 +26,9 @@ const links = [
   ["الإيرادات", "/admin/revenue", CircleDollarSign],
   ["العمليات", "/admin/operations", ClipboardList],
   ["الباقات", "/admin/plans", Layers3],
+  ["إدارة محتوى المنصة", "/admin/content", Megaphone],
+  ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
+  ["إدارة المناديب", "/admin/representatives", UserRoundCog],
   ["خيارات المنصة", "/admin/options", Settings2],
 ] as const;
 

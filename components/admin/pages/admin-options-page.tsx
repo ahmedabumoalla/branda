@@ -1,7 +1,7 @@
 "use client";
 
 import { Save, Settings2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import {
   AdminPageShell,
@@ -12,31 +12,39 @@ import {
   AdminSelect,
   StatusBadge,
 } from "@/components/ui/design-system";
-import {
-  PLATFORM_OPTIONS_KEY,
-  PLATFORM_PLANS_KEY,
-  mockPlatformOptions,
-  mockPlatformPlans,
-  type PlatformPlan,
-} from "@/lib/platform/admin-data";
+import { mockPlatformOptions, type PlatformPlan } from "@/lib/platform/admin-data";
+import { savePlatformSettingsAction } from "@/app/actions/admin";
 
 const softPanel =
   "rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
-export function AdminOptionsPage() {
-  const [options, setOptions] = useState(mockPlatformOptions);
-  const [plans, setPlans] = useState<PlatformPlan[]>(mockPlatformPlans);
+type Props = {
+  initialOptions: typeof mockPlatformOptions;
+  initialPlans: PlatformPlan[];
+  configError?: string;
+};
 
-  useEffect(() => {
-    const saved = localStorage.getItem(PLATFORM_OPTIONS_KEY);
-    const savedPlans = localStorage.getItem(PLATFORM_PLANS_KEY);
-    if (saved) setOptions(JSON.parse(saved));
-    if (savedPlans) setPlans(JSON.parse(savedPlans));
-  }, []);
+export function AdminOptionsPage({ initialOptions, initialPlans, configError }: Props) {
+  const [options, setOptions] = useState(initialOptions);
+  const [plans] = useState<PlatformPlan[]>(initialPlans);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  function save() {
-    localStorage.setItem(PLATFORM_OPTIONS_KEY, JSON.stringify(options));
-    alert("تم حفظ خيارات المنصة");
+  async function save() {
+    if (configError) {
+      alert(configError);
+      return;
+    }
+    setSaving(true);
+    setSaveMessage("");
+    try {
+      await savePlatformSettingsAction(options);
+      setSaveMessage("تم حفظ الخيارات في قاعدة البيانات");
+    } catch {
+      alert("تعذر حفظ الخيارات");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -46,13 +54,19 @@ export function AdminOptionsPage() {
       action={
         <div className="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
           <BrandaLogo variant="dark" width={120} height={48} />
-          <GoldButton onClick={save} className="inline-flex items-center gap-2">
+          <GoldButton onClick={save} disabled={saving} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
-            حفظ الخيارات
+            {saving ? "جاري الحفظ..." : "حفظ الخيارات"}
           </GoldButton>
         </div>
       }
     >
+      {saveMessage ? (
+        <p className="mb-4 text-sm font-bold text-emerald-400">{saveMessage}</p>
+      ) : null}
+      {configError ? (
+        <p className="mb-4 text-sm font-bold text-red-400">{configError}</p>
+      ) : null}
       <BentoGrid className="xl:grid-cols-2">
         <BentoCard variant="cyber" span="2">
           <div className="mb-6 flex items-center gap-3">

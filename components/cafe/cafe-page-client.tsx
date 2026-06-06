@@ -2,56 +2,38 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { CafeThemeRenderer } from "@/components/cafe/themes/cafe-theme-renderer";
-import { runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
+import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
+import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import { useResolvedCafeTheme } from "@/lib/cafe/use-resolved-cafe-theme";
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
-import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
-import { mockOffers, type CafeOffer } from "@/lib/mock/offers";
-import {
-  CAFE_SETTINGS_KEY,
-  mockCafeSettings,
-  type CafeSettings,
-} from "@/lib/mock/cafe-settings";
-import {
-  mockLoyaltyRewards,
-  mockLoyaltySettings,
-  type LoyaltyReward,
-  type LoyaltySettings,
-} from "@/lib/mock/loyalty";
-const MENU_KEY = "branda_qatrah_menu";
-const OFFERS_KEY = "branda_qatrah_offers";
+import type { MenuProduct } from "@/lib/mock/menu";
+import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
+import { PublicLoyaltyCardSection } from "@/components/cafe/public-loyalty-card-section";
 
 function productScore(product: MenuProduct, index: number) {
-  return Number(product.loyaltyPoints || 0) + Number(product.price || 0) + (100 - index);
+  return Number(product.price || 0) + (100 - index);
 }
 
 function CafePageInner({ slug }: { slug: string }) {
-  const { themeId, theme, isPreview, previewThemeId } = useResolvedCafeTheme();
+  const { themeId, theme, isPreview, previewThemeId, settings, loadError: cafeLoadError } =
+    useCafeThemePage(slug);
+  const {
+    products,
+    offers,
+    loyaltySettings,
+    loyaltyRewards,
+    loading,
+    error: menuError,
+  } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
-  const [products, setProducts] = useState<MenuProduct[]>(mockMenuProducts);
-  const [offers, setOffers] = useState<CafeOffer[]>(mockOffers);
-  const [cafeSettings, setCafeSettings] = useState<CafeSettings>(mockCafeSettings);
-  const [loyaltySettings] = useState<LoyaltySettings>(mockLoyaltySettings);
-  const [activeRewards] = useState<LoyaltyReward[]>(
-    mockLoyaltyRewards.filter((r) => r.active)
-  );
 
   useEffect(() => {
-    void runCustomIdentityMigrationOnce();
-    setCustomer(getCustomerSession(slug));
-    const savedMenu = localStorage.getItem(MENU_KEY);
-    const savedOffers = localStorage.getItem(OFFERS_KEY);
-    const savedSettings = localStorage.getItem(CAFE_SETTINGS_KEY);
-
-    if (savedMenu) setProducts(JSON.parse(savedMenu));
-    if (savedOffers) setOffers(JSON.parse(savedOffers));
-    if (savedSettings) setCafeSettings(JSON.parse(savedSettings));
+    void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
 
-  const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
-
+  const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const availableProducts = products.filter((p) => p.available);
+  const activeRewards = loyaltyRewards.filter((r) => r.active);
 
   const bannerOffers = offers.filter(
     (o) =>
@@ -74,11 +56,29 @@ function CafePageInner({ slug }: { slug: string }) {
     [availableProducts]
   );
 
+  const loadError = cafeLoadError || menuError;
+
+  if (loading) {
+    return (
+      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#e8e4df]">
+        <p className="font-black text-[#4a4540]">جاري التحميل...</p>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#e8e4df] px-4">
+        <p className="text-center font-black text-[#4a4540]">{loadError}</p>
+      </main>
+    );
+  }
+
   return (
     <>
       <CafeThemeRenderer
         slug={slug}
-        cafeSettings={cafeSettings}
+        cafeSettings={settings}
         cafeLogoUrl={cafeLogoUrl}
         themeId={themeId}
         theme={theme}
@@ -93,6 +93,21 @@ function CafePageInner({ slug }: { slug: string }) {
         activeRewards={activeRewards}
         loyaltySettings={loyaltySettings}
         isPreview={isPreview}
+      />
+      <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} />
+      <PublicLoyaltyCardSection
+        slug={slug}
+        cafeName={settings.cafeName || slug}
+        program={{
+          enabled: true,
+          cardTitle: "بطاقة الولاء",
+          cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
+          purchasesRequired: 7,
+          rewardName: "منتج مجاني",
+          cardBackground: "#4A281D",
+          cardForeground: "#FCF8F3",
+          cardAccent: "#D9A33F",
+        }}
       />
     </>
   );

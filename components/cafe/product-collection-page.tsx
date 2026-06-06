@@ -15,24 +15,14 @@ import {
   getCollectionGridClass,
 } from "@/components/cafe/themes/themed-product-card";
 import { getCafePath } from "@/lib/cafe/theme-links";
-import { formatSar } from "@/lib/format";
-import { BRANCHES_KEY, mockBranches } from "@/lib/mock/branches";
+import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import {
   getCustomerCategoryFilterOptions,
   productMatchesCategory,
   productMatchesPriceRange,
   resolveProductCategoryLabel,
 } from "@/lib/cafe/menu-category-utils";
-import { subscribeBrandaStorageEvents } from "@/lib/cafe/theme-storage-sync";
-import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
-import {
-  loadMenuCategories,
-  type MenuCategoryRecord,
-} from "@/lib/mock/menu-categories";
-import { mockOffers, type CafeOffer } from "@/lib/mock/offers";
-
-const MENU_KEY = "branda_qatrah_menu";
-const OFFERS_KEY = "branda_qatrah_offers";
+import type { MenuProduct } from "@/lib/mock/menu";
 
 type Props = {
   slug: string;
@@ -65,10 +55,8 @@ function getScore(product: MenuProduct, index: number) {
 export function ProductCollectionPage({ slug, view }: Props) {
   const searchParams = useSearchParams();
   const { theme, settings, experience, path, previewThemeId } = useCafePageContext(slug);
-  const [products, setProducts] = useState<MenuProduct[]>(mockMenuProducts);
-  const [offers, setOffers] = useState<CafeOffer[]>(mockOffers);
-  const [branches, setBranches] = useState(mockBranches);
-  const [menuCategories, setMenuCategories] = useState<MenuCategoryRecord[]>([]);
+  const { products, offers, branches, categories: menuCategories, loading, error } =
+    usePublicCafeMenu(slug);
 
   const [filters, setFilters] = useState<FilterBarState>(() =>
     defaultProductFilters({
@@ -78,28 +66,12 @@ export function ProductCollectionPage({ slug, view }: Props) {
     })
   );
 
-  const refreshCategories = () => setMenuCategories(loadMenuCategories());
-
   useEffect(() => {
     const fromUrl = searchParams.get("category");
     if (fromUrl) {
       setFilters((prev) => ({ ...prev, category: fromUrl }));
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    const savedMenu = localStorage.getItem(MENU_KEY);
-    const savedOffers = localStorage.getItem(OFFERS_KEY);
-    if (savedMenu) setProducts(JSON.parse(savedMenu));
-    if (savedOffers) setOffers(JSON.parse(savedOffers));
-    const savedBranches = localStorage.getItem(BRANCHES_KEY);
-    if (savedBranches) setBranches(JSON.parse(savedBranches));
-    refreshCategories();
-
-    return subscribeBrandaStorageEvents({
-      onMenuCategoriesUpdated: refreshCategories,
-    });
-  }, []);
 
   const availableProducts = products.filter((product) => product.available);
 
@@ -165,8 +137,28 @@ export function ProductCollectionPage({ slug, view }: Props) {
   }, [availableProducts, view, filters, offerProductIds, menuCategories]);
 
   const activeOffers = offers.filter((o) => o.status === "نشط" && o.visibleInCafe);
-  const activeBranches = branches.filter((b: { active?: boolean }) => b.active !== false);
+  const activeBranches = branches.filter((b) => b.active !== false);
   const gridClass = getCollectionGridClass(experience.collection);
+
+  if (loading) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">جاري التحميل...</p>
+        </div>
+      </CafeLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">{error}</p>
+        </div>
+      </CafeLayout>
+    );
+  }
 
   if (view === "branches") {
     return (
@@ -183,8 +175,8 @@ export function ProductCollectionPage({ slug, view }: Props) {
         </h1>
         <p className={`mt-2 font-bold ${theme.muted}`}>اختر الفرع الأقرب واحجز مباشرة.</p>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {activeBranches.map(
-            (branch: { id: string; name: string; address: string; mapUrl?: string }) => (
+          {activeBranches.length ? (
+            activeBranches.map((branch) => (
               <article key={branch.id} className={`p-6 ${theme.card}`}>
                 <MapPin className={`mb-3 h-7 w-7 ${theme.accent}`} />
                 <h2 className="text-2xl font-black">{branch.name}</h2>
@@ -200,7 +192,9 @@ export function ProductCollectionPage({ slug, view }: Props) {
                   </a>
                 ) : null}
               </article>
-            )
+            ))
+          ) : (
+            <p className={`font-bold ${theme.muted}`}>لا توجد فروع متاحة حاليًا.</p>
           )}
         </div>
       </CafeLayout>
@@ -239,59 +233,61 @@ export function ProductCollectionPage({ slug, view }: Props) {
         />
 
         {view === "offers" && activeOffers.length > 0 ? (
-            <section className="mt-8">
-              <h2 className="mb-4 text-2xl font-black">العروض النشطة</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {activeOffers.map((offer) => (
-                  <article key={offer.id} className={`p-5 ${theme.card}`}>
-                    <p className={`font-black ${theme.accent}`}>{offer.type}</p>
-                    <h3 className="mt-2 text-xl font-black">{offer.title}</h3>
-                    <p className={`mt-2 text-sm ${theme.muted}`}>{offer.description}</p>
-                    {offer.discountPercent ? (
-                      <span className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm font-black ${theme.badge}`}>
-                        خصم {offer.discountPercent}%
-                      </span>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section className="mt-10">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-2xl font-black">المنتجات</h2>
-              <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
-                {orderedProducts.length} منتج
-              </span>
-            </div>
-
-            <div className={gridClass}>
-              {orderedProducts.map((item) => (
-                <ThemedProductCard
-                  key={item.id}
-                  slug={slug}
-                  product={item}
-                  experience={experience}
-                  href={getCafePath(slug, `product/${item.id}`, previewThemeId)}
-                />
+          <section className="mt-8">
+            <h2 className="mb-4 text-2xl font-black">العروض النشطة</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {activeOffers.map((offer) => (
+                <article key={offer.id} className={`p-5 ${theme.card}`}>
+                  <p className={`font-black ${theme.accent}`}>{offer.type}</p>
+                  <h3 className="mt-2 text-xl font-black">{offer.title}</h3>
+                  <p className={`mt-2 text-sm ${theme.muted}`}>{offer.description}</p>
+                  {offer.discountPercent ? (
+                    <span
+                      className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm font-black ${theme.badge}`}
+                    >
+                      خصم {offer.discountPercent}%
+                    </span>
+                  ) : null}
+                </article>
               ))}
             </div>
-
-            {!orderedProducts.length ? (
-              <div className={`mt-8 p-10 text-center ${theme.card}`}>
-                <h3 className="text-2xl font-black">لا توجد منتجات مطابقة للفلاتر الحالية</h3>
-                <p className={`mt-2 ${theme.muted}`}>جرّب تغيير التصنيف أو مسح الفلاتر.</p>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className={`mt-5 rounded-2xl px-6 py-3 text-sm font-black ${theme.button}`}
-                >
-                  إعادة ضبط الفلاتر
-                </button>
-              </div>
-            ) : null}
           </section>
+        ) : null}
+
+        <section className="mt-10">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-2xl font-black">المنتجات</h2>
+            <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
+              {orderedProducts.length} منتج
+            </span>
+          </div>
+
+          <div className={gridClass}>
+            {orderedProducts.map((item) => (
+              <ThemedProductCard
+                key={item.id}
+                slug={slug}
+                product={item}
+                experience={experience}
+                href={getCafePath(slug, `product/${item.id}`, previewThemeId)}
+              />
+            ))}
+          </div>
+
+          {!orderedProducts.length ? (
+            <div className={`mt-8 p-10 text-center ${theme.card}`}>
+              <h3 className="text-2xl font-black">لا توجد منتجات مطابقة للفلاتر الحالية</h3>
+              <p className={`mt-2 ${theme.muted}`}>جرّب تغيير التصنيف أو مسح الفلاتر.</p>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className={`mt-5 rounded-2xl px-6 py-3 text-sm font-black ${theme.button}`}
+              >
+                إعادة ضبط الفلاتر
+              </button>
+            </div>
+          ) : null}
+        </section>
       </div>
     </CafeLayout>
   );

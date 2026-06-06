@@ -119,10 +119,7 @@ export function MenuProductFormModal({
 
   const [calories, setCalories] = useState("");
   const [price, setPrice] = useState("18");
-  const [loyaltyPoints, setLoyaltyPoints] = useState("18");
   const [preparationTimeMinutes, setPreparationTimeMinutes] = useState("");
-  const [redeemableWithPoints, setRedeemableWithPoints] = useState(false);
-  const [redemptionPoints, setRedemptionPoints] = useState("");
   const [availableForPickup, setAvailableForPickup] = useState(true);
   const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState("");
 
@@ -158,17 +155,10 @@ export function MenuProductFormModal({
       setCalories(
         editingProduct.calories === undefined ? "" : String(editingProduct.calories)
       );
-      setLoyaltyPoints(String(editingProduct.loyaltyPoints));
       setPreparationTimeMinutes(
         editingProduct.preparationTimeMinutes === undefined
           ? ""
           : String(editingProduct.preparationTimeMinutes)
-      );
-      setRedeemableWithPoints(!!editingProduct.redeemableWithPoints);
-      setRedemptionPoints(
-        editingProduct.redemptionPoints === undefined
-          ? ""
-          : String(editingProduct.redemptionPoints)
       );
       setAvailableForPickup(editingProduct.availableForPickup !== false);
       setPickupLeadTimeMinutes(
@@ -203,10 +193,7 @@ export function MenuProductFormModal({
       setImageVariant("latte");
       setPrice("18");
       setCalories("");
-      setLoyaltyPoints("18");
       setPreparationTimeMinutes("");
-      setRedeemableWithPoints(false);
-      setRedemptionPoints("");
       setAvailableForPickup(true);
       setPickupLeadTimeMinutes("");
       setIngredients([]);
@@ -307,15 +294,12 @@ export function MenuProductFormModal({
       imageVariant,
       price: Number(price) || 0,
       calories: calories.trim() ? Number(calories) || 0 : undefined,
-      loyaltyPoints: Number(loyaltyPoints) || 0,
+      loyaltyPoints: 0,
       preparationTimeMinutes: preparationTimeMinutes.trim()
         ? Number(preparationTimeMinutes) || undefined
         : undefined,
-      redeemableWithPoints,
-      redemptionPoints:
-        redeemableWithPoints && redemptionPoints.trim()
-          ? Number(redemptionPoints) || undefined
-          : undefined,
+      redeemableWithPoints: false,
+      redemptionPoints: undefined,
       availableForPickup,
       pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
         ? Number(pickupLeadTimeMinutes) || undefined
@@ -336,10 +320,7 @@ export function MenuProductFormModal({
     imageVariant,
     price,
     calories,
-    loyaltyPoints,
     preparationTimeMinutes,
-    redeemableWithPoints,
-    redemptionPoints,
     availableForPickup,
     pickupLeadTimeMinutes,
     ingredients,
@@ -372,11 +353,6 @@ export function MenuProductFormModal({
 
     if (!price || Number.isNaN(Number(price))) {
       alert("السعر مطلوب");
-      return;
-    }
-
-    if (!loyaltyPoints || Number.isNaN(Number(loyaltyPoints))) {
-      alert("نقاط الولاء مطلوبة");
       return;
     }
 
@@ -444,15 +420,12 @@ export function MenuProductFormModal({
       imageVariant,
       price: Number(price),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
-      loyaltyPoints: Number(loyaltyPoints) || 0,
+      loyaltyPoints: 0,
       preparationTimeMinutes: preparationTimeMinutes.trim()
         ? Number(preparationTimeMinutes) || undefined
         : undefined,
-      redeemableWithPoints: redeemableWithPoints || undefined,
-      redemptionPoints:
-        redeemableWithPoints && redemptionPoints.trim()
-          ? Number(redemptionPoints) || undefined
-          : undefined,
+      redeemableWithPoints: false,
+      redemptionPoints: undefined,
       availableForPickup: availableForPickup || undefined,
       pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
         ? Number(pickupLeadTimeMinutes) || undefined
@@ -634,7 +607,7 @@ export function MenuProductFormModal({
             </label>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
                 السعرات الحرارية اختياري
@@ -662,19 +635,7 @@ export function MenuProductFormModal({
               />
             </label>
 
-            <label className="block">
-              <span className="text-xs font-black text-[#7A6255]">
-                نقاط الولاء *
-              </span>
-              <input
-                required
-                inputMode="numeric"
-                value={loyaltyPoints}
-                onChange={(e) => setLoyaltyPoints(e.target.value)}
-                placeholder="مثال: 18"
-                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
-              />
-            </label>
+
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -707,7 +668,7 @@ export function MenuProductFormModal({
 
           <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
-              الاستلام والاستبدال بالنقاط
+              خيارات الاستلام
             </legend>
 
             <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
@@ -719,27 +680,6 @@ export function MenuProductFormModal({
               متاح للاستلام
             </label>
 
-            <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
-              <input
-                type="checkbox"
-                checked={redeemableWithPoints}
-                onChange={(e) => setRedeemableWithPoints(e.target.checked)}
-              />
-              قابل للاستبدال بالنقاط
-            </label>
-
-            {redeemableWithPoints ? (
-              <label className="mt-4 block">
-                <span className="text-xs font-black text-[#7A6255]">نقاط الاستبدال</span>
-                <input
-                  inputMode="numeric"
-                  value={redemptionPoints}
-                  onChange={(e) => setRedemptionPoints(e.target.value)}
-                  placeholder="مثال: 120"
-                  className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
-                />
-              </label>
-            ) : null}
           </fieldset>
 
           <div>
@@ -994,14 +934,7 @@ export function MenuProductFormModal({
                   </p>
                 </div>
 
-                <div>
-                  <p className="text-[10px] font-black text-[#7A6255]">
-                    ولاء
-                  </p>
-                  <p className="font-black text-[#8B5E3C]">
-                    +{previewProduct.loyaltyPoints.toLocaleString("ar-SA")}
-                  </p>
-                </div>
+
               </div>
 
               {previewProduct.promo ? (

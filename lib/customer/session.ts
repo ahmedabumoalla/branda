@@ -1,6 +1,3 @@
-import { CUSTOMER_KEY, type CustomerProfile } from "@/lib/mock/customer-activity";
-import { sanitizeCustomerSession } from "@/lib/cafe/entity-storage-sanitize";
-
 export type BrandaCustomerSession = {
   id: string;
   cafeSlug: string;
@@ -8,71 +5,40 @@ export type BrandaCustomerSession = {
   phone: string;
   email?: string;
   avatarUrl?: string;
-  /** IndexedDB reference — mock only */
   avatarAssetId?: string;
   createdAt: string;
 };
 
-export function getCustomerKey(slug: string) {
-  return `branda_customer_session_${slug}`;
+export function getCustomerKey(_slug: string) {
+  return "supabase_auth_session";
 }
 
-export function getCustomerSession(slug: string): BrandaCustomerSession | null {
-  if (typeof window === "undefined") return null;
-
-  const saved = localStorage.getItem(getCustomerKey(slug));
-  if (!saved) return null;
-
-  try {
-    return JSON.parse(saved) as BrandaCustomerSession;
-  } catch {
-    return null;
-  }
+/** Load customer session from Supabase Auth (server action) */
+export async function getCustomerSession(slug: string): Promise<BrandaCustomerSession | null> {
+  const { getCustomerSessionAction } = await import("@/app/actions/auth");
+  return getCustomerSessionAction(slug);
 }
 
-export function setCustomerSession(slug: string, session: BrandaCustomerSession) {
-  localStorage.setItem(getCustomerKey(slug), JSON.stringify(session));
-  upsertCustomerProfile(session);
+/** @deprecated Sessions are managed by Supabase Auth — use loginCustomerAction */
+export function setCustomerSession(_slug: string, _session: BrandaCustomerSession) {
+  console.warn("[session] setCustomerSession is deprecated — use loginCustomerAction");
 }
 
-export function updateCustomerSession(
+export async function updateCustomerSession(
   slug: string,
   updates: Partial<BrandaCustomerSession>
-) {
-  const current = getCustomerSession(slug);
+): Promise<BrandaCustomerSession | null> {
+  const current = await getCustomerSession(slug);
   if (!current) return null;
-
-  const next: BrandaCustomerSession = {
-    ...current,
-    ...updates,
-  };
-
-  setCustomerSession(slug, sanitizeCustomerSession(next));
-  return next;
+  return { ...current, ...updates };
 }
 
-export function clearCustomerSession(slug: string) {
-  localStorage.removeItem(getCustomerKey(slug));
+export async function clearCustomerSession(_slug: string) {
+  const { logoutCustomerAction } = await import("@/app/actions/auth");
+  await logoutCustomerAction();
 }
 
-export function upsertCustomerProfile(session: BrandaCustomerSession) {
-  const saved = localStorage.getItem(CUSTOMER_KEY);
-  const customers: CustomerProfile[] = saved ? JSON.parse(saved) : [];
-
-  const exists = customers.some((customer) => customer.id === session.id);
-
-  const profile: CustomerProfile = {
-    id: session.id,
-    cafeSlug: session.cafeSlug,
-    fullName: session.fullName,
-    phone: session.phone,
-    email: session.email,
-    createdAt: session.createdAt,
-  };
-
-  const next = exists
-    ? customers.map((customer) => (customer.id === session.id ? profile : customer))
-    : [profile, ...customers];
-
-  localStorage.setItem(CUSTOMER_KEY, JSON.stringify(next));
+/** @deprecated CRM profiles live in customer_profiles table */
+export function upsertCustomerProfile(_session: BrandaCustomerSession) {
+  /* no-op — handled by loginCustomerAction */
 }

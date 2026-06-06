@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ExternalLink, Eye, Palette } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import {
   BentoCard,
   BentoGrid,
@@ -11,53 +11,54 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { CafeThemeRenderer } from "@/components/cafe/themes/cafe-theme-renderer";
+import { CustomIdentityBuilder } from "@/components/dashboard/theme/custom-identity-builder";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
+import { adoptCafeTheme } from "@/lib/cafe/theme-storage-sync";
+import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import type { MenuProduct } from "@/lib/mock/menu";
+import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
+import type { CafeOffer } from "@/lib/mock/offers";
+import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import {
-  CAFE_SETTINGS_KEY,
-  mockCafeSettings,
-  type CafeSettings,
-} from "@/lib/mock/cafe-settings";
-import { mockMenuProducts } from "@/lib/mock/menu";
-import { mockOffers } from "@/lib/mock/offers";
-import {
-  mockLoyaltyRewards,
-  mockLoyaltySettings,
-} from "@/lib/mock/loyalty";
-import {
-  CAFE_THEME_KEY,
   cafeThemes,
   getThemeClasses,
   getThemeDefinition,
-  normalizeThemeId,
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
+import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import { getCafePublicUrl } from "@/lib/platform/cafe-domain";
-import { adoptCafeTheme, runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
-import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import { CustomIdentityBuilder } from "@/components/dashboard/theme/custom-identity-builder";
 
 const CAFE_SLUG = "qatrah";
-const MENU_KEY = "branda_qatrah_menu";
-const OFFERS_KEY = "branda_qatrah_offers";
 
-function ThemePageInner() {
-  const [activeTheme, setActiveTheme] = useState<CafeThemeId>("soft-cream-3d");
+type Props = {
+  initialThemeId: CafeThemeId;
+  initialSettings: CafeSettings;
+  initialProducts: MenuProduct[];
+  initialCategories: MenuCategoryRecord[];
+  initialOffers: CafeOffer[];
+  initialLoyaltySettings: LoyaltySettings;
+  initialLoyaltyRewards: LoyaltyReward[];
+  initialCustomIdentity: CustomIdentityTheme;
+  configError?: string;
+};
+
+function ThemePageInner({
+  initialThemeId,
+  initialSettings,
+  initialProducts,
+  initialCategories,
+  initialOffers,
+  initialLoyaltySettings,
+  initialLoyaltyRewards,
+  initialCustomIdentity,
+  configError,
+}: Props) {
+  const [activeTheme, setActiveTheme] = useState<CafeThemeId>(initialThemeId);
   const [previewTheme, setPreviewTheme] = useState<CafeThemeId | null>(null);
-  const [cafeSettings, setCafeSettings] = useState<CafeSettings>(mockCafeSettings);
-  const [products, setProducts] = useState(mockMenuProducts);
-  const [offers, setOffers] = useState(mockOffers);
+  const [cafeSettings] = useState<CafeSettings>(initialSettings);
+  const [products] = useState(initialProducts);
+  const [offers] = useState(initialOffers);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    void runCustomIdentityMigrationOnce();
-    const savedTheme = localStorage.getItem(CAFE_THEME_KEY);
-    setActiveTheme(normalizeThemeId(savedTheme));
-    const s = localStorage.getItem(CAFE_SETTINGS_KEY);
-    if (s) setCafeSettings(JSON.parse(s));
-    const m = localStorage.getItem(MENU_KEY);
-    if (m) setProducts(JSON.parse(m));
-    const o = localStorage.getItem(OFFERS_KEY);
-    if (o) setOffers(JSON.parse(o));
-  }, []);
 
   const selected = previewTheme ?? activeTheme;
   const theme = getThemeClasses(selected);
@@ -80,9 +81,10 @@ function ThemePageInner() {
       ((o.placement ?? "كلاهما") === "بانر الكوفي" ||
         (o.placement ?? "كلاهما") === "كلاهما")
   );
+  const activeRewards = initialLoyaltyRewards.filter((r) => r.active);
 
-  function adoptTheme(id: CafeThemeId) {
-    adoptCafeTheme(id);
+  async function adoptTheme(id: CafeThemeId) {
+    await adoptCafeTheme(id);
     setActiveTheme(id);
     setPreviewTheme(null);
     setSaved(true);
@@ -102,8 +104,8 @@ function ThemePageInner() {
     popularProducts,
     latestProducts,
     bannerOffers,
-    activeRewards: mockLoyaltyRewards.filter((r) => r.active),
-    loyaltySettings: mockLoyaltySettings,
+    activeRewards,
+    loyaltySettings: initialLoyaltySettings,
     isPreview: previewTheme !== null && previewTheme !== activeTheme,
   };
 
@@ -114,13 +116,21 @@ function ThemePageInner() {
         subtitle="اختر ثيمًا، عاينه داخل اللوحة، ثم اعتمده ليظهر على صفحة الكوفي العامة."
         action={
           <LinkButton
-            href={getCafePublicUrl(CAFE_SLUG, { origin: typeof window !== "undefined" ? window.location.origin : undefined })}
+            href={getCafePublicUrl(CAFE_SLUG, {
+              origin: typeof window !== "undefined" ? window.location.origin : undefined,
+            })}
             variant="outline"
           >
             معاينة صفحة الكوفي الحية
           </LinkButton>
         }
       >
+        {configError ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
+            {configError}
+          </div>
+        ) : null}
+
         {saved ? (
           <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-center font-black text-green-800">
             تم اعتماد الثيم بنجاح — صفحة الكوفي ستستخدمه الآن
@@ -132,7 +142,7 @@ function ThemePageInner() {
             <StatPill
               label="الثيم المعتمد"
               value={getThemeDefinition(activeTheme).name}
-              hint="يُحفظ في branda_qatrah_theme"
+              hint="محفوظ في Supabase"
             />
           </BentoCard>
           <BentoCard variant="white" span="2">
@@ -154,9 +164,12 @@ function ThemePageInner() {
             popularProducts,
             latestProducts,
             bannerOffers,
-            activeRewards: mockLoyaltyRewards.filter((r) => r.active),
-            loyaltySettings: mockLoyaltySettings,
+            activeRewards,
+            loyaltySettings: initialLoyaltySettings,
           }}
+          initialIdentity={initialCustomIdentity}
+          initialCategories={initialCategories}
+          initialIsActiveTheme={activeTheme === "brand-identity-custom"}
           onAdopted={(id) => {
             setActiveTheme(id);
             setPreviewTheme(null);
@@ -175,7 +188,7 @@ function ThemePageInner() {
                 <p className="text-sm font-bold text-[#7A6255]">{definition.description}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <PrimaryButton onClick={() => adoptTheme(previewTheme)}>
+                <PrimaryButton onClick={() => void adoptTheme(previewTheme)}>
                   <Check className="h-4 w-4" />
                   اعتماد الثيم
                 </PrimaryButton>
@@ -244,7 +257,7 @@ function ThemePageInner() {
                       </div>
                     ) : (
                       <PrimaryButton
-                        onClick={() => adoptTheme(t.id)}
+                        onClick={() => void adoptTheme(t.id)}
                         className="flex h-11 items-center justify-center gap-2"
                       >
                         <Palette className="h-4 w-4" />
@@ -271,10 +284,10 @@ function ThemePageInner() {
   );
 }
 
-export function ThemePageClient() {
+export function ThemePageClient(props: Props) {
   return (
     <Suspense fallback={<div className="p-8 font-black">جاري التحميل...</div>}>
-      <ThemePageInner />
+      <ThemePageInner {...props} />
     </Suspense>
   );
 }

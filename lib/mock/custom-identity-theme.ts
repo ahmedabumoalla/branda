@@ -183,97 +183,17 @@ function normalizeLoadedTheme(raw: RawStoredTheme): CustomIdentityTheme {
 
 
 export function loadCustomIdentityTheme(): CustomIdentityTheme {
-
-  if (typeof window === "undefined") return defaultCustomIdentityTheme();
-
-  try {
-
-    const saved = localStorage.getItem(CUSTOM_IDENTITY_THEME_KEY);
-
-    if (!saved) return defaultCustomIdentityTheme();
-
-    return normalizeLoadedTheme(JSON.parse(saved) as RawStoredTheme);
-
-  } catch (err) {
-
-    console.error("[custom-identity-theme] load failed", err);
-
-    return defaultCustomIdentityTheme();
-
-  }
-
+  return defaultCustomIdentityTheme();
 }
 
-
-
-function stripForStorage(theme: CustomIdentityTheme): CustomIdentityTheme {
-
-  const {
-
-    legacyLogoDataUrl: _legacyLogo,
-
-    legacyBackgroundImageDataUrl: _legacyBg,
-
-    ...rest
-
-  } = theme;
-
-
-
-  const payload: CustomIdentityTheme = {
-
-    ...rest,
-
-    updatedAt: new Date().toISOString(),
-
-  };
-
-
-
-  const json = JSON.stringify(payload);
-
-  if (json.includes("data:image")) {
-
-    throw new Error("Image assets must be stored in IndexedDB, not localStorage.");
-
-  }
-
-
-
-  return payload;
-
-}
-
-
-
-export function saveCustomIdentityTheme(theme: CustomIdentityTheme) {
-
-  if (typeof window === "undefined") return;
-
-  const payload = stripForStorage(theme);
-
-  localStorage.setItem(CUSTOM_IDENTITY_THEME_KEY, JSON.stringify(payload));
-
+export function saveCustomIdentityTheme(_theme: CustomIdentityTheme) {
+  throw new Error("Use Supabase — save via app/actions/theme");
 }
 
 
 
 export function containsLegacyBase64InStorage(): boolean {
-
-  if (typeof window === "undefined") return false;
-
-  try {
-
-    const saved = localStorage.getItem(CUSTOM_IDENTITY_THEME_KEY);
-
-    return Boolean(saved && saved.includes("data:image"));
-
-  } catch {
-
-    return true;
-
-  }
-
+  return false;
 }
 
 

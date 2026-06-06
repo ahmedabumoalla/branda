@@ -3,7 +3,8 @@
 import { Copy, ExternalLink, Globe, ImagePlus, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
-import { saveCafeSettingsToStorage } from "@/lib/cafe/cafe-settings-storage";
+import { saveSettingsAction } from "@/app/actions/settings";
+import { uploadImageAction } from "@/app/actions/upload";
 import {
   ImagePipelineError,
   optimizeImageForStorage,
@@ -12,11 +13,9 @@ import {
 import {
   deleteLocalAsset,
   FIXED_ASSET_IDS,
-  saveOptimizedImageAsset,
   revokeObjectUrl,
 } from "@/lib/cafe/local-asset-store";
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
-import { runCustomIdentityMigrationOnce } from "@/lib/cafe/theme-storage-sync";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import {
   BentoCard,
@@ -30,10 +29,9 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import { CAFE_SETTINGS_KEY, mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
+import { type CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CafeDomainLinkStatus } from "@/lib/platform/cafe-domain";
 import {
-  CAFE_DOMAIN_SETTINGS_KEY,
   getCafeDisplayDomain,
   getCafePublicUrl,
   getCafeSubdomainHost,
@@ -43,25 +41,20 @@ import {
   VERCEL_CNAME_TARGET,
 } from "@/lib/platform/cafe-domain";
 import {
-  DOMAIN_PURCHASES_KEY,
-  DOMAIN_PURCHASE_ACTIVE_KEY,
-  DOMAIN_SEARCHES_KEY,
-  buildDomainOperation,
   normalizeDomain,
   type CafePurchasedDomain,
   type DomainAvailabilityResult,
   type DomainPriceResult,
 } from "@/lib/platform/domain-purchase";
-import {
-  PLATFORM_CAFES_KEY,
-  PLATFORM_OPERATIONS_KEY,
-  type PlatformCafe,
-  type PlatformOperation,
-} from "@/lib/platform/admin-data";
 
-export function SettingsPageClient() {
+type Props = {
+  initialSettings: CafeSettings;
+  configError?: string;
+};
+
+export function SettingsPageClient({ initialSettings, configError }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [settings, setSettings] = useState<CafeSettings>(mockCafeSettings);
+  const [settings, setSettings] = useState<CafeSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const { toast, showToast, setToast } = useAppToast();
@@ -82,13 +75,23 @@ export function SettingsPageClient() {
   const displayLogoUrl = logoPreviewUrl ?? resolvedLogoUrl;
 
   useEffect(() => {
-    void runCustomIdentityMigrationOnce().then(() => {
-      const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
-      if (saved) setSettings(JSON.parse(saved));
-    });
-    const activePurchase = localStorage.getItem(DOMAIN_PURCHASE_ACTIVE_KEY);
-    if (activePurchase) setPurchase(JSON.parse(activePurchase));
-  }, []);
+    setSettings(initialSettings);
+    if (initialSettings.purchasedDomain) {
+      setPurchase({
+        id: initialSettings.purchasedDomain,
+        cafeSlug: initialSettings.cafeSlug,
+        domain: initialSettings.purchasedDomain,
+        tld: initialSettings.purchasedDomain.split(".").pop() ?? "sa",
+        status:
+          initialSettings.purchasedDomainStatus === "مربوط" ? "connected" : "purchased",
+        price: 0,
+        currency: "SAR",
+        years: 1,
+        autoRenew: true,
+        createdAt: initialSettings.purchasedDomainCreatedAt ?? new Date().toISOString(),
+      });
+    }
+  }, [initialSettings]);
 
   useEffect(() => {
     return () => revokeObjectUrl(logoPreviewUrl);
@@ -102,35 +105,28 @@ export function SettingsPageClient() {
       delete next.logoDataUrl;
 
       if (pendingLogo) {
-        next.logoAssetId = await saveOptimizedImageAsset("cafe-logo", pendingLogo);
+        const formData = new FormData();
+        formData.append("file", pendingLogo.blob, "logo.webp");
+        const uploaded = await uploadImageAction(
+          "cafe-logos",
+          formData,
+          "logo",
+          "logo"
+        );
+        next.logoAssetId = uploaded.storagePath;
         setPendingLogo(null);
         revokeObjectUrl(logoPreviewUrl);
         setLogoPreviewUrl(undefined);
       }
 
-      saveCafeSettingsToStorage(next);
+      await saveSettingsAction(next);
       setSettings(next);
-      localStorage.setItem(
-        CAFE_DOMAIN_SETTINGS_KEY,
-        JSON.stringify({
-          customDomain: next.customDomain || "",
-          domainStatus: next.domainStatus || "غير مربوط",
-          purchasedDomain: next.purchasedDomain || "",
-          purchasedDomainStatus: next.purchasedDomainStatus || "غير مربوط",
-        })
-      );
       showToast({ type: "success", message: "تم حفظ إعدادات الكوفي بنجاح" });
     } catch (err) {
-      const quota =
-        err instanceof DOMException &&
-        (err.name === "QuotaExceededError" || err.code === 22);
       showToast({
         type: "error",
-        message: quota
-          ? "تعذر الحفظ محليًا. جرّب إصلاح وتحسين الصور القديمة من صفحة الثيم."
-          : err instanceof Error
-            ? err.message
-            : "تعذر حفظ الإعدادات، حاول مرة أخرى",
+        message:
+          err instanceof Error ? err.message : "تعذر حفظ الإعدادات، حاول مرة أخرى",
       });
     } finally {
       setSaving(false);
@@ -229,15 +225,6 @@ export function SettingsPageClient() {
       setAvailability(availabilityData);
       setPricing(priceData);
 
-      const historyRaw = localStorage.getItem(DOMAIN_SEARCHES_KEY);
-      const history = historyRaw ? (JSON.parse(historyRaw) as Array<Record<string, unknown>>) : [];
-      history.unshift({
-        domain: candidate,
-        checkedAt: new Date().toISOString(),
-        available: availabilityData.available,
-      });
-      localStorage.setItem(DOMAIN_SEARCHES_KEY, JSON.stringify(history.slice(0, 20)));
-
       if (availabilityData.message) {
         setDomainMessage(availabilityData.message);
       } else if (availabilityData.available) {
@@ -252,64 +239,9 @@ export function SettingsPageClient() {
     }
   }
 
-  function updatePlatformRecords(domain: CafePurchasedDomain, status: "purchased" | "connected") {
-    const cafesRaw = localStorage.getItem(PLATFORM_CAFES_KEY);
-    const cafes = cafesRaw ? (JSON.parse(cafesRaw) as PlatformCafe[]) : [];
-    let found = false;
-    const nextCafes = cafes.map((cafe) => {
-      if (cafe.slug !== slug) return cafe;
-      found = true;
-      return {
-        ...cafe,
-        purchasedDomain: domain.domain,
-        purchasedDomainStatus: status === "connected" ? "مربوط" : "بانتظار التحقق",
-        purchasedDomainCreatedAt: domain.createdAt,
-        purchasedDomainConnectedAt:
-          status === "connected" ? new Date().toISOString() : cafe.purchasedDomainConnectedAt,
-      };
-    });
-    if (!found) {
-      nextCafes.push({
-        id: "cafe_qatrah",
-        slug,
-        name: settings.cafeName,
-        ownerName: settings.ownerName,
-        ownerEmail: settings.ownerEmail,
-        ownerPhone: settings.ownerPhone,
-        planId: "pro",
-        status: "نشط",
-        totalRevenue: 0,
-        totalOrders: 0,
-        customersCount: 0,
-        createdAt: new Date().toISOString().slice(0, 10),
-        purchasedDomain: domain.domain,
-        purchasedDomainStatus: status === "connected" ? "مربوط" : "بانتظار التحقق",
-        purchasedDomainCreatedAt: domain.createdAt,
-        purchasedDomainConnectedAt: status === "connected" ? new Date().toISOString() : undefined,
-      });
-    }
-    localStorage.setItem(PLATFORM_CAFES_KEY, JSON.stringify(nextCafes));
-
-    const opsRaw = localStorage.getItem(PLATFORM_OPERATIONS_KEY);
-    const operations = opsRaw ? (JSON.parse(opsRaw) as PlatformOperation[]) : [];
-    const op =
-      status === "connected"
-        ? buildDomainOperation({
-            cafeId: "cafe_qatrah",
-            cafeName: settings.cafeName,
-            type: "ربط دومين",
-            title: `ربط الدومين ${domain.domain} بصفحة كوفي ${settings.cafeName}`,
-            status: "connected",
-          })
-        : buildDomainOperation({
-            cafeId: "cafe_qatrah",
-            cafeName: settings.cafeName,
-            type: "شراء دومين",
-            title: `شراء دومين ${domain.domain}`,
-            amount: domain.price,
-            status: "purchased",
-          });
-    localStorage.setItem(PLATFORM_OPERATIONS_KEY, JSON.stringify([op, ...operations]));
+  async function persistDomainSettings(next: CafeSettings) {
+    await saveSettingsAction(next);
+    setSettings(next);
   }
 
   async function payAndBuyDomain() {
@@ -333,23 +265,18 @@ export function SettingsPageClient() {
       if (!res.ok) throw new Error(data.error || "فشل شراء الدومين");
       setPurchase(data);
 
-      const purchasesRaw = localStorage.getItem(DOMAIN_PURCHASES_KEY);
-      const purchases = purchasesRaw ? (JSON.parse(purchasesRaw) as CafePurchasedDomain[]) : [];
-      localStorage.setItem(DOMAIN_PURCHASES_KEY, JSON.stringify([data, ...purchases]));
-      localStorage.setItem(DOMAIN_PURCHASE_ACTIVE_KEY, JSON.stringify(data));
-
-      setSettings((prev) => ({
-        ...prev,
+      const nextSettings: CafeSettings = {
+        ...settings,
         purchasedDomain: data.domain,
         purchasedDomainStatus: "بانتظار التحقق",
         purchasedDomainCreatedAt: data.createdAt,
-      }));
+      };
+      await persistDomainSettings(nextSettings);
       setDomainMessage(
-        data.vercelOrderId?.startsWith("mock_order_")
-          ? "تم شراء الدومين تجريبيًا (Mock mode)."
+        data.status === "purchase_pending"
+          ? "تم تسجيل طلب النطاق — قيد المراجعة من الإدارة. لن يُفعَّل الشراء تلقائيًا حتى اكتمال التكامل."
           : "تم تنفيذ شراء الدومين. انتقل الآن إلى خطوة الربط بالمشروع."
       );
-      updatePlatformRecords(data, "purchased");
     } catch (error) {
       setDomainMessage(error instanceof Error ? error.message : "فشل شراء الدومين");
     } finally {
@@ -365,7 +292,7 @@ export function SettingsPageClient() {
       const res = await fetch("/api/domains/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: purchase.domain }),
+        body: JSON.stringify({ domain: purchase.domain, cafeSlug: slug }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || "فشل ربط الدومين");
@@ -376,16 +303,15 @@ export function SettingsPageClient() {
         purchasedAt: purchase.purchasedAt || connectedAt,
       };
       setPurchase(nextPurchase);
-      localStorage.setItem(DOMAIN_PURCHASE_ACTIVE_KEY, JSON.stringify(nextPurchase));
-      setSettings((prev) => ({
-        ...prev,
+      const nextSettings: CafeSettings = {
+        ...settings,
         purchasedDomain: purchase.domain,
         purchasedDomainStatus: "مربوط",
-        domainStatus: prev.domainStatus === "مربوط" ? "بانتظار التحقق" : prev.domainStatus,
+        domainStatus: settings.domainStatus === "مربوط" ? "بانتظار التحقق" : settings.domainStatus,
         purchasedDomainConnectedAt: connectedAt,
-      }));
+      };
+      await persistDomainSettings(nextSettings);
       setDomainMessage("تم ربط الدومين بصفحة الكوفي بنجاح.");
-      updatePlatformRecords(nextPurchase, "connected");
     } catch (error) {
       setDomainMessage(error instanceof Error ? error.message : "فشل ربط الدومين");
     } finally {
@@ -426,6 +352,11 @@ export function SettingsPageClient() {
           </div>
         }
       >
+        {configError ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
+            {configError}
+          </div>
+        ) : null}
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="اسم الكوفي" value={settings.cafeName} />

@@ -16,9 +16,8 @@ import { CafeFooter } from "@/components/cafe/cafe-footer";
 import { OfferBannerImage } from "@/components/cafe/offer-banner-image";
 import { ProductImage } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel, getVisibleCategoryNames } from "@/lib/cafe/menu-category-utils";
-import { subscribeBrandaStorageEvents } from "@/lib/cafe/theme-storage-sync";
 import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
-import { loadMenuCategories } from "@/lib/mock/menu-categories";
+import { defaultMenuCategories, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { CafeThemeId, ThemeClasses } from "@/lib/mock/cafe-theme";
@@ -273,25 +272,20 @@ export function ThemeCategoryStrip({
   previewThemeId,
   className = "",
   variant = "chips",
+  categories = defaultMenuCategories,
 }: {
   slug: string;
   theme: ThemeClasses;
   previewThemeId?: string | null;
   className?: string;
   variant?: "chips" | "cards";
+  categories?: MenuCategoryRecord[];
 }) {
-  const [names, setNames] = useState<string[]>([]);
-
-  const refresh = () => {
-    setNames(getVisibleCategoryNames(loadMenuCategories()));
-  };
+  const [names, setNames] = useState<string[]>(() => getVisibleCategoryNames(categories));
 
   useEffect(() => {
-    refresh();
-    return subscribeBrandaStorageEvents({
-      onMenuCategoriesUpdated: refresh,
-    });
-  }, []);
+    setNames(getVisibleCategoryNames(categories));
+  }, [categories]);
 
   if (!names.length) return null;
 

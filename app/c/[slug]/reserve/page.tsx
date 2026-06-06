@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { createReservationFlowAction } from "@/app/actions/reservations";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedInput } from "@/components/cafe/themes/themed-auth-panel";
 import {
@@ -11,13 +12,13 @@ import {
   ThemedSelect,
   ThemedTextarea,
 } from "@/components/cafe/themes/themed-reservation-panel";
+import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
-import { BRANCHES_KEY, mockBranches, type CafeBranch } from "@/lib/mock/branches";
+import type { CafeBranch } from "@/lib/mock/branches";
 import {
   RESERVATION_EVENT_TYPES,
   type ReservationEventType,
 } from "@/lib/mock/reservations";
-import { createReservationFlow } from "@/lib/platform/reservation-flow";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 
 function ReserveForm() {
@@ -25,9 +26,9 @@ function ReserveForm() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { settings, experience, path, previewThemeId, theme } = useCafePageContext(slug);
+  const { branches, loading, error } = usePublicCafeMenu(slug);
 
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
-  const [branches, setBranches] = useState<CafeBranch[]>(mockBranches);
   const [branchId, setBranchId] = useState("");
   const [reservationType, setReservationType] =
     useState<ReservationEventType>("طاولة عادية");
@@ -41,12 +42,16 @@ function ReserveForm() {
   const [needsCatering, setNeedsCatering] = useState(false);
   const [budgetEstimate, setBudgetEstimate] = useState("");
   const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setCustomer(getCustomerSession(slug));
-    const savedBranches = localStorage.getItem(BRANCHES_KEY);
-    if (savedBranches) setBranches(JSON.parse(savedBranches));
+    void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
+
+  useEffect(() => {
+    const active = branches.filter((b: CafeBranch) => b.active);
+    if (active[0] && !branchId) setBranchId(active[0].id);
+  }, [branches, branchId]);
 
   const activeBranches = branches.filter((b) => b.active);
   const selectedBranch = activeBranches.find((b) => b.id === branchId);
@@ -57,7 +62,7 @@ function ReserveForm() {
     [reservationType]
   );
 
-  function submitReservation() {
+  async function submitReservation() {
     if (!customer) {
       router.push(
         `${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`
@@ -69,24 +74,52 @@ function ReserveForm() {
       return;
     }
     if (!selectedBranch) return;
-    createReservationFlow({
-      slug,
-      customer,
-      branch: selectedBranch,
-      reservationType,
-      guests: Number(guests) || 1,
-      date,
-      time,
-      durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-      spaceType,
-      eventTitle: isSpecialEvent ? eventTitle : undefined,
-      needsDecoration: isSpecialEvent ? needsDecoration : undefined,
-      needsCatering: isSpecialEvent ? needsCatering : undefined,
-      budgetEstimate: budgetEstimate ? Number(budgetEstimate) : undefined,
-      notes,
-    });
-    alert("تم إرسال طلب الحجز بنجاح");
-    router.push(appendPreviewToNextPath(path("account"), previewThemeId));
+
+    setSubmitting(true);
+    try {
+      await createReservationFlowAction({
+        slug,
+        customer,
+        branch: selectedBranch,
+        reservationType,
+        guests: Number(guests) || 1,
+        date,
+        time,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
+        spaceType,
+        eventTitle: isSpecialEvent ? eventTitle : undefined,
+        needsDecoration: isSpecialEvent ? needsDecoration : undefined,
+        needsCatering: isSpecialEvent ? needsCatering : undefined,
+        budgetEstimate: budgetEstimate ? Number(budgetEstimate) : undefined,
+        notes,
+      });
+      alert("تم إرسال طلب الحجز بنجاح");
+      router.push(appendPreviewToNextPath(path("account"), previewThemeId));
+    } catch {
+      alert("تعذر إرسال الحجز. حاول مرة أخرى.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">جاري التحميل...</p>
+        </div>
+      </CafeLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">{error}</p>
+        </div>
+      </CafeLayout>
+    );
   }
 
   const loginPrompt = !customer ? (
@@ -186,10 +219,11 @@ function ReserveForm() {
       />
       <button
         type="button"
-        onClick={submitReservation}
-        className={`md:col-span-2 w-full font-black ${experience.reserve === "kiosk" ? "h-16 text-lg rounded-lg" : "h-14 rounded-2xl"} ${theme.button}`}
+        onClick={() => void submitReservation()}
+        disabled={submitting}
+        className={`md:col-span-2 w-full font-black disabled:opacity-60 ${experience.reserve === "kiosk" ? "h-16 text-lg rounded-lg" : "h-14 rounded-2xl"} ${theme.button}`}
       >
-        إرسال طلب الحجز
+        {submitting ? "جاري الإرسال..." : "إرسال طلب الحجز"}
       </button>
     </div>
   ) : null;

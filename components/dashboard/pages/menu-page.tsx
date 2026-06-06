@@ -1,7 +1,12 @@
 "use client";
 
 import { Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  deleteMenuProductAction,
+  saveMenuCategoriesAction,
+  saveMenuProductAction,
+} from "@/app/actions/menu";
 import { CategoryManager } from "@/components/dashboard/menu/category-manager";
 import { MenuProductCard } from "@/components/dashboard/menu/product-card";
 import { MenuProductFormModal } from "@/components/dashboard/menu/product-modal";
@@ -14,55 +19,25 @@ import {
   PrimaryButton,
   StatPill,
 } from "@/components/ui/design-system";
-import {
-  defaultMenuCategories,
-  getCategoryNameById,
-  loadMenuCategories,
-  saveMenuCategories,
-  type MenuCategoryRecord,
-} from "@/lib/mock/menu-categories";
-import { runCustomIdentityMigrationOnce, notifyMenuCategoriesUpdated } from "@/lib/cafe/theme-storage-sync";
-import { saveMenuProductsToStorage, MENU_STORAGE_KEY } from "@/lib/cafe/menu-storage";
+import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
 import { type MenuProduct } from "@/lib/mock/menu";
 
-const STORAGE_KEY = MENU_STORAGE_KEY;
-
 type Props = {
   initialProducts: MenuProduct[];
+  initialCategories: MenuCategoryRecord[];
+  configError?: string;
 };
 
-export function MenuPageClient({ initialProducts }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, configError }: Props) {
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
-  const [categories, setCategories] = useState<MenuCategoryRecord[]>(defaultMenuCategories);
+  const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("الكل");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
+  const [saving, setSaving] = useState(false);
   const { toast, showToast } = useAppToast();
-  const [categoriesReady, setCategoriesReady] = useState(false);
-
-  useEffect(() => {
-    void runCustomIdentityMigrationOnce().then(() => {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setProducts(JSON.parse(saved));
-      }
-    });
-    setCategories(loadMenuCategories());
-    setCategoriesReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!categoriesReady) return;
-    saveMenuProductsToStorage(products);
-  }, [products, categoriesReady]);
-
-  useEffect(() => {
-    if (!categoriesReady) return;
-    saveMenuCategories(categories);
-    notifyMenuCategoriesUpdated();
-  }, [categories, categoriesReady]);
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -89,34 +64,62 @@ export function MenuPageClient({ initialProducts }: Props) {
 
   const availableCount = products.filter((p) => p.available).length;
 
-  function saveProduct(product: MenuProduct) {
-    const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
-    const normalized = { ...product, category: categoryName };
+  async function saveProduct(product: MenuProduct) {
+    setSaving(true);
+    try {
+      const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
+      const normalized = { ...product, category: categoryName };
+      const id = await saveMenuProductAction(normalized);
+      const saved = { ...normalized, id: id || normalized.id };
 
-    if (product.id) {
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? normalized : p)));
-    } else {
-      setProducts((prev) => [{ ...normalized, id: crypto.randomUUID() }, ...prev]);
+      if (product.id) {
+        setProducts((prev) => prev.map((p) => (p.id === product.id ? saved : p)));
+      } else {
+        setProducts((prev) => [saved, ...prev]);
+      }
+      showToast({ type: "success", message: "تم حفظ المنتج" });
+    } catch {
+      showToast({ type: "error", message: "تعذر حفظ المنتج" });
+    } finally {
+      setSaving(false);
     }
   }
 
-  function handleCategoriesChange(next: MenuCategoryRecord[]) {
-    setCategories(next);
-    notifyMenuCategoriesUpdated();
-    showToast({ type: "success", message: "تم حفظ تصنيفات المنيو" });
+  async function handleCategoriesChange(next: MenuCategoryRecord[]) {
+    setSaving(true);
+    try {
+      const saved = await saveMenuCategoriesAction(next);
+      setCategories(saved);
+      showToast({ type: "success", message: "تم حفظ تصنيفات المنيو" });
+    } catch {
+      showToast({ type: "error", message: "تعذر حفظ التصنيفات" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (configError) {
+    return (
+      <DashboardPageShell title="المنيو الرقمي" subtitle={configError}>
+        <BentoCard variant="white" span="4">
+          <p className="font-bold text-[#806A5E]">{configError}</p>
+        </BentoCard>
+      </DashboardPageShell>
+    );
   }
 
   return (
     <div dir="rtl">
       <DashboardPageShell
         title="المنيو الرقمي"
-        subtitle="أي منتج تضيفه هنا يظهر في صفحة الكوفي للعميل."
+        subtitle="أي منتج تضيفه هنا يظهر في صفحة الفرع الالكتروني للعميل"
         action={
           <PrimaryButton
             onClick={() => {
               setEditing(null);
               setOpen(true);
             }}
+            disabled={saving}
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
@@ -153,7 +156,7 @@ export function MenuPageClient({ initialProducts }: Props) {
             <NeumoInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث باسم المنتج أو التصنيف..."
+              placeholder="ابحث باسم المنتج أو التصنيف"
               className="pr-12"
             />
           </div>
@@ -187,38 +190,41 @@ export function MenuPageClient({ initialProducts }: Props) {
 
         <BentoGrid>
           <BentoCard variant="white" span="4">
-            <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((product) => (
-                <MenuProductCard
-                  key={product.id}
-                  product={product}
-                  categoryLabel={getCategoryNameById(
-                    categories,
-                    product.categoryId,
-                    product.category
-                  )}
-                  freeProductLabel={
-                    product.promo?.freeProductId
-                      ? products.find((p) => p.id === product.promo?.freeProductId)?.name
-                      : undefined
-                  }
-                  onEdit={() => {
-                    setEditing(product);
-                    setOpen(true);
-                  }}
-                  onToggleAvailability={() => {
-                    setProducts((prev) =>
-                      prev.map((p) =>
-                        p.id === product.id ? { ...p, available: !p.available } : p
-                      )
-                    );
-                  }}
-                  onDelete={() => {
-                    setProducts((prev) => prev.filter((p) => p.id !== product.id));
-                  }}
-                />
-              ))}
-            </section>
+            {filtered.length === 0 ? (
+              <p className="py-12 text-center font-bold text-[#806A5E]">لا توجد منتجات بعد</p>
+            ) : (
+              <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((product) => (
+                  <MenuProductCard
+                    key={product.id}
+                    product={product}
+                    categoryLabel={getCategoryNameById(
+                      categories,
+                      product.categoryId,
+                      product.category
+                    )}
+                    freeProductLabel={
+                      product.promo?.freeProductId
+                        ? products.find((p) => p.id === product.promo?.freeProductId)?.name
+                        : undefined
+                    }
+                    onEdit={() => {
+                      setEditing(product);
+                      setOpen(true);
+                    }}
+                    onToggleAvailability={() => {
+                      void saveProduct({ ...product, available: !product.available });
+                    }}
+                    onDelete={() => {
+                      void deleteMenuProductAction(product.id).then(() => {
+                        setProducts((prev) => prev.filter((p) => p.id !== product.id));
+                        showToast({ type: "success", message: "تم حذف المنتج" });
+                      });
+                    }}
+                  />
+                ))}
+              </section>
+            )}
           </BentoCard>
         </BentoGrid>
 

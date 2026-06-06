@@ -8,7 +8,7 @@ export function DashboardAppLayout({ children }: { children: ReactNode }) {
   return (
     <ResponsiveAppShell
       variant="dashboard"
-      mobileTitle="لوحة الكوفي"
+      mobileTitle="لوحة التحكم"
       sidebar={(close) => <DashboardSidebar onNavigate={close} />}
     >
       {children}

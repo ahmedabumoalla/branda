@@ -4,23 +4,19 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock } from "lucide-react";
+import { createCafeOrderAction } from "@/app/actions/orders";
 import { formatSar } from "@/lib/format";
-import {
-  mockMenuProducts,
-  promoBadgeText,
-  type MenuProduct,
-} from "@/lib/mock/menu";
-import { BRANCHES_KEY, mockBranches, type CafeBranch } from "@/lib/mock/branches";
+import { promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
+import type { CafeBranch } from "@/lib/mock/branches";
 import { ProductReviews } from "@/components/cafe/product-reviews";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-product-detail";
 import { getCustomerSession } from "@/lib/customer/session";
-import { createCafeOrderFromProduct } from "@/lib/platform/order-flow";
+import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { ProductImage } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 
-const STORAGE_KEY = "branda_qatrah_menu";
 const TAX_RATE = 0.15;
 
 function defaultPickupTime(leadMinutes = 30) {
@@ -33,8 +29,7 @@ function defaultPickupTime(leadMinutes = 30) {
 export function ProductDetailClient({ slug, id }: { slug: string; id: string }) {
   const router = useRouter();
   const { theme, experience, previewThemeId, path } = useCafePageContext(slug);
-  const [products, setProducts] = useState<MenuProduct[]>(mockMenuProducts);
-  const [branches, setBranches] = useState<CafeBranch[]>(mockBranches);
+  const { products, branches, loading, error } = usePublicCafeMenu(slug);
   const [quantity, setQuantity] = useState(1);
   const [branchName, setBranchName] = useState("");
   const [pickupAt, setPickupAt] = useState("");
@@ -42,15 +37,9 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setProducts(JSON.parse(saved));
-
-    const savedBranches = localStorage.getItem(BRANCHES_KEY);
-    const list: CafeBranch[] = savedBranches ? JSON.parse(savedBranches) : mockBranches;
-    setBranches(list);
-    const active = list.filter((b) => b.active);
+    const active = branches.filter((b: CafeBranch) => b.active);
     if (active[0]) setBranchName(active[0].name);
-  }, []);
+  }, [branches]);
 
   const product = useMemo(() => products.find((p) => p.id === id), [products, id]);
 
@@ -66,9 +55,9 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const loyaltyPoints = Math.floor(total);
 
-  function addToOrder() {
+  async function addToOrder() {
     if (!product) return;
-    const customer = getCustomerSession(slug);
+    const customer = await getCustomerSession(slug);
     if (!customer) {
       const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
       router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
@@ -86,21 +75,46 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     }
 
     setAdding(true);
-    const pickupLabel = pickupAt.replace("T", " ");
-    const result = createCafeOrderFromProduct({
-      slug,
-      customer,
-      product,
-      quantity,
-      branchName,
-      pickupAt: pickupLabel,
-      notes: notes.trim() || undefined,
-    });
-    setAdding(false);
-    alert(
-      `تم إرسال طلب الاستلام!\nالإجمالي: ${result.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة الكوفي.`
+    try {
+      const pickupLabel = pickupAt.replace("T", " ");
+      const result = await createCafeOrderAction({
+        slug,
+        customer,
+        product,
+        quantity,
+        branchName,
+        pickupAt: pickupLabel,
+        notes: notes.trim() || undefined,
+      });
+      alert(
+        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة الكوفي.`
+      );
+      router.push(appendPreviewToNextPath(path("account"), previewThemeId));
+    } catch {
+      alert("تعذر إرسال الطلب. حاول مرة أخرى.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">جاري التحميل...</p>
+        </div>
+      </CafeLayout>
     );
-    router.push(appendPreviewToNextPath(path("account"), previewThemeId));
+  }
+
+  if (error) {
+    return (
+      <CafeLayout slug={slug}>
+        <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
+          <p className="font-black">{error}</p>
+        </div>
+      </CafeLayout>
+    );
   }
 
   if (!product) {
@@ -285,7 +299,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
       <button
         type="button"
-        onClick={addToOrder}
+        onClick={() => void addToOrder()}
         disabled={adding || !pickupAvailable}
         className={`mt-8 flex w-full items-center justify-center gap-2 font-black disabled:opacity-60 ${
           experience.detail === "kiosk" ? "h-16 text-lg rounded-lg" : "h-16 rounded-2xl text-lg"

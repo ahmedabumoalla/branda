@@ -35,7 +35,6 @@ import {
 import {
   EXPERIENCE_CAMPAIGNS_KEY,
   EXPERIENCE_SUBMISSIONS_KEY,
-  calculateExperiencePoints,
   mockExperienceCampaigns,
   mockExperienceSubmissions,
   platformLabels,
@@ -44,11 +43,15 @@ import {
   type ExperienceSubmission,
 } from "@/lib/mock/experience-campaigns";
 import {
-  approveExperienceSubmission,
-  rejectExperienceSubmission,
-  saveExperienceCampaign,
-  updateExperienceMetrics,
-} from "@/lib/platform/experience-flow";
+  approveExperienceSubmissionAction,
+  rejectExperienceSubmissionAction,
+  saveExperienceCampaignAction,
+  updateExperienceMetricsAction,
+} from "@/app/actions/experience";
+import {
+  fetchOwnerMarketingAction,
+  saveMarketingCampaignAction,
+} from "@/app/actions/marketing";
 
 const channels: MarketingCampaign["channel"][] = [
   "واتساب",
@@ -68,13 +71,23 @@ const platformOptions: ExperiencePlatform[] = [
 
 type Tab = "marketing" | "experience";
 
-export function MarketingPageClient() {
+type Props = {
+  initialCampaigns?: MarketingCampaign[];
+  initialExpCampaigns?: ExperienceCampaign[];
+  initialSubmissions?: ExperienceSubmission[];
+  configError?: string;
+};
+
+export function MarketingPageClient({
+  initialCampaigns = [],
+  initialExpCampaigns = [],
+  initialSubmissions = [],
+  configError,
+}: Props = {}) {
   const [tab, setTab] = useState<Tab>("marketing");
-  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>(mockMarketingCampaigns);
-  const [expCampaigns, setExpCampaigns] =
-    useState<ExperienceCampaign[]>(mockExperienceCampaigns);
-  const [submissions, setSubmissions] =
-    useState<ExperienceSubmission[]>(mockExperienceSubmissions);
+  const [campaigns, setCampaigns] = useState<MarketingCampaign[]>(initialCampaigns);
+  const [expCampaigns, setExpCampaigns] = useState<ExperienceCampaign[]>(initialExpCampaigns);
+  const [submissions, setSubmissions] = useState<ExperienceSubmission[]>(initialSubmissions);
 
   const [title, setTitle] = useState("");
   const [channel, setChannel] =
@@ -91,15 +104,13 @@ export function MarketingPageClient() {
 
   const [expTitle, setExpTitle] = useState("وثّق تجربتك");
   const [expDescription, setExpDescription] = useState(
-    "صوّر تجربتك في الكوفي وانشرها واحصل على نقاط ولاء."
+    "شارك تجربة العميل المصورة مع علامتك التجارية"
   );
   const [expTerms, setExpTerms] = useState(
     "يجب أن يظهر اسم الكوفي في الفيديو. المحتوى المسيء مرفوض."
   );
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
-  const [expBasePoints, setExpBasePoints] = useState("25");
-  const [expMaxPoints, setExpMaxPoints] = useState("200");
   const [expPlatforms, setExpPlatforms] = useState<ExperiencePlatform[]>([
     "tiktok",
     "instagram",
@@ -113,28 +124,23 @@ export function MarketingPageClient() {
     kind: "approve" | "reject";
   } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
-  const [awardPoints, setAwardPoints] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem(MARKETING_KEY);
-    const savedExp = localStorage.getItem(EXPERIENCE_CAMPAIGNS_KEY);
-    const savedSub = localStorage.getItem(EXPERIENCE_SUBMISSIONS_KEY);
-    if (saved) setCampaigns(JSON.parse(saved));
-    if (savedExp) setExpCampaigns(JSON.parse(savedExp));
-    if (savedSub) setSubmissions(JSON.parse(savedSub));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(MARKETING_KEY, JSON.stringify(campaigns));
-  }, [campaigns]);
-
-  useEffect(() => {
-    localStorage.setItem(EXPERIENCE_CAMPAIGNS_KEY, JSON.stringify(expCampaigns));
-  }, [expCampaigns]);
-
-  useEffect(() => {
-    localStorage.setItem(EXPERIENCE_SUBMISSIONS_KEY, JSON.stringify(submissions));
-  }, [submissions]);
+    if (initialCampaigns.length || initialExpCampaigns.length || initialSubmissions.length) return;
+    void (async () => {
+      try {
+        const [marketing, experience] = await Promise.all([
+          fetchOwnerMarketingAction(),
+          (await import("@/app/actions/experience")).fetchOwnerExperienceAction(),
+        ]);
+        setCampaigns(marketing);
+        setExpCampaigns(experience.campaigns);
+        setSubmissions(experience.submissions);
+      } catch {
+        /* empty state */
+      }
+    })();
+  }, [initialCampaigns.length, initialExpCampaigns.length, initialSubmissions.length]);
 
   const activeExpCampaign = useMemo(
     () => expCampaigns.find((c) => c.cafeSlug === "qatrah" && c.status === "active"),
@@ -229,7 +235,7 @@ export function MarketingPageClient() {
     );
   }
 
-  function createExperienceCampaign() {
+  async function createExperienceCampaign() {
     if (!expTitle.trim() || expPlatforms.length === 0) {
       alert("أكمل عنوان الحملة واختر منصة واحدة على الأقل");
       return;
@@ -244,11 +250,11 @@ export function MarketingPageClient() {
       endDate: expEnd || "2026-12-31",
       terms: expTerms.trim(),
       platforms: expPlatforms,
-      basePoints: Number(expBasePoints) || 25,
-      pointsPerView: 2,
-      pointsPerLike: 1,
-      pointsPerComment: 3,
-      maxPointsPerSubmission: Number(expMaxPoints) || 200,
+      basePoints: 0,
+      pointsPerView: 0,
+      pointsPerLike: 0,
+      pointsPerComment: 0,
+      maxPointsPerSubmission: 0,
       requiresManualApproval: true,
       status: "active",
       createdAt: new Date().toISOString().slice(0, 10),
@@ -259,61 +265,49 @@ export function MarketingPageClient() {
         ? { ...c, status: "ended" as const }
         : c
     );
-    saveExperienceCampaign(campaign);
+    await saveExperienceCampaignAction(campaign);
     setExpCampaigns([campaign, ...next]);
     alert("تم إنشاء حملة وثّق تجربتك");
   }
 
-  function saveMetrics(submissionId: string) {
+  async function saveMetrics(submissionId: string) {
     const draft = metricsDraft[submissionId];
     if (!draft) return;
-    const result = updateExperienceMetrics(submissionId, {
-      views: Number(draft.views) || 0,
-      likes: Number(draft.likes) || 0,
-      comments: Number(draft.comments) || 0,
-    });
-    if (result.ok) {
+    try {
+      const submission = await updateExperienceMetricsAction(submissionId, {
+        views: Number(draft.views) || 0,
+        likes: Number(draft.likes) || 0,
+        comments: Number(draft.comments) || 0,
+      });
       setSubmissions((prev) =>
-        prev.map((s) => (s.id === submissionId ? result.submission : s))
+        prev.map((s) => (s.id === submissionId ? submission : s))
       );
+    } catch {
+      alert("تعذر حفظ المقاييس");
     }
   }
 
   function openReview(id: string, kind: "approve" | "reject") {
-    const sub = submissions.find((s) => s.id === id);
-    const campaign = activeExpCampaign;
-    const suggested =
-      sub && campaign
-        ? calculateExperiencePoints(campaign, {
-            views: sub.views,
-            likes: sub.likes,
-            comments: sub.comments,
-          })
-        : sub?.suggestedPoints ?? 25;
     setReviewTarget({ id, kind });
     setReviewNote("");
-    setAwardPoints(String(suggested));
   }
 
-  function confirmReview() {
+  async function confirmReview() {
     if (!reviewTarget) return;
-    if (reviewTarget.kind === "approve") {
-      const result = approveExperienceSubmission(
-        reviewTarget.id,
-        Number(awardPoints) || 0
-      );
-      if (result.ok) {
+    try {
+      if (reviewTarget.kind === "approve") {
+        const submission = await approveExperienceSubmissionAction(reviewTarget.id);
         setSubmissions((prev) =>
-          prev.map((s) => (s.id === reviewTarget.id ? result.submission : s))
+          prev.map((s) => (s.id === reviewTarget.id ? submission : s))
+        );
+      } else {
+        const submission = await rejectExperienceSubmissionAction(reviewTarget.id, reviewNote);
+        setSubmissions((prev) =>
+          prev.map((s) => (s.id === reviewTarget.id ? submission : s))
         );
       }
-    } else {
-      const result = rejectExperienceSubmission(reviewTarget.id, reviewNote);
-      if (result.ok) {
-        setSubmissions((prev) =>
-          prev.map((s) => (s.id === reviewTarget.id ? result.submission : s))
-        );
-      }
+    } catch {
+      alert("تعذر تحديث المشاركة");
     }
     setReviewTarget(null);
   }
@@ -484,10 +478,6 @@ export function MarketingPageClient() {
                     <NeumoInput type="date" value={expStart} onChange={(e) => setExpStart(e.target.value)} />
                     <NeumoInput type="date" value={expEnd} onChange={(e) => setExpEnd(e.target.value)} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <NeumoInput value={expBasePoints} onChange={(e) => setExpBasePoints(e.target.value)} placeholder="نقاط أساسية" />
-                    <NeumoInput value={expMaxPoints} onChange={(e) => setExpMaxPoints(e.target.value)} placeholder="حد أقصى للنقاط" />
-                  </div>
                   <div className="flex flex-wrap gap-2">
                     {platformOptions.map((p) => (
                       <button
@@ -522,13 +512,6 @@ export function MarketingPageClient() {
                         likes: String(sub.likes ?? ""),
                         comments: String(sub.comments ?? ""),
                       };
-                      const suggested =
-                        activeExpCampaign &&
-                        calculateExperiencePoints(activeExpCampaign, {
-                          views: Number(draft.views) || 0,
-                          likes: Number(draft.likes) || 0,
-                          comments: Number(draft.comments) || 0,
-                        });
 
                       return (
                         <SoftCard key={sub.id}>
@@ -569,12 +552,6 @@ export function MarketingPageClient() {
                             ))}
                           </div>
 
-                          {suggested !== undefined ? (
-                            <p className="mt-2 text-sm font-black text-[#6B3A25]">
-                              نقاط مقترحة: {suggested}
-                            </p>
-                          ) : null}
-
                           <div className="mt-4 flex flex-wrap gap-2">
                             <button
                               onClick={() => saveMetrics(sub.id)}
@@ -587,7 +564,7 @@ export function MarketingPageClient() {
                               className="inline-flex items-center gap-1 rounded-2xl bg-green-50 px-4 py-2 text-sm font-black text-green-700"
                             >
                               <Check className="h-4 w-4" />
-                              موافقة + نقاط
+                              موافقة على المشاركة
                             </button>
                             <button
                               onClick={() => openReview(sub.id, "reject")}
@@ -612,23 +589,16 @@ export function MarketingPageClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-[28px] bg-[#FDFBF8] p-6 shadow-xl">
             <h3 className="text-xl font-black">
-              {reviewTarget.kind === "approve" ? "موافقة ومنح النقاط" : "رفض المشاركة"}
+              {reviewTarget.kind === "approve" ? "الموافقة على المشاركة" : "رفض المشاركة"}
             </h3>
-            {reviewTarget.kind === "approve" ? (
-              <NeumoInput
-                value={awardPoints}
-                onChange={(e) => setAwardPoints(e.target.value)}
-                placeholder="عدد النقاط"
-                className="mt-4"
-              />
-            ) : (
+            {reviewTarget.kind === "reject" ? (
               <NeumoTextarea
                 value={reviewNote}
                 onChange={(e) => setReviewNote(e.target.value)}
                 placeholder="سبب الرفض"
                 className="mt-4 h-24"
               />
-            )}
+            ) : null}
             <div className="mt-4 flex gap-2">
               <button
                 onClick={confirmReview}

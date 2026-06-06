@@ -35,7 +35,7 @@ export function resolveProductCategoryLabel(
 ): string {
   const list =
     categories ??
-    (typeof window !== "undefined" ? loadMenuCategories() : defaultMenuCategories);
+    (typeof window !== "undefined" ? defaultMenuCategories : defaultMenuCategories);
 
   const categoryId = resolveProductCategoryId(product, list);
   if (categoryId) {

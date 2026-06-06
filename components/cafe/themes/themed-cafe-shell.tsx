@@ -15,12 +15,8 @@ import { getCafePath } from "@/lib/cafe/theme-links";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import {
-  runCustomIdentityMigrationOnce,
-  subscribeBrandaStorageEvents,
-} from "@/lib/cafe/theme-storage-sync";
-import {
   buildCustomIdentityCssVars,
-  loadCustomIdentityTheme,
+  defaultCustomIdentityTheme,
   OVERLAY_OPACITY,
 } from "@/lib/mock/custom-identity-theme";
 import { ThemedPreviewBanner } from "./themed-preview-banner";
@@ -37,40 +33,28 @@ type Props = {
 function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
   const ctx = useCafeThemePage(slug);
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
-  const [identityStyle, setIdentityStyle] = useState<CSSProperties>({});
-  const [identityConfig, setIdentityConfig] = useState(() => loadCustomIdentityTheme());
 
-  const { theme, experience, settings, themeId, previewThemeId, isPreview } = ctx;
+  const { theme, experience, settings, themeId, previewThemeId, isPreview, customIdentity, loadError } =
+    ctx;
+  const identityConfig = customIdentity ?? defaultCustomIdentityTheme();
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
-  const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(
-    identityConfig
-  );
+  const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(identityConfig);
+  const identityStyle =
+    themeId === "brand-identity-custom"
+      ? (buildCustomIdentityCssVars(identityConfig.palette) as CSSProperties)
+      : {};
 
   useEffect(() => {
-    void runCustomIdentityMigrationOnce();
-  }, []);
-
-  useEffect(() => {
-    setCustomer(getCustomerSession(slug));
+    void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
 
-  useEffect(() => {
-    if (themeId !== "brand-identity-custom") {
-      setIdentityStyle({});
-      return;
-    }
-
-    const refreshIdentity = () => {
-      const identity = loadCustomIdentityTheme();
-      setIdentityConfig(identity);
-      setIdentityStyle(buildCustomIdentityCssVars(identity.palette) as CSSProperties);
-    };
-
-    refreshIdentity();
-    return subscribeBrandaStorageEvents({
-      onCustomIdentityUpdated: refreshIdentity,
-    });
-  }, [themeId]);
+  if (loadError) {
+    return (
+      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#e8e4df] px-4">
+        <p className="text-center font-black text-[#4a4540]">{loadError}</p>
+      </main>
+    );
+  }
 
   const isCustomIdentity = themeId === "brand-identity-custom";
 

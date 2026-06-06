@@ -1,7 +1,8 @@
 "use client";
 
 import { MessageSquareText, Star } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { replyToReviewAction } from "@/app/actions/reviews";
 import {
   BentoCard,
   BentoGrid,
@@ -11,35 +12,36 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import { REVIEWS_KEY, mockReviews, type CafeReview } from "@/lib/mock/reviews";
+import { type CafeReview } from "@/lib/mock/reviews";
 
-export function ReviewsPageClient() {
-  const [reviews, setReviews] = useState<CafeReview[]>(mockReviews);
+type Props = {
+  initialReviews: CafeReview[];
+  configError?: string;
+};
+
+export function ReviewsPageClient({ initialReviews, configError }: Props) {
+  const [reviews, setReviews] = useState<CafeReview[]>(initialReviews);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const saved = localStorage.getItem(REVIEWS_KEY);
-    if (saved) setReviews(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
-  }, [reviews]);
 
   const avgRating = useMemo(() => {
     if (!reviews.length) return 0;
     return reviews.reduce((sum, item) => sum + item.rating, 0) / reviews.length;
   }, [reviews]);
 
-  function saveReply(id: string) {
+  async function saveReply(id: string) {
     const answer = replyDrafts[id]?.trim();
     if (!answer) return;
 
-    setReviews((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, answer, status: "ظاهر" } : item
-      )
-    );
+    try {
+      await replyToReviewAction(id, answer);
+      setReviews((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, answer, status: "ظاهر" } : item
+        )
+      );
+    } catch {
+      alert("تعذر حفظ الرد");
+    }
   }
 
   return (
@@ -48,6 +50,11 @@ export function ReviewsPageClient() {
         title="الأسئلة والتقييمات"
         subtitle="إدارة تعليقات العملاء وأسئلتهم تحت المنتجات."
       >
+        {configError ? (
+          <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            {configError}
+          </SoftCard>
+        ) : null}
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="عدد التقييمات" value={reviews.length} />

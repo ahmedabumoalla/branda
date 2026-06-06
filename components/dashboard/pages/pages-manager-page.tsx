@@ -2,6 +2,7 @@
 
 import { Eye, FileText, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { deletePageAction, savePageAction } from "@/app/actions/pages";
 import {
   BentoCard,
   BentoGrid,
@@ -11,25 +12,21 @@ import {
   PrimaryButton,
   SoftCard,
 } from "@/components/ui/design-system";
-import { CAFE_PAGES_KEY, mockCafePages, type CafeInfoPage } from "@/lib/mock/cafe-pages";
+import { type CafeInfoPage } from "@/lib/mock/cafe-pages";
 
-export function PagesManagerPageClient() {
-  const [pages, setPages] = useState<CafeInfoPage[]>(mockCafePages);
-  const [selectedId, setSelectedId] = useState(pages[0]?.id || "");
+type Props = {
+  initialPages: CafeInfoPage[];
+  configError?: string;
+};
+
+export function PagesManagerPageClient({ initialPages, configError }: Props) {
+  const [pages, setPages] = useState<CafeInfoPage[]>(initialPages);
+  const [selectedId, setSelectedId] = useState(initialPages[0]?.id || "");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(CAFE_PAGES_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as CafeInfoPage[];
-      setPages(parsed);
-      setSelectedId(parsed[0]?.id || "");
-    }
-  }, []);
 
   useEffect(() => {
     const page = pages.find((item) => item.id === selectedId);
@@ -42,11 +39,7 @@ export function PagesManagerPageClient() {
     setVisible(page.visible);
   }, [selectedId, pages]);
 
-  useEffect(() => {
-    localStorage.setItem(CAFE_PAGES_KEY, JSON.stringify(pages));
-  }, [pages]);
-
-  function savePage() {
+  async function savePage() {
     if (!title.trim()) {
       alert("اكتب عنوان الصفحة");
       return;
@@ -62,15 +55,19 @@ export function PagesManagerPageClient() {
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
-    setPages((prev) => {
-      const exists = prev.some((item) => item.id === nextPage.id);
-      return exists
-        ? prev.map((item) => (item.id === nextPage.id ? nextPage : item))
-        : [nextPage, ...prev];
-    });
-
-    setSelectedId(nextPage.id);
-    alert("تم حفظ الصفحة");
+    try {
+      const saved = await savePageAction(nextPage);
+      setPages((prev) => {
+        const exists = prev.some((item) => item.id === saved.id);
+        return exists
+          ? prev.map((item) => (item.id === saved.id ? saved : item))
+          : [saved, ...prev];
+      });
+      setSelectedId(saved.id);
+      alert("تم حفظ الصفحة");
+    } catch {
+      alert("تعذر حفظ الصفحة");
+    }
   }
 
   function newPage() {
@@ -82,9 +79,14 @@ export function PagesManagerPageClient() {
     setVisible(true);
   }
 
-  function deletePage(id: string) {
-    setPages((prev) => prev.filter((item) => item.id !== id));
-    if (selectedId === id) setSelectedId("");
+  async function deletePage(id: string) {
+    try {
+      await deletePageAction(id);
+      setPages((prev) => prev.filter((item) => item.id !== id));
+      if (selectedId === id) setSelectedId("");
+    } catch {
+      alert("تعذر حذف الصفحة");
+    }
   }
 
   return (
@@ -99,6 +101,11 @@ export function PagesManagerPageClient() {
           </PrimaryButton>
         }
       >
+        {configError ? (
+          <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            {configError}
+          </SoftCard>
+        ) : null}
         <BentoGrid>
           <BentoCard variant="white" span="1">
             <h2 className="mb-5 text-2xl font-black text-[#3A2117]">الصفحات</h2>

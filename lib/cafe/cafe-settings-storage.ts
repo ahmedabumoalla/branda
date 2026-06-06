@@ -8,18 +8,10 @@ export function sanitizeCafeSettingsForStorage(settings: CafeSettings): CafeSett
   return payload;
 }
 
-export function saveCafeSettingsToStorage(settings: CafeSettings) {
-  const payload = sanitizeCafeSettingsForStorage(settings);
-  localStorage.setItem(CAFE_SETTINGS_KEY, JSON.stringify(payload));
+export function saveCafeSettingsToStorage(_settings: CafeSettings) {
+  throw new Error("Use Supabase — save via app/actions/settings");
 }
 
 export function loadCafeSettingsFromStorage(): CafeSettings | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const saved = localStorage.getItem(CAFE_SETTINGS_KEY);
-    if (!saved) return null;
-    return JSON.parse(saved) as CafeSettings;
-  } catch {
-    return null;
-  }
+  throw new Error("Use Supabase — fetch via app/actions/settings");
 }

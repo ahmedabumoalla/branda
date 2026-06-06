@@ -26,11 +26,9 @@ export type AppNotification = {
 export const NOTIFICATIONS_KEY = "branda_qatrah_notifications";
 
 export function loadNotifications(): AppNotification[] {
-  if (typeof window === "undefined") return [];
-  const saved = localStorage.getItem(NOTIFICATIONS_KEY);
-  return saved ? (JSON.parse(saved) as AppNotification[]) : [];
+  throw new Error("Use Supabase — fetch via lib/data/notifications");
 }
 
-export function saveNotifications(items: AppNotification[]) {
-  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(items));
+export function saveNotifications(_items: AppNotification[]) {
+  throw new Error("Use Supabase — save via lib/data/notifications");
 }

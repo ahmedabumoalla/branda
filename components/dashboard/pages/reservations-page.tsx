@@ -9,7 +9,8 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { updateReservationStatusAction } from "@/app/actions/reservations";
 import {
   BentoCard,
   BentoGrid,
@@ -20,16 +21,7 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import {
-  RESERVATIONS_KEY,
-  type CafeReservation,
-  type ReservationStatus,
-} from "@/lib/mock/reservations";
-import { updateReservationStatus } from "@/lib/platform/reservation-flow";
-
-type Props = {
-  initialReservations: CafeReservation[];
-};
+import { type CafeReservation, type ReservationStatus } from "@/lib/mock/reservations";
 
 const statusStyle: Record<ReservationStatus, string> = {
   "بانتظار الرد": "bg-amber-50 text-amber-700",
@@ -40,7 +32,12 @@ const statusStyle: Record<ReservationStatus, string> = {
 
 type ActionKind = "accept" | "reject" | "modify";
 
-export function ReservationsPageClient({ initialReservations }: Props) {
+type Props = {
+  initialReservations: CafeReservation[];
+  configError?: string;
+};
+
+export function ReservationsPageClient({ initialReservations, configError }: Props) {
   const [reservations, setReservations] = useState<CafeReservation[]>(initialReservations);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ReservationStatus | "الكل">("الكل");
@@ -49,15 +46,7 @@ export function ReservationsPageClient({ initialReservations }: Props) {
     kind: ActionKind;
   } | null>(null);
   const [cafeMessage, setCafeMessage] = useState("");
-
-  useEffect(() => {
-    const saved = localStorage.getItem(RESERVATIONS_KEY);
-    if (saved) setReservations(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(reservations));
-  }, [reservations]);
+  const [busy, setBusy] = useState(false);
 
   const filtered = useMemo(() => {
     return reservations.filter((r) => {
@@ -82,7 +71,7 @@ export function ReservationsPageClient({ initialReservations }: Props) {
     setCafeMessage("");
   }
 
-  function confirmAction() {
+  async function confirmAction() {
     if (!actionTarget) return;
 
     const statusMap: Record<ActionKind, ReservationStatus> = {
@@ -92,20 +81,25 @@ export function ReservationsPageClient({ initialReservations }: Props) {
     };
 
     const nextStatus = statusMap[actionTarget.kind];
-    const result = updateReservationStatus(actionTarget.id, nextStatus, {
-      cafeSlug: "qatrah",
-      cafeMessage: cafeMessage,
-      rejectionReason: actionTarget.kind === "reject" ? cafeMessage : undefined,
-    });
-
-    if (result.ok) {
-      setReservations((prev) =>
-        prev.map((r) => (r.id === actionTarget.id ? result.reservation : r))
+    setBusy(true);
+    try {
+      const result = await updateReservationStatusAction(
+        actionTarget.id,
+        nextStatus,
+        cafeMessage,
+        actionTarget.kind === "reject" ? cafeMessage : undefined
       );
-    }
 
-    setActionTarget(null);
-    setCafeMessage("");
+      if (result.ok) {
+        setReservations((prev) =>
+          prev.map((r) => (r.id === actionTarget.id ? result.reservation : r))
+        );
+      }
+    } finally {
+      setBusy(false);
+      setActionTarget(null);
+      setCafeMessage("");
+    }
   }
 
   return (
