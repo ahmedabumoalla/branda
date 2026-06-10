@@ -12,6 +12,7 @@ import {
 } from "@/lib/data/platform-content";
 import { createClient } from "@/lib/supabase/server";
 import { uploadPlatformMedia, uploadSocialPostMedia } from "@/lib/storage/platform-content-upload";
+import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
 
 export async function savePlatformHomeSettingsAction(input: PlatformHomeSettings) {
   await savePlatformHomeSettings(input);
@@ -80,6 +81,30 @@ export async function submitContactRequestAction(input: {
     p_message: input.message,
   });
   if (error) throw error;
+
+  if (isBrandaEmailConfigured()) {
+    const to = process.env.RESEND_REPLY_TO?.trim();
+    if (to) {
+      await sendBrandaEmail({
+        to,
+        replyTo: input.email,
+        subject: `طلب تواصل جديد من ${input.fullName}`,
+        html: `
+          <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
+            <h2>طلب تواصل جديد من منصة برندة</h2>
+            <p><strong>الاسم:</strong> ${escapeEmailHtml(input.fullName)}</p>
+            <p><strong>البريد:</strong> ${escapeEmailHtml(input.email)}</p>
+            <p><strong>الرسالة:</strong></p>
+            <div style="white-space:pre-wrap;border:1px solid #eee;padding:12px;border-radius:12px">${escapeEmailHtml(input.message)}</div>
+          </div>
+        `,
+        text: `طلب تواصل جديد
+الاسم: ${input.fullName}
+البريد: ${input.email}
+الرسالة: ${input.message}`,
+      }).catch((mailError) => console.error("[submitContactRequestAction:email]", mailError));
+    }
+  }
 }
 
 export async function recordIntroVideoEventAction(eventType: "intro_video_click" | "intro_video_view") {

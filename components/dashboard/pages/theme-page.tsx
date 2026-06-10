@@ -1,30 +1,19 @@
 "use client";
 
-import { Check, ExternalLink, Eye, Palette } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import {
   BentoCard,
-  BentoGrid,
   DashboardPageShell,
   LinkButton,
-  PrimaryButton,
   StatPill,
 } from "@/components/ui/design-system";
-import { CafeThemeRenderer } from "@/components/cafe/themes/cafe-theme-renderer";
 import { CustomIdentityBuilder } from "@/components/dashboard/theme/custom-identity-builder";
-import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import { adoptCafeTheme } from "@/lib/cafe/theme-storage-sync";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
-import {
-  cafeThemes,
-  getThemeClasses,
-  getThemeDefinition,
-  type CafeThemeId,
-} from "@/lib/mock/cafe-theme";
+import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import { getCafePublicUrl } from "@/lib/platform/cafe-domain";
 
@@ -43,7 +32,6 @@ type Props = {
 };
 
 function ThemePageInner({
-  initialThemeId,
   initialSettings,
   initialProducts,
   initialCategories,
@@ -53,27 +41,13 @@ function ThemePageInner({
   initialCustomIdentity,
   configError,
 }: Props) {
-  const [activeTheme, setActiveTheme] = useState<CafeThemeId>(initialThemeId);
-  const [previewTheme, setPreviewTheme] = useState<CafeThemeId | null>(null);
-  const [cafeSettings] = useState<CafeSettings>(initialSettings);
-  const [products] = useState(initialProducts);
-  const [offers] = useState(initialOffers);
   const [saved, setSaved] = useState(false);
-
-  const selected = previewTheme ?? activeTheme;
-  const theme = getThemeClasses(selected);
-  const definition = getThemeDefinition(selected);
-  const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
-
+  const cafeSettings = initialSettings;
+  const products = initialProducts;
+  const offers = initialOffers;
   const availableProducts = products.filter((p) => p.available);
-  const popularProducts = useMemo(
-    () => [...availableProducts].slice(0, 4),
-    [availableProducts]
-  );
-  const latestProducts = useMemo(
-    () => [...availableProducts].slice(-4).reverse(),
-    [availableProducts]
-  );
+  const popularProducts = [...availableProducts].slice(0, 4);
+  const latestProducts = [...availableProducts].slice(-4).reverse();
   const bannerOffers = offers.filter(
     (o) =>
       o.status === "نشط" &&
@@ -83,37 +57,11 @@ function ThemePageInner({
   );
   const activeRewards = initialLoyaltyRewards.filter((r) => r.active);
 
-  async function adoptTheme(id: CafeThemeId) {
-    await adoptCafeTheme(id);
-    setActiveTheme(id);
-    setPreviewTheme(null);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  }
-
-  const previewProps = {
-    slug: CAFE_SLUG,
-    cafeSettings,
-    cafeLogoUrl,
-    themeId: selected,
-    theme,
-    customer: null,
-    products,
-    offers,
-    availableProducts,
-    popularProducts,
-    latestProducts,
-    bannerOffers,
-    activeRewards,
-    loyaltySettings: initialLoyaltySettings,
-    isPreview: previewTheme !== null && previewTheme !== activeTheme,
-  };
-
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="ثيم الكوفي"
-        subtitle="اختر ثيمًا، عاينه داخل اللوحة، ثم اعتمده ليظهر على صفحة الكوفي العامة."
+        title="ثيم هوية علامتك"
+        subtitle="تم حذف كل الثيمات الجاهزة واعتماد ثيم واحد فقط يتم بناؤه من هوية علامتك"
         action={
           <LinkButton
             href={getCafePublicUrl(CAFE_SLUG, {
@@ -121,7 +69,7 @@ function ThemePageInner({
             })}
             variant="outline"
           >
-            معاينة صفحة الكوفي الحية
+            معاينة صفحة العلامة
           </LinkButton>
         }
       >
@@ -133,26 +81,17 @@ function ThemePageInner({
 
         {saved ? (
           <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-center font-black text-green-800">
-            تم اعتماد الثيم بنجاح — صفحة الكوفي ستستخدمه الآن
+            تم حفظ واعتماد ثيم هوية العلامة
           </div>
         ) : null}
 
-        <BentoGrid className="mb-6">
-          <BentoCard variant="gold" span="2">
-            <StatPill
-              label="الثيم المعتمد"
-              value={getThemeDefinition(activeTheme).name}
-              hint="محفوظ في Supabase"
-            />
-          </BentoCard>
-          <BentoCard variant="white" span="2">
-            <StatPill
-              label="ثيمات متاحة"
-              value={cafeThemes.length}
-              hint="تخطيطات مختلفة — ليس ألوانًا فقط"
-            />
-          </BentoCard>
-        </BentoGrid>
+        <BentoCard variant="gold" span="4" className="mb-6">
+          <StatPill
+            label="الثيم المعتمد"
+            value="ثيم هوية علامتك فقط"
+            hint="تم إلغاء كل الثيمات الجاهزة"
+          />
+        </BentoCard>
 
         <CustomIdentityBuilder
           preview={{
@@ -169,116 +108,12 @@ function ThemePageInner({
           }}
           initialIdentity={initialCustomIdentity}
           initialCategories={initialCategories}
-          initialIsActiveTheme={activeTheme === "brand-identity-custom"}
-          onAdopted={(id) => {
-            setActiveTheme(id);
-            setPreviewTheme(null);
+          initialIsActiveTheme={true}
+          onAdopted={() => {
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
           }}
         />
-
-        {previewTheme ? (
-          <BentoCard variant="white" span="4" className="mb-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-black text-[#3A2117]">
-                  معاينة: {definition.name}
-                </h2>
-                <p className="text-sm font-bold text-[#7A6255]">{definition.description}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <PrimaryButton onClick={() => void adoptTheme(previewTheme)}>
-                  <Check className="h-4 w-4" />
-                  اعتماد الثيم
-                </PrimaryButton>
-                <LinkButton
-                  href={getCafePublicUrl(CAFE_SLUG, {
-                    previewTheme,
-                    origin: typeof window !== "undefined" ? window.location.origin : undefined,
-                  })}
-                  variant="outline"
-                  target="_blank"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  فتح صفحة الكوفي بهذا الثيم
-                </LinkButton>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-[#F8F4EF]">
-              <div className="max-h-[min(70vh,640px)] overflow-x-hidden overflow-y-auto overscroll-contain">
-                <div className="pointer-events-none origin-top scale-[0.52] sm:scale-[0.62] md:scale-[0.75] lg:scale-[0.85]">
-                  <CafeThemeRenderer {...previewProps} />
-                </div>
-              </div>
-            </div>
-          </BentoCard>
-        ) : null}
-
-        <BentoGrid>
-          {cafeThemes.map((t) => {
-            const isActive = activeTheme === t.id;
-            const isPreviewing = previewTheme === t.id;
-
-            return (
-              <BentoCard key={t.id} variant="white" span="2">
-                <div
-                  className={`h-36 rounded-3xl bg-gradient-to-br ${t.previewGradient} border border-[#E5D8CD]`}
-                />
-
-                <div className="mt-5">
-                  <p className="text-xs font-bold text-[#7A6255]">{t.recommendedFor}</p>
-                  <h2 className="mt-1 text-2xl font-black text-[#3A2117]">{t.name}</h2>
-                  <p className="mt-2 min-h-12 text-sm font-bold text-[#7A6255]">
-                    {t.description}
-                  </p>
-                  <p className="mt-1 text-[10px] font-bold text-[#CBB29C]">
-                    {t.layoutType} · {t.density}
-                  </p>
-
-                  <div className="mt-5 flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTheme(t.id)}
-                      className={`flex h-11 items-center justify-center gap-2 rounded-2xl font-black ${
-                        isPreviewing
-                          ? "bg-[#3A2117] text-[#F8E8D2]"
-                          : "border border-[#E5D8CD] bg-white text-[#3A2117] hover:bg-[#F8F4EF]"
-                      }`}
-                    >
-                      <Eye className="h-4 w-4" />
-                      معاينة
-                    </button>
-
-                    {isActive ? (
-                      <div className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-green-50 font-black text-green-700">
-                        <Check className="h-5 w-5" />
-                        معتمد حاليًا
-                      </div>
-                    ) : (
-                      <PrimaryButton
-                        onClick={() => void adoptTheme(t.id)}
-                        className="flex h-11 items-center justify-center gap-2"
-                      >
-                        <Palette className="h-4 w-4" />
-                        اعتماد الثيم
-                      </PrimaryButton>
-                    )}
-
-                    <LinkButton
-                      href={getCafePublicUrl(CAFE_SLUG, { previewTheme: t.id })}
-                      variant="outline"
-                      className="h-10 text-center text-xs"
-                      target="_blank"
-                    >
-                      فتح صفحة الكوفي بهذا الثيم
-                    </LinkButton>
-                  </div>
-                </div>
-              </BentoCard>
-            );
-          })}
-        </BentoGrid>
       </DashboardPageShell>
     </div>
   );
@@ -286,8 +121,8 @@ function ThemePageInner({
 
 export function ThemePageClient(props: Props) {
   return (
-    <Suspense fallback={<div className="p-8 font-black">جاري التحميل...</div>}>
-      <ThemePageInner {...props} />
+    <Suspense fallback={<div />}>
+      <ThemePageInner {...props} initialThemeId="brand-identity-custom" />
     </Suspense>
   );
 }

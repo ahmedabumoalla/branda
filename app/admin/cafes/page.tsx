@@ -48,7 +48,7 @@ export default async function AdminCafesRoutePage() {
         initialPlans={mockPlatformPlans}
         initialCustomers={[]}
         initialOperations={[]}
-        configError="تعذر تحميل الكوفيهات"
+        configError="تعذر تحميل العلامات التجارية"
       />
     );
   }

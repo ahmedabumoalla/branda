@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loginCustomerByEmail, registerCustomer } from "@/lib/data/customers";
 import type { BrandaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
+import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
 
 export async function loginOwnerAction(email: string, password: string) {
   try {
@@ -100,6 +101,7 @@ const cafeOwnerRegistrationSchema = z.object({
   primaryBranchCity: z.string().trim().min(2).max(100),
   primaryBranchLat: z.number().min(-90).max(90),
   primaryBranchLng: z.number().min(-180).max(180),
+  primaryBranchRadiusMeters: z.number().int().min(10).max(500).default(50),
   couponCode: z.string().trim().max(30).optional(),
 });
 
@@ -116,6 +118,7 @@ export async function registerCafeOwnerAction(input: {
   primaryBranchCity: string;
   primaryBranchLat: number;
   primaryBranchLng: number;
+  primaryBranchRadiusMeters?: number;
   couponCode?: string;
 }) {
   try {
@@ -149,6 +152,7 @@ export async function registerCafeOwnerAction(input: {
           primary_branch_city: parsed.primaryBranchCity,
           primary_branch_lat: parsed.primaryBranchLat.toString(),
           primary_branch_lng: parsed.primaryBranchLng.toString(),
+          primary_branch_radius_meters: String(parsed.primaryBranchRadiusMeters ?? 50),
           coupon_code: couponCode,
         },
       },
@@ -162,6 +166,21 @@ export async function registerCafeOwnerAction(input: {
           : "تعذر إنشاء حساب العلامة التجارية",
         redirectTo: null,
       };
+    }
+
+    if (isBrandaEmailConfigured()) {
+      await sendBrandaEmail({
+        to: parsed.email.toLowerCase(),
+        subject: "مرحبًا بك في برندة",
+        html: `
+          <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
+            <h2>مرحبًا ${escapeEmailHtml(parsed.ownerName)}</h2>
+            <p>تم إنشاء حساب العلامة التجارية <strong>${escapeEmailHtml(parsed.brandName)}</strong> في منصة برندة.</p>
+            <p>رابط الدخول: <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login">تسجيل الدخول</a></p>
+          </div>
+        `,
+        text: `مرحبًا ${parsed.ownerName}، تم إنشاء حساب ${parsed.brandName} في برندة.`,
+      }).catch((mailError) => console.error("[registerCafeOwnerAction:email]", mailError));
     }
 
     return {

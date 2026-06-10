@@ -1,6 +1,6 @@
 "use client";
 
-import { LocateFixed, MapPin } from "lucide-react";
+import { LocateFixed, MapPin, Move } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type LocationValue = {
@@ -14,225 +14,199 @@ type Props = {
   heightClassName?: string;
 };
 
-type LeafletPoint = {
-  lat: number;
-  lng: number;
-};
-
-type LeafletMap = {
-  on: (event: string, handler: (event: { latlng: LeafletPoint }) => void) => LeafletMap;
-  setView: (position: [number, number], zoom: number) => LeafletMap;
-  remove: () => void;
-  invalidateSize: () => void;
-};
-
-type LeafletMarker = {
-  addTo: (map: LeafletMap) => LeafletMarker;
-  on: (event: string, handler: () => void) => LeafletMarker;
-  setLatLng: (position: [number, number]) => LeafletMarker;
-  getLatLng: () => LeafletPoint;
-};
-
-type LeafletRuntime = {
-  map: (
-    node: HTMLElement,
-    options: {
-      center: [number, number];
-      zoom: number;
-      zoomControl: boolean;
-    }
-  ) => LeafletMap;
-  tileLayer: (
-    url: string,
-    options: {
-      attribution: string;
-      maxZoom: number;
-    }
-  ) => { addTo: (map: LeafletMap) => void };
-  marker: (
-    position: [number, number],
-    options: { draggable: boolean; autoPan: boolean }
-  ) => LeafletMarker;
+type MapboxRuntime = {
+  accessToken: string;
+  Map: new (options: {
+    container: HTMLElement;
+    style: string;
+    center: [number, number];
+    zoom: number;
+    attributionControl?: boolean;
+  }) => {
+    on: (event: string, handler: () => void) => void;
+    remove: () => void;
+    getCenter: () => { lng: number; lat: number };
+    flyTo: (options: { center: [number, number]; zoom?: number }) => void;
+    resize: () => void;
+  };
+  Marker: new (options?: { draggable?: boolean; color?: string }) => {
+    setLngLat: (lngLat: [number, number]) => InstanceType<MapboxRuntime["Marker"]>;
+    addTo: (map: InstanceType<MapboxRuntime["Map"]>) => InstanceType<MapboxRuntime["Marker"]>;
+    on: (event: string, handler: () => void) => void;
+    getLngLat: () => { lng: number; lat: number };
+  };
+  NavigationControl: new () => unknown;
 };
 
 declare global {
   interface Window {
-    L?: LeafletRuntime;
-    __brandaLeafletLoader?: Promise<void>;
+    mapboxgl?: MapboxRuntime;
+    __brandaMapboxLoader?: Promise<void>;
   }
 }
 
 const fallbackPosition: LocationValue = { lat: 24.7136, lng: 46.6753 };
-const leafletScriptUrl = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-const leafletStyleUrl = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+const mapboxScriptUrl = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js";
+const mapboxStyleUrl = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
 
-function loadLeaflet() {
-  if (window.L) return Promise.resolve();
-  if (window.__brandaLeafletLoader) return window.__brandaLeafletLoader;
+function loadMapbox() {
+  if (window.mapboxgl) return Promise.resolve();
+  if (window.__brandaMapboxLoader) return window.__brandaMapboxLoader;
 
-  window.__brandaLeafletLoader = new Promise<void>((resolve, reject) => {
-    if (!document.querySelector<HTMLLinkElement>('link[data-branda-leaflet-style="true"]')) {
+  window.__brandaMapboxLoader = new Promise<void>((resolve, reject) => {
+    if (!document.querySelector<HTMLLinkElement>('link[data-branda-mapbox-style="true"]')) {
       const stylesheet = document.createElement("link");
       stylesheet.rel = "stylesheet";
-      stylesheet.href = leafletStyleUrl;
-      stylesheet.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
-      stylesheet.crossOrigin = "";
-      stylesheet.dataset.brandaLeafletStyle = "true";
+      stylesheet.href = mapboxStyleUrl;
+      stylesheet.dataset.brandaMapboxStyle = "true";
       document.head.appendChild(stylesheet);
     }
 
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-branda-leaflet-script="true"]'
-    );
-
+    const existing = document.querySelector<HTMLScriptElement>('script[data-branda-mapbox-script="true"]');
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error("Leaflet failed to load")),
-        { once: true }
-      );
+      existing.addEventListener("error", () => reject(new Error("Mapbox failed to load")), { once: true });
       return;
     }
 
     const script = document.createElement("script");
-    script.src = leafletScriptUrl;
-    script.integrity = "sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg=";
-    script.crossOrigin = "";
+    script.src = mapboxScriptUrl;
     script.async = true;
-    script.dataset.brandaLeafletScript = "true";
+    script.dataset.brandaMapboxScript = "true";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Leaflet failed to load"));
-    document.head.appendChild(script);
+    script.onerror = () => reject(new Error("Mapbox failed to load"));
+    document.body.appendChild(script);
   });
 
-  return window.__brandaLeafletLoader;
+  return window.__brandaMapboxLoader;
 }
 
-export function GoogleMapPicker({
-  value,
-  onChange,
-  heightClassName = "h-[320px]",
-}: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerRef = useRef<LeafletMarker | null>(null);
+function normalize(point: { lng: number; lat: number }): LocationValue {
+  return {
+    lat: Number(point.lat.toFixed(7)),
+    lng: Number(point.lng.toFixed(7)),
+  };
+}
+
+export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]" }: Props) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [mapError, setMapError] = useState("");
-  const [locating, setLocating] = useState(false);
+  const [current, setCurrent] = useState<LocationValue>(value ?? fallbackPosition);
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    let active = true;
-
-    void loadLeaflet()
-      .then(() => {
-        if (!active || !containerRef.current || !window.L || mapRef.current) return;
-
-        const position = value ?? fallbackPosition;
-        const point: [number, number] = [position.lat, position.lng];
-
-        const map = window.L.map(containerRef.current, {
-          center: point,
-          zoom: value ? 16 : 6,
-          zoomControl: true,
-        });
-
-        window.L
-          .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          })
-          .addTo(map);
-
-        const marker = window.L
-          .marker(point, { draggable: true, autoPan: true })
-          .addTo(map);
-
-        marker.on("dragend", () => {
-          const nextPosition = marker.getLatLng();
-          onChange({ lat: nextPosition.lat, lng: nextPosition.lng });
-        });
-
-        map.on("click", (event) => {
-          marker.setLatLng([event.latlng.lat, event.latlng.lng]);
-          onChange({ lat: event.latlng.lat, lng: event.latlng.lng });
-        });
-
-        mapRef.current = map;
-        markerRef.current = marker;
-        window.setTimeout(() => map.invalidateSize(), 30);
-      })
-      .catch(() => {
-        if (active) setMapError("تعذر تحميل الخريطة حاول مرة أخرى");
-      });
-
-    return () => {
-      active = false;
-      mapRef.current?.remove();
-      mapRef.current = null;
-      markerRef.current = null;
-    };
-  }, [onChange]);
-
-  useEffect(() => {
-    if (!value || !mapRef.current || !markerRef.current) return;
-
-    const point: [number, number] = [value.lat, value.lng];
-    markerRef.current.setLatLng(point);
-    mapRef.current.setView(point, 16);
-  }, [value]);
-
-  function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      setMapError("تحديد الموقع غير مدعوم في هذا المتصفح");
+    if (!token) {
+      setMapError("أضف NEXT_PUBLIC_MAPBOX_TOKEN في ملف البيئة وفي Vercel");
       return;
     }
 
-    setLocating(true);
-    setMapError("");
+    let map: InstanceType<MapboxRuntime["Map"]> | null = null;
+    let marker: InstanceType<MapboxRuntime["Marker"]> | null = null;
+    let cancelled = false;
 
+    void loadMapbox()
+      .then(() => {
+        if (cancelled || !containerRef.current || !window.mapboxgl) return;
+        window.mapboxgl.accessToken = token;
+
+        const center: [number, number] = [current.lng, current.lat];
+        map = new window.mapboxgl.Map({
+          container: containerRef.current,
+          style: "mapbox://styles/mapbox/streets-v12",
+          center,
+          zoom: 16,
+          attributionControl: false,
+        });
+
+        marker = new window.mapboxgl.Marker({ draggable: true, color: "#6B3A25" })
+          .setLngLat(center)
+          .addTo(map);
+
+        marker.on("dragend", () => {
+          if (!marker) return;
+          const next = normalize(marker.getLngLat());
+          setCurrent(next);
+          onChange(next);
+        });
+
+        map.on("load", () => {
+          setMapError("");
+          window.setTimeout(() => map?.resize(), 120);
+        });
+
+        map.on("moveend", () => {
+          if (!map || !marker) return;
+          const centerPoint = normalize(map.getCenter());
+          marker.setLngLat([centerPoint.lng, centerPoint.lat]);
+          setCurrent(centerPoint);
+          onChange(centerPoint);
+        });
+      })
+      .catch(() => setMapError("تعذر تحميل خريطة Mapbox"));
+
+    return () => {
+      cancelled = true;
+      if (map) map.remove();
+    };
+  }, [token]);
+
+  function locateMe() {
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const position = { lat: coords.latitude, lng: coords.longitude };
-        onChange(position);
-        markerRef.current?.setLatLng([position.lat, position.lng]);
-        mapRef.current?.setView([position.lat, position.lng], 16);
-        setLocating(false);
+      (position) => {
+        const next = {
+          lat: Number(position.coords.latitude.toFixed(7)),
+          lng: Number(position.coords.longitude.toFixed(7)),
+        };
+        setCurrent(next);
+        onChange(next);
+        const mapbox = window.mapboxgl;
+        if (!mapbox) return;
       },
-      () => {
-        setMapError("لم يتم السماح بالوصول إلى الموقع");
-        setLocating(false);
-      },
+      () => setMapError("تعذر تحديد موقعك الحالي"),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={useCurrentLocation}
-        disabled={locating}
-        className="inline-flex items-center gap-2 rounded-xl bg-[#6B3A25] px-4 py-3 text-sm font-black text-[#FCF8F3] disabled:opacity-60"
-      >
-        <LocateFixed className="h-4 w-4" />
-        {locating ? "جاري تحديد موقعك" : "استخدام موقعي الحالي"}
-      </button>
-
-      <div
-        ref={containerRef}
-        className={`${heightClassName} relative z-0 overflow-hidden rounded-2xl border border-[#E7D7C6] bg-[#F8F4EF]`}
-      />
-
-      {value ? (
-        <div className="flex items-center gap-2 rounded-xl bg-[#F8F4EF] px-4 py-3 text-xs font-black text-[#6B3A25]">
-          <MapPin className="h-4 w-4" />
-          تم تحديد الموقع على الخريطة
+      <div className={`relative overflow-hidden rounded-[28px] border border-[#E5D8CD] bg-[#F8F4EF] ${heightClassName}`}>
+        <div ref={containerRef} className="h-full w-full" />
+        <div className="pointer-events-none absolute right-4 top-4 rounded-2xl bg-white/95 px-4 py-2 text-sm font-black text-[#3A2117] shadow">
+          اسحب الدبوس أو حرّك الخريطة
         </div>
-      ) : null}
-
-      {mapError ? <p className="text-sm font-black text-red-600">{mapError}</p> : null}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#6B3A25]/70 bg-[#D9A33F]/15 shadow-[0_0_0_9999px_rgba(255,255,255,0.04)]" />
+        <div className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-2 rounded-2xl bg-white/95 px-4 py-3 text-sm font-black text-[#3A2117] shadow">
+          <Move className="h-4 w-4" />
+          يحفظ نطاق ترحيب 50 متر حول الموقع
+        </div>
+        {mapError ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#FCF8F3]/95 p-6 text-center font-black text-[#6B3A25]">
+            {mapError}
+          </div>
+        ) : null}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div className="rounded-2xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold text-[#6B3A25]">
+          خط العرض {current.lat}
+        </div>
+        <div className="rounded-2xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold text-[#6B3A25]">
+          خط الطول {current.lng}
+        </div>
+        <button
+          type="button"
+          onClick={locateMe}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
+        >
+          <LocateFixed className="h-5 w-5" />
+          تحديد موقعي
+        </button>
+      </div>
+      <div className="flex items-center gap-2 rounded-2xl bg-[#FCF8F3] p-3 text-sm font-bold text-[#806A5E]">
+        <MapPin className="h-5 w-5 text-[#6B3A25]" />
+        يتم حفظ النقطة مع نصف قطر 50 متر للاستخدام في تجربة العميل لاحقًا
+      </div>
     </div>
   );
 }

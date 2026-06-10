@@ -37,6 +37,7 @@ export type DbMenuProduct = {
   description: string;
   image_url: string | null;
   image_storage_path: string | null;
+  image_gallery?: unknown;
   image_variant: string;
   price: number;
   calories: number | null;
@@ -161,13 +162,14 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     description: row.description,
     imageAssetId: row.image_storage_path ?? undefined,
     imageDataUrl: row.image_url,
+    imageGallery: Array.isArray(row.image_gallery) ? (row.image_gallery as MenuProduct["imageGallery"]) : [],
     imageVariant: row.image_variant as MenuProduct["imageVariant"],
     price: Number(row.price),
     calories: row.calories ?? undefined,
-    loyaltyPoints: row.loyalty_points,
+    loyaltyPoints: 0,
     preparationTimeMinutes: row.preparation_time_minutes ?? undefined,
-    redeemableWithPoints: row.redeemable_with_points,
-    redemptionPoints: row.redemption_points ?? undefined,
+    redeemableWithPoints: false,
+    redemptionPoints: undefined,
     availableForPickup: row.available_for_pickup,
     pickupLeadTimeMinutes: row.pickup_lead_minutes ?? undefined,
     ingredients: Array.isArray(row.ingredients) ? (row.ingredients as string[]) : [],

@@ -69,6 +69,14 @@ export type CashierActivity = {
   createdAt: string;
 };
 
+
+export type CustomerLoyaltyCardView = {
+  card: LoyaltyBrandCard;
+  program: LoyaltyCardProgram;
+  cafeSlug: string;
+  cafeName: string;
+};
+
 export type LoyaltyCardsDashboard = {
   cafeId: string;
   cafeSlug: string;
@@ -347,6 +355,48 @@ export async function getCardByCode(cardCode: string) {
 
   if (error) throw error;
   return cardRow ? mapCard(cardRow) : null;
+}
+
+export async function getLoyaltyCardViewByCode(cardCode: string): Promise<CustomerLoyaltyCardView | null> {
+  const supabase = await createClient();
+
+  const { data: cardRow, error } = await supabase
+    .from("loyalty_cards")
+    .select("*, cafes(slug, name)")
+    .eq("card_code", cardCode.toUpperCase())
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!cardRow) return null;
+
+  const cafe = Array.isArray(cardRow.cafes) ? cardRow.cafes[0] : cardRow.cafes;
+  const cafeSlug = cafe?.slug ? String(cafe.slug) : "";
+  const cafeName = cafe?.name ? String(cafe.name) : "العلامة التجارية";
+
+  const { data: programRow } = await supabase
+    .from("cafe_loyalty_programs")
+    .select("*, menu_products(name)")
+    .eq("cafe_id", String(cardRow.cafe_id))
+    .eq("enabled", true)
+    .maybeSingle();
+
+  return {
+    card: mapCard(cardRow),
+    program: mapProgram(programRow),
+    cafeSlug,
+    cafeName,
+  };
+}
+
+export async function getCurrentCustomerLoyaltyCardView(slug: string): Promise<CustomerLoyaltyCardView> {
+  const code = await issueCurrentCustomerLoyaltyCard(slug);
+  const view = await getLoyaltyCardViewByCode(code);
+
+  if (!view) {
+    throw new Error("تعذر تحميل بطاقة الولاء");
+  }
+
+  return view;
 }
 
 export async function getPublicLoyaltyProgramBySlug(slug: string) {

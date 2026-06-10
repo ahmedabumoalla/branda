@@ -4,6 +4,8 @@ import {
   createOwnerCashier,
   getOwnerLoyaltyCardsDashboard,
   issueCurrentCustomerLoyaltyCard,
+  getCurrentCustomerLoyaltyCardView,
+  getLoyaltyCardViewByCode,
   recordOwnerLoyaltyOperation,
   saveOwnerLoyaltyProgram,
   setOwnerCashierStatus,
@@ -52,4 +54,13 @@ export async function recordLoyaltyCardOperationAction(input: {
 
 export async function issueLoyaltyCardAction(slug: string) {
   return issueCurrentCustomerLoyaltyCard(slug);
+}
+
+
+export async function fetchCustomerLoyaltyCardAction(slug: string) {
+  return getCurrentCustomerLoyaltyCardView(slug);
+}
+
+export async function fetchLoyaltyCardViewByCodeAction(cardCode: string) {
+  return getLoyaltyCardViewByCode(cardCode);
 }

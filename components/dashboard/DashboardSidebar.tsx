@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  BadgeCheck,
   BarChart3,
   CalendarDays,
   CreditCard,
@@ -13,7 +14,6 @@ import {
   MapPin,
   Megaphone,
   MessageSquareText,
-  Newspaper,
   Package,
   Palette,
   Settings,
@@ -61,16 +61,17 @@ const links: {
     feature: "reviews",
   },
   {
-    title: "الصفحات التعريفية",
-    href: "/dashboard/pages",
-    icon: Newspaper,
-    feature: "pages",
-  },
-  {
     title: "الأدوات التسويقية",
     href: "/dashboard/marketing",
     icon: Megaphone,
     feature: "marketing",
+  },
+  {
+    title: "مراجعة توثيق التجارب",
+    href: "/dashboard/experience-reviews",
+    icon: BadgeCheck,
+    feature: "menu",
+    badge: "جديد",
   },
   {
     title: "طلبات الكوفي",

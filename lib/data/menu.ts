@@ -94,6 +94,7 @@ const productSchema = z.object({
   imageVariant: z.string(),
   imageStoragePath: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  imageGallery: z.array(z.object({ imageAssetId: z.string().optional(), imageDataUrl: z.string().optional().nullable(), alt: z.string().optional() })).optional().default([]),
   promo: z.unknown().optional().nullable(),
 });
 
@@ -110,17 +111,18 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     description: parsed.description,
     price: parsed.price,
     calories: parsed.calories ?? null,
-    loyalty_points: parsed.loyaltyPoints,
+    loyalty_points: 0,
     preparation_time_minutes: parsed.preparationTimeMinutes ?? null,
-    redeemable_with_points: parsed.redeemableWithPoints,
-    redemption_points: parsed.redemptionPoints ?? null,
+    redeemable_with_points: false,
+    redemption_points: null,
     available_for_pickup: parsed.availableForPickup,
     pickup_lead_minutes: parsed.pickupLeadTimeMinutes ?? null,
     ingredients: parsed.ingredients,
     available: parsed.available,
     image_variant: parsed.imageVariant,
     image_storage_path: parsed.imageStoragePath ?? null,
-    image_url: null,
+    image_url: parsed.imageUrl ?? null,
+    image_gallery: parsed.imageGallery ?? [],
     promo: parsed.promo ?? null,
   };
 
@@ -177,6 +179,7 @@ const categorySchema = z.object({
   icon: z.string().optional(),
   imageStoragePath: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  imageGallery: z.array(z.object({ imageAssetId: z.string().optional(), imageDataUrl: z.string().optional().nullable(), alt: z.string().optional() })).optional().default([]),
 });
 
 export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) {
@@ -193,7 +196,8 @@ export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) 
     featured: parsed.featured,
     icon: parsed.icon ?? null,
     image_storage_path: parsed.imageStoragePath ?? null,
-    image_url: null,
+    image_url: parsed.imageUrl ?? null,
+    image_gallery: parsed.imageGallery ?? [],
   };
 
   if (parsed.id) {
@@ -230,6 +234,8 @@ export async function saveAllMenuCategories(categories: MenuCategoryRecord[]) {
       featured: cat.featured,
       icon: cat.icon,
       imageStoragePath: cat.imageAssetId ?? null,
+      imageUrl: null,
+      imageGallery: [],
     });
     results.push(saved);
   }

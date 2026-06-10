@@ -1,135 +1,305 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import type { PlanDurationUnit, PlatformPlan } from "@/lib/platform/admin-data";
+
+import { getPlatformPlans } from "@/lib/data/admin";
+
 import type {
-  ActiveSubscription,
-  SubscriptionPaymentMethod,
-  SubscriptionPaymentRequest,
+
+  PendingSubscription,
+
   SubscriptionRecord,
+
 } from "@/lib/platform/subscription";
 
-function mapPlan(row: Record<string, unknown>): PlatformPlan {
+
+
+function mapDbStatusToPaymentStatus(
+
+  status: string
+
+): SubscriptionRecord["paymentStatus"] {
+
+  if (status === "active" || status === "trialing") return "paid";
+
+  if (status === "past_due") return "pending";
+
+  return "failed";
+
+}
+
+
+
+function mapDbRowToRecord(row: Record<string, unknown>): SubscriptionRecord {
+
+  const plan = row.platform_plans as { name: string } | null;
+
+  const status = row.status as string;
+
   return {
-    id: String(row.id),
-    name: String(row.name),
-    priceMonthly: Number(row.price_sar ?? 0),
-    offerEnabled: Boolean(row.offer_enabled),
-    offerPrice: row.offer_price_sar == null ? undefined : Number(row.offer_price_sar),
-    durationUnit: String(row.duration_unit ?? "month") as PlanDurationUnit,
-    durationCount: Number(row.duration_count ?? 1),
-    description: String(row.description ?? ""),
-    active: Boolean(row.active),
-    isDefault: false,
-    features: Array.isArray(row.features) ? (row.features as PlatformPlan["features"]) : [],
+
+    id: row.id as string,
+
+    planId: row.plan_id as string,
+
+    planName: plan?.name ?? (row.plan_id as string),
+
+    amount: Number(row.amount_sar),
+
+    paymentStatus: mapDbStatusToPaymentStatus(status),
+
+    createdAt: row.created_at as string,
+
+    paidAt:
+
+      status === "active" || status === "trialing"
+
+        ? ((row.started_at as string) ?? (row.created_at as string))
+
+        : undefined,
+
+    paymentMethodLabel: (row.payment_method_label as string) ?? undefined,
+
   };
+
 }
 
-export async function getAvailablePlans(): Promise<PlatformPlan[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("platform_plans").select("*").eq("active", true).order("sort_order");
-  if (error) throw error;
-  return (data ?? []).map(mapPlan);
-}
 
-export async function getOwnerActiveSubscription(): Promise<ActiveSubscription | null> {
-  const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("*, platform_plans(name)")
-    .eq("cafe_id", cafe.id)
-    .in("status", ["active", "trialing"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-  const plan = data.platform_plans as { name?: string } | null;
-  return {
-    id: String(data.id),
-    planId: String(data.plan_id),
-    planName: String(data.plan_name_snapshot ?? plan?.name ?? data.plan_id),
-    amount: Number(data.amount_sar ?? 0),
-    durationUnit: String(data.duration_unit ?? "month") as PlanDurationUnit,
-    durationCount: Number(data.duration_count ?? 1),
-    startedAt: String(data.started_at),
-    expiresAt: data.expires_at ? String(data.expires_at) : undefined,
-  };
-}
 
 export async function getOwnerSubscriptionHistory(): Promise<SubscriptionRecord[]> {
+
   const cafe = await requireOwnerCafeContext();
+
   const supabase = await createClient();
+
   const { data, error } = await supabase
+
     .from("subscriptions")
+
     .select("*, platform_plans(name)")
+
     .eq("cafe_id", cafe.id)
+
     .order("created_at", { ascending: false });
 
+
+
   if (error) throw error;
-  return (data ?? []).map((row) => {
-    const plan = row.platform_plans as { name?: string } | null;
-    const status = String(row.status);
-    return {
-      id: String(row.id),
-      planId: String(row.plan_id),
-      planName: String(row.plan_name_snapshot ?? plan?.name ?? row.plan_id),
-      amount: Number(row.amount_sar ?? 0),
-      paymentStatus: status === "active" || status === "trialing" ? "active" : status === "expired" ? "expired" : "cancelled",
-      durationUnit: String(row.duration_unit ?? "month") as PlanDurationUnit,
-      durationCount: Number(row.duration_count ?? 1),
-      createdAt: String(row.created_at),
-      startedAt: row.started_at ? String(row.started_at) : undefined,
-      expiresAt: row.expires_at ? String(row.expires_at) : undefined,
-    };
-  });
+
+  return (data ?? []).map(mapDbRowToRecord);
+
 }
 
-export async function getOwnerSubscriptionRequests(): Promise<SubscriptionPaymentRequest[]> {
+
+
+export async function getOwnerPendingSubscription(): Promise<PendingSubscription | null> {
+
   const cafe = await requireOwnerCafeContext();
+
   const supabase = await createClient();
+
   const { data, error } = await supabase
-    .from("subscription_payment_requests")
-    .select("*, branches(name)")
+
+    .from("subscriptions")
+
+    .select("*, platform_plans(name)")
+
     .eq("cafe_id", cafe.id)
-    .order("created_at", { ascending: false });
+
+    .eq("status", "past_due")
+
+    .order("created_at", { ascending: false })
+
+    .limit(1)
+
+    .maybeSingle();
+
+
 
   if (error) throw error;
-  return (data ?? []).map((row) => {
-    const branch = row.branches as { name?: string } | null;
-    return {
-      id: String(row.id),
-      cafeId: cafe.id,
-      planId: String(row.plan_id),
-      planName: String(row.plan_name),
-      baseAmount: Number(row.base_amount_sar),
-      amount: Number(row.amount_sar),
-      durationUnit: String(row.duration_unit) as PlanDurationUnit,
-      durationCount: Number(row.duration_count),
-      paymentMethod: row.payment_method as SubscriptionPaymentMethod,
-      branchId: row.branch_id ? String(row.branch_id) : undefined,
-      branchName: branch?.name,
-      receiptStoragePath: row.receipt_storage_path ? String(row.receipt_storage_path) : undefined,
-      status: row.status as SubscriptionPaymentRequest["status"],
-      createdAt: String(row.created_at),
-      adminResponse: row.admin_response ? String(row.admin_response) : undefined,
-    };
-  });
+
+  if (!data) return null;
+
+
+
+  const plan = data.platform_plans as { name: string } | null;
+
+  return {
+
+    id: data.id as string,
+
+    planId: data.plan_id as string,
+
+    planName: plan?.name ?? (data.plan_id as string),
+
+    amount: Number(data.amount_sar),
+
+    paymentStatus: "pending",
+
+    createdAt: data.created_at as string,
+
+  };
+
 }
 
-export async function createOwnerSubscriptionRequest(input: {
-  planId: string;
-  paymentMethod: SubscriptionPaymentMethod;
-  branchId?: string;
-}): Promise<string> {
-  await requireOwnerCafeContext();
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_subscription_payment_request", {
-    p_plan_id: input.planId,
-    p_payment_method: input.paymentMethod,
-    p_branch_id: input.branchId ?? null,
-  });
+
+
+export async function startOwnerPlanCheckout(planId: string): Promise<string> {
+
+  const cafe = await requireOwnerCafeContext();
+
+  const plans = await getPlatformPlans();
+
+  const plan = plans.find((item) => item.id === planId);
+
+  if (!plan) throw new Error("الباقة غير موجودة");
+
+
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+
+    .from("subscriptions")
+
+    .insert({
+
+      cafe_id: cafe.id,
+
+      plan_id: planId,
+
+      status: "past_due",
+
+      amount_sar: plan.priceMonthly,
+      plan_name_snapshot: plan.name,
+      duration_unit: plan.durationUnit,
+      duration_count: plan.durationCount,
+      activation_source: "brand_card_checkout",
+      payment_provider: "paypal",
+      payment_method_label: "بطاقة بنكية",
+
+    })
+
+    .select("id")
+
+    .single();
+
+
+
   if (error) throw error;
-  return String(data);
+
+  return data.id as string;
+
+}
+
+
+
+export async function completeOwnerPlanPayment(subscriptionId?: string): Promise<boolean> {
+
+  const cafe = await requireOwnerCafeContext();
+
+  const supabase = createAdminClient();
+
+
+
+  let targetId = subscriptionId;
+
+  if (!targetId) {
+
+    const { data: pending } = await supabase
+
+      .from("subscriptions")
+
+      .select("id")
+
+      .eq("cafe_id", cafe.id)
+
+      .eq("status", "past_due")
+
+      .order("created_at", { ascending: false })
+
+      .limit(1)
+
+      .maybeSingle();
+
+    if (!pending) return false;
+
+    targetId = pending.id as string;
+
+  }
+
+
+
+  const paidAt = new Date().toISOString();
+
+
+
+  await supabase
+
+    .from("subscriptions")
+
+    .update({ status: "cancelled", cancelled_at: paidAt })
+
+    .eq("cafe_id", cafe.id)
+
+    .in("status", ["active", "trialing"]);
+
+
+
+  const { error } = await supabase
+
+    .from("subscriptions")
+
+    .update({ status: "active", started_at: paidAt })
+
+    .eq("id", targetId)
+
+    .eq("cafe_id", cafe.id);
+
+
+
+  if (error) throw error;
+
+  return true;
+
+}
+
+
+
+export async function failOwnerPlanPayment(): Promise<void> {
+
+  const cafe = await requireOwnerCafeContext();
+
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+
+    .from("subscriptions")
+
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+
+    .eq("cafe_id", cafe.id)
+
+    .eq("status", "past_due");
+
+
+
+  if (error) throw error;
+
+}
+
+
+
+// Compatibility aliases for older dashboard imports.
+export async function getAvailablePlans() {
+  return getPlatformPlans();
+}
+
+export async function getOwnerActiveSubscription() {
+  return getOwnerPendingSubscription();
+}
+
+export async function getOwnerSubscriptionRequests() {
+  return [];
 }

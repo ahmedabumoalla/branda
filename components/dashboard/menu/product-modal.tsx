@@ -300,7 +300,7 @@ export function MenuProductFormModal({
       name: name.trim() || "اسم المنتج",
       category: displayCategory,
       categoryId: resolvedCategoryId,
-      description: description.trim() || "وصف مختصر يظهر للعميل في صفحة المنتج.",
+      description: description.trim() || "منتج من قائمة العلامة التجارية",
       imageAssetId,
       imageDataUrl: legacyExternalImageUrl,
       imageVariant,
@@ -360,12 +360,7 @@ export function MenuProductFormModal({
       return;
     }
 
-    if (!description.trim()) {
-      alert("اكتب وصف المنتج");
-      return;
-    }
-
-    if (!price || Number.isNaN(Number(price))) {
+        if (!price || Number.isNaN(Number(price))) {
       alert("السعر مطلوب");
       return;
     }
@@ -430,7 +425,7 @@ export function MenuProductFormModal({
       name: name.trim(),
       category: categoryName,
       categoryId: nextCategoryId,
-      description: description.trim(),
+      description: description.trim() || "منتج من قائمة العلامة التجارية",
       imageAssetId: finalAssetId,
       imageDataUrl: legacyExternalImageUrl,
       imageVariant,
@@ -569,7 +564,7 @@ export function MenuProductFormModal({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
               className="hidden"
               onChange={onPickFile}
             />

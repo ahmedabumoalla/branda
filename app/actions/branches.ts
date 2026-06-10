@@ -17,6 +17,8 @@ export async function saveBranchAction(branch: CafeBranch) {
     workingHours: branch.workingHours,
     lat: branch.lat ?? null,
     lng: branch.lng ?? null,
+    geofenceRadiusM: branch.geofenceRadiusM ?? 50,
+    welcomeMessage: branch.welcomeMessage,
     active: branch.active,
   });
 }

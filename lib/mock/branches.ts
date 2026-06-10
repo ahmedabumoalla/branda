@@ -9,6 +9,8 @@ export type CafeBranch = {
   mapUrl?: string;
   lat?: number;
   lng?: number;
+  geofenceRadiusM?: number;
+  welcomeMessage?: string;
   active: boolean;
 };
 
@@ -18,6 +20,15 @@ export function buildGoogleMapsUrl(lat?: number, lng?: number, fallback?: string
   if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;
   return fallback || "https://www.google.com/maps";
 }
+
+export function buildMapboxMapUrl(lat?: number, lng?: number, fallback?: string) {
+  if (lat && lng) {
+    return `https://www.mapbox.com/maps?coordinates=${lng},${lat}`;
+  }
+  return fallback || "https://www.mapbox.com/maps";
+}
+
+export const DEFAULT_BRANCH_GEOFENCE_RADIUS_M = 50;
 
 export const mockBranches: CafeBranch[] = [
   {
@@ -30,7 +41,9 @@ export const mockBranches: CafeBranch[] = [
     workingHours: "8 صباحًا - 12 منتصف الليل",
     lat: 21.5433,
     lng: 39.1728,
-    mapUrl: "https://www.google.com/maps?q=21.5433,39.1728",
+    geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+    welcomeMessage: "أهلًا بك في فرع التحلية، سعداء بزيارتك",
+    mapUrl: "https://www.mapbox.com/maps?coordinates=39.1728,21.5433",
     active: true,
   },
   {
@@ -43,7 +56,9 @@ export const mockBranches: CafeBranch[] = [
     workingHours: "9 صباحًا - 1 بعد منتصف الليل",
     lat: 21.6341,
     lng: 39.1044,
-    mapUrl: "https://www.google.com/maps?q=21.6341,39.1044",
+    geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+    welcomeMessage: "أهلًا بك في فرع الواجهة، استمتع بتجربتك معنا",
+    mapUrl: "https://www.mapbox.com/maps?coordinates=39.1044,21.6341",
     active: true,
   },
 ];

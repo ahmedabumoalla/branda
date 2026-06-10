@@ -14,6 +14,7 @@ export type AppNotification = {
     | "reservation_rejected"
     | "loyalty_points"
     | "experience_approved"
+    | "experience_reward"
     | "new_pickup_order"
     | "new_reservation"
     | "new_review"

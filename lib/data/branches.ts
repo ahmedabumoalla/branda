@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
-import type { CafeBranch } from "@/lib/mock/branches";
+import { buildMapboxMapUrl, DEFAULT_BRANCH_GEOFENCE_RADIUS_M, type CafeBranch } from "@/lib/mock/branches";
 
 function mapDbBranch(row: Record<string, unknown>): CafeBranch {
   const hours = row.hours as Record<string, string> | null;
@@ -16,7 +16,11 @@ function mapDbBranch(row: Record<string, unknown>): CafeBranch {
     workingHours: hours?.summary ?? (hours?.default as string) ?? "",
     lat,
     lng,
-    mapUrl: lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : undefined,
+    geofenceRadiusM: Number(row.geofence_radius_m ?? DEFAULT_BRANCH_GEOFENCE_RADIUS_M),
+    welcomeMessage:
+      (row.welcome_message as string | null) ??
+      (row.name ? `أهلًا بك في ${String(row.name)}` : undefined),
+    mapUrl: buildMapboxMapUrl(lat, lng),
     active: row.active as boolean,
   };
 }
@@ -60,6 +64,8 @@ const branchSchema = z.object({
   workingHours: z.string().optional(),
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
+  geofenceRadiusM: z.number().int().min(10).max(500).optional().nullable(),
+  welcomeMessage: z.string().max(300).optional().nullable(),
   active: z.boolean(),
   sortOrder: z.number().int().optional(),
 });
@@ -78,6 +84,10 @@ export async function upsertBranch(input: z.infer<typeof branchSchema>) {
     hours: parsed.workingHours ? { summary: parsed.workingHours } : {},
     lat: parsed.lat ?? null,
     lng: parsed.lng ?? null,
+    geofence_radius_m: parsed.geofenceRadiusM ?? DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+    welcome_message:
+      parsed.welcomeMessage ??
+      (parsed.name ? `أهلًا بك في ${parsed.name}` : null),
     active: parsed.active,
     sort_order: parsed.sortOrder ?? 0,
   };

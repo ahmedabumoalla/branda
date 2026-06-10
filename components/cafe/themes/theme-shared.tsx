@@ -16,7 +16,7 @@ import { CafeFooter } from "@/components/cafe/cafe-footer";
 import { OfferBannerImage } from "@/components/cafe/offer-banner-image";
 import { ProductImage } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel, getVisibleCategoryNames } from "@/lib/cafe/menu-category-utils";
-import { mockMenuProducts, type MenuProduct } from "@/lib/mock/menu";
+import { isPromoActive, mockMenuProducts, productFinalPrice, promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
 import { defaultMenuCategories, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import type { CafeOffer } from "@/lib/mock/offers";
@@ -158,6 +158,16 @@ export function ThemeProductCard({
 }: ProductCardProps) {
   const productHref = getCafePath(slug, `product/${product.id}`, previewThemeId);
   const categoryLabel = resolveProductCategoryLabel(product);
+  const promoOn = product.promo ? isPromoActive(product.promo) : false;
+  const finalPrice = productFinalPrice(product.price, product.promo);
+  const priceNode = promoOn && finalPrice < product.price ? (
+    <span className="inline-flex flex-col leading-tight">
+      <span>{formatSar(finalPrice)}</span>
+      <span className="text-xs opacity-60 line-through">{formatSar(product.price)}</span>
+    </span>
+  ) : (
+    <span>{formatSar(product.price)}</span>
+  );
   const base = `${theme.card} ${theme.cardHover} group block overflow-hidden transition ${className}`;
 
   if (size === "kiosk") {
@@ -174,7 +184,7 @@ export function ThemeProductCard({
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-black">{product.name}</h3>
-            <p className={`text-2xl font-black ${theme.accent}`}>{formatSar(product.price)}</p>
+            <p className={`text-2xl font-black ${theme.accent}`}>{priceNode}</p>
           </div>
           <span className={`shrink-0 rounded-lg px-4 py-3 text-sm font-black ${theme.button}`}>
             طلب
@@ -197,7 +207,7 @@ export function ThemeProductCard({
         </div>
         <p className={`mt-4 text-sm ${theme.muted}`}>{categoryLabel}</p>
         <h3 className="mt-1 text-2xl font-semibold tracking-tight">{product.name}</h3>
-        <p className={`mt-2 text-lg ${theme.accent}`}>{formatSar(product.price)}</p>
+        <p className={`mt-2 text-lg ${theme.accent}`}>{priceNode}</p>
       </Link>
     );
   }
@@ -214,7 +224,7 @@ export function ThemeProductCard({
           />
         </div>
         <h3 className="mt-2 line-clamp-2 text-sm font-black">{product.name}</h3>
-        <p className={`text-xs font-black ${theme.accent}`}>{formatSar(product.price)}</p>
+        <p className={`text-xs font-black ${theme.accent}`}>{priceNode}</p>
       </Link>
     );
   }
@@ -238,7 +248,7 @@ export function ThemeProductCard({
           <p className={`mt-3 text-sm ${theme.muted}`}>
             {product.ingredients.slice(0, 4).join(" · ") || "منتج مختار بعناية"}
           </p>
-          <p className="mt-4 text-xl font-black">{formatSar(product.price)}</p>
+          <p className="mt-4 text-xl font-black">{priceNode}</p>
         </div>
       </Link>
     );
@@ -257,7 +267,7 @@ export function ThemeProductCard({
       <p className={`mt-2 text-xs font-black ${theme.accent}`}>{categoryLabel}</p>
       <h3 className="line-clamp-1 font-black">{product.name}</h3>
       <div className="mt-2 flex items-center justify-between">
-        <span className="font-black">{formatSar(product.price)}</span>
+        <span className="font-black">{priceNode}</span>
         <span className={`rounded-lg px-2 py-1 text-[10px] font-black ${theme.badge}`}>
           التفاصيل
         </span>

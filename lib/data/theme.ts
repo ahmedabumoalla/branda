@@ -10,14 +10,8 @@ import {
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 
-export async function getPublicThemeId(slug: string): Promise<CafeThemeId> {
-  const cafe = await getCafeBySlug(slug);
-  if (!cafe) return "soft-cream-3d";
-
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("get_cafe_public_settings", { p_cafe_id: cafe.id });
-  const row = data as { theme_id?: string } | null;
-  return (row?.theme_id as CafeThemeId) ?? "soft-cream-3d";
+export async function getPublicThemeId(_slug: string): Promise<CafeThemeId> {
+  return "brand-identity-custom";
 }
 
 export async function getPublicCustomIdentity(slug: string): Promise<CustomIdentityTheme | null> {
@@ -41,6 +35,7 @@ export async function getPublicCustomIdentity(slug: string): Promise<CustomIdent
       data.logo_storage_path as string
     );
   }
+
   if (data.background_storage_path) {
     identity.backgroundAssetId = data.background_storage_path as string;
     identity.legacyBackgroundImageDataUrl = await resolvePublishedStoragePathToUrl(
@@ -52,12 +47,12 @@ export async function getPublicCustomIdentity(slug: string): Promise<CustomIdent
   return identity;
 }
 
-export async function updateOwnerThemeId(themeId: CafeThemeId) {
+export async function updateOwnerThemeId(_themeId: CafeThemeId) {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const { error } = await supabase
     .from("cafe_settings")
-    .upsert({ cafe_id: cafe.id, theme_id: themeId }, { onConflict: "cafe_id" });
+    .upsert({ cafe_id: cafe.id, theme_id: "brand-identity-custom" }, { onConflict: "cafe_id" });
   if (error) throw error;
 }
 
@@ -93,7 +88,9 @@ export async function upsertCustomIdentity(input: z.infer<typeof identitySchema>
     },
     { onConflict: "cafe_id" }
   );
+
   if (error) throw error;
+  await updateOwnerThemeId("brand-identity-custom");
 }
 
 export async function getOwnerCustomIdentity(): Promise<CustomIdentityTheme | null> {
@@ -107,6 +104,7 @@ export async function getOwnerCustomIdentity(): Promise<CustomIdentityTheme | nu
 
   if (!data) return null;
   const identity = mapDbCustomIdentity(data);
+
   if (data.logo_storage_path) {
     identity.logoAssetId = data.logo_storage_path as string;
     identity.legacyLogoDataUrl = await resolvePublishedStoragePathToUrl(
@@ -114,6 +112,7 @@ export async function getOwnerCustomIdentity(): Promise<CustomIdentityTheme | nu
       data.logo_storage_path as string
     );
   }
+
   if (data.background_storage_path) {
     identity.backgroundAssetId = data.background_storage_path as string;
     identity.legacyBackgroundImageDataUrl = await resolvePublishedStoragePathToUrl(
@@ -121,10 +120,10 @@ export async function getOwnerCustomIdentity(): Promise<CustomIdentityTheme | nu
       data.background_storage_path as string
     );
   }
+
   return identity;
 }
 
 export async function getOwnerThemeId(): Promise<CafeThemeId> {
-  const cafe = await requireOwnerCafeContext();
-  return getPublicThemeId(cafe.slug);
+  return "brand-identity-custom";
 }

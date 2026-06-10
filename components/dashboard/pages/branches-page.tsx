@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
+import { CircleDot, ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { deleteBranchAction, saveBranchAction } from "@/app/actions/branches";
 import {
@@ -12,7 +12,8 @@ import {
   SoftCard,
   StatPill,
 } from "@/components/ui/design-system";
-import { buildGoogleMapsUrl, type CafeBranch } from "@/lib/mock/branches";
+import { GoogleMapPicker } from "@/components/maps/google-map-picker";
+import { buildMapboxMapUrl, DEFAULT_BRANCH_GEOFENCE_RADIUS_M, type CafeBranch } from "@/lib/mock/branches";
 
 type Props = {
   initialBranches: CafeBranch[];
@@ -70,7 +71,9 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
         workingHours: workingHours.trim() || "غير محدد",
         lat: location.lat,
         lng: location.lng,
-        mapUrl: buildGoogleMapsUrl(location.lat, location.lng),
+        mapUrl: buildMapboxMapUrl(location.lat, location.lng),
+        geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+        welcomeMessage: `أهلًا بك في ${name.trim()}، سعداء بزيارتك`,
         active: true,
         id: crypto.randomUUID(),
       });
@@ -160,12 +163,23 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
                         <p className="mt-1 text-sm font-bold text-[#7A6255]">
                           {branch.city} {branch.workingHours ? ` ${branch.workingHours}` : ""}
                         </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-2xl bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#3A2117]">
+                            <CircleDot className="h-3.5 w-3.5" />
+                            نطاق ترحيب {branch.geofenceRadiusM ?? DEFAULT_BRANCH_GEOFENCE_RADIUS_M} متر
+                          </span>
+                          {branch.welcomeMessage ? (
+                            <span className="rounded-2xl bg-[#FFF8EF] px-3 py-1 text-xs font-black text-[#6B3A25]">
+                              {branch.welcomeMessage}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                       <a
-                        href={branch.mapUrl || buildGoogleMapsUrl(branch.lat, branch.lng)}
+                        href={branch.mapUrl || buildMapboxMapUrl(branch.lat, branch.lng)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-[#F8F4EF]"
@@ -212,57 +226,50 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
               <NeumoInput value={workingHours} onChange={(event) => setWorkingHours(event.target.value)} placeholder="أوقات العمل اختياري" />
 
               <SoftCard className="p-4">
-                <p className="mb-3 font-black text-[#3A2117]">موقع الفرع على الخريطة</p>
-                <div className="rounded-[28px] border border-[#E5D8CD] bg-white p-4">
-                    <p className="font-black text-[#3A2117]">موقع الفرع</p>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-black text-[#3A2117]">موقع الفرع على Mapbox</p>
                     <p className="mt-1 text-xs font-bold text-[#7A6255]">
-                      استخدم الموقع الحالي أو أدخل الإحداثيات يدويًا ثم افتحها في Google Maps للتأكد
+                      حرّك الخريطة أو اسحب الدبوس، وسيتم حفظ الموقع مع نطاق ترحيب 50 متر حول الفرع
                     </p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <NeumoInput
-                        type="number"
-                        step="any"
-                        value={location?.lat ?? ""}
-                        onChange={(e) =>
-                          setLocation((current) => ({
-                            lat: Number(e.target.value),
-                            lng: current?.lng ?? 0,
-                          }))
-                        }
-                        placeholder="خط العرض"
-                      />
-                      <NeumoInput
-                        type="number"
-                        step="any"
-                        value={location?.lng ?? ""}
-                        onChange={(e) =>
-                          setLocation((current) => ({
-                            lat: current?.lat ?? 0,
-                            lng: Number(e.target.value),
-                          }))
-                        }
-                        placeholder="خط الطول"
-                      />
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={useCurrentLocation}
-                        className="rounded-2xl bg-[#3A2117] px-4 py-3 text-sm font-black text-white"
-                      >
-                        تحديد موقعي الحالي
-                      </button>
-                      {location ? (
-                        <a
-                          href={buildGoogleMapsUrl(location.lat, location.lng)}
-                          target="_blank"
-                          className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]"
-                        >
-                          فتح في Google Maps
-                        </a>
-                      ) : null}
-                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={useCurrentLocation}
+                    className="rounded-2xl bg-[#3A2117] px-4 py-3 text-sm font-black text-white"
+                  >
+                    تحديد موقعي الحالي
+                  </button>
+                </div>
+
+                <GoogleMapPicker
+                  value={location}
+                  onChange={handleMapChange}
+                  heightClassName="h-[420px]"
+                />
+
+                {location ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]">
+                      خط العرض {location.lat}
+                    </div>
+                    <div className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]">
+                      خط الطول {location.lng}
+                    </div>
+                    <a
+                      href={buildMapboxMapUrl(location.lat, location.lng)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl bg-[#FFF8EF] px-4 py-3 text-center text-sm font-black text-[#6B3A25]"
+                    >
+                      فتح في Mapbox
+                    </a>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 rounded-2xl border border-[#E5D8CD] bg-white p-4 text-sm font-bold leading-7 text-[#7A6255]">
+                  سيتم حفظ دائرة ترحيب حول الفرع بنطاق 50 متر، وعند دخول العميل هذا النطاق تظهر له رسالة ترحيبية تلقائيًا في صفحة العلامة.
+                </div>
               </SoftCard>
 
               <PrimaryButton type="button" onClick={() => void addBranch()} disabled={saving} className="w-full">

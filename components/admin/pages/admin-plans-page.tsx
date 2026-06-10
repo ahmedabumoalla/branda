@@ -393,7 +393,11 @@ export function AdminPlansPage({
                     {request.cafeName} — {request.planName}
                   </p>
                   <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-                    {request.paymentMethod === "cash" ? "تحصيل كاش" : "حوالة بنكية"}
+                    {request.paymentMethod === "card_paypal"
+                      ? "دفع بالبطاقة"
+                      : request.paymentMethod === "bank_transfer"
+                        ? "حوالة بنكية"
+                        : "حوالة بنكية"}
                     {request.branchName ? ` • ${request.branchName}` : ""}
                     {" • "}
                     {request.amount} ر.س

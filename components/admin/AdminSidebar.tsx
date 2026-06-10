@@ -21,7 +21,7 @@ import { logoutBrandaAuth } from "@/lib/platform/auth";
 
 const links = [
   ["الرئيسية", "/admin", Home],
-  ["الكوفيهات", "/admin/cafes", Building2],
+  ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
   ["الإيرادات", "/admin/revenue", CircleDollarSign],
   ["العمليات", "/admin/operations", ClipboardList],
@@ -30,6 +30,7 @@ const links = [
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
   ["إدارة المناديب", "/admin/representatives", UserRoundCog],
   ["خيارات المنصة", "/admin/options", Settings2],
+  ["الدعم", "/admin/support", ClipboardList],
 ] as const;
 
 type AdminSidebarProps = {
@@ -67,7 +68,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
           href="/dashboard"
           className="mt-4 flex h-12 items-center justify-center rounded-2xl bg-gradient-to-l from-[#F6C35B] to-[#d4a84a] font-black text-[#241610] shadow-[0_0_20px_rgba(246,195,91,0.3)] transition hover:brightness-105"
         >
-          لوحة الكوفي
+          لوحة العلامة
         </Link>
       </div>
 

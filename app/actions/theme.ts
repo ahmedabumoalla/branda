@@ -4,8 +4,8 @@ import { updateOwnerThemeId, upsertCustomIdentity, getOwnerCustomIdentity } from
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 
-export async function adoptThemeAction(themeId: CafeThemeId) {
-  await updateOwnerThemeId(themeId);
+export async function adoptThemeAction(_themeId: CafeThemeId) {
+  await updateOwnerThemeId("brand-identity-custom");
 }
 
 export async function saveCustomIdentityAction(identity: CustomIdentityTheme) {

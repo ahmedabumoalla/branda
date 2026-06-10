@@ -3,7 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
-import { ExperienceCampaignSection } from "@/components/cafe/experience-campaign-section";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 import {
@@ -27,7 +26,14 @@ import {
   type CustomerTransaction,
 } from "@/lib/mock/customer-activity";
 import { formatSar } from "@/lib/format";
-import { getThemeExperience } from "@/lib/cafe/theme-experience";
+import { fetchCustomerLoyaltyCardAction } from "@/app/actions/loyalty-cards";
+import {
+  fetchCustomerExperienceRewardsAction,
+  submitCustomerExperienceRewardProofAction,
+} from "@/app/actions/experience-rewards";
+import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
+import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
+import { Bell, Barcode, Coffee, Gift, Link as LinkIcon, Send, WalletCards, X } from "lucide-react";
 
 type Reservation = {
   id: string;
@@ -45,17 +51,443 @@ type Reservation = {
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
 
+
+function CustomerCoffeeLoyaltyCard({
+  view,
+  homeHref,
+  onOpenCard,
+}: {
+  view: CustomerLoyaltyCardView | null;
+  homeHref: string;
+  onOpenCard: () => void;
+}) {
+  const program = view?.program;
+  const card = view?.card;
+  const required = Math.max(1, Number(program?.purchasesRequired ?? 7));
+  const lit = Math.min(required, Number(card?.stampsInCycle ?? 0));
+  const cups = Array.from({ length: required });
+
+  return (
+    <section className="mb-6 overflow-hidden rounded-[34px] border border-[#E7D7C6] bg-[#F1D7C6] p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <div className="rounded-[28px] bg-[#4A281D] p-5 text-[#FCF8F3] shadow-2xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-serif text-2xl font-black uppercase tracking-[0.18em]">
+                Loyalty Card
+              </p>
+              <p className="mt-1 text-xs font-bold text-[#E7D7C6]">
+                اشتر {required} مرات واحصل على {program?.rewardName || "كوب مجاني"}
+              </p>
+            </div>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D9A33F] text-[#311912]">
+              <WalletCards className="h-6 w-6" />
+            </span>
+          </div>
+
+          <div className="mt-6 grid grid-cols-4 gap-4 sm:grid-cols-7">
+            {cups.map((_, index) => {
+              const active = index < lit;
+              return (
+                <div key={index} className="flex flex-col items-center gap-2">
+                  <div
+                    className={`relative flex h-16 w-14 items-center justify-center rounded-b-2xl rounded-t-md border-2 transition-all ${
+                      active
+                        ? "border-[#FFD36B] bg-[#FFD36B] text-[#4A281D] shadow-[0_0_24px_rgba(255,211,107,0.75)]"
+                        : "border-[#8A6B5E] bg-[#6B4A3B] text-[#D8BDAF]"
+                    }`}
+                  >
+                    <Coffee className="h-7 w-7" />
+                    <span
+                      className={`absolute -top-2 h-2 w-10 rounded-t-xl ${
+                        active ? "bg-[#FFF3C4]" : "bg-[#8A6B5E]"
+                      }`}
+                    />
+                  </div>
+                  <p className="text-[10px] font-black">
+                    {active ? "مضيء" : `${index + 1}`}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-white p-4 text-center text-[#17100d]">
+            <p className="font-mono text-sm font-black tracking-[0.2em]">
+              {card?.cardCode || "BRANDA LOYALTY"}
+            </p>
+            <div className="mt-3 grid grid-cols-12 gap-1">
+              {Array.from({ length: 36 }).map((_, index) => (
+                <span
+                  key={index}
+                  className="h-7 rounded-sm bg-[#17100d]"
+                  style={{ opacity: index % 3 === 0 ? 1 : 0.55 }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-black text-[#D9A33F]">بطاقة الولاء الخاصة بالعلامة التجارية</p>
+          <h2 className="mt-2 text-3xl font-black text-[#311912]">
+            {program?.cardTitle || "بطاقة الولاء"}
+          </h2>
+          <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
+            كل مرة يقرأ الكاشير باركود البطاقة مع باركود الفاتورة يضيء كوب جديد حتى تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4 text-center">
+              <p className="text-2xl font-black text-[#311912]">{lit}</p>
+              <p className="text-xs font-bold text-[#806A5E]">أكواب مضيئة</p>
+            </div>
+            <div className="rounded-2xl bg-white p-4 text-center">
+              <p className="text-2xl font-black text-[#311912]">{required}</p>
+              <p className="text-xs font-bold text-[#806A5E]">المطلوب</p>
+            </div>
+            <div className="rounded-2xl bg-white p-4 text-center">
+              <p className="text-2xl font-black text-[#311912]">{card?.availableRewards ?? 0}</p>
+              <p className="text-xs font-bold text-[#806A5E]">مكافآت جاهزة</p>
+            </div>
+          </div>
+
+          {(card?.availableRewards ?? 0) > 0 ? (
+            <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#D9A33F] p-4 font-black text-[#311912]">
+              <Gift className="h-5 w-5" />
+              لديك مكافأة جاهزة للصرف
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onOpenCard}
+              className="rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
+            >
+              فتح البطاقة والباركود
+            </button>
+            <a
+              href={homeHref}
+              className="rounded-2xl border border-[#6B3A25] px-5 py-3 font-black text-[#6B3A25]"
+            >
+              رجوع للصفحة الرئيسية
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+
+function formatRewardDate(value?: string) {
+  if (!value) return "غير محدد";
+  try {
+    return new Intl.DateTimeFormat("ar-SA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function ExperienceRewardBarcode({ code }: { code: string }) {
+  const pattern = Array.from(code || "BRANDA").map((char, index) => {
+    const size = ((char.charCodeAt(0) + index) % 4) + 2;
+    return `${size}px`;
+  });
+
+  return (
+    <div className="rounded-[24px] border border-[#E7D7C6] bg-white p-4">
+      <div
+        aria-label={`باركود المكافأة ${code}`}
+        className="h-20 w-full rounded-xl bg-[#311912]"
+        style={{
+          backgroundImage: `repeating-linear-gradient(90deg, #311912 0 ${pattern[0] ?? "3px"}, transparent ${pattern[0] ?? "3px"} ${Number.parseInt(pattern[0] ?? "3", 10) + 2}px)`,
+        }}
+      />
+      <p className="mt-3 select-all rounded-2xl bg-[#FCF8F3] px-3 py-2 text-center font-mono text-sm font-black tracking-[0.18em] text-[#311912]">
+        {code}
+      </p>
+      <p className="mt-2 text-center text-[11px] font-black text-[#806A5E]">
+        يقرأه الكاشير من خانة صرف مكافأة توثيق التجربة
+      </p>
+    </div>
+  );
+}
+
+function ExperienceProofPanel({
+  rewards,
+  open,
+  onOpen,
+  onClose,
+  experienceUrl,
+  views,
+  comments,
+  notes,
+  busy,
+  onExperienceUrl,
+  onViews,
+  onComments,
+  onNotes,
+  onSubmit,
+}: {
+  rewards: CustomerExperienceReward[];
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  experienceUrl: string;
+  views: string;
+  comments: string;
+  notes: string;
+  busy: boolean;
+  onExperienceUrl: (value: string) => void;
+  onViews: (value: string) => void;
+  onComments: (value: string) => void;
+  onNotes: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  const rewardNotifications = rewards.slice(0, 8);
+  const readyRewards = rewards.filter((reward) => reward.status === "approved" && reward.rewardCode);
+  const pendingRewards = rewards.filter((reward) => reward.status === "pending").length;
+
+  return (
+    <section className="mb-6 space-y-5">
+      <div className="rounded-[34px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-black text-[#D9A33F]">
+              <Bell className="h-4 w-4" />
+              التنبيهات والمكافآت
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-[#311912]">
+              مكافآت توثيق التجربة
+            </h2>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها تلقائيًا، ومع كل مكافأة باركود خاص يستخدم مرة واحدة فقط عند الكاشير
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
+          >
+            <LinkIcon className="h-4 w-4" />
+            توثيق تجربة جديدة
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-3xl bg-[#FCF8F3] p-4">
+            <p className="text-xs font-black text-[#806A5E]">مكافآت جاهزة</p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">{readyRewards.length}</p>
+          </div>
+          <div className="rounded-3xl bg-[#FCF8F3] p-4">
+            <p className="text-xs font-black text-[#806A5E]">بانتظار المراجعة</p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">{pendingRewards}</p>
+          </div>
+          <div className="rounded-3xl bg-[#FCF8F3] p-4">
+            <p className="text-xs font-black text-[#806A5E]">كل التوثيقات</p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">{rewards.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {rewardNotifications.length ? (
+        <div className="grid gap-4">
+          {rewardNotifications.map((reward, index) => {
+            const isReady = reward.status === "approved" && Boolean(reward.rewardCode);
+            const isRedeemed = reward.status === "redeemed";
+            const statusText =
+              isReady
+                ? "لديكم مكافأة جاهزة"
+                : isRedeemed
+                  ? "تم صرف المكافأة"
+                  : reward.status === "rejected"
+                    ? "تم رفض التوثيق"
+                    : "بانتظار مراجعة العلامة";
+
+            return (
+              <article
+                key={reward.id}
+                className={`rounded-[34px] border p-5 shadow-[0_16px_40px_rgba(49,25,18,0.07)] ${
+                  isReady
+                    ? "border-[#D9A33F] bg-[#FFF8E8]"
+                    : "border-[#E7D7C6] bg-white"
+                }`}
+              >
+                <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-2xl bg-[#6B3A25] px-3 py-1 text-xs font-black text-white">
+                        {statusText}
+                      </span>
+                      <span className="rounded-2xl bg-white px-3 py-1 text-xs font-black text-[#806A5E]">
+                        توثيق رقم {reward.id.slice(0, 8)}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-4 text-xl font-black text-[#311912]">
+                      {isReady
+                        ? `مكافأة مقابل توثيق التجربة رقم ${reward.id.slice(0, 8)}`
+                        : `توثيق تجربة رقم ${reward.id.slice(0, 8)}`}
+                    </h3>
+
+                    <div className="mt-4 grid gap-3 text-sm font-bold text-[#806A5E] sm:grid-cols-2">
+                      <p>رابط التوثيق: <a className="font-black text-[#6B3A25] underline" href={reward.experienceUrl} target="_blank" rel="noreferrer">فتح الرابط</a></p>
+                      <p>المشاهدات: {reward.currentViews.toLocaleString("ar-SA")}</p>
+                      <p>التعليقات: {reward.currentComments.toLocaleString("ar-SA")}</p>
+                      <p>تاريخ الإرسال: {formatRewardDate(reward.createdAt)}</p>
+                      {reward.rewardExpiresAt ? (
+                        <p className="sm:col-span-2">صلاحية المكافأة: حتى {formatRewardDate(reward.rewardExpiresAt)}</p>
+                      ) : null}
+                    </div>
+
+                    {reward.customerNotes ? (
+                      <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-bold leading-7 text-[#806A5E]">
+                        ملاحظاتك: {reward.customerNotes}
+                      </p>
+                    ) : null}
+
+                    {reward.reviewNotes ? (
+                      <p className="mt-3 rounded-2xl bg-[#FCF8F3] px-4 py-3 text-sm font-bold leading-7 text-[#806A5E]">
+                        ملاحظات العلامة: {reward.reviewNotes}
+                      </p>
+                    ) : null}
+
+                    {reward.items.length ? (
+                      <div className="mt-4">
+                        <p className="text-sm font-black text-[#311912]">تفاصيل المكافأة</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {reward.items.map((item) => (
+                            <span
+                              key={item.id || `${reward.id}-${item.productId}`}
+                              className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-[#6B3A25]"
+                            >
+                              {item.productName} × {item.quantity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {isReady ? (
+                    <ExperienceRewardBarcode code={reward.rewardCode} />
+                  ) : isRedeemed ? (
+                    <div className="rounded-[24px] border border-[#E7D7C6] bg-[#F8F4EF] p-5 text-center">
+                      <Barcode className="mx-auto h-9 w-9 text-[#806A5E]" />
+                      <p className="mt-3 font-black text-[#311912]">تم استخدام الباركود</p>
+                      <p className="mt-2 text-xs font-bold text-[#806A5E]">
+                        توقف هذا الباركود ولا يمكن صرفه مرة أخرى
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-[24px] border border-dashed border-[#E7D7C6] bg-[#FCF8F3] p-5 text-center">
+                      <Barcode className="mx-auto h-9 w-9 text-[#806A5E]" />
+                      <p className="mt-3 font-black text-[#311912]">
+                        الباركود يظهر بعد اعتماد العلامة
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-[34px] border border-dashed border-[#E7D7C6] bg-white p-8 text-center shadow-sm">
+          <Gift className="mx-auto h-10 w-10 text-[#D9A33F]" />
+          <h3 className="mt-3 text-xl font-black text-[#311912]">لا توجد تنبيهات مكافآت حتى الآن</h3>
+          <p className="mt-2 text-sm font-bold text-[#806A5E]">
+            وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع الباركود الخاص بها
+          </p>
+        </div>
+      )}
+
+      {open ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-xl rounded-[32px] bg-white p-5 text-[#311912] shadow-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-2xl font-black">إرسال توثيق تجربة</h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FCF8F3]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <label className="grid gap-2">
+                <span className="text-sm font-black text-[#806A5E]">رابط التجربة</span>
+                <input
+                  value={experienceUrl}
+                  onChange={(event) => onExperienceUrl(event.target.value)}
+                  placeholder="https://..."
+                  className="h-12 rounded-2xl border border-[#E7D7C6] px-4 font-bold outline-none"
+                />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-[#806A5E]">عدد المشاهدات الحالية</span>
+                  <input
+                    value={views}
+                    onChange={(event) => onViews(event.target.value)}
+                    inputMode="numeric"
+                    className="h-12 rounded-2xl border border-[#E7D7C6] px-4 font-bold outline-none"
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-sm font-black text-[#806A5E]">عدد التعليقات الحالية</span>
+                  <input
+                    value={comments}
+                    onChange={(event) => onComments(event.target.value)}
+                    inputMode="numeric"
+                    className="h-12 rounded-2xl border border-[#E7D7C6] px-4 font-bold outline-none"
+                  />
+                </label>
+              </div>
+              <label className="grid gap-2">
+                <span className="text-sm font-black text-[#806A5E]">ملاحظات العميل</span>
+                <textarea
+                  value={notes}
+                  onChange={(event) => onNotes(event.target.value)}
+                  rows={4}
+                  className="rounded-2xl border border-[#E7D7C6] px-4 py-3 font-bold outline-none"
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={busy}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-4 font-black text-white disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" />
+              إرسال للعلامة للمراجعة
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const { experience, settings, path, previewThemeId, themeId } = useCafePageContext(slug);
+  const { experience, settings, path, previewThemeId } = useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const defaultTab: TabKey =
-    getThemeExperience(themeId).account === "lounge-reservations"
-      ? "reservations"
-      : "orders";
+  const defaultTab: TabKey = "orders";
 
   const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
@@ -71,6 +503,44 @@ function AccountPageInner() {
   const [pendingAvatar, setPendingAvatar] = useState<OptimizedImageResult | null>(null);
   const [avatarAssetId, setAvatarAssetId] = useState<string | undefined>();
   const [optimizingAvatar, setOptimizingAvatar] = useState(false);
+  const [loyaltyView, setLoyaltyView] = useState<CustomerLoyaltyCardView | null>(null);
+  const [experienceRewards, setExperienceRewards] = useState<CustomerExperienceReward[]>([]);
+  const [experienceProofOpen, setExperienceProofOpen] = useState(false);
+  const [experienceUrl, setExperienceUrl] = useState("");
+  const [experienceViews, setExperienceViews] = useState("");
+  const [experienceComments, setExperienceComments] = useState("");
+  const [experienceNotes, setExperienceNotes] = useState("");
+  const [submittingExperienceProof, setSubmittingExperienceProof] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshRewards() {
+      try {
+        const items = await fetchCustomerExperienceRewardsAction(slug);
+        if (!cancelled) setExperienceRewards(items);
+      } catch {
+        if (!cancelled) setExperienceRewards([]);
+      }
+    }
+
+    void refreshRewards();
+
+    const onFocus = () => {
+      void refreshRewards();
+    };
+
+    window.addEventListener("focus", onFocus);
+    const timer = window.setInterval(() => {
+      void refreshRewards();
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
+  }, [slug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +586,22 @@ function AccountPageInner() {
           notes: o.notes,
         }))
       );
+      void fetchCustomerLoyaltyCardAction(slug)
+        .then((view) => {
+          if (!cancelled) setLoyaltyView(view);
+        })
+        .catch(() => {
+          if (!cancelled) setLoyaltyView(null);
+        });
+
+      void fetchCustomerExperienceRewardsAction(slug)
+        .then((items) => {
+          if (!cancelled) setExperienceRewards(items);
+        })
+        .catch(() => {
+          if (!cancelled) setExperienceRewards([]);
+        });
+
       setReservations(
         cafeReservations.map((r) => ({
           id: r.id,
@@ -204,6 +690,12 @@ function AccountPageInner() {
       .slice(0, 4);
   }, [myOrders, myReservations, myTransactions]);
 
+  function openLoyaltyCard() {
+    if (loyaltyView?.card.cardCode) {
+      router.push(`/loyalty-card/${loyaltyView.card.cardCode}?back=${encodeURIComponent(path("account"))}`);
+    }
+  }
+
   function logout() {
     clearCustomerSession(slug);
     router.push(path());
@@ -261,10 +753,64 @@ function AccountPageInner() {
     }
   }
 
+  async function submitExperienceProof() {
+    if (!experienceUrl.trim()) {
+      alert("أدخل رابط التجربة");
+      return;
+    }
+
+    setSubmittingExperienceProof(true);
+    try {
+      await submitCustomerExperienceRewardProofAction({
+        cafeSlug: slug,
+        experienceUrl: experienceUrl.trim(),
+        currentViews: Number(experienceViews || 0),
+        currentComments: Number(experienceComments || 0),
+        customerNotes: experienceNotes.trim() || undefined,
+      });
+
+      const items = await fetchCustomerExperienceRewardsAction(slug);
+      setExperienceRewards(items);
+      setExperienceUrl("");
+      setExperienceViews("");
+      setExperienceComments("");
+      setExperienceNotes("");
+      setExperienceProofOpen(false);
+      alert("تم إرسال التوثيق للعلامة التجارية للمراجعة");
+    } catch {
+      alert("تعذر إرسال التوثيق، تأكد من الرابط وحاول مرة أخرى");
+    } finally {
+      setSubmittingExperienceProof(false);
+    }
+  }
+
   if (!customer) return null;
 
   return (
     <>
+      <CustomerCoffeeLoyaltyCard
+        view={loyaltyView}
+        homeHref={path()}
+        onOpenCard={openLoyaltyCard}
+      />
+
+      <ExperienceProofPanel
+        rewards={experienceRewards}
+        open={experienceProofOpen}
+        onOpen={() => setExperienceProofOpen(true)}
+        onClose={() => setExperienceProofOpen(false)}
+        experienceUrl={experienceUrl}
+        views={experienceViews}
+        comments={experienceComments}
+        notes={experienceNotes}
+        busy={submittingExperienceProof}
+        onExperienceUrl={setExperienceUrl}
+        onViews={setExperienceViews}
+        onComments={setExperienceComments}
+        onNotes={setExperienceNotes}
+        onSubmit={() => void submitExperienceProof()}
+      />
+
       <ThemedAccountPanel
         slug={slug}
         experience={experience}
@@ -307,7 +853,6 @@ function AccountPageInner() {
         onSaveSettings={() => void saveSettings()}
         fileRef={fileRef}
       />
-      <ExperienceCampaignSection slug={slug} compact />
     </>
   );
 }

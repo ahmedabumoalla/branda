@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock } from "lucide-react";
 import { createCafeOrderAction } from "@/app/actions/orders";
 import { formatSar } from "@/lib/format";
-import { promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
+import { promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import type { CafeBranch } from "@/lib/mock/branches";
 import { ProductReviews } from "@/components/cafe/product-reviews";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
@@ -17,7 +17,7 @@ import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { ProductImage } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 
-const TAX_RATE = 0.15;
+
 
 function defaultPickupTime(leadMinutes = 30) {
   const d = new Date();
@@ -50,10 +50,9 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   const activeBranches = branches.filter((b) => b.active);
 
-  const subtotal = product ? product.price * quantity : 0;
-  const taxAmount = Math.round(subtotal * TAX_RATE * 100) / 100;
-  const total = Math.round((subtotal + taxAmount) * 100) / 100;
-  const loyaltyPoints = Math.floor(total);
+  const unitPrice = product ? productFinalPrice(product.price, product.promo) : 0;
+  const subtotal = product ? unitPrice * quantity : 0;
+  const total = Math.round(subtotal * 100) / 100;
 
   async function addToOrder() {
     if (!product) return;
@@ -64,7 +63,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       return;
     }
 
-    if (!branchName) {
+    if (activeBranches.length > 1 && !branchName) {
       alert("اختر فرع الاستلام");
       return;
     }
@@ -82,7 +81,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         customer,
         product,
         quantity,
-        branchName,
+        branchName: activeBranches.length === 1 ? activeBranches[0].name : branchName,
         pickupAt: pickupLabel,
         notes: notes.trim() || undefined,
       });
@@ -140,16 +139,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       text: `جاهز خلال ${product.preparationTimeMinutes} دقيقة`,
     });
   }
-  if (product.redeemableWithPoints && product.redemptionPoints) {
-    metaBadges.push({
-      text: `يمكن استبداله مقابل ${product.redemptionPoints} نقطة`,
-    });
-  }
-  if (loyaltyPoints > 0) {
-    metaBadges.push({
-      text: `تكسب +${loyaltyPoints} نقطة عند الطلب`,
-    });
-  }
+
 
   const imageSlot = (
     <div className="relative flex h-[min(420px,50vh)] items-center justify-center overflow-hidden rounded-2xl bg-black/5">
@@ -218,10 +208,8 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["السعر", formatSar(product.price)],
-          ["الضريبة", formatSar(taxAmount)],
+          ["السعر شامل الضريبة", formatSar(unitPrice)],
           ["الإجمالي", formatSar(total)],
-          ["نقاط الولاء", `+${loyaltyPoints}`],
         ].map(([label, val]) => (
           <div key={label} className={`rounded-2xl p-3 text-center ${theme.card}`}>
             <p className={`text-xs font-black ${theme.muted}`}>{label}</p>
@@ -234,23 +222,19 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         <div className={`mt-6 space-y-4 rounded-2xl p-4 ${theme.card}`}>
           <p className="text-sm font-black">تفاصيل الاستلام</p>
 
-          <label className="block">
-            <span className={`flex items-center gap-1 text-xs font-black ${theme.muted}`}>
-              <MapPin className="h-3.5 w-3.5" />
-              فرع الاستلام
-            </span>
-            <select
-              value={branchName}
-              onChange={(e) => setBranchName(e.target.value)}
-              className={`mt-2 w-full rounded-xl border px-4 py-3 text-sm font-bold outline-none ${theme.card}`}
-            >
-              {activeBranches.map((branch) => (
-                <option key={branch.id} value={branch.name}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {activeBranches.length > 1 ? (
+            <label className="block">
+              <span className={`flex items-center gap-1 text-xs font-black ${theme.muted}`}>
+                <MapPin className="h-3.5 w-3.5" />
+                فرع الاستلام
+              </span>
+              <select value={branchName} onChange={(e) => setBranchName(e.target.value)} className={`mt-2 w-full rounded-xl border px-4 py-3 text-sm font-bold outline-none ${theme.card}`}>
+                {activeBranches.map((branch) => (
+                  <option key={branch.id} value={branch.name}>{branch.name} {branch.address ? ` - ${branch.address}` : ""}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <label className="block">
             <span className={`flex items-center gap-1 text-xs font-black ${theme.muted}`}>

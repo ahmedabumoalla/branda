@@ -2,6 +2,7 @@
 
 import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   deleteMenuProductAction,
   saveMenuCategoriesAction,
@@ -37,6 +38,7 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
   const { toast, showToast } = useAppToast();
 
   const sortedCategories = useMemo(
@@ -78,6 +80,7 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
         setProducts((prev) => [saved, ...prev]);
       }
       showToast({ type: "success", message: "تم حفظ المنتج" });
+      router.refresh();
     } catch {
       showToast({ type: "error", message: "تعذر حفظ المنتج" });
     } finally {

@@ -222,7 +222,7 @@ function ReserveForm() {
         type="button"
         onClick={() => void submitReservation()}
         disabled={submitting}
-        className={`md:col-span-2 w-full font-black disabled:opacity-60 ${experience.reserve === "kiosk" ? "h-16 text-lg rounded-lg" : "h-14 rounded-2xl"} ${theme.button}`}
+        className={`md:col-span-2 w-full font-black disabled:opacity-60 h-14 rounded-2xl ${theme.button}`}
       >
         {submitting ? "جاري الإرسال..." : "إرسال طلب الحجز"}
       </button>

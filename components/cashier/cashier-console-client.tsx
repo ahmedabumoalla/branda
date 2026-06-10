@@ -2,10 +2,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, BellRing, CalendarDays, LogOut, QrCode, RefreshCw, ScanLine, ShoppingBag } from "lucide-react";
+import { BadgeCheck, BellRing, CalendarDays, Gift, LogOut, QrCode, RefreshCw, ScanLine, ShoppingBag } from "lucide-react";
 import {
   acceptCashierOrderAction,
   acceptCashierReservationAction,
+  cashierRedeemExperienceRewardAction,
   cashierScanLoyaltyAction,
   confirmReservationCodeAction,
   logoutCashierAction,
@@ -35,6 +36,7 @@ export function CashierConsoleClient({ initialData }: Props) {
   const [invoiceBarcode, setInvoiceBarcode] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState("");
   const [reservationCode, setReservationCode] = useState("");
+  const [experienceRewardCode, setExperienceRewardCode] = useState("");
   const [operation, setOperation] = useState<"stamp" | "redeem">("stamp");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -78,6 +80,30 @@ export function CashierConsoleClient({ initialData }: Props) {
     finally { setBusy(false); }
   }
 
+
+  async function redeemExperienceReward() {
+    if (!experienceRewardCode.trim()) {
+      setMessage("أدخل باركود مكافأة توثيق التجربة");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const result = await cashierRedeemExperienceRewardAction(experienceRewardCode.trim());
+      const items = Array.isArray(result.items)
+        ? result.items
+            .map((item) => `${String(item.productName ?? "")} × ${String(item.quantity ?? 1)}`)
+            .join("، ")
+        : "مكافأة";
+      setMessage(`تم صرف مكافأة توثيق التجربة للعميل ${String(result.customerName ?? "عميل")} — ${items}`);
+      setExperienceRewardCode("");
+    } catch {
+      setMessage("باركود مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function scanLoyalty() {
     if (!cardCode.trim() || !invoiceBarcode.trim()) { setMessage("أدخل باركود البطاقة وباركود الفاتورة"); return; }
     setBusy(true);
@@ -119,6 +145,19 @@ export function CashierConsoleClient({ initialData }: Props) {
               <select className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">تأكيد عملية شراء</option><option value="redeem">صرف مكافأة</option></select>
             </div>
             <div className="mt-5 flex flex-wrap gap-3"><BarcodeCameraScanner label="قراءة بطاقة العميل" onDetected={(value) => setCardCode(value.toUpperCase())} /><BarcodeCameraScanner label="قراءة باركود الفاتورة" onDetected={setInvoiceBarcode} /><button onClick={scanLoyalty} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912] disabled:opacity-60"><BadgeCheck className="h-4 w-4" /> تنفيذ العملية</button></div>
+          </section>
+
+
+          <section className="rounded-[28px] bg-white p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 text-xl font-black"><Gift className="h-6 w-6 text-[#6B3A25]" /> صرف مكافأة توثيق التجربة</h2>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+              اقرأ باركود المكافأة الظاهر في تنبيهات العميل، وبعد الصرف يتوقف الباركود مباشرة ولا يمكن استخدامه مرة ثانية
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
+              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="باركود مكافأة التوثيق" value={experienceRewardCode} onChange={(e) => setExperienceRewardCode(e.target.value.toUpperCase())} />
+              <button onClick={redeemExperienceReward} disabled={busy} className="rounded-2xl bg-[#D9A33F] px-5 py-3 font-black text-[#311912] disabled:opacity-60">صرف المكافأة</button>
+            </div>
+            <div className="mt-5"><BarcodeCameraScanner label="قراءة باركود المكافأة" onDetected={(value) => setExperienceRewardCode(value.toUpperCase())} /></div>
           </section>
 
           <section className="rounded-[28px] bg-white p-5 shadow-sm">

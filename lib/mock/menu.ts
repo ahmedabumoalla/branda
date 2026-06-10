@@ -9,6 +9,12 @@ export type MenuImageVariant =
 
 export type PromoKind = "خصم" | "منتج مجاني مع الطلب" | "عرض مخصص";
 
+export type MenuProductImage = {
+  imageAssetId?: string;
+  imageDataUrl?: string | null;
+  alt?: string;
+};
+
 export type ProductPromo = {
   kind: PromoKind;
   /** percent = خصم مئوي من السعر الأساسي, fixed_price = سعر نهائي بعد الخصم */
@@ -30,6 +36,7 @@ export type MenuProduct = {
   imageDataUrl?: string | null;
   /** IndexedDB reference — mock only; production → Storage URL */
   imageAssetId?: string;
+  imageGallery?: MenuProductImage[];
   imageVariant: MenuImageVariant;
   price: number;
   calories?: number;

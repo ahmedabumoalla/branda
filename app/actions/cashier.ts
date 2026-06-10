@@ -11,6 +11,7 @@ import {
   loginCashierWithPassword,
   logoutCashier,
 } from "@/lib/data/cashier";
+import { redeemCashierExperienceReward } from "@/lib/data/experience-rewards";
 
 export async function loginCashierAction(email: string, password: string) {
   const result = await loginCashierWithPassword(email, password);
@@ -47,4 +48,9 @@ export async function cashierScanLoyaltyAction(input: {
   operation: "stamp" | "redeem";
 }) {
   return cashierScanLoyalty(input);
+}
+
+
+export async function cashierRedeemExperienceRewardAction(rewardCode: string) {
+  return redeemCashierExperienceReward(rewardCode);
 }

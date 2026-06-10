@@ -5,12 +5,52 @@ import {
   getLocalAssetObjectUrl,
   revokeObjectUrl,
 } from "@/lib/cafe/local-asset-store";
+import { isHttpImageUrl, isLegacyDataImageUrl } from "@/lib/cafe/image-asset-pipeline";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 
 type PreviewUrls = {
   logoUrl?: string;
   backgroundUrl?: string;
 };
+
+const publicUrlCache = new Map<string, string>();
+
+async function resolvePublicStorageUrl(bucket: string, path: string) {
+  const key = `${bucket}:${path}`;
+  const cached = publicUrlCache.get(key);
+  if (cached) return cached;
+
+  const response = await fetch(
+    `/api/public/storage?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
+    { cache: "no-store" }
+  );
+
+  if (!response.ok) return undefined;
+
+  const payload = (await response.json()) as { url?: string };
+  if (payload.url) {
+    publicUrlCache.set(key, payload.url);
+  }
+
+  return payload.url;
+}
+
+async function resolveAssetUrl(assetId: string | undefined, bucket: string) {
+  if (!assetId) return undefined;
+
+  if (isHttpImageUrl(assetId) || isLegacyDataImageUrl(assetId)) {
+    return assetId;
+  }
+
+  const localObjectUrl = await getLocalAssetObjectUrl(assetId);
+  if (localObjectUrl) return localObjectUrl;
+
+  if (assetId.includes("/")) {
+    return resolvePublicStorageUrl(bucket, assetId);
+  }
+
+  return undefined;
+}
 
 export function useCustomIdentityVisuals(
   identity: CustomIdentityTheme,
@@ -27,21 +67,15 @@ export function useCustomIdentityVisuals(
     let resolvedBackgroundUrl: string | undefined;
 
     async function load() {
-      if (preview?.logoUrl) {
-        resolvedLogoUrl = preview.logoUrl;
-      } else if (identity.logoAssetId) {
-        resolvedLogoUrl = await getLocalAssetObjectUrl(identity.logoAssetId);
-      } else if (identity.legacyLogoDataUrl) {
-        resolvedLogoUrl = identity.legacyLogoDataUrl;
-      }
+      resolvedLogoUrl =
+        preview?.logoUrl ??
+        (await resolveAssetUrl(identity.logoAssetId, "cafe-logos")) ??
+        identity.legacyLogoDataUrl;
 
-      if (preview?.backgroundUrl) {
-        resolvedBackgroundUrl = preview.backgroundUrl;
-      } else if (identity.backgroundAssetId) {
-        resolvedBackgroundUrl = await getLocalAssetObjectUrl(identity.backgroundAssetId);
-      } else if (identity.legacyBackgroundImageDataUrl) {
-        resolvedBackgroundUrl = identity.legacyBackgroundImageDataUrl;
-      }
+      resolvedBackgroundUrl =
+        preview?.backgroundUrl ??
+        (await resolveAssetUrl(identity.backgroundAssetId, "cafe-backgrounds")) ??
+        identity.legacyBackgroundImageDataUrl;
 
       if (!cancelled) {
         setLogoUrl(resolvedLogoUrl);

@@ -1,21 +1,17 @@
-import {
-  normalizeThemeId,
-  type CafeThemeId,
-} from "@/lib/mock/cafe-theme";
+import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
-import { adoptThemeAction } from "@/app/actions/theme";
-import { saveCustomIdentityAction } from "@/app/actions/theme";
+import { adoptThemeAction, saveCustomIdentityAction } from "@/app/actions/theme";
 
 export const BRANDA_THEME_UPDATED_EVENT = "branda:theme-updated";
 export const BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT = "branda:custom-identity-updated";
 export const BRANDA_MENU_CATEGORIES_UPDATED_EVENT = "branda:menu-categories-updated";
 
 export function readSavedCafeThemeIdFromStorage(): CafeThemeId {
-  return normalizeThemeId(null);
+  return "brand-identity-custom";
 }
 
-export async function adoptCafeTheme(themeId: CafeThemeId) {
-  await adoptThemeAction(themeId);
+export async function adoptCafeTheme(_themeId: CafeThemeId) {
+  await adoptThemeAction("brand-identity-custom");
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(BRANDA_THEME_UPDATED_EVENT));
   }
@@ -41,38 +37,14 @@ export function subscribeBrandaStorageEvents(handlers: {
 }) {
   if (typeof window === "undefined") return () => {};
 
-  if (handlers.onThemeUpdated) {
-    window.addEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
-  }
-  if (handlers.onCustomIdentityUpdated) {
-    window.addEventListener(
-      BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT,
-      handlers.onCustomIdentityUpdated
-    );
-  }
-  if (handlers.onMenuCategoriesUpdated) {
-    window.addEventListener(
-      BRANDA_MENU_CATEGORIES_UPDATED_EVENT,
-      handlers.onMenuCategoriesUpdated
-    );
-  }
+  if (handlers.onThemeUpdated) window.addEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
+  if (handlers.onCustomIdentityUpdated) window.addEventListener(BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT, handlers.onCustomIdentityUpdated);
+  if (handlers.onMenuCategoriesUpdated) window.addEventListener(BRANDA_MENU_CATEGORIES_UPDATED_EVENT, handlers.onMenuCategoriesUpdated);
 
   return () => {
-    if (handlers.onThemeUpdated) {
-      window.removeEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
-    }
-    if (handlers.onCustomIdentityUpdated) {
-      window.removeEventListener(
-        BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT,
-        handlers.onCustomIdentityUpdated
-      );
-    }
-    if (handlers.onMenuCategoriesUpdated) {
-      window.removeEventListener(
-        BRANDA_MENU_CATEGORIES_UPDATED_EVENT,
-        handlers.onMenuCategoriesUpdated
-      );
-    }
+    if (handlers.onThemeUpdated) window.removeEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
+    if (handlers.onCustomIdentityUpdated) window.removeEventListener(BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT, handlers.onCustomIdentityUpdated);
+    if (handlers.onMenuCategoriesUpdated) window.removeEventListener(BRANDA_MENU_CATEGORIES_UPDATED_EVENT, handlers.onMenuCategoriesUpdated);
   };
 }
 
@@ -81,15 +53,15 @@ export async function runCustomIdentityMigrationOnce() {
 }
 
 export async function migrateAllLegacyImageDataUrls() {
-  throw new Error("Legacy localStorage migration removed — use Supabase storage");
+  return { ok: true as const };
 }
 
 export async function migrateLegacyCustomIdentityAssets() {
-  throw new Error("Legacy localStorage migration removed — use Supabase storage");
+  return { ok: true as const };
 }
 
 export async function repairLocalImageStorage(_force?: boolean) {
-  throw new Error("Legacy localStorage repair removed — use Supabase storage");
+  return { ok: true as const };
 }
 
 export function settingsContainsLegacyBase64() {

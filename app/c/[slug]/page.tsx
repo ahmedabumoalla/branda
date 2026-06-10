@@ -1,11 +1,10 @@
 import { CafePageClient } from "@/components/cafe/cafe-page-client";
 
-type Props = {
+type Params = {
   params: Promise<{ slug: string }>;
 };
 
-export default async function CafePage({ params }: Props) {
+export default async function CafePublicPage({ params }: Params) {
   const { slug } = await params;
-
   return <CafePageClient slug={slug} />;
 }

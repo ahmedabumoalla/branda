@@ -145,10 +145,8 @@ export function MenuProductCard({
           </div>
 
           <div>
-            <p className="text-[10px] font-black text-[#7A6255]">ولاء</p>
-            <p className="font-black text-[#8B5E3C]">
-              +{product.loyaltyPoints.toLocaleString("ar-SA")}
-            </p>
+            <p className="text-[10px] font-black text-[#7A6255]">الاستلام</p>
+            <p className="font-black text-[#8B5E3C]">{product.availableForPickup === false ? "لا" : "متاح"}</p>
           </div>
         </div>
 

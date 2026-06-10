@@ -24,7 +24,7 @@ export default async function ThemePage() {
 
       <ThemePageClient
 
-        initialThemeId="soft-cream-3d"
+        initialThemeId="brand-identity-custom"
 
         initialSettings={{
 
@@ -128,7 +128,7 @@ export default async function ThemePage() {
 
       <ThemePageClient
 
-        initialThemeId="soft-cream-3d"
+        initialThemeId="brand-identity-custom"
 
         initialSettings={{
 

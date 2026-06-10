@@ -9,6 +9,66 @@ import type {
   PlanDurationUnit,
 } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
+import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+
+
+function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
+  return String(status) === "active" ? "نشط" : "موقوف";
+}
+
+function makeMaintenanceAccountNumber(cafeId: string, slug: string) {
+  const idPart = cafeId.replaceAll("-", "").slice(0, 8).toUpperCase();
+  const slugPart = slug.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() || "BRND";
+  return `BR-${slugPart}-${idPart}`;
+}
+
+function daysUntil(value: unknown): number | null {
+  if (!value) return null;
+  const target = new Date(String(value)).getTime();
+  if (!Number.isFinite(target)) return null;
+  return Math.max(0, Math.ceil((target - Date.now()) / 86400000));
+}
+
+function categoryLabel(category: unknown) {
+  const id = String(category ?? "cafes_coffee");
+  return BUSINESS_CATEGORIES.find((item) => item.id === id)?.label ?? id;
+}
+
+async function safeCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  cafeId: string,
+  extra?: (query: any) => any
+) {
+  try {
+    let query = supabase.from(table).select("id", { count: "exact", head: true }).eq("cafe_id", cafeId);
+    if (extra) query = extra(query);
+    const { count, error } = await query;
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function safeSumOrders(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cafeId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("total,total_amount,final_price")
+      .eq("cafe_id", cafeId);
+    if (error) return 0;
+    return (data ?? []).reduce((sum, row: Record<string, unknown>) => {
+      return sum + Number(row.total ?? row.total_amount ?? row.final_price ?? 0);
+    }, 0);
+  } catch {
+    return 0;
+  }
+}
+
 
 const planSchema = z.object({
   id: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/),
@@ -172,36 +232,128 @@ export async function rejectSubscriptionRequest(requestId: string, response: str
 export async function getAdminCafes(): Promise<PlatformCafe[]> {
   await requirePlatformAdmin();
   const supabase = await createClient();
+
   const { data: cafes, error } = await supabase
     .from("cafes")
-    .select("*, cafe_settings(*), subscriptions(plan_id, status)")
+    .select(`
+      *,
+      cafe_settings(*),
+      subscriptions(*),
+      cafe_members(user_id, role, profiles(email, full_name))
+    `)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+
   if (error) throw error;
 
-  return (cafes ?? []).map((row) => {
-    const settings = row.cafe_settings as Record<string, unknown> | null;
-    const subscriptions = row.subscriptions as { plan_id: string; status: string }[] | null;
-    const activeSub = subscriptions?.find((item) => item.status === "active" || item.status === "trialing");
-    return {
-      id: String(row.id),
-      slug: String(row.slug),
-      name: String(row.name),
-      ownerName: String(settings?.owner_name ?? ""),
-      ownerEmail: String(settings?.owner_email ?? ""),
-      ownerPhone: String(settings?.owner_phone ?? ""),
-      planId: activeSub?.plan_id ?? "",
-      status: row.status === "active" ? "نشط" : "موقوف",
-      totalRevenue: 0,
-      totalOrders: 0,
-      customersCount: 0,
-      createdAt: String(row.created_at).slice(0, 10),
-      customDomain: settings?.custom_domain as string | undefined,
-      customDomainStatus: settings?.domain_status as PlatformCafe["customDomainStatus"],
-      purchasedDomain: settings?.purchased_domain as string | undefined,
-      purchasedDomainStatus: settings?.purchased_domain_status as PlatformCafe["purchasedDomainStatus"],
-    };
-  });
+  const rows = (cafes ?? []) as Record<string, unknown>[];
+
+  return Promise.all(
+    rows.map(async (row) => {
+      const cafeId = String(row.id);
+      const slug = String(row.slug);
+      const settings = row.cafe_settings as Record<string, unknown> | null;
+      const subscriptions = Array.isArray(row.subscriptions)
+        ? (row.subscriptions as Record<string, unknown>[])
+        : [];
+
+      const activeSub =
+        subscriptions.find((item) => ["active", "trialing"].includes(String(item.status))) ??
+        subscriptions[0];
+
+      const ownerMember = Array.isArray(row.cafe_members)
+        ? (row.cafe_members as Record<string, unknown>[]).find(
+            (item) => String(item.role) === "owner"
+          )
+        : null;
+      const ownerProfile = ownerMember?.profiles as Record<string, unknown> | null | undefined;
+
+      const [
+        productsCount,
+        offersCount,
+        branchesCount,
+        customersCount,
+        ordersCount,
+        reservationsCount,
+        reviewsCount,
+        experienceSubmissionsCount,
+        experienceRewardsCount,
+        loyaltyCardsCount,
+        supportTicketsCount,
+        totalRevenue,
+      ] = await Promise.all([
+        safeCount(supabase, "menu_products", cafeId, (q) => q.is("deleted_at", null)),
+        safeCount(supabase, "offers", cafeId, (q) => q.is("deleted_at", null)),
+        safeCount(supabase, "branches", cafeId, (q) => q.is("deleted_at", null)),
+        safeCount(supabase, "customer_profiles", cafeId),
+        safeCount(supabase, "orders", cafeId),
+        safeCount(supabase, "reservations", cafeId),
+        safeCount(supabase, "reviews", cafeId),
+        safeCount(supabase, "experience_reward_submissions", cafeId),
+        safeCount(supabase, "experience_reward_submissions", cafeId, (q) =>
+          q.in("status", ["approved", "redeemed"])
+        ),
+        safeCount(supabase, "loyalty_cards", cafeId),
+        safeCount(supabase, "brand_support_tickets", cafeId),
+        safeSumOrders(supabase, cafeId),
+      ]);
+
+      return {
+        id: cafeId,
+        slug,
+        name: String(row.name ?? ""),
+        businessCategory: String(row.business_category ?? "cafes_coffee"),
+        businessCategoryLabel: categoryLabel(row.business_category),
+        ownerName: String(settings?.owner_name ?? ownerProfile?.full_name ?? ""),
+        ownerEmail: String(settings?.owner_email ?? ownerProfile?.email ?? ""),
+        ownerPhone: String(settings?.owner_phone ?? ""),
+        ownerLoginEmail: String(ownerProfile?.email ?? settings?.owner_email ?? ""),
+        passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة.",
+        maintenanceAccountNumber: makeMaintenanceAccountNumber(cafeId, slug),
+        logoUrl: String(settings?.logo_url ?? ""),
+        logoAssetId: settings?.logo_storage_path ? String(settings.logo_storage_path) : undefined,
+        description: settings?.description ? String(settings.description) : undefined,
+        instagram: settings?.instagram ? String(settings.instagram) : undefined,
+        whatsapp: settings?.whatsapp ? String(settings.whatsapp) : undefined,
+        taxNumber: settings?.tax_number ? String(settings.tax_number) : undefined,
+        commercialRegister: settings?.commercial_register ? String(settings.commercial_register) : undefined,
+        maroofCertificate: settings?.maroof_certificate ? String(settings.maroof_certificate) : undefined,
+        planId: activeSub ? String(activeSub.plan_id ?? "") : "",
+        planName: activeSub ? String(activeSub.plan_name_snapshot ?? activeSub.plan_id ?? "") : "",
+        planStartedAt: activeSub?.started_at ? String(activeSub.started_at).slice(0, 10) : undefined,
+        planExpiresAt: activeSub?.expires_at ? String(activeSub.expires_at).slice(0, 10) : undefined,
+        planRemainingDays: daysUntil(activeSub?.expires_at),
+        hasActivePlan: Boolean(activeSub && ["active", "trialing"].includes(String(activeSub.status))),
+        status: normalizeCafeStatus(row.status),
+        totalRevenue,
+        totalOrders: ordersCount,
+        customersCount,
+        productsCount,
+        offersCount,
+        branchesCount,
+        reservationsCount,
+        reviewsCount,
+        experienceSubmissionsCount,
+        experienceRewardsCount,
+        loyaltyCardsCount,
+        supportTicketsCount,
+        subscriptionsCount: subscriptions.length,
+        renewalsCount: subscriptions.filter((item) => String(item.activation_source ?? "").includes("renew")).length,
+        createdAt: String(row.created_at).slice(0, 10),
+        publicUrl: `/c/${slug}`,
+        customDomain: settings?.custom_domain as string | undefined,
+        customDomainStatus: settings?.domain_status as PlatformCafe["customDomainStatus"],
+        purchasedDomain: settings?.purchased_domain as string | undefined,
+        purchasedDomainStatus: settings?.purchased_domain_status as PlatformCafe["purchasedDomainStatus"],
+        purchasedDomainCreatedAt: settings?.purchased_domain_created_at
+          ? String(settings.purchased_domain_created_at).slice(0, 10)
+          : undefined,
+        purchasedDomainConnectedAt: settings?.purchased_domain_connected_at
+          ? String(settings.purchased_domain_connected_at).slice(0, 10)
+          : undefined,
+      };
+    })
+  );
 }
 
 export async function getAdminCustomers(): Promise<PlatformCustomer[]> {

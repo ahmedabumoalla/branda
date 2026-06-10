@@ -1,7 +1,37 @@
 "use client";
 
-import { Building2, Eye, ExternalLink, Power, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  Armchair,
+  Building2,
+  CalendarDays,
+  CircleDollarSign,
+  Coffee,
+  Copy,
+  Dumbbell,
+  ExternalLink,
+  Eye,
+  Gift,
+  Globe,
+  HeartPulse,
+  KeyRound,
+  Layers3,
+  MessageSquareText,
+  Package,
+  Power,
+  Scissors,
+  Search,
+  ShieldCheck,
+  Shirt,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  TicketCheck,
+  Utensils,
+  Users,
+  X,
+} from "lucide-react";
+import { useMemo, useState, type ElementType } from "react";
 import {
   updateCafePlanAction,
   updateCafeStatusAction,
@@ -19,19 +49,31 @@ import {
   StatusBadge,
 } from "@/components/ui/design-system";
 import {
-  getCafeSubdomainHost,
   getCafeDisplayDomain,
   getCafePublicUrl,
   resolveCafeDomainSource,
 } from "@/lib/platform/cafe-domain";
-import {
-  allPlatformFeatures,
-  type PlatformCafe,
-  type PlatformCustomer,
-  type PlatformOperation,
-  type PlatformPlan,
+import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+import type {
+  PlatformCafe,
+  PlatformCustomer,
+  PlatformOperation,
+  PlatformPlan,
 } from "@/lib/platform/admin-data";
 import { formatSar } from "@/lib/format";
+
+const iconMap = {
+  Coffee,
+  Utensils,
+  Sparkles,
+  Scissors,
+  HeartPulse,
+  Dumbbell,
+  ShoppingBag,
+  Shirt,
+  Armchair,
+  CalendarDays,
+} as const;
 
 const softPanel =
   "rounded-2xl border border-white/10 bg-[#0f0c0a]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
@@ -43,6 +85,52 @@ type Props = {
   initialOperations: PlatformOperation[];
   configError?: string;
 };
+
+function countByCategory(cafes: PlatformCafe[]) {
+  return BUSINESS_CATEGORIES.map((category) => ({
+    ...category,
+    count: cafes.filter((cafe) => (cafe.businessCategory ?? "cafes_coffee") === category.id).length,
+  }));
+}
+
+function info(value?: string | number | null) {
+  if (value === null || value === undefined || value === "") return "غير متوفر";
+  return String(value);
+}
+
+function copy(text?: string | null) {
+  if (!text) return;
+  void navigator.clipboard?.writeText(text);
+}
+
+function StatBox({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <Icon className="mb-3 h-5 w-5 text-[#F6C35B]" />
+      <p className="text-xs font-bold text-[#CBB29C]">{label}</p>
+      <p className="mt-1 text-2xl font-black text-[#F8F4EF]">{value}</p>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 py-3 last:border-b-0">
+      <span className="text-sm font-bold text-[#CBB29C]">{label}</span>
+      <span className="max-w-full break-words text-left text-sm font-black text-[#F8F4EF]">
+        {info(value)}
+      </span>
+    </div>
+  );
+}
 
 export function AdminCafesPage({
   initialCafes,
@@ -58,7 +146,9 @@ export function AdminCafesPage({
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "نشط" | "موقوف">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(initialCafes[0]?.id ?? null);
+  const [modalCafe, setModalCafe] = useState<PlatformCafe | null>(null);
 
   const filtered = useMemo(() => {
     return cafes.filter((cafe) => {
@@ -69,13 +159,15 @@ export function AdminCafesPage({
         cafe.ownerName.includes(q) ||
         cafe.ownerPhone.includes(q) ||
         cafe.ownerEmail.includes(q) ||
-        cafe.slug.includes(q);
+        cafe.slug.includes(q) ||
+        String(cafe.maintenanceAccountNumber ?? "").includes(q);
       const matchesStatus = statusFilter === "all" || cafe.status === statusFilter;
-      return matchesQuery && matchesStatus;
+      const matchesCategory = categoryFilter === "all" || cafe.businessCategory === categoryFilter;
+      return matchesQuery && matchesStatus && matchesCategory;
     });
-  }, [cafes, query, statusFilter]);
+  }, [cafes, query, statusFilter, categoryFilter]);
 
-  const selected = cafes.find((c) => c.id === selectedId) ?? null;
+  const selected = cafes.find((c) => c.id === selectedId) ?? filtered[0] ?? null;
   const selectedDomainSettings = selected
     ? {
         customDomain: selected.customDomain,
@@ -86,6 +178,7 @@ export function AdminCafesPage({
     : null;
   const selectedDomainSource = resolveCafeDomainSource(selectedDomainSettings);
   const selectedPlan = plans.find((p) => p.id === selected?.planId);
+  const categoryStats = countByCategory(cafes);
 
   const cafeCustomers = useMemo(
     () => (selected ? customers.filter((c) => c.cafeId === selected.id) : []),
@@ -109,7 +202,7 @@ export function AdminCafesPage({
         )
       );
     } catch {
-      alert("تعذر تحديث حالة الكوفي");
+      alert("تعذر تحديث حالة العلامة التجارية");
     }
   }
 
@@ -124,8 +217,8 @@ export function AdminCafesPage({
 
   return (
     <AdminPageShell
-      title="الكوفيهات المسجلة"
-      subtitle="اضغط على أي كوفي لعرض التفاصيل الكاملة والتحكم بالباقة والحالة."
+      title="العلامات التجارية"
+      subtitle="إدارة جميع العلامات التجارية المسجلة وتفاصيلها التشغيلية والمالية والدعم والصيانة."
       action={<BrandaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
@@ -133,13 +226,55 @@ export function AdminCafesPage({
           {configError}
         </div>
       ) : null}
+
+      <section className="mb-6 rounded-[28px] border border-white/10 bg-white/[0.03] p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black text-[#F6C35B]">تصنيفات العلامات التجارية</p>
+            <h2 className="text-xl font-black text-[#F8F4EF]">حسب تصنيفات التسجيل</h2>
+          </div>
+          <span className="rounded-2xl bg-[#F6C35B]/15 px-4 py-2 text-sm font-black text-[#F6C35B]">
+            {cafes.length} علامة
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {categoryStats.map((category) => {
+            const Icon = iconMap[category.icon as keyof typeof iconMap] ?? Store;
+            const active = categoryFilter === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setCategoryFilter(active ? "all" : category.id)}
+                className={`rounded-2xl border p-4 text-right transition ${
+                  active
+                    ? "border-[#F6C35B]/60 bg-[#F6C35B]/15"
+                    : "border-white/10 bg-[#0f0c0a]/50 hover:border-[#F6C35B]/30"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <Icon className="h-6 w-6 text-[#F6C35B]" />
+                  <span className="rounded-xl bg-white/10 px-3 py-1 text-xs font-black text-[#F8F4EF]">
+                    {category.count}
+                  </span>
+                </div>
+                <p className="mt-3 font-black text-[#F8F4EF]">{category.label}</p>
+                <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                  {category.available ? "متاح حاليًا" : "قريبًا"}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <AdminFilterBar>
-        <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">
+        <div className="relative min-w-0 w-full flex-1 sm:min-w-[240px]">
           <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#CBB29C]" />
           <AdminInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالاسم، المالك، الجوال..."
+            placeholder="ابحث باسم العلامة، المالك، الجوال، رقم الصيانة..."
             className="pr-12"
           />
         </div>
@@ -152,268 +287,343 @@ export function AdminCafesPage({
           <option value="نشط">نشط فقط</option>
           <option value="موقوف">موقوف فقط</option>
         </AdminSelect>
-        <div className={`w-full min-w-0 sm:w-auto sm:min-w-[140px] ${softPanel}`}>
-          <AdminStatPill label="النتائج" value={filtered.length} />
+        <AdminSelect
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="max-w-xs"
+        >
+          <option value="all">كل التصنيفات</option>
+          {BUSINESS_CATEGORIES.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.label}
+            </option>
+          ))}
+        </AdminSelect>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AdminStatPill label="العلامات" value={cafes.length} />
+          <AdminStatPill label="النشطة" value={cafes.filter((c) => c.status === "نشط").length} />
+          <AdminStatPill label="اشتراكات فعالة" value={cafes.filter((c) => c.hasActivePlan).length} />
+          <AdminStatPill label="إيراد الطلبات" value={formatSar(cafes.reduce((s, c) => s + c.totalRevenue, 0))} />
         </div>
       </AdminFilterBar>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <BentoGrid className="xl:grid-cols-1">
-          {filtered.map((cafe) => {
-            const active = cafe.id === selectedId;
-            return (
-              <button
-                key={cafe.id}
-                type="button"
-                onClick={() => setSelectedId(cafe.id)}
-                className="w-full text-right"
-              >
-                <BentoCard
-                  variant={active ? "gold" : "cyber"}
-                  span="4"
-                  className={`transition ${active ? "ring-2 ring-[#F6C35B]/50" : "hover:border-[#F6C35B]/30"}`}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F6C35B]/20 text-[#F6C35B]">
-                        <Building2 className="h-7 w-7" />
-                      </div>
-                      <div>
-                        <h2 className="break-words text-xl font-black sm:text-2xl">{cafe.name}</h2>
-                        <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-                          {cafe.ownerName} • /c/{cafe.slug}
-                        </p>
-                      </div>
-                    </div>
-                    <StatusBadge tone={cafe.status === "نشط" ? "success" : "danger"}>
-                      {cafe.status}
-                    </StatusBadge>
-                  </div>
-                  <p className="mt-3 text-sm font-bold text-[#7A6255]">
-                    {formatSar(cafe.totalRevenue)} • {cafe.totalOrders} طلب • {cafe.customersCount}{" "}
-                    عميل
-                  </p>
-                </BentoCard>
-              </button>
-            );
-          })}
-        </BentoGrid>
+      <BentoGrid className="mt-6">
+        <BentoCard variant="dark" span="3">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-black text-[#F8F4EF]">جدول العلامات التجارية</h2>
+            <span className="text-sm font-bold text-[#CBB29C]">{filtered.length} نتيجة</span>
+          </div>
 
-        {selected ? (
-          <aside className="xl:sticky xl:top-8 xl:self-start">
-            <BentoCard variant="dark" span="4" className="max-h-[calc(100vh-8rem)] overflow-y-auto">
-              <div className="mb-6 flex items-start justify-between gap-3">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1180px] w-full text-right text-sm">
+              <thead>
+                <tr className="border-b border-white/10 text-[#CBB29C]">
+                  {["العلامة", "التصنيف", "رقم الصيانة", "الباقة", "المنتجات", "العروض", "التوثيقات", "المكافآت", "الدعم", "الحالة", "تفاصيل"].map((head) => (
+                    <th key={head} className="px-3 py-3 font-black">{head}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((cafe) => (
+                  <tr
+                    key={cafe.id}
+                    onClick={() => {
+                      setSelectedId(cafe.id);
+                      setModalCafe(cafe);
+                    }}
+                    className="cursor-pointer border-b border-white/5 text-[#F8F4EF] transition hover:bg-white/[0.04]"
+                  >
+                    <td className="px-3 py-4">
+                      <div className="flex items-center gap-3">
+                        {cafe.logoUrl ? (
+                          <img src={cafe.logoUrl} alt={cafe.name} className="h-11 w-11 rounded-2xl object-contain bg-white" />
+                        ) : (
+                          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F6C35B]/15">
+                            <Building2 className="h-5 w-5 text-[#F6C35B]" />
+                          </span>
+                        )}
+                        <div>
+                          <p className="font-black">{cafe.name}</p>
+                          <p className="text-xs font-bold text-[#7A6255]">/{cafe.slug}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 text-[#CBB29C]">{cafe.businessCategoryLabel}</td>
+                    <td className="px-3 py-4 font-mono text-xs">{cafe.maintenanceAccountNumber}</td>
+                    <td className="px-3 py-4">{cafe.planName || selectedPlan?.name || cafe.planId || "بدون باقة"}</td>
+                    <td className="px-3 py-4">{cafe.productsCount ?? 0}</td>
+                    <td className="px-3 py-4">{cafe.offersCount ?? 0}</td>
+                    <td className="px-3 py-4">{cafe.experienceSubmissionsCount ?? 0}</td>
+                    <td className="px-3 py-4">{cafe.experienceRewardsCount ?? 0}</td>
+                    <td className="px-3 py-4">{cafe.supportTicketsCount ?? 0}</td>
+                    <td className="px-3 py-4"><StatusBadge tone={cafe.status === "نشط" ? "success" : "danger"}>{cafe.status}</StatusBadge></td>
+                    <td className="px-3 py-4">
+                      <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-[#F6C35B]/15 px-3 py-2 font-black text-[#F6C35B]">
+                        <Eye className="h-4 w-4" /> عرض
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!filtered.length ? (
+                  <tr>
+                    <td colSpan={11} className="px-3 py-10 text-center font-bold text-[#7A6255]">
+                      لا توجد علامات تجارية مطابقة
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </BentoCard>
+
+        <BentoCard variant="dark">
+          {selected ? (
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black text-[#F6C35B]">تفاصيل الكوفي</p>
-                  <h2 className="mt-1 text-3xl font-black text-[#F8F4EF]">{selected.name}</h2>
-                  <StatusBadge tone={selected.status === "نشط" ? "success" : "danger"}>
-                    {selected.status}
-                  </StatusBadge>
+                  <p className="text-sm font-black text-[#F6C35B]">العلامة المحددة</p>
+                  <h2 className="mt-1 text-2xl font-black text-[#F8F4EF]">{selected.name}</h2>
+                  <p className="mt-1 text-sm font-bold text-[#CBB29C]">{selected.businessCategoryLabel}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="rounded-xl border border-white/10 p-2 text-[#CBB29C] xl:hidden"
-                  aria-label="إغلاق"
+                  onClick={() => void toggleCafe(selected.id)}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 font-black ${
+                    selected.status === "نشط"
+                      ? "bg-red-500/15 text-red-300"
+                      : "bg-emerald-500/15 text-emerald-300"
+                  }`}
                 >
-                  <X className="h-5 w-5" />
+                  <Power className="h-4 w-4" />
+                  {selected.status === "نشط" ? "إيقاف" : "تفعيل"}
                 </button>
               </div>
 
-              <div className="space-y-3 text-sm font-bold">
-                <DetailRow label="المعرّف" value={selected.id} />
-                <DetailRow label="Slug" value={selected.slug} />
-                <DetailRow
-                  label="رابط الكوفي"
-                  value={getCafeDisplayDomain(selected.slug, selectedDomainSettings)}
-                />
-                <DetailRow
-                  label="مسار fallback"
-                  value={getCafePublicUrl(selected.slug)}
-                />
-                <DetailRow label="المالك" value={selected.ownerName} />
-                <DetailRow label="البريد" value={selected.ownerEmail} />
-                <DetailRow label="الجوال" value={selected.ownerPhone} />
-                <DetailRow label="تاريخ التسجيل" value={selected.createdAt} />
+              <div className="grid grid-cols-2 gap-3">
+                <StatBox icon={Package} label="منتجات" value={selected.productsCount ?? 0} />
+                <StatBox icon={Gift} label="عروض" value={selected.offersCount ?? 0} />
+                <StatBox icon={Users} label="عملاء" value={selected.customersCount ?? 0} />
+                <StatBox icon={TicketCheck} label="مكافآت" value={selected.experienceRewardsCount ?? 0} />
               </div>
 
-              <div className="mt-6">
-                <h3 className="mb-3 font-black text-[#F8F4EF]">الدومينات</h3>
-                <div className="space-y-2 text-sm font-bold">
-                  <DetailRow label="Subdomain" value={getCafeSubdomainHost(selected.slug)} />
-                  <DetailRow label="Custom Domain" value={selected.customDomain || "—"} />
-                  <DetailRow label="Purchased Domain" value={selected.purchasedDomain || "—"} />
-                  <DetailRow
-                    label="Status"
-                    value={
-                      selected.purchasedDomainStatus ||
-                      selected.customDomainStatus ||
-                      "غير مربوط"
-                    }
-                  />
-                  <DetailRow label="Source" value={selectedDomainSource} />
-                  <DetailRow
-                    label="CreatedAt"
-                    value={selected.purchasedDomainCreatedAt || selected.createdAt}
-                  />
-                  <DetailRow
-                    label="Verified/PurchasedAt"
-                    value={selected.purchasedDomainConnectedAt || "—"}
-                  />
+              <div className={softPanel}>
+                <DetailRow label="رقم الصيانة" value={selected.maintenanceAccountNumber} />
+                <DetailRow label="إيميل الدخول" value={selected.ownerLoginEmail} />
+                <DetailRow label="كلمة المرور" value={selected.passwordAccessNote} />
+                <DetailRow label="تاريخ الانضمام" value={selected.createdAt} />
+                <DetailRow label="الباقة الحالية" value={selected.planName || selected.planId || "بدون باقة"} />
+                <DetailRow label="باقي في الباقة" value={selected.planRemainingDays == null ? "غير محدد" : `${selected.planRemainingDays} يوم`} />
+              </div>
+
+              <div className="grid gap-2">
+                <GoldButton type="button" onClick={() => setModalCafe(selected)} className="w-full">
+                  عرض كل التفاصيل
+                </GoldButton>
+                <Link
+                  href={getCafePublicUrl(selected.slug, { settings: selectedDomainSettings })}
+                  target="_blank"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 font-black text-[#F8F4EF]"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  رابط العلامة
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center font-bold text-[#7A6255]">اختر علامة تجارية من الجدول</p>
+          )}
+        </BentoCard>
+      </BentoGrid>
+
+      {selected ? (
+        <BentoGrid className="mt-6">
+          <BentoCard variant="dark" span="2">
+            <h3 className="mb-4 text-xl font-black text-[#F8F4EF]">التحكم بالباقة والحالة</h3>
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+              <AdminSelect value={selected.planId} onChange={(e) => void updatePlan(selected.id, e.target.value)}>
+                <option value="">بدون باقة</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>{plan.name}</option>
+                ))}
+              </AdminSelect>
+              <button
+                type="button"
+                onClick={() => void toggleCafe(selected.id)}
+                className="rounded-2xl bg-[#F6C35B] px-5 py-3 font-black text-[#241610]"
+              >
+                {selected.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <StatBox icon={Layers3} label="عدد الاشتراكات" value={selected.subscriptionsCount ?? 0} />
+              <StatBox icon={CircleDollarSign} label="عدد التجديدات" value={selected.renewalsCount ?? 0} />
+              <StatBox icon={ShieldCheck} label="لها باقة؟" value={selected.hasActivePlan ? "نعم" : "لا"} />
+            </div>
+          </BentoCard>
+
+          <BentoCard variant="dark" span="2">
+            <h3 className="mb-4 text-xl font-black text-[#F8F4EF]">آخر العمليات المرتبطة</h3>
+            <div className="space-y-2">
+              {cafeOperations.map((operation) => (
+                <div key={operation.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-black text-[#F8F4EF]">{operation.title}</p>
+                    <span className="text-xs font-bold text-[#CBB29C]">{operation.createdAt}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                    {operation.type} {operation.amount ? `• ${formatSar(operation.amount)}` : ""}
+                  </p>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <a
-                    href={getCafePublicUrl(selected.slug, { settings: selectedDomainSettings })}
+              ))}
+              {!cafeOperations.length ? (
+                <p className="py-6 text-center font-bold text-[#7A6255]">لا توجد عمليات حديثة</p>
+              ) : null}
+            </div>
+          </BentoCard>
+
+          <BentoCard variant="dark" span="2">
+            <h3 className="mb-4 text-xl font-black text-[#F8F4EF]">عملاء العلامة</h3>
+            <div className="space-y-2">
+              {cafeCustomers.slice(0, 8).map((customer) => (
+                <div key={customer.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <div>
+                    <p className="font-black text-[#F8F4EF]">{customer.fullName}</p>
+                    <p className="text-xs font-bold text-[#7A6255]">{customer.phone} {customer.email ? `• ${customer.email}` : ""}</p>
+                  </div>
+                  <span className="text-sm font-black text-[#F6C35B]">{formatSar(customer.totalSpent)}</span>
+                </div>
+              ))}
+              {!cafeCustomers.length ? (
+                <p className="py-6 text-center font-bold text-[#7A6255]">لا يوجد عملاء مسجلون</p>
+              ) : null}
+            </div>
+          </BentoCard>
+        </BentoGrid>
+      ) : null}
+
+      {modalCafe ? (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModalCafe(null)}>
+          <div
+            className="mx-auto my-8 max-w-6xl rounded-[32px] border border-white/10 bg-[#15100d] p-5 text-[#F8F4EF] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {modalCafe.logoUrl ? (
+                  <img src={modalCafe.logoUrl} alt={modalCafe.name} className="h-20 w-20 rounded-3xl bg-white object-contain" />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#F6C35B]/15">
+                    <Building2 className="h-9 w-9 text-[#F6C35B]" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-black text-[#F6C35B]">{modalCafe.businessCategoryLabel}</p>
+                  <h2 className="text-3xl font-black">{modalCafe.name}</h2>
+                  <p className="mt-1 font-mono text-sm text-[#CBB29C]">{modalCafe.maintenanceAccountNumber}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setModalCafe(null)} className="rounded-2xl bg-white/10 p-3">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-4">
+              <StatBox icon={Package} label="عدد المنتجات" value={modalCafe.productsCount ?? 0} />
+              <StatBox icon={Gift} label="كل العروض" value={modalCafe.offersCount ?? 0} />
+              <StatBox icon={MessageSquareText} label="كل التوثيقات" value={modalCafe.experienceSubmissionsCount ?? 0} />
+              <StatBox icon={TicketCheck} label="كل المكافآت" value={modalCafe.experienceRewardsCount ?? 0} />
+              <StatBox icon={Users} label="العملاء" value={modalCafe.customersCount ?? 0} />
+              <StatBox icon={ShoppingBag} label="الطلبات" value={modalCafe.totalOrders} />
+              <StatBox icon={CalendarDays} label="الحجوزات" value={modalCafe.reservationsCount ?? 0} />
+              <StatBox icon={CircleDollarSign} label="إيراد الطلبات" value={formatSar(modalCafe.totalRevenue)} />
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className={softPanel}>
+                <h3 className="mb-3 text-lg font-black text-[#F6C35B]">بيانات العلامة والحساب</h3>
+                <DetailRow label="اسم العلامة" value={modalCafe.name} />
+                <DetailRow label="الرابط المختصر" value={modalCafe.slug} />
+                <DetailRow label="رقم حساب الصيانة" value={modalCafe.maintenanceAccountNumber} />
+                <DetailRow label="اسم المالك" value={modalCafe.ownerName} />
+                <DetailRow label="إيميل المالك" value={modalCafe.ownerEmail} />
+                <DetailRow label="إيميل الدخول" value={modalCafe.ownerLoginEmail} />
+                <DetailRow label="كلمة المرور" value={modalCafe.passwordAccessNote} />
+                <DetailRow label="جوال المالك" value={modalCafe.ownerPhone} />
+                <DetailRow label="تاريخ الانضمام" value={modalCafe.createdAt} />
+              </div>
+
+              <div className={softPanel}>
+                <h3 className="mb-3 text-lg font-black text-[#F6C35B]">الدومين والروابط</h3>
+                <DetailRow label="رابط العلامة" value={getCafePublicUrl(modalCafe.slug, {
+                  settings: {
+                    customDomain: modalCafe.customDomain,
+                    domainStatus: modalCafe.customDomainStatus || "غير مربوط",
+                    purchasedDomain: modalCafe.purchasedDomain,
+                    purchasedDomainStatus: modalCafe.purchasedDomainStatus || "غير مربوط",
+                  },
+                })} />
+                <DetailRow label="مصدر الدومين" value={getCafeDisplayDomain(modalCafe.slug, {
+                  customDomain: modalCafe.customDomain,
+                  domainStatus: modalCafe.customDomainStatus || "غير مربوط",
+                  purchasedDomain: modalCafe.purchasedDomain,
+                  purchasedDomainStatus: modalCafe.purchasedDomainStatus || "غير مربوط",
+                })} />
+                <DetailRow label="دومين مخصص" value={modalCafe.customDomain} />
+                <DetailRow label="حالة الدومين المخصص" value={modalCafe.customDomainStatus} />
+                <DetailRow label="دومين مشتراة" value={modalCafe.purchasedDomain} />
+                <DetailRow label="حالة الدومين المشتراة" value={modalCafe.purchasedDomainStatus} />
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    href={getCafePublicUrl(modalCafe.slug, {
+                      settings: {
+                        customDomain: modalCafe.customDomain,
+                        domainStatus: modalCafe.customDomainStatus || "غير مربوط",
+                        purchasedDomain: modalCafe.purchasedDomain,
+                        purchasedDomainStatus: modalCafe.purchasedDomainStatus || "غير مربوط",
+                      },
+                    })}
                     target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-[#F8E8D2]"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-[#F6C35B] px-4 py-3 font-black text-[#241610]"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    فتح الدومين
-                  </a>
+                    فتح العلامة
+                  </Link>
                   <button
                     type="button"
-                    className="rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-[#CBB29C]"
+                    onClick={() => copy(modalCafe.maintenanceAccountNumber)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 font-black"
                   >
-                    إعادة التحقق (Mock)
+                    <Copy className="h-4 w-4" />
+                    نسخ رقم الصيانة
                   </button>
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <StatMini label="قيمة الطلبات المتوقعة" value={formatSar(selected.totalRevenue)} highlight />
-                <StatMini label="الطلبات" value={String(selected.totalOrders)} />
-                <StatMini label="العملاء" value={String(selected.customersCount)} />
-                <StatMini label="الباقة" value={selectedPlan?.name ?? selected.planId} />
+              <div className={softPanel}>
+                <h3 className="mb-3 text-lg font-black text-[#F6C35B]">الباقة والاشتراكات</h3>
+                <DetailRow label="هل لديها باقة؟" value={modalCafe.hasActivePlan ? "نعم" : "لا"} />
+                <DetailRow label="الباقة الحالية" value={modalCafe.planName || modalCafe.planId || "بدون باقة"} />
+                <DetailRow label="تاريخ بداية الباقة" value={modalCafe.planStartedAt} />
+                <DetailRow label="تاريخ نهاية الباقة" value={modalCafe.planExpiresAt} />
+                <DetailRow label="المتبقي في الباقة" value={modalCafe.planRemainingDays == null ? "غير محدد" : `${modalCafe.planRemainingDays} يوم`} />
+                <DetailRow label="عدد الاشتراكات" value={modalCafe.subscriptionsCount ?? 0} />
+                <DetailRow label="عدد التجديدات" value={modalCafe.renewalsCount ?? 0} />
               </div>
 
-              <div className="mt-6">
-                <p className="mb-2 text-xs font-black text-[#CBB29C]">الخدمات حسب الباقة</p>
-                <div className="flex flex-wrap gap-2">
-                  {allPlatformFeatures.map((f) => {
-                    const on = selectedPlan?.features.includes(f.id);
-                    return (
-                      <span
-                        key={f.id}
-                        className={`rounded-lg px-2 py-1 text-xs font-black ${
-                          on
-                            ? "bg-emerald-500/15 text-emerald-300"
-                            : "bg-white/5 text-[#7A6255]"
-                        }`}
-                      >
-                        {f.title}
-                      </span>
-                    );
-                  })}
-                </div>
+              <div className={softPanel}>
+                <h3 className="mb-3 text-lg font-black text-[#F6C35B]">الدعم والصيانة</h3>
+                <DetailRow label="تذاكر الدعم" value={modalCafe.supportTicketsCount ?? 0} />
+                <DetailRow label="رقم حساب العلامة للصيانة" value={modalCafe.maintenanceAccountNumber} />
+                <DetailRow label="الرقم الضريبي" value={modalCafe.taxNumber} />
+                <DetailRow label="السجل التجاري" value={modalCafe.commercialRegister} />
+                <DetailRow label="معروف" value={modalCafe.maroofCertificate} />
+                <DetailRow label="واتساب" value={modalCafe.whatsapp} />
+                <DetailRow label="انستجرام" value={modalCafe.instagram} />
               </div>
-
-              <div className="mt-6 space-y-3">
-                <label className="block text-xs font-black text-[#CBB29C]">تغيير الباقة</label>
-                <AdminSelect
-                  value={selected.planId}
-                  onChange={(e) => updatePlan(selected.id, e.target.value)}
-                >
-                  {plans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name} — {plan.priceMonthly} ر.س
-                    </option>
-                  ))}
-                </AdminSelect>
-
-                <GoldButton
-                  onClick={() => toggleCafe(selected.id)}
-                  className="flex w-full items-center justify-center gap-2"
-                >
-                  <Power className="h-4 w-4" />
-                  {selected.status === "نشط" ? "إيقاف الكوفي" : "تفعيل الكوفي"}
-                </GoldButton>
-
-                <a
-                  href={getCafePublicUrl(selected.slug)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#F6C35B]/30 bg-[#F6C35B]/10 py-3.5 font-black text-[#F6C35B]"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  زيارة صفحة الكوفي
-                </a>
-              </div>
-
-              <div className="mt-8">
-                <h3 className="mb-3 font-black text-[#F8F4EF]">آخر عمليات الكوفي</h3>
-                <div className="space-y-2">
-                  {cafeOperations.length ? (
-                    cafeOperations.map((op) => (
-                      <div key={op.id} className={softPanel}>
-                        <p className="font-black text-[#F8E8D2]">{op.title}</p>
-                        <p className="mt-1 text-xs text-[#CBB29C]">
-                          {op.type} • {op.status} • {op.createdAt}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[#7A6255]">لا توجد عمليات مسجلة.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="mb-3 font-black text-[#F8F4EF]">عملاء الكوفي</h3>
-                <div className="space-y-2">
-                  {cafeCustomers.length ? (
-                    cafeCustomers.slice(0, 5).map((c) => (
-                      <div key={c.id} className={softPanel}>
-                        <p className="font-black text-[#F8E8D2]">{c.fullName}</p>
-                        <p className="mt-1 text-xs text-[#CBB29C]">
-                          {c.phone} • {formatSar(c.totalSpent)} • {c.loyaltyPoints} نقطة
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[#7A6255]">لا يوجد عملاء مرتبطون بعد.</p>
-                  )}
-                </div>
-              </div>
-            </BentoCard>
-          </aside>
-        ) : (
-          <aside className="hidden rounded-[32px] border border-dashed border-white/15 p-8 text-center text-[#CBB29C] xl:flex xl:items-center xl:justify-center">
-            <div>
-              <Eye className="mx-auto mb-3 h-10 w-10 opacity-50" />
-              <p className="font-bold">اختر كوفيًا من القائمة لعرض التفاصيل</p>
             </div>
-          </aside>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : null}
     </AdminPageShell>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={`flex justify-between gap-3 rounded-xl px-3 py-2 ${softPanel}`}>
-      <span className="text-[#CBB29C]">{label}</span>
-      <span className="text-left font-black text-[#F8E8D2]">{value}</span>
-    </div>
-  );
-}
-
-function StatMini({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className={softPanel}>
-      <p className="text-xs font-black text-[#CBB29C]">{label}</p>
-      <p className={`mt-1 font-black ${highlight ? "text-[#F6C35B]" : "text-[#F8E8D2]"}`}>
-        {value}
-      </p>
-    </div>
   );
 }

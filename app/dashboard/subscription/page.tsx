@@ -1,47 +1,39 @@
 import { SubscriptionPageClient } from "@/components/dashboard/pages/subscription-page";
 import { isSupabaseConfigured } from "@/lib/branda/env";
-import { getOwnerBranches } from "@/lib/data/branches";
+import { getOwnerActivePlanId, getPlatformPlans } from "@/lib/data/admin";
 import {
-  getAvailablePlans,
-  getOwnerActiveSubscription,
+  getOwnerPendingSubscription,
   getOwnerSubscriptionHistory,
-  getOwnerSubscriptionRequests,
 } from "@/lib/data/subscription";
+import { mockPlatformPlans } from "@/lib/platform/admin-data";
 
 export default async function SubscriptionPage() {
   if (!isSupabaseConfigured()) {
     return (
       <SubscriptionPageClient
-        initialPlans={[]}
-        initialActiveSubscription={null}
+        initialPlans={mockPlatformPlans}
+        initialActivePlanId=""
         initialHistory={[]}
-        initialRequests={[]}
-        initialBranches={[]}
+        initialPending={null}
         configError="قم بإعداد Supabase في .env.local"
       />
     );
   }
 
   try {
-    const [plans, activeSubscription, history, requests, branches] = await Promise.all([
-      getAvailablePlans(),
-      getOwnerActiveSubscription(),
+    const [plans, activePlanId, history, pending] = await Promise.all([
+      getPlatformPlans(),
+      getOwnerActivePlanId(),
       getOwnerSubscriptionHistory(),
-      getOwnerSubscriptionRequests(),
-      getOwnerBranches(),
+      getOwnerPendingSubscription(),
     ]);
 
     return (
       <SubscriptionPageClient
         initialPlans={plans}
-        initialActiveSubscription={activeSubscription}
+        initialActivePlanId={activePlanId}
         initialHistory={history}
-        initialRequests={requests}
-        initialBranches={branches.map((branch) => ({
-          id: branch.id,
-          name: branch.name,
-          active: branch.active,
-        }))}
+        initialPending={pending}
       />
     );
   } catch (error) {
@@ -49,11 +41,10 @@ export default async function SubscriptionPage() {
     return (
       <SubscriptionPageClient
         initialPlans={[]}
-        initialActiveSubscription={null}
+        initialActivePlanId=""
         initialHistory={[]}
-        initialRequests={[]}
-        initialBranches={[]}
-        configError="تعذر تحميل بيانات الاشتراك"
+        initialPending={null}
+        configError="تعذر تحميل الاشتراك والباقات"
       />
     );
   }

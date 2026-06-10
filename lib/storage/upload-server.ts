@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { optimizeImageForStorage } from "@/lib/cafe/image-asset-pipeline";
+import type { ImageAssetPurpose } from "@/lib/cafe/image-asset-pipeline";
 
 export type StorageBucket =
   | "cafe-logos"
@@ -12,21 +12,79 @@ export type StorageBucket =
   | "marketing-assets"
   | "experience-submissions";
 
+const MAX_SERVER_UPLOAD_BYTES = 40 * 1024 * 1024;
+
 const BUCKET_MIME: Record<StorageBucket, string[]> = {
-  "cafe-logos": ["image/webp", "image/jpeg", "image/png"],
-  "cafe-backgrounds": ["image/webp", "image/jpeg", "image/png"],
-  "menu-products": ["image/webp", "image/jpeg", "image/png"],
-  "menu-categories": ["image/webp", "image/jpeg", "image/png"],
-  "offer-banners": ["image/webp", "image/jpeg", "image/png"],
-  "customer-avatars": ["image/webp", "image/jpeg", "image/png"],
-  "marketing-assets": ["image/webp", "image/jpeg", "image/png"],
-  "experience-submissions": ["image/webp", "image/jpeg", "image/png"],
+  "cafe-logos": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "cafe-backgrounds": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "menu-products": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "menu-categories": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "offer-banners": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "customer-avatars": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "marketing-assets": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "experience-submissions": ["image/webp", "image/jpeg", "image/png", "image/avif"],
 };
 
-function assertSafeFileName(segment: string) {
-  if (!segment || segment.includes("..") || segment.includes("/") || segment.includes("\\")) {
+function getSupabaseUrl() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+}
+
+function getServiceRoleKey() {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
+
+function createStorageAdminClient() {
+  const url = getSupabaseUrl();
+  const serviceRoleKey = getServiceRoleKey();
+
+  if (!url || !serviceRoleKey) {
+    throw new Error("Missing Supabase service role configuration for server storage upload");
+  }
+
+  return createSupabaseAdminClient(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+function normalizeMime(type: string) {
+  return type.toLowerCase().split(";")[0].trim();
+}
+
+function extensionFromMime(mimeType: string) {
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/avif") return "avif";
+  return "jpg";
+}
+
+function assertSafePathSegment(segment: string) {
+  if (!segment || segment.includes("..") || segment.includes("\\") || segment.includes(":")) {
     throw new Error("Invalid storage path segment");
   }
+}
+
+function normalizeEntityPath(entityId: string) {
+  const parts = entityId
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) {
+    throw new Error("Invalid storage path segment");
+  }
+
+  for (const part of parts) {
+    assertSafePathSegment(part);
+  }
+
+  return parts.join("/");
 }
 
 function buildStoragePath(
@@ -35,18 +93,19 @@ function buildStoragePath(
   entityId: string,
   fileName: string
 ) {
-  assertSafeFileName(entityId);
-  assertSafeFileName(fileName);
+  assertSafePathSegment(fileName);
 
   switch (bucket) {
     case "cafe-logos":
     case "cafe-backgrounds":
-      return `${cafeId}/${fileName}`;
+      return `${cafeId}/${normalizeEntityPath(entityId)}/${fileName}`;
+
     case "menu-products":
     case "menu-categories":
     case "offer-banners":
     case "marketing-assets":
-      return `${cafeId}/${entityId}/${fileName}`;
+      return `${cafeId}/${normalizeEntityPath(entityId)}/${fileName}`;
+
     default:
       throw new Error(`Bucket ${bucket} requires dedicated upload handler`);
   }
@@ -55,41 +114,57 @@ function buildStoragePath(
 export async function uploadOptimizedImage(
   bucket: StorageBucket,
   file: File,
-  purpose: Parameters<typeof optimizeImageForStorage>[1],
+  _purpose: ImageAssetPurpose,
   entityId: string
 ) {
   const cafe = await requireOwnerCafeContext();
-  const optimized = await optimizeImageForStorage(file, purpose);
 
-  if (!BUCKET_MIME[bucket].includes(optimized.mimeType)) {
-    throw new Error("Unsupported file type after optimization");
+  if (file.size <= 0) {
+    throw new Error("Missing file");
   }
 
-  const ext = optimized.mimeType === "image/webp" ? "webp" : "jpg";
+  if (file.size > MAX_SERVER_UPLOAD_BYTES) {
+    throw new Error("حجم الصورة كبير جدًا، اختر ملفًا أقل من 40MB");
+  }
+
+  const mimeType = normalizeMime(file.type || "application/octet-stream");
+
+  if (mimeType === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+    throw new Error("ارفع الصورة بصيغة PNG أو JPG أو WEBP");
+  }
+
+  if (!BUCKET_MIME[bucket].includes(mimeType)) {
+    throw new Error("صيغة الصورة غير مدعومة، جرّب PNG أو JPG أو WEBP");
+  }
+
+  const ext = extensionFromMime(mimeType);
   const fileName = `${crypto.randomUUID()}.${ext}`;
   const storagePath = buildStoragePath(bucket, cafe.id, entityId, fileName);
+  const arrayBuffer = await file.arrayBuffer();
 
-  const supabase = await createClient();
-  const { error } = await supabase.storage.from(bucket).upload(storagePath, optimized.blob, {
-    contentType: optimized.mimeType,
+  const supabaseAdmin = createStorageAdminClient();
+  const { error } = await supabaseAdmin.storage.from(bucket).upload(storagePath, arrayBuffer, {
+    contentType: mimeType,
     upsert: false,
   });
+
   if (error) throw error;
 
   return {
     storagePath,
-    byteSize: optimized.sizeBytes,
+    byteSize: file.size,
   };
 }
 
 export async function deleteStorageObject(bucket: StorageBucket, storagePath: string) {
   const cafe = await requireOwnerCafeContext();
   const pathCafeId = storagePath.split("/")[0];
+
   if (pathCafeId !== cafe.id) {
     throw new Error("Forbidden: storage path does not belong to this cafe");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.storage.from(bucket).remove([storagePath]);
+  const supabaseAdmin = createStorageAdminClient();
+  const { error } = await supabaseAdmin.storage.from(bucket).remove([storagePath]);
   if (error) throw error;
 }

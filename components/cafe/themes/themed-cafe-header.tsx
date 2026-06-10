@@ -3,19 +3,16 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
-import { CustomerNotifications } from "@/components/cafe/customer-notifications";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import type { BrandaCustomerSession } from "@/lib/customer/session";
-import type { ThemeExperience } from "@/lib/cafe/theme-experience";
-import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 
 type Props = {
   slug: string;
   cafeName: string;
-  logoUrl?: string;
-  themeId: CafeThemeId;
-  experience: ThemeExperience;
-  customer: BrandaCustomerSession | null;
+  logoUrl?: string | null;
+  themeId?: string;
+  experience?: unknown;
+  customer?: BrandaCustomerSession | null;
   previewThemeId?: string | null;
 };
 
@@ -23,68 +20,54 @@ export function ThemedCafeHeader({
   slug,
   cafeName,
   logoUrl,
-  themeId,
-  experience,
   customer,
   previewThemeId,
 }: Props) {
-  const { theme } = experience;
   const home = getCafePath(slug, "", previewThemeId);
   const account = getCafePath(slug, "account", previewThemeId);
   const login = getCafePath(slug, "login", previewThemeId);
-  const register = getCafePath(slug, "register", previewThemeId);
-
-  const headerClass =
-    themeId === "marketplace-amazon"
-      ? `${theme.header} border-b`
-      : themeId === "mobile-first-cafe"
-        ? `${theme.header} shadow-sm`
-        : `sticky top-0 z-50 border-b backdrop-blur-xl ${theme.nav}`;
 
   return (
-    <header className={headerClass}>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-5">
+    <header
+      dir="rtl"
+      className="sticky top-0 z-40 border-b border-[#E7D7C6] bg-[#FCF8F3]/95 shadow-sm backdrop-blur"
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href={home} className="flex min-w-0 items-center gap-3">
-          <CafeLogo name={cafeName} logoUrl={logoUrl} size="sm" />
+          <CafeLogo
+            name={cafeName}
+            logoUrl={logoUrl ?? undefined}
+            size="sm"
+            className="rounded-2xl bg-white object-contain p-1 shadow-sm"
+          />
           <div className="min-w-0">
-            <h1 className={`truncate text-lg font-black ${experience.headingTracking}`}>
-              {cafeName}
-            </h1>
-            <p className={`truncate text-xs font-bold ${theme.muted}`}>منيو رقمي</p>
+            <p className="truncate text-lg font-black text-[#311912]">{cafeName}</p>
+            <p className="text-xs font-bold text-[#806A5E]">الفرع الإلكتروني</p>
           </div>
         </Link>
 
-        {customer ? (
-          <div className="flex shrink-0 items-center gap-2">
-            <CustomerNotifications
-              slug={slug}
-              customerId={customer.id}
-              experience={experience}
-            />
-            <Link
-              href={account}
-              className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black ${theme.button}`}
-            >
-              <UserRound className="h-4 w-4" />
-              حسابي
-            </Link>
-          </div>
-        ) : (
-          <div className="flex shrink-0 gap-2">
-            <Link
-              href={login}
-              className={`rounded-2xl border px-3 py-2.5 text-sm font-black sm:px-4 ${theme.card}`}
-            >
-              دخول
-            </Link>
-            <Link
-              href={register}
-              className={`rounded-2xl px-3 py-2.5 text-sm font-black sm:px-4 ${theme.button}`}
-            >
-              حساب جديد
-            </Link>
-          </div>
-        )}
+        <nav className="hidden items-center gap-2 md:flex">
+          <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            أحدث المنتجات
+          </Link>
+          <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            العروض
+          </Link>
+          <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            المنيو
+          </Link>
+          <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            الحجز
+          </Link>
+        </nav>
+
+        <Link
+          href={customer ? account : login}
+          className="inline-flex items-center gap-2 rounded-2xl bg-[#6B3A25] px-4 py-2 text-sm font-black text-white"
+        >
+          <UserRound className="h-4 w-4" />
+          {customer ? "حسابي" : "دخول"}
+        </Link>
       </div>
     </header>
   );

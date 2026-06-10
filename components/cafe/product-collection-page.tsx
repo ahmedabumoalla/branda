@@ -49,7 +49,7 @@ const viewInfo: Record<string, { title: string; desc: string }> = {
 };
 
 function getScore(product: MenuProduct, index: number) {
-  return Number(product.loyaltyPoints || 0) + Number(product.price || 0) + (100 - index);
+  return Number(product.price || 0) + (100 - index);
 }
 
 export function ProductCollectionPage({ slug, view }: Props) {
@@ -104,7 +104,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
     if (view === "latest") list = [...list].reverse();
     if (view === "popular") list = list.sort((a, b) => getScore(b, 0) - getScore(a, 0));
-    if (view === "offers") list = list.filter((item) => offerProductIds.has(item.id));
+    if (view === "offers") list = list.filter((item) => offerProductIds.has(item.id) || Boolean(item.promo));
 
     list = list.filter((product) => {
       const categoryLabel = resolveProductCategoryLabel(product);
@@ -120,13 +120,13 @@ export function ProductCollectionPage({ slug, view }: Props) {
       const matchesPrice = productMatchesPriceRange(product, filters.priceRange);
       const matchesOffer =
         filters.onlyOffers || filters.sort === "offers"
-          ? offerProductIds.has(product.id)
+          ? offerProductIds.has(product.id) || Boolean(product.promo)
           : true;
       return matchesQuery && matchesCategory && matchesPrice && matchesOffer;
     });
 
     if (filters.sort === "offers") {
-      list = list.filter((item) => offerProductIds.has(item.id));
+      list = list.filter((item) => offerProductIds.has(item.id) || Boolean(item.promo));
     }
     if (filters.sort === "popular") list = list.sort((a, b) => getScore(b, 0) - getScore(a, 0));
     if (filters.sort === "price-low") list = list.sort((a, b) => a.price - b.price);
