@@ -16,12 +16,16 @@ export async function saveReservationServiceAction(input: {
   isFree: boolean;
   maxGuests?: number | null;
   availableSlots: string[];
+  amenities?: string[];
+  includedProducts?: string[];
+  durationValue?: number | null;
+  durationUnit?: "minute" | "hour" | "day" | null;
   imageAssetId?: string;
   videoAssetId?: string;
   active: boolean;
   sortOrder: number;
 }) {
-  return saveOwnerReservationService(input);
+  return saveOwnerReservationService({ ...input, amenities: input.amenities ?? [], includedProducts: input.includedProducts ?? [] });
 }
 
 export async function setCustomerStatusAction(customerId: string, status: "active" | "suspended" | "blocked") {

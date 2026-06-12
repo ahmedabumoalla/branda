@@ -5,6 +5,8 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCustomerProfileForSession } from "@/lib/data/customers";
 import { createNotification } from "@/lib/data/notifications";
 import { getCashierToken } from "@/lib/data/cashier";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
 
 export type ExperienceRewardStatus = "pending" | "approved" | "rejected" | "redeemed";
 
@@ -135,6 +137,27 @@ export async function submitCustomerExperienceRewardProof(
     });
   } catch (notificationError) {
     console.warn("Experience reward cafe notification skipped", notificationError);
+  }
+
+  if (isBrandaEmailConfigured()) {
+    try {
+      const { data: settings } = await supabase
+        .from("cafe_settings")
+        .select("owner_email")
+        .eq("cafe_id", cafe.id)
+        .maybeSingle();
+      const ownerEmail = settings?.owner_email ? String(settings.owner_email) : undefined;
+      if (ownerEmail) {
+        await sendBrandaEmail({
+          to: ownerEmail,
+          subject: "توثيق تجربة جديد يحتاج مراجعة",
+          text: `وصل توثيق تجربة جديد من ${String(profile.full_name ?? "عميل")}. الرابط: ${parsed.experienceUrl}`,
+          html: `<div dir="rtl"><h2>توثيق تجربة جديد</h2><p>العميل: ${escapeEmailHtml(String(profile.full_name ?? "عميل"))}</p><p>الرابط: ${escapeEmailHtml(parsed.experienceUrl)}</p><p>المشاهدات: ${parsed.currentViews}</p><p>التعليقات: ${parsed.currentComments}</p></div>`,
+        });
+      }
+    } catch (emailError) {
+      console.warn("Experience reward email skipped", emailError);
+    }
   }
 
   return normalizeSubmission(data as Record<string, unknown>);
@@ -388,12 +411,83 @@ export async function rejectOwnerExperienceRewardSubmission(
   return { ok: true };
 }
 
+export async function redeemOwnerExperienceReward(rewardCode: string) {
+  const cafe = await requireOwnerCafeContext();
+  const code = parseBrandaQrPayload(rewardCode, "experience-reward") ?? rewardCode.trim().toUpperCase();
+  if (!code) throw new Error("QR المكافأة مطلوب");
+
+  const admin = createAdminClient();
+
+  const { data: submission, error: submissionError } = await admin
+    .from("experience_reward_submissions")
+    .select("*, experience_reward_items(*)")
+    .eq("reward_code", code)
+    .eq("cafe_id", cafe.id)
+    .maybeSingle();
+
+  if (submissionError) throw submissionError;
+  if (!submission) throw new Error("مكافأة غير موجودة");
+
+  const row = submission as Record<string, unknown>;
+  if (String(row.status) !== "approved") {
+    throw new Error("المكافأة غير قابلة للصرف");
+  }
+
+  if (row.used_at) {
+    throw new Error("تم استخدام هذه المكافأة مسبقًا");
+  }
+
+  const expiresAt = row.reward_expires_at ? new Date(String(row.reward_expires_at)) : null;
+  if (expiresAt && expiresAt < new Date(new Date().toISOString().slice(0, 10))) {
+    throw new Error("انتهت صلاحية المكافأة");
+  }
+
+  const items = normalizeRewardItems(row.experience_reward_items);
+
+  const { data: customer } = await admin
+    .from("customer_profiles")
+    .select("full_name")
+    .eq("id", String(row.customer_id))
+    .maybeSingle();
+
+  const customerName =
+    customer && typeof customer === "object"
+      ? String((customer as Record<string, unknown>).full_name ?? "عميل")
+      : "عميل";
+
+  const { error: updateError } = await admin
+    .from("experience_reward_submissions")
+    .update({
+      status: "redeemed",
+      used_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", String(row.id))
+    .eq("cafe_id", cafe.id)
+    .is("used_at", null)
+    .eq("status", "approved");
+
+  if (updateError) throw updateError;
+
+  return {
+    ok: true,
+    submissionId: String(row.id),
+    customerName,
+    rewardCode: code,
+    experienceUrl: String(row.experience_url ?? ""),
+    views: Number(row.current_views ?? 0),
+    comments: Number(row.current_comments ?? 0),
+    expiresAt: String(row.reward_expires_at ?? ""),
+    items,
+  };
+}
+
 export async function redeemCashierExperienceReward(rewardCode: string) {
   const token = await getCashierToken();
   if (!token) throw new Error("جلسة الكاشير منتهية");
 
-  const code = rewardCode.trim().toUpperCase();
-  if (!code) throw new Error("باركود المكافأة مطلوب");
+  const code = parseBrandaQrPayload(rewardCode, "experience-reward") ?? rewardCode.trim().toUpperCase();
+  if (!code) throw new Error("QR المكافأة مطلوب");
 
   const admin = createAdminClient();
 

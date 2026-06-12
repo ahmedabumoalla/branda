@@ -1,6 +1,7 @@
 
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 
 export const cashierSessionCookie = "branda_cashier_session";
 
@@ -40,7 +41,7 @@ export async function loginCashierWithPassword(email: string, password: string) 
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: 60 * 60 * 24 * 30,
   });
   return {
     token,
@@ -116,8 +117,8 @@ export async function cashierScanLoyalty(input: {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
     p_cafe_id: input.cafeId,
-    p_card_code: input.cardCode,
-    p_invoice_barcode: input.invoiceBarcode,
+    p_card_code: parseBrandaQrPayload(input.cardCode, "loyalty-card") ?? input.cardCode.trim().toUpperCase(),
+    p_invoice_barcode: parseBrandaQrPayload(input.invoiceBarcode, "invoice") ?? input.invoiceBarcode.trim(),
     p_invoice_amount: input.invoiceAmount,
     p_operation: input.operation,
     p_cashier_session_token: token,

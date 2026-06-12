@@ -4,6 +4,7 @@ import { Coffee, Download, PartyPopper, UserRound, WalletCards } from "lucide-re
 import { useEffect, useState } from "react";
 import { issueLoyaltyCardAction } from "@/app/actions/loyalty-cards";
 import { getCustomerSession } from "@/lib/customer/session";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 
 type Program = {
   enabled: boolean;
@@ -93,15 +94,13 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
             <p className="font-mono text-sm font-black tracking-[0.18em]">
               {cardCode || "BRANDA LOYALTY"}
             </p>
-            <div className="mt-3 grid grid-cols-12 gap-1">
-              {Array.from({ length: 36 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="h-7 rounded-sm bg-[#17100d]"
-                  style={{ opacity: index % 3 === 0 ? 1 : 0.55 }}
-                />
-              ))}
-            </div>
+            {cardCode ? (
+              <SecureQrCode kind="loyalty-card" value={cardCode} title={`QR بطاقة الولاء ${cardCode}`} size={160} className="mt-3" />
+            ) : (
+              <div className="mt-3 flex h-36 items-center justify-center rounded-2xl bg-[#FCF8F3] text-xs font-black text-[#806A5E]">
+                سجّل دخولك لعرض QR البطاقة
+              </div>
+            )}
           </div>
 
           <div className="relative mt-7 rounded-[28px] bg-white/10 p-4">
@@ -155,7 +154,7 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#6B3A25] px-5 py-4 font-black text-[#6B3A25]"
             >
               <WalletCards className="h-5 w-5" />
-              فتح الباركود
+              فتح QR البطاقة
             </a>
           ) : null}
         </div>

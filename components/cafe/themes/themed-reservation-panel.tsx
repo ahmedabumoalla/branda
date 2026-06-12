@@ -17,6 +17,7 @@ type Props = {
   settings: CafeSettings;
   experience: ThemeExperience;
   branchCount: number;
+  serviceCount?: number;
   formSlot: ReactNode;
   loginPromptSlot?: ReactNode;
 };
@@ -25,6 +26,7 @@ export function ThemedReservationPanel({
   settings,
   experience,
   branchCount,
+  serviceCount = RESERVATION_EVENT_TYPES.length,
   formSlot,
   loginPromptSlot,
 }: Props) {
@@ -54,7 +56,7 @@ export function ThemedReservationPanel({
           />
           <div>
             <p className={`text-sm font-black ${theme.accent}`}>
-              {reserve === "lounge" ? "احجز تجربتك" : "حجز الطاولات"}
+              {reserve === "lounge" ? "احجز تجربتك" : "خيارات الحجز"}
             </p>
             <h1
               className={`mt-1 font-black ${reserve === "kiosk" ? "text-4xl" : "text-3xl md:text-4xl"} ${experience.headingTracking}`}
@@ -62,7 +64,7 @@ export function ThemedReservationPanel({
               احجز في {settings.cafeName}
             </h1>
             <p className={`mt-2 font-bold ${theme.muted}`}>
-              اختر نوع المناسبة، الفرع، والوقت المناسب — من طاولة عادية إلى حفلات خاصة.
+              اختر بطاقة الحجز المناسبة، التاريخ، الوقت، والعدد — والرد يصلك من العلامة مباشرة.
             </p>
           </div>
         </div>
@@ -71,7 +73,7 @@ export function ThemedReservationPanel({
         >
           {[
             [MapPin, "فروع", branchCount],
-            [CalendarDays, "أنواع", RESERVATION_EVENT_TYPES.length],
+            [CalendarDays, "أنواع", serviceCount],
             [Users, "مناسبات", "خاصة"],
           ].map(([Icon, label, val]) => {
             const I = Icon as React.ElementType;

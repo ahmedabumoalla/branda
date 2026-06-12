@@ -33,7 +33,8 @@ import {
 } from "@/app/actions/experience-rewards";
 import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
-import { Bell, Barcode, Coffee, Gift, Link as LinkIcon, Send, WalletCards, X } from "lucide-react";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { Bell, Coffee, Gift, Link as LinkIcon, QrCode, Send, WalletCards, X } from "lucide-react";
 
 type Reservation = {
   id: string;
@@ -56,10 +57,12 @@ function CustomerCoffeeLoyaltyCard({
   view,
   homeHref,
   onOpenCard,
+  loading,
 }: {
   view: CustomerLoyaltyCardView | null;
   homeHref: string;
   onOpenCard: () => void;
+  loading: boolean;
 }) {
   const program = view?.program;
   const card = view?.card;
@@ -116,15 +119,19 @@ function CustomerCoffeeLoyaltyCard({
             <p className="font-mono text-sm font-black tracking-[0.2em]">
               {card?.cardCode || "BRANDA LOYALTY"}
             </p>
-            <div className="mt-3 grid grid-cols-12 gap-1">
-              {Array.from({ length: 36 }).map((_, index) => (
-                <span
-                  key={index}
-                  className="h-7 rounded-sm bg-[#17100d]"
-                  style={{ opacity: index % 3 === 0 ? 1 : 0.55 }}
-                />
-              ))}
-            </div>
+            {card?.cardCode ? (
+              <SecureQrCode
+                kind="loyalty-card"
+                value={card.cardCode}
+                title={`QR بطاقة الولاء ${card.cardCode}`}
+                size={160}
+                className="mt-3"
+              />
+            ) : (
+              <div className="mt-3 flex h-36 items-center justify-center rounded-2xl bg-[#FCF8F3] px-4 text-center text-xs font-black leading-6 text-[#806A5E]">
+                {loading ? "جاري تجهيز QR بطاقة الولاء..." : "تعذر تحميل QR البطاقة، حدّث الصفحة أو تأكد من تفعيل برنامج الولاء"}
+              </div>
+            )}
           </div>
         </div>
 
@@ -134,7 +141,7 @@ function CustomerCoffeeLoyaltyCard({
             {program?.cardTitle || "بطاقة الولاء"}
           </h2>
           <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
-            كل مرة يقرأ الكاشير باركود البطاقة مع باركود الفاتورة يضيء كوب جديد حتى تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
+            كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء كوب جديد حتى تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -163,9 +170,10 @@ function CustomerCoffeeLoyaltyCard({
             <button
               type="button"
               onClick={onOpenCard}
-              className="rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
+              disabled={!card?.cardCode}
+              className="rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              فتح البطاقة والباركود
+              فتح البطاقة والـ QR
             </button>
             <a
               href={homeHref}
@@ -195,31 +203,24 @@ function formatRewardDate(value?: string) {
   }
 }
 
-function ExperienceRewardBarcode({ code }: { code: string }) {
-  const pattern = Array.from(code || "BRANDA").map((char, index) => {
-    const size = ((char.charCodeAt(0) + index) % 4) + 2;
-    return `${size}px`;
-  });
-
+function ExperienceRewardQrCode({ code }: { code: string }) {
   return (
     <div className="rounded-[24px] border border-[#E7D7C6] bg-white p-4">
-      <div
-        aria-label={`باركود المكافأة ${code}`}
-        className="h-20 w-full rounded-xl bg-[#311912]"
-        style={{
-          backgroundImage: `repeating-linear-gradient(90deg, #311912 0 ${pattern[0] ?? "3px"}, transparent ${pattern[0] ?? "3px"} ${Number.parseInt(pattern[0] ?? "3", 10) + 2}px)`,
-        }}
+      <SecureQrCode
+        kind="experience-reward"
+        value={code}
+        title={`QR مكافأة توثيق التجربة ${code}`}
+        size={172}
       />
       <p className="mt-3 select-all rounded-2xl bg-[#FCF8F3] px-3 py-2 text-center font-mono text-sm font-black tracking-[0.18em] text-[#311912]">
         {code}
       </p>
       <p className="mt-2 text-center text-[11px] font-black text-[#806A5E]">
-        يقرأه الكاشير من خانة صرف مكافأة توثيق التجربة
+        QR آمن للصرف من الكاشير أو لوحة العلامة فقط
       </p>
     </div>
   );
 }
-
 function ExperienceProofPanel({
   rewards,
   open,
@@ -268,7 +269,7 @@ function ExperienceProofPanel({
               مكافآت توثيق التجربة
             </h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها تلقائيًا، ومع كل مكافأة باركود خاص يستخدم مرة واحدة فقط عند الكاشير
+              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها تلقائيًا، ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو لوحة العلامة
             </p>
           </div>
           <button
@@ -377,20 +378,20 @@ function ExperienceProofPanel({
                   </div>
 
                   {isReady ? (
-                    <ExperienceRewardBarcode code={reward.rewardCode} />
+                    <ExperienceRewardQrCode code={reward.rewardCode} />
                   ) : isRedeemed ? (
                     <div className="rounded-[24px] border border-[#E7D7C6] bg-[#F8F4EF] p-5 text-center">
-                      <Barcode className="mx-auto h-9 w-9 text-[#806A5E]" />
-                      <p className="mt-3 font-black text-[#311912]">تم استخدام الباركود</p>
+                      <QrCode className="mx-auto h-9 w-9 text-[#806A5E]" />
+                      <p className="mt-3 font-black text-[#311912]">تم استخدام QR</p>
                       <p className="mt-2 text-xs font-bold text-[#806A5E]">
-                        توقف هذا الباركود ولا يمكن صرفه مرة أخرى
+                        توقف هذا QR ولا يمكن صرفه مرة أخرى
                       </p>
                     </div>
                   ) : (
                     <div className="rounded-[24px] border border-dashed border-[#E7D7C6] bg-[#FCF8F3] p-5 text-center">
-                      <Barcode className="mx-auto h-9 w-9 text-[#806A5E]" />
+                      <QrCode className="mx-auto h-9 w-9 text-[#806A5E]" />
                       <p className="mt-3 font-black text-[#311912]">
-                        الباركود يظهر بعد اعتماد العلامة
+                        QR يظهر بعد اعتماد العلامة
                       </p>
                     </div>
                   )}
@@ -404,7 +405,7 @@ function ExperienceProofPanel({
           <Gift className="mx-auto h-10 w-10 text-[#D9A33F]" />
           <h3 className="mt-3 text-xl font-black text-[#311912]">لا توجد تنبيهات مكافآت حتى الآن</h3>
           <p className="mt-2 text-sm font-bold text-[#806A5E]">
-            وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع الباركود الخاص بها
+            وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع QR الخاص بها
           </p>
         </div>
       )}
@@ -486,6 +487,7 @@ function AccountPageInner() {
   const slug = params.slug;
   const { experience, settings, path, previewThemeId } = useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
+  const initialLoadKeyRef = useRef<string | null>(null);
 
   const defaultTab: TabKey = "orders";
 
@@ -504,6 +506,7 @@ function AccountPageInner() {
   const [avatarAssetId, setAvatarAssetId] = useState<string | undefined>();
   const [optimizingAvatar, setOptimizingAvatar] = useState(false);
   const [loyaltyView, setLoyaltyView] = useState<CustomerLoyaltyCardView | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(true);
   const [experienceRewards, setExperienceRewards] = useState<CustomerExperienceReward[]>([]);
   const [experienceProofOpen, setExperienceProofOpen] = useState(false);
   const [experienceUrl, setExperienceUrl] = useState("");
@@ -513,39 +516,15 @@ function AccountPageInner() {
   const [submittingExperienceProof, setSubmittingExperienceProof] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    const loadKey = `${slug}:${previewThemeId ?? "live"}`;
+    if (initialLoadKeyRef.current === loadKey) return;
+    initialLoadKeyRef.current = loadKey;
 
-    async function refreshRewards() {
-      try {
-        const items = await fetchCustomerExperienceRewardsAction(slug);
-        if (!cancelled) setExperienceRewards(items);
-      } catch {
-        if (!cancelled) setExperienceRewards([]);
-      }
-    }
-
-    void refreshRewards();
-
-    const onFocus = () => {
-      void refreshRewards();
-    };
-
-    window.addEventListener("focus", onFocus);
-    const timer = window.setInterval(() => {
-      void refreshRewards();
-    }, 10000);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", onFocus);
-      window.clearInterval(timer);
-    };
-  }, [slug]);
-
-  useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      setLoyaltyLoading(true);
+
       const session = await getCustomerSession(slug);
       if (cancelled) return;
 
@@ -564,12 +543,18 @@ function AccountPageInner() {
       const { fetchCustomerOrdersAction, fetchCustomerReservationsAction } = await import(
         "@/app/actions/customer"
       );
-      const [cafeOrders, cafeReservations] = await Promise.all([
+
+      const [ordersResult, reservationsResult, loyaltyResult, rewardsResult] = await Promise.allSettled([
         fetchCustomerOrdersAction(slug),
         fetchCustomerReservationsAction(slug),
+        fetchCustomerLoyaltyCardAction(slug),
+        fetchCustomerExperienceRewardsAction(slug),
       ]);
 
       if (cancelled) return;
+
+      const cafeOrders = ordersResult.status === "fulfilled" ? ordersResult.value : [];
+      const cafeReservations = reservationsResult.status === "fulfilled" ? reservationsResult.value : [];
 
       setOrders(
         cafeOrders.map((o) => ({
@@ -586,21 +571,6 @@ function AccountPageInner() {
           notes: o.notes,
         }))
       );
-      void fetchCustomerLoyaltyCardAction(slug)
-        .then((view) => {
-          if (!cancelled) setLoyaltyView(view);
-        })
-        .catch(() => {
-          if (!cancelled) setLoyaltyView(null);
-        });
-
-      void fetchCustomerExperienceRewardsAction(slug)
-        .then((items) => {
-          if (!cancelled) setExperienceRewards(items);
-        })
-        .catch(() => {
-          if (!cancelled) setExperienceRewards([]);
-        });
 
       setReservations(
         cafeReservations.map((r) => ({
@@ -617,13 +587,17 @@ function AccountPageInner() {
           createdAt: r.createdAt,
         }))
       );
+
+      setLoyaltyView(loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null);
+      setExperienceRewards(rewardsResult.status === "fulfilled" ? rewardsResult.value : []);
+      setLoyaltyLoading(false);
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [router, slug, path, previewThemeId]);
+  }, [router, slug, previewThemeId]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -792,6 +766,7 @@ function AccountPageInner() {
         view={loyaltyView}
         homeHref={path()}
         onOpenCard={openLoyaltyCard}
+        loading={loyaltyLoading}
       />
 
       <ExperienceProofPanel

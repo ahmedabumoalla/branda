@@ -56,10 +56,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Forbidden or not found" }, { status: 403 });
   }
 
-  return NextResponse.json({
-    url: data.signedUrl,
-    expiresIn: PRIVATE_STORAGE_TTL_SECONDS,
-    bucket,
-    allowedBuckets: ANON_PUBLIC_STORAGE_BUCKETS,
-  });
+  return NextResponse.json(
+    {
+      url: data.signedUrl,
+      expiresIn: PRIVATE_STORAGE_TTL_SECONDS,
+      bucket,
+      allowedBuckets: ANON_PUBLIC_STORAGE_BUCKETS,
+    },
+    { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" } }
+  );
 }

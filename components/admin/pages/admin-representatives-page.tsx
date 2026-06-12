@@ -3,7 +3,7 @@
 import { BadgePercent, Plus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { createRepresentativeAction } from "@/app/actions/representatives";
+import { createRepresentativeAction, updateRepresentativeAction } from "@/app/actions/representatives";
 import {
   AdminInput,
   AdminPageShell,
@@ -33,6 +33,8 @@ export function AdminRepresentativesPage({
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [editing, setEditing] = useState<RepresentativeItem | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,6 +52,19 @@ export function AdminRepresentativesPage({
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+
+  async function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEditSaving(true);
+    try {
+      await updateRepresentativeAction(new FormData(event.currentTarget));
+      setEditing(null);
+      router.refresh();
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -113,13 +128,27 @@ export function AdminRepresentativesPage({
               </p>
               <p className="mt-2 text-sm font-bold text-[#CBB29C]">
                 خصم {representative.discountPercent}% • تجربة مجانية{" "}
-                {representative.freeTrialDays} يوم
+                {representative.freeTrialDays} يوم • الرمز {representative.couponActive ? "نشط" : "متوقف"}
               </p>
               <p className="mt-2 text-xs font-bold text-[#CBB29C]">
                 {representative.eligiblePlanIds.length
                   ? `الباقات المشمولة ${representative.eligiblePlanIds.join(" • ")}`
                   : "العرض يشمل جميع الباقات"}
               </p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs font-black text-[#CBB29C]">كلمة مرور المندوب</p>
+                <p className="mt-2 break-all font-black text-[#F6C35B]">{representative.loginPassword || "غير محفوظة للمناديب القديمة"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditing(representative)}
+                className="rounded-2xl border border-[#D9A33F]/30 bg-[#D9A33F]/15 px-5 py-3 font-black text-[#F6C35B]"
+              >
+                تعديل البيانات والنسب والحالة
+              </button>
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
@@ -152,6 +181,30 @@ export function AdminRepresentativesPage({
           </BentoCard>
         ) : null}
       </BentoGrid>
+
+
+      {editing ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 sm:px-6 sm:py-10">
+          <form onSubmit={submitEdit} dir="rtl" className="mx-auto w-full max-w-3xl rounded-[28px] border border-[#D9A33F]/20 bg-[#17100d] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:p-8">
+            <input type="hidden" name="representativeId" value={editing.id} />
+            <h2 className="mb-5 text-2xl font-black text-white">تعديل المندوب</h2>
+            <div className="grid gap-5 md:grid-cols-2">
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">الاسم</span><AdminInput required name="fullName" defaultValue={editing.fullName} className="text-[#FCF8F3]" /></label>
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">الجوال</span><AdminInput required name="phone" defaultValue={editing.phone} className="text-[#FCF8F3]" /></label>
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">البريد</span><AdminInput required name="email" type="email" defaultValue={editing.email} className="text-[#FCF8F3]" /></label>
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">المنطقة</span><AdminInput required name="region" defaultValue={editing.region} className="text-[#FCF8F3]" /></label>
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">نسبة الخصم</span><AdminInput required name="discountPercent" type="number" defaultValue={editing.discountPercent} className="text-[#FCF8F3]" /></label>
+              <label className="block"><span className="mb-2 block text-sm font-black text-[#F2E7D9]">أيام التجربة المجانية</span><AdminInput required name="freeTrialDays" type="number" defaultValue={editing.freeTrialDays} className="text-[#FCF8F3]" /></label>
+              <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-4 font-black text-[#F2E7D9]"><input name="active" type="checkbox" defaultChecked={editing.active} /> تشغيل حساب المندوب</label>
+              <label className="flex items-center gap-3 rounded-2xl bg-white/5 p-4 font-black text-[#F2E7D9]"><input name="couponActive" type="checkbox" defaultChecked={editing.couponActive} /> تشغيل رمز المندوب</label>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <GoldButton type="submit" disabled={editSaving}>{editSaving ? "جاري الحفظ" : "حفظ التعديلات"}</GoldButton>
+              <button type="button" onClick={() => setEditing(null)} className="rounded-2xl border border-white/10 px-6 font-black text-white">إلغاء</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
       {formOpen ? (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6 sm:px-6 sm:py-10">

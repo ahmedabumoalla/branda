@@ -5,6 +5,7 @@ import {
   getCustomerExperienceRewardSubmissions,
   getOwnerExperienceRewardReviews,
   redeemCashierExperienceReward,
+  redeemOwnerExperienceReward,
   rejectOwnerExperienceRewardSubmission,
   submitCustomerExperienceRewardProof,
 } from "@/lib/data/experience-rewards";
@@ -45,4 +46,8 @@ export async function rejectExperienceRewardSubmissionAction(
 
 export async function cashierRedeemExperienceRewardAction(rewardCode: string) {
   return redeemCashierExperienceReward(rewardCode);
+}
+
+export async function ownerRedeemExperienceRewardAction(rewardCode: string) {
+  return redeemOwnerExperienceReward(rewardCode);
 }

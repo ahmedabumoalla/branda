@@ -9,7 +9,9 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  Filter,
   KeyRound,
+  Search,
   LogOut,
   MapPin,
   ReceiptText,
@@ -117,6 +119,16 @@ export function RepresentativeDashboardClient({
   const [expandedBrandId, setExpandedBrandId] = useState<string | null>(
     dashboard.brands[0]?.id ?? null
   );
+  const [brandQuery, setBrandQuery] = useState("");
+  const [onlyPaid, setOnlyPaid] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const filteredBrands = dashboard.brands.filter((brand) => {
+    const matchesQuery = [brand.name, brand.slug, brand.branch?.city, brand.branch?.name]
+      .some((value) => (value ?? "").toLowerCase().includes(brandQuery.trim().toLowerCase()));
+    const matchesPaid = !onlyPaid || Boolean(brand.firstPaidSubscriptionAt);
+    return matchesQuery && matchesPaid;
+  });
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -220,20 +232,31 @@ export function RepresentativeDashboardClient({
           />
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-[30px] border border-white/10 bg-[#17100d] p-5 sm:p-7">
             <div className="mb-6 flex items-center gap-3">
               <Building2 className="h-7 w-7 text-[#D9A33F]" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2 className="text-xl font-black">تفاصيل العلامات التجارية</h2>
                 <p className="mt-1 text-sm font-bold text-[#CBB29C]">
                   الاشتراكات والتجديدات والمواقع والمستحقات
                 </p>
               </div>
+              <button type="button" onClick={() => setFiltersOpen((current) => !current)} className="inline-flex items-center gap-2 rounded-2xl border border-[#D9A33F]/25 bg-[#D9A33F]/10 px-4 py-3 text-sm font-black text-[#F6C35B]"><Filter className="h-4 w-4" /> فلترة</button>
             </div>
 
+            {filtersOpen ? (
+              <div className="mb-6 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 md:grid-cols-[1fr_auto]">
+                <div className="relative">
+                  <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#CBB29C]" />
+                  <input value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} placeholder="بحث باسم العلامة أو المدينة" className="h-12 w-full rounded-2xl border border-white/10 bg-[#100c0a] px-4 pr-12 font-bold text-[#FCF8F3] outline-none" />
+                </div>
+                <label className="flex items-center gap-2 rounded-2xl bg-[#100c0a] px-4 py-3 font-black text-[#F2E7D9]"><input type="checkbox" checked={onlyPaid} onChange={(event) => setOnlyPaid(event.target.checked)} /> العلامات المشتركة فقط</label>
+              </div>
+            ) : null}
+
             <div className="space-y-4">
-              {dashboard.brands.map((brand) => {
+              {filteredBrands.map((brand) => {
                 const expanded = expandedBrandId === brand.id;
 
                 return (
@@ -365,9 +388,9 @@ export function RepresentativeDashboardClient({
                 );
               })}
 
-              {!dashboard.brands.length ? (
+              {!filteredBrands.length ? (
                 <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center font-bold text-[#CBB29C]">
-                  لا توجد علامات تجارية مسجلة بالكوبون حتى الآن
+                  لا توجد علامات تجارية مطابقة للفلترة الحالية
                 </div>
               ) : null}
             </div>
@@ -417,6 +440,11 @@ export function RepresentativeDashboardClient({
             <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="text-xs font-black text-[#CBB29C]">بريد الحساب</p>
               <p className="mt-2 break-all text-sm font-black">{dashboard.representative.email}</p>
+            </div>
+            <div className="mt-4 rounded-2xl border border-[#D9A33F]/20 bg-[#D9A33F]/10 p-4">
+              <p className="text-xs font-black text-[#CBB29C]">الدعم الفني</p>
+              <p className="mt-2 text-sm font-bold text-[#F2E7D9]">في حال الحاجة إلى دعم فني يرجى إرسال بريد رسمي إلى</p>
+              <a href="mailto:cto.branda@gmail.com" className="mt-2 block break-all text-sm font-black text-[#F6C35B]">cto.branda@gmail.com</a>
             </div>
           </aside>
         </div>

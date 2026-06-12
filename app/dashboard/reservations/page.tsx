@@ -3,13 +3,14 @@ import { ReservationsPageClient } from "@/components/dashboard/pages/reservation
 import { isSupabaseConfigured } from "@/lib/branda/env";
 import { getOwnerReservations } from "@/lib/data/reservations";
 import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
+import { getOwnerMenu } from "@/lib/data/menu";
 
 export default async function ReservationsPage() {
-  if (!isSupabaseConfigured()) return <ReservationsPageClient initialReservations={[]} initialServices={[]} configError="قم بإعداد Supabase في .env.local" />;
+  if (!isSupabaseConfigured()) return <ReservationsPageClient initialReservations={[]} initialServices={[]} menuProducts={[]} configError="قم بإعداد Supabase في .env.local" />;
   try {
-    const [reservations, services] = await Promise.all([getOwnerReservations(), getOwnerReservationServices()]);
-    return <ReservationsPageClient initialReservations={reservations} initialServices={services} />;
+    const [reservations, services, menu] = await Promise.all([getOwnerReservations(), getOwnerReservationServices(), getOwnerMenu()]);
+    return <ReservationsPageClient initialReservations={reservations} initialServices={services} menuProducts={menu.products} />;
   } catch {
-    return <ReservationsPageClient initialReservations={[]} initialServices={[]} configError="تعذر تحميل الحجوزات" />;
+    return <ReservationsPageClient initialReservations={[]} initialServices={[]} menuProducts={[]} configError="تعذر تحميل الحجوزات" />;
   }
 }

@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/cashier";
 import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
 import type { CashierConsole } from "@/lib/data/cashier";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 
 type Props = { initialData: CashierConsole };
 
@@ -70,7 +71,7 @@ export function CashierConsoleClient({ initialData }: Props) {
   }
 
   async function confirmReservation() {
-    if (!reservationCode.trim()) { setMessage("أدخل كود الحجز أو اقرأ الباركود"); return; }
+    if (!reservationCode.trim()) { setMessage("أدخل كود الحجز أو اقرأ QR"); return; }
     setBusy(true);
     try {
       const result = await confirmReservationCodeAction(reservationCode.trim());
@@ -83,13 +84,14 @@ export function CashierConsoleClient({ initialData }: Props) {
 
   async function redeemExperienceReward() {
     if (!experienceRewardCode.trim()) {
-      setMessage("أدخل باركود مكافأة توثيق التجربة");
+      setMessage("أدخل QR مكافأة توثيق التجربة");
       return;
     }
 
     setBusy(true);
     try {
-      const result = await cashierRedeemExperienceRewardAction(experienceRewardCode.trim());
+      const rewardCode = parseBrandaQrPayload(experienceRewardCode, "experience-reward") ?? experienceRewardCode.trim().toUpperCase();
+      const result = await cashierRedeemExperienceRewardAction(rewardCode);
       const items = Array.isArray(result.items)
         ? result.items
             .map((item) => `${String(item.productName ?? "")} × ${String(item.quantity ?? 1)}`)
@@ -98,17 +100,19 @@ export function CashierConsoleClient({ initialData }: Props) {
       setMessage(`تم صرف مكافأة توثيق التجربة للعميل ${String(result.customerName ?? "عميل")} — ${items}`);
       setExperienceRewardCode("");
     } catch {
-      setMessage("باركود مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية");
+      setMessage("QR مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية");
     } finally {
       setBusy(false);
     }
   }
 
   async function scanLoyalty() {
-    if (!cardCode.trim() || !invoiceBarcode.trim()) { setMessage("أدخل باركود البطاقة وباركود الفاتورة"); return; }
+    if (!cardCode.trim() || !invoiceBarcode.trim()) { setMessage("أدخل QR البطاقة وQR الفاتورة"); return; }
     setBusy(true);
     try {
-      const result = await cashierScanLoyaltyAction({ cafeId: data.cafe.id, cardCode, invoiceBarcode, invoiceAmount: Number(invoiceAmount || 0), operation });
+      const parsedCardCode = parseBrandaQrPayload(cardCode, "loyalty-card") ?? cardCode.trim().toUpperCase();
+      const parsedInvoiceBarcode = parseBrandaQrPayload(invoiceBarcode, "invoice") ?? invoiceBarcode.trim();
+      const result = await cashierScanLoyaltyAction({ cafeId: data.cafe.id, cardCode: parsedCardCode, invoiceBarcode: parsedInvoiceBarcode, invoiceAmount: Number(invoiceAmount || 0), operation });
       setMessage(operation === "stamp" ? `تم تأكيد العملية للعميل ${String(result.customerName)}` : `تم صرف المكافأة للعميل ${String(result.customerName)}`);
       setCardCode(""); setInvoiceBarcode(""); setInvoiceAmount("");
     } catch { setMessage(operation === "stamp" ? "تعذر تأكيد العملية" : "تعذر صرف المكافأة"); }
@@ -137,36 +141,36 @@ export function CashierConsoleClient({ initialData }: Props) {
 
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="rounded-[28px] bg-white p-5 shadow-sm">
-            <h2 className="flex items-center gap-2 text-xl font-black"><ScanLine className="h-6 w-6 text-[#6B3A25]" /> قراءة بطاقة الولاء والفاتورة</h2>
+            <h2 className="flex items-center gap-2 text-xl font-black"><ScanLine className="h-6 w-6 text-[#6B3A25]" /> قراءة QR بطاقة الولاء والفاتورة</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="باركود بطاقة العميل" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
-              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="باركود الفاتورة" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
+              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="QR بطاقة العميل أو الكود" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
+              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="QR الفاتورة أو رقمها" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
               <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="قيمة الفاتورة اختياري" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
               <select className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">تأكيد عملية شراء</option><option value="redeem">صرف مكافأة</option></select>
             </div>
-            <div className="mt-5 flex flex-wrap gap-3"><BarcodeCameraScanner label="قراءة بطاقة العميل" onDetected={(value) => setCardCode(value.toUpperCase())} /><BarcodeCameraScanner label="قراءة باركود الفاتورة" onDetected={setInvoiceBarcode} /><button onClick={scanLoyalty} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912] disabled:opacity-60"><BadgeCheck className="h-4 w-4" /> تنفيذ العملية</button></div>
+            <div className="mt-5 flex flex-wrap gap-3"><BarcodeCameraScanner label="قراءة QR بطاقة العميل" expectedKind="loyalty-card" onDetected={(value) => setCardCode(value.toUpperCase())} /><BarcodeCameraScanner label="قراءة QR الفاتورة" onDetected={setInvoiceBarcode} /><button onClick={scanLoyalty} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912] disabled:opacity-60"><BadgeCheck className="h-4 w-4" /> تنفيذ العملية</button></div>
           </section>
 
 
           <section className="rounded-[28px] bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 text-xl font-black"><Gift className="h-6 w-6 text-[#6B3A25]" /> صرف مكافأة توثيق التجربة</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              اقرأ باركود المكافأة الظاهر في تنبيهات العميل، وبعد الصرف يتوقف الباركود مباشرة ولا يمكن استخدامه مرة ثانية
+              اقرأ QR المكافأة الظاهر في تنبيهات العميل، وبعد الصرف يتوقف الكود مباشرة ولا يمكن استخدامه مرة ثانية
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
-              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="باركود مكافأة التوثيق" value={experienceRewardCode} onChange={(e) => setExperienceRewardCode(e.target.value.toUpperCase())} />
+              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="QR مكافأة التوثيق أو الكود" value={experienceRewardCode} onChange={(e) => setExperienceRewardCode(e.target.value.toUpperCase())} />
               <button onClick={redeemExperienceReward} disabled={busy} className="rounded-2xl bg-[#D9A33F] px-5 py-3 font-black text-[#311912] disabled:opacity-60">صرف المكافأة</button>
             </div>
-            <div className="mt-5"><BarcodeCameraScanner label="قراءة باركود المكافأة" onDetected={(value) => setExperienceRewardCode(value.toUpperCase())} /></div>
+            <div className="mt-5"><BarcodeCameraScanner label="قراءة QR المكافأة" expectedKind="experience-reward" onDetected={(value) => setExperienceRewardCode(value.toUpperCase())} /></div>
           </section>
 
           <section className="rounded-[28px] bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 text-xl font-black"><QrCode className="h-6 w-6 text-[#6B3A25]" /> تأكيد حضور الحجز بكود يستخدم مرة واحدة</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
-              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="كود الحجز أو باركود الحجز" value={reservationCode} onChange={(e) => setReservationCode(e.target.value.toUpperCase())} />
+              <input className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold" placeholder="كود الحجز أو QR الحجز" value={reservationCode} onChange={(e) => setReservationCode(e.target.value.toUpperCase())} />
               <button onClick={confirmReservation} disabled={busy} className="rounded-2xl bg-[#311912] px-5 py-3 font-black text-white disabled:opacity-60">تأكيد الحضور</button>
             </div>
-            <div className="mt-5"><BarcodeCameraScanner label="قراءة باركود الحجز" onDetected={(value) => setReservationCode(value.toUpperCase())} /></div>
+            <div className="mt-5"><BarcodeCameraScanner label="قراءة QR الحجز" onDetected={(value) => setReservationCode(value.toUpperCase())} /></div>
           </section>
 
           <section className="rounded-[28px] bg-white p-5 shadow-sm">

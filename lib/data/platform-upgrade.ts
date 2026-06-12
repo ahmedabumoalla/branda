@@ -1,7 +1,8 @@
-
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+
+import type { ReservationDurationUnit } from "@/lib/mock/reservation-services";
 
 export type ReservationService = {
   id: string;
@@ -11,6 +12,10 @@ export type ReservationService = {
   isFree: boolean;
   maxGuests: number | null;
   availableSlots: string[];
+  amenities: string[];
+  includedProducts: string[];
+  durationValue: number | null;
+  durationUnit: ReservationDurationUnit | null;
   imageAssetId?: string;
   videoAssetId?: string;
   active: boolean;
@@ -27,6 +32,10 @@ export type VisitAnalytics = {
   recent: Array<{ id: string; path: string; sessionId: string; durationSeconds: number | null; createdAt: string }>;
 };
 
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).map((item) => item.trim()).filter(Boolean) : [];
+}
+
 function mapService(row: Record<string, unknown>): ReservationService {
   return {
     id: String(row.id),
@@ -35,7 +44,11 @@ function mapService(row: Record<string, unknown>): ReservationService {
     price: row.price === null || row.price === undefined ? null : Number(row.price),
     isFree: Boolean(row.is_free),
     maxGuests: row.max_guests === null || row.max_guests === undefined ? null : Number(row.max_guests),
-    availableSlots: Array.isArray(row.available_slots) ? row.available_slots.map(String) : [],
+    availableSlots: stringArray(row.available_slots),
+    amenities: stringArray(row.amenities),
+    includedProducts: stringArray(row.included_products),
+    durationValue: row.duration_value === null || row.duration_value === undefined ? null : Number(row.duration_value),
+    durationUnit: row.duration_unit ? (String(row.duration_unit) as ReservationDurationUnit) : null,
     imageAssetId: row.image_storage_path ? String(row.image_storage_path) : undefined,
     videoAssetId: row.video_storage_path ? String(row.video_storage_path) : undefined,
     active: Boolean(row.active),
@@ -70,12 +83,16 @@ export async function getPublicReservationServicesBySlug(slug: string) {
 
 const reservationServiceSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(500).optional(),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(700).optional(),
   price: z.number().min(0).nullable().optional(),
   isFree: z.boolean(),
-  maxGuests: z.number().int().positive().nullable().optional(),
-  availableSlots: z.array(z.string()).default([]),
+  maxGuests: z.number().int().positive().max(500).nullable().optional(),
+  availableSlots: z.array(z.string().trim().max(50)).default([]),
+  amenities: z.array(z.string().trim().max(80)).max(30).default([]),
+  includedProducts: z.array(z.string().trim().max(80)).max(30).default([]),
+  durationValue: z.number().positive().max(365).nullable().optional(),
+  durationUnit: z.enum(["minute", "hour", "day"]).nullable().optional(),
   imageAssetId: z.string().optional(),
   videoAssetId: z.string().optional(),
   active: z.boolean(),
@@ -84,21 +101,35 @@ const reservationServiceSchema = z.object({
 
 export async function saveOwnerReservationService(input: z.infer<typeof reservationServiceSchema>) {
   const parsed = reservationServiceSchema.parse(input);
+  const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("upsert_reservation_service", {
+
+  const rpcPayload = {
+    p_cafe_id: cafe.id,
     p_service_id: parsed.id ?? null,
     p_name: parsed.name,
     p_description: parsed.description ?? "",
     p_price: parsed.isFree ? 0 : parsed.price ?? null,
     p_is_free: parsed.isFree,
     p_max_guests: parsed.maxGuests ?? null,
-    p_available_slots: parsed.availableSlots,
+    p_available_slots: parsed.availableSlots.filter(Boolean),
+    p_amenities: parsed.amenities.filter(Boolean),
+    p_included_products: parsed.includedProducts.filter(Boolean),
+    p_duration_value: parsed.durationValue ?? null,
+    p_duration_unit: parsed.durationValue ? parsed.durationUnit ?? "hour" : null,
     p_image_storage_path: parsed.imageAssetId ?? null,
     p_video_storage_path: parsed.videoAssetId ?? null,
     p_active: parsed.active,
     p_sort_order: parsed.sortOrder,
-  });
-  if (error) throw error;
+  };
+
+  const { data, error } = await supabase.rpc("upsert_reservation_service_v3", rpcPayload);
+  if (error) {
+    const { p_cafe_id: _pCafeId, ...legacyRpcPayload } = rpcPayload;
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc("upsert_reservation_service_v2", legacyRpcPayload);
+    if (fallbackError) throw fallbackError;
+    return String(fallbackData);
+  }
   return String(data);
 }
 

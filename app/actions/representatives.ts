@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { changeRepresentativePassword, createRepresentative } from "@/lib/data/representatives";
+import { changeRepresentativePassword, createRepresentative, updateAdminRepresentative } from "@/lib/data/representatives";
 
 export async function createRepresentativeAction(formData: FormData) {
   const fileEntry = formData.get("bankDocument");
@@ -55,4 +55,20 @@ export async function changeRepresentativePasswordAction(input: {
       message: error instanceof Error ? error.message : "تعذر تغيير كلمة المرور",
     };
   }
+}
+
+
+export async function updateRepresentativeAction(formData: FormData) {
+  await updateAdminRepresentative({
+    representativeId: String(formData.get("representativeId") ?? ""),
+    fullName: String(formData.get("fullName") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    region: String(formData.get("region") ?? ""),
+    discountPercent: Number(formData.get("discountPercent") ?? 0),
+    freeTrialDays: Number(formData.get("freeTrialDays") ?? 0),
+    active: formData.get("active") === "on",
+    couponActive: formData.get("couponActive") === "on",
+  });
+  revalidatePath("/admin/representatives");
 }

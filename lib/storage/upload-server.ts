@@ -168,3 +168,33 @@ export async function deleteStorageObject(bucket: StorageBucket, storagePath: st
   const { error } = await supabaseAdmin.storage.from(bucket).remove([storagePath]);
   if (error) throw error;
 }
+
+function videoExtensionFromMime(mimeType: string) {
+  if (mimeType === "video/webm") return "webm";
+  if (mimeType === "video/quicktime") return "mov";
+  return "mp4";
+}
+
+export async function uploadReservationServiceVideo(file: File, entityId: string) {
+  const cafe = await requireOwnerCafeContext();
+
+  if (file.size <= 0) throw new Error("Missing file");
+  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
+
+  const mimeType = normalizeMime(file.type || "application/octet-stream");
+  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
+    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM");
+  }
+
+  const ext = videoExtensionFromMime(mimeType);
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = `${cafe.id}/${normalizeEntityPath(entityId)}/${fileName}`;
+  const arrayBuffer = await file.arrayBuffer();
+  const supabaseAdmin = createStorageAdminClient();
+  const { error } = await supabaseAdmin.storage.from("marketing-assets").upload(storagePath, arrayBuffer, {
+    contentType: mimeType,
+    upsert: false,
+  });
+  if (error) throw error;
+  return { storagePath, byteSize: file.size };
+}

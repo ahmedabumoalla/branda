@@ -23,6 +23,9 @@ import {
   Users,
 } from "lucide-react";
 import { fetchOwnerPlanIdAction, fetchPlatformPlansAction } from "@/app/actions/admin";
+import { fetchOwnerReservationsAction } from "@/app/actions/reservations";
+import { fetchOwnerOrdersAction } from "@/app/actions/orders";
+import { fetchOwnerExperienceRewardReviewsAction } from "@/app/actions/experience-rewards";
 import { fetchOwnerSettingsAction } from "@/app/actions/settings";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
@@ -71,14 +74,12 @@ const links: {
     href: "/dashboard/experience-reviews",
     icon: BadgeCheck,
     feature: "menu",
-    badge: "جديد",
   },
   {
     title: "طلبات الكوفي",
     href: "/dashboard/orders",
     icon: ShoppingBag,
     feature: "orders",
-    badge: "جديد",
   },
   {
     title: "إعدادات الكوفي",
@@ -118,6 +119,9 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const [planName, setPlanName] = useState("Starter");
   const [cafeSettings, setCafeSettings] = useState<CafeSettings>(initialCafeSettings);
   const [shareMessage, setShareMessage] = useState("");
+  const [pendingReservations, setPendingReservations] = useState(0);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [pendingExperienceReviews, setPendingExperienceReviews] = useState(0);
 
   const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
   const cafeName = cafeSettings.cafeName || "الكوفي";
@@ -126,10 +130,13 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   useEffect(() => {
     void (async () => {
       try {
-        const [planId, platformPlans, settings] = await Promise.all([
+        const [planId, platformPlans, settings, reservations, orders, experienceReviews] = await Promise.all([
           fetchOwnerPlanIdAction(),
           fetchPlatformPlansAction(),
           fetchOwnerSettingsAction(),
+          fetchOwnerReservationsAction(),
+          fetchOwnerOrdersAction(),
+          fetchOwnerExperienceRewardReviewsAction(),
         ]);
 
         setActivePlanId(planId);
@@ -138,6 +145,9 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
 
         const plan = platformPlans.find((item) => item.id === planId);
         setPlanName(plan?.name ?? planId);
+        setPendingReservations(reservations.filter((item) => item.status === "بانتظار الرد").length);
+        setPendingOrders(orders.filter((item) => item.status === "بانتظار موافقة الكوفي").length);
+        setPendingExperienceReviews(experienceReviews.filter((item) => item.status === "pending").length);
       } catch (error) {
         console.error("[DashboardSidebar]", error);
       }
@@ -165,6 +175,14 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   function handleLogout() {
     logoutBrandaAuth();
     router.push("/login");
+  }
+
+
+  function getLinkCounter(href: string) {
+    if (href === "/dashboard/reservations") return pendingReservations;
+    if (href === "/dashboard/orders") return pendingOrders;
+    if (href === "/dashboard/experience-reviews") return pendingExperienceReviews;
+    return 0;
   }
 
   function isActive(href: string) {
@@ -281,9 +299,9 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
               }`}
             >
               <span className="flex items-center gap-2">
-                {item.badge ? (
-                  <span className="rounded-full bg-[#D9A33F] px-2 py-0.5 text-[10px] font-black text-[#311912]">
-                    {item.badge}
+                {getLinkCounter(item.href) > 0 ? (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
+                    {getLinkCounter(item.href) > 99 ? "99+" : getLinkCounter(item.href)}
                   </span>
                 ) : (
                   <span className="w-8" />

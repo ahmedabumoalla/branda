@@ -2,10 +2,12 @@
 
 import { Camera, Keyboard, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { parseBrandaQrPayload, type BrandaQrKind } from "@/lib/loyalty/secure-qr-payload";
 
 type Props = {
   label: string;
   onDetected: (value: string) => void;
+  expectedKind?: BrandaQrKind;
 };
 
 type BarcodeDetectorShape = {
@@ -20,7 +22,7 @@ declare global {
   }
 }
 
-export function BarcodeCameraScanner({ label, onDetected }: Props) {
+export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [open, setOpen] = useState(false);
@@ -40,7 +42,7 @@ export function BarcodeCameraScanner({ label, onDetected }: Props) {
         }
 
         if (!window.BarcodeDetector) {
-          setError("قارئ الباركود غير مدعوم في هذا المتصفح استخدم Chrome أو أدخل الكود يدويًا");
+          setError("قارئ QR غير مدعوم في هذا المتصفح استخدم Chrome أو أدخل الكود يدويًا");
           return;
         }
 
@@ -64,7 +66,8 @@ export function BarcodeCameraScanner({ label, onDetected }: Props) {
 
           try {
             const codes = await detector.detect(videoRef.current);
-            const value = codes[0]?.rawValue?.trim();
+            const rawValue = codes[0]?.rawValue?.trim();
+            const value = rawValue ? parseBrandaQrPayload(rawValue, expectedKind) : null;
             if (value) {
               onDetected(value);
               setOpen(false);
@@ -91,7 +94,7 @@ export function BarcodeCameraScanner({ label, onDetected }: Props) {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [open, onDetected]);
+  }, [expectedKind, open, onDetected]);
 
   return (
     <>
@@ -129,7 +132,7 @@ export function BarcodeCameraScanner({ label, onDetected }: Props) {
               </div>
             ) : (
               <p className="mt-4 text-center text-sm font-bold text-white/70">
-                وجّه الكاميرا إلى الباركود حتى تتم القراءة تلقائيًا
+                وجّه الكاميرا إلى QR حتى تتم القراءة تلقائيًا
               </p>
             )}
           </div>

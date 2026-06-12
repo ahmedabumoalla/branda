@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BadgeCheck, ExternalLink, Gift, Link as LinkIcon, MessageSquareText, XCircle } from "lucide-react";
+import { BadgeCheck, ExternalLink, Gift, Link as LinkIcon, MessageSquareText, QrCode, XCircle } from "lucide-react";
 import {
   approveExperienceRewardSubmissionAction,
+  ownerRedeemExperienceRewardAction,
   rejectExperienceRewardSubmissionAction,
 } from "@/app/actions/experience-rewards";
 import { formatSar } from "@/lib/format";
+import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { OwnerExperienceRewardSubmission } from "@/lib/data/experience-rewards";
 import type { MenuProduct } from "@/lib/mock/menu";
 
@@ -41,6 +45,7 @@ export function ExperienceRewardReviewsPageClient({
     return date.toISOString().slice(0, 10);
   });
   const [reviewNotes, setReviewNotes] = useState("");
+  const [rewardCodeToRedeem, setRewardCodeToRedeem] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -107,7 +112,7 @@ export function ExperienceRewardReviewsPageClient({
             }
           : current
       );
-      setMessage(`تم اعتماد التوثيق وإصدار الباركود ${result.rewardCode}`);
+      setMessage(`تم اعتماد التوثيق وإصدار QR ${result.rewardCode}`);
     } catch {
       setMessage("تعذر اعتماد التوثيق");
     } finally {
@@ -136,12 +141,50 @@ export function ExperienceRewardReviewsPageClient({
     }
   }
 
+  async function redeemRewardFromOwnerPage() {
+    const parsedRewardCode = parseBrandaQrPayload(rewardCodeToRedeem, "experience-reward") ?? rewardCodeToRedeem.trim().toUpperCase();
+    if (!parsedRewardCode) {
+      setMessage("أدخل QR المكافأة أو اقرأه من الكاميرا");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await ownerRedeemExperienceRewardAction(parsedRewardCode);
+      setSubmissions((current) =>
+        current.map((item) =>
+          item.rewardCode === parsedRewardCode
+            ? { ...item, status: "redeemed", usedAt: new Date().toISOString() }
+            : item
+        )
+      );
+      setSelected((current) =>
+        current?.rewardCode === parsedRewardCode
+          ? { ...current, status: "redeemed", usedAt: new Date().toISOString() }
+          : current
+      );
+      setRewardCodeToRedeem("");
+      const items = Array.isArray(result.items)
+        ? result.items.map((item) => {
+            const rewardItem = item as { productName?: unknown; quantity?: unknown };
+            return `${String(rewardItem.productName ?? "")} × ${String(rewardItem.quantity ?? 1)}`;
+          }).join("، ")
+        : "مكافأة";
+      setMessage(`تم صرف مكافأة توثيق التجربة للعميل ${String(result.customerName ?? "عميل")} — ${items}`);
+    } catch {
+      setMessage("QR مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-4 py-8 text-[#311912]">
       <section className="mx-auto max-w-7xl">
         <div className="mb-6 rounded-[32px] bg-white p-6 shadow-sm">
           <p className="text-sm font-black text-[#9B6A34]">مراجعة توثيق التجارب للعملاء</p>
-          <h1 className="mt-1 text-3xl font-black">اعتماد المكافآت وربطها بالباركود</h1>
+          <h1 className="mt-1 text-3xl font-black">اعتماد المكافآت وربطها بالـ QR</h1>
           <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
             راجع رابط التوثيق وبيانات العميل ثم اختر منتجات من المنيو كمكافأة وحدد صلاحيتها
           </p>
@@ -158,6 +201,37 @@ export function ExperienceRewardReviewsPageClient({
             {message}
           </div>
         ) : null}
+
+        <section className="mb-6 rounded-[32px] bg-white p-5 shadow-sm">
+          <h2 className="flex items-center gap-2 text-xl font-black">
+            <QrCode className="h-6 w-6 text-[#6B3A25]" />
+            قارئ QR مكافآت توثيق التجربة
+          </h2>
+          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+            يقرأ QR المكافأة من داخل لوحة العلامة فقط، وبعد الصرف يتوقف الكود ولا يمكن استخدامه مرة ثانية.
+          </p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto]">
+            <input
+              value={rewardCodeToRedeem}
+              onChange={(event) => setRewardCodeToRedeem(event.target.value.toUpperCase())}
+              placeholder="QR المكافأة أو الكود"
+              className="h-12 rounded-2xl border border-[#E7D7C6] px-4 font-bold"
+            />
+            <BarcodeCameraScanner
+              label="قراءة QR المكافأة"
+              expectedKind="experience-reward"
+              onDetected={(value) => setRewardCodeToRedeem(value.toUpperCase())}
+            />
+            <button
+              type="button"
+              onClick={() => void redeemRewardFromOwnerPage()}
+              disabled={busy}
+              className="rounded-2xl bg-[#D9A33F] px-5 py-3 font-black text-[#311912] disabled:opacity-50"
+            >
+              صرف المكافأة
+            </button>
+          </div>
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <section className="rounded-[32px] bg-white p-5 shadow-sm">
@@ -315,8 +389,15 @@ export function ExperienceRewardReviewsPageClient({
 
                 {selected.rewardCode ? (
                   <div className="mt-4 rounded-3xl bg-[#311912] p-4 text-center text-white">
-                    <p className="text-xs font-bold text-[#D9A33F]">باركود المكافأة</p>
-                    <p className="mt-2 font-mono text-2xl font-black tracking-[0.18em]">
+                    <p className="text-xs font-bold text-[#D9A33F]">QR المكافأة</p>
+                    <SecureQrCode
+                      kind="experience-reward"
+                      value={selected.rewardCode}
+                      title={`QR مكافأة ${selected.rewardCode}`}
+                      size={176}
+                      className="mt-3"
+                    />
+                    <p className="mt-3 font-mono text-2xl font-black tracking-[0.18em]">
                       {selected.rewardCode}
                     </p>
                   </div>

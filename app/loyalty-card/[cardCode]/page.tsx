@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Coffee, Gift, Home, WalletCards } from "lucide-react";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 
 type Props = {
   params: Promise<{ cardCode: string }>;
@@ -83,15 +84,16 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
 
             <div className="mt-8 rounded-2xl bg-white p-5 text-center text-[#17100d]">
               <p className="font-mono text-lg font-black tracking-[0.25em]">{card.cardCode}</p>
-              <div className="mt-4 grid grid-cols-12 gap-1">
-                {Array.from({ length: 48 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className="h-10 rounded-sm bg-[#17100d]"
-                    style={{ opacity: index % 4 === 0 ? 1 : index % 2 === 0 ? 0.75 : 0.45 }}
-                  />
-                ))}
-              </div>
+              <SecureQrCode
+                kind="loyalty-card"
+                value={card.cardCode}
+                title={`QR بطاقة الولاء ${card.cardCode}`}
+                size={190}
+                className="mt-4"
+              />
+              <p className="mt-3 text-[11px] font-black text-[#806A5E]">
+                QR آمن لا يؤكد العملية إلا من صفحة الكاشير أو لوحة العلامة
+              </p>
             </div>
 
             <div className="mt-5 flex items-center justify-between">
@@ -106,7 +108,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
             <p className="text-sm font-black text-[#D9A33F]">{cafeName}</p>
             <h1 className="mt-2 text-4xl font-black">{program.cardTitle}</h1>
             <p className="mt-3 text-base font-bold leading-8 text-[#806A5E]">
-              اعرض هذه البطاقة للكاشير عند كل عملية شراء. بعد قراءة باركود البطاقة وباركود الفاتورة يضيء كوب جديد في البطاقة.
+              اعرض هذه البطاقة للكاشير عند كل عملية شراء. بعد قراءة QR البطاقة وQR الفاتورة من الكاشير أو لوحة العلامة يضيء كوب جديد في البطاقة.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">

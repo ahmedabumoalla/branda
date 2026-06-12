@@ -564,7 +564,7 @@ function CafePageInner({ slug }: { slug: string }) {
               {settings.description || "استعرض المنتجات والعروض والحملات الخاصة بالعلامة التجارية من مكان واحد"}
             </p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+            <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:max-w-3xl">
               <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-5 py-4 font-black text-[var(--ci-button-fg)]">
                 <ShoppingBag className="h-5 w-5" />
                 تصفح المنتجات
@@ -572,6 +572,10 @@ function CafePageInner({ slug }: { slug: string }) {
               <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
                 <BadgePercent className="h-5 w-5" />
                 العروض والخصومات
+              </Link>
+              <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
+                <CalendarDays className="h-5 w-5" />
+                الحجوزات
               </Link>
             </div>
 

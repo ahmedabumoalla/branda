@@ -11,6 +11,7 @@ import {
 import { ThemedCafeShell } from "@/components/cafe/themes/themed-cafe-shell";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { getCustomerExperienceRewardNotifications } from "@/lib/data/experience-rewards";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 
 export const dynamic = "force-dynamic";
 
@@ -74,20 +75,20 @@ export default async function CustomerNotificationsPage({ params }: Params) {
                 <div className="mt-4 rounded-3xl bg-white p-4 text-center">
                   <p className="flex items-center justify-center gap-2 text-xs font-black text-[#806A5E]">
                     <QrCode className="h-4 w-4" />
-                    باركود المكافأة
+                    QR المكافأة
                   </p>
                   <p className="mt-2 font-mono text-xl font-black tracking-[0.18em] text-[#311912]">
                     {reward.rewardCode || "بانتظار الإصدار"}
                   </p>
-                  <div className="mx-auto mt-3 grid max-w-xs grid-cols-12 gap-1">
-                    {Array.from({ length: 36 }).map((_, index) => (
-                      <span
-                        key={index}
-                        className="h-8 rounded-sm bg-[#17100d]"
-                        style={{ opacity: index % 3 === 0 ? 1 : 0.55 }}
-                      />
-                    ))}
-                  </div>
+                  {reward.rewardCode ? (
+                    <SecureQrCode
+                      kind="experience-reward"
+                      value={reward.rewardCode}
+                      title={`QR مكافأة ${reward.rewardCode}`}
+                      size={168}
+                      className="mt-3"
+                    />
+                  ) : null}
                 </div>
               </article>
             ))}

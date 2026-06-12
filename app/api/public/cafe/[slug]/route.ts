@@ -4,6 +4,7 @@ import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
 
 type Params = { params: Promise<{ slug: string }> };
+export const revalidate = 60;
 
 export async function GET(_request: Request, { params }: Params) {
   if (!isSupabaseConfigured()) {
@@ -23,7 +24,10 @@ export async function GET(_request: Request, { params }: Params) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ settings, themeId, customIdentity });
+    return NextResponse.json(
+      { settings, themeId, customIdentity },
+      { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } }
+    );
   } catch (err) {
     console.error("[public/cafe]", err);
     return NextResponse.json({ error: "Failed to load cafe" }, { status: 500 });

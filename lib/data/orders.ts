@@ -4,6 +4,7 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { assertCustomerIdMatchesSession } from "@/lib/data/customers";
 import { mapDbOrderToCafeOrder, mapOrderStatusToDb } from "@/lib/data/mappers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
+import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
 
 export async function getOwnerOrders(): Promise<CafeOrder[]> {
   const cafe = await requireOwnerCafeContext();
@@ -89,5 +90,27 @@ export async function createPickupOrder(input: z.infer<typeof createOrderSchema>
   });
 
   if (error) throw error;
+
+  if (isBrandaEmailConfigured()) {
+    try {
+      const { data: settings } = await supabase
+        .from("cafe_settings")
+        .select("owner_email")
+        .eq("cafe_id", cafe.id)
+        .maybeSingle();
+      const ownerEmail = settings?.owner_email ? String(settings.owner_email) : undefined;
+      if (ownerEmail) {
+        await sendBrandaEmail({
+          to: ownerEmail,
+          subject: "طلب كوفي جديد وصل عبر برندة",
+          text: `وصل طلب كوفي جديد للفرع ${parsed.branchName ?? "غير محدد"}.`,
+          html: `<div dir="rtl"><h2>طلب كوفي جديد</h2><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
+        });
+      }
+    } catch (emailError) {
+      console.warn("Pickup order email skipped", emailError);
+    }
+  }
+
   return orderId as string;
 }

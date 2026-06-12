@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 
 export type LoyaltyCardProgram = {
@@ -314,8 +315,8 @@ export async function recordOwnerLoyaltyOperation(input: {
   operation: "stamp" | "redeem";
 }) {
   const parsed = z.object({
-    cardCode: z.string().min(4).max(120),
-    invoiceBarcode: z.string().min(2).max(120),
+    cardCode: z.string().min(4).max(500),
+    invoiceBarcode: z.string().min(2).max(500),
     invoiceAmount: z.number().min(0).max(999999),
     operation: z.enum(["stamp", "redeem"]),
   }).parse(input);
@@ -325,8 +326,8 @@ export async function recordOwnerLoyaltyOperation(input: {
 
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
     p_cafe_id: cafe.id,
-    p_card_code: parsed.cardCode,
-    p_invoice_barcode: parsed.invoiceBarcode,
+    p_card_code: parseBrandaQrPayload(parsed.cardCode, "loyalty-card") ?? parsed.cardCode.trim().toUpperCase(),
+    p_invoice_barcode: parseBrandaQrPayload(parsed.invoiceBarcode, "invoice") ?? parsed.invoiceBarcode.trim(),
     p_invoice_amount: parsed.invoiceAmount,
     p_operation: parsed.operation,
     p_cashier_session_token: null,

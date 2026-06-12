@@ -20,6 +20,7 @@ import {
   setLoyaltyCashierStatusAction,
 } from "@/app/actions/loyalty-cards";
 import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import {
   BentoCard,
   BentoGrid,
@@ -32,6 +33,7 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
+import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
 
@@ -152,7 +154,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
   async function runScan() {
     if (!cardCode.trim() || !invoiceBarcode.trim()) {
-      setMessage("أدخل باركود البطاقة وباركود الفاتورة");
+      setMessage("أدخل QR البطاقة وQR الفاتورة");
       return;
     }
 
@@ -160,8 +162,8 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     setMessage("");
     try {
       const result = await recordLoyaltyCardOperationAction({
-        cardCode,
-        invoiceBarcode,
+        cardCode: parseBrandaQrPayload(cardCode, "loyalty-card") ?? cardCode.trim().toUpperCase(),
+        invoiceBarcode: parseBrandaQrPayload(invoiceBarcode, "invoice") ?? invoiceBarcode.trim(),
         invoiceAmount: Number(invoiceAmount || 0),
         operation,
       });
@@ -179,7 +181,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
   return (
     <DashboardPageShell
       title="بطاقات الولاء"
-      subtitle="منظومة بطاقة العلامة والكاشير والباركود وسجل العمليات"
+      subtitle="منظومة بطاقة العلامة والكاشير وQR وسجل العمليات"
       action={<a href="#cashier-tracking" className="rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white">متابعة الكاشير</a>}
     >
       {configError ? <SoftCard className="mb-6 p-4 font-black text-amber-700">{configError}</SoftCard> : null}
@@ -188,7 +190,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
       <BentoGrid className="mb-6">
         <BentoCard variant="white"><CreditCard className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="بطاقات العملاء" value={dashboard.cards.length} hint="داخل هذه العلامة" /></BentoCard>
-        <BentoCard variant="white"><ShoppingBag className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="عمليات الشراء" value={totalPurchases} hint="مؤكدة بالباركود" /></BentoCard>
+        <BentoCard variant="white"><ShoppingBag className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="عمليات الشراء" value={totalPurchases} hint="مؤكدة بالـ QR" /></BentoCard>
         <BentoCard variant="white"><Gift className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="مكافآت متاحة" value={activeRewards} hint="جاهزة للصرف" /></BentoCard>
         <BentoCard variant="white"><UserRound className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="الكاشيرات" value={dashboard.cashiers.length} hint="حسابات تشغيل محدودة" /></BentoCard>
       </BentoGrid>
@@ -218,7 +220,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
             </div>
             <div className="mt-8 rounded-2xl bg-white p-4 text-center text-[#17100d]">
               <p className="font-mono text-xl font-black tracking-[0.3em]">BRANDA-CARD</p>
-              <div className="mt-3 grid grid-cols-12 gap-1">{Array.from({ length: 36 }).map((_, index) => <span key={index} className="h-10 rounded-sm bg-[#17100d]" style={{ opacity: index % 3 === 0 ? 1 : 0.55 }} />)}</div>
+              <SecureQrCode kind="loyalty-card" value="BRANDA-CARD" title="نموذج QR بطاقة الولاء" size={170} className="mt-3" />
             </div>
           </div>
         </BentoCard>
@@ -226,16 +228,16 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
       <BentoGrid className="mb-6">
         <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />قارئ البطاقة والفاتورة</h2>
+          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />قارئ QR البطاقة والفاتورة</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <NeumoInput placeholder="باركود بطاقة العميل" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
-            <NeumoInput placeholder="باركود الفاتورة" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
+            <NeumoInput placeholder="QR بطاقة العميل أو الكود" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
+            <NeumoInput placeholder="QR الفاتورة أو رقمها" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
             <NeumoInput type="number" placeholder="قيمة الفاتورة اختياري" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
             <NeumoSelect value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">تأكيد ختم أو عملية شراء</option><option value="redeem">صرف مكافأة</option></NeumoSelect>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <BarcodeCameraScanner label="قراءة بطاقة العميل" onDetected={(value) => setCardCode(value.toUpperCase())} />
-            <BarcodeCameraScanner label="قراءة باركود الفاتورة" onDetected={setInvoiceBarcode} />
+            <BarcodeCameraScanner label="قراءة QR بطاقة العميل" expectedKind="loyalty-card" onDetected={(value) => setCardCode(value.toUpperCase())} />
+            <BarcodeCameraScanner label="قراءة QR الفاتورة" onDetected={setInvoiceBarcode} />
             <PrimaryButton onClick={runScan} disabled={processing}><BadgeCheck className="h-4 w-4" />تنفيذ العملية</PrimaryButton>
           </div>
         </BentoCard>

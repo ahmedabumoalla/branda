@@ -8,6 +8,9 @@ export type CreateReservationInput = {
   customer: BrandaCustomerSession;
   branch: CafeBranch;
   reservationType: ReservationEventType;
+  serviceId?: string;
+  serviceName?: string;
+  reservationPrice?: number;
   guests: number;
   date: string;
   time: string;
@@ -26,6 +29,9 @@ export async function createReservationFlow(input: CreateReservationInput) {
     customer,
     branch,
     reservationType,
+    serviceId,
+    serviceName,
+    reservationPrice,
     guests,
     date,
     time,
@@ -41,6 +47,7 @@ export async function createReservationFlow(input: CreateReservationInput) {
   const reservationId = await createReservation({
     cafeSlug: slug,
     customerId: customer.id,
+    serviceId,
     type: reservationType,
     guests,
     date,
@@ -60,6 +67,9 @@ export async function createReservationFlow(input: CreateReservationInput) {
     customerId: customer.id,
     customerName: customer.fullName,
     phone: customer.phone,
+    serviceId,
+    serviceName,
+    reservationPrice,
     type: reservationType,
     guests,
     date,

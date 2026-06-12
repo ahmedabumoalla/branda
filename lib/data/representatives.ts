@@ -21,6 +21,8 @@ export type RepresentativeItem = {
   renewalsRevenue: number;
   commissionAmount: number;
   active: boolean;
+  couponActive: boolean;
+  loginPassword?: string;
 };
 
 export type RepresentativeSession = {
@@ -138,7 +140,7 @@ export async function getAdminRepresentatives(): Promise<RepresentativeItem[]> {
   const { data, error } = await supabase
     .from("platform_representatives")
     .select(
-      "*, representative_coupons(code, discount_percent, free_trial_days, eligible_plan_ids), brand_referrals(id, first_paid_subscription_at), representative_commissions(amount_sar, base_amount_sar, commission_type)"
+      "*, representative_coupons(id, code, discount_percent, free_trial_days, eligible_plan_ids, active), brand_referrals(id, first_paid_subscription_at), representative_commissions(amount_sar, base_amount_sar, commission_type)"
     )
     .order("created_at", { ascending: false });
 
@@ -178,6 +180,8 @@ export async function getAdminRepresentatives(): Promise<RepresentativeItem[]> {
         0
       ),
       active: Boolean(row.active),
+      couponActive: Boolean(coupon?.active ?? true),
+      loginPassword: row.portal_password_hint ? String(row.portal_password_hint) : undefined,
     };
   });
 }
@@ -257,6 +261,7 @@ export async function createRepresentative(input: {
         account_name: parsed.accountName ?? null,
         swift_code: parsed.swiftCode ?? null,
         bank_document_storage_path: documentPath,
+        portal_password_hint: password,
         created_by: adminUser.id,
       })
       .select("id")
@@ -295,6 +300,55 @@ export async function createRepresentative(input: {
 
     throw error;
   }
+}
+
+
+export async function updateAdminRepresentative(input: {
+  representativeId: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  region: string;
+  discountPercent: number;
+  freeTrialDays: number;
+  active: boolean;
+  couponActive: boolean;
+}) {
+  await requirePlatformAdmin();
+  const parsed = z.object({
+    representativeId: z.string().uuid(),
+    fullName: z.string().trim().min(2).max(120),
+    phone: z.string().trim().min(8).max(20),
+    email: z.string().trim().email(),
+    region: z.string().trim().min(1).max(100),
+    discountPercent: z.number().min(0).max(100),
+    freeTrialDays: z.number().int().min(0).max(365),
+    active: z.boolean(),
+    couponActive: z.boolean(),
+  }).parse(input);
+
+  const admin = createAdminClient();
+  const { error: representativeError } = await admin
+    .from("platform_representatives")
+    .update({
+      full_name: parsed.fullName,
+      phone: parsed.phone,
+      email: parsed.email.toLowerCase(),
+      region: parsed.region,
+      active: parsed.active,
+    })
+    .eq("id", parsed.representativeId);
+  if (representativeError) throw representativeError;
+
+  const { error: couponError } = await admin
+    .from("representative_coupons")
+    .update({
+      discount_percent: parsed.discountPercent,
+      free_trial_days: parsed.freeTrialDays,
+      active: parsed.couponActive,
+    })
+    .eq("representative_id", parsed.representativeId);
+  if (couponError) throw couponError;
 }
 
 export async function loginRepresentativeWithPassword(email: string, password: string) {
