@@ -24,7 +24,7 @@ async function resolvePublicStorageUrl(bucket: string, path: string) {
   return cachedRequest(`public-storage:${key}`, 60 * 60_000, async () => {
     const response = await fetch(
       `/api/public/storage?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
-      { cache: "force-cache", next: { revalidate: 3600 } }
+      { cache: "no-store" }
     );
 
     if (!response.ok) return undefined;

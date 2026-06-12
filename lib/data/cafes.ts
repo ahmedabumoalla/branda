@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CafeContext = {
   id: string;
@@ -33,6 +34,23 @@ export async function getCafeBySlug(slug: string) {
   }
 
   return publicCafeRows ?? null;
+}
+
+export async function getPublicCafeBySlugAdmin(slug: string) {
+  const supabase = createAdminClient();
+  const normalizedSlug = slug.trim().toLowerCase();
+
+  const { data, error } = await supabase
+    .from("cafes")
+    .select("id, slug, name, status, is_public")
+    .eq("slug", normalizedSlug)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  if (data.status && !["active", "published"].includes(String(data.status))) return null;
+  return data;
 }
 
 export async function getOwnerCafeContext(): Promise<CafeContext | null> {

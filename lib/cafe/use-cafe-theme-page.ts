@@ -38,8 +38,7 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
 
   const request = cachedRequest(`public-cafe-theme:${slug}`, CAFE_THEME_PAGE_CACHE_TTL_MS, async () => {
     const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, {
-      cache: "force-cache",
-      next: { revalidate: 300 },
+      cache: "no-store",
     });
 
     if (!res.ok) {

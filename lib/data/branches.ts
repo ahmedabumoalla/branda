@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { buildMapboxMapUrl, DEFAULT_BRANCH_GEOFENCE_RADIUS_M, type CafeBranch } from "@/lib/mock/branches";
 
 function mapDbBranch(row: Record<string, unknown>): CafeBranch {
@@ -26,10 +27,10 @@ function mapDbBranch(row: Record<string, unknown>): CafeBranch {
 }
 
 export async function getPublicBranchesBySlug(slug: string): Promise<CafeBranch[]> {
-  const cafe = await getCafeBySlug(slug);
+  const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("branches")
     .select("*")

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { mapDbOfferToCafeOffer } from "@/lib/data/mappers";
 import type { CafeOffer } from "@/lib/mock/offers";
 
@@ -85,10 +86,10 @@ async function syncLinkedProductPromo(
 }
 
 export async function getPublicOffersBySlug(slug: string): Promise<CafeOffer[]> {
-  const cafe = await getCafeBySlug(slug);
+  const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("offers")
     .select("*")

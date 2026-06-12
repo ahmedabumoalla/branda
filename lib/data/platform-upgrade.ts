@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 
 import type { ReservationDurationUnit } from "@/lib/mock/reservation-services";
 
@@ -69,9 +70,9 @@ export async function getOwnerReservationServices() {
 }
 
 export async function getPublicReservationServicesBySlug(slug: string) {
-  const cafe = await getCafeBySlug(slug);
+  const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return [];
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("reservation_services")
     .select("*")

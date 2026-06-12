@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireOwnerCafeContext, getCafeBySlug } from "@/lib/data/cafes";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireOwnerCafeContext, getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import {
   mapDbCategoryToRecord,
   mapDbProductToMenuProduct,
@@ -11,10 +12,10 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 
 export async function getPublicMenuBySlug(slug: string) {
-  const cafe = await getCafeBySlug(slug);
+  const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return { categories: [] as MenuCategoryRecord[], products: [] as MenuProduct[] };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [{ data: categories }, { data: products }] = await Promise.all([
     supabase
