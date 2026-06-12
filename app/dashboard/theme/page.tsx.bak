@@ -1,0 +1,189 @@
+﻿export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+import { ThemePageClient } from "@/components/dashboard/pages/theme-page";
+
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+
+import { getOwnerLoyalty } from "@/lib/data/loyalty";
+
+import { getOwnerMenu } from "@/lib/data/menu";
+
+import { getOwnerOffers } from "@/lib/data/offers";
+
+import { getOwnerCafeSettings } from "@/lib/data/settings";
+
+import { getOwnerCustomIdentity, getOwnerThemeId } from "@/lib/data/theme";
+
+import { defaultCustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
+
+
+
+export default async function ThemePage() {
+
+  if (!isSupabaseConfigured()) {
+
+    return (
+
+      <ThemePageClient
+
+        initialThemeId="brand-identity-custom"
+
+        initialSettings={{
+
+          cafeSlug: "test-cafe",
+
+          cafeName: "ظƒظˆظپظٹ",
+
+          ownerName: "",
+
+          ownerEmail: "",
+
+          ownerPhone: "",
+
+          description: "",
+
+          domainStatus: "ط؛ظٹط± ظ…ط±ط¨ظˆط·",
+
+        }}
+
+        initialProducts={[]}
+
+        initialCategories={[]}
+
+        initialOffers={[]}
+
+        initialLoyaltySettings={{
+
+          pointsPerSar: 1,
+
+          welcomePoints: 0,
+
+          enabled: true,
+
+          earnRules: [],
+
+          redemptionRules: [],
+
+        }}
+
+        initialLoyaltyRewards={[]}
+
+        initialCustomIdentity={defaultCustomIdentityTheme()}
+
+        configError="ظ‚ظ… ط¨ط¥ط¹ط¯ط§ط¯ Supabase ظپظٹ .env.local"
+
+      />
+
+    );
+
+  }
+
+
+
+  try {
+
+    const [settings, themeId, menu, offers, loyalty, customIdentity] = await Promise.all([
+
+      getOwnerCafeSettings(),
+
+      getOwnerThemeId(),
+
+      getOwnerMenu(),
+
+      getOwnerOffers(),
+
+      getOwnerLoyalty(),
+
+      getOwnerCustomIdentity(),
+
+    ]);
+
+
+
+    return (
+
+      <ThemePageClient
+
+        initialThemeId={themeId}
+
+        initialSettings={settings}
+
+        initialProducts={menu.products}
+
+        initialCategories={menu.categories}
+
+        initialOffers={offers}
+
+        initialLoyaltySettings={loyalty.settings}
+
+        initialLoyaltyRewards={loyalty.rewards}
+
+        initialCustomIdentity={customIdentity ?? defaultCustomIdentityTheme()}
+
+      />
+
+    );
+
+  } catch {
+
+    return (
+
+      <ThemePageClient
+
+        initialThemeId="brand-identity-custom"
+
+        initialSettings={{
+
+          cafeSlug: "test-cafe",
+
+          cafeName: "ظƒظˆظپظٹ",
+
+          ownerName: "",
+
+          ownerEmail: "",
+
+          ownerPhone: "",
+
+          description: "",
+
+          domainStatus: "ط؛ظٹط± ظ…ط±ط¨ظˆط·",
+
+        }}
+
+        initialProducts={[]}
+
+        initialCategories={[]}
+
+        initialOffers={[]}
+
+        initialLoyaltySettings={{
+
+          pointsPerSar: 1,
+
+          welcomePoints: 0,
+
+          enabled: true,
+
+          earnRules: [],
+
+          redemptionRules: [],
+
+        }}
+
+        initialLoyaltyRewards={[]}
+
+        initialCustomIdentity={defaultCustomIdentityTheme()}
+
+        configError="طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط«ظٹظ…"
+
+      />
+
+    );
+
+  }
+
+}
+
+

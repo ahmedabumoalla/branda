@@ -71,7 +71,7 @@ export default function RegisterPage() {
     <main dir="rtl" className="grid min-h-screen lg:grid-cols-2" style={{ background: C.creamBase, color: C.espressoDark }}>
       <section className="relative hidden flex-col items-center justify-center overflow-hidden px-12 lg:flex" style={{ background: `linear-gradient(to bottom right, ${C.warmSand}, ${C.creamBase})` }}>
         <div className="max-w-xl text-center">
-          <p className="text-sm font-black tracking-[0.3em] text-[#9B6A34]">برندة</p>
+          <p className="text-sm font-black tracking-[0.3em] text-[#9B6A34]">بارنداكسا</p>
           <h1 className="mt-5 text-5xl font-black leading-tight" style={{ color: C.coffeeBrown }}>أهلاً بك في نافذة جديدة لنمو علامتك</h1>
           <p className="mt-5 text-lg font-bold leading-9" style={{ color: C.mutedText }}>أنشئ فرعك الإلكتروني وابدأ إدارة المنتجات والحجوزات والولاء والتسويق من مكان واحد</p>
         </div>

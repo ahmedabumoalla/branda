@@ -228,8 +228,8 @@ export async function registerCustomer(
     await sendBarndaksaEmail({
       to: parsed.email.trim().toLowerCase(),
       subject: `مرحبًا بك في ${cafe.name}`,
-      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
-      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
+      text: `تم إنشاء حسابك في ${cafe.name} عبر بارنداكسا.`,
+      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر بارنداكسا.</p></div>`,
     }).catch(() => undefined);
   }
 

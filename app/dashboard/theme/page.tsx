@@ -32,7 +32,7 @@ export default async function ThemePage() {
 
         initialSettings={{
 
-          cafeSlug: "qatrah",
+          cafeSlug: "test-cafe",
 
           cafeName: "كوفي",
 
@@ -136,7 +136,7 @@ export default async function ThemePage() {
 
         initialSettings={{
 
-          cafeSlug: "qatrah",
+          cafeSlug: "test-cafe",
 
           cafeName: "كوفي",
 

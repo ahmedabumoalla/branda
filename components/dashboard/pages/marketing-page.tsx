@@ -143,7 +143,7 @@ export function MarketingPageClient({
   }, [initialCampaigns.length, initialExpCampaigns.length, initialSubmissions.length]);
 
   const activeExpCampaign = useMemo(
-    () => expCampaigns.find((c) => c.cafeSlug === "qatrah" && c.status === "active"),
+    () => expCampaigns.find((c) => c.cafeSlug === "test-cafe" && c.status === "active"),
     [expCampaigns]
   );
 
@@ -180,7 +180,7 @@ export function MarketingPageClient({
       audience: audience.trim() || "كل العملاء",
       message:
         message.trim() ||
-        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر برندة.",
+        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر بارنداكسا.",
       code: code.trim() || undefined,
       discountPercent: discountPercent ? Number(discountPercent) : undefined,
       influencerName: influencerName.trim() || undefined,
@@ -216,7 +216,7 @@ export function MarketingPageClient({
   }
 
   function shareUrl(campaign: MarketingCampaign) {
-    const base = getCafePublicUrl("qatrah", {
+    const base = getCafePublicUrl("test-cafe", {
       origin: typeof window !== "undefined" ? window.location.origin : undefined,
     });
     const sep = base.includes("?") ? "&" : "?";
@@ -243,7 +243,7 @@ export function MarketingPageClient({
 
     const campaign: ExperienceCampaign = {
       id: crypto.randomUUID(),
-      cafeSlug: "qatrah",
+      cafeSlug: "test-cafe",
       title: expTitle.trim(),
       description: expDescription.trim(),
       startDate: expStart || new Date().toISOString().slice(0, 10),
@@ -261,7 +261,7 @@ export function MarketingPageClient({
     };
 
     const next = expCampaigns.map((c) =>
-      c.cafeSlug === "qatrah" && c.status === "active"
+      c.cafeSlug === "test-cafe" && c.status === "active"
         ? { ...c, status: "ended" as const }
         : c
     );
@@ -318,7 +318,7 @@ export function MarketingPageClient({
         title="الأدوات التسويقية"
         subtitle="حملات ترويجية، روابط مشاركة، وحملة وثّق تجربتك مع مراجعة المشاركات."
         action={
-          <LinkButton href={getCafePublicUrl("qatrah")} variant="outline" target="_blank">
+          <LinkButton href={getCafePublicUrl("test-cafe")} variant="outline" target="_blank">
             صفحة الكوفي
           </LinkButton>
         }

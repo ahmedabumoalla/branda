@@ -91,7 +91,7 @@ export async function submitContactRequestAction(input: {
         subject: `طلب تواصل جديد من ${input.fullName}`,
         html: `
           <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
-            <h2>طلب تواصل جديد من منصة برندة</h2>
+            <h2>طلب تواصل جديد من منصة بارنداكسا</h2>
             <p><strong>الاسم:</strong> ${escapeEmailHtml(input.fullName)}</p>
             <p><strong>البريد:</strong> ${escapeEmailHtml(input.email)}</p>
             <p><strong>الرسالة:</strong></p>

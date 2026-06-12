@@ -49,7 +49,7 @@ const emptyForm: FormState = {
 export function CategoryManager({
   categories,
   products,
-  cafeSlug = "qatrah",
+  cafeSlug = "test-cafe",
   onChange,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);

@@ -14,7 +14,7 @@ type Props = {
 export function ResponsiveAppShell({
   children,
   sidebar,
-  mobileTitle = "برندة",
+  mobileTitle = "بارنداكسا",
   variant = "dashboard",
 }: Props) {
   const [open, setOpen] = useState(false);

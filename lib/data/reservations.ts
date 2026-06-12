@@ -148,10 +148,10 @@ export async function updateReservationStatus(
         to: customerEmail,
         subject:
           status === "مقبول"
-            ? "تم قبول حجزك في برندة"
+            ? "تم قبول حجزك في بارنداكسا"
             : status === "مرفوض"
-              ? "تم رفض حجزك في برندة"
-              : "اقتراح تعديل على حجزك في برندة",
+              ? "تم رفض حجزك في بارنداكسا"
+              : "اقتراح تعديل على حجزك في بارنداكسا",
         text: `تم تحديث حالة حجزك: ${status}. ${message ?? ""}`,
         html: `<div dir="rtl"><h2>تم تحديث حالة حجزك</h2><p>الحالة: ${escapeEmailHtml(status)}</p><p>${escapeEmailHtml(message ?? "")}</p></div>`,
       }).catch(() => undefined);
@@ -344,7 +344,7 @@ export async function createReservation(
     if (ownerEmail) {
       await sendBarndaksaEmail({
         to: ownerEmail,
-        subject: "حجز جديد وصل للعلامة عبر برندة",
+        subject: "حجز جديد وصل للعلامة عبر بارنداكسا",
         text: `وصل حجز جديد من عميل للنوع ${parsed.type} بتاريخ ${parsed.date} الساعة ${parsed.time}.`,
         html: `<div dir="rtl"><h2>حجز جديد</h2><p>نوع الحجز: ${escapeEmailHtml(parsed.type)}</p><p>التاريخ: ${escapeEmailHtml(parsed.date)} - ${escapeEmailHtml(parsed.time)}</p><p>عدد الأشخاص: ${parsed.guests}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
       }).catch(() => undefined);

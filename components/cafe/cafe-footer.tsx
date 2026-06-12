@@ -37,7 +37,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
         </nav>
 
         <div className={`flex items-center gap-2 rounded-full border px-4 py-2 ${theme.card}`}>
-          <span className="text-[11px] font-bold tracking-wide opacity-80">صُمم بواسطة برندة</span>
+          <span className="text-[11px] font-bold tracking-wide opacity-80">صُمم بواسطة بارنداكسا</span>
           <span className="text-[10px] font-medium opacity-50" aria-hidden>
             ·
           </span>
@@ -46,7 +46,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
           </span>
           <Image
             src={logoSrc}
-            alt="برندة"
+            alt="بارنداكسا"
             width={52}
             height={20}
             className="object-contain opacity-70"

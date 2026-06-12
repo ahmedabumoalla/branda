@@ -1,0 +1,317 @@
+{
+  "ok": true,
+  "checkedAt": "2026-06-12T23:24:19.125Z",
+  "source": {
+    "issues": []
+  },
+  "env": {
+    "hasSupabaseUrl": true,
+    "hasAnonKey": true,
+    "hasServiceRoleKey": true,
+    "appUrl": "https://barndaksa.com",
+    "siteUrl": "https://barndaksa.com",
+    "publicDomain": "barndaksa.com"
+  },
+  "database": {
+    "anonPublicReads": {
+      "cafes": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "cafe_pages": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 0
+      },
+      "cafe_settings": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 0
+      },
+      "menu_categories": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "menu_products": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "branches": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "reviews": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "reservation_services": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "offers": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      }
+    },
+    "anonPrivateReads": {
+      "profiles": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table profiles",
+        "count": null
+      },
+      "orders": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table orders",
+        "count": null
+      },
+      "order_items": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table order_items",
+        "count": null
+      },
+      "reservations": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table reservations",
+        "count": null
+      },
+      "customer_profiles": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table customer_profiles",
+        "count": null
+      },
+      "subscriptions": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table subscriptions",
+        "count": null
+      },
+      "representatives": {
+        "ok": false,
+        "status": 404,
+        "error": "Could not find the table 'public.representatives' in the schema cache",
+        "count": null
+      },
+      "platform_settings": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table platform_settings",
+        "count": null
+      },
+      "audit_logs": {
+        "ok": false,
+        "status": 401,
+        "error": "permission denied for table audit_logs",
+        "count": null
+      }
+    },
+    "serviceRoleCoreTables": {
+      "cafes": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "cafe_pages": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "cafe_settings": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "menu_categories": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "menu_products": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "branches": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "reviews": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "reservation_services": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "offers": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "profiles": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "orders": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 0
+      },
+      "order_items": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 0
+      },
+      "reservations": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 0
+      },
+      "customer_profiles": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "subscriptions": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "representatives": {
+        "ok": false,
+        "status": 404,
+        "error": "Could not find the table 'public.representatives' in the schema cache",
+        "count": null
+      },
+      "platform_settings": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      },
+      "audit_logs": {
+        "ok": true,
+        "status": 200,
+        "error": null,
+        "count": 1
+      }
+    },
+    "storageBuckets": {
+      "ok": true,
+      "buckets": [
+        {
+          "id": "cafe-logos",
+          "name": "cafe-logos",
+          "public": false
+        },
+        {
+          "id": "cafe-backgrounds",
+          "name": "cafe-backgrounds",
+          "public": false
+        },
+        {
+          "id": "menu-products",
+          "name": "menu-products",
+          "public": false
+        },
+        {
+          "id": "menu-categories",
+          "name": "menu-categories",
+          "public": false
+        },
+        {
+          "id": "offer-banners",
+          "name": "offer-banners",
+          "public": false
+        },
+        {
+          "id": "customer-avatars",
+          "name": "customer-avatars",
+          "public": false
+        },
+        {
+          "id": "experience-submissions",
+          "name": "experience-submissions",
+          "public": false
+        },
+        {
+          "id": "subscription-receipts",
+          "name": "subscription-receipts",
+          "public": false
+        },
+        {
+          "id": "platform-media",
+          "name": "platform-media",
+          "public": false
+        },
+        {
+          "id": "job-applications",
+          "name": "job-applications",
+          "public": false
+        },
+        {
+          "id": "representative-documents",
+          "name": "representative-documents",
+          "public": false
+        },
+        {
+          "id": "marketing-assets",
+          "name": "marketing-assets",
+          "public": false
+        }
+      ]
+    },
+    "deepSqlAudit": {
+      "attempted": true,
+      "exitCode": null,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "warnings": [
+    {
+      "message": "psql is not available locally; install PostgreSQL client or run the SQL file in Supabase SQL Editor",
+      "meta": "spawnSync psql ENOENT"
+    }
+  ],
+  "failures": []
+}

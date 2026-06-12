@@ -42,7 +42,7 @@ function ThemePageInner({
 }: Props) {
   const [saved, setSaved] = useState(false);
   const cafeSettings = initialSettings;
-  const cafeSlug = cafeSettings.cafeSlug || "qatrah";
+  const cafeSlug = cafeSettings.cafeSlug || "test-cafe";
   const products = initialProducts;
   const offers = initialOffers;
   const availableProducts = products.filter((p) => p.available);

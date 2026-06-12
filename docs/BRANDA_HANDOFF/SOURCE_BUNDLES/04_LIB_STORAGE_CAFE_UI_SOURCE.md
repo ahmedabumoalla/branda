@@ -26,7 +26,7 @@ export function loadCafeSettingsFromStorage(): CafeSettings | null {
 # File: lib/cafe/cafe-theme-types.ts
 
 ```typescript
-import type { BarndaksaCustomerSession } from "@/lib/customer/session";
+import type { BrandaCustomerSession } from "@/lib/customer/session";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
@@ -39,7 +39,7 @@ export type CafeThemePageProps = {
   cafeSettings: CafeSettings;
   themeId: CafeThemeId;
   theme: ThemeClasses;
-  customer: BarndaksaCustomerSession | null;
+  customer: BrandaCustomerSession | null;
   products: MenuProduct[];
   offers: CafeOffer[];
   availableProducts: MenuProduct[];
@@ -475,7 +475,7 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { MarketingCampaign } from "@/lib/mock/marketing";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
-import type { BarndaksaCustomerSession } from "@/lib/customer/session";
+import type { BrandaCustomerSession } from "@/lib/customer/session";
 import { isLegacyDataImageUrl } from "@/lib/cafe/image-asset-pipeline";
 
 export function jsonContainsBase64Images(json: string): boolean {
@@ -528,7 +528,7 @@ export function sanitizeMarketingCampaign(campaign: MarketingCampaign): Marketin
   return { ...campaign };
 }
 
-export function sanitizeCustomerSession(session: BarndaksaCustomerSession): BarndaksaCustomerSession {
+export function sanitizeCustomerSession(session: BrandaCustomerSession): BrandaCustomerSession {
   const next = { ...session };
   if (isLegacyDataImageUrl(next.avatarUrl)) {
     delete next.avatarUrl;
@@ -880,15 +880,15 @@ export type StoredLocalAsset = {
   updatedAt: string;
 };
 
-const DB_NAME = "barndaksa-local-assets";
+const DB_NAME = "branda-local-assets";
 const DB_VERSION = 1;
 const STORE_NAME = "assets";
 
 /** Fixed IDs — replaced in place */
 export const FIXED_ASSET_IDS: Partial<Record<LocalAssetKind, string>> = {
-  "custom-theme-logo": "barndaksa-qatrah-custom-theme-logo",
-  "custom-theme-background": "barndaksa-qatrah-custom-theme-background",
-  "cafe-logo": "barndaksa-qatrah-cafe-logo",
+  "custom-theme-logo": "branda-qatrah-custom-theme-logo",
+  "custom-theme-background": "branda-qatrah-custom-theme-background",
+  "cafe-logo": "branda-qatrah-cafe-logo",
 };
 
 /** @deprecated use FIXED_ASSET_IDS */
@@ -953,15 +953,15 @@ export function buildAssetId(kind: LocalAssetKind, entityId?: string): string {
 
   switch (kind) {
     case "product-image":
-      return `barndaksa-qatrah-product-${entityId}-image`;
+      return `branda-qatrah-product-${entityId}-image`;
     case "category-image":
-      return `barndaksa-qatrah-category-${entityId}-image`;
+      return `branda-qatrah-category-${entityId}-image`;
     case "offer-banner":
-      return `barndaksa-qatrah-offer-${entityId}-banner`;
+      return `branda-qatrah-offer-${entityId}-banner`;
     case "marketing-image":
-      return `barndaksa-qatrah-marketing-${entityId}-image`;
+      return `branda-qatrah-marketing-${entityId}-image`;
     case "customer-avatar":
-      return `barndaksa-customer-${entityId}-avatar`;
+      return `branda-customer-${entityId}-avatar`;
     default:
       throw new Error(`Unknown asset kind "${kind}"`);
   }
@@ -1104,7 +1104,7 @@ export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 # File: lib/cafe/local-storage-repair.ts
 
 ```typescript
-import { getCustomerKey, type BarndaksaCustomerSession } from "@/lib/customer/session";
+import { getCustomerKey, type BrandaCustomerSession } from "@/lib/customer/session";
 import { sanitizeCafeSettingsForStorage } from "@/lib/cafe/cafe-settings-storage";
 import {
   assertNoBase64Images,
@@ -1152,8 +1152,8 @@ export type MigrationResult = MigrationReport & {
   repairedStorage: boolean;
 };
 
-const MENU_KEY = "barndaksa_qatrah_menu";
-const OFFERS_KEY = "barndaksa_qatrah_offers";
+const MENU_KEY = "branda_qatrah_menu";
+const OFFERS_KEY = "branda_qatrah_offers";
 
 let migrationPromise: Promise<MigrationResult> | null = null;
 
@@ -1412,11 +1412,11 @@ export async function migrateAllLegacyImageDataUrls(): Promise<MigrationReport> 
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (!key?.startsWith("barndaksa_customer_session_")) continue;
+      if (!key?.startsWith("branda_customer_session_")) continue;
       const raw = localStorage.getItem(key);
       if (!raw?.includes("data:image")) continue;
 
-      const session = JSON.parse(raw) as BarndaksaCustomerSession & { avatarAssetId?: string };
+      const session = JSON.parse(raw) as BrandaCustomerSession & { avatarAssetId?: string };
       if (session.avatarUrl?.startsWith("data:image")) {
         const assetId = await migrateDataUrlField(
           session.avatarUrl,
@@ -1521,7 +1521,7 @@ export function anyLegacyBase64InProjectStorage(): boolean {
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (!key?.startsWith("barndaksa_")) continue;
+      if (!key?.startsWith("branda_")) continue;
       const value = localStorage.getItem(key);
       if (value?.includes("data:image")) return true;
     }
@@ -1687,7 +1687,7 @@ export const DEFAULT_FILTER_STATE = {
 import { assertNoBase64Images, sanitizeMenuProducts } from "@/lib/cafe/entity-storage-sanitize";
 import type { MenuProduct } from "@/lib/mock/menu";
 
-export const MENU_STORAGE_KEY = "barndaksa_qatrah_menu";
+export const MENU_STORAGE_KEY = "branda_qatrah_menu";
 
 export function saveMenuProductsToStorage(_products: MenuProduct[]) {
   throw new Error("Use Supabase — save via app/actions/menu");
@@ -1943,9 +1943,9 @@ import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import { adoptThemeAction } from "@/app/actions/theme";
 import { saveCustomIdentityAction } from "@/app/actions/theme";
 
-export const BARNDAKSA_THEME_UPDATED_EVENT = "barndaksa:theme-updated";
-export const BARNDAKSA_CUSTOM_IDENTITY_UPDATED_EVENT = "barndaksa:custom-identity-updated";
-export const BARNDAKSA_MENU_CATEGORIES_UPDATED_EVENT = "barndaksa:menu-categories-updated";
+export const BRANDA_THEME_UPDATED_EVENT = "branda:theme-updated";
+export const BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT = "branda:custom-identity-updated";
+export const BRANDA_MENU_CATEGORIES_UPDATED_EVENT = "branda:menu-categories-updated";
 
 export function readSavedCafeThemeIdFromStorage(): CafeThemeId {
   return normalizeThemeId(null);
@@ -1954,24 +1954,24 @@ export function readSavedCafeThemeIdFromStorage(): CafeThemeId {
 export async function adoptCafeTheme(themeId: CafeThemeId) {
   await adoptThemeAction(themeId);
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(BARNDAKSA_THEME_UPDATED_EVENT));
+    window.dispatchEvent(new Event(BRANDA_THEME_UPDATED_EVENT));
   }
 }
 
 export async function persistCustomIdentityTheme(theme: CustomIdentityTheme) {
   await saveCustomIdentityAction(theme);
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(BARNDAKSA_CUSTOM_IDENTITY_UPDATED_EVENT));
+    window.dispatchEvent(new Event(BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT));
   }
 }
 
 export function notifyMenuCategoriesUpdated() {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(BARNDAKSA_MENU_CATEGORIES_UPDATED_EVENT));
+    window.dispatchEvent(new Event(BRANDA_MENU_CATEGORIES_UPDATED_EVENT));
   }
 }
 
-export function subscribeBarndaksaStorageEvents(handlers: {
+export function subscribeBrandaStorageEvents(handlers: {
   onThemeUpdated?: () => void;
   onCustomIdentityUpdated?: () => void;
   onMenuCategoriesUpdated?: () => void;
@@ -1979,34 +1979,34 @@ export function subscribeBarndaksaStorageEvents(handlers: {
   if (typeof window === "undefined") return () => {};
 
   if (handlers.onThemeUpdated) {
-    window.addEventListener(BARNDAKSA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
+    window.addEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
   }
   if (handlers.onCustomIdentityUpdated) {
     window.addEventListener(
-      BARNDAKSA_CUSTOM_IDENTITY_UPDATED_EVENT,
+      BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT,
       handlers.onCustomIdentityUpdated
     );
   }
   if (handlers.onMenuCategoriesUpdated) {
     window.addEventListener(
-      BARNDAKSA_MENU_CATEGORIES_UPDATED_EVENT,
+      BRANDA_MENU_CATEGORIES_UPDATED_EVENT,
       handlers.onMenuCategoriesUpdated
     );
   }
 
   return () => {
     if (handlers.onThemeUpdated) {
-      window.removeEventListener(BARNDAKSA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
+      window.removeEventListener(BRANDA_THEME_UPDATED_EVENT, handlers.onThemeUpdated);
     }
     if (handlers.onCustomIdentityUpdated) {
       window.removeEventListener(
-        BARNDAKSA_CUSTOM_IDENTITY_UPDATED_EVENT,
+        BRANDA_CUSTOM_IDENTITY_UPDATED_EVENT,
         handlers.onCustomIdentityUpdated
       );
     }
     if (handlers.onMenuCategoriesUpdated) {
       window.removeEventListener(
-        BARNDAKSA_MENU_CATEGORIES_UPDATED_EVENT,
+        BRANDA_MENU_CATEGORIES_UPDATED_EVENT,
         handlers.onMenuCategoriesUpdated
       );
     }
@@ -2060,7 +2060,7 @@ import {
 } from "@/lib/mock/cafe-theme";
 import { mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { isSupabaseConfigured } from "@/lib/branda/env";
 
 export function useCafeThemePage(slug: string) {
   const searchParams = useSearchParams();
@@ -2307,7 +2307,7 @@ export function useLocalAssetUrl(
 "use client";
 
 import { useEffect, useState } from "react";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { isSupabaseConfigured } from "@/lib/branda/env";
 import type { CafeBranch } from "@/lib/mock/branches";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
@@ -2448,8 +2448,8 @@ import {
   isValidCafeThemeId,
   type CafeThemeId,
 } from "@/lib/mock/cafe-theme";
-import { subscribeBarndaksaStorageEvents } from "@/lib/cafe/theme-storage-sync";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { subscribeBrandaStorageEvents } from "@/lib/cafe/theme-storage-sync";
+import { isSupabaseConfigured } from "@/lib/branda/env";
 
 export function readSavedCafeThemeId(): CafeThemeId | null {
   return null;
@@ -2489,7 +2489,7 @@ export function useResolvedCafeTheme(slug = "qatrah") {
     }
 
     void load();
-    return subscribeBarndaksaStorageEvents({
+    return subscribeBrandaStorageEvents({
       onThemeUpdated: () => {
         void load();
       },
@@ -3152,7 +3152,7 @@ export async function deleteStorageObject(bucket: StorageBucket, storagePath: st
 # File: lib/ui/brand-colors.ts
 
 ```typescript
-/** Official Barndaksa platform palette */
+/** Official Branda platform palette */
 export const BRAND_COLORS = {
   espressoDark: "#311912",
   coffeeBrown: "#4A281D",
@@ -3183,9 +3183,9 @@ export const brandColors = {
 } as const;
 
 export const LOGO = {
-  dark: "/brand/barndaksa-logo-dark.png",
-  brown: "/brand/barndaksa-logo-brown.png",
-  brownBg: "/brand/barndaksa-logo-brown-bg.png",
+  dark: "/brand/branda-logo-dark.png",
+  brown: "/brand/branda-logo-brown.png",
+  brownBg: "/brand/branda-logo-brown-bg.png",
 } as const;
 
 ```

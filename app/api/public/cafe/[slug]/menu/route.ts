@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
@@ -9,7 +8,10 @@ import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade"
 import { publicCacheHeader, PUBLIC_MENU_CACHE_SECONDS } from "@/lib/performance/server-cache";
 
 type Params = { params: Promise<{ slug: string }> };
-export const revalidate = 300;
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 const emptyLoyaltySettings = {
   pointsPerSar: 0,
@@ -19,31 +21,27 @@ const emptyLoyaltySettings = {
   redemptionRules: [],
 };
 
-const loadPublicMenu = unstable_cache(
-  async (slug: string) => {
-    const settings = await getPublicCafeSettings(slug);
-    if (!settings) return null;
+async function loadPublicMenu(slug: string) {
+  const settings = await getPublicCafeSettings(slug);
+  if (!settings) return null;
 
-    const [menu, offers, branches, reservationServices] = await Promise.all([
-      getPublicMenuBySlug(slug),
-      getPublicOffersBySlug(slug),
-      getPublicBranchesBySlug(slug),
-      getPublicReservationServicesBySlug(slug),
-    ]);
+  const [menu, offers, branches, reservationServices] = await Promise.all([
+    getPublicMenuBySlug(slug),
+    getPublicOffersBySlug(slug),
+    getPublicBranchesBySlug(slug),
+    getPublicReservationServicesBySlug(slug),
+  ]);
 
-    return {
-      ...menu,
-      offers,
-      branches,
-      loyaltySettings: emptyLoyaltySettings,
-      loyaltyRewards: [],
-      pages: [],
-      reservationServices,
-    };
-  },
-  ["barndaksa-public-menu-v2"],
-  { revalidate: PUBLIC_MENU_CACHE_SECONDS },
-);
+  return {
+    ...menu,
+    offers,
+    branches,
+    loyaltySettings: emptyLoyaltySettings,
+    loyaltyRewards: [],
+    pages: [],
+    reservationServices,
+  };
+}
 
 export async function GET(_request: Request, { params }: Params) {
   if (!isSupabaseConfigured()) {

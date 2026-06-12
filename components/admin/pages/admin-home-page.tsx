@@ -140,7 +140,7 @@ export function AdminHomePage({
 
   return (
     <AdminPageShell
-      title="مركز قيادة منصة برندة"
+      title="مركز قيادة منصة بارنداكسا"
       subtitle="مؤشرات المنصة والإيرادات وسجل العمليات من قاعدة البيانات الفعلية."
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
@@ -303,7 +303,7 @@ export function AdminHomePage({
             </div>
 
             <h2 className="text-xl font-black text-[#F8F4EF]">
-              مساعد برندة الذكي
+              مساعد بارنداكسا الذكي
             </h2>
 
             <p className="mt-3 text-sm font-bold leading-7 text-[#CBB29C]">

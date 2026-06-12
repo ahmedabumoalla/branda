@@ -1,51 +1,43 @@
-﻿export function getSupabaseUrl() {
+/** Safe env access — never log secrets */
+
+export function getSupabaseUrl(): string {
   return process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 }
 
-export function getSupabaseAnonKey() {
+export function getSupabaseAnonKey(): string {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 }
 
-export function getSupabaseServiceRoleKey() {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-}
-
-export function requireSupabaseUrl() {
-  const value = getSupabaseUrl();
-  if (!value) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+export function requireSupabaseUrl(): string {
+  const url = getSupabaseUrl();
+  if (!url) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL. Copy .env.example to .env.local and configure Supabase."
+    );
   }
-  return value;
+  return url;
 }
 
-export function requireSupabaseAnonKey() {
-  const value = getSupabaseAnonKey();
-  if (!value) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
+export function requireSupabaseAnonKey(): string {
+  const key = getSupabaseAnonKey();
+  if (!key) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Copy .env.example to .env.local and configure Supabase."
+    );
   }
-  return value;
+  return key;
 }
 
-export function requireSupabaseServiceRoleKey() {
-  const value = getSupabaseServiceRoleKey();
-  if (!value) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+export function getSupabaseServiceRoleKey(): string {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_KEY. Server-only — never expose to the client."
+    );
   }
-  return value;
+  return key;
 }
 
-export function isSupabaseConfigured() {
+export function isSupabaseConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
-}
-
-export function getPublicAppUrl() {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000"
-  );
-}
-
-export function getPublicDomain() {
-  return process.env.NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN ?? "barndaksa.com";
 }

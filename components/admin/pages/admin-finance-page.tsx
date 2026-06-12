@@ -67,7 +67,7 @@ export function AdminFinancePage({ data, configError }: Props) {
       {configError ? <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">{configError}</div> : null}
       {!data ? <BentoCard variant="dark"><p className="font-black text-[#CBB29C]">لا توجد بيانات مالية للعرض حاليًا.</p></BentoCard> : <>
         <BentoGrid className="mb-6">
-          <BentoCard variant="gold"><AdminStatPill label="القيمة السوقية الحالية لبرندة" value={money(data.currentMarketValue)} /></BentoCard>
+          <BentoCard variant="gold"><AdminStatPill label="القيمة السوقية الحالية لبارنداكسا" value={money(data.currentMarketValue)} /></BentoCard>
           <BentoCard variant="cyber"><AdminStatPill label="إجمالي الاشتراكات شامل الضريبة" value={money(data.summary.totalGrossSubscriptions)} /></BentoCard>
           <BentoCard variant="dark"><AdminStatPill label="صافي الاشتراكات بدون الضريبة" value={money(data.summary.totalNetSubscriptions)} /></BentoCard>
           <BentoCard variant="cyber"><AdminStatPill label="ضريبة القيمة المضافة المضمنة" value={money(data.summary.totalVatAmount)} /></BentoCard>
@@ -113,7 +113,7 @@ export function AdminFinancePage({ data, configError }: Props) {
           <RepresentativeTable rows={data.representatives} onSelect={(rep) => setLedger({ type: "representative", id: rep.representativeId, title: rep.representativeName })} />
         </BentoGrid>
 
-        <BentoCard variant="gold"><div className="mb-4 flex items-center gap-3"><BarChart3 className="h-7 w-7 text-[#241610]" /><h2 className="text-xl font-black text-[#241610]">ملخص آلية توزيع الأرباح</h2></div><div className="grid gap-3 md:grid-cols-3"><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">أول 6 شهور مع كوبون مندوب: المندوب 40%، الصب في رأس المال 40%، وكل مالك 5%.</div><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">ثاني 6 شهور: المندوب 20%، برندة 60%، وكل مالك 5%.</div><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">بعد 12 شهر: المندوب 0%، برندة 60%، وكل مالك 10%.</div></div></BentoCard>
+        <BentoCard variant="gold"><div className="mb-4 flex items-center gap-3"><BarChart3 className="h-7 w-7 text-[#241610]" /><h2 className="text-xl font-black text-[#241610]">ملخص آلية توزيع الأرباح</h2></div><div className="grid gap-3 md:grid-cols-3"><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">أول 6 شهور مع كوبون مندوب: المندوب 40%، الصب في رأس المال 40%، وكل مالك 5%.</div><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">ثاني 6 شهور: المندوب 20%، بارنداكسا 60%، وكل مالك 5%.</div><div className="rounded-2xl bg-black/10 p-4 font-black text-[#241610]">بعد 12 شهر: المندوب 0%، بارنداكسا 60%، وكل مالك 10%.</div></div></BentoCard>
 
         {ledger ? <LedgerModal target={ledger} rows={ledgerRows} onClose={() => setLedger(null)} /> : null}
       </>}

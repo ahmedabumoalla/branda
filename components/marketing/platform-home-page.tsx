@@ -96,7 +96,7 @@ function LoyaltyCards({ images }: { images: PublicPlatformHomeData["loyaltyImage
           <img
             key={item.id}
             src={item.url}
-            alt={item.altText || "بطاقة ولاء برندة"}
+            alt={item.altText || "بطاقة ولاء بارنداكسا"}
             className="h-44 w-full rounded-3xl object-cover"
           />
         ))}
@@ -259,9 +259,9 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
           <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
             <div className="relative min-h-[260px] overflow-hidden rounded-[1.5rem] sm:min-h-[330px]">
               {heroImages ? heroImages.map((item, index) => (
-                <img key={item.id} src={item.url} alt={item.altText || "واجهة برندة"} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === heroIndex ? "opacity-100" : "opacity-0"}`} />
+                <img key={item.id} src={item.url} alt={item.altText || "واجهة بارنداكسا"} className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === heroIndex ? "opacity-100" : "opacity-0"}`} />
               )) : (
-                <img src={DEFAULT_HERO} alt="واجهة برندة الأساسية" className="absolute inset-0 h-full w-full object-cover" />
+                <img src={DEFAULT_HERO} alt="واجهة بارنداكسا الأساسية" className="absolute inset-0 h-full w-full object-cover" />
               )}
             </div>
             <div className="flex items-center rounded-[1.5rem] border border-[#E7D7C6] bg-white/70 p-7 sm:p-9">
@@ -299,7 +299,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
       </section>
 
       <section className="mx-auto max-w-6xl overflow-hidden px-4 py-14 sm:px-6 sm:py-20">
-        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق ببرندة</h2>
+        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق ببارنداكسا</h2>
         {data.brands.length ? (
           <div className="mt-10 overflow-hidden">
             <div className="flex gap-4 transition-transform duration-700" style={{ transform: `translateX(${brandIndex * 8}rem)` }}>
@@ -350,7 +350,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
             {data.contacts.instagram ? <a href={data.contacts.instagram}><Camera className="h-5 w-5" /></a> : null}
             {data.contacts.facebook ? <a href={data.contacts.facebook}><Globe className="h-5 w-5" /></a> : null}
           </div>
-          <p className="text-sm font-bold text-[#806A5E]">© برندة جميع الحقوق محفوظة</p>
+          <p className="text-sm font-bold text-[#806A5E]">© بارنداكسا جميع الحقوق محفوظة</p>
         </div>
       </footer>
 

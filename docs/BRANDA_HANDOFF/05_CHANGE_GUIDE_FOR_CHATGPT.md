@@ -1,4 +1,4 @@
-# Barndaksa — Change Guide for ChatGPT
+# Branda — Change Guide for ChatGPT
 
 ## Golden Rules
 
@@ -88,7 +88,7 @@ CREATE POLICY new_policy ON table_name ...;
 
 ## File Discovery
 
-1. Start with `docs/BARNDAKSA_HANDOFF/02_ROUTES_AND_FEATURES_MAP.md`
+1. Start with `docs/BRANDA_HANDOFF/02_ROUTES_AND_FEATURES_MAP.md`
 2. Use `04_DATA_FLOW_AND_STATE_MAP.md` for end-to-end trace
 3. Read full source from `SOURCE_BUNDLES/` if needed
 

@@ -50,7 +50,7 @@ export function printThermalReceipt({
   cafeName,
   lines,
   items = [],
-  footer = "برندة — Barndaksa",
+  footer = "بارنداكسا — Barndaksa",
   paperSize = "80mm",
 }: {
   title: string;

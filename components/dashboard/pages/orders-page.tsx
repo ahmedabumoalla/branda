@@ -53,7 +53,7 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
   function printOrderThermal(order: CafeOrder) {
     printThermalReceipt({
       title: "طلب منيو",
-      cafeName: order.cafeSlug || "برندة",
+      cafeName: order.cafeSlug || "بارنداكسا",
       subtitle: order.status,
       lines: [
         { label: "رقم الطلب", value: order.id },

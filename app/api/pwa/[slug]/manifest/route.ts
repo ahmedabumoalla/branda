@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: Props) {
   return NextResponse.json({
     name,
     short_name: name.slice(0, 12),
-    description: `تطبيق ${name} على منصة برندة`,
+    description: `تطبيق ${name} على منصة بارنداكسا`,
     start_url: startUrl,
     scope: `/c/${encodeURIComponent(slug)}`,
     display: "standalone",

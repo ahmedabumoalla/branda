@@ -201,10 +201,10 @@ BEGIN
 
   IF to_regclass('public.platform_content_sections') IS NOT NULL THEN
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='platform_content_sections' AND column_name='title') THEN
-      EXECUTE $sql$UPDATE public.platform_content_sections SET title = replace(replace(title, 'Branda', 'Barndaksa'), 'برندة', 'برندة') WHERE title ILIKE '%branda%' OR title LIKE '%برندة%'$sql$;
+      EXECUTE $sql$UPDATE public.platform_content_sections SET title = replace(replace(title, 'Branda', 'Barndaksa'), 'برندة', 'بارنداكسا') WHERE title ILIKE '%branda%' OR title LIKE '%برندة%'$sql$;
     END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='platform_content_sections' AND column_name='body') THEN
-      EXECUTE $sql$UPDATE public.platform_content_sections SET body = replace(replace(body, 'Branda', 'Barndaksa'), 'برندة', 'برندة') WHERE body ILIKE '%branda%' OR body LIKE '%برندة%'$sql$;
+      EXECUTE $sql$UPDATE public.platform_content_sections SET body = replace(replace(body, 'Branda', 'Barndaksa'), 'برندة', 'بارنداكسا') WHERE body ILIKE '%branda%' OR body LIKE '%برندة%'$sql$;
     END IF;
   END IF;
 END

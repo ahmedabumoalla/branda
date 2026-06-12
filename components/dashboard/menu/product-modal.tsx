@@ -228,7 +228,7 @@ export function MenuProductFormModal({
       const maxOrder = categories.reduce((max, c) => Math.max(max, c.sortOrder), 0);
       const newCat: MenuCategoryRecord = {
         id: `cat_${Date.now()}`,
-        cafeSlug: "qatrah",
+        cafeSlug: "test-cafe",
         name: newCategoryName.trim(),
         sortOrder: maxOrder + 1,
         visible: true,

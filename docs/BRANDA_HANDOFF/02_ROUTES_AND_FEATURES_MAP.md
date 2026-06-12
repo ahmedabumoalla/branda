@@ -1,4 +1,4 @@
-# Barndaksa — Routes & Features Map
+# Branda — Routes & Features Map
 
 | Path | Feature | Key files | Data source | Permission | Notes |
 | ---- | ------- | --------- | ----------- | ---------- | ----- |

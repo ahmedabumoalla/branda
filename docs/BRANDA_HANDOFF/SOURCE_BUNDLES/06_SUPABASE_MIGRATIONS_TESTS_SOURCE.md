@@ -3,10 +3,10 @@
 # File: supabase/config.toml
 
 ```toml
-# Barndaksa Platform — local Supabase CLI project
+# Branda Platform — local Supabase CLI project
 # Docs: https://supabase.com/docs/guides/cli/config
 
-project_id = "barndaksa-platform"
+project_id = "branda-platform"
 
 [api]
 enabled = true
@@ -59,10 +59,10 @@ enabled = false
 
 ```
 
-# File: supabase/migrations/001_barndaksa_production_schema.sql
+# File: supabase/migrations/001_branda_production_schema.sql
 
 ```sql
--- Barndaksa Platform — Production Schema
+-- Branda Platform — Production Schema
 -- Apply via Supabase Dashboard → SQL Editor or `supabase db push`
 -- Version: 001
 
@@ -1022,12 +1022,12 @@ CREATE TRIGGER on_auth_user_created
 
 ```
 
-# File: supabase/migrations/002_barndaksa_storage_policies.sql
+# File: supabase/migrations/002_branda_storage_policies.sql
 
 ```sql
--- Barndaksa Platform — Storage buckets & RLS policies
+-- Branda Platform — Storage buckets & RLS policies
 -- Version: 002
--- Run after 001_barndaksa_production_schema.sql
+-- Run after 001_branda_production_schema.sql
 
 -- ─── Path helpers (SECURITY INVOKER — pure parsing, no RLS bypass) ─────────────
 CREATE OR REPLACE FUNCTION public.storage_path_segment(object_name text, segment int)
@@ -1720,12 +1720,12 @@ CREATE POLICY storage_experience_delete ON storage.objects FOR DELETE TO authent
 
 ```
 
-# File: supabase/migrations/003_barndaksa_security_hardening.sql
+# File: supabase/migrations/003_branda_security_hardening.sql
 
 ```sql
--- Barndaksa Platform — RLS hardening, platform_settings, domain_orders
+-- Branda Platform — RLS hardening, platform_settings, domain_orders
 -- Version: 003
--- Run after 002_barndaksa_storage_policies.sql
+-- Run after 002_branda_storage_policies.sql
 
 -- ─── Profile role escalation guard ───────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
@@ -1873,7 +1873,7 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   allow_cafe_signup           BOOLEAN NOT NULL DEFAULT true,
   require_cafe_approval       BOOLEAN NOT NULL DEFAULT true,
   platform_commission_percent   NUMERIC(5,2) NOT NULL DEFAULT 3 CHECK (platform_commission_percent >= 0),
-  support_email               CITEXT NOT NULL DEFAULT 'support@barndaksa.com',
+  support_email               CITEXT NOT NULL DEFAULT 'support@branda.com',
   default_plan_id             TEXT NOT NULL DEFAULT 'starter' REFERENCES platform_plans(id),
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1928,12 +1928,12 @@ CREATE POLICY domain_orders_admin_update ON domain_orders FOR UPDATE USING (is_p
 
 ```
 
-# File: supabase/migrations/004_barndaksa_critical_security_fixes.sql
+# File: supabase/migrations/004_branda_critical_security_fixes.sql
 
 ```sql
--- Barndaksa Platform — Critical security fixes
+-- Branda Platform — Critical security fixes
 -- Version: 004
--- Run after 003_barndaksa_security_hardening.sql
+-- Run after 003_branda_security_hardening.sql
 -- =============================================================================
 -- Shared helpers (SECURITY DEFINER, search_path = '')
 -- =============================================================================
@@ -3321,7 +3321,7 @@ BEGIN
     RAISE EXCEPTION 'Avatar file not found in storage';
   END IF;
 
-  PERFORM set_config('barndaksa.avatar_path_update', '1', true);
+  PERFORM set_config('branda.avatar_path_update', '1', true);
 
   UPDATE public.customer_profiles
   SET avatar_storage_path = p_storage_path,
@@ -3331,11 +3331,11 @@ BEGIN
     AND user_id = auth.uid();
 
   IF NOT FOUND THEN
-    PERFORM set_config('barndaksa.avatar_path_update', '', true);
+    PERFORM set_config('branda.avatar_path_update', '', true);
     RAISE EXCEPTION 'Profile not found or forbidden';
   END IF;
 
-  PERFORM set_config('barndaksa.avatar_path_update', '', true);
+  PERFORM set_config('branda.avatar_path_update', '', true);
 END;
 $$;
 REVOKE ALL ON FUNCTION public.set_customer_avatar_storage_path(uuid, text) FROM PUBLIC;
@@ -3369,7 +3369,7 @@ BEGIN
         RAISE EXCEPTION 'Avatar path must belong to profile user';
       END IF;
       IF NOT public.is_platform_admin()
-         AND COALESCE(current_setting('barndaksa.avatar_path_update', true), '') <> '1' THEN
+         AND COALESCE(current_setting('branda.avatar_path_update', true), '') <> '1' THEN
         RAISE EXCEPTION 'Avatar path can only be updated via upload';
       END IF;
     END IF;
@@ -3640,7 +3640,7 @@ GRANT EXECUTE ON FUNCTION public.update_customer_profile(uuid, text, text, text)
 # File: supabase/seed/security_test_seed.sql
 
 ```sql
--- Barndaksa security test seed — LOCAL + STAGING ONLY
+-- Branda security test seed — LOCAL + STAGING ONLY
 -- Loaded by `supabase db reset` via supabase/config.toml
 -- NEVER run automatically on Production.
 

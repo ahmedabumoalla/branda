@@ -1,4 +1,4 @@
-# Barndaksa — Security Final Status
+# Branda — Security Final Status
 
 **Date:** 2026-05-30  
 **Phase:** Source-level hardening revised and statically gated
@@ -57,7 +57,7 @@ Source-level hardening revised and statically gated — database not initialized
 
 ## Red Team Result
 
-See [BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md](../BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md).
+See [BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md](../BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md).
 
 | Severity | Known open |
 | -------- | ---------- |
@@ -89,7 +89,7 @@ No SQL, migration, seed, Supabase CLI, Staging, or Production action was execute
 
 ## Next Steps (user-controlled)
 
-1. Review handoff package (`docs/BARNDAKSA_HANDOFF/`)
+1. Review handoff package (`docs/BRANDA_HANDOFF/`)
 2. Apply migrations on isolated Staging Supabase project
 3. Run pgTAP + manual security checklist
 4. Fix any runtime findings

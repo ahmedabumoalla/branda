@@ -114,7 +114,7 @@ export function ReportsPageClient({
   function printThermalReport() {
     printThermalReceipt({
       title: "تقرير العلامة",
-      cafeName: "برندة",
+      cafeName: "بارنداكسا",
       lines: [
         { label: "إيراد الطلبات", value: formatSar(totalSales), strong: true },
         { label: "معدل القبول", value: `${conversionRate}%` },

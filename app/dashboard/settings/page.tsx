@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
         initialSettings={{
 
-          cafeSlug: "qatrah",
+          cafeSlug: "test-cafe",
 
           cafeName: "كوفي",
 
@@ -60,7 +60,7 @@ export default async function SettingsPage() {
 
         initialSettings={{
 
-          cafeSlug: "qatrah",
+          cafeSlug: "test-cafe",
 
           cafeName: "كوفي",
 

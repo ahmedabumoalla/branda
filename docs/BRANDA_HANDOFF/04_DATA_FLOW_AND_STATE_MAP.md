@@ -1,4 +1,4 @@
-# Barndaksa — Data Flow & State Map
+# Branda — Data Flow & State Map
 
 | Feature | UI | Action/API | Data layer | DB/RPC/Storage | Files |
 | ------- | -- | ---------- | ---------- | -------------- | ----- |

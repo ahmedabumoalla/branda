@@ -133,7 +133,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     }
   }
 
-  const slug = settings.cafeSlug || "qatrah";
+  const slug = settings.cafeSlug || "test-cafe";
   const displayDomain = getCafeDisplayDomain(slug, settings);
   const domainSource = resolveCafeDomainSource(settings);
   const publicUrl =
@@ -196,7 +196,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   async function checkDomainAvailability() {
     const candidate = normalizeDomain(domainQuery);
     if (!candidate) {
-      setDomainMessage("اكتب دومين صحيح مثل qatrah.sa");
+      setDomainMessage("اكتب دومين صحيح مثل barndaksa.com");
       return;
     }
     setSearching(true);
@@ -339,7 +339,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         action={
           <div className="flex flex-wrap gap-3">
             <LinkButton
-              href={getCafePublicUrl(settings.cafeSlug || "qatrah", {
+              href={getCafePublicUrl(settings.cafeSlug || "test-cafe", {
                 origin: typeof window !== "undefined" ? window.location.origin : undefined,
               })}
               variant="outline"
@@ -579,7 +579,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               </div>
 
               <div className="rounded-2xl border border-[#E5D8CD] bg-white p-4">
-                <h3 className="text-xl font-black text-[#3A2117]">3) شراء دومين من برندة</h3>
+                <h3 className="text-xl font-black text-[#3A2117]">3) شراء دومين من بارنداكسا</h3>
                 <p className="mt-1 text-sm font-bold text-[#7A6255]">
                   ابحث عن دومين، افحص توفره، ثم أكمل الدفع والشراء والربط.
                 </p>
@@ -588,7 +588,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                   <NeumoInput
                     value={domainQuery}
                     onChange={(e) => setDomainQuery(e.target.value)}
-                    placeholder="qatrah.sa أو qatrah.com"
+                    placeholder="barndaksa.com أو cafe.com"
                   />
                   <PrimaryButton onClick={checkDomainAvailability} disabled={searching}>
                     {searching ? "جاري الفحص..." : "فحص التوفر"}
@@ -640,7 +640,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                           <p>
                             ملخص الدفع: {pricing.price} {pricing.currency} لمدة {domainYears} سنة
                           </p>
-                          <p>رسوم برندة: 0 (Placeholder)</p>
+                          <p>رسوم بارنداكسا: 0 (Placeholder)</p>
                         </div>
 
                         <div className="sm:col-span-2 flex flex-wrap gap-3">

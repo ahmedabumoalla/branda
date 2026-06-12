@@ -51,7 +51,7 @@ export default function CareersPage() {
       <section className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-[32px] bg-gradient-to-br from-[#4A281D] to-[#311912] p-7 text-[#FCF8F3]">
           <BriefcaseBusiness className="h-12 w-12 text-[#F6C35B]" />
-          <h1 className="mt-6 text-3xl font-black">انضم إلى فريق برندة</h1>
+          <h1 className="mt-6 text-3xl font-black">انضم إلى فريق بارنداكسا</h1>
           <p className="mt-4 font-bold leading-8 text-[#E8D7C7]">
             نبحث عن المواهب الطموحة للمشاركة في تطوير تجربة رقمية متقدمة
             للعلامات التجارية

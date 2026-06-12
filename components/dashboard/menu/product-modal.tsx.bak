@@ -1,0 +1,1008 @@
+﻿"use client";
+
+import {
+  Coffee,
+  Flame,
+  Gift,
+  ImagePlus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ProductImage } from "@/components/cafe/product-image";
+import {
+  ImagePipelineError,
+  isHttpImageUrl,
+  optimizeImageForStorage,
+  type OptimizedImageResult,
+} from "@/lib/cafe/image-asset-pipeline";
+import {
+  revokeObjectUrl,
+  saveOptimizedImageAsset,
+} from "@/lib/cafe/local-asset-store";
+import { Modal } from "@/components/dashboard/ui/modal";
+import { formatSar } from "@/lib/format";
+import {
+  isPromoActive,
+  PROMO_KINDS,
+  promoBadgeText,
+  type MenuImageVariant,
+  type MenuProduct,
+  type ProductPromo,
+  type PromoKind,
+} from "@/lib/mock/menu";
+import {
+  getCategoryNameById,
+  type MenuCategoryRecord,
+} from "@/lib/mock/menu-categories";
+
+type Props = {
+  open: boolean;
+  mode: "add" | "edit";
+  editingProduct: MenuProduct | null;
+  productList: MenuProduct[];
+  categories: MenuCategoryRecord[];
+  onCategoriesChange: (categories: MenuCategoryRecord[]) => void;
+  onClose: () => void;
+  onSave: (product: MenuProduct) => void;
+};
+
+const VARIANT_OPTIONS: { id: MenuImageVariant; label: string }[] = [
+  { id: "latte", label: "ظ‚ظ‡ظˆط© ط¯ط§ظپط¦ط©" },
+  { id: "cold", label: "ط¨ط§ط±ط¯" },
+  { id: "cake", label: "ط­ظ„ظˆظٹط§طھ" },
+  { id: "bakery", label: "ظ…ط®ط¨ظˆط²ط§طھ" },
+  { id: "tea", label: "ط´ط§ظٹ / ط³ط¨ظٹط´ظ„" },
+];
+
+function buildPromoFromForm(
+  linked: boolean,
+  kind: PromoKind,
+  discountMode: "percent" | "fixed_price",
+  discountPercent: string,
+  discountedPrice: string,
+  freeProductId: string,
+  customText: string,
+  startDate: string,
+  endDate: string
+): ProductPromo | null {
+  if (!linked || !startDate || !endDate) return null;
+
+  if (kind === "ط®طµظ…") {
+    return {
+      kind,
+      discountMode,
+      discountPercent: discountMode === "percent" ? Number(discountPercent) || 10 : undefined,
+      discountedPrice: discountMode === "fixed_price" ? Number(discountedPrice) || 0 : undefined,
+      startDate,
+      endDate,
+    };
+  }
+
+  if (kind === "ظ…ظ†طھط¬ ظ…ط¬ط§ظ†ظٹ ظ…ط¹ ط§ظ„ط·ظ„ط¨") {
+    return {
+      kind,
+      freeProductId: freeProductId || undefined,
+      startDate,
+      endDate,
+    };
+  }
+
+  return {
+    kind,
+    customText: customText.trim() || "ط¹ط±ط¶ ط®ط§طµ",
+    startDate,
+    endDate,
+  };
+}
+
+export function MenuProductFormModal({
+  open,
+  mode,
+  editingProduct,
+  productList,
+  categories,
+  onCategoriesChange,
+  onClose,
+  onSave,
+}: Props) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [name, setName] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [description, setDescription] = useState("");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageAssetId, setImageAssetId] = useState<string | undefined>();
+  const [legacyExternalImageUrl, setLegacyExternalImageUrl] = useState<string | null>(null);
+  const [pendingOptimized, setPendingOptimized] = useState<OptimizedImageResult | null>(null);
+  const [optimizingImage, setOptimizingImage] = useState(false);
+  const [imageVariant, setImageVariant] = useState<MenuImageVariant>("latte");
+
+  const [calories, setCalories] = useState("");
+  const [price, setPrice] = useState("18");
+  const [preparationTimeMinutes, setPreparationTimeMinutes] = useState("");
+  const [availableForPickup, setAvailableForPickup] = useState(true);
+  const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState("");
+
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [ingredientDraft, setIngredientDraft] = useState("");
+  const [available, setAvailable] = useState(true);
+
+  const [promoLinked, setPromoLinked] = useState(false);
+  const [promoKind, setPromoKind] = useState<PromoKind>("ط®طµظ…");
+  const [promoDiscountMode, setPromoDiscountMode] = useState<"percent" | "fixed_price">("percent");
+  const [promoDiscount, setPromoDiscount] = useState("10");
+  const [promoDiscountedPrice, setPromoDiscountedPrice] = useState("");
+  const [promoFreeId, setPromoFreeId] = useState("");
+  const [promoCustom, setPromoCustom] = useState("");
+  const [promoStart, setPromoStart] = useState("2026-05-10");
+  const [promoEnd, setPromoEnd] = useState("2026-05-31");
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (mode === "edit" && editingProduct) {
+      setName(editingProduct.name);
+      setCategoryId(editingProduct.categoryId ?? "");
+      setCreatingCategory(false);
+      setNewCategoryName("");
+      setDescription(editingProduct.description);
+      setImagePreviewUrl(null);
+      setImageAssetId(editingProduct.imageAssetId);
+      setLegacyExternalImageUrl(
+        isHttpImageUrl(editingProduct.imageDataUrl) ? editingProduct.imageDataUrl! : null
+      );
+      setPendingOptimized(null);
+      setImageVariant(editingProduct.imageVariant);
+      setPrice(String(editingProduct.price));
+      setCalories(
+        editingProduct.calories === undefined ? "" : String(editingProduct.calories)
+      );
+      setPreparationTimeMinutes(
+        editingProduct.preparationTimeMinutes === undefined
+          ? ""
+          : String(editingProduct.preparationTimeMinutes)
+      );
+      setAvailableForPickup(editingProduct.availableForPickup !== false);
+      setPickupLeadTimeMinutes(
+        editingProduct.pickupLeadTimeMinutes === undefined
+          ? ""
+          : String(editingProduct.pickupLeadTimeMinutes)
+      );
+      setIngredients([...editingProduct.ingredients]);
+      setAvailable(editingProduct.available);
+
+      const promo = editingProduct.promo;
+      setPromoLinked(!!promo);
+
+      if (promo) {
+        setPromoKind(promo.kind);
+        setPromoDiscountMode(promo.discountMode ?? "percent");
+        setPromoDiscount(String(promo.discountPercent ?? 10));
+        setPromoDiscountedPrice(promo.discountedPrice == null ? "" : String(promo.discountedPrice));
+        setPromoFreeId(promo.freeProductId ?? "");
+        setPromoCustom(promo.customText ?? "");
+        setPromoStart(promo.startDate);
+        setPromoEnd(promo.endDate);
+      }
+    } else {
+      setName("");
+      setCategoryId(categories[0]?.id ?? "");
+      setCreatingCategory(false);
+      setNewCategoryName("");
+      setDescription("");
+      setImagePreviewUrl(null);
+      setImageAssetId(undefined);
+      setLegacyExternalImageUrl(null);
+      setPendingOptimized(null);
+      setImageVariant("latte");
+      setPrice("18");
+      setCalories("");
+      setPreparationTimeMinutes("");
+      setAvailableForPickup(true);
+      setPickupLeadTimeMinutes("");
+      setIngredients([]);
+      setIngredientDraft("");
+      setAvailable(true);
+      setPromoLinked(false);
+      setPromoKind("ط®طµظ…");
+      setPromoDiscountMode("percent");
+      setPromoDiscount("10");
+      setPromoDiscountedPrice("");
+      setPromoFreeId("");
+      setPromoCustom("");
+      setPromoStart("2026-05-10");
+      setPromoEnd("2026-05-31");
+    }
+  }, [open, mode, editingProduct, categories]);
+
+  const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  function resolveCategoryId(): string | undefined {
+    if (creatingCategory) {
+      if (!newCategoryName.trim()) return undefined;
+      const now = new Date().toISOString().slice(0, 10);
+      const maxOrder = categories.reduce((max, c) => Math.max(max, c.sortOrder), 0);
+      const newCat: MenuCategoryRecord = {
+        id: `cat_${Date.now()}`,
+        cafeSlug: "test-cafe",
+        name: newCategoryName.trim(),
+        sortOrder: maxOrder + 1,
+        visible: true,
+        featured: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      onCategoriesChange([...categories, newCat]);
+      return newCat.id;
+    }
+    return categoryId || undefined;
+  }
+
+  function addIngredient() {
+    const value = ingredientDraft.trim();
+    if (!value) return;
+
+    setIngredients((prev) => [...prev, value]);
+    setIngredientDraft("");
+  }
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setOptimizingImage(true);
+    try {
+      const optimized = await optimizeImageForStorage(file, "product-image");
+      if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+      setImagePreviewUrl(URL.createObjectURL(optimized.blob));
+      setPendingOptimized(optimized);
+      setLegacyExternalImageUrl(null);
+    } catch (err) {
+      alert(
+        err instanceof ImagePipelineError
+          ? err.message
+          : "طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط§ظ„طµظˆط±ط©طŒ ط¬ط±ظ‘ط¨ ظ…ظ„ظپ PNG ط£ظˆ JPG ط£ظˆ WEBP"
+      );
+    } finally {
+      setOptimizingImage(false);
+    }
+  }
+
+  const resolvedCategoryId = creatingCategory
+    ? undefined
+    : categoryId || undefined;
+  const displayCategory = getCategoryNameById(
+    categories,
+    resolvedCategoryId,
+    creatingCategory ? newCategoryName.trim() || "ط£ط®ط±ظ‰" : "ط£ط®ط±ظ‰"
+  );
+
+  const previewProduct: MenuProduct = useMemo(() => {
+    const promo = buildPromoFromForm(
+      promoLinked,
+      promoKind,
+      promoDiscountMode,
+      promoDiscount,
+      promoDiscountedPrice,
+      promoFreeId,
+      promoCustom,
+      promoStart,
+      promoEnd
+    );
+
+    return {
+      id: "preview",
+      name: name.trim() || "ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬",
+      category: displayCategory,
+      categoryId: resolvedCategoryId,
+      description: description.trim() || "ظ…ظ†طھط¬ ظ…ظ† ظ‚ط§ط¦ظ…ط© ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط©",
+      imageAssetId,
+      imageDataUrl: legacyExternalImageUrl,
+      imageVariant,
+      price: Number(price) || 0,
+      calories: calories.trim() ? Number(calories) || 0 : undefined,
+      loyaltyPoints: 0,
+      preparationTimeMinutes: preparationTimeMinutes.trim()
+        ? Number(preparationTimeMinutes) || undefined
+        : undefined,
+      redeemableWithPoints: false,
+      redemptionPoints: undefined,
+      availableForPickup,
+      pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
+        ? Number(pickupLeadTimeMinutes) || undefined
+        : undefined,
+      ingredients: ingredients.length ? ingredients : ["ظ…ظƒظˆظ†"],
+      available,
+      promo,
+    };
+  }, [
+    name,
+    displayCategory,
+    resolvedCategoryId,
+    description,
+    imageAssetId,
+    legacyExternalImageUrl,
+    imagePreviewUrl,
+    pendingOptimized,
+    imageVariant,
+    price,
+    calories,
+    preparationTimeMinutes,
+    availableForPickup,
+    pickupLeadTimeMinutes,
+    ingredients,
+    available,
+    promoLinked,
+    promoKind,
+    promoDiscountMode,
+    promoDiscount,
+    promoDiscountedPrice,
+    promoFreeId,
+    promoCustom,
+    promoStart,
+    promoEnd,
+  ]);
+
+  const freeProductOptions = productList.filter(
+    (product) => product.id !== editingProduct?.id
+  );
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      alert("ط§ظƒطھط¨ ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬");
+      return;
+    }
+
+        if (!price || Number.isNaN(Number(price))) {
+      alert("ط§ظ„ط³ط¹ط± ظ…ط·ظ„ظˆط¨");
+      return;
+    }
+
+    if (creatingCategory && !newCategoryName.trim()) {
+      alert("ط§ظƒطھط¨ ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¬ط¯ظٹط¯");
+      return;
+    }
+
+    if (!creatingCategory && !categoryId) {
+      alert("ط§ط®طھط± طھطµظ†ظٹظپظ‹ط§ ظ„ظ„ظ…ظ†طھط¬");
+      return;
+    }
+
+    const nextCategoryId = resolveCategoryId();
+    if (!nextCategoryId) {
+      alert("طھط¹ط°ط± ط­ظپط¸ ط§ظ„طھطµظ†ظٹظپ");
+      return;
+    }
+
+    const categoryName = getCategoryNameById(
+      categories,
+      nextCategoryId,
+      newCategoryName.trim() || "ط£ط®ط±ظ‰"
+    );
+
+    if (promoLinked && promoKind === "ظ…ظ†طھط¬ ظ…ط¬ط§ظ†ظٹ ظ…ط¹ ط§ظ„ط·ظ„ط¨" && !promoFreeId) {
+      alert("ط§ط®طھط± ط§ظ„ظ…ظ†طھط¬ ط§ظ„ظ…ط¬ط§ظ†ظٹ");
+      return;
+    }
+
+    const promo = buildPromoFromForm(
+      promoLinked,
+      promoKind,
+      promoDiscountMode,
+      promoDiscount,
+      promoDiscountedPrice,
+      promoFreeId,
+      promoCustom,
+      promoStart,
+      promoEnd
+    );
+
+    const productId = editingProduct?.id || crypto.randomUUID();
+    let finalAssetId = imageAssetId;
+
+    try {
+      if (pendingOptimized) {
+        finalAssetId = await saveOptimizedImageAsset(
+          "product-image",
+          pendingOptimized,
+          productId
+        );
+      }
+    } catch {
+      alert("طھط¹ط°ط± ط­ظپط¸ طµظˆط±ط© ط§ظ„ظ…ظ†طھط¬ ظ…ط­ظ„ظٹظ‹ط§");
+      return;
+    }
+
+    const payload: MenuProduct = {
+      id: productId,
+      name: name.trim(),
+      category: categoryName,
+      categoryId: nextCategoryId,
+      description: description.trim() || "ظ…ظ†طھط¬ ظ…ظ† ظ‚ط§ط¦ظ…ط© ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط©",
+      imageAssetId: finalAssetId,
+      imageDataUrl: legacyExternalImageUrl,
+      imageVariant,
+      price: Number(price),
+      calories: calories.trim() ? Number(calories) || 0 : undefined,
+      loyaltyPoints: 0,
+      preparationTimeMinutes: preparationTimeMinutes.trim()
+        ? Number(preparationTimeMinutes) || undefined
+        : undefined,
+      redeemableWithPoints: false,
+      redemptionPoints: undefined,
+      availableForPickup: availableForPickup || undefined,
+      pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
+        ? Number(pickupLeadTimeMinutes) || undefined
+        : undefined,
+      ingredients,
+      available,
+      promo,
+    };
+
+    onSave(payload);
+    if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+    onClose();
+  }
+
+  const variantGradient: Record<MenuImageVariant, string> = {
+    latte: "from-[#3b2416] via-[#5c3d2e] to-[#c78a45]",
+    cold: "from-[#1e3a4a] via-[#496b4a] to-[#7eb8b8]",
+    cake: "from-[#4a2c3d] via-[#8b5a6b] to-[#d4a59a]",
+    bakery: "from-[#5c4a3a] via-[#8b7355] to-[#e8dcc8]",
+    tea: "from-[#3d4f3f] via-[#496b4a] to-[#a8c4a9]",
+  };
+
+  const promoPreviewActive =
+    previewProduct.promo && isPromoActive(previewProduct.promo);
+
+  return (
+    <Modal
+      open={open}
+      title={mode === "add" ? "ط¥ط¶ط§ظپط© ظ…ظ†طھط¬ ط¬ط¯ظٹط¯" : "طھط¹ط¯ظٹظ„ ط§ظ„ظ…ظ†طھط¬"}
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-[#E5D8CD] px-5 py-3 text-sm font-black text-[#3A2117] hover:bg-[#F8F4EF]"
+          >
+            ط¥ظ„ط؛ط§ط،
+          </button>
+
+          <button
+            type="submit"
+            form="menu-product-form"
+            className="rounded-2xl bg-[#3A2117] px-6 py-3 text-sm font-black text-[#F8E8D2]"
+          >
+            {mode === "add" ? "ط­ظپط¸ ط§ظ„ظ…ظ†طھط¬" : "طھط­ط¯ظٹط« ط§ظ„ظ…ظ†طھط¬"}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="menu-product-form"
+        onSubmit={handleSubmit}
+        className="grid gap-8 lg:grid-cols-2"
+      >
+        <div className="space-y-5">
+          <label className="block">
+            <span className="text-xs font-black text-[#7A6255]">
+              ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬
+            </span>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ظ…ط«ط§ظ„: ظ„ط§طھظٹظ‡ ظپط§ظ†ظٹظ„ط§"
+              className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-black text-[#7A6255]">ط§ظ„طھطµظ†ظٹظپ</span>
+            <select
+              value={creatingCategory ? "__new__" : categoryId}
+              onChange={(e) => {
+                if (e.target.value === "__new__") {
+                  setCreatingCategory(true);
+                  setCategoryId("");
+                } else {
+                  setCreatingCategory(false);
+                  setCategoryId(e.target.value);
+                }
+              }}
+              className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+            >
+              {sortedCategories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+              <option value="__new__">+ ط¥ظ†ط´ط§ط، طھطµظ†ظٹظپ ط¬ط¯ظٹط¯</option>
+            </select>
+          </label>
+
+          {creatingCategory ? (
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¬ط¯ظٹط¯
+              </span>
+              <input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="ط§ظƒطھط¨ ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+          ) : null}
+
+          <label className="block">
+            <span className="text-xs font-black text-[#7A6255]">
+              ظˆطµظپ ط§ظ„ظ…ظ†طھط¬
+            </span>
+            <textarea
+              required
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="ط§ظƒطھط¨ ظˆطµظپ ط§ظ„ظ…ظ†طھط¬ ظƒظ…ط§ ط³ظٹط¸ظ‡ط± ظ„ظ„ط¹ظ…ظٹظ„"
+              className="mt-2 w-full resize-none rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+            />
+          </label>
+
+          <div className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+            <p className="text-xs font-black text-[#7A6255]">طµظˆط±ط© ط§ظ„ظ…ظ†طھط¬</p>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={onPickFile}
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={optimizingImage}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117] disabled:opacity-60"
+              >
+                <ImagePlus className="h-5 w-5" />
+                {optimizingImage ? "ط¬ط§ط±ظٹ طھط­ط³ظٹظ† ط§ظ„طµظˆط±ط©..." : "ط§ط®طھظٹط§ط± طµظˆط±ط©"}
+              </button>
+
+              {imagePreviewUrl || imageAssetId || legacyExternalImageUrl ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+                    setImagePreviewUrl(null);
+                    setPendingOptimized(null);
+                    setImageAssetId(undefined);
+                    setLegacyExternalImageUrl(null);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  ط¥ط²ط§ظ„ط©
+                </button>
+              ) : null}
+            </div>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ط®ظ„ظپظٹط© ط§ط­طھظٹط§ط·ظٹط© ط¹ظ†ط¯ ط¹ط¯ظ… ط±ظپط¹ طµظˆط±ط©
+              </span>
+              <select
+                value={imageVariant}
+                onChange={(e) =>
+                  setImageVariant(e.target.value as MenuImageVariant)
+                }
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              >
+                {VARIANT_OPTIONS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ط§ظ„ط³ط¹ط±ط§طھ ط§ظ„ط­ط±ط§ط±ظٹط© ط§ط®طھظٹط§ط±ظٹ
+              </span>
+              <input
+                inputMode="numeric"
+                value={calories}
+                onChange={(e) => setCalories(e.target.value)}
+                placeholder="ظ…ط«ط§ظ„: 220"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ط§ظ„ط³ط¹ط± ط±.ط³ *
+              </span>
+              <input
+                required
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="ظ…ط«ط§ظ„: 18"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+
+
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ظˆظ‚طھ ط§ظ„طھط­ط¶ظٹط± (ط¯ظ‚ظٹظ‚ط©) ط§ط®طھظٹط§ط±ظٹ
+              </span>
+              <input
+                inputMode="numeric"
+                value={preparationTimeMinutes}
+                onChange={(e) => setPreparationTimeMinutes(e.target.value)}
+                placeholder="ظ…ط«ط§ظ„: 5"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-black text-[#7A6255]">
+                ظ…ظ‡ظ„ط© ط§ظ„ط§ط³طھظ„ط§ظ… (ط¯ظ‚ظٹظ‚ط©) ط§ط®طھظٹط§ط±ظٹ
+              </span>
+              <input
+                inputMode="numeric"
+                value={pickupLeadTimeMinutes}
+                onChange={(e) => setPickupLeadTimeMinutes(e.target.value)}
+                placeholder="ظ…ط«ط§ظ„: 15"
+                className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+            </label>
+          </div>
+
+          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+            <legend className="px-2 text-xs font-black text-[#3A2117]">
+              ط®ظٹط§ط±ط§طھ ط§ظ„ط§ط³طھظ„ط§ظ…
+            </legend>
+
+            <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
+              <input
+                type="checkbox"
+                checked={availableForPickup}
+                onChange={(e) => setAvailableForPickup(e.target.checked)}
+              />
+              ظ…طھط§ط­ ظ„ظ„ط§ط³طھظ„ط§ظ…
+            </label>
+
+          </fieldset>
+
+          <div>
+            <span className="text-xs font-black text-[#7A6255]">
+              ظ…ظƒظˆظ†ط§طھ ط§ظ„ظ…ظ†طھط¬
+            </span>
+
+            <div className="mt-2 flex gap-2">
+              <input
+                value={ingredientDraft}
+                onChange={(e) => setIngredientDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addIngredient();
+                  }
+                }}
+                placeholder="ظ…ط«ط§ظ„: ط­ظ„ظٹط¨طŒ ظ‚ظ‡ظˆط©..."
+                className="min-w-0 flex-1 rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+              />
+
+              <button
+                type="button"
+                onClick={addIngredient}
+                className="rounded-2xl bg-[#3A2117] px-5 py-4 text-sm font-black text-[#F8E8D2]"
+              >
+                ط¥ط¶ط§ظپط©
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {ingredients.map((ingredient) => (
+                <span
+                  key={ingredient}
+                  className="inline-flex items-center gap-1 rounded-full bg-[#EFE8DF] px-3 py-1 text-xs font-black text-[#3A2117]"
+                >
+                  {ingredient}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIngredients((prev) =>
+                        prev.filter((item) => item !== ingredient)
+                      )
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+            <legend className="px-2 text-xs font-black text-[#3A2117]">
+              ط­ط§ظ„ط© ط§ظ„ظ…ظ†طھط¬
+            </legend>
+
+            <div className="mt-3 flex gap-5">
+              <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
+                <input
+                  type="radio"
+                  checked={available}
+                  onChange={() => setAvailable(true)}
+                />
+                ظ…طھط§ط­
+              </label>
+
+              <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
+                <input
+                  type="radio"
+                  checked={!available}
+                  onChange={() => setAvailable(false)}
+                />
+                ط؛ظٹط± ظ…طھط§ط­
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+            <legend className="px-2 text-xs font-black text-[#3A2117]">
+              ظ‡ظ„ ظٹظˆط¬ط¯ ط¹ط±ط¶ ظ…ط±طھط¨ط·طں
+            </legend>
+
+            <div className="mt-3 flex gap-5">
+              <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
+                <input
+                  type="radio"
+                  checked={!promoLinked}
+                  onChange={() => setPromoLinked(false)}
+                />
+                ظ„ط§
+              </label>
+
+              <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
+                <input
+                  type="radio"
+                  checked={promoLinked}
+                  onChange={() => setPromoLinked(true)}
+                />
+                ظ†ط¹ظ…
+              </label>
+            </div>
+
+            {promoLinked ? (
+              <div className="mt-5 space-y-4 border-t border-[#E5D8CD] pt-4">
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">
+                    ظ†ظˆط¹ ط§ظ„ط¹ط±ط¶
+                  </span>
+                  <select
+                    value={promoKind}
+                    onChange={(e) =>
+                      setPromoKind(e.target.value as PromoKind)
+                    }
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none"
+                  >
+                    {PROMO_KINDS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {promoKind === "ط®طµظ…" ? (
+                  <div className="space-y-3 rounded-2xl bg-[#F8F4EF] p-3">
+                    <p className="text-xs font-black text-[#7A6255]">
+                      ط·ط±ظٹظ‚ط© ط§ظ„ط®طµظ…
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="flex items-center gap-2 rounded-xl bg-white p-3 text-sm font-black text-[#3A2117]">
+                        <input
+                          type="radio"
+                          checked={promoDiscountMode === "percent"}
+                          onChange={() => setPromoDiscountMode("percent")}
+                        />
+                        ظ†ط³ط¨ط© ظ…ط¦ظˆظٹط© طھط·ط¨ظ‚ ط¹ظ„ظ‰ ط§ظ„ط³ط¹ط± ط§ظ„ط£ط³ط§ط³ظٹ
+                      </label>
+                      <label className="flex items-center gap-2 rounded-xl bg-white p-3 text-sm font-black text-[#3A2117]">
+                        <input
+                          type="radio"
+                          checked={promoDiscountMode === "fixed_price"}
+                          onChange={() => setPromoDiscountMode("fixed_price")}
+                        />
+                        ط³ط¹ط± ط§ظ„ظ…ظ†طھط¬ ط¨ط¹ط¯ ط§ظ„ط®طµظ…
+                      </label>
+                    </div>
+
+                    {promoDiscountMode === "percent" ? (
+                      <input
+                        value={promoDiscount}
+                        onChange={(e) => setPromoDiscount(e.target.value)}
+                        placeholder="ظ†ط³ط¨ط© ط§ظ„ط®طµظ… ظ…ط«ظ„ 15"
+                        className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                      />
+                    ) : (
+                      <input
+                        value={promoDiscountedPrice}
+                        onChange={(e) => setPromoDiscountedPrice(e.target.value)}
+                        placeholder="ط§ظ„ط³ط¹ط± ط¨ط¹ط¯ ط§ظ„ط®طµظ… ظ…ط«ظ„ 19"
+                        className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                      />
+                    )}
+                  </div>
+                ) : null}
+
+                {promoKind === "ظ…ظ†طھط¬ ظ…ط¬ط§ظ†ظٹ ظ…ط¹ ط§ظ„ط·ظ„ط¨" ? (
+                  <select
+                    value={promoFreeId}
+                    onChange={(e) => setPromoFreeId(e.target.value)}
+                    className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
+                  >
+                    <option value="">ط§ط®طھط± ظ…ظ†طھط¬ ظ…ط¬ط§ظ†ظٹ</option>
+                    {freeProductOptions.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+
+                {promoKind === "ط¹ط±ط¶ ظ…ط®طµطµ" ? (
+                  <textarea
+                    value={promoCustom}
+                    onChange={(e) => setPromoCustom(e.target.value)}
+                    placeholder="ظ†طµ ط§ظ„ط¹ط±ط¶"
+                    className="h-24 w-full resize-none rounded-2xl border border-[#E5D8CD] p-4 text-right text-sm font-bold outline-none"
+                  />
+                ) : null}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-xs font-black text-[#7A6255]">طھط§ط±ظٹط® ط¨ط¯ط§ظٹط© ط§ظ„ط¹ط±ط¶</span>
+                    <input
+                      type="date"
+                      value={promoStart}
+                      onChange={(e) => setPromoStart(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-xs font-black text-[#7A6255]">طھط§ط±ظٹط® ظ†ظ‡ط§ظٹط© ط§ظ„ط¹ط±ط¶</span>
+                    <input
+                      type="date"
+                      value={promoEnd}
+                      onChange={(e) => setPromoEnd(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[#E5D8CD] px-4 py-4 text-sm font-bold outline-none"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+          </fieldset>
+        </div>
+
+        <div className="lg:sticky lg:top-0 lg:self-start">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#8B5E3C]" />
+            <p className="font-black text-[#3A2117]">ظ…ط¹ط§ظٹظ†ط© ظ…ط¨ط§ط´ط±ط©</p>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-white shadow-xl">
+            <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
+              <ProductImage
+                product={previewProduct}
+                previewUrl={imagePreviewUrl ?? undefined}
+                alt=""
+                className="h-full w-full object-contain"
+                fallback={
+                  <div
+                    className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[previewProduct.imageVariant]}`}
+                  >
+                    <Coffee className="h-12 w-12 text-white/85" />
+                  </div>
+                }
+              />
+
+              {previewProduct.promo ? (
+                <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-[#3A2117] shadow">
+                  <Gift className="h-3.5 w-3.5 text-[#8B5E3C]" />
+                  {promoPreviewActive
+                    ? promoBadgeText(previewProduct.promo)
+                    : "ط¹ط±ط¶ ط؛ظٹط± ظ†ط´ط·"}
+                </span>
+              ) : null}
+
+              <span
+                className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-black shadow ${
+                  previewProduct.available
+                    ? "bg-green-600 text-white"
+                    : "bg-white text-[#3A2117]"
+                }`}
+              >
+                {previewProduct.available ? "ظ…طھط§ط­" : "ط؛ظٹط± ظ…طھط§ط­"}
+              </span>
+            </div>
+
+            <div className="space-y-3 p-5">
+              <p className="text-xs font-black text-[#8B5E3C]">
+                {previewProduct.category}
+              </p>
+
+              <h3 className="text-xl font-black text-[#3A2117]">
+                {previewProduct.name}
+              </h3>
+
+              <p className="line-clamp-3 text-sm font-bold leading-7 text-[#7A6255]">
+                {previewProduct.description}
+              </p>
+
+              <div className="flex flex-wrap gap-4 border-t border-[#E5D8CD] pt-4 text-sm">
+                <div>
+                  <p className="text-[10px] font-black text-[#7A6255]">
+                    ط§ظ„ط³ط¹ط±
+                  </p>
+                  <p className="font-black text-[#3A2117]">
+                    {formatSar(previewProduct.price)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="flex items-center gap-1 text-[10px] font-black text-[#7A6255]">
+                    <Flame className="h-3 w-3 text-[#8B5E3C]" />
+                    ط³ط¹ط±ط§طھ
+                  </p>
+                  <p className="font-black text-[#3A2117]">
+                    {previewProduct.calories === undefined
+                      ? "ط؛ظٹط± ظ…ط­ط¯ط¯"
+                      : previewProduct.calories.toLocaleString("ar-SA")}
+                  </p>
+                </div>
+
+
+              </div>
+
+              {previewProduct.promo ? (
+                <p className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-bold text-[#3A2117]">
+                  ط§ظ„ط¹ط±ط¶:{" "}
+                  <span className="font-black">
+                    {promoBadgeText(previewProduct.promo)}
+                  </span>
+                </p>
+              ) : (
+                <p className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-bold text-[#7A6255]">
+                  ط¨ط¯ظˆظ† ط¹ط±ط¶ ظ…ط±طھط¨ط·
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}

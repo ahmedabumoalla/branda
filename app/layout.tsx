@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Barndaksa | برندة",
+  title: "Barndaksa | بارنداكسا",
   description: "منصة إدارة العلامات التجارية والولاء والطلبات والحجوزات.",
 };
 
