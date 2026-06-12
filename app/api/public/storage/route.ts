@@ -8,6 +8,7 @@ import {
 } from "@/lib/storage/public-storage-access";
 import { PRIVATE_STORAGE_TTL_SECONDS } from "@/lib/storage/resolve-storage-url";
 import { createClient } from "@/lib/supabase/server";
+import { immutableAssetCacheHeader } from "@/lib/performance/server-cache";
 
 const querySchema = z.object({
   bucket: z.string().min(1),
@@ -63,6 +64,6 @@ export async function GET(req: Request) {
       bucket,
       allowedBuckets: ANON_PUBLIC_STORAGE_BUCKETS,
     },
-    { headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400" } }
+    { headers: { "Cache-Control": immutableAssetCacheHeader() } }
   );
 }

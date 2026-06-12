@@ -21,7 +21,7 @@ export type MarketingCampaign = {
   imageAssetId?: string;
 };
 
-export const MARKETING_KEY = "branda_qatrah_marketing";
+export const MARKETING_KEY = "barndaksa_qatrah_marketing";
 
 export const mockMarketingCampaigns: MarketingCampaign[] = [
   {

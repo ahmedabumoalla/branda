@@ -50,9 +50,9 @@ export type DomainPriceResult = {
   message?: string;
 };
 
-export const DOMAIN_SEARCHES_KEY = "branda_qatrah_domain_searches";
-export const DOMAIN_PURCHASES_KEY = "branda_qatrah_domain_purchases";
-export const DOMAIN_PURCHASE_ACTIVE_KEY = "branda_qatrah_purchased_domain_active";
+export const DOMAIN_SEARCHES_KEY = "barndaksa_qatrah_domain_searches";
+export const DOMAIN_PURCHASES_KEY = "barndaksa_qatrah_domain_purchases";
+export const DOMAIN_PURCHASE_ACTIVE_KEY = "barndaksa_qatrah_purchased_domain_active";
 
 const SUPPORTED_TLDS = [".com", ".net", ".org", ".io", ".co", ".app", ".store", ".sa"] as const;
 

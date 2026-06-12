@@ -6,7 +6,7 @@ import { uploadCustomerAvatar, deleteCustomerAvatar } from "@/lib/storage/custom
 import { uploadExperienceSubmissionMedia } from "@/lib/storage/experience-media-server";
 import { resolvePrivateStoragePathToUrl, storageBucketForAvatar } from "@/lib/storage/resolve-storage-url";
 import { createClient } from "@/lib/supabase/server";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 export async function uploadCustomerAvatarAction(cafeSlug: string, formData: FormData) {
   const file = formData.get("file");
@@ -53,7 +53,7 @@ export async function uploadCustomerAvatarAction(cafeSlug: string, formData: For
     ...session,
     avatarUrl: signedUrl,
     avatarAssetId: storagePath,
-  } satisfies BrandaCustomerSession;
+  } satisfies BarndaksaCustomerSession;
 }
 
 /** Updates name/email/phone only — avatar changes go through uploadCustomerAvatarAction. */

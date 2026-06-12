@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { loginCustomerByEmail, registerCustomer } from "@/lib/data/customers";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
-import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
+import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
 
 export async function loginOwnerAction(email: string, password: string) {
   try {
@@ -168,8 +168,8 @@ export async function registerCafeOwnerAction(input: {
       };
     }
 
-    if (isBrandaEmailConfigured()) {
-      await sendBrandaEmail({
+    if (isBarndaksaEmailConfigured()) {
+      await sendBarndaksaEmail({
         to: parsed.email.toLowerCase(),
         subject: "مرحبًا بك في برندة",
         html: `
@@ -231,7 +231,7 @@ export async function registerCustomerAction(
   password: string,
   fullName: string,
   phone: string
-): Promise<{ ok: boolean; message: string; session?: BrandaCustomerSession }> {
+): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
   try {
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
     return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
@@ -245,7 +245,7 @@ export async function loginCustomerAction(
   cafeSlug: string,
   email: string,
   password: string
-): Promise<{ ok: boolean; message: string; session?: BrandaCustomerSession }> {
+): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
   try {
     const session = await loginCustomerByEmail({ cafeSlug, email, password });
     return { ok: true, message: "تم تسجيل الدخول", session };

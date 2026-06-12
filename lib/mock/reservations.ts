@@ -12,7 +12,7 @@ export type ReservationEventType =
   | "حجز طاولة عادية مع إطلالة"
   | "حجز طاولة عادية داخلية";
 
-export const RESERVATIONS_KEY = "branda_qatrah_reservations";
+export const RESERVATIONS_KEY = "barndaksa_qatrah_reservations";
 
 export const RESERVATION_EVENT_TYPES: ReservationEventType[] = [
   "حجز عيد ميلاد غرفة خاصة",
@@ -55,6 +55,9 @@ export type CafeReservation = {
   budgetEstimate?: number;
   notes?: string;
   status: ReservationStatus;
+  reservationCode?: string;
+  reservationCodeUsedAt?: string;
+  cashierConfirmedAt?: string;
   rejectionReason?: string;
   cafeMessage?: string;
   createdAt: string;

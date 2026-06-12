@@ -1,11 +1,11 @@
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { CafeBranch } from "@/lib/mock/branches";
 import type { ReservationEventType, ReservationStatus } from "@/lib/mock/reservations";
 import { createReservation, updateReservationStatus as updateReservationStatusDb } from "@/lib/data/reservations";
 
 export type CreateReservationInput = {
   slug: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   branch: CafeBranch;
   reservationType: ReservationEventType;
   serviceId?: string;

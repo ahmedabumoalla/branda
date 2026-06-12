@@ -4,14 +4,14 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { getThemeClasses, type CafeThemeId } from "@/lib/mock/cafe-theme";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
   slug: string;
   cafeName: string;
   logoUrl?: string;
   themeId: CafeThemeId;
-  customer: BrandaCustomerSession | null;
+  customer: BarndaksaCustomerSession | null;
 };
 
 export function CafeHeader({ slug, cafeName, logoUrl, themeId, customer }: Props) {

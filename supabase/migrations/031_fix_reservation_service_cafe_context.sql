@@ -1,4 +1,4 @@
--- Branda reservation service cafe context fix
+-- Barndaksa reservation service cafe context fix
 -- Version: 031
 -- Run after 030
 BEGIN;

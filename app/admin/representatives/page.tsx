@@ -1,3 +1,7 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { AdminRepresentativesPage } from "@/components/admin/pages/admin-representatives-page";
 import { getAdminPlatformPlans } from "@/lib/data/admin";
 import { getAdminRepresentatives } from "@/lib/data/representatives";

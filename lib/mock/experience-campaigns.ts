@@ -46,8 +46,8 @@ export type ExperienceSubmission = {
   reviewedAt?: string;
 };
 
-export const EXPERIENCE_CAMPAIGNS_KEY = "branda_qatrah_experience_campaigns";
-export const EXPERIENCE_SUBMISSIONS_KEY = "branda_qatrah_experience_submissions";
+export const EXPERIENCE_CAMPAIGNS_KEY = "barndaksa_qatrah_experience_campaigns";
+export const EXPERIENCE_SUBMISSIONS_KEY = "barndaksa_qatrah_experience_submissions";
 
 export const platformLabels: Record<ExperiencePlatform, string> = {
   tiktok: "TikTok",

@@ -1,11 +1,11 @@
-export type BrandaQrKind = "loyalty-card" | "experience-reward" | "invoice" | "reservation";
+export type BarndaksaQrKind = "loyalty-card" | "experience-reward" | "invoice" | "reservation";
 
-const QR_PREFIX = "BRANDA_QR";
+const QR_PREFIX = "BARNDAKSA_QR";
 const QR_VERSION = "v1";
 
 type QrPayload = {
   v: typeof QR_VERSION;
-  kind: BrandaQrKind;
+  kind: BarndaksaQrKind;
   value: string;
 };
 
@@ -33,13 +33,13 @@ function decodeBase64Url(value: string) {
   return new TextDecoder().decode(bytes);
 }
 
-export function createBrandaQrPayload(kind: BrandaQrKind, value: string) {
+export function createBarndaksaQrPayload(kind: BarndaksaQrKind, value: string) {
   const normalized = value.trim().toUpperCase();
   const payload: QrPayload = { v: QR_VERSION, kind, value: normalized };
   return `${QR_PREFIX}:${QR_VERSION}:${encodeBase64Url(JSON.stringify(payload))}`;
 }
 
-export function parseBrandaQrPayload(rawValue: string, expectedKind?: BrandaQrKind) {
+export function parseBarndaksaQrPayload(rawValue: string, expectedKind?: BarndaksaQrKind) {
   const value = rawValue.trim();
   const [prefix, version, encoded] = value.split(":");
 

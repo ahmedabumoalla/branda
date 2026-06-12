@@ -11,7 +11,7 @@ export const brandColors = {
 } as const;
 
 export const LOGO = {
-  dark: "/brand/branda-logo-dark.png",
-  brown: "/brand/branda-logo-brown.png",
-  brownBg: "/brand/branda-logo-brown-bg.png",
+  dark: "/brand/barndaksa-logo-dark.png",
+  brown: "/brand/barndaksa-logo-brown.png",
+  brownBg: "/brand/barndaksa-logo-brown-bg.png",
 } as const;

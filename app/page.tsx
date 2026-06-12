@@ -5,7 +5,7 @@ import {
   getPublicPlatformHomeData,
   type PublicPlatformHomeData,
 } from "@/lib/data/platform-content";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
 const emptyData: PublicPlatformHomeData = {
   settings: defaultPlatformHomeSettings,

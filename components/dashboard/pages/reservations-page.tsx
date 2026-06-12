@@ -10,6 +10,9 @@ import {
   ImageIcon,
   PackagePlus,
   Plus,
+  FileSpreadsheet,
+  Printer,
+  QrCode,
   Search,
   Settings2,
   Upload,
@@ -18,7 +21,10 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { updateReservationStatusAction } from "@/app/actions/reservations";
+import {
+  confirmOwnerReservationCodeAction,
+  updateReservationStatusAction,
+} from "@/app/actions/reservations";
 import { saveReservationServiceAction } from "@/app/actions/platform-upgrade";
 import {
   uploadImageAction,
@@ -46,6 +52,13 @@ import {
   type ReservationStatus,
 } from "@/lib/mock/reservations";
 import type { MenuProduct } from "@/lib/mock/menu";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import {
+  exportRowsToExcel,
+  exportRowsToPdf,
+} from "@/lib/export/admin-report-export";
+import { printThermalReceipt } from "@/lib/print/thermal";
 
 type Props = {
   initialReservations: CafeReservation[];
@@ -135,6 +148,7 @@ export function ReservationsPageClient({
   } | null>(null);
   const [cafeMessage, setCafeMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reservationCheckinCode, setReservationCheckinCode] = useState("");
 
   const filtered = useMemo(
     () =>
@@ -250,6 +264,98 @@ export function ReservationsPageClient({
         );
       setActionTarget(null);
       setCafeMessage("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function exportReservations(format: "pdf" | "excel") {
+    const rows = reservations.map((reservation) => ({
+      id: reservation.id,
+      customer: reservation.customerName,
+      phone: reservation.phone,
+      type: reservation.type,
+      date: reservation.date,
+      time: reservation.time,
+      guests: String(reservation.guests),
+      status: reservation.status,
+      code: reservation.reservationCode ?? "-",
+    }));
+    const columns = [
+      { key: "id", title: "رقم الحجز" },
+      { key: "customer", title: "العميل" },
+      { key: "phone", title: "الجوال" },
+      { key: "type", title: "نوع الحجز" },
+      { key: "date", title: "التاريخ" },
+      { key: "time", title: "الوقت" },
+      { key: "guests", title: "الأشخاص" },
+      { key: "status", title: "الحالة" },
+      { key: "code", title: "كود الحضور" },
+    ];
+    if (format === "pdf") exportRowsToPdf("تقرير الحجوزات", rows, columns);
+    else exportRowsToExcel("reservations-report", rows, columns);
+  }
+
+  function printReservationsSummary() {
+    printThermalReceipt({
+      title: "تقرير الحجوزات",
+      cafeName: "برندة",
+      lines: [
+        { label: "إجمالي الحجوزات", value: reservations.length, strong: true },
+        { label: "بانتظار الرد", value: pending },
+        { label: "مقبولة", value: accepted },
+        { label: "عدد الأشخاص", value: guests },
+        { label: "وقت الطباعة", value: new Date().toLocaleString("ar-SA") },
+      ],
+    });
+  }
+
+  function printReservationThermal(reservation: CafeReservation) {
+    printThermalReceipt({
+      title: "طلب حجز",
+      cafeName: "برندة",
+      subtitle: reservation.status,
+      lines: [
+        { label: "العميل", value: reservation.customerName, strong: true },
+        { label: "الجوال", value: reservation.phone },
+        { label: "نوع الحجز", value: reservation.type },
+        { label: "التاريخ", value: reservation.date },
+        { label: "الوقت", value: reservation.time },
+        { label: "عدد الأشخاص", value: reservation.guests },
+        { label: "الحالة", value: reservation.status },
+        { label: "كود الحضور", value: reservation.reservationCode ?? "-" },
+        { label: "ملاحظات", value: reservation.notes ?? "-" },
+      ],
+      paperSize: "80mm",
+    });
+  }
+
+  async function confirmReservationAttendance(codeInput?: string) {
+    const raw = (codeInput ?? reservationCheckinCode).trim();
+    if (!raw) return alert("أدخل QR أو كود الحجز");
+    const code = parseBarndaksaQrPayload(raw, "reservation") ?? raw.toUpperCase();
+    setBusy(true);
+    try {
+      const result = await confirmOwnerReservationCodeAction(code);
+      setReservationCheckinCode("");
+      setReservations((current) =>
+        current.map((item) =>
+          item.id === result.reservationId
+            ? {
+                ...item,
+                reservationCodeUsedAt: new Date().toISOString(),
+                cashierConfirmedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      alert(`تم تأكيد حضور ${String(result.customerName ?? "العميل")}`);
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "كود الحجز غير صالح أو مستخدم مسبقًا",
+      );
     } finally {
       setBusy(false);
     }
@@ -388,6 +494,26 @@ export function ReservationsPageClient({
             {configError}
           </SoftCard>
         ) : null}
+        <div className="mb-6 flex flex-wrap gap-3">
+          <button
+            onClick={printReservationsSummary}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white"
+          >
+            <Printer className="h-4 w-4" /> طباعة حرارية
+          </button>
+          <button
+            onClick={() => exportReservations("pdf")}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> PDF
+          </button>
+          <button
+            onClick={() => exportReservations("excel")}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#D9A33F] px-5 py-3 font-black text-[#311912]"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Excel
+          </button>
+        </div>
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="بانتظار الرد" value={pending} />
@@ -704,6 +830,39 @@ export function ReservationsPageClient({
           </BentoCard>
         </BentoGrid>
 
+        <BentoCard variant="white" span="4" className="mb-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-black text-[#D9A33F]">
+                تأكيد حضور الحجز
+              </p>
+              <h2 className="mt-1 text-2xl font-black text-[#3A2117]">
+                قراءة QR حضور الحجز لمرة واحدة
+              </h2>
+              <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                يقبل فقط الحجوزات المقبولة، وبعد التأكيد يتوقف الكود نهائيًا.
+              </p>
+            </div>
+            <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[1fr_auto] lg:max-w-xl">
+              <NeumoInput
+                value={reservationCheckinCode}
+                onChange={(event) =>
+                  setReservationCheckinCode(event.target.value.toUpperCase())
+                }
+                placeholder="امسح QR الحجز أو اكتب الكود"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void confirmReservationAttendance()}
+                className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white disabled:opacity-60"
+              >
+                <QrCode className="inline h-4 w-4" /> تأكيد الحضور
+              </button>
+            </div>
+          </div>
+        </BentoCard>
+
         <FilterBar>
           <div className="relative flex-1">
             <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7A6255]" />
@@ -755,8 +914,53 @@ export function ReservationsPageClient({
                       >
                         <X className="inline h-4 w-4" /> رفض
                       </button>
+                      <button
+                        onClick={() => printReservationThermal(r)}
+                        className="rounded-xl bg-[#F8F4EF] px-4 py-2 font-black text-[#3A2117]"
+                      >
+                        <Printer className="inline h-4 w-4" /> طباعة حرارية
+                      </button>
                     </div>
                   </div>
+                  {r.status === "مقبول" && r.reservationCode ? (
+                    <div className="mt-4 rounded-3xl border border-[#E7D7C6] bg-[#FCF8F3] p-4">
+                      <div className="grid gap-4 md:grid-cols-[180px_1fr_auto] md:items-center">
+                        <SecureQrCode
+                          kind="reservation"
+                          value={r.reservationCode}
+                          title={`QR حضور الحجز ${r.reservationCode}`}
+                          size={156}
+                        />
+                        <div>
+                          <p className="font-black text-[#3A2117]">
+                            QR حضور الحجز
+                          </p>
+                          <p className="mt-1 font-mono text-sm font-black tracking-[0.15em] text-[#6B3A25]">
+                            {r.reservationCode}
+                          </p>
+                          <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                            {r.reservationCodeUsedAt
+                              ? "تم استخدام QR وتأكيد الحضور"
+                              : "يستخدم مرة واحدة من صفحة العلامة أو الكاشير"}
+                          </p>
+                        </div>
+                        {!r.reservationCodeUsedAt ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void confirmReservationAttendance(
+                                r.reservationCode,
+                              )
+                            }
+                            className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white disabled:opacity-60"
+                          >
+                            تأكيد الحضور
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="mt-4 grid gap-3 md:grid-cols-4">
                     <Info
                       label="الأشخاص"

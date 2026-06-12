@@ -1,4 +1,4 @@
-export const CAFE_THEME_KEY = "branda_qatrah_theme";
+export const CAFE_THEME_KEY = "barndaksa_qatrah_theme";
 
 export type CafeThemeId =
   | "marketplace-amazon"

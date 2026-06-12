@@ -8,7 +8,7 @@ export type CafeInfoPage = {
   updatedAt: string;
 };
 
-export const CAFE_PAGES_KEY = "branda_qatrah_pages";
+export const CAFE_PAGES_KEY = "barndaksa_qatrah_pages";
 
 export const mockCafePages: CafeInfoPage[] = [
   {

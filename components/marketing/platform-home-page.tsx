@@ -23,7 +23,7 @@ import {
   recordIntroVideoEventAction,
   submitContactRequestAction,
 } from "@/app/actions/platform-content";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 import type { PublicPlatformHomeData } from "@/lib/data/platform-content";
 
@@ -118,7 +118,7 @@ function LoyaltyCards({ images }: { images: PublicPlatformHomeData["loyaltyImage
             zIndex: index === 1 ? 3 : index === 2 ? 2 : 1,
           }}
         >
-          <BrandaLogo variant={index === 0 ? "brown" : "dark"} width={92} height={36} />
+          <BarndaksaLogo variant={index === 0 ? "brown" : "dark"} width={92} height={36} />
           <div>
             <p className="text-xs font-black opacity-80">بطاقة ولاء رقمية</p>
             <div className="mt-3 flex gap-[3px]">
@@ -227,7 +227,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
     <main dir="rtl" className="min-h-screen overflow-x-hidden" style={{ background: C.creamBase, color: C.espressoDark }}>
       <header className="sticky top-0 z-50 border-b backdrop-blur-md" style={{ borderColor: C.borderSand, background: `${C.creamBase}ed` }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link href="/"><BrandaLogo variant="brown" width={140} height={56} priority /></Link>
+          <Link href="/"><BarndaksaLogo variant="brown" width={140} height={56} priority /></Link>
           <nav className="hidden items-center gap-6 md:flex">
             {[["#features", "المزايا"], ["#solutions", "الحلول"], ["#about", "من نحن"], ["/careers", "الوظائف"], ["/login", "تسجيل الدخول"]].map(([href, label]) =>
               href.startsWith("/") ? <Link key={href} href={href} className="text-sm font-bold">{label}</Link> : <a key={href} href={href} className="text-sm font-bold">{label}</a>
@@ -329,7 +329,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
 
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="grid items-center gap-8 rounded-[2rem] border border-[#E7D7C6] bg-[#EFE2D3] p-6 sm:p-10 lg:grid-cols-2">
-          <div className="flex justify-center"><BrandaLogo variant="brown" width={230} height={92} /></div>
+          <div className="flex justify-center"><BarndaksaLogo variant="brown" width={230} height={92} /></div>
           <div className="text-center lg:text-right">
             <h2 className="text-3xl font-black sm:text-4xl">{data.settings.ctaTitle}</h2>
             <p className="mt-4 text-base font-bold leading-8 text-[#806A5E]">{data.settings.ctaDescription}</p>
@@ -343,7 +343,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
 
       <footer className="border-t border-[#E7D7C6] px-4 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 sm:flex-row">
-          <BrandaLogo variant="brown" width={120} height={48} />
+          <BarndaksaLogo variant="brown" width={120} height={48} />
           <div className="flex flex-wrap items-center justify-center gap-5 text-sm font-black">
             <Link href="/careers">التوظيف</Link>
             <button type="button" onClick={() => setContactOpen(true)}>طرق التواصل</button>

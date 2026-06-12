@@ -50,8 +50,8 @@ export type LoyaltySettings = {
   redemptionRules: LoyaltyRedemptionRule[];
 };
 
-export const LOYALTY_SETTINGS_KEY = "branda_qatrah_loyalty_settings";
-export const LOYALTY_REWARDS_KEY = "branda_qatrah_loyalty_rewards";
+export const LOYALTY_SETTINGS_KEY = "barndaksa_qatrah_loyalty_settings";
+export const LOYALTY_REWARDS_KEY = "barndaksa_qatrah_loyalty_rewards";
 
 export const mockLoyaltySettings: LoyaltySettings = {
   pointsPerSar: 1,

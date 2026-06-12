@@ -41,7 +41,7 @@ type MapboxRuntime = {
 declare global {
   interface Window {
     mapboxgl?: MapboxRuntime;
-    __brandaMapboxLoader?: Promise<void>;
+    __barndaksaMapboxLoader?: Promise<void>;
   }
 }
 
@@ -51,18 +51,18 @@ const mapboxStyleUrl = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css
 
 function loadMapbox() {
   if (window.mapboxgl) return Promise.resolve();
-  if (window.__brandaMapboxLoader) return window.__brandaMapboxLoader;
+  if (window.__barndaksaMapboxLoader) return window.__barndaksaMapboxLoader;
 
-  window.__brandaMapboxLoader = new Promise<void>((resolve, reject) => {
-    if (!document.querySelector<HTMLLinkElement>('link[data-branda-mapbox-style="true"]')) {
+  window.__barndaksaMapboxLoader = new Promise<void>((resolve, reject) => {
+    if (!document.querySelector<HTMLLinkElement>('link[data-barndaksa-mapbox-style="true"]')) {
       const stylesheet = document.createElement("link");
       stylesheet.rel = "stylesheet";
       stylesheet.href = mapboxStyleUrl;
-      stylesheet.dataset.brandaMapboxStyle = "true";
+      stylesheet.dataset.barndaksaMapboxStyle = "true";
       document.head.appendChild(stylesheet);
     }
 
-    const existing = document.querySelector<HTMLScriptElement>('script[data-branda-mapbox-script="true"]');
+    const existing = document.querySelector<HTMLScriptElement>('script[data-barndaksa-mapbox-script="true"]');
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("Mapbox failed to load")), { once: true });
@@ -72,13 +72,13 @@ function loadMapbox() {
     const script = document.createElement("script");
     script.src = mapboxScriptUrl;
     script.async = true;
-    script.dataset.brandaMapboxScript = "true";
+    script.dataset.barndaksaMapboxScript = "true";
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Mapbox failed to load"));
     document.body.appendChild(script);
   });
 
-  return window.__brandaMapboxLoader;
+  return window.__barndaksaMapboxLoader;
 }
 
 function normalize(point: { lng: number; lat: number }): LocationValue {

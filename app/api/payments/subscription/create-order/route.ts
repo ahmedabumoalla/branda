@@ -46,8 +46,7 @@ export async function POST(request: Request) {
     }
 
     const plan = data.platform_plans as { name?: string } | null;
-    const baseAmount = Number(data.amount_sar ?? 0);
-    const amountWithVat = Math.round(baseAmount * 1.15 * 100) / 100;
+    const amountWithVat = Number(data.amount_sar ?? 0);
 
     const origin = request.headers.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
     const subscriptionId = String(data.id);

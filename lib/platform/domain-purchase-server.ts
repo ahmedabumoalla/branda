@@ -79,7 +79,7 @@ export async function resolveAvailability(domainInput: string): Promise<DomainAv
   }
 
   if (!isLiveDomainPurchaseEnabled()) {
-    const unavailableSeeds = ["taken", "google", "apple", "amazon", "vercel", "branda"];
+    const unavailableSeeds = ["taken", "google", "apple", "amazon", "vercel", "barndaksa"];
     const firstLabel = domain.split(".")[0] || "";
     const available = !unavailableSeeds.some((seed) => firstLabel.includes(seed));
     return {

@@ -1,27 +1,27 @@
-export type BrandaUserRole = "admin" | "cafe_owner";
+export type BarndaksaUserRole = "admin" | "cafe_owner";
 
 /** @deprecated Use Supabase Auth via loginOwnerAction */
-export type BrandaAuthUser = {
+export type BarndaksaAuthUser = {
   id: string;
   fullName: string;
   email: string;
-  role: BrandaUserRole;
+  role: BarndaksaUserRole;
   cafeSlug?: string;
   cafeId?: string;
   status: "نشط" | "موقوف";
 };
 
-export const BRANDA_AUTH_SESSION_KEY = "branda_auth_session";
+export const BARNDAKSA_AUTH_SESSION_KEY = "barndaksa_auth_session";
 
 /** Mock users removed — use Supabase Auth + development seed */
-export const mockAuthUsers: BrandaAuthUser[] = [];
+export const mockAuthUsers: BarndaksaAuthUser[] = [];
 
 export async function loginWithRole(email: string, password: string) {
   const { loginOwnerAction } = await import("@/app/actions/auth");
   return loginOwnerAction(email, password);
 }
 
-export async function getBrandaAuthSession() {
+export async function getBarndaksaAuthSession() {
   const { createClient } = await import("@/lib/supabase/client");
   const supabase = createClient();
   const {
@@ -46,7 +46,7 @@ export async function getBrandaAuthSession() {
   };
 }
 
-export async function logoutBrandaAuth() {
+export async function logoutBarndaksaAuth() {
   const { logoutAction } = await import("@/app/actions/auth");
   await logoutAction();
 }

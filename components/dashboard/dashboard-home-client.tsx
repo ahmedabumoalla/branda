@@ -11,7 +11,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   BentoCard,
   BentoGrid,
@@ -114,7 +114,7 @@ export function DashboardHomeClient({
       }
       action={
         <div className="flex flex-wrap items-center gap-3">
-          <BrandaLogo variant="brown" width={120} height={48} />
+          <BarndaksaLogo variant="brown" width={120} height={48} />
           {cafeSlug ? (
             <LinkButton
               href={getCafePublicUrl(cafeSlug)}

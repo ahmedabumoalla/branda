@@ -39,8 +39,8 @@ export type PendingSubscription = {
   createdAt: string;
 };
 
-export const SUBSCRIPTION_HISTORY_KEY = "branda_qatrah_subscription_history";
-export const PENDING_SUBSCRIPTION_KEY = "branda_qatrah_pending_subscription";
+export const SUBSCRIPTION_HISTORY_KEY = "barndaksa_qatrah_subscription_history";
+export const PENDING_SUBSCRIPTION_KEY = "barndaksa_qatrah_pending_subscription";
 
 export function getSubscriptionHistory(): SubscriptionRecord[] {
   throw new Error("Use fetchOwnerSubscriptionHistoryAction");

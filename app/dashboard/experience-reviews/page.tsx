@@ -1,5 +1,9 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { ExperienceRewardReviewsPageClient } from "@/components/dashboard/pages/experience-reward-reviews-page";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerExperienceRewardReviews } from "@/lib/data/experience-rewards";
 import { getOwnerMenu } from "@/lib/data/menu";
 

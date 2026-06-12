@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 
 import { ReportsPageClient } from "@/components/dashboard/pages/reports-page";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerCustomersDashboard } from "@/lib/data/customers";
 import { getOwnerOrders } from "@/lib/data/orders";
 import { getOwnerReservations } from "@/lib/data/reservations";

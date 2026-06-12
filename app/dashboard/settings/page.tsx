@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { SettingsPageClient } from "@/components/dashboard/pages/settings-page";
 
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
 import { getOwnerCafeSettings } from "@/lib/data/settings";
 

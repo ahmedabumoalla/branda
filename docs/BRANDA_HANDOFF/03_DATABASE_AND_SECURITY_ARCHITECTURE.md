@@ -1,4 +1,4 @@
-# Branda — Database & Security Architecture
+# Barndaksa — Database & Security Architecture
 
 **Status:** Source-level hardening revised and statically gated — database not initialized — runtime validation pending.
 
@@ -8,10 +8,10 @@
 
 | # | File | Purpose |
 | - | ---- | ------- |
-| 1 | `001_branda_production_schema.sql` | Core schema, enums, RLS baseline, auth helpers |
-| 2 | `002_branda_storage_policies.sql` | Storage buckets, path helpers, public/private object policies |
-| 3 | `003_branda_security_hardening.sql` | Profile escalation guard, cafe_members, domain_orders table |
-| 4 | `004_branda_critical_security_fixes.sql` | RPC-only flows, policy tightening, triggers |
+| 1 | `001_barndaksa_production_schema.sql` | Core schema, enums, RLS baseline, auth helpers |
+| 2 | `002_barndaksa_storage_policies.sql` | Storage buckets, path helpers, public/private object policies |
+| 3 | `003_barndaksa_security_hardening.sql` | Profile escalation guard, cafe_members, domain_orders table |
+| 4 | `004_barndaksa_critical_security_fixes.sql` | RPC-only flows, policy tightening, triggers |
 
 **Not executed.** Fresh install applies 001→004 in order. Migration 004 explicitly `DROP POLICY IF EXISTS` for replaced wide policies.
 

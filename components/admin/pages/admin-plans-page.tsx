@@ -7,7 +7,7 @@ import {
   rejectSubscriptionRequestAction,
   savePlatformPlansAction,
 } from "@/app/actions/admin";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminInput,
   AdminPageShell,
@@ -19,6 +19,7 @@ import {
   GoldButton,
   StatusBadge,
 } from "@/components/ui/design-system";
+import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 import {
   allPlatformFeatures,
   type PlatformFeature,
@@ -58,7 +59,14 @@ function createPlan(): PlatformPlan {
     description: "",
     active: true,
     isDefault: false,
-    features: ["menu", "settings"],
+    features: ["home", "menu", "settings", "subscription"],
+    categoryId: "cafes_coffee",
+    maxOrdersMonthly: 30,
+    maxProductsMonthly: 20,
+    maxReservationsMonthly: 10,
+    maxBranches: 1,
+    trialDays: 15,
+    freeAfterTrial: false,
   };
 }
 
@@ -157,8 +165,8 @@ export function AdminPlansPage({
   return (
     <AdminPageShell
       title="الباقات والاشتراكات"
-      subtitle="إدارة الباقة الأساسية والأسعار والعروض وطلبات الدفع اليدوي."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      subtitle="إدارة الباقة الأساسية والأسعار الشاملة للضريبة والعروض وطلبات الدفع اليدوي."
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
         <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">
@@ -235,7 +243,7 @@ export function AdminPlansPage({
               <div className="grid grid-cols-2 gap-3">
                 <label>
                   <span className="mb-2 block text-xs font-black text-[#CBB29C]">
-                    السعر الأساسي
+                    السعر شامل الضريبة
                   </span>
                   <AdminInput
                     type="number"
@@ -248,13 +256,13 @@ export function AdminPlansPage({
                 </label>
                 <label>
                   <span className="mb-2 block text-xs font-black text-[#CBB29C]">
-                    سعر العرض
+                    سعر العرض شامل الضريبة
                   </span>
                   <AdminInput
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="أدخل سعر العرض"
+                    placeholder="أدخل سعر العرض شامل الضريبة"
                     value={plan.offerPrice ?? ""}
                     className="text-[#FCF8F3] placeholder:text-[#CBB29C]"
                     onChange={(event) => {
@@ -297,6 +305,29 @@ export function AdminPlansPage({
                   <option value="month">شهر</option>
                   <option value="year">سنة</option>
                 </AdminSelect>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="mb-3 text-sm font-black text-[#CBB29C]">تصنيف الباقة وحدود الاستخدام الشهرية</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <AdminSelect
+                    value={plan.categoryId ?? "cafes_coffee"}
+                    onChange={(event) => updatePlan(plan.id, { categoryId: event.target.value })}
+                  >
+                    {BUSINESS_CATEGORIES.map((category) => (
+                      <option key={category.id} value={category.id}>{category.label}</option>
+                    ))}
+                  </AdminSelect>
+                  <AdminInput type="number" min="0" placeholder="عدد الطلبات شهريًا" value={plan.maxOrdersMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxOrdersMonthly: event.target.value ? Number(event.target.value) : null })} />
+                  <AdminInput type="number" min="0" placeholder="عدد المنتجات شهريًا" value={plan.maxProductsMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value ? Number(event.target.value) : null })} />
+                  <AdminInput type="number" min="0" placeholder="عدد الحجوزات شهريًا" value={plan.maxReservationsMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxReservationsMonthly: event.target.value ? Number(event.target.value) : null })} />
+                  <AdminInput type="number" min="0" placeholder="عدد الفروع" value={plan.maxBranches ?? ""} onChange={(event) => updatePlan(plan.id, { maxBranches: event.target.value ? Number(event.target.value) : null })} />
+                  <AdminInput type="number" min="0" placeholder="أيام التجربة" value={plan.trialDays ?? ""} onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value ? Number(event.target.value) : null })} />
+                </div>
+                <label className="mt-3 flex items-center gap-3 rounded-xl bg-black/20 p-3 text-xs font-black text-[#F8F4EF]">
+                  <input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />
+                  هذه هي الباقة المجانية التي يرجع لها الحساب بعد انتهاء التجربة
+                </label>
               </div>
 
               <div className="flex flex-wrap gap-2">

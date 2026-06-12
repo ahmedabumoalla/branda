@@ -1,4 +1,4 @@
--- Branda reservation service save fix + media access/performance hardening
+-- Barndaksa reservation service save fix + media access/performance hardening
 -- Version: 030
 -- Run after 029
 BEGIN;

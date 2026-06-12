@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/branda/env";
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/barndaksa/env";
 
 /** Service role — SERVER ONLY. Never import in Client Components. */
 export function createAdminClient() {

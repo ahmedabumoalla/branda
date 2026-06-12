@@ -10,7 +10,7 @@ import {
 import { formatSar } from "@/lib/format";
 import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
-import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { OwnerExperienceRewardSubmission } from "@/lib/data/experience-rewards";
 import type { MenuProduct } from "@/lib/mock/menu";
 
@@ -142,7 +142,7 @@ export function ExperienceRewardReviewsPageClient({
   }
 
   async function redeemRewardFromOwnerPage() {
-    const parsedRewardCode = parseBrandaQrPayload(rewardCodeToRedeem, "experience-reward") ?? rewardCodeToRedeem.trim().toUpperCase();
+    const parsedRewardCode = parseBarndaksaQrPayload(rewardCodeToRedeem, "experience-reward") ?? rewardCodeToRedeem.trim().toUpperCase();
     if (!parsedRewardCode) {
       setMessage("أدخل QR المكافأة أو اقرأه من الكاميرا");
       return;

@@ -1,4 +1,4 @@
-cd E:\branda-platform
+cd E:\barndaksa-platform
 
 $delete = @(
   "components\cafe\themes\marketplace-amazon-theme.tsx",

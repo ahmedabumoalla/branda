@@ -37,5 +37,8 @@ export async function activatePaidSubscription(input: {
     .maybeSingle();
 
   if (error) throw error;
+  if (data) {
+    await admin.rpc("record_subscription_finance_distribution", { p_subscription_id: input.subscriptionId });
+  }
   return Boolean(data);
 }

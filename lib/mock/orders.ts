@@ -40,7 +40,7 @@ export type CafeOrder = {
   notes?: string;
 };
 
-export const ORDERS_KEY = "branda_qatrah_orders";
+export const ORDERS_KEY = "barndaksa_qatrah_orders";
 
 export const mockCafeOrders: CafeOrder[] = [
   {

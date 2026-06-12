@@ -1,6 +1,15 @@
 "use client";
 
-import { Receipt, UserRound, Check, X, Clock, MapPin } from "lucide-react";
+import {
+  Receipt,
+  UserRound,
+  Check,
+  X,
+  Clock,
+  MapPin,
+  Printer,
+  FileSpreadsheet,
+} from "lucide-react";
 import { useState } from "react";
 import {
   acceptPickupOrderAction,
@@ -15,6 +24,11 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
+import {
+  exportRowsToExcel,
+  exportRowsToPdf,
+} from "@/lib/export/admin-report-export";
+import { printThermalReceipt } from "@/lib/print/thermal";
 import { type CafeOrder, type OrderStatus } from "@/lib/mock/orders";
 
 const statusStyle: Record<OrderStatus, string> = {
@@ -35,6 +49,54 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function printOrderThermal(order: CafeOrder) {
+    printThermalReceipt({
+      title: "طلب منيو",
+      cafeName: order.cafeSlug || "برندة",
+      subtitle: order.status,
+      lines: [
+        { label: "رقم الطلب", value: order.id },
+        { label: "العميل", value: order.customerName, strong: true },
+        { label: "الجوال", value: order.customerPhone },
+        { label: "الفرع", value: order.branchName || "غير محدد" },
+        { label: "وقت الاستلام", value: order.pickupAt || "غير محدد" },
+        { label: "الدفع", value: order.paymentStatus },
+        { label: "الإجمالي", value: formatSar(order.total), strong: true },
+        { label: "ملاحظات", value: order.notes || "-" },
+      ],
+      items: order.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: formatSar(item.unitPrice),
+        notes: item.notes,
+      })),
+      paperSize: "80mm",
+    });
+  }
+
+  function exportOrders(format: "pdf" | "excel") {
+    const rows = orders.map((order) => ({
+      id: order.id,
+      customer: order.customerName,
+      phone: order.customerPhone,
+      status: order.status,
+      total: formatSar(order.total),
+      branch: order.branchName || "-",
+      createdAt: order.createdAt,
+    }));
+    const columns = [
+      { key: "id", title: "رقم الطلب" },
+      { key: "customer", title: "العميل" },
+      { key: "phone", title: "الجوال" },
+      { key: "status", title: "الحالة" },
+      { key: "total", title: "الإجمالي" },
+      { key: "branch", title: "الفرع" },
+      { key: "createdAt", title: "تاريخ الطلب" },
+    ];
+    if (format === "pdf") exportRowsToPdf("تقرير طلبات المنيو", rows, columns);
+    else exportRowsToExcel("menu-orders-report", rows, columns);
+  }
 
   async function refreshOrders() {
     try {
@@ -81,7 +143,9 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
     }
   }
 
-  const pendingOrders = orders.filter((o) => o.status === "بانتظار موافقة الكوفي").length;
+  const pendingOrders = orders.filter(
+    (o) => o.status === "بانتظار موافقة الكوفي",
+  ).length;
   const acceptedOrders = orders.filter((o) => o.status === "مقبول").length;
   const acceptedRevenue = orders
     .filter((o) => o.status === "مقبول")
@@ -98,6 +162,20 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
             {configError}
           </SoftCard>
         ) : null}
+        <div className="mb-6 flex flex-wrap gap-3">
+          <button
+            onClick={() => exportOrders("pdf")}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> PDF
+          </button>
+          <button
+            onClick={() => exportOrders("excel")}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#D9A33F] px-5 py-3 font-black text-[#311912]"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Excel
+          </button>
+        </div>
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
             <StatPill label="إجمالي الطلبات" value={orders.length} />
@@ -109,7 +187,10 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
             <StatPill label="طلبات مقبولة" value={acceptedOrders} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="قيمة الطلبات المقبولة المتوقعة" value={formatSar(acceptedRevenue)} />
+            <StatPill
+              label="قيمة الطلبات المقبولة المتوقعة"
+              value={formatSar(acceptedRevenue)}
+            />
           </BentoCard>
         </BentoGrid>
 
@@ -157,14 +238,18 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                         <MapPin className="h-4 w-4" />
                         الفرع
                       </p>
-                      <p className="mt-1 font-black">{order.branchName || "غير محدد"}</p>
+                      <p className="mt-1 font-black">
+                        {order.branchName || "غير محدد"}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-[#F8F4EF] p-4">
                       <p className="flex items-center gap-1 text-xs font-black text-[#7A6255]">
                         <Clock className="h-4 w-4" />
                         وقت الاستلام
                       </p>
-                      <p className="mt-1 font-black">{order.pickupAt || "غير محدد"}</p>
+                      <p className="mt-1 font-black">
+                        {order.pickupAt || "غير محدد"}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-[#F8F4EF] p-4">
                       <p className="text-xs font-black text-[#7A6255]">الدفع</p>
@@ -184,7 +269,9 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                       </button>
                       <button
                         onClick={() =>
-                          setShowRejectForm((prev) => (prev === order.id ? null : order.id))
+                          setShowRejectForm((prev) =>
+                            prev === order.id ? null : order.id,
+                          )
                         }
                         className="flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-black text-red-700"
                       >
@@ -197,7 +284,9 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                   {showRejectForm === order.id ? (
                     <div className="mt-4 rounded-2xl bg-red-50/50 p-4">
                       <label className="block">
-                        <span className="text-xs font-black text-[#7A6255]">سبب الرفض</span>
+                        <span className="text-xs font-black text-[#7A6255]">
+                          سبب الرفض
+                        </span>
                         <textarea
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
@@ -224,6 +313,12 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
 
                   <div className="mt-5">
                     <button
+                      onClick={() => printOrderThermal(order)}
+                      className="rounded-2xl bg-[#FFF8EA] px-5 py-2 font-black text-[#6B3A25]"
+                    >
+                      <Printer className="inline h-4 w-4" /> طباعة حرارية
+                    </button>
+                    <button
                       onClick={() => setSelected(order)}
                       className="rounded-2xl bg-[#F8F4EF] px-5 py-2 font-black text-[#3A2117]"
                     >
@@ -236,7 +331,9 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
               {orders.length === 0 ? (
                 <SoftCard className="text-center">
                   <h2 className="text-2xl font-black">لا توجد طلبات</h2>
-                  <p className="mt-2 text-[#7A6255]">ستظهر طلبات الاستلام هنا عند إنشائها.</p>
+                  <p className="mt-2 text-[#7A6255]">
+                    ستظهر طلبات الاستلام هنا عند إنشائها.
+                  </p>
                 </SoftCard>
               ) : null}
             </div>
@@ -245,7 +342,9 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
           <BentoCard variant="white" span="row2">
             {selected ? (
               <>
-                <h2 className="text-2xl font-black text-[#3A2117]">تفاصيل الطلب</h2>
+                <h2 className="text-2xl font-black text-[#3A2117]">
+                  تفاصيل الطلب
+                </h2>
 
                 <SoftCard className="mt-5 p-4">
                   <p className="flex items-center gap-2 font-black">
@@ -261,9 +360,15 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
 
                 <SoftCard className="mt-5 p-4">
                   <p className="font-black">تفاصيل الاستلام</p>
-                  <p className="mt-2 text-[#7A6255]">الفرع: {selected.branchName || "—"}</p>
-                  <p className="text-[#7A6255]">وقت الاستلام: {selected.pickupAt || "—"}</p>
-                  <p className="text-[#7A6255]">الدفع: {selected.paymentStatus}</p>
+                  <p className="mt-2 text-[#7A6255]">
+                    الفرع: {selected.branchName || "—"}
+                  </p>
+                  <p className="text-[#7A6255]">
+                    وقت الاستلام: {selected.pickupAt || "—"}
+                  </p>
+                  <p className="text-[#7A6255]">
+                    الدفع: {selected.paymentStatus}
+                  </p>
                   <p className="text-[#7A6255]">الحالة: {selected.status}</p>
                 </SoftCard>
 
@@ -294,6 +399,14 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                     الإجمالي: {formatSar(selected.total)}
                   </p>
                 </SoftCard>
+
+                <button
+                  onClick={() => printOrderThermal(selected)}
+                  className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white"
+                >
+                  <Printer className="h-4 w-4" /> طباعة الطلب على الطابعة
+                  الحرارية
+                </button>
 
                 {selected.notes ? (
                   <div className="mt-5 rounded-2xl bg-[#FFF8EF] p-4 font-bold text-[#7A6255]">

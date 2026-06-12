@@ -11,7 +11,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
 # Optional: public domain for cafe routing
-NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=
+NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN=
 
 # Optional: Vercel domain purchase (server routes only)
 VERCEL_TOKEN=

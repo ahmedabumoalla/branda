@@ -35,14 +35,14 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Branda Domain Purchase Env Vars
+## Barndaksa Domain Purchase Env Vars
 
 ```bash
 VERCEL_TOKEN=
 VERCEL_TEAM_ID=
 VERCEL_PROJECT_ID=
 VERCEL_DOMAIN_PURCHASE_LIVE=false
-NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
+NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN=barndaksa.local
 ```
 
 - `VERCEL_TOKEN` يستخدم في server routes فقط داخل `app/api/domains/*`.

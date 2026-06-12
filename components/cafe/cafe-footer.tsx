@@ -42,7 +42,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
             ·
           </span>
           <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
-            Powered by Branda
+            Powered by Barndaksa
           </span>
           <Image
             src={logoSrc}

@@ -33,7 +33,7 @@ import {
   StatPill,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
-import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
 
@@ -162,8 +162,8 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     setMessage("");
     try {
       const result = await recordLoyaltyCardOperationAction({
-        cardCode: parseBrandaQrPayload(cardCode, "loyalty-card") ?? cardCode.trim().toUpperCase(),
-        invoiceBarcode: parseBrandaQrPayload(invoiceBarcode, "invoice") ?? invoiceBarcode.trim(),
+        cardCode: parseBarndaksaQrPayload(cardCode, "loyalty-card") ?? cardCode.trim().toUpperCase(),
+        invoiceBarcode: parseBarndaksaQrPayload(invoiceBarcode, "invoice") ?? invoiceBarcode.trim(),
         invoiceAmount: Number(invoiceAmount || 0),
         operation,
       });
@@ -219,8 +219,8 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: cardAccent, color: cardBackground }}><WalletCards className="h-8 w-8" /></div>
             </div>
             <div className="mt-8 rounded-2xl bg-white p-4 text-center text-[#17100d]">
-              <p className="font-mono text-xl font-black tracking-[0.3em]">BRANDA-CARD</p>
-              <SecureQrCode kind="loyalty-card" value="BRANDA-CARD" title="نموذج QR بطاقة الولاء" size={170} className="mt-3" />
+              <p className="font-mono text-xl font-black tracking-[0.3em]">BARNDAKSA-CARD</p>
+              <SecureQrCode kind="loyalty-card" value="BARNDAKSA-CARD" title="نموذج QR بطاقة الولاء" size={170} className="mt-3" />
             </div>
           </div>
         </BentoCard>

@@ -20,7 +20,7 @@ import {
   savePlatformHomeSettingsAction,
   uploadPlatformMediaAction,
 } from "@/app/actions/platform-content";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminInput,
   AdminPageShell,
@@ -174,7 +174,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
     <AdminPageShell
       title="إدارة محتوى المنصة"
       subtitle="تحكم في الصفحة الرئيسية والفيديو التعريفي ووسائل التواصل ومحتوى النشر"
-      action={<BrandaLogo variant="dark" width={130} height={52} />}
+      action={<BarndaksaLogo variant="dark" width={130} height={52} />}
     >
       {configError ? <p className="mb-5 rounded-2xl bg-red-500/10 p-4 font-black text-red-300">{configError}</p> : null}
       {message ? <p className="mb-5 rounded-2xl bg-[#D9A33F]/10 p-4 font-black text-[#F6C35B]">{message}</p> : null}

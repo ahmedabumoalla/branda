@@ -18,8 +18,8 @@ import {
   Settings2,
   Users,
 } from "lucide-react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
-import { logoutBrandaAuth } from "@/lib/platform/auth";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
+import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 
 const links = [
   ["الرئيسية", "/admin", Home],
@@ -40,7 +40,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
   const router = useRouter();
 
   function handleLogout() {
-    logoutBrandaAuth();
+    logoutBarndaksaAuth();
     router.push("/login");
   }
 
@@ -50,7 +50,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
       className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-white/10 bg-gradient-to-b from-[#0f0c0a] via-[#1a1210] to-[#241610] text-[#F8F4EF] shadow-[-16px_0_48px_rgba(0,0,0,0.5)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
-        <BrandaLogo variant="dark" width={168} height={68} priority className="mx-auto" />
+        <BarndaksaLogo variant="dark" width={168} height={68} priority className="mx-auto" />
         <p className="mt-3 text-center text-xs font-bold text-[#CBB29C]">
           لوحة تحكم المنصة
         </p>
@@ -134,7 +134,7 @@ export function AdminAppLayout({ children }: { children: ReactNode }) {
       mobileTitle="لوحة المنصة"
       sidebar={(close) => <AdminSidebar onNavigate={close} />}
     >
-      <div className="branda-admin-fields min-w-0">{children}</div>
+      <div className="barndaksa-admin-fields min-w-0">{children}</div>
     </ResponsiveAppShell>
   );
 }
@@ -152,7 +152,7 @@ import {
   updateCafePlanAction,
   updateCafeStatusAction,
 } from "@/app/actions/admin";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminFilterBar,
   AdminInput,
@@ -272,7 +272,7 @@ export function AdminCafesPage({
     <AdminPageShell
       title="الكوفيهات المسجلة"
       subtitle="اضغط على أي كوفي لعرض التفاصيل الكاملة والتحكم بالباقة والحالة."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
         <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center font-black text-amber-200">
@@ -573,7 +573,7 @@ function StatMini({
 
 import { Power, Search, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminFilterBar,
   AdminPageShell,
@@ -619,7 +619,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
     <AdminPageShell
       title="عملاء الكوفيهات"
       subtitle="كل عميل موضح تابع لأي كوفي مع إنفاقه ونقاطه وحالة حسابه."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">
@@ -701,7 +701,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
 
 import { Building2, CircleDollarSign, ClipboardList, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   AdminStatPill,
@@ -749,7 +749,7 @@ export function AdminHomePage({
     <AdminPageShell
       title="لوحة تحكم المنصة"
       subtitle="مراقبة كاملة للكوفيهات والعملاء وقيمة الطلبات والعمليات."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
         <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center font-black text-amber-200">
@@ -826,7 +826,7 @@ export function AdminHomePage({
 
 import { ClipboardList, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminFilterBar,
   AdminPageShell,
@@ -872,7 +872,7 @@ export function AdminOperationsPage({ initialOperations, configError }: Props) {
     <AdminPageShell
       title="كل العمليات"
       subtitle="سجل كامل لكل طلب وحجز ودفع وتقييم وتغيير يتم داخل المنصة."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">
@@ -929,7 +929,7 @@ export function AdminOperationsPage({ initialOperations, configError }: Props) {
 
 import { Save, Settings2 } from "lucide-react";
 import { useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   BentoCard,
@@ -980,7 +980,7 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
       subtitle="تحكم في التسجيل، الموافقات، العمولة، والباقات الافتراضية."
       action={
         <div className="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
-          <BrandaLogo variant="dark" width={120} height={48} />
+          <BarndaksaLogo variant="dark" width={120} height={48} />
           <GoldButton onClick={save} disabled={saving} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
             {saving ? "جاري الحفظ..." : "حفظ الخيارات"}
@@ -1096,7 +1096,7 @@ function Toggle({ title, active, onClick }: { title: string; active: boolean; on
 import { Check, Layers3, Plus, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { savePlatformPlansAction } from "@/app/actions/admin";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   AdminStatPill,
@@ -1235,7 +1235,7 @@ export function AdminPlansPage({ initialPlans, configError }: Props) {
     <AdminPageShell
       title="الباقات وخيارات الكوفيهات"
       subtitle="أنشئ باقات جديدة وحدد الخدمات المتاحة داخل كل باقة. أي خيار تلغيه من الباقة يختفي مباشرة من لوحة الكوفي."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <BentoGrid className="mb-6">
         <BentoCard variant="cyber" span="2">
@@ -1413,7 +1413,7 @@ export function AdminPlansPage({ initialPlans, configError }: Props) {
 
 import { CircleDollarSign } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   AdminStatPill,
@@ -1445,7 +1445,7 @@ export function AdminRevenuePage({ initialCafes, configError }: Props) {
     <AdminPageShell
       title="قيمة الطلبات المتوقعة"
       subtitle="متابعة قيمة طلبات الاستلام المقبولة (الدفع عند الاستلام — غير مؤكد داخل النظام)."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <BentoGrid className="mb-6">
         <BentoCard variant="gold" span="2">
@@ -1561,7 +1561,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
             ·
           </span>
           <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
-            Powered by Branda
+            Powered by Barndaksa
           </span>
           <Image
             src={logoSrc}
@@ -1587,14 +1587,14 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { getThemeClasses, type CafeThemeId } from "@/lib/mock/cafe-theme";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
   slug: string;
   cafeName: string;
   logoUrl?: string;
   themeId: CafeThemeId;
-  customer: BrandaCustomerSession | null;
+  customer: BarndaksaCustomerSession | null;
 };
 
 export function CafeHeader({ slug, cafeName, logoUrl, themeId, customer }: Props) {
@@ -1747,7 +1747,7 @@ import { CafeThemeRenderer } from "@/components/cafe/themes/cafe-theme-renderer"
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { MenuProduct } from "@/lib/mock/menu";
 
 function productScore(product: MenuProduct, index: number) {
@@ -1765,7 +1765,7 @@ function CafePageInner({ slug }: { slug: string }) {
     loading,
     error: menuError,
   } = usePublicCafeMenu(slug);
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
@@ -1998,7 +1998,7 @@ import {
   fetchPublicExperienceCampaignsAction,
   submitExperienceCampaignAction,
 } from "@/app/actions/customer";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
   slug?: string;
@@ -2010,7 +2010,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
   const slug = slugProp || params.slug;
   const { experience, theme, path } = useCafePageContext(slug);
 
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [campaigns, setCampaigns] = useState<ExperienceCampaign[]>([]);
   const [submissions, setSubmissions] = useState<ExperienceSubmission[]>([]);
   const [platform, setPlatform] = useState<ExperiencePlatform>("tiktok");
@@ -4284,7 +4284,7 @@ export function ThemeBannerCarousel({
             : "rounded-[28px] overflow-hidden border";
 
   return (
-    <section className={`mt-6 animate-branda-fade ${shell} ${theme.card}`}>
+    <section className={`mt-6 animate-barndaksa-fade ${shell} ${theme.card}`}>
       <div
         className={
           variant === "strip"
@@ -4608,7 +4608,7 @@ import {
   X,
 } from "lucide-react";
 import { formatSar } from "@/lib/format";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type {
   CustomerInvoice,
   CustomerOrder,
@@ -4643,7 +4643,7 @@ export type ThemedAccountPanelProps = {
   experience: ThemeExperience;
   cafeName: string;
   homeHref: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   myOrders: CustomerOrder[];
@@ -5284,7 +5284,7 @@ import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CustomerNotifications } from "@/components/cafe/customer-notifications";
 import { getCafePath } from "@/lib/cafe/theme-links";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 
@@ -5294,7 +5294,7 @@ type Props = {
   logoUrl?: string;
   themeId: CafeThemeId;
   experience: ThemeExperience;
-  customer: BrandaCustomerSession | null;
+  customer: BarndaksaCustomerSession | null;
   previewThemeId?: string | null;
 };
 
@@ -5385,7 +5385,7 @@ import {
   MapPin,
   Sparkles,
 } from "lucide-react";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
@@ -5408,7 +5408,7 @@ type Props = {
 
 function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
   const ctx = useCafeThemePage(slug);
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
   const { theme, experience, settings, themeId, previewThemeId, isPreview, customIdentity, loadError } =
     ctx;
@@ -6203,8 +6203,8 @@ import {
 } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
-import { BrandaLogo } from "@/components/ui/branda-logo";
-import { logoutBrandaAuth } from "@/lib/platform/auth";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
+import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { fetchOwnerPlanIdAction, fetchPlatformPlansAction } from "@/app/actions/admin";
 import { fetchOwnerSettingsAction } from "@/app/actions/settings";
@@ -6247,7 +6247,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const router = useRouter();
 
   function handleLogout() {
-    logoutBrandaAuth();
+    logoutBarndaksaAuth();
     router.push("/login");
   }
   const [activePlanId, setActivePlanId] = useState("pro");
@@ -6300,7 +6300,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
       className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E7D7C6]/60 bg-gradient-to-b from-[#4A281D] via-[#311912] to-[#311912] text-[#FCF8F3] shadow-[-12px_0_40px_rgba(49,25,18,0.35)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
-        <BrandaLogo variant="dark" width={160} height={64} priority className="mx-auto" />
+        <BarndaksaLogo variant="dark" width={160} height={64} priority className="mx-auto" />
         <p className="mt-3 text-center text-xs font-bold text-[#F2E7D9]">
           لوحة تحكم الكوفي
         </p>
@@ -6438,7 +6438,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   BentoCard,
   BentoGrid,
@@ -6491,7 +6491,7 @@ export function DashboardHomeClient({
       subtitle="أي تعديل هنا ينعكس مباشرة على صفحة الكوفي للعميل."
       action={
         <div className="flex flex-wrap items-center gap-3">
-          <BrandaLogo variant="brown" width={120} height={48} />
+          <BarndaksaLogo variant="brown" width={120} height={48} />
           <LinkButton href={getCafePublicUrl(cafeSlug)} variant="primary" target="_blank">
             زيارة الكوفي
           </LinkButton>
@@ -12974,7 +12974,7 @@ function Field({
 
 import { Check, CreditCard, Crown, Layers3, Receipt } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   BentoCard,
   BentoGrid,
@@ -13105,7 +13105,7 @@ export function SubscriptionPageClient({
       <DashboardPageShell
         title="الاشتراك والباقات"
         subtitle="اختر الباقة، راجع الفاتورة، ثم ادفع لتفعيل المميزات. الباقة الحالية لا تتغير قبل تأكيد الدفع."
-        action={<BrandaLogo variant="brown" width={140} height={56} />}
+        action={<BarndaksaLogo variant="brown" width={140} height={56} />}
       >
         {configError ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
@@ -13695,7 +13695,7 @@ import { uploadImageAction } from "@/app/actions/upload";
 import {
   adoptCafeTheme,
   persistCustomIdentityTheme,
-  subscribeBrandaStorageEvents,
+  subscribeBarndaksaStorageEvents,
 } from "@/lib/cafe/theme-storage-sync";
 import {
   getThemeClasses,
@@ -13845,7 +13845,7 @@ export function CustomIdentityBuilder({
     setCategories(initialCategories.filter((c) => c.visible));
     setIsActiveTheme(initialIsActiveTheme);
 
-    return subscribeBrandaStorageEvents({
+    return subscribeBarndaksaStorageEvents({
       onThemeUpdated: () => {
         setIsActiveTheme(initialIsActiveTheme);
       },
@@ -14694,30 +14694,30 @@ export function useAppToast(autoHideMs = 3500) {
 
 ```
 
-# File: components/ui/branda-logo.tsx
+# File: components/ui/barndaksa-logo.tsx
 
 ```tsx
 "use client";
 
 import Image from "next/image";
 
-export type BrandaLogoVariant = "dark" | "brown" | "brown-bg";
+export type BarndaksaLogoVariant = "dark" | "brown" | "brown-bg";
 
-const LOGO_PATHS: Record<BrandaLogoVariant, string> = {
-  dark: "/brand/branda-logo-dark.png",
-  brown: "/brand/branda-logo-brown.png",
-  "brown-bg": "/brand/branda-logo-brown-bg.png",
+const LOGO_PATHS: Record<BarndaksaLogoVariant, string> = {
+  dark: "/brand/barndaksa-logo-dark.png",
+  brown: "/brand/barndaksa-logo-brown.png",
+  "brown-bg": "/brand/barndaksa-logo-brown-bg.png",
 };
 
 type Props = {
-  variant?: BrandaLogoVariant;
+  variant?: BarndaksaLogoVariant;
   className?: string;
   width?: number;
   height?: number;
   priority?: boolean;
 };
 
-export function BrandaLogo({
+export function BarndaksaLogo({
   variant = "brown",
   className = "",
   width = 180,
@@ -14857,7 +14857,7 @@ export function AdminPageShell({
     <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-[#D9A33F]">Branda Admin</p>
+          <p className="font-black text-[#D9A33F]">Barndaksa Admin</p>
           <h1 className="mt-2 break-words text-2xl font-black text-[#F8F4EF] sm:text-3xl lg:text-4xl">
             {title}
           </h1>

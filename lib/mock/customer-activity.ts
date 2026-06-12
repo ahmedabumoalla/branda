@@ -50,10 +50,10 @@ export type CustomerTransaction = {
   createdAt: string;
 };
 
-export const CUSTOMER_KEY = "branda_customers_qatrah";
-export const ORDERS_KEY = "branda_qatrah_orders";
-export const INVOICES_KEY = "branda_qatrah_invoices";
-export const TRANSACTIONS_KEY = "branda_qatrah_customer_transactions";
+export const CUSTOMER_KEY = "barndaksa_customers_qatrah";
+export const ORDERS_KEY = "barndaksa_qatrah_orders";
+export const INVOICES_KEY = "barndaksa_qatrah_invoices";
+export const TRANSACTIONS_KEY = "barndaksa_qatrah_customer_transactions";
 
 export const mockOrders: CustomerOrder[] = [];
 export const mockInvoices: CustomerInvoice[] = [];

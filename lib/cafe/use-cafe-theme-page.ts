@@ -6,7 +6,8 @@ import { getThemeExperience } from "@/lib/cafe/theme-experience";
 import { DEFAULT_CAFE_THEME_ID } from "@/lib/mock/cafe-theme";
 import { mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { cachedRequest } from "@/lib/performance/browser-cache";
 
 type CafeThemePageData = {
   settings: CafeSettings;
@@ -14,7 +15,7 @@ type CafeThemePageData = {
   cachedAt: number;
 };
 
-const CAFE_THEME_PAGE_CACHE_TTL_MS = 60_000;
+const CAFE_THEME_PAGE_CACHE_TTL_MS = 5 * 60_000;
 const cafeThemePageCache = new Map<string, CafeThemePageData>();
 const cafeThemePageRequests = new Map<string, Promise<CafeThemePageData>>();
 
@@ -35,26 +36,27 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
   const pending = cafeThemePageRequests.get(slug);
   if (pending) return pending;
 
-  const request = fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, {
-    cache: "force-cache",
-  })
-    .then(async (res) => {
-      if (!res.ok) {
-        throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل بيانات المقهى");
-      }
-
-      const data = await res.json();
-      const value: CafeThemePageData = {
-        settings: data.settings ?? fallbackSettings(slug),
-        customIdentity: data.customIdentity ?? null,
-        cachedAt: Date.now(),
-      };
-      cafeThemePageCache.set(slug, value);
-      return value;
-    })
-    .finally(() => {
-      cafeThemePageRequests.delete(slug);
+  const request = cachedRequest(`public-cafe-theme:${slug}`, CAFE_THEME_PAGE_CACHE_TTL_MS, async () => {
+    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, {
+      cache: "force-cache",
+      next: { revalidate: 300 },
     });
+
+    if (!res.ok) {
+      throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل بيانات المقهى");
+    }
+
+    const data = await res.json();
+    const value: CafeThemePageData = {
+      settings: data.settings ?? fallbackSettings(slug),
+      customIdentity: data.customIdentity ?? null,
+      cachedAt: Date.now(),
+    };
+    cafeThemePageCache.set(slug, value);
+    return value;
+  }).finally(() => {
+    cafeThemePageRequests.delete(slug);
+  });
 
   cafeThemePageRequests.set(slug, request);
   return request;

@@ -1,17 +1,19 @@
 export type PlatformFeature =
+  | "home"
   | "menu"
   | "offers"
   | "reservations"
-  | "loyalty"
   | "customers"
+  | "loyalty"
   | "branches"
   | "reports"
   | "reviews"
-  | "orders"
-  | "pages"
   | "marketing"
+  | "experience_reviews"
+  | "orders"
+  | "settings"
   | "theme"
-  | "settings";
+  | "subscription";
 
 export type PlanDurationUnit = "day" | "month" | "year";
 
@@ -27,6 +29,13 @@ export type PlatformPlan = {
   active: boolean;
   isDefault: boolean;
   features: PlatformFeature[];
+  categoryId?: string;
+  maxOrdersMonthly?: number | null;
+  maxProductsMonthly?: number | null;
+  maxReservationsMonthly?: number | null;
+  maxBranches?: number | null;
+  trialDays?: number | null;
+  freeAfterTrial?: boolean;
 };
 
 export type PlatformCafe = {
@@ -113,21 +122,26 @@ export type PlatformOperation = {
   createdAt: string;
 };
 
-export const allPlatformFeatures: { id: PlatformFeature; title: string }[] = [
-  { id: "menu", title: "المنيو" },
-  { id: "offers", title: "العروض" },
-  { id: "reservations", title: "الحجوزات" },
-  { id: "loyalty", title: "الولاء" },
-  { id: "customers", title: "العملاء" },
-  { id: "branches", title: "الفروع" },
-  { id: "reports", title: "التقارير" },
-  { id: "reviews", title: "التقييمات والأسئلة" },
-  { id: "orders", title: "الطلبات" },
-  { id: "pages", title: "الصفحات التعريفية" },
-  { id: "marketing", title: "التسويق" },
-  { id: "theme", title: "ثيم الكوفي" },
-  { id: "settings", title: "الإعدادات" },
+export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; href: string }[] = [
+  { id: "home", title: "الرئيسية", href: "/dashboard" },
+  { id: "menu", title: "المنيو", href: "/dashboard/menu" },
+  { id: "offers", title: "العروض", href: "/dashboard/offers" },
+  { id: "reservations", title: "الحجوزات", href: "/dashboard/reservations" },
+  { id: "customers", title: "العملاء", href: "/dashboard/customers" },
+  { id: "loyalty", title: "بطاقات الولاء", href: "/dashboard/loyalty" },
+  { id: "branches", title: "الفروع", href: "/dashboard/branches" },
+  { id: "reports", title: "التقارير", href: "/dashboard/reports" },
+  { id: "reviews", title: "الأسئلة والتقييمات", href: "/dashboard/reviews" },
+  { id: "marketing", title: "الأدوات التسويقية", href: "/dashboard/marketing" },
+  { id: "experience_reviews", title: "مراجعة توثيق التجارب", href: "/dashboard/experience-reviews" },
+  { id: "orders", title: "طلبات الكوفي", href: "/dashboard/orders" },
+  { id: "settings", title: "إعدادات الكوفي", href: "/dashboard/settings" },
+  { id: "theme", title: "ثيم الكوفي", href: "/dashboard/theme" },
+  { id: "subscription", title: "الاشتراك والباقات", href: "/dashboard/subscription" },
 ];
+
+export const allPlatformFeatures: { id: PlatformFeature; title: string }[] =
+  dashboardPlatformFeatures.map(({ id, title }) => ({ id, title }));
 
 export const mockPlatformPlans: PlatformPlan[] = [];
 export const mockPlatformCafes: PlatformCafe[] = [];
@@ -138,6 +152,6 @@ export const mockPlatformOptions = {
   allowCafeSignup: true,
   requireCafeApproval: true,
   platformCommissionPercent: 3,
-  supportEmail: "support@branda.com",
+  supportEmail: "support@barndaksa.com",
   defaultPlanId: "starter",
 };

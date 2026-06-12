@@ -2,7 +2,7 @@
 
 import { Save, Settings2 } from "lucide-react";
 import { useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   BentoCard,
@@ -53,7 +53,7 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
       subtitle="تحكم في التسجيل، الموافقات، العمولة، والباقات الافتراضية."
       action={
         <div className="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
-          <BrandaLogo variant="dark" width={120} height={48} />
+          <BarndaksaLogo variant="dark" width={120} height={48} />
           <GoldButton onClick={save} disabled={saving} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
             {saving ? "جاري الحفظ..." : "حفظ الخيارات"}

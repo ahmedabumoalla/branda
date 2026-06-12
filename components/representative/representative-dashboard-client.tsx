@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { changeRepresentativePasswordAction } from "@/app/actions/representatives";
 import { logoutAction } from "@/app/actions/auth";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import type { RepresentativeDashboard } from "@/lib/data/representatives";
 
 function formatSar(value: number) {
@@ -156,7 +156,7 @@ export function RepresentativeDashboardClient({
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">
-            <BrandaLogo variant="dark" width={150} height={60} />
+            <BarndaksaLogo variant="dark" width={150} height={60} />
             <div className="hidden border-r border-white/10 pr-5 sm:block">
               <p className="text-xs font-black text-[#D9A33F]">بوابة المندوب</p>
               <p className="mt-1 font-black text-[#FCF8F3]">
@@ -444,7 +444,7 @@ export function RepresentativeDashboardClient({
             <div className="mt-4 rounded-2xl border border-[#D9A33F]/20 bg-[#D9A33F]/10 p-4">
               <p className="text-xs font-black text-[#CBB29C]">الدعم الفني</p>
               <p className="mt-2 text-sm font-bold text-[#F2E7D9]">في حال الحاجة إلى دعم فني يرجى إرسال بريد رسمي إلى</p>
-              <a href="mailto:cto.branda@gmail.com" className="mt-2 block break-all text-sm font-black text-[#F6C35B]">cto.branda@gmail.com</a>
+              <a href="mailto:cto.barndaksa@gmail.com" className="mt-2 block break-all text-sm font-black text-[#F6C35B]">cto.barndaksa@gmail.com</a>
             </div>
           </aside>
         </div>

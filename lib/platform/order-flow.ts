@@ -1,5 +1,5 @@
 import type { MenuProduct } from "@/lib/mock/menu";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { createPickupOrder, updateOrderStatus } from "@/lib/data/orders";
 import { createNotification } from "@/lib/data/notifications";
 
@@ -7,7 +7,7 @@ export type CreateOrderInput = {
   slug: string;
   cafeId?: string;
   cafeName?: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   product: MenuProduct;
   quantity: number;
   branchName?: string;
@@ -22,7 +22,7 @@ export type CreateOrderResult = {
 };
 
 export async function createCafeOrderFromProduct(
-  input: CreateOrderInput
+  input: CreateOrderInput,
 ): Promise<CreateOrderResult> {
   const { slug, customer, product, quantity } = input;
 
@@ -61,7 +61,7 @@ export async function acceptPickupOrder(orderId: string, cafeSlug = "qatrah") {
 
   if (order.customerId) {
     await createNotification({
-      cafeSlug,
+      cafeSlug: order.cafeSlug || cafeSlug,
       audience: "customer",
       customerId: order.customerId,
       title: "تم قبول طلبك",
@@ -74,8 +74,16 @@ export async function acceptPickupOrder(orderId: string, cafeSlug = "qatrah") {
   return { ok: true as const, order: { ...order, status: "مقبول" as const } };
 }
 
-export async function rejectPickupOrder(orderId: string, reason: string, cafeSlug = "qatrah") {
-  await updateOrderStatus(orderId, "مرفوض", reason.trim() || "تم الرفض من الكوفي");
+export async function rejectPickupOrder(
+  orderId: string,
+  reason: string,
+  cafeSlug = "qatrah",
+) {
+  await updateOrderStatus(
+    orderId,
+    "مرفوض",
+    reason.trim() || "تم الرفض من الكوفي",
+  );
 
   const { getOwnerOrders } = await import("@/lib/data/orders");
   const orders = await getOwnerOrders();
@@ -86,7 +94,7 @@ export async function rejectPickupOrder(orderId: string, reason: string, cafeSlu
 
   if (order.customerId) {
     await createNotification({
-      cafeSlug,
+      cafeSlug: order.cafeSlug || cafeSlug,
       audience: "customer",
       customerId: order.customerId,
       title: "تم رفض طلبك",

@@ -4,12 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const file = path.join(ROOT, "supabase/migrations/004_branda_critical_security_fixes.sql");
+const file = path.join(ROOT, "supabase/migrations/004_barndaksa_critical_security_fixes.sql");
 const SEP = "-- =============================================================================";
 
 let s = fs.readFileSync(file, "utf8");
 
-s = s.replace(/^-- Branda Platform .*Critical security fixes$/m, "-- Branda Platform — Critical security fixes");
+s = s.replace(/^-- Barndaksa Platform .*Critical security fixes$/m, "-- Barndaksa Platform — Critical security fixes");
 
 s = s
   .split("\n")

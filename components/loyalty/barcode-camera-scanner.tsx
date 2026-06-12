@@ -2,12 +2,12 @@
 
 import { Camera, Keyboard, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { parseBrandaQrPayload, type BrandaQrKind } from "@/lib/loyalty/secure-qr-payload";
+import { parseBarndaksaQrPayload, type BarndaksaQrKind } from "@/lib/loyalty/secure-qr-payload";
 
 type Props = {
   label: string;
   onDetected: (value: string) => void;
-  expectedKind?: BrandaQrKind;
+  expectedKind?: BarndaksaQrKind;
 };
 
 type BarcodeDetectorShape = {
@@ -67,7 +67,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
           try {
             const codes = await detector.detect(videoRef.current);
             const rawValue = codes[0]?.rawValue?.trim();
-            const value = rawValue ? parseBrandaQrPayload(rawValue, expectedKind) : null;
+            const value = rawValue ? parseBarndaksaQrPayload(rawValue, expectedKind) : null;
             if (value) {
               onDetected(value);
               setOpen(false);

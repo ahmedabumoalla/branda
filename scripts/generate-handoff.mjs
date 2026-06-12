@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generates BRANDA_HANDOFF source bundles and file tree.
+ * Generates BARNDAKSA_HANDOFF source bundles and file tree.
  * Does not touch secrets or node_modules.
  */
 import fs from "node:fs";
@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const HANDOFF = path.join(ROOT, "docs", "BRANDA_HANDOFF");
+const HANDOFF = path.join(ROOT, "docs", "BARNDAKSA_HANDOFF");
 const BUNDLES = path.join(HANDOFF, "SOURCE_BUNDLES");
 
 const SKIP_DIRS = new Set([
@@ -134,7 +134,7 @@ function writeFileTree() {
     "tsconfig.json",
     ".env.example",
   ];
-  const lines = ["# Branda Platform — Complete File Tree", "", "```txt"];
+  const lines = ["# Barndaksa Platform — Complete File Tree", "", "```txt"];
   for (const r of roots) {
     const full = path.join(ROOT, r);
     if (!fs.existsSync(full)) continue;
@@ -170,7 +170,7 @@ function main() {
       files: collect([
         "lib/data/**",
         "lib/supabase/**",
-        "lib/branda/**",
+        "lib/barndaksa/**",
         "lib/customer/**",
         "lib/platform/**",
       ]),
@@ -214,21 +214,21 @@ function main() {
   fs.writeFileSync(path.join(BUNDLES, "00_BUNDLE_MANIFEST.md"), manifest.join("\n"), "utf8");
 
   const securityDocs = [
-    "docs/BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md",
-    "docs/BRANDA_PRODUCTION_DATABASE_MIGRATION_REPORT.md",
-    "docs/BRANDA_RLS_SECURITY_REVIEW.md",
-    "docs/BRANDA_SERVER_SECURITY_REVIEW.md",
-    "docs/BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md",
-    "docs/BRANDA_STAGING_SECURITY_VALIDATION_REPORT.md",
-    "docs/BRANDA_SECURITY_DEFINER_REVIEW.md",
-    "docs/BRANDA_HANDOFF/00_MASTER_INDEX.md",
-    "docs/BRANDA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md",
-    "docs/BRANDA_HANDOFF/06_SECURITY_FINAL_STATUS.md",
+    "docs/BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md",
+    "docs/BARNDAKSA_PRODUCTION_DATABASE_MIGRATION_REPORT.md",
+    "docs/BARNDAKSA_RLS_SECURITY_REVIEW.md",
+    "docs/BARNDAKSA_SERVER_SECURITY_REVIEW.md",
+    "docs/BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md",
+    "docs/BARNDAKSA_STAGING_SECURITY_VALIDATION_REPORT.md",
+    "docs/BARNDAKSA_SECURITY_DEFINER_REVIEW.md",
+    "docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md",
+    "docs/BARNDAKSA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md",
+    "docs/BARNDAKSA_HANDOFF/06_SECURITY_FINAL_STATUS.md",
   ];
-  let docIndex = "# Branda Handoff — Docs & Reports Index\n\n";
+  let docIndex = "# Barndaksa Handoff — Docs & Reports Index\n\n";
   docIndex +=
     "**Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.\n\n";
-  docIndex += "## All docs/BRANDA*.md files\n\n";
+  docIndex += "## All docs/BARNDAKSA*.md files\n\n";
   for (const f of walk(path.join(ROOT, "docs")).filter((p) => p.endsWith(".md")).map(rel).sort()) {
     docIndex += `- \`${f}\`\n`;
   }

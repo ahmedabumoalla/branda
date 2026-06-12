@@ -33,7 +33,7 @@ import { uploadImageAction } from "@/app/actions/upload";
 import {
   adoptCafeTheme,
   persistCustomIdentityTheme,
-  subscribeBrandaStorageEvents,
+  subscribeBarndaksaStorageEvents,
 } from "@/lib/cafe/theme-storage-sync";
 import {
   getThemeClasses,
@@ -58,7 +58,6 @@ import {
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 
 const BRAND_THEME_ID: CafeThemeId = "brand-identity-custom";
-const CAFE_PUBLIC_PATH = "/c/qatrah";
 
 const PALETTE_FIELDS: { key: keyof CustomIdentityPalette; label: string }[] = [
   { key: "primary", label: "أساسي" },
@@ -183,7 +182,7 @@ export function CustomIdentityBuilder({
     setCategories(initialCategories.filter((c) => c.visible));
     setIsActiveTheme(initialIsActiveTheme);
 
-    return subscribeBrandaStorageEvents({
+    return subscribeBarndaksaStorageEvents({
       onThemeUpdated: () => {
         setIsActiveTheme(initialIsActiveTheme);
       },
@@ -462,7 +461,7 @@ export function CustomIdentityBuilder({
       showToast({
         type: "success",
         message: "تم تطبيق ثيم الهوية على صفحة الكوفي",
-        action: { label: "عرض صفحة الكوفي", href: CAFE_PUBLIC_PATH },
+        action: { label: "عرض صفحة الكوفي", href: `/c/${encodeURIComponent(preview.slug)}` },
       });
     } catch (err) {
       console.error("[custom-identity] apply failed", err);

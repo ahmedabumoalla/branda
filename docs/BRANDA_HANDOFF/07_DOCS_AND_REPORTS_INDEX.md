@@ -1,43 +1,43 @@
-# Branda Handoff — Docs & Reports Index
+# Barndaksa Handoff — Docs & Reports Index
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
-## All docs/BRANDA*.md files
+## All docs/BARNDAKSA*.md files
 
-- `docs/BRANDA_DATABASE_BLUEPRINT.md`
-- `docs/BRANDA_DESIGN_UPGRADE_REPORT.md`
-- `docs/BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md`
-- `docs/BRANDA_HANDOFF/00_MASTER_INDEX.md`
-- `docs/BRANDA_HANDOFF/01_COMPLETE_FILE_TREE.md`
-- `docs/BRANDA_HANDOFF/02_ROUTES_AND_FEATURES_MAP.md`
-- `docs/BRANDA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md`
-- `docs/BRANDA_HANDOFF/04_DATA_FLOW_AND_STATE_MAP.md`
-- `docs/BRANDA_HANDOFF/05_CHANGE_GUIDE_FOR_CHATGPT.md`
-- `docs/BRANDA_HANDOFF/06_SECURITY_FINAL_STATUS.md`
-- `docs/BRANDA_HANDOFF/07_DOCS_AND_REPORTS_INDEX.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/00_BUNDLE_MANIFEST.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/01_APP_ROUTES_AND_API_SOURCE.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/02_COMPONENTS_SOURCE.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/03_LIB_DATA_AUTH_SUPABASE_SOURCE.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/04_LIB_STORAGE_CAFE_UI_SOURCE.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/05_TYPES_CONFIG_PACKAGE_SOURCE.md`
-- `docs/BRANDA_HANDOFF/SOURCE_BUNDLES/06_SUPABASE_MIGRATIONS_TESTS_SOURCE.md`
-- `docs/BRANDA_PRODUCTION_DATABASE_MIGRATION_AUDIT.md`
-- `docs/BRANDA_PRODUCTION_DATABASE_MIGRATION_REPORT.md`
-- `docs/BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
-- `docs/BRANDA_RLS_SECURITY_REVIEW.md`
-- `docs/BRANDA_SECURITY_DEFINER_REVIEW.md`
-- `docs/BRANDA_SERVER_SECURITY_REVIEW.md`
-- `docs/BRANDA_STAGING_DEPLOYMENT_GUIDE.md`
-- `docs/BRANDA_STAGING_SECURITY_VALIDATION_REPORT.md`
+- `docs/BARNDAKSA_DATABASE_BLUEPRINT.md`
+- `docs/BARNDAKSA_DESIGN_UPGRADE_REPORT.md`
+- `docs/BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md`
+- `docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md`
+- `docs/BARNDAKSA_HANDOFF/01_COMPLETE_FILE_TREE.md`
+- `docs/BARNDAKSA_HANDOFF/02_ROUTES_AND_FEATURES_MAP.md`
+- `docs/BARNDAKSA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md`
+- `docs/BARNDAKSA_HANDOFF/04_DATA_FLOW_AND_STATE_MAP.md`
+- `docs/BARNDAKSA_HANDOFF/05_CHANGE_GUIDE_FOR_CHATGPT.md`
+- `docs/BARNDAKSA_HANDOFF/06_SECURITY_FINAL_STATUS.md`
+- `docs/BARNDAKSA_HANDOFF/07_DOCS_AND_REPORTS_INDEX.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/00_BUNDLE_MANIFEST.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/01_APP_ROUTES_AND_API_SOURCE.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/02_COMPONENTS_SOURCE.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/03_LIB_DATA_AUTH_SUPABASE_SOURCE.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/04_LIB_STORAGE_CAFE_UI_SOURCE.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/05_TYPES_CONFIG_PACKAGE_SOURCE.md`
+- `docs/BARNDAKSA_HANDOFF/SOURCE_BUNDLES/06_SUPABASE_MIGRATIONS_TESTS_SOURCE.md`
+- `docs/BARNDAKSA_PRODUCTION_DATABASE_MIGRATION_AUDIT.md`
+- `docs/BARNDAKSA_PRODUCTION_DATABASE_MIGRATION_REPORT.md`
+- `docs/BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
+- `docs/BARNDAKSA_RLS_SECURITY_REVIEW.md`
+- `docs/BARNDAKSA_SECURITY_DEFINER_REVIEW.md`
+- `docs/BARNDAKSA_SERVER_SECURITY_REVIEW.md`
+- `docs/BARNDAKSA_STAGING_DEPLOYMENT_GUIDE.md`
+- `docs/BARNDAKSA_STAGING_SECURITY_VALIDATION_REPORT.md`
 
 ---
 
 ## Final security & handoff reports (full content)
 
-# File: docs/BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md
+# File: docs/BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md
 
-# Branda — Final Source Security Audit (Red Team)
+# Barndaksa — Final Source Security Audit (Red Team)
 
 **Status:** Source-level hardening revised and statically gated — database not initialized — runtime validation pending.
 
@@ -124,9 +124,9 @@ Source-level hardening revised and statically gated — database not initialized
 
 ---
 
-# File: docs/BRANDA_PRODUCTION_DATABASE_MIGRATION_REPORT.md
+# File: docs/BARNDAKSA_PRODUCTION_DATABASE_MIGRATION_REPORT.md
 
-# Branda Production Database Migration Report
+# Barndaksa Production Database Migration Report
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -142,10 +142,10 @@ Four SQL migration files (`001`–`004`) define the complete production schema, 
 
 | Order | File | Lines (approx) | Focus |
 | ----- | ---- | -------------- | ----- |
-| 1 | `001_branda_production_schema.sql` | ~970 | Schema, enums, baseline RLS |
-| 2 | `002_branda_storage_policies.sql` | ~660 | 8 buckets, public/private policies |
-| 3 | `003_branda_security_hardening.sql` | ~260 | Role escalation, domain_orders |
-| 4 | `004_branda_critical_security_fixes.sql` | ~1475 | RPC flows, policy replacement |
+| 1 | `001_barndaksa_production_schema.sql` | ~970 | Schema, enums, baseline RLS |
+| 2 | `002_barndaksa_storage_policies.sql` | ~660 | 8 buckets, public/private policies |
+| 3 | `003_barndaksa_security_hardening.sql` | ~260 | Role escalation, domain_orders |
+| 4 | `004_barndaksa_critical_security_fixes.sql` | ~1475 | RPC flows, policy replacement |
 
 ---
 
@@ -155,8 +155,8 @@ Four SQL migration files (`001`–`004`) define the complete production schema, 
 - [ ] Apply 001 → 002 → 003 → 004 in order
 - [ ] Run `supabase/tests/*.sql` (pgTAP)
 - [ ] Run `supabase/seed/security_test_seed.sql`
-- [ ] Execute manual checklist in `BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
-- [ ] Document results in `BRANDA_STAGING_SECURITY_VALIDATION_REPORT.md`
+- [ ] Execute manual checklist in `BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
+- [ ] Document results in `BARNDAKSA_STAGING_SECURITY_VALIDATION_REPORT.md`
 
 ---
 
@@ -188,9 +188,9 @@ No SQL, migration, seed, Supabase CLI, Staging, or Production action was execute
 
 ---
 
-# File: docs/BRANDA_RLS_SECURITY_REVIEW.md
+# File: docs/BARNDAKSA_RLS_SECURITY_REVIEW.md
 
-# Branda RLS Security Review
+# Barndaksa RLS Security Review
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -258,9 +258,9 @@ Migrations, pgTAP, manual RLS tests.
 
 ---
 
-# File: docs/BRANDA_SERVER_SECURITY_REVIEW.md
+# File: docs/BARNDAKSA_SERVER_SECURITY_REVIEW.md
 
-# Branda Server Security Review
+# Barndaksa Server Security Review
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -318,9 +318,9 @@ Runtime penetration testing, Staging validation.
 
 ---
 
-# File: docs/BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md
+# File: docs/BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md
 
-# Branda Production Security Test Checklist
+# Barndaksa Production Security Test Checklist
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -405,9 +405,9 @@ Runtime validation and Staging tests remain mandatory before Production deployme
 
 ---
 
-# File: docs/BRANDA_STAGING_SECURITY_VALIDATION_REPORT.md
+# File: docs/BARNDAKSA_STAGING_SECURITY_VALIDATION_REPORT.md
 
-# Branda Staging Security Validation Report
+# Barndaksa Staging Security Validation Report
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -427,7 +427,7 @@ Staging security validation **has not been performed**. No Supabase project has 
 | pgTAP tests (55 tests, 6 files) | Written, not run |
 | Security test seed | Written, not run |
 | `npm run build` | Passes |
-| Handoff package | `docs/BRANDA_HANDOFF/` |
+| Handoff package | `docs/BARNDAKSA_HANDOFF/` |
 
 ---
 
@@ -446,7 +446,7 @@ Staging security validation **has not been performed**. No Supabase project has 
 2. Apply migrations in order
 3. Seed test data
 4. Run pgTAP
-5. Manual checklist (`BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`)
+5. Manual checklist (`BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`)
 6. Update this report with pass/fail per scenario
 
 ---
@@ -462,9 +462,9 @@ No claim of Production readiness or runtime security validation.
 
 ---
 
-# File: docs/BRANDA_SECURITY_DEFINER_REVIEW.md
+# File: docs/BARNDAKSA_SECURITY_DEFINER_REVIEW.md
 
-# Branda Security — SECURITY DEFINER Function Review
+# Barndaksa Security — SECURITY DEFINER Function Review
 
 **Status:** Code hardening complete at source level — database not initialized — runtime security validation pending.
 
@@ -570,13 +570,13 @@ Function behavior not validated at runtime until migrations run on Staging.
 
 ---
 
-# File: docs/BRANDA_HANDOFF/00_MASTER_INDEX.md
+# File: docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md
 
-# Branda Platform — Handoff Master Index
+# Barndaksa Platform — Handoff Master Index
 
 ## Project
 
-**Branda** is a multi-tenant SaaS platform for coffee shops (cafes): public storefront, customer accounts, owner dashboard, platform admin, menu/orders/reservations/loyalty/marketing/experience campaigns, custom domains, and Supabase-backed auth + Postgres + Storage.
+**Barndaksa** is a multi-tenant SaaS platform for coffee shops (cafes): public storefront, customer accounts, owner dashboard, platform admin, menu/orders/reservations/loyalty/marketing/experience campaigns, custom domains, and Supabase-backed auth + Postgres + Storage.
 
 ## Stack
 
@@ -611,7 +611,7 @@ Source-level hardening revised and statically gated — database not initialized
 | [05_CHANGE_GUIDE_FOR_CHATGPT.md](./05_CHANGE_GUIDE_FOR_CHATGPT.md) | Rules for safe edits | Every modification task |
 | [06_SECURITY_FINAL_STATUS.md](./06_SECURITY_FINAL_STATUS.md) | Security closure summary | Security review |
 | [SOURCE_BUNDLES/00_BUNDLE_MANIFEST.md](./SOURCE_BUNDLES/00_BUNDLE_MANIFEST.md) | Full source code bundles | Need exact file contents |
-| [../BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md](../BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md) | Red-team source audit | Threat modeling |
+| [../BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md](../BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md) | Red-team source audit | Threat modeling |
 
 ## Source Bundles (full code, no truncation)
 
@@ -619,7 +619,7 @@ Source-level hardening revised and statically gated — database not initialized
 | ------ | -------- |
 | `SOURCE_BUNDLES/01_APP_ROUTES_AND_API_SOURCE.md` | `app/**`, `proxy.ts` |
 | `SOURCE_BUNDLES/02_COMPONENTS_SOURCE.md` | `components/**` |
-| `SOURCE_BUNDLES/03_LIB_DATA_AUTH_SUPABASE_SOURCE.md` | `lib/data`, `lib/supabase`, `lib/branda`, `lib/customer`, `lib/platform` |
+| `SOURCE_BUNDLES/03_LIB_DATA_AUTH_SUPABASE_SOURCE.md` | `lib/data`, `lib/supabase`, `lib/barndaksa`, `lib/customer`, `lib/platform` |
 | `SOURCE_BUNDLES/04_LIB_STORAGE_CAFE_UI_SOURCE.md` | `lib/storage`, `lib/cafe`, `lib/ui` |
 | `SOURCE_BUNDLES/05_TYPES_CONFIG_PACKAGE_SOURCE.md` | `types/**`, configs, `.env.example` |
 | `SOURCE_BUNDLES/06_SUPABASE_MIGRATIONS_TESTS_SOURCE.md` | migrations, tests, supabase config |
@@ -640,7 +640,7 @@ node scripts/generate-handoff.mjs
 | Upload / signed URL | `03` § Storage → `lib/storage/**` → bundle `04` |
 | New table / RLS / RPC | `03` → migration `004` pattern → bundle `06` |
 | Admin panel | `02` → `app/admin/**` → `lib/data/admin.ts` |
-| Security change | `06` + `BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md` |
+| Security change | `06` + `BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md` |
 
 ## Hard Rules (never break)
 
@@ -654,20 +654,20 @@ node scripts/generate-handoff.mjs
 
 ## Related Docs (repo root `docs/`)
 
-- `BRANDA_PRODUCTION_DATABASE_MIGRATION_REPORT.md`
-- `BRANDA_RLS_SECURITY_REVIEW.md`
-- `BRANDA_SERVER_SECURITY_REVIEW.md`
-- `BRANDA_SECURITY_DEFINER_REVIEW.md`
-- `BRANDA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
-- `BRANDA_STAGING_SECURITY_VALIDATION_REPORT.md`
-- `BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md`
+- `BARNDAKSA_PRODUCTION_DATABASE_MIGRATION_REPORT.md`
+- `BARNDAKSA_RLS_SECURITY_REVIEW.md`
+- `BARNDAKSA_SERVER_SECURITY_REVIEW.md`
+- `BARNDAKSA_SECURITY_DEFINER_REVIEW.md`
+- `BARNDAKSA_PRODUCTION_SECURITY_TEST_CHECKLIST.md`
+- `BARNDAKSA_STAGING_SECURITY_VALIDATION_REPORT.md`
+- `BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md`
 
 
 ---
 
-# File: docs/BRANDA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md
+# File: docs/BARNDAKSA_HANDOFF/03_DATABASE_AND_SECURITY_ARCHITECTURE.md
 
-# Branda — Database & Security Architecture
+# Barndaksa — Database & Security Architecture
 
 **Status:** Source-level hardening revised and statically gated — database not initialized — runtime validation pending.
 
@@ -677,10 +677,10 @@ node scripts/generate-handoff.mjs
 
 | # | File | Purpose |
 | - | ---- | ------- |
-| 1 | `001_branda_production_schema.sql` | Core schema, enums, RLS baseline, auth helpers |
-| 2 | `002_branda_storage_policies.sql` | Storage buckets, path helpers, public/private object policies |
-| 3 | `003_branda_security_hardening.sql` | Profile escalation guard, cafe_members, domain_orders table |
-| 4 | `004_branda_critical_security_fixes.sql` | RPC-only flows, policy tightening, triggers |
+| 1 | `001_barndaksa_production_schema.sql` | Core schema, enums, RLS baseline, auth helpers |
+| 2 | `002_barndaksa_storage_policies.sql` | Storage buckets, path helpers, public/private object policies |
+| 3 | `003_barndaksa_security_hardening.sql` | Profile escalation guard, cafe_members, domain_orders table |
+| 4 | `004_barndaksa_critical_security_fixes.sql` | RPC-only flows, policy tightening, triggers |
 
 **Not executed.** Fresh install applies 001→004 in order. Migration 004 explicitly `DROP POLICY IF EXISTS` for replaced wide policies.
 
@@ -858,9 +858,9 @@ Source-level hardening revised and statically gated — database not initialized
 
 ---
 
-# File: docs/BRANDA_HANDOFF/06_SECURITY_FINAL_STATUS.md
+# File: docs/BARNDAKSA_HANDOFF/06_SECURITY_FINAL_STATUS.md
 
-# Branda — Security Final Status
+# Barndaksa — Security Final Status
 
 **Date:** 2026-05-30  
 **Phase:** Source-level hardening revised and statically gated
@@ -919,7 +919,7 @@ Source-level hardening revised and statically gated — database not initialized
 
 ## Red Team Result
 
-See [BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md](../BRANDA_FINAL_SOURCE_SECURITY_AUDIT.md).
+See [BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md](../BARNDAKSA_FINAL_SOURCE_SECURITY_AUDIT.md).
 
 | Severity | Known open |
 | -------- | ---------- |
@@ -951,7 +951,7 @@ No SQL, migration, seed, Supabase CLI, Staging, or Production action was execute
 
 ## Next Steps (user-controlled)
 
-1. Review handoff package (`docs/BRANDA_HANDOFF/`)
+1. Review handoff package (`docs/BARNDAKSA_HANDOFF/`)
 2. Apply migrations on isolated Staging Supabase project
 3. Run pgTAP + manual security checklist
 4. Fix any runtime findings

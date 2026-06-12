@@ -14,7 +14,7 @@ import {
   TicketCheck,
   Users,
 } from "lucide-react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   AdminStatPill,
@@ -142,7 +142,7 @@ export function AdminHomePage({
     <AdminPageShell
       title="مركز قيادة منصة برندة"
       subtitle="مؤشرات المنصة والإيرادات وسجل العمليات من قاعدة البيانات الفعلية."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center font-black text-amber-200">

@@ -81,7 +81,7 @@ export function ThemeBannerCarousel({
             : "rounded-[28px] overflow-hidden border";
 
   return (
-    <section className={`mt-6 animate-branda-fade ${shell} ${theme.card}`}>
+    <section className={`mt-6 animate-barndaksa-fade ${shell} ${theme.card}`}>
       <div
         className={
           variant === "strip"

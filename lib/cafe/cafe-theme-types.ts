@@ -1,4 +1,4 @@
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
@@ -11,7 +11,7 @@ export type CafeThemePageProps = {
   cafeSettings: CafeSettings;
   themeId: CafeThemeId;
   theme: ThemeClasses;
-  customer: BrandaCustomerSession | null;
+  customer: BarndaksaCustomerSession | null;
   products: MenuProduct[];
   offers: CafeOffer[];
   availableProducts: MenuProduct[];

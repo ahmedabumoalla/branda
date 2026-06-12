@@ -24,15 +24,15 @@ export type StoredLocalAsset = {
   updatedAt: string;
 };
 
-const DB_NAME = "branda-local-assets";
+const DB_NAME = "barndaksa-local-assets";
 const DB_VERSION = 1;
 const STORE_NAME = "assets";
 
 /** Fixed IDs — replaced in place */
 export const FIXED_ASSET_IDS: Partial<Record<LocalAssetKind, string>> = {
-  "custom-theme-logo": "branda-qatrah-custom-theme-logo",
-  "custom-theme-background": "branda-qatrah-custom-theme-background",
-  "cafe-logo": "branda-qatrah-cafe-logo",
+  "custom-theme-logo": "barndaksa-qatrah-custom-theme-logo",
+  "custom-theme-background": "barndaksa-qatrah-custom-theme-background",
+  "cafe-logo": "barndaksa-qatrah-cafe-logo",
 };
 
 /** @deprecated use FIXED_ASSET_IDS */
@@ -97,15 +97,15 @@ export function buildAssetId(kind: LocalAssetKind, entityId?: string): string {
 
   switch (kind) {
     case "product-image":
-      return `branda-qatrah-product-${entityId}-image`;
+      return `barndaksa-qatrah-product-${entityId}-image`;
     case "category-image":
-      return `branda-qatrah-category-${entityId}-image`;
+      return `barndaksa-qatrah-category-${entityId}-image`;
     case "offer-banner":
-      return `branda-qatrah-offer-${entityId}-banner`;
+      return `barndaksa-qatrah-offer-${entityId}-banner`;
     case "marketing-image":
-      return `branda-qatrah-marketing-${entityId}-image`;
+      return `barndaksa-qatrah-marketing-${entityId}-image`;
     case "customer-avatar":
-      return `branda-customer-${entityId}-avatar`;
+      return `barndaksa-customer-${entityId}-avatar`;
     default:
       throw new Error(`Unknown asset kind "${kind}"`);
   }

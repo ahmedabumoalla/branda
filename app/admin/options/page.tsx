@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { AdminOptionsPage } from "@/components/admin/pages/admin-options-page";
 
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
 import { getPlatformPlans } from "@/lib/data/admin";
 

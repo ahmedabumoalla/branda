@@ -1,7 +1,7 @@
-# Branda Platform — local Supabase CLI project
+# Barndaksa Platform — local Supabase CLI project
 # Docs: https://supabase.com/docs/guides/cli/config
 
-project_id = "branda-platform"
+project_id = "barndaksa-platform"
 
 [api]
 enabled = true

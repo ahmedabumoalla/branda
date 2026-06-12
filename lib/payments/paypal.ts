@@ -139,7 +139,7 @@ export async function createPaypalSubscriptionOrder(input: {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "PayPal-Request-Id": `branda-sub-${input.subscriptionId}`,
+      "PayPal-Request-Id": `barndaksa-sub-${input.subscriptionId}`,
     },
     body: JSON.stringify({
       intent: "CAPTURE",
@@ -147,7 +147,7 @@ export async function createPaypalSubscriptionOrder(input: {
         {
           reference_id: input.subscriptionId,
           custom_id: input.subscriptionId,
-          description: `Branda subscription - ${input.planName}`.slice(0, 120),
+          description: `Barndaksa subscription - ${input.planName}`.slice(0, 120),
           amount: {
             currency_code: amount.currency,
             value: amount.value,
@@ -160,7 +160,7 @@ export async function createPaypalSubscriptionOrder(input: {
           },
           items: [
             {
-              name: `Branda ${input.planName}`.slice(0, 120),
+              name: `Barndaksa ${input.planName}`.slice(0, 120),
               quantity: "1",
               unit_amount: {
                 currency_code: amount.currency,
@@ -172,11 +172,15 @@ export async function createPaypalSubscriptionOrder(input: {
         },
       ],
       application_context: {
-        brand_name: "Branda",
+        brand_name: "Barndaksa",
         shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
+        landing_page: "BILLING",
         return_url: input.returnUrl,
         cancel_url: input.cancelUrl,
+      },
+      payment_method: {
+        payee_preferred: "IMMEDIATE_PAYMENT_REQUIRED",
       },
     }),
   });
@@ -205,7 +209,7 @@ export async function capturePaypalOrder(orderId: string): Promise<PaypalCapture
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "PayPal-Request-Id": `branda-cap-${orderId}`,
+      "PayPal-Request-Id": `barndaksa-cap-${orderId}`,
     },
   });
 

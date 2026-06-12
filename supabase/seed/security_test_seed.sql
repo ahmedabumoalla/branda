@@ -1,4 +1,4 @@
--- Branda security test seed — LOCAL + STAGING ONLY
+-- Barndaksa security test seed — LOCAL + STAGING ONLY
 -- Loaded by `supabase db reset` via supabase/config.toml
 -- NEVER run automatically on Production.
 

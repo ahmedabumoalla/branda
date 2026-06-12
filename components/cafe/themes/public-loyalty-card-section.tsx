@@ -92,7 +92,7 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
 
           <div className="mt-6 rounded-2xl bg-white p-4 text-center text-[#17100d]">
             <p className="font-mono text-sm font-black tracking-[0.18em]">
-              {cardCode || "BRANDA LOYALTY"}
+              {cardCode || "BARNDAKSA LOYALTY"}
             </p>
             {cardCode ? (
               <SecureQrCode kind="loyalty-card" value={cardCode} title={`QR بطاقة الولاء ${cardCode}`} size={160} className="mt-3" />

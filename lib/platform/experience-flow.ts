@@ -1,4 +1,4 @@
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { ExperienceCampaign, ExperiencePlatform } from "@/lib/mock/experience-campaigns";
 import {
   approveExperienceSubmission as approveSubmissionDb,
@@ -11,7 +11,7 @@ import { createNotification } from "@/lib/data/notifications";
 
 export async function submitExperienceCampaign(input: {
   slug: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   campaignId: string;
   platform: ExperiencePlatform;
   videoUrl: string;

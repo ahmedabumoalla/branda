@@ -4,35 +4,30 @@ import { createClient } from "@/lib/supabase/server";
 
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 import type {
-
   CustomerOrder,
-
   CustomerProfile,
-
 } from "@/lib/mock/customer-activity";
 
 import type { CafeReservation } from "@/lib/mock/reservations";
-
-
+import {
+  escapeEmailHtml,
+  isBarndaksaEmailConfigured,
+  sendBarndaksaEmail,
+} from "@/lib/email/resend";
 
 export async function upsertCustomerProfileForUser(
-
   cafeSlug: string,
 
   userId: string,
 
-  profile: { fullName: string; phone: string; email?: string }
-
+  profile: { fullName: string; phone: string; email?: string },
 ) {
-
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) throw new Error("Cafe not found");
-
-
 
   const supabase = await createClient();
 
@@ -89,15 +84,13 @@ export async function upsertCustomerProfileForUser(
   return created;
 }
 
-
-
-export async function getCustomerProfileByUser(cafeSlug: string, userId: string) {
-
+export async function getCustomerProfileByUser(
+  cafeSlug: string,
+  userId: string,
+) {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return null;
-
-
 
   const supabase = await createClient();
 
@@ -112,8 +105,6 @@ export async function getCustomerProfileByUser(cafeSlug: string, userId: string)
     .eq("user_id", userId)
 
     .maybeSingle();
-
-
 
   return data;
 }
@@ -131,7 +122,10 @@ export async function requireCustomerProfileForSession(cafeSlug: string) {
   return { user, profile };
 }
 
-export async function assertCustomerIdMatchesSession(cafeSlug: string, customerId: string) {
+export async function assertCustomerIdMatchesSession(
+  cafeSlug: string,
+  customerId: string,
+) {
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
   if ((profile.id as string) !== customerId) {
     throw new Error("Forbidden: customer mismatch");
@@ -140,15 +134,11 @@ export async function assertCustomerIdMatchesSession(cafeSlug: string, customerI
 }
 
 export function mapCustomerProfileToSession(
-
   slug: string,
 
-  row: Record<string, unknown>
-
-): BrandaCustomerSession {
-
+  row: Record<string, unknown>,
+): BarndaksaCustomerSession {
   return {
-
     id: row.id as string,
 
     cafeSlug: slug,
@@ -164,15 +154,10 @@ export function mapCustomerProfileToSession(
     avatarAssetId: (row.avatar_storage_path as string) ?? undefined,
 
     createdAt: row.created_at as string,
-
   };
-
 }
 
-
-
 const customerRegisterSchema = z.object({
-
   cafeSlug: z.string().min(1),
 
   email: z.string().email(),
@@ -182,145 +167,123 @@ const customerRegisterSchema = z.object({
   fullName: z.string().min(1),
 
   phone: z.string().min(8),
-
 });
 
-
-
 const customerLoginSchema = z.object({
-
   cafeSlug: z.string().min(1),
 
   email: z.string().email(),
 
   password: z.string().min(1),
-
 });
-
-
 
 /** Register customer with real Supabase Auth (email + password) */
 
-export async function registerCustomer(input: z.infer<typeof customerRegisterSchema>) {
-
+export async function registerCustomer(
+  input: z.infer<typeof customerRegisterSchema>,
+) {
   const parsed = customerRegisterSchema.parse(input);
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
 
   if (!cafe) throw new Error("Cafe not found");
 
-
-
   const normalizedPhone = parsed.phone.replace(/\D/g, "");
 
   const supabase = await createClient();
 
-
-
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-
     email: parsed.email.trim().toLowerCase(),
 
     password: parsed.password,
 
     options: {
-
       data: {
-
         full_name: parsed.fullName.trim(),
 
         phone: normalizedPhone,
 
         role: "customer",
-
       },
-
     },
-
   });
-
-
 
   if (signUpError) throw signUpError;
 
   if (!signUpData.user) throw new Error("Registration failed");
 
+  const profile = await upsertCustomerProfileForUser(
+    parsed.cafeSlug,
+    signUpData.user.id,
+    {
+      fullName: parsed.fullName.trim(),
 
+      phone: normalizedPhone,
 
-  const profile = await upsertCustomerProfileForUser(parsed.cafeSlug, signUpData.user.id, {
+      email: parsed.email.trim().toLowerCase(),
+    },
+  );
 
-    fullName: parsed.fullName.trim(),
-
-    phone: normalizedPhone,
-
-    email: parsed.email.trim().toLowerCase(),
-
-  });
-
-
+  if (isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: parsed.email.trim().toLowerCase(),
+      subject: `مرحبًا بك في ${cafe.name}`,
+      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
+      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
+    }).catch(() => undefined);
+  }
 
   return mapCustomerProfileToSession(parsed.cafeSlug, profile);
-
 }
-
-
 
 /** Customer login via real Supabase Auth session */
 
-export async function loginCustomerByEmail(input: z.infer<typeof customerLoginSchema>) {
-
+export async function loginCustomerByEmail(
+  input: z.infer<typeof customerLoginSchema>,
+) {
   const parsed = customerLoginSchema.parse(input);
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
 
   if (!cafe) throw new Error("Cafe not found");
 
-
-
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
-
     email: parsed.email.trim().toLowerCase(),
 
     password: parsed.password,
-
   });
 
   if (error || !data.user) throw error ?? new Error("Invalid credentials");
 
-
-
-  const existing = await getCustomerProfileByUser(parsed.cafeSlug, data.user.id);
+  const existing = await getCustomerProfileByUser(
+    parsed.cafeSlug,
+    data.user.id,
+  );
 
   if (!existing) {
-
     const meta = data.user.user_metadata ?? {};
 
-    const profile = await upsertCustomerProfileForUser(parsed.cafeSlug, data.user.id, {
+    const profile = await upsertCustomerProfileForUser(
+      parsed.cafeSlug,
+      data.user.id,
+      {
+        fullName: (meta.full_name as string) || "عميل",
 
-      fullName: (meta.full_name as string) || "عميل",
+        phone: (meta.phone as string) || "0000000000",
 
-      phone: (meta.phone as string) || "0000000000",
-
-      email: parsed.email.trim().toLowerCase(),
-
-    });
+        email: parsed.email.trim().toLowerCase(),
+      },
+    );
 
     return mapCustomerProfileToSession(parsed.cafeSlug, profile);
-
   }
 
-
-
   return mapCustomerProfileToSession(parsed.cafeSlug, existing);
-
 }
 
-
-
 export async function getCafeCustomers() {
-
   const cafe = await requireOwnerCafeContext();
 
   const supabase = await createClient();
@@ -335,23 +298,18 @@ export async function getCafeCustomers() {
 
     .order("created_at", { ascending: false });
 
-
-
   if (error) throw error;
 
   return data ?? [];
-
 }
 
-
-
-export async function getCustomerOrdersForProfile(cafeSlug: string, customerId: string) {
-
+export async function getCustomerOrdersForProfile(
+  cafeSlug: string,
+  customerId: string,
+) {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
-
-
 
   const supabase = await createClient();
 
@@ -369,31 +327,26 @@ export async function getCustomerOrdersForProfile(cafeSlug: string, customerId: 
 
     .order("created_at", { ascending: false });
 
-
-
   if (!orders?.length) return [];
-
-
 
   const { mapDbOrderToCafeOrder } = await import("@/lib/data/mappers");
 
   return orders.map((o) =>
-
-    mapDbOrderToCafeOrder(cafeSlug, o, (o.order_items as Record<string, unknown>[]) ?? [])
-
+    mapDbOrderToCafeOrder(
+      cafeSlug,
+      o,
+      (o.order_items as Record<string, unknown>[]) ?? [],
+    ),
   );
-
 }
 
-
-
-export async function getCustomerReservationsForProfile(cafeSlug: string, customerId: string) {
-
+export async function getCustomerReservationsForProfile(
+  cafeSlug: string,
+  customerId: string,
+) {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
-
-
 
   const supabase = await createClient();
 
@@ -411,84 +364,66 @@ export async function getCustomerReservationsForProfile(cafeSlug: string, custom
 
     .order("reservation_date", { ascending: false });
 
-
-
   if (!data?.length) return [];
 
-  const { mapDbReservationToCafeReservation } = await import("@/lib/data/mappers");
+  const { mapDbReservationToCafeReservation } =
+    await import("@/lib/data/mappers");
 
   return data.map(mapDbReservationToCafeReservation);
-
 }
 
-
-
 export async function getOwnerCustomersDashboard(): Promise<{
-
   customers: CustomerProfile[];
 
   orders: CustomerOrder[];
 
   reservations: CafeReservation[];
-
 }> {
-
   const cafe = await requireOwnerCafeContext();
 
   const supabase = await createClient();
 
+  const [{ data: profiles }, { data: orders }, { data: reservations }] =
+    await Promise.all([
+      supabase
 
+        .from("customer_profiles")
 
-  const [{ data: profiles }, { data: orders }, { data: reservations }] = await Promise.all([
+        .select("*")
 
-    supabase
+        .eq("cafe_id", cafe.id)
 
-      .from("customer_profiles")
+        .order("created_at", { ascending: false }),
 
-      .select("*")
+      supabase
 
-      .eq("cafe_id", cafe.id)
+        .from("orders")
 
-      .order("created_at", { ascending: false }),
+        .select("*, order_items(*)")
 
-    supabase
+        .eq("cafe_id", cafe.id)
 
-      .from("orders")
+        .is("deleted_at", null)
 
-      .select("*, order_items(*)")
+        .order("created_at", { ascending: false }),
 
-      .eq("cafe_id", cafe.id)
+      supabase
 
-      .is("deleted_at", null)
+        .from("reservations")
 
-      .order("created_at", { ascending: false }),
+        .select("*")
 
-    supabase
+        .eq("cafe_id", cafe.id)
 
-      .from("reservations")
+        .is("deleted_at", null)
 
-      .select("*")
+        .order("reservation_date", { ascending: false }),
+    ]);
 
-      .eq("cafe_id", cafe.id)
-
-      .is("deleted_at", null)
-
-      .order("reservation_date", { ascending: false }),
-
-  ]);
-
-
-
-  const { mapDbOrderToCafeOrder, mapDbReservationToCafeReservation } = await import(
-
-    "@/lib/data/mappers"
-
-  );
-
-
+  const { mapDbOrderToCafeOrder, mapDbReservationToCafeReservation } =
+    await import("@/lib/data/mappers");
 
   const customers: CustomerProfile[] = (profiles ?? []).map((row) => ({
-
     id: row.id as string,
 
     cafeSlug: cafe.slug,
@@ -500,19 +435,14 @@ export async function getOwnerCustomersDashboard(): Promise<{
     email: (row.email as string) ?? undefined,
 
     createdAt: (row.created_at as string).slice(0, 10),
-
   }));
 
-
-
   const mappedOrders: CustomerOrder[] = (orders ?? []).map((order) => {
-
     const items = (order.order_items as Record<string, unknown>[]) ?? [];
 
     const cafeOrder = mapDbOrderToCafeOrder(cafe.slug, order, items);
 
     return {
-
       id: cafeOrder.id,
 
       cafeSlug: cafe.slug,
@@ -536,22 +466,14 @@ export async function getOwnerCustomersDashboard(): Promise<{
       notes: cafeOrder.notes,
 
       rejectionReason: cafeOrder.rejectionReason,
-
     };
-
   });
 
-
-
   return {
-
     customers,
 
     orders: mappedOrders,
 
     reservations: (reservations ?? []).map(mapDbReservationToCafeReservation),
-
   };
-
 }
-

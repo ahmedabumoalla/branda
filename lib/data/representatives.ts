@@ -106,11 +106,11 @@ const passwordChangeSchema = z.object({
 
 function generateTemporaryPassword() {
   const token = crypto.randomUUID().replaceAll("-", "");
-  return `Branda!${token.slice(0, 6)}${token.slice(8, 12)}9`;
+  return `Barndaksa!${token.slice(0, 6)}${token.slice(8, 12)}9`;
 }
 
 function buildRepresentativeAuthEmail() {
-  return `rep-login-${crypto.randomUUID()}@auth.branda.local`;
+  return `rep-login-${crypto.randomUUID()}@auth.barndaksa.local`;
 }
 
 function getBankDocumentExtension(file: File) {

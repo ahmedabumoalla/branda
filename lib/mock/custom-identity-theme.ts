@@ -82,7 +82,7 @@ export type CustomIdentityTheme = {
 
 
 
-export const CUSTOM_IDENTITY_THEME_KEY = "branda_qatrah_custom_identity_theme";
+export const CUSTOM_IDENTITY_THEME_KEY = "barndaksa_qatrah_custom_identity_theme";
 
 
 

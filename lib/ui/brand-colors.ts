@@ -1,4 +1,4 @@
-/** Official Branda platform palette */
+/** Official Barndaksa platform palette */
 export const BRAND_COLORS = {
   espressoDark: "#311912",
   coffeeBrown: "#4A281D",

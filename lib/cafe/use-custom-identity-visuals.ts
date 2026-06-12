@@ -7,6 +7,7 @@ import {
 } from "@/lib/cafe/local-asset-store";
 import { isHttpImageUrl, isLegacyDataImageUrl } from "@/lib/cafe/image-asset-pipeline";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
+import { cachedRequest } from "@/lib/performance/browser-cache";
 
 type PreviewUrls = {
   logoUrl?: string;
@@ -20,19 +21,21 @@ async function resolvePublicStorageUrl(bucket: string, path: string) {
   const cached = publicUrlCache.get(key);
   if (cached) return cached;
 
-  const response = await fetch(
-    `/api/public/storage?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
-    { cache: "no-store" }
-  );
+  return cachedRequest(`public-storage:${key}`, 60 * 60_000, async () => {
+    const response = await fetch(
+      `/api/public/storage?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
+      { cache: "force-cache", next: { revalidate: 3600 } }
+    );
 
-  if (!response.ok) return undefined;
+    if (!response.ok) return undefined;
 
-  const payload = (await response.json()) as { url?: string };
-  if (payload.url) {
-    publicUrlCache.set(key, payload.url);
-  }
+    const payload = (await response.json()) as { url?: string };
+    if (payload.url) {
+      publicUrlCache.set(key, payload.url);
+    }
 
-  return payload.url;
+    return payload.url;
+  });
 }
 
 async function resolveAssetUrl(assetId: string | undefined, bucket: string) {

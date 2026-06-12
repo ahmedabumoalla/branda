@@ -14,7 +14,7 @@ export type MenuCategoryRecord = {
   updatedAt: string;
 };
 
-export const MENU_CATEGORIES_KEY = "branda_qatrah_menu_categories";
+export const MENU_CATEGORIES_KEY = "barndaksa_qatrah_menu_categories";
 
 export const defaultMenuCategories: MenuCategoryRecord[] = [
   {

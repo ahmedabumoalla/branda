@@ -20,13 +20,14 @@ import {
   X,
 } from "lucide-react";
 import { formatSar } from "@/lib/format";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type {
   CustomerInvoice,
   CustomerOrder,
   CustomerTransaction,
 } from "@/lib/mock/customer-activity";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import { ThemedInput } from "./themed-auth-panel";
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
@@ -38,6 +39,9 @@ type Reservation = {
   time: string;
   guests: number;
   status: string;
+  reservationCode?: string;
+  reservationCodeUsedAt?: string;
+  cashierConfirmedAt?: string;
   notes?: string;
   createdAt: string;
 };
@@ -55,7 +59,7 @@ export type ThemedAccountPanelProps = {
   experience: ThemeExperience;
   cafeName: string;
   homeHref: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   myOrders: CustomerOrder[];
@@ -159,7 +163,9 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               >
                 أهلًا {customer.fullName}
               </h1>
-              <p className={`mt-4 max-w-2xl font-bold leading-8 ${theme.muted}`}>
+              <p
+                className={`mt-4 max-w-2xl font-bold leading-8 ${theme.muted}`}
+              >
                 تابع طلباتك، حجوزاتك، نقاط الولاء، الفواتير، وسجل العمليات.
               </p>
             </div>
@@ -182,9 +188,15 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                   />
                 </div>
                 <div>
-                  <p className={`text-sm font-black ${theme.accent}`}>بيانات الحساب</p>
-                  <h2 className="mt-1 text-2xl font-black">{customer.fullName}</h2>
-                  <p className={`mt-1 font-bold ${theme.muted}`}>{customer.phone}</p>
+                  <p className={`text-sm font-black ${theme.accent}`}>
+                    بيانات الحساب
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black">
+                    {customer.fullName}
+                  </h2>
+                  <p className={`mt-1 font-bold ${theme.muted}`}>
+                    {customer.phone}
+                  </p>
                 </div>
               </div>
             </div>
@@ -196,17 +208,40 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         <div
           className={`mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${account === "kiosk-big" ? "lg:grid-cols-2" : "xl:grid-cols-4"}`}
         >
-          <StatCard experience={experience} icon={ClipboardList} title="الطلبات" value={props.myOrders.length} />
-          <StatCard experience={experience} icon={CalendarDays} title="الحجوزات" value={props.myReservations.length} highlight={account === "lounge-reservations"} />
-          <StatCard experience={experience} icon={Star} title="نقاط الولاء" value={props.loyaltyBalance} />
-          <StatCard experience={experience} icon={CreditCard} title="الفواتير" value={formatSar(props.totalInvoices)} />
+          <StatCard
+            experience={experience}
+            icon={ClipboardList}
+            title="الطلبات"
+            value={props.myOrders.length}
+          />
+          <StatCard
+            experience={experience}
+            icon={CalendarDays}
+            title="الحجوزات"
+            value={props.myReservations.length}
+            highlight={account === "lounge-reservations"}
+          />
+          <StatCard
+            experience={experience}
+            icon={Star}
+            title="نقاط الولاء"
+            value={props.loyaltyBalance}
+          />
+          <StatCard
+            experience={experience}
+            icon={CreditCard}
+            title="الفواتير"
+            value={formatSar(props.totalInvoices)}
+          />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
           <div className={`p-5 ${theme.card}`}>
             <div
               className={`mb-6 flex flex-wrap gap-2 ${
-                account === "editorial-timeline" ? "border-b-2 border-inherit pb-4" : ""
+                account === "editorial-timeline"
+                  ? "border-b-2 border-inherit pb-4"
+                  : ""
               }`}
             >
               {orderedTabs.map((tab) => {
@@ -241,7 +276,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                     />
                   ))
                 ) : (
-                  <EmptyState experience={experience} title="لا توجد طلبات" desc="أي طلب من صفحة الكوفي سيظهر هنا." />
+                  <EmptyState
+                    experience={experience}
+                    title="لا توجد طلبات"
+                    desc="أي طلب من صفحة الكوفي سيظهر هنا."
+                  />
                 )}
               </TabSection>
             )}
@@ -257,10 +296,41 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                       badge={r.status}
                       desc={`${r.date} • ${r.time} • ${r.guests} أشخاص`}
                       footer={r.notes ? `ملاحظة: ${r.notes}` : undefined}
+                      extra={
+                        r.status === "مقبول" && r.reservationCode ? (
+                          <div className="mt-4 rounded-2xl border border-inherit bg-white/70 p-4 text-center text-[#311912]">
+                            {r.reservationCodeUsedAt ? (
+                              <div className="font-black text-emerald-700">
+                                تم تأكيد حضور هذا الحجز
+                              </div>
+                            ) : (
+                              <>
+                                <SecureQrCode
+                                  kind="reservation"
+                                  value={r.reservationCode}
+                                  title={`QR حضور الحجز ${r.reservationCode}`}
+                                  size={150}
+                                />
+                                <p className="mt-2 select-all font-mono text-xs font-black tracking-[0.16em]">
+                                  {r.reservationCode}
+                                </p>
+                                <p className="mt-1 text-[11px] font-black text-[#806A5E]">
+                                  QR يستخدم مرة واحدة لتأكيد حضور الحجز من
+                                  الكاشير أو لوحة العلامة
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        ) : undefined
+                      }
                     />
                   ))
                 ) : (
-                  <EmptyState experience={experience} title="لا توجد حجوزات" desc="احجز من صفحة الكوفي." />
+                  <EmptyState
+                    experience={experience}
+                    title="لا توجد حجوزات"
+                    desc="احجز من صفحة الكوفي."
+                  />
                 )}
               </TabSection>
             )}
@@ -285,7 +355,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                     />
                   ))
                 ) : (
-                  <EmptyState experience={experience} title="لا توجد عمليات" desc="ستظهر الطلبات والنقاط هنا." />
+                  <EmptyState
+                    experience={experience}
+                    title="لا توجد عمليات"
+                    desc="ستظهر الطلبات والنقاط هنا."
+                  />
                 )}
               </TabSection>
             )}
@@ -304,7 +378,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                     />
                   ))
                 ) : (
-                  <EmptyState experience={experience} title="لا توجد فواتير" desc="الفواتير المرتبطة بحسابك تظهر هنا." />
+                  <EmptyState
+                    experience={experience}
+                    title="لا توجد فواتير"
+                    desc="الفواتير المرتبطة بحسابك تظهر هنا."
+                  />
                 )}
               </TabSection>
             )}
@@ -325,19 +403,30 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               {props.latestActivity.length ? (
                 <div className="space-y-3">
                   {props.latestActivity.map((item) => (
-                    <div key={`${item.type}-${item.id}`} className={`rounded-2xl p-4 ${theme.buttonOutline}`}>
+                    <div
+                      key={`${item.type}-${item.id}`}
+                      className={`rounded-2xl p-4 ${theme.buttonOutline}`}
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-black">{item.title}</h3>
-                        <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}
+                        >
                           {item.type}
                         </span>
                       </div>
-                      <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{item.desc}</p>
+                      <p className={`mt-2 text-sm font-bold ${theme.muted}`}>
+                        {item.desc}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState experience={experience} title="لا يوجد نشاط" desc="ابدأ بطلب أو حجز." />
+                <EmptyState
+                  experience={experience}
+                  title="لا يوجد نشاط"
+                  desc="ابدأ بطلب أو حجز."
+                />
               )}
             </div>
           </aside>
@@ -349,12 +438,18 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           <div className={`w-full max-w-2xl p-6 ${theme.card}`}>
             <div className="mb-6 flex items-center justify-between border-b border-inherit pb-4">
               <h2 className="text-2xl font-black">تعديل بيانات العميل</h2>
-              <button type="button" onClick={props.onCloseSettings} className={`p-3 ${theme.buttonOutline}`}>
+              <button
+                type="button"
+                onClick={props.onCloseSettings}
+                className={`p-3 ${theme.buttonOutline}`}
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-5">
-              <div className={`flex items-center gap-4 p-4 ${theme.buttonOutline}`}>
+              <div
+                className={`flex items-center gap-4 p-4 ${theme.buttonOutline}`}
+              >
                 <div className={`h-24 w-24 overflow-hidden ${theme.button}`}>
                   <LocalAssetImage
                     assetId={props.avatarAssetId}
@@ -401,13 +496,23 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                   placeholder="example@email.com"
                 />
               </ThemedFormField>
-              <p className={`text-sm font-bold ${theme.muted}`}>الجوال: {customer.phone}</p>
+              <p className={`text-sm font-bold ${theme.muted}`}>
+                الجوال: {customer.phone}
+              </p>
             </div>
             <div className="mt-6 flex justify-end gap-3 border-t border-inherit pt-4">
-              <button type="button" onClick={props.onCloseSettings} className={`px-6 py-3 font-black ${theme.buttonOutline}`}>
+              <button
+                type="button"
+                onClick={props.onCloseSettings}
+                className={`px-6 py-3 font-black ${theme.buttonOutline}`}
+              >
                 إلغاء
               </button>
-              <button type="button" onClick={props.onSaveSettings} className={`inline-flex items-center gap-2 px-6 py-3 font-black ${theme.button}`}>
+              <button
+                type="button"
+                onClick={props.onSaveSettings}
+                className={`inline-flex items-center gap-2 px-6 py-3 font-black ${theme.button}`}
+              >
                 <Save className="h-5 w-5" />
                 حفظ
               </button>
@@ -430,7 +535,9 @@ function ThemedFormField({
 }) {
   return (
     <label className="block">
-      <span className={`text-xs font-black ${experience.theme.muted}`}>{label}</span>
+      <span className={`text-xs font-black ${experience.theme.muted}`}>
+        {label}
+      </span>
       <div className="mt-2">{children}</div>
     </label>
   );
@@ -470,7 +577,9 @@ function TabSection({
 }) {
   return (
     <section>
-      <h2 className={`mb-5 text-2xl font-black ${experience.headingTracking}`}>{title}</h2>
+      <h2 className={`mb-5 text-2xl font-black ${experience.headingTracking}`}>
+        {title}
+      </h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -483,6 +592,7 @@ function InfoCard({
   badge,
   value,
   footer,
+  extra,
 }: {
   experience: ThemeExperience;
   title: string;
@@ -490,6 +600,7 @@ function InfoCard({
   badge?: string;
   value?: string;
   footer?: string;
+  extra?: ReactNode;
 }) {
   const { theme } = experience;
   return (
@@ -500,11 +611,26 @@ function InfoCard({
           <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{desc}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {value ? <span className={`rounded-xl px-4 py-2 font-black ${theme.badge}`}>{value}</span> : null}
-          {badge ? <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.buttonOutline}`}>{badge}</span> : null}
+          {value ? (
+            <span className={`rounded-xl px-4 py-2 font-black ${theme.badge}`}>
+              {value}
+            </span>
+          ) : null}
+          {badge ? (
+            <span
+              className={`rounded-xl px-4 py-2 text-sm font-black ${theme.buttonOutline}`}
+            >
+              {badge}
+            </span>
+          ) : null}
         </div>
       </div>
-      {footer ? <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${theme.muted}`}>{footer}</p> : null}
+      {footer ? (
+        <p className={`mt-4 rounded-xl p-3 text-sm font-bold ${theme.muted}`}>
+          {footer}
+        </p>
+      ) : null}
+      {extra}
     </article>
   );
 }

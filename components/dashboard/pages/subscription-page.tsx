@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Crown, Layers3, Receipt } from "lucide-react";
+import { Check, Crown, Layers3, Receipt, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
-import { BrandaCardPaymentButton } from "@/components/payments/branda-card-payment-button";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
+import { BarndaksaCardPaymentButton } from "@/components/payments/barndaksa-card-payment-button";
 import {
   BentoCard,
   BentoGrid,
@@ -21,6 +21,7 @@ import {
   fetchOwnerPendingSubscriptionAction,
   fetchOwnerSubscriptionHistoryAction,
   startPlanCheckoutAction,
+  validatePlanCouponAction,
 } from "@/app/actions/subscription";
 import type {
   PendingSubscription,
@@ -56,31 +57,76 @@ export function SubscriptionPageClient({
   const [history, setHistory] = useState<SubscriptionRecord[]>(initialHistory);
   const [pending, setPending] = useState<PendingSubscription | null>(initialPending);
   const [paymentMessage, setPaymentMessage] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponApplied, setCouponApplied] = useState<string | undefined>();
+  const [selectedHistoryRecordId, setSelectedHistoryRecordId] = useState<string | null>(null);
 
   const activePlan = plans.find((plan) => plan.id === activePlanId);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
+  const selectedHistoryRecord = history.find((record) => record.id === selectedHistoryRecordId) ?? null;
+  const selectedHistoryPlan = selectedHistoryRecord ? plans.find((plan) => plan.id === selectedHistoryRecord.planId) : null;
 
-  const vat = useMemo(() => {
+  const selectedPlanAmount = useMemo(() => {
     if (!selectedPlan) return 0;
-    return Math.round(selectedPlan.priceMonthly * 0.15 * 100) / 100;
+    return selectedPlan.offerEnabled && typeof selectedPlan.offerPrice === "number"
+      ? selectedPlan.offerPrice
+      : selectedPlan.priceMonthly;
   }, [selectedPlan]);
 
   const total = useMemo(() => {
     if (!selectedPlan) return 0;
-    return selectedPlan.priceMonthly + vat;
-  }, [selectedPlan, vat]);
+    return Math.max(0, Math.round((selectedPlanAmount - couponDiscount) * 100) / 100);
+  }, [couponDiscount, selectedPlan, selectedPlanAmount]);
+
+  async function applyCoupon() {
+    if (!selectedPlan || !couponCode.trim()) {
+      setCouponApplied(undefined);
+      setCouponDiscount(0);
+      setCouponMessage("اكتب كوبون الخصم أولًا");
+      return;
+    }
+
+    try {
+      const preview = await validatePlanCouponAction(selectedPlan.id, couponCode);
+      setCouponMessage(preview.message);
+      if (!preview.ok) {
+        setCouponApplied(undefined);
+        setCouponDiscount(0);
+        return;
+      }
+      setCouponApplied(preview.code);
+      setCouponDiscount(preview.discountAmount ?? 0);
+      if (pending?.id) {
+        const subscriptionId = await startPlanCheckoutAction(selectedPlan.id, preview.code);
+        setPending({
+          id: subscriptionId,
+          planId: selectedPlan.id,
+          planName: selectedPlan.name,
+          amount: preview.totalAmount ?? Math.max(0, selectedPlanAmount - (preview.discountAmount ?? 0)),
+          paymentStatus: "pending",
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      setCouponMessage("تعذر التحقق من الكوبون");
+      setCouponApplied(undefined);
+      setCouponDiscount(0);
+    }
+  }
 
   async function choosePlan(planId: string) {
     if (planId === activePlanId) return;
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
     try {
-      const subscriptionId = await startPlanCheckoutAction(plan.id);
+      const subscriptionId = await startPlanCheckoutAction(plan.id, couponApplied ?? couponCode);
       const nextPending: PendingSubscription = {
         id: subscriptionId,
         planId: plan.id,
         planName: plan.name,
-        amount: plan.priceMonthly,
+        amount: Math.max(0, Math.round(((plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly) - couponDiscount) * 100) / 100),
         paymentStatus: "pending",
         createdAt: new Date().toISOString(),
       };
@@ -109,12 +155,37 @@ export function SubscriptionPageClient({
     failed: "فشل",
   };
 
+  function formatLimit(value?: number | null, unit = "") {
+    if (value == null || value <= 0) return "غير محدود";
+    return `${value.toLocaleString("ar-SA")} ${unit}`.trim();
+  }
+
+  function getPlanLimits(plan?: PlatformPlan | null) {
+    if (!plan) return [];
+    return [
+      { label: "الطلبات الشهرية", value: formatLimit(plan.maxOrdersMonthly, "طلب") },
+      { label: "المنتجات المعروضة", value: formatLimit(plan.maxProductsMonthly, "منتج") },
+      { label: "الحجوزات الشهرية", value: formatLimit(plan.maxReservationsMonthly, "حجز") },
+      { label: "الفروع", value: formatLimit(plan.maxBranches, "فرع") },
+      { label: "مدة التجربة", value: plan.trialDays && plan.trialDays > 0 ? `${plan.trialDays} يوم` : "بدون تجربة" },
+    ];
+  }
+
+  async function refreshRecordAfterPayment(record: SubscriptionRecord) {
+    setActivePlanId(record.planId);
+    setPending(null);
+    setSelectedHistoryRecordId(null);
+    setStep("done");
+    setHistory(await fetchOwnerSubscriptionHistoryAction());
+    window.setTimeout(() => window.location.reload(), 800);
+  }
+
   return (
     <div dir="rtl">
       <DashboardPageShell
         title="الاشتراك والباقات"
         subtitle="اختر الباقة، راجع الفاتورة، ثم ادفع لتفعيل المميزات. الباقة الحالية لا تتغير قبل تأكيد الدفع."
-        action={<BrandaLogo variant="brown" width={140} height={56} />}
+        action={<BarndaksaLogo variant="brown" width={140} height={56} />}
       >
         {configError ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
@@ -138,8 +209,16 @@ export function SubscriptionPageClient({
                   </div>
                 </div>
                 <div className="mt-8 rounded-3xl bg-white/10 px-6 py-5 text-center">
-                  <p className="text-sm text-[#F2E7D9]">السعر الشهري</p>
+                  <p className="text-sm text-[#F2E7D9]">السعر شامل الضريبة</p>
                   <p className="mt-1 text-4xl font-black">{activePlan.priceMonthly} ر.س</p>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {getPlanLimits(activePlan).map((limit) => (
+                    <div key={limit.label} className="rounded-2xl bg-white/10 px-4 py-3">
+                      <p className="text-xs font-black text-[#F2E7D9]">{limit.label}</p>
+                      <p className="mt-1 text-sm font-black text-[#F0C568]">{limit.value}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </BentoCard>
@@ -201,8 +280,23 @@ export function SubscriptionPageClient({
                     <p
                       className={`mt-4 text-3xl font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}
                     >
-                      {plan.priceMonthly} ر.س
+                      {plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly} ر.س
                     </p>
+                    <p className={`mt-1 text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>شامل ضريبة القيمة المضافة</p>
+
+                    <div className="mt-4 grid grid-cols-1 gap-2">
+                      {getPlanLimits(plan).map((limit) => (
+                        <div
+                          key={limit.label}
+                          className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-black ${
+                            isCurrent ? "bg-white/10 text-[#FCF8F3]" : "bg-white text-[#6B3A25]"
+                          }`}
+                        >
+                          <span>{limit.label}</span>
+                          <span>{limit.value}</span>
+                        </div>
+                      ))}
+                    </div>
 
                     <ul className="mt-4 flex-1 space-y-1.5">
                       {allPlatformFeatures.map((feature) => {
@@ -259,15 +353,41 @@ export function SubscriptionPageClient({
 
               <SoftCard className="mt-6 space-y-4">
                 <div className="flex justify-between font-bold">
-                  <span>الاشتراك الشهري</span>
-                  <span>{selectedPlan.priceMonthly} ر.س</span>
+                  <span>سعر الباقة شامل الضريبة</span>
+                  <span>{selectedPlanAmount} ر.س</span>
                 </div>
-                <div className="flex justify-between font-bold text-[#806A5E]">
-                  <span>ضريبة القيمة المضافة (15%)</span>
-                  <span>{vat} ر.س</span>
+                <div className="rounded-2xl border border-[#E7D7C6] bg-white p-3">
+                  <label className="mb-2 block text-xs font-black text-[#806A5E]">كوبون خصم اختياري</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      value={couponCode}
+                      onChange={(event) => {
+                        setCouponCode(event.target.value.toUpperCase());
+                        setCouponApplied(undefined);
+                        setCouponDiscount(0);
+                        setCouponMessage("");
+                      }}
+                      placeholder="اكتب كوبون الخصم"
+                      className="min-h-12 flex-1 rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 font-black text-[#311912] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      className="rounded-xl bg-[#3A2117] px-5 py-3 font-black text-white"
+                    >
+                      تطبيق
+                    </button>
+                  </div>
+                  {couponMessage ? <p className="mt-2 text-xs font-black text-[#6B3A25]">{couponMessage}</p> : null}
                 </div>
+                {couponDiscount > 0 ? (
+                  <div className="flex justify-between font-bold text-emerald-700">
+                    <span>خصم الكوبون</span>
+                    <span>- {couponDiscount} ر.س</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between border-t border-[#E7D7C6] pt-4 text-xl font-black text-[#311912]">
-                  <span>الإجمالي</span>
+                  <span>الإجمالي شامل الضريبة</span>
                   <span>{total} ر.س</span>
                 </div>
               </SoftCard>
@@ -284,7 +404,7 @@ export function SubscriptionPageClient({
               ) : null}
 
               <div className="mt-6 space-y-4">
-                <BrandaCardPaymentButton
+                <BarndaksaCardPaymentButton
                   subscriptionId={pending?.id}
                   disabled={!pending?.id || paying}
                   onMessage={setPaymentMessage}
@@ -301,7 +421,15 @@ export function SubscriptionPageClient({
             </BentoCard>
 
             <BentoCard variant="white" span="2">
-              <h3 className="text-lg font-black text-[#311912]">مميزات الباقة</h3>
+              <h3 className="text-lg font-black text-[#311912]">حدود ومميزات الباقة</h3>
+              <div className="mt-4 grid gap-2">
+                {getPlanLimits(selectedPlan).map((limit) => (
+                  <div key={limit.label} className="flex justify-between rounded-xl bg-[#FCF8F3] px-4 py-3 text-sm font-black text-[#6B3A25]">
+                    <span>{limit.label}</span>
+                    <span>{limit.value}</span>
+                  </div>
+                ))}
+              </div>
               <div className="mt-4 grid gap-2">
                 {allPlatformFeatures.map((feature) => {
                   const on = selectedPlan.features.includes(feature.id);
@@ -327,7 +455,16 @@ export function SubscriptionPageClient({
           <BentoGrid className="xl:grid-cols-1">
             {history.length ? (
               history.map((record) => (
-                <BentoCard key={record.id} variant="white" span="4">
+                <div
+                  key={record.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedHistoryRecordId(record.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") setSelectedHistoryRecordId(record.id);
+                  }}
+                  className="md:col-span-4 cursor-pointer rounded-[24px] border border-[#E7D7C6] bg-[#FCF8F3] p-4 text-right text-[#311912] shadow-[8px_8px_24px_rgba(49,25,18,0.06),-6px_-6px_20px_rgba(255,255,255,0.9)] transition hover:border-[#D9A33F] hover:shadow-[0_18px_45px_rgba(49,25,18,0.10)] sm:rounded-[32px] sm:p-6"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h3 className="text-xl font-black">{record.planName}</h3>
@@ -336,6 +473,7 @@ export function SubscriptionPageClient({
                         {record.paidAt ? ` • دُفع: ${record.paidAt.slice(0, 10)}` : ""}
                         {record.paymentMethodLabel ? ` • ${record.paymentMethodLabel}` : ""}
                       </p>
+                      <p className="mt-2 text-xs font-black text-[#6B3A25]">اضغط لعرض تفاصيل السجل والفاتورة</p>
                     </div>
                     <StatusBadge
                       tone={
@@ -349,7 +487,7 @@ export function SubscriptionPageClient({
                       {statusLabel[record.paymentStatus]}
                     </StatusBadge>
                   </div>
-                </BentoCard>
+                </div>
               ))
             ) : (
               <BentoCard variant="white" span="4">
@@ -358,6 +496,78 @@ export function SubscriptionPageClient({
             )}
           </BentoGrid>
         </section>
+        {selectedHistoryRecord ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-[#E7D7C6] bg-[#FCF8F3] p-5 shadow-[0_30px_80px_rgba(49,25,18,0.30)] sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black text-[#806A5E]">تفاصيل سجل الاشتراك</p>
+                  <h3 className="mt-1 text-2xl font-black text-[#311912]">{selectedHistoryRecord.planName}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedHistoryRecordId(null)}
+                  className="rounded-2xl bg-white p-3 text-[#6B3A25]"
+                  aria-label="إغلاق"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">نوع السجل</p>
+                  <p className="mt-1 font-black text-[#311912]">اشتراك / تجديد باقة</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">حالة الدفع</p>
+                  <p className="mt-1 font-black text-[#311912]">{statusLabel[selectedHistoryRecord.paymentStatus]}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">المبلغ شامل الضريبة</p>
+                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.amount} ر.س</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">تاريخ إنشاء السجل</p>
+                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.createdAt.slice(0, 10)}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">تاريخ الدفع</p>
+                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.paidAt ? selectedHistoryRecord.paidAt.slice(0, 10) : "لم يدفع بعد"}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-xs font-black text-[#806A5E]">طريقة الدفع</p>
+                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.paymentMethodLabel ?? "لم تحدد"}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-3xl border border-[#E7D7C6] bg-white p-4">
+                <h4 className="font-black text-[#311912]">حدود الباقة</h4>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {getPlanLimits(selectedHistoryPlan).map((limit) => (
+                    <div key={limit.label} className="flex justify-between rounded-xl bg-[#FCF8F3] px-3 py-2 text-sm font-black text-[#6B3A25]">
+                      <span>{limit.label}</span>
+                      <span>{limit.value}</span>
+                    </div>
+                  ))}
+                </div>
+                {!selectedHistoryPlan ? (
+                  <p className="mt-3 text-sm font-bold text-[#806A5E]">تفاصيل هذه الباقة غير متاحة لأنها غير موجودة ضمن الباقات الحالية.</p>
+                ) : null}
+              </div>
+
+              {selectedHistoryRecord.paymentStatus !== "paid" ? (
+                <div className="mt-5">
+                  <BarndaksaCardPaymentButton
+                    subscriptionId={selectedHistoryRecord.id}
+                    onMessage={setPaymentMessage}
+                    onPaid={() => refreshRecordAfterPayment(selectedHistoryRecord)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </DashboardPageShell>
     </div>
   );

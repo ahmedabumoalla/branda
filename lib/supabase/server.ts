@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/branda/env";
+import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 
 export async function createClient() {
   const cookieStore = await cookies();

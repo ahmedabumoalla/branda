@@ -81,7 +81,14 @@ const planSchema = z.object({
   description: z.string().trim().max(500),
   active: z.boolean(),
   isDefault: z.boolean(),
-  features: z.array(z.string()).max(20),
+  features: z.array(z.string()).max(40),
+  categoryId: z.string().trim().max(80).optional(),
+  maxOrdersMonthly: z.number().int().nonnegative().nullable().optional(),
+  maxProductsMonthly: z.number().int().nonnegative().nullable().optional(),
+  maxReservationsMonthly: z.number().int().nonnegative().nullable().optional(),
+  maxBranches: z.number().int().nonnegative().nullable().optional(),
+  trialDays: z.number().int().nonnegative().max(365).nullable().optional(),
+  freeAfterTrial: z.boolean().optional(),
 });
 
 function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): PlatformPlan {
@@ -97,6 +104,13 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): Platfo
     active: Boolean(row.active),
     isDefault: String(row.id) === defaultPlanId,
     features: Array.isArray(row.features) ? (row.features as PlatformPlan["features"]) : [],
+    categoryId: row.category_id ? String(row.category_id) : undefined,
+    maxOrdersMonthly: row.max_orders_monthly == null ? null : Number(row.max_orders_monthly),
+    maxProductsMonthly: row.max_products_monthly == null ? null : Number(row.max_products_monthly),
+    maxReservationsMonthly: row.max_reservations_monthly == null ? null : Number(row.max_reservations_monthly),
+    maxBranches: row.max_branches == null ? null : Number(row.max_branches),
+    trialDays: row.trial_days == null ? null : Number(row.trial_days),
+    freeAfterTrial: Boolean(row.free_after_trial),
   };
 }
 
@@ -169,6 +183,13 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
       p_features: plan.features,
       p_active: plan.active,
       p_is_default: plan.isDefault,
+      p_category_id: plan.categoryId ?? null,
+      p_max_orders_monthly: plan.maxOrdersMonthly ?? null,
+      p_max_products_monthly: plan.maxProductsMonthly ?? null,
+      p_max_reservations_monthly: plan.maxReservationsMonthly ?? null,
+      p_max_branches: plan.maxBranches ?? null,
+      p_trial_days: plan.trialDays ?? null,
+      p_free_after_trial: plan.freeAfterTrial ?? false,
     });
     if (error) throw error;
   }

@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 
 import { ReservationsPageClient } from "@/components/dashboard/pages/reservations-page";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerReservations } from "@/lib/data/reservations";
 import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
 import { getOwnerMenu } from "@/lib/data/menu";

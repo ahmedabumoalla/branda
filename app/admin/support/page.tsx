@@ -1,3 +1,7 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { AdminAppLayout } from "@/components/admin/admin-app-layout";
 import { getAdminSupportTickets, type AdminSupportTicket } from "@/lib/data/admin-support";
 

@@ -11,12 +11,13 @@ import type { AppNotification } from "@/lib/mock/notifications";
 
 type Props = {
   className?: string;
+  initialNotifications?: AppNotification[];
 };
 
-export function NotificationsPanel({ className = "" }: Props) {
+export function NotificationsPanel({ className = "", initialNotifications = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
 
   const refresh = useCallback(async () => {
     try {
@@ -29,12 +30,15 @@ export function NotificationsPanel({ className = "" }: Props) {
 
   useEffect(() => {
     setMounted(true);
-    void refresh();
-  }, [refresh]);
+  }, []);
 
   useEffect(() => {
-    if (open) void refresh();
-  }, [open, refresh]);
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
+
+  useEffect(() => {
+    if (open && notifications.length === 0) void refresh();
+  }, [open, notifications.length, refresh]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read).length,

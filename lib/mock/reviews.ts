@@ -15,7 +15,7 @@ export type CafeReview = {
   createdAt: string;
 };
 
-export const REVIEWS_KEY = "branda_qatrah_reviews";
+export const REVIEWS_KEY = "barndaksa_qatrah_reviews";
 
 export const mockReviews: CafeReview[] = [
   {

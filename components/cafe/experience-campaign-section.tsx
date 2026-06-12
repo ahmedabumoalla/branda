@@ -17,7 +17,7 @@ import {
   fetchPublicExperienceCampaignsAction,
   submitExperienceCampaignAction,
 } from "@/app/actions/customer";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
   slug?: string;
@@ -29,7 +29,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
   const slug = slugProp || params.slug;
   const { experience, theme, path } = useCafePageContext(slug);
 
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [campaigns, setCampaigns] = useState<ExperienceCampaign[]>([]);
   const [submissions, setSubmissions] = useState<ExperienceSubmission[]>([]);
   const [platform, setPlatform] = useState<ExperiencePlatform>("tiktok");

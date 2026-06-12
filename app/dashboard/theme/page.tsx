@@ -1,6 +1,10 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { ThemePageClient } from "@/components/dashboard/pages/theme-page";
 
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
 import { getOwnerLoyalty } from "@/lib/data/loyalty";
 

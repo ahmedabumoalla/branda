@@ -1,5 +1,9 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getCafeCustomers } from "@/lib/data/customers";
 import { getOwnerExperienceData } from "@/lib/data/experience";

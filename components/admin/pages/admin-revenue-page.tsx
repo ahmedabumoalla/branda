@@ -2,7 +2,7 @@
 
 import { CircleDollarSign } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminPageShell,
   AdminStatPill,
@@ -34,7 +34,7 @@ export function AdminRevenuePage({ initialCafes, configError }: Props) {
     <AdminPageShell
       title="قيمة الطلبات المتوقعة"
       subtitle="متابعة قيمة طلبات الاستلام المقبولة (الدفع عند الاستلام — غير مؤكد داخل النظام)."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <BentoGrid className="mb-6">
         <BentoCard variant="gold" span="2">

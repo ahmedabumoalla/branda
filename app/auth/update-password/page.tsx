@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { updatePasswordAction } from "@/app/actions/auth";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { NeumoInput, PrimaryButton, SoftCard } from "@/components/ui/design-system";
 
 export default function UpdatePasswordPage() {
@@ -31,7 +31,7 @@ export default function UpdatePasswordPage() {
   return (
     <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3] p-4">
       <SoftCard className="w-full max-w-md p-8">
-        <BrandaLogo variant="brown" width={150} height={60} />
+        <BarndaksaLogo variant="brown" width={150} height={60} />
         <h1 className="mt-6 text-2xl font-black">تعيين كلمة مرور جديدة</h1>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div className="relative">

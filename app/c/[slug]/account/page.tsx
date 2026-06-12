@@ -14,7 +14,7 @@ import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
   getCustomerSession,
-  type BrandaCustomerSession,
+  type BarndaksaCustomerSession,
 } from "@/lib/customer/session";
 import {
   updateCustomerProfileAction,
@@ -34,7 +34,16 @@ import {
 import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
-import { Bell, Coffee, Gift, Link as LinkIcon, QrCode, Send, WalletCards, X } from "lucide-react";
+import {
+  Bell,
+  Coffee,
+  Gift,
+  Link as LinkIcon,
+  QrCode,
+  Send,
+  WalletCards,
+  X,
+} from "lucide-react";
 
 type Reservation = {
   id: string;
@@ -46,12 +55,14 @@ type Reservation = {
   date: string;
   time: string;
   status: string;
+  reservationCode?: string;
+  reservationCodeUsedAt?: string;
+  cashierConfirmedAt?: string;
   notes?: string;
   createdAt: string;
 };
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
-
 
 function CustomerCoffeeLoyaltyCard({
   view,
@@ -80,7 +91,8 @@ function CustomerCoffeeLoyaltyCard({
                 Loyalty Card
               </p>
               <p className="mt-1 text-xs font-bold text-[#E7D7C6]">
-                اشتر {required} مرات واحصل على {program?.rewardName || "كوب مجاني"}
+                اشتر {required} مرات واحصل على{" "}
+                {program?.rewardName || "كوب مجاني"}
               </p>
             </div>
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D9A33F] text-[#311912]">
@@ -117,7 +129,7 @@ function CustomerCoffeeLoyaltyCard({
 
           <div className="mt-5 rounded-2xl bg-white p-4 text-center text-[#17100d]">
             <p className="font-mono text-sm font-black tracking-[0.2em]">
-              {card?.cardCode || "BRANDA LOYALTY"}
+              {card?.cardCode || "BARNDAKSA LOYALTY"}
             </p>
             {card?.cardCode ? (
               <SecureQrCode
@@ -129,19 +141,24 @@ function CustomerCoffeeLoyaltyCard({
               />
             ) : (
               <div className="mt-3 flex h-36 items-center justify-center rounded-2xl bg-[#FCF8F3] px-4 text-center text-xs font-black leading-6 text-[#806A5E]">
-                {loading ? "جاري تجهيز QR بطاقة الولاء..." : "تعذر تحميل QR البطاقة، حدّث الصفحة أو تأكد من تفعيل برنامج الولاء"}
+                {loading
+                  ? "جاري تجهيز QR بطاقة الولاء..."
+                  : "تعذر تحميل QR البطاقة، حدّث الصفحة أو تأكد من تفعيل برنامج الولاء"}
               </div>
             )}
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-black text-[#D9A33F]">بطاقة الولاء الخاصة بالعلامة التجارية</p>
+          <p className="text-sm font-black text-[#D9A33F]">
+            بطاقة الولاء الخاصة بالعلامة التجارية
+          </p>
           <h2 className="mt-2 text-3xl font-black text-[#311912]">
             {program?.cardTitle || "بطاقة الولاء"}
           </h2>
           <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
-            كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء كوب جديد حتى تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
+            كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء كوب جديد حتى
+            تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -154,7 +171,9 @@ function CustomerCoffeeLoyaltyCard({
               <p className="text-xs font-bold text-[#806A5E]">المطلوب</p>
             </div>
             <div className="rounded-2xl bg-white p-4 text-center">
-              <p className="text-2xl font-black text-[#311912]">{card?.availableRewards ?? 0}</p>
+              <p className="text-2xl font-black text-[#311912]">
+                {card?.availableRewards ?? 0}
+              </p>
               <p className="text-xs font-bold text-[#806A5E]">مكافآت جاهزة</p>
             </div>
           </div>
@@ -187,8 +206,6 @@ function CustomerCoffeeLoyaltyCard({
     </section>
   );
 }
-
-
 
 function formatRewardDate(value?: string) {
   if (!value) return "غير محدد";
@@ -253,8 +270,12 @@ function ExperienceProofPanel({
   onSubmit: () => void;
 }) {
   const rewardNotifications = rewards.slice(0, 8);
-  const readyRewards = rewards.filter((reward) => reward.status === "approved" && reward.rewardCode);
-  const pendingRewards = rewards.filter((reward) => reward.status === "pending").length;
+  const readyRewards = rewards.filter(
+    (reward) => reward.status === "approved" && reward.rewardCode,
+  );
+  const pendingRewards = rewards.filter(
+    (reward) => reward.status === "pending",
+  ).length;
 
   return (
     <section className="mb-6 space-y-5">
@@ -269,7 +290,9 @@ function ExperienceProofPanel({
               مكافآت توثيق التجربة
             </h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها تلقائيًا، ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو لوحة العلامة
+              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها
+              تلقائيًا، ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو
+              لوحة العلامة
             </p>
           </div>
           <button
@@ -285,15 +308,23 @@ function ExperienceProofPanel({
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-3xl bg-[#FCF8F3] p-4">
             <p className="text-xs font-black text-[#806A5E]">مكافآت جاهزة</p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">{readyRewards.length}</p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">
+              {readyRewards.length}
+            </p>
           </div>
           <div className="rounded-3xl bg-[#FCF8F3] p-4">
-            <p className="text-xs font-black text-[#806A5E]">بانتظار المراجعة</p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">{pendingRewards}</p>
+            <p className="text-xs font-black text-[#806A5E]">
+              بانتظار المراجعة
+            </p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">
+              {pendingRewards}
+            </p>
           </div>
           <div className="rounded-3xl bg-[#FCF8F3] p-4">
             <p className="text-xs font-black text-[#806A5E]">كل التوثيقات</p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">{rewards.length}</p>
+            <p className="mt-1 text-3xl font-black text-[#311912]">
+              {rewards.length}
+            </p>
           </div>
         </div>
       </div>
@@ -301,16 +332,16 @@ function ExperienceProofPanel({
       {rewardNotifications.length ? (
         <div className="grid gap-4">
           {rewardNotifications.map((reward, index) => {
-            const isReady = reward.status === "approved" && Boolean(reward.rewardCode);
+            const isReady =
+              reward.status === "approved" && Boolean(reward.rewardCode);
             const isRedeemed = reward.status === "redeemed";
-            const statusText =
-              isReady
-                ? "لديكم مكافأة جاهزة"
-                : isRedeemed
-                  ? "تم صرف المكافأة"
-                  : reward.status === "rejected"
-                    ? "تم رفض التوثيق"
-                    : "بانتظار مراجعة العلامة";
+            const statusText = isReady
+              ? "لديكم مكافأة جاهزة"
+              : isRedeemed
+                ? "تم صرف المكافأة"
+                : reward.status === "rejected"
+                  ? "تم رفض التوثيق"
+                  : "بانتظار مراجعة العلامة";
 
             return (
               <article
@@ -339,12 +370,30 @@ function ExperienceProofPanel({
                     </h3>
 
                     <div className="mt-4 grid gap-3 text-sm font-bold text-[#806A5E] sm:grid-cols-2">
-                      <p>رابط التوثيق: <a className="font-black text-[#6B3A25] underline" href={reward.experienceUrl} target="_blank" rel="noreferrer">فتح الرابط</a></p>
-                      <p>المشاهدات: {reward.currentViews.toLocaleString("ar-SA")}</p>
-                      <p>التعليقات: {reward.currentComments.toLocaleString("ar-SA")}</p>
+                      <p>
+                        رابط التوثيق:{" "}
+                        <a
+                          className="font-black text-[#6B3A25] underline"
+                          href={reward.experienceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          فتح الرابط
+                        </a>
+                      </p>
+                      <p>
+                        المشاهدات: {reward.currentViews.toLocaleString("ar-SA")}
+                      </p>
+                      <p>
+                        التعليقات:{" "}
+                        {reward.currentComments.toLocaleString("ar-SA")}
+                      </p>
                       <p>تاريخ الإرسال: {formatRewardDate(reward.createdAt)}</p>
                       {reward.rewardExpiresAt ? (
-                        <p className="sm:col-span-2">صلاحية المكافأة: حتى {formatRewardDate(reward.rewardExpiresAt)}</p>
+                        <p className="sm:col-span-2">
+                          صلاحية المكافأة: حتى{" "}
+                          {formatRewardDate(reward.rewardExpiresAt)}
+                        </p>
                       ) : null}
                     </div>
 
@@ -362,7 +411,9 @@ function ExperienceProofPanel({
 
                     {reward.items.length ? (
                       <div className="mt-4">
-                        <p className="text-sm font-black text-[#311912]">تفاصيل المكافأة</p>
+                        <p className="text-sm font-black text-[#311912]">
+                          تفاصيل المكافأة
+                        </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {reward.items.map((item) => (
                             <span
@@ -382,7 +433,9 @@ function ExperienceProofPanel({
                   ) : isRedeemed ? (
                     <div className="rounded-[24px] border border-[#E7D7C6] bg-[#F8F4EF] p-5 text-center">
                       <QrCode className="mx-auto h-9 w-9 text-[#806A5E]" />
-                      <p className="mt-3 font-black text-[#311912]">تم استخدام QR</p>
+                      <p className="mt-3 font-black text-[#311912]">
+                        تم استخدام QR
+                      </p>
                       <p className="mt-2 text-xs font-bold text-[#806A5E]">
                         توقف هذا QR ولا يمكن صرفه مرة أخرى
                       </p>
@@ -403,7 +456,9 @@ function ExperienceProofPanel({
       ) : (
         <div className="rounded-[34px] border border-dashed border-[#E7D7C6] bg-white p-8 text-center shadow-sm">
           <Gift className="mx-auto h-10 w-10 text-[#D9A33F]" />
-          <h3 className="mt-3 text-xl font-black text-[#311912]">لا توجد تنبيهات مكافآت حتى الآن</h3>
+          <h3 className="mt-3 text-xl font-black text-[#311912]">
+            لا توجد تنبيهات مكافآت حتى الآن
+          </h3>
           <p className="mt-2 text-sm font-bold text-[#806A5E]">
             وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع QR الخاص بها
           </p>
@@ -426,7 +481,9 @@ function ExperienceProofPanel({
 
             <div className="mt-5 grid gap-4">
               <label className="grid gap-2">
-                <span className="text-sm font-black text-[#806A5E]">رابط التجربة</span>
+                <span className="text-sm font-black text-[#806A5E]">
+                  رابط التجربة
+                </span>
                 <input
                   value={experienceUrl}
                   onChange={(event) => onExperienceUrl(event.target.value)}
@@ -436,7 +493,9 @@ function ExperienceProofPanel({
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-sm font-black text-[#806A5E]">عدد المشاهدات الحالية</span>
+                  <span className="text-sm font-black text-[#806A5E]">
+                    عدد المشاهدات الحالية
+                  </span>
                   <input
                     value={views}
                     onChange={(event) => onViews(event.target.value)}
@@ -445,7 +504,9 @@ function ExperienceProofPanel({
                   />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-black text-[#806A5E]">عدد التعليقات الحالية</span>
+                  <span className="text-sm font-black text-[#806A5E]">
+                    عدد التعليقات الحالية
+                  </span>
                   <input
                     value={comments}
                     onChange={(event) => onComments(event.target.value)}
@@ -455,7 +516,9 @@ function ExperienceProofPanel({
                 </label>
               </div>
               <label className="grid gap-2">
-                <span className="text-sm font-black text-[#806A5E]">ملاحظات العميل</span>
+                <span className="text-sm font-black text-[#806A5E]">
+                  ملاحظات العميل
+                </span>
                 <textarea
                   value={notes}
                   onChange={(event) => onNotes(event.target.value)}
@@ -485,13 +548,14 @@ function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const { experience, settings, path, previewThemeId } = useCafePageContext(slug);
+  const { experience, settings, path, previewThemeId } =
+    useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
 
   const defaultTab: TabKey = "orders";
 
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
@@ -502,18 +566,23 @@ function AccountPageInner() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editAvatarPreview, setEditAvatarPreview] = useState("");
-  const [pendingAvatar, setPendingAvatar] = useState<OptimizedImageResult | null>(null);
+  const [pendingAvatar, setPendingAvatar] =
+    useState<OptimizedImageResult | null>(null);
   const [avatarAssetId, setAvatarAssetId] = useState<string | undefined>();
   const [optimizingAvatar, setOptimizingAvatar] = useState(false);
-  const [loyaltyView, setLoyaltyView] = useState<CustomerLoyaltyCardView | null>(null);
+  const [loyaltyView, setLoyaltyView] =
+    useState<CustomerLoyaltyCardView | null>(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(true);
-  const [experienceRewards, setExperienceRewards] = useState<CustomerExperienceReward[]>([]);
+  const [experienceRewards, setExperienceRewards] = useState<
+    CustomerExperienceReward[]
+  >([]);
   const [experienceProofOpen, setExperienceProofOpen] = useState(false);
   const [experienceUrl, setExperienceUrl] = useState("");
   const [experienceViews, setExperienceViews] = useState("");
   const [experienceComments, setExperienceComments] = useState("");
   const [experienceNotes, setExperienceNotes] = useState("");
-  const [submittingExperienceProof, setSubmittingExperienceProof] = useState(false);
+  const [submittingExperienceProof, setSubmittingExperienceProof] =
+    useState(false);
 
   useEffect(() => {
     const loadKey = `${slug}:${previewThemeId ?? "live"}`;
@@ -529,7 +598,10 @@ function AccountPageInner() {
       if (cancelled) return;
 
       if (!session) {
-        const next = appendPreviewToNextPath(`/c/${slug}/account`, previewThemeId);
+        const next = appendPreviewToNextPath(
+          `/c/${slug}/account`,
+          previewThemeId,
+        );
         router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
         return;
       }
@@ -540,21 +612,25 @@ function AccountPageInner() {
       setEditAvatarPreview(session.avatarUrl || "");
       setAvatarAssetId(session.avatarAssetId);
 
-      const { fetchCustomerOrdersAction, fetchCustomerReservationsAction } = await import(
-        "@/app/actions/customer"
-      );
+      const { fetchCustomerOrdersAction, fetchCustomerReservationsAction } =
+        await import("@/app/actions/customer");
 
-      const [ordersResult, reservationsResult, loyaltyResult, rewardsResult] = await Promise.allSettled([
-        fetchCustomerOrdersAction(slug),
-        fetchCustomerReservationsAction(slug),
-        fetchCustomerLoyaltyCardAction(slug),
-        fetchCustomerExperienceRewardsAction(slug),
-      ]);
+      const [ordersResult, reservationsResult, loyaltyResult, rewardsResult] =
+        await Promise.allSettled([
+          fetchCustomerOrdersAction(slug),
+          fetchCustomerReservationsAction(slug),
+          fetchCustomerLoyaltyCardAction(slug),
+          fetchCustomerExperienceRewardsAction(slug),
+        ]);
 
       if (cancelled) return;
 
-      const cafeOrders = ordersResult.status === "fulfilled" ? ordersResult.value : [];
-      const cafeReservations = reservationsResult.status === "fulfilled" ? reservationsResult.value : [];
+      const cafeOrders =
+        ordersResult.status === "fulfilled" ? ordersResult.value : [];
+      const cafeReservations =
+        reservationsResult.status === "fulfilled"
+          ? reservationsResult.value
+          : [];
 
       setOrders(
         cafeOrders.map((o) => ({
@@ -569,7 +645,7 @@ function AccountPageInner() {
           branchName: o.branchName,
           pickupAt: o.pickupAt,
           notes: o.notes,
-        }))
+        })),
       );
 
       setReservations(
@@ -583,13 +659,20 @@ function AccountPageInner() {
           date: r.date,
           time: r.time,
           status: r.status,
+          reservationCode: r.reservationCode,
+          reservationCodeUsedAt: r.reservationCodeUsedAt,
+          cashierConfirmedAt: r.cashierConfirmedAt,
           notes: r.notes,
           createdAt: r.createdAt,
-        }))
+        })),
       );
 
-      setLoyaltyView(loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null);
-      setExperienceRewards(rewardsResult.status === "fulfilled" ? rewardsResult.value : []);
+      setLoyaltyView(
+        loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null,
+      );
+      setExperienceRewards(
+        rewardsResult.status === "fulfilled" ? rewardsResult.value : [],
+      );
       setLoyaltyLoading(false);
     }
 
@@ -601,17 +684,17 @@ function AccountPageInner() {
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
-    [orders, customer]
+    [orders, customer],
   );
 
   const myInvoices = useMemo(
     () => invoices.filter((invoice) => invoice.customerId === customer?.id),
-    [invoices, customer]
+    [invoices, customer],
   );
 
   const myTransactions = useMemo(
     () => transactions.filter((item) => item.customerId === customer?.id),
-    [transactions, customer]
+    [transactions, customer],
   );
 
   const myReservations = useMemo(
@@ -619,19 +702,19 @@ function AccountPageInner() {
       reservations.filter(
         (reservation) =>
           reservation.customerId === customer?.id ||
-          reservation.phone === customer?.phone
+          reservation.phone === customer?.phone,
       ),
-    [reservations, customer]
+    [reservations, customer],
   );
 
   const loyaltyBalance = useMemo(
     () => myTransactions.reduce((sum, item) => sum + (item.points || 0), 0),
-    [myTransactions]
+    [myTransactions],
   );
 
   const totalInvoices = useMemo(
     () => myInvoices.reduce((sum, invoice) => sum + invoice.amount, 0),
-    [myInvoices]
+    [myInvoices],
   );
 
   const latestActivity = useMemo(() => {
@@ -659,14 +742,20 @@ function AccountPageInner() {
       type: transaction.type,
     }));
 
-    return [...orderActivities, ...reservationActivities, ...transactionActivities]
+    return [
+      ...orderActivities,
+      ...reservationActivities,
+      ...transactionActivities,
+    ]
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 4);
   }, [myOrders, myReservations, myTransactions]);
 
   function openLoyaltyCard() {
     if (loyaltyView?.card.cardCode) {
-      router.push(`/loyalty-card/${loyaltyView.card.cardCode}?back=${encodeURIComponent(path("account"))}`);
+      router.push(
+        `/loyalty-card/${loyaltyView.card.cardCode}?back=${encodeURIComponent(path("account"))}`,
+      );
     }
   }
 
@@ -683,14 +772,15 @@ function AccountPageInner() {
     setOptimizingAvatar(true);
     try {
       const optimized = await optimizeImageForStorage(file, "customer-avatar");
-      if (editAvatarPreview.startsWith("blob:")) revokeObjectUrl(editAvatarPreview);
+      if (editAvatarPreview.startsWith("blob:"))
+        revokeObjectUrl(editAvatarPreview);
       setEditAvatarPreview(URL.createObjectURL(optimized.blob));
       setPendingAvatar(optimized);
     } catch (err) {
       alert(
         err instanceof ImagePipelineError
           ? err.message
-          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP"
+          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
       );
     } finally {
       setOptimizingAvatar(false);
@@ -820,7 +910,8 @@ function AccountPageInner() {
         onEditEmail={setEditEmail}
         onPickAvatar={pickAvatar}
         onClearAvatar={() => {
-          if (editAvatarPreview.startsWith("blob:")) revokeObjectUrl(editAvatarPreview);
+          if (editAvatarPreview.startsWith("blob:"))
+            revokeObjectUrl(editAvatarPreview);
           setEditAvatarPreview("");
           setPendingAvatar(null);
           setAvatarAssetId(undefined);
@@ -835,8 +926,14 @@ function AccountPageInner() {
 export default function CafeCustomerAccountPage() {
   const params = useParams<{ slug: string }>();
   return (
-    <CafeLayout slug={params.slug} className="!px-0 !py-0" maxWidth="max-w-[100%]">
-      <Suspense fallback={<p className="p-8 text-center font-black">جاري التحميل...</p>}>
+    <CafeLayout
+      slug={params.slug}
+      className="!px-0 !py-0"
+      maxWidth="max-w-[100%]"
+    >
+      <Suspense
+        fallback={<p className="p-8 text-center font-black">جاري التحميل...</p>}
+      >
         <AccountPageInner />
       </Suspense>
     </CafeLayout>

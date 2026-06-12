@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
-import { isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
+import { isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -18,7 +18,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      configured: isBrandaEmailConfigured(),
+      configured: isBarndaksaEmailConfigured(),
       hasApiKey: Boolean(process.env.RESEND_API_KEY?.trim()),
       from: process.env.RESEND_FROM_EMAIL?.trim() || null,
       replyTo: process.env.RESEND_REPLY_TO?.trim() || null,
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isBrandaEmailConfigured()) {
+    if (!isBarndaksaEmailConfigured()) {
       return NextResponse.json(
         {
           ok: false,
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await sendBrandaEmail({
+    const result = await sendBarndaksaEmail({
       to,
       subject: "اختبار Resend من برندة",
       html: `

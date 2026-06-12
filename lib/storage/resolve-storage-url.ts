@@ -11,7 +11,7 @@ import type { StorageBucket } from "@/lib/storage/upload-server";
 
 /** Short-lived signed URLs — max 10 minutes. */
 export const PRIVATE_STORAGE_TTL_SECONDS = 10 * 60;
-export const PUBLIC_STORAGE_TTL_SECONDS = 10 * 60;
+export const PUBLIC_STORAGE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const PUBLISHED_BUCKETS = [
   "cafe-logos",

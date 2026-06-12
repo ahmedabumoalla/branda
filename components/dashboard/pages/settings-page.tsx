@@ -338,7 +338,13 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         subtitle="الشعار، بيانات الحساب، والوثائق الحكومية الاختيارية."
         action={
           <div className="flex flex-wrap gap-3">
-            <LinkButton href="/c/qatrah" variant="outline">
+            <LinkButton
+              href={getCafePublicUrl(settings.cafeSlug || "qatrah", {
+                origin: typeof window !== "undefined" ? window.location.origin : undefined,
+              })}
+              variant="outline"
+              target="_blank"
+            >
               معاينة الكوفي
             </LinkButton>
             <PrimaryButton

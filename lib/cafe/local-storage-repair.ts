@@ -1,4 +1,4 @@
-import { getCustomerKey, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerKey, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { sanitizeCafeSettingsForStorage } from "@/lib/cafe/cafe-settings-storage";
 import {
   assertNoBase64Images,
@@ -46,8 +46,8 @@ export type MigrationResult = MigrationReport & {
   repairedStorage: boolean;
 };
 
-const MENU_KEY = "branda_qatrah_menu";
-const OFFERS_KEY = "branda_qatrah_offers";
+const MENU_KEY = "barndaksa_qatrah_menu";
+const OFFERS_KEY = "barndaksa_qatrah_offers";
 
 let migrationPromise: Promise<MigrationResult> | null = null;
 
@@ -306,11 +306,11 @@ export async function migrateAllLegacyImageDataUrls(): Promise<MigrationReport> 
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (!key?.startsWith("branda_customer_session_")) continue;
+      if (!key?.startsWith("barndaksa_customer_session_")) continue;
       const raw = localStorage.getItem(key);
       if (!raw?.includes("data:image")) continue;
 
-      const session = JSON.parse(raw) as BrandaCustomerSession & { avatarAssetId?: string };
+      const session = JSON.parse(raw) as BarndaksaCustomerSession & { avatarAssetId?: string };
       if (session.avatarUrl?.startsWith("data:image")) {
         const assetId = await migrateDataUrlField(
           session.avatarUrl,
@@ -415,7 +415,7 @@ export function anyLegacyBase64InProjectStorage(): boolean {
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (!key?.startsWith("branda_")) continue;
+      if (!key?.startsWith("barndaksa_")) continue;
       const value = localStorage.getItem(key);
       if (value?.includes("data:image")) return true;
     }

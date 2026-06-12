@@ -5,10 +5,18 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCustomerProfileForSession } from "@/lib/data/customers";
 import { createNotification } from "@/lib/data/notifications";
 import { getCashierToken } from "@/lib/data/cashier";
-import { parseBrandaQrPayload } from "@/lib/loyalty/secure-qr-payload";
-import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
+import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import {
+  escapeEmailHtml,
+  isBarndaksaEmailConfigured,
+  sendBarndaksaEmail,
+} from "@/lib/email/resend";
 
-export type ExperienceRewardStatus = "pending" | "approved" | "rejected" | "redeemed";
+export type ExperienceRewardStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "redeemed";
 
 export type ExperienceRewardItem = {
   id: string;
@@ -68,7 +76,9 @@ function normalizeRewardItems(rows: unknown): ExperienceRewardItem[] {
   });
 }
 
-function normalizeSubmission(row: Record<string, unknown>): CustomerExperienceReward {
+function normalizeSubmission(
+  row: Record<string, unknown>,
+): CustomerExperienceReward {
   return {
     id: String(row.id),
     experienceUrl: String(row.experience_url ?? ""),
@@ -96,7 +106,7 @@ const customerSubmissionSchema = z.object({
 });
 
 export async function submitCustomerExperienceRewardProof(
-  input: z.infer<typeof customerSubmissionSchema>
+  input: z.infer<typeof customerSubmissionSchema>,
 ) {
   const parsed = customerSubmissionSchema.parse(input);
   const { profile } = await requireCustomerProfileForSession(parsed.cafeSlug);
@@ -136,19 +146,24 @@ export async function submitCustomerExperienceRewardProof(
       },
     });
   } catch (notificationError) {
-    console.warn("Experience reward cafe notification skipped", notificationError);
+    console.warn(
+      "Experience reward cafe notification skipped",
+      notificationError,
+    );
   }
 
-  if (isBrandaEmailConfigured()) {
+  if (isBarndaksaEmailConfigured()) {
     try {
       const { data: settings } = await supabase
         .from("cafe_settings")
         .select("owner_email")
         .eq("cafe_id", cafe.id)
         .maybeSingle();
-      const ownerEmail = settings?.owner_email ? String(settings.owner_email) : undefined;
+      const ownerEmail = settings?.owner_email
+        ? String(settings.owner_email)
+        : undefined;
       if (ownerEmail) {
-        await sendBrandaEmail({
+        await sendBarndaksaEmail({
           to: ownerEmail,
           subject: "توثيق تجربة جديد يحتاج مراجعة",
           text: `وصل توثيق تجربة جديد من ${String(profile.full_name ?? "عميل")}. الرابط: ${parsed.experienceUrl}`,
@@ -164,7 +179,7 @@ export async function submitCustomerExperienceRewardProof(
 }
 
 export async function getCustomerExperienceRewardSubmissions(
-  cafeSlug: string
+  cafeSlug: string,
 ): Promise<CustomerExperienceReward[]> {
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
   const cafe = await getCafeBySlug(cafeSlug);
@@ -183,7 +198,9 @@ export async function getCustomerExperienceRewardSubmissions(
   return ((data ?? []) as Record<string, unknown>[]).map(normalizeSubmission);
 }
 
-export async function getCustomerExperienceRewardNotifications(cafeSlug: string) {
+export async function getCustomerExperienceRewardNotifications(
+  cafeSlug: string,
+) {
   try {
     return await getCustomerExperienceRewardSubmissions(cafeSlug);
   } catch {
@@ -191,13 +208,17 @@ export async function getCustomerExperienceRewardNotifications(cafeSlug: string)
   }
 }
 
-export async function getOwnerExperienceRewardReviews(): Promise<OwnerExperienceRewardSubmission[]> {
+export async function getOwnerExperienceRewardReviews(): Promise<
+  OwnerExperienceRewardSubmission[]
+> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("experience_reward_submissions")
-    .select("*, experience_reward_items(*), customer_profiles(id, full_name, phone, email, created_at)")
+    .select(
+      "*, experience_reward_items(*), customer_profiles(id, full_name, phone, email, created_at)",
+    )
     .eq("cafe_id", cafe.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -205,7 +226,9 @@ export async function getOwnerExperienceRewardReviews(): Promise<OwnerExperience
   if (error) throw error;
 
   const rows = (data ?? []) as Record<string, unknown>[];
-  const customerIds = Array.from(new Set(rows.map((row) => String(row.customer_id)).filter(Boolean)));
+  const customerIds = Array.from(
+    new Set(rows.map((row) => String(row.customer_id)).filter(Boolean)),
+  );
 
   const [ordersResult, loyaltyResult, submissionsResult] = await Promise.all([
     customerIds.length
@@ -235,19 +258,29 @@ export async function getOwnerExperienceRewardReviews(): Promise<OwnerExperience
   for (const order of (ordersResult.data ?? []) as Record<string, unknown>[]) {
     const customerId = String(order.customer_id ?? "");
     const current = orderStats.get(customerId) ?? { count: 0, total: 0 };
-    const amount = Number(order.total ?? order.total_amount ?? order.final_price ?? 0);
-    orderStats.set(customerId, { count: current.count + 1, total: current.total + amount });
+    const amount = Number(
+      order.total ?? order.total_amount ?? order.final_price ?? 0,
+    );
+    orderStats.set(customerId, {
+      count: current.count + 1,
+      total: current.total + amount,
+    });
   }
 
   const loyaltyStats = new Map<string, number>();
   for (const card of (loyaltyResult.data ?? []) as Record<string, unknown>[]) {
     const customerId = String(card.customer_id ?? "");
-    const events = Array.isArray(card.loyalty_card_events) ? card.loyalty_card_events.length : 0;
+    const events = Array.isArray(card.loyalty_card_events)
+      ? card.loyalty_card_events.length
+      : 0;
     loyaltyStats.set(customerId, (loyaltyStats.get(customerId) ?? 0) + events);
   }
 
   const submissionStats = new Map<string, number>();
-  for (const item of (submissionsResult.data ?? []) as Record<string, unknown>[]) {
+  for (const item of (submissionsResult.data ?? []) as Record<
+    string,
+    unknown
+  >[]) {
     const customerId = String(item.customer_id ?? "");
     submissionStats.set(customerId, (submissionStats.get(customerId) ?? 0) + 1);
   }
@@ -257,9 +290,9 @@ export async function getOwnerExperienceRewardReviews(): Promise<OwnerExperience
     const customerRaw = Array.isArray(row.customer_profiles)
       ? row.customer_profiles[0]
       : row.customer_profiles;
-    const customer = (customerRaw && typeof customerRaw === "object"
-      ? customerRaw
-      : {}) as Record<string, unknown>;
+    const customer = (
+      customerRaw && typeof customerRaw === "object" ? customerRaw : {}
+    ) as Record<string, unknown>;
     const customerId = String(row.customer_id ?? "");
     const stats = orderStats.get(customerId) ?? { count: 0, total: 0 };
 
@@ -288,13 +321,13 @@ const approveSchema = z.object({
         productId: z.string().uuid(),
         productName: z.string().min(1),
         quantity: z.number().int().min(1).max(20),
-      })
+      }),
     )
     .min(1),
 });
 
 export async function approveOwnerExperienceRewardSubmission(
-  input: z.infer<typeof approveSchema>
+  input: z.infer<typeof approveSchema>,
 ) {
   const parsed = approveSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
@@ -302,7 +335,7 @@ export async function approveOwnerExperienceRewardSubmission(
 
   const { data: submission, error: fetchError } = await supabase
     .from("experience_reward_submissions")
-    .select("*, customer_profiles(full_name)")
+    .select("*, customer_profiles(full_name, email)")
     .eq("id", parsed.submissionId)
     .eq("cafe_id", cafe.id)
     .maybeSingle();
@@ -336,18 +369,22 @@ export async function approveOwnerExperienceRewardSubmission(
 
   if (deleteError) throw deleteError;
 
-  const { error: insertError } = await supabase.from("experience_reward_items").insert(
-    parsed.items.map((item) => ({
-      submission_id: parsed.submissionId,
-      product_id: item.productId,
-      product_name: item.productName,
-      quantity: item.quantity,
-    }))
-  );
+  const { error: insertError } = await supabase
+    .from("experience_reward_items")
+    .insert(
+      parsed.items.map((item) => ({
+        submission_id: parsed.submissionId,
+        product_id: item.productId,
+        product_name: item.productName,
+        quantity: item.quantity,
+      })),
+    );
 
   if (insertError) throw insertError;
 
-  const itemsText = parsed.items.map((item) => `${item.productName} × ${item.quantity}`).join("، ");
+  const itemsText = parsed.items
+    .map((item) => `${item.productName} × ${item.quantity}`)
+    .join("، ");
 
   await createNotification({
     cafeSlug: cafe.slug,
@@ -365,19 +402,36 @@ export async function approveOwnerExperienceRewardSubmission(
     },
   });
 
+  const customerRaw = Array.isArray(submission.customer_profiles)
+    ? submission.customer_profiles[0]
+    : submission.customer_profiles;
+  const customer =
+    customerRaw && typeof customerRaw === "object"
+      ? (customerRaw as Record<string, unknown>)
+      : null;
+  const customerEmail = customer?.email ? String(customer.email) : undefined;
+  if (customerEmail && isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: customerEmail,
+      subject: "تم اعتماد توثيق تجربتك",
+      text: `تم اعتماد توثيق تجربتك. مكافأتك: ${itemsText}.`,
+      html: `<div dir="rtl"><h2>تم اعتماد توثيق تجربتك</h2><p>المكافأة: ${escapeEmailHtml(itemsText)}</p><p>كود المكافأة: <strong>${escapeEmailHtml(rewardCode)}</strong></p><p>صالحة حتى: ${escapeEmailHtml(parsed.rewardExpiresAt)}</p></div>`,
+    }).catch(() => undefined);
+  }
+
   return { ok: true, rewardCode };
 }
 
 export async function rejectOwnerExperienceRewardSubmission(
   submissionId: string,
-  reviewNotes: string
+  reviewNotes: string,
 ) {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
   const { data: submission, error: fetchError } = await supabase
     .from("experience_reward_submissions")
-    .select("*")
+    .select("*, customer_profiles(email, full_name)")
     .eq("id", z.string().uuid().parse(submissionId))
     .eq("cafe_id", cafe.id)
     .maybeSingle();
@@ -408,12 +462,31 @@ export async function rejectOwnerExperienceRewardSubmission(
     meta: { submissionId },
   });
 
+  const customerRaw = Array.isArray(submission.customer_profiles)
+    ? submission.customer_profiles[0]
+    : submission.customer_profiles;
+  const customer =
+    customerRaw && typeof customerRaw === "object"
+      ? (customerRaw as Record<string, unknown>)
+      : null;
+  const customerEmail = customer?.email ? String(customer.email) : undefined;
+  if (customerEmail && isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: customerEmail,
+      subject: "تمت مراجعة توثيق تجربتك",
+      text: reviewNotes || "لم يتم اعتماد التوثيق هذه المرة",
+      html: `<div dir="rtl"><h2>تمت مراجعة توثيق تجربتك</h2><p>${escapeEmailHtml(reviewNotes || "لم يتم اعتماد التوثيق هذه المرة")}</p></div>`,
+    }).catch(() => undefined);
+  }
+
   return { ok: true };
 }
 
 export async function redeemOwnerExperienceReward(rewardCode: string) {
   const cafe = await requireOwnerCafeContext();
-  const code = parseBrandaQrPayload(rewardCode, "experience-reward") ?? rewardCode.trim().toUpperCase();
+  const code =
+    parseBarndaksaQrPayload(rewardCode, "experience-reward") ??
+    rewardCode.trim().toUpperCase();
   if (!code) throw new Error("QR المكافأة مطلوب");
 
   const admin = createAdminClient();
@@ -437,8 +510,13 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
     throw new Error("تم استخدام هذه المكافأة مسبقًا");
   }
 
-  const expiresAt = row.reward_expires_at ? new Date(String(row.reward_expires_at)) : null;
-  if (expiresAt && expiresAt < new Date(new Date().toISOString().slice(0, 10))) {
+  const expiresAt = row.reward_expires_at
+    ? new Date(String(row.reward_expires_at))
+    : null;
+  if (
+    expiresAt &&
+    expiresAt < new Date(new Date().toISOString().slice(0, 10))
+  ) {
     throw new Error("انتهت صلاحية المكافأة");
   }
 
@@ -446,7 +524,7 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
 
   const { data: customer } = await admin
     .from("customer_profiles")
-    .select("full_name")
+    .select("full_name, email")
     .eq("id", String(row.customer_id))
     .maybeSingle();
 
@@ -469,6 +547,19 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
 
   if (updateError) throw updateError;
 
+  const customerEmail =
+    customer && typeof customer === "object"
+      ? String((customer as Record<string, unknown>).email ?? "")
+      : "";
+  if (customerEmail && isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: customerEmail,
+      subject: "تم صرف مكافأة توثيق التجربة",
+      text: `تم صرف مكافأتك: ${items.map((item) => `${item.productName} × ${item.quantity}`).join("، ")}`,
+      html: `<div dir="rtl"><h2>تم صرف المكافأة</h2><p>${escapeEmailHtml(items.map((item) => `${item.productName} × ${item.quantity}`).join("، "))}</p></div>`,
+    }).catch(() => undefined);
+  }
+
   return {
     ok: true,
     submissionId: String(row.id),
@@ -486,7 +577,9 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
   const token = await getCashierToken();
   if (!token) throw new Error("جلسة الكاشير منتهية");
 
-  const code = parseBrandaQrPayload(rewardCode, "experience-reward") ?? rewardCode.trim().toUpperCase();
+  const code =
+    parseBarndaksaQrPayload(rewardCode, "experience-reward") ??
+    rewardCode.trim().toUpperCase();
   if (!code) throw new Error("QR المكافأة مطلوب");
 
   const admin = createAdminClient();
@@ -520,8 +613,13 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
     throw new Error("تم استخدام هذه المكافأة مسبقًا");
   }
 
-  const expiresAt = row.reward_expires_at ? new Date(String(row.reward_expires_at)) : null;
-  if (expiresAt && expiresAt < new Date(new Date().toISOString().slice(0, 10))) {
+  const expiresAt = row.reward_expires_at
+    ? new Date(String(row.reward_expires_at))
+    : null;
+  if (
+    expiresAt &&
+    expiresAt < new Date(new Date().toISOString().slice(0, 10))
+  ) {
     throw new Error("انتهت صلاحية المكافأة");
   }
 
@@ -529,7 +627,7 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
 
   const { data: customer } = await admin
     .from("customer_profiles")
-    .select("full_name")
+    .select("full_name, email")
     .eq("id", String(row.customer_id))
     .maybeSingle();
 
@@ -568,6 +666,19 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
       items,
     },
   });
+
+  const customerEmail =
+    customer && typeof customer === "object"
+      ? String((customer as Record<string, unknown>).email ?? "")
+      : "";
+  if (customerEmail && isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: customerEmail,
+      subject: "تم صرف مكافأة توثيق التجربة",
+      text: `تم صرف مكافأتك من الكاشير: ${items.map((item) => `${item.productName} × ${item.quantity}`).join("، ")}`,
+      html: `<div dir="rtl"><h2>تم صرف المكافأة</h2><p>${escapeEmailHtml(items.map((item) => `${item.productName} × ${item.quantity}`).join("، "))}</p></div>`,
+    }).catch(() => undefined);
+  }
 
   return {
     ok: true,

@@ -20,16 +20,24 @@ export function cafeHasFeature(
   feature: PlatformFeature,
   options?: { planId?: string; plans?: PlatformPlan[] }
 ) {
+  if (feature === "home" || feature === "subscription") return true;
+
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
   const plan = plans.find((item) => item.id === activePlanId);
   if (!plan) return true;
-  return plan.features.includes(feature);
+
+  const legacyFeatureMap: Partial<Record<PlatformFeature, PlatformFeature>> = {
+    experience_reviews: "menu",
+  };
+
+  return plan.features.includes(feature) || Boolean(legacyFeatureMap[feature] && plan.features.includes(legacyFeatureMap[feature]!));
 }
 
 export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[] }) {
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
   const plan = plans.find((item) => item.id === activePlanId);
-  return plan?.features || [];
+  const features = plan?.features || [];
+  return Array.from(new Set<PlatformFeature>(["home", ...features, "subscription"]));
 }

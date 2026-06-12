@@ -1,5 +1,5 @@
--- Branda Development Seed (manual only — NEVER run in production automatically)
--- Run after 001_branda_production_schema.sql
+-- Barndaksa Development Seed (manual only — NEVER run in production automatically)
+-- Run after 001_barndaksa_production_schema.sql
 -- Create auth users in Supabase Dashboard first, then replace UUIDs below.
 
 -- Example cafe (requires owner auth user UUID)

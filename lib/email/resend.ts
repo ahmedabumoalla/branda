@@ -1,4 +1,4 @@
-type SendBrandaEmailInput = {
+type SendBarndaksaEmailInput = {
   to: string | string[];
   subject: string;
   html?: string;
@@ -28,11 +28,11 @@ function getRequiredEmailEnv() {
   return { apiKey, from };
 }
 
-export function isBrandaEmailConfigured() {
+export function isBarndaksaEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
 }
 
-export async function sendBrandaEmail(input: SendBrandaEmailInput) {
+export async function sendBarndaksaEmail(input: SendBarndaksaEmailInput) {
   const { apiKey, from } = getRequiredEmailEnv();
   const replyTo = input.replyTo?.trim() || process.env.RESEND_REPLY_TO?.trim() || undefined;
   const text = input.text ?? input.html?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

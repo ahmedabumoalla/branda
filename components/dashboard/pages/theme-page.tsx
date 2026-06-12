@@ -17,7 +17,6 @@ import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import { getCafePublicUrl } from "@/lib/platform/cafe-domain";
 
-const CAFE_SLUG = "qatrah";
 
 type Props = {
   initialThemeId: CafeThemeId;
@@ -43,6 +42,7 @@ function ThemePageInner({
 }: Props) {
   const [saved, setSaved] = useState(false);
   const cafeSettings = initialSettings;
+  const cafeSlug = cafeSettings.cafeSlug || "qatrah";
   const products = initialProducts;
   const offers = initialOffers;
   const availableProducts = products.filter((p) => p.available);
@@ -64,7 +64,7 @@ function ThemePageInner({
         subtitle="تم حذف كل الثيمات الجاهزة واعتماد ثيم واحد فقط يتم بناؤه من هوية علامتك"
         action={
           <LinkButton
-            href={getCafePublicUrl(CAFE_SLUG, {
+            href={getCafePublicUrl(cafeSlug, {
               origin: typeof window !== "undefined" ? window.location.origin : undefined,
             })}
             variant="outline"
@@ -95,7 +95,7 @@ function ThemePageInner({
 
         <CustomIdentityBuilder
           preview={{
-            slug: CAFE_SLUG,
+            slug: cafeSlug,
             cafeSettings,
             products,
             offers,

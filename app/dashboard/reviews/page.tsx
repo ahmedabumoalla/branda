@@ -1,5 +1,9 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { ReviewsPageClient } from "@/components/dashboard/pages/reviews-page";
-import { isSupabaseConfigured } from "@/lib/branda/env";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerReviews } from "@/lib/data/reviews";
 
 export default async function ReviewsPage() {

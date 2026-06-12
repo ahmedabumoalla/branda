@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = path.join(ROOT, "supabase", "migrations");
-const UNIFIED_INSTALL = path.join(ROOT, "supabase", "manual", "BRANDA_STAGING_INITIAL_INSTALL.sql");
+const UNIFIED_INSTALL = path.join(ROOT, "supabase", "manual", "BARNDAKSA_STAGING_INITIAL_INSTALL.sql");
 
 const MOJIBAKE_PATTERNS = [
   { label: "ط·ظ", re: /ط·ظ/ },
@@ -163,10 +163,10 @@ function checkMojibakeInSources(files) {
     checkMojibake(name, content);
   }
   if (!fs.existsSync(UNIFIED_INSTALL)) {
-    failures.push("supabase/manual/BRANDA_STAGING_INITIAL_INSTALL.sql: missing — run node scripts/merge-staging-install.mjs");
+    failures.push("supabase/manual/BARNDAKSA_STAGING_INITIAL_INSTALL.sql: missing — run node scripts/merge-staging-install.mjs");
     return;
   }
-  checkMojibake("BRANDA_STAGING_INITIAL_INSTALL.sql", fs.readFileSync(UNIFIED_INSTALL, "utf8"));
+  checkMojibake("BARNDAKSA_STAGING_INITIAL_INSTALL.sql", fs.readFileSync(UNIFIED_INSTALL, "utf8"));
 }
 
 function checkUnsafeProfilesInsertPolicy(files) {
@@ -175,7 +175,7 @@ function checkUnsafeProfilesInsertPolicy(files) {
   ];
   if (fs.existsSync(UNIFIED_INSTALL)) {
     sources.push({
-      name: "BRANDA_STAGING_INITIAL_INSTALL.sql",
+      name: "BARNDAKSA_STAGING_INITIAL_INSTALL.sql",
       content: fs.readFileSync(UNIFIED_INSTALL, "utf8"),
     });
   }

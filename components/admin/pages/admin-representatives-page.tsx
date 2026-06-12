@@ -1,8 +1,8 @@
 "use client";
 
-import { BadgePercent, Plus, Users } from "lucide-react";
+import { BadgePercent, Download, Filter, Plus, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { createRepresentativeAction, updateRepresentativeAction } from "@/app/actions/representatives";
 import {
   AdminInput,
@@ -13,6 +13,7 @@ import {
   StatusBadge,
 } from "@/components/ui/design-system";
 import { formatSar } from "@/lib/format";
+import { exportRowsToExcel, exportRowsToPdf } from "@/lib/export/admin-report-export";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 import type { RepresentativeItem } from "@/lib/data/representatives";
 
@@ -35,6 +36,17 @@ export function AdminRepresentativesPage({
   const [formError, setFormError] = useState("");
   const [editing, setEditing] = useState<RepresentativeItem | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const filteredRepresentatives = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return initialRepresentatives.filter((representative) => {
+      const matchesTerm = !term || [representative.fullName, representative.email, representative.phone, representative.region, representative.couponCode].some((value) => String(value ?? "").toLowerCase().includes(term));
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? representative.active : !representative.active);
+      return matchesTerm && matchesStatus;
+    });
+  }, [initialRepresentatives, search, statusFilter]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,8 +112,22 @@ export function AdminRepresentativesPage({
         </BentoCard>
       ) : null}
 
+      <BentoCard variant="cyber" className="mb-6">
+        <div className="mb-4 flex items-center gap-3"><Filter className="h-6 w-6 text-[#F6C35B]" /><h2 className="text-xl font-black text-[#F8F4EF]">فلترة المناديب والتصدير</h2></div>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+          <div className="relative"><Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7A6255]" /><AdminInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="بحث باسم المندوب أو الجوال أو الكوبون" className="pr-12 text-[#FCF8F3]" /></div>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className="rounded-2xl border border-white/10 bg-[#17100d] px-4 py-3 font-black text-[#F8F4EF] outline-none">
+            <option value="all">كل الحالات</option>
+            <option value="active">النشط فقط</option>
+            <option value="inactive">المتوقف فقط</option>
+          </select>
+          <button type="button" onClick={() => exportRowsToPdf("تقرير المناديب", filteredRepresentatives as unknown as Record<string, unknown>[], [{ key: "fullName", title: "المندوب" }, { key: "couponCode", title: "الكوبون" }, { key: "discountPercent", title: "الخصم" }, { key: "commissionAmount", title: "المستحق" }])} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-[#F8F4EF]"><Download className="h-5 w-5" /> PDF</button>
+          <button type="button" onClick={() => exportRowsToExcel("representatives", filteredRepresentatives as unknown as Record<string, unknown>[], [{ key: "fullName", title: "المندوب" }, { key: "couponCode", title: "الكوبون" }, { key: "discountPercent", title: "الخصم" }, { key: "commissionAmount", title: "المستحق" }])} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black text-[#F8F4EF]"><Download className="h-5 w-5" /> Excel</button>
+        </div>
+      </BentoCard>
+
       <BentoGrid>
-        {initialRepresentatives.map((representative) => (
+        {filteredRepresentatives.map((representative) => (
           <BentoCard key={representative.id} variant="dark" span="2">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -172,11 +198,11 @@ export function AdminRepresentativesPage({
           </BentoCard>
         ))}
 
-        {!initialRepresentatives.length && !formOpen ? (
+        {!filteredRepresentatives.length && !formOpen ? (
           <BentoCard variant="dark" span="4">
             <div className="flex flex-col items-center py-10 text-[#CBB29C]">
               <Users className="h-12 w-12" />
-              <p className="mt-4 font-black">لا يوجد مناديب حتى الآن</p>
+              <p className="mt-4 font-black">لا توجد نتائج مطابقة للفلترة</p>
             </div>
           </BentoCard>
         ) : null}

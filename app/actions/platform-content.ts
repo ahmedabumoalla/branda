@@ -12,7 +12,7 @@ import {
 } from "@/lib/data/platform-content";
 import { createClient } from "@/lib/supabase/server";
 import { uploadPlatformMedia, uploadSocialPostMedia } from "@/lib/storage/platform-content-upload";
-import { escapeEmailHtml, isBrandaEmailConfigured, sendBrandaEmail } from "@/lib/email/resend";
+import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
 
 export async function savePlatformHomeSettingsAction(input: PlatformHomeSettings) {
   await savePlatformHomeSettings(input);
@@ -82,10 +82,10 @@ export async function submitContactRequestAction(input: {
   });
   if (error) throw error;
 
-  if (isBrandaEmailConfigured()) {
+  if (isBarndaksaEmailConfigured()) {
     const to = process.env.RESEND_REPLY_TO?.trim();
     if (to) {
-      await sendBrandaEmail({
+      await sendBarndaksaEmail({
         to,
         replyTo: input.email,
         subject: `طلب تواصل جديد من ${input.fullName}`,

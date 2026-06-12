@@ -73,3 +73,22 @@ export async function savePlatformSettingsAction(
   const { savePlatformSettings } = await import("@/lib/data/platform-settings");
   await savePlatformSettings(settings);
 }
+
+export async function fetchPlatformDiscountCouponsAction() {
+  const { getPlatformDiscountCoupons } = await import("@/lib/data/platform-coupons");
+  return getPlatformDiscountCoupons();
+}
+
+export async function savePlatformDiscountCouponAction(
+  input: Omit<import("@/lib/data/platform-coupons").PlatformDiscountCoupon, "createdAt" | "redeemedCount">
+) {
+  const { savePlatformDiscountCoupon, getPlatformDiscountCoupons } = await import("@/lib/data/platform-coupons");
+  await savePlatformDiscountCoupon(input);
+  return getPlatformDiscountCoupons();
+}
+
+export async function deletePlatformDiscountCouponAction(couponId: string) {
+  const { deletePlatformDiscountCoupon, getPlatformDiscountCoupons } = await import("@/lib/data/platform-coupons");
+  await deletePlatformDiscountCoupon(couponId);
+  return getPlatformDiscountCoupons();
+}

@@ -23,7 +23,7 @@ export type CafeSettings = {
   purchasedDomainConnectedAt?: string;
 };
 
-export const CAFE_SETTINGS_KEY = "branda_qatrah_settings";
+export const CAFE_SETTINGS_KEY = "barndaksa_qatrah_settings";
 
 export const mockCafeSettings: CafeSettings = {
   cafeSlug: "qatrah",

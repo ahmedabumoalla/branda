@@ -14,7 +14,7 @@ export type CafeBranch = {
   active: boolean;
 };
 
-export const BRANCHES_KEY = "branda_qatrah_branches";
+export const BRANCHES_KEY = "barndaksa_qatrah_branches";
 
 export function buildGoogleMapsUrl(lat?: number, lng?: number, fallback?: string) {
   if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;

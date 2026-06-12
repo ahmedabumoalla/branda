@@ -14,12 +14,12 @@ export type CafeDomainSource =
   | "external_custom_domain"
   | "purchased_domain";
 
-export const CAFE_DOMAIN_SETTINGS_KEY = "branda_qatrah_domain_settings";
+export const CAFE_DOMAIN_SETTINGS_KEY = "barndaksa_qatrah_domain_settings";
 
 const DEFAULT_PLATFORM_DOMAIN =
   (typeof process !== "undefined" &&
-    process.env.NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN) ||
-  "branda.local";
+    process.env.NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN) ||
+  "barndaksa.local";
 
 export function getPlatformPublicDomain() {
   return DEFAULT_PLATFORM_DOMAIN.replace(/^https?:\/\//, "").replace(/\/$/, "");

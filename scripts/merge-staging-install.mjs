@@ -4,20 +4,20 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const OUT = path.join(ROOT, "supabase", "manual", "BRANDA_STAGING_INITIAL_INSTALL.sql");
+const OUT = path.join(ROOT, "supabase", "manual", "BARNDAKSA_STAGING_INITIAL_INSTALL.sql");
 
 const migrations = [
-  { num: "001", name: "branda_production_schema", file: "001_branda_production_schema.sql" },
-  { num: "002", name: "branda_storage_policies", file: "002_branda_storage_policies.sql" },
-  { num: "003", name: "branda_security_hardening", file: "003_branda_security_hardening.sql" },
-  { num: "004", name: "branda_critical_security_fixes", file: "004_branda_critical_security_fixes.sql" },
+  { num: "001", name: "barndaksa_production_schema", file: "001_barndaksa_production_schema.sql" },
+  { num: "002", name: "barndaksa_storage_policies", file: "002_barndaksa_storage_policies.sql" },
+  { num: "003", name: "barndaksa_security_hardening", file: "003_barndaksa_security_hardening.sql" },
+  { num: "004", name: "barndaksa_critical_security_fixes", file: "004_barndaksa_critical_security_fixes.sql" },
 ];
 
-const header = `-- BRANDA STAGING INITIAL INSTALL
+const header = `-- BARNDAKSA STAGING INITIAL INSTALL
 -- TARGET: Fresh empty Supabase Staging project only
 -- DO NOT RUN ON PRODUCTION
 -- SOURCE: Final reviewed migrations 001 -> 002 -> 003 -> 004
--- DATABASE STATUS BEFORE RUN: Must be empty / no Branda migrations previously applied
+-- DATABASE STATUS BEFORE RUN: Must be empty / no Barndaksa migrations previously applied
 
 `;
 

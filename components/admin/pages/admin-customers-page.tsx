@@ -2,7 +2,7 @@
 
 import { Power, Search, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminFilterBar,
   AdminPageShell,
@@ -48,7 +48,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
     <AdminPageShell
       title="عملاء الكوفيهات"
       subtitle="كل عميل موضح تابع لأي كوفي مع إنفاقه ونقاطه وحالة حسابه."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">

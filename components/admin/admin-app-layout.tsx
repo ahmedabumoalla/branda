@@ -11,7 +11,7 @@ export function AdminAppLayout({ children }: { children: ReactNode }) {
       mobileTitle="لوحة المنصة"
       sidebar={(close) => <AdminSidebar onNavigate={close} />}
     >
-      <div className="branda-admin-fields min-w-0">{children}</div>
+      <div className="barndaksa-admin-fields min-w-0">{children}</div>
     </ResponsiveAppShell>
   );
 }

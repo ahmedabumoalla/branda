@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { getCafePath } from "@/lib/cafe/theme-links";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
   slug: string;
@@ -12,7 +12,7 @@ type Props = {
   logoUrl?: string | null;
   themeId?: string;
   experience?: unknown;
-  customer?: BrandaCustomerSession | null;
+  customer?: BarndaksaCustomerSession | null;
   previewThemeId?: string | null;
 };
 

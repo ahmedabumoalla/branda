@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   BriefcaseBusiness,
+  BadgePercent,
   Building2,
   CircleDollarSign,
   ClipboardList,
@@ -17,17 +18,19 @@ import {
   Settings2,
   Users,
 } from "lucide-react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
-import { logoutBrandaAuth } from "@/lib/platform/auth";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
+import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 
 const links = [
   ["الرئيسية", "/admin", Home],
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
+  ["المالية", "/admin/finance", CircleDollarSign],
   ["الإيرادات", "/admin/revenue", CircleDollarSign],
   ["العمليات", "/admin/operations", ClipboardList],
   ["مراقبة الحجوزات", "/admin/reservations", CalendarDays],
   ["الباقات", "/admin/plans", Layers3],
+  ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
   ["إدارة محتوى المنصة", "/admin/content", Megaphone],
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
   ["إدارة المناديب", "/admin/representatives", UserRoundCog],
@@ -44,7 +47,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
   const router = useRouter();
 
   function handleLogout() {
-    logoutBrandaAuth();
+    logoutBarndaksaAuth();
     router.push("/login");
   }
 
@@ -54,7 +57,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps = {}) {
       className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-white/10 bg-gradient-to-b from-[#0f0c0a] via-[#1a1210] to-[#241610] text-[#F8F4EF] shadow-[-16px_0_48px_rgba(0,0,0,0.5)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
-        <BrandaLogo variant="dark" width={168} height={68} priority className="mx-auto" />
+        <BarndaksaLogo variant="dark" width={168} height={68} priority className="mx-auto" />
         <p className="mt-3 text-center text-xs font-bold text-[#CBB29C]">
           لوحة تحكم المنصة
         </p>

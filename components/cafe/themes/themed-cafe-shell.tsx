@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
@@ -23,7 +23,7 @@ type Props = {
 
 function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
   const ctx = useCafeThemePage(slug);
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
   const { settings, themeId, previewThemeId, isPreview, customIdentity, loadError } = ctx;
   const identityConfig = customIdentity ?? defaultCustomIdentityTheme();

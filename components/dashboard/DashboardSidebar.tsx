@@ -22,79 +22,42 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { fetchOwnerPlanIdAction, fetchPlatformPlansAction } from "@/app/actions/admin";
-import { fetchOwnerReservationsAction } from "@/app/actions/reservations";
-import { fetchOwnerOrdersAction } from "@/app/actions/orders";
-import { fetchOwnerExperienceRewardReviewsAction } from "@/app/actions/experience-rewards";
-import { fetchOwnerSettingsAction } from "@/app/actions/settings";
+import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import type { AppNotification } from "@/lib/mock/notifications";
 import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
-import { logoutBrandaAuth } from "@/lib/platform/auth";
-import type { PlatformFeature, PlatformPlan } from "@/lib/platform/admin-data";
+import { logoutBarndaksaAuth } from "@/lib/platform/auth";
+import { dashboardPlatformFeatures, type PlatformFeature, type PlatformPlan } from "@/lib/platform/admin-data";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
-const links: {
-  title: string;
-  href: string;
-  icon: React.ElementType;
-  feature: PlatformFeature;
-  badge?: string;
-}[] = [
-  { title: "الرئيسية", href: "/dashboard", icon: Home, feature: "menu" },
-  { title: "المنيو", href: "/dashboard/menu", icon: Package, feature: "menu" },
-  { title: "العروض", href: "/dashboard/offers", icon: Gift, feature: "offers" },
-  {
-    title: "الحجوزات",
-    href: "/dashboard/reservations",
-    icon: CalendarDays,
-    feature: "reservations",
-  },
-  { title: "العملاء", href: "/dashboard/customers", icon: Users, feature: "customers" },
-  { title: "بطاقات الولاء", href: "/dashboard/loyalty", icon: Star, feature: "loyalty" },
-  { title: "الفروع", href: "/dashboard/branches", icon: MapPin, feature: "branches" },
-  { title: "التقارير", href: "/dashboard/reports", icon: BarChart3, feature: "reports" },
-  {
-    title: "الأسئلة والتقييمات",
-    href: "/dashboard/reviews",
-    icon: MessageSquareText,
-    feature: "reviews",
-  },
-  {
-    title: "الأدوات التسويقية",
-    href: "/dashboard/marketing",
-    icon: Megaphone,
-    feature: "marketing",
-  },
-  {
-    title: "مراجعة توثيق التجارب",
-    href: "/dashboard/experience-reviews",
-    icon: BadgeCheck,
-    feature: "menu",
-  },
-  {
-    title: "طلبات الكوفي",
-    href: "/dashboard/orders",
-    icon: ShoppingBag,
-    feature: "orders",
-  },
-  {
-    title: "إعدادات الكوفي",
-    href: "/dashboard/settings",
-    icon: Settings,
-    feature: "settings",
-  },
-  { title: "ثيم الكوفي", href: "/dashboard/theme", icon: Palette, feature: "theme" },
-  {
-    title: "الاشتراك والباقات",
-    href: "/dashboard/subscription",
-    icon: CreditCard,
-    feature: "settings",
-  },
-];
+const featureIcons: Record<PlatformFeature, React.ElementType> = {
+  home: Home,
+  menu: Package,
+  offers: Gift,
+  reservations: CalendarDays,
+  customers: Users,
+  loyalty: Star,
+  branches: MapPin,
+  reports: BarChart3,
+  reviews: MessageSquareText,
+  marketing: Megaphone,
+  experience_reviews: BadgeCheck,
+  orders: ShoppingBag,
+  settings: Settings,
+  theme: Palette,
+  subscription: CreditCard,
+};
+
+const links = dashboardPlatformFeatures.map((feature) => ({
+  title: feature.title,
+  href: feature.href,
+  icon: featureIcons[feature.id],
+  feature: feature.id,
+}));
 
 type SidebarProps = {
   onNavigate?: () => void;
@@ -122,36 +85,37 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const [pendingReservations, setPendingReservations] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [pendingExperienceReviews, setPendingExperienceReviews] = useState(0);
+  const [initialNotifications, setInitialNotifications] = useState<AppNotification[]>([]);
 
   const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
   const cafeName = cafeSettings.cafeName || "الكوفي";
   const cafeSlug = cafeSettings.cafeSlug;
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
-        const [planId, platformPlans, settings, reservations, orders, experienceReviews] = await Promise.all([
-          fetchOwnerPlanIdAction(),
-          fetchPlatformPlansAction(),
-          fetchOwnerSettingsAction(),
-          fetchOwnerReservationsAction(),
-          fetchOwnerOrdersAction(),
-          fetchOwnerExperienceRewardReviewsAction(),
-        ]);
+        const snapshot = await fetchOwnerDashboardShellAction();
+        if (cancelled) return;
 
-        setActivePlanId(planId);
-        setPlans(platformPlans);
-        setCafeSettings(settings);
+        setActivePlanId(snapshot.planId);
+        setPlans(snapshot.plans);
+        setCafeSettings(snapshot.settings);
+        setInitialNotifications(snapshot.notifications);
 
-        const plan = platformPlans.find((item) => item.id === planId);
-        setPlanName(plan?.name ?? planId);
-        setPendingReservations(reservations.filter((item) => item.status === "بانتظار الرد").length);
-        setPendingOrders(orders.filter((item) => item.status === "بانتظار موافقة الكوفي").length);
-        setPendingExperienceReviews(experienceReviews.filter((item) => item.status === "pending").length);
+        const plan = snapshot.plans.find((item) => item.id === snapshot.planId);
+        setPlanName(plan?.name ?? snapshot.planId);
+        setPendingReservations(snapshot.pendingReservations);
+        setPendingOrders(snapshot.pendingOrders);
+        setPendingExperienceReviews(snapshot.pendingExperienceReviews);
       } catch (error) {
         console.error("[DashboardSidebar]", error);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
 
@@ -173,7 +137,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   }
 
   function handleLogout() {
-    logoutBrandaAuth();
+    logoutBarndaksaAuth();
     router.push("/login");
   }
 
@@ -200,7 +164,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
       className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E7D7C6]/60 bg-gradient-to-b from-[#4A281D] via-[#311912] to-[#311912] text-[#FCF8F3] shadow-[-12px_0_40px_rgba(49,25,18,0.35)]"
     >
       <div className="border-b border-white/10 px-6 py-7">
-        <BrandaLogo
+        <BarndaksaLogo
           variant="dark"
           width={160}
           height={64}
@@ -244,7 +208,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         </div>
 
         <div className="mt-5 flex gap-2">
-          <NotificationsPanel />
+          <NotificationsPanel initialNotifications={initialNotifications} />
 
           <button
             type="button"

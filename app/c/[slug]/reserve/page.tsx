@@ -16,7 +16,7 @@ import { useLocalAssetUrl } from "@/lib/cafe/use-local-asset-url";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import {
   getCustomerSession,
-  type BrandaCustomerSession,
+  type BarndaksaCustomerSession,
 } from "@/lib/customer/session";
 import type { CafeBranch } from "@/lib/mock/branches";
 import type { ReservationEventType } from "@/lib/mock/reservations";
@@ -86,7 +86,7 @@ function ReserveForm() {
   const { branches, reservationServices, loading, error } =
     usePublicCafeMenu(slug);
 
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [branchId, setBranchId] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [guests, setGuests] = useState("");

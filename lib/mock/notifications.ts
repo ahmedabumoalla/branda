@@ -24,7 +24,7 @@ export type AppNotification = {
   meta?: Record<string, string>;
 };
 
-export const NOTIFICATIONS_KEY = "branda_qatrah_notifications";
+export const NOTIFICATIONS_KEY = "barndaksa_qatrah_notifications";
 
 export function loadNotifications(): AppNotification[] {
   throw new Error("Use Supabase — fetch via lib/data/notifications");

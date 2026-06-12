@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, FileText } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { submitJobApplicationAction } from "@/app/actions/jobs";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 
 export default function CareersPage() {
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -36,7 +36,7 @@ export default function CareersPage() {
       <header className="border-b border-[#E7D7C6] bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
           <Link href="/">
-            <BrandaLogo variant="brown" width={145} height={56} priority />
+            <BarndaksaLogo variant="brown" width={145} height={56} priority />
           </Link>
           <Link
             href="/"

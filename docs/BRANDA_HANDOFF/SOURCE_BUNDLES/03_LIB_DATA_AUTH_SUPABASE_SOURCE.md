@@ -1,6 +1,6 @@
 # Lib Data Auth Supabase Source
 
-# File: lib/branda/env.ts
+# File: lib/barndaksa/env.ts
 
 ```typescript
 /** Safe env access — never log secrets */
@@ -52,7 +52,7 @@ export function isSupabaseConfigured(): boolean {
 # File: lib/customer/session.ts
 
 ```typescript
-export type BrandaCustomerSession = {
+export type BarndaksaCustomerSession = {
   id: string;
   cafeSlug: string;
   fullName: string;
@@ -68,20 +68,20 @@ export function getCustomerKey(_slug: string) {
 }
 
 /** Load customer session from Supabase Auth (server action) */
-export async function getCustomerSession(slug: string): Promise<BrandaCustomerSession | null> {
+export async function getCustomerSession(slug: string): Promise<BarndaksaCustomerSession | null> {
   const { getCustomerSessionAction } = await import("@/app/actions/auth");
   return getCustomerSessionAction(slug);
 }
 
 /** @deprecated Sessions are managed by Supabase Auth — use loginCustomerAction */
-export function setCustomerSession(_slug: string, _session: BrandaCustomerSession) {
+export function setCustomerSession(_slug: string, _session: BarndaksaCustomerSession) {
   console.warn("[session] setCustomerSession is deprecated — use loginCustomerAction");
 }
 
 export async function updateCustomerSession(
   slug: string,
-  updates: Partial<BrandaCustomerSession>
-): Promise<BrandaCustomerSession | null> {
+  updates: Partial<BarndaksaCustomerSession>
+): Promise<BarndaksaCustomerSession | null> {
   const current = await getCustomerSession(slug);
   if (!current) return null;
   return { ...current, ...updates };
@@ -93,7 +93,7 @@ export async function clearCustomerSession(_slug: string) {
 }
 
 /** @deprecated CRM profiles live in customer_profiles table */
-export function upsertCustomerProfile(_session: BrandaCustomerSession) {
+export function upsertCustomerProfile(_session: BarndaksaCustomerSession) {
   /* no-op — handled by loginCustomerAction */
 }
 
@@ -541,7 +541,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 import type {
 
@@ -682,7 +682,7 @@ export function mapCustomerProfileToSession(
 
   row: Record<string, unknown>
 
-): BrandaCustomerSession {
+): BarndaksaCustomerSession {
 
   return {
 
@@ -3628,12 +3628,12 @@ export type PlatformOperation = {
   createdAt: string;
 };
 
-export const PLATFORM_PLANS_KEY = "branda_platform_plans";
-export const PLATFORM_CAFES_KEY = "branda_platform_cafes";
-export const PLATFORM_CUSTOMERS_KEY = "branda_platform_customers";
-export const PLATFORM_OPERATIONS_KEY = "branda_platform_operations";
-export const PLATFORM_OPTIONS_KEY = "branda_platform_options";
-export const ACTIVE_CAFE_PLAN_KEY = "branda_qatrah_active_plan";
+export const PLATFORM_PLANS_KEY = "barndaksa_platform_plans";
+export const PLATFORM_CAFES_KEY = "barndaksa_platform_cafes";
+export const PLATFORM_CUSTOMERS_KEY = "barndaksa_platform_customers";
+export const PLATFORM_OPERATIONS_KEY = "barndaksa_platform_operations";
+export const PLATFORM_OPTIONS_KEY = "barndaksa_platform_options";
+export const ACTIVE_CAFE_PLAN_KEY = "barndaksa_qatrah_active_plan";
 
 export const allPlatformFeatures: { id: PlatformFeature; title: string }[] = [
   { id: "menu", title: "المنيو" },
@@ -3766,7 +3766,7 @@ export const mockPlatformOptions = {
   allowCafeSignup: true,
   requireCafeApproval: true,
   platformCommissionPercent: 3,
-  supportEmail: "support@branda.com",
+  supportEmail: "support@barndaksa.com",
   defaultPlanId: "starter",
 };
 ```
@@ -3774,30 +3774,30 @@ export const mockPlatformOptions = {
 # File: lib/platform/auth.ts
 
 ```typescript
-export type BrandaUserRole = "admin" | "cafe_owner";
+export type BarndaksaUserRole = "admin" | "cafe_owner";
 
 /** @deprecated Use Supabase Auth via loginOwnerAction */
-export type BrandaAuthUser = {
+export type BarndaksaAuthUser = {
   id: string;
   fullName: string;
   email: string;
-  role: BrandaUserRole;
+  role: BarndaksaUserRole;
   cafeSlug?: string;
   cafeId?: string;
   status: "نشط" | "موقوف";
 };
 
-export const BRANDA_AUTH_SESSION_KEY = "branda_auth_session";
+export const BARNDAKSA_AUTH_SESSION_KEY = "barndaksa_auth_session";
 
 /** Mock users removed — use Supabase Auth + development seed */
-export const mockAuthUsers: BrandaAuthUser[] = [];
+export const mockAuthUsers: BarndaksaAuthUser[] = [];
 
 export async function loginWithRole(email: string, password: string) {
   const { loginOwnerAction } = await import("@/app/actions/auth");
   return loginOwnerAction(email, password);
 }
 
-export async function getBrandaAuthSession() {
+export async function getBarndaksaAuthSession() {
   const { createClient } = await import("@/lib/supabase/client");
   const supabase = createClient();
   const {
@@ -3822,7 +3822,7 @@ export async function getBrandaAuthSession() {
   };
 }
 
-export async function logoutBrandaAuth() {
+export async function logoutBarndaksaAuth() {
   const { logoutAction } = await import("@/app/actions/auth");
   await logoutAction();
 }
@@ -3848,12 +3848,12 @@ export type CafeDomainSource =
   | "external_custom_domain"
   | "purchased_domain";
 
-export const CAFE_DOMAIN_SETTINGS_KEY = "branda_qatrah_domain_settings";
+export const CAFE_DOMAIN_SETTINGS_KEY = "barndaksa_qatrah_domain_settings";
 
 const DEFAULT_PLATFORM_DOMAIN =
   (typeof process !== "undefined" &&
-    process.env.NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN) ||
-  "branda.local";
+    process.env.NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN) ||
+  "barndaksa.local";
 
 export function getPlatformPublicDomain() {
   return DEFAULT_PLATFORM_DOMAIN.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -4065,7 +4065,7 @@ export async function resolveAvailability(domainInput: string): Promise<DomainAv
   }
 
   if (!isLiveDomainPurchaseEnabled()) {
-    const unavailableSeeds = ["taken", "google", "apple", "amazon", "vercel", "branda"];
+    const unavailableSeeds = ["taken", "google", "apple", "amazon", "vercel", "barndaksa"];
     const firstLabel = domain.split(".")[0] || "";
     const available = !unavailableSeeds.some((seed) => firstLabel.includes(seed));
     return {
@@ -4289,9 +4289,9 @@ export type DomainPriceResult = {
   message?: string;
 };
 
-export const DOMAIN_SEARCHES_KEY = "branda_qatrah_domain_searches";
-export const DOMAIN_PURCHASES_KEY = "branda_qatrah_domain_purchases";
-export const DOMAIN_PURCHASE_ACTIVE_KEY = "branda_qatrah_purchased_domain_active";
+export const DOMAIN_SEARCHES_KEY = "barndaksa_qatrah_domain_searches";
+export const DOMAIN_PURCHASES_KEY = "barndaksa_qatrah_domain_purchases";
+export const DOMAIN_PURCHASE_ACTIVE_KEY = "barndaksa_qatrah_purchased_domain_active";
 
 const SUPPORTED_TLDS = [".com", ".net", ".org", ".io", ".co", ".app", ".store", ".sa"] as const;
 
@@ -4351,7 +4351,7 @@ export function buildDomainOperation(input: {
 # File: lib/platform/experience-flow.ts
 
 ```typescript
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { ExperienceCampaign, ExperiencePlatform } from "@/lib/mock/experience-campaigns";
 import {
   approveExperienceSubmission as approveSubmissionDb,
@@ -4364,7 +4364,7 @@ import { createNotification } from "@/lib/data/notifications";
 
 export async function submitExperienceCampaign(input: {
   slug: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   campaignId: string;
   platform: ExperiencePlatform;
   videoUrl: string;
@@ -4530,7 +4530,7 @@ export async function markCustomerNotificationReadById(cafeSlug: string, id: str
 
 ```typescript
 import type { MenuProduct } from "@/lib/mock/menu";
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { createPickupOrder, updateOrderStatus } from "@/lib/data/orders";
 import { createNotification } from "@/lib/data/notifications";
 
@@ -4538,7 +4538,7 @@ export type CreateOrderInput = {
   slug: string;
   cafeId?: string;
   cafeName?: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   product: MenuProduct;
   quantity: number;
   branchName?: string;
@@ -4676,14 +4676,14 @@ export function getEnabledCafeFeatures(options?: { planId?: string; plans?: Plat
 # File: lib/platform/reservation-flow.ts
 
 ```typescript
-import type { BrandaCustomerSession } from "@/lib/customer/session";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { CafeBranch } from "@/lib/mock/branches";
 import type { ReservationEventType, ReservationStatus } from "@/lib/mock/reservations";
 import { createReservation, updateReservationStatus as updateReservationStatusDb } from "@/lib/data/reservations";
 
 export type CreateReservationInput = {
   slug: string;
-  customer: BrandaCustomerSession;
+  customer: BarndaksaCustomerSession;
   branch: CafeBranch;
   reservationType: ReservationEventType;
   guests: number;
@@ -4808,8 +4808,8 @@ export type PendingSubscription = {
   createdAt: string;
 };
 
-export const SUBSCRIPTION_HISTORY_KEY = "branda_qatrah_subscription_history";
-export const PENDING_SUBSCRIPTION_KEY = "branda_qatrah_pending_subscription";
+export const SUBSCRIPTION_HISTORY_KEY = "barndaksa_qatrah_subscription_history";
+export const PENDING_SUBSCRIPTION_KEY = "barndaksa_qatrah_pending_subscription";
 
 export function getSubscriptionHistory(): SubscriptionRecord[] {
   throw new Error("Use fetchOwnerSubscriptionHistoryAction");
@@ -4849,7 +4849,7 @@ export function getActivePlanIdFromStorage() {
 
 ```typescript
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/branda/env";
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from "@/lib/barndaksa/env";
 
 /** Service role — SERVER ONLY. Never import in Client Components. */
 export function createAdminClient() {
@@ -4864,7 +4864,7 @@ export function createAdminClient() {
 
 ```typescript
 import { createBrowserClient } from "@supabase/ssr";
-import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/branda/env";
+import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 
 export function createClient() {
   return createBrowserClient(requireSupabaseUrl(), requireSupabaseAnonKey());
@@ -4914,7 +4914,7 @@ export async function updateSession(request: NextRequest) {
 ```typescript
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/branda/env";
+import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 
 export async function createClient() {
   const cookieStore = await cookies();

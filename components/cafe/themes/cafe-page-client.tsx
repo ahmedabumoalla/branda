@@ -12,7 +12,7 @@ import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
-import { getCustomerSession, type BrandaCustomerSession } from "@/lib/customer/session";
+import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { formatSar } from "@/lib/format";
 import { isPromoActive, productFinalPrice, promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
 import { trackCafeVisitAction } from "@/app/actions/platform-upgrade";
@@ -103,15 +103,14 @@ function CafeHomeProductCard({
 function CafePageInner({ slug }: { slug: string }) {
   const { theme, settings, previewThemeId, loadError: cafeLoadError } = useCafeThemePage(slug);
   const { products, offers, loading, error: menuError } = usePublicCafeMenu(slug);
-  const [customer, setCustomer] = useState<BrandaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
 
   useEffect(() => {
-    const startedAt = Date.now();
-    const key = `branda_visit_session_${slug}`;
+    const key = `barndaksa_visit_session_${slug}`;
     let sessionId = sessionStorage.getItem(key);
 
     if (!sessionId) {
@@ -119,23 +118,18 @@ function CafePageInner({ slug }: { slug: string }) {
       sessionStorage.setItem(key, sessionId);
     }
 
+    const path = window.location.pathname;
+    const pingKey = `barndaksa_visit_ping_${slug}_${path}`;
+    const lastPing = Number(sessionStorage.getItem(pingKey) ?? 0);
+    if (Date.now() - lastPing < 15 * 60_000) return;
+    sessionStorage.setItem(pingKey, String(Date.now()));
+
     void trackCafeVisitAction({
       slug,
       sessionId,
-      path: window.location.pathname,
+      path,
       referrer: document.referrer || undefined,
     });
-
-    return () => {
-      const durationSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-      void trackCafeVisitAction({
-        slug,
-        sessionId: sessionId || "anonymous",
-        path: window.location.pathname,
-        referrer: document.referrer || undefined,
-        durationSeconds,
-      });
-    };
   }, [slug]);
 
   const availableProducts = products.filter((product) => product.available);

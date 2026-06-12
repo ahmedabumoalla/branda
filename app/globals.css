@@ -2,28 +2,28 @@
 
 :root {
   /* Official palette */
-  --branda-espresso-dark: #311912;
-  --branda-coffee-brown: #4a281d;
-  --branda-brand-brown: #6b3a25;
-  --branda-gold-accent: #d9a33f;
-  --branda-soft-gold: #f0c568;
-  --branda-cream-base: #fcf8f3;
-  --branda-warm-sand: #f2e7d9;
-  --branda-border-sand: #e7d7c6;
-  --branda-muted-text: #806a5e;
+  --barndaksa-espresso-dark: #311912;
+  --barndaksa-coffee-brown: #4a281d;
+  --barndaksa-brand-brown: #6b3a25;
+  --barndaksa-gold-accent: #d9a33f;
+  --barndaksa-soft-gold: #f0c568;
+  --barndaksa-cream-base: #fcf8f3;
+  --barndaksa-warm-sand: #f2e7d9;
+  --barndaksa-border-sand: #e7d7c6;
+  --barndaksa-muted-text: #806a5e;
 
   /* Backward-compat aliases */
-  --branda-brown: var(--branda-coffee-brown);
-  --branda-brown-dark: var(--branda-espresso-dark);
-  --branda-brown-luxury: var(--branda-brand-brown);
-  --branda-cream: var(--branda-cream-base);
-  --branda-cream-secondary: var(--branda-warm-sand);
-  --branda-gold: var(--branda-gold-accent);
-  --branda-muted: var(--branda-muted-text);
-  --branda-border: var(--branda-border-sand);
-  --branda-cream-text: var(--branda-soft-gold);
-  --background: var(--branda-cream-base);
-  --foreground: var(--branda-espresso-dark);
+  --barndaksa-brown: var(--barndaksa-coffee-brown);
+  --barndaksa-brown-dark: var(--barndaksa-espresso-dark);
+  --barndaksa-brown-luxury: var(--barndaksa-brand-brown);
+  --barndaksa-cream: var(--barndaksa-cream-base);
+  --barndaksa-cream-secondary: var(--barndaksa-warm-sand);
+  --barndaksa-gold: var(--barndaksa-gold-accent);
+  --barndaksa-muted: var(--barndaksa-muted-text);
+  --barndaksa-border: var(--barndaksa-border-sand);
+  --barndaksa-cream-text: var(--barndaksa-soft-gold);
+  --background: var(--barndaksa-cream-base);
+  --foreground: var(--barndaksa-espresso-dark);
 }
 
 @theme inline {
@@ -54,23 +54,23 @@ body {
   display: none;
 }
 
-.branda-glow-gold {
+.barndaksa-glow-gold {
   box-shadow: 0 0 32px rgba(217, 163, 63, 0.15);
 }
 
-.branda-neumo {
+.barndaksa-neumo {
   box-shadow:
     8px 8px 24px rgba(49, 25, 18, 0.06),
     -6px -6px 20px rgba(255, 255, 255, 0.9);
 }
 
-.branda-neumo-inset {
+.barndaksa-neumo-inset {
   box-shadow:
     inset 3px 3px 8px rgba(49, 25, 18, 0.06),
     inset -2px -2px 6px rgba(255, 255, 255, 0.95);
 }
 
-@keyframes branda-fade {
+@keyframes barndaksa-fade {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -81,11 +81,11 @@ body {
   }
 }
 
-.animate-branda-fade {
-  animation: branda-fade 0.45s ease-out forwards;
+.animate-barndaksa-fade {
+  animation: barndaksa-fade 0.45s ease-out forwards;
 }
 
-@keyframes branda-slide {
+@keyframes barndaksa-slide {
   from {
     opacity: 0;
     transform: translateX(12px);
@@ -96,25 +96,25 @@ body {
   }
 }
 
-.animate-branda-slide {
-  animation: branda-slide 0.5s ease-out forwards;
+.animate-barndaksa-slide {
+  animation: barndaksa-slide 0.5s ease-out forwards;
 }
 
 /* Admin / dark panels — readable fields */
-.branda-admin-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-.branda-admin-fields select,
-.branda-admin-fields textarea {
+.barndaksa-admin-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.barndaksa-admin-fields select,
+.barndaksa-admin-fields textarea {
   background-color: #211711 !important;
   color: #f8e8d2 !important;
   border-color: rgba(246, 195, 91, 0.25) !important;
 }
 
-.branda-admin-fields input::placeholder,
-.branda-admin-fields textarea::placeholder {
+.barndaksa-admin-fields input::placeholder,
+.barndaksa-admin-fields textarea::placeholder {
   color: rgba(203, 178, 156, 0.75) !important;
 }
 
-.branda-admin-fields select option {
+.barndaksa-admin-fields select option {
   background-color: #211711;
   color: #f8e8d2;
 }

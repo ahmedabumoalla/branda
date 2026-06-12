@@ -2,7 +2,7 @@
 
 import { ClipboardList, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import {
   AdminFilterBar,
   AdminPageShell,
@@ -48,7 +48,7 @@ export function AdminOperationsPage({ initialOperations, configError }: Props) {
     <AdminPageShell
       title="كل العمليات"
       subtitle="سجل كامل لكل طلب وحجز ودفع وتقييم وتغيير يتم داخل المنصة."
-      action={<BrandaLogo variant="dark" width={140} height={56} />}
+      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[200px]">

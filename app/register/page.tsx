@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent, type ReactNode, type ElementType } from "react";
 import { registerCafeOwnerAction } from "@/app/actions/auth";
 import { GoogleMapPicker } from "@/components/maps/google-map-picker";
-import { BrandaLogo } from "@/components/ui/branda-logo";
+import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
 type BrandCategory = { id: string; label: string; available: boolean; icon: ElementType };
@@ -65,7 +65,7 @@ export default function RegisterPage() {
     if (result.ok && result.redirectTo) router.push(result.redirectTo);
   }
 
-  const fieldClass = "branda-neumo-inset h-14 w-full rounded-2xl border px-5 text-right font-bold outline-none";
+  const fieldClass = "barndaksa-neumo-inset h-14 w-full rounded-2xl border px-5 text-right font-bold outline-none";
 
   return (
     <main dir="rtl" className="grid min-h-screen lg:grid-cols-2" style={{ background: C.creamBase, color: C.espressoDark }}>
@@ -79,7 +79,7 @@ export default function RegisterPage() {
 
       <section className="flex min-w-0 items-start justify-center bg-white px-4 py-8 sm:px-6 sm:py-10">
         <div className="w-full max-w-[760px]">
-          <div className="mb-7 flex flex-col items-center text-center lg:hidden"><BrandaLogo variant="brown" width={180} height={72} /></div>
+          <div className="mb-7 flex flex-col items-center text-center lg:hidden"><BarndaksaLogo variant="brown" width={180} height={72} /></div>
           <h1 className="text-center text-3xl font-black" style={{ color: C.coffeeBrown }}>إنشاء حساب علامة تجارية</h1>
           <p className="mt-2 text-center font-bold text-[#806A5E]">املأ البيانات التالية بدون أمثلة داخل الخانات</p>
           <div className="my-6 grid grid-cols-2 overflow-hidden rounded-2xl border" style={{ borderColor: C.borderSand }}><Link href="/login" className="bg-white py-4 text-center font-black" style={{ color: C.mutedText }}>تسجيل الدخول</Link><span className="py-4 text-center font-black" style={{ background: C.coffeeBrown, color: C.creamBase }}>إنشاء حساب</span></div>
@@ -111,5 +111,5 @@ export default function RegisterPage() {
 }
 
 function PasswordField({ label, value, setValue, visible, toggle }: { label: string; value: string; setValue: (value: string) => void; visible: boolean; toggle: () => void }) {
-  return <Field label={label}><div className="relative"><input type={visible ? "text" : "password"} minLength={8} value={value} onChange={(e) => setValue(e.target.value)} required className="branda-neumo-inset h-14 w-full rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-5 pl-14 text-right font-bold outline-none" /><button type="button" onClick={toggle} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]">{visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div></Field>;
+  return <Field label={label}><div className="relative"><input type={visible ? "text" : "password"} minLength={8} value={value} onChange={(e) => setValue(e.target.value)} required className="barndaksa-neumo-inset h-14 w-full rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-5 pl-14 text-right font-bold outline-none" /><button type="button" onClick={toggle} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]">{visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}</button></div></Field>;
 }
