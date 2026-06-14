@@ -1180,7 +1180,7 @@ export function AdminPlansPage({ initialPlans, configError }: Props) {
       id: id || crypto.randomUUID(),
       name: name.trim(),
       priceMonthly: Number(priceMonthly) || 0,
-      description: description.trim() || "باقة مخصصة من إدارة منصة بارنداكسا.",
+      description: description.trim() || "باقة مخصصة من إدارة منصة برندة.",
       active: true,
       features,
     };
@@ -1556,7 +1556,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
         </nav>
 
         <div className={`flex items-center gap-2 rounded-full border px-4 py-2 ${theme.card}`}>
-          <span className="text-[11px] font-bold tracking-wide opacity-80">صُمم بواسطة بارنداكسا</span>
+          <span className="text-[11px] font-bold tracking-wide opacity-80">صُمم بواسطة برندة</span>
           <span className="text-[10px] font-medium opacity-50" aria-hidden>
             ·
           </span>
@@ -1565,7 +1565,7 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
           </span>
           <Image
             src={logoSrc}
-            alt="بارنداكسا"
+            alt="برندة"
             width={52}
             height={20}
             className="object-contain opacity-70"
@@ -9673,7 +9673,7 @@ export function MarketingPageClient({
       audience: audience.trim() || "كل العملاء",
       message:
         message.trim() ||
-        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر بارنداكسا.",
+        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر برندة.",
       code: code.trim() || undefined,
       discountPercent: discountPercent ? Number(discountPercent) : undefined,
       influencerName: influencerName.trim() || undefined,
@@ -12800,7 +12800,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               </div>
 
               <div className="rounded-2xl border border-[#E5D8CD] bg-white p-4">
-                <h3 className="text-xl font-black text-[#3A2117]">3) شراء دومين من بارنداكسا</h3>
+                <h3 className="text-xl font-black text-[#3A2117]">3) شراء دومين من برندة</h3>
                 <p className="mt-1 text-sm font-bold text-[#7A6255]">
                   ابحث عن دومين، افحص توفره، ثم أكمل الدفع والشراء والربط.
                 </p>
@@ -12861,7 +12861,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                           <p>
                             ملخص الدفع: {pricing.price} {pricing.currency} لمدة {domainYears} سنة
                           </p>
-                          <p>رسوم بارنداكسا: 0 (Placeholder)</p>
+                          <p>رسوم برندة: 0 (Placeholder)</p>
                         </div>
 
                         <div className="sm:col-span-2 flex flex-wrap gap-3">
@@ -14729,7 +14729,7 @@ export function BarndaksaLogo({
   return (
     <Image
       src={src}
-      alt="شعار بارنداكسا"
+      alt="شعار برندة"
       width={width}
       height={height}
       priority={priority}
@@ -14827,7 +14827,7 @@ export function DashboardPageShell({
     <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-[#6B3A25]">لوحة بارنداكسا</p>
+          <p className="font-black text-[#6B3A25]">لوحة برندة</p>
           <h1 className="mt-2 break-words text-2xl font-black text-[#311912] sm:text-3xl lg:text-4xl">
             {title}
           </h1>
@@ -15195,7 +15195,7 @@ type Props = {
 export function ResponsiveAppShell({
   children,
   sidebar,
-  mobileTitle = "بارنداكسا",
+  mobileTitle = "برندة",
   variant = "dashboard",
 }: Props) {
   const [open, setOpen] = useState(false);

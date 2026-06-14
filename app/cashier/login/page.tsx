@@ -24,7 +24,7 @@ export default function CashierLoginPage() {
   return (
     <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#F8F4EF] px-4">
       <section className="w-full max-w-md rounded-[32px] bg-white p-8 shadow-xl">
-        <p className="font-black text-[#6B3A25]">بارنداكسا كاشير</p>
+        <p className="font-black text-[#6B3A25]">برندة كاشير</p>
         <h1 className="mt-2 text-3xl font-black text-[#311912]">تسجيل دخول الكاشير</h1>
         <div className="mt-6 space-y-4">
           <input className="w-full rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold text-[#311912]" placeholder="البريد الإلكتروني" value={email} onChange={(e) => setEmail(e.target.value)} />

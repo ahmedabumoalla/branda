@@ -229,7 +229,7 @@ export function DashboardHomeClient({
           </div>
 
           <h2 className="mt-5 text-xl font-black text-[#311912]">
-            مساعد بارنداكسا الذكي
+            مساعد برندة الذكي
           </h2>
 
           <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">

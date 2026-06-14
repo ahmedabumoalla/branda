@@ -171,15 +171,15 @@ export async function registerCafeOwnerAction(input: {
     if (isBarndaksaEmailConfigured()) {
       await sendBarndaksaEmail({
         to: parsed.email.toLowerCase(),
-        subject: "مرحبًا بك في بارنداكسا",
+        subject: "مرحبًا بك في برندة",
         html: `
           <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
             <h2>مرحبًا ${escapeEmailHtml(parsed.ownerName)}</h2>
-            <p>تم إنشاء حساب العلامة التجارية <strong>${escapeEmailHtml(parsed.brandName)}</strong> في منصة بارنداكسا.</p>
+            <p>تم إنشاء حساب العلامة التجارية <strong>${escapeEmailHtml(parsed.brandName)}</strong> في منصة برندة.</p>
             <p>رابط الدخول: <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login">تسجيل الدخول</a></p>
           </div>
         `,
-        text: `مرحبًا ${parsed.ownerName}، تم إنشاء حساب ${parsed.brandName} في بارنداكسا.`,
+        text: `مرحبًا ${parsed.ownerName}، تم إنشاء حساب ${parsed.brandName} في برندة.`,
       }).catch((mailError) => console.error("[registerCafeOwnerAction:email]", mailError));
     }
 

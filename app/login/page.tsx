@@ -50,7 +50,7 @@ export default function LoginPage() {
           <Image src={LOGO.brownBg} alt="" width={200} height={200} className="pointer-events-none absolute -left-8 -top-8 opacity-25 object-contain" />
           <BarndaksaLogo variant="dark" width={200} height={80} priority className="relative" />
           <h1 className="relative mt-8 text-4xl font-black leading-tight">دخول لوحة التحكم</h1>
-          <p className="relative mt-5 max-w-md text-lg font-bold leading-9" style={{ color: C.warmSand }}>سجل دخولك لإدارة حسابك في بارنداكسا</p>
+          <p className="relative mt-5 max-w-md text-lg font-bold leading-9" style={{ color: C.warmSand }}>سجل دخولك لإدارة حسابك في برندة</p>
           <Link href="/" className="relative mt-8 inline-block font-black underline" style={{ color: C.softGold }}>العودة للصفحة الرئيسية</Link>
         </div>
         <SoftCard className="w-full p-5 sm:p-8">

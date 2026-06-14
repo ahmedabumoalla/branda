@@ -169,8 +169,8 @@ export async function cashierConfirmReservationCode(code: string) {
       await sendBarndaksaEmail({
         to: customerEmail,
         subject: "تم تأكيد حضور حجزك",
-        text: `تم تأكيد حضور حجزك في ${String(cafe?.name ?? "بارنداكسا")}.`,
-        html: `<div dir="rtl"><h2>تم تأكيد حضور الحجز</h2><p>العلامة: ${escapeEmailHtml(String(cafe?.name ?? "بارنداكسا"))}</p><p>نوع الحجز: ${escapeEmailHtml(String(reservation?.event_type ?? "حجز"))}</p><p>التاريخ: ${escapeEmailHtml(String(reservation?.reservation_date ?? ""))} ${escapeEmailHtml(String(reservation?.reservation_time ?? ""))}</p></div>`,
+        text: `تم تأكيد حضور حجزك في ${String(cafe?.name ?? "برندة")}.`,
+        html: `<div dir="rtl"><h2>تم تأكيد حضور الحجز</h2><p>العلامة: ${escapeEmailHtml(String(cafe?.name ?? "برندة"))}</p><p>نوع الحجز: ${escapeEmailHtml(String(reservation?.event_type ?? "حجز"))}</p><p>التاريخ: ${escapeEmailHtml(String(reservation?.reservation_date ?? ""))} ${escapeEmailHtml(String(reservation?.reservation_time ?? ""))}</p></div>`,
       }).catch(() => undefined);
     }
   }

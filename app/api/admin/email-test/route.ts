@@ -72,11 +72,11 @@ export async function POST(request: Request) {
 
     const result = await sendBarndaksaEmail({
       to,
-      subject: "اختبار Resend من بارنداكسا",
+      subject: "اختبار Resend من برندة",
       html: `
         <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
           <h2>تم ربط Resend بنجاح</h2>
-          <p>هذه رسالة اختبار من منصة بارنداكسا.</p>
+          <p>هذه رسالة اختبار من منصة برندة.</p>
           <p>وقت الإرسال: ${new Date().toISOString()}</p>
         </div>
       `,

@@ -117,7 +117,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
     <div dir="rtl">
       <DashboardPageShell
         title="الفروع والمواقع"
-        subtitle="حدد مواقع الفروع على الخريطة لتظهر للعملاء في تطبيق بارنداكسا والفرع الالكتروني"
+        subtitle="حدد مواقع الفروع على الخريطة لتظهر للعملاء في تطبيق برندة والفرع الالكتروني"
       >
         {configError ? (
           <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">

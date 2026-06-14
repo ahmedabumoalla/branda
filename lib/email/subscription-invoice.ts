@@ -22,7 +22,7 @@ export async function sendSubscriptionInvoiceEmail(subscription: Record<string, 
     <div dir="rtl" style="font-family:Arial,sans-serif;background:#fcf8f3;padding:24px;color:#241610;line-height:1.8">
       <div style="max-width:720px;margin:auto;background:white;border:1px solid #eadcc8;border-radius:24px;overflow:hidden">
         <div style="background:#241610;color:#f6c35b;padding:24px">
-          <h1 style="margin:0;font-size:26px">${invoiceType} - بارنداكسا</h1>
+          <h1 style="margin:0;font-size:26px">${invoiceType} - برندة</h1>
           <p style="margin:8px 0 0;color:#f8f4ef">رقم الفاتورة: ${invoiceNumber}</p>
         </div>
         <div style="padding:24px">
@@ -37,15 +37,15 @@ export async function sendSubscriptionInvoiceEmail(subscription: Record<string, 
             <tr><td style="border:1px solid #eadcc8;padding:10px">الخصم</td><td style="border:1px solid #eadcc8;padding:10px">${roundMoney(discount)} ر.س</td></tr>
             <tr><td style="border:1px solid #eadcc8;padding:10px"><strong>الإجمالي شامل الضريبة</strong></td><td style="border:1px solid #eadcc8;padding:10px"><strong>${roundMoney(amount)} ر.س</strong></td></tr>
           </table>
-          <p style="margin-top:22px;color:#6b3a25">شكرًا لاشتراككم في منصة بارنداكسا.</p>
+          <p style="margin-top:22px;color:#6b3a25">شكرًا لاشتراككم في منصة برندة.</p>
         </div>
       </div>
     </div>`;
 
   await sendBarndaksaEmail({
     to,
-    subject: `${invoiceType} من بارنداكسا - ${invoiceNumber}`,
+    subject: `${invoiceType} من برندة - ${invoiceNumber}`,
     html,
-    text: `${invoiceType} من بارنداكسا. الإجمالي شامل الضريبة: ${roundMoney(amount)} ر.س`,
+    text: `${invoiceType} من برندة. الإجمالي شامل الضريبة: ${roundMoney(amount)} ر.س`,
   });
 }

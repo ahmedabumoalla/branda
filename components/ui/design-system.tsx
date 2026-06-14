@@ -81,7 +81,7 @@ export function DashboardPageShell({
     <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="font-black text-[#6B3A25]">لوحة بارنداكسا</p>
+          <p className="font-black text-[#6B3A25]">لوحة برندة</p>
           <h1 className="mt-2 break-words text-2xl font-black text-[#311912] sm:text-3xl lg:text-4xl">
             {title}
           </h1>

@@ -1,4 +1,4 @@
-# تقرير ترقية تصميم منصة بارنداكسا
+# تقرير ترقية تصميم منصة برندة
 
 تاريخ التنفيذ: 2026-05-22  
 حالة البناء: `npm run build` — نجح بدون أخطاء TypeScript.
@@ -12,7 +12,7 @@
 - **Bento Grid** للوحات الرئيسية والتقارير والباقات والعملاء.
 - **Cyber-Eco Dark Mode** في لوحة الأدمن والثيم `cyber-eco-dark`.
 - **Neumorphism / Soft UI** في النماذج والكروت الداخلية ولوحة الكوفي.
-- **شعارات بارنداكسا الحقيقية** من `public/brand/` بدون نصوص بديلة.
+- **شعارات برندة الحقيقية** من `public/brand/` بدون نصوص بديلة.
 
 المنطق الحالي (mock + localStorage + الصلاحيات) محفوظ؛ أُضيفت طبقات للدفع الوهمي للاشتراك وربط الطلبات/الحجوزات بالأدمن.
 
@@ -46,7 +46,7 @@
 - `app/page.tsx` — صفحة رئيسية Bento + شعار + شرائح تلقائية
 - `app/login/page.tsx` — دخول بشعار dark على بانل بني
 - `app/register/page.tsx` — تسجيل بشعار brown / brown-bg
-- `app/globals.css` — متغيرات هوية بارنداكسا + أنيميشن fade/slide
+- `app/globals.css` — متغيرات هوية برندة + أنيميشن fade/slide
 
 ### لوحة الكوفي
 - `app/dashboard/layout.tsx` — هامش جانبي 280px
@@ -64,7 +64,7 @@
 - `components/cafe/cafe-page-client.tsx` — صفحة مختصرة، هيرو، تنقل أيقوني، بانر/منتج واحد بتناوب 5 ثوانٍ
 - `components/cafe/product-detail-client.tsx` — طلب فعلي + ضريبة + ولاء + ثيم
 - `app/c/[slug]/reserve/page.tsx` — حجز احترافي + `createReservationFlow`
-- `app/c/[slug]/login/page.tsx` — شعار بارنداكسا + Soft UI
+- `app/c/[slug]/login/page.tsx` — شعار برندة + Soft UI
 
 ---
 
@@ -220,7 +220,7 @@
 | صفحة الكوفي العامة | لوجو الكوفي من الإعدادات إن وُجد، وإلا `barndaksa-logo-brown.png` |
 | Dashboard sidebar — كوفي بدون لوجو مرفوع | `barndaksa-logo-brown.png` داخل بطاقة الكوفي |
 
-مكوّن: `<BarndaksaLogo variant="dark|brown|brown-bg" />` — لا يستخدم حرف «ق» أو نص «بارنداكسا» كبديل.
+مكوّن: `<BarndaksaLogo variant="dark|brown|brown-bg" />` — لا يستخدم حرف «ق» أو نص «برندة» كبديل.
 
 ---
 
@@ -228,7 +228,7 @@
 
 | ID | الاسم | التأثير (`getThemeClasses`) |
 |----|-------|------------------------------|
-| `classic-barndaksa` | كلاسيك بارنداكسا | كريمي + بني كلاسيكي |
+| `classic-barndaksa` | كلاسيك برندة | كريمي + بني كلاسيكي |
 | `cyber-eco-dark` | سايبر إيكو داكن | خلفية داكنة + ذهبي + حدود شفافة |
 | `soft-cream-3d` | كريمي ناعم 3D | ظلال neumo على الكروت |
 | `luxury-brown-gold` | فاخر بني وذهبي | تدرج بني فاخر في الهيرو |
@@ -284,17 +284,17 @@ npm run build
 - **`app/admin/layout.tsx`**: إضافة class `barndaksa-admin-fields` على منطقة المحتوى.
 - صفحات الأدمن: `admin-cafes`, `admin-plans`, `admin-customers`, `admin-operations`, `admin-options` — استبدال `NeumoInput` + `darkInput` بـ `AdminInput` حيث يلزم.
 
-### صفحة الكوفي العامة — إزالة شعار بارنداكسا الكبير
+### صفحة الكوفي العامة — إزالة شعار برندة الكبير
 
-- **`components/cafe/cafe-page-client.tsx`**: تركيز كامل على هوية الكوفي؛ `CafeLogo` placeholder (حرف أول) بدون شعار بارنداكسا في الهيدر/الهيرو.
+- **`components/cafe/cafe-page-client.tsx`**: تركيز كامل على هوية الكوفي؛ `CafeLogo` placeholder (حرف أول) بدون شعار برندة في الهيدر/الهيرو.
 - **`components/cafe/cafe-logo.tsx`**: placeholder أنيق عند غياب لوجو الكوفي.
-- **`components/cafe/cafe-footer.tsx`**: «صُمم بواسطة بارنداكسا» + «Powered by Barndaksa» + شعار صغير (~52px) فقط في الفوتر.
+- **`components/cafe/cafe-footer.tsx`**: «صُمم بواسطة برندة» + «Powered by Barndaksa» + شعار صغير (~52px) فقط في الفوتر.
 
 ### مكوّنات مشتركة لصفحات العميل
 
 | ملف | الغرض |
 |-----|--------|
-| `components/cafe/cafe-header.tsx` | هيدر sticky بدون نص «مدعوم من بارنداكسا» |
+| `components/cafe/cafe-header.tsx` | هيدر sticky بدون نص «مدعوم من برندة» |
 | `components/cafe/cafe-footer.tsx` | فوتر موحّد |
 | `components/cafe/cafe-layout.tsx` | غلاف Header + محتوى + Footer + ثيم |
 
@@ -400,7 +400,7 @@ npm run build
 
 1. إضافة **wildcard domain** على Vercel: `*.barndaksa.sa` (أو الدومين المُعرّف في env).
 2. **Middleware / rewrite** يقرأ `hostname` → `resolveCafeSlugFromHost` → يوجّه داخليًا إلى `/c/[slug]`.
-3. التحقق من custom domain من لوحة بارنداكسا بعد CNAME إلى `cname.vercel-dns.com`.
+3. التحقق من custom domain من لوحة برندة بعد CNAME إلى `cname.vercel-dns.com`.
 
 ### صفحات الكوفي الداخلية (محدّث — تجربة كاملة)
 
@@ -448,7 +448,7 @@ npm run build
 | `lib/cafe/use-cafe-theme-page.ts` | Hook موحّد: ثيم + إعدادات + preview + مسارات |
 | `components/cafe/themes/themed-cafe-shell.tsx` | غلاف كل صفحات العميل + banner معاينة + bottom nav للجوال |
 | `components/cafe/themes/themed-cafe-header.tsx` | هيدر بروابط تحافظ على previewTheme |
-| `components/cafe/themes/themed-cafe-footer.tsx` | فوتر «صُمم بواسطة بارنداكسا» |
+| `components/cafe/themes/themed-cafe-footer.tsx` | فوتر «صُمم بواسطة برندة» |
 | `components/cafe/themes/themed-preview-banner.tsx` | شريط «وضع معاينة الثيم» |
 | `components/cafe/themes/themed-auth-panel.tsx` | login/register حسب الثيم |
 | `components/cafe/themes/themed-account-panel.tsx` | حساب العميل (طلبات، حجوزات، فواتير، ولاء) |
@@ -579,7 +579,7 @@ npm run build
 
 | Bucket | محتوى | سياسة |
 |--------|--------|--------|
-| `brand-assets` | شعارات بارنداكسا | public read |
+| `brand-assets` | شعارات برندة | public read |
 | `cafe-logos` | `/{cafe_id}/logo` | public read للكوفي النشط؛ write owner |
 | `product-images` | `/{cafe_id}/products/` | public read |
 | `offer-banners` | `/{cafe_id}/offers/` | public read |
@@ -736,7 +736,7 @@ npm run build
 
 ## 22. Domain Purchase via Vercel Registrar API
 
-> **قرار المنتج:** بارنداكسا تدعم الآن شراء الدومين من داخل لوحة الكوفي (وليس فقط ربط دومين خارجي).
+> **قرار المنتج:** برندة تدعم الآن شراء الدومين من داخل لوحة الكوفي (وليس فقط ربط دومين خارجي).
 
 ### Env Vars
 
@@ -799,7 +799,7 @@ NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN=barndaksa.local
 
 1. **الرابط الافتراضي** (`qatrah.{NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN}`).
 2. **ربط دومين يملكه الكوفي** (manual DNS).
-3. **شراء دومين من بارنداكسا**:
+3. **شراء دومين من برندة**:
    - بحث الدومين
    - فحص التوفر
    - عرض السعر + سنوات التسجيل + auto renew

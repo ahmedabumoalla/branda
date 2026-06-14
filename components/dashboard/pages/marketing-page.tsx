@@ -180,7 +180,7 @@ export function MarketingPageClient({
       audience: audience.trim() || "كل العملاء",
       message:
         message.trim() ||
-        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر بارنداكسا.",
+        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر برندة.",
       code: code.trim() || undefined,
       discountPercent: discountPercent ? Number(discountPercent) : undefined,
       influencerName: influencerName.trim() || undefined,

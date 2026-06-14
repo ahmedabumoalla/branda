@@ -141,6 +141,6 @@ export function getDomainSetupInstructions(slug: string) {
     cname: VERCEL_CNAME_TARGET,
     subdomain: getCafeSubdomainHost(slug),
     note:
-      "لتفعيل دومين خاص: أضف سجل CNAME يشير إلى cname.vercel-dns.com ثم انتظر التحقق من لوحة بارنداكسا.",
+      "لتفعيل دومين خاص: أضف سجل CNAME يشير إلى cname.vercel-dns.com ثم انتظر التحقق من لوحة برندة.",
   };
 }

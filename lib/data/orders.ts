@@ -82,7 +82,7 @@ export async function updateOrderStatus(
       cafeRaw && typeof cafeRaw === "object"
         ? (cafeRaw as Record<string, unknown>)
         : null;
-    const cafeName = String(cafe?.name ?? "بارنداكسا");
+    const cafeName = String(cafe?.name ?? "برندة");
     if (customerEmail) {
       await sendBarndaksaEmail({
         to: customerEmail,
@@ -164,7 +164,7 @@ export async function createPickupOrder(
       if (ownerEmail) {
         await sendBarndaksaEmail({
           to: ownerEmail,
-          subject: "طلب كوفي جديد وصل عبر بارنداكسا",
+          subject: "طلب كوفي جديد وصل عبر برندة",
           text: `وصل طلب كوفي جديد للفرع ${parsed.branchName ?? "غير محدد"}.`,
           html: `<div dir="rtl"><h2>طلب كوفي جديد</h2><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
         });
@@ -175,7 +175,7 @@ export async function createPickupOrder(
       if (customerEmail) {
         await sendBarndaksaEmail({
           to: customerEmail,
-          subject: "تم استلام طلبك عبر بارنداكسا",
+          subject: "تم استلام طلبك عبر برندة",
           text: `تم استلام طلبك لدى ${cafe.name}.`,
           html: `<div dir="rtl"><h2>تم استلام طلبك</h2><p>العلامة: ${escapeEmailHtml(cafe.name)}</p><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p></div>`,
         });

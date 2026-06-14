@@ -3682,7 +3682,7 @@ export const mockPlatformPlans: PlatformPlan[] = [
     id: "pro",
     name: "Pro",
     priceMonthly: 399,
-    description: "كل أدوات بارنداكسا للكوفيهات الاحترافية.",
+    description: "كل أدوات برندة للكوفيهات الاحترافية.",
     active: true,
     features: [
       "menu",
@@ -3975,7 +3975,7 @@ export function getDomainSetupInstructions(slug: string) {
     cname: VERCEL_CNAME_TARGET,
     subdomain: getCafeSubdomainHost(slug),
     note:
-      "لتفعيل دومين خاص: أضف سجل CNAME يشير إلى cname.vercel-dns.com ثم انتظر التحقق من لوحة بارنداكسا.",
+      "لتفعيل دومين خاص: أضف سجل CNAME يشير إلى cname.vercel-dns.com ثم انتظر التحقق من لوحة برندة.",
   };
 }
 

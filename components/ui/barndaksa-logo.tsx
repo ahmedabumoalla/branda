@@ -30,7 +30,7 @@ export function BarndaksaLogo({
   return (
     <Image
       src={src}
-      alt="شعار بارنداكسا"
+      alt="شعار برندة"
       width={width}
       height={height}
       priority={priority}

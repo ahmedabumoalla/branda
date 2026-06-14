@@ -29,7 +29,7 @@ export const mockMarketingCampaigns: MarketingCampaign[] = [
     title: "عرض افتتاح المنيو الرقمي",
     channel: "واتساب",
     audience: "عملاء الكوفي",
-    message: "خصم خاص على أول طلب من كوفي قطرة عبر بارنداكسا.",
+    message: "خصم خاص على أول طلب من كوفي قطرة عبر برندة.",
     code: "QATRAH15",
     discountPercent: 15,
     status: "نشطة",

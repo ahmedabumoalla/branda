@@ -299,7 +299,7 @@ export function ReservationsPageClient({
   function printReservationsSummary() {
     printThermalReceipt({
       title: "تقرير الحجوزات",
-      cafeName: "بارنداكسا",
+      cafeName: "برندة",
       lines: [
         { label: "إجمالي الحجوزات", value: reservations.length, strong: true },
         { label: "بانتظار الرد", value: pending },
@@ -313,7 +313,7 @@ export function ReservationsPageClient({
   function printReservationThermal(reservation: CafeReservation) {
     printThermalReceipt({
       title: "طلب حجز",
-      cafeName: "بارنداكسا",
+      cafeName: "برندة",
       subtitle: reservation.status,
       lines: [
         { label: "العميل", value: reservation.customerName, strong: true },
