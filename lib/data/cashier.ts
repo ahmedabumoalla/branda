@@ -177,26 +177,42 @@ export async function cashierConfirmReservationCode(code: string) {
   return result;
 }
 
+function makeLoyaltyScanReference(cardCode: string) {
+  const normalized =
+    cardCode
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, "")
+      .slice(0, 64) || "CARD";
+  const suffix = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return `LOYALTY-CARD-${normalized}-${Date.now()}-${suffix}`;
+}
+
 export async function cashierScanLoyalty(input: {
   cafeId: string;
   cardCode: string;
-  invoiceBarcode: string;
-  invoiceAmount: number;
-  operation: "stamp" | "redeem";
+  invoiceBarcode?: string;
+  invoiceAmount?: number;
+  operation?: "stamp" | "redeem";
 }) {
   const token = await getCashierToken();
   if (!token) throw new Error("جلسة الكاشير منتهية");
+
+  const normalizedCardCode =
+    parseBarndaksaQrPayload(input.cardCode, "loyalty-card") ??
+    input.cardCode.trim().toUpperCase();
+
+  const normalizedInvoiceBarcode = input.invoiceBarcode?.trim()
+    ? parseBarndaksaQrPayload(input.invoiceBarcode, "invoice") ?? input.invoiceBarcode.trim()
+    : makeLoyaltyScanReference(normalizedCardCode);
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
     p_cafe_id: input.cafeId,
-    p_card_code:
-      parseBarndaksaQrPayload(input.cardCode, "loyalty-card") ??
-      input.cardCode.trim().toUpperCase(),
-    p_invoice_barcode:
-      parseBarndaksaQrPayload(input.invoiceBarcode, "invoice") ??
-      input.invoiceBarcode.trim(),
-    p_invoice_amount: input.invoiceAmount,
-    p_operation: input.operation,
+    p_card_code: normalizedCardCode,
+    p_invoice_barcode: normalizedInvoiceBarcode,
+    p_invoice_amount: input.invoiceAmount ?? 0,
+    p_operation: input.operation ?? "stamp",
     p_cashier_session_token: token,
   });
   if (error) throw error;

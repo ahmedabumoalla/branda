@@ -63,9 +63,6 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
   const [newPassword, setNewPassword] = useState("");
 
   const [cardCode, setCardCode] = useState("");
-  const [invoiceBarcode, setInvoiceBarcode] = useState("");
-  const [invoiceAmount, setInvoiceAmount] = useState("");
-  const [operation, setOperation] = useState<"stamp" | "redeem">("stamp");
 
   const [saving, setSaving] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -152,9 +149,10 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     }
   }
 
-  async function runScan() {
-    if (!cardCode.trim() || !invoiceBarcode.trim()) {
-      setMessage("أدخل QR البطاقة وQR الفاتورة");
+  async function runScan(detectedCardCode?: string) {
+    const rawCardCode = detectedCardCode ?? cardCode;
+    if (!rawCardCode.trim()) {
+      setMessage("أدخل QR بطاقة العميل");
       return;
     }
 
@@ -162,17 +160,13 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     setMessage("");
     try {
       const result = await recordLoyaltyCardOperationAction({
-        cardCode: parseBarndaksaQrPayload(cardCode, "loyalty-card") ?? cardCode.trim().toUpperCase(),
-        invoiceBarcode: parseBarndaksaQrPayload(invoiceBarcode, "invoice") ?? invoiceBarcode.trim(),
-        invoiceAmount: Number(invoiceAmount || 0),
-        operation,
+        cardCode: parseBarndaksaQrPayload(rawCardCode, "loyalty-card") ?? rawCardCode.trim().toUpperCase(),
+        operation: "stamp",
       });
-      setMessage(operation === "stamp" ? `تم تأكيد العملية للعميل ${String(result.customerName)}` : `تم صرف المكافأة للعميل ${String(result.customerName)}`);
+      setMessage(`تم احتساب عملية شراء للعميل ${String(result.customerName)} وإضافة ختم في بطاقة الولاء`);
       setCardCode("");
-      setInvoiceBarcode("");
-      setInvoiceAmount("");
     } catch {
-      setMessage(operation === "stamp" ? "تعذر تأكيد الختم أو العملية" : "تعذر صرف المكافأة");
+      setMessage("تعذر احتساب عملية الشراء من بطاقة الولاء");
     } finally {
       setProcessing(false);
     }
@@ -228,17 +222,14 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
 
       <BentoGrid className="mb-6">
         <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />قارئ QR البطاقة والفاتورة</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><ScanLine className="h-6 w-6 text-[#6B3A25]" />قارئ QR بطاقة الولاء</h2>
+          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">اقرأ QR بطاقة العميل فقط، وسيتم احتساب عملية شراء مباشرة وإضافة ختم في بطاقة الولاء.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
             <NeumoInput placeholder="QR بطاقة العميل أو الكود" value={cardCode} onChange={(e) => setCardCode(e.target.value.toUpperCase())} />
-            <NeumoInput placeholder="QR الفاتورة أو رقمها" value={invoiceBarcode} onChange={(e) => setInvoiceBarcode(e.target.value)} />
-            <NeumoInput type="number" placeholder="قيمة الفاتورة اختياري" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
-            <NeumoSelect value={operation} onChange={(e) => setOperation(e.target.value as "stamp" | "redeem")}><option value="stamp">تأكيد ختم أو عملية شراء</option><option value="redeem">صرف مكافأة</option></NeumoSelect>
+            <PrimaryButton onClick={() => runScan()} disabled={processing}><BadgeCheck className="h-4 w-4" />احتساب عملية شراء</PrimaryButton>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
-            <BarcodeCameraScanner label="قراءة QR بطاقة العميل" expectedKind="loyalty-card" onDetected={(value) => setCardCode(value.toUpperCase())} />
-            <BarcodeCameraScanner label="قراءة QR الفاتورة" onDetected={setInvoiceBarcode} />
-            <PrimaryButton onClick={runScan} disabled={processing}><BadgeCheck className="h-4 w-4" />تنفيذ العملية</PrimaryButton>
+            <BarcodeCameraScanner label="قراءة QR بطاقة العميل" expectedKind="loyalty-card" onDetected={(value) => { setCardCode(value.toUpperCase()); void runScan(value); }} />
           </div>
         </BentoCard>
 
@@ -295,7 +286,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                   <span className="rounded-full bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#6B3A25]">{activity.actionType}</span>
                 </div>
                 <p className="mt-2 text-xs font-bold text-[#806A5E]">{activity.createdAt}</p>
-                <p className="mt-1 text-sm font-bold text-[#806A5E]">الهدف {activity.targetType || "-"} الفاتورة {activity.invoiceBarcode || "-"}</p>
+                <p className="mt-1 text-sm font-bold text-[#806A5E]">الهدف {activity.targetType || "-"} مرجع العملية {activity.invoiceBarcode || "-"}</p>
                 <pre className="mt-3 max-h-28 overflow-auto rounded-xl bg-[#17100d] p-3 text-left text-xs text-[#FCF8F3]">{JSON.stringify(activity.details, null, 2)}</pre>
               </SoftCard>
             ))}

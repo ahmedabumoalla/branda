@@ -1,10 +1,12 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   experimental: {
     cpus: 1,
-    workerThreads: false,
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
   },
-};
+} as NextConfig;
 
 export default nextConfig;

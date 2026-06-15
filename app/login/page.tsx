@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, Mail, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,7 +8,6 @@ import { requestPasswordResetAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { NeumoInput, PrimaryButton, SoftCard } from "@/components/ui/design-system";
 import { loginWithRole } from "@/lib/platform/auth";
-import { LOGO } from "@/lib/ui/brand";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
 export default function LoginPage() {
@@ -47,7 +45,6 @@ export default function LoginPage() {
     <main dir="rtl" className="min-h-screen" style={{ background: C.creamBase, color: C.espressoDark }}>
       <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-2">
         <div className="relative hidden overflow-hidden rounded-[40px] border p-10 shadow-2xl lg:block" style={{ borderColor: C.borderSand, background: `linear-gradient(to bottom right, ${C.coffeeBrown}, ${C.espressoDark})`, color: C.creamBase }}>
-          <Image src={LOGO.brownBg} alt="" width={200} height={200} className="pointer-events-none absolute -left-8 -top-8 opacity-25 object-contain" />
           <BarndaksaLogo variant="dark" width={200} height={80} priority className="relative" />
           <h1 className="relative mt-8 text-4xl font-black leading-tight">دخول لوحة التحكم</h1>
           <p className="relative mt-5 max-w-md text-lg font-bold leading-9" style={{ color: C.warmSand }}>سجل دخولك لإدارة حسابك في برندة</p>

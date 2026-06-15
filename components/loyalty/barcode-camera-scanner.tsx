@@ -67,7 +67,13 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
           try {
             const codes = await detector.detect(videoRef.current);
             const rawValue = codes[0]?.rawValue?.trim();
-            const value = rawValue ? parseBarndaksaQrPayload(rawValue, expectedKind) : null;
+            const parsedValue = rawValue ? parseBarndaksaQrPayload(rawValue, expectedKind) : null;
+            const isSecureBarndaksaPayload = rawValue?.startsWith("BARNDAKSA_QR:") ?? false;
+            const value =
+              parsedValue ??
+              (expectedKind === "loyalty-card" && rawValue && !isSecureBarndaksaPayload
+                ? rawValue.trim().toUpperCase()
+                : null);
             if (value) {
               onDetected(value);
               setOpen(false);

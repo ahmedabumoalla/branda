@@ -43,9 +43,9 @@ export async function confirmReservationCodeAction(code: string) {
 export async function cashierScanLoyaltyAction(input: {
   cafeId: string;
   cardCode: string;
-  invoiceBarcode: string;
-  invoiceAmount: number;
-  operation: "stamp" | "redeem";
+  invoiceBarcode?: string;
+  invoiceAmount?: number;
+  operation?: "stamp" | "redeem";
 }) {
   return cashierScanLoyalty(input);
 }

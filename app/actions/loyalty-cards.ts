@@ -45,9 +45,9 @@ export async function setLoyaltyCashierStatusAction(cashierId: string, active: b
 
 export async function recordLoyaltyCardOperationAction(input: {
   cardCode: string;
-  invoiceBarcode: string;
-  invoiceAmount: number;
-  operation: "stamp" | "redeem";
+  invoiceBarcode?: string;
+  invoiceAmount?: number;
+  operation?: "stamp" | "redeem";
 }) {
   return recordOwnerLoyaltyOperation(input);
 }

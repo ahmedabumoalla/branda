@@ -53,11 +53,8 @@ function playAlert() {
 export function CashierConsoleClient({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [cardCode, setCardCode] = useState("");
-  const [invoiceBarcode, setInvoiceBarcode] = useState("");
-  const [invoiceAmount, setInvoiceAmount] = useState("");
   const [reservationCode, setReservationCode] = useState("");
   const [experienceRewardCode, setExperienceRewardCode] = useState("");
-  const [operation, setOperation] = useState<"stamp" | "redeem">("stamp");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef(true);
@@ -282,38 +279,26 @@ export function CashierConsoleClient({ initialData }: Props) {
     }
   }
 
-  async function scanLoyalty() {
-    if (!cardCode.trim() || !invoiceBarcode.trim()) {
-      setMessage("أدخل QR البطاقة وQR الفاتورة");
+  async function scanLoyalty(detectedCardCode?: string) {
+    const rawCardCode = detectedCardCode ?? cardCode;
+    if (!rawCardCode.trim()) {
+      setMessage("أدخل QR بطاقة العميل");
       return;
     }
     setBusy(true);
     try {
       const parsedCardCode =
-        parseBarndaksaQrPayload(cardCode, "loyalty-card") ??
-        cardCode.trim().toUpperCase();
-      const parsedInvoiceBarcode =
-        parseBarndaksaQrPayload(invoiceBarcode, "invoice") ??
-        invoiceBarcode.trim();
+        parseBarndaksaQrPayload(rawCardCode, "loyalty-card") ??
+        rawCardCode.trim().toUpperCase();
       const result = await cashierScanLoyaltyAction({
         cafeId: data.cafe.id,
         cardCode: parsedCardCode,
-        invoiceBarcode: parsedInvoiceBarcode,
-        invoiceAmount: Number(invoiceAmount || 0),
-        operation,
+        operation: "stamp",
       });
-      setMessage(
-        operation === "stamp"
-          ? `تم تأكيد العملية للعميل ${String(result.customerName)}`
-          : `تم صرف المكافأة للعميل ${String(result.customerName)}`,
-      );
+      setMessage(`تم احتساب عملية شراء للعميل ${String(result.customerName)} وإضافة ختم في بطاقة الولاء`);
       setCardCode("");
-      setInvoiceBarcode("");
-      setInvoiceAmount("");
     } catch {
-      setMessage(
-        operation === "stamp" ? "تعذر تأكيد العملية" : "تعذر صرف المكافأة",
-      );
+      setMessage("تعذر احتساب عملية الشراء من بطاقة الولاء");
     } finally {
       setBusy(false);
     }
@@ -383,56 +368,35 @@ export function CashierConsoleClient({ initialData }: Props) {
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="rounded-[28px] bg-white p-5 shadow-sm">
             <h2 className="flex items-center gap-2 text-xl font-black">
-              <ScanLine className="h-6 w-6 text-[#6B3A25]" /> قراءة QR بطاقة
-              الولاء والفاتورة
+              <ScanLine className="h-6 w-6 text-[#6B3A25]" /> قراءة QR بطاقة الولاء
             </h2>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+              اقرأ QR بطاقة العميل فقط، وسيتم احتساب عملية شراء مباشرة وإضاءة كوب في بطاقة الولاء.
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
               <input
                 className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold"
                 placeholder="QR بطاقة العميل أو الكود"
                 value={cardCode}
                 onChange={(e) => setCardCode(e.target.value.toUpperCase())}
               />
-              <input
-                className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold"
-                placeholder="QR الفاتورة أو رقمها"
-                value={invoiceBarcode}
-                onChange={(e) => setInvoiceBarcode(e.target.value)}
-              />
-              <input
-                className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold"
-                placeholder="قيمة الفاتورة اختياري"
-                value={invoiceAmount}
-                onChange={(e) => setInvoiceAmount(e.target.value)}
-              />
-              <select
-                className="rounded-2xl bg-[#F8F4EF] px-4 py-4 font-bold"
-                value={operation}
-                onChange={(e) =>
-                  setOperation(e.target.value as "stamp" | "redeem")
-                }
+              <button
+                onClick={() => scanLoyalty()}
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912] disabled:opacity-60"
               >
-                <option value="stamp">تأكيد عملية شراء</option>
-                <option value="redeem">صرف مكافأة</option>
-              </select>
+                <BadgeCheck className="h-4 w-4" /> احتساب عملية شراء
+              </button>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <BarcodeCameraScanner
                 label="قراءة QR بطاقة العميل"
                 expectedKind="loyalty-card"
-                onDetected={(value) => setCardCode(value.toUpperCase())}
+                onDetected={(value) => {
+                  setCardCode(value.toUpperCase());
+                  void scanLoyalty(value);
+                }}
               />
-              <BarcodeCameraScanner
-                label="قراءة QR الفاتورة"
-                onDetected={setInvoiceBarcode}
-              />
-              <button
-                onClick={scanLoyalty}
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912] disabled:opacity-60"
-              >
-                <BadgeCheck className="h-4 w-4" /> تنفيذ العملية
-              </button>
             </div>
           </section>
 
@@ -627,7 +591,7 @@ export function CashierConsoleClient({ initialData }: Props) {
                       {String(log.createdAt)}
                     </p>
                     <p className="mt-1 text-sm font-bold text-[#806A5E]">
-                      الفاتورة {String(log.invoiceBarcode || "-")}
+                      مرجع العملية {String(log.invoiceBarcode || "-")}
                     </p>
                   </article>
                 ))
