@@ -133,8 +133,6 @@ export function SubscriptionPageClient({
       setPending(nextPending);
       setSelectedPlanId(planId);
       setStep("invoice");
-      const nextHistory = await fetchOwnerSubscriptionHistoryAction();
-      setHistory(nextHistory);
     } catch {
       alert("تعذر بدء عملية الاشتراك");
     }
@@ -150,7 +148,7 @@ export function SubscriptionPageClient({
   }
 
   const statusLabel: Record<string, string> = {
-    pending: "بانتظار الدفع",
+    pending: "لم يكتمل الدفع",
     paid: "مدفوع",
     failed: "فشل",
   };
@@ -234,9 +232,7 @@ export function SubscriptionPageClient({
                       : "3 — مكتمل"
                 }
                 hint={
-                  pending?.paymentStatus === "pending"
-                    ? "لديك باقة بانتظار الدفع"
-                    : undefined
+                  undefined
                 }
               />
             </BentoCard>
@@ -330,7 +326,7 @@ export function SubscriptionPageClient({
                       disabled={isCurrent}
                       className="mt-5 w-full"
                     >
-                      {isCurrent ? "مفعّلة حاليًا" : "اختيار والمتابعة للفاتورة"}
+                      {isCurrent ? "مفعّلة حاليًا" : "اختيار الباقة"}
                     </PrimaryButton>
                   </article>
                 );
@@ -393,8 +389,7 @@ export function SubscriptionPageClient({
               </SoftCard>
 
               <p className="mt-4 text-sm font-bold text-[#806A5E]">
-                لن يتم تغيير الباقة الحالية ({activePlan?.name}) حتى تضغط «الدفع وتفعيل
-                الباقة» وتنجح العملية.
+                لن يتم تغيير الباقة الحالية ({activePlan?.name}) إلا بعد إتمام الدفع بنجاح.
               </p>
 
               {paymentMessage ? (
@@ -556,7 +551,7 @@ export function SubscriptionPageClient({
                 ) : null}
               </div>
 
-              {selectedHistoryRecord.paymentStatus !== "paid" ? (
+              {selectedHistoryRecord.paymentStatus === "pending" ? (
                 <div className="mt-5">
                   <BarndaksaCardPaymentButton
                     subscriptionId={selectedHistoryRecord.id}

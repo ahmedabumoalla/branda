@@ -151,7 +151,7 @@ export async function getAdminFinanceDashboard(): Promise<BarndaksaFinanceDashbo
   });
 
   const paidSubscriptions = (subscriptionsRes.data ?? []).filter((sub) =>
-    ["active", "trialing", "paid"].includes(String(sub.status))
+    ["active", "trialing"].includes(String(sub.status))
   );
   const renewalCountByCafe = new Map<string, number>();
   paidSubscriptions.forEach((subscription) => {

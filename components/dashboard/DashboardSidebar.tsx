@@ -8,6 +8,7 @@ import {
   BarChart3,
   CalendarDays,
   CreditCard,
+  FileText,
   Gift,
   Home,
   LogOut,
@@ -35,9 +36,11 @@ import { dashboardPlatformFeatures, type PlatformFeature, type PlatformPlan } fr
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
 const featureIcons: Record<PlatformFeature, React.ElementType> = {
+  all: Star,
   home: Home,
   menu: Package,
   offers: Gift,
+  pages: FileText,
   reservations: CalendarDays,
   customers: Users,
   loyalty: Star,

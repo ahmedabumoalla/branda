@@ -12,6 +12,7 @@ import { cachedRequest } from "@/lib/performance/browser-cache";
 type CafeThemePageData = {
   settings: CafeSettings;
   customIdentity: CustomIdentityTheme | null;
+  features: string[];
   cachedAt: number;
 };
 
@@ -49,6 +50,7 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
     const value: CafeThemePageData = {
       settings: data.settings ?? fallbackSettings(slug),
       customIdentity: data.customIdentity ?? null,
+      features: Array.isArray(data.features) ? data.features.map(String) : [],
       cachedAt: Date.now(),
     };
     cafeThemePageCache.set(slug, value);
@@ -63,6 +65,7 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
 
 export function useCafeThemePage(slug: string) {
   const [customIdentity, setCustomIdentity] = useState<CustomIdentityTheme | null>(null);
+  const [features, setFeatures] = useState<string[]>([]);
   const [settings, setSettings] = useState<CafeSettings>(() => fallbackSettings(slug));
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function useCafeThemePage(slug: string) {
       if (cached && Date.now() - cached.cachedAt < CAFE_THEME_PAGE_CACHE_TTL_MS) {
         setSettings(cached.settings);
         setCustomIdentity(cached.customIdentity);
+        setFeatures(cached.features);
         setLoadError(null);
         setHydrated(true);
         return;
@@ -91,6 +95,7 @@ export function useCafeThemePage(slug: string) {
         if (cancelled) return;
         setSettings(data.settings);
         setCustomIdentity(data.customIdentity);
+        setFeatures(data.features);
         setLoadError(null);
       } catch (error) {
         if (!cancelled) {
@@ -125,6 +130,7 @@ export function useCafeThemePage(slug: string) {
     experience,
     settings,
     customIdentity,
+    features,
     previewThemeId: null,
     isPreview: false,
     path,

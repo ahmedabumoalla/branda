@@ -24,6 +24,7 @@ import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals
 import { buildCustomIdentityCssVars, defaultCustomIdentityTheme, OVERLAY_OPACITY } from "@/lib/mock/custom-identity-theme";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath } from "@/lib/cafe/theme-links";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { formatSar } from "@/lib/format";
@@ -288,7 +289,8 @@ function todayKey() {
 }
 
 function CafePageInner({ slug }: { slug: string }) {
-  const { settings, previewThemeId, loadError: cafeLoadError, customIdentity } = useCafeThemePage(slug);
+  const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features } = useCafeThemePage(slug);
+  const hasFeature = (feature: string) => featureCodesAllow(features, feature);
   const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
@@ -516,9 +518,11 @@ function CafePageInner({ slug }: { slug: string }) {
             <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
               أحدث المنتجات
             </Link>
-            <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-              العروض
-            </Link>
+            {hasFeature("offers") ? (
+              <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
+                العروض
+              </Link>
+            ) : null}
             <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
               المنتجات
             </Link>
@@ -528,14 +532,16 @@ function CafePageInner({ slug }: { slug: string }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link
-              href={getCafePath(slug, "account", previewThemeId)}
-              className="hidden items-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] sm:inline-flex"
-              title="بطاقة الولاء الخاصة بالعلامة التجارية"
-            >
-              <WalletCards className="h-4 w-4" />
-              بطاقة الولاء
-            </Link>
+            {hasFeature("loyalty") ? (
+              <Link
+                href={getCafePath(slug, "account", previewThemeId)}
+                className="hidden items-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] sm:inline-flex"
+                title="بطاقة الولاء الخاصة بالعلامة التجارية"
+              >
+                <WalletCards className="h-4 w-4" />
+                بطاقة الولاء
+              </Link>
+            ) : null}
             <Link
               href={customer ? getCafePath(slug, "account", previewThemeId) : getCafePath(slug, "login", previewThemeId)}
               className="inline-flex items-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-4 py-2 text-sm font-black text-[var(--ci-button-fg)]"
@@ -563,14 +569,18 @@ function CafePageInner({ slug }: { slug: string }) {
                 <ShoppingBag className="h-5 w-5" />
                 تصفح المنتجات
               </Link>
-              <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
-                <BadgePercent className="h-5 w-5" />
-                العروض والخصومات
-              </Link>
-              <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
-                <CalendarDays className="h-5 w-5" />
-                الحجوزات
-              </Link>
+              {hasFeature("offers") ? (
+                <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
+                  <BadgePercent className="h-5 w-5" />
+                  العروض والخصومات
+                </Link>
+              ) : null}
+              {hasFeature("reservations") ? (
+                <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
+                  <CalendarDays className="h-5 w-5" />
+                  الحجوزات
+                </Link>
+              ) : null}
             </div>
 
             <ActiveOfferSlider

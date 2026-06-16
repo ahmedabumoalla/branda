@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { getCafePath } from "@/lib/cafe/theme-links";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
   experience?: unknown;
   customer?: BarndaksaCustomerSession | null;
   previewThemeId?: string | null;
+  features?: string[];
 };
 
 export function ThemedCafeHeader({
@@ -22,10 +24,12 @@ export function ThemedCafeHeader({
   logoUrl,
   customer,
   previewThemeId,
+  features = [],
 }: Props) {
   const home = getCafePath(slug, "", previewThemeId);
   const account = getCafePath(slug, "account", previewThemeId);
   const login = getCafePath(slug, "login", previewThemeId);
+  const has = (feature: string) => featureCodesAllow(features, feature);
 
   return (
     <header
@@ -47,18 +51,26 @@ export function ThemedCafeHeader({
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
-          <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
-            أحدث المنتجات
-          </Link>
-          <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
-            العروض
-          </Link>
-          <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
-            المنيو
-          </Link>
-          <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
-            الحجز
-          </Link>
+          {has("menu") ? (
+            <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+              أحدث المنتجات
+            </Link>
+          ) : null}
+          {has("offers") ? (
+            <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+              العروض
+            </Link>
+          ) : null}
+          {has("menu") ? (
+            <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+              المنيو
+            </Link>
+          ) : null}
+          {has("reservations") ? (
+            <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+              الحجز
+            </Link>
+          ) : null}
         </nav>
 
         <Link

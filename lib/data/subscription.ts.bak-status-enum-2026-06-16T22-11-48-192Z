@@ -1,0 +1,339 @@
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireOwnerCafeContext } from "@/lib/data/cafes";
+import { getPlatformPlans } from "@/lib/data/admin";
+import { roundMoney } from "@/lib/finance/barndaksa-finance";
+import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
+
+function mapDbStatusToPaymentStatus(status: string): SubscriptionRecord["paymentStatus"] {
+  if (status === "active" || status === "trialing") return "paid";
+  if (status === "past_due") return "pending";
+  return "failed";
+}
+
+function mapDbRowToRecord(row: Record<string, unknown>): SubscriptionRecord {
+  const plan = row.platform_plans as { name: string } | null;
+  const status = row.status as string;
+  return {
+    id: row.id as string,
+    planId: row.plan_id as string,
+    planName: plan?.name ?? (row.plan_id as string),
+    amount: Number(row.amount_sar),
+    paymentStatus: mapDbStatusToPaymentStatus(status),
+    createdAt: row.created_at as string,
+    paidAt: status === "active" || status === "trialing" ? ((row.started_at as string) ?? (row.created_at as string)) : undefined,
+    paymentMethodLabel: (row.payment_method_label as string) ?? undefined,
+  };
+}
+
+function normalizeCoupon(code?: string | null) {
+  const value = code?.trim().toUpperCase() ?? "";
+  return value || null;
+}
+
+export type SubscriptionCouponPreview = {
+  ok: boolean;
+  message: string;
+  code?: string;
+  discountPercent?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+  representativeName?: string;
+};
+
+export async function getOwnerSubscriptionHistory(): Promise<SubscriptionRecord[]> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*, platform_plans(name)")
+    .eq("cafe_id", cafe.id)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(mapDbRowToRecord);
+}
+
+export async function getOwnerPendingSubscription(): Promise<PendingSubscription | null> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*, platform_plans(name)")
+    .eq("cafe_id", cafe.id)
+    .eq("status", "past_due")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const plan = data.platform_plans as { name: string } | null;
+  return {
+    id: data.id as string,
+    planId: data.plan_id as string,
+    planName: plan?.name ?? (data.plan_id as string),
+    amount: Number(data.amount_sar),
+    paymentStatus: "pending",
+    createdAt: data.created_at as string,
+  };
+}
+
+async function previewCouponForPlan(planId: string, planAmount: number, couponCode?: string | null): Promise<SubscriptionCouponPreview> {
+  const code = normalizeCoupon(couponCode);
+  if (!code) {
+    return { ok: true, message: "بدون كوبون", totalAmount: planAmount };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: platformCoupon, error: platformCouponError } = await admin
+    .from("platform_discount_coupons")
+    .select("id, code, title, discount_percent, eligible_plan_ids, active, valid_from, valid_until, max_redemptions, redeemed_count")
+    .eq("code", code)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (platformCouponError && platformCouponError.code !== "42P01") throw platformCouponError;
+
+  if (platformCoupon) {
+    const now = Date.now();
+    const validFrom = platformCoupon.valid_from ? new Date(String(platformCoupon.valid_from)).getTime() : null;
+    const validUntil = platformCoupon.valid_until ? new Date(String(platformCoupon.valid_until)).getTime() : null;
+    if (validFrom && now < validFrom) return { ok: false, message: "كوبون الخصم لم يبدأ بعد" };
+    if (validUntil && now > validUntil) return { ok: false, message: "انتهت صلاحية كوبون الخصم" };
+    const maxRedemptions = platformCoupon.max_redemptions == null ? null : Number(platformCoupon.max_redemptions);
+    if (maxRedemptions && Number(platformCoupon.redeemed_count ?? 0) >= maxRedemptions) {
+      return { ok: false, message: "تم استهلاك عدد مرات الكوبون" };
+    }
+    const eligible = Array.isArray(platformCoupon.eligible_plan_ids) ? (platformCoupon.eligible_plan_ids as string[]) : [];
+    if (eligible.length && !eligible.includes(planId)) {
+      return { ok: false, message: "الكوبون غير متاح لهذه الباقة" };
+    }
+    const discountPercent = Number(platformCoupon.discount_percent ?? 0);
+    const discountAmount = roundMoney(planAmount * discountPercent / 100);
+    return {
+      ok: true,
+      message: discountPercent > 0 ? `تم تطبيق خصم منصة ${discountPercent}%` : "تم تطبيق كوبون المنصة",
+      code,
+      discountPercent,
+      discountAmount,
+      totalAmount: Math.max(0, roundMoney(planAmount - discountAmount)),
+    };
+  }
+
+  const cafe = await requireOwnerCafeContext();
+  const { data: previousPaid } = await admin
+    .from("subscriptions")
+    .select("id")
+    .eq("cafe_id", cafe.id)
+    .gt("amount_sar", 0)
+    .in("status", ["active", "trialing", "paid"])
+    .limit(1)
+    .maybeSingle();
+
+  if (previousPaid) {
+    return { ok: false, message: "كوبون المندوب يستخدم مرة واحدة لأول اشتراك مدفوع فقط. استخدم كوبون خصم المنصة للتجديد أو الترقية." };
+  }
+
+  const { data, error } = await admin
+    .from("representative_coupons")
+    .select("id, code, discount_percent, eligible_plan_ids, active, valid_from, valid_until, platform_representatives(full_name, active)")
+    .eq("code", code)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
+    return { ok: false, message: "كوبون الخصم غير صالح" };
+  }
+
+  const rep = data.platform_representatives as { full_name?: string; active?: boolean } | null;
+  if (rep?.active === false) {
+    return { ok: false, message: "كوبون الخصم غير مفعل" };
+  }
+
+  const eligible = Array.isArray(data.eligible_plan_ids) ? (data.eligible_plan_ids as string[]) : [];
+  if (eligible.length && !eligible.includes(planId)) {
+    return { ok: false, message: "الكوبون غير متاح لهذه الباقة" };
+  }
+
+  const discountPercent = Number(data.discount_percent ?? 0);
+  const discountAmount = roundMoney(planAmount * discountPercent / 100);
+  return {
+    ok: true,
+    message: discountPercent > 0 ? `تم تطبيق خصم مندوب ${discountPercent}% لأول اشتراك مدفوع` : "تم ربط الكوبون بدون خصم مالي",
+    code,
+    discountPercent,
+    discountAmount,
+    totalAmount: Math.max(0, roundMoney(planAmount - discountAmount)),
+    representativeName: rep?.full_name,
+  };
+}
+
+export async function validateOwnerPlanCoupon(planId: string, couponCode?: string | null) {
+  const plans = await getPlatformPlans();
+  const plan = plans.find((item) => item.id === planId);
+  if (!plan) throw new Error("الباقة غير موجودة");
+  const amount = plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly;
+  return previewCouponForPlan(plan.id, amount, couponCode);
+}
+
+export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null): Promise<string> {
+  const cafe = await requireOwnerCafeContext();
+  const plans = await getPlatformPlans();
+  const plan = plans.find((item) => item.id === planId);
+  if (!plan) throw new Error("الباقة غير موجودة");
+
+  const baseAmount = plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly;
+  const coupon = await previewCouponForPlan(plan.id, baseAmount, couponCode);
+  if (!coupon.ok) throw new Error(coupon.message);
+
+  const supabase = createAdminClient();
+  const normalizedCoupon = normalizeCoupon(coupon.code);
+
+  const { data: platformCouponRow } = normalizedCoupon
+    ? await supabase
+        .from("platform_discount_coupons")
+        .select("id")
+        .eq("code", normalizedCoupon)
+        .eq("active", true)
+        .maybeSingle()
+    : { data: null } as { data: null };
+
+  const { data: couponRow } = normalizedCoupon && !platformCouponRow
+    ? await supabase
+        .from("representative_coupons")
+        .select("id, representative_id")
+        .eq("code", normalizedCoupon)
+        .eq("active", true)
+        .maybeSingle()
+    : { data: null } as { data: null };
+
+  if (couponRow) {
+    await supabase
+      .from("brand_referrals")
+      .upsert(
+        {
+          cafe_id: cafe.id,
+          representative_id: couponRow.representative_id,
+          coupon_id: couponRow.id,
+        },
+        { onConflict: "cafe_id", ignoreDuplicates: true }
+      );
+    await supabase
+      .from("cafes")
+      .update({ representative_id: couponRow.representative_id, referral_coupon_id: couponRow.id, referral_started_at: new Date().toISOString() })
+      .eq("id", cafe.id)
+      .is("referral_coupon_id", null);
+  }
+
+  await supabase
+    .from("subscriptions")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("cafe_id", cafe.id)
+    .eq("status", "past_due");
+
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .insert({
+      cafe_id: cafe.id,
+      plan_id: planId,
+      status: "past_due",
+      amount_sar: coupon.totalAmount ?? baseAmount,
+      base_amount_sar: baseAmount,
+      discount_amount_sar: coupon.discountAmount ?? 0,
+      coupon_code_snapshot: normalizedCoupon,
+      platform_coupon_id: platformCouponRow?.id ?? null,
+      representative_id: couponRow?.representative_id ?? null,
+      plan_name_snapshot: plan.name,
+      duration_unit: plan.durationUnit,
+      duration_count: plan.durationCount,
+      activation_source: "brand_card_checkout",
+      payment_provider: "pending",
+      payment_method_label: "بانتظار اختيار بوابة الدفع",
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function completeOwnerPlanPayment(subscriptionId?: string): Promise<boolean> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = createAdminClient();
+
+  let targetId = subscriptionId;
+  if (!targetId) {
+    const { data: pending } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("cafe_id", cafe.id)
+      .eq("status", "past_due")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!pending) return false;
+    targetId = pending.id as string;
+  }
+
+  const paidAt = new Date().toISOString();
+
+  await supabase
+    .from("subscriptions")
+    .update({ status: "cancelled", cancelled_at: paidAt })
+    .eq("cafe_id", cafe.id)
+    .in("status", ["active", "trialing"]);
+
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ status: "active", started_at: paidAt, paid_at: paidAt })
+    .eq("id", targetId)
+    .eq("cafe_id", cafe.id);
+
+  if (error) throw error;
+  await supabase.rpc("record_subscription_finance_distribution", { p_subscription_id: targetId });
+
+  const { data: paidSubscription } = await supabase
+    .from("subscriptions")
+    .select("id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,platform_coupon_id,created_at,cafes(name,owner_email,tax_number,commercial_register)")
+    .eq("id", targetId)
+    .maybeSingle();
+
+  if (paidSubscription?.platform_coupon_id) {
+    await supabase.rpc("increment_platform_coupon_redemption", { p_coupon_id: paidSubscription.platform_coupon_id });
+  }
+
+  if (paidSubscription) {
+    const { sendSubscriptionInvoiceEmail } = await import("@/lib/email/subscription-invoice");
+    await sendSubscriptionInvoiceEmail(paidSubscription as Record<string, unknown>).catch((mailError) => console.error("[completeOwnerPlanPayment:invoice]", mailError));
+  }
+
+  return true;
+}
+
+export async function failOwnerPlanPayment(): Promise<void> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("cafe_id", cafe.id)
+    .eq("status", "past_due");
+
+  if (error) throw error;
+}
+
+export async function getAvailablePlans() {
+  return getPlatformPlans();
+}
+
+export async function getOwnerActiveSubscription() {
+  return getOwnerPendingSubscription();
+}
+
+export async function getOwnerSubscriptionRequests() {
+  return [];
+}

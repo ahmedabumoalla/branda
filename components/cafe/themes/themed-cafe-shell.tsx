@@ -25,7 +25,7 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
   const ctx = useCafeThemePage(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
-  const { settings, themeId, previewThemeId, isPreview, customIdentity, loadError } = ctx;
+  const { settings, themeId, previewThemeId, isPreview, customIdentity, features, loadError } = ctx;
   const identityConfig = customIdentity ?? defaultCustomIdentityTheme();
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(identityConfig);
@@ -87,6 +87,7 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
           themeId="brand-identity-custom"
           customer={customer}
           previewThemeId={previewThemeId}
+          features={features}
         />
         <div className={`brand-cafe-fields mx-auto ${maxWidth} px-4 py-6 sm:px-6 sm:py-8 ${className}`}>
           {children}

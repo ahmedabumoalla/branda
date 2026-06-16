@@ -48,36 +48,15 @@ export async function getOwnerSubscriptionHistory(): Promise<SubscriptionRecord[
     .from("subscriptions")
     .select("*, platform_plans(name)")
     .eq("cafe_id", cafe.id)
+    .in("status", ["active", "trialing", "cancelled", "expired"])
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map(mapDbRowToRecord);
+  return (data ?? []).map(mapDbRowToRecord).filter((record) => record.paymentStatus !== "pending");
 }
 
 export async function getOwnerPendingSubscription(): Promise<PendingSubscription | null> {
-  const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("*, platform_plans(name)")
-    .eq("cafe_id", cafe.id)
-    .eq("status", "past_due")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-
-  const plan = data.platform_plans as { name: string } | null;
-  return {
-    id: data.id as string,
-    planId: data.plan_id as string,
-    planName: plan?.name ?? (data.plan_id as string),
-    amount: Number(data.amount_sar),
-    paymentStatus: "pending",
-    createdAt: data.created_at as string,
-  };
+  return null;
 }
 
 async function previewCouponForPlan(planId: string, planAmount: number, couponCode?: string | null): Promise<SubscriptionCouponPreview> {
@@ -129,7 +108,7 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
     .select("id")
     .eq("cafe_id", cafe.id)
     .gt("amount_sar", 0)
-    .in("status", ["active", "trialing", "paid"])
+    .in("status", ["active", "trialing"])
     .limit(1)
     .maybeSingle();
 
@@ -251,8 +230,8 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
       duration_unit: plan.durationUnit,
       duration_count: plan.durationCount,
       activation_source: "brand_card_checkout",
-      payment_provider: "paypal",
-      payment_method_label: "بطاقة بنكية",
+      payment_provider: "pending",
+      payment_method_label: "بانتظار اختيار بوابة الدفع",
     })
     .select("id")
     .single();

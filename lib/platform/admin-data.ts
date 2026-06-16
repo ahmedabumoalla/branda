@@ -1,7 +1,9 @@
 export type PlatformFeature =
+  | "all"
   | "home"
   | "menu"
   | "offers"
+  | "pages"
   | "reservations"
   | "customers"
   | "loyalty"
@@ -126,6 +128,7 @@ export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; hr
   { id: "home", title: "الرئيسية", href: "/dashboard" },
   { id: "menu", title: "المنيو", href: "/dashboard/menu" },
   { id: "offers", title: "العروض", href: "/dashboard/offers" },
+  { id: "pages", title: "الصفحات", href: "/dashboard/pages" },
   { id: "reservations", title: "الحجوزات", href: "/dashboard/reservations" },
   { id: "customers", title: "العملاء", href: "/dashboard/customers" },
   { id: "loyalty", title: "بطاقات الولاء", href: "/dashboard/loyalty" },
