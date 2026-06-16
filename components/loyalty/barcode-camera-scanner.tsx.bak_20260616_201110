@@ -1,0 +1,234 @@
+"use client";
+
+import { Camera, Keyboard, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { parseBarndaksaQrPayload, type BarndaksaQrKind } from "@/lib/loyalty/secure-qr-payload";
+
+type Props = {
+  label: string;
+  onDetected: (value: string) => void;
+  expectedKind?: BarndaksaQrKind;
+};
+
+type BarcodeDetectorShape = {
+  detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
+};
+
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorShape;
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor;
+  }
+}
+
+function normalizeDetectedValue(rawValue: string, expectedKind?: BarndaksaQrKind) {
+  const raw = rawValue.trim();
+  if (!raw) return null;
+
+  const parsed = parseBarndaksaQrPayload(raw, expectedKind);
+  if (parsed) return parsed.trim().toUpperCase();
+
+  if (expectedKind === "loyalty-card") {
+    try {
+      const url = new URL(raw);
+      const loyaltyIndex = url.pathname.split("/").findIndex((part) => part === "loyalty-card");
+      const codeFromPath = loyaltyIndex >= 0 ? url.pathname.split("/")[loyaltyIndex + 1] : "";
+      if (codeFromPath) return decodeURIComponent(codeFromPath).trim().toUpperCase();
+    } catch {
+      // raw is not a URL
+    }
+
+    const jsonValue = raw.match(/"value"\s*:\s*"([^"]+)"/i)?.[1];
+    if (jsonValue) return jsonValue.trim().toUpperCase();
+
+    // QR بطاقة الولاء الجديدة تحتوي كود البطاقة مباشرة.
+    if (!raw.startsWith("BARNDAKSA_QR:")) {
+      return raw.trim().toUpperCase();
+    }
+  }
+
+  return null;
+}
+
+export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastDetectedRef = useRef("");
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [manualCode, setManualCode] = useState("");
+  const [hint, setHint] = useState("وجّه الكاميرا إلى QR حتى تتم القراءة تلقائيًا");
+
+  useEffect(() => {
+    if (!open) return;
+
+    let stopped = false;
+    let timer: number | null = null;
+    let detector: BarcodeDetectorShape | null = null;
+
+    async function detectFrame() {
+      if (stopped || !videoRef.current || !detector) return;
+
+      try {
+        const video = videoRef.current;
+        if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+          if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
+          const canvas = canvasRef.current;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (context) {
+            const maxWidth = 960;
+            const scale = Math.min(1, maxWidth / video.videoWidth);
+            canvas.width = Math.max(320, Math.floor(video.videoWidth * scale));
+            canvas.height = Math.max(240, Math.floor(video.videoHeight * scale));
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const codes = await detector.detect(canvas);
+            const rawValue = codes[0]?.rawValue?.trim();
+            if (rawValue && rawValue !== lastDetectedRef.current) {
+              lastDetectedRef.current = rawValue;
+              const value = normalizeDetectedValue(rawValue, expectedKind);
+              if (value) {
+                onDetected(value);
+                setOpen(false);
+                return;
+              }
+              setHint("تمت قراءة QR لكنه ليس من النوع المطلوب لهذه العملية");
+            }
+          }
+        }
+      } catch {
+        // نستمر بالمحاولة لأن بعض الإطارات تفشل حسب الإضاءة أو تركيز الكاميرا.
+      }
+
+      timer = window.setTimeout(detectFrame, 180);
+    }
+
+    async function start() {
+      try {
+        setHint("جاري تشغيل الكاميرا...");
+        lastDetectedRef.current = "";
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setError("الكاميرا غير مدعومة في هذا المتصفح");
+          return;
+        }
+
+        if (!window.BarcodeDetector) {
+          setError("قارئ QR غير مدعوم في هذا المتصفح. استخدم Chrome محدث أو أدخل الكود يدويًا.");
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+
+        detector = new window.BarcodeDetector({
+          formats: ["qr_code", "code_128", "code_39", "ean_13"],
+        });
+
+        setHint("وجّه الكاميرا إلى QR بطاقة الولاء فقط");
+        timer = window.setTimeout(detectFrame, 250);
+      } catch {
+        setError("تعذر تشغيل الكاميرا. تأكد من السماح للمتصفح باستخدام الكاميرا.");
+      }
+    }
+
+    void start();
+
+    return () => {
+      stopped = true;
+      if (timer) window.clearTimeout(timer);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      canvasRef.current = null;
+    };
+  }, [expectedKind, onDetected, open]);
+
+  function submitManualCode() {
+    const value = normalizeDetectedValue(manualCode, expectedKind);
+    if (!value) {
+      setError("الكود المدخل غير صالح لهذه العملية");
+      return;
+    }
+    onDetected(value);
+    setManualCode("");
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setError("");
+          setManualCode("");
+          setHint("وجّه الكاميرا إلى QR حتى تتم القراءة تلقائيًا");
+          setOpen(true);
+        }}
+        className="inline-flex items-center gap-2 rounded-xl bg-[#6B3A25] px-4 py-3 text-sm font-black text-white"
+      >
+        <Camera className="h-4 w-4" />
+        {label}
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-lg rounded-[28px] bg-[#17100d] p-4 text-white">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-black">{label}</p>
+              <button type="button" onClick={() => setOpen(false)}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <video ref={videoRef} className="aspect-video w-full rounded-2xl bg-black object-cover" muted playsInline />
+
+            <p className="mt-4 text-center text-sm font-bold text-white/70">{hint}</p>
+
+            {error ? (
+              <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm font-bold">
+                {error}
+                <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
+                  <Keyboard className="h-4 w-4" />
+                  يمكنك إدخال كود البطاقة يدويًا بدل الكاميرا
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                value={manualCode}
+                onChange={(event) => setManualCode(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") submitManualCode();
+                }}
+                placeholder="أدخل كود البطاقة يدويًا"
+                className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-[#17100d] outline-none"
+              />
+              <button
+                type="button"
+                onClick={submitManualCode}
+                className="rounded-2xl bg-[#D9A33F] px-5 py-3 text-sm font-black text-[#17100d]"
+              >
+                تأكيد الكود
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
