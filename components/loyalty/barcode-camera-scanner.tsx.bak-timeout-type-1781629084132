@@ -65,7 +65,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
     if (!open) return;
 
     let stopped = false;
-    let timer: number | null = null;
+    let timer: ReturnType<typeof window.setTimeout> | null = null;
     let detector: BarcodeDetectorShape | null = null;
 
     async function detectFrame() {
