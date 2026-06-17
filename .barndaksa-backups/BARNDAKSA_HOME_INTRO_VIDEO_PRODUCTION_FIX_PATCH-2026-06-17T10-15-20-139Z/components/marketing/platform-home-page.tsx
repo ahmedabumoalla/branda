@@ -27,11 +27,6 @@ import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 import type { PublicPlatformHomeData } from "@/lib/data/platform-content";
 
-// BARNDAKSA_INTRO_VIDEO_PRODUCTION_SRC_FIX
-function platformMediaStreamUrl(id: string) {
-  return `/api/public/platform-media/${encodeURIComponent(id)}`;
-}
-
 const DEFAULT_HERO =
   "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=1200&h=900&fit=crop&q=80";
 
@@ -239,11 +234,9 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
     return () => window.clearInterval(interval);
   }, [data.brands.length]);
 
-  function openVideo() {
+  async function openVideo() {
     setVideoOpen(true);
-    void recordIntroVideoEventAction("intro_video_click").catch((error) => {
-      console.error("[intro_video_click]", error);
-    });
+    await recordIntroVideoEventAction("intro_video_click");
   }
 
   return (
@@ -382,20 +375,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
           <div className="relative w-full max-w-4xl rounded-[28px] bg-[#111] p-3" onClick={(event) => event.stopPropagation()}>
             <button onClick={() => setVideoOpen(false)} className="absolute -top-12 left-0 rounded-full bg-white/15 p-2 text-white"><X className="h-6 w-6" /></button>
             {data.introVideo ? (
-              <video
-                key={data.introVideo.id}
-                src={platformMediaStreamUrl(data.introVideo.id)}
-                controls
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="max-h-[75vh] w-full rounded-2xl"
-                onPlay={() => {
-                  void recordIntroVideoEventAction("intro_video_view").catch((error) => {
-                    console.error("[intro_video_view]", error);
-                  });
-                }}
-              />
+              <video src={data.introVideo.url} controls autoPlay className="max-h-[75vh] w-full rounded-2xl" onPlay={() => void recordIntroVideoEventAction("intro_video_view")} />
             ) : (
               <div className="flex h-64 items-center justify-center rounded-2xl text-center font-black text-white">الفيديو التعريفي سيتم إضافته من لوحة إدارة المحتوى</div>
             )}

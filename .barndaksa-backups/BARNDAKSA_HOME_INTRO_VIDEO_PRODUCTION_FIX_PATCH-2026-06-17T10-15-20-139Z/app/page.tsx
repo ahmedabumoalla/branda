@@ -1,8 +1,3 @@
-// BARNDAKSA_HOME_PAGE_VIDEO_DYNAMIC_FIX
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
-
 import { PlatformHomePage } from "@/components/marketing/platform-home-page";
 import {
   defaultPlatformContactSettings,
