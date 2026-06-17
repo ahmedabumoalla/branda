@@ -86,7 +86,9 @@ function ReserveForm() {
   const { branches, reservationServices, loading, error } =
     usePublicCafeMenu(slug);
 
-  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(
+    null,
+  );
   const [branchId, setBranchId] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [guests, setGuests] = useState("");
@@ -257,27 +259,50 @@ function ReserveForm() {
     );
 
   const loginPrompt = !customer ? (
-    <div className={`mt-4 rounded-2xl p-5 ${theme.card}`}>
-      <p className="font-black">سجّل دخولك لإتمام الحجز.</p>
+    <div
+      className={`mt-5 rounded-3xl border border-black/10 p-5 ${theme.card}`}
+    >
+      <p className="font-black">سجّل دخولك لإتمام الحجز المختار.</p>
+      <p className={`mt-1 text-sm font-bold ${theme.muted}`}>
+        بطاقات الحجز الظاهرة هنا هي نفس الخيارات التي أعدّتها العلامة التجارية
+        من لوحة التحكم.
+      </p>
       <Link
         href={`${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`}
         className={`mt-4 inline-flex rounded-2xl px-6 py-3 font-black ${theme.button}`}
       >
-        تسجيل الدخول
+        تسجيل الدخول وإكمال الحجز
       </Link>
     </div>
   ) : null;
 
-  const form = customer ? (
-    <div className="mt-6 space-y-6">
-      <div className="barndaksa-stagger-grid grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {serviceCards}
+  const servicesSection = (
+    <div className="mt-6 space-y-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className={`text-sm font-black ${theme.accent}`}>
+            خيارات العلامة التجارية
+          </p>
+          <h2 className="text-2xl font-black">اختر بطاقة الحجز</h2>
+        </div>
+        <p className={`text-sm font-bold ${theme.muted}`}>
+          يتم إرسال الطلب للعلامة التجارية ويردك التأكيد على بريدك الإلكتروني.
+        </p>
       </div>
-      {!reservationServices.length ? (
+      {reservationServices.length ? (
+        <div className="barndaksa-stagger-grid grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {serviceCards}
+        </div>
+      ) : (
         <div className={`rounded-2xl p-5 text-center font-black ${theme.card}`}>
           لا توجد خيارات حجز متاحة حاليًا
         </div>
-      ) : null}
+      )}
+    </div>
+  );
+
+  const form = customer ? (
+    <div className="mt-6 space-y-6">
       <div
         className={`barndaksa-premium-card grid gap-4 rounded-[28px] p-5 md:grid-cols-2 ${theme.card}`}
       >
@@ -340,7 +365,12 @@ function ReserveForm() {
       branchCount={activeBranches.length}
       serviceCount={reservationServices.length}
       loginPromptSlot={loginPrompt}
-      formSlot={form}
+      formSlot={
+        <>
+          {servicesSection}
+          {form}
+        </>
+      }
     />
   );
 }

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getPlatformPlans } from "@/lib/data/admin";
 import { roundMoney } from "@/lib/finance/barndaksa-finance";
+import { calculateSubscriptionAmount, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
 
 function mapDbStatusToPaymentStatus(status: string): SubscriptionRecord["paymentStatus"] {
@@ -151,21 +152,22 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
   };
 }
 
-export async function validateOwnerPlanCoupon(planId: string, couponCode?: string | null) {
+export async function validateOwnerPlanCoupon(planId: string, couponCode?: string | null, durationMonths = 1) {
   const plans = await getPlatformPlans();
   const plan = plans.find((item) => item.id === planId);
   if (!plan) throw new Error("الباقة غير موجودة");
-  const amount = plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly;
+  const amount = calculateSubscriptionAmount(plan, sanitizeDurationMonths(durationMonths));
   return previewCouponForPlan(plan.id, amount, couponCode);
 }
 
-export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null): Promise<string> {
+export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null, durationMonths = 1): Promise<string> {
   const cafe = await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
   const plan = plans.find((item) => item.id === planId);
   if (!plan) throw new Error("الباقة غير موجودة");
 
-  const baseAmount = plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly;
+  const selectedDurationMonths = sanitizeDurationMonths(durationMonths);
+  const baseAmount = calculateSubscriptionAmount(plan, selectedDurationMonths);
   const coupon = await previewCouponForPlan(plan.id, baseAmount, couponCode);
   if (!coupon.ok) throw new Error(coupon.message);
 
@@ -227,8 +229,8 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
       platform_coupon_id: platformCouponRow?.id ?? null,
       representative_id: couponRow?.representative_id ?? null,
       plan_name_snapshot: plan.name,
-      duration_unit: plan.durationUnit,
-      duration_count: plan.durationCount,
+      duration_unit: "month",
+      duration_count: selectedDurationMonths,
       activation_source: "brand_card_checkout",
       payment_provider: "pending",
       payment_method_label: "بانتظار اختيار بوابة الدفع",

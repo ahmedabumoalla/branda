@@ -38,9 +38,7 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
   if (pending) return pending;
 
   const request = cachedRequest(`public-cafe-theme:${slug}`, CAFE_THEME_PAGE_CACHE_TTL_MS, async () => {
-    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`);
 
     if (!res.ok) {
       throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل بيانات المقهى");

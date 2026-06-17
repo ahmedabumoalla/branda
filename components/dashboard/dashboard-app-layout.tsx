@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { ResponsiveAppShell } from "@/components/ui/responsive-app-shell";
-import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
+import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
@@ -42,7 +42,7 @@ export function DashboardAppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void fetchOwnerDashboardShellAction()
+    void getCachedDashboardShellSnapshot()
       .then((snapshot) => {
         if (cancelled) return;
         setGuard({ loading: false, activePlanId: snapshot.planId, plans: snapshot.plans });

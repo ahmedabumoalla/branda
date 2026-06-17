@@ -176,6 +176,7 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
       .from("cafe_cashier_activity_logs")
       .select("*, cafe_cashiers(full_name)")
       .eq("cafe_id", cafe.id)
+      .in("action_type", ["loyalty_card_scan", "loyalty_reward_redeem", "experience_reward_redeem", "reservation_code_scan", "reservation_checkin", "order_accept", "reservation_accept", "cashier_accept_order", "cashier_accept_reservation"])
       .order("created_at", { ascending: false })
       .limit(120),
   ]);

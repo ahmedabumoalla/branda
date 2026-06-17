@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { RoutePrefetcher } from "@/components/performance/route-prefetcher";
 import "./globals.css";
 
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
@@ -44,7 +45,10 @@ export default function RootLayout({
         } as React.CSSProperties
       }
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <RoutePrefetcher />
+        {children}
+      </body>
     </html>
   );
 }

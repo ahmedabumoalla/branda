@@ -8,6 +8,15 @@ export function getCafePath(
   previewTheme?: string | null
 ) {
   const normalized = path.replace(/^\//, "");
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname.toLowerCase();
+    const expectedSuffix = ".barndaksa.com";
+    const subdomain = host.endsWith(expectedSuffix) ? host.slice(0, -expectedSuffix.length) : "";
+    if (subdomain && subdomain === slug.toLowerCase() && !host.startsWith("www.")) {
+      const base = normalized ? `/${normalized}` : "/";
+      return withThemePreview(base, previewTheme);
+    }
+  }
   const base = normalized ? `/c/${slug}/${normalized}` : `/c/${slug}`;
   return withThemePreview(base, previewTheme);
 }

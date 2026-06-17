@@ -25,6 +25,9 @@ export type PlatformPlan = {
   priceMonthly: number;
   offerEnabled: boolean;
   offerPrice?: number;
+  offerLabel?: string | null;
+  offerEndsAt?: string | null;
+  durationOptions?: number[];
   durationUnit: PlanDurationUnit;
   durationCount: number;
   description: string;

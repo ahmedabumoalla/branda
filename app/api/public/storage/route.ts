@@ -6,14 +6,45 @@ import {
   isAnonPublicStorageBucket,
   isPrivateStorageBucketName,
 } from "@/lib/storage/public-storage-access";
-import { PRIVATE_STORAGE_TTL_SECONDS } from "@/lib/storage/resolve-storage-url";
+import { PUBLIC_STORAGE_TTL_SECONDS } from "@/lib/storage/resolve-storage-url";
 import { createClient } from "@/lib/supabase/server";
 import { immutableAssetCacheHeader } from "@/lib/performance/server-cache";
+import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
 const querySchema = z.object({
   bucket: z.string().min(1),
   path: z.string().min(1),
 });
+
+type SignedStoragePayload = {
+  url: string;
+  expiresIn: number;
+  bucket: string;
+  allowedBuckets: typeof ANON_PUBLIC_STORAGE_BUCKETS;
+};
+
+async function createPublishedSignedUrl(bucket: (typeof ANON_PUBLIC_STORAGE_BUCKETS)[number], path: string): Promise<SignedStoragePayload> {
+  const supabase = await createClient();
+  const access = await assertAnonPublicStorageAccess(supabase, bucket, path);
+  if (!access.ok) {
+    throw Object.assign(new Error(access.error), { status: access.status });
+  }
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, PUBLIC_STORAGE_TTL_SECONDS);
+
+  if (error || !data?.signedUrl) {
+    throw Object.assign(new Error("Forbidden or not found"), { status: 403 });
+  }
+
+  return {
+    url: data.signedUrl,
+    expiresIn: PUBLIC_STORAGE_TTL_SECONDS,
+    bucket,
+    allowedBuckets: ANON_PUBLIC_STORAGE_BUCKETS,
+  };
+}
 
 /**
  * Anonymous public signed URLs for published cafe assets only.
@@ -35,7 +66,7 @@ export async function GET(req: Request) {
   if (isPrivateStorageBucketName(bucket)) {
     return NextResponse.json(
       { error: "Private bucket requires authenticated session" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -43,27 +74,19 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unknown or disallowed bucket" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const access = await assertAnonPublicStorageAccess(supabase, bucket, path);
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: access.status });
+  try {
+    const payload = await cachedServerValue(
+      `public-storage:${bucket}:${path}`,
+      Math.max(60_000, (PUBLIC_STORAGE_TTL_SECONDS - 120) * 1000),
+      () => createPublishedSignedUrl(bucket, path),
+    );
+
+    return NextResponse.json(payload, {
+      headers: { "Cache-Control": immutableAssetCacheHeader(PUBLIC_STORAGE_TTL_SECONDS) },
+    });
+  } catch (error) {
+    const status = typeof (error as { status?: unknown }).status === "number" ? Number((error as { status?: unknown }).status) : 403;
+    const message = error instanceof Error ? error.message : "Forbidden or not found";
+    return NextResponse.json({ error: message }, { status });
   }
-
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(path, PRIVATE_STORAGE_TTL_SECONDS);
-
-  if (error || !data?.signedUrl) {
-    return NextResponse.json({ error: "Forbidden or not found" }, { status: 403 });
-  }
-
-  return NextResponse.json(
-    {
-      url: data.signedUrl,
-      expiresIn: PRIVATE_STORAGE_TTL_SECONDS,
-      bucket,
-      allowedBuckets: ANON_PUBLIC_STORAGE_BUCKETS,
-    },
-    { headers: { "Cache-Control": immutableAssetCacheHeader() } }
-  );
 }

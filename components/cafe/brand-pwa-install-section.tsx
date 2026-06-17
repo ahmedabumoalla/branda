@@ -11,8 +11,17 @@ type Props = {
 export function BrandPwaInstallSection({ slug, cafeName }: Props) {
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [message, setMessage] = useState("");
+  const [installed, setInstalled] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    const installedKey = `barndaksa_pwa_installed_${slug}`;
+    const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
+    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+    if (localStorage.getItem(installedKey) === "1" || mediaStandalone || navigatorStandalone) {
+      setInstalled(true);
+    }
+
     const manifest = document.createElement("link");
     manifest.rel = "manifest";
     manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
@@ -29,14 +38,25 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
       setInstallPrompt(event);
     };
 
+    const appInstalledHandler = () => {
+      localStorage.setItem(installedKey, "1");
+      setInstalled(true);
+      setProgress(100);
+    };
+
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", appInstalledHandler);
       manifest.remove();
     };
   }, [slug]);
 
   async function install() {
+    setProgress(15);
+    window.setTimeout(() => setProgress((current) => Math.max(current, 45)), 150);
+    window.setTimeout(() => setProgress((current) => Math.max(current, 75)), 450);
     const promptEvent = installPrompt as Event & {
       prompt?: () => Promise<void>;
       userChoice?: Promise<{ outcome: string }>;
@@ -44,12 +64,23 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
 
     if (promptEvent?.prompt) {
       await promptEvent.prompt();
+      const choice = await promptEvent.userChoice?.catch(() => null);
+      if (choice?.outcome === "accepted") {
+        localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
+        setInstalled(true);
+        setProgress(100);
+        return;
+      }
+      setProgress(90);
       setMessage("إذا لم يظهر التثبيت استخدم إضافة إلى الشاشة الرئيسية من المتصفح");
       return;
     }
 
+    setProgress(90);
     setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
   }
+
+  if (installed) return null;
 
   return (
     <section dir="rtl" className="mx-auto w-full max-w-6xl px-4 py-8">
@@ -71,6 +102,17 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
             تحميل التطبيق السريع
           </button>
         </div>
+        {progress > 0 ? (
+          <div className="mt-5 rounded-2xl bg-white/10 p-3">
+            <div className="mb-2 flex items-center justify-between text-xs font-black text-[#E7D7C6]">
+              <span>تجهيز التطبيق السريع</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-[#D9A33F] transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        ) : null}
         {message ? (
           <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 p-4 text-sm font-bold">
             <Smartphone className="h-5 w-5" />

@@ -50,9 +50,7 @@ function normalizePayload(json: Partial<PublicMenuPayload>): PublicMenuPayload {
 
 async function loadPublicMenu(slug: string) {
   return cachedRequest(`public-menu:${slug}`, TTL_MS, async () => {
-    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`);
     if (!res.ok) throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل المنيو");
     const payload = normalizePayload(await res.json());
     writeSessionCache(`barndaksa_public_menu_${slug}`, payload);

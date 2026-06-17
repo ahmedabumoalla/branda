@@ -23,7 +23,7 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
+import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
@@ -98,7 +98,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     let cancelled = false;
     void (async () => {
       try {
-        const snapshot = await fetchOwnerDashboardShellAction();
+        const snapshot = await getCachedDashboardShellSnapshot();
         if (cancelled) return;
 
         setActivePlanId(snapshot.planId);

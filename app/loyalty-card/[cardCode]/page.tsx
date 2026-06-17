@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Coffee, Gift, Home, WalletCards } from "lucide-react";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 type Props = {
   params: Promise<{ cardCode: string }>;
@@ -17,6 +19,9 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
   if (!view) notFound();
 
   const { card, program, cafeSlug, cafeName } = view;
+  const features = cafeSlug ? await getPublicCafeFeatureCodesBySlug(cafeSlug).catch(() => []) : [];
+  if (!featureCodesAllow(features, "loyalty")) notFound();
+
   const required = Math.max(1, Number(program.purchasesRequired || 7));
   const lit = Math.min(required, Number(card.stampsInCycle || 0));
   const backHref = query?.back || (cafeSlug ? `/c/${cafeSlug}/account` : "/");

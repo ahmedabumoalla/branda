@@ -27,6 +27,13 @@ import type {
   PendingSubscription,
   SubscriptionRecord,
 } from "@/lib/platform/subscription";
+import {
+  calculateSubscriptionAmount,
+  formatSubscriptionDuration,
+  getPlanDurationOptions,
+  isPlanOfferActive,
+  getPlanMonthlyAmount,
+} from "@/lib/platform/subscription-durations";
 
 type Step = "select" | "invoice" | "done";
 
@@ -62,6 +69,7 @@ export function SubscriptionPageClient({
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState<string | undefined>();
   const [selectedHistoryRecordId, setSelectedHistoryRecordId] = useState<string | null>(null);
+  const [selectedDurationMonths, setSelectedDurationMonths] = useState(1);
 
   const activePlan = plans.find((plan) => plan.id === activePlanId);
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
@@ -70,9 +78,12 @@ export function SubscriptionPageClient({
 
   const selectedPlanAmount = useMemo(() => {
     if (!selectedPlan) return 0;
-    return selectedPlan.offerEnabled && typeof selectedPlan.offerPrice === "number"
-      ? selectedPlan.offerPrice
-      : selectedPlan.priceMonthly;
+    return calculateSubscriptionAmount(selectedPlan, selectedDurationMonths);
+  }, [selectedDurationMonths, selectedPlan]);
+
+  const selectedPlanMonthlyAmount = useMemo(() => {
+    if (!selectedPlan) return 0;
+    return getPlanMonthlyAmount(selectedPlan);
   }, [selectedPlan]);
 
   const total = useMemo(() => {
@@ -89,7 +100,7 @@ export function SubscriptionPageClient({
     }
 
     try {
-      const preview = await validatePlanCouponAction(selectedPlan.id, couponCode);
+      const preview = await validatePlanCouponAction(selectedPlan.id, couponCode, selectedDurationMonths);
       setCouponMessage(preview.message);
       if (!preview.ok) {
         setCouponApplied(undefined);
@@ -99,7 +110,7 @@ export function SubscriptionPageClient({
       setCouponApplied(preview.code);
       setCouponDiscount(preview.discountAmount ?? 0);
       if (pending?.id) {
-        const subscriptionId = await startPlanCheckoutAction(selectedPlan.id, preview.code);
+        const subscriptionId = await startPlanCheckoutAction(selectedPlan.id, preview.code, selectedDurationMonths);
         setPending({
           id: subscriptionId,
           planId: selectedPlan.id,
@@ -121,12 +132,12 @@ export function SubscriptionPageClient({
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
     try {
-      const subscriptionId = await startPlanCheckoutAction(plan.id, couponApplied ?? couponCode);
+      const subscriptionId = await startPlanCheckoutAction(plan.id, couponApplied ?? couponCode, selectedDurationMonths);
       const nextPending: PendingSubscription = {
         id: subscriptionId,
         planId: plan.id,
         planName: plan.name,
-        amount: Math.max(0, Math.round(((plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly) - couponDiscount) * 100) / 100),
+        amount: Math.max(0, Math.round((calculateSubscriptionAmount(plan, selectedDurationMonths) - couponDiscount) * 100) / 100),
         paymentStatus: "pending",
         createdAt: new Date().toISOString(),
       };
@@ -245,6 +256,9 @@ export function SubscriptionPageClient({
               .filter((plan) => plan.active)
               .map((plan) => {
                 const isCurrent = plan.id === activePlanId;
+                const offerActive = isPlanOfferActive(plan);
+                const monthlyAmount = getPlanMonthlyAmount(plan);
+                const durationOptions = getPlanDurationOptions(plan);
 
                 return (
                   <article
@@ -273,12 +287,20 @@ export function SubscriptionPageClient({
                     <p className={`mt-2 text-sm font-bold ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>
                       {plan.description}
                     </p>
-                    <p
-                      className={`mt-4 text-3xl font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}
-                    >
-                      {plan.offerEnabled && typeof plan.offerPrice === "number" ? plan.offerPrice : plan.priceMonthly} ر.س
-                    </p>
-                    <p className={`mt-1 text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>شامل ضريبة القيمة المضافة</p>
+                    <div className="mt-4">
+                      <p className={`text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>السعر الأساسي شامل الضريبة</p>
+                      <p className={`${offerActive ? "text-sm line-through opacity-70" : "text-3xl"} font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}>
+                        {plan.priceMonthly} ر.س / شهر
+                      </p>
+                      {offerActive ? (
+                        <div className="mt-2 rounded-2xl bg-[#D9A33F]/15 px-3 py-2">
+                          <p className={`text-3xl font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}>{monthlyAmount} ر.س / شهر</p>
+                          <p className={`text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>
+                            {plan.offerLabel || "عرض على الباقة"}{plan.offerEndsAt ? ` ينتهي في ${plan.offerEndsAt}` : " لفترة محدودة"}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-2">
                       {getPlanLimits(plan).map((limit) => (
@@ -321,8 +343,40 @@ export function SubscriptionPageClient({
                       })}
                     </ul>
 
+                    {!isCurrent ? (
+                      <div className="mt-5 rounded-2xl bg-white/70 p-3">
+                        <label className="mb-2 block text-xs font-black text-[#806A5E]">مدة الاشتراك</label>
+                        <select
+                          value={selectedPlanId === plan.id ? selectedDurationMonths : 1}
+                          onChange={(event) => {
+                            setSelectedPlanId(plan.id);
+                            setSelectedDurationMonths(Number(event.target.value));
+                            setCouponApplied(undefined);
+                            setCouponDiscount(0);
+                            setCouponMessage("");
+                          }}
+                          className="h-12 w-full rounded-xl border border-[#E7D7C6] bg-white px-3 font-black text-[#311912]"
+                        >
+                          {durationOptions.map((option) => (
+                            <option key={option.months} value={option.months}>
+                              {option.label}{option.badge ? ` — ${option.badge}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-2 text-sm font-black text-[#6B3A25]">
+                          الإجمالي: {calculateSubscriptionAmount(plan, selectedPlanId === plan.id ? selectedDurationMonths : 1)} ر.س قبل الكوبون
+                        </p>
+                      </div>
+                    ) : null}
+
                     <PrimaryButton
-                      onClick={() => choosePlan(plan.id)}
+                      onClick={() => {
+                        if (selectedPlanId !== plan.id) {
+                          setSelectedPlanId(plan.id);
+                          setSelectedDurationMonths(1);
+                        }
+                        choosePlan(plan.id);
+                      }}
                       disabled={isCurrent}
                       className="mt-5 w-full"
                     >
@@ -342,14 +396,14 @@ export function SubscriptionPageClient({
                 <div>
                   <h2 className="text-2xl font-black text-[#311912]">ملخص الفاتورة</h2>
                   <p className="text-sm font-bold text-[#806A5E]">
-                    الباقة المختارة: {selectedPlan.name}
+                    الباقة المختارة: {selectedPlan.name} — مدة الاشتراك {formatSubscriptionDuration(selectedDurationMonths)}
                   </p>
                 </div>
               </div>
 
               <SoftCard className="mt-6 space-y-4">
                 <div className="flex justify-between font-bold">
-                  <span>سعر الباقة شامل الضريبة</span>
+                  <span>سعر الباقة شامل الضريبة ({formatSubscriptionDuration(selectedDurationMonths)})</span>
                   <span>{selectedPlanAmount} ر.س</span>
                 </div>
                 <div className="rounded-2xl border border-[#E7D7C6] bg-white p-3">

@@ -169,15 +169,25 @@ function ContactModal({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [state, setState] = useState<"idle" | "saving" | "done">("idle");
+  const [state, setState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [submitError, setSubmitError] = useState("");
 
   if (!open) return null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setState("saving");
-    await submitContactRequestAction({ fullName, email, message });
-    setState("done");
+    setSubmitError("");
+    try {
+      await submitContactRequestAction({ fullName, email, message });
+      setState("done");
+      setFullName("");
+      setEmail("");
+      setMessage("");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "تعذر إرسال الرسالة، حاول مرة أخرى");
+      setState("error");
+    }
   }
 
   return (
@@ -195,14 +205,21 @@ function ContactModal({
             وصلتنا رسالتك وسنتواصل معك قريبا
           </p>
         ) : (
-          <form onSubmit={submit} className="mt-5 space-y-3">
+          <>
+            {state === "error" && submitError ? (
+              <p className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-black text-red-700">
+                {submitError}
+              </p>
+            ) : null}
+            <form onSubmit={submit} className="mt-5 space-y-3">
             <input required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="الاسم" className="h-14 w-full rounded-2xl border border-[#E7D7C6] bg-white px-4 font-bold outline-none" />
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="البريد الإلكتروني" className="h-14 w-full rounded-2xl border border-[#E7D7C6] bg-white px-4 font-bold outline-none" />
             <textarea required value={message} onChange={(e) => setMessage(e.target.value)} placeholder="اكتب رسالتك" className="min-h-32 w-full rounded-2xl border border-[#E7D7C6] bg-white p-4 font-bold outline-none" />
             <button disabled={state === "saving"} className="h-14 w-full rounded-2xl bg-[#4A281D] font-black text-white">
               {state === "saving" ? "جاري الإرسال" : "إرسال"}
             </button>
-          </form>
+            </form>
+          </>
         )}
         <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-[#806A5E]">
           {contacts.email ? <span className="inline-flex items-center gap-1"><Mail className="h-4 w-4" />{contacts.email}</span> : null}

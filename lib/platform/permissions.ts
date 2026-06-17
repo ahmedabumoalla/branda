@@ -30,11 +30,7 @@ export function cafeHasFeature(
   const featureList = plan.features.map(String);
   if (featureList.includes("all")) return true;
 
-  const legacyFeatureMap: Partial<Record<PlatformFeature, PlatformFeature>> = {
-    experience_reviews: "menu",
-  };
-
-  return featureList.includes(feature) || Boolean(legacyFeatureMap[feature] && featureList.includes(legacyFeatureMap[feature]!));
+  return featureList.includes(feature);
 }
 
 export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[] }) {

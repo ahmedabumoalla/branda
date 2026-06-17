@@ -16,7 +16,6 @@ async function resolvePublicStorageUrl(bucket: string, path: string) {
 
   const response = await fetch(
     `/api/public/storage?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,
-    { cache: "no-store" }
   );
 
   if (!response.ok) return undefined;

@@ -4,12 +4,9 @@ import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
 import { publicCacheHeader, PUBLIC_CAFE_CACHE_SECONDS } from "@/lib/performance/server-cache";
+import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
 type Params = { params: Promise<{ slug: string }> };
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 async function safePublicFeatures(slug: string) {
   try {
@@ -38,9 +35,14 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   const { slug } = await params;
+  const normalizedSlug = slug.trim().toLowerCase();
 
   try {
-    const payload = await loadPublicCafe(slug);
+    const payload = await cachedServerValue(
+      `public-cafe:${normalizedSlug}`,
+      PUBLIC_CAFE_CACHE_SECONDS * 1000,
+      () => loadPublicCafe(normalizedSlug),
+    );
 
     if (!payload) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });

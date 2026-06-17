@@ -82,6 +82,7 @@ export type ThemedAccountPanelProps = {
   onPickAvatar: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearAvatar: () => void;
   onSaveSettings: () => void;
+  loyaltyFeatureEnabled?: boolean;
   fileRef: React.RefObject<HTMLInputElement | null>;
 };
 
@@ -95,6 +96,7 @@ const tabs: { key: TabKey; title: string; icon: ElementType }[] = [
 export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
   const { experience, customer } = props;
   const { theme, account } = experience;
+  const loyaltyFeatureEnabled = props.loyaltyFeatureEnabled !== false;
 
   const heroClass =
     account === "boutique" || account === "lounge-reservations"
@@ -166,7 +168,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <p
                 className={`mt-4 max-w-2xl font-bold leading-8 ${theme.muted}`}
               >
-                تابع طلباتك، حجوزاتك، نقاط الولاء، الفواتير، وسجل العمليات.
+                تابع طلباتك، حجوزاتك، {loyaltyFeatureEnabled ? "نقاط الولاء، " : ""}الفواتير، وسجل العمليات.
               </p>
             </div>
 
@@ -221,12 +223,14 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
             value={props.myReservations.length}
             highlight={account === "lounge-reservations"}
           />
-          <StatCard
-            experience={experience}
-            icon={Star}
-            title="نقاط الولاء"
-            value={props.loyaltyBalance}
-          />
+          {loyaltyFeatureEnabled ? (
+            <StatCard
+              experience={experience}
+              icon={Star}
+              title="نقاط الولاء"
+              value={props.loyaltyBalance}
+            />
+          ) : null}
           <StatCard
             experience={experience}
             icon={CreditCard}

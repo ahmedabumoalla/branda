@@ -35,7 +35,9 @@ function normalizeConsolePayload(data: unknown): CashierConsole | null {
     reservations: Array.isArray(payload.reservations)
       ? payload.reservations
       : [],
-    logs: Array.isArray(payload.logs) ? payload.logs : [],
+    logs: Array.isArray(payload.logs)
+      ? payload.logs.filter((log) => !["login", "logout", "cashier_login", "cashier_logout", "session_start", "session_end"].includes(String((log as Record<string, unknown>).actionType ?? (log as Record<string, unknown>).action_type ?? "")))
+      : [],
   };
 }
 

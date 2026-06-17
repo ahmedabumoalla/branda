@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCafeBySlug } from "@/lib/data/cafes";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export async function createPublicSupportTicketAction(input: { slug: string; name: string; phone: string; message: string }) {
   try {
@@ -20,6 +22,10 @@ export async function createPublicSupportTicketAction(input: { slug: string; nam
 export async function submitExperienceProofAction(input: { slug: string; customerName: string; contact: string; url: string; agreed: boolean }) {
   try {
     if (!input.agreed) return { ok: false as const, message: "يجب الموافقة على الشروط" };
+    const features = await getPublicCafeFeatureCodesBySlug(input.slug).catch(() => []);
+    if (!featureCodesAllow(features, "experience_reviews")) {
+      return { ok: false as const, message: "توثيق التجارب غير مفعل لهذه العلامة التجارية" };
+    }
     const cafe = await getCafeBySlug(input.slug);
     if (!cafe) return { ok: false as const, message: "العلامة غير موجودة" };
     const supabase = await createClient();

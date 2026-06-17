@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import {
   ImagePipelineError,
   optimizeImageForStorage,
@@ -544,16 +545,98 @@ function ExperienceProofPanel({
   );
 }
 
+
+function AccountFeatureTiles({
+  experience,
+  loyaltyEnabled,
+  experienceRewardsEnabled,
+  loyaltyView,
+  rewards,
+  loyaltyLoading,
+  onOpenLoyalty,
+  onOpenExperience,
+}: {
+  experience: ReturnType<typeof useCafePageContext>["experience"];
+  loyaltyEnabled: boolean;
+  experienceRewardsEnabled: boolean;
+  loyaltyView: CustomerLoyaltyCardView | null;
+  rewards: CustomerExperienceReward[];
+  loyaltyLoading: boolean;
+  onOpenLoyalty: () => void;
+  onOpenExperience: () => void;
+}) {
+  const { theme } = experience;
+  const readyRewards = rewards.filter((reward) => Boolean(reward.rewardCode) || reward.status === "approved").length;
+
+  if (!loyaltyEnabled && !experienceRewardsEnabled) return null;
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        {loyaltyEnabled ? (
+          <button
+            type="button"
+            onClick={onOpenLoyalty}
+            disabled={!loyaltyView?.card.cardCode}
+            className={`group flex items-center justify-between gap-4 p-5 text-right transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${theme.card}`}
+          >
+            <span className="flex items-center gap-4">
+              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${theme.button}`}>
+                <WalletCards className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block text-lg font-black">بطاقة الولاء</span>
+                <span className={`mt-1 block text-xs font-bold ${theme.muted}`}>
+                  {loyaltyLoading
+                    ? "جاري تجهيز البطاقة..."
+                    : loyaltyView?.card.cardCode
+                      ? `جاهزة • ${loyaltyView.card.stampsInCycle} ختم`
+                      : "اضغط لتجهيز بطاقة الولاء"}
+                </span>
+              </span>
+            </span>
+            <QrCode className={`h-6 w-6 ${theme.accent}`} />
+          </button>
+        ) : null}
+
+        {experienceRewardsEnabled ? (
+          <button
+            type="button"
+            onClick={onOpenExperience}
+            className={`group flex items-center justify-between gap-4 p-5 text-right transition hover:-translate-y-0.5 ${theme.card}`}
+          >
+            <span className="flex items-center gap-4">
+              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${theme.button}`}>
+                <Gift className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block text-lg font-black">مكافآت التوثيق</span>
+                <span className={`mt-1 block text-xs font-bold ${theme.muted}`}>
+                  {readyRewards ? `${readyRewards} مكافأة جاهزة للصرف` : "أرسل رابط توثيق تجربتك من هنا"}
+                </span>
+              </span>
+            </span>
+            <Send className={`h-6 w-6 ${theme.accent}`} />
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const { experience, settings, path, previewThemeId } =
+  const { experience, settings, path, previewThemeId, features, hydrated } =
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
 
   const defaultTab: TabKey = "orders";
+  const hasFeature = (feature: string) => features.length > 0 && featureCodesAllow(features, feature);
+  const loyaltyEnabled = hasFeature("loyalty");
+  const experienceRewardsEnabled = hasFeature("experience_reviews");
 
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
@@ -585,14 +668,16 @@ function AccountPageInner() {
     useState(false);
 
   useEffect(() => {
-    const loadKey = `${slug}:${previewThemeId ?? "live"}`;
+    if (!hydrated) return;
+
+    const loadKey = `${slug}:${previewThemeId ?? "live"}:${features.join("|") || "no-entitlements"}`;
     if (initialLoadKeyRef.current === loadKey) return;
     initialLoadKeyRef.current = loadKey;
 
     let cancelled = false;
 
     async function load() {
-      setLoyaltyLoading(true);
+      setLoyaltyLoading(loyaltyEnabled);
 
       const session = await getCustomerSession(slug);
       if (cancelled) return;
@@ -619,8 +704,8 @@ function AccountPageInner() {
         await Promise.allSettled([
           fetchCustomerOrdersAction(slug),
           fetchCustomerReservationsAction(slug),
-          fetchCustomerLoyaltyCardAction(slug),
-          fetchCustomerExperienceRewardsAction(slug),
+          loyaltyEnabled ? fetchCustomerLoyaltyCardAction(slug) : Promise.resolve(null),
+          experienceRewardsEnabled ? fetchCustomerExperienceRewardsAction(slug) : Promise.resolve([]),
         ]);
 
       if (cancelled) return;
@@ -668,10 +753,10 @@ function AccountPageInner() {
       );
 
       setLoyaltyView(
-        loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null,
+        loyaltyEnabled && loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null,
       );
       setExperienceRewards(
-        rewardsResult.status === "fulfilled" ? rewardsResult.value : [],
+        experienceRewardsEnabled && rewardsResult.status === "fulfilled" ? rewardsResult.value : [],
       );
       setLoyaltyLoading(false);
     }
@@ -680,7 +765,7 @@ function AccountPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [router, slug, previewThemeId]);
+  }, [router, slug, previewThemeId, hydrated, features, loyaltyEnabled, experienceRewardsEnabled]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -752,6 +837,7 @@ function AccountPageInner() {
   }, [myOrders, myReservations, myTransactions]);
 
   function openLoyaltyCard() {
+    if (!loyaltyEnabled) return;
     if (loyaltyView?.card.cardCode) {
       router.push(
         `/loyalty-card/${loyaltyView.card.cardCode}?back=${encodeURIComponent(path("account"))}`,
@@ -818,6 +904,11 @@ function AccountPageInner() {
   }
 
   async function submitExperienceProof() {
+    if (!experienceRewardsEnabled) {
+      alert("توثيق التجارب غير مفعل في باقة هذه العلامة التجارية");
+      return;
+    }
+
     if (!experienceUrl.trim()) {
       alert("أدخل رابط التجربة");
       return;
@@ -852,30 +943,6 @@ function AccountPageInner() {
 
   return (
     <>
-      <CustomerCoffeeLoyaltyCard
-        view={loyaltyView}
-        homeHref={path()}
-        onOpenCard={openLoyaltyCard}
-        loading={loyaltyLoading}
-      />
-
-      <ExperienceProofPanel
-        rewards={experienceRewards}
-        open={experienceProofOpen}
-        onOpen={() => setExperienceProofOpen(true)}
-        onClose={() => setExperienceProofOpen(false)}
-        experienceUrl={experienceUrl}
-        views={experienceViews}
-        comments={experienceComments}
-        notes={experienceNotes}
-        busy={submittingExperienceProof}
-        onExperienceUrl={setExperienceUrl}
-        onViews={setExperienceViews}
-        onComments={setExperienceComments}
-        onNotes={setExperienceNotes}
-        onSubmit={() => void submitExperienceProof()}
-      />
-
       <ThemedAccountPanel
         slug={slug}
         experience={experience}
@@ -917,8 +984,48 @@ function AccountPageInner() {
           setAvatarAssetId(undefined);
         }}
         onSaveSettings={() => void saveSettings()}
+        loyaltyFeatureEnabled={loyaltyEnabled}
         fileRef={fileRef}
       />
+
+      <AccountFeatureTiles
+        experience={experience}
+        loyaltyEnabled={loyaltyEnabled}
+        experienceRewardsEnabled={experienceRewardsEnabled}
+        loyaltyView={loyaltyView}
+        rewards={experienceRewards}
+        loyaltyLoading={loyaltyLoading}
+        onOpenLoyalty={openLoyaltyCard}
+        onOpenExperience={() => setExperienceProofOpen(true)}
+      />
+
+      {loyaltyEnabled ? (
+        <CustomerCoffeeLoyaltyCard
+          view={loyaltyView}
+          homeHref={path()}
+          onOpenCard={openLoyaltyCard}
+          loading={loyaltyLoading}
+        />
+      ) : null}
+
+      {experienceRewardsEnabled ? (
+        <ExperienceProofPanel
+          rewards={experienceRewards}
+          open={experienceProofOpen}
+          onOpen={() => setExperienceProofOpen(true)}
+          onClose={() => setExperienceProofOpen(false)}
+          experienceUrl={experienceUrl}
+          views={experienceViews}
+          comments={experienceComments}
+          notes={experienceNotes}
+          busy={submittingExperienceProof}
+          onExperienceUrl={setExperienceUrl}
+          onViews={setExperienceViews}
+          onComments={setExperienceComments}
+          onNotes={setExperienceNotes}
+          onSubmit={() => void submitExperienceProof()}
+        />
+      ) : null}
     </>
   );
 }

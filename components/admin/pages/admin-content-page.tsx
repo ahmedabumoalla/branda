@@ -345,9 +345,15 @@ export function AdminContentPage({ initialData, configError }: Props) {
       </BentoGrid>
 
       <BentoCard variant="dark">
-        <div className="mb-5 flex items-center gap-3">
-          <ContactRound className="h-7 w-7 text-[#F6C35B]" />
-          <h2 className="text-xl font-black text-[#F8F4EF]">طلبات التواصل الواردة</h2>
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <ContactRound className="h-7 w-7 text-[#F6C35B]" />
+            <div>
+              <h2 className="text-xl font-black text-[#F8F4EF]">طلبات التواصل الواردة</h2>
+              <p className="mt-1 text-xs font-bold text-[#CBB29C]">هذه هي رسائل قسم تواصل معنا في الصفحة الرئيسية، ويتم إرسال نسخة إلى cto.branda@gmail.com عند توفر إعدادات Resend.</p>
+            </div>
+          </div>
+          <StatusBadge tone="gold">المسار: الأدمن ← إدارة محتوى المنصة</StatusBadge>
         </div>
         <div className="space-y-3">
           {requests.map((request) => (

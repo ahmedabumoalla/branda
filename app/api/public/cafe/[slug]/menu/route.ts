@@ -6,12 +6,9 @@ import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
 import { publicCacheHeader, PUBLIC_MENU_CACHE_SECONDS } from "@/lib/performance/server-cache";
+import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
 type Params = { params: Promise<{ slug: string }> };
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 const emptyLoyaltySettings = {
   pointsPerSar: 0,
@@ -49,9 +46,15 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   const { slug } = await params;
+  const normalizedSlug = slug.trim().toLowerCase();
 
   try {
-    const payload = await loadPublicMenu(slug);
+    const payload = await cachedServerValue(
+      `public-menu:${normalizedSlug}`,
+      PUBLIC_MENU_CACHE_SECONDS * 1000,
+      () => loadPublicMenu(normalizedSlug),
+    );
+
     if (!payload) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });
     }

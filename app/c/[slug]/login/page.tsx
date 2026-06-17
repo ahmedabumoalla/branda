@@ -70,7 +70,9 @@ function LoginForm() {
 
       }
 
-      router.push(appendPreviewToNextPath(rawNext, previewThemeId));
+      const next = appendPreviewToNextPath(rawNext, previewThemeId);
+      router.replace(next);
+      router.refresh();
 
     });
 

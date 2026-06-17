@@ -31,7 +31,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useMemo, useState, type ElementType } from "react";
+import { useMemo, useState, useTransition, type ElementType } from "react";
 import {
   updateCafePlanAction,
   updateCafeStatusAction,
@@ -100,6 +100,11 @@ function info(value?: string | number | null) {
   return String(value);
 }
 
+function resolvePlanName(plans: PlatformPlan[], planId?: string | null) {
+  if (!planId) return "بدون باقة";
+  return plans.find((plan) => plan.id === planId)?.name ?? planId;
+}
+
 function copy(text?: string | null) {
   if (!text) return;
   void navigator.clipboard?.writeText(text);
@@ -161,6 +166,8 @@ export function AdminCafesPage({
     initialCafes[0]?.id ?? null,
   );
   const [modalCafe, setModalCafe] = useState<PlatformCafe | null>(null);
+  const [updatingPlanCafeId, setUpdatingPlanCafeId] = useState<string | null>(null);
+  const [isPlanUpdatePending, startPlanUpdateTransition] = useTransition();
 
   const filtered = useMemo(() => {
     return cafes.filter((cafe) => {
@@ -226,15 +233,56 @@ export function AdminCafesPage({
     }
   }
 
-  async function updatePlan(id: string, planId: string) {
-    try {
-      await updateCafePlanAction(id, planId);
-      setCafes((prev) =>
-        prev.map((cafe) => (cafe.id === id ? { ...cafe, planId } : cafe)),
-      );
-    } catch {
-      alert("تعذر تحديث الباقة");
+  function updatePlan(id: string, planId: string) {
+    if (!planId) {
+      alert("اختر الباقة الجديدة أولًا");
+      return;
     }
+
+    const nextPlanName = resolvePlanName(plans, planId);
+    const today = new Date().toISOString().slice(0, 10);
+
+    setUpdatingPlanCafeId(id);
+    startPlanUpdateTransition(() => {
+      void (async () => {
+        try {
+          await updateCafePlanAction(id, planId);
+          setCafes((prev) =>
+            prev.map((cafe) =>
+              cafe.id === id
+                ? {
+                    ...cafe,
+                    planId,
+                    planName: nextPlanName,
+                    hasActivePlan: true,
+                    planStartedAt: today,
+                    planExpiresAt: undefined,
+                    planRemainingDays: null,
+                  }
+                : cafe,
+            ),
+          );
+          setModalCafe((current) =>
+            current?.id === id
+              ? {
+                  ...current,
+                  planId,
+                  planName: nextPlanName,
+                  hasActivePlan: true,
+                  planStartedAt: today,
+                  planExpiresAt: undefined,
+                  planRemainingDays: null,
+                }
+              : current,
+          );
+        } catch (error) {
+          console.error("[AdminCafesPage:updatePlan]", error);
+          alert("تعذر تحديث الباقة الحالية للعلامة التجارية");
+        } finally {
+          setUpdatingPlanCafeId(null);
+        }
+      })();
+    });
   }
 
   return (
@@ -418,11 +466,27 @@ export function AdminCafesPage({
                     <td className="px-3 py-4 font-mono text-xs">
                       {cafe.maintenanceAccountNumber}
                     </td>
-                    <td className="px-3 py-4">
-                      {cafe.planName ||
-                        selectedPlan?.name ||
-                        cafe.planId ||
-                        "بدون باقة"}
+                    <td className="px-3 py-4" onClick={(event) => event.stopPropagation()}>
+                      <div className="min-w-[220px] space-y-2">
+                        <AdminSelect
+                          value={cafe.planId || ""}
+                          disabled={isPlanUpdatePending && updatingPlanCafeId === cafe.id}
+                          onChange={(event) => updatePlan(cafe.id, event.target.value)}
+                          className="h-11 text-xs"
+                        >
+                          <option value="" disabled>
+                            اختر الباقة الحالية
+                          </option>
+                          {plans.map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.name}
+                            </option>
+                          ))}
+                        </AdminSelect>
+                        <p className="text-xs font-bold text-[#7A6255]">
+                          الحالية: {cafe.planName || resolvePlanName(plans, cafe.planId)}
+                        </p>
+                      </div>
                     </td>
                     <td className="px-3 py-4">{cafe.productsCount ?? 0}</td>
                     <td className="px-3 py-4">{cafe.offersCount ?? 0}</td>
@@ -475,17 +539,26 @@ export function AdminCafesPage({
               التحكم بالباقة والحالة
             </h3>
             <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-              <AdminSelect
-                value={selected.planId}
-                onChange={(e) => void updatePlan(selected.id, e.target.value)}
-              >
-                <option value="">بدون باقة</option>
-                {plans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </AdminSelect>
+              <div className="space-y-2">
+                <p className="text-xs font-black text-[#CBB29C]">
+                  تغيير الباقة الحالية للعلامة التجارية
+                </p>
+                <AdminSelect
+                  value={selected.planId || ""}
+                  disabled={isPlanUpdatePending && updatingPlanCafeId === selected.id}
+                  onChange={(e) => updatePlan(selected.id, e.target.value)}
+                >
+                  <option value="" disabled>اختر الباقة الجديدة</option>
+                  {plans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+                <p className="text-xs font-bold text-[#7A6255]">
+                  الحالية الآن: {selected.planName || resolvePlanName(plans, selected.planId)}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => void toggleCafe(selected.id)}
@@ -766,8 +839,28 @@ export function AdminCafesPage({
                 />
                 <DetailRow
                   label="الباقة الحالية"
-                  value={modalCafe.planName || modalCafe.planId || "بدون باقة"}
+                  value={modalCafe.planName || resolvePlanName(plans, modalCafe.planId)}
                 />
+                <div className="mt-4 rounded-2xl border border-[#F6C35B]/20 bg-[#F6C35B]/10 p-4">
+                  <p className="mb-2 text-xs font-black text-[#F6C35B]">
+                    تغيير الباقة الحالية مباشرة من الأدمن
+                  </p>
+                  <AdminSelect
+                    value={modalCafe.planId || ""}
+                    disabled={isPlanUpdatePending && updatingPlanCafeId === modalCafe.id}
+                    onChange={(event) => updatePlan(modalCafe.id, event.target.value)}
+                  >
+                    <option value="" disabled>اختر الباقة الجديدة</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                  <p className="mt-2 text-xs font-bold text-[#CBB29C]">
+                    عند تغيير الباقة يتم تعطيل الاشتراك الحالي وإنشاء اشتراك إداري جديد للعلامة.
+                  </p>
+                </div>
                 <DetailRow
                   label="تاريخ بداية الباقة"
                   value={modalCafe.planStartedAt}

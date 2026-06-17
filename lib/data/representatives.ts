@@ -56,6 +56,9 @@ export type RepresentativeBrandDetail = {
   subscriptionsAmount: number;
   commissionAmount: number;
   unsettledAmount: number;
+  ownerName?: string;
+  ownerPhone?: string;
+  ownerEmail?: string;
   branch?: {
     name: string;
     address: string;
@@ -77,6 +80,14 @@ export type RepresentativeDashboard = {
     unsettledAmount: number;
   };
   brands: RepresentativeBrandDetail[];
+  activities?: Array<{
+    id: string;
+    title: string;
+    detail: string;
+    actionType: string;
+    createdAt: string;
+    payload?: Record<string, unknown>;
+  }>;
 };
 
 const optionalText = (maxLength: number) =>
@@ -398,6 +409,16 @@ function mapRepresentativeDashboard(payload: Record<string, unknown>): Represent
       commissionAmount: Number(summary.commissionAmount ?? 0),
       unsettledAmount: Number(summary.unsettledAmount ?? 0),
     },
+    activities: Array.isArray(payload.activities)
+      ? (payload.activities as Record<string, unknown>[]).map((item) => ({
+          id: String(item.id),
+          title: String(item.title ?? item.actionType ?? "عملية"),
+          detail: String(item.detail ?? ""),
+          actionType: String(item.actionType ?? ""),
+          createdAt: String(item.createdAt ?? ""),
+          payload: item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : undefined,
+        }))
+      : [],
     brands: brandRows.map((value) => {
       const brand = value as Record<string, unknown>;
       const branch = brand.branch as Record<string, unknown> | null;
@@ -412,6 +433,9 @@ function mapRepresentativeDashboard(payload: Record<string, unknown>): Represent
           ? String(brand.firstPaidSubscriptionAt)
           : undefined,
         commissionEndAt: brand.commissionEndAt ? String(brand.commissionEndAt) : undefined,
+        ownerName: brand.ownerName ? String(brand.ownerName) : undefined,
+        ownerPhone: brand.ownerPhone ? String(brand.ownerPhone) : undefined,
+        ownerEmail: brand.ownerEmail ? String(brand.ownerEmail) : undefined,
         renewalsCount: Number(brand.renewalsCount ?? 0),
         subscriptionsAmount: Number(brand.subscriptionsAmount ?? 0),
         commissionAmount: Number(brand.commissionAmount ?? 0),

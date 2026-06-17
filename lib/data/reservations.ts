@@ -30,6 +30,187 @@ export type AdminReservationMonitorItem = CafeReservation & {
   pendingMinutes: number;
 };
 
+type ReservationEmailCustomer = {
+  email?: string;
+  fullName?: string;
+  phone?: string;
+};
+
+type ReservationEmailBrand = {
+  email?: string;
+  ownerName?: string;
+  ownerPhone?: string;
+};
+
+type ReservationEmailDetails = {
+  cafeName: string;
+  title: string;
+  intro: string;
+  status?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  reservationType?: string;
+  date?: string;
+  time?: string;
+  guests?: string | number;
+  branchName?: string;
+  notes?: string;
+  message?: string;
+  reservationCode?: string;
+};
+
+function cleanText(value: unknown, fallback = "") {
+  if (value === null || value === undefined) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function cleanEmail(value: unknown) {
+  const email = cleanText(value).toLowerCase();
+  return email.includes("@") ? email : undefined;
+}
+
+function htmlRow(label: string, value: unknown) {
+  const text = cleanText(value, "-");
+  return `<tr><td style="padding:10px 12px;color:#806A5E;font-weight:800;border-bottom:1px solid #E7D7C6;white-space:nowrap">${escapeEmailHtml(label)}</td><td style="padding:10px 12px;color:#311912;font-weight:900;border-bottom:1px solid #E7D7C6">${escapeEmailHtml(text)}</td></tr>`;
+}
+
+function buildReservationEmailHtml(details: ReservationEmailDetails) {
+  const rows = [
+    htmlRow("العلامة التجارية", details.cafeName),
+    details.status ? htmlRow("الحالة", details.status) : "",
+    htmlRow("نوع الحجز", details.reservationType),
+    htmlRow("التاريخ", details.date),
+    htmlRow("الوقت", details.time),
+    htmlRow("عدد الأشخاص", details.guests),
+    details.branchName ? htmlRow("الفرع", details.branchName) : "",
+    details.customerName ? htmlRow("اسم العميل", details.customerName) : "",
+    details.customerPhone ? htmlRow("جوال العميل", details.customerPhone) : "",
+    details.customerEmail ? htmlRow("إيميل العميل", details.customerEmail) : "",
+    details.reservationCode
+      ? htmlRow("كود تأكيد الحجز", details.reservationCode)
+      : "",
+    details.notes ? htmlRow("ملاحظات العميل", details.notes) : "",
+    details.message ? htmlRow("رسالة العلامة", details.message) : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  return `<div dir="rtl" style="font-family:Arial,Tahoma,sans-serif;background:#FCF8F3;padding:24px;color:#311912">
+    <div style="max-width:620px;margin:auto;background:#fff;border:1px solid #E7D7C6;border-radius:24px;overflow:hidden">
+      <div style="background:#4A281D;color:#FCF8F3;padding:22px">
+        <p style="margin:0;color:#D9A33F;font-weight:900;font-size:13px">برندة | Barndaksa</p>
+        <h2 style="margin:8px 0 0;font-size:24px">${escapeEmailHtml(details.title)}</h2>
+      </div>
+      <div style="padding:22px">
+        <p style="margin:0 0 18px;line-height:1.9;font-weight:800;color:#806A5E">${escapeEmailHtml(details.intro)}</p>
+        <table style="width:100%;border-collapse:collapse;background:#FCF8F3;border-radius:18px;overflow:hidden">${rows}</table>
+        <p style="margin:18px 0 0;color:#806A5E;font-size:12px;line-height:1.8">هذه رسالة آلية من منصة برندة. الرجاء عدم مشاركة كود الحجز إلا عند الوصول للفرع.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildReservationEmailText(details: ReservationEmailDetails) {
+  return [
+    details.title,
+    details.intro,
+    `العلامة التجارية: ${details.cafeName}`,
+    details.status ? `الحالة: ${details.status}` : "",
+    `نوع الحجز: ${cleanText(details.reservationType, "-")}`,
+    `التاريخ: ${cleanText(details.date, "-")}`,
+    `الوقت: ${cleanText(details.time, "-")}`,
+    `عدد الأشخاص: ${cleanText(details.guests, "-")}`,
+    details.branchName ? `الفرع: ${details.branchName}` : "",
+    details.customerName ? `اسم العميل: ${details.customerName}` : "",
+    details.customerPhone ? `جوال العميل: ${details.customerPhone}` : "",
+    details.reservationCode ? `كود الحجز: ${details.reservationCode}` : "",
+    details.notes ? `ملاحظات العميل: ${details.notes}` : "",
+    details.message ? `رسالة العلامة: ${details.message}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function sendReservationEmailSafely(input: {
+  to?: string;
+  subject: string;
+  details: ReservationEmailDetails;
+  replyTo?: string;
+}) {
+  if (!input.to || !isBarndaksaEmailConfigured()) return;
+  await sendBarndaksaEmail({
+    to: input.to,
+    subject: input.subject,
+    text: buildReservationEmailText(input.details),
+    html: buildReservationEmailHtml(input.details),
+    replyTo: input.replyTo,
+  }).catch((error) => {
+    console.error("[reservation-email]", error);
+  });
+}
+
+async function getReservationBrandContact(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cafeId: string,
+): Promise<ReservationEmailBrand> {
+  const { data } = await supabase
+    .from("cafe_settings")
+    .select("owner_email, owner_name, owner_phone")
+    .eq("cafe_id", cafeId)
+    .maybeSingle();
+
+  return {
+    email: cleanEmail(data?.owner_email),
+    ownerName: cleanText(data?.owner_name),
+    ownerPhone: cleanText(data?.owner_phone),
+  };
+}
+
+async function getReservationCustomerContact(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  customerId: string,
+): Promise<ReservationEmailCustomer> {
+  const { data } = await supabase
+    .from("customer_profiles")
+    .select("email, full_name, phone")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  return {
+    email: cleanEmail(data?.email),
+    fullName: cleanText(data?.full_name),
+    phone: cleanText(data?.phone),
+  };
+}
+
+function rowReservationDetails(
+  cafeName: string,
+  row: Record<string, unknown>,
+  overrides: Partial<ReservationEmailDetails> = {},
+): ReservationEmailDetails {
+  return {
+    cafeName,
+    title: overrides.title ?? "تحديث على حجزك",
+    intro: overrides.intro ?? "تم تحديث طلب الحجز من العلامة التجارية.",
+    status: overrides.status,
+    customerName: overrides.customerName ?? cleanText(row.customer_name),
+    customerPhone: overrides.customerPhone ?? cleanText(row.phone),
+    customerEmail: overrides.customerEmail,
+    reservationType:
+      overrides.reservationType ?? cleanText(row.event_type, "حجز"),
+    date: overrides.date ?? cleanText(row.reservation_date),
+    time: overrides.time ?? cleanText(row.reservation_time),
+    guests: overrides.guests ?? cleanText(row.guests),
+    branchName: overrides.branchName ?? cleanText(row.branch_name),
+    notes: overrides.notes ?? cleanText(row.notes),
+    message: overrides.message,
+    reservationCode:
+      overrides.reservationCode ?? cleanText(row.reservation_code),
+  };
+}
+
 export async function getOwnerReservations(): Promise<CafeReservation[]> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
@@ -87,7 +268,7 @@ export async function updateReservationStatus(
   cafeMessage?: string,
   rejectionReason?: string,
 ) {
-  await requireOwnerCafeContext();
+  const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
   if (status === "بانتظار الرد") {
@@ -103,16 +284,23 @@ export async function updateReservationStatus(
 
   if (error) throw error;
 
-  const { data: updatedReservation } = await supabase
+  const { data: row } = await supabase
     .from("reservations")
-    .select("customer_id")
+    .select("*")
     .eq("id", reservationId)
     .maybeSingle();
-  if (updatedReservation?.customer_id) {
+
+  const reservationRow = (row ?? {}) as Record<string, unknown>;
+  const customerId = cleanText(reservationRow.customer_id);
+  const customer = customerId
+    ? await getReservationCustomerContact(supabase, customerId)
+    : {};
+
+  if (customerId) {
     await createNotification({
-      cafeSlug: (await requireOwnerCafeContext()).slug,
+      cafeSlug: cafe.slug,
       audience: "customer",
-      customerId: String(updatedReservation.customer_id),
+      customerId,
       title:
         status === "مقبول"
           ? "تم قبول حجزك"
@@ -130,33 +318,39 @@ export async function updateReservationStatus(
     }).catch(() => undefined);
   }
 
-  if (isBarndaksaEmailConfigured()) {
-    const { data: row } = await supabase
-      .from("reservations")
-      .select(
-        "customer_name, phone, event_type, reservation_date, reservation_time, customer_profiles(email)",
-      )
-      .eq("id", reservationId)
-      .maybeSingle();
-    const customerRaw = row?.customer_profiles as unknown;
-    const customer = Array.isArray(customerRaw)
-      ? (customerRaw[0] as Record<string, unknown> | undefined)
-      : (customerRaw as Record<string, unknown> | undefined);
-    const customerEmail = customer?.email ? String(customer.email) : undefined;
-    if (customerEmail) {
-      await sendBarndaksaEmail({
-        to: customerEmail,
-        subject:
-          status === "مقبول"
-            ? "تم قبول حجزك في برندة"
-            : status === "مرفوض"
-              ? "تم رفض حجزك في برندة"
-              : "اقتراح تعديل على حجزك في برندة",
-        text: `تم تحديث حالة حجزك: ${status}. ${message ?? ""}`,
-        html: `<div dir="rtl"><h2>تم تحديث حالة حجزك</h2><p>الحالة: ${escapeEmailHtml(status)}</p><p>${escapeEmailHtml(message ?? "")}</p></div>`,
-      }).catch(() => undefined);
-    }
-  }
+  const title =
+    status === "مقبول"
+      ? `تم قبول حجزك في ${cafe.name}`
+      : status === "مرفوض"
+        ? `تم رفض حجزك في ${cafe.name}`
+        : `اقتراح تعديل على حجزك في ${cafe.name}`;
+
+  const intro =
+    status === "مقبول"
+      ? "تمت الموافقة على طلب الحجز. ستجد أدناه نفس تفاصيل الحجز المعتمدة، ويمكنك إبراز كود الحجز عند الوصول."
+      : status === "مرفوض"
+        ? message
+          ? `تم رفض طلب الحجز من العلامة التجارية، والسبب: ${message}`
+          : "تم رفض طلب الحجز من العلامة التجارية."
+        : message
+          ? `طلبت العلامة التجارية تعديل الحجز: ${message}`
+          : "طلبت العلامة التجارية تعديل بعض تفاصيل الحجز.";
+
+  await sendReservationEmailSafely({
+    to: customer.email,
+    subject: title,
+    replyTo: (await getReservationBrandContact(supabase, cafe.id)).email,
+    details: rowReservationDetails(cafe.name, reservationRow, {
+      title,
+      intro,
+      status,
+      customerName:
+        customer.fullName || cleanText(reservationRow.customer_name),
+      customerPhone: customer.phone || cleanText(reservationRow.phone),
+      customerEmail: customer.email,
+      message: message ?? undefined,
+    }),
+  });
 }
 
 export async function confirmOwnerReservationCode(codeInput: string) {
@@ -303,6 +497,8 @@ export async function createReservation(
 
   if (error) throw error;
 
+  const id = String(reservationId);
+
   await createNotification({
     cafeSlug: cafe.slug,
     audience: "cafe",
@@ -310,7 +506,7 @@ export async function createReservation(
     body: `وصل حجز جديد من عميل للنوع ${parsed.type} بتاريخ ${parsed.date} الساعة ${parsed.time}`,
     type: "new_reservation",
     meta: {
-      reservationId: String(reservationId),
+      reservationId: id,
       type: parsed.type,
       date: parsed.date,
       time: parsed.time,
@@ -325,46 +521,57 @@ export async function createReservation(
     body: `تم إرسال طلب حجزك إلى ${cafe.name} وفي انتظار الرد`,
     type: "new_reservation",
     meta: {
-      reservationId: String(reservationId),
+      reservationId: id,
       type: parsed.type,
       date: parsed.date,
       time: parsed.time,
     },
   }).catch(() => undefined);
 
-  if (isBarndaksaEmailConfigured()) {
-    const { data: settings } = await supabase
-      .from("cafe_settings")
-      .select("owner_email, owner_name")
-      .eq("cafe_id", cafe.id)
-      .maybeSingle();
-    const ownerEmail = settings?.owner_email
-      ? String(settings.owner_email)
-      : undefined;
-    if (ownerEmail) {
-      await sendBarndaksaEmail({
-        to: ownerEmail,
-        subject: "حجز جديد وصل للعلامة عبر برندة",
-        text: `وصل حجز جديد من عميل للنوع ${parsed.type} بتاريخ ${parsed.date} الساعة ${parsed.time}.`,
-        html: `<div dir="rtl"><h2>حجز جديد</h2><p>نوع الحجز: ${escapeEmailHtml(parsed.type)}</p><p>التاريخ: ${escapeEmailHtml(parsed.date)} - ${escapeEmailHtml(parsed.time)}</p><p>عدد الأشخاص: ${parsed.guests}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
-      }).catch(() => undefined);
-    }
+  const [brand, customerFromDb] = await Promise.all([
+    getReservationBrandContact(supabase, cafe.id),
+    getReservationCustomerContact(supabase, parsed.customerId),
+  ]);
 
-    const { data: customer } = await supabase
-      .from("customer_profiles")
-      .select("email, full_name")
-      .eq("id", parsed.customerId)
-      .maybeSingle();
-    const customerEmail = customer?.email ? String(customer.email) : undefined;
-    if (customerEmail) {
-      await sendBarndaksaEmail({
-        to: customerEmail,
-        subject: "تم إرسال طلب الحجز",
-        text: `تم إرسال طلب حجزك إلى ${cafe.name}.`,
-        html: `<div dir="rtl"><h2>تم إرسال طلب الحجز</h2><p>العلامة: ${escapeEmailHtml(cafe.name)}</p><p>نوع الحجز: ${escapeEmailHtml(parsed.type)}</p><p>التاريخ: ${escapeEmailHtml(parsed.date)} - ${escapeEmailHtml(parsed.time)}</p><p>الحالة: بانتظار الرد</p></div>`,
-      }).catch(() => undefined);
-    }
-  }
+  const customerName = customerFromDb.fullName || "عميل";
+  const customerPhone = customerFromDb.phone || "";
+  const customerEmail = customerFromDb.email;
 
-  return reservationId as string;
+  const details: ReservationEmailDetails = {
+    cafeName: cafe.name,
+    title: "تم إرسال طلب الحجز",
+    intro: `تم إرسال طلب الحجز إلى ${cafe.name}، وسيصلك الرد بعد مراجعة العلامة التجارية.`,
+    status: "بانتظار الرد",
+    customerName,
+    customerPhone,
+    customerEmail,
+    reservationType: parsed.type,
+    date: parsed.date,
+    time: parsed.time,
+    guests: parsed.guests,
+    branchName: parsed.branchName,
+    notes: parsed.notes,
+  };
+
+  await Promise.all([
+    sendReservationEmailSafely({
+      to: customerEmail,
+      subject: `تم إرسال طلب حجزك إلى ${cafe.name}`,
+      replyTo: brand.email,
+      details,
+    }),
+    sendReservationEmailSafely({
+      to: brand.email,
+      subject: "حجز جديد وصل للعلامة عبر برندة",
+      replyTo: customerEmail,
+      details: {
+        ...details,
+        title: "حجز جديد بانتظار مراجعتك",
+        intro:
+          "وصل طلب حجز جديد من عميل عبر صفحة الفرع الإلكتروني. راجع التفاصيل ثم وافق أو ارفض من لوحة التحكم.",
+      },
+    }),
+  ]);
+
+  return id;
 }

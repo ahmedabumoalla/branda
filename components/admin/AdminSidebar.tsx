@@ -31,7 +31,7 @@ const links = [
   ["مراقبة الحجوزات", "/admin/reservations", CalendarDays],
   ["الباقات", "/admin/plans", Layers3],
   ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
-  ["إدارة محتوى المنصة", "/admin/content", Megaphone],
+  ["المحتوى ورسائل التواصل", "/admin/content", Megaphone],
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
   ["إدارة المناديب", "/admin/representatives", UserRoundCog],
   ["خيارات المنصة", "/admin/options", Settings2],

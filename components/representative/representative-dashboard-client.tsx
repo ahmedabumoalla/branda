@@ -309,6 +309,12 @@ export function RepresentativeDashboardClient({
                           </div>
                         </div>
 
+                        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl bg-white/5 p-3"><p className="text-xs font-bold text-[#CBB29C]">اسم المسؤول</p><p className="mt-2 text-sm font-black">{brand.ownerName || "غير متوفر"}</p></div>
+                          <div className="rounded-xl bg-white/5 p-3"><p className="text-xs font-bold text-[#CBB29C]">رقم الجوال</p><p className="mt-2 text-sm font-black">{brand.ownerPhone || "غير متوفر"}</p></div>
+                          <div className="rounded-xl bg-white/5 p-3"><p className="text-xs font-bold text-[#CBB29C]">البريد الإلكتروني</p><p className="mt-2 text-sm font-black">{brand.ownerEmail || "غير متوفر"}</p></div>
+                        </div>
+
                         <div className="mb-5 rounded-2xl border border-[#D9A33F]/15 bg-[#D9A33F]/5 p-4">
                           <div className="flex items-start gap-3">
                             <MapPin className="mt-1 h-5 w-5 shrink-0 text-[#D9A33F]" />

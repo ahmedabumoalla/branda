@@ -37,7 +37,6 @@ async function resolvePublicCafeLogoUrl(storagePath: string) {
 
   const response = await fetch(
     `/api/public/storage?bucket=cafe-logos&path=${encodeURIComponent(storagePath)}`,
-    { cache: "no-store" }
   );
 
   if (!response.ok) return undefined;

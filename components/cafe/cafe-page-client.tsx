@@ -293,7 +293,7 @@ function CafePageInner({ slug }: { slug: string }) {
   const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features } = useCafeThemePage(slug);
   // إذا لم تصل ميزات الباقة بعد من API لا نخفي أزرار الفرع الإلكتروني بالخطأ.
   // عند وصول features من قاعدة البيانات يرجع النظام يطبق حدود الباقة فعليًا.
-  const hasFeature = (feature: string) => !features.length || featureCodesAllow(features, feature);
+  const hasFeature = (feature: string) => features.length > 0 && featureCodesAllow(features, feature);
   const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
@@ -307,7 +307,7 @@ function CafePageInner({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    if (!branches.length || !navigator.geolocation) return;
+    if (!hasFeature("branches") || !branches.length || !navigator.geolocation) return;
 
     let cancelled = false;
     const activeGeoBranches = branches.filter(
@@ -361,7 +361,7 @@ function CafePageInner({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [branches, slug]);
+  }, [branches, slug, features]);
 
   useEffect(() => {
     const key = `barndaksa_visit_session_${slug}`;
@@ -396,7 +396,7 @@ function CafePageInner({ slug }: { slug: string }) {
         String(offer.status ?? "")
       )
   );
-  const activeBranches = branches.filter((branch) => branch.active !== false);
+  const activeBranches = hasFeature("branches") ? branches.filter((branch) => branch.active !== false) : [];
 
   const featuredProducts = useMemo(() => {
     const mode = customIdentity?.featuredSectionMode ?? "latest";
@@ -529,9 +529,11 @@ function CafePageInner({ slug }: { slug: string }) {
             <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
               المنتجات
             </Link>
-            <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-              الفروع
-            </Link>
+            {hasFeature("branches") ? (
+              <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
+                الفروع
+              </Link>
+            ) : null}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -669,18 +671,20 @@ function CafePageInner({ slug }: { slug: string }) {
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <CampaignBanner slug={slug} previewThemeId={previewThemeId} />
 
-          <section className="rounded-[32px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-6 shadow-sm">
-            <MapPin className="h-8 w-8 text-[#D9A33F]" />
-            <h2 className="mt-3 text-2xl font-black">الفروع ومواعيد الاستلام</h2>
-            <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg)]">
-              {activeBranches.length
-                ? `لديك ${activeBranches.length} فرع متاح للزيارة والاستلام`
-                : "لم يتم إضافة فروع متاحة بعد"}
-            </p>
-            <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="mt-5 inline-flex rounded-2xl bg-[var(--ci-button-bg)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg)]">
-              عرض الفروع
-            </Link>
-          </section>
+          {hasFeature("branches") ? (
+            <section className="rounded-[32px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-6 shadow-sm">
+              <MapPin className="h-8 w-8 text-[#D9A33F]" />
+              <h2 className="mt-3 text-2xl font-black">الفروع ومواعيد الاستلام</h2>
+              <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg)]">
+                {activeBranches.length
+                  ? `لديك ${activeBranches.length} فرع متاح للزيارة والاستلام`
+                  : "لم يتم إضافة فروع متاحة بعد"}
+              </p>
+              <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="mt-5 inline-flex rounded-2xl bg-[var(--ci-button-bg)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg)]">
+                عرض الفروع
+              </Link>
+            </section>
+          ) : null}
         </div>
       </div>
       </div>

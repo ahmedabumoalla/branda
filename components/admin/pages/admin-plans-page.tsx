@@ -67,6 +67,9 @@ function createPlan(): PlatformPlan {
     maxBranches: 1,
     trialDays: 15,
     freeAfterTrial: false,
+    offerLabel: "عرض خاص",
+    offerEndsAt: null,
+    durationOptions: [1, 2, 12, 24],
   };
 }
 
@@ -283,6 +286,17 @@ export function AdminPlansPage({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">اسم العرض</span>
+                  <AdminInput value={plan.offerLabel ?? ""} placeholder="مثال: خصم الإطلاق" onChange={(event) => updatePlan(plan.id, { offerLabel: event.target.value || null })} />
+                </label>
+                <label>
+                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">تاريخ انتهاء العرض</span>
+                  <AdminInput type="date" value={plan.offerEndsAt ?? ""} onChange={(event) => updatePlan(plan.id, { offerEndsAt: event.target.value || null })} />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <AdminInput
                   type="number"
                   min="1"
@@ -308,6 +322,29 @@ export function AdminPlansPage({
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="mb-3 text-sm font-black text-[#CBB29C]">مدد الاشتراك المتاحة للعميل</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[1, 2, 12, 24].map((months) => {
+                    const checked = (plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24]).includes(months);
+                    return (
+                      <label key={months} className="flex items-center gap-2 rounded-xl bg-black/20 p-3 text-xs font-black text-[#F8F4EF]">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => {
+                            const current = plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24];
+                            const next = event.target.checked ? [...current, months] : current.filter((item) => item !== months);
+                            updatePlan(plan.id, { durationOptions: next.length ? Array.from(new Set(next)).sort((a, b) => a - b) : [1] });
+                          }}
+                        />
+                        {months === 1 ? "شهر" : months === 2 ? "شهرين" : months === 12 ? "سنة" : "سنتين"}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="mb-3 text-sm font-black text-[#CBB29C]">تصنيف الباقة وحدود الاستخدام الشهرية</p>
                 <div className="grid grid-cols-2 gap-3">
                   <AdminSelect
@@ -323,6 +360,12 @@ export function AdminPlansPage({
                   <AdminInput type="number" min="0" placeholder="عدد الحجوزات شهريًا" value={plan.maxReservationsMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxReservationsMonthly: event.target.value ? Number(event.target.value) : null })} />
                   <AdminInput type="number" min="0" placeholder="عدد الفروع" value={plan.maxBranches ?? ""} onChange={(event) => updatePlan(plan.id, { maxBranches: event.target.value ? Number(event.target.value) : null })} />
                   <AdminInput type="number" min="0" placeholder="أيام التجربة" value={plan.trialDays ?? ""} onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value ? Number(event.target.value) : null })} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                  <button type="button" onClick={() => updatePlan(plan.id, { maxOrdersMonthly: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">الطلبات Unlimited</button>
+                  <button type="button" onClick={() => updatePlan(plan.id, { maxProductsMonthly: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">المنتجات Unlimited</button>
+                  <button type="button" onClick={() => updatePlan(plan.id, { maxReservationsMonthly: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">الحجوزات Unlimited</button>
+                  <button type="button" onClick={() => updatePlan(plan.id, { maxBranches: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">الفروع Unlimited</button>
                 </div>
                 <label className="mt-3 flex items-center gap-3 rounded-xl bg-black/20 p-3 text-xs font-black text-[#F8F4EF]">
                   <input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />

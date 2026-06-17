@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import type {
   PlatformCafe,
@@ -89,6 +90,9 @@ const planSchema = z.object({
   maxBranches: z.number().int().nonnegative().nullable().optional(),
   trialDays: z.number().int().nonnegative().max(365).nullable().optional(),
   freeAfterTrial: z.boolean().optional(),
+  offerLabel: z.string().trim().max(80).nullable().optional(),
+  offerEndsAt: z.string().trim().max(40).nullable().optional(),
+  durationOptions: z.array(z.number().int()).max(4).optional(),
 });
 
 function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): PlatformPlan {
@@ -98,6 +102,9 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): Platfo
     priceMonthly: Number(row.price_sar ?? 0),
     offerEnabled: Boolean(row.offer_enabled),
     offerPrice: row.offer_price_sar == null ? undefined : Number(row.offer_price_sar),
+    offerLabel: row.offer_label ? String(row.offer_label) : null,
+    offerEndsAt: row.offer_ends_at ? String(row.offer_ends_at).slice(0, 10) : null,
+    durationOptions: Array.isArray(row.duration_options) ? (row.duration_options as number[]).map(Number).filter((item) => [1, 2, 12, 24].includes(item)) : [1, 2, 12, 24],
     durationUnit: String(row.duration_unit ?? "month") as PlanDurationUnit,
     durationCount: Number(row.duration_count ?? 1),
     description: String(row.description ?? ""),
@@ -191,7 +198,43 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
       p_trial_days: plan.trialDays ?? null,
       p_free_after_trial: plan.freeAfterTrial ?? false,
     });
-    if (error) throw error;
+
+    const admin = createAdminClient();
+    const normalizedDurationOptions = Array.from(new Set((plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24]).map(Number))).filter((item) => [1, 2, 12, 24].includes(item));
+    const extraPayload = {
+      offer_label: plan.offerLabel || null,
+      offer_ends_at: plan.offerEndsAt || null,
+      duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 2, 12, 24],
+    };
+
+    if (error) {
+      const { error: directError } = await admin
+        .from("platform_plans")
+        .upsert({
+          id: plan.id,
+          name: plan.name,
+          price_sar: plan.priceMonthly,
+          offer_enabled: plan.offerEnabled,
+          offer_price_sar: plan.offerEnabled ? (plan.offerPrice ?? null) : null,
+          duration_unit: plan.durationUnit,
+          duration_count: plan.durationCount,
+          description: plan.description,
+          features: plan.features,
+          active: plan.active,
+          category_id: plan.categoryId ?? null,
+          max_orders_monthly: plan.maxOrdersMonthly ?? null,
+          max_products_monthly: plan.maxProductsMonthly ?? null,
+          max_reservations_monthly: plan.maxReservationsMonthly ?? null,
+          max_branches: plan.maxBranches ?? null,
+          trial_days: plan.trialDays ?? null,
+          free_after_trial: plan.freeAfterTrial ?? false,
+          ...extraPayload,
+        }, { onConflict: "id" });
+      if (directError) throw directError;
+    } else {
+      const { error: extraError } = await admin.from("platform_plans").update(extraPayload).eq("id", plan.id);
+      if (extraError) throw extraError;
+    }
   }
 }
 
@@ -423,12 +466,46 @@ export async function getAdminOperations(): Promise<PlatformOperation[]> {
 
 export async function updateCafePlan(cafeId: string, planId: string) {
   await requirePlatformAdmin();
+  const admin = createAdminClient();
+  const { data: plan, error: planError } = await admin
+    .from("platform_plans")
+    .select("id, name, price_sar, duration_unit, duration_count")
+    .eq("id", planId)
+    .maybeSingle();
+  if (planError) throw planError;
+  if (!plan) throw new Error("الباقة غير موجودة");
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_assign_plan_without_payment", {
     p_cafe_id: cafeId,
     p_plan_id: planId,
   });
-  if (error) throw error;
+
+  if (error) {
+    await admin
+      .from("subscriptions")
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("cafe_id", cafeId)
+      .in("status", ["active", "trialing", "past_due"]);
+
+    const { error: insertError } = await admin.from("subscriptions").insert({
+      cafe_id: cafeId,
+      plan_id: planId,
+      status: "active",
+      amount_sar: Number(plan.price_sar ?? 0),
+      base_amount_sar: Number(plan.price_sar ?? 0),
+      discount_amount_sar: 0,
+      plan_name_snapshot: String(plan.name ?? planId),
+      duration_unit: String(plan.duration_unit ?? "month"),
+      duration_count: Number(plan.duration_count ?? 1),
+      activation_source: "admin_manual_change",
+      payment_provider: "admin",
+      payment_method_label: "تغيير يدوي من الأدمن",
+      started_at: new Date().toISOString(),
+      expires_at: null,
+    });
+    if (insertError) throw insertError;
+  }
 }
 
 export async function updateCafeStatus(cafeId: string, active: boolean) {

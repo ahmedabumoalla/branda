@@ -11,6 +11,7 @@ import { ThemedCafeShell } from "@/components/cafe/themes/themed-cafe-shell";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath } from "@/lib/cafe/theme-links";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { formatSar } from "@/lib/format";
@@ -101,7 +102,8 @@ function CafeHomeProductCard({
 }
 
 function CafePageInner({ slug }: { slug: string }) {
-  const { theme, settings, previewThemeId, loadError: cafeLoadError } = useCafeThemePage(slug);
+  const { theme, settings, previewThemeId, loadError: cafeLoadError, features } = useCafeThemePage(slug);
+  const hasFeature = (feature: string) => features.length > 0 && featureCodesAllow(features, feature);
   const { products, offers, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
@@ -292,22 +294,26 @@ function CafePageInner({ slug }: { slug: string }) {
 
       <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} />
 
-      <PublicLoyaltyCardSection
-        slug={slug}
-        cafeName={settings.cafeName || slug}
-        program={{
-          enabled: true,
-          cardTitle: "بطاقة الولاء",
-          cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
-          purchasesRequired: 7,
-          rewardName: "منتج مجاني",
-          cardBackground: "#4A281D",
-          cardForeground: "#FCF8F3",
-          cardAccent: "#D9A33F",
-        }}
-      />
+      {hasFeature("loyalty") ? (
+        <PublicLoyaltyCardSection
+          slug={slug}
+          cafeName={settings.cafeName || slug}
+          program={{
+            enabled: true,
+            cardTitle: "بطاقة الولاء",
+            cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
+            purchasesRequired: 7,
+            rewardName: "منتج مجاني",
+            cardBackground: "#4A281D",
+            cardForeground: "#FCF8F3",
+            cardAccent: "#D9A33F",
+          }}
+        />
+      ) : null}
 
-      <PublicExperienceSupportSection slug={slug} cafeName={settings.cafeName || slug} />
+      {hasFeature("experience_reviews") ? (
+        <PublicExperienceSupportSection slug={slug} cafeName={settings.cafeName || slug} />
+      ) : null}
     </ThemedCafeShell>
   );
 }
