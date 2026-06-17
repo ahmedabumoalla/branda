@@ -134,7 +134,9 @@ function ReserveForm() {
                   : current,
               );
             }}
-            className={`overflow-hidden rounded-[28px] border text-right transition ${selected ? "scale-[1.01] border-[#D9A33F] shadow-xl" : "border-black/10 hover:-translate-y-0.5"} ${theme.card}`}
+            aria-pressed={selected}
+            data-selected={selected ? "true" : "false"}
+            className={`barndaksa-premium-card barndaksa-reservation-motion overflow-hidden rounded-[28px] border text-right transition ${selected ? "scale-[1.01] border-[#D9A33F] shadow-xl" : "border-black/10 hover:-translate-y-0.5"} ${theme.card}`}
           >
             <div className="relative h-44 overflow-hidden bg-black/10">
               <ReservationServiceMedia service={service} theme={theme} />
@@ -268,7 +270,7 @@ function ReserveForm() {
 
   const form = customer ? (
     <div className="mt-6 space-y-6">
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="barndaksa-stagger-grid grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {serviceCards}
       </div>
       {!reservationServices.length ? (
@@ -277,7 +279,7 @@ function ReserveForm() {
         </div>
       ) : null}
       <div
-        className={`grid gap-4 rounded-[28px] p-5 md:grid-cols-2 ${theme.card}`}
+        className={`barndaksa-premium-card grid gap-4 rounded-[28px] p-5 md:grid-cols-2 ${theme.card}`}
       >
         <select
           className={`w-full font-bold ${experience.formInput}`}

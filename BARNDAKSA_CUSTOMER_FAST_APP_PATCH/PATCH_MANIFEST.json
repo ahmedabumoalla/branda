@@ -1,0 +1,16 @@
+{
+  "name": "BARNDAKSA_CUSTOMER_FAST_APP_PATCH",
+  "createdAt": "2026-06-17",
+  "description": "Adds the lightweight customer PWA layer at /app/[slug] and points brand install flow to the fast app.",
+  "databaseChanges": false,
+  "files": [
+    "app/api/customer-fast/[slug]/route.ts",
+    "app/api/pwa/[slug]/manifest/route.ts",
+    "app/api/pwa/[slug]/sw/route.ts",
+    "app/app/[slug]/page.tsx",
+    "components/cafe/brand-pwa-install-section.tsx",
+    "components/customer-app/customer-fast-app-client.tsx"
+  ],
+  "runFromProjectRoot": "node BARNDAKSA_CUSTOMER_FAST_APP_PATCH/apply-patch.cjs",
+  "runFromPatchFolder": "cd BARNDAKSA_CUSTOMER_FAST_APP_PATCH && node apply-patch.cjs"
+}

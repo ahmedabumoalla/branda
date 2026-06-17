@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
 import { publicCacheHeader, PUBLIC_CAFE_CACHE_SECONDS } from "@/lib/performance/server-cache";
@@ -10,15 +11,25 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
+async function safePublicFeatures(slug: string) {
+  try {
+    return await getPublicCafeFeatureCodesBySlug(slug);
+  } catch (error) {
+    console.warn("[public/cafe/features]", error);
+    return [];
+  }
+}
+
 async function loadPublicCafe(slug: string) {
-  const [settings, themeId, customIdentity] = await Promise.all([
+  const [settings, themeId, customIdentity, features] = await Promise.all([
     getPublicCafeSettings(slug),
     getPublicThemeId(slug),
     getPublicCustomIdentity(slug),
+    safePublicFeatures(slug),
   ]);
 
   if (!settings) return null;
-  return { settings, themeId, customIdentity };
+  return { settings, themeId, customIdentity, features };
 }
 
 export async function GET(_request: Request, { params }: Params) {

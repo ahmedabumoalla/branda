@@ -1,0 +1,104 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  getLocalAssetObjectUrl,
+  revokeObjectUrl,
+} from "@/lib/cafe/local-asset-store";
+import {
+  isHttpImageUrl,
+  isLegacyDataImageUrl,
+} from "@/lib/cafe/image-asset-pipeline";
+import type { CafeSettings } from "@/lib/mock/cafe-settings";
+
+const publicUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+function isRenderableImageUrl(url?: string | null): url is string {
+  return isHttpImageUrl(url) || isLegacyDataImageUrl(url) || Boolean(url?.startsWith("/"));
+}
+
+async function resolvePublicCafeLogoUrl(storagePath: string) {
+  const key = `cafe-logos:${storagePath}`;
+  const cached = publicUrlCache.get(key);
+
+  if (cached && cached.expiresAt > Date.now() + 60_000) {
+    return cached.url;
+  }
+
+  const response = await fetch(
+    `/api/public/storage?bucket=cafe-logos&path=${encodeURIComponent(storagePath)}`,
+    { cache: "no-store" }
+  );
+
+  if (!response.ok) return undefined;
+
+  const payload = (await response.json()) as { url?: string; expiresIn?: number };
+  if (!payload.url) return undefined;
+
+  const expiresIn = Number(payload.expiresIn ?? 3600);
+  publicUrlCache.set(key, {
+    url: payload.url,
+    expiresAt: Date.now() + Math.max(60, expiresIn - 60) * 1000,
+  });
+
+  return payload.url;
+}
+
+export function useResolvedCafeLogoUrl(
+  settings: CafeSettings,
+  previewUrl?: string
+) {
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(() =>
+    previewUrl ?? (isRenderableImageUrl(settings.logoDataUrl) ? settings.logoDataUrl : undefined)
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+
+    async function load() {
+      if (previewUrl) {
+        setLogoUrl(previewUrl);
+        return;
+      }
+
+      const fallback = isRenderableImageUrl(settings.logoDataUrl)
+        ? settings.logoDataUrl
+        : undefined;
+      const assetId = settings.logoAssetId;
+
+      if (assetId) {
+        if (isRenderableImageUrl(assetId)) {
+          if (!cancelled) setLogoUrl(assetId);
+          return;
+        }
+
+        objectUrl = await getLocalAssetObjectUrl(assetId);
+        if (objectUrl) {
+          if (!cancelled) setLogoUrl(objectUrl);
+          return;
+        }
+
+        // Production logos are stored as Supabase storage paths, not IndexedDB IDs.
+        if (assetId.includes("/")) {
+          const signedUrl = await resolvePublicCafeLogoUrl(assetId);
+          if (!cancelled && signedUrl) {
+            setLogoUrl(signedUrl);
+            return;
+          }
+        }
+      }
+
+      if (!cancelled) setLogoUrl(fallback);
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) revokeObjectUrl(objectUrl);
+    };
+  }, [settings.logoAssetId, settings.logoDataUrl, previewUrl]);
+
+  return logoUrl;
+}

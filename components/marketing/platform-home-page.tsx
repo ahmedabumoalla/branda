@@ -315,7 +315,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
       </section>
 
       <section className="mx-auto max-w-6xl overflow-hidden px-4 py-14 sm:px-6 sm:py-20">
-        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق ببارنداكسا</h2>
+        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق ببرندة</h2>
         {data.brands.length ? (
           <div className="mt-10 overflow-hidden">
             <div className="flex gap-4 transition-transform duration-700" style={{ transform: `translateX(${brandIndex * 8}rem)` }}>

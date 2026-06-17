@@ -37,7 +37,7 @@ function CafeHomeProductCard({
   return (
     <Link
       href={getCafePath(slug, `product/${product.id}`, previewThemeId)}
-      className="block overflow-hidden rounded-[28px] border border-[#E7D7C6] bg-white shadow-[0_14px_38px_rgba(49,25,18,0.08)]"
+      className="barndaksa-premium-card barndaksa-product-motion block overflow-hidden rounded-[28px] border border-[#E7D7C6] bg-white shadow-[0_14px_38px_rgba(49,25,18,0.08)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-[#FCF8F3]">
         <ProductImage
@@ -175,7 +175,7 @@ function CafePageInner({ slug }: { slug: string }) {
 
   return (
     <ThemedCafeShell slug={slug} maxWidth="max-w-md">
-      <section className="rounded-[32px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+      <section className="barndaksa-premium-hero rounded-[32px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-black text-[#D9A33F]">مرحبًا بك في</p>
@@ -190,11 +190,11 @@ function CafePageInner({ slug }: { slug: string }) {
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-4 py-3 text-sm font-black text-white">
+          <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="barndaksa-cta-motion flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-4 py-3 text-sm font-black text-white">
             <Search className="h-4 w-4" />
             تصفح المنيو
           </Link>
-          <Link href={getCafePath(slug, "reserve", previewThemeId)} className="flex items-center justify-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-3 text-sm font-black text-[#6B3A25]">
+          <Link href={getCafePath(slug, "reserve", previewThemeId)} className="barndaksa-cta-motion flex items-center justify-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-3 text-sm font-black text-[#6B3A25]">
             <CalendarDays className="h-4 w-4" />
             احجز
           </Link>
@@ -208,7 +208,7 @@ function CafePageInner({ slug }: { slug: string }) {
         ) : null}
       </section>
 
-      <section className="mt-5 overflow-hidden rounded-[32px] border border-[#E7D7C6] bg-gradient-to-l from-[#6B3A25] to-[#3A2117] p-5 text-white shadow-[0_18px_45px_rgba(49,25,18,0.12)]">
+      <section className="barndaksa-premium-card barndaksa-offer-motion mt-5 overflow-hidden rounded-[32px] border border-[#E7D7C6] bg-gradient-to-l from-[#6B3A25] to-[#3A2117] p-5 text-white shadow-[0_18px_45px_rgba(49,25,18,0.12)]">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-black text-[#D9A33F]">
@@ -234,12 +234,12 @@ function CafePageInner({ slug }: { slug: string }) {
               الكل
             </Link>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="barndaksa-stagger-grid flex gap-2 overflow-x-auto pb-2">
             {categories.map((category) => (
               <Link
                 key={category}
                 href={`${getCafePath(slug, "products/popular", previewThemeId)}?category=${encodeURIComponent(category)}`}
-                className="shrink-0 rounded-2xl border border-[#E7D7C6] bg-white px-4 py-3 text-sm font-black text-[#6B3A25]"
+                className="barndaksa-premium-card shrink-0 rounded-2xl border border-[#E7D7C6] bg-white px-4 py-3 text-sm font-black text-[#6B3A25]"
               >
                 {category}
               </Link>
@@ -259,7 +259,7 @@ function CafePageInner({ slug }: { slug: string }) {
           </Link>
         </div>
 
-        <div className="grid gap-4">
+        <div className="barndaksa-stagger-grid grid gap-4">
           {featuredProducts.length ? (
             featuredProducts.map((product) => (
               <CafeHomeProductCard
@@ -277,7 +277,7 @@ function CafePageInner({ slug }: { slug: string }) {
         </div>
       </section>
 
-      <section className="mt-6 rounded-[32px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+      <section className="barndaksa-premium-card mt-6 rounded-[32px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
         <div className="flex items-center gap-3">
           <MapPin className="h-6 w-6 text-[#6B3A25]" />
           <div>

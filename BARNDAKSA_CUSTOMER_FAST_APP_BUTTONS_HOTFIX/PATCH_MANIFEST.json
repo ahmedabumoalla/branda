@@ -1,0 +1,10 @@
+{
+  "name": "BARNDAKSA_CUSTOMER_FAST_APP_BUTTONS_HOTFIX",
+  "createdAt": "2026-06-17",
+  "description": "Restores customer fast app quick buttons for products, offers/discounts, and reservations, and adds reservations tab/cards.",
+  "databaseChanges": false,
+  "files": [
+    "components/customer-app/customer-fast-app-client.tsx"
+  ],
+  "runFromProjectRoot": "node BARNDAKSA_CUSTOMER_FAST_APP_BUTTONS_HOTFIX/apply-patch.cjs"
+}

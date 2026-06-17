@@ -1,0 +1,9 @@
+{
+  "name": "BARNDAKSA_CAFE_LOGO_FINAL_FIX_PATCH",
+  "description": "Final forced replacement for lib/cafe/use-resolved-cafe-logo.ts to close the TypeScript never/includes error and preserve Supabase Storage logo resolution.",
+  "files": [
+    "lib/cafe/use-resolved-cafe-logo.ts"
+  ],
+  "database_changes": false,
+  "run_from_project_root": "node BARNDAKSA_CAFE_LOGO_FINAL_FIX_PATCH/apply-patch.cjs"
+}

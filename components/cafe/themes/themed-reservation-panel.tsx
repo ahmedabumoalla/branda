@@ -42,12 +42,12 @@ export function ThemedReservationPanel({
 
   const formWrap =
     reserve === "kiosk"
-      ? `rounded-lg border-2 p-6 ${theme.card}`
-      : `rounded-[28px] p-6 ${theme.card}`;
+      ? `barndaksa-premium-card rounded-lg border-2 p-6 ${theme.card}`
+      : `barndaksa-premium-card rounded-[28px] p-6 ${theme.card}`;
 
   return (
     <>
-      <section className={`mb-8 overflow-hidden ${heroClass}`}>
+      <section className={`barndaksa-premium-hero mb-8 overflow-hidden ${heroClass}`}>
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <CafeLogo
             name={settings.cafeName}
@@ -80,7 +80,7 @@ export function ThemedReservationPanel({
             return (
               <div
                 key={label as string}
-                className={`rounded-2xl border p-3 text-center ${theme.card}`}
+                className={`barndaksa-premium-card rounded-2xl border p-3 text-center ${theme.card}`}
               >
                 <I className={`mx-auto h-5 w-5 ${theme.accent}`} />
                 <p className={`mt-1 text-xs font-black ${theme.muted}`}>{label as string}</p>

@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+:root {
+  /* Official palette */
+  --barndaksa-espresso-dark: #311912;
+  --barndaksa-coffee-brown: #4a281d;
+  --barndaksa-brand-brown: #6b3a25;
+  --barndaksa-gold-accent: #d9a33f;
+  --barndaksa-soft-gold: #f0c568;
+  --barndaksa-cream-base: #fcf8f3;
+  --barndaksa-warm-sand: #f2e7d9;
+  --barndaksa-border-sand: #e7d7c6;
+  --barndaksa-muted-text: #806a5e;
+
+  /* Backward-compat aliases */
+  --barndaksa-brown: var(--barndaksa-coffee-brown);
+  --barndaksa-brown-dark: var(--barndaksa-espresso-dark);
+  --barndaksa-brown-luxury: var(--barndaksa-brand-brown);
+  --barndaksa-cream: var(--barndaksa-cream-base);
+  --barndaksa-cream-secondary: var(--barndaksa-warm-sand);
+  --barndaksa-gold: var(--barndaksa-gold-accent);
+  --barndaksa-muted: var(--barndaksa-muted-text);
+  --barndaksa-border: var(--barndaksa-border-sand);
+  --barndaksa-cream-text: var(--barndaksa-soft-gold);
+  --background: var(--barndaksa-cream-base);
+  --foreground: var(--barndaksa-espresso-dark);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.barndaksa-glow-gold {
+  box-shadow: 0 0 32px rgba(217, 163, 63, 0.15);
+}
+
+.barndaksa-neumo {
+  box-shadow:
+    8px 8px 24px rgba(49, 25, 18, 0.06),
+    -6px -6px 20px rgba(255, 255, 255, 0.9);
+}
+
+.barndaksa-neumo-inset {
+  box-shadow:
+    inset 3px 3px 8px rgba(49, 25, 18, 0.06),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95);
+}
+
+@keyframes barndaksa-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-barndaksa-fade {
+  animation: barndaksa-fade 0.45s ease-out forwards;
+}
+
+@keyframes barndaksa-slide {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-barndaksa-slide {
+  animation: barndaksa-slide 0.5s ease-out forwards;
+}
+
+/* Admin / dark panels — readable fields */
+.barndaksa-admin-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.barndaksa-admin-fields select,
+.barndaksa-admin-fields textarea {
+  background-color: #211711 !important;
+  color: #f8e8d2 !important;
+  border-color: rgba(246, 195, 91, 0.25) !important;
+}
+
+.barndaksa-admin-fields input::placeholder,
+.barndaksa-admin-fields textarea::placeholder {
+  color: rgba(203, 178, 156, 0.75) !important;
+}
+
+.barndaksa-admin-fields select option {
+  background-color: #211711;
+  color: #f8e8d2;
+}
+
+/* Custom identity — readable fields via contrast tokens inherited from <main> */
+.brand-identity-custom-theme .brand-cafe-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.brand-identity-custom-theme .brand-cafe-fields select,
+.brand-identity-custom-theme .brand-cafe-fields textarea {
+  background-color: var(--ci-input-bg, #ffffff);
+  color: var(--ci-input-fg, #241610);
+  border-color: var(--ci-input-border, #e5d8cd);
+}
+
+.brand-identity-custom-theme .brand-cafe-fields input::placeholder,
+.brand-identity-custom-theme .brand-cafe-fields textarea::placeholder {
+  color: var(--ci-input-placeholder, #9b8173);
+}
+
+.brand-identity-custom-theme .brand-cafe-fields select option,
+.brand-identity-custom-theme .brand-cafe-form-select option {
+  background-color: var(--ci-dropdown-bg, #ffffff);
+  color: var(--ci-dropdown-fg, #241610);
+}
+
+/* Dashboard theme builder — isolate light surfaces from gold BentoCard text */
+.theme-builder-form-fields {
+  color: #3a2117;
+}
+
+.theme-builder-form-fields select,
+.theme-builder-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+.theme-builder-form-fields textarea {
+  background-color: #ffffff !important;
+  color: #241610 !important;
+  border-color: #e5d8cd !important;
+}
+
+.theme-builder-form-fields select option {
+  background-color: #ffffff;
+  color: #241610;
+}
+
+.theme-builder-form-fields input::placeholder,
+.theme-builder-form-fields textarea::placeholder {
+  color: #9b8173 !important;
+}

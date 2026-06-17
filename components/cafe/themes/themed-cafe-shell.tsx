@@ -5,6 +5,7 @@ import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/custome
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
+import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 import {
   buildCustomIdentityCssVars,
   defaultCustomIdentityTheme,
@@ -55,7 +56,7 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
   return (
     <main
       dir="rtl"
-      className="brand-identity-custom-theme relative min-h-screen bg-[#FCF8F3] text-[#311912]"
+      className="brand-identity-custom-theme barndaksa-cinematic-page relative min-h-screen bg-[#FCF8F3] text-[#311912]"
       style={identityStyle}
     >
       {showPageBackground ? (
@@ -83,13 +84,13 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
         <ThemedCafeHeader
           slug={slug}
           cafeName={settings.cafeName}
-          logoUrl={identityLogoUrl ?? cafeLogoUrl}
+          logoUrl={getPreferredCafeDisplayLogoUrl(cafeLogoUrl, identityLogoUrl)}
           themeId="brand-identity-custom"
           customer={customer}
           previewThemeId={previewThemeId}
           features={features}
         />
-        <div className={`brand-cafe-fields mx-auto ${maxWidth} px-4 py-6 sm:px-6 sm:py-8 ${className}`}>
+        <div className={`brand-cafe-fields barndaksa-cinematic-stage mx-auto ${maxWidth} px-4 py-6 sm:px-6 sm:py-8 ${className}`}>
           {children}
         </div>
         <div className={`mx-auto ${maxWidth} px-4 pb-6 sm:px-6`}>

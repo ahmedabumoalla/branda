@@ -81,7 +81,7 @@ export function ThemeBannerCarousel({
             : "rounded-[28px] overflow-hidden border";
 
   return (
-    <section className={`mt-6 animate-barndaksa-fade ${shell} ${theme.card}`}>
+    <section className={`mt-6 animate-barndaksa-fade barndaksa-premium-card barndaksa-offer-motion ${shell} ${theme.card}`}>
       <div
         className={
           variant === "strip"
@@ -168,7 +168,7 @@ export function ThemeProductCard({
   ) : (
     <span>{formatSar(product.price)}</span>
   );
-  const base = `${theme.card} ${theme.cardHover} group block overflow-hidden transition ${className}`;
+  const base = `${theme.card} ${theme.cardHover} barndaksa-premium-card barndaksa-product-motion group block overflow-hidden transition ${className}`;
 
   if (size === "kiosk") {
     return (
@@ -311,8 +311,8 @@ export function ThemeCategoryStrip({
           )}
           className={
             variant === "cards"
-              ? `min-w-[7rem] rounded-2xl px-4 py-3 text-center text-sm font-black ${theme.card} ${theme.cardHover}`
-              : `rounded-full px-4 py-2 text-sm font-black ${theme.badge} ${theme.cardHover}`
+              ? `min-w-[7rem] rounded-2xl px-4 py-3 text-center text-sm font-black barndaksa-premium-card ${theme.card} ${theme.cardHover}`
+              : `rounded-full px-4 py-2 text-sm font-black barndaksa-premium-card ${theme.badge} ${theme.cardHover}`
           }
         >
           {name}

@@ -26,6 +26,7 @@ import {
   buildCafeNavItems,
 } from "./theme-shared";
 
+import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 type BgTarget = "page" | "hero" | "banner";
 
 function scopeApplies(scope: CustomIdentityTheme["backgroundScope"], target: BgTarget) {
@@ -109,7 +110,7 @@ export function BrandIdentityCustomTheme(props: CafeThemePageProps) {
   );
 
   const cssVars = buildCustomIdentityCssVars(identity.palette) as CSSProperties;
-  const logoUrl = identityLogoUrl ?? cafeLogoUrl;
+  const logoUrl = getPreferredCafeDisplayLogoUrl(cafeLogoUrl, identityLogoUrl);
 
   const featuredProducts = useMemo(
     () =>

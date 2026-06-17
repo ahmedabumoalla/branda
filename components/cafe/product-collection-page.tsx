@@ -177,7 +177,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
         <div className="mt-8 grid gap-5 md:grid-cols-2">
           {activeBranches.length ? (
             activeBranches.map((branch) => (
-              <article key={branch.id} className={`p-6 ${theme.card}`}>
+              <article key={branch.id} className={`barndaksa-premium-card p-6 ${theme.card}`}>
                 <MapPin className={`mb-3 h-7 w-7 ${theme.accent}`} />
                 <h2 className="text-2xl font-black">{branch.name}</h2>
                 <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{branch.address}</p>
@@ -211,7 +211,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
         رجوع للكوفي
       </Link>
 
-      <div className="space-y-8">
+      <div className="barndaksa-cinematic-stage space-y-8">
         <div>
           <p className={`font-black ${theme.accent}`}>{viewInfo[view]?.title || "المنتجات"}</p>
           <h1
@@ -237,7 +237,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             <h2 className="mb-4 text-2xl font-black">العروض النشطة</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {activeOffers.map((offer) => (
-                <article key={offer.id} className={`p-5 ${theme.card}`}>
+                <article key={offer.id} className={`barndaksa-premium-card barndaksa-offer-motion p-5 ${theme.card}`}>
                   <p className={`font-black ${theme.accent}`}>{offer.type}</p>
                   <h3 className="mt-2 text-xl font-black">{offer.title}</h3>
                   <p className={`mt-2 text-sm ${theme.muted}`}>{offer.description}</p>
@@ -262,7 +262,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             </span>
           </div>
 
-          <div className={gridClass}>
+          <div className={`${gridClass} barndaksa-stagger-grid`}>
             {orderedProducts.map((item) => (
               <ThemedProductCard
                 key={item.id}

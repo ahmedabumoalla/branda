@@ -21,6 +21,7 @@ import { ProductMediaCarousel } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
+import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 import { buildCustomIdentityCssVars, defaultCustomIdentityTheme, OVERLAY_OPACITY } from "@/lib/mock/custom-identity-theme";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath } from "@/lib/cafe/theme-links";
@@ -290,7 +291,9 @@ function todayKey() {
 
 function CafePageInner({ slug }: { slug: string }) {
   const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features } = useCafeThemePage(slug);
-  const hasFeature = (feature: string) => featureCodesAllow(features, feature);
+  // إذا لم تصل ميزات الباقة بعد من API لا نخفي أزرار الفرع الإلكتروني بالخطأ.
+  // عند وصول features من قاعدة البيانات يرجع النظام يطبق حدود الباقة فعليًا.
+  const hasFeature = (feature: string) => !features.length || featureCodesAllow(features, feature);
   const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
@@ -384,7 +387,7 @@ function CafePageInner({ slug }: { slug: string }) {
   }, [slug]);
 
   const cafeName = settings.cafeName || slug;
-  const logoUrl = settings.logoAssetId;
+  const logoUrl = settings.logoDataUrl ?? settings.logoAssetId;
   const availableProducts = products.filter((product) => product.available);
   const activeOffers = offers.filter(
     (offer) =>
@@ -426,7 +429,7 @@ function CafePageInner({ slug }: { slug: string }) {
   const identity = customIdentity ?? defaultCustomIdentityTheme();
   const identityStyle = buildCustomIdentityCssVars(identity.palette) as CSSProperties;
   const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(identity);
-  const appliedLogoUrl = identityLogoUrl ?? logoUrl;
+  const appliedLogoUrl = getPreferredCafeDisplayLogoUrl(logoUrl, identityLogoUrl);
   const showPageBackground =
     Boolean(backgroundUrl) &&
     (identity.backgroundScope === "all-customer-pages" ||

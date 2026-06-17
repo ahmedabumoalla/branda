@@ -30,7 +30,7 @@ export function ThemedProductCard({ product, experience, href }: Props) {
   const hasDiscount = promoOn && finalPrice < product.price;
 
   return (
-    <Link href={href} className={`${theme.card} ${theme.cardHover} group block overflow-hidden transition`}>
+    <Link href={href} className={`${theme.card} ${theme.cardHover} barndaksa-premium-card barndaksa-product-motion group block overflow-hidden transition`}>
       <div className="relative aspect-[4/3] overflow-hidden">
         <ProductMediaCarousel
           product={product}

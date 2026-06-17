@@ -1,0 +1,11 @@
+{
+  "name": "BARNDAKSA_CAFE_LOGO_SAVE_FIX_PATCH",
+  "createdAt": "2026-06-17",
+  "description": "Fixes cafe settings logo preview/persistence after uploading to Supabase storage by resolving storage paths to public signed URLs, and removes settings page hydration mismatch caused by localhost vs production public URL rendering.",
+  "databaseChanges": false,
+  "files": [
+    "lib/cafe/use-resolved-cafe-logo.ts",
+    "components/dashboard/pages/settings-page.tsx"
+  ],
+  "runFromProjectRoot": "node BARNDAKSA_CAFE_LOGO_SAVE_FIX_PATCH/apply-patch.cjs"
+}

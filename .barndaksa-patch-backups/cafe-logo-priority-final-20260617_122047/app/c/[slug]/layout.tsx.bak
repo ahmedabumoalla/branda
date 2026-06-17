@@ -1,0 +1,90 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getPublicCafeSettings } from "@/lib/data/settings";
+import { getPublicCustomIdentity } from "@/lib/data/theme";
+
+const DEFAULT_BARNDAKSA_ICON = "/brand/barndaksa-app-icon-512.png";
+
+type Props = {
+  children: ReactNode;
+  params: Promise<{ slug: string }>;
+};
+
+function normalizeBrowserIconUrl(url?: string | null) {
+  if (!url) return DEFAULT_BARNDAKSA_ICON;
+  if (url.startsWith("data:") || url.startsWith("blob:")) return DEFAULT_BARNDAKSA_ICON;
+  return url;
+}
+
+function iconType(url: string) {
+  const clean = url.split("?")[0]?.toLowerCase() ?? url.toLowerCase();
+  if (clean.endsWith(".svg")) return "image/svg+xml";
+  if (clean.endsWith(".webp")) return "image/webp";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".ico")) return "image/x-icon";
+  return "image/png";
+}
+
+async function loadCafeBrowserBrand(slug: string) {
+  if (!isSupabaseConfigured()) {
+    return {
+      name: "برندة",
+      iconUrl: DEFAULT_BARNDAKSA_ICON,
+    };
+  }
+
+  try {
+    const [settingsResult, identityResult] = await Promise.allSettled([
+      getPublicCafeSettings(slug),
+      getPublicCustomIdentity(slug),
+    ]);
+
+    const settings = settingsResult.status === "fulfilled" ? settingsResult.value : null;
+    const identity = identityResult.status === "fulfilled" ? identityResult.value : null;
+    const name = settings?.cafeName || slug || "برندة";
+    const iconUrl = normalizeBrowserIconUrl(
+      identity?.legacyLogoDataUrl ?? settings?.logoDataUrl ?? DEFAULT_BARNDAKSA_ICON,
+    );
+
+    return { name, iconUrl };
+  } catch (error) {
+    console.warn("[cafe/browser-brand]", error);
+    return {
+      name: slug || "برندة",
+      iconUrl: DEFAULT_BARNDAKSA_ICON,
+    };
+  }
+}
+
+export async function generateMetadata({ params }: { params: Props["params"] }): Promise<Metadata> {
+  const { slug } = await params;
+  const brand = await loadCafeBrowserBrand(slug);
+  const type = iconType(brand.iconUrl);
+
+  return {
+    title: `${brand.name} | برندة`,
+    description: `الفرع الإلكتروني لـ ${brand.name} على منصة برندة`,
+    icons: {
+      icon: [
+        { url: brand.iconUrl, type },
+        { url: DEFAULT_BARNDAKSA_ICON, sizes: "512x512", type: "image/png" },
+        { url: "/favicon.ico" },
+      ],
+      shortcut: [brand.iconUrl, "/favicon.ico"],
+      apple: [
+        { url: brand.iconUrl, type },
+        { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      ],
+    },
+    openGraph: {
+      title: `${brand.name} | برندة`,
+      description: `الفرع الإلكتروني لـ ${brand.name}`,
+      images: [{ url: brand.iconUrl }],
+    },
+  };
+}
+
+export default function CafePublicSegmentLayout({ children }: Props) {
+  return <>{children}</>;
+}

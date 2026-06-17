@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+const fs = require("fs");
+const path = require("path");
+
+const TARGET_FILE = "lib/cafe/use-resolved-cafe-logo.ts";
+const PAYLOAD_BASE64 = "InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgdXNlRWZmZWN0LCB1c2VTdGF0ZSB9IGZyb20gInJlYWN0IjsKaW1wb3J0IHsKICBnZXRMb2NhbEFzc2V0T2JqZWN0VXJsLAogIHJldm9rZU9iamVjdFVybCwKfSBmcm9tICJAL2xpYi9jYWZlL2xvY2FsLWFzc2V0LXN0b3JlIjsKaW1wb3J0IHsKICBpc0h0dHBJbWFnZVVybCwKICBpc0xlZ2FjeURhdGFJbWFnZVVybCwKfSBmcm9tICJAL2xpYi9jYWZlL2ltYWdlLWFzc2V0LXBpcGVsaW5lIjsKaW1wb3J0IHR5cGUgeyBDYWZlU2V0dGluZ3MgfSBmcm9tICJAL2xpYi9tb2NrL2NhZmUtc2V0dGluZ3MiOwoKY29uc3QgcHVibGljVXJsQ2FjaGUgPSBuZXcgTWFwPHN0cmluZywgeyB1cmw6IHN0cmluZzsgZXhwaXJlc0F0OiBudW1iZXIgfT4oKTsKCmZ1bmN0aW9uIGNhblJlbmRlckltYWdlVmFsdWUodmFsdWU/OiBzdHJpbmcgfCBudWxsKTogYm9vbGVhbiB7CiAgcmV0dXJuICgKICAgIGlzSHR0cEltYWdlVXJsKHZhbHVlKSB8fAogICAgaXNMZWdhY3lEYXRhSW1hZ2VVcmwodmFsdWUpIHx8CiAgICBCb29sZWFuKHZhbHVlPy5zdGFydHNXaXRoKCIvIikpCiAgKTsKfQoKZnVuY3Rpb24gZ2V0UmVuZGVyYWJsZUltYWdlVmFsdWUodmFsdWU/OiBzdHJpbmcgfCBudWxsKTogc3RyaW5nIHwgdW5kZWZpbmVkIHsKICBpZiAodHlwZW9mIHZhbHVlICE9PSAic3RyaW5nIikgcmV0dXJuIHVuZGVmaW5lZDsKICBjb25zdCBuZXh0ID0gdmFsdWUudHJpbSgpOwogIHJldHVybiBjYW5SZW5kZXJJbWFnZVZhbHVlKG5leHQpID8gbmV4dCA6IHVuZGVmaW5lZDsKfQoKYXN5bmMgZnVuY3Rpb24gcmVzb2x2ZVB1YmxpY0NhZmVMb2dvVXJsKHN0b3JhZ2VQYXRoOiBzdHJpbmcpIHsKICBjb25zdCBrZXkgPSBgY2FmZS1sb2dvczoke3N0b3JhZ2VQYXRofWA7CiAgY29uc3QgY2FjaGVkID0gcHVibGljVXJsQ2FjaGUuZ2V0KGtleSk7CgogIGlmIChjYWNoZWQgJiYgY2FjaGVkLmV4cGlyZXNBdCA+IERhdGUubm93KCkgKyA2MF8wMDApIHsKICAgIHJldHVybiBjYWNoZWQudXJsOwogIH0KCiAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCBmZXRjaCgKICAgIGAvYXBpL3B1YmxpYy9zdG9yYWdlP2J1Y2tldD1jYWZlLWxvZ29zJnBhdGg9JHtlbmNvZGVVUklDb21wb25lbnQoc3RvcmFnZVBhdGgpfWAsCiAgICB7IGNhY2hlOiAibm8tc3RvcmUiIH0KICApOwoKICBpZiAoIXJlc3BvbnNlLm9rKSByZXR1cm4gdW5kZWZpbmVkOwoKICBjb25zdCBwYXlsb2FkID0gKGF3YWl0IHJlc3BvbnNlLmpzb24oKSkgYXMgeyB1cmw/OiBzdHJpbmc7IGV4cGlyZXNJbj86IG51bWJlciB9OwogIGlmICghcGF5bG9hZC51cmwpIHJldHVybiB1bmRlZmluZWQ7CgogIGNvbnN0IGV4cGlyZXNJbiA9IE51bWJlcihwYXlsb2FkLmV4cGlyZXNJbiA/PyAzNjAwKTsKICBwdWJsaWNVcmxDYWNoZS5zZXQoa2V5LCB7CiAgICB1cmw6IHBheWxvYWQudXJsLAogICAgZXhwaXJlc0F0OiBEYXRlLm5vdygpICsgTWF0aC5tYXgoNjAsIGV4cGlyZXNJbiAtIDYwKSAqIDEwMDAsCiAgfSk7CgogIHJldHVybiBwYXlsb2FkLnVybDsKfQoKZXhwb3J0IGZ1bmN0aW9uIHVzZVJlc29sdmVkQ2FmZUxvZ29VcmwoCiAgc2V0dGluZ3M6IENhZmVTZXR0aW5ncywKICBwcmV2aWV3VXJsPzogc3RyaW5nCikgewogIGNvbnN0IFtsb2dvVXJsLCBzZXRMb2dvVXJsXSA9IHVzZVN0YXRlPHN0cmluZyB8IHVuZGVmaW5lZD4oKCkgPT4KICAgIHByZXZpZXdVcmwgPz8gZ2V0UmVuZGVyYWJsZUltYWdlVmFsdWUoc2V0dGluZ3MubG9nb0RhdGFVcmwpCiAgKTsKCiAgdXNlRWZmZWN0KCgpID0+IHsKICAgIGxldCBjYW5jZWxsZWQgPSBmYWxzZTsKICAgIGxldCBvYmplY3RVcmw6IHN0cmluZyB8IHVuZGVmaW5lZDsKCiAgICBhc3luYyBmdW5jdGlvbiBsb2FkKCkgewogICAgICBpZiAocHJldmlld1VybCkgewogICAgICAgIHNldExvZ29VcmwocHJldmlld1VybCk7CiAgICAgICAgcmV0dXJuOwogICAgICB9CgogICAgICBjb25zdCBmYWxsYmFjayA9IGdldFJlbmRlcmFibGVJbWFnZVZhbHVlKHNldHRpbmdzLmxvZ29EYXRhVXJsKTsKICAgICAgY29uc3QgYXNzZXRJZCA9CiAgICAgICAgdHlwZW9mIHNldHRpbmdzLmxvZ29Bc3NldElkID09PSAic3RyaW5nIiA/IHNldHRpbmdzLmxvZ29Bc3NldElkLnRyaW0oKSA6ICIiOwoKICAgICAgaWYgKGFzc2V0SWQubGVuZ3RoID4gMCkgewogICAgICAgIGNvbnN0IHJlbmRlcmFibGVBc3NldFVybCA9IGdldFJlbmRlcmFibGVJbWFnZVZhbHVlKGFzc2V0SWQpOwogICAgICAgIGlmIChyZW5kZXJhYmxlQXNzZXRVcmwpIHsKICAgICAgICAgIGlmICghY2FuY2VsbGVkKSBzZXRMb2dvVXJsKHJlbmRlcmFibGVBc3NldFVybCk7CiAgICAgICAgICByZXR1cm47CiAgICAgICAgfQoKICAgICAgICAvLyBQcm9kdWN0aW9uIGNhZmUgbG9nb3MgYXJlIHNhdmVkIGFzIFN1cGFiYXNlIFN0b3JhZ2UgcGF0aHMuCiAgICAgICAgLy8gUmVzb2x2ZSB0aGVzZSBwYXRocyB0aHJvdWdoIHRoZSBwdWJsaWMgc3RvcmFnZSBBUEkgYmVmb3JlIHRyeWluZyBsZWdhY3kgbG9jYWwgYXNzZXRzLgogICAgICAgIGlmIChhc3NldElkLmluZGV4T2YoIi8iKSA+PSAwKSB7CiAgICAgICAgICBjb25zdCBzaWduZWRVcmwgPSBhd2FpdCByZXNvbHZlUHVibGljQ2FmZUxvZ29VcmwoYXNzZXRJZCk7CiAgICAgICAgICBpZiAoIWNhbmNlbGxlZCAmJiBzaWduZWRVcmwpIHsKICAgICAgICAgICAgc2V0TG9nb1VybChzaWduZWRVcmwpOwogICAgICAgICAgICByZXR1cm47CiAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICAvLyBLZWVwIHN1cHBvcnQgZm9yIG9sZGVyIGxvY2FsIEluZGV4ZWREQiBsb2dvIElEcyB1c2VkIGJ5IHRoZSBtb2NrL2xvY2FsIGZsb3cuCiAgICAgICAgb2JqZWN0VXJsID0gYXdhaXQgZ2V0TG9jYWxBc3NldE9iamVjdFVybChhc3NldElkKTsKICAgICAgICBpZiAob2JqZWN0VXJsKSB7CiAgICAgICAgICBpZiAoIWNhbmNlbGxlZCkgc2V0TG9nb1VybChvYmplY3RVcmwpOwogICAgICAgICAgcmV0dXJuOwogICAgICAgIH0KICAgICAgfQoKICAgICAgaWYgKCFjYW5jZWxsZWQpIHNldExvZ29VcmwoZmFsbGJhY2spOwogICAgfQoKICAgIHZvaWQgbG9hZCgpOwoKICAgIHJldHVybiAoKSA9PiB7CiAgICAgIGNhbmNlbGxlZCA9IHRydWU7CiAgICAgIGlmIChvYmplY3RVcmwpIHJldm9rZU9iamVjdFVybChvYmplY3RVcmwpOwogICAgfTsKICB9LCBbc2V0dGluZ3MubG9nb0Fzc2V0SWQsIHNldHRpbmdzLmxvZ29EYXRhVXJsLCBwcmV2aWV3VXJsXSk7CgogIHJldHVybiBsb2dvVXJsOwp9Cg==";
+const REQUIRED_MARKER = "assetId.indexOf(\"/\") >= 0";
+const FORBIDDEN_MARKER = "assetId.includes(\"/\")";
+
+function nowStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return String(d.getFullYear()) + pad(d.getMonth() + 1) + pad(d.getDate()) + "_" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+function fail(message) {
+  console.error("\n[Barndaksa patch] " + message);
+  process.exit(1);
+}
+
+const projectRoot = process.cwd();
+const targetPath = path.join(projectRoot, TARGET_FILE);
+
+if (!fs.existsSync(path.join(projectRoot, "package.json"))) {
+  fail("شغل الأمر من جذر المشروع E:\\branda-platform وليس من داخل مجلد الباتش.");
+}
+
+if (!fs.existsSync(targetPath)) {
+  fail("الملف المطلوب غير موجود: " + TARGET_FILE);
+}
+
+const nextContent = Buffer.from(PAYLOAD_BASE64, "base64").toString("utf8");
+
+const backupDir = path.join(projectRoot, ".barndaksa-patch-backups", "logo-final-fix-" + nowStamp());
+fs.mkdirSync(backupDir, { recursive: true });
+fs.copyFileSync(targetPath, path.join(backupDir, "use-resolved-cafe-logo.ts.bak"));
+
+fs.writeFileSync(targetPath, nextContent, "utf8");
+
+const written = fs.readFileSync(targetPath, "utf8");
+if (written.includes(FORBIDDEN_MARKER)) {
+  fail("فشل الاستبدال: السطر القديم assetId.includes ما زال موجود.");
+}
+if (!written.includes(REQUIRED_MARKER)) {
+  fail("فشل الاستبدال: علامة الإصلاح النهائية غير موجودة.");
+}
+
+console.log("\n✅ تم قفل إصلاح شعار الكوفي نهائيًا.");
+console.log("✅ تم استبدال: " + TARGET_FILE);
+console.log("✅ نسخة احتياطية: " + path.relative(projectRoot, backupDir));
+console.log("\nشغل الآن:");
+console.log("npm exec tsc -- --noEmit");
+console.log("npm run build");

@@ -68,6 +68,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   const [pricing, setPricing] = useState<DomainPriceResult | null>(null);
   const [purchase, setPurchase] = useState<CafePurchasedDomain | null>(null);
   const [domainMessage, setDomainMessage] = useState<string>("");
+  const [browserOrigin, setBrowserOrigin] = useState<string | undefined>();
 
   const [pendingLogo, setPendingLogo] = useState<OptimizedImageResult | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>();
@@ -96,6 +97,10 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   useEffect(() => {
     return () => revokeObjectUrl(logoPreviewUrl);
   }, [logoPreviewUrl]);
+
+  useEffect(() => {
+    setBrowserOrigin(window.location.origin);
+  }, []);
 
   async function save() {
     try {
@@ -136,10 +141,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   const slug = settings.cafeSlug || "test-cafe";
   const displayDomain = getCafeDisplayDomain(slug, settings);
   const domainSource = resolveCafeDomainSource(settings);
-  const publicUrl =
-    typeof window !== "undefined"
-      ? getCafePublicUrl(slug, { origin: window.location.origin, settings })
-      : getCafePublicUrl(slug, { settings });
+  const publicUrl = getCafePublicUrl(slug, { origin: browserOrigin, settings });
   const subdomainPreview = getCafeSubdomainHost(slug);
 
   function copyPublicUrl() {
@@ -339,9 +341,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         action={
           <div className="flex flex-wrap gap-3">
             <LinkButton
-              href={getCafePublicUrl(settings.cafeSlug || "test-cafe", {
-                origin: typeof window !== "undefined" ? window.location.origin : undefined,
-              })}
+              href={publicUrl}
               variant="outline"
               target="_blank"
             >

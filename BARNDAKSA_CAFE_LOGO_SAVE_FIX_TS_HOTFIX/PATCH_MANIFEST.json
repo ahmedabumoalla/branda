@@ -1,0 +1,10 @@
+{
+  "name": "BARNDAKSA_CAFE_LOGO_SAVE_FIX_TS_HOTFIX",
+  "createdAt": "2026-06-17",
+  "description": "Fixes the TypeScript narrowing error in use-resolved-cafe-logo.ts after the cafe logo save fix patch.",
+  "databaseChanges": false,
+  "files": [
+    "lib/cafe/use-resolved-cafe-logo.ts"
+  ],
+  "runFromProjectRoot": "node BARNDAKSA_CAFE_LOGO_SAVE_FIX_TS_HOTFIX/apply-patch.cjs"
+}

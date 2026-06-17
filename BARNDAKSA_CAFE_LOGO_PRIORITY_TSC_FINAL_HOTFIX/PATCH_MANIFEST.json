@@ -1,0 +1,6 @@
+{
+  "name": "BARNDAKSA_CAFE_LOGO_PRIORITY_TSC_FINAL_HOTFIX",
+  "description": "Final TypeScript hotfix for missing getPreferredCafeDisplayLogoUrl imports after cafe logo priority patch.",
+  "database_changes": false,
+  "run_from_project_root": "node BARNDAKSA_CAFE_LOGO_PRIORITY_TSC_FINAL_HOTFIX/apply-patch.cjs"
+}
