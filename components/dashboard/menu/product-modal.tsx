@@ -10,16 +10,17 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ProductImage } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
+import { uploadImageAction, uploadProductVideoAction } from "@/app/actions/upload";
 import {
   ImagePipelineError,
+  MAX_UPLOAD_BYTES,
   isHttpImageUrl,
   optimizeImageForStorage,
   type OptimizedImageResult,
 } from "@/lib/cafe/image-asset-pipeline";
 import {
   revokeObjectUrl,
-  saveOptimizedImageAsset,
 } from "@/lib/cafe/local-asset-store";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { formatSar } from "@/lib/format";
@@ -43,7 +44,9 @@ type Props = {
   editingProduct: MenuProduct | null;
   productList: MenuProduct[];
   categories: MenuCategoryRecord[];
-  onCategoriesChange: (categories: MenuCategoryRecord[]) => void;
+  onCategoriesChange: (
+    categories: MenuCategoryRecord[]
+  ) => Promise<MenuCategoryRecord[]> | MenuCategoryRecord[] | void;
   onClose: () => void;
   onSave: (product: MenuProduct) => void;
 };
@@ -55,6 +58,43 @@ const VARIANT_OPTIONS: { id: MenuImageVariant; label: string }[] = [
   { id: "bakery", label: "مخبوزات" },
   { id: "tea", label: "شاي / سبيشل" },
 ];
+
+const UUID_PATTERN = /^[0-9a-f-]{36}$/i;
+const ACCEPTED_VIDEO_MIMES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+const ACCEPTED_VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"];
+
+type PendingProductImage = {
+  id: string;
+  optimized: OptimizedImageResult;
+  previewUrl: string;
+};
+
+function normalizeMime(type: string) {
+  return type.toLowerCase().split(";")[0].trim();
+}
+
+function isVideoFile(file: File) {
+  const mime = normalizeMime(file.type || "");
+  const name = file.name.toLowerCase();
+  return (
+    ACCEPTED_VIDEO_MIMES.has(mime) ||
+    ACCEPTED_VIDEO_EXTENSIONS.some((extension) => name.endsWith(extension))
+  );
+}
+
+function videoMimeFromFile(file: File) {
+  const mime = normalizeMime(file.type || "");
+  if (ACCEPTED_VIDEO_MIMES.has(mime)) return mime;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".webm")) return "video/webm";
+  if (name.endsWith(".mov")) return "video/quicktime";
+  if (name.endsWith(".mp4")) return "video/mp4";
+  return undefined;
+}
+
+function isPersistableUrl(value?: string | null) {
+  return Boolean(value && (value.startsWith("http://") || value.startsWith("https://")));
+}
 
 function buildPromoFromForm(
   linked: boolean,
@@ -116,9 +156,14 @@ export function MenuProductFormModal({
   const [description, setDescription] = useState("");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imageAssetId, setImageAssetId] = useState<string | undefined>();
+  const [imageGallery, setImageGallery] = useState<MenuProduct["imageGallery"]>([]);
+  const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([]);
   const [legacyExternalImageUrl, setLegacyExternalImageUrl] = useState<string | null>(null);
   const [pendingOptimized, setPendingOptimized] = useState<OptimizedImageResult | null>(null);
   const [optimizingImage, setOptimizingImage] = useState(false);
+  const [videoAssetId, setVideoAssetId] = useState<string | undefined>();
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | undefined>();
   const [imageVariant, setImageVariant] = useState<MenuImageVariant>("latte");
 
   const [calories, setCalories] = useState("");
@@ -152,10 +197,15 @@ export function MenuProductFormModal({
       setDescription(editingProduct.description);
       setImagePreviewUrl(null);
       setImageAssetId(editingProduct.imageAssetId);
+      setImageGallery(editingProduct.imageGallery ?? []);
+      setPendingImages([]);
       setLegacyExternalImageUrl(
         isHttpImageUrl(editingProduct.imageDataUrl) ? editingProduct.imageDataUrl! : null
       );
       setPendingOptimized(null);
+      setVideoAssetId(editingProduct.videoAssetId);
+      setPendingVideoFile(null);
+      setVideoPreviewUrl(undefined);
       setImageVariant(editingProduct.imageVariant);
       setPrice(String(editingProduct.price));
       setCalories(
@@ -196,8 +246,13 @@ export function MenuProductFormModal({
       setDescription("");
       setImagePreviewUrl(null);
       setImageAssetId(undefined);
+      setImageGallery([]);
+      setPendingImages([]);
       setLegacyExternalImageUrl(null);
       setPendingOptimized(null);
+      setVideoAssetId(undefined);
+      setPendingVideoFile(null);
+      setVideoPreviewUrl(undefined);
       setImageVariant("latte");
       setPrice("18");
       setCalories("");
@@ -221,7 +276,7 @@ export function MenuProductFormModal({
 
   const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  function resolveCategoryId(): string | undefined {
+  async function resolveCategoryRecord(): Promise<MenuCategoryRecord | undefined> {
     if (creatingCategory) {
       if (!newCategoryName.trim()) return undefined;
       const now = new Date().toISOString().slice(0, 10);
@@ -236,10 +291,21 @@ export function MenuProductFormModal({
         createdAt: now,
         updatedAt: now,
       };
-      onCategoriesChange([...categories, newCat]);
-      return newCat.id;
+      const nextCategories = [...categories, newCat];
+      const savedCategories = await onCategoriesChange(nextCategories);
+      const availableCategories = Array.isArray(savedCategories)
+        ? savedCategories
+        : nextCategories;
+
+      return (
+        availableCategories.find((item) => item.id === newCat.id) ??
+        availableCategories.find(
+          (item) => item.name === newCat.name && item.sortOrder === newCat.sortOrder
+        ) ??
+        availableCategories.find((item) => item.name === newCat.name)
+      );
     }
-    return categoryId || undefined;
+    return categories.find((item) => item.id === categoryId);
   }
 
   function addIngredient() {
@@ -267,6 +333,53 @@ export function MenuProductFormModal({
         err instanceof ImagePipelineError
           ? err.message
           : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP"
+      );
+    } finally {
+      setOptimizingImage(false);
+    }
+  }
+
+  async function onPickMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+
+    setOptimizingImage(true);
+    try {
+      const nextImages: PendingProductImage[] = [];
+
+      for (const file of files) {
+        if (isVideoFile(file)) {
+          if (file.size > MAX_UPLOAD_BYTES) {
+            throw new ImagePipelineError("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
+          }
+
+          if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
+          setPendingVideoFile(file);
+          setVideoPreviewUrl(URL.createObjectURL(file));
+          continue;
+        }
+
+        const optimized = await optimizeImageForStorage(file, "product-image");
+        nextImages.push({
+          id: crypto.randomUUID(),
+          optimized,
+          previewUrl: URL.createObjectURL(optimized.blob),
+        });
+      }
+
+      if (nextImages.length) {
+        setPendingImages((current) => [...current, ...nextImages]);
+        setPendingOptimized(nextImages[0].optimized);
+        if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+        setImagePreviewUrl(nextImages[0].previewUrl);
+        setLegacyExternalImageUrl(null);
+      }
+    } catch (err) {
+      alert(
+        err instanceof ImagePipelineError
+          ? err.message
+          : "تعذر قراءة الملف، جرّب صورة PNG أو JPG أو WEBP أو فيديو MP4"
       );
     } finally {
       setOptimizingImage(false);
@@ -303,6 +416,25 @@ export function MenuProductFormModal({
       description: description.trim() || "منتج من قائمة العلامة التجارية",
       imageAssetId,
       imageDataUrl: legacyExternalImageUrl,
+      imageGallery: [
+        ...(imageGallery ?? []),
+        ...pendingImages.map((item) => ({
+          imageDataUrl: item.previewUrl,
+          alt: name.trim() || undefined,
+        })),
+      ],
+      videoAssetId,
+      media: [
+        ...(pendingVideoFile && videoPreviewUrl
+          ? [{
+              type: "video" as const,
+              url: videoPreviewUrl,
+              mimeType: videoMimeFromFile(pendingVideoFile),
+            }]
+          : videoAssetId
+            ? [{ type: "video" as const, assetId: videoAssetId }]
+            : []),
+      ],
       imageVariant,
       price: Number(price) || 0,
       calories: calories.trim() ? Number(calories) || 0 : undefined,
@@ -326,9 +458,14 @@ export function MenuProductFormModal({
     resolvedCategoryId,
     description,
     imageAssetId,
+    imageGallery,
+    pendingImages,
     legacyExternalImageUrl,
     imagePreviewUrl,
     pendingOptimized,
+    videoAssetId,
+    pendingVideoFile,
+    videoPreviewUrl,
     imageVariant,
     price,
     calories,
@@ -375,17 +512,14 @@ export function MenuProductFormModal({
       return;
     }
 
-    const nextCategoryId = resolveCategoryId();
-    if (!nextCategoryId) {
+    const categoryRecord = await resolveCategoryRecord();
+    if (!categoryRecord || !UUID_PATTERN.test(categoryRecord.id)) {
       alert("تعذر حفظ التصنيف");
       return;
     }
 
-    const categoryName = getCategoryNameById(
-      categories,
-      nextCategoryId,
-      newCategoryName.trim() || "أخرى"
-    );
+    const nextCategoryId = categoryRecord.id;
+    const categoryName = categoryRecord.name;
 
     if (promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
       alert("اختر المنتج المجاني");
@@ -406,14 +540,35 @@ export function MenuProductFormModal({
 
     const productId = editingProduct?.id || crypto.randomUUID();
     let finalAssetId = imageAssetId;
+    let finalVideoAssetId = videoAssetId;
+    const finalGallery = (imageGallery ?? []).filter(
+      (item) => item.imageAssetId || isPersistableUrl(item.imageDataUrl)
+    );
 
     try {
-      if (pendingOptimized) {
-        finalAssetId = await saveOptimizedImageAsset(
-          "product-image",
-          pendingOptimized,
+      for (const pendingImage of pendingImages) {
+        const formData = new FormData();
+        formData.append("file", pendingImage.optimized.blob, pendingImage.optimized.fileName);
+        const uploaded = await uploadImageAction(
+          "menu-products",
+          formData,
+          "product",
           productId
         );
+        const galleryItem = {
+          imageAssetId: uploaded.storagePath,
+          imageDataUrl: null,
+          alt: name.trim() || undefined,
+        };
+        finalGallery.push(galleryItem);
+        finalAssetId = finalAssetId ?? uploaded.storagePath;
+      }
+
+      if (pendingVideoFile) {
+        const formData = new FormData();
+        formData.append("file", pendingVideoFile, pendingVideoFile.name);
+        const uploaded = await uploadProductVideoAction(formData, productId);
+        finalVideoAssetId = uploaded.storagePath;
       }
     } catch {
       alert("تعذر حفظ صورة المنتج محليًا");
@@ -427,7 +582,24 @@ export function MenuProductFormModal({
       categoryId: nextCategoryId,
       description: description.trim() || "منتج من قائمة العلامة التجارية",
       imageAssetId: finalAssetId,
-      imageDataUrl: legacyExternalImageUrl,
+      imageDataUrl: isPersistableUrl(legacyExternalImageUrl) ? legacyExternalImageUrl : null,
+      imageGallery: finalGallery,
+      videoAssetId: finalVideoAssetId,
+      media: [
+        ...(finalVideoAssetId
+          ? [{
+              type: "video" as const,
+              assetId: finalVideoAssetId,
+              mimeType: pendingVideoFile ? videoMimeFromFile(pendingVideoFile) : undefined,
+            }]
+          : []),
+        ...finalGallery.map((item) => ({
+          type: "image" as const,
+          assetId: item.imageAssetId,
+          url: item.imageDataUrl ?? null,
+          alt: item.alt,
+        })),
+      ],
       imageVariant,
       price: Number(price),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
@@ -437,7 +609,7 @@ export function MenuProductFormModal({
         : undefined,
       redeemableWithPoints: false,
       redemptionPoints: undefined,
-      availableForPickup: availableForPickup || undefined,
+      availableForPickup,
       pickupLeadTimeMinutes: pickupLeadTimeMinutes.trim()
         ? Number(pickupLeadTimeMinutes) || undefined
         : undefined,
@@ -448,6 +620,8 @@ export function MenuProductFormModal({
 
     onSave(payload);
     if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+    pendingImages.forEach((item) => revokeObjectUrl(item.previewUrl));
+    if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
     onClose();
   }
 
@@ -564,9 +738,10 @@ export function MenuProductFormModal({
             <input
               ref={fileRef}
               type="file"
+              multiple
               accept="image/*,video/mp4,video/webm,video/quicktime"
               className="hidden"
-              onChange={onPickFile}
+              onChange={onPickMediaFiles}
             />
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -580,15 +755,22 @@ export function MenuProductFormModal({
                 {optimizingImage ? "جاري تحسين الصورة..." : "اختيار صورة"}
               </button>
 
-              {imagePreviewUrl || imageAssetId || legacyExternalImageUrl ? (
+              {imagePreviewUrl || imageAssetId || legacyExternalImageUrl || imageGallery?.length || pendingImages.length || videoAssetId || pendingVideoFile ? (
                 <button
                   type="button"
                   onClick={() => {
                     if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+                    pendingImages.forEach((item) => revokeObjectUrl(item.previewUrl));
+                    if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
                     setImagePreviewUrl(null);
                     setPendingOptimized(null);
+                    setPendingImages([]);
+                    setImageGallery([]);
                     setImageAssetId(undefined);
                     setLegacyExternalImageUrl(null);
+                    setVideoAssetId(undefined);
+                    setPendingVideoFile(null);
+                    setVideoPreviewUrl(undefined);
                   }}
                   className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700"
                 >
@@ -597,6 +779,26 @@ export function MenuProductFormModal({
                 </button>
               ) : null}
             </div>
+
+            {pendingImages.length || imageGallery?.length || videoPreviewUrl || videoAssetId ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {videoPreviewUrl || videoAssetId ? (
+                  <span className="rounded-2xl bg-[#3A2117] px-3 py-2 text-xs font-black text-[#F8E8D2]">
+                    فيديو
+                  </span>
+                ) : null}
+                {imageGallery?.map((item, index) => (
+                  <span key={item.imageAssetId || item.imageDataUrl || index} className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#3A2117]">
+                    صورة {index + 1}
+                  </span>
+                ))}
+                {pendingImages.map((item, index) => (
+                  <span key={item.id} className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#3A2117]">
+                    صورة جديدة {index + 1}
+                  </span>
+                ))}
+              </div>
+            ) : null}
 
             <label className="mt-4 block">
               <span className="text-xs font-black text-[#7A6255]">
@@ -915,11 +1117,12 @@ export function MenuProductFormModal({
 
           <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-white shadow-xl">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
-              <ProductImage
+              <ProductMediaDisplay
                 product={previewProduct}
-                previewUrl={imagePreviewUrl ?? undefined}
                 alt=""
                 className="h-full w-full object-contain"
+                imagePreviewUrl={imagePreviewUrl ?? undefined}
+                videoPreviewUrl={videoPreviewUrl}
                 fallback={
                   <div
                     className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[previewProduct.imageVariant]}`}

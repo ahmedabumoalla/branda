@@ -32,7 +32,7 @@ export function ProductMedia({ product, className = "" }: { product: ProductWith
   }
 
   const current = images[index];
-  if (current?.url || current?.assetId) {
+  if (current?.url) {
     return <img src={current.url} alt={product.name} className={className} loading="lazy" decoding="async" />;
   }
 

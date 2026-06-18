@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarDays, Coffee, Gift, MapPin, Search, WalletCards } from "lucide-react";
-import { ProductImage } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { PublicExperienceSupportSection } from "@/components/cafe/public-experience-support-section";
 import { PublicLoyaltyCardSection } from "@/components/cafe/public-loyalty-card-section";
@@ -41,7 +41,7 @@ function CafeHomeProductCard({
       className="barndaksa-premium-card barndaksa-product-motion block overflow-hidden rounded-[28px] border border-[#E7D7C6] bg-white shadow-[0_14px_38px_rgba(49,25,18,0.08)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-[#FCF8F3]">
-        <ProductImage
+        <ProductMediaDisplay
           product={product}
           alt={product.name}
           className="h-full w-full object-cover"

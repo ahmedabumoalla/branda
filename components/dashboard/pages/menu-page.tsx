@@ -93,9 +93,12 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
     try {
       const saved = await saveMenuCategoriesAction(next);
       setCategories(saved);
+      router.refresh();
       showToast({ type: "success", message: "تم حفظ تصنيفات المنيو" });
+      return saved;
     } catch {
       showToast({ type: "error", message: "تعذر حفظ التصنيفات" });
+      return categories;
     } finally {
       setSaving(false);
     }

@@ -36,6 +36,7 @@ export function CafeLogo({ name, logoUrl, size = "md", className = "" }: Props) 
         src={src}
         alt={name || "برندة"}
         className={`h-full w-full object-contain ${s.pad}`}
+        style={{ width: "100%", height: "100%" }}
         onError={(event) => {
           if (event.currentTarget.src !== DEFAULT_BARNDAKSA_CAFE_LOGO) {
             event.currentTarget.src = DEFAULT_BARNDAKSA_CAFE_LOGO;

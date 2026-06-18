@@ -14,7 +14,7 @@ import {
 import { formatSar } from "@/lib/format";
 import { CafeFooter } from "@/components/cafe/cafe-footer";
 import { OfferBannerImage } from "@/components/cafe/offer-banner-image";
-import { ProductImage } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel, getVisibleCategoryNames } from "@/lib/cafe/menu-category-utils";
 import { isPromoActive, mockMenuProducts, productFinalPrice, promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
 import { defaultMenuCategories, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
@@ -175,7 +175,7 @@ export function ThemeProductCard({
       <Link href={productHref} className={`${base} rounded-lg p-4`}>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f5]">
-            <ProductImage
+            <ProductMediaDisplay
               product={product}
               alt=""
               className="max-h-full object-contain"
@@ -198,7 +198,7 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} rounded-3xl p-6`}>
         <div className="flex h-56 items-center justify-center">
-          <ProductImage
+          <ProductMediaDisplay
             product={product}
             alt=""
             className="max-h-full object-contain transition group-hover:scale-105"
@@ -216,7 +216,7 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} flex flex-col items-center rounded-2xl p-3 text-center`}>
         <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white shadow-md">
-          <ProductImage
+          <ProductMediaDisplay
             product={product}
             alt=""
             className="h-full w-full object-cover"
@@ -233,7 +233,7 @@ export function ThemeProductCard({
     return (
       <Link href={productHref} className={`${base} grid gap-4 md:grid-cols-2`}>
         <div className="flex min-h-[200px] items-center justify-center p-4">
-          <ProductImage
+          <ProductMediaDisplay
             product={product}
             alt=""
             className="max-h-[220px] object-contain"
@@ -257,7 +257,7 @@ export function ThemeProductCard({
   return (
     <Link href={productHref} className={`${base} rounded-2xl p-4`}>
       <div className="flex h-36 items-center justify-center">
-        <ProductImage
+        <ProductMediaDisplay
           product={product}
           alt=""
           className="max-h-full object-contain transition group-hover:scale-[1.03]"

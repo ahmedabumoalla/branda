@@ -35,6 +35,8 @@ export async function saveMenuProductAction(product: MenuProduct) {
     imageStoragePath: product.imageAssetId ?? null,
     imageUrl: product.imageDataUrl ?? null,
     imageGallery: product.imageGallery ?? [],
+    videoStoragePath: product.videoAssetId ?? null,
+    media: product.media ?? [],
     promo: product.promo ?? null,
   });
   return row.id;
@@ -59,6 +61,5 @@ export async function saveMenuCategoryAction(category: MenuCategoryRecord) {
     icon: category.icon,
     imageStoragePath: category.imageAssetId ?? null,
     imageUrl: null,
-    imageGallery: [],
   });
 }

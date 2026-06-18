@@ -10,9 +10,21 @@ export type MenuImageVariant =
 export type PromoKind = "خصم" | "منتج مجاني مع الطلب" | "عرض مخصص";
 
 export type MenuProductImage = {
+  type?: "image" | "video";
+  assetId?: string;
   imageAssetId?: string;
+  videoAssetId?: string;
   imageDataUrl?: string | null;
   alt?: string;
+  mimeType?: string;
+};
+
+export type MenuProductMedia = {
+  type: "image" | "video";
+  assetId?: string;
+  url?: string | null;
+  alt?: string;
+  mimeType?: string;
 };
 
 export type ProductPromo = {
@@ -37,6 +49,8 @@ export type MenuProduct = {
   /** IndexedDB reference — mock only; production → Storage URL */
   imageAssetId?: string;
   imageGallery?: MenuProductImage[];
+  videoAssetId?: string;
+  media?: MenuProductMedia[];
   imageVariant: MenuImageVariant;
   price: number;
   calories?: number;

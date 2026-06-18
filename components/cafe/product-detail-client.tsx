@@ -14,7 +14,7 @@ import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-produ
 import { getCustomerSession } from "@/lib/customer/session";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
-import { ProductImage } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 
 
@@ -143,7 +143,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   const imageSlot = (
     <div className="relative flex h-[min(420px,50vh)] items-center justify-center overflow-hidden rounded-2xl bg-black/5">
-      <ProductImage
+      <ProductMediaDisplay
         product={product}
         alt={product.name}
         className="relative z-10 max-h-full w-full object-contain p-6"

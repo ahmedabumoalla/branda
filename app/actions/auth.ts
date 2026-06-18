@@ -122,7 +122,22 @@ export async function registerCafeOwnerAction(input: {
   couponCode?: string;
 }) {
   try {
-    const parsed = cafeOwnerRegistrationSchema.parse(input);
+    const normalizedSlug =
+  String(input.slug ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]+/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "") ||
+  `brand-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+
+const normalizedInput = {
+  ...input,
+  slug: normalizedSlug,
+};
+
+const parsed = cafeOwnerRegistrationSchema.parse(normalizedInput);
     const supabase = await createClient();
     const couponCode = parsed.couponCode?.trim().toUpperCase() || null;
 

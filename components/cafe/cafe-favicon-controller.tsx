@@ -28,8 +28,8 @@ export function CafeFaviconController({ slug }: CafeFaviconControllerProps) {
     if (!slug) return;
 
     const encodedSlug = encodeURIComponent(slug);
-    const version = Date.now().toString();
-    const href = `/api/public/cafe/${encodedSlug}/favicon?source=client&v=${version}`;
+    // بدون Date.now: كان يسبب طلبات favicon جديدة بلا توقف ويثقل صفحة الحساب.
+    const href = `/api/public/cafe/${encodedSlug}/favicon?source=client`;
 
     upsertFaviconLink("icon", href);
     upsertFaviconLink("shortcut icon", href);

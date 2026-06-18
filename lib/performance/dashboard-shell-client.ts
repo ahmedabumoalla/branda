@@ -25,10 +25,21 @@ function readSessionSnapshot(): DashboardShellSnapshot | null {
 }
 
 function writeSessionSnapshot(value: DashboardShellSnapshot) {
+  if ((value as { unauthenticated?: boolean }).unauthenticated) {
+    clearDashboardShellSnapshot();
+    return;
+  }
   cachedSnapshot = { at: Date.now(), value };
   try {
     sessionStorage.setItem("barndaksa_dashboard_shell_snapshot", JSON.stringify(cachedSnapshot));
   } catch {}
+}
+
+function redirectUnauthenticatedDashboard(value: DashboardShellSnapshot) {
+  if ((value as { unauthenticated?: boolean }).unauthenticated && typeof window !== "undefined") {
+    window.location.replace("/login");
+  }
+  return value;
 }
 
 export function getCachedDashboardShellSnapshot() {
@@ -37,14 +48,14 @@ export function getCachedDashboardShellSnapshot() {
   }
 
   const sessionSnapshot = readSessionSnapshot();
-  if (sessionSnapshot) return Promise.resolve(sessionSnapshot);
+  if (sessionSnapshot) return Promise.resolve(redirectUnauthenticatedDashboard(sessionSnapshot));
 
   if (pendingSnapshot) return pendingSnapshot;
 
   pendingSnapshot = fetchOwnerDashboardShellAction()
     .then((snapshot) => {
       writeSessionSnapshot(snapshot);
-      return snapshot;
+      return redirectUnauthenticatedDashboard(snapshot);
     })
     .finally(() => {
       pendingSnapshot = null;

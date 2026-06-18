@@ -101,6 +101,8 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         const snapshot = await getCachedDashboardShellSnapshot();
         if (cancelled) return;
 
+        if ((snapshot as { unauthenticated?: boolean }).unauthenticated) return;
+
         setActivePlanId(snapshot.planId);
         setPlans(snapshot.plans);
         setCafeSettings(snapshot.settings);
@@ -112,6 +114,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         setPendingOrders(snapshot.pendingOrders);
         setPendingExperienceReviews(snapshot.pendingExperienceReviews);
       } catch (error) {
+        if (error instanceof Error && error.message.toLowerCase().includes("unauthorized")) return;
         console.error("[DashboardSidebar]", error);
       }
     })();

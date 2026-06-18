@@ -45,10 +45,16 @@ export function DashboardAppLayout({ children }: { children: ReactNode }) {
     void getCachedDashboardShellSnapshot()
       .then((snapshot) => {
         if (cancelled) return;
+        if ((snapshot as { unauthenticated?: boolean }).unauthenticated) {
+          setGuard({ loading: false, activePlanId: "", plans: [] });
+          return;
+        }
         setGuard({ loading: false, activePlanId: snapshot.planId, plans: snapshot.plans });
       })
       .catch((error) => {
-        console.error("[DashboardAppLayout:feature-guard]", error);
+        if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) {
+          console.error("[DashboardAppLayout:feature-guard]", error);
+        }
         if (!cancelled) setGuard((current) => ({ ...current, loading: false }));
       });
 

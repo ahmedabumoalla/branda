@@ -7,6 +7,12 @@ import { DEFAULT_CAFE_THEME_ID } from "@/lib/mock/cafe-theme";
 import { mockCafeSettings, type CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import {
+  readPublicCafeFastCache,
+  refreshPublicCafeFastLayer,
+  subscribePublicCafeFastLayer,
+  type PublicCafeFastPayload,
+} from "@/lib/cafe/public-cafe-fast-layer";
 import { cachedRequest } from "@/lib/performance/browser-cache";
 
 type CafeThemePageData = {
@@ -28,34 +34,56 @@ function fallbackSettings(slug: string): CafeSettings {
   };
 }
 
-async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
-  const cached = cafeThemePageCache.get(slug);
-  if (cached && Date.now() - cached.cachedAt < CAFE_THEME_PAGE_CACHE_TTL_MS) {
-    return cached;
-  }
+function fromFastPayload(payload: PublicCafeFastPayload): CafeThemePageData {
+  return {
+    settings: payload.cafe.settings,
+    customIdentity: payload.cafe.customIdentity,
+    features: payload.cafe.features,
+    cachedAt: Date.now(),
+  };
+}
 
-  const pending = cafeThemePageRequests.get(slug);
-  if (pending) return pending;
+function applyThemeCache(slug: string, data: CafeThemePageData) {
+  cafeThemePageCache.set(slug, data);
+  return data;
+}
 
-  const request = cachedRequest(`public-cafe-theme:${slug}`, CAFE_THEME_PAGE_CACHE_TTL_MS, async () => {
-    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`);
+async function loadLegacyCafeThemePageData(slug: string): Promise<CafeThemePageData> {
+  return cachedRequest(`public-cafe-theme-legacy:${slug}`, CAFE_THEME_PAGE_CACHE_TTL_MS, async () => {
+    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, { cache: "no-store" });
 
     if (!res.ok) {
       throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل بيانات المقهى");
     }
 
     const data = await res.json();
-    const value: CafeThemePageData = {
+    return applyThemeCache(slug, {
       settings: data.settings ?? fallbackSettings(slug),
       customIdentity: data.customIdentity ?? null,
       features: Array.isArray(data.features) ? data.features.map(String) : [],
       cachedAt: Date.now(),
-    };
-    cafeThemePageCache.set(slug, value);
-    return value;
-  }).finally(() => {
-    cafeThemePageRequests.delete(slug);
+    });
   });
+}
+
+async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
+  const cached = cafeThemePageCache.get(slug);
+  if (cached && Date.now() - cached.cachedAt < CAFE_THEME_PAGE_CACHE_TTL_MS) {
+    return cached;
+  }
+
+  const fastCached = readPublicCafeFastCache(slug);
+  if (fastCached) return applyThemeCache(slug, fromFastPayload(fastCached));
+
+  const pending = cafeThemePageRequests.get(slug);
+  if (pending) return pending;
+
+  const request = refreshPublicCafeFastLayer(slug)
+    .then((payload) => applyThemeCache(slug, fromFastPayload(payload)))
+    .catch(() => loadLegacyCafeThemePageData(slug))
+    .finally(() => {
+      cafeThemePageRequests.delete(slug);
+    });
 
   cafeThemePageRequests.set(slug, request);
   return request;
@@ -70,6 +98,28 @@ export function useCafeThemePage(slug: string) {
 
   useEffect(() => {
     let cancelled = false;
+    const fallback = fallbackSettings(slug);
+
+    // مهم: لا نقرأ localStorage داخل useState قبل hydration.
+    // القراءة المبكرة كانت تخلي السيرفر يرندر شعار/ألوان افتراضية، والعميل يرندر بيانات الكوفي مباشرة، فينكسر /account.
+    setSettings((current) => (current.cafeSlug === slug ? current : fallback));
+    setCustomIdentity(null);
+    setFeatures([]);
+    setHydrated(false);
+    setLoadError(null);
+
+    const apply = (data: CafeThemePageData) => {
+      if (cancelled) return;
+      setSettings(data.settings);
+      setCustomIdentity(data.customIdentity);
+      setFeatures(data.features);
+      setLoadError(null);
+      setHydrated(true);
+    };
+
+    const unsubscribe = subscribePublicCafeFastLayer(slug, (payload) => {
+      apply(applyThemeCache(slug, fromFastPayload(payload)));
+    });
 
     async function load() {
       if (!isSupabaseConfigured()) {
@@ -80,27 +130,27 @@ export function useCafeThemePage(slug: string) {
 
       const cached = cafeThemePageCache.get(slug);
       if (cached && Date.now() - cached.cachedAt < CAFE_THEME_PAGE_CACHE_TTL_MS) {
-        setSettings(cached.settings);
-        setCustomIdentity(cached.customIdentity);
-        setFeatures(cached.features);
-        setLoadError(null);
-        setHydrated(true);
+        apply(cached);
+        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
+        return;
+      }
+
+      // قراءة كاش المتصفح تتم بعد mount فقط عشان ما يصير Hydration mismatch.
+      const fastCached = readPublicCafeFastCache(slug);
+      if (fastCached) {
+        apply(applyThemeCache(slug, fromFastPayload(fastCached)));
+        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
         return;
       }
 
       try {
         const data = await loadCafeThemePageData(slug);
-        if (cancelled) return;
-        setSettings(data.settings);
-        setCustomIdentity(data.customIdentity);
-        setFeatures(data.features);
-        setLoadError(null);
+        apply(data);
       } catch (error) {
         if (!cancelled) {
           setLoadError(error instanceof Error ? error.message : "تعذر الاتصال بالخادم");
+          setHydrated(true);
         }
-      } finally {
-        if (!cancelled) setHydrated(true);
       }
     }
 
@@ -108,6 +158,7 @@ export function useCafeThemePage(slug: string) {
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [slug]);
 

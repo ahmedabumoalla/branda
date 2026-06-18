@@ -56,6 +56,7 @@
     ".barndaksa_patch_backups",
     ".barndaksa_patch_backups/**/*",
     ".barndaksa-backups",
-    ".barndaksa-backups/**/*"
+    ".barndaksa-backups/**/*",
+    ".barndaksa-patch-backups"
   ]
 }

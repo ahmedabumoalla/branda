@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { cachedRequest, readSessionCache, writeSessionCache } from "@/lib/performance/browser-cache";
 import type { CafeBranch } from "@/lib/mock/branches";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
@@ -10,6 +9,14 @@ import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
 import type { ReservationService } from "@/lib/data/platform-upgrade";
+import { cachedRequest, readSessionCache, writeSessionCache } from "@/lib/performance/browser-cache";
+import {
+  readPublicCafeFastCache,
+  refreshPublicCafeFastLayer,
+  subscribePublicCafeFastLayer,
+  type PublicCafeFastMenuPayload,
+  type PublicCafeFastPayload,
+} from "@/lib/cafe/public-cafe-fast-layer";
 
 type PublicMenuPayload = {
   products: MenuProduct[];
@@ -34,43 +41,100 @@ const emptyPayload: PublicMenuPayload = {
 };
 
 const TTL_MS = 5 * 60_000;
+const menuCache = new Map<string, { value: PublicMenuPayload; cachedAt: number }>();
+const menuRequests = new Map<string, Promise<PublicMenuPayload>>();
 
-function normalizePayload(json: Partial<PublicMenuPayload>): PublicMenuPayload {
+function normalizePayload(json: Partial<PublicMenuPayload> | PublicCafeFastMenuPayload | null | undefined): PublicMenuPayload {
   return {
-    products: json.products ?? [],
-    categories: json.categories ?? [],
-    offers: json.offers ?? [],
-    branches: json.branches ?? [],
-    loyaltySettings: json.loyaltySettings ?? emptyPayload.loyaltySettings,
-    loyaltyRewards: json.loyaltyRewards ?? [],
-    pages: json.pages ?? [],
-    reservationServices: json.reservationServices ?? [],
+    products: Array.isArray(json?.products) ? json.products : [],
+    categories: Array.isArray(json?.categories) ? json.categories : [],
+    offers: Array.isArray(json?.offers) ? json.offers : [],
+    branches: Array.isArray(json?.branches) ? json.branches : [],
+    loyaltySettings: json?.loyaltySettings ?? emptyPayload.loyaltySettings,
+    loyaltyRewards: Array.isArray(json?.loyaltyRewards) ? json.loyaltyRewards : [],
+    pages: Array.isArray(json?.pages) ? json.pages : [],
+    reservationServices: Array.isArray(json?.reservationServices) ? json.reservationServices : [],
   };
 }
 
-async function loadPublicMenu(slug: string) {
-  return cachedRequest(`public-menu:${slug}`, TTL_MS, async () => {
-    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`);
+function cacheMenu(slug: string, payload: PublicMenuPayload) {
+  menuCache.set(slug, { value: payload, cachedAt: Date.now() });
+  writeSessionCache(`barndaksa_public_menu_${slug}`, payload);
+  return payload;
+}
+
+function menuFromFastPayload(slug: string, payload: PublicCafeFastPayload) {
+  return cacheMenu(slug, normalizePayload(payload.menu));
+}
+
+async function loadLegacyPublicMenu(slug: string) {
+  return cachedRequest(`public-menu-legacy:${slug}`, TTL_MS, async () => {
+    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل المنيو");
-    const payload = normalizePayload(await res.json());
-    writeSessionCache(`barndaksa_public_menu_${slug}`, payload);
-    return payload;
+    return cacheMenu(slug, normalizePayload(await res.json()));
   });
 }
 
+async function loadPublicMenu(slug: string) {
+  const cached = menuCache.get(slug);
+  if (cached && Date.now() - cached.cachedAt < TTL_MS) return cached.value;
+
+  const fastCached = readPublicCafeFastCache(slug);
+  if (fastCached) return menuFromFastPayload(slug, fastCached);
+
+  const pending = menuRequests.get(slug);
+  if (pending) return pending;
+
+  const request = refreshPublicCafeFastLayer(slug)
+    .then((payload) => menuFromFastPayload(slug, payload))
+    .catch(() => loadLegacyPublicMenu(slug))
+    .finally(() => menuRequests.delete(slug));
+
+  menuRequests.set(slug, request);
+  return request;
+}
+
 export function usePublicCafeMenu(slug: string) {
-  const [data, setData] = useState<PublicMenuPayload>(() => emptyPayload);
-  const [loading, setLoading] = useState(true);
+  const initialFast = readPublicCafeFastCache(slug);
+  const initialSession = initialFast
+    ? normalizePayload(initialFast.menu)
+    : readSessionCache<PublicMenuPayload>(`barndaksa_public_menu_${slug}`, TTL_MS);
+
+  const hadInitialData = Boolean(initialSession);
+  const [data, setData] = useState<PublicMenuPayload>(() => initialSession ?? emptyPayload);
+  const [loading, setLoading] = useState(!initialSession);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const cached = readSessionCache<PublicMenuPayload>(`barndaksa_public_menu_${slug}`, TTL_MS);
-    if (cached) {
-      setData(cached);
+
+    const apply = (payload: PublicMenuPayload) => {
+      if (cancelled) return;
+      setData(payload);
+      setError(null);
       setLoading(false);
+    };
+
+    const unsubscribe = subscribePublicCafeFastLayer(slug, (payload) => {
+      apply(menuFromFastPayload(slug, payload));
+    });
+
+    const cached = menuCache.get(slug);
+    if (cached && Date.now() - cached.cachedAt < TTL_MS) {
+      apply(cached.value);
+      void refreshPublicCafeFastLayer(slug).catch(() => undefined);
     } else {
-      setLoading(true);
+      const fastCached = readPublicCafeFastCache(slug);
+      const sessionCached = readSessionCache<PublicMenuPayload>(`barndaksa_public_menu_${slug}`, TTL_MS);
+      if (fastCached) {
+        apply(menuFromFastPayload(slug, fastCached));
+        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
+      } else if (sessionCached) {
+        apply(sessionCached);
+        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
+      } else {
+        setLoading(true);
+      }
     }
 
     async function load() {
@@ -84,21 +148,20 @@ export function usePublicCafeMenu(slug: string) {
 
       try {
         const payload = await loadPublicMenu(slug);
-        if (cancelled) return;
-        setData(payload);
-        setError(null);
+        apply(payload);
       } catch (err) {
-        if (!cancelled && !cached) {
+        if (!cancelled && !hadInitialData) {
           setError(err instanceof Error ? err.message : "تعذر الاتصال بالخادم");
+          setLoading(false);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     }
 
     void load();
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [slug]);
 

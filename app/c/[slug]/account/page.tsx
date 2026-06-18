@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -14,7 +15,6 @@ import {
 import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
-  getCustomerSession,
   type BarndaksaCustomerSession,
 } from "@/lib/customer/session";
 import {
@@ -27,7 +27,6 @@ import {
   type CustomerTransaction,
 } from "@/lib/mock/customer-activity";
 import { formatSar } from "@/lib/format";
-import { fetchCustomerLoyaltyCardAction } from "@/app/actions/loyalty-cards";
 import {
   fetchCustomerExperienceRewardsAction,
   submitCustomerExperienceRewardProofAction,
@@ -545,98 +544,16 @@ function ExperienceProofPanel({
   );
 }
 
-
-function AccountFeatureTiles({
-  experience,
-  loyaltyEnabled,
-  experienceRewardsEnabled,
-  loyaltyView,
-  rewards,
-  loyaltyLoading,
-  onOpenLoyalty,
-  onOpenExperience,
-}: {
-  experience: ReturnType<typeof useCafePageContext>["experience"];
-  loyaltyEnabled: boolean;
-  experienceRewardsEnabled: boolean;
-  loyaltyView: CustomerLoyaltyCardView | null;
-  rewards: CustomerExperienceReward[];
-  loyaltyLoading: boolean;
-  onOpenLoyalty: () => void;
-  onOpenExperience: () => void;
-}) {
-  const { theme } = experience;
-  const readyRewards = rewards.filter((reward) => Boolean(reward.rewardCode) || reward.status === "approved").length;
-
-  if (!loyaltyEnabled && !experienceRewardsEnabled) return null;
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        {loyaltyEnabled ? (
-          <button
-            type="button"
-            onClick={onOpenLoyalty}
-            disabled={!loyaltyView?.card.cardCode}
-            className={`group flex items-center justify-between gap-4 p-5 text-right transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${theme.card}`}
-          >
-            <span className="flex items-center gap-4">
-              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${theme.button}`}>
-                <WalletCards className="h-7 w-7" />
-              </span>
-              <span>
-                <span className="block text-lg font-black">بطاقة الولاء</span>
-                <span className={`mt-1 block text-xs font-bold ${theme.muted}`}>
-                  {loyaltyLoading
-                    ? "جاري تجهيز البطاقة..."
-                    : loyaltyView?.card.cardCode
-                      ? `جاهزة • ${loyaltyView.card.stampsInCycle} ختم`
-                      : "اضغط لتجهيز بطاقة الولاء"}
-                </span>
-              </span>
-            </span>
-            <QrCode className={`h-6 w-6 ${theme.accent}`} />
-          </button>
-        ) : null}
-
-        {experienceRewardsEnabled ? (
-          <button
-            type="button"
-            onClick={onOpenExperience}
-            className={`group flex items-center justify-between gap-4 p-5 text-right transition hover:-translate-y-0.5 ${theme.card}`}
-          >
-            <span className="flex items-center gap-4">
-              <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${theme.button}`}>
-                <Gift className="h-7 w-7" />
-              </span>
-              <span>
-                <span className="block text-lg font-black">مكافآت التوثيق</span>
-                <span className={`mt-1 block text-xs font-bold ${theme.muted}`}>
-                  {readyRewards ? `${readyRewards} مكافأة جاهزة للصرف` : "أرسل رابط توثيق تجربتك من هنا"}
-                </span>
-              </span>
-            </span>
-            <Send className={`h-6 w-6 ${theme.accent}`} />
-          </button>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
 function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  const { experience, settings, path, previewThemeId, features, hydrated } =
+  const { experience, settings, path, previewThemeId } =
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
 
   const defaultTab: TabKey = "orders";
-  const hasFeature = (feature: string) => features.length > 0 && featureCodesAllow(features, feature);
-  const loyaltyEnabled = hasFeature("loyalty");
-  const experienceRewardsEnabled = hasFeature("experience_reviews");
 
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
@@ -644,6 +561,7 @@ function AccountPageInner() {
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+  const [accountFeatures, setAccountFeatures] = useState<string[]>([]);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -668,21 +586,20 @@ function AccountPageInner() {
     useState(false);
 
   useEffect(() => {
-    if (!hydrated) return;
-
-    const loadKey = `${slug}:${previewThemeId ?? "live"}:${features.join("|") || "no-entitlements"}`;
+    const loadKey = `${slug}:${previewThemeId ?? "live"}`;
     if (initialLoadKeyRef.current === loadKey) return;
     initialLoadKeyRef.current = loadKey;
 
     let cancelled = false;
 
     async function load() {
-      setLoyaltyLoading(loyaltyEnabled);
+      setLoyaltyLoading(true);
+      setAccountFeatures([]);
 
-      const session = await getCustomerSession(slug);
+      const snapshot = await fetchCustomerAccountSnapshotAction(slug);
       if (cancelled) return;
 
-      if (!session) {
+      if (!snapshot.customer) {
         const next = appendPreviewToNextPath(
           `/c/${slug}/account`,
           previewThemeId,
@@ -691,40 +608,22 @@ function AccountPageInner() {
         return;
       }
 
+      const session = snapshot.customer;
       setCustomer(session);
+      setAccountFeatures(snapshot.features);
       setEditName(session.fullName);
       setEditEmail(session.email || "");
       setEditAvatarPreview(session.avatarUrl || "");
       setAvatarAssetId(session.avatarAssetId);
 
-      const { fetchCustomerOrdersAction, fetchCustomerReservationsAction } =
-        await import("@/app/actions/customer");
-
-      const [ordersResult, reservationsResult, loyaltyResult, rewardsResult] =
-        await Promise.allSettled([
-          fetchCustomerOrdersAction(slug),
-          fetchCustomerReservationsAction(slug),
-          loyaltyEnabled ? fetchCustomerLoyaltyCardAction(slug) : Promise.resolve(null),
-          experienceRewardsEnabled ? fetchCustomerExperienceRewardsAction(slug) : Promise.resolve([]),
-        ]);
-
-      if (cancelled) return;
-
-      const cafeOrders =
-        ordersResult.status === "fulfilled" ? ordersResult.value : [];
-      const cafeReservations =
-        reservationsResult.status === "fulfilled"
-          ? reservationsResult.value
-          : [];
-
       setOrders(
-        cafeOrders.map((o) => ({
+        snapshot.orders.map((o: any) => ({
           id: o.id,
           cafeSlug: slug,
           customerId: o.customerId,
           customerName: o.customerName,
-          status: o.status,
-          items: o.items.map((item) => `${item.name} × ${item.quantity}`),
+          status: o.status as CustomerOrder["status"],
+          items: Array.isArray(o.items) ? o.items.map((item: any) => typeof item === "string" ? item : `${item.name} × ${item.quantity}`) : [],
           total: o.total,
           createdAt: o.createdAt,
           branchName: o.branchName,
@@ -734,7 +633,7 @@ function AccountPageInner() {
       );
 
       setReservations(
-        cafeReservations.map((r) => ({
+        snapshot.reservations.map((r: any) => ({
           id: r.id,
           customerName: r.customerName,
           phone: r.phone,
@@ -752,20 +651,20 @@ function AccountPageInner() {
         })),
       );
 
-      setLoyaltyView(
-        loyaltyEnabled && loyaltyResult.status === "fulfilled" ? loyaltyResult.value : null,
-      );
-      setExperienceRewards(
-        experienceRewardsEnabled && rewardsResult.status === "fulfilled" ? rewardsResult.value : [],
-      );
+      setLoyaltyView(snapshot.loyalty);
+      setExperienceRewards(snapshot.experienceRewards);
       setLoyaltyLoading(false);
     }
 
-    void load();
+    void load().catch((error) => {
+      console.error("[CafeCustomerAccountPage:load]", error);
+      setLoyaltyLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
-  }, [router, slug, previewThemeId, hydrated, features, loyaltyEnabled, experienceRewardsEnabled]);
+  }, [router, slug, previewThemeId]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -836,8 +735,10 @@ function AccountPageInner() {
       .slice(0, 4);
   }, [myOrders, myReservations, myTransactions]);
 
+  const loyaltyEnabled = featureCodesAllow(accountFeatures, "loyalty");
+  const experienceRewardsEnabled = featureCodesAllow(accountFeatures, "experience_reviews");
+
   function openLoyaltyCard() {
-    if (!loyaltyEnabled) return;
     if (loyaltyView?.card.cardCode) {
       router.push(
         `/loyalty-card/${loyaltyView.card.cardCode}?back=${encodeURIComponent(path("account"))}`,
@@ -905,7 +806,7 @@ function AccountPageInner() {
 
   async function submitExperienceProof() {
     if (!experienceRewardsEnabled) {
-      alert("توثيق التجارب غير مفعل في باقة هذه العلامة التجارية");
+      alert("توثيق التجارب غير مفعّل ضمن باقة هذه العلامة");
       return;
     }
 
@@ -943,6 +844,34 @@ function AccountPageInner() {
 
   return (
     <>
+      {loyaltyEnabled ? (
+        <CustomerCoffeeLoyaltyCard
+          view={loyaltyView}
+          homeHref={path()}
+          onOpenCard={openLoyaltyCard}
+          loading={loyaltyLoading}
+        />
+      ) : null}
+
+      {experienceRewardsEnabled ? (
+        <ExperienceProofPanel
+          rewards={experienceRewards}
+          open={experienceProofOpen}
+          onOpen={() => setExperienceProofOpen(true)}
+          onClose={() => setExperienceProofOpen(false)}
+          experienceUrl={experienceUrl}
+          views={experienceViews}
+          comments={experienceComments}
+          notes={experienceNotes}
+          busy={submittingExperienceProof}
+          onExperienceUrl={setExperienceUrl}
+          onViews={setExperienceViews}
+          onComments={setExperienceComments}
+          onNotes={setExperienceNotes}
+          onSubmit={() => void submitExperienceProof()}
+        />
+      ) : null}
+
       <ThemedAccountPanel
         slug={slug}
         experience={experience}
@@ -984,48 +913,8 @@ function AccountPageInner() {
           setAvatarAssetId(undefined);
         }}
         onSaveSettings={() => void saveSettings()}
-        loyaltyFeatureEnabled={loyaltyEnabled}
         fileRef={fileRef}
       />
-
-      <AccountFeatureTiles
-        experience={experience}
-        loyaltyEnabled={loyaltyEnabled}
-        experienceRewardsEnabled={experienceRewardsEnabled}
-        loyaltyView={loyaltyView}
-        rewards={experienceRewards}
-        loyaltyLoading={loyaltyLoading}
-        onOpenLoyalty={openLoyaltyCard}
-        onOpenExperience={() => setExperienceProofOpen(true)}
-      />
-
-      {loyaltyEnabled ? (
-        <CustomerCoffeeLoyaltyCard
-          view={loyaltyView}
-          homeHref={path()}
-          onOpenCard={openLoyaltyCard}
-          loading={loyaltyLoading}
-        />
-      ) : null}
-
-      {experienceRewardsEnabled ? (
-        <ExperienceProofPanel
-          rewards={experienceRewards}
-          open={experienceProofOpen}
-          onOpen={() => setExperienceProofOpen(true)}
-          onClose={() => setExperienceProofOpen(false)}
-          experienceUrl={experienceUrl}
-          views={experienceViews}
-          comments={experienceComments}
-          notes={experienceNotes}
-          busy={submittingExperienceProof}
-          onExperienceUrl={setExperienceUrl}
-          onViews={setExperienceViews}
-          onComments={setExperienceComments}
-          onNotes={setExperienceNotes}
-          onSubmit={() => void submitExperienceProof()}
-        />
-      ) : null}
     </>
   );
 }

@@ -17,7 +17,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
-import { ProductMediaCarousel } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
@@ -62,7 +62,7 @@ function ProductShowcaseCard({
       className="group grid overflow-hidden rounded-[32px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] shadow-[0_18px_45px_rgba(49,25,18,0.08)] transition hover:-translate-y-1 hover:shadow-[0_26px_70px_rgba(49,25,18,0.12)] sm:grid-cols-[220px_1fr]"
     >
       <div className="relative min-h-[220px] overflow-hidden bg-[var(--ci-page-bg)] sm:min-h-full">
-        <ProductMediaCarousel
+        <ProductMediaDisplay
           product={product}
           alt={product.name}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"

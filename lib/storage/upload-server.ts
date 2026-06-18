@@ -17,7 +17,7 @@ const MAX_SERVER_UPLOAD_BYTES = 40 * 1024 * 1024;
 const BUCKET_MIME: Record<StorageBucket, string[]> = {
   "cafe-logos": ["image/webp", "image/jpeg", "image/png", "image/avif"],
   "cafe-backgrounds": ["image/webp", "image/jpeg", "image/png", "image/avif"],
-  "menu-products": ["image/webp", "image/jpeg", "image/png", "image/avif"],
+  "menu-products": ["image/webp", "image/jpeg", "image/png", "image/avif", "video/mp4", "video/webm", "video/quicktime"],
   "menu-categories": ["image/webp", "image/jpeg", "image/png", "image/avif"],
   "offer-banners": ["image/webp", "image/jpeg", "image/png", "image/avif"],
   "customer-avatars": ["image/webp", "image/jpeg", "image/png", "image/avif"],
@@ -175,15 +175,52 @@ function videoExtensionFromMime(mimeType: string) {
   return "mp4";
 }
 
+function videoMimeFromFile(file: File) {
+  const mimeType = normalizeMime(file.type || "");
+  if (["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
+    return mimeType;
+  }
+
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".webm")) return "video/webm";
+  if (name.endsWith(".mov")) return "video/quicktime";
+  if (name.endsWith(".mp4")) return "video/mp4";
+  return mimeType || "application/octet-stream";
+}
+
+export async function uploadProductVideo(file: File, entityId: string) {
+  const cafe = await requireOwnerCafeContext();
+
+  if (file.size <= 0) throw new Error("Missing file");
+  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("ط­ط¬ظ… ط§ظ„ظپظٹط¯ظٹظˆ ظƒط¨ظٹط± ط¬ط¯ظ‹ط§طŒ ط§ط®طھط± ظ…ظ„ظپظ‹ط§ ط£ظ‚ظ„ ظ…ظ† 40MB");
+
+  const mimeType = videoMimeFromFile(file);
+  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
+    throw new Error("طµظٹط؛ط© ط§ظ„ظپظٹط¯ظٹظˆ ط؛ظٹط± ظ…ط¯ط¹ظˆظ…ط©طŒ ط§ط±ظپط¹ MP4 ط£ظˆ WEBM ط£ظˆ MOV");
+  }
+
+  const ext = videoExtensionFromMime(mimeType);
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = buildStoragePath("menu-products", cafe.id, entityId, fileName);
+  const arrayBuffer = await file.arrayBuffer();
+  const supabaseAdmin = createStorageAdminClient();
+  const { error } = await supabaseAdmin.storage.from("menu-products").upload(storagePath, arrayBuffer, {
+    contentType: mimeType,
+    upsert: false,
+  });
+  if (error) throw error;
+  return { storagePath, byteSize: file.size, mimeType };
+}
+
 export async function uploadReservationServiceVideo(file: File, entityId: string) {
   const cafe = await requireOwnerCafeContext();
 
   if (file.size <= 0) throw new Error("Missing file");
   if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
 
-  const mimeType = normalizeMime(file.type || "application/octet-stream");
+  const mimeType = videoMimeFromFile(file);
   if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
-    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM");
+    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM أو MOV");
   }
 
   const ext = videoExtensionFromMime(mimeType);

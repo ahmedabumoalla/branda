@@ -6,6 +6,15 @@ import { isHttpImageUrl, isLegacyDataImageUrl } from "@/lib/cafe/image-asset-pip
 
 const publicUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
+function isRenderableUrl(url?: string | null) {
+  return Boolean(
+    url &&
+      (isLegacyDataImageUrl(url) ||
+        isHttpImageUrl(url) ||
+        url.startsWith("blob:"))
+  );
+}
+
 async function resolvePublicStorageUrl(bucket: string, path: string) {
   const key = `${bucket}:${path}`;
   const cached = publicUrlCache.get(key);
@@ -41,9 +50,7 @@ export function useLocalAssetUrl(
 ) {
   const [url, setUrl] = useState<string | undefined>(() =>
     previewUrl ||
-    (isLegacyDataImageUrl(fallbackSrc) || isHttpImageUrl(fallbackSrc)
-      ? fallbackSrc ?? undefined
-      : undefined)
+    (isRenderableUrl(fallbackSrc) ? fallbackSrc ?? undefined : undefined)
   );
 
   useEffect(() => {
@@ -74,11 +81,7 @@ export function useLocalAssetUrl(
       }
 
       if (!cancelled) {
-        setUrl(
-          isLegacyDataImageUrl(fallbackSrc) || isHttpImageUrl(fallbackSrc)
-            ? fallbackSrc ?? undefined
-            : undefined
-        );
+        setUrl(isRenderableUrl(fallbackSrc) ? fallbackSrc ?? undefined : undefined);
       }
     }
 

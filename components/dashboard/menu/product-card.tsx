@@ -9,7 +9,7 @@ import {
   Power,
   Trash2,
 } from "lucide-react";
-import { ProductImage } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
@@ -51,7 +51,7 @@ export function MenuProductCard({
   return (
     <article className="overflow-hidden rounded-3xl border border-white bg-white/80 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
-        <ProductImage
+        <ProductMediaDisplay
           product={product}
           alt=""
           className="h-full w-full object-contain bg-[#F8F4EF]"

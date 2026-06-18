@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Coffee, Gift } from "lucide-react";
-import { ProductMediaCarousel } from "@/components/cafe/product-image";
+import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
@@ -32,7 +32,7 @@ export function ThemedProductCard({ product, experience, href }: Props) {
   return (
     <Link href={href} className={`${theme.card} ${theme.cardHover} barndaksa-premium-card barndaksa-product-motion group block overflow-hidden transition`}>
       <div className="relative aspect-[4/3] overflow-hidden">
-        <ProductMediaCarousel
+        <ProductMediaDisplay
           product={product}
           alt={product.name}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"

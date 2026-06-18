@@ -1,6 +1,6 @@
 "use server";
 
-import { requireOwnerCafeContext } from "@/lib/data/cafes";
+import { getOwnerCafeContext } from "@/lib/data/cafes";
 import { getPlatformPlans } from "@/lib/data/admin";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
@@ -104,7 +104,20 @@ function fallbackSettings(cafe: { slug: string; name: string }): CafeSettings {
 }
 
 export async function fetchOwnerDashboardShellAction() {
-  const cafe = await requireOwnerCafeContext();
+  const cafe = await getOwnerCafeContext();
+  if (!cafe) {
+    return {
+      unauthenticated: true as const,
+      planId: "",
+      plans: await getPlatformPlans().catch(() => []),
+      settings: fallbackSettings({ slug: "", name: "" }),
+      notifications: [],
+      pendingReservations: 0,
+      pendingOrders: 0,
+      pendingExperienceReviews: 0,
+    };
+  }
+
   const supabase = await createClient();
 
   const [plans, subscriptionResult, settingsResult, notificationsResult, fastCounts] = await Promise.all([

@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Coffee } from "lucide-react";
 import { LocalAssetImage } from "@/components/ui/local-asset-image";
+import { useLocalAssetUrl } from "@/lib/cafe/use-local-asset-url";
 import type { MenuProduct, MenuProductImage } from "@/lib/mock/menu";
 import { isHttpImageUrl } from "@/lib/cafe/image-asset-pipeline";
 
 type ProductImageSource = Pick<MenuProduct, "imageAssetId" | "imageDataUrl" | "imageGallery">;
+type ProductMediaSource = Pick<
+  MenuProduct,
+  "imageAssetId" | "imageDataUrl" | "imageGallery" | "videoAssetId" | "media"
+>;
 
 type Props = {
   product: ProductImageSource;
@@ -20,6 +25,13 @@ function externalUrl(src?: string | null) {
   if (!src) return undefined;
   if (isHttpImageUrl(src)) return src;
   if (src.startsWith("data:image")) return src;
+  if (src.startsWith("blob:")) return src;
+  return undefined;
+}
+
+function mediaUrl(src?: string | null) {
+  if (!src) return undefined;
+  if (isHttpImageUrl(src) || src.startsWith("blob:")) return src;
   return undefined;
 }
 
@@ -67,6 +79,23 @@ export function ProductImage({ product, alt, className = "", previewUrl, fallbac
   );
 }
 
+export function getProductVideoSource(product: ProductMediaSource) {
+  const media = Array.isArray(product.media) ? product.media : [];
+  const video = media.find((item) => item.type === "video" && (item.assetId || item.url));
+
+  if (video) {
+    return {
+      assetId: video.assetId,
+      url: video.url ?? null,
+      mimeType: video.mimeType,
+    };
+  }
+
+  return product.videoAssetId
+    ? { assetId: product.videoAssetId, url: null, mimeType: undefined }
+    : null;
+}
+
 type CarouselProps = {
   product: ProductImageSource;
   alt: string;
@@ -83,19 +112,41 @@ export function ProductMediaCarousel({
   intervalMs = 5000,
 }: CarouselProps) {
   const sources = useMemo(() => getProductImageSources(product), [product]);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     setIndex(0);
   }, [sources.length]);
 
   useEffect(() => {
-    if (sources.length <= 1) return;
+    if (sources.length <= 1) {
+      setIsVisible(false);
+      return;
+    }
+
+    const element = rootRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.2 }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [sources.length]);
+
+  useEffect(() => {
+    if (sources.length <= 1 || !isVisible) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % sources.length);
     }, intervalMs);
     return () => window.clearInterval(timer);
-  }, [sources.length, intervalMs]);
+  }, [sources.length, intervalMs, isVisible]);
 
   if (!sources.length) {
     return (
@@ -112,12 +163,13 @@ export function ProductMediaCarousel({
   const current = sources[index] ?? sources[0];
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div ref={rootRef} className="relative h-full w-full overflow-hidden">
       <LocalAssetImage
+        key={current.imageAssetId || current.imageDataUrl || index}
         assetId={current.imageAssetId}
         fallbackSrc={externalUrl(current.imageDataUrl)}
         alt={current.alt || alt}
-        className={className}
+        className={`${className} barndaksa-product-media-fade`}
         fallback={fallback}
         publicBucket="menu-products"
       />
@@ -135,5 +187,54 @@ export function ProductMediaCarousel({
         </div>
       ) : null}
     </div>
+  );
+}
+
+type ProductMediaDisplayProps = {
+  product: ProductMediaSource;
+  alt: string;
+  className?: string;
+  fallback?: ReactNode;
+  imagePreviewUrl?: string;
+  videoPreviewUrl?: string;
+};
+
+export function ProductMediaDisplay({
+  product,
+  alt,
+  className = "",
+  fallback,
+  imagePreviewUrl,
+  videoPreviewUrl,
+}: ProductMediaDisplayProps) {
+  const video = getProductVideoSource(product);
+  const videoSrc = useLocalAssetUrl(
+    video?.assetId,
+    mediaUrl(video?.url),
+    videoPreviewUrl,
+    "menu-products"
+  );
+
+  if (videoSrc) {
+    return (
+      <video
+        src={videoSrc}
+        className={className}
+        preload="metadata"
+        playsInline
+        muted
+        controls
+      />
+    );
+  }
+
+  return (
+    <ProductMediaCarousel
+      product={product}
+      alt={alt}
+      className={className}
+      fallback={fallback}
+      intervalMs={5000}
+    />
   );
 }

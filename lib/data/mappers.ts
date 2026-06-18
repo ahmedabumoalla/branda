@@ -38,6 +38,9 @@ export type DbMenuProduct = {
   image_url: string | null;
   image_storage_path: string | null;
   image_gallery?: unknown;
+  gallery_storage_paths?: string[] | unknown;
+  video_storage_path?: string | null;
+  media?: unknown;
   image_variant: string;
   price: number;
   calories: number | null;
@@ -52,6 +55,85 @@ export type DbMenuProduct = {
   promo: unknown;
   sort_order: number;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function stringOrUndefined(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function mapUnknownImageGallery(value: unknown): NonNullable<MenuProduct["imageGallery"]> {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(isRecord)
+    .map((item) => {
+      if (item.type === "video" || stringOrUndefined(item.videoAssetId)) return null;
+
+      return {
+        type: "image" as const,
+        assetId: stringOrUndefined(item.assetId) ?? stringOrUndefined(item.imageAssetId),
+        imageAssetId: stringOrUndefined(item.imageAssetId) ?? stringOrUndefined(item.assetId),
+        imageDataUrl:
+          typeof item.imageDataUrl === "string"
+            ? item.imageDataUrl
+            : typeof item.url === "string"
+              ? item.url
+              : null,
+        alt: stringOrUndefined(item.alt),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .filter((item) => item.imageAssetId || item.imageDataUrl);
+}
+
+function mapUnknownMedia(value: unknown): NonNullable<MenuProduct["media"]> {
+  if (!Array.isArray(value)) return [];
+
+  const media: NonNullable<MenuProduct["media"]> = [];
+
+  for (const item of value) {
+    if (!isRecord(item)) continue;
+
+    const type = item.type === "video" ? "video" : item.type === "image" ? "image" : null;
+    if (!type) continue;
+
+    const mapped: NonNullable<MenuProduct["media"]>[number] = {
+        type,
+        assetId:
+          stringOrUndefined(item.assetId) ??
+          stringOrUndefined(item.imageAssetId) ??
+          stringOrUndefined(item.videoAssetId),
+        url: typeof item.url === "string" ? item.url : null,
+        alt: stringOrUndefined(item.alt),
+        mimeType: stringOrUndefined(item.mimeType),
+    };
+
+    if (mapped.assetId || mapped.url) {
+      media.push(mapped);
+    }
+  }
+
+  return media;
+}
+
+function pushUniqueMedia(
+  target: NonNullable<MenuProduct["media"]>,
+  items: NonNullable<MenuProduct["media"]>
+) {
+  const seen = new Set(
+    target.map((item) => `${item.type}:${item.assetId ?? item.url ?? ""}`)
+  );
+
+  for (const item of items) {
+    const key = `${item.type}:${item.assetId ?? item.url ?? ""}`;
+    if (seen.has(key)) continue;
+    target.push(item);
+    seen.add(key);
+  }
+}
 
 export type DbMenuCategory = {
   id: string;
@@ -154,6 +236,26 @@ export function mapDbCategoryToRecord(slug: string, row: DbMenuCategory): MenuCa
 }
 
 export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: string): MenuProduct {
+  const imageGallery = mapUnknownImageGallery(row.image_gallery);
+  const galleryPaths = Array.isArray(row.gallery_storage_paths)
+    ? row.gallery_storage_paths.map(String).filter(Boolean)
+    : [];
+  const seenGallery = new Set(imageGallery.map((item) => item.imageAssetId || item.imageDataUrl));
+
+  for (const storagePath of galleryPaths) {
+    if (seenGallery.has(storagePath)) continue;
+    imageGallery.push({ imageAssetId: storagePath, imageDataUrl: null });
+    seenGallery.add(storagePath);
+  }
+
+  const media = mapUnknownMedia(row.image_gallery);
+  pushUniqueMedia(media, mapUnknownMedia(row.media));
+  if (row.video_storage_path && !media.some((item) => item.type === "video" && item.assetId === row.video_storage_path)) {
+    media.unshift({ type: "video", assetId: row.video_storage_path });
+  }
+
+  const videoAssetId = media.find((item) => item.type === "video" && item.assetId)?.assetId;
+
   return {
     id: row.id,
     name: row.name,
@@ -162,7 +264,9 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     description: row.description,
     imageAssetId: row.image_storage_path ?? undefined,
     imageDataUrl: row.image_url,
-    imageGallery: Array.isArray(row.image_gallery) ? (row.image_gallery as MenuProduct["imageGallery"]) : [],
+    imageGallery,
+    videoAssetId: row.video_storage_path ?? videoAssetId,
+    media,
     imageVariant: row.image_variant as MenuProduct["imageVariant"],
     price: Number(row.price),
     calories: row.calories ?? undefined,
