@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
+import { makeMaintenanceAccountNumber } from "@/lib/platform/maintenance";
 import type {
   PlatformCafe,
   PlatformCustomer,
@@ -15,12 +16,6 @@ import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 
 function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
   return String(status) === "active" ? "نشط" : "موقوف";
-}
-
-function makeMaintenanceAccountNumber(cafeId: string, slug: string) {
-  const idPart = cafeId.replaceAll("-", "").slice(0, 8).toUpperCase();
-  const slugPart = slug.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() || "BRND";
-  return `BR-${slugPart}-${idPart}`;
 }
 
 function daysUntil(value: unknown): number | null {

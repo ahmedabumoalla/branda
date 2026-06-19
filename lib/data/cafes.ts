@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 
 export type CafeContext = {
   id: string;
@@ -67,6 +68,27 @@ export async function getOwnerCafeContext(): Promise<CafeContext | null> {
     .maybeSingle();
 
   if (profile?.role === "platform_admin") {
+    const maintenanceSession = await readMaintenanceSessionCookie();
+    if (
+      maintenanceSession?.adminUserId === user.id &&
+      maintenanceSession.expiresAt > Date.now()
+    ) {
+      const { data: maintenanceCafe } = await supabase
+        .from("cafes")
+        .select("id, slug, name")
+        .eq("id", maintenanceSession.cafeId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (maintenanceCafe) {
+        return {
+          id: maintenanceCafe.id,
+          slug: maintenanceCafe.slug,
+          name: maintenanceCafe.name,
+          role: "platform_admin",
+        };
+      }
+    }
+
     const { data: cafe } = await supabase
       .from("cafes")
       .select("id, slug, name")

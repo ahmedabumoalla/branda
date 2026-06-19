@@ -1,7 +1,12 @@
 "use client";
 
-import { LocateFixed, MapPin, Move } from "lucide-react";
+import { Link as LinkIcon, LocateFixed, MapPin, Move } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { resolveGoogleMapsShortUrlAction } from "@/app/actions/maps";
+import {
+  isGoogleMapsShortUrl,
+  parseGoogleMapsCoordinates,
+} from "@/lib/maps/google-maps-url";
 
 type LocationValue = {
   lat: number;
@@ -107,6 +112,9 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   const hadInitialValueRef = useRef(Boolean(value));
   const autoLocateRequestedRef = useRef(false);
   const [mapError, setMapError] = useState("");
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  const [linkMessage, setLinkMessage] = useState("");
+  const [resolvingLink, setResolvingLink] = useState(false);
   const [current, setCurrent] = useState<LocationValue>(value ?? fallbackPosition);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -235,8 +243,84 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
     requestBrowserLocation();
   }
 
+  const applyGoogleMapsUrl = useCallback(
+    async (nextUrl: string) => {
+      const trimmed = nextUrl.trim();
+      setGoogleMapsUrl(nextUrl);
+      setLinkMessage("");
+
+      if (!trimmed) return;
+
+      const coordinates = parseGoogleMapsCoordinates(trimmed);
+      if (coordinates) {
+        applyLocation(coordinates);
+        setLinkMessage("تم تحديث الموقع من رابط Google Maps");
+        return;
+      }
+
+      if (!isGoogleMapsShortUrl(trimmed)) {
+        setLinkMessage("لم يتم العثور على إحداثيات واضحة داخل الرابط");
+        return;
+      }
+
+      setResolvingLink(true);
+      try {
+        const result = await resolveGoogleMapsShortUrlAction(trimmed);
+        if (result.ok) {
+          applyLocation(result.coordinates);
+          setLinkMessage("تم تحديث الموقع من الرابط المختصر");
+        } else {
+          setLinkMessage(result.message);
+        }
+      } catch {
+        setLinkMessage("تعذر معالجة الرابط المختصر");
+      } finally {
+        setResolvingLink(false);
+      }
+    },
+    [applyLocation]
+  );
+
+  function handleGoogleMapsUrlChange(nextUrl: string) {
+    setGoogleMapsUrl(nextUrl);
+    setLinkMessage("");
+
+    const coordinates = parseGoogleMapsCoordinates(nextUrl);
+    if (coordinates) {
+      applyLocation(coordinates);
+      setLinkMessage("تم تحديث الموقع من رابط Google Maps");
+    }
+  }
+
   return (
     <div className="space-y-3">
+      <div className="rounded-2xl border border-[#E5D8CD] bg-white p-3">
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-sm font-black text-[#3A2117]">
+            <LinkIcon className="h-4 w-4 text-[#6B3A25]" />
+            رابط Google Maps
+          </span>
+          <input
+            type="url"
+            value={googleMapsUrl}
+            onChange={(event) => handleGoogleMapsUrlChange(event.target.value)}
+            onBlur={(event) => void applyGoogleMapsUrl(event.target.value)}
+            onPaste={(event) => {
+              const pasted = event.clipboardData.getData("text");
+              if (pasted) {
+                event.preventDefault();
+                void applyGoogleMapsUrl(pasted);
+              }
+            }}
+            dir="ltr"
+            placeholder="https://www.google.com/maps?q=24.7136,46.6753"
+            className="h-12 w-full rounded-2xl border border-[#E5D8CD] bg-[#FCF8F3] px-4 text-left text-sm font-bold text-[#3A2117] outline-none"
+          />
+        </label>
+        <p className="mt-2 text-xs font-bold text-[#806A5E]">
+          {resolvingLink ? "جاري فحص الرابط المختصر..." : linkMessage || "اختياري، ويمكنك الاستمرار بالتحديد اليدوي من الخريطة"}
+        </p>
+      </div>
       <div className={`relative overflow-hidden rounded-[28px] border border-[#E5D8CD] bg-[#F8F4EF] ${heightClassName}`}>
         <div ref={containerRef} className="h-full w-full" />
         <div className="pointer-events-none absolute right-4 top-4 rounded-2xl bg-white/95 px-4 py-2 text-sm font-black text-[#3A2117] shadow">

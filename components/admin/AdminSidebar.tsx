@@ -17,6 +17,7 @@ import {
   UserRoundCog,
   Settings2,
   Users,
+  Wrench,
 } from "lucide-react";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
@@ -35,6 +36,7 @@ const links = [
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
   ["إدارة المناديب", "/admin/representatives", UserRoundCog],
   ["خيارات المنصة", "/admin/options", Settings2],
+  ["الصيانة", "/admin/maintenance", Wrench],
   ["الدعم", "/admin/support", ClipboardList],
 ] as const;
 
