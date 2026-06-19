@@ -2,37 +2,23 @@
 
 import { isIP } from "node:net";
 import {
-  extractGoogleMapsQuery,
   isAllowedGoogleMapsUrl,
   isGoogleMapsShortUrl,
-  parseGoogleMapsCoordinates,
+  parseGoogleMapsCoordinatesFromText,
   readSafeUrl,
 } from "@/lib/maps/google-maps-url";
-
-type ResolveSuccessSource =
-  | "google-short-url-explicit"
-  | "google-short-url-geocoded-query";
 
 type ResolveSuccess = {
   ok: true;
   coordinates: { lat: number; lng: number };
-  source: ResolveSuccessSource;
+  source: "google-short-url-explicit";
 };
 
 const unsupportedMessage =
-  "تعذر استخراج الإحداثيات من الرابط المختصر. جرّب فتح الرابط في Google Maps ثم مشاركة رابط يحتوي على الإحداثيات، أو حدد الموقع يدويًا من الخريطة.";
-const maxRedirects = 6;
-const redirectTimeoutMs = 4500;
-const geocodingTimeoutMs = 4000;
-
-function getMapboxAccessToken() {
-  return (
-    process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
-    process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ||
-    process.env.MAPBOX_ACCESS_TOKEN ||
-    ""
-  );
-}
+  "هذا الرابط المختصر لا يحتوي إحداثيات واضحة. افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس، أو حدّد الموقع يدويًا من الخريطة.";
+const maxRedirects = 5;
+const requestTimeoutMs = 9000;
+const browserLikeUserAgent = "Mozilla/5.0 BarndaksaBot/1.0";
 
 function isPrivateHostname(hostname: string) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
@@ -84,89 +70,74 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-async function resolveAllowedRedirectUrl(input: string, method: "HEAD" | "GET") {
+type ResolvedGoogleMapsPage = {
+  finalUrl: string;
+  visitedUrls: string[];
+  html: string;
+};
+
+async function resolveAllowedGoogleMapsPage(input: string): Promise<ResolvedGoogleMapsPage | null> {
   const initial = readSafeUrl(input);
   if (!initial || !canRequestGoogleMapsUrl(initial)) return null;
   let current: URL = initial;
+  const visitedUrls: string[] = [];
 
   for (let index = 0; index < maxRedirects; index += 1) {
+    visitedUrls.push(current.toString());
     const response = await fetchWithTimeout(
       current.toString(),
       {
-        method,
+        method: "GET",
         redirect: "manual",
         cache: "no-store",
+        headers: {
+          "User-Agent": browserLikeUserAgent,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
       },
-      redirectTimeoutMs
+      requestTimeoutMs
     );
 
-    const coordinates = parseGoogleMapsCoordinates(current.toString());
-    if (coordinates) return current.toString();
-
     if (response.status < 300 || response.status >= 400) {
-      return response.url && canRequestGoogleMapsUrl(new URL(response.url))
-        ? response.url
-        : current.toString();
+      const contentType = response.headers.get("content-type") ?? "";
+      const html = contentType.includes("text") || contentType.includes("html")
+        ? await response.text()
+        : "";
+      return {
+        finalUrl: current.toString(),
+        visitedUrls,
+        html,
+      };
     }
 
     const location = response.headers.get("location");
-    if (!location) return current.toString();
+    if (!location) {
+      const html = await response.text().catch(() => "");
+      return {
+        finalUrl: current.toString(),
+        visitedUrls,
+        html,
+      };
+    }
 
     const next = new URL(location, current);
     if (!canRequestGoogleMapsUrl(next)) return null;
     current = next;
   }
 
-  return current.toString();
+  return {
+    finalUrl: current.toString(),
+    visitedUrls,
+    html: "",
+  };
 }
 
-async function geocodeQueryWithMapbox(query: string) {
-  const token = getMapboxAccessToken();
-  if (!token) return null;
-
-  const endpoint = new URL(
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`
-  );
-  endpoint.searchParams.set("access_token", token);
-  endpoint.searchParams.set("country", "sa");
-  endpoint.searchParams.set("language", "ar");
-  endpoint.searchParams.set("limit", "2");
-  endpoint.searchParams.set("types", "poi,address,place,locality,neighborhood");
-
-  try {
-    const response = await fetchWithTimeout(
-      endpoint.toString(),
-      { method: "GET", cache: "no-store" },
-      geocodingTimeoutMs
-    );
-    if (!response.ok) return null;
-
-    const payload = (await response.json()) as {
-      features?: Array<{
-        center?: [number, number];
-        relevance?: number;
-      }>;
-    };
-    const features = payload.features ?? [];
-    const first = features[0];
-    if (!first?.center || first.center.length < 2) return null;
-
-    const firstRelevance = Number(first.relevance ?? 1);
-    const secondRelevance = Number(features[1]?.relevance ?? 0);
-    const clearEnough = firstRelevance >= 0.8 && (features.length === 1 || firstRelevance - secondRelevance >= 0.15);
-    if (!clearEnough) return null;
-
-    const [lng, lat] = first.center;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-
-    return {
-      lat: Number(lat.toFixed(7)),
-      lng: Number(lng.toFixed(7)),
-    };
-  } catch {
-    return null;
-  }
+function resolveSuccess(coordinates: { lat: number; lng: number }) {
+  return {
+    ok: true as const,
+    coordinates,
+    source: "google-short-url-explicit" as const,
+  } satisfies ResolveSuccess;
 }
 
 export async function resolveGoogleMapsShortUrlAction(input: string) {
@@ -175,42 +146,23 @@ export async function resolveGoogleMapsShortUrlAction(input: string) {
     return { ok: false as const, message: "الرابط المختصر غير مدعوم" };
   }
 
-  const direct = parseGoogleMapsCoordinates(raw);
-  if (direct) {
-    return {
-      ok: true as const,
-      coordinates: direct,
-      source: "google-short-url-explicit" as const,
-    } satisfies ResolveSuccess;
-  }
+  const direct = parseGoogleMapsCoordinatesFromText(raw);
+  if (direct) return resolveSuccess(direct);
 
-  for (const method of ["HEAD", "GET"] as const) {
-    try {
-      const resolvedUrl = await resolveAllowedRedirectUrl(raw, method);
-      if (!resolvedUrl) continue;
-
-      const coordinates = parseGoogleMapsCoordinates(resolvedUrl);
-      if (coordinates) {
-        return {
-          ok: true as const,
-          coordinates,
-          source: "google-short-url-explicit" as const,
-        } satisfies ResolveSuccess;
+  try {
+    const resolved = await resolveAllowedGoogleMapsPage(raw);
+    if (resolved) {
+      for (const url of [...resolved.visitedUrls, resolved.finalUrl]) {
+        const coordinates = parseGoogleMapsCoordinatesFromText(url);
+        if (coordinates) return resolveSuccess(coordinates);
       }
 
-      const googleQuery = extractGoogleMapsQuery(resolvedUrl);
-      if (googleQuery) {
-        const geocoded = await geocodeQueryWithMapbox(googleQuery.query);
-        if (geocoded) {
-          return {
-            ok: true as const,
-            coordinates: geocoded,
-            source: "google-short-url-geocoded-query" as const,
-          } satisfies ResolveSuccess;
-        }
-      }
-    } catch {}
-  }
+      const htmlCoordinates = parseGoogleMapsCoordinatesFromText(resolved.html, {
+        includeViewportParams: false,
+      });
+      if (htmlCoordinates) return resolveSuccess(htmlCoordinates);
+    }
+  } catch {}
 
   return {
     ok: false as const,

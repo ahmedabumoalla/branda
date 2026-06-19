@@ -111,6 +111,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   const currentRef = useRef<LocationValue>(value ?? fallbackPosition);
   const hadInitialValueRef = useRef(Boolean(value));
   const autoLocateRequestedRef = useRef(false);
+  const lastResolvedUrlRef = useRef("");
   const [mapError, setMapError] = useState("");
   const [googleMapsUrl, setGoogleMapsUrl] = useState("");
   const [linkMessage, setLinkMessage] = useState("");
@@ -263,6 +264,9 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
         return;
       }
 
+      if (lastResolvedUrlRef.current === trimmed) return;
+      lastResolvedUrlRef.current = trimmed;
+
       setResolvingLink(true);
       try {
         const result = await resolveGoogleMapsShortUrlAction(trimmed);
@@ -273,7 +277,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
           setLinkMessage(result.message);
         }
       } catch {
-        setLinkMessage("تعذر معالجة الرابط المختصر");
+        setLinkMessage("هذا الرابط المختصر لا يحتوي إحداثيات واضحة. افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس، أو حدّد الموقع يدويًا من الخريطة.");
       } finally {
         setResolvingLink(false);
       }
@@ -284,6 +288,9 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   function handleGoogleMapsUrlChange(nextUrl: string) {
     setGoogleMapsUrl(nextUrl);
     setLinkMessage("");
+    if (nextUrl.trim() !== lastResolvedUrlRef.current) {
+      lastResolvedUrlRef.current = "";
+    }
 
     const coordinates = parseGoogleMapsCoordinates(nextUrl);
     if (coordinates) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
   saveMenuProductAction,
 } from "@/app/actions/menu";
 import { CategoryManager } from "@/components/dashboard/menu/category-manager";
+import { MenuImportModal } from "@/components/dashboard/menu/menu-import-modal";
 import { MenuProductCard } from "@/components/dashboard/menu/product-card";
 import { MenuProductFormModal } from "@/components/dashboard/menu/product-modal";
 import {
@@ -36,6 +37,7 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("الكل");
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
@@ -120,7 +122,17 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
         title="المنيو الرقمي"
         subtitle="أي منتج تضيفه هنا يظهر في صفحة الفرع الالكتروني للعميل"
         action={
-          <PrimaryButton
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-[#3A2117] shadow"
+            >
+              <Upload className="h-5 w-5" />
+              استيراد المنيو
+            </button>
+            <PrimaryButton
             onClick={() => {
               setEditing(null);
               setOpen(true);
@@ -130,7 +142,8 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
           >
             <Plus className="h-5 w-5" />
             إضافة منتج
-          </PrimaryButton>
+            </PrimaryButton>
+          </div>
         }
       >
         <BentoGrid className="mb-6">
@@ -243,6 +256,14 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
           onCategoriesChange={handleCategoriesChange}
           onClose={() => setOpen(false)}
           onSave={saveProduct}
+        />
+        <MenuImportModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            setImportOpen(false);
+            router.refresh();
+          }}
         />
       </DashboardPageShell>
       <AppToast toast={toast} />
