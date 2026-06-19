@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LockKeyhole, Sparkles, UserRound } from "lucide-react";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 
@@ -30,16 +31,16 @@ export function ThemedAuthPanel({
 
   const panelClass =
     auth === "minimal"
-      ? `rounded-3xl p-8 md:p-10 ${theme.card}`
+      ? `rounded-[32px] p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] md:p-8 ${theme.card}`
       : auth === "kiosk"
-        ? `rounded-lg border-2 p-8 ${theme.card}`
+        ? `rounded-2xl border-2 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] ${theme.card}`
         : auth === "boutique"
-          ? `rounded-none border border-[#c9a227]/20 p-8 ${theme.card}`
+          ? `rounded-[28px] border border-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]/20 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] ${theme.card}`
           : auth === "neon"
-            ? `rounded-lg border border-[#00e676]/20 p-8 backdrop-blur ${theme.card}`
+            ? `rounded-2xl border border-[#00e676]/20 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] backdrop-blur ${theme.card}`
             : auth === "app"
-              ? `rounded-3xl p-6 shadow-xl ${theme.card}`
-              : `rounded-[28px] p-8 ${theme.card}`;
+              ? `rounded-[32px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.card}`
+              : `rounded-[32px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] sm:p-8 ${theme.card}`;
 
   const title = mode === "login" ? "تسجيل دخول العميل" : "إنشاء حساب جديد";
   const description =
@@ -48,26 +49,52 @@ export function ThemedAuthPanel({
       : `سجّل في ${settings.cafeName} لمتابعة الطلبات والحجوزات`;
 
   return (
-    <div className={auth === "app" ? "mx-auto max-w-md" : "mx-auto max-w-lg"}>
-      <div className="mb-8 flex flex-col items-center text-center">
+    <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[0.88fr_1fr] lg:items-stretch">
+      <aside className={`barndaksa-premium-hero rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.hero}`}>
+        <span className={`flex h-16 w-16 items-center justify-center rounded-[24px] shadow-lg ${theme.button}`}>
+          {mode === "login" ? <LockKeyhole className="h-7 w-7" /> : <UserRound className="h-7 w-7" />}
+        </span>
+        <p className={`mt-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
+          <Sparkles className="h-3.5 w-3.5" />
+          حساب العميل
+        </p>
         <h1
-          className={`mt-0 font-black ${auth === "kiosk" ? "text-4xl" : "text-3xl"} ${experience.headingTracking}`}
+          className={`mt-3 text-balance font-black leading-tight ${auth === "kiosk" ? "text-4xl" : "text-3xl sm:text-4xl"} ${experience.headingTracking}`}
         >
           {title}
         </h1>
-        <p className={`mt-2 font-bold ${theme.muted}`}>{description}</p>
-      </div>
+        <p className={`mt-3 text-sm font-bold leading-7 ${theme.muted}`}>{description}</p>
 
-      <div className={panelClass}>
+        <div className="mt-7 grid gap-3">
+          {[
+            ["الطلبات", "تابع حالة الاستلام من حسابك"],
+            ["الحجوزات", "كل موعد يظهر في سجل واحد"],
+            ["الولاء", "بطاقتك ومكافآتك بعد الدخول"],
+          ].map(([label, desc]) => (
+            <div key={label} className={`rounded-2xl border border-black/5 p-4 ${theme.card}`}>
+              <p className="font-black">{label}</p>
+              <p className={`mt-1 text-xs font-bold leading-5 ${theme.muted}`}>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <div className={`barndaksa-premium-card border border-black/5 ${panelClass}`}>
+        <div className="mb-5">
+          <p className={`text-xs font-black ${theme.accent}`}>دخول آمن ومباشر</p>
+          <h2 className="mt-1 text-2xl font-black">
+            {mode === "login" ? "أكمل بيانات الدخول" : "أنشئ حسابك"}
+          </h2>
+        </div>
         <div className="space-y-4">{children}</div>
         <button
           type="button"
           onClick={onSubmit}
-          className={`mt-6 w-full font-black ${auth === "kiosk" ? "h-16 text-lg rounded-lg" : "h-14 rounded-2xl"} ${theme.button}`}
+          className={`barndaksa-cta-motion mt-6 w-full font-black shadow-lg transition active:scale-[0.985] ${auth === "kiosk" ? "h-16 rounded-2xl text-lg" : "h-14 rounded-2xl"} ${theme.button}`}
         >
           {submitLabel}
         </button>
-        <p className={`mt-6 text-center text-sm font-bold ${theme.muted}`}>
+        <p className={`mt-6 rounded-2xl px-4 py-3 text-center text-sm font-bold ${theme.badge}`}>
           {mode === "login" ? (
             <>
               ما عندك حساب؟{" "}
@@ -113,7 +140,7 @@ export function ThemedInput({
   return (
     <input
       {...props}
-      className={`w-full font-bold outline-none focus:ring-2 focus:ring-offset-1 ${experience.formInput} ${props.className ?? ""}`}
+      className={`w-full min-h-12 font-bold outline-none transition focus:ring-2 focus:ring-offset-1 ${experience.formInput} ${props.className ?? ""}`}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw, Search, Tag } from "lucide-react";
+import { BadgePercent, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { PriceRangeFilter } from "@/lib/cafe/menu-category-utils";
 import { isFilterActive } from "@/lib/cafe/menu-category-utils";
@@ -84,17 +84,22 @@ export function ThemedFilterBar({
   const hasActive = isFilterActive(state);
 
   return (
-    <div className={`rounded-2xl p-4 sm:p-5 ${theme.card}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+    <div className={`barndaksa-premium-card overflow-hidden rounded-[28px] border border-black/5 p-4 shadow-[0_18px_55px_rgba(49,25,18,0.08)] backdrop-blur sm:p-5 ${theme.card}`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Tag className={`h-4 w-4 ${theme.accent}`} />
-          <h2 className="text-sm font-black">فلترة المنيو</h2>
+          <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${theme.badge}`}>
+            <SlidersHorizontal className={`h-4 w-4 ${theme.accent}`} />
+          </span>
+          <div>
+            <p className={`text-[11px] font-black ${theme.muted}`}>تخصيص العرض</p>
+            <h2 className="text-sm font-black">فلترة المنيو</h2>
+          </div>
         </div>
         {hasActive && onReset ? (
           <button
             type="button"
             onClick={onReset}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black ${theme.buttonOutline}`}
+            className={`inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-black transition active:scale-95 ${theme.buttonOutline}`}
           >
             <RotateCcw className="h-3.5 w-3.5" />
             مسح الفلاتر
@@ -115,6 +120,26 @@ export function ThemedFilterBar({
             />
           </div>
         </label>
+
+        {categories.length > 1 ? (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {categories.slice(0, 8).map((name) => {
+              const active = state.category === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => onChange({ category: name })}
+                  className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${
+                    active ? theme.button : theme.buttonOutline
+                  }`}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FilterSelect
@@ -147,10 +172,11 @@ export function ThemedFilterBar({
             <button
               type="button"
               onClick={() => onChange({ onlyOffers: !state.onlyOffers })}
-              className={`h-11 w-full rounded-2xl text-sm font-black transition ${
+              className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black transition active:scale-95 ${
                 state.onlyOffers ? theme.button : theme.buttonOutline
               }`}
             >
+              <BadgePercent className="h-4 w-4" />
               {state.onlyOffers ? "✓ العروض فقط" : "العروض فقط"}
             </button>
           </div>

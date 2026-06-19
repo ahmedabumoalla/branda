@@ -146,7 +146,7 @@ export default function CafeCustomerLoginPage() {
 
   return (
 
-    <CafeLayout slug={params.slug} className="max-w-lg py-8" maxWidth="max-w-lg">
+    <CafeLayout slug={params.slug} className="py-8" maxWidth="max-w-5xl">
 
       <Suspense fallback={<p className="text-center font-black">جاري التحميل...</p>}>
 
@@ -159,4 +159,3 @@ export default function CafeCustomerLoginPage() {
   );
 
 }
-

@@ -16,13 +16,29 @@ export type CafeBranch = {
 
 export const BRANCHES_KEY = "barndaksa_qatrah_branches";
 
-export function buildGoogleMapsUrl(lat?: number, lng?: number, fallback?: string) {
-  if (lat && lng) return `https://www.google.com/maps?q=${lat},${lng}`;
-  return fallback || "https://www.google.com/maps";
+const GOOGLE_MAPS_URL = "https://www.google.com/maps";
+
+function hasCoordinate(value?: number | null) {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
-export function buildMapboxMapUrl(lat?: number, lng?: number, fallback?: string) {
-  if (lat && lng) {
+function sanitizeCustomerMapFallback(fallback?: string | null) {
+  const nextFallback = fallback?.trim();
+  if (!nextFallback || nextFallback.toLowerCase().includes("mapbox.com")) {
+    return GOOGLE_MAPS_URL;
+  }
+  return nextFallback;
+}
+
+export function buildGoogleMapsUrl(lat?: number | null, lng?: number | null, fallback?: string | null) {
+  if (hasCoordinate(lat) && hasCoordinate(lng)) {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  return sanitizeCustomerMapFallback(fallback);
+}
+
+export function buildMapboxMapUrl(lat?: number | null, lng?: number | null, fallback?: string) {
+  if (hasCoordinate(lat) && hasCoordinate(lng)) {
     return `https://www.mapbox.com/maps?coordinates=${lng},${lat}`;
   }
   return fallback || "https://www.mapbox.com/maps";
@@ -43,7 +59,7 @@ export const mockBranches: CafeBranch[] = [
     lng: 39.1728,
     geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
     welcomeMessage: "أهلًا بك في فرع التحلية، سعداء بزيارتك",
-    mapUrl: "https://www.mapbox.com/maps?coordinates=39.1728,21.5433",
+    mapUrl: buildGoogleMapsUrl(21.5433, 39.1728),
     active: true,
   },
   {
@@ -58,7 +74,7 @@ export const mockBranches: CafeBranch[] = [
     lng: 39.1044,
     geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
     welcomeMessage: "أهلًا بك في فرع الواجهة، استمتع بتجربتك معنا",
-    mapUrl: "https://www.mapbox.com/maps?coordinates=39.1044,21.6341",
+    mapUrl: buildGoogleMapsUrl(21.6341, 39.1044),
     active: true,
   },
 ];

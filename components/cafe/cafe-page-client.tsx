@@ -1,24 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useMemo, useState, type CSSProperties, type ElementType } from "react";
 import {
   ArrowLeft,
   BadgePercent,
   CalendarDays,
   Coffee,
   Gift,
+  Heart,
   MapPin,
   Megaphone,
-  Search,
   ShoppingBag,
-  Smartphone,
+  Star,
   UserRound,
   WalletCards,
 } from "lucide-react";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import {
+  CustomerQuickDock,
+  InternalAdPanel,
+  PremiumSectionHeader,
+  SocialProofPanel,
+  buildCustomerQuickDockItems,
+} from "@/components/cafe/themes/customer-experience-primitives";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
 import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
@@ -37,6 +44,7 @@ import {
   type MenuProduct,
 } from "@/lib/mock/menu";
 import { trackCafeVisitAction } from "@/app/actions/platform-upgrade";
+import { sendBranchProximityEmailAction } from "@/app/actions/customer";
 
 function productScore(product: MenuProduct, index: number) {
   return Number(product.price || 0) + (100 - index);
@@ -182,19 +190,6 @@ function ActiveOfferSlider({
 }) {
   const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    if (offers.length <= 1) {
-      setIndex(0);
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % offers.length);
-    }, 5000);
-
-    return () => window.clearInterval(timer);
-  }, [offers.length]);
-
   if (!offers.length) {
     return (
       <div className="mt-8 rounded-[28px] border border-dashed border-[var(--ci-border)] bg-[var(--ci-page-bg)]/60 p-6 text-center">
@@ -289,11 +284,24 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function branchEmailStorageKey(slug: string, branchId: string, customerId: string) {
+  return `barndaksa_branch_email_${slug}*${branchId}*${customerId}_${todayKey()}`;
+}
+
+function markBranchEmailPending(slug: string, branchId: string, customerId: string) {
+  try {
+    const key = branchEmailStorageKey(slug, branchId, customerId);
+    if (localStorage.getItem(key)) return false;
+    localStorage.setItem(key, "sent");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function CafePageInner({ slug }: { slug: string }) {
-  const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features } = useCafeThemePage(slug);
-  // إذا لم تصل ميزات الباقة بعد من API لا نخفي أزرار الفرع الإلكتروني بالخطأ.
-  // عند وصول features من قاعدة البيانات يرجع النظام يطبق حدود الباقة فعليًا.
-  const hasFeature = (feature: string) => features.length > 0 && featureCodesAllow(features, feature);
+  const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features, hydrated } = useCafeThemePage(slug);
+  const hasFeature = (feature: string) => hydrated && featureCodesAllow(features, feature);
   const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
@@ -343,16 +351,39 @@ function CafePageInner({ slug }: { slug: string }) {
         if (!nearest) return;
 
         const storageKey = `barndaksa_branch_welcome_${slug}_${nearest.branch.id}_${todayKey()}`;
-        if (localStorage.getItem(storageKey)) return;
-        localStorage.setItem(storageKey, "shown");
+        let shouldShowWelcome = true;
 
-        setBranchWelcome({
-          branchName: nearest.branch.name,
-          message:
-            nearest.branch.welcomeMessage ||
-            `أهلًا بك في ${nearest.branch.name}، سعداء بزيارتك`,
-          distance: Math.round(nearest.distance),
-        });
+        try {
+          shouldShowWelcome = !localStorage.getItem(storageKey);
+          if (shouldShowWelcome) {
+            localStorage.setItem(storageKey, "shown");
+          }
+        } catch {
+          shouldShowWelcome = true;
+        }
+
+        if (shouldShowWelcome) {
+          setBranchWelcome({
+            branchName: nearest.branch.name,
+            message:
+              nearest.branch.welcomeMessage ||
+              `أهلًا بك في ${nearest.branch.name}، سعداء بزيارتك`,
+            distance: Math.round(nearest.distance),
+          });
+        }
+
+        if (
+          customer?.id &&
+          customer.email &&
+          markBranchEmailPending(slug, nearest.branch.id, customer.id)
+        ) {
+          void sendBranchProximityEmailAction({
+            cafeSlug: slug,
+            branchId: nearest.branch.id,
+            customerLat: customerPoint.lat,
+            customerLng: customerPoint.lng,
+          }).catch(() => undefined);
+        }
       },
       () => undefined,
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
@@ -361,7 +392,7 @@ function CafePageInner({ slug }: { slug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [branches, slug, features]);
+  }, [branches, slug, features, hydrated, customer?.id, customer?.email]);
 
   useEffect(() => {
     const key = `barndaksa_visit_session_${slug}`;
@@ -388,14 +419,16 @@ function CafePageInner({ slug }: { slug: string }) {
 
   const cafeName = settings.cafeName || slug;
   const logoUrl = settings.logoDataUrl ?? settings.logoAssetId;
-  const availableProducts = products.filter((product) => product.available);
-  const activeOffers = offers.filter(
-    (offer) =>
-      offer.visibleInCafe &&
-      !["غير نشط", "inactive", "منتهي", "expired", "مسودة", "draft"].includes(
-        String(offer.status ?? "")
+  const availableProducts = hasFeature("menu") ? products.filter((product) => product.available) : [];
+  const activeOffers = hasFeature("offers")
+    ? offers.filter(
+        (offer) =>
+          offer.visibleInCafe &&
+          !["غير نشط", "inactive", "منتهي", "expired", "مسودة", "draft"].includes(
+            String(offer.status ?? "")
+          )
       )
-  );
+    : [];
   const activeBranches = hasFeature("branches") ? branches.filter((branch) => branch.active !== false) : [];
 
   const featuredProducts = useMemo(() => {
@@ -416,6 +449,7 @@ function CafePageInner({ slug }: { slug: string }) {
 
     return list.reverse().slice(0, 6);
   }, [availableProducts, customIdentity?.featuredCategoryId, customIdentity?.featuredSectionMode]);
+  const heroProduct = featuredProducts[0];
 
   const categoryLinks = useMemo(
     () =>
@@ -437,8 +471,15 @@ function CafePageInner({ slug }: { slug: string }) {
   const overlayOpacity = OVERLAY_OPACITY[identity.overlayStrength];
 
   const loadError = cafeLoadError || menuError;
+  const internalAdHref = activeOffers[0]?.linkedProductId
+    ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId)
+    : hasFeature("offers")
+      ? getCafePath(slug, "products/offers", previewThemeId)
+      : hasFeature("menu")
+        ? getCafePath(slug, "products/popular", previewThemeId)
+        : getCafePath(slug, "", previewThemeId);
 
-  if (loading) {
+  if (loading || !hydrated) {
     return (
       <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3]">
         <p className="font-black text-[#4a4540]">جاري التحميل...</p>
@@ -457,7 +498,7 @@ function CafePageInner({ slug }: { slug: string }) {
   return (
     <main
       dir="rtl"
-      className="brand-identity-custom-theme relative min-h-screen overflow-hidden bg-[var(--ci-page-bg)] text-[var(--ci-page-fg)]"
+      className="brand-identity-custom-theme relative min-h-screen overflow-hidden bg-[var(--ci-page-bg)] pb-24 text-[var(--ci-page-fg)] md:pb-0"
       style={identityStyle}
     >
       {showPageBackground ? (
@@ -559,66 +600,134 @@ function CafePageInner({ slug }: { slug: string }) {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-stretch">
-          <div className="rounded-[36px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-6 shadow-[0_18px_45px_rgba(49,25,18,0.08)] sm:p-8">
-            <p className="text-sm font-black text-[#D9A33F]">مرحبًا بك في</p>
-            <h2 className="mt-2 text-4xl font-black leading-tight text-[var(--ci-page-fg)] sm:text-5xl">
-              {cafeName}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base font-bold leading-8 text-[var(--ci-muted-fg)]">
-              {settings.description || "استعرض المنتجات والعروض والحملات الخاصة بالعلامة التجارية من مكان واحد"}
-            </p>
+        <section className="barndaksa-premium-hero overflow-hidden rounded-[40px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-4 shadow-[0_30px_96px_rgba(49,25,18,0.16)] sm:p-6 lg:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1.04fr_0.96fr] lg:items-stretch">
+            <div className="flex min-w-0 flex-col justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[var(--ci-page-bg)] px-3 py-1 text-xs font-black text-[var(--ci-primary-bg)]">
+                    <Star className="h-3.5 w-3.5 text-[var(--ci-accent-bg)]" />
+                    تجربة جوال مصممة كواجهة تطبيق
+                  </span>
+                  {activeBranches.length ? (
+                    <span className="inline-flex rounded-full bg-[var(--ci-page-bg)] px-3 py-1 text-xs font-black text-[var(--ci-muted-fg)]">
+                      {activeBranches.length} فرع
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-6 text-sm font-black text-[var(--ci-accent-bg)]">مرحبًا بك في</p>
+                <h2 className="mt-2 text-balance text-4xl font-black leading-[1.05] text-[var(--ci-page-fg)] sm:text-5xl lg:text-6xl">
+                  {cafeName}
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[var(--ci-muted-fg)] sm:text-base sm:leading-8">
+                  {settings.description || "استعرض المنتجات والعروض والحجوزات وبطاقة الولاء من شاشة واحدة مصممة للجوال أولًا."}
+                </p>
+              </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:max-w-3xl">
-              <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-5 py-4 font-black text-[var(--ci-button-fg)]">
-                <ShoppingBag className="h-5 w-5" />
-                تصفح المنتجات
-              </Link>
-              {hasFeature("offers") ? (
-                <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
-                  <BadgePercent className="h-5 w-5" />
-                  العروض والخصومات
-                </Link>
-              ) : null}
-              {hasFeature("reservations") ? (
-                <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] px-5 py-4 font-black text-[var(--ci-primary-bg)]">
-                  <CalendarDays className="h-5 w-5" />
-                  الحجوزات
-                </Link>
-              ) : null}
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {hasFeature("menu") ? (
+                  <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="barndaksa-cta-motion inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-5 py-4 font-black text-[var(--ci-button-fg)] shadow-lg transition active:scale-[0.985]">
+                    <ShoppingBag className="h-5 w-5" />
+                    المنتجات
+                  </Link>
+                ) : null}
+                {hasFeature("offers") ? (
+                  <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] bg-white/25 px-5 py-4 font-black text-[var(--ci-primary-bg)] backdrop-blur transition active:scale-[0.985]">
+                    <BadgePercent className="h-5 w-5" />
+                    العروض
+                  </Link>
+                ) : null}
+                {hasFeature("reservations") ? (
+                  <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] bg-white/25 px-5 py-4 font-black text-[var(--ci-primary-bg)] backdrop-blur transition active:scale-[0.985]">
+                    <CalendarDays className="h-5 w-5" />
+                    الحجوزات
+                  </Link>
+                ) : null}
+              </div>
             </div>
 
-            <ActiveOfferSlider
-              slug={slug}
-              offers={activeOffers}
-              previewThemeId={previewThemeId}
-            />
-          </div>
+            <div className="grid gap-3 sm:grid-cols-[1fr_0.72fr] lg:grid-cols-1">
+              <div className="barndaksa-premium-card overflow-hidden rounded-[34px] border border-[var(--ci-border)] bg-[var(--ci-page-bg)] shadow-[0_20px_70px_rgba(49,25,18,0.12)]">
+                <div className="relative h-72 sm:h-80 lg:h-[420px]">
+                  {heroProduct ? (
+                    <>
+                      <ProductMediaDisplay
+                        product={heroProduct}
+                        alt={heroProduct.name}
+                        className="h-full w-full object-cover"
+                        fallback={
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ci-primary-bg)] to-[var(--ci-secondary-bg)]">
+                            <Coffee className="h-16 w-16 text-white/80" />
+                          </div>
+                        }
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/68 to-transparent p-5 text-white">
+                        <p className="text-xs font-black text-[var(--ci-accent-bg)]">مختار من المنيو</p>
+                        <h3 className="mt-1 line-clamp-1 text-2xl font-black">{heroProduct.name}</h3>
+                        <p className="mt-1 line-clamp-2 text-xs font-bold text-white/78">
+                          {heroProduct.description || "منتج بارز من العلامة"}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ci-primary-bg)] to-[var(--ci-secondary-bg)]">
+                      <Coffee className="h-16 w-16 text-white/80" />
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          <div className="rounded-[36px] border border-[var(--ci-border)] bg-[var(--ci-button-bg)] p-6 text-[var(--ci-button-fg)] shadow-[0_18px_45px_rgba(49,25,18,0.12)]">
-            <Smartphone className="h-10 w-10 text-[#D9A33F]" />
-            <h3 className="mt-4 text-2xl font-black">تحميل تطبيق العلامة</h3>
-            <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-secondary-fg)]">
-              أضف صفحة {cafeName} إلى شاشة جوالك للوصول السريع للمنيو والعروض وحسابك
-            </p>
-            <div className="mt-5">
-              <BrandPwaInstallSection slug={slug} cafeName={cafeName} />
+              <div className="grid grid-cols-3 gap-2 rounded-[28px] bg-[var(--ci-page-bg)]/76 p-2 backdrop-blur sm:grid-cols-1 lg:grid-cols-3">
+                {[
+                  [ShoppingBag, "منتجات", availableProducts.length],
+                  [Gift, "عروض", activeOffers.length],
+                  [Heart, "تجربة", "سريعة"],
+                ].map(([Icon, label, value]) => {
+                  const I = Icon as ElementType;
+                  return (
+                    <div key={label as string} className="rounded-2xl bg-[var(--ci-surface-bg)] px-3 py-3 text-center shadow-sm">
+                      <I className="mx-auto h-4 w-4 text-[var(--ci-accent-bg)]" />
+                      <p className="mt-1 text-[11px] font-black text-[var(--ci-muted-fg)]">{label as string}</p>
+                      <p className="font-black text-[var(--ci-page-fg)]">{value as string | number}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
+
+          <ActiveOfferSlider
+            slug={slug}
+            offers={activeOffers}
+            previewThemeId={previewThemeId}
+          />
         </section>
 
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.72fr]">
+          <InternalAdPanel
+            title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "مساحة عروض العلامة"}
+            eyebrow="إعلان رئيسي داخل التجربة"
+            description={activeOffers[0]?.description || "مساحة ذكية بعد الـ Hero تقود العميل مباشرة إلى العروض أو المنتجات بدون مغادرة تجربة الفرع."}
+            href={internalAdHref}
+            cta={activeOffers[0]?.ctaText || "مشاهدة العرض"}
+            metric={activeOffers.length ? `${activeOffers.length} عروض` : `${availableProducts.length} منتج`}
+          />
+          <BrandPwaInstallSection slug={slug} cafeName={cafeName} compact />
+        </div>
 
-
+        {hasFeature("menu") ? (
+          <>
         <section className="mt-8">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-black text-[#D9A33F]">الأقسام</p>
-              <h2 className="text-3xl font-black">تصفح حسب التصنيف</h2>
-            </div>
-            <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="text-sm font-black text-[var(--ci-primary-bg)]">
+          <PremiumSectionHeader
+            eyebrow="الأقسام"
+            title="تصفح حسب التصنيف"
+            description="تصنيفات أفقية سهلة اللمس على الجوال، وتبقى مرتبطة بنفس صفحات المنتجات الحالية."
+            action={
+              <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="text-sm font-black text-[var(--ci-primary-bg)]">
               كل المنتجات
-            </Link>
-          </div>
+              </Link>
+            }
+          />
           <div className="flex gap-3 overflow-x-auto pb-2">
             {categoryLinks.length ? (
               categoryLinks.map((category) => (
@@ -639,16 +748,17 @@ function CafePageInner({ slug }: { slug: string }) {
         </section>
 
         <section className="mt-8">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-black text-[#D9A33F]">المنتجات</p>
-              <h2 className="text-3xl font-black">منتجات مختارة</h2>
-            </div>
-            <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="inline-flex items-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)]">
+          <PremiumSectionHeader
+            eyebrow="المنتجات"
+            title="منتجات مختارة"
+            description="بطاقات واسعة تكشف الصورة والسعر والمكونات بدون نقل العميل بعيدًا عن مسار الشراء."
+            action={
+              <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="inline-flex items-center gap-2 rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)]">
               أحدث المنتجات
               <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
+              </Link>
+            }
+          />
 
           <div className="grid gap-5 xl:grid-cols-2">
             {featuredProducts.length ? (
@@ -667,6 +777,17 @@ function CafePageInner({ slug }: { slug: string }) {
             )}
           </div>
         </section>
+          </>
+        ) : null}
+
+        <div className="mt-8">
+          <SocialProofPanel
+            cafeName={cafeName}
+            productCount={availableProducts.length}
+            offerCount={activeOffers.length}
+            branchCount={activeBranches.length}
+          />
+        </div>
 
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <CampaignBanner slug={slug} previewThemeId={previewThemeId} />
@@ -687,6 +808,22 @@ function CafePageInner({ slug }: { slug: string }) {
           ) : null}
         </div>
       </div>
+      <CustomerQuickDock
+        items={buildCustomerQuickDockItems({
+          slug,
+          homeHref: getCafePath(slug, "", previewThemeId),
+          productsHref: getCafePath(slug, "products/popular", previewThemeId),
+          reserveHref: getCafePath(slug, "reserve", previewThemeId),
+          loyaltyHref: getCafePath(slug, "account", previewThemeId),
+          accountHref: getCafePath(slug, "account", previewThemeId),
+          loginHref: getCafePath(slug, "login", previewThemeId),
+          isCustomer: Boolean(customer),
+          hasProducts: hasFeature("menu"),
+          hasReservations: hasFeature("reservations"),
+          hasLoyalty: hasFeature("loyalty"),
+          active: "home",
+        })}
+      />
       </div>
     </main>
   );

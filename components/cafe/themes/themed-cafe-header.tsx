@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserRound } from "lucide-react";
+import { UserRound, WalletCards } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -34,7 +34,7 @@ export function ThemedCafeHeader({
   return (
     <header
       dir="rtl"
-      className="sticky top-0 z-40 border-b border-[#E7D7C6] bg-[#FCF8F3]/95 shadow-sm backdrop-blur"
+      className="sticky top-0 z-40 border-b border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-page-bg,#FCF8F3)]/86 shadow-[0_10px_35px_rgba(49,25,18,0.06)] backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href={home} className="flex min-w-0 items-center gap-3">
@@ -45,39 +45,44 @@ export function ThemedCafeHeader({
             className="rounded-2xl bg-white object-contain p-1 shadow-sm"
           />
           <div className="min-w-0">
-            <p className="truncate text-lg font-black text-[#311912]">{cafeName}</p>
-            <p className="text-xs font-bold text-[#806A5E]">الفرع الإلكتروني</p>
+            <p className="truncate text-lg font-black text-[var(--ci-page-fg,var(--barndaksa-espresso-dark))]">{cafeName}</p>
+            <p className="text-xs font-bold text-[var(--ci-muted-fg,var(--barndaksa-muted-text))]">الفرع الإلكتروني</p>
           </div>
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
           {has("menu") ? (
-            <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
               أحدث المنتجات
             </Link>
           ) : null}
           {has("offers") ? (
-            <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
               العروض
             </Link>
           ) : null}
           {has("menu") ? (
-            <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
               المنيو
             </Link>
           ) : null}
           {has("reservations") ? (
-            <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[#6B3A25] hover:bg-white">
+            <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
               الحجز
+            </Link>
+          ) : null}
+          {has("loyalty") ? (
+            <Link href={account} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
+              الولاء
             </Link>
           ) : null}
         </nav>
 
         <Link
           href={customer ? account : login}
-          className="inline-flex items-center gap-2 rounded-2xl bg-[#6B3A25] px-4 py-2 text-sm font-black text-white"
+          className="inline-flex items-center gap-2 rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-4 py-2 text-sm font-black text-[var(--ci-button-fg,#fff)] shadow-sm transition active:scale-95"
         >
-          <UserRound className="h-4 w-4" />
+          {customer ? <WalletCards className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
           {customer ? "حسابي" : "دخول"}
         </Link>
       </div>

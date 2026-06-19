@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, ExternalLink, MapPin, Phone, Sparkles } from "lucide-react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import {
   ThemedFilterBar,
@@ -16,6 +16,7 @@ import {
 } from "@/components/cafe/themes/themed-product-card";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
+import { buildGoogleMapsUrl } from "@/lib/mock/branches";
 import {
   getCustomerCategoryFilterOptions,
   productMatchesCategory,
@@ -23,6 +24,11 @@ import {
   resolveProductCategoryLabel,
 } from "@/lib/cafe/menu-category-utils";
 import type { MenuProduct } from "@/lib/mock/menu";
+import {
+  InternalAdPanel,
+  PremiumSectionHeader,
+  SocialProofPanel,
+} from "@/components/cafe/themes/customer-experience-primitives";
 
 type Props = {
   slug: string;
@@ -165,32 +171,65 @@ export function ProductCollectionPage({ slug, view }: Props) {
       <CafeLayout slug={slug}>
         <Link
           href={path()}
-          className={`mb-6 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-black ${theme.buttonOutline}`}
+          className={`mb-5 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
         >
           <ArrowRight className="h-4 w-4" />
           رجوع للكوفي
         </Link>
-        <h1 className={`text-4xl font-black ${experience.headingTracking}`}>
-          فروع {settings.cafeName}
-        </h1>
-        <p className={`mt-2 font-bold ${theme.muted}`}>اختر الفرع الأقرب واحجز مباشرة.</p>
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
+        <section className={`barndaksa-premium-hero overflow-hidden rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-8 ${theme.hero}`}>
+          <p className={`inline-flex items-center gap-2 text-sm font-black ${theme.accent}`}>
+            <Sparkles className="h-4 w-4" />
+            فروع قريبة وتجربة أسهل
+          </p>
+          <h1 className={`mt-2 text-4xl font-black leading-tight sm:text-5xl ${experience.headingTracking}`}>
+            فروع {settings.cafeName}
+          </h1>
+          <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
+            اختر الفرع المناسب، افتح موقعه على خرائط جوجل، أو تواصل معه مباشرة إذا كان رقم الفرع متاحًا.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
+              {activeBranches.length} فرع متاح
+            </span>
+          </div>
+        </section>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {activeBranches.length ? (
             activeBranches.map((branch) => (
-              <article key={branch.id} className={`barndaksa-premium-card p-6 ${theme.card}`}>
-                <MapPin className={`mb-3 h-7 w-7 ${theme.accent}`} />
-                <h2 className="text-2xl font-black">{branch.name}</h2>
-                <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{branch.address}</p>
-                {branch.mapUrl ? (
-                  <a
-                    href={branch.mapUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`mt-4 inline-flex rounded-2xl px-5 py-2.5 text-sm font-black ${theme.button}`}
-                  >
-                    عرض على الخريطة
-                  </a>
-                ) : null}
+              <article key={branch.id} className={`barndaksa-premium-card overflow-hidden rounded-[32px] border border-black/5 p-5 shadow-[0_18px_55px_rgba(49,25,18,0.10)] ${theme.card}`}>
+                <div className="flex items-start gap-4">
+                  <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${theme.badge}`}>
+                    <MapPin className={`h-7 w-7 ${theme.accent}`} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className={`text-xs font-black ${theme.muted}`}>فرع جاهز للزيارة</p>
+                    <h2 className="mt-1 text-2xl font-black leading-snug">{branch.name}</h2>
+                    <p className={`mt-2 text-sm font-bold leading-7 ${theme.muted}`}>{branch.address || branch.city}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                  {branch.mapUrl ? (
+                    <a
+                      href={buildGoogleMapsUrl(branch.lat, branch.lng, branch.mapUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition active:scale-95 ${theme.button}`}
+                    >
+                      عرض على الخريطة
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  ) : null}
+                  {branch.phone ? (
+                    <a
+                      href={`tel:${branch.phone}`}
+                      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
+                    >
+                      اتصال
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  ) : null}
+                </div>
               </article>
             ))
           ) : (
@@ -205,23 +244,48 @@ export function ProductCollectionPage({ slug, view }: Props) {
     <CafeLayout slug={slug}>
       <Link
         href={path()}
-        className={`mb-6 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-black ${theme.buttonOutline}`}
+        className={`mb-5 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
       >
         <ArrowRight className="h-4 w-4" />
         رجوع للكوفي
       </Link>
 
       <div className="barndaksa-cinematic-stage space-y-8">
-        <div>
-          <p className={`font-black ${theme.accent}`}>{viewInfo[view]?.title || "المنتجات"}</p>
+        <div className={`barndaksa-premium-hero rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-8 ${theme.hero}`}>
+          <p className={`inline-flex items-center gap-2 font-black ${theme.accent}`}>
+            <Sparkles className="h-4 w-4" />
+            {viewInfo[view]?.title || "المنتجات"}
+          </p>
           <h1
-            className={`mt-2 break-words text-3xl font-black sm:text-4xl lg:text-5xl ${experience.headingTracking}`}
+            className={`mt-2 break-words text-4xl font-black leading-tight sm:text-5xl ${experience.headingTracking}`}
           >
             {viewInfo[view]?.title || "منتجات الكوفي"}
           </h1>
-          <p className={`mt-3 max-w-2xl font-bold ${theme.muted}`}>
+          <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
             {viewInfo[view]?.desc || "استعرض منتجات الكوفي."}
           </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
+              {orderedProducts.length} منتج
+            </span>
+            {activeOffers.length ? (
+              <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
+                {activeOffers.length} عرض نشط
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              ["المطابقة", orderedProducts.length],
+              ["العروض", activeOffers.length],
+              ["الفروع", activeBranches.length],
+            ].map(([label, value]) => (
+              <div key={label as string} className={`rounded-[24px] border border-black/5 p-4 ${theme.card}`}>
+                <p className={`text-xs font-black ${theme.muted}`}>{label as string}</p>
+                <p className="mt-1 text-2xl font-black">{value as number}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <ThemedFilterBar
@@ -255,22 +319,40 @@ export function ProductCollectionPage({ slug, view }: Props) {
         ) : null}
 
         <section className="mt-10">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-2xl font-black">المنتجات</h2>
-            <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
-              {orderedProducts.length} منتج
-            </span>
-          </div>
+          <PremiumSectionHeader
+            eyebrow="المعرض"
+            title="المنتجات"
+            description="الفلاتر والفرز كما هي، لكن النتائج تظهر الآن بتكوين بصري أوسع مع مساحة إعلان داخلية."
+            action={
+              <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
+                {orderedProducts.length} منتج
+              </span>
+            }
+          />
 
           <div className={`${gridClass} barndaksa-stagger-grid`}>
-            {orderedProducts.map((item) => (
-              <ThemedProductCard
-                key={item.id}
-                slug={slug}
-                product={item}
-                experience={experience}
-                href={getCafePath(slug, `product/${item.id}`, previewThemeId)}
-              />
+            {orderedProducts.map((item, index) => (
+              <Fragment key={item.id}>
+                <ThemedProductCard
+                  slug={slug}
+                  product={item}
+                  experience={experience}
+                  href={getCafePath(slug, `product/${item.id}`, previewThemeId)}
+                />
+                {index === 2 ? (
+                  <div className="md:col-span-2 xl:col-span-3">
+                    <InternalAdPanel
+                      compact
+                      title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "استكشف عروض العلامة"}
+                      eyebrow="إعلان داخل القائمة"
+                      description={activeOffers[0]?.description || "مساحة مدمجة بين المنتجات تقود العميل إلى العروض أو المنتج المرتبط بدون تغيير مسار القائمة."}
+                      href={activeOffers[0]?.linkedProductId ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId) : getCafePath(slug, "products/offers", previewThemeId)}
+                      cta={activeOffers[0]?.ctaText || "فتح العرض"}
+                      metric={activeOffers.length ? `${activeOffers.length} عروض` : orderedProducts.length}
+                    />
+                  </div>
+                ) : null}
+              </Fragment>
             ))}
           </div>
 
@@ -288,6 +370,24 @@ export function ProductCollectionPage({ slug, view }: Props) {
             </div>
           ) : null}
         </section>
+
+        {orderedProducts.length > 0 && orderedProducts.length <= 2 ? (
+          <InternalAdPanel
+            compact
+            title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "مساحة عروض العلامة"}
+            eyebrow="إعلان داخل القائمة"
+            description={activeOffers[0]?.description || "مساحة مدمجة تظهر حتى عندما تكون نتائج الفلترة قليلة."}
+            href={activeOffers[0]?.linkedProductId ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId) : getCafePath(slug, "products/offers", previewThemeId)}
+            cta={activeOffers[0]?.ctaText || "فتح العرض"}
+          />
+        ) : null}
+
+        <SocialProofPanel
+          cafeName={settings.cafeName || slug}
+          productCount={availableProducts.length}
+          offerCount={activeOffers.length}
+          branchCount={activeBranches.length}
+        />
       </div>
     </CafeLayout>
   );

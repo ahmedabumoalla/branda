@@ -6,9 +6,10 @@ import { useEffect, useState } from "react";
 type Props = {
   slug: string;
   cafeName: string;
+  compact?: boolean;
 };
 
-export function BrandPwaInstallSection({ slug, cafeName }: Props) {
+export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
@@ -54,9 +55,7 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
   }, [slug]);
 
   async function install() {
-    setProgress(15);
-    window.setTimeout(() => setProgress((current) => Math.max(current, 45)), 150);
-    window.setTimeout(() => setProgress((current) => Math.max(current, 75)), 450);
+    setProgress(65);
     const promptEvent = installPrompt as Event & {
       prompt?: () => Promise<void>;
       userChoice?: Promise<{ outcome: string }>;
@@ -83,20 +82,20 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
   if (installed) return null;
 
   return (
-    <section dir="rtl" className="mx-auto w-full max-w-6xl px-4 py-8">
-      <div className="overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4A281D] to-[#17100d] p-6 text-[#FCF8F3] shadow-xl">
+    <section dir="rtl" className={compact ? "w-full" : "mx-auto w-full max-w-6xl px-4 py-8"}>
+      <div className="barndaksa-premium-card overflow-hidden rounded-[32px] bg-gradient-to-br from-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] to-[var(--ci-secondary-bg,#17100d)] p-6 text-[var(--ci-button-fg,#FCF8F3)] shadow-xl">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-black text-[#D9A33F]">تطبيق العلامة</p>
+            <p className="font-black text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]">تطبيق العلامة</p>
             <h2 className="mt-2 text-3xl font-black">حمّل تطبيق {cafeName}</h2>
-            <p className="mt-3 max-w-xl font-bold leading-8 text-[#E7D7C6]">
+            <p className="mt-3 max-w-xl font-bold leading-8 text-white/74">
               واجهة عميل أخف وأسرع للمنيو والعروض وبطاقة الولاء، تعمل من شاشة الجوال مباشرة
             </p>
           </div>
           <button
             type="button"
             onClick={install}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#D9A33F] px-6 py-4 font-black text-[#311912]"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))]"
           >
             <Download className="h-5 w-5" />
             تحميل التطبيق السريع
@@ -104,12 +103,12 @@ export function BrandPwaInstallSection({ slug, cafeName }: Props) {
         </div>
         {progress > 0 ? (
           <div className="mt-5 rounded-2xl bg-white/10 p-3">
-            <div className="mb-2 flex items-center justify-between text-xs font-black text-[#E7D7C6]">
+            <div className="mb-2 flex items-center justify-between text-xs font-black text-white/74">
               <span>تجهيز التطبيق السريع</span>
               <span>{progress}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/15">
-              <div className="h-full rounded-full bg-[#D9A33F] transition-all duration-500" style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
         ) : null}

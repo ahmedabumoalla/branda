@@ -43,9 +43,7 @@ export function useBannerCarousel(offers: CafeOffer[]) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (offers.length <= 1) return;
-    const t = setInterval(() => setIndex((c) => (c + 1) % offers.length), 5000);
-    return () => clearInterval(t);
+    setIndex(0);
   }, [offers.length]);
 
   return { index, current: offers[index], setIndex };
@@ -66,7 +64,7 @@ export function ThemeBannerCarousel({
   previewThemeId,
   variant = "wide",
 }: BannerProps) {
-  const { index, current } = useBannerCarousel(offers);
+  const { index, current, setIndex } = useBannerCarousel(offers);
   if (!current) return null;
 
   const shell =
@@ -97,7 +95,6 @@ export function ThemeBannerCarousel({
           <OfferBannerImage
             offer={current}
             className="max-h-[200px] w-full object-contain"
-            fallbackSrc="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800&auto=format&fit=crop"
           />
         </div>
         <div className="flex flex-col justify-center p-4 md:p-6">
@@ -124,8 +121,11 @@ export function ThemeBannerCarousel({
           {offers.length > 1 ? (
             <div className="mt-3 flex gap-1.5">
               {offers.map((_, i) => (
-                <span
+                <button
                   key={i}
+                  type="button"
+                  aria-label={`عرض ${i + 1}`}
+                  onClick={() => setIndex(i)}
                   className={`h-1.5 rounded-full transition-all ${
                     i === index ? `w-6 ${theme.badge}` : `w-1.5 opacity-40 ${theme.muted}`
                   }`}

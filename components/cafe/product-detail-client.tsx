@@ -11,6 +11,7 @@ import type { CafeBranch } from "@/lib/mock/branches";
 import { ProductReviews } from "@/components/cafe/product-reviews";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-product-detail";
+import { InternalAdPanel } from "@/components/cafe/themes/customer-experience-primitives";
 import { getCustomerSession } from "@/lib/customer/session";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
@@ -142,18 +143,38 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
 
   const imageSlot = (
-    <div className="relative flex h-[min(420px,50vh)] items-center justify-center overflow-hidden rounded-2xl bg-black/5">
+    <div className="relative flex h-[min(520px,58vh)] items-center justify-center overflow-hidden rounded-[30px] bg-[var(--ci-page-bg,var(--barndaksa-cream-base))]">
+      <div className="absolute inset-x-4 top-4 z-20 flex flex-wrap items-center gap-2">
+        <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
+          {categoryLabel}
+        </span>
+        {product.promo ? (
+          <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.button}`}>
+            {promoBadgeText(product.promo)}
+          </span>
+        ) : null}
+      </div>
       <ProductMediaDisplay
         product={product}
         alt={product.name}
-        className="relative z-10 max-h-full w-full object-contain p-6"
+        className="relative z-10 max-h-full w-full object-contain p-8 sm:p-10"
         fallback={<Coffee className="relative z-10 h-16 w-16 opacity-40" />}
       />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/20 to-transparent" />
     </div>
   );
 
   const infoSlot = (
     <>
+      <div className="mb-5 grid gap-3 rounded-[28px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <p className={`text-xs font-black ${theme.muted}`}>ملخص الطلب</p>
+          <p className="mt-1 text-3xl font-black">{formatSar(total)}</p>
+        </div>
+        <span className={`rounded-2xl px-4 py-3 text-center text-sm font-black ${theme.badge}`}>
+          {pickupAvailable ? "استلام متاح" : "غير متاح للاستلام"}
+        </span>
+      </div>
       <p className={`text-sm font-black ${theme.accent}`}>{categoryLabel}</p>
       <h1
         className={`mt-2 font-black ${experience.detail === "kiosk" ? "text-4xl" : "text-3xl sm:text-4xl"} ${experience.headingTracking}`}
@@ -310,13 +331,23 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         imageSlot={imageSlot}
         infoSlot={infoSlot}
         reviewsSlot={
-          <ProductReviews
-            slug={slug}
-            productId={product.id}
-            productName={product.name}
-            experience={experience}
-            previewThemeId={previewThemeId}
-          />
+          <div className="space-y-6">
+            <ProductReviews
+              slug={slug}
+              productId={product.id}
+              productName={product.name}
+              experience={experience}
+              previewThemeId={previewThemeId}
+            />
+            <InternalAdPanel
+              compact
+              title={product.promo ? promoBadgeText(product.promo) : "استكشف منتجات مشابهة"}
+              eyebrow="إعلان داخل تفاصيل المنتج"
+              description="مساحة ذكية تقود العميل إلى قائمة المنتجات أو العروض بعد قراءة تفاصيل المنتج والمراجعات."
+              href={getCafePath(slug, product.promo ? "products/offers" : "products/popular", previewThemeId)}
+              cta={product.promo ? "كل العروض" : "كل المنتجات"}
+            />
+          </div>
         }
       />
     </CafeLayout>

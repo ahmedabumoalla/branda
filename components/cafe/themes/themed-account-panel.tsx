@@ -83,6 +83,8 @@ export type ThemedAccountPanelProps = {
   onClearAvatar: () => void;
   onSaveSettings: () => void;
   loyaltyFeatureEnabled?: boolean;
+  loyaltySlot?: ReactNode;
+  experienceRewardsSlot?: ReactNode;
   fileRef: React.RefObject<HTMLInputElement | null>;
 };
 
@@ -100,12 +102,12 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
   const heroClass =
     account === "boutique" || account === "lounge-reservations"
-      ? `relative overflow-hidden ${theme.hero} py-10`
+      ? `barndaksa-premium-hero relative overflow-hidden rounded-b-[36px] shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.hero} py-8 sm:py-10`
       : account === "glow-panels"
-        ? `relative overflow-hidden border border-[#00e676]/15 ${theme.hero} py-8`
+        ? `barndaksa-premium-hero relative overflow-hidden rounded-b-[36px] border border-[#00e676]/15 shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.hero} py-8`
         : account === "minimal"
-          ? `py-12 ${theme.page}`
-          : `relative overflow-hidden border-b ${theme.hero} py-8`;
+          ? `barndaksa-premium-hero rounded-b-[36px] py-10 shadow-[0_24px_80px_rgba(49,25,18,0.10)] ${theme.page}`
+          : `barndaksa-premium-hero relative overflow-hidden rounded-b-[36px] border-b shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.hero} py-8`;
 
   const defaultTabOrder: TabKey[] =
     account === "lounge-reservations"
@@ -123,7 +125,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <Link
               href={props.homeHref}
-              className={`inline-flex items-center gap-2 px-5 py-3 font-black ${theme.buttonOutline}`}
+            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-black transition active:scale-95 ${theme.buttonOutline}`}
             >
               <ArrowRight className="h-5 w-5" />
               رجوع للكوفي
@@ -132,7 +134,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <button
                 type="button"
                 onClick={props.onOpenSettings}
-                className={`inline-flex items-center gap-2 px-5 py-3 font-black ${theme.buttonOutline}`}
+                className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-black transition active:scale-95 ${theme.buttonOutline}`}
               >
                 <Settings className="h-5 w-5" />
                 إعدادات الحساب
@@ -140,7 +142,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <button
                 type="button"
                 onClick={props.onLogout}
-                className="inline-flex items-center gap-2 rounded-2xl bg-red-500/15 px-5 py-3 font-black text-red-600"
+                className="inline-flex items-center gap-2 rounded-2xl bg-red-500/15 px-5 py-3 font-black text-red-600 transition active:scale-95"
               >
                 <LogOut className="h-5 w-5" />
                 تسجيل خروج
@@ -166,16 +168,39 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                 أهلًا {customer.fullName}
               </h1>
               <p
-                className={`mt-4 max-w-2xl font-bold leading-8 ${theme.muted}`}
+                className={`mt-4 max-w-2xl text-sm font-bold leading-7 sm:text-base sm:leading-8 ${theme.muted}`}
               >
                 تابع طلباتك، حجوزاتك، {loyaltyFeatureEnabled ? "نقاط الولاء، " : ""}الفواتير، وسجل العمليات.
               </p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => props.onTabChange("orders")}
+                  className={`rounded-2xl px-4 py-3 text-sm font-black transition active:scale-95 ${theme.button}`}
+                >
+                  طلباتي
+                </button>
+                <button
+                  type="button"
+                  onClick={() => props.onTabChange("reservations")}
+                  className={`rounded-2xl px-4 py-3 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
+                >
+                  حجوزاتي
+                </button>
+                <button
+                  type="button"
+                  onClick={props.onOpenSettings}
+                  className={`rounded-2xl px-4 py-3 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
+                >
+                  تعديل بياناتي
+                </button>
+              </div>
             </div>
 
-            <div className={`p-6 ${theme.card}`}>
+            <div className={`barndaksa-premium-card rounded-[32px] border border-black/5 p-5 shadow-[0_22px_70px_rgba(49,25,18,0.12)] sm:p-6 ${theme.card}`}>
               <div className="flex items-center gap-4">
                 <div
-                  className={`flex h-24 w-24 overflow-hidden ${account === "boutique" ? "rounded-none" : "rounded-3xl"} ${theme.button}`}
+                  className={`flex h-24 w-24 shrink-0 overflow-hidden shadow-lg ${account === "boutique" ? "rounded-[24px]" : "rounded-3xl"} ${theme.button}`}
                 >
                   <LocalAssetImage
                     assetId={customer.avatarAssetId}
@@ -206,7 +231,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
         <div
           className={`mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 ${account === "kiosk-big" ? "lg:grid-cols-2" : "xl:grid-cols-4"}`}
         >
@@ -239,10 +264,22 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           />
         </div>
 
+        {props.loyaltySlot ? (
+          <div className="mb-8">{props.loyaltySlot}</div>
+        ) : null}
+
+        <div className="mb-8">
+          <AccountAdPanel experience={experience} cafeName={props.cafeName} />
+        </div>
+
+        {props.experienceRewardsSlot ? (
+          <div className="mb-8">{props.experienceRewardsSlot}</div>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-          <div className={`p-5 ${theme.card}`}>
+          <div className={`barndaksa-premium-card rounded-[32px] border border-black/5 p-4 shadow-[0_22px_70px_rgba(49,25,18,0.10)] sm:p-5 ${theme.card}`}>
             <div
-              className={`mb-6 flex flex-wrap gap-2 ${
+              className={`mb-6 flex gap-2 overflow-x-auto pb-1 ${
                 account === "editorial-timeline"
                   ? "border-b-2 border-inherit pb-4"
                   : ""
@@ -256,7 +293,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                     key={tab.key}
                     type="button"
                     onClick={() => props.onTabChange(tab.key)}
-                    className={`inline-flex items-center gap-2 px-5 py-3 text-sm font-black transition ${
+                    className={`inline-flex shrink-0 items-center gap-2 px-5 py-3 text-sm font-black transition active:scale-95 ${
                       active ? theme.button : theme.buttonOutline
                     } ${account === "kiosk-big" ? "text-base py-4" : "rounded-2xl"}`}
                   >
@@ -393,7 +430,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           </div>
 
           <aside className="space-y-6">
-            <div className={`p-6 ${theme.hero}`}>
+            <div className={`barndaksa-premium-card rounded-[32px] p-6 shadow-[0_22px_70px_rgba(49,25,18,0.12)] ${theme.hero}`}>
               <p className={`text-sm font-bold opacity-80`}>رصيد الولاء</p>
               <h2 className="mt-2 text-3xl font-black sm:text-4xl lg:text-5xl">
                 {props.loyaltyBalance}
@@ -402,7 +439,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                 يُحتسب تلقائيًا من عملياتك المسجلة.
               </p>
             </div>
-            <div className={`p-6 ${theme.card}`}>
+            <div className={`barndaksa-premium-card rounded-[32px] border border-black/5 p-5 shadow-[0_22px_70px_rgba(49,25,18,0.10)] sm:p-6 ${theme.card}`}>
               <h2 className="mb-4 text-xl font-black">آخر النشاطات</h2>
               {props.latestActivity.length ? (
                 <div className="space-y-3">
@@ -439,7 +476,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
       {props.settingsOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className={`w-full max-w-2xl p-6 ${theme.card}`}>
+          <div className={`barndaksa-premium-card max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-black/5 p-5 shadow-2xl sm:p-6 ${theme.card}`}>
             <div className="mb-6 flex items-center justify-between border-b border-inherit pb-4">
               <h2 className="text-2xl font-black">تعديل بيانات العميل</h2>
               <button
@@ -478,7 +515,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                   <button
                     type="button"
                     onClick={() => props.fileRef.current?.click()}
-                    className={`inline-flex items-center gap-2 px-5 py-3 font-black ${theme.buttonOutline}`}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-black ${theme.buttonOutline}`}
                   >
                     <ImagePlus className="h-5 w-5" />
                     تغيير الصورة
@@ -508,14 +545,14 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <button
                 type="button"
                 onClick={props.onCloseSettings}
-                className={`px-6 py-3 font-black ${theme.buttonOutline}`}
+                className={`rounded-2xl px-6 py-3 font-black ${theme.buttonOutline}`}
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={props.onSaveSettings}
-                className={`inline-flex items-center gap-2 px-6 py-3 font-black ${theme.button}`}
+                className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 font-black ${theme.button}`}
               >
                 <Save className="h-5 w-5" />
                 حفظ
@@ -547,6 +584,49 @@ function ThemedFormField({
   );
 }
 
+function AccountAdPanel({
+  experience,
+  cafeName,
+}: {
+  experience: ThemeExperience;
+  cafeName: string;
+}) {
+  const { theme } = experience;
+  return (
+    <section className={`barndaksa-premium-card overflow-hidden rounded-[32px] p-5 shadow-[0_22px_70px_rgba(49,25,18,0.12)] sm:p-6 ${theme.hero}`}>
+      <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <p className={`inline-flex items-center gap-2 text-sm font-black ${theme.accent}`}>
+            <Sparkles className="h-4 w-4" />
+            مساحة داخل الحساب
+          </p>
+          <h2 className="mt-2 text-2xl font-black">
+            {cafeName} أقرب لحسابك الآن
+          </h2>
+          <p className={`mt-2 max-w-2xl text-sm font-bold leading-7 ${theme.muted}`}>
+            اختصارات الطلبات والحجوزات والولاء مجمعة هنا حتى يعود العميل لما يهمه بسرعة.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ["طلب", ClipboardList],
+            ["حجز", CalendarDays],
+            ["ولاء", WalletCards],
+          ].map(([label, Icon]) => {
+            const ItemIcon = Icon as ElementType;
+            return (
+              <span key={label as string} className={`rounded-2xl px-4 py-3 text-xs font-black ${theme.card}`}>
+                <ItemIcon className={`mx-auto mb-1 h-4 w-4 ${theme.accent}`} />
+                {label as string}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function StatCard({
   experience,
   icon: Icon,
@@ -562,10 +642,12 @@ function StatCard({
 }) {
   const { theme } = experience;
   return (
-    <div className={`p-6 ${highlight ? theme.hero : theme.card}`}>
-      <Icon className={`mb-4 h-7 w-7 ${theme.accent}`} />
+    <div className={`barndaksa-premium-card rounded-[28px] border border-black/5 p-5 shadow-[0_18px_55px_rgba(49,25,18,0.09)] ${highlight ? theme.hero : theme.card}`}>
+      <span className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${theme.badge}`}>
+        <Icon className={`h-6 w-6 ${theme.accent}`} />
+      </span>
       <p className={`text-sm font-black ${theme.muted}`}>{title}</p>
-      <h2 className="mt-2 text-3xl font-black md:text-4xl">{value}</h2>
+      <h2 className="mt-2 break-words text-3xl font-black md:text-4xl">{value}</h2>
     </div>
   );
 }
@@ -584,7 +666,9 @@ function TabSection({
       <h2 className={`mb-5 text-2xl font-black ${experience.headingTracking}`}>
         {title}
       </h2>
-      <div className="space-y-3">{children}</div>
+      <div className="relative space-y-3 border-r border-[var(--ci-border,var(--barndaksa-border-sand))] pr-4">
+        {children}
+      </div>
     </section>
   );
 }
@@ -608,9 +692,10 @@ function InfoCard({
 }) {
   const { theme } = experience;
   return (
-    <article className={`p-5 ${theme.card}`}>
+    <article className={`barndaksa-premium-card relative rounded-[26px] border border-black/5 p-4 shadow-[0_16px_45px_rgba(49,25,18,0.08)] sm:p-5 ${theme.card}`}>
+      <span className={`absolute -right-[25px] top-6 h-3 w-3 rounded-full ring-4 ${theme.button}`} />
       <div className="flex flex-col gap-3 md:flex-row md:justify-between">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-lg font-black">{title}</h3>
           <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{desc}</p>
         </div>
@@ -650,8 +735,10 @@ function EmptyState({
 }) {
   const { theme } = experience;
   return (
-    <div className={`border border-dashed p-8 text-center ${theme.card}`}>
-      <UserRound className={`mx-auto mb-4 h-10 w-10 ${theme.muted}`} />
+    <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
+      <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${theme.badge}`}>
+        <UserRound className={`h-8 w-8 ${theme.muted}`} />
+      </span>
       <h3 className="text-xl font-black">{title}</h3>
       <p className={`mt-2 text-sm font-bold ${theme.muted}`}>{desc}</p>
     </div>

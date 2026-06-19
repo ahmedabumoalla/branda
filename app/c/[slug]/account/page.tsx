@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
-import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
+import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import {
   ImagePipelineError,
@@ -64,6 +64,34 @@ type Reservation = {
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
 
+type CustomerAccountSnapshot = Awaited<
+  ReturnType<typeof fetchCustomerAccountSnapshotAction>
+>;
+
+const accountSnapshotCache = new Map<
+  string,
+  Promise<CustomerAccountSnapshot> | CustomerAccountSnapshot
+>();
+
+function fetchCustomerAccountSnapshotOnce(slug: string, cacheKey: string) {
+  const cached = accountSnapshotCache.get(cacheKey);
+  if (cached) return Promise.resolve(cached);
+
+  const promise = fetchCustomerAccountSnapshotAction(slug).then(
+    (snapshot) => {
+      accountSnapshotCache.set(cacheKey, snapshot);
+      return snapshot;
+    },
+    (error) => {
+      accountSnapshotCache.delete(cacheKey);
+      throw error;
+    },
+  );
+
+  accountSnapshotCache.set(cacheKey, promise);
+  return promise;
+}
+
 function CustomerCoffeeLoyaltyCard({
   view,
   homeHref,
@@ -82,20 +110,22 @@ function CustomerCoffeeLoyaltyCard({
   const cups = Array.from({ length: required });
 
   return (
-    <section className="mb-6 overflow-hidden rounded-[34px] border border-[#E7D7C6] bg-[#F1D7C6] p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+    <section className="barndaksa-premium-card mb-6 overflow-hidden rounded-[36px] border border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-surface-bg,#fff)] p-4 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-5">
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <div className="rounded-[28px] bg-[#4A281D] p-5 text-[#FCF8F3] shadow-2xl">
+        <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] to-[var(--ci-secondary-bg,var(--barndaksa-brand-brown))] p-5 text-[var(--ci-button-fg,#FCF8F3)] shadow-2xl">
+          <div aria-hidden className="absolute inset-x-0 top-0 h-24 bg-white/10" />
+          <div aria-hidden className="absolute -left-16 bottom-8 h-32 w-52 rotate-[-18deg] border-y border-white/15" />
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-serif text-2xl font-black uppercase tracking-[0.18em]">
                 Loyalty Card
               </p>
-              <p className="mt-1 text-xs font-bold text-[#E7D7C6]">
+              <p className="mt-1 text-xs font-bold text-white/75">
                 اشتر {required} مرات واحصل على{" "}
                 {program?.rewardName || "كوب مجاني"}
               </p>
             </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D9A33F] text-[#311912]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] text-[var(--ci-accent-fg,#311912)]">
               <WalletCards className="h-6 w-6" />
             </span>
           </div>
@@ -108,7 +138,7 @@ function CustomerCoffeeLoyaltyCard({
                   <div
                     className={`relative flex h-16 w-14 items-center justify-center rounded-b-2xl rounded-t-md border-2 transition-all ${
                       active
-                        ? "border-[#FFD36B] bg-[#FFD36B] text-[#4A281D] shadow-[0_0_24px_rgba(255,211,107,0.75)]"
+                        ? "border-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] text-[var(--ci-accent-fg,#311912)] shadow-[0_0_24px_rgba(255,211,107,0.55)]"
                         : "border-[#8A6B5E] bg-[#6B4A3B] text-[#D8BDAF]"
                     }`}
                   >
@@ -150,36 +180,36 @@ function CustomerCoffeeLoyaltyCard({
         </div>
 
         <div>
-          <p className="text-sm font-black text-[#D9A33F]">
+          <p className="text-sm font-black text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]">
             بطاقة الولاء الخاصة بالعلامة التجارية
           </p>
-          <h2 className="mt-2 text-3xl font-black text-[#311912]">
+          <h2 className="mt-2 text-3xl font-black text-[var(--ci-page-fg,#311912)]">
             {program?.cardTitle || "بطاقة الولاء"}
           </h2>
-          <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
+          <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
             كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء كوب جديد حتى
             تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4 text-center">
-              <p className="text-2xl font-black text-[#311912]">{lit}</p>
-              <p className="text-xs font-bold text-[#806A5E]">أكواب مضيئة</p>
+            <div className="rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] p-4 text-center">
+              <p className="text-2xl font-black text-[var(--ci-page-fg,#311912)]">{lit}</p>
+              <p className="text-xs font-bold text-[var(--ci-muted-fg,#806A5E)]">أكواب مضيئة</p>
             </div>
-            <div className="rounded-2xl bg-white p-4 text-center">
-              <p className="text-2xl font-black text-[#311912]">{required}</p>
-              <p className="text-xs font-bold text-[#806A5E]">المطلوب</p>
+            <div className="rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] p-4 text-center">
+              <p className="text-2xl font-black text-[var(--ci-page-fg,#311912)]">{required}</p>
+              <p className="text-xs font-bold text-[var(--ci-muted-fg,#806A5E)]">المطلوب</p>
             </div>
-            <div className="rounded-2xl bg-white p-4 text-center">
-              <p className="text-2xl font-black text-[#311912]">
+            <div className="rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] p-4 text-center">
+              <p className="text-2xl font-black text-[var(--ci-page-fg,#311912)]">
                 {card?.availableRewards ?? 0}
               </p>
-              <p className="text-xs font-bold text-[#806A5E]">مكافآت جاهزة</p>
+              <p className="text-xs font-bold text-[var(--ci-muted-fg,#806A5E)]">مكافآت جاهزة</p>
             </div>
           </div>
 
           {(card?.availableRewards ?? 0) > 0 ? (
-            <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#D9A33F] p-4 font-black text-[#311912]">
+            <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] p-4 font-black text-[var(--ci-accent-fg,#311912)]">
               <Gift className="h-5 w-5" />
               لديك مكافأة جاهزة للصرف
             </div>
@@ -190,13 +220,13 @@ function CustomerCoffeeLoyaltyCard({
               type="button"
               onClick={onOpenCard}
               disabled={!card?.cardCode}
-              className="rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               فتح البطاقة والـ QR
             </button>
             <a
               href={homeHref}
-              className="rounded-2xl border border-[#6B3A25] px-5 py-3 font-black text-[#6B3A25]"
+              className="rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
             >
               رجوع للصفحة الرئيسية
             </a>
@@ -279,17 +309,17 @@ function ExperienceProofPanel({
 
   return (
     <section className="mb-6 space-y-5">
-      <div className="rounded-[34px] border border-[#E7D7C6] bg-white p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+      <div className="barndaksa-premium-card rounded-[36px] border border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-surface-bg,#fff)] p-5 shadow-[0_24px_80px_rgba(49,25,18,0.12)]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black text-[#D9A33F]">
+            <p className="flex items-center gap-2 text-sm font-black text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]">
               <Bell className="h-4 w-4" />
               التنبيهات والمكافآت
             </p>
-            <h2 className="mt-1 text-2xl font-black text-[#311912]">
+            <h2 className="mt-1 text-2xl font-black text-[var(--ci-page-fg,#311912)]">
               مكافآت توثيق التجربة
             </h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+            <p className="mt-2 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
               هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها
               تلقائيًا، ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو
               لوحة العلامة
@@ -298,7 +328,7 @@ function ExperienceProofPanel({
           <button
             type="button"
             onClick={onOpen}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)] transition active:scale-95"
           >
             <LinkIcon className="h-4 w-4" />
             توثيق تجربة جديدة
@@ -306,23 +336,23 @@ function ExperienceProofPanel({
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-3xl bg-[#FCF8F3] p-4">
-            <p className="text-xs font-black text-[#806A5E]">مكافآت جاهزة</p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">
+          <div className="rounded-3xl bg-[var(--ci-page-bg,#FCF8F3)] p-4">
+            <p className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">مكافآت جاهزة</p>
+            <p className="mt-1 text-3xl font-black text-[var(--ci-page-fg,#311912)]">
               {readyRewards.length}
             </p>
           </div>
-          <div className="rounded-3xl bg-[#FCF8F3] p-4">
-            <p className="text-xs font-black text-[#806A5E]">
+          <div className="rounded-3xl bg-[var(--ci-page-bg,#FCF8F3)] p-4">
+            <p className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
               بانتظار المراجعة
             </p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">
+            <p className="mt-1 text-3xl font-black text-[var(--ci-page-fg,#311912)]">
               {pendingRewards}
             </p>
           </div>
-          <div className="rounded-3xl bg-[#FCF8F3] p-4">
-            <p className="text-xs font-black text-[#806A5E]">كل التوثيقات</p>
-            <p className="mt-1 text-3xl font-black text-[#311912]">
+          <div className="rounded-3xl bg-[var(--ci-page-bg,#FCF8F3)] p-4">
+            <p className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">كل التوثيقات</p>
+            <p className="mt-1 text-3xl font-black text-[var(--ci-page-fg,#311912)]">
               {rewards.length}
             </p>
           </div>
@@ -346,34 +376,34 @@ function ExperienceProofPanel({
             return (
               <article
                 key={reward.id}
-                className={`rounded-[34px] border p-5 shadow-[0_16px_40px_rgba(49,25,18,0.07)] ${
+                className={`barndaksa-premium-card rounded-[34px] border p-5 shadow-[0_18px_55px_rgba(49,25,18,0.08)] ${
                   isReady
-                    ? "border-[#D9A33F] bg-[#FFF8E8]"
-                    : "border-[#E7D7C6] bg-white"
+                    ? "border-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] bg-[var(--ci-surface-bg,#fff)]"
+                    : "border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-surface-bg,#fff)]"
                 }`}
               >
                 <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-2xl bg-[#6B3A25] px-3 py-1 text-xs font-black text-white">
+                      <span className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-3 py-1 text-xs font-black text-[var(--ci-button-fg,#fff)]">
                         {statusText}
                       </span>
-                      <span className="rounded-2xl bg-white px-3 py-1 text-xs font-black text-[#806A5E]">
+                      <span className="rounded-2xl bg-white/80 px-3 py-1 text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
                         توثيق رقم {reward.id.slice(0, 8)}
                       </span>
                     </div>
 
-                    <h3 className="mt-4 text-xl font-black text-[#311912]">
+                    <h3 className="mt-4 text-xl font-black text-[var(--ci-page-fg,#311912)]">
                       {isReady
                         ? `مكافأة مقابل توثيق التجربة رقم ${reward.id.slice(0, 8)}`
                         : `توثيق تجربة رقم ${reward.id.slice(0, 8)}`}
                     </h3>
 
-                    <div className="mt-4 grid gap-3 text-sm font-bold text-[#806A5E] sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 text-sm font-bold text-[var(--ci-muted-fg,#806A5E)] sm:grid-cols-2">
                       <p>
                         رابط التوثيق:{" "}
                         <a
-                          className="font-black text-[#6B3A25] underline"
+                          className="font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] underline"
                           href={reward.experienceUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -398,27 +428,27 @@ function ExperienceProofPanel({
                     </div>
 
                     {reward.customerNotes ? (
-                      <p className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm font-bold leading-7 text-[#806A5E]">
+                      <p className="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
                         ملاحظاتك: {reward.customerNotes}
                       </p>
                     ) : null}
 
                     {reward.reviewNotes ? (
-                      <p className="mt-3 rounded-2xl bg-[#FCF8F3] px-4 py-3 text-sm font-bold leading-7 text-[#806A5E]">
+                      <p className="mt-3 rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] px-4 py-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
                         ملاحظات العلامة: {reward.reviewNotes}
                       </p>
                     ) : null}
 
                     {reward.items.length ? (
                       <div className="mt-4">
-                        <p className="text-sm font-black text-[#311912]">
+                        <p className="text-sm font-black text-[var(--ci-page-fg,#311912)]">
                           تفاصيل المكافأة
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {reward.items.map((item) => (
                             <span
                               key={item.id || `${reward.id}-${item.productId}`}
-                              className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-[#6B3A25]"
+                              className="rounded-2xl bg-white/80 px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
                             >
                               {item.productName} × {item.quantity}
                             </span>
@@ -454,12 +484,12 @@ function ExperienceProofPanel({
           })}
         </div>
       ) : (
-        <div className="rounded-[34px] border border-dashed border-[#E7D7C6] bg-white p-8 text-center shadow-sm">
-          <Gift className="mx-auto h-10 w-10 text-[#D9A33F]" />
-          <h3 className="mt-3 text-xl font-black text-[#311912]">
+        <div className="rounded-[34px] border border-dashed border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-sm">
+          <Gift className="mx-auto h-10 w-10 text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]" />
+          <h3 className="mt-3 text-xl font-black text-[var(--ci-page-fg,#311912)]">
             لا توجد تنبيهات مكافآت حتى الآن
           </h3>
-          <p className="mt-2 text-sm font-bold text-[#806A5E]">
+          <p className="mt-2 text-sm font-bold text-[var(--ci-muted-fg,#806A5E)]">
             وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع QR الخاص بها
           </p>
         </div>
@@ -552,10 +582,20 @@ function AccountPageInner() {
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
   const initialLoadKeyRef = useRef<string | null>(null);
+  const accountSnapshotKey = `${slug}:${previewThemeId ?? "live"}`;
+  const accountLoginHref = getCafePath(slug, "login", previewThemeId);
+  const accountNextPath = appendPreviewToNextPath(
+    `/c/${slug}/account`,
+    previewThemeId,
+  );
 
   const defaultTab: TabKey = "orders";
 
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
+  const [accountError, setAccountError] = useState("");
+  const [redirectingToLogin, setRedirectingToLogin] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
@@ -586,25 +626,27 @@ function AccountPageInner() {
     useState(false);
 
   useEffect(() => {
-    const loadKey = `${slug}:${previewThemeId ?? "live"}`;
+    const loadKey = `${accountSnapshotKey}:${reloadToken}`;
     if (initialLoadKeyRef.current === loadKey) return;
     initialLoadKeyRef.current = loadKey;
 
     let cancelled = false;
 
     async function load() {
+      setAccountLoading(true);
+      setAccountError("");
+      setRedirectingToLogin(false);
       setLoyaltyLoading(true);
       setAccountFeatures([]);
 
-      const snapshot = await fetchCustomerAccountSnapshotAction(slug);
+      const snapshot = await fetchCustomerAccountSnapshotOnce(slug, loadKey);
       if (cancelled) return;
 
       if (!snapshot.customer) {
-        const next = appendPreviewToNextPath(
-          `/c/${slug}/account`,
-          previewThemeId,
-        );
-        router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
+        setLoyaltyLoading(false);
+        setAccountLoading(false);
+        setRedirectingToLogin(true);
+        router.push(`${accountLoginHref}?next=${encodeURIComponent(accountNextPath)}`);
         return;
       }
 
@@ -654,17 +696,20 @@ function AccountPageInner() {
       setLoyaltyView(snapshot.loyalty);
       setExperienceRewards(snapshot.experienceRewards);
       setLoyaltyLoading(false);
+      setAccountLoading(false);
     }
 
     void load().catch((error) => {
       console.error("[CafeCustomerAccountPage:load]", error);
       setLoyaltyLoading(false);
+      setAccountLoading(false);
+      setAccountError("تعذر تحميل بيانات الحساب. حاول مرة أخرى.");
     });
 
     return () => {
       cancelled = true;
     };
-  }, [router, slug, previewThemeId]);
+  }, [accountLoginHref, accountNextPath, accountSnapshotKey, reloadToken, router, slug]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -840,38 +885,50 @@ function AccountPageInner() {
     }
   }
 
-  if (!customer) return null;
+  if (accountLoading && !customer) {
+    return (
+      <div className="rounded-3xl p-8 text-center">
+        <p className="font-black text-[var(--ci-page-fg,#311912)]">
+          جاري تحميل بيانات الحساب...
+        </p>
+      </div>
+    );
+  }
+
+  if (accountError && !customer) {
+    return (
+      <div className="rounded-3xl p-8 text-center">
+        <p className="font-black text-[var(--ci-page-fg,#311912)]">
+          {accountError}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
+            setReloadToken((value) => value + 1);
+          }}
+          className="mt-4 rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="rounded-3xl p-8 text-center">
+        <p className="font-black text-[var(--ci-page-fg,#311912)]">
+          {redirectingToLogin
+            ? "جاري تحويلك لتسجيل الدخول..."
+            : "لم يتم العثور على جلسة عميل نشطة."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
-      {loyaltyEnabled ? (
-        <CustomerCoffeeLoyaltyCard
-          view={loyaltyView}
-          homeHref={path()}
-          onOpenCard={openLoyaltyCard}
-          loading={loyaltyLoading}
-        />
-      ) : null}
-
-      {experienceRewardsEnabled ? (
-        <ExperienceProofPanel
-          rewards={experienceRewards}
-          open={experienceProofOpen}
-          onOpen={() => setExperienceProofOpen(true)}
-          onClose={() => setExperienceProofOpen(false)}
-          experienceUrl={experienceUrl}
-          views={experienceViews}
-          comments={experienceComments}
-          notes={experienceNotes}
-          busy={submittingExperienceProof}
-          onExperienceUrl={setExperienceUrl}
-          onViews={setExperienceViews}
-          onComments={setExperienceComments}
-          onNotes={setExperienceNotes}
-          onSubmit={() => void submitExperienceProof()}
-        />
-      ) : null}
-
       <ThemedAccountPanel
         slug={slug}
         experience={experience}
@@ -913,6 +970,36 @@ function AccountPageInner() {
           setAvatarAssetId(undefined);
         }}
         onSaveSettings={() => void saveSettings()}
+        loyaltySlot={
+          loyaltyEnabled ? (
+            <CustomerCoffeeLoyaltyCard
+              view={loyaltyView}
+              homeHref={path()}
+              onOpenCard={openLoyaltyCard}
+              loading={loyaltyLoading}
+            />
+          ) : undefined
+        }
+        experienceRewardsSlot={
+          experienceRewardsEnabled ? (
+            <ExperienceProofPanel
+              rewards={experienceRewards}
+              open={experienceProofOpen}
+              onOpen={() => setExperienceProofOpen(true)}
+              onClose={() => setExperienceProofOpen(false)}
+              experienceUrl={experienceUrl}
+              views={experienceViews}
+              comments={experienceComments}
+              notes={experienceNotes}
+              busy={submittingExperienceProof}
+              onExperienceUrl={setExperienceUrl}
+              onViews={setExperienceViews}
+              onComments={setExperienceComments}
+              onNotes={setExperienceNotes}
+              onSubmit={() => void submitExperienceProof()}
+            />
+          ) : undefined
+        }
         fileRef={fileRef}
       />
     </>

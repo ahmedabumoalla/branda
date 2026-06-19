@@ -101,7 +101,6 @@ type CarouselProps = {
   alt: string;
   className?: string;
   fallback?: ReactNode;
-  intervalMs?: number;
 };
 
 export function ProductMediaCarousel({
@@ -109,44 +108,13 @@ export function ProductMediaCarousel({
   alt,
   className = "",
   fallback,
-  intervalMs = 5000,
 }: CarouselProps) {
   const sources = useMemo(() => getProductImageSources(product), [product]);
-  const rootRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     setIndex(0);
   }, [sources.length]);
-
-  useEffect(() => {
-    if (sources.length <= 1) {
-      setIsVisible(false);
-      return;
-    }
-
-    const element = rootRef.current;
-    if (!element || typeof IntersectionObserver === "undefined") {
-      setIsVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.2 }
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [sources.length]);
-
-  useEffect(() => {
-    if (sources.length <= 1 || !isVisible) return;
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % sources.length);
-    }, intervalMs);
-    return () => window.clearInterval(timer);
-  }, [sources.length, intervalMs, isVisible]);
 
   if (!sources.length) {
     return (
@@ -163,7 +131,7 @@ export function ProductMediaCarousel({
   const current = sources[index] ?? sources[0];
 
   return (
-    <div ref={rootRef} className="relative h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
       <LocalAssetImage
         key={current.imageAssetId || current.imageDataUrl || index}
         assetId={current.imageAssetId}
@@ -177,8 +145,11 @@ export function ProductMediaCarousel({
       {sources.length > 1 ? (
         <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/25 px-2 py-1 backdrop-blur">
           {sources.map((_, itemIndex) => (
-            <span
+            <button
               key={itemIndex}
+              type="button"
+              aria-label={`عرض صورة ${itemIndex + 1}`}
+              onClick={() => setIndex(itemIndex)}
               className={`h-1.5 rounded-full bg-white transition-all ${
                 itemIndex === index ? "w-5 opacity-100" : "w-1.5 opacity-50"
               }`}
@@ -199,6 +170,67 @@ type ProductMediaDisplayProps = {
   videoPreviewUrl?: string;
 };
 
+export function AutoplayProductVideo({
+  src,
+  className = "",
+  label,
+}: {
+  src: string;
+  className?: string;
+  label?: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = true;
+
+    const play = () => {
+      void video.play().catch(() => {});
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      play();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          play();
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.2 },
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, [src]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      className={className}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      controls={false}
+      aria-label={label}
+    />
+  );
+}
+
 export function ProductMediaDisplay({
   product,
   alt,
@@ -217,13 +249,10 @@ export function ProductMediaDisplay({
 
   if (videoSrc) {
     return (
-      <video
+      <AutoplayProductVideo
         src={videoSrc}
         className={className}
-        preload="metadata"
-        playsInline
-        muted
-        controls
+        label={alt}
       />
     );
   }
@@ -234,7 +263,6 @@ export function ProductMediaDisplay({
       alt={alt}
       className={className}
       fallback={fallback}
-      intervalMs={5000}
     />
   );
 }

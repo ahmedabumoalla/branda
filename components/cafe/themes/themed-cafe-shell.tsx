@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
@@ -14,6 +15,11 @@ import {
 import { ThemedPreviewBanner } from "./themed-preview-banner";
 import { ThemedCafeHeader } from "./themed-cafe-header";
 import { ThemedCafeFooter } from "./themed-cafe-footer";
+import {
+  CustomerQuickDock,
+  buildCustomerQuickDockItems,
+} from "./customer-experience-primitives";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 type Props = {
   slug: string;
@@ -24,9 +30,10 @@ type Props = {
 
 function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
   const ctx = useCafeThemePage(slug);
+  const pathname = usePathname();
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
 
-  const { settings, themeId, previewThemeId, isPreview, customIdentity, features, loadError } = ctx;
+  const { settings, themeId, previewThemeId, isPreview, customIdentity, features, loadError, hydrated } = ctx;
   const identityConfig = customIdentity ?? defaultCustomIdentityTheme();
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(identityConfig);
@@ -40,6 +47,14 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
     void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
 
+  if (!hydrated) {
+    return (
+      <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3] px-4">
+        <p className="text-center font-black text-[#4a4540]">جاري التحميل...</p>
+      </main>
+    );
+  }
+
   if (loadError) {
     return (
       <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3] px-4">
@@ -52,11 +67,21 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
     backgroundUrl &&
     (identityConfig.backgroundScope === "all-customer-pages" ||
       identityConfig.backgroundScope === "home-only");
+  const hasFeature = (feature: string) => featureCodesAllow(features, feature);
+  const activeDockItem = pathname.includes("/products") || pathname.includes("/product/")
+    ? "products"
+    : pathname.includes("/reserve")
+      ? "reserve"
+      : pathname.includes("/account")
+        ? "account"
+        : pathname.includes("/login") || pathname.includes("/register")
+          ? "account"
+          : "home";
 
   return (
     <main
       dir="rtl"
-      className="brand-identity-custom-theme barndaksa-cinematic-page relative min-h-screen bg-[#FCF8F3] text-[#311912]"
+      className="brand-identity-custom-theme barndaksa-cinematic-page relative min-h-screen bg-[var(--ci-page-bg,#FCF8F3)] pb-24 text-[var(--ci-page-fg,#311912)] md:pb-0"
       style={identityStyle}
     >
       {showPageBackground ? (
@@ -96,6 +121,22 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
         <div className={`mx-auto ${maxWidth} px-4 pb-6 sm:px-6`}>
           <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId="brand-identity-custom" />
         </div>
+        <CustomerQuickDock
+          items={buildCustomerQuickDockItems({
+            slug,
+            homeHref: ctx.path(""),
+            productsHref: ctx.path("products/popular"),
+            reserveHref: ctx.path("reserve"),
+            loyaltyHref: ctx.path("account"),
+            accountHref: ctx.path("account"),
+            loginHref: ctx.path("login"),
+            isCustomer: Boolean(customer),
+            hasProducts: hasFeature("menu"),
+            hasReservations: hasFeature("reservations"),
+            hasLoyalty: hasFeature("loyalty"),
+            active: activeDockItem,
+          })}
+        />
       </div>
     </main>
   );

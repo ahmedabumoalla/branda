@@ -1,7 +1,7 @@
 "use client";
 
 import { LocateFixed, MapPin, Move } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type LocationValue = {
   lat: number;
@@ -48,6 +48,11 @@ declare global {
 const fallbackPosition: LocationValue = { lat: 24.7136, lng: 46.6753 };
 const mapboxScriptUrl = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js";
 const mapboxStyleUrl = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
+const geolocationOptions: PositionOptions = {
+  enableHighAccuracy: true,
+  timeout: 10000,
+  maximumAge: 30000,
+};
 
 function loadMapbox() {
   if (window.mapboxgl) return Promise.resolve();
@@ -88,11 +93,79 @@ function normalize(point: { lng: number; lat: number }): LocationValue {
   };
 }
 
+function isSameLocation(first: LocationValue, second: LocationValue) {
+  return Math.abs(first.lat - second.lat) < 0.0000001 && Math.abs(first.lng - second.lng) < 0.0000001;
+}
+
 export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]" }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<InstanceType<MapboxRuntime["Map"]> | null>(null);
+  const markerRef = useRef<InstanceType<MapboxRuntime["Marker"]> | null>(null);
+  const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
+  const currentRef = useRef<LocationValue>(value ?? fallbackPosition);
+  const hadInitialValueRef = useRef(Boolean(value));
+  const autoLocateRequestedRef = useRef(false);
   const [mapError, setMapError] = useState("");
   const [current, setCurrent] = useState<LocationValue>(value ?? fallbackPosition);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  const applyLocation = useCallback(
+    (
+      next: LocationValue,
+      options: { notify?: boolean; flyTo?: boolean } = {}
+    ) => {
+      const normalized = normalize({ lat: next.lat, lng: next.lng });
+      const notify = options.notify ?? true;
+      const flyTo = options.flyTo ?? true;
+
+      currentRef.current = normalized;
+      setCurrent(normalized);
+      if (notify) onChangeRef.current(normalized);
+
+      markerRef.current?.setLngLat([normalized.lng, normalized.lat]);
+      if (flyTo) {
+        mapRef.current?.flyTo({
+          center: [normalized.lng, normalized.lat],
+          zoom: 16,
+        });
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!value || isSameLocation(value, currentRef.current)) return;
+    applyLocation(value, { notify: false });
+  }, [applyLocation, value]);
+
+  const requestBrowserLocation = useCallback(
+    (options: { silent?: boolean } = {}) => {
+      if (!navigator.geolocation) return;
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          applyLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        () => {
+          if (!options.silent) setMapError("");
+        },
+        geolocationOptions
+      );
+    },
+    [applyLocation]
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -110,7 +183,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
         if (cancelled || !containerRef.current || !window.mapboxgl) return;
         window.mapboxgl.accessToken = token;
 
-        const center: [number, number] = [current.lng, current.lat];
+        const center: [number, number] = [currentRef.current.lng, currentRef.current.lat];
         map = new window.mapboxgl.Map({
           container: containerRef.current,
           style: "mapbox://styles/mapbox/streets-v12",
@@ -122,25 +195,30 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
         marker = new window.mapboxgl.Marker({ draggable: true, color: "#6B3A25" })
           .setLngLat(center)
           .addTo(map);
+        mapRef.current = map;
+        markerRef.current = marker;
 
         marker.on("dragend", () => {
           if (!marker) return;
-          const next = normalize(marker.getLngLat());
-          setCurrent(next);
-          onChange(next);
+          applyLocation(normalize(marker.getLngLat()));
         });
 
         map.on("load", () => {
           setMapError("");
           window.setTimeout(() => map?.resize(), 120);
+          if (
+            !hadInitialValueRef.current &&
+            !valueRef.current &&
+            !autoLocateRequestedRef.current
+          ) {
+            autoLocateRequestedRef.current = true;
+            requestBrowserLocation({ silent: true });
+          }
         });
 
         map.on("moveend", () => {
           if (!map || !marker) return;
-          const centerPoint = normalize(map.getCenter());
-          marker.setLngLat([centerPoint.lng, centerPoint.lat]);
-          setCurrent(centerPoint);
-          onChange(centerPoint);
+          applyLocation(normalize(map.getCenter()), { flyTo: false });
         });
       })
       .catch(() => setMapError("تعذر تحميل خريطة Mapbox"));
@@ -148,25 +226,13 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
     return () => {
       cancelled = true;
       if (map) map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
     };
-  }, [token]);
+  }, [applyLocation, requestBrowserLocation, token]);
 
   function locateMe() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const next = {
-          lat: Number(position.coords.latitude.toFixed(7)),
-          lng: Number(position.coords.longitude.toFixed(7)),
-        };
-        setCurrent(next);
-        onChange(next);
-        const mapbox = window.mapboxgl;
-        if (!mapbox) return;
-      },
-      () => setMapError("تعذر تحديد موقعك الحالي"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    requestBrowserLocation();
   }
 
   return (

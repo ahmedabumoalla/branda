@@ -20,28 +20,32 @@ export function ThemedProductDetailLayout({
 
   if (detail === "kiosk") {
     return (
-      <div className="space-y-6">
-        <div className={`rounded-lg border-2 p-4 ${theme.card}`}>{imageSlot}</div>
-        <div className={`rounded-lg border-2 p-6 ${theme.card}`}>{infoSlot}</div>
-        <div className={theme.card}>{reviewsSlot}</div>
+      <div className="space-y-5">
+        <div className={`barndaksa-premium-card rounded-2xl border-2 p-3 shadow-[0_18px_55px_rgba(49,25,18,0.08)] ${theme.card}`}>{imageSlot}</div>
+        <div className={`barndaksa-premium-card rounded-2xl border-2 p-5 shadow-[0_18px_55px_rgba(49,25,18,0.08)] ${theme.card}`}>{infoSlot}</div>
+        <div className={`rounded-[28px] ${theme.card}`}>{reviewsSlot}</div>
       </div>
     );
   }
 
   if (detail === "stack" || detail === "minimal") {
     return (
-      <div className="space-y-8">
-        <div className={`rounded-3xl p-4 ${theme.card}`}>{imageSlot}</div>
-        <div className={`rounded-3xl p-6 md:p-8 ${theme.card}`}>{infoSlot}</div>
+      <div className="space-y-6">
+        <div className={`barndaksa-premium-card overflow-hidden rounded-[34px] border border-black/5 p-3 shadow-[0_22px_70px_rgba(49,25,18,0.10)] ${theme.card}`}>{imageSlot}</div>
+        <div className={`barndaksa-premium-card rounded-[34px] border border-black/5 p-5 shadow-[0_22px_70px_rgba(49,25,18,0.10)] sm:p-6 md:p-8 ${theme.card}`}>{infoSlot}</div>
         <div>{reviewsSlot}</div>
       </div>
     );
   }
 
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-2">
-      <div className={`rounded-[32px] p-4 md:p-5 ${theme.card}`}>{imageSlot}</div>
-      <div className={`rounded-[32px] p-6 md:p-8 ${theme.card}`}>{infoSlot}</div>
+    <div className="grid items-start gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8">
+      <div className={`barndaksa-premium-card overflow-hidden rounded-[36px] border border-black/5 p-3 shadow-[0_24px_80px_rgba(49,25,18,0.12)] md:p-4 lg:sticky lg:top-24 ${theme.card}`}>
+        {imageSlot}
+      </div>
+      <div className={`barndaksa-premium-card rounded-[36px] border border-black/5 p-5 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-6 md:p-8 ${theme.card}`}>
+        {infoSlot}
+      </div>
       <div className="lg:col-span-2">{reviewsSlot}</div>
     </div>
   );

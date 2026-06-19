@@ -2,9 +2,16 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
-import { buildMapboxMapUrl, DEFAULT_BRANCH_GEOFENCE_RADIUS_M, type CafeBranch } from "@/lib/mock/branches";
+import {
+  buildGoogleMapsUrl,
+  buildMapboxMapUrl,
+  DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+  type CafeBranch,
+} from "@/lib/mock/branches";
 
-function mapDbBranch(row: Record<string, unknown>): CafeBranch {
+type BranchMapUrlBuilder = (lat?: number | null, lng?: number | null) => string;
+
+function mapDbBranch(row: Record<string, unknown>, buildMapUrl: BranchMapUrlBuilder): CafeBranch {
   const hours = row.hours as Record<string, string> | null;
   const lat = row.lat != null ? Number(row.lat) : undefined;
   const lng = row.lng != null ? Number(row.lng) : undefined;
@@ -21,7 +28,7 @@ function mapDbBranch(row: Record<string, unknown>): CafeBranch {
     welcomeMessage:
       (row.welcome_message as string | null) ??
       (row.name ? `أهلًا بك في ${String(row.name)}` : undefined),
-    mapUrl: buildMapboxMapUrl(lat, lng),
+    mapUrl: buildMapUrl(lat, lng),
     active: row.active as boolean,
   };
 }
@@ -39,7 +46,7 @@ export async function getPublicBranchesBySlug(slug: string): Promise<CafeBranch[
     .is("deleted_at", null)
     .order("sort_order");
 
-  return (data ?? []).map(mapDbBranch);
+  return (data ?? []).map((row) => mapDbBranch(row, buildGoogleMapsUrl));
 }
 
 export async function getOwnerBranches(): Promise<CafeBranch[]> {
@@ -53,7 +60,7 @@ export async function getOwnerBranches(): Promise<CafeBranch[]> {
     .order("sort_order");
 
   if (error) throw error;
-  return (data ?? []).map(mapDbBranch);
+  return (data ?? []).map((row) => mapDbBranch(row, buildMapboxMapUrl));
 }
 
 const branchSchema = z.object({
@@ -102,12 +109,12 @@ export async function upsertBranch(input: z.infer<typeof branchSchema>) {
       .select("*")
       .single();
     if (error) throw error;
-    return mapDbBranch(data);
+    return mapDbBranch(data, buildMapboxMapUrl);
   }
 
   const { data, error } = await supabase.from("branches").insert(payload).select("*").single();
   if (error) throw error;
-  return mapDbBranch(data);
+  return mapDbBranch(data, buildMapboxMapUrl);
 }
 
 export async function softDeleteBranch(branchId: string) {
