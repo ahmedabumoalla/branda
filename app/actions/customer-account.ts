@@ -1,11 +1,15 @@
 "use server";
 
-import { getCustomerProfileByUser, getCustomerOrdersForProfile, getCustomerReservationsForProfile, mapCustomerProfileToSession } from "@/lib/data/customers";
-import { getCurrentCustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
+import { getCustomerOrdersForProfile, getCustomerReservationsForProfile } from "@/lib/data/customers";
+import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-rewards";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
-import { createClient } from "@/lib/supabase/server";
+import { getCustomerSessionAction } from "@/app/actions/auth";
+
+type CustomerAccountErrorCode = "invalid_session" | "load_failed";
+const CUSTOMER_ACCOUNT_LOAD_ERROR =
+  "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
 
 function emptySnapshot(cafeSlug: string) {
   return {
@@ -14,7 +18,7 @@ function emptySnapshot(cafeSlug: string) {
     features: [] as string[],
     orders: [] as Awaited<ReturnType<typeof getCustomerOrdersForProfile>>,
     reservations: [] as Awaited<ReturnType<typeof getCustomerReservationsForProfile>>,
-    loyalty: null as Awaited<ReturnType<typeof getCurrentCustomerLoyaltyCardView>> | null,
+    loyalty: null as Awaited<ReturnType<typeof getCustomerLoyaltyCardViewForProfile>> | null,
     experienceRewards: [] as Awaited<ReturnType<typeof getCustomerExperienceRewardSubmissions>>,
   };
 }
@@ -23,7 +27,9 @@ async function safeResult<T>(task: Promise<T>, fallback: T): Promise<T> {
   try {
     return await task;
   } catch (error) {
-    console.warn("[fetchCustomerAccountSnapshotAction] skipped", error);
+    console.error("[fetchCustomerAccountSnapshotAction:optional]", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
     return fallback;
   }
 }
@@ -32,46 +38,69 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
   const normalizedSlug = cafeSlug.trim().toLowerCase();
   const snapshot = emptySnapshot(normalizedSlug);
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const customer = await getCustomerSessionAction(normalizedSlug);
+    if (!customer) {
+      return {
+        success: false as const,
+        code: "invalid_session" as CustomerAccountErrorCode,
+        error: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        errorCode: "invalid_session" as CustomerAccountErrorCode,
+        message: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        data: snapshot,
+      };
+    }
 
-  if (!user) return snapshot;
+    const features = await safeResult(getPublicCafeFeatureCodesBySlug(normalizedSlug), [] as string[]);
 
-  const profile = await getCustomerProfileByUser(normalizedSlug, user.id);
-  if (!profile) return snapshot;
+    const ordersEnabled = featureCodesAllow(features, "orders") || featureCodesAllow(features, "menu");
+    const reservationsEnabled = featureCodesAllow(features, "reservations");
+    const loyaltyEnabled = featureCodesAllow(features, "loyalty");
+    const experienceEnabled = featureCodesAllow(features, "experience_reviews");
 
-  const customer = mapCustomerProfileToSession(normalizedSlug, profile as Record<string, unknown>);
-  const features = await safeResult(getPublicCafeFeatureCodesBySlug(normalizedSlug), [] as string[]);
+    const [orders, reservations, loyalty, experienceRewards] = await Promise.all([
+      ordersEnabled
+        ? safeResult(getCustomerOrdersForProfile(normalizedSlug, customer.id, 5), snapshot.orders)
+        : Promise.resolve(snapshot.orders),
+      reservationsEnabled
+        ? safeResult(getCustomerReservationsForProfile(normalizedSlug, customer.id, 5), snapshot.reservations)
+        : Promise.resolve(snapshot.reservations),
+      loyaltyEnabled
+        ? safeResult(getCustomerLoyaltyCardViewForProfile(normalizedSlug, customer.id), null)
+        : Promise.resolve(null),
+      experienceEnabled
+        ? safeResult(getCustomerExperienceRewardSubmissions(normalizedSlug, customer.id, 5), snapshot.experienceRewards)
+        : Promise.resolve(snapshot.experienceRewards),
+    ]);
 
-  const ordersEnabled = featureCodesAllow(features, "orders") || featureCodesAllow(features, "menu");
-  const reservationsEnabled = featureCodesAllow(features, "reservations");
-  const loyaltyEnabled = featureCodesAllow(features, "loyalty");
-  const experienceEnabled = featureCodesAllow(features, "experience_reviews");
+    return {
+      success: true as const,
+      code: null,
+      error: null,
+      errorCode: null,
+      message: null,
+      data: {
+        ...snapshot,
+        customer,
+        features,
+        orders,
+        reservations,
+        loyalty,
+        experienceRewards,
+      },
+    };
+  } catch (error) {
+    console.error("[fetchCustomerAccountSnapshotAction]", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
 
-  const [orders, reservations, loyalty, experienceRewards] = await Promise.all([
-    ordersEnabled
-      ? safeResult(getCustomerOrdersForProfile(normalizedSlug, customer.id), snapshot.orders)
-      : Promise.resolve(snapshot.orders),
-    reservationsEnabled
-      ? safeResult(getCustomerReservationsForProfile(normalizedSlug, customer.id), snapshot.reservations)
-      : Promise.resolve(snapshot.reservations),
-    loyaltyEnabled
-      ? safeResult(getCurrentCustomerLoyaltyCardView(normalizedSlug), null)
-      : Promise.resolve(null),
-    experienceEnabled
-      ? safeResult(getCustomerExperienceRewardSubmissions(normalizedSlug), snapshot.experienceRewards)
-      : Promise.resolve(snapshot.experienceRewards),
-  ]);
-
-  return {
-    ...snapshot,
-    customer,
-    features,
-    orders,
-    reservations,
-    loyalty,
-    experienceRewards,
-  };
+    return {
+      success: false as const,
+      code: "load_failed" as CustomerAccountErrorCode,
+      error: CUSTOMER_ACCOUNT_LOAD_ERROR,
+      errorCode: "load_failed" as CustomerAccountErrorCode,
+      message: CUSTOMER_ACCOUNT_LOAD_ERROR,
+      data: snapshot,
+    };
+  }
 }

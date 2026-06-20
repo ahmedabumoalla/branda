@@ -2,10 +2,12 @@
 
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { requireCustomerProfileForSession, mapCustomerProfileToSession } from "@/lib/data/customers";
+import { getCustomerSessionAction } from "@/app/actions/auth";
 import { uploadCustomerAvatar, deleteCustomerAvatar } from "@/lib/storage/customer-media-server";
 import { uploadExperienceSubmissionMedia } from "@/lib/storage/experience-media-server";
 import { resolvePrivateStoragePathToUrl, storageBucketForAvatar } from "@/lib/storage/resolve-storage-url";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 export async function uploadCustomerAvatarAction(cafeSlug: string, formData: FormData) {
@@ -61,38 +63,49 @@ export async function updateCustomerProfileAction(
   cafeSlug: string,
   input: { fullName: string; email?: string; phone?: string }
 ) {
-  const { profile } = await requireCustomerProfileForSession(cafeSlug);
+  const session = await getCustomerSessionAction(cafeSlug);
+  if (!session) throw new Error("Unauthorized");
+
   const cafe = await getCafeBySlug(cafeSlug);
   if (!cafe) throw new Error("Cafe not found");
 
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("update_customer_profile", {
-    p_cafe_id: cafe.id,
-    p_full_name: input.fullName.trim(),
-    p_email: input.email?.trim() || null,
-    p_phone: input.phone?.trim() || null,
-  });
+  const updatePayload: Record<string, string | null> = {
+    full_name: input.fullName.trim(),
+    email: input.email?.trim() || null,
+    avatar_url: null,
+    updated_at: new Date().toISOString(),
+  };
+  if (input.phone?.trim()) {
+    updatePayload.phone = input.phone.trim();
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("customer_profiles")
+    .update(updatePayload)
+    .eq("id", session.id)
+    .eq("cafe_id", cafe.id);
 
   if (error) throw error;
 
-  const { data, error: fetchError } = await supabase
+  const { data, error: fetchError } = await admin
     .from("customer_profiles")
     .select("*")
-    .eq("id", profile.id)
+    .eq("id", session.id)
     .single();
 
   if (fetchError || !data) throw fetchError ?? new Error("Profile not found");
 
-  const session = mapCustomerProfileToSession(cafeSlug, data);
+  const updatedSession = mapCustomerProfileToSession(cafeSlug, data);
   if (data.avatar_storage_path) {
-    session.avatarUrl = await resolvePrivateStoragePathToUrl(
+    updatedSession.avatarUrl = await resolvePrivateStoragePathToUrl(
       storageBucketForAvatar(),
       data.avatar_storage_path as string
     );
-    session.avatarAssetId = data.avatar_storage_path as string;
+    updatedSession.avatarAssetId = data.avatar_storage_path as string;
   }
 
-  return session;
+  return updatedSession;
 }
 
 export async function uploadExperienceMediaAction(

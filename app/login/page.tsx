@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [resetOpen, setResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetMessage, setResetMessage] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -37,7 +38,10 @@ export default function LoginPage() {
 
   async function submitReset(event: FormEvent) {
     event.preventDefault();
+    setResetLoading(true);
+    setResetMessage("");
     const result = await requestPasswordResetAction(resetEmail);
+    setResetLoading(false);
     setResetMessage(result.message);
   }
 
@@ -71,7 +75,17 @@ export default function LoginPage() {
               </button>
             </div>
           </label>
-          <button type="button" onClick={() => setResetOpen(true)} className="mt-4 text-sm font-black text-[#6B3A25]">نسيت كلمة المرور</button>
+          <button
+            type="button"
+            onClick={() => {
+              setResetEmail(email);
+              setResetMessage("");
+              setResetOpen(true);
+            }}
+            className="mt-4 text-sm font-black text-[#6B3A25]"
+          >
+            نسيت كلمة المرور؟
+          </button>
           <PrimaryButton onClick={handleLogin} disabled={loading} className="mt-6 h-14 w-full">
             {loading ? "جاري الدخول" : "دخول"}
           </PrimaryButton>
@@ -82,10 +96,12 @@ export default function LoginPage() {
           <form onSubmit={submitReset} className="w-full max-w-md rounded-[28px] bg-[#FCF8F3] p-6">
             <button type="button" onClick={() => setResetOpen(false)}><X className="h-5 w-5" /></button>
             <h2 className="mt-4 text-xl font-black">استعادة كلمة المرور</h2>
-            <p className="mt-2 text-sm font-bold text-[#806A5E]">أدخل بريدك لإرسال رابط إعادة التعيين</p>
+            <p className="mt-2 text-sm font-bold text-[#806A5E]">أدخل بريدك لإرسال رابط استعادة كلمة المرور</p>
             <NeumoInput type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="البريد الإلكتروني" className="mt-5" />
             {resetMessage ? <p className="mt-3 font-bold text-[#6B3A25]">{resetMessage}</p> : null}
-            <PrimaryButton className="mt-5 w-full">إرسال الرابط</PrimaryButton>
+            <PrimaryButton disabled={resetLoading} className="mt-5 w-full">
+              {resetLoading ? "جار إرسال الرابط..." : "إرسال الرابط"}
+            </PrimaryButton>
           </form>
         </div>
       ) : null}

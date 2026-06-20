@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 
@@ -418,6 +419,42 @@ export async function getCurrentCustomerLoyaltyCardView(slug: string): Promise<C
   }
 
   return view;
+}
+
+export async function getCustomerLoyaltyCardViewForProfile(
+  slug: string,
+  customerProfileId: string,
+): Promise<CustomerLoyaltyCardView | null> {
+  const cafe = await getCafeBySlug(slug);
+  if (!cafe) return null;
+
+  const supabase = createAdminClient();
+  const { data: cardRow, error } = await supabase
+    .from("loyalty_cards")
+    .select("*")
+    .eq("cafe_id", cafe.id)
+    .eq("customer_profile_id", customerProfileId)
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!cardRow) return null;
+
+  const { data: programRow } = await supabase
+    .from("cafe_loyalty_programs")
+    .select("*, menu_products(name)")
+    .eq("cafe_id", cafe.id)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  return {
+    card: mapCard(cardRow),
+    program: mapProgram(programRow),
+    cafeSlug: slug,
+    cafeName: cafe.name,
+  };
 }
 
 export async function getPublicLoyaltyProgramBySlug(slug: string) {

@@ -85,6 +85,7 @@ export type ThemedAccountPanelProps = {
   loyaltyFeatureEnabled?: boolean;
   loyaltySlot?: ReactNode;
   experienceRewardsSlot?: ReactNode;
+  passwordSlot?: ReactNode;
   fileRef: React.RefObject<HTMLInputElement | null>;
 };
 
@@ -540,6 +541,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <p className={`text-sm font-bold ${theme.muted}`}>
                 الجوال: {customer.phone}
               </p>
+              {props.passwordSlot ? (
+                <div className="border-t border-inherit pt-5">
+                  {props.passwordSlot}
+                </div>
+              ) : null}
             </div>
             <div className="mt-6 flex justify-end gap-3 border-t border-inherit pt-4">
               <button

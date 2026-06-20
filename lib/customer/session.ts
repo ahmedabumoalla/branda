@@ -10,7 +10,7 @@ export type BarndaksaCustomerSession = {
 };
 
 export function getCustomerKey(_slug: string) {
-  return "supabase_auth_session";
+  return `barndaksa_customer_session_${_slug}`;
 }
 
 const SESSION_TTL_MS = 30_000;
@@ -67,7 +67,7 @@ export async function updateCustomerSession(
 
 export async function clearCustomerSession(slug?: string) {
   const { logoutCustomerAction } = await import("@/app/actions/auth");
-  await logoutCustomerAction();
+  await logoutCustomerAction(slug);
   clearCachedCustomerSession(slug);
 }
 

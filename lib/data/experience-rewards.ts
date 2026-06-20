@@ -180,19 +180,23 @@ export async function submitCustomerExperienceRewardProof(
 
 export async function getCustomerExperienceRewardSubmissions(
   cafeSlug: string,
+  customerId?: string,
+  limit = 5,
 ): Promise<CustomerExperienceReward[]> {
-  const { profile } = await requireCustomerProfileForSession(cafeSlug);
+  const profile = customerId
+    ? { id: customerId }
+    : (await requireCustomerProfileForSession(cafeSlug)).profile;
   const cafe = await getCafeBySlug(cafeSlug);
   if (!cafe) return [];
 
-  const supabase = await createClient();
+  const supabase = customerId ? createAdminClient() : await createClient();
   const { data, error } = await supabase
     .from("experience_reward_submissions")
     .select("*, experience_reward_items(*)")
     .eq("cafe_id", cafe.id)
     .eq("customer_id", profile.id)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(limit);
 
   if (error) throw error;
   return ((data ?? []) as Record<string, unknown>[]).map(normalizeSubmission);

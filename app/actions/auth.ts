@@ -1,12 +1,93 @@
 "use server";
 
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
+import { randomBytes } from "crypto";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { loginCustomerByEmail, registerCustomer } from "@/lib/data/customers";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
+import {
+  changeCustomerPassword,
+  clearPersistedCustomerSession,
+  createCustomerPasswordReset,
+  getCustomerProfileBySessionToken,
+  loginCustomerByEmail,
+  mapCustomerProfileToSession,
+  persistCustomerSession,
+  registerCustomer,
+  resetCustomerPasswordWithToken,
+} from "@/lib/data/customers";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
 import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
+
+const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
+const CUSTOMER_SESSION_DAYS = 30;
+
+function getAppBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "http://localhost:3000"
+  );
+}
+
+function logAuthError(context: string, error: unknown) {
+  if (!error || typeof error !== "object") {
+    console.error(context, { error: String(error) });
+    return;
+  }
+
+  const details = error as {
+    name?: string;
+    message?: string;
+    status?: number;
+    code?: string;
+  };
+
+  console.error(context, {
+    name: details.name,
+    message: details.message,
+    status: details.status,
+    code: details.code,
+  });
+}
+
+function normalizeSlugForCookie(slug: string) {
+  return slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 80);
+}
+
+function getCustomerSessionCookieName(slug: string) {
+  return `barndaksa_customer_session_${normalizeSlugForCookie(slug)}`;
+}
+
+async function createCustomerSessionCookie(cafeSlug: string, customerId: string) {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + CUSTOMER_SESSION_DAYS * 24 * 60 * 60 * 1000);
+  await persistCustomerSession(customerId, token, expiresAt);
+
+  const cookieStore = await cookies();
+  cookieStore.set(getCustomerSessionCookieName(cafeSlug), token, {
+    httpOnly: true,
+    expires: expiresAt,
+    path: `/c/${normalizeSlugForCookie(cafeSlug)}`,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+async function deleteCustomerSessionCookie(cafeSlug: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(getCustomerSessionCookieName(cafeSlug), "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: `/c/${normalizeSlugForCookie(cafeSlug)}`,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
 
 export async function loginOwnerAction(email: string, password: string) {
   try {
@@ -212,26 +293,234 @@ const parsed = cafeOwnerRegistrationSchema.parse(normalizedInput);
 }
 
 export async function requestPasswordResetAction(email: string) {
-  try {
-    const normalized = z.string().trim().email().parse(email);
-    const supabase = await createClient();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const { error } = await supabase.auth.resetPasswordForEmail(normalized.toLowerCase(), {
-      redirectTo: `${appUrl}/auth/callback?next=/auth/update-password`,
-    });
-    if (error) throw error;
-    return { ok: true as const, message: "تم إرسال رابط استعادة كلمة المرور إلى بريدك" };
-  } catch {
-    return { ok: false as const, message: "تعذر إرسال رابط الاستعادة" };
+  const parsed = z.string().trim().email().safeParse(email);
+  if (!parsed.success) {
+    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
   }
+
+  const supabase = await createClient();
+  const appUrl = getAppBaseUrl();
+
+  await supabase.auth.resetPasswordForEmail(parsed.data.toLowerCase(), {
+    redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+  });
+
+  return {
+    ok: true as const,
+    message: "إذا كان البريد مسجلًا لدينا، سيصلك رابط استعادة كلمة المرور خلال دقائق.",
+  };
 }
 
-export async function updatePasswordAction(password: string) {
-  const parsed = z.string().min(8).max(72).parse(password);
+export async function getPasswordRecoveryStateAction() {
+  const cookieStore = await cookies();
+  if (cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value !== "1") {
+    return { ok: false as const };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed });
-  if (error) throw error;
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return { ok: false as const };
+  }
+
   return { ok: true as const };
+}
+
+export async function confirmPasswordRecoverySessionAction() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return { ok: false as const };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(PASSWORD_RECOVERY_COOKIE, "1", {
+    httpOnly: true,
+    maxAge: 15 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return { ok: true as const };
+}
+
+export async function updatePasswordAction(password: string, confirmPassword?: string) {
+  const parsed = z.string().min(8).max(72).safeParse(password);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+    };
+  }
+
+  if (confirmPassword !== undefined && parsed.data !== confirmPassword) {
+    return {
+      ok: false as const,
+      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+    };
+  }
+
+  const cookieStore = await cookies();
+  if (cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value !== "1") {
+    return {
+      ok: false as const,
+      message: "رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      ok: false as const,
+      message: "رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data });
+  if (error) {
+    return {
+      ok: false as const,
+      message: "تعذر تحديث كلمة المرور. اطلب رابطًا جديدًا وحاول مرة أخرى.",
+    };
+  }
+
+  cookieStore.delete(PASSWORD_RECOVERY_COOKIE);
+  return {
+    ok: true as const,
+    message: "تم تحديث كلمة المرور بنجاح، يمكنك تسجيل الدخول الآن.",
+  };
+}
+
+const changeOwnerPasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(72),
+  confirmPassword: z.string().min(1),
+});
+
+export async function changeOwnerPasswordAction(input: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const parsed = changeOwnerPasswordSchema.safeParse(input);
+  if (!parsed.success) {
+    const errors = parsed.error.flatten().fieldErrors;
+    if (errors.currentPassword) {
+      return { ok: false as const, message: "كلمة المرور الحالية مطلوبة." };
+    }
+    if (errors.newPassword) {
+      return { ok: false as const, message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف." };
+    }
+    return { ok: false as const, message: "تحقق من حقول كلمة المرور وحاول مرة أخرى." };
+  }
+
+  const { currentPassword, newPassword, confirmPassword } = parsed.data;
+
+  if (newPassword !== confirmPassword) {
+    return {
+      ok: false as const,
+      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+    };
+  }
+
+  if (currentPassword === newPassword) {
+    return {
+      ok: false as const,
+      message: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية.",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user || !user.email) {
+    if (userError) logAuthError("[changeOwnerPasswordAction:getUser]", userError);
+    return {
+      ok: false as const,
+      message: "يجب تسجيل الدخول لتغيير كلمة المرور.",
+    };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (
+    profileError ||
+    !profile ||
+    profile.status === "suspended" ||
+    !["cafe_owner", "cafe_manager", "cafe_staff"].includes(String(profile.role))
+  ) {
+    if (profileError) logAuthError("[changeOwnerPasswordAction:profile]", profileError);
+    return {
+      ok: false as const,
+      message: "لا تملك صلاحية تغيير كلمة مرور هذا الحساب.",
+    };
+  }
+
+  const verifyClient = createSupabaseJsClient(
+    requireSupabaseUrl(),
+    requireSupabaseAnonKey(),
+    {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    }
+  );
+
+  const { data: verified, error: verifyError } = await verifyClient.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  await verifyClient.auth.signOut();
+
+  if (verifyError || !verified.user || verified.user.id !== user.id) {
+    if (verifyError) logAuthError("[changeOwnerPasswordAction:verifyCurrentPassword]", verifyError);
+    return { ok: false as const, message: "كلمة المرور الحالية غير صحيحة." };
+  }
+
+  const admin = createAdminClient();
+  const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
+    password: newPassword,
+  });
+  if (updateError) {
+    logAuthError("[changeOwnerPasswordAction:updateUserById]", updateError);
+    const weakPassword =
+      updateError.message?.toLowerCase().includes("password") ||
+      updateError.message?.toLowerCase().includes("weak") ||
+      updateError.message?.toLowerCase().includes("strength");
+
+    return {
+      ok: false as const,
+      message: weakPassword
+        ? "كلمة المرور الجديدة ضعيفة أو غير مقبولة."
+        : "تعذر تغيير كلمة المرور، حاول مرة أخرى.",
+    };
+  }
+
+  return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح." };
 }
 
 export async function logoutAction() {
@@ -249,10 +538,14 @@ export async function registerCustomerAction(
 ): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
   try {
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
+    await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
   } catch (error) {
     console.error("[registerCustomerAction]", error);
-    return { ok: false, message: "تعذر إنشاء الحساب تحقق من البيانات وحاول مرة أخرى" };
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "تعذر إنشاء الحساب تحقق من البيانات وحاول مرة أخرى",
+    };
   }
 }
 
@@ -263,24 +556,139 @@ export async function loginCustomerAction(
 ): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
   try {
     const session = await loginCustomerByEmail({ cafeSlug, email, password });
+    await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم تسجيل الدخول", session };
   } catch (error) {
     console.error("[loginCustomerAction]", error);
-    return { ok: false, message: "بيانات الدخول غير صحيحة" };
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "بيانات الدخول غير صحيحة",
+    };
   }
 }
 
 export async function getCustomerSessionAction(cafeSlug: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { getCustomerProfileByUser, mapCustomerProfileToSession } = await import("@/lib/data/customers");
-  const profile = await getCustomerProfileByUser(cafeSlug, user.id);
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
+  if (!token) return null;
+
+  const profile = await getCustomerProfileBySessionToken(cafeSlug, token);
   if (!profile) return null;
   return mapCustomerProfileToSession(cafeSlug, profile);
 }
 
-export async function logoutCustomerAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+export async function logoutCustomerAction(cafeSlug?: string) {
+  if (!cafeSlug) return;
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
+  if (token) {
+    const profile = await getCustomerProfileBySessionToken(cafeSlug, token);
+    if (profile?.id) {
+      await clearPersistedCustomerSession(String(profile.id));
+    }
+  }
+
+  await deleteCustomerSessionCookie(cafeSlug);
+}
+
+export async function changeCustomerPasswordAction(input: {
+  cafeSlug: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  try {
+    const session = await getCustomerSessionAction(input.cafeSlug);
+    if (!session) {
+      return { ok: false as const, message: "يجب تسجيل الدخول لتغيير كلمة المرور." };
+    }
+
+    await changeCustomerPassword({
+      cafeSlug: input.cafeSlug,
+      customerId: session.id,
+      currentPassword: input.currentPassword,
+      newPassword: input.newPassword,
+      confirmPassword: input.confirmPassword,
+    });
+
+    return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح." };
+  } catch (error) {
+    return {
+      ok: false as const,
+      message:
+        error instanceof Error
+          ? error.message
+          : "تعذر تغيير كلمة المرور الآن. حاول مرة أخرى.",
+    };
+  }
+}
+
+export async function requestCustomerPasswordResetAction(cafeSlug: string, email: string) {
+  const parsedEmail = z.string().trim().email().safeParse(email);
+  if (!parsedEmail.success) {
+    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
+  }
+
+  try {
+    const reset = await createCustomerPasswordReset({
+      cafeSlug,
+      email: parsedEmail.data,
+    });
+
+    if (reset && isBarndaksaEmailConfigured()) {
+      const appUrl = getAppBaseUrl();
+      const resetUrl = `${appUrl}/c/${encodeURIComponent(cafeSlug)}/reset-password?token=${encodeURIComponent(reset.token)}`;
+
+      await sendBarndaksaEmail({
+        to: reset.email,
+        subject: `استعادة كلمة مرور ${reset.cafeName}`,
+        text: `افتح رابط استعادة كلمة المرور الخاص بـ ${reset.cafeName}: ${resetUrl}`,
+        html: `
+          <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
+            <h2>استعادة كلمة المرور</h2>
+            <p>مرحبًا ${escapeEmailHtml(reset.customerName)}، يمكنك تعيين كلمة مرور جديدة لحسابك في <strong>${escapeEmailHtml(reset.cafeName)}</strong> من الرابط التالي:</p>
+            <p><a href="${resetUrl}">تعيين كلمة مرور جديدة</a></p>
+            <p>إذا لم تطلب الاستعادة فتجاهل هذه الرسالة.</p>
+          </div>
+        `,
+      });
+    }
+  } catch (error) {
+    console.error("[requestCustomerPasswordResetAction]", {
+      message: error instanceof Error ? error.message : "unknown error",
+    });
+  }
+
+  return {
+    ok: true as const,
+    message:
+      "إذا كان البريد مسجلًا لدى هذه العلامة، سيصلك رابط استعادة كلمة المرور خلال دقائق.",
+  };
+}
+
+export async function resetCustomerPasswordAction(input: {
+  cafeSlug: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  try {
+    await resetCustomerPasswordWithToken(input);
+    return {
+      ok: true as const,
+      message: "تم تحديث كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.",
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      message:
+        error instanceof Error
+          ? error.message
+          : "تعذر حفظ كلمة المرور. اطلب رابطًا جديدًا وحاول مرة أخرى.",
+    };
+  }
 }

@@ -1,6 +1,10 @@
 import { z } from "zod";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
+import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 
@@ -92,7 +96,7 @@ export async function getCustomerProfileByUser(
 
   if (!cafe) return null;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
 
@@ -111,7 +115,7 @@ export async function getCustomerProfileByUser(
 
 /** Requires authenticated Supabase session linked to a customer profile for this cafe */
 export async function requireCustomerProfileForSession(cafeSlug: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -177,7 +181,153 @@ const customerLoginSchema = z.object({
   password: z.string().min(1),
 });
 
-/** Register customer with real Supabase Auth (email + password) */
+const customerPasswordSchema = z.string().min(8).max(72);
+const customerResetTokenTtlMs = 30 * 60 * 1000;
+
+function normalizeCustomerEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function hashSecret(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function hashCustomerPassword(password: string) {
+  const salt = randomBytes(16).toString("base64url");
+  const hash = scryptSync(password, salt, 64).toString("base64url");
+  return `scrypt$${salt}$${hash}`;
+}
+
+function verifyCustomerPassword(password: string, storedHash?: string | null) {
+  if (!storedHash) return false;
+  const [scheme, salt, expectedHash] = storedHash.split("$");
+  if (scheme !== "scrypt" || !salt || !expectedHash) return false;
+
+  const expected = Buffer.from(expectedHash, "base64url");
+  const actual = scryptSync(password, salt, expected.length);
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+async function verifyLegacySupabaseCustomerPassword(
+  userId: string | null | undefined,
+  email: string,
+  password: string,
+) {
+  if (!userId) return false;
+
+  const verifyClient = createSupabaseJsClient(
+    requireSupabaseUrl(),
+    requireSupabaseAnonKey(),
+    {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    },
+  );
+
+  const { data, error } = await verifyClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  await verifyClient.auth.signOut();
+  return !error && data.user?.id === userId;
+}
+
+async function findCustomerProfileByCafeEmail(cafeId: string, email: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("customer_profiles")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .ilike("email", email)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function setCustomerPasswordHash(
+  profileId: string,
+  password: string,
+  options: { clearSessions?: boolean } = {},
+) {
+  const admin = createAdminClient();
+  const updatePayload: Record<string, string | null> = {
+    password_hash: hashCustomerPassword(password),
+    password_updated_at: new Date().toISOString(),
+    password_reset_token_hash: null,
+    password_reset_expires_at: null,
+  };
+
+  if (options.clearSessions) {
+    updatePayload.session_token_hash = null;
+    updatePayload.session_expires_at = null;
+  }
+
+  const { error } = await admin
+    .from("customer_profiles")
+    .update(updatePayload)
+    .eq("id", profileId);
+
+  if (error) throw error;
+}
+
+export async function persistCustomerSession(
+  customerId: string,
+  token: string,
+  expiresAt: Date,
+) {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("customer_profiles")
+    .update({
+      session_token_hash: hashSecret(token),
+      session_expires_at: expiresAt.toISOString(),
+      last_visit_at: new Date().toISOString(),
+    })
+    .eq("id", customerId);
+
+  if (error) throw error;
+}
+
+export async function clearPersistedCustomerSession(customerId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("customer_profiles")
+    .update({
+      session_token_hash: null,
+      session_expires_at: null,
+    })
+    .eq("id", customerId);
+
+  if (error) throw error;
+}
+
+export async function getCustomerProfileBySessionToken(
+  cafeSlug: string,
+  token: string,
+) {
+  const cafe = await getCafeBySlug(cafeSlug);
+  if (!cafe) return null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("customer_profiles")
+    .select("*")
+    .eq("cafe_id", cafe.id)
+    .eq("session_token_hash", hashSecret(token))
+    .gt("session_expires_at", new Date().toISOString())
+    .not("password_hash", "is", null)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/** Register customer with a cafe-scoped password hash. */
 
 export async function registerCustomer(
   input: z.infer<typeof customerRegisterSchema>,
@@ -190,43 +340,37 @@ export async function registerCustomer(
 
   const normalizedPhone = parsed.phone.replace(/\D/g, "");
 
-  const supabase = await createClient();
+  const email = normalizeCustomerEmail(parsed.email);
+  const admin = createAdminClient();
 
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: parsed.email.trim().toLowerCase(),
+  const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
+  if (existing) {
+    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة.");
+  }
 
-    password: parsed.password,
-
-    options: {
-      data: {
-        full_name: parsed.fullName.trim(),
-
-        phone: normalizedPhone,
-
-        role: "customer",
-      },
-    },
-  });
-
-  if (signUpError) throw signUpError;
-
-  if (!signUpData.user) throw new Error("Registration failed");
-
-  const profile = await upsertCustomerProfileForUser(
-    parsed.cafeSlug,
-    signUpData.user.id,
-    {
-      fullName: parsed.fullName.trim(),
-
+  const { data: profile, error } = await admin
+    .from("customer_profiles")
+    .insert({
+      cafe_id: cafe.id,
+      full_name: parsed.fullName.trim(),
       phone: normalizedPhone,
+      email,
+      password_hash: hashCustomerPassword(parsed.password),
+      password_updated_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
 
-      email: parsed.email.trim().toLowerCase(),
-    },
-  );
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة.");
+    }
+    throw error;
+  }
 
   if (isBarndaksaEmailConfigured()) {
     await sendBarndaksaEmail({
-      to: parsed.email.trim().toLowerCase(),
+      to: email,
       subject: `مرحبًا بك في ${cafe.name}`,
       text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
       html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
@@ -236,7 +380,7 @@ export async function registerCustomer(
   return mapCustomerProfileToSession(parsed.cafeSlug, profile);
 }
 
-/** Customer login via real Supabase Auth session */
+/** Customer login requires cafe + email + password, never email/password alone. */
 
 export async function loginCustomerByEmail(
   input: z.infer<typeof customerLoginSchema>,
@@ -247,40 +391,155 @@ export async function loginCustomerByEmail(
 
   if (!cafe) throw new Error("Cafe not found");
 
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: parsed.email.trim().toLowerCase(),
-
-    password: parsed.password,
-  });
-
-  if (error || !data.user) throw error ?? new Error("Invalid credentials");
-
-  const existing = await getCustomerProfileByUser(
-    parsed.cafeSlug,
-    data.user.id,
-  );
+  const email = normalizeCustomerEmail(parsed.email);
+  const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
 
   if (!existing) {
-    const meta = data.user.user_metadata ?? {};
+    throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة. أنشئ حسابًا جديدًا أولًا.");
+  }
 
-    const profile = await upsertCustomerProfileForUser(
-      parsed.cafeSlug,
-      data.user.id,
-      {
-        fullName: (meta.full_name as string) || "عميل",
+  const passwordHash = existing.password_hash as string | null | undefined;
+  const userId = existing.user_id as string | null | undefined;
+  const passwordOk =
+    verifyCustomerPassword(parsed.password, passwordHash) ||
+    (await verifyLegacySupabaseCustomerPassword(userId, email, parsed.password));
 
-        phone: (meta.phone as string) || "0000000000",
+  if (!passwordOk) {
+    throw new Error("بيانات الدخول غير صحيحة");
+  }
 
-        email: parsed.email.trim().toLowerCase(),
-      },
-    );
-
-    return mapCustomerProfileToSession(parsed.cafeSlug, profile);
+  if (!passwordHash) {
+    await setCustomerPasswordHash(existing.id as string, parsed.password);
   }
 
   return mapCustomerProfileToSession(parsed.cafeSlug, existing);
+}
+
+export async function changeCustomerPassword(input: {
+  cafeSlug: string;
+  customerId: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const parsed = z
+    .object({
+      cafeSlug: z.string().min(1),
+      customerId: z.string().uuid(),
+      currentPassword: z.string().min(1),
+      newPassword: customerPasswordSchema,
+      confirmPassword: z.string().min(1),
+    })
+    .parse(input);
+
+  if (parsed.newPassword !== parsed.confirmPassword) {
+    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.");
+  }
+
+  const cafe = await getCafeBySlug(parsed.cafeSlug);
+  if (!cafe) throw new Error("Cafe not found");
+
+  const admin = createAdminClient();
+  const { data: profile, error } = await admin
+    .from("customer_profiles")
+    .select("*")
+    .eq("id", parsed.customerId)
+    .eq("cafe_id", cafe.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!profile) throw new Error("Customer profile not found");
+
+  const email = normalizeCustomerEmail(String(profile.email ?? ""));
+  const passwordHash = profile.password_hash as string | null | undefined;
+  const userId = profile.user_id as string | null | undefined;
+  const currentOk =
+    verifyCustomerPassword(parsed.currentPassword, passwordHash) ||
+    (await verifyLegacySupabaseCustomerPassword(userId, email, parsed.currentPassword));
+
+  if (!currentOk) {
+    throw new Error("كلمة المرور الحالية غير صحيحة.");
+  }
+
+  await setCustomerPasswordHash(parsed.customerId, parsed.newPassword);
+}
+
+export async function createCustomerPasswordReset(input: {
+  cafeSlug: string;
+  email: string;
+}) {
+  const parsed = z
+    .object({
+      cafeSlug: z.string().min(1),
+      email: z.string().email(),
+    })
+    .parse(input);
+
+  const cafe = await getCafeBySlug(parsed.cafeSlug);
+  if (!cafe) return null;
+
+  const email = normalizeCustomerEmail(parsed.email);
+  const profile = await findCustomerProfileByCafeEmail(cafe.id, email);
+  if (!profile) return null;
+
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + customerResetTokenTtlMs);
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("customer_profiles")
+    .update({
+      password_reset_token_hash: hashSecret(token),
+      password_reset_expires_at: expiresAt.toISOString(),
+    })
+    .eq("id", profile.id as string);
+
+  if (error) throw error;
+
+  return {
+    token,
+    cafeName: cafe.name,
+    customerName: String(profile.full_name ?? "عميل"),
+    email,
+  };
+}
+
+export async function resetCustomerPasswordWithToken(input: {
+  cafeSlug: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const parsed = z
+    .object({
+      cafeSlug: z.string().min(1),
+      token: z.string().min(24),
+      newPassword: customerPasswordSchema,
+      confirmPassword: z.string().min(1),
+    })
+    .parse(input);
+
+  if (parsed.newPassword !== parsed.confirmPassword) {
+    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.");
+  }
+
+  const cafe = await getCafeBySlug(parsed.cafeSlug);
+  if (!cafe) throw new Error("Cafe not found");
+
+  const admin = createAdminClient();
+  const { data: profile, error } = await admin
+    .from("customer_profiles")
+    .select("id")
+    .eq("cafe_id", cafe.id)
+    .eq("password_reset_token_hash", hashSecret(parsed.token))
+    .gt("password_reset_expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!profile) throw new Error("رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.");
+
+  await setCustomerPasswordHash(profile.id as string, parsed.newPassword, {
+    clearSessions: true,
+  });
 }
 
 export async function getCafeCustomers() {
@@ -306,12 +565,13 @@ export async function getCafeCustomers() {
 export async function getCustomerOrdersForProfile(
   cafeSlug: string,
   customerId: string,
+  limit = 5,
 ) {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: orders } = await supabase
 
@@ -325,7 +585,9 @@ export async function getCustomerOrdersForProfile(
 
     .is("deleted_at", null)
 
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+
+    .limit(limit);
 
   if (!orders?.length) return [];
 
@@ -343,12 +605,13 @@ export async function getCustomerOrdersForProfile(
 export async function getCustomerReservationsForProfile(
   cafeSlug: string,
   customerId: string,
+  limit = 5,
 ) {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data } = await supabase
 
@@ -362,7 +625,9 @@ export async function getCustomerReservationsForProfile(
 
     .is("deleted_at", null)
 
-    .order("reservation_date", { ascending: false });
+    .order("reservation_date", { ascending: false })
+
+    .limit(limit);
 
   if (!data?.length) return [];
 

@@ -21,6 +21,7 @@ import {
   updateCustomerProfileAction,
   uploadCustomerAvatarAction,
 } from "@/app/actions/customer-media";
+import { changeCustomerPasswordAction } from "@/app/actions/auth";
 import {
   type CustomerInvoice,
   type CustomerOrder,
@@ -37,7 +38,10 @@ import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import {
   Bell,
   Coffee,
+  Eye,
+  EyeOff,
   Gift,
+  KeyRound,
   Link as LinkIcon,
   QrCode,
   Send,
@@ -72,6 +76,28 @@ const accountSnapshotCache = new Map<
   string,
   Promise<CustomerAccountSnapshot> | CustomerAccountSnapshot
 >();
+const ACCOUNT_SNAPSHOT_TIMEOUT_MS = 5_000;
+const CUSTOMER_ACCOUNT_LOAD_ERROR =
+  "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
+
+function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error("timeout"));
+    }, timeoutMs);
+
+    task.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
 
 function fetchCustomerAccountSnapshotOnce(slug: string, cacheKey: string) {
   const cached = accountSnapshotCache.get(cacheKey);
@@ -79,7 +105,9 @@ function fetchCustomerAccountSnapshotOnce(slug: string, cacheKey: string) {
 
   const promise = fetchCustomerAccountSnapshotAction(slug).then(
     (snapshot) => {
-      accountSnapshotCache.set(cacheKey, snapshot);
+      if (accountSnapshotCache.get(cacheKey) === promise) {
+        accountSnapshotCache.set(cacheKey, snapshot);
+      }
       return snapshot;
     },
     (error) => {
@@ -574,6 +602,50 @@ function ExperienceProofPanel({
   );
 }
 
+function CustomerPasswordField({
+  label,
+  value,
+  visible,
+  autoComplete,
+  onChange,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  visible: boolean;
+  autoComplete: string;
+  onChange: (value: string) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
+        {label}
+      </span>
+      <div className="relative mt-2">
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          className="h-12 w-full rounded-2xl border border-[#E7D7C6] bg-white px-4 pl-12 font-bold text-[#311912] outline-none"
+          required
+          minLength={autoComplete === "new-password" ? 8 : undefined}
+          placeholder="••••••••"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]"
+          aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+        >
+          {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      </div>
+    </label>
+  );
+}
+
 function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
@@ -581,13 +653,11 @@ function AccountPageInner() {
   const { experience, settings, path, previewThemeId } =
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
-  const initialLoadKeyRef = useRef<string | null>(null);
   const accountSnapshotKey = `${slug}:${previewThemeId ?? "live"}`;
   const accountLoginHref = getCafePath(slug, "login", previewThemeId);
-  const accountNextPath = appendPreviewToNextPath(
-    `/c/${slug}/account`,
-    previewThemeId,
-  );
+  const accountLoginWithNextHref = `${accountLoginHref}?next=${encodeURIComponent(
+    appendPreviewToNextPath(`/c/${slug}/account`, previewThemeId),
+  )}`;
 
   const defaultTab: TabKey = "orders";
 
@@ -624,13 +694,31 @@ function AccountPageInner() {
   const [experienceNotes, setExperienceNotes] = useState("");
   const [submittingExperienceProof, setSubmittingExperienceProof] =
     useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordVisible, setPasswordVisible] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     const loadKey = `${accountSnapshotKey}:${reloadToken}`;
-    if (initialLoadKeyRef.current === loadKey) return;
-    initialLoadKeyRef.current = loadKey;
 
     let cancelled = false;
+
+    function finishLoading() {
+      setLoyaltyLoading(false);
+      setAccountLoading(false);
+    }
 
     async function load() {
       setAccountLoading(true);
@@ -639,14 +727,36 @@ function AccountPageInner() {
       setLoyaltyLoading(true);
       setAccountFeatures([]);
 
-      const snapshot = await fetchCustomerAccountSnapshotOnce(slug, loadKey);
+      const result = await withTimeout(
+        fetchCustomerAccountSnapshotOnce(slug, loadKey),
+        ACCOUNT_SNAPSHOT_TIMEOUT_MS,
+      );
       if (cancelled) return;
 
+      const errorCode = result.code ?? result.errorCode ?? null;
+      const errorMessage = result.error ?? result.message ?? CUSTOMER_ACCOUNT_LOAD_ERROR;
+      const hasData = Boolean(result.data);
+
+      if (process.env.NODE_ENV === "development") {
+        console.info("[customer-account] snapshot result", {
+          success: result.success,
+          hasData,
+          errorCode,
+        });
+      }
+
+      if (!result.success || !result.data) {
+        finishLoading();
+        setRedirectingToLogin(errorCode === "invalid_session");
+        setAccountError(errorMessage);
+        return;
+      }
+
+      const snapshot = result.data;
       if (!snapshot.customer) {
-        setLoyaltyLoading(false);
-        setAccountLoading(false);
+        finishLoading();
         setRedirectingToLogin(true);
-        router.push(`${accountLoginHref}?next=${encodeURIComponent(accountNextPath)}`);
+        setAccountError(CUSTOMER_ACCOUNT_LOAD_ERROR);
         return;
       }
 
@@ -695,21 +805,25 @@ function AccountPageInner() {
 
       setLoyaltyView(snapshot.loyalty);
       setExperienceRewards(snapshot.experienceRewards);
-      setLoyaltyLoading(false);
-      setAccountLoading(false);
+      finishLoading();
     }
 
     void load().catch((error) => {
+      if (cancelled) return;
       console.error("[CafeCustomerAccountPage:load]", error);
-      setLoyaltyLoading(false);
-      setAccountLoading(false);
-      setAccountError("تعذر تحميل بيانات الحساب. حاول مرة أخرى.");
+      accountSnapshotCache.delete(loadKey);
+      finishLoading();
+      setAccountError(
+        error instanceof Error && error.message === "timeout"
+          ? CUSTOMER_ACCOUNT_LOAD_ERROR
+          : CUSTOMER_ACCOUNT_LOAD_ERROR,
+      );
     });
 
     return () => {
       cancelled = true;
     };
-  }, [accountLoginHref, accountNextPath, accountSnapshotKey, reloadToken, router, slug]);
+  }, [accountSnapshotKey, reloadToken, slug]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -849,6 +963,56 @@ function AccountPageInner() {
     }
   }
 
+  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordMessage(null);
+
+    if (!passwordForm.currentPassword) {
+      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة." });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordMessage({
+        type: "error",
+        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+      });
+      return;
+    }
+
+    setPasswordSaving(true);
+    const result = await changeCustomerPasswordAction({
+      cafeSlug: slug,
+      ...passwordForm,
+    });
+    setPasswordSaving(false);
+    setPasswordMessage({
+      type: result.ok ? "success" : "error",
+      text: result.message,
+    });
+
+    if (result.ok) {
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordVisible({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false,
+      });
+    }
+  }
+
   async function submitExperienceProof() {
     if (!experienceRewardsEnabled) {
       alert("توثيق التجارب غير مفعّل ضمن باقة هذه العلامة");
@@ -901,16 +1065,24 @@ function AccountPageInner() {
         <p className="font-black text-[var(--ci-page-fg,#311912)]">
           {accountError}
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
-            setReloadToken((value) => value + 1);
-          }}
-          className="mt-4 rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
-        >
-          إعادة المحاولة
-        </button>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
+              setReloadToken((value) => value + 1);
+            }}
+            className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
+          >
+            إعادة المحاولة
+          </button>
+          <a
+            href={accountLoginWithNextHref}
+            className="rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
+          >
+            تسجيل الدخول
+          </a>
+        </div>
       </div>
     );
   }
@@ -920,9 +1092,27 @@ function AccountPageInner() {
       <div className="rounded-3xl p-8 text-center">
         <p className="font-black text-[var(--ci-page-fg,#311912)]">
           {redirectingToLogin
-            ? "جاري تحويلك لتسجيل الدخول..."
+            ? "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة."
             : "لم يتم العثور على جلسة عميل نشطة."}
         </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
+              setReloadToken((value) => value + 1);
+            }}
+            className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
+          >
+            إعادة المحاولة
+          </button>
+          <a
+            href={accountLoginWithNextHref}
+            className="rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
+          >
+            تسجيل الدخول
+          </a>
+        </div>
       </div>
     );
   }
@@ -999,6 +1189,77 @@ function AccountPageInner() {
               onSubmit={() => void submitExperienceProof()}
             />
           ) : undefined
+        }
+        passwordSlot={
+          <form onSubmit={changePassword} className="space-y-4">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              <h3 className="text-lg font-black">تغيير كلمة المرور</h3>
+            </div>
+            <CustomerPasswordField
+              label="كلمة المرور الحالية"
+              value={passwordForm.currentPassword}
+              visible={passwordVisible.currentPassword}
+              autoComplete="current-password"
+              onChange={(value) =>
+                setPasswordForm((prev) => ({ ...prev, currentPassword: value }))
+              }
+              onToggle={() =>
+                setPasswordVisible((prev) => ({
+                  ...prev,
+                  currentPassword: !prev.currentPassword,
+                }))
+              }
+            />
+            <CustomerPasswordField
+              label="كلمة المرور الجديدة"
+              value={passwordForm.newPassword}
+              visible={passwordVisible.newPassword}
+              autoComplete="new-password"
+              onChange={(value) =>
+                setPasswordForm((prev) => ({ ...prev, newPassword: value }))
+              }
+              onToggle={() =>
+                setPasswordVisible((prev) => ({
+                  ...prev,
+                  newPassword: !prev.newPassword,
+                }))
+              }
+            />
+            <CustomerPasswordField
+              label="تأكيد كلمة المرور الجديدة"
+              value={passwordForm.confirmPassword}
+              visible={passwordVisible.confirmPassword}
+              autoComplete="new-password"
+              onChange={(value) =>
+                setPasswordForm((prev) => ({ ...prev, confirmPassword: value }))
+              }
+              onToggle={() =>
+                setPasswordVisible((prev) => ({
+                  ...prev,
+                  confirmPassword: !prev.confirmPassword,
+                }))
+              }
+            />
+            {passwordMessage ? (
+              <p
+                className={
+                  passwordMessage.type === "success"
+                    ? "text-sm font-black text-emerald-700"
+                    : "text-sm font-black text-red-600"
+                }
+              >
+                {passwordMessage.text}
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={passwordSaving}
+              className="w-full rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-4 font-black text-[var(--ci-button-fg,#fff)] disabled:opacity-60"
+            >
+              {passwordSaving ? "جار تغيير كلمة المرور..." : "تغيير كلمة المرور"}
+            </button>
+          </form>
         }
         fileRef={fileRef}
       />

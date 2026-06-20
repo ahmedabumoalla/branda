@@ -1,8 +1,9 @@
 "use client";
 
-import { Copy, ExternalLink, Globe, ImagePlus, Save, ShieldCheck } from "lucide-react";
+import { Copy, ExternalLink, Eye, EyeOff, Globe, ImagePlus, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { changeOwnerPasswordAction } from "@/app/actions/auth";
 import { saveSettingsAction } from "@/app/actions/settings";
 import { uploadImageAction } from "@/app/actions/upload";
 import {
@@ -69,6 +70,21 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   const [purchase, setPurchase] = useState<CafePurchasedDomain | null>(null);
   const [domainMessage, setDomainMessage] = useState<string>("");
   const [browserOrigin, setBrowserOrigin] = useState<string | undefined>();
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const [pendingLogo, setPendingLogo] = useState<OptimizedImageResult | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | undefined>();
@@ -135,6 +151,61 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordMessage(null);
+
+    if (!passwordForm.currentPassword) {
+      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة." });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordMessage({
+        type: "error",
+        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+      });
+      return;
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      setPasswordMessage({
+        type: "error",
+        text: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية.",
+      });
+      return;
+    }
+
+    setPasswordSaving(true);
+    const result = await changeOwnerPasswordAction(passwordForm);
+    setPasswordSaving(false);
+    setPasswordMessage({
+      type: result.ok ? "success" : "error",
+      text: result.message,
+    });
+
+    if (result.ok) {
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordVisibility({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false,
+      });
     }
   }
 
@@ -473,6 +544,77 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
             </label>
           </BentoCard>
 
+          <BentoCard variant="white" span="2">
+            <h2 className="flex items-center gap-2 text-2xl font-black text-[#3A2117]">
+              <KeyRound className="h-6 w-6" />
+              تغيير كلمة المرور
+            </h2>
+
+            <form onSubmit={changePassword} className="mt-5 grid gap-4">
+              <PasswordField
+                label="كلمة المرور الحالية"
+                value={passwordForm.currentPassword}
+                visible={passwordVisibility.currentPassword}
+                autoComplete="current-password"
+                onChange={(value) =>
+                  setPasswordForm((prev) => ({ ...prev, currentPassword: value }))
+                }
+                onToggle={() =>
+                  setPasswordVisibility((prev) => ({
+                    ...prev,
+                    currentPassword: !prev.currentPassword,
+                  }))
+                }
+              />
+              <PasswordField
+                label="كلمة المرور الجديدة"
+                value={passwordForm.newPassword}
+                visible={passwordVisibility.newPassword}
+                autoComplete="new-password"
+                onChange={(value) =>
+                  setPasswordForm((prev) => ({ ...prev, newPassword: value }))
+                }
+                onToggle={() =>
+                  setPasswordVisibility((prev) => ({
+                    ...prev,
+                    newPassword: !prev.newPassword,
+                  }))
+                }
+              />
+              <PasswordField
+                label="تأكيد كلمة المرور الجديدة"
+                value={passwordForm.confirmPassword}
+                visible={passwordVisibility.confirmPassword}
+                autoComplete="new-password"
+                onChange={(value) =>
+                  setPasswordForm((prev) => ({ ...prev, confirmPassword: value }))
+                }
+                onToggle={() =>
+                  setPasswordVisibility((prev) => ({
+                    ...prev,
+                    confirmPassword: !prev.confirmPassword,
+                  }))
+                }
+              />
+
+              {passwordMessage ? (
+                <p
+                  className={
+                    passwordMessage.type === "success"
+                      ? "text-sm font-black text-emerald-700"
+                      : "text-sm font-black text-red-600"
+                  }
+                >
+                  {passwordMessage.text}
+                </p>
+              ) : null}
+
+              <PrimaryButton type="submit" disabled={passwordSaving} className="w-full">
+                {passwordSaving ? "جار تغيير كلمة المرور..." : "تغيير كلمة المرور"}
+              </PrimaryButton>
+            </form>
+          </BentoCard>
+
           <BentoCard variant="white" span="4">
             <h2 className="flex items-center gap-2 text-2xl font-black text-[#3A2117]">
               <Globe className="h-6 w-6" />
@@ -720,6 +862,46 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
       </DashboardPageShell>
       <AppToast toast={toast} />
     </div>
+  );
+}
+
+function PasswordField({
+  label,
+  value,
+  visible,
+  autoComplete,
+  onChange,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  visible: boolean;
+  autoComplete: string;
+  onChange: (value: string) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-[#7A6255]">{label}</span>
+      <div className="relative mt-2">
+        <NeumoInput
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          type={visible ? "text" : "password"}
+          placeholder="••••••••"
+          autoComplete={autoComplete}
+          className="pl-12"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]"
+          aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+        >
+          {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      </div>
+    </label>
   );
 }
 

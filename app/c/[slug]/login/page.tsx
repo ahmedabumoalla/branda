@@ -18,7 +18,31 @@ import {
 
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 
-import { loginCustomerAction } from "@/app/actions/auth";
+import {
+  loginCustomerAction,
+  requestCustomerPasswordResetAction,
+} from "@/app/actions/auth";
+
+const LOGIN_TIMEOUT_MS = 5_000;
+
+function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error("timeout"));
+    }, timeoutMs);
+
+    task.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
 
 
 
@@ -43,6 +67,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
 
 
@@ -58,24 +86,44 @@ function LoginForm() {
 
     setLoading(true);
 
-    void loginCustomerAction(slug, email.trim(), password).then((result) => {
+    void withTimeout(
+      loginCustomerAction(slug, email.trim(), password),
+      LOGIN_TIMEOUT_MS,
+    )
+      .then((result) => {
+        if (!result.ok) {
+          alert(result.message);
+          return;
+        }
 
-      setLoading(false);
+        router.replace(appendPreviewToNextPath(`/c/${slug}`, previewThemeId));
+      })
+      .catch(() => {
+        alert("تعذر إكمال تسجيل الدخول خلال الوقت المتوقع. حاول مرة أخرى.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
-      if (!result.ok) {
+  }
 
-        alert(result.message);
+  function submitReset() {
+    const requestedEmail = (resetEmail || email).trim();
+    if (!requestedEmail) {
+      alert("اكتب البريد الإلكتروني أولًا");
+      return;
+    }
 
-        return;
+    setResetLoading(true);
+    setResetMessage("");
 
-      }
-
-      const next = appendPreviewToNextPath(rawNext, previewThemeId);
-      router.replace(next);
-      router.refresh();
-
-    });
-
+    void requestCustomerPasswordResetAction(slug, requestedEmail)
+      .then((result) => {
+        setResetMessage(result.message);
+      })
+      .finally(() => {
+        setResetLoading(false);
+      });
   }
 
 
@@ -131,6 +179,43 @@ function LoginForm() {
         type="password"
 
       />
+
+      <button
+        type="button"
+        onClick={() => {
+          setResetEmail(email);
+          setResetMessage("");
+          setResetOpen((value) => !value);
+        }}
+        className="text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] underline"
+      >
+        نسيت كلمة المرور؟
+      </button>
+
+      {resetOpen ? (
+        <div className="rounded-2xl border border-black/10 bg-white/70 p-4">
+          <p className="text-sm font-black">استعادة كلمة المرور</p>
+          <ThemedInput
+            experience={experience}
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            placeholder="البريد الإلكتروني"
+            type="email"
+            className="mt-3"
+          />
+          {resetMessage ? (
+            <p className="mt-3 text-sm font-bold">{resetMessage}</p>
+          ) : null}
+          <button
+            type="button"
+            onClick={submitReset}
+            disabled={resetLoading}
+            className="mt-4 w-full rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)] disabled:opacity-60"
+          >
+            {resetLoading ? "جار إرسال الرابط..." : "إرسال رابط الاستعادة"}
+          </button>
+        </div>
+      ) : null}
 
     </ThemedAuthPanel>
 
