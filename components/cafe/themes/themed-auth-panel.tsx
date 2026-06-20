@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { LockKeyhole, Sparkles, UserRound } from "lucide-react";
+import { CafeLogo } from "@/components/cafe/cafe-logo";
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 
@@ -28,90 +28,41 @@ export function ThemedAuthPanel({
   submitLabel,
 }: Props) {
   const { theme, auth } = experience;
-
-  const panelClass =
-    auth === "minimal"
-      ? `rounded-[32px] p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] md:p-8 ${theme.card}`
-      : auth === "kiosk"
-        ? `rounded-2xl border-2 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] ${theme.card}`
-        : auth === "boutique"
-          ? `rounded-[28px] border border-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]/20 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] ${theme.card}`
-          : auth === "neon"
-            ? `rounded-2xl border border-[#00e676]/20 p-6 shadow-[0_22px_75px_rgba(49,25,18,0.12)] backdrop-blur ${theme.card}`
-            : auth === "app"
-              ? `rounded-[32px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.card}`
-              : `rounded-[32px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] sm:p-8 ${theme.card}`;
-
-  const title = mode === "login" ? "تسجيل دخول العميل" : "إنشاء حساب جديد";
-  const description =
-    mode === "login"
-      ? `أدخل بريدك وكلمة المرور للمتابعة في ${settings.cafeName}`
-      : `سجّل في ${settings.cafeName} لمتابعة الطلبات والحجوزات`;
+  const title = mode === "login" ? "تسجيل الدخول" : "إنشاء حساب جديد";
+  const switchHref = mode === "login" ? registerHref : loginHref;
+  const switchText = mode === "login" ? "إنشاء حساب جديد" : "تسجيل الدخول";
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-5 lg:grid-cols-[0.88fr_1fr] lg:items-stretch">
-      <aside className={`barndaksa-premium-hero rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.14)] ${theme.hero}`}>
-        <span className={`flex h-16 w-16 items-center justify-center rounded-[24px] shadow-lg ${theme.button}`}>
-          {mode === "login" ? <LockKeyhole className="h-7 w-7" /> : <UserRound className="h-7 w-7" />}
-        </span>
-        <p className={`mt-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
-          <Sparkles className="h-3.5 w-3.5" />
-          حساب العميل
-        </p>
-        <h1
-          className={`mt-3 text-balance font-black leading-tight ${auth === "kiosk" ? "text-4xl" : "text-3xl sm:text-4xl"} ${experience.headingTracking}`}
-        >
-          {title}
-        </h1>
-        <p className={`mt-3 text-sm font-bold leading-7 ${theme.muted}`}>{description}</p>
-
-        <div className="mt-7 grid gap-3">
-          {[
-            ["الطلبات", "تابع حالة الاستلام من حسابك"],
-            ["الحجوزات", "كل موعد يظهر في سجل واحد"],
-            ["الولاء", "بطاقتك ومكافآتك بعد الدخول"],
-          ].map(([label, desc]) => (
-            <div key={label} className={`rounded-2xl border border-black/5 p-4 ${theme.card}`}>
-              <p className="font-black">{label}</p>
-              <p className={`mt-1 text-xs font-bold leading-5 ${theme.muted}`}>{desc}</p>
-            </div>
-          ))}
+    <div className="mx-auto flex min-h-[100svh] w-full max-w-sm flex-col justify-center px-4 py-8 text-right">
+      <section className="w-full">
+        <div className="flex flex-col items-center text-center">
+          <CafeLogo name={settings.cafeName} logoUrl={settings.logoDataUrl} size="lg" />
+          <h1 className="mt-3 max-w-full truncate text-xl font-black text-[var(--ci-page-fg,#171412)]">
+            {settings.cafeName}
+          </h1>
         </div>
-      </aside>
 
-      <div className={`barndaksa-premium-card border border-black/5 ${panelClass}`}>
-        <div className="mb-5">
-          <p className={`text-xs font-black ${theme.accent}`}>دخول آمن ومباشر</p>
-          <h2 className="mt-1 text-2xl font-black">
-            {mode === "login" ? "أكمل بيانات الدخول" : "أنشئ حسابك"}
+        <div className="mt-6 rounded-[22px] border border-[var(--ci-border,#E7D7C6)] bg-white p-4 shadow-[0_16px_42px_rgba(23,20,18,0.08)]">
+          <h2 className="text-center text-lg font-black text-[var(--ci-page-fg,#171412)]">
+            {title}
           </h2>
+          <div className="mt-4 space-y-3">{children}</div>
+
+          <button
+            type="button"
+            onClick={onSubmit}
+            className={`barndaksa-cta-motion mt-4 w-full font-black shadow-lg transition active:scale-[0.985] ${auth === "kiosk" ? "h-14 rounded-2xl text-base" : "h-12 rounded-2xl text-sm"} ${theme.button}`}
+          >
+            {submitLabel}
+          </button>
         </div>
-        <div className="space-y-4">{children}</div>
-        <button
-          type="button"
-          onClick={onSubmit}
-          className={`barndaksa-cta-motion mt-6 w-full font-black shadow-lg transition active:scale-[0.985] ${auth === "kiosk" ? "h-16 rounded-2xl text-lg" : "h-14 rounded-2xl"} ${theme.button}`}
-        >
-          {submitLabel}
-        </button>
-        <p className={`mt-6 rounded-2xl px-4 py-3 text-center text-sm font-bold ${theme.badge}`}>
-          {mode === "login" ? (
-            <>
-              ما عندك حساب؟{" "}
-              <Link href={registerHref} className={`font-black ${theme.link}`}>
-                إنشاء حساب جديد
-              </Link>
-            </>
-          ) : (
-            <>
-              عندك حساب؟{" "}
-              <Link href={loginHref} className={`font-black ${theme.link}`}>
-                تسجيل الدخول
-              </Link>
-            </>
-          )}
+
+        <p className={`mt-4 text-center text-xs font-bold ${theme.muted}`}>
+          <Link href={switchHref} className={`font-black underline ${theme.link}`}>
+            {switchText}
+          </Link>
         </p>
-      </div>
+      </section>
     </div>
   );
 }
@@ -140,7 +91,7 @@ export function ThemedInput({
   return (
     <input
       {...props}
-      className={`w-full min-h-12 font-bold outline-none transition focus:ring-2 focus:ring-offset-1 ${experience.formInput} ${props.className ?? ""}`}
+      className={`w-full min-h-11 font-bold outline-none transition focus:ring-2 focus:ring-offset-1 ${experience.formInput} ${props.className ?? ""}`}
     />
   );
 }

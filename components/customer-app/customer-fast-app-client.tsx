@@ -20,6 +20,8 @@ import {
   WalletCards,
 } from "lucide-react";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { AppLoyaltyCard, BrandaMadeByMark } from "@/components/cafe/themes/customer-mobile-experience";
 import { formatSar } from "@/lib/format";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { isPromoActive, productFinalPrice, promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
@@ -82,6 +84,37 @@ function writeCachedPayload(slug: string, payload: CustomerFastPayload) {
   } catch {}
 }
 
+async function loadPublicCafeFallbackPayload(slug: string): Promise<CustomerFastPayload> {
+  const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(res.status === 404 ? "العلامة غير موجودة" : "تعذر تحميل بيانات العلامة");
+  }
+
+  const data = (await res.json()) as {
+    settings?: CafeSettings;
+    customIdentity?: CustomIdentityTheme | null;
+    features?: unknown[];
+  };
+
+  if (!data.settings) throw new Error("تعذر قراءة بيانات العلامة");
+
+  return {
+    slug,
+    generatedAt: new Date().toISOString(),
+    settings: data.settings,
+    customIdentity: data.customIdentity ?? null,
+    features: Array.isArray(data.features) ? data.features.map(String) : [],
+    products: [],
+    categories: [],
+    offers: [],
+    branches: [],
+    reservationServices: [],
+    loyaltyProgram: null,
+    customer: null,
+    loyaltyCard: null,
+  };
+}
+
 function firstImage(product: MenuProduct) {
   return product.imageDataUrl || product.imageGallery?.find((image) => image.imageDataUrl)?.imageDataUrl || null;
 }
@@ -122,8 +155,8 @@ function TabButton({
     <button
       type="button"
       onClick={() => onClick(tab)}
-      className={`flex min-w-[4.25rem] flex-none flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-black transition active:scale-95 ${
-        selected ? "bg-[var(--fast-button)] text-white shadow-[0_12px_28px_rgba(49,25,18,0.18)]" : "text-[var(--fast-muted)] hover:bg-white/60"
+      className={`flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black transition active:scale-95 ${
+        selected ? "bg-[var(--fast-button)]/10 text-[var(--fast-button)]" : "text-[#4E4B56]"
       }`}
     >
       {icon}
@@ -350,7 +383,18 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
         setOfflineMode(true);
         setError(null);
       } else {
-        setError(err instanceof Error ? err.message : "تعذر الاتصال بالخادم");
+        try {
+          const fallback = await loadPublicCafeFallbackPayload(slug);
+          if (process.env.NODE_ENV === "development") {
+            console.warn("[customer-fast-app] using public cafe fallback", { slug });
+          }
+          writeCachedPayload(slug, fallback);
+          setPayload(fallback);
+          setOfflineMode(false);
+          setError(null);
+        } catch {
+          setError(err instanceof Error ? err.message : "تعذر الاتصال بالخادم");
+        }
       }
     } finally {
       setLoading(false);
@@ -382,6 +426,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
   } as CSSProperties;
 
   const cafeName = payload?.settings?.cafeName || slug;
+  const cafeLogoUrl = payload?.settings?.logoDataUrl ?? payload?.settings?.logoAssetId;
   const features = payload?.features ?? [];
   const allow = (feature: string) => featureCodesAllow(features, feature);
   const products = useMemo(() => allow("menu") ? payload?.products?.filter((product) => product.available !== false) ?? [] : [], [features, payload?.products]);
@@ -452,6 +497,27 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
       ) : null}
 
       <div className="mx-auto max-w-2xl space-y-5 px-4 py-5">
+        <section className="flex flex-col items-center text-center">
+          <CafeLogo name={cafeName} logoUrl={cafeLogoUrl} size="lg" />
+          <h1 className="mt-3 max-w-full truncate text-3xl font-black text-[var(--fast-text)]">
+            {cafeName}
+          </h1>
+          <BrandaMadeByMark className="mt-3" />
+        </section>
+
+        {allow("loyalty") ? (
+          <AppLoyaltyCard
+            customerName={payload.customer?.fullName}
+            code={payload.loyaltyCard?.card?.cardCode}
+            points={payload.loyaltyCard?.card?.availableRewards ?? 0}
+            current={payload.loyaltyCard?.card?.stampsInCycle ?? 0}
+            required={payload.loyaltyCard?.program?.purchasesRequired ?? payload.loyaltyProgram?.purchasesRequired ?? 7}
+            isAuthenticated={Boolean(payload.customer)}
+            loginHref={`/c/${encodeURIComponent(slug)}/login`}
+            onClickHref={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : undefined}
+          />
+        ) : null}
+
         <section className="barndaksa-premium-hero overflow-hidden rounded-[38px] bg-gradient-to-br from-[var(--fast-button)] to-[var(--fast-secondary)] p-5 text-white shadow-[0_26px_80px_rgba(49,25,18,0.22)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -724,21 +790,19 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
         ) : null}
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--fast-border)] bg-[var(--fast-bg)]/88 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-2xl gap-1.5 overflow-x-auto rounded-[30px] bg-white/82 p-2 shadow-[0_-18px_60px_rgba(49,25,18,0.12)]">
-          <TabButton tab="home" active={activeTab} icon={<Home className="h-4 w-4" />} label="الرئيسية" onClick={setActiveTab} />
-          {allow("menu") ? <TabButton tab="menu" active={activeTab} icon={<MenuIcon className="h-4 w-4" />} label="المنيو" onClick={setActiveTab} /> : null}
-          {allow("offers") ? <TabButton tab="offers" active={activeTab} icon={<Gift className="h-4 w-4" />} label="العروض" onClick={setActiveTab} /> : null}
-          {allow("reservations") ? <TabButton tab="reservations" active={activeTab} icon={<CalendarDays className="h-4 w-4" />} label="الحجوزات" onClick={setActiveTab} /> : null}
-          {allow("loyalty") ? <TabButton tab="loyalty" active={activeTab} icon={<WalletCards className="h-4 w-4" />} label="بطاقتي" onClick={setActiveTab} /> : null}
+      <nav className="fixed inset-x-0 bottom-0 z-50">
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--fast-border)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
+          <TabButton tab="home" active={activeTab} icon={<Home className="h-6 w-6" />} label="الرئيسية" onClick={setActiveTab} />
+          {allow("menu") ? <TabButton tab="menu" active={activeTab} icon={<MenuIcon className="h-6 w-6" />} label="المنتجات" onClick={setActiveTab} /> : null}
+          {allow("reservations") ? <TabButton tab="reservations" active={activeTab} icon={<CalendarDays className="h-6 w-6" />} label="الحجوزات" onClick={setActiveTab} /> : null}
+          {allow("loyalty") ? <TabButton tab="loyalty" active={activeTab} icon={<WalletCards className="h-6 w-6" />} label="المكافآت" onClick={setActiveTab} /> : null}
           <Link
             href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : `/c/${encodeURIComponent(slug)}/login`}
-            className="flex min-w-[4.25rem] flex-none flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-black text-[var(--fast-muted)] transition active:scale-95 hover:bg-white/60"
+            className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black text-[#4E4B56] transition active:scale-95"
           >
-            <UserRound className="h-4 w-4" />
-            <span className="truncate">{payload.customer ? "الحساب" : "الدخول"}</span>
+            <UserRound className="h-6 w-6" />
+            <span className="truncate">الحساب</span>
           </Link>
-          {allow("branches") ? <TabButton tab="branches" active={activeTab} icon={<MapPin className="h-4 w-4" />} label="الفروع" onClick={setActiveTab} /> : null}
         </div>
       </nav>
     </main>

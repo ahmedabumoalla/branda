@@ -9,11 +9,17 @@ import { formatSar } from "@/lib/format";
 import { promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import type { CafeBranch } from "@/lib/mock/branches";
 import { ProductReviews } from "@/components/cafe/product-reviews";
+import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-product-detail";
 import { InternalAdPanel } from "@/components/cafe/themes/customer-experience-primitives";
+import {
+  CustomerBottomDock,
+  defaultCustomerDockItems,
+} from "@/components/cafe/themes/customer-mobile-experience";
 import { getCustomerSession } from "@/lib/customer/session";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
@@ -29,7 +35,8 @@ function defaultPickupTime(leadMinutes = 30) {
 
 export function ProductDetailClient({ slug, id }: { slug: string; id: string }) {
   const router = useRouter();
-  const { theme, experience, previewThemeId, path } = useCafePageContext(slug);
+  const { theme, settings, experience, previewThemeId, path } = useCafePageContext(slug);
+  const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, branches, loading, error } = usePublicCafeMenu(slug);
   const [quantity, setQuantity] = useState(1);
   const [branchName, setBranchName] = useState("");
@@ -99,7 +106,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   if (loading) {
     return (
-      <CafeLayout slug={slug}>
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
           <p className="font-black">جاري التحميل...</p>
         </div>
@@ -109,7 +116,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   if (error) {
     return (
-      <CafeLayout slug={slug}>
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
           <p className="font-black">{error}</p>
         </div>
@@ -119,7 +126,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   if (!product) {
     return (
-      <CafeLayout slug={slug}>
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
           <h1 className="text-3xl font-black">المنتج غير موجود</h1>
           <Link href={path()} className={`mt-5 inline-block px-6 py-3 font-black ${theme.button}`}>
@@ -143,7 +150,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
 
   const imageSlot = (
-    <div className="relative flex h-[min(520px,58vh)] items-center justify-center overflow-hidden rounded-[30px] bg-[var(--ci-page-bg,var(--barndaksa-cream-base))]">
+    <div className="relative flex h-[min(460px,54vh)] items-center justify-center overflow-hidden rounded-[24px] bg-[var(--ci-page-bg,var(--barndaksa-cream-base))]">
       <div className="absolute inset-x-4 top-4 z-20 flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
           {categoryLabel}
@@ -157,7 +164,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       <ProductMediaDisplay
         product={product}
         alt={product.name}
-        className="relative z-10 max-h-full w-full object-contain p-8 sm:p-10"
+        className="relative z-10 max-h-full w-full object-contain p-6 sm:p-8"
         fallback={<Coffee className="relative z-10 h-16 w-16 opacity-40" />}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/20 to-transparent" />
@@ -166,10 +173,10 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   const infoSlot = (
     <>
-      <div className="mb-5 grid gap-3 rounded-[28px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="mb-5 grid gap-3 rounded-[24px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
           <p className={`text-xs font-black ${theme.muted}`}>ملخص الطلب</p>
-          <p className="mt-1 text-3xl font-black">{formatSar(total)}</p>
+          <p className="mt-1 text-2xl font-black">{formatSar(total)}</p>
         </div>
         <span className={`rounded-2xl px-4 py-3 text-center text-sm font-black ${theme.badge}`}>
           {pickupAvailable ? "استلام متاح" : "غير متاح للاستلام"}
@@ -177,11 +184,11 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       </div>
       <p className={`text-sm font-black ${theme.accent}`}>{categoryLabel}</p>
       <h1
-        className={`mt-2 font-black ${experience.detail === "kiosk" ? "text-4xl" : "text-3xl sm:text-4xl"} ${experience.headingTracking}`}
+        className={`mt-2 font-black leading-tight ${experience.detail === "kiosk" ? "text-3xl" : "text-2xl sm:text-3xl"} ${experience.headingTracking}`}
       >
         {product.name}
       </h1>
-      <p className={`mt-4 leading-9 ${theme.muted}`}>{product.description}</p>
+      <p className={`mt-3 text-sm font-bold leading-7 ${theme.muted}`}>{product.description}</p>
 
       {metaBadges.length ? (
         <div className="mt-5 flex flex-wrap gap-2">
@@ -317,7 +324,63 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   );
 
   return (
-    <CafeLayout slug={slug}>
+    <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+      <div className="barndaksa-cinematic-stage space-y-5">
+        <header className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <CafeLogo
+              name={settings.cafeName || slug}
+              logoUrl={logoUrl}
+              size="sm"
+              className="rounded-[18px]"
+            />
+            <div className="min-w-0">
+              <h1 className={`truncate text-xl font-black leading-tight ${experience.headingTracking}`}>
+                {settings.cafeName || slug}
+              </h1>
+            </div>
+          </div>
+          <Link
+            href={getCafePath(slug, "products/popular", previewThemeId)}
+            aria-label="رجوع للمنيو"
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
+          >
+            <ArrowRight className={`h-5 w-5 ${theme.accent}`} />
+          </Link>
+        </header>
+
+        <ThemedProductDetailLayout
+          experience={experience}
+          imageSlot={imageSlot}
+          infoSlot={infoSlot}
+          reviewsSlot={
+            <div className="rounded-[28px] bg-white/60 p-1 shadow-[0_14px_45px_rgba(23,20,18,0.06)] ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
+              <ProductReviews
+                slug={slug}
+                productId={product.id}
+                productName={product.name}
+                experience={experience}
+                previewThemeId={previewThemeId}
+              />
+            </div>
+          }
+        />
+      </div>
+      <CustomerBottomDock
+        {...defaultCustomerDockItems({
+          slug,
+          previewThemeId,
+          active: "menu",
+          hasProducts: true,
+          hasOrders: true,
+          hasRewards: true,
+        })}
+      />
+    </CafeLayout>
+  );
+
+  return (
+    <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
       <Link
         href={getCafePath(slug, "products/popular", previewThemeId)}
         className={`mb-6 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-black ${theme.buttonOutline}`}
@@ -334,21 +397,31 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           <div className="space-y-6">
             <ProductReviews
               slug={slug}
-              productId={product.id}
-              productName={product.name}
+              productId={product!.id}
+              productName={product!.name}
               experience={experience}
               previewThemeId={previewThemeId}
             />
             <InternalAdPanel
               compact
-              title={product.promo ? promoBadgeText(product.promo) : "استكشف منتجات مشابهة"}
+              title={product!.promo ? promoBadgeText(product!.promo!) : "استكشف منتجات مشابهة"}
               eyebrow="إعلان داخل تفاصيل المنتج"
               description="مساحة ذكية تقود العميل إلى قائمة المنتجات أو العروض بعد قراءة تفاصيل المنتج والمراجعات."
-              href={getCafePath(slug, product.promo ? "products/offers" : "products/popular", previewThemeId)}
-              cta={product.promo ? "كل العروض" : "كل المنتجات"}
+              href={getCafePath(slug, product!.promo ? "products/offers" : "products/popular", previewThemeId)}
+              cta={product!.promo ? "كل العروض" : "كل المنتجات"}
             />
           </div>
         }
+      />
+      <CustomerBottomDock
+        {...defaultCustomerDockItems({
+          slug,
+          previewThemeId,
+          active: "menu",
+          hasProducts: true,
+          hasOrders: true,
+          hasRewards: true,
+        })}
       />
     </CafeLayout>
   );

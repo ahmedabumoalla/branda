@@ -6,6 +6,8 @@ import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-re
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getCustomerSessionAction } from "@/app/actions/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
 type CustomerAccountErrorCode = "invalid_session" | "load_failed";
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
@@ -34,12 +36,25 @@ async function safeResult<T>(task: Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+async function attachCustomerAvatarUrl(customer: BarndaksaCustomerSession) {
+  if (!customer.avatarAssetId) return customer;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from("customer-avatars")
+    .createSignedUrl(customer.avatarAssetId, 10 * 60);
+
+  if (error || !data?.signedUrl) return customer;
+  return { ...customer, avatarUrl: data.signedUrl };
+}
+
 export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
   const normalizedSlug = cafeSlug.trim().toLowerCase();
   const snapshot = emptySnapshot(normalizedSlug);
 
   try {
-    const customer = await getCustomerSessionAction(normalizedSlug);
+    const customerSession = await getCustomerSessionAction(normalizedSlug);
+    const customer = customerSession ? await attachCustomerAvatarUrl(customerSession) : null;
     if (!customer) {
       return {
         success: false as const,

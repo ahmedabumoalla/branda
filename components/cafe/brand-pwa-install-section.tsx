@@ -81,8 +81,30 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   if (installed) return null;
 
+  if (compact) {
+    return (
+      <section dir="rtl" className="w-full">
+        <div className="mx-auto flex w-full max-w-[320px] flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={install}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98]"
+          >
+            <Download className="h-5 w-5" />
+            حمل التطبيق لتجربة أكثر جمالية
+          </button>
+          {message ? (
+            <p className="max-w-xs text-center text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
+              {message}
+            </p>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section dir="rtl" className={compact ? "w-full" : "mx-auto w-full max-w-6xl px-4 py-8"}>
+    <section dir="rtl" className="mx-auto w-full max-w-6xl px-4 py-8">
       <div className="barndaksa-premium-card overflow-hidden rounded-[32px] bg-gradient-to-br from-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] to-[var(--ci-secondary-bg,#17100d)] p-6 text-[var(--ci-button-fg,#FCF8F3)] shadow-xl">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>

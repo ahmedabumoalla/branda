@@ -18,15 +18,53 @@ const emptyLoyaltySettings = {
   redemptionRules: [],
 };
 
+const emptyMenu = { products: [], categories: [] };
+
+async function safeMenu(slug: string) {
+  try {
+    return await getPublicMenuBySlug(slug);
+  } catch (error) {
+    console.warn("[public/menu/menu-fallback]", error);
+    return emptyMenu;
+  }
+}
+
+async function safeOffers(slug: string) {
+  try {
+    return await getPublicOffersBySlug(slug);
+  } catch (error) {
+    console.warn("[public/menu/offers-fallback]", error);
+    return [];
+  }
+}
+
+async function safeBranches(slug: string) {
+  try {
+    return await getPublicBranchesBySlug(slug);
+  } catch (error) {
+    console.warn("[public/menu/branches-fallback]", error);
+    return [];
+  }
+}
+
+async function safeReservationServices(slug: string) {
+  try {
+    return await getPublicReservationServicesBySlug(slug);
+  } catch (error) {
+    console.warn("[public/menu/reservations-fallback]", error);
+    return [];
+  }
+}
+
 async function loadPublicMenu(slug: string) {
   const settings = await getPublicCafeSettings(slug);
   if (!settings) return null;
 
   const [menu, offers, branches, reservationServices] = await Promise.all([
-    getPublicMenuBySlug(slug),
-    getPublicOffersBySlug(slug),
-    getPublicBranchesBySlug(slug),
-    getPublicReservationServicesBySlug(slug),
+    safeMenu(slug),
+    safeOffers(slug),
+    safeBranches(slug),
+    safeReservationServices(slug),
   ]);
 
   return {
@@ -49,11 +87,15 @@ export async function GET(_request: Request, { params }: Params) {
   const normalizedSlug = slug.trim().toLowerCase();
 
   try {
-    const payload = await cachedServerValue(
+    let payload = await cachedServerValue(
       `public-menu:${normalizedSlug}`,
       PUBLIC_MENU_CACHE_SECONDS * 1000,
       () => loadPublicMenu(normalizedSlug),
     );
+
+    if (!payload) {
+      payload = await loadPublicMenu(normalizedSlug);
+    }
 
     if (!payload) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });

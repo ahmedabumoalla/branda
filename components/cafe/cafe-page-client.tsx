@@ -20,12 +20,17 @@ import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-sect
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import {
-  CustomerQuickDock,
   InternalAdPanel,
   PremiumSectionHeader,
   SocialProofPanel,
-  buildCustomerQuickDockItems,
 } from "@/components/cafe/themes/customer-experience-primitives";
+import {
+  AppLoyaltyCard,
+  CustomerBottomDock,
+  MobileBrandMasthead,
+  ProductPosterCard,
+  defaultCustomerDockItems,
+} from "@/components/cafe/themes/customer-mobile-experience";
 import { useCafeThemePage } from "@/lib/cafe/use-cafe-theme-page";
 import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals";
 import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
@@ -45,6 +50,9 @@ import {
 } from "@/lib/mock/menu";
 import { trackCafeVisitAction } from "@/app/actions/platform-upgrade";
 import { sendBranchProximityEmailAction } from "@/app/actions/customer";
+import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
+
+type HomeLoyaltySnapshot = Awaited<ReturnType<typeof fetchCustomerAccountSnapshotAction>>["data"]["loyalty"];
 
 function productScore(product: MenuProduct, index: number) {
   return Number(product.price || 0) + (100 - index);
@@ -304,6 +312,7 @@ function CafePageInner({ slug }: { slug: string }) {
   const hasFeature = (feature: string) => hydrated && featureCodesAllow(features, feature);
   const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
+  const [homeLoyalty, setHomeLoyalty] = useState<HomeLoyaltySnapshot | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
     branchName: string;
     message: string;
@@ -313,6 +322,27 @@ function CafePageInner({ slug }: { slug: string }) {
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
+
+  useEffect(() => {
+    if (!customer || !hasFeature("loyalty")) {
+      setHomeLoyalty(null);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchCustomerAccountSnapshotAction(slug)
+      .then((result) => {
+        if (cancelled) return;
+        setHomeLoyalty(result.success ? result.data.loyalty : null);
+      })
+      .catch(() => {
+        if (!cancelled) setHomeLoyalty(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, customer?.id, features, hydrated]);
 
   useEffect(() => {
     if (!hasFeature("branches") || !branches.length || !navigator.geolocation) return;
@@ -470,7 +500,8 @@ function CafePageInner({ slug }: { slug: string }) {
       identity.backgroundScope === "home-only");
   const overlayOpacity = OVERLAY_OPACITY[identity.overlayStrength];
 
-  const loadError = cafeLoadError || menuError;
+  const loadError = cafeLoadError;
+  const menuFallbackActive = Boolean(menuError);
   const internalAdHref = activeOffers[0]?.linkedProductId
     ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId)
     : hasFeature("offers")
@@ -478,6 +509,12 @@ function CafePageInner({ slug }: { slug: string }) {
       : hasFeature("menu")
         ? getCafePath(slug, "products/popular", previewThemeId)
         : getCafePath(slug, "", previewThemeId);
+
+  useEffect(() => {
+    if (menuFallbackActive && process.env.NODE_ENV === "development") {
+      console.warn("[cafe-page] using empty menu fallback", { slug });
+    }
+  }, [menuFallbackActive, slug]);
 
   if (loading || !hydrated) {
     return (
@@ -548,279 +585,74 @@ function CafePageInner({ slug }: { slug: string }) {
         </div>
       ) : null}
 
-      <header className="sticky top-0 z-40 border-b border-[var(--ci-border)] bg-[var(--ci-page-bg)] backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link href={getCafePath(slug, "", previewThemeId)} className="flex min-w-0 items-center gap-3">
-            <CafeLogo name={cafeName} logoUrl={appliedLogoUrl} size="sm" />
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-black">{cafeName}</h1>
-              <p className="text-xs font-bold text-[var(--ci-muted-fg)]">الفرع الإلكتروني</p>
-            </div>
-          </Link>
 
-          <nav className="hidden items-center gap-2 lg:flex">
-            <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-              أحدث المنتجات
-            </Link>
-            {hasFeature("offers") ? (
-              <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-                العروض
-              </Link>
-            ) : null}
-            <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-              المنتجات
-            </Link>
-            {hasFeature("branches") ? (
-              <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] hover:bg-[var(--ci-surface-bg)]">
-                الفروع
-              </Link>
-            ) : null}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            {hasFeature("loyalty") ? (
-              <Link
-                href={getCafePath(slug, "account", previewThemeId)}
-                className="hidden items-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)] sm:inline-flex"
-                title="بطاقة الولاء الخاصة بالعلامة التجارية"
-              >
-                <WalletCards className="h-4 w-4" />
-                بطاقة الولاء
-              </Link>
-            ) : null}
-            <Link
-              href={customer ? getCafePath(slug, "account", previewThemeId) : getCafePath(slug, "login", previewThemeId)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-4 py-2 text-sm font-black text-[var(--ci-button-fg)]"
-            >
-              <UserRound className="h-4 w-4" />
-              {customer ? "حسابي" : "دخول"}
-            </Link>
-          </div>
-        </div>
-      </header>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="barndaksa-premium-hero overflow-hidden rounded-[40px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-4 shadow-[0_30px_96px_rgba(49,25,18,0.16)] sm:p-6 lg:p-8">
-          <div className="grid gap-6 lg:grid-cols-[1.04fr_0.96fr] lg:items-stretch">
-            <div className="flex min-w-0 flex-col justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-[var(--ci-page-bg)] px-3 py-1 text-xs font-black text-[var(--ci-primary-bg)]">
-                    <Star className="h-3.5 w-3.5 text-[var(--ci-accent-bg)]" />
-                    تجربة جوال مصممة كواجهة تطبيق
-                  </span>
-                  {activeBranches.length ? (
-                    <span className="inline-flex rounded-full bg-[var(--ci-page-bg)] px-3 py-1 text-xs font-black text-[var(--ci-muted-fg)]">
-                      {activeBranches.length} فرع
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-6 text-sm font-black text-[var(--ci-accent-bg)]">مرحبًا بك في</p>
-                <h2 className="mt-2 text-balance text-4xl font-black leading-[1.05] text-[var(--ci-page-fg)] sm:text-5xl lg:text-6xl">
-                  {cafeName}
-                </h2>
-                <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[var(--ci-muted-fg)] sm:text-base sm:leading-8">
-                  {settings.description || "استعرض المنتجات والعروض والحجوزات وبطاقة الولاء من شاشة واحدة مصممة للجوال أولًا."}
-                </p>
-              </div>
+        <MobileBrandMasthead
+          cafeName={cafeName}
+          logoUrl={appliedLogoUrl}
+          subtitle={settings.description}
+        />
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {hasFeature("menu") ? (
-                  <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="barndaksa-cta-motion inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-5 py-4 font-black text-[var(--ci-button-fg)] shadow-lg transition active:scale-[0.985]">
-                    <ShoppingBag className="h-5 w-5" />
-                    المنتجات
-                  </Link>
-                ) : null}
-                {hasFeature("offers") ? (
-                  <Link href={getCafePath(slug, "products/offers", previewThemeId)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] bg-white/25 px-5 py-4 font-black text-[var(--ci-primary-bg)] backdrop-blur transition active:scale-[0.985]">
-                    <BadgePercent className="h-5 w-5" />
-                    العروض
-                  </Link>
-                ) : null}
-                {hasFeature("reservations") ? (
-                  <Link href={getCafePath(slug, "reserve", previewThemeId)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[var(--ci-primary-bg)] bg-white/25 px-5 py-4 font-black text-[var(--ci-primary-bg)] backdrop-blur transition active:scale-[0.985]">
-                    <CalendarDays className="h-5 w-5" />
-                    الحجوزات
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-[1fr_0.72fr] lg:grid-cols-1">
-              <div className="barndaksa-premium-card overflow-hidden rounded-[34px] border border-[var(--ci-border)] bg-[var(--ci-page-bg)] shadow-[0_20px_70px_rgba(49,25,18,0.12)]">
-                <div className="relative h-72 sm:h-80 lg:h-[420px]">
-                  {heroProduct ? (
-                    <>
-                      <ProductMediaDisplay
-                        product={heroProduct}
-                        alt={heroProduct.name}
-                        className="h-full w-full object-cover"
-                        fallback={
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ci-primary-bg)] to-[var(--ci-secondary-bg)]">
-                            <Coffee className="h-16 w-16 text-white/80" />
-                          </div>
-                        }
-                      />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/68 to-transparent p-5 text-white">
-                        <p className="text-xs font-black text-[var(--ci-accent-bg)]">مختار من المنيو</p>
-                        <h3 className="mt-1 line-clamp-1 text-2xl font-black">{heroProduct.name}</h3>
-                        <p className="mt-1 line-clamp-2 text-xs font-bold text-white/78">
-                          {heroProduct.description || "منتج بارز من العلامة"}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ci-primary-bg)] to-[var(--ci-secondary-bg)]">
-                      <Coffee className="h-16 w-16 text-white/80" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 rounded-[28px] bg-[var(--ci-page-bg)]/76 p-2 backdrop-blur sm:grid-cols-1 lg:grid-cols-3">
-                {[
-                  [ShoppingBag, "منتجات", availableProducts.length],
-                  [Gift, "عروض", activeOffers.length],
-                  [Heart, "تجربة", "سريعة"],
-                ].map(([Icon, label, value]) => {
-                  const I = Icon as ElementType;
-                  return (
-                    <div key={label as string} className="rounded-2xl bg-[var(--ci-surface-bg)] px-3 py-3 text-center shadow-sm">
-                      <I className="mx-auto h-4 w-4 text-[var(--ci-accent-bg)]" />
-                      <p className="mt-1 text-[11px] font-black text-[var(--ci-muted-fg)]">{label as string}</p>
-                      <p className="font-black text-[var(--ci-page-fg)]">{value as string | number}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        {hasFeature("loyalty") ? (
+          <div className="mx-auto mt-6 max-w-xl lg:max-w-3xl">
+            <AppLoyaltyCard
+              customerName={homeLoyalty?.card.customerName || customer?.fullName}
+              code={homeLoyalty?.card.cardCode || customer?.id?.slice(0, 8).toUpperCase()}
+              points={homeLoyalty?.card.availableRewards ?? 0}
+              current={homeLoyalty?.card.stampsInCycle ?? 0}
+              required={homeLoyalty?.program.purchasesRequired ?? 7}
+              isAuthenticated={Boolean(customer)}
+              loginHref={getCafePath(slug, "login", previewThemeId)}
+              onClickHref={customer ? getCafePath(slug, "account", previewThemeId) : undefined}
+            />
           </div>
+        ) : null}
 
-          <ActiveOfferSlider
-            slug={slug}
-            offers={activeOffers}
-            previewThemeId={previewThemeId}
-          />
-        </section>
-
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.72fr]">
-          <InternalAdPanel
-            title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "مساحة عروض العلامة"}
-            eyebrow="إعلان رئيسي داخل التجربة"
-            description={activeOffers[0]?.description || "مساحة ذكية بعد الـ Hero تقود العميل مباشرة إلى العروض أو المنتجات بدون مغادرة تجربة الفرع."}
-            href={internalAdHref}
-            cta={activeOffers[0]?.ctaText || "مشاهدة العرض"}
-            metric={activeOffers.length ? `${activeOffers.length} عروض` : `${availableProducts.length} منتج`}
-          />
+        <div className="mx-auto mt-5 flex max-w-xl justify-center lg:max-w-3xl">
           <BrandPwaInstallSection slug={slug} cafeName={cafeName} compact />
         </div>
 
-        {hasFeature("menu") ? (
-          <>
-        <section className="mt-8">
-          <PremiumSectionHeader
-            eyebrow="الأقسام"
-            title="تصفح حسب التصنيف"
-            description="تصنيفات أفقية سهلة اللمس على الجوال، وتبقى مرتبطة بنفس صفحات المنتجات الحالية."
-            action={
-              <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="text-sm font-black text-[var(--ci-primary-bg)]">
-              كل المنتجات
-              </Link>
-            }
-          />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {categoryLinks.length ? (
-              categoryLinks.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`${getCafePath(slug, "products/popular", previewThemeId)}?category=${encodeURIComponent(category.name)}`}
-                  className="shrink-0 rounded-2xl border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] px-5 py-3 text-sm font-black text-[var(--ci-primary-bg)] shadow-sm"
-                >
-                  {category.name}
-                </Link>
-              ))
-            ) : (
-              <span className="rounded-2xl border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] px-5 py-3 text-sm font-black text-[var(--ci-muted-fg)]">
-                لا توجد تصنيفات
-              </span>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <PremiumSectionHeader
-            eyebrow="المنتجات"
-            title="منتجات مختارة"
-            description="بطاقات واسعة تكشف الصورة والسعر والمكونات بدون نقل العميل بعيدًا عن مسار الشراء."
-            action={
-              <Link href={getCafePath(slug, "products/latest", previewThemeId)} className="inline-flex items-center gap-2 rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-4 py-2 text-sm font-black text-[var(--ci-primary-bg)]">
-              أحدث المنتجات
-              <ArrowLeft className="h-4 w-4" />
-              </Link>
-            }
-          />
-
-          <div className="grid gap-5 xl:grid-cols-2">
-            {featuredProducts.length ? (
-              featuredProducts.map((product) => (
-                <ProductShowcaseCard
-                  key={product.id}
-                  slug={slug}
-                  product={product}
-                  previewThemeId={previewThemeId}
-                />
-              ))
-            ) : (
-              <div className="rounded-[28px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-8 text-center font-black text-[var(--ci-muted-fg)] xl:col-span-2">
-                لا توجد منتجات متاحة حاليًا
-              </div>
-            )}
-          </div>
-        </section>
-          </>
+        {hasFeature("menu") && featuredProducts.length ? (
+          <section className="mt-8">
+            <PremiumSectionHeader
+              eyebrow="أحدث المنتجات"
+              title="اختيارات تتحرك بروح التطبيق"
+            />
+            <div className="flex snap-x gap-4 overflow-x-auto pb-3">
+              {featuredProducts.concat(featuredProducts).slice(0, 10).map((product, index) => (
+                <div key={`${product.id}-${index}`} className="snap-start">
+                  <ProductPosterCard
+                    product={product}
+                    href={getCafePath(slug, `product/${product.id}`, previewThemeId)}
+                    compact
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : hasFeature("menu") ? (
+          <section className="mt-8 rounded-[28px] border border-dashed border-[var(--ci-border)] bg-[var(--ci-surface-bg)]/75 p-6 text-center">
+            <p className="text-sm font-black text-[var(--ci-muted-fg)]">
+              {menuFallbackActive ? "تعذر تحميل المنيو الآن، وستظهر المنتجات عند توفرها." : "لا توجد منتجات متاحة حاليا."}
+            </p>
+          </section>
         ) : null}
 
+
+
         <div className="mt-8">
-          <SocialProofPanel
-            cafeName={cafeName}
-            productCount={availableProducts.length}
-            offerCount={activeOffers.length}
-            branchCount={activeBranches.length}
-          />
-        </div>
-
-        <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <CampaignBanner slug={slug} previewThemeId={previewThemeId} />
-
-          {hasFeature("branches") ? (
-            <section className="rounded-[32px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] p-6 shadow-sm">
-              <MapPin className="h-8 w-8 text-[#D9A33F]" />
-              <h2 className="mt-3 text-2xl font-black">الفروع ومواعيد الاستلام</h2>
-              <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg)]">
-                {activeBranches.length
-                  ? `لديك ${activeBranches.length} فرع متاح للزيارة والاستلام`
-                  : "لم يتم إضافة فروع متاحة بعد"}
-              </p>
-              <Link href={getCafePath(slug, "products/branches", previewThemeId)} className="mt-5 inline-flex rounded-2xl bg-[var(--ci-button-bg)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg)]">
-                عرض الفروع
-              </Link>
-            </section>
-          ) : null}
         </div>
       </div>
-      <CustomerQuickDock
-        items={buildCustomerQuickDockItems({
+      <CustomerBottomDock
+        {...defaultCustomerDockItems({
           slug,
-          homeHref: getCafePath(slug, "", previewThemeId),
-          productsHref: getCafePath(slug, "products/popular", previewThemeId),
-          reserveHref: getCafePath(slug, "reserve", previewThemeId),
-          loyaltyHref: getCafePath(slug, "account", previewThemeId),
-          accountHref: getCafePath(slug, "account", previewThemeId),
-          loginHref: getCafePath(slug, "login", previewThemeId),
+          previewThemeId,
           isCustomer: Boolean(customer),
           hasProducts: hasFeature("menu"),
-          hasReservations: hasFeature("reservations"),
-          hasLoyalty: hasFeature("loyalty"),
+          hasOrders: hasFeature("reservations") || hasFeature("menu"),
+          hasRewards: hasFeature("loyalty"),
           active: "home",
         })}
       />

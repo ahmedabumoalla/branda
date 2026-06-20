@@ -5,13 +5,12 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
+import {
+  CustomerBottomDock,
+  defaultCustomerDockItems,
+} from "@/components/cafe/themes/customer-mobile-experience";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
-import {
-  ImagePipelineError,
-  optimizeImageForStorage,
-  type OptimizedImageResult,
-} from "@/lib/cafe/image-asset-pipeline";
 import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
@@ -72,13 +71,218 @@ type CustomerAccountSnapshot = Awaited<
   ReturnType<typeof fetchCustomerAccountSnapshotAction>
 >;
 
+type AccountNotification = {
+  id: string;
+  title: string;
+  body: string;
+};
+
 const accountSnapshotCache = new Map<
   string,
   Promise<CustomerAccountSnapshot> | CustomerAccountSnapshot
 >();
 const ACCOUNT_SNAPSHOT_TIMEOUT_MS = 5_000;
+const AVATAR_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const AVATAR_MAX_DIMENSION = 1024;
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
   "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
+
+type CompressedAvatar = {
+  file: File;
+  mimeType: "image/webp" | "image/jpeg";
+};
+
+function formatFileSize(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function isHeicLike(file: File) {
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return type.includes("heic") || type.includes("heif") || name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+function scaleAvatarDimensions(width: number, height: number) {
+  const ratio = Math.min(AVATAR_MAX_DIMENSION / width, AVATAR_MAX_DIMENSION / height, 1);
+  return {
+    width: Math.max(1, Math.round(width * ratio)),
+    height: Math.max(1, Math.round(height * ratio)),
+  };
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+  });
+}
+
+async function loadAvatarImage(file: File) {
+  if (typeof createImageBitmap !== "undefined") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+        draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+          ctx.drawImage(bitmap, 0, 0, width, height);
+        },
+        cleanup: () => bitmap.close(),
+      };
+    } catch {
+      // Fall back to HTMLImageElement for browsers without bitmap support for this file.
+    }
+  }
+
+  return new Promise<{
+    width: number;
+    height: number;
+    draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void;
+    cleanup: () => void;
+  }>((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        draw: (ctx, width, height) => ctx.drawImage(image, 0, 0, width, height),
+        cleanup: () => {},
+      });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(isHeicLike(file) ? "unsupported_heic" : "decode_failed"));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function compressAvatarForUpload(file: File): Promise<CompressedAvatar> {
+  if (isHeicLike(file)) {
+    throw new Error("unsupported_heic");
+  }
+
+  const source = await loadAvatarImage(file);
+  const dimensions = scaleAvatarDimensions(source.width, source.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = dimensions.width;
+  canvas.height = dimensions.height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    source.cleanup();
+    throw new Error("decode_failed");
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  source.draw(ctx, dimensions.width, dimensions.height);
+  source.cleanup();
+
+  const candidates: Array<{ mimeType: "image/webp" | "image/jpeg"; quality: number; fileName: string }> = [
+    { mimeType: "image/webp", quality: 0.84, fileName: "avatar.webp" },
+    { mimeType: "image/webp", quality: 0.8, fileName: "avatar.webp" },
+    { mimeType: "image/jpeg", quality: 0.84, fileName: "avatar.jpg" },
+    { mimeType: "image/jpeg", quality: 0.8, fileName: "avatar.jpg" },
+  ];
+
+  let best: CompressedAvatar | null = null;
+
+  for (const candidate of candidates) {
+    const blob = await canvasToBlob(canvas, candidate.mimeType, candidate.quality);
+    if (!blob) continue;
+
+    const compressed = new File([blob], candidate.fileName, { type: candidate.mimeType });
+    if (!best || compressed.size < best.file.size) {
+      best = { file: compressed, mimeType: candidate.mimeType };
+    }
+    if (compressed.size <= AVATAR_MAX_UPLOAD_BYTES) {
+      return { file: compressed, mimeType: candidate.mimeType };
+    }
+  }
+
+  if (!best) {
+    throw new Error("decode_failed");
+  }
+
+  return best;
+}
+
+function isAcceptedAccountStatus(status?: string) {
+  const value = String(status ?? "").toLowerCase();
+  return (
+    value === "accepted" ||
+    value.includes("accepted") ||
+    value.includes("مقبول") ||
+    value.includes("قبول") ||
+    value.includes("تمت الموافقة")
+  );
+}
+
+function buildAccountNotifications({
+  orders,
+  reservations,
+  loyaltyView,
+  experienceRewards,
+}: {
+  orders: CustomerOrder[];
+  reservations: Reservation[];
+  loyaltyView: CustomerLoyaltyCardView | null;
+  experienceRewards: CustomerExperienceReward[];
+}) {
+  const notifications: AccountNotification[] = [];
+
+  orders.filter((order) => isAcceptedAccountStatus(order.status)).forEach((order) => {
+    const statusMarker =
+      (order as CustomerOrder & { statusUpdatedAt?: string; updatedAt?: string }).statusUpdatedAt ??
+      (order as CustomerOrder & { updatedAt?: string }).updatedAt ??
+      order.status;
+    notifications.push({
+      id: `order:${order.id}:${statusMarker}`,
+      title: "تمت الموافقة على طلب",
+      body: `${order.items.join("، ") || "طلب منتجات"} - ${formatSar(order.total)}`,
+    });
+  });
+
+  reservations.filter((reservation) => isAcceptedAccountStatus(reservation.status)).forEach((reservation) => {
+    const statusMarker =
+      (reservation as Reservation & { statusUpdatedAt?: string; updatedAt?: string }).statusUpdatedAt ??
+      (reservation as Reservation & { updatedAt?: string }).updatedAt ??
+      reservation.status;
+    notifications.push({
+      id: `reservation:${reservation.id}:${statusMarker}`,
+      title: "تمت الموافقة على حجز",
+      body: `${reservation.type || "حجز"} - ${reservation.date || "-"} ${reservation.time || ""}`.trim(),
+    });
+  });
+
+  experienceRewards
+    .filter((reward) => reward.status === "approved" && reward.rewardCode)
+    .forEach((reward) => {
+      const statusMarker =
+        (reward as CustomerExperienceReward & { statusUpdatedAt?: string; updatedAt?: string }).statusUpdatedAt ??
+        (reward as CustomerExperienceReward & { updatedAt?: string }).updatedAt ??
+        reward.status;
+      notifications.push({
+        id: `experience-reward:${reward.id}:${statusMarker}`,
+        title: "مكافأة توثيق جاهزة",
+        body: reward.items.map((item) => `${item.productName} × ${item.quantity}`).join("، ") || "مكافأة جاهزة للصرف",
+      });
+    });
+
+  const availableRewards = Number(loyaltyView?.card.availableRewards ?? 0);
+  if (availableRewards > 0) {
+    notifications.push({
+      id: `loyalty-reward:${loyaltyView?.card.cardCode ?? "card"}:${availableRewards}`,
+      title: "مكافأة بطاقة الولاء جاهزة",
+      body: `${availableRewards} مكافأة متاحة`,
+    });
+  }
+
+  return notifications;
+}
 
 function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -675,12 +879,17 @@ function AccountPageInner() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [editAvatarPreview, setEditAvatarPreview] = useState("");
-  const [pendingAvatar, setPendingAvatar] =
-    useState<OptimizedImageResult | null>(null);
   const [avatarAssetId, setAvatarAssetId] = useState<string | undefined>();
   const [optimizingAvatar, setOptimizingAvatar] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [loyaltyView, setLoyaltyView] =
     useState<CustomerLoyaltyCardView | null>(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(true);
@@ -764,9 +973,10 @@ function AccountPageInner() {
       setCustomer(session);
       setAccountFeatures(snapshot.features);
       setEditName(session.fullName);
-      setEditEmail(session.email || "");
+      setEditPhone(session.phone || "");
       setEditAvatarPreview(session.avatarUrl || "");
       setAvatarAssetId(session.avatarAssetId);
+      setAvatarMessage(null);
 
       setOrders(
         snapshot.orders.map((o: any) => ({
@@ -896,6 +1106,71 @@ function AccountPageInner() {
 
   const loyaltyEnabled = featureCodesAllow(accountFeatures, "loyalty");
   const experienceRewardsEnabled = featureCodesAllow(accountFeatures, "experience_reviews");
+  const notificationStorageKey = customer
+    ? `barndaksa_read_notifications_${slug}_${customer.id}`
+    : "";
+  const accountNotifications = useMemo(
+    () =>
+      buildAccountNotifications({
+        orders: myOrders,
+        reservations: myReservations,
+        loyaltyView,
+        experienceRewards,
+      }),
+    [experienceRewards, loyaltyView, myOrders, myReservations],
+  );
+  const unreadNotificationCount = useMemo(
+    () => accountNotifications.filter((item) => !readNotificationIds.has(item.id)).length,
+    [accountNotifications, readNotificationIds],
+  );
+  const dockProps = useMemo(() => {
+    const dock = defaultCustomerDockItems({
+      slug,
+      previewThemeId,
+      active: "account",
+      hasProducts: true,
+      hasOrders: true,
+      hasRewards: loyaltyEnabled,
+      isCustomer: true,
+    });
+
+    return {
+      ...dock,
+      items: dock.items.map((item) =>
+        item.key === "account" ? { ...item, badge: unreadNotificationCount } : item,
+      ),
+    };
+  }, [loyaltyEnabled, previewThemeId, slug, unreadNotificationCount]);
+
+  useEffect(() => {
+    if (!notificationStorageKey) {
+      setReadNotificationIds(new Set());
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(notificationStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setReadNotificationIds(new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []));
+    } catch {
+      setReadNotificationIds(new Set());
+    }
+  }, [notificationStorageKey]);
+
+  function markCurrentNotificationsRead() {
+    if (!notificationStorageKey || !accountNotifications.length) return;
+
+    setReadNotificationIds((previous) => {
+      const next = new Set(previous);
+      accountNotifications.forEach((item) => next.add(item.id));
+      try {
+        window.localStorage.setItem(notificationStorageKey, JSON.stringify(Array.from(next)));
+      } catch {
+        // Keep the in-memory reset even if localStorage is unavailable.
+      }
+      return next;
+    });
+  }
 
   function openLoyaltyCard() {
     if (loyaltyView?.card.cardCode) {
@@ -914,20 +1189,76 @@ function AccountPageInner() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (!customer) return;
 
     setOptimizingAvatar(true);
+    setAvatarMessage({
+      type: "success",
+      text: `حجم الصورة الأصلي ${formatFileSize(file.size)}، جاري تجهيزها للرفع.`,
+    });
+    const previousPreview = customer.avatarUrl || "";
+
     try {
-      const optimized = await optimizeImageForStorage(file, "customer-avatar");
-      if (editAvatarPreview.startsWith("blob:"))
+      const compressed = await compressAvatarForUpload(file);
+
+      if (compressed.file.size > AVATAR_MAX_UPLOAD_BYTES) {
+        setEditAvatarPreview(previousPreview);
+        setAvatarMessage({
+          type: "error",
+          text: "تعذر ضغط الصورة بما يكفي، جرّب صورة أصغر أو بصيغة JPG/PNG.",
+        });
+        return;
+      }
+
+      if (editAvatarPreview.startsWith("blob:")) {
         revokeObjectUrl(editAvatarPreview);
-      setEditAvatarPreview(URL.createObjectURL(optimized.blob));
-      setPendingAvatar(optimized);
-    } catch (err) {
-      alert(
-        err instanceof ImagePipelineError
-          ? err.message
-          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+      }
+
+      const previewUrl = URL.createObjectURL(compressed.file);
+      setEditAvatarPreview(previewUrl);
+
+      const formData = new FormData();
+      formData.set("file", compressed.file);
+
+      const result = await uploadCustomerAvatarAction(slug, formData);
+      if (!result.success) {
+        revokeObjectUrl(previewUrl);
+        setEditAvatarPreview(previousPreview);
+        setAvatarMessage({
+          type: "error",
+          text: result.error || "تعذر رفع الصورة. تأكد من أن الملف صورة وبحجم أقل من 5MB.",
+        });
+        return;
+      }
+
+      if (result.avatarUrl) {
+        revokeObjectUrl(previewUrl);
+        setEditAvatarPreview(result.avatarUrl);
+      }
+
+      setAvatarAssetId(result.avatarStoragePath);
+      setCustomer((current) =>
+        current
+          ? {
+              ...current,
+              avatarUrl: result.avatarUrl ?? current.avatarUrl,
+              avatarAssetId: result.avatarStoragePath,
+            }
+          : current,
       );
+      setAvatarMessage({
+        type: "success",
+        text: `تم تحديث صورة الحساب بعد ضغطها إلى ${formatFileSize(compressed.file.size)}.`,
+      });
+    } catch (err) {
+      setEditAvatarPreview(previousPreview);
+      setAvatarMessage({
+        type: "error",
+        text:
+          err instanceof Error && err.message === "unsupported_heic"
+            ? "هذه الصيغة غير مدعومة حاليًا، فضلاً ارفع JPG أو PNG."
+            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+      });
     } finally {
       setOptimizingAvatar(false);
     }
@@ -938,24 +1269,19 @@ function AccountPageInner() {
       alert("اكتب الاسم");
       return;
     }
+    if (!editPhone.trim()) {
+      alert("اكتب رقم الجوال");
+      return;
+    }
     if (!customer) return;
 
     try {
-      let session = customer;
-
-      if (pendingAvatar) {
-        const formData = new FormData();
-        formData.append("file", pendingAvatar.blob, "avatar.webp");
-        session = await uploadCustomerAvatarAction(slug, formData);
-      }
-
-      session = await updateCustomerProfileAction(slug, {
+      const session = await updateCustomerProfileAction(slug, {
         fullName: editName.trim(),
-        email: editEmail.trim() || undefined,
+        phone: editPhone.trim(),
       });
 
       setCustomer(session);
-      setPendingAvatar(null);
       setSettingsOpen(false);
       alert("تم حفظ بيانات الحساب");
     } catch {
@@ -1137,29 +1463,28 @@ function AccountPageInner() {
         onLogout={logout}
         onOpenSettings={() => {
           setEditName(customer.fullName);
-          setEditEmail(customer.email || "");
-          setEditAvatarPreview("");
+          setEditPhone(customer.phone || "");
+          setEditAvatarPreview(customer.avatarUrl || "");
           setAvatarAssetId(customer.avatarAssetId);
-          setPendingAvatar(null);
+          setAvatarMessage(null);
           setSettingsOpen(true);
         }}
         settingsOpen={settingsOpen}
         onCloseSettings={() => setSettingsOpen(false)}
         editName={editName}
-        editEmail={editEmail}
+        editPhone={editPhone}
         editAvatarPreview={editAvatarPreview}
         avatarAssetId={avatarAssetId}
+        avatarBusy={optimizingAvatar}
+        avatarMessage={avatarMessage}
+        avatarFileRef={fileRef}
+        onPickAvatar={(event) => void pickAvatar(event)}
         onEditName={setEditName}
-        onEditEmail={setEditEmail}
-        onPickAvatar={pickAvatar}
-        onClearAvatar={() => {
-          if (editAvatarPreview.startsWith("blob:"))
-            revokeObjectUrl(editAvatarPreview);
-          setEditAvatarPreview("");
-          setPendingAvatar(null);
-          setAvatarAssetId(undefined);
-        }}
+        onEditPhone={setEditPhone}
         onSaveSettings={() => void saveSettings()}
+        notifications={accountNotifications}
+        unreadNotificationCount={unreadNotificationCount}
+        onOpenNotifications={markCurrentNotificationsRead}
         loyaltySlot={
           loyaltyEnabled ? (
             <CustomerCoffeeLoyaltyCard
@@ -1190,6 +1515,8 @@ function AccountPageInner() {
             />
           ) : undefined
         }
+        loyaltyView={loyaltyView}
+        experienceRewards={experienceRewards}
         passwordSlot={
           <form onSubmit={changePassword} className="space-y-4">
             <div className="flex items-center gap-2">
@@ -1261,7 +1588,9 @@ function AccountPageInner() {
             </button>
           </form>
         }
-        fileRef={fileRef}
+      />
+      <CustomerBottomDock
+        {...dockProps}
       />
     </>
   );
@@ -1274,6 +1603,9 @@ export default function CafeCustomerAccountPage() {
       slug={params.slug}
       className="!px-0 !py-0"
       maxWidth="max-w-[100%]"
+      hideQuickDock
+      hideHeader
+      hideFooter
     >
       <Suspense
         fallback={<p className="p-8 text-center font-black">جاري التحميل...</p>}

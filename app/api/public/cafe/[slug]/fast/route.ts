@@ -24,11 +24,67 @@ const emptyLoyaltySettings = {
   redemptionRules: [],
 };
 
+const emptyMenu = { products: [], categories: [] };
+
 async function safeFeatures(slug: string) {
   try {
     return await getPublicCafeFeatureCodesBySlug(slug);
   } catch (error) {
     console.warn("[public/cafe/fast/features]", error);
+    return [];
+  }
+}
+
+async function safeThemeId(slug: string) {
+  try {
+    return await getPublicThemeId(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/theme]", error);
+    return null;
+  }
+}
+
+async function safeCustomIdentity(slug: string) {
+  try {
+    return await getPublicCustomIdentity(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/identity]", error);
+    return null;
+  }
+}
+
+async function safeMenu(slug: string) {
+  try {
+    return await getPublicMenuBySlug(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/menu-fallback]", error);
+    return emptyMenu;
+  }
+}
+
+async function safeOffers(slug: string) {
+  try {
+    return await getPublicOffersBySlug(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/offers-fallback]", error);
+    return [];
+  }
+}
+
+async function safeBranches(slug: string) {
+  try {
+    return await getPublicBranchesBySlug(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/branches-fallback]", error);
+    return [];
+  }
+}
+
+async function safeReservationServices(slug: string) {
+  try {
+    return await getPublicReservationServicesBySlug(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/reservations-fallback]", error);
     return [];
   }
 }
@@ -41,18 +97,18 @@ function canUseFeature(features: string[], feature: string) {
 async function loadPublicCafeFastLayer(slug: string) {
   const [settings, themeId, customIdentity, features] = await Promise.all([
     getPublicCafeSettings(slug),
-    getPublicThemeId(slug),
-    getPublicCustomIdentity(slug),
+    safeThemeId(slug),
+    safeCustomIdentity(slug),
     safeFeatures(slug),
   ]);
 
   if (!settings) return null;
 
   const [menu, offers, branches, reservationServices] = await Promise.all([
-    canUseFeature(features, "menu") ? getPublicMenuBySlug(slug) : Promise.resolve({ products: [], categories: [] }),
-    canUseFeature(features, "offers") ? getPublicOffersBySlug(slug) : Promise.resolve([]),
-    canUseFeature(features, "branches") ? getPublicBranchesBySlug(slug) : Promise.resolve([]),
-    canUseFeature(features, "reservations") ? getPublicReservationServicesBySlug(slug) : Promise.resolve([]),
+    canUseFeature(features, "menu") ? safeMenu(slug) : Promise.resolve(emptyMenu),
+    canUseFeature(features, "offers") ? safeOffers(slug) : Promise.resolve([]),
+    canUseFeature(features, "branches") ? safeBranches(slug) : Promise.resolve([]),
+    canUseFeature(features, "reservations") ? safeReservationServices(slug) : Promise.resolve([]),
   ]);
 
   const rawMenuPayload = {
@@ -65,9 +121,14 @@ async function loadPublicCafeFastLayer(slug: string) {
     reservationServices,
   };
 
-  const menuPayload = features.length
-    ? filterPublicCafePayloadByFeatures(rawMenuPayload, features)
-    : rawMenuPayload;
+  let menuPayload = rawMenuPayload;
+  if (features.length) {
+    try {
+      menuPayload = filterPublicCafePayloadByFeatures(rawMenuPayload, features);
+    } catch (error) {
+      console.warn("[public/cafe/fast/filter-fallback]", error);
+    }
+  }
 
   const now = Date.now();
   return {
@@ -90,13 +151,17 @@ export async function GET(request: Request, { params }: Params) {
   const fresh = new URL(request.url).searchParams.get("fresh") === "1";
 
   try {
-    const payload = fresh
+    let payload = fresh
       ? await loadPublicCafeFastLayer(normalizedSlug)
       : await cachedServerValue(
           `public-cafe-fast:${normalizedSlug}`,
           FAST_LAYER_TTL_SECONDS * 1000,
           () => loadPublicCafeFastLayer(normalizedSlug),
         );
+
+    if (!payload && !fresh) {
+      payload = await loadPublicCafeFastLayer(normalizedSlug);
+    }
 
     if (!payload) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });

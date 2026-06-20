@@ -17,11 +17,29 @@ async function safePublicFeatures(slug: string) {
   }
 }
 
+async function safeThemeId(slug: string) {
+  try {
+    return await getPublicThemeId(slug);
+  } catch (error) {
+    console.warn("[public/cafe/theme]", error);
+    return null;
+  }
+}
+
+async function safeCustomIdentity(slug: string) {
+  try {
+    return await getPublicCustomIdentity(slug);
+  } catch (error) {
+    console.warn("[public/cafe/identity]", error);
+    return null;
+  }
+}
+
 async function loadPublicCafe(slug: string) {
   const [settings, themeId, customIdentity, features] = await Promise.all([
     getPublicCafeSettings(slug),
-    getPublicThemeId(slug),
-    getPublicCustomIdentity(slug),
+    safeThemeId(slug),
+    safeCustomIdentity(slug),
     safePublicFeatures(slug),
   ]);
 
@@ -38,11 +56,15 @@ export async function GET(_request: Request, { params }: Params) {
   const normalizedSlug = slug.trim().toLowerCase();
 
   try {
-    const payload = await cachedServerValue(
+    let payload = await cachedServerValue(
       `public-cafe:${normalizedSlug}`,
       PUBLIC_CAFE_CACHE_SECONDS * 1000,
       () => loadPublicCafe(normalizedSlug),
     );
+
+    if (!payload) {
+      payload = await loadPublicCafe(normalizedSlug);
+    }
 
     if (!payload) {
       return NextResponse.json({ error: "Cafe not found" }, { status: 404 });

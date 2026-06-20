@@ -78,20 +78,20 @@ export function ProductReviews({
   }
 
   return (
-    <section className={`mt-10 p-6 ${theme.card}`}>
-      <h2 className={`flex items-center gap-2 text-2xl font-black ${experience.headingTracking}`}>
-        <MessageSquareText className="h-6 w-6" />
+    <section className={`p-4 sm:p-5 ${theme.card}`}>
+      <h2 className={`flex items-center gap-2 text-xl font-black ${experience.headingTracking}`}>
+        <MessageSquareText className="h-5 w-5" />
         الأسئلة والتقييمات
       </h2>
 
       {loading ? (
         <p className={`mt-6 ${theme.muted}`}>جاري التحميل...</p>
       ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_360px]">
           <div className="space-y-3">
             {productReviews.length ? (
               productReviews.map((review) => (
-                <article key={review.id} className={`rounded-2xl p-4 ${theme.buttonOutline}`}>
+                <article key={review.id} className={`rounded-2xl p-4 text-sm ${theme.buttonOutline}`}>
                   <div className="flex justify-between gap-3">
                     <h3 className="font-black">{review.customerName}</h3>
                     <div className={`flex gap-1 ${theme.accent}`}>
@@ -116,7 +116,7 @@ export function ProductReviews({
             )}
           </div>
 
-          <aside className={`rounded-2xl p-4 ${theme.buttonOutline}`}>
+          <aside className={`rounded-2xl p-4 text-sm ${theme.buttonOutline}`}>
             <p className="font-black">أضف تقييمك أو سؤالك</p>
 
             <select

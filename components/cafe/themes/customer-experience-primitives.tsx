@@ -38,9 +38,9 @@ export function CustomerQuickDock({
   return (
     <nav
       aria-label="تنقل سريع"
-      className={`fixed inset-x-3 bottom-3 z-50 md:hidden ${className}`}
+      className={`fixed inset-x-0 bottom-0 z-50 md:hidden ${className}`}
     >
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[30px] border border-[var(--ci-border,var(--barndaksa-border-sand))] bg-[var(--ci-surface-bg,#fff)]/90 p-1.5 shadow-[0_-18px_60px_rgba(49,25,18,0.14)] backdrop-blur-xl">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
         {visibleItems.slice(0, 5).map((item) => {
           const Icon = item.icon;
           return (
@@ -48,13 +48,13 @@ export function CustomerQuickDock({
               key={`${item.label}-${item.href}`}
               href={item.href}
               aria-current={item.active ? "page" : undefined}
-              className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[22px] px-1.5 py-2 text-[10px] font-black transition active:scale-95 ${
+              className={`flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black transition active:scale-95 ${
                 item.active
-                  ? "bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] text-[var(--ci-button-fg,#fff)] shadow-[0_14px_30px_rgba(49,25,18,0.18)]"
-                  : "text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
+                  ? "bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]"
+                  : "text-[#4E4B56]"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-6 w-6" />
               <span className="max-w-full truncate">{item.label}</span>
             </Link>
           );
@@ -118,14 +118,14 @@ export function buildCustomerQuickDockItems({
     },
     {
       href: loyaltyHref ?? resolvedAccountHref,
-      label: "الولاء",
+      label: "المكافآت",
       icon: WalletCards,
       active: active === "loyalty",
       enabled: hasLoyalty,
     },
     {
       href: isCustomer ? resolvedAccountHref : loginHref ?? `/c/${encodedSlug}/login`,
-      label: isCustomer ? "الحساب" : "الدخول",
+      label: "الحساب",
       icon: UserRound,
       active: active === "account",
     },

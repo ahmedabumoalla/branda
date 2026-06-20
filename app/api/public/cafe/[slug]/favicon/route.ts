@@ -59,7 +59,10 @@ export async function GET(request: Request, { params }: Props) {
     `public-cafe-favicon:${normalizedSlug}:${version}:${size}:${purpose}`,
     ICON_TTL_SECONDS * 1000,
     () => loadCafeIconUrl(normalizedSlug),
-  );
+  ).catch((error) => {
+    console.warn("[public/cafe/favicon/fallback]", error);
+    return null;
+  });
   const brandIconUrl =
     iconUrl && iconUrl !== DEFAULT_BARNDAKSA_CAFE_LOGO ? iconUrl : null;
 

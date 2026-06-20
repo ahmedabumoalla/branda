@@ -21,7 +21,7 @@ type Props = {
 };
 
 export function getCollectionGridClass(_collection?: unknown) {
-  return "grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3";
+  return "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4";
 }
 
 export function ThemedProductCard({ product, experience, href }: Props) {

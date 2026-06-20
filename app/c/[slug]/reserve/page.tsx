@@ -1,27 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   CalendarDays,
+  CheckCircle2,
   Clock,
   ExternalLink,
   ImageIcon,
   MapPin,
+  Search,
+  SlidersHorizontal,
+  TicketCheck,
   Users,
   Video,
+  X,
 } from "lucide-react";
 import { createReservationFlowAction } from "@/app/actions/reservations";
+import { fetchCustomerReservationsAction } from "@/app/actions/customer";
+import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
-import { ThemedInput } from "@/components/cafe/themes/themed-auth-panel";
 import {
-  ThemedReservationPanel,
-  ThemedTextarea,
-} from "@/components/cafe/themes/themed-reservation-panel";
+  CustomerBottomDock,
+  defaultCustomerDockItems,
+} from "@/components/cafe/themes/customer-mobile-experience";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import { LocalAssetImage } from "@/components/ui/local-asset-image";
 import { useLocalAssetUrl } from "@/lib/cafe/use-local-asset-url";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import {
   getCustomerSession,
   type BarndaksaCustomerSession,
@@ -32,6 +42,41 @@ import type { ReservationService } from "@/lib/data/platform-upgrade";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
 import { formatSar } from "@/lib/format";
 
+type ReservationRecord = {
+  id: string;
+  customerId?: string;
+  customerName: string;
+  phone: string;
+  type: string;
+  serviceId?: string;
+  serviceName?: string;
+  reservationPrice?: number;
+  guests: number;
+  date: string;
+  time: string;
+  durationMinutes?: number;
+  branchName?: string;
+  notes?: string;
+  status: string;
+  reservationCode?: string;
+  reservationCodeUsedAt?: string;
+  cashierConfirmedAt?: string;
+  rejectionReason?: string;
+  cafeMessage?: string;
+  createdAt: string;
+};
+
+type ReservationStatusFilter = "all" | "accepted" | "pending" | "rejected" | "past";
+type ViewMode = "services" | "my-reservations";
+
+const STATUS_FILTERS: Array<{ value: ReservationStatusFilter; label: string }> = [
+  { value: "accepted", label: "حجوزات مؤكدة" },
+  { value: "all", label: "حجوزات" },
+  { value: "pending", label: "حجوزات تحت المراجعة" },
+  { value: "rejected", label: "حجوزات مرفوضة" },
+  { value: "past", label: "حجوزات سابقة" },
+];
+
 function durationLabel(service: ReservationService) {
   if (!service.durationValue || !service.durationUnit) return "مدة مرنة";
   const unit =
@@ -41,6 +86,13 @@ function durationLabel(service: ReservationService) {
         ? "ساعة"
         : "دقيقة";
   return `${service.durationValue} ${unit}`;
+}
+
+function reservationDurationLabel(minutes?: number) {
+  if (!minutes) return "";
+  if (minutes >= 1440) return `${Math.round(minutes / 1440)} يوم`;
+  if (minutes >= 60) return `${Math.round(minutes / 60)} ساعة`;
+  return `${minutes} دقيقة`;
 }
 
 function normalizeBranch(branch: CafeBranch): CafeBranch {
@@ -81,6 +133,31 @@ function branchGoogleMapsUrl(branch: CafeBranch, cafeName: string, slug: string)
   );
 }
 
+function isAcceptedStatus(status: string) {
+  return status === "مقبول" || status.includes("مقبول") || status.includes("مؤكد");
+}
+
+function isRejectedStatus(status: string) {
+  return status === "مرفوض" || status.includes("مرفوض");
+}
+
+function isPendingStatus(status: string) {
+  return status.includes("انتظار") || status.includes("مراجعة") || status.includes("تعديل");
+}
+
+function isPastReservation(reservation: ReservationRecord) {
+  const value = `${reservation.date || ""}T${reservation.time || "00:00"}`;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) && date.getTime() < Date.now();
+}
+
+function statusLabel(status: string) {
+  if (isAcceptedStatus(status)) return "مقبول";
+  if (isRejectedStatus(status)) return "مرفوض";
+  if (isPendingStatus(status)) return "تحت المراجعة";
+  return status || "تحت المراجعة";
+}
+
 function ReservationServiceMedia({
   service,
   theme,
@@ -115,11 +192,60 @@ function ReservationServiceMedia({
       publicBucket="marketing-assets"
       className="h-full w-full object-cover"
       fallback={
-        <div className="flex h-full w-full items-center justify-center">
-          <ImageIcon className={`h-12 w-12 ${theme.accent}`} />
+        <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#FCF8F3)]">
+          <ImageIcon className={`h-10 w-10 ${theme.accent}`} />
         </div>
       }
     />
+  );
+}
+
+function ModalShell({
+  title,
+  open,
+  onClose,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <>
+      <button
+        type="button"
+        aria-label="إغلاق"
+        className="fixed inset-0 z-[9998] cursor-default bg-black/45 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="fixed inset-x-0 bottom-0 z-[9999] max-h-[82vh] overflow-y-auto rounded-t-[28px] border border-[var(--ci-border,#E7D7C6)] bg-white p-4 text-[var(--ci-page-fg,#311912)] shadow-[0_-24px_90px_rgba(23,20,18,0.32)] sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px]"
+      >
+        {children}
+      </section>
+    </>,
+    document.body,
   );
 }
 
@@ -129,10 +255,13 @@ function ReserveForm() {
   const slug = params.slug;
   const { settings, experience, path, previewThemeId, theme } =
     useCafePageContext(slug);
+  const logoUrl = useResolvedCafeLogoUrl(settings);
   const { branches, reservationServices, loading, error } =
     usePublicCafeMenu(slug);
 
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
+  const [customerReservations, setCustomerReservations] = useState<ReservationRecord[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("services");
   const [branchId, setBranchId] = useState("");
   const [reservationBranches, setReservationBranches] = useState<CafeBranch[] | null>(null);
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -141,10 +270,41 @@ function ReserveForm() {
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [reservationSearch, setReservationSearch] = useState("");
+  const [serviceBranchFilter, setServiceBranchFilter] = useState("all");
+  const [serviceTypeFilter, setServiceTypeFilter] = useState("all");
+  const [serviceStatusFilter, setServiceStatusFilter] = useState<ReservationStatusFilter>("all");
+  const [myFromDate, setMyFromDate] = useState("");
+  const [myToDate, setMyToDate] = useState("");
+  const [myBranchFilter, setMyBranchFilter] = useState("all");
+  const [myTypeFilter, setMyTypeFilter] = useState("all");
+  const [myStatusFilter, setMyStatusFilter] = useState<ReservationStatusFilter>("accepted");
+  const [serviceFilterOpen, setServiceFilterOpen] = useState(false);
+  const [myFilterOpen, setMyFilterOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
+
+  useEffect(() => {
+    if (!customer) {
+      setCustomerReservations([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchCustomerReservationsAction(slug)
+      .then((items) => {
+        if (!cancelled) setCustomerReservations(items as ReservationRecord[]);
+      })
+      .catch(() => {
+        if (!cancelled) setCustomerReservations([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer, slug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,79 +375,67 @@ function ReserveForm() {
     slug,
   );
 
-  const serviceCards = useMemo(
+  const confirmedReservations = useMemo(
+    () => customerReservations.filter((reservation) => isAcceptedStatus(reservation.status)),
+    [customerReservations],
+  );
+
+  const serviceTypes = useMemo(
+    () => reservationServices.map((service) => service.name),
+    [reservationServices],
+  );
+
+  const filteredServices = useMemo(
     () =>
-      reservationServices.map((service) => {
-        const selected = service.id === selectedServiceId;
-        return (
-          <button
-            key={service.id}
-            type="button"
-            onClick={() => {
-              setSelectedServiceId(service.id);
-              setGuests((current) =>
-                current &&
-                service.maxGuests &&
-                Number(current) > service.maxGuests
-                  ? String(service.maxGuests)
-                  : current,
-              );
-            }}
-            aria-pressed={selected}
-            data-selected={selected ? "true" : "false"}
-            className={`barndaksa-premium-card barndaksa-reservation-motion overflow-hidden rounded-[28px] border text-right transition ${selected ? "scale-[1.01] border-[#D9A33F] shadow-xl" : "border-black/10 hover:-translate-y-0.5"} ${theme.card}`}
-          >
-            <div className="relative h-44 overflow-hidden bg-black/10">
-              <ReservationServiceMedia service={service} theme={theme} />
-              {service.videoAssetId ? (
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-xs font-black text-white">
-                  <Video className="h-3.5 w-3.5" /> فيديو
-                </span>
-              ) : null}
-            </div>
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-xl font-black">{service.name}</h3>
-                <span
-                  className={`rounded-xl px-3 py-1 text-sm font-black ${theme.button}`}
-                >
-                  {service.isFree ? "بدون رسوم" : formatSar(service.price ?? 0)}
-                </span>
-              </div>
-              <p
-                className={`mt-2 line-clamp-2 text-sm font-bold ${theme.muted}`}
-              >
-                {service.description || "حجز مخصص من العلامة التجارية"}
-              </p>
-              <div className="mt-4 grid gap-2 text-sm font-black sm:grid-cols-2">
-                <span
-                  className={`inline-flex items-center gap-2 ${theme.muted}`}
-                >
-                  <Users className="h-4 w-4" /> حتى{" "}
-                  {service.maxGuests ?? "غير محدد"}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-2 ${theme.muted}`}
-                >
-                  <Clock className="h-4 w-4" /> {durationLabel(service)}
-                </span>
-              </div>
-              {service.amenities.length ? (
-                <p className={`mt-3 text-xs font-bold ${theme.muted}`}>
-                  الخدمات: {service.amenities.slice(0, 4).join("، ")}
-                </p>
-              ) : null}
-              {service.includedProducts.length ? (
-                <p className={`mt-1 text-xs font-bold ${theme.muted}`}>
-                  منتجات مجانية:{" "}
-                  {service.includedProducts.slice(0, 3).join("، ")}
-                </p>
-              ) : null}
-            </div>
-          </button>
-        );
+      reservationServices.filter((service) => {
+        const query = serviceSearch.trim();
+        const matchesQuery =
+          !query ||
+          service.name.includes(query) ||
+          service.description.includes(query) ||
+          service.amenities.some((item) => item.includes(query)) ||
+          service.includedProducts.some((item) => item.includes(query));
+        const matchesType = serviceTypeFilter === "all" || service.name === serviceTypeFilter;
+        return matchesQuery && matchesType;
       }),
-    [reservationServices, selectedServiceId, theme],
+    [reservationServices, serviceSearch, serviceTypeFilter],
+  );
+
+  const filteredCustomerReservations = useMemo(
+    () =>
+      customerReservations.filter((reservation) => {
+        const query = reservationSearch.trim();
+        const branch = reservation.branchName || "الفرع الرئيسي";
+        const type = reservation.serviceName || reservation.type;
+        const matchesQuery =
+          !query ||
+          type.includes(query) ||
+          branch.includes(query) ||
+          reservation.status.includes(query) ||
+          (reservation.notes ?? "").includes(query);
+        const matchesBranch = myBranchFilter === "all" || branch === myBranchFilter;
+        const matchesType = myTypeFilter === "all" || type === myTypeFilter;
+        const matchesFrom = !myFromDate || reservation.date >= myFromDate;
+        const matchesTo = !myToDate || reservation.date <= myToDate;
+        const matchesStatus =
+          myStatusFilter === "all" ||
+          (myStatusFilter === "accepted" && isAcceptedStatus(reservation.status)) ||
+          (myStatusFilter === "pending" && isPendingStatus(reservation.status)) ||
+          (myStatusFilter === "rejected" && isRejectedStatus(reservation.status)) ||
+          (myStatusFilter === "past" && isPastReservation(reservation));
+        return matchesQuery && matchesBranch && matchesType && matchesFrom && matchesTo && matchesStatus;
+      }),
+    [customerReservations, myBranchFilter, myFromDate, myStatusFilter, myToDate, myTypeFilter, reservationSearch],
+  );
+
+  const reservationBranchesForFilters = useMemo(
+    () => Array.from(new Set(customerReservations.map((item) => item.branchName || "الفرع الرئيسي"))),
+    [customerReservations],
+  );
+
+  const reservationTypesForFilters = useMemo(
+    () => Array.from(new Set(customerReservations.map((item) => item.serviceName || item.type))),
+    [customerReservations],
   );
 
   async function submitReservation() {
@@ -341,6 +489,16 @@ function ReserveForm() {
     }
   }
 
+  function openBooking(service: ReservationService) {
+    setSelectedServiceId(service.id);
+    setGuests((current) =>
+      current && service.maxGuests && Number(current) > service.maxGuests
+        ? String(service.maxGuests)
+        : current,
+    );
+    setBookingOpen(true);
+  }
+
   if (loading)
     return (
       <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
@@ -354,138 +512,555 @@ function ReserveForm() {
       </div>
     );
 
-  const loginPrompt = !customer ? (
-    <div className={`mt-4 rounded-2xl p-5 ${theme.card}`}>
-      <p className="font-black">سجّل دخولك لإتمام الحجز.</p>
-      <Link
-        href={`${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`}
-        className={`mt-4 inline-flex rounded-2xl px-6 py-3 font-black ${theme.button}`}
-      >
-        تسجيل الدخول
-      </Link>
-    </div>
-  ) : null;
+  const Header = (
+    <header className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <CafeLogo
+          name={settings.cafeName || slug}
+          logoUrl={logoUrl}
+          size="sm"
+          className="rounded-[18px]"
+        />
+        <div className="min-w-0">
+          <p className={`truncate text-xs font-black ${theme.muted}`}>{settings.cafeName || slug}</p>
+          <h1 className={`truncate text-2xl font-black leading-tight ${experience.headingTracking}`}>
+            {viewMode === "services" ? "الحجوزات" : "حجوزاتك المؤكدة"}
+          </h1>
+        </div>
+      </div>
+      {viewMode === "services" ? (
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setServiceFilterOpen(true)}
+            aria-label="فلترة الحجوزات"
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
+          >
+            <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("my-reservations")}
+            className={`relative flex h-12 items-center justify-center rounded-2xl border border-black/5 px-3 text-xs font-black shadow-sm transition active:scale-95 ${theme.card}`}
+          >
+            حجوزاتك المؤكدة
+            {confirmedReservations.length ? (
+              <span className="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
+            ) : null}
+          </button>
+        </div>
+      ) : (
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMode("services")}
+            aria-label="رجوع إلى صفحة الحجز"
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
+          >
+            <ArrowRight className={`h-5 w-5 ${theme.accent}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setMyFilterOpen(true)}
+            aria-label="فلترة حجوزاتك"
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
+          >
+            <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
+          </button>
+        </div>
+      )}
+    </header>
+  );
 
-  const branchSelector = activeStoredBranches.length > 1 ? (
-    <div className="space-y-3">
-      <select
-        className={`w-full font-bold ${experience.formInput}`}
-        value={branchId}
-        onChange={(e) => setBranchId(e.target.value)}
+  return (
+    <>
+      <div className="space-y-5">
+        {Header}
+
+        {viewMode === "services" ? (
+          <>
+            <label className="relative block">
+              <Search className={`absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${theme.muted}`} />
+              <input
+                value={serviceSearch}
+                onChange={(event) => setServiceSearch(event.target.value)}
+                placeholder="ابحث عن نوع حجز..."
+                className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-11 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
+              />
+            </label>
+
+            {!reservationServices.length ? (
+              <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
+                <CalendarDays className={`mx-auto h-8 w-8 ${theme.accent}`} />
+                <p className="mt-3 font-black">لا توجد أنواع حجوزات متاحة حاليًا</p>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredServices.map((service) => {
+                const branch = selectedBranch;
+                const mapUrl = branchGoogleMapsUrl(branch, settings.cafeName || slug, slug);
+                return (
+                  <article
+                    key={service.id}
+                    className="overflow-hidden rounded-[22px] bg-white shadow-[0_14px_40px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/80"
+                  >
+                    <div className="relative aspect-[1.45/1] overflow-hidden bg-[var(--ci-page-bg,#FCF8F3)]">
+                      <ReservationServiceMedia service={service} theme={theme} />
+                      {service.videoAssetId ? (
+                        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-xs font-black text-white">
+                          <Video className="h-3.5 w-3.5" /> فيديو
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="space-y-3 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <h2 className="line-clamp-2 text-lg font-black leading-snug">{service.name}</h2>
+                        <span className={`shrink-0 rounded-xl px-2.5 py-1 text-xs font-black ${theme.badge}`}>
+                          {service.isFree ? "مجاني" : formatSar(service.price ?? 0)}
+                        </span>
+                      </div>
+                      {service.description ? (
+                        <p className={`line-clamp-3 text-xs font-bold leading-6 ${theme.muted}`}>
+                          {service.description}
+                        </p>
+                      ) : null}
+                      <div className={`grid gap-2 text-xs font-black ${theme.muted}`}>
+                        <span className="inline-flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {branch.name}
+                        </span>
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-2 ${theme.accent}`}
+                        >
+                          لوكيشن الفرع <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                        {service.maxGuests ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            حتى {service.maxGuests} أشخاص
+                          </span>
+                        ) : null}
+                        <span className="inline-flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          {durationLabel(service)}
+                        </span>
+                      </div>
+                      {service.amenities.length ? (
+                        <p className={`text-xs font-bold leading-6 ${theme.muted}`}>
+                          المزايا: {service.amenities.slice(0, 3).join("، ")}
+                        </p>
+                      ) : null}
+                      {service.includedProducts.length ? (
+                        <p className={`text-xs font-bold leading-6 ${theme.muted}`}>
+                          منتجات مجانية: {service.includedProducts.slice(0, 3).join("، ")}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openBooking(service)}
+                        className={`h-12 w-full rounded-2xl text-sm font-black ${theme.button}`}
+                      >
+                        احجز الآن
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {reservationServices.length > 0 && !filteredServices.length ? (
+              <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
+                <p className="font-black">لا توجد حجوزات مطابقة للبحث أو الفلاتر الحالية</p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <label className="relative block">
+              <Search className={`absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 ${theme.muted}`} />
+              <input
+                value={reservationSearch}
+                onChange={(event) => setReservationSearch(event.target.value)}
+                placeholder="ابحث في حجوزاتك..."
+                className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-11 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
+              />
+            </label>
+
+            <div className="-mx-4 overflow-x-auto px-4 pb-1">
+              <div className="flex w-max gap-2">
+                {STATUS_FILTERS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setMyStatusFilter(item.value)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${
+                      myStatusFilter === item.value ? theme.button : theme.buttonOutline
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {filteredCustomerReservations.map((reservation) => (
+                <CustomerReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  branchMapUrl={branchGoogleMapsUrl(
+                    activeBranches.find((branch) => branch.name === reservation.branchName) ?? selectedBranch,
+                    settings.cafeName || slug,
+                    slug,
+                  )}
+                  theme={theme}
+                />
+              ))}
+            </div>
+
+            {!filteredCustomerReservations.length ? (
+              <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
+                <TicketCheck className={`mx-auto h-8 w-8 ${theme.accent}`} />
+                <p className="mt-3 font-black">لا توجد حجوزات مطابقة حاليًا</p>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+
+      <ModalShell
+        title="فلترة الحجوزات"
+        open={serviceFilterOpen}
+        onClose={() => setServiceFilterOpen(false)}
       >
-        {activeBranches.map((b) => (
-          <option key={b.id} value={b.id}>
-            {b.name}
+        <FilterHeader title="فلترة الحجوزات" onClose={() => setServiceFilterOpen(false)} theme={theme} />
+        <div className="space-y-4">
+          <SelectField
+            label="الفرع"
+            value={serviceBranchFilter}
+            onChange={(value) => {
+              setServiceBranchFilter(value);
+              if (value !== "all") setBranchId(value);
+            }}
+            options={[
+              { value: "all", label: "كل الفروع" },
+              ...activeBranches.map((branch) => ({ value: branch.id, label: branch.name })),
+            ]}
+          />
+          <SelectField
+            label="نوع الحجز"
+            value={serviceTypeFilter}
+            onChange={setServiceTypeFilter}
+            options={[
+              { value: "all", label: "كل أنواع الحجز" },
+              ...serviceTypes.map((name) => ({ value: name, label: name })),
+            ]}
+          />
+          <SelectField
+            label="حالة الحجز"
+            value={serviceStatusFilter}
+            onChange={(value) => setServiceStatusFilter(value as ReservationStatusFilter)}
+            options={[
+              { value: "all", label: "كل الحالات" },
+              { value: "accepted", label: "مقبول" },
+              { value: "rejected", label: "مرفوض" },
+              { value: "pending", label: "تحت المراجعة" },
+              { value: "past", label: "سابق" },
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => setServiceFilterOpen(false)}
+            className={`h-12 w-full rounded-2xl text-sm font-black ${theme.button}`}
+          >
+            تطبيق
+          </button>
+        </div>
+      </ModalShell>
+
+      <ModalShell
+        title="فلترة حجوزاتك"
+        open={myFilterOpen}
+        onClose={() => setMyFilterOpen(false)}
+      >
+        <FilterHeader title="فلترة حجوزاتك" onClose={() => setMyFilterOpen(false)} theme={theme} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InputField label="من تاريخ" type="date" value={myFromDate} onChange={setMyFromDate} />
+          <InputField label="إلى تاريخ" type="date" value={myToDate} onChange={setMyToDate} />
+          <SelectField
+            label="الفرع"
+            value={myBranchFilter}
+            onChange={setMyBranchFilter}
+            options={[
+              { value: "all", label: "كل الفروع" },
+              ...reservationBranchesForFilters.map((name) => ({ value: name, label: name })),
+            ]}
+          />
+          <SelectField
+            label="نوع الحجز"
+            value={myTypeFilter}
+            onChange={setMyTypeFilter}
+            options={[
+              { value: "all", label: "كل الأنواع" },
+              ...reservationTypesForFilters.map((name) => ({ value: name, label: name })),
+            ]}
+          />
+          <SelectField
+            label="الحالة"
+            value={myStatusFilter}
+            onChange={(value) => setMyStatusFilter(value as ReservationStatusFilter)}
+            options={[
+              { value: "all", label: "كل الحالات" },
+              { value: "accepted", label: "مقبول" },
+              { value: "rejected", label: "مرفوض" },
+              { value: "pending", label: "تحت المراجعة" },
+              { value: "past", label: "سابق" },
+            ]}
+          />
+          <button
+            type="button"
+            onClick={() => setMyFilterOpen(false)}
+            className={`h-12 rounded-2xl text-sm font-black sm:self-end ${theme.button}`}
+          >
+            تطبيق
+          </button>
+        </div>
+      </ModalShell>
+
+      <ModalShell
+        title="احجز الآن"
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+      >
+        <FilterHeader title="احجز الآن" onClose={() => setBookingOpen(false)} theme={theme} />
+        {!customer ? (
+          <div className={`rounded-2xl p-5 ${theme.card}`}>
+            <p className="font-black">سجّل دخولك لإتمام الحجز.</p>
+            <Link
+              href={`${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`}
+              className={`mt-4 inline-flex rounded-2xl px-6 py-3 font-black ${theme.button}`}
+            >
+              تسجيل الدخول
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            <SelectField
+              label="اختيار الفرع"
+              value={branchId}
+              onChange={setBranchId}
+              options={activeBranches.map((branch) => ({ value: branch.id, label: branch.name }))}
+            />
+            {usingFallbackBranch ? (
+              <p className={`rounded-2xl border border-dashed p-3 text-xs font-bold ${theme.muted}`}>
+                سيتم اعتماد الفرع الرئيسي تلقائيًا لهذا الحجز.
+              </p>
+            ) : null}
+            <InputField
+              label={`عدد الأشخاص${selectedService?.maxGuests ? ` - أقصى حد ${selectedService.maxGuests}` : ""}`}
+              type="number"
+              value={guests}
+              onChange={setGuests}
+              min={1}
+              max={maxGuests}
+            />
+            <InputField label="التاريخ" type="date" value={date} onChange={setDate} />
+            <InputField label="الوقت" type="time" value={time} onChange={setTime} />
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">الملاحظات</span>
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="ملاحظات إضافية"
+                className="min-h-24 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void submitReservation()}
+              disabled={submitting || !reservationServices.length}
+              className={`h-12 rounded-2xl text-sm font-black disabled:opacity-60 ${theme.button}`}
+            >
+              {submitting ? "جاري الإرسال..." : "إرسال الطلب"}
+            </button>
+          </div>
+        )}
+      </ModalShell>
+    </>
+  );
+}
+
+function FilterHeader({
+  title,
+  onClose,
+  theme,
+}: {
+  title: string;
+  onClose: () => void;
+  theme: { buttonOutline: string; muted: string };
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <p className={`text-xs font-black ${theme.muted}`}>الحجوزات</p>
+        <h2 className="text-lg font-black">{title}</h2>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="إغلاق"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${theme.buttonOutline}`}
+      >
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>
-      <a
-        href={selectedBranchMapUrl}
-        target="_blank"
-        rel="noreferrer"
-        className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black ${theme.button}`}
-      >
-        <MapPin className="h-4 w-4" /> فتح الموقع في Google Maps <ExternalLink className="h-4 w-4" />
-      </a>
-    </div>
-  ) : (
-    <div className={`rounded-2xl border border-black/10 p-4 ${theme.card}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className={`text-xs font-black ${theme.muted}`}>الفرع</p>
-          <h3 className="mt-1 text-lg font-black">{selectedBranch.name || "الفرع الرئيسي"}</h3>
-          <p className={`mt-1 text-sm font-bold ${theme.muted}`}>
-            {usingFallbackBranch
-              ? "سيتم اعتماد الفرع الرئيسي تلقائيًا لهذا الحجز"
-              : [selectedBranch.address, selectedBranch.city].filter(Boolean).join("، ") || "الفرع الرئيسي"}
-          </p>
-        </div>
-        <CalendarDays className="h-6 w-6 opacity-60" />
-      </div>
-      <a
-        href={selectedBranchMapUrl}
-        target="_blank"
-        rel="noreferrer"
-        className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black ${theme.button}`}
-      >
-        <MapPin className="h-4 w-4" /> فتح الموقع في Google Maps <ExternalLink className="h-4 w-4" />
-      </a>
-    </div>
+    </label>
   );
+}
 
-  const form = customer ? (
-    <div className="mt-6 space-y-6">
-      <div className="barndaksa-stagger-grid grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {serviceCards}
-      </div>
-      {!reservationServices.length ? (
-        <div className={`rounded-2xl p-5 text-center font-black ${theme.card}`}>
-          لا توجد خيارات حجز متاحة حاليًا
-        </div>
-      ) : null}
-      <div
-        className={`barndaksa-premium-card grid gap-4 rounded-[28px] p-5 md:grid-cols-2 ${theme.card}`}
-      >
-        {branchSelector}
-        <ThemedInput
-          experience={experience}
-          value={guests}
-          onChange={(e) => setGuests(e.target.value)}
-          placeholder={`عدد الأشخاص${selectedService?.maxGuests ? ` — أقصى حد ${selectedService.maxGuests}` : ""}`}
-          type="number"
-          min={1}
-          max={maxGuests}
-        />
-        <ThemedInput
-          experience={experience}
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-        <ThemedInput
-          experience={experience}
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-        />
-        <ThemedTextarea
-          experience={experience}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="ملاحظات إضافية"
-          className="md:col-span-2 min-h-24"
-        />
-        <button
-          type="button"
-          onClick={() => void submitReservation()}
-          disabled={submitting || !reservationServices.length}
-          className={`md:col-span-2 w-full rounded-2xl h-14 font-black disabled:opacity-60 ${theme.button}`}
-        >
-          {submitting ? "جاري الإرسال..." : "إرسال طلب الحجز"}
-        </button>
-      </div>
-    </div>
-  ) : null;
+function InputField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  min,
+  max,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  min?: number;
+  max?: number;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">{label}</span>
+      <input
+        type={type}
+        value={value}
+        min={min}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
+      />
+    </label>
+  );
+}
+
+function CustomerReservationCard({
+  reservation,
+  branchMapUrl,
+  theme,
+}: {
+  reservation: ReservationRecord;
+  branchMapUrl: string;
+  theme: {
+    accent: string;
+    badge: string;
+    buttonOutline: string;
+    muted: string;
+    card: string;
+  };
+}) {
+  const accepted = isAcceptedStatus(reservation.status);
+  const used = Boolean(reservation.reservationCodeUsedAt || reservation.cashierConfirmedAt);
+  const duration = reservationDurationLabel(reservation.durationMinutes);
+  const title = reservation.serviceName || reservation.type || "حجز";
 
   return (
-    <ThemedReservationPanel
-      settings={settings}
-      experience={experience}
-      branchCount={activeBranches.length}
-      serviceCount={reservationServices.length}
-      loginPromptSlot={loginPrompt}
-      formSlot={form}
-    />
+    <article className={`rounded-[22px] p-4 shadow-[0_14px_40px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/80 ${theme.card}`}>
+      <div className="flex gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-black">{title}</h3>
+            <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
+              {used ? "تم الاستخدام" : statusLabel(reservation.status)}
+            </span>
+          </div>
+          <div className={`mt-3 grid gap-2 text-xs font-bold leading-6 ${theme.muted}`}>
+            <span>الفرع: {reservation.branchName || "الفرع الرئيسي"}</span>
+            <a href={branchMapUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1 ${theme.accent}`}>
+              لوكيشن الفرع <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <span>التاريخ: {reservation.date || "-"} - {reservation.time || "-"}</span>
+            <span>عدد الأشخاص: {reservation.guests || "-"}</span>
+            {duration ? <span>مدة الحجز: {duration}</span> : null}
+            {reservation.notes ? <span>الملاحظات: {reservation.notes}</span> : null}
+            {reservation.cafeMessage ? <span>رسالة العلامة: {reservation.cafeMessage}</span> : null}
+            {reservation.rejectionReason ? <span>سبب الرفض: {reservation.rejectionReason}</span> : null}
+          </div>
+        </div>
+        {accepted && reservation.reservationCode ? (
+          <div className="hidden w-[116px] shrink-0 text-center sm:block">
+            <SecureQrCode
+              kind="reservation"
+              value={reservation.reservationCode}
+              title={`QR حجز ${reservation.reservationCode}`}
+              size={104}
+            />
+            <p className={`mt-1 text-[10px] font-black ${theme.muted}`}>
+              {used ? "تم الاستخدام" : reservation.reservationCode}
+            </p>
+          </div>
+        ) : (
+          <div className={`hidden w-[96px] shrink-0 items-center justify-center rounded-2xl border border-dashed p-3 text-center text-xs font-black sm:flex ${theme.muted}`}>
+            لا يوجد QR صالح
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
 export default function ReservePage() {
   const params = useParams<{ slug: string }>();
   return (
-    <CafeLayout slug={params.slug}>
+    <CafeLayout slug={params.slug} hideHeader hideFooter hideQuickDock>
       <Suspense fallback={<p className="font-black">جاري التحميل...</p>}>
         <ReserveForm />
       </Suspense>
+      <CustomerBottomDock
+        {...defaultCustomerDockItems({
+          slug: params.slug,
+          active: "orders",
+          hasProducts: true,
+          hasOrders: true,
+          hasRewards: true,
+        })}
+      />
     </CafeLayout>
   );
 }

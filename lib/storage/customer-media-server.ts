@@ -1,12 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
-import { requireCustomerProfileForSession } from "@/lib/data/customers";
-import { optimizeImageForStorage } from "@/lib/cafe/image-asset-pipeline";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const AVATAR_MIME = ["image/webp", "image/jpeg", "image/png"];
-/** Max raw upload before server-side optimization (5 MB). */
+const AVATAR_MIME = ["image/webp", "image/jpeg", "image/png", "image/avif"] as const;
 const MAX_ORIGINAL_BYTES = 5 * 1024 * 1024;
-/** Matches customer-avatars bucket limit in migration 002 (2 MB). */
-const MAX_FINAL_BYTES = 2 * 1024 * 1024;
+
+export type CustomerAvatarUploadContext = {
+  cafeId: string;
+  customerId: string;
+  previousStoragePath?: string | null;
+};
 
 function assertSafePathSegment(segment: string) {
   if (!segment || segment.includes("..") || segment.includes("/") || segment.includes("\\")) {
@@ -14,55 +15,116 @@ function assertSafePathSegment(segment: string) {
   }
 }
 
-/** Upload customer avatar — stores `{userId}/{uuid}.webp` in customer-avatars only. */
-export async function uploadCustomerAvatar(cafeSlug: string, file: File) {
+function normalizeMime(type: string) {
+  return type.toLowerCase().split(";")[0]?.trim() ?? "";
+}
+
+function extensionForMime(mime: string) {
+  switch (mime) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/avif":
+      return "avif";
+    default:
+      return null;
+  }
+}
+
+export function validateCustomerAvatarFile(file: File) {
   if (file.size > MAX_ORIGINAL_BYTES) {
-    throw new Error("Image file is too large (max 5 MB before processing)");
+    return {
+      ok: false as const,
+      code: "file_too_large",
+      error: "Image file is too large (max 5 MB)",
+    };
   }
 
-  const { user, profile } = await requireCustomerProfileForSession(cafeSlug);
-  const optimized = await optimizeImageForStorage(file, "customer-avatar");
-
-  if (!AVATAR_MIME.includes(optimized.mimeType)) {
-    throw new Error("Unsupported file type after optimization");
+  const mime = normalizeMime(file.type);
+  if (!AVATAR_MIME.includes(mime as (typeof AVATAR_MIME)[number])) {
+    return {
+      ok: false as const,
+      code: "unsupported_type",
+      error: "Unsupported image type",
+    };
   }
 
-  if (optimized.sizeBytes > MAX_FINAL_BYTES) {
-    throw new Error("Optimized image exceeds safe size limit (max 2 MB)");
+  return { ok: true as const, mime };
+}
+
+function ascii(bytes: Uint8Array, start: number, end: number) {
+  return String.fromCharCode(...bytes.slice(start, end));
+}
+
+export async function validateCustomerAvatarContent(file: File, mime: string) {
+  const bytes = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+
+  if (mime === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   }
 
-  const ext = optimized.mimeType === "image/webp" ? "webp" : "jpg";
-  const fileName = `${crypto.randomUUID()}.${ext}`;
+  if (mime === "image/png") {
+    return (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    );
+  }
+
+  if (mime === "image/webp") {
+    return ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP";
+  }
+
+  if (mime === "image/avif") {
+    const brand = ascii(bytes, 8, 12);
+    return ascii(bytes, 4, 8) === "ftyp" && (brand === "avif" || brand === "avis");
+  }
+
+  return false;
+}
+
+/** Upload customer avatar under `{cafeId}/{customerId}/avatar-{timestamp}.{ext}`. */
+export async function uploadCustomerAvatar(file: File, context: CustomerAvatarUploadContext) {
+  const validation = validateCustomerAvatarFile(file);
+  if (!validation.ok) throw new Error(validation.error);
+  if (!(await validateCustomerAvatarContent(file, validation.mime))) {
+    throw new Error("Unsupported image type");
+  }
+
+  assertSafePathSegment(context.cafeId);
+  assertSafePathSegment(context.customerId);
+
+  const ext = extensionForMime(validation.mime);
+  if (!ext) throw new Error("Unsupported image type");
+
+  const fileName = `avatar-${Date.now()}-${crypto.randomUUID()}.${ext}`;
   assertSafePathSegment(fileName);
-  const storagePath = `${user.id}/${fileName}`;
-  const previousStoragePath = (profile.avatar_storage_path as string | null | undefined) ?? null;
+  const storagePath = `${context.cafeId}/${context.customerId}/${fileName}`;
 
-  const supabase = await createClient();
-  const { error } = await supabase.storage.from("customer-avatars").upload(storagePath, optimized.blob, {
-    contentType: optimized.mimeType,
+  const admin = createAdminClient();
+  const { error } = await admin.storage.from("customer-avatars").upload(storagePath, file, {
+    contentType: validation.mime,
     upsert: false,
   });
   if (error) throw error;
 
   return {
     storagePath,
-    byteSize: optimized.sizeBytes,
-    previousStoragePath,
+    byteSize: file.size,
+    previousStoragePath: context.previousStoragePath ?? null,
   };
 }
 
 export async function deleteCustomerAvatar(storagePath: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-
-  const ownerId = storagePath.split("/")[0];
-  if (ownerId !== user.id) {
-    throw new Error("Forbidden: avatar path does not belong to current user");
-  }
-
-  const { error } = await supabase.storage.from("customer-avatars").remove([storagePath]);
+  const admin = createAdminClient();
+  const { error } = await admin.storage.from("customer-avatars").remove([storagePath]);
   if (error) throw error;
 }

@@ -26,9 +26,20 @@ type Props = {
   children: ReactNode;
   className?: string;
   maxWidth?: string;
+  hideHeader?: boolean;
+  hideFooter?: boolean;
+  hideQuickDock?: boolean;
 };
 
-function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-w-6xl" }: Props) {
+function ThemedCafeShellInner({
+  slug,
+  children,
+  className = "",
+  maxWidth = "max-w-6xl",
+  hideHeader = false,
+  hideFooter = false,
+  hideQuickDock = false,
+}: Props) {
   const ctx = useCafeThemePage(slug);
   const pathname = usePathname();
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
@@ -106,37 +117,43 @@ function ThemedCafeShellInner({ slug, children, className = "", maxWidth = "max-
 
       <div className="relative z-10">
         <ThemedPreviewBanner themeId="brand-identity-custom" visible={isPreview} />
-        <ThemedCafeHeader
-          slug={slug}
-          cafeName={settings.cafeName}
-          logoUrl={getPreferredCafeDisplayLogoUrl(cafeLogoUrl, identityLogoUrl)}
-          themeId="brand-identity-custom"
-          customer={customer}
-          previewThemeId={previewThemeId}
-          features={features}
-        />
+        {!hideHeader ? (
+          <ThemedCafeHeader
+            slug={slug}
+            cafeName={settings.cafeName}
+            logoUrl={getPreferredCafeDisplayLogoUrl(cafeLogoUrl, identityLogoUrl)}
+            themeId="brand-identity-custom"
+            customer={customer}
+            previewThemeId={previewThemeId}
+            features={features}
+          />
+        ) : null}
         <div className={`brand-cafe-fields barndaksa-cinematic-stage mx-auto ${maxWidth} px-4 py-6 sm:px-6 sm:py-8 ${className}`}>
           {children}
         </div>
-        <div className={`mx-auto ${maxWidth} px-4 pb-6 sm:px-6`}>
-          <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId="brand-identity-custom" />
-        </div>
-        <CustomerQuickDock
-          items={buildCustomerQuickDockItems({
-            slug,
-            homeHref: ctx.path(""),
-            productsHref: ctx.path("products/popular"),
-            reserveHref: ctx.path("reserve"),
-            loyaltyHref: ctx.path("account"),
-            accountHref: ctx.path("account"),
-            loginHref: ctx.path("login"),
-            isCustomer: Boolean(customer),
-            hasProducts: hasFeature("menu"),
-            hasReservations: hasFeature("reservations"),
-            hasLoyalty: hasFeature("loyalty"),
-            active: activeDockItem,
-          })}
-        />
+        {!hideFooter ? (
+          <div className={`mx-auto ${maxWidth} px-4 pb-6 sm:px-6`}>
+            <ThemedCafeFooter slug={slug} cafeName={settings.cafeName} themeId="brand-identity-custom" />
+          </div>
+        ) : null}
+        {!hideQuickDock ? (
+          <CustomerQuickDock
+            items={buildCustomerQuickDockItems({
+              slug,
+              homeHref: ctx.path(""),
+              productsHref: ctx.path("products/popular"),
+              reserveHref: ctx.path("reserve"),
+              loyaltyHref: ctx.path("rewards"),
+              accountHref: ctx.path("account"),
+              loginHref: ctx.path("login"),
+              isCustomer: Boolean(customer),
+              hasProducts: hasFeature("menu"),
+              hasReservations: hasFeature("reservations"),
+              hasLoyalty: hasFeature("loyalty"),
+              active: activeDockItem,
+            })}
+          />
+        ) : null}
       </div>
     </main>
   );
