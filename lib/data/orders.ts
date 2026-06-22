@@ -121,7 +121,10 @@ export async function createPickupOrder(
     throw new Error("Cafe is not available");
   }
 
-  const profile = await requireCustomerProfileForOrderSession(parsed.cafeSlug);
+  const profile = await requireCustomerProfileForOrderSession(
+    parsed.cafeSlug,
+    parsed.customerId,
+  );
   const customerId = String(profile.id ?? "");
   if (!customerId) throw new Error("Customer profile not found");
 
@@ -202,7 +205,13 @@ export async function createPickupOrder(
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    const dbError = new Error("Database order create failed") as Error & {
+      cause?: unknown;
+    };
+    dbError.cause = error;
+    throw dbError;
+  }
   const orderId = String(order.id);
 
   const { error: itemsError } = await supabase.from("order_items").insert(
@@ -212,7 +221,13 @@ export async function createPickupOrder(
     })),
   );
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    const dbError = new Error("Database order create failed") as Error & {
+      cause?: unknown;
+    };
+    dbError.cause = itemsError;
+    throw dbError;
+  }
 
   await createNotification({
     cafeSlug: cafe.slug,

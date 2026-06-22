@@ -96,7 +96,10 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       });
       if (!result.ok) {
         alert(result.message);
-        if (result.code === "login_required") {
+        if (
+          result.code === "login_required" ||
+          result.code === "invalid_customer_session"
+        ) {
           clearCachedCustomerSession(slug);
           const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
           router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
@@ -108,7 +111,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       );
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
-      alert("تعذر إرسال الطلب حاول مرة أخرى.");
+      alert("تعذر إرسال الطلب. تحقق من الاتصال وحاول مرة أخرى.");
     } finally {
       setAdding(false);
     }

@@ -129,24 +129,46 @@ export async function getCustomerProfileForActiveSession(cafeSlug: string) {
   return getCustomerProfileBySessionToken(cafeSlug, token);
 }
 
-export async function requireCustomerProfileForOrderSession(cafeSlug: string) {
+export async function resolveCustomerProfileForOrderSession(cafeSlug: string) {
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
 
-  if (token) {
-    const profile = await getCustomerProfileBySessionToken(cafeSlug, token);
-    if (!profile) throw new Error("Customer profile not found");
-    return profile;
+  if (!token) {
+    return {
+      hasCustomerSession: false,
+      profile: null,
+      reason: "missing_customer_session" as const,
+    };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  const profile = await getCustomerProfileBySessionToken(cafeSlug, token);
+  if (!profile) {
+    return {
+      hasCustomerSession: true,
+      profile: null,
+      reason: "invalid_customer_session" as const,
+    };
+  }
 
-  const profile = await getCustomerProfileByUser(cafeSlug, user.id);
-  if (!profile) throw new Error("Customer profile not found");
+  return {
+    hasCustomerSession: true,
+    profile,
+    reason: null,
+  };
+}
+
+export async function requireCustomerProfileForOrderSession(
+  cafeSlug: string,
+  expectedCustomerId?: string,
+) {
+  const session = await resolveCustomerProfileForOrderSession(cafeSlug);
+  if (!session.hasCustomerSession) throw new Error("Unauthorized");
+  if (!session.profile) throw new Error("Invalid customer session");
+
+  const profile = session.profile;
+  if (expectedCustomerId && (profile.id as string) !== expectedCustomerId) {
+    throw new Error("Forbidden: customer mismatch");
+  }
   return profile;
 }
 
