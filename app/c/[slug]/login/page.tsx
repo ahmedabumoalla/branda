@@ -13,8 +13,13 @@ import {
   loginCustomerAction,
   requestCustomerPasswordResetAction,
 } from "@/app/actions/auth";
+import {
+  clearCachedCustomerSession,
+  waitForConfirmedCustomerSession,
+} from "@/lib/customer/session";
 
 const LOGIN_TIMEOUT_MS = 5_000;
+const SESSION_CONFIRM_TIMEOUT_MS = 5_000;
 
 function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -37,13 +42,15 @@ function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
 
 function safeCustomerNext(rawNext: string | null, slug: string) {
   const fallback = `/c/${slug}/account`;
+  const cafeRoot = `/c/${slug}`;
   if (!rawNext) return fallback;
-  if (rawNext === `/c/${slug}`) return fallback;
-  if (!rawNext.startsWith(`/c/${slug}/`)) return fallback;
+  if (rawNext === cafeRoot || rawNext.startsWith(`${cafeRoot}?`)) return rawNext;
+  if (!rawNext.startsWith(`${cafeRoot}/`)) return fallback;
+  const nextPath = rawNext.split(/[?#]/)[0] ?? rawNext;
   if (
-    rawNext.includes(`/${slug}/login`) ||
-    rawNext.includes(`/${slug}/register`) ||
-    rawNext.includes(`/${slug}/reset-password`)
+    nextPath === `${cafeRoot}/login` ||
+    nextPath === `${cafeRoot}/register` ||
+    nextPath === `${cafeRoot}/reset-password`
   ) {
     return fallback;
   }
@@ -115,13 +122,24 @@ function LoginForm() {
       loginCustomerAction(slug, email.trim(), password),
       LOGIN_TIMEOUT_MS,
     )
-      .then((result) => {
+      .then(async (result) => {
         if (!result.ok || !result.session) {
           alert(result.message || "تعذر تسجيل الدخول");
           return;
         }
 
+        clearCachedCustomerSession(slug);
+        const confirmedSession = await waitForConfirmedCustomerSession(
+          slug,
+          SESSION_CONFIRM_TIMEOUT_MS,
+        );
+        if (!confirmedSession) {
+          alert("تم قبول بيانات الدخول، لكن لم تتأكد جلسة العميل بعد. حدّث الصفحة أو حاول مرة أخرى.");
+          return;
+        }
+
         const destination = safeCustomerNext(rawNext, slug);
+        router.refresh();
         router.replace(appendPreviewToNextPath(destination, previewThemeId));
       })
       .catch(() => {

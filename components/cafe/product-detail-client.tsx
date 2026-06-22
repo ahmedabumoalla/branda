@@ -20,7 +20,7 @@ import {
 import { clearCachedCustomerSession, getCustomerSession } from "@/lib/customer/session";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
+import { appendPreviewToNextPath, getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 
@@ -66,9 +66,8 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     if (!product) return;
     const customer = await getCustomerSession(slug);
     if (!customer) {
-      const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
       alert("يجب تسجيل الدخول لإرسال الطلب.");
-      router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
+      router.push(getCustomerLoginHref(slug, `/c/${slug}/product/${id}`, previewThemeId));
       return;
     }
 
@@ -101,8 +100,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           result.code === "invalid_customer_session"
         ) {
           clearCachedCustomerSession(slug);
-          const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
-          router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
+          router.push(getCustomerLoginHref(slug, `/c/${slug}/product/${id}`, previewThemeId));
         }
         return;
       }

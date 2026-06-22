@@ -17,6 +17,10 @@ const SESSION_TTL_MS = 30_000;
 const sessionCache = new Map<string, { at: number; value: BarndaksaCustomerSession | null }>();
 const sessionRequests = new Map<string, Promise<BarndaksaCustomerSession | null>>();
 
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 /** Load customer session from Supabase Auth with short client-side de-duplication. */
 export async function getCustomerSession(slug: string): Promise<BarndaksaCustomerSession | null> {
   const cached = sessionCache.get(slug);
@@ -47,6 +51,26 @@ export function clearCachedCustomerSession(slug?: string) {
     sessionCache.clear();
     sessionRequests.clear();
   }
+}
+
+export async function waitForConfirmedCustomerSession(
+  slug: string,
+  timeoutMs = 5_000
+): Promise<BarndaksaCustomerSession | null> {
+  const deadline = Date.now() + timeoutMs;
+  const { getCustomerSessionAction } = await import("@/app/actions/auth");
+
+  while (Date.now() <= deadline) {
+    clearCachedCustomerSession(slug);
+    const session = await getCustomerSessionAction(slug);
+    if (session) {
+      sessionCache.set(slug, { at: Date.now(), value: session });
+      return session;
+    }
+    await sleep(250);
+  }
+
+  return null;
 }
 
 /** @deprecated Sessions are managed by Supabase Auth — use loginCustomerAction */

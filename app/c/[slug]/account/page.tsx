@@ -9,7 +9,7 @@ import {
   CustomerBottomDock,
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
-import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
+import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
@@ -858,10 +858,11 @@ function AccountPageInner() {
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
   const accountSnapshotKey = `${slug}:${previewThemeId ?? "live"}`;
-  const accountLoginHref = getCafePath(slug, "login", previewThemeId);
-  const accountLoginWithNextHref = `${accountLoginHref}?next=${encodeURIComponent(
-    appendPreviewToNextPath(`/c/${slug}/account`, previewThemeId),
-  )}`;
+  const accountLoginWithNextHref = getCustomerLoginHref(
+    slug,
+    `/c/${slug}/account`,
+    previewThemeId,
+  );
 
   const defaultTab: TabKey = "orders";
 

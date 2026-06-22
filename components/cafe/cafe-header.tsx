@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { getThemeClasses, type CafeThemeId } from "@/lib/mock/cafe-theme";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
@@ -39,7 +40,7 @@ export function CafeHeader({ slug, cafeName, logoUrl, themeId, customer }: Props
         ) : (
           <div className="flex shrink-0 gap-2">
             <Link
-              href={`/c/${slug}/login`}
+              href={getCustomerLoginHref(slug, `/c/${slug}/account`)}
               className={`rounded-2xl border px-3 py-2.5 text-sm font-black sm:px-4 ${theme.card}`}
             >
               دخول

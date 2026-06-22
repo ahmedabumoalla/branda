@@ -3,6 +3,7 @@
 import { getCustomerOrdersForProfile, getCustomerReservationsForProfile } from "@/lib/data/customers";
 import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-rewards";
+import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getCustomerSessionAction } from "@/app/actions/auth";
@@ -48,14 +49,55 @@ async function attachCustomerAvatarUrl(customer: BarndaksaCustomerSession) {
   return { ...customer, avatarUrl: data.signedUrl };
 }
 
+function logRewardsSnapshotLoad(input: {
+  slug: string;
+  resolvedCafeId: string | null;
+  customerProfileCafeId: string | null;
+  loyaltyCardCafeId: string | null;
+  rewardsCount: number;
+}) {
+  console.info("[customer-rewards:load]", input);
+}
+
 export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
   const normalizedSlug = cafeSlug.trim().toLowerCase();
   const snapshot = emptySnapshot(normalizedSlug);
+  let resolvedCafeId: string | null = null;
+  let customerProfileCafeId: string | null = null;
 
   try {
+    const cafe = await getCafeBySlug(normalizedSlug);
+    if (!cafe) {
+      logRewardsSnapshotLoad({
+        slug: normalizedSlug,
+        resolvedCafeId: null,
+        customerProfileCafeId: null,
+        loyaltyCardCafeId: null,
+        rewardsCount: 0,
+      });
+
+      return {
+        success: false as const,
+        code: "load_failed" as CustomerAccountErrorCode,
+        error: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        errorCode: "load_failed" as CustomerAccountErrorCode,
+        message: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        data: snapshot,
+      };
+    }
+    resolvedCafeId = cafe.id;
+
     const customerSession = await getCustomerSessionAction(normalizedSlug);
     const customer = customerSession ? await attachCustomerAvatarUrl(customerSession) : null;
     if (!customer) {
+      logRewardsSnapshotLoad({
+        slug: normalizedSlug,
+        resolvedCafeId: cafe.id,
+        customerProfileCafeId: null,
+        loyaltyCardCafeId: null,
+        rewardsCount: 0,
+      });
+
       return {
         success: false as const,
         code: "invalid_session" as CustomerAccountErrorCode,
@@ -66,6 +108,35 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
       };
     }
 
+    const admin = createAdminClient();
+    const { data: profileRow, error: profileError } = await admin
+      .from("customer_profiles")
+      .select("id,cafe_id")
+      .eq("id", customer.id)
+      .eq("cafe_id", cafe.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+    if (!profileRow) {
+      logRewardsSnapshotLoad({
+        slug: normalizedSlug,
+        resolvedCafeId: cafe.id,
+        customerProfileCafeId: null,
+        loyaltyCardCafeId: null,
+        rewardsCount: 0,
+      });
+
+      return {
+        success: false as const,
+        code: "invalid_session" as CustomerAccountErrorCode,
+        error: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        errorCode: "invalid_session" as CustomerAccountErrorCode,
+        message: CUSTOMER_ACCOUNT_LOAD_ERROR,
+        data: snapshot,
+      };
+    }
+
+    customerProfileCafeId = String(profileRow.cafe_id ?? "");
     const features = await safeResult(getPublicCafeFeatureCodesBySlug(normalizedSlug), [] as string[]);
 
     const ordersEnabled = featureCodesAllow(features, "orders") || featureCodesAllow(features, "menu");
@@ -88,6 +159,22 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
         : Promise.resolve(snapshot.experienceRewards),
     ]);
 
+    const scopedLoyalty =
+      loyalty && loyalty.card.cafeId === cafe.id && loyalty.cafeSlug === normalizedSlug
+        ? loyalty
+        : null;
+    const scopedExperienceRewards = experienceRewards.filter(
+      (reward) => reward.cafeId === cafe.id,
+    );
+
+    logRewardsSnapshotLoad({
+      slug: normalizedSlug,
+      resolvedCafeId: cafe.id,
+      customerProfileCafeId,
+      loyaltyCardCafeId: scopedLoyalty?.card.cafeId ?? null,
+      rewardsCount: scopedExperienceRewards.length,
+    });
+
     return {
       success: true as const,
       code: null,
@@ -100,11 +187,19 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
         features,
         orders,
         reservations,
-        loyalty,
-        experienceRewards,
+        loyalty: scopedLoyalty,
+        experienceRewards: scopedExperienceRewards,
       },
     };
   } catch (error) {
+    logRewardsSnapshotLoad({
+      slug: normalizedSlug,
+      resolvedCafeId,
+      customerProfileCafeId,
+      loyaltyCardCafeId: null,
+      rewardsCount: 0,
+    });
+
     console.error("[fetchCustomerAccountSnapshotAction]", {
       message: error instanceof Error ? error.message : "unknown error",
     });

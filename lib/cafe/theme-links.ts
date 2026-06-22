@@ -62,3 +62,16 @@ export function appendPreviewToNextPath(
   const sep = nextPath.includes("?") ? "&" : "?";
   return `${nextPath}${sep}previewTheme=${encodeURIComponent(previewTheme)}`;
 }
+
+export function getCustomerLoginHref(
+  slug: string,
+  nextPath: string,
+  previewTheme?: string | null
+) {
+  const loginPath = getCafePath(slug, "login", previewTheme);
+  const [pathname, search = ""] = loginPath.split("?");
+  const params = new URLSearchParams(search);
+  params.set("next", appendPreviewToNextPath(nextPath, previewTheme));
+  const qs = params.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
+}

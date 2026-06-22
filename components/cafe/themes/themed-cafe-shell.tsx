@@ -19,6 +19,7 @@ import {
   CustomerQuickDock,
   buildCustomerQuickDockItems,
 } from "./customer-experience-primitives";
+import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 type Props = {
@@ -48,6 +49,7 @@ function ThemedCafeShellInner({
   const identityConfig = customIdentity ?? defaultCustomIdentityTheme();
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const { logoUrl: identityLogoUrl, backgroundUrl } = useCustomIdentityVisuals(identityConfig);
+  const [customerChecked, setCustomerChecked] = useState(false);
 
   const identityStyle =
     themeId === "brand-identity-custom"
@@ -55,7 +57,16 @@ function ThemedCafeShellInner({
       : {};
 
   useEffect(() => {
-    void getCustomerSession(slug).then(setCustomer);
+    let cancelled = false;
+    setCustomerChecked(false);
+    void getCustomerSession(slug).then((session) => {
+      if (cancelled) return;
+      setCustomer(session);
+      setCustomerChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   if (!hydrated) {
@@ -124,6 +135,7 @@ function ThemedCafeShellInner({
             logoUrl={getPreferredCafeDisplayLogoUrl(cafeLogoUrl, identityLogoUrl)}
             themeId="brand-identity-custom"
             customer={customer}
+            checkingCustomer={!customerChecked}
             previewThemeId={previewThemeId}
             features={features}
           />
@@ -145,8 +157,8 @@ function ThemedCafeShellInner({
               reserveHref: ctx.path("reserve"),
               loyaltyHref: ctx.path("rewards"),
               accountHref: ctx.path("account"),
-              loginHref: ctx.path("login"),
-              isCustomer: Boolean(customer),
+              loginHref: getCustomerLoginHref(slug, `/c/${slug}/account`, previewThemeId),
+              isCustomer: customerChecked ? Boolean(customer) : true,
               hasProducts: hasFeature("menu"),
               hasReservations: hasFeature("reservations"),
               hasLoyalty: hasFeature("loyalty"),

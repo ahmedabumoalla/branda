@@ -40,7 +40,7 @@ import {
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
-import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
+import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
@@ -712,6 +712,7 @@ function RewardsPageInner() {
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [loadedSlug, setLoadedSlug] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("home");
   const [query, setQuery] = useState("");
   const [loyaltyTab, setLoyaltyTab] = useState<RewardTab>("current");
@@ -730,12 +731,7 @@ function RewardsPageInner() {
 
   const loyaltyEnabled = featureCodesAllow(features, "loyalty");
   const experienceRewardsEnabled = featureCodesAllow(features, "experience_reviews");
-  const loginHref = appendPreviewToNextPath(
-    `/c/${encodeURIComponent(slug)}/login?next=${encodeURIComponent(
-      `/c/${slug}/rewards`,
-    )}`,
-    previewThemeId,
-  );
+  const loginHref = getCustomerLoginHref(slug, `/c/${slug}/rewards`, previewThemeId);
 
   useEffect(() => {
     let cancelled = false;
@@ -743,6 +739,7 @@ function RewardsPageInner() {
     async function load() {
       setLoading(true);
       setLoadError("");
+      setLoadedSlug(null);
       try {
         const result: CustomerAccountSnapshot =
           await fetchCustomerAccountSnapshotAction(slug);
@@ -752,15 +749,20 @@ function RewardsPageInner() {
           setLoadError(result.message || REWARDS_LOAD_ERROR);
           setLoyaltyView(null);
           setExperienceRewards([]);
+          setLoadedSlug(slug);
           return;
         }
 
         setLoyaltyView(result.data.loyalty);
         setExperienceRewards(result.data.experienceRewards);
+        setLoadedSlug(slug);
       } catch (error) {
         if (cancelled) return;
         console.error("[customer-rewards] load", error);
         setLoadError(REWARDS_LOAD_ERROR);
+        setLoyaltyView(null);
+        setExperienceRewards([]);
+        setLoadedSlug(slug);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -772,28 +774,31 @@ function RewardsPageInner() {
     };
   }, [slug]);
 
-  const currentExperienceRewards = useMemo(
-    () => experienceRewards.filter((reward) => !isExperienceRewardExpired(reward)),
-    [experienceRewards],
-  );
-  const expiredExperienceRewards = useMemo(
-    () => experienceRewards.filter(isExperienceRewardExpired),
-    [experienceRewards],
-  );
+  const hasCurrentSlugData = loadedSlug === slug;
+  const pageLoading = loading || !hasCurrentSlugData;
+  const scopedLoyaltyView = hasCurrentSlugData ? loyaltyView : null;
+  const scopedExperienceRewards = hasCurrentSlugData ? experienceRewards : [];
+
   const readyExperienceRewards = useMemo(
     () =>
-      experienceRewards.filter(
+      scopedExperienceRewards.filter(
         (reward) =>
           reward.status === "approved" &&
           Boolean(reward.rewardCode) &&
           !isExperienceRewardExpired(reward),
       ),
-    [experienceRewards],
+    [scopedExperienceRewards],
+  );
+  const currentExperienceRewards = readyExperienceRewards;
+  const expiredExperienceRewards = useMemo(
+    () => scopedExperienceRewards.filter(isExperienceRewardExpired),
+    [scopedExperienceRewards],
   );
   const loyaltyReadyCount = Math.max(
     0,
-    Number(loyaltyView?.card.availableRewards ?? 0),
+    Number(scopedLoyaltyView?.card.availableRewards ?? 0),
   );
+  const hasReadyLoyaltyReward = loyaltyReadyCount > 0;
   const normalizedQuery = normalizeText(query);
 
   const mainActions = useMemo(
@@ -842,15 +847,15 @@ function RewardsPageInner() {
   const loyaltyMatches = useMemo(() => {
     if (!normalizedQuery) return true;
     const text = [
-      loyaltyView?.program.cardTitle,
-      loyaltyView?.program.rewardName,
-      loyaltyView?.program.rewardProductName,
-      loyaltyView?.card.cardCode,
+      scopedLoyaltyView?.program.cardTitle,
+      scopedLoyaltyView?.program.rewardName,
+      scopedLoyaltyView?.program.rewardProductName,
+      scopedLoyaltyView?.card.cardCode,
     ]
       .join(" ")
       .toLowerCase();
     return text.includes(normalizedQuery);
-  }, [loyaltyView, normalizedQuery]);
+  }, [scopedLoyaltyView, normalizedQuery]);
 
   async function submitExperienceProof(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -877,6 +882,7 @@ function RewardsPageInner() {
 
       const items = await fetchCustomerExperienceRewardsAction(slug);
       setExperienceRewards(items);
+      setLoadedSlug(slug);
       setExperienceUrl("");
       setExperienceViews("");
       setExperienceComments("");
@@ -892,7 +898,7 @@ function RewardsPageInner() {
 
   let content: ReactNode;
 
-  if (loading) {
+  if (pageLoading) {
     content = (
       <div className="rounded-[24px] bg-white p-8 text-center shadow-sm">
         <p className="font-black text-[var(--ci-page-fg,#311912)]">
@@ -915,7 +921,7 @@ function RewardsPageInner() {
       </div>
     );
   } else if (viewMode === "loyalty") {
-    const currentCount = loyaltyReadyCount > 0 ? 1 : loyaltyView ? 1 : 0;
+    const currentCount = hasReadyLoyaltyReward ? 1 : 0;
     const expiredCount = 0;
     content = (
       <>
@@ -933,6 +939,15 @@ function RewardsPageInner() {
           onChange={setQuery}
           placeholder="ابحث داخل مكافآت الولاء"
         />
+        <div className="grid gap-2">
+          <p className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
+            بطاقة الولاء
+          </p>
+          <LoyaltyQrPreviewCard
+            view={scopedLoyaltyView}
+            enabled={loyaltyEnabled}
+          />
+        </div>
         <SegmentTabs
           value={loyaltyTab}
           onChange={setLoyaltyTab}
@@ -940,8 +955,8 @@ function RewardsPageInner() {
           expiredCount={expiredCount}
         />
         <div className="grid gap-3">
-          {loyaltyTab === "current" && loyaltyView && loyaltyMatches ? (
-            <LoyaltyRewardCard view={loyaltyView} />
+          {loyaltyTab === "current" && hasReadyLoyaltyReward && scopedLoyaltyView && loyaltyMatches ? (
+            <LoyaltyRewardCard view={scopedLoyaltyView} />
           ) : loyaltyTab === "expired" ? (
             <EmptyState
               title="لا توجد مكافآت منتهية"
@@ -949,7 +964,7 @@ function RewardsPageInner() {
             />
           ) : (
             <EmptyState
-              title="لا توجد مكافآت حالية"
+              title="لا توجد مكافآت حالية لهذه العلامة"
               desc="ستظهر بطاقة الولاء والمكافآت الجاهزة هنا عند توفرها."
             />
           )}
@@ -998,7 +1013,7 @@ function RewardsPageInner() {
             <EmptyState
               title={
                 experienceTab === "current"
-                  ? "لا توجد مكافآت حالية"
+                  ? "لا توجد مكافآت حالية لهذه العلامة"
                   : "لا توجد مكافآت منتهية"
               }
               desc={
@@ -1036,7 +1051,7 @@ function RewardsPageInner() {
           placeholder="ابحث في المكافآت"
         />
         <LoyaltyQrPreviewCard
-          view={loyaltyView}
+          view={scopedLoyaltyView}
           enabled={loyaltyEnabled}
         />
         <div className="grid grid-cols-2 gap-3">
@@ -1062,6 +1077,12 @@ function RewardsPageInner() {
             </div>
           )}
         </div>
+        {hasReadyLoyaltyReward || readyExperienceRewards.length ? null : (
+          <EmptyState
+            title="لا توجد مكافآت حالية لهذه العلامة"
+            desc="بطاقة الولاء قد تظهر كهوية للعميل، لكنها لا تُحسب كمكافأة إلا عند توفر مكافأة جاهزة للاسترداد."
+          />
+        )}
       </>
     );
   }

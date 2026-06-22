@@ -4,6 +4,7 @@ import { Coffee, Download, PartyPopper, UserRound, WalletCards } from "lucide-re
 import { useEffect, useState } from "react";
 import { issueLoyaltyCardAction } from "@/app/actions/loyalty-cards";
 import { getCustomerSession } from "@/lib/customer/session";
+import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 
 type Program = {
@@ -26,11 +27,24 @@ type Props = {
 export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
   const [cardCode, setCardCode] = useState("");
   const [hasCustomerSession, setHasCustomerSession] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [issuing, setIssuing] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    void getCustomerSession(slug).then((session) => setHasCustomerSession(Boolean(session)));
+    let cancelled = false;
+    setCheckingSession(true);
+    void getCustomerSession(slug)
+      .then((session) => {
+        if (cancelled) return;
+        setHasCustomerSession(Boolean(session));
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingSession(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   if (!program?.enabled) return null;
@@ -128,7 +142,16 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
         </div>
 
         <div className="mt-5 grid gap-3">
-          {hasCustomerSession ? (
+          {checkingSession ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-4 font-black text-[#FCF8F3] opacity-60"
+            >
+              <UserRound className="h-5 w-5" />
+              جاري التحقق من الدخول
+            </button>
+          ) : hasCustomerSession ? (
             <button
               type="button"
               onClick={showCard}
@@ -140,7 +163,7 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
             </button>
           ) : (
             <a
-              href={`/c/${encodeURIComponent(slug)}/login`}
+              href={getCustomerLoginHref(slug, `/c/${slug}`)}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-4 font-black text-[#FCF8F3]"
             >
               <UserRound className="h-5 w-5" />

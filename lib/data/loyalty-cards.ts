@@ -23,6 +23,7 @@ export type LoyaltyCardProgram = {
 
 export type LoyaltyBrandCard = {
   id: string;
+  cafeId: string;
   cardCode: string;
   customerName: string;
   customerPhone: string;
@@ -134,6 +135,7 @@ function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCar
 function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
   return {
     id: String(row.id),
+    cafeId: String(row.cafe_id ?? ""),
     cardCode: String(row.card_code),
     customerName: String(row.customer_name ?? "عميل"),
     customerPhone: String(row.customer_phone ?? ""),
@@ -455,6 +457,16 @@ export async function getCustomerLoyaltyCardViewForProfile(
   if (!cafe) return null;
 
   const supabase = createAdminClient();
+  const { data: profileRow, error: profileError } = await supabase
+    .from("customer_profiles")
+    .select("id")
+    .eq("id", customerProfileId)
+    .eq("cafe_id", cafe.id)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+  if (!profileRow) return null;
+
   const { data: cardRow, error } = await supabase
     .from("loyalty_cards")
     .select("*")

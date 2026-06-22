@@ -39,7 +39,7 @@ import {
 import { buildGoogleMapsUrl, type CafeBranch } from "@/lib/mock/branches";
 import type { ReservationEventType } from "@/lib/mock/reservations";
 import type { ReservationService } from "@/lib/data/platform-upgrade";
-import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
+import { appendPreviewToNextPath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { formatSar } from "@/lib/format";
 
 type ReservationRecord = {
@@ -450,13 +450,14 @@ function ReserveForm() {
   );
 
   async function submitReservation() {
-    if (!customer) {
+    const reserveLoginHref = getCustomerLoginHref(slug, `/c/${slug}/reserve`, previewThemeId);
+    const activeCustomer = customer ?? (await getCustomerSession(slug));
+    if (!activeCustomer) {
       setReservationMessage("سجّل دخولك بحساب العميل لإتمام الحجز.");
-      router.push(
-        `${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`,
-      );
+      router.push(reserveLoginHref);
       return;
     }
+    if (!customer) setCustomer(activeCustomer);
     if (!selectedService || !selectedBranch || !guests || !date || !time) {
       setReservationMessage("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص.");
       alert("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص");
@@ -474,7 +475,7 @@ function ReserveForm() {
     try {
       const result = await createReservationFlowAction({
         slug,
-        customer,
+        customer: activeCustomer,
         branch: selectedBranch,
         reservationType: selectedService.name as ReservationEventType,
         serviceId: selectedService.id,
@@ -499,9 +500,7 @@ function ReserveForm() {
         setReservationMessage(result.message);
         if (result.code === "login_required") {
           setCustomer(null);
-          router.push(
-            `${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`,
-          );
+          router.push(reserveLoginHref);
         }
         return;
       }
@@ -867,7 +866,7 @@ function ReserveForm() {
           <div className={`rounded-2xl p-5 ${theme.card}`}>
             <p className="font-black">سجّل دخولك لإتمام الحجز.</p>
             <Link
-              href={`${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`}
+              href={getCustomerLoginHref(slug, `/c/${slug}/reserve`, previewThemeId)}
               className={`mt-4 inline-flex rounded-2xl px-6 py-3 font-black ${theme.button}`}
             >
               تسجيل الدخول

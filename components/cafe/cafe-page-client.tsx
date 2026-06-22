@@ -37,7 +37,7 @@ import { useCustomIdentityVisuals } from "@/lib/cafe/use-custom-identity-visuals
 import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 import { buildCustomIdentityCssVars, defaultCustomIdentityTheme, OVERLAY_OPACITY } from "@/lib/mock/custom-identity-theme";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
-import { getCafePath } from "@/lib/cafe/theme-links";
+import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
@@ -489,6 +489,7 @@ function CafePageInner({ slug }: { slug: string }) {
   const hasFeature = (feature: string) => hydrated && featureCodesAllow(features, feature);
   const { products, offers, branches, categories, experienceCampaigns, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
+  const [customerChecked, setCustomerChecked] = useState(false);
   const [homeLoyalty, setHomeLoyalty] = useState<HomeLoyaltySnapshot | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
     branchName: string;
@@ -497,7 +498,16 @@ function CafePageInner({ slug }: { slug: string }) {
   } | null>(null);
 
   useEffect(() => {
-    void getCustomerSession(slug).then(setCustomer);
+    let cancelled = false;
+    setCustomerChecked(false);
+    void getCustomerSession(slug).then((session) => {
+      if (cancelled) return;
+      setCustomer(session);
+      setCustomerChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   useEffect(() => {
@@ -780,7 +790,7 @@ function CafePageInner({ slug }: { slug: string }) {
               current={homeLoyalty?.card.stampsInCycle ?? 0}
               required={homeLoyalty?.program.purchasesRequired ?? 7}
               isAuthenticated={Boolean(customer)}
-              loginHref={getCafePath(slug, "login", previewThemeId)}
+              loginHref={customerChecked ? getCustomerLoginHref(slug, `/c/${slug}`, previewThemeId) : undefined}
               onClickHref={customer ? getCafePath(slug, "account", previewThemeId) : undefined}
             />
           </div>

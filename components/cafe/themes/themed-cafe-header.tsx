@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserRound, WalletCards } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
-import { getCafePath } from "@/lib/cafe/theme-links";
+import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 
@@ -14,6 +14,7 @@ type Props = {
   themeId?: string;
   experience?: unknown;
   customer?: BarndaksaCustomerSession | null;
+  checkingCustomer?: boolean;
   previewThemeId?: string | null;
   features?: string[];
 };
@@ -23,13 +24,15 @@ export function ThemedCafeHeader({
   cafeName,
   logoUrl,
   customer,
+  checkingCustomer = false,
   previewThemeId,
   features = [],
 }: Props) {
   const home = getCafePath(slug, "", previewThemeId);
   const account = getCafePath(slug, "account", previewThemeId);
-  const login = getCafePath(slug, "login", previewThemeId);
+  const login = getCustomerLoginHref(slug, `/c/${slug}/account`, previewThemeId);
   const has = (feature: string) => featureCodesAllow(features, feature);
+  const accountReady = Boolean(customer) || checkingCustomer;
 
   return (
     <header
@@ -79,11 +82,11 @@ export function ThemedCafeHeader({
         </nav>
 
         <Link
-          href={customer ? account : login}
+          href={accountReady ? account : login}
           className="inline-flex items-center gap-2 rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-4 py-2 text-sm font-black text-[var(--ci-button-fg,#fff)] shadow-sm transition active:scale-95"
         >
-          {customer ? <WalletCards className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
-          {customer ? "حسابي" : "دخول"}
+          {accountReady ? <WalletCards className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
+          {accountReady ? "حسابي" : "دخول"}
         </Link>
       </div>
     </header>

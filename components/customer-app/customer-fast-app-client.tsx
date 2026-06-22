@@ -23,6 +23,7 @@ import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { AppLoyaltyCard, BrandaMadeByMark } from "@/components/cafe/themes/customer-mobile-experience";
 import { formatSar } from "@/lib/format";
+import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { isPromoActive, productFinalPrice, promoBadgeText, type MenuProduct } from "@/lib/mock/menu";
 import { buildGoogleMapsUrl, type CafeBranch } from "@/lib/mock/branches";
@@ -288,7 +289,7 @@ function LoyaltyPanel({ slug, payload }: { slug: string; payload: CustomerFastPa
           سجل دخولك مرة واحدة وستظهر البطاقة والـ QR بسرعة من التطبيق المثبت.
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Link href={`/c/${encodeURIComponent(slug)}/login`} className="rounded-2xl bg-[var(--fast-button)] px-5 py-3 font-black text-white">
+          <Link href={getCustomerLoginHref(slug, `/c/${slug}`)} className="rounded-2xl bg-[var(--fast-button)] px-5 py-3 font-black text-white">
             تسجيل الدخول
           </Link>
           <Link href={`/c/${encodeURIComponent(slug)}/register`} className="rounded-2xl border border-[var(--fast-button)] px-5 py-3 font-black text-[var(--fast-button)]">
@@ -481,7 +482,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
-            <Link href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : `/c/${encodeURIComponent(slug)}/login`} className="rounded-2xl bg-[var(--fast-button)] p-3 text-white shadow-sm transition active:scale-95" title="حسابي">
+            <Link href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : getCustomerLoginHref(slug, `/c/${slug}/account`)} className="rounded-2xl bg-[var(--fast-button)] p-3 text-white shadow-sm transition active:scale-95" title="حسابي">
               <UserRound className="h-4 w-4" />
             </Link>
           </div>
@@ -513,7 +514,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
             current={payload.loyaltyCard?.card?.stampsInCycle ?? 0}
             required={payload.loyaltyCard?.program?.purchasesRequired ?? payload.loyaltyProgram?.purchasesRequired ?? 7}
             isAuthenticated={Boolean(payload.customer)}
-            loginHref={`/c/${encodeURIComponent(slug)}/login`}
+            loginHref={getCustomerLoginHref(slug, `/c/${slug}`)}
             onClickHref={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : undefined}
           />
         ) : null}
@@ -797,7 +798,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
           {allow("reservations") ? <TabButton tab="reservations" active={activeTab} icon={<CalendarDays className="h-6 w-6" />} label="الحجوزات" onClick={setActiveTab} /> : null}
           {allow("loyalty") ? <TabButton tab="loyalty" active={activeTab} icon={<WalletCards className="h-6 w-6" />} label="المكافآت" onClick={setActiveTab} /> : null}
           <Link
-            href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : `/c/${encodeURIComponent(slug)}/login`}
+            href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : getCustomerLoginHref(slug, `/c/${slug}/account`)}
             className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black text-[#4E4B56] transition active:scale-95"
           >
             <UserRound className="h-6 w-6" />

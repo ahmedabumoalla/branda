@@ -27,6 +27,7 @@ export type ExperienceRewardItem = {
 
 export type CustomerExperienceReward = {
   id: string;
+  cafeId: string;
   experienceUrl: string;
   currentViews: number;
   currentComments: number;
@@ -81,6 +82,7 @@ function normalizeSubmission(
 ): CustomerExperienceReward {
   return {
     id: String(row.id),
+    cafeId: String(row.cafe_id ?? ""),
     experienceUrl: String(row.experience_url ?? ""),
     currentViews: Number(row.current_views ?? 0),
     currentComments: Number(row.current_comments ?? 0),
@@ -190,6 +192,18 @@ export async function getCustomerExperienceRewardSubmissions(
   if (!cafe) return [];
 
   const supabase = customerId ? createAdminClient() : await createClient();
+  if (customerId) {
+    const { data: profileRow, error: profileError } = await supabase
+      .from("customer_profiles")
+      .select("id")
+      .eq("id", customerId)
+      .eq("cafe_id", cafe.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+    if (!profileRow) return [];
+  }
+
   const { data, error } = await supabase
     .from("experience_reward_submissions")
     .select("*, experience_reward_items(*)")
