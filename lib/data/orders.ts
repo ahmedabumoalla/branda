@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
-import { assertCustomerIdMatchesSession } from "@/lib/data/customers";
+import { requireCustomerProfileForOrderSession } from "@/lib/data/customers";
 import { mapDbOrderToCafeOrder, mapOrderStatusToDb } from "@/lib/data/mappers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
 import {
@@ -96,7 +97,7 @@ export async function updateOrderStatus(
 
 const createOrderSchema = z.object({
   cafeSlug: z.string(),
-  customerId: z.string().uuid(),
+  customerId: z.string().uuid().optional(),
   branchName: z.string().optional(),
   pickupAt: z.string().optional(),
   notes: z.string().optional(),
@@ -109,31 +110,109 @@ const createOrderSchema = z.object({
   ),
 });
 
-/** Creates order via secure RPC — prices and status computed in database only */
+/** Creates order with server-verified customer session and database-priced items. */
 export async function createPickupOrder(
   input: z.infer<typeof createOrderSchema>,
 ) {
   const parsed = createOrderSchema.parse(input);
-  await assertCustomerIdMatchesSession(parsed.cafeSlug, parsed.customerId);
   const cafe = await getCafeBySlug(parsed.cafeSlug);
   if (!cafe) throw new Error("Cafe not found");
+  if (String(cafe.status ?? "") !== "active" || cafe.is_public !== true) {
+    throw new Error("Cafe is not available");
+  }
 
-  const supabase = await createClient();
-  const rpcItems = parsed.items.map((item) => ({
-    product_id: item.productId,
-    quantity: item.quantity,
-    notes: item.notes ?? null,
-  }));
+  const profile = await requireCustomerProfileForOrderSession(parsed.cafeSlug);
+  const customerId = String(profile.id ?? "");
+  if (!customerId) throw new Error("Customer profile not found");
 
-  const { data: orderId, error } = await supabase.rpc("create_pickup_order", {
-    p_cafe_id: cafe.id,
-    p_branch_name: parsed.branchName ?? null,
-    p_pickup_at: parsed.pickupAt ?? null,
-    p_notes: parsed.notes ?? null,
-    p_items: rpcItems,
-  });
+  const branchName = parsed.branchName?.trim() || null;
+  const notes = parsed.notes?.trim() || null;
+  if (branchName && branchName.length > 100) throw new Error("Branch name too long");
+  if (notes && notes.length > 500) throw new Error("Notes too long");
+  if (!parsed.items.length) throw new Error("Order must contain at least one item");
+  if (parsed.items.length > 50) throw new Error("Too many items in order");
+
+  const supabase = createAdminClient();
+  const orderItems: Array<{
+    product_id: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    notes: string | null;
+  }> = [];
+  let subtotal = 0;
+  let loyaltyPointsEarned = 0;
+
+  for (const item of parsed.items) {
+    if (item.quantity <= 0 || item.quantity > 99) throw new Error("Invalid quantity");
+    const itemNotes = item.notes?.trim() || null;
+    if (itemNotes && itemNotes.length > 500) throw new Error("Item notes too long");
+
+    const { data: product, error: productError } = await supabase
+      .from("menu_products")
+      .select("id, name, price, loyalty_points")
+      .eq("id", item.productId)
+      .eq("cafe_id", cafe.id)
+      .eq("available", true)
+      .eq("available_for_pickup", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (productError) throw productError;
+    if (!product) {
+      throw new Error(`Invalid or unavailable product for pickup: ${item.productId}`);
+    }
+
+    const unitPrice = Number(product.price ?? 0);
+    subtotal += unitPrice * item.quantity;
+    loyaltyPointsEarned += Number(product.loyalty_points ?? 0) * item.quantity;
+    orderItems.push({
+      product_id: String(product.id),
+      name: String(product.name ?? ""),
+      quantity: item.quantity,
+      unit_price: unitPrice,
+      notes: itemNotes,
+    });
+  }
+
+  const discountAmount = 0;
+  const taxAmount = Math.round(subtotal * 0.15 * 100) / 100;
+  const total = Math.round((subtotal - discountAmount + taxAmount) * 100) / 100;
+
+  const { data: order, error } = await supabase
+    .from("orders")
+    .insert({
+      cafe_id: cafe.id,
+      customer_id: customerId,
+      customer_name: String(profile.full_name ?? ""),
+      customer_phone: String(profile.phone ?? ""),
+      customer_email: profile.email ? String(profile.email) : null,
+      branch_name: branchName,
+      fulfillment_type: "pickup",
+      status: "pending_cafe",
+      payment_status: "pay_at_pickup",
+      pickup_at: parsed.pickupAt ?? null,
+      notes,
+      subtotal,
+      discount_amount: discountAmount,
+      tax_amount: taxAmount,
+      total,
+      loyalty_points_earned: loyaltyPointsEarned,
+    })
+    .select("id")
+    .single();
 
   if (error) throw error;
+  const orderId = String(order.id);
+
+  const { error: itemsError } = await supabase.from("order_items").insert(
+    orderItems.map((item) => ({
+      ...item,
+      order_id: orderId,
+    })),
+  );
+
+  if (itemsError) throw itemsError;
 
   await createNotification({
     cafeSlug: cafe.slug,
@@ -141,7 +220,7 @@ export async function createPickupOrder(
     title: "طلب منيو جديد",
     body: `وصل طلب جديد من عميل للفرع ${parsed.branchName ?? "غير محدد"}`,
     type: "new_pickup_order",
-    meta: { orderId: String(orderId), branchName: parsed.branchName ?? "" },
+    meta: { orderId, branchName: parsed.branchName ?? "" },
   }).catch(() => undefined);
 
   if (isBarndaksaEmailConfigured()) {
@@ -155,7 +234,7 @@ export async function createPickupOrder(
         supabase
           .from("customer_profiles")
           .select("email, full_name")
-          .eq("id", parsed.customerId)
+          .eq("id", customerId)
           .maybeSingle(),
       ]);
       const ownerEmail = settings?.owner_email
@@ -185,5 +264,5 @@ export async function createPickupOrder(
     }
   }
 
-  return orderId as string;
+  return { orderId, total, loyaltyPointsEarned };
 }

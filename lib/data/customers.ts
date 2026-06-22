@@ -129,6 +129,27 @@ export async function getCustomerProfileForActiveSession(cafeSlug: string) {
   return getCustomerProfileBySessionToken(cafeSlug, token);
 }
 
+export async function requireCustomerProfileForOrderSession(cafeSlug: string) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
+
+  if (token) {
+    const profile = await getCustomerProfileBySessionToken(cafeSlug, token);
+    if (!profile) throw new Error("Customer profile not found");
+    return profile;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const profile = await getCustomerProfileByUser(cafeSlug, user.id);
+  if (!profile) throw new Error("Customer profile not found");
+  return profile;
+}
+
 /** Requires authenticated Supabase session linked to a customer profile for this cafe */
 export async function requireCustomerProfileForSession(cafeSlug: string) {
   const sessionProfile = await getCustomerProfileForActiveSession(cafeSlug);

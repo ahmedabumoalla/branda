@@ -17,7 +17,7 @@ import {
   CustomerBottomDock,
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
-import { getCustomerSession } from "@/lib/customer/session";
+import { clearCachedCustomerSession, getCustomerSession } from "@/lib/customer/session";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
@@ -67,6 +67,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     const customer = await getCustomerSession(slug);
     if (!customer) {
       const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
+      alert("يجب تسجيل الدخول لإرسال الطلب.");
       router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
       return;
     }
@@ -93,12 +94,21 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         pickupAt: pickupLabel,
         notes: notes.trim() || undefined,
       });
+      if (!result.ok) {
+        alert(result.message);
+        if (result.code === "login_required") {
+          clearCachedCustomerSession(slug);
+          const next = appendPreviewToNextPath(`/c/${slug}/product/${id}`, previewThemeId);
+          router.push(`${path("login")}?next=${encodeURIComponent(next)}`);
+        }
+        return;
+      }
       alert(
-        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة الكوفي.`
+        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.order.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة الكوفي.`
       );
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
-      alert("تعذر إرسال الطلب. حاول مرة أخرى.");
+      alert("تعذر إرسال الطلب حاول مرة أخرى.");
     } finally {
       setAdding(false);
     }

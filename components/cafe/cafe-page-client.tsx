@@ -795,7 +795,7 @@ function CafePageInner({ slug }: { slug: string }) {
             <div className="flex items-start justify-between gap-3">
               <PremiumSectionHeader
                 eyebrow="أحدث المنتجات"
-                title="اختيارات تتحرك بروح التطبيق"
+                title="منتجات مختارة"
               />
               <Link
                 href={getCafePath(slug, "products/latest", previewThemeId)}

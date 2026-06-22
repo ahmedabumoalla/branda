@@ -24,11 +24,10 @@ export type CreateOrderResult = {
 export async function createCafeOrderFromProduct(
   input: CreateOrderInput,
 ): Promise<CreateOrderResult> {
-  const { slug, customer, product, quantity } = input;
+  const { slug, product, quantity } = input;
 
-  const orderId = await createPickupOrder({
+  return createPickupOrder({
     cafeSlug: slug,
-    customerId: customer.id,
     branchName: input.branchName,
     pickupAt: input.pickupAt,
     notes: input.notes,
@@ -40,13 +39,6 @@ export async function createCafeOrderFromProduct(
       },
     ],
   });
-
-  const subtotal = product.price * quantity;
-  const taxAmount = Math.round(subtotal * 0.15 * 100) / 100;
-  const total = Math.round((subtotal + taxAmount) * 100) / 100;
-  const loyaltyPointsEarned = Math.floor(total);
-
-  return { orderId, total, loyaltyPointsEarned };
 }
 
 export async function acceptPickupOrder(orderId: string, cafeSlug = "qatrah") {
