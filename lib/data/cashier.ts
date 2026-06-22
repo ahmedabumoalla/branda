@@ -208,9 +208,41 @@ export async function cashierScanLoyalty(input: {
     ? parseBarndaksaQrPayload(input.invoiceBarcode, "invoice") ?? input.invoiceBarcode.trim()
     : makeLoyaltyScanReference(normalizedCardCode);
 
+  const admin = createAdminClient();
+  const { data: session, error: sessionError } = await admin
+    .from("cafe_cashier_sessions")
+    .select("cafe_id,revoked_at,expires_at")
+    .eq("token", token)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (sessionError) throw sessionError;
+  if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
+
+  const currentCafeId = String(session.cafe_id);
+  if (input.cafeId && input.cafeId !== currentCafeId) {
+    throw new Error("جلسة الكاشير لا تطابق العلامة التجارية");
+  }
+
+  const { data: scannedCard, error: cardLookupError } = await admin
+    .from("loyalty_cards")
+    .select("id,cafe_id")
+    .eq("card_code", normalizedCardCode)
+    .maybeSingle();
+
+  if (cardLookupError) throw cardLookupError;
+  if (scannedCard && String(scannedCard.cafe_id) !== currentCafeId) {
+    console.warn("[cashierScanLoyalty:cross-cafe-card]", {
+      currentCafeId,
+      rewardCafeId: String(scannedCard.cafe_id),
+      reason: "loyalty_card_belongs_to_another_cafe",
+    });
+    throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
-    p_cafe_id: input.cafeId,
+    p_cafe_id: currentCafeId,
     p_card_code: normalizedCardCode,
     p_invoice_barcode: normalizedInvoiceBarcode,
     p_invoice_amount: input.invoiceAmount ?? 0,

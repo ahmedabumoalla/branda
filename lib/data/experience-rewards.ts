@@ -245,9 +245,9 @@ export async function getOwnerExperienceRewardReviews(): Promise<
     customerIds.length
       ? supabase
           .from("loyalty_cards")
-          .select("id,customer_id,loyalty_card_events(id)")
+          .select("id,customer_profile_id,loyalty_card_events(id)")
           .eq("cafe_id", cafe.id)
-          .in("customer_id", customerIds)
+          .in("customer_profile_id", customerIds)
       : Promise.resolve({ data: [], error: null }),
     customerIds.length
       ? supabase
@@ -273,7 +273,7 @@ export async function getOwnerExperienceRewardReviews(): Promise<
 
   const loyaltyStats = new Map<string, number>();
   for (const card of (loyaltyResult.data ?? []) as Record<string, unknown>[]) {
-    const customerId = String(card.customer_id ?? "");
+    const customerId = String(card.customer_profile_id ?? "");
     const events = Array.isArray(card.loyalty_card_events)
       ? card.loyalty_card_events.length
       : 0;
@@ -346,6 +346,20 @@ export async function approveOwnerExperienceRewardSubmission(
 
   if (fetchError) throw fetchError;
   if (!submission) throw new Error("Submission not found");
+
+  const productIds = Array.from(
+    new Set(parsed.items.map((item) => item.productId)),
+  );
+  const { data: rewardProducts, error: productsError } = await supabase
+    .from("menu_products")
+    .select("id")
+    .eq("cafe_id", cafe.id)
+    .in("id", productIds);
+
+  if (productsError) throw productsError;
+  if ((rewardProducts ?? []).length !== productIds.length) {
+    throw new Error("Reward product does not belong to this cafe");
+  }
 
   const rewardCode = makeRewardCode();
 
@@ -530,6 +544,7 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
     .from("customer_profiles")
     .select("full_name, email")
     .eq("id", String(row.customer_id))
+    .eq("cafe_id", cafe.id)
     .maybeSingle();
 
   const customerName =
@@ -602,13 +617,23 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
     .from("experience_reward_submissions")
     .select("*, experience_reward_items(*)")
     .eq("reward_code", code)
-    .eq("cafe_id", String(session.cafe_id))
     .maybeSingle();
 
   if (submissionError) throw submissionError;
   if (!submission) throw new Error("مكافأة غير موجودة");
 
   const row = submission as Record<string, unknown>;
+  const currentCafeId = String(session.cafe_id);
+  const rewardCafeId = String(row.cafe_id ?? "");
+  if (rewardCafeId !== currentCafeId) {
+    console.warn("[redeemCashierExperienceReward:cross-cafe-reward]", {
+      currentCafeId,
+      rewardCafeId,
+      reason: "experience_reward_belongs_to_another_cafe",
+    });
+    throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
+  }
+
   if (String(row.status) !== "approved") {
     throw new Error("المكافأة غير قابلة للصرف");
   }
@@ -633,6 +658,7 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
     .from("customer_profiles")
     .select("full_name, email")
     .eq("id", String(row.customer_id))
+    .eq("cafe_id", currentCafeId)
     .maybeSingle();
 
   const customerName =
@@ -649,14 +675,14 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", String(row.id))
-    .eq("cafe_id", String(session.cafe_id))
+    .eq("cafe_id", currentCafeId)
     .is("used_at", null)
     .eq("status", "approved");
 
   if (updateError) throw updateError;
 
   await admin.from("cafe_cashier_activity_logs").insert({
-    cafe_id: String(session.cafe_id),
+    cafe_id: currentCafeId,
     cashier_id: String(session.cashier_id),
     action_type: "loyalty_redeem",
     target_type: "experience_reward_submission",

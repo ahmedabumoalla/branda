@@ -256,6 +256,18 @@ export async function saveOwnerLoyaltyProgram(input: z.infer<typeof programSchem
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
+  if (parsed.rewardProductId) {
+    const { data: product, error: productError } = await supabase
+      .from("menu_products")
+      .select("id")
+      .eq("id", parsed.rewardProductId)
+      .eq("cafe_id", cafe.id)
+      .maybeSingle();
+
+    if (productError) throw productError;
+    if (!product) throw new Error("Reward product does not belong to this cafe");
+  }
+
   const { error } = await supabase.rpc("set_cafe_loyalty_program", {
     p_cafe_id: cafe.id,
     p_enabled: parsed.enabled,
@@ -345,6 +357,18 @@ export async function recordOwnerLoyaltyOperation(input: {
     ? parseBarndaksaQrPayload(parsed.invoiceBarcode, "invoice") ?? parsed.invoiceBarcode.trim()
     : makeLoyaltyScanReference(normalizedCardCode);
 
+  const admin = createAdminClient();
+  const { data: scannedCard, error: cardLookupError } = await admin
+    .from("loyalty_cards")
+    .select("id,cafe_id")
+    .eq("card_code", normalizedCardCode)
+    .maybeSingle();
+
+  if (cardLookupError) throw cardLookupError;
+  if (scannedCard && String(scannedCard.cafe_id) !== cafe.id) {
+    throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
+  }
+
   const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
     p_cafe_id: cafe.id,
     p_card_code: normalizedCardCode,
@@ -368,11 +392,12 @@ export async function issueCurrentCustomerLoyaltyCard(slug: string) {
 }
 
 export async function getCardByCode(cardCode: string) {
-  const supabase = await createClient();
-  const { data: cardRow, error } = await supabase
+  const admin = createAdminClient();
+  const { data: cardRow, error } = await admin
     .from("loyalty_cards")
     .select("*")
     .eq("card_code", cardCode.toUpperCase())
+    .eq("status", "active")
     .maybeSingle();
 
   if (error) throw error;
@@ -380,12 +405,13 @@ export async function getCardByCode(cardCode: string) {
 }
 
 export async function getLoyaltyCardViewByCode(cardCode: string): Promise<CustomerLoyaltyCardView | null> {
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data: cardRow, error } = await supabase
+  const { data: cardRow, error } = await admin
     .from("loyalty_cards")
     .select("*, cafes(slug, name)")
     .eq("card_code", cardCode.toUpperCase())
+    .eq("status", "active")
     .maybeSingle();
 
   if (error) throw error;
@@ -395,7 +421,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
   const cafeSlug = cafe?.slug ? String(cafe.slug) : "";
   const cafeName = cafe?.name ? String(cafe.name) : "العلامة التجارية";
 
-  const { data: programRow } = await supabase
+  const { data: programRow } = await admin
     .from("cafe_loyalty_programs")
     .select("*, menu_products(name)")
     .eq("cafe_id", String(cardRow.cafe_id))

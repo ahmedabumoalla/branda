@@ -276,9 +276,12 @@ export function CashierConsoleClient({ initialData }: Props) {
         `تم صرف مكافأة توثيق التجربة للعميل ${String(result.customerName ?? "عميل")} — ${items}`,
       );
       setExperienceRewardCode("");
-    } catch {
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "";
       setMessage(
-        "QR مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية",
+        rawMessage.includes("علامة تجارية أخرى")
+          ? "هذه المكافأة تابعة لعلامة تجارية أخرى"
+          : "QR مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية",
       );
     } finally {
       setBusy(false);
@@ -303,8 +306,13 @@ export function CashierConsoleClient({ initialData }: Props) {
       });
       setMessage(`تم احتساب عملية شراء للعميل ${String(result.customerName)} وإضافة ختم في بطاقة الولاء`);
       setCardCode("");
-    } catch {
-      setMessage("تعذر احتساب عملية الشراء من بطاقة الولاء");
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "";
+      setMessage(
+        rawMessage.includes("علامة تجارية أخرى")
+          ? "هذه المكافأة تابعة لعلامة تجارية أخرى"
+          : "تعذر احتساب عملية الشراء من بطاقة الولاء",
+      );
     } finally {
       setBusy(false);
     }
