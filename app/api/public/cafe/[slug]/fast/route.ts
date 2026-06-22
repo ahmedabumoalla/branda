@@ -4,6 +4,7 @@ import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getPublicCafeFeatureCodesBySlug, filterPublicCafePayloadByFeatures } from "@/lib/data/feature-entitlements";
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
+import { getPublicExperienceCampaigns } from "@/lib/data/experience";
 import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
@@ -89,6 +90,15 @@ async function safeReservationServices(slug: string) {
   }
 }
 
+async function safeExperienceCampaigns(slug: string) {
+  try {
+    return await getPublicExperienceCampaigns(slug);
+  } catch (error) {
+    console.warn("[public/cafe/fast/experience-campaigns-fallback]", error);
+    return [];
+  }
+}
+
 function canUseFeature(features: string[], feature: string) {
   // Fail open if entitlement loading fails, to avoid hiding the public branch by mistake.
   return !features.length || featureCodesAllow(features, feature);
@@ -104,11 +114,12 @@ async function loadPublicCafeFastLayer(slug: string) {
 
   if (!settings) return null;
 
-  const [menu, offers, branches, reservationServices] = await Promise.all([
+  const [menu, offers, branches, reservationServices, experienceCampaigns] = await Promise.all([
     canUseFeature(features, "menu") ? safeMenu(slug) : Promise.resolve(emptyMenu),
     canUseFeature(features, "offers") ? safeOffers(slug) : Promise.resolve([]),
     canUseFeature(features, "branches") ? safeBranches(slug) : Promise.resolve([]),
     canUseFeature(features, "reservations") ? safeReservationServices(slug) : Promise.resolve([]),
+    canUseFeature(features, "experience_reviews") ? safeExperienceCampaigns(slug) : Promise.resolve([]),
   ]);
 
   const rawMenuPayload = {
@@ -119,6 +130,7 @@ async function loadPublicCafeFastLayer(slug: string) {
     loyaltyRewards: [],
     pages: [],
     reservationServices,
+    experienceCampaigns,
   };
 
   let menuPayload = rawMenuPayload;

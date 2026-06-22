@@ -5,11 +5,31 @@ export type OfferType =
   | "كود مسوق"
   | "إطلاق منتج"
   | "عرض موسمي"
-  | "عرض مخصص";
+  | "عرض مخصص"
+  | "عرض حجز";
 
 export type OfferStatus = "نشط" | "مجدول" | "متوقف";
 
 export type OfferPlacement = "قائمة العروض" | "بانر الكوفي" | "كلاهما";
+
+export type OfferTargetType = "products" | "reservation" | "experience_campaign";
+
+export type OfferCardGenerationStatus = "idle" | "generating" | "ready" | "failed";
+
+export type OfferRules = {
+  buyProductId?: string;
+  buyQuantity?: number;
+  rewardKind?: "free_product" | "gift";
+  freeProductId?: string;
+  giftName?: string;
+  rewardQuantity?: number;
+  selectedProductIds?: string[];
+  seasonalMode?: "package" | "discount" | "experience";
+  packageDescription?: string;
+  appliesToAllProducts?: boolean;
+  reservationBenefitType?: "free_products" | "product_discount" | "reservation_discount" | "extra_benefits";
+  reservationBenefitText?: string;
+};
 
 export type CafeOffer = {
   id: string;
@@ -33,9 +53,16 @@ export type CafeOffer = {
   codeOwnerCommissionPercent?: number;
 
   linkedProductId?: string;
+  targetType?: OfferTargetType;
+  reservationServiceId?: string;
+  offerRules?: OfferRules;
   bannerImageUrl?: string;
   /** IndexedDB reference for uploaded banner — mock only */
   bannerAssetId?: string;
+  cardStoragePath?: string;
+  cardGenerationStatus?: OfferCardGenerationStatus;
+  cardGenerationError?: string;
+  cardGeneratedAt?: string;
   ctaText?: string;
 
   promoProductName?: string;

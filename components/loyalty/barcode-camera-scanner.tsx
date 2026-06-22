@@ -48,6 +48,13 @@ function normalizeDetectedValue(rawValue: string, expectedKind?: BarndaksaQrKind
     }
   }
 
+  if (
+    (expectedKind === "reservation" || expectedKind === "experience-reward") &&
+    !raw.startsWith("BARNDAKSA_QR:")
+  ) {
+    return raw.trim().toUpperCase();
+  }
+
   return null;
 }
 
@@ -60,6 +67,14 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
   const [error, setError] = useState("");
   const [manualCode, setManualCode] = useState("");
   const [hint, setHint] = useState("وجّه الكاميرا إلى QR حتى تتم القراءة تلقائيًا");
+  const codeLabel =
+    expectedKind === "loyalty-card"
+      ? "كود البطاقة"
+      : expectedKind === "reservation"
+        ? "كود الحجز"
+        : expectedKind === "experience-reward"
+          ? "كود المكافأة"
+          : "الكود";
 
   useEffect(() => {
     if (!open) return;
@@ -139,7 +154,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
           formats: ["qr_code", "code_128", "code_39", "ean_13"],
         });
 
-        setHint("وجّه الكاميرا إلى QR بطاقة الولاء فقط");
+        setHint(`وجّه الكاميرا إلى QR ${codeLabel}`);
         timer = window.setTimeout(detectFrame, 250);
       } catch {
         setError("تعذر تشغيل الكاميرا. تأكد من السماح للمتصفح باستخدام الكاميرا.");
@@ -155,7 +170,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
       streamRef.current = null;
       canvasRef.current = null;
     };
-  }, [expectedKind, onDetected, open]);
+  }, [codeLabel, expectedKind, onDetected, open]);
 
   function submitManualCode() {
     const value = normalizeDetectedValue(manualCode, expectedKind);
@@ -203,7 +218,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
                 {error}
                 <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
                   <Keyboard className="h-4 w-4" />
-                  يمكنك إدخال كود البطاقة يدويًا بدل الكاميرا
+                  يمكنك إدخال {codeLabel} يدويًا بدل الكاميرا
                 </div>
               </div>
             ) : null}
@@ -215,7 +230,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
                 onKeyDown={(event) => {
                   if (event.key === "Enter") submitManualCode();
                 }}
-                placeholder="أدخل كود البطاقة يدويًا"
+                placeholder={`أدخل ${codeLabel} يدويًا`}
                 className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-[#17100d] outline-none"
               />
               <button

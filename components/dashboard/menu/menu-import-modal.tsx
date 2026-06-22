@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileText, LinkIcon, Loader2, Trash2, Upload, X } from "lucide-react";
+import { Check, FileText, LinkIcon, Loader2, Send, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -8,6 +8,7 @@ import {
   cancelMenuImportAction,
   createMenuImportFromPdfAction,
   createMenuImportFromUrlAction,
+  reportMenuImportUrlAction,
   updateMenuImportItemsAction,
 } from "@/app/actions/menu-import";
 import { NeumoInput, PrimaryButton } from "@/components/ui/design-system";
@@ -71,6 +72,9 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
   const [job, setJob] = useState<MenuImportReviewJob | null>(null);
   const [items, setItems] = useState<MenuImportEditableItem[]>([]);
   const [message, setMessage] = useState("");
+  const [reportUrl, setReportUrl] = useState("");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -96,7 +100,13 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
 
   async function analyze() {
     setBusy(true);
-    setMessage("");
+    setMessage(mode === "url" ? "جاري قراءة المنيو..." : "جاري قراءة الملف...");
+    const progressTimer =
+      mode === "url"
+        ? window.setTimeout(() => {
+            setMessage("جاري ترتيب الأصناف...");
+          }, 900)
+        : undefined;
     try {
       const nextJob =
         mode === "url"
@@ -109,12 +119,14 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
               })()
             );
       setJob(nextJob);
-      setItems(editableFromJob(nextJob));
-      setMessage(nextJob.errorMessage ?? "تم إنشاء مسودة المراجعة.");
+      const nextItems = editableFromJob(nextJob);
+      setItems(nextItems);
+      setMessage(nextJob.errorMessage ?? `تم استخراج ${nextItems.length} صنف`);
     } catch (error) {
       console.error("Menu import draft creation failed", error);
       setMessage(menuImportErrorMessage(error, "تعذر إنشاء مسودة الاستيراد."));
     } finally {
+      if (progressTimer) window.clearTimeout(progressTimer);
       setBusy(false);
     }
   }
@@ -168,8 +180,33 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
     }
   }
 
+  async function reportIncompleteMenuUrl() {
+    const targetUrl = reportUrl.trim() || (mode === "url" ? url.trim() : "");
+    if (!targetUrl) {
+      setReportMessage("أدخل رابط المنيو المراد إرساله.");
+      return;
+    }
+
+    setReportBusy(true);
+    setReportMessage("");
+    try {
+      const result = await reportMenuImportUrlAction({
+        menuUrl: targetUrl,
+        source: "dashboard-menu-import",
+      });
+      setReportMessage(result.message);
+      if (result.ok) setReportUrl("");
+    } catch (error) {
+      console.error("Menu import URL report failed", error);
+      setReportMessage("تعذر الإرسال، حاول مرة أخرى.");
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
   const canAnalyze = mode === "url" ? url.trim().length > 0 : Boolean(file);
   const canApprove = Boolean(job) && items.some((item) => item.status === "ready" && item.productName.trim());
+  const canReport = reportUrl.trim().length > 0 || (mode === "url" && url.trim().length > 0);
 
   const modal = (
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/40 p-4">
@@ -242,6 +279,38 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
             {message}
           </div>
         ) : null}
+
+        <div className="mb-5 rounded-2xl border border-[#E7D7C6] bg-white p-4">
+          <div className="mb-3">
+            <h3 className="text-base font-black text-[#3A2117]">لم يتم استخراج كامل الأصناف؟</h3>
+            <p className="mt-1 text-sm font-bold text-[#806A5E]">
+              برجاء إرسال رابط المنيو للفريق التقني لمراجعته وإضافته للنظام.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <NeumoInput
+              value={reportUrl}
+              onChange={(event) => setReportUrl(event.target.value)}
+              placeholder={mode === "url" && url.trim() ? url.trim() : "https://example.com/menu"}
+              dir="ltr"
+              className="text-left"
+            />
+            <button
+              type="button"
+              onClick={reportIncompleteMenuUrl}
+              disabled={reportBusy || !canReport}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {reportBusy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+              إرسال للفريق التقني
+            </button>
+          </div>
+          {reportMessage ? (
+            <p className={`mt-3 text-sm font-black ${reportMessage.includes("تم إرسال") ? "text-emerald-700" : "text-[#6B3A25]"}`}>
+              {reportMessage}
+            </p>
+          ) : null}
+        </div>
 
         {job ? (
           <>

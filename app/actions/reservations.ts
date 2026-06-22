@@ -12,7 +12,26 @@ export async function fetchOwnerReservationServicesAction() { return getOwnerRes
 export async function updateReservationStatusAction(id: string, status: ReservationStatus, cafeMessage?: string, rejectionReason?: string) {
   return updateReservationStatusFlow(id, status, { cafeMessage, rejectionReason });
 }
-export async function createReservationFlowAction(input: CreateReservationInput) { return createReservationFlow(input); }
+export async function createReservationFlowAction(input: CreateReservationInput) {
+  try {
+    const reservation = await createReservationFlow(input);
+    return { ok: true as const, reservation };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const loginRequired =
+      message === "Unauthorized" ||
+      message === "Customer profile not found" ||
+      message.includes("customer mismatch");
+
+    return {
+      ok: false as const,
+      code: loginRequired ? ("login_required" as const) : ("reservation_failed" as const),
+      message: loginRequired
+        ? "يجب تسجيل الدخول بحساب العميل لإرسال الحجز."
+        : "تعذر إرسال الحجز. تحقق من البيانات وحاول مرة أخرى.",
+    };
+  }
+}
 export async function createReservationAction(input: Parameters<typeof createReservation>[0]) { return createReservation(input); }
 
 

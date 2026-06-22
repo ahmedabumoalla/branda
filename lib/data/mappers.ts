@@ -284,6 +284,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
 
 export function mapDbOfferToCafeOffer(row: Record<string, unknown>): CafeOffer {
   const promo = (row.promo_payload as Record<string, unknown>) ?? {};
+  const rules = (row.offer_rules as CafeOffer["offerRules"]) ?? {};
   return {
     id: row.id as string,
     title: row.title as string,
@@ -297,8 +298,15 @@ export function mapDbOfferToCafeOffer(row: Record<string, unknown>): CafeOffer {
     startDate: row.start_date as string | undefined,
     endDate: row.end_date as string | undefined,
     linkedProductId: row.linked_product_id as string | undefined,
+    targetType: (row.target_type as CafeOffer["targetType"]) ?? "products",
+    reservationServiceId: row.reservation_service_id as string | undefined,
+    offerRules: rules,
     bannerImageUrl: row.banner_url as string | undefined,
     bannerAssetId: row.banner_storage_path as string | undefined,
+    cardStoragePath: row.card_storage_path as string | undefined,
+    cardGenerationStatus: (row.card_generation_status as CafeOffer["cardGenerationStatus"]) ?? "idle",
+    cardGenerationError: row.card_generation_error as string | undefined,
+    cardGeneratedAt: row.card_generated_at as string | undefined,
     ctaText: row.cta_text as string | undefined,
     promoProductName: promo.promoProductName as string | undefined,
     promoProductPrice: promo.promoProductPrice as number | undefined,

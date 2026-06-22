@@ -19,6 +19,7 @@ import {
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { LocalAssetImage } from "@/components/ui/local-asset-image";
 import {
   InternalAdPanel,
   PremiumSectionHeader,
@@ -42,6 +43,7 @@ import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { formatSar } from "@/lib/format";
 import type { CafeOffer } from "@/lib/mock/offers";
+import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
 import {
   isPromoActive,
   productFinalPrice,
@@ -269,6 +271,181 @@ function ActiveOfferSlider({
   );
 }
 
+function offerCardHref(slug: string, offer: CafeOffer, previewThemeId?: string | null) {
+  if (offer.targetType === "reservation" || offer.type === "عرض حجز") {
+    return getCafePath(slug, "reserve", previewThemeId);
+  }
+  if (offer.linkedProductId) {
+    return getCafePath(slug, `product/${offer.linkedProductId}`, previewThemeId);
+  }
+  return getCafePath(slug, "products/offers", previewThemeId);
+}
+
+function offerDestinationLabel(offer: CafeOffer) {
+  if (offer.targetType === "reservation" || offer.type === "عرض حجز") return "الحجوزات";
+  if (offer.targetType === "experience_campaign") return "توثيق التجربة";
+  return "المنتجات";
+}
+
+function campaignRewardLabel(campaign: ExperienceCampaign) {
+  if (campaign.rewardType === "free_order") return "طلب مجاني";
+  if (campaign.rewardType === "reservation") return "حجز مجاني";
+  if (campaign.rewardType === "discount") {
+    return campaign.rewardDiscountPercent ? `خصم ${campaign.rewardDiscountPercent}%` : "خصم";
+  }
+  return "منتج مجاني";
+}
+
+function campaignMetaLabel(campaign: ExperienceCampaign) {
+  return `${campaignRewardLabel(campaign)} · ${campaign.startDate} إلى ${campaign.endDate}`;
+}
+
+function promoTitleClass(title: string) {
+  const length = title.trim().length;
+  if (length > 56) return "text-sm leading-6";
+  if (length > 34) return "text-base leading-6";
+  return "text-lg leading-7";
+}
+
+function promoSubtitle(value: string) {
+  const compacted = value.replace(/\s+/g, " ").trim();
+  if (compacted.length <= 92) return compacted;
+  return `${compacted.slice(0, 89).trim()}...`;
+}
+
+function PromoVisual({
+  title,
+  subtitle,
+  imageAssetId,
+  accentLabel,
+  destinationLabel,
+  metaLabel,
+}: {
+  title: string;
+  subtitle: string;
+  imageAssetId?: string;
+  accentLabel: string;
+  destinationLabel: string;
+  metaLabel?: string;
+}) {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[var(--ci-primary-bg)]">
+      {imageAssetId ? (
+        <LocalAssetImage
+          assetId={imageAssetId}
+          publicBucket="offer-banners"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          fallback={
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--ci-primary-bg) 0%, var(--ci-secondary-bg) 54%, var(--ci-accent-bg) 100%)",
+              }}
+            />
+          }
+        />
+      ) : (
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--ci-primary-bg) 0%, var(--ci-secondary-bg) 54%, var(--ci-accent-bg) 100%)",
+          }}
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/38 to-black/14" />
+      <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.42))]" />
+      <div className="relative flex h-full min-h-0 flex-col justify-between p-4 text-white">
+        <span className="max-w-full self-start truncate rounded-full bg-white/88 px-3 py-1 text-[10px] font-black text-[#311912] shadow-sm">
+          {accentLabel}
+        </span>
+        <div className="min-h-0">
+          <h3 className={`line-clamp-2 font-black ${promoTitleClass(title)}`}>{title}</h3>
+          {subtitle ? (
+            <p className="mt-1.5 line-clamp-2 text-[11px] font-bold leading-5 text-white/86">
+              {promoSubtitle(subtitle)}
+            </p>
+          ) : null}
+          <div className="mt-3 flex items-center justify-between gap-2 text-[10px] font-black text-white/82">
+            <span className="truncate">{destinationLabel}</span>
+            {metaLabel ? <span className="min-w-0 truncate text-white/72">{metaLabel}</span> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HomePromoSections({
+  slug,
+  offers,
+  campaigns,
+  previewThemeId,
+}: {
+  slug: string;
+  offers: CafeOffer[];
+  campaigns: ExperienceCampaign[];
+  previewThemeId?: string | null;
+}) {
+  const visibleOffers = offers.slice(0, 8);
+  const visibleCampaigns = campaigns.filter((campaign) => campaign.status === "active").slice(0, 8);
+
+  if (!visibleOffers.length && !visibleCampaigns.length) return null;
+
+  return (
+    <div className="mt-8 space-y-8">
+      {visibleOffers.length ? (
+        <section>
+          <PremiumSectionHeader eyebrow="العروض" title="بطاقات مختارة لك" />
+          <div className="flex snap-x gap-4 overflow-x-auto pb-3">
+            {visibleOffers.map((offer) => (
+              <Link
+                key={offer.id}
+                href={offerCardHref(slug, offer, previewThemeId)}
+                className="relative block h-[188px] w-[238px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] shadow-[0_14px_34px_rgba(49,25,18,0.12)] transition active:scale-[0.98]"
+              >
+                <PromoVisual
+                  title={offer.promoProductName || offer.title}
+                  subtitle={offer.promoProductDescription || offer.description || "عرض متاح لفترة محدودة"}
+                  imageAssetId={offer.cardStoragePath || offer.bannerAssetId}
+                  accentLabel={offer.discountPercent ? `خصم ${offer.discountPercent}%` : offer.type}
+                  destinationLabel={offerDestinationLabel(offer)}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {visibleCampaigns.length ? (
+        <section>
+          <PremiumSectionHeader eyebrow="حملات توثيق التجربة" title="شارك تجربتك واستفد" />
+          <div className="flex snap-x gap-4 overflow-x-auto pb-3">
+            {visibleCampaigns.map((campaign) => (
+              <Link
+                key={campaign.id}
+                href={getCafePath(slug, "account", previewThemeId)}
+                className="relative block h-[188px] w-[238px] shrink-0 snap-start overflow-hidden rounded-[24px] border border-[var(--ci-border)] bg-[var(--ci-surface-bg)] shadow-[0_14px_34px_rgba(49,25,18,0.12)] transition active:scale-[0.98]"
+              >
+                <PromoVisual
+                  title={campaign.title}
+                  subtitle={campaign.description || campaign.terms || "وثّق تجربتك واحصل على مكافأة"}
+                  imageAssetId={campaign.cardStoragePath}
+                  accentLabel="وثّق تجربتك"
+                  destinationLabel="المكافآت والتوثيق"
+                  metaLabel={campaignMetaLabel(campaign)}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 
 function distanceMeters(
   first: { lat: number; lng: number },
@@ -310,7 +487,7 @@ function markBranchEmailPending(slug: string, branchId: string, customerId: stri
 function CafePageInner({ slug }: { slug: string }) {
   const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features, hydrated } = useCafeThemePage(slug);
   const hasFeature = (feature: string) => hydrated && featureCodesAllow(features, feature);
-  const { products, offers, branches, categories, loading, error: menuError } = usePublicCafeMenu(slug);
+  const { products, offers, branches, categories, experienceCampaigns, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [homeLoyalty, setHomeLoyalty] = useState<HomeLoyaltySnapshot | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
@@ -615,10 +792,19 @@ function CafePageInner({ slug }: { slug: string }) {
 
         {hasFeature("menu") && featuredProducts.length ? (
           <section className="mt-8">
-            <PremiumSectionHeader
-              eyebrow="أحدث المنتجات"
-              title="اختيارات تتحرك بروح التطبيق"
-            />
+            <div className="flex items-start justify-between gap-3">
+              <PremiumSectionHeader
+                eyebrow="أحدث المنتجات"
+                title="اختيارات تتحرك بروح التطبيق"
+              />
+              <Link
+                href={getCafePath(slug, "products/latest", previewThemeId)}
+                className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-4 py-2 text-xs font-black text-[var(--ci-button-fg)]"
+              >
+                كل المنتجات
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </div>
             <div className="flex snap-x gap-4 overflow-x-auto pb-3">
               {featuredProducts.concat(featuredProducts).slice(0, 10).map((product, index) => (
                 <div key={`${product.id}-${index}`} className="snap-start">
@@ -641,9 +827,12 @@ function CafePageInner({ slug }: { slug: string }) {
 
 
 
-        <div className="mt-8">
-          <CampaignBanner slug={slug} previewThemeId={previewThemeId} />
-        </div>
+        <HomePromoSections
+          slug={slug}
+          offers={activeOffers}
+          campaigns={hasFeature("experience_reviews") ? experienceCampaigns : []}
+          previewThemeId={previewThemeId}
+        />
       </div>
       <CustomerBottomDock
         {...defaultCustomerDockItems({

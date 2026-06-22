@@ -156,6 +156,37 @@ export async function uploadOptimizedImage(
   };
 }
 
+export async function uploadGeneratedImageBytes(
+  bucket: Extract<StorageBucket, "offer-banners" | "marketing-assets">,
+  bytes: Uint8Array | ArrayBuffer,
+  mimeType: "image/png" | "image/jpeg" | "image/webp",
+  entityId: string
+) {
+  const cafe = await requireOwnerCafeContext();
+  const byteLength = bytes instanceof Uint8Array ? bytes.byteLength : bytes.byteLength;
+
+  if (byteLength <= 0) throw new Error("Missing generated image");
+  if (byteLength > MAX_SERVER_UPLOAD_BYTES) {
+    throw new Error("حجم بطاقة العرض كبير جدًا");
+  }
+
+  if (!BUCKET_MIME[bucket].includes(mimeType)) {
+    throw new Error("صيغة البطاقة غير مدعومة");
+  }
+
+  const ext = extensionFromMime(mimeType);
+  const fileName = `${crypto.randomUUID()}.${ext}`;
+  const storagePath = buildStoragePath(bucket, cafe.id, entityId, fileName);
+  const supabaseAdmin = createStorageAdminClient();
+  const { error } = await supabaseAdmin.storage.from(bucket).upload(storagePath, bytes, {
+    contentType: mimeType,
+    upsert: false,
+  });
+
+  if (error) throw error;
+  return { storagePath, byteSize: byteLength };
+}
+
 export async function deleteStorageObject(bucket: StorageBucket, storagePath: string) {
   const cafe = await requireOwnerCafeContext();
   const pathCafeId = storagePath.split("/")[0];

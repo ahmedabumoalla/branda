@@ -6,6 +6,8 @@ import { OffersPageClient } from "@/components/dashboard/pages/offers-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { getOwnerOffers } from "@/lib/data/offers";
+import { getOwnerExperienceData } from "@/lib/data/experience";
+import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
 
 export default async function OffersPage() {
   if (!isSupabaseConfigured()) {
@@ -14,9 +16,19 @@ export default async function OffersPage() {
     );
   }
   try {
-    const [offers, menu] = await Promise.all([getOwnerOffers(), getOwnerMenu()]);
+    const [offers, menu, services, experience] = await Promise.all([
+      getOwnerOffers(),
+      getOwnerMenu(),
+      getOwnerReservationServices(),
+      getOwnerExperienceData(),
+    ]);
     return (
-      <OffersPageClient initialOffers={offers} initialProducts={menu.products} />
+      <OffersPageClient
+        initialOffers={offers}
+        initialProducts={menu.products}
+        initialReservationServices={services}
+        initialExperienceCampaigns={experience.campaigns}
+      />
     );
   } catch {
     return (

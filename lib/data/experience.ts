@@ -24,6 +24,24 @@ function mapDbCampaign(slug: string, row: Record<string, unknown>): ExperienceCa
     pointsPerComment: Number(row.points_per_comment),
     maxPointsPerSubmission: row.max_points_per_submission as number,
     requiresManualApproval: row.requires_manual_approval as boolean,
+    requirements: (row.requirements as ExperienceCampaign["requirements"]) ?? {},
+    excludedContentRules: Array.isArray(row.excluded_content_rules)
+      ? (row.excluded_content_rules as string[])
+      : Array.isArray((row.excluded_content_rules as Record<string, unknown> | null)?.items)
+        ? ((row.excluded_content_rules as { items: string[] }).items ?? [])
+        : [],
+    rewardType: (row.reward_type as ExperienceCampaign["rewardType"]) ?? "product",
+    rewardProductId: row.reward_product_id as string | undefined,
+    rewardReservationServiceId: row.reward_reservation_service_id as string | undefined,
+    rewardDiscountPercent:
+      row.reward_discount_percent === null || row.reward_discount_percent === undefined
+        ? undefined
+        : Number(row.reward_discount_percent),
+    cardStoragePath: row.card_storage_path as string | undefined,
+    cardGenerationStatus:
+      (row.card_generation_status as ExperienceCampaign["cardGenerationStatus"]) ?? "idle",
+    cardGenerationError: row.card_generation_error as string | undefined,
+    cardGeneratedAt: row.card_generated_at as string | undefined,
     status: row.status as ExperienceCampaign["status"],
     createdAt: (row.created_at as string).slice(0, 10),
   };
@@ -63,6 +81,7 @@ export async function getPublicExperienceCampaigns(slug: string): Promise<Experi
     .select("*")
     .eq("cafe_id", cafe.id)
     .eq("status", "active")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => mapDbCampaign(slug, row));
@@ -76,6 +95,7 @@ export async function getOwnerExperienceData() {
       .from("experience_campaigns")
       .select("*")
       .eq("cafe_id", cafe.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("experience_submissions")
@@ -111,6 +131,16 @@ const campaignSchema = z.object({
   pointsPerComment: z.number(),
   maxPointsPerSubmission: z.number().int(),
   requiresManualApproval: z.boolean(),
+  requirements: z.record(z.string(), z.unknown()).optional(),
+  excludedContentRules: z.array(z.string()).optional(),
+  rewardType: z.enum(["free_order", "product", "reservation", "discount"]).optional(),
+  rewardProductId: z.string().uuid().optional().nullable(),
+  rewardReservationServiceId: z.string().uuid().optional().nullable(),
+  rewardDiscountPercent: z.number().optional().nullable(),
+  cardStoragePath: z.string().optional().nullable(),
+  cardGenerationStatus: z.enum(["idle", "generating", "ready", "failed"]).optional(),
+  cardGenerationError: z.string().optional().nullable(),
+  cardGeneratedAt: z.string().optional().nullable(),
   status: z.string(),
 });
 
@@ -134,6 +164,16 @@ export async function upsertExperienceCampaign(input: z.infer<typeof campaignSch
     points_per_comment: 0,
     max_points_per_submission: 0,
     requires_manual_approval: parsed.requiresManualApproval,
+    requirements: parsed.requirements ?? {},
+    excluded_content_rules: { items: parsed.excludedContentRules ?? [] },
+    reward_type: parsed.rewardType ?? "product",
+    reward_product_id: parsed.rewardProductId ?? null,
+    reward_reservation_service_id: parsed.rewardReservationServiceId ?? null,
+    reward_discount_percent: parsed.rewardDiscountPercent ?? null,
+    card_storage_path: parsed.cardStoragePath ?? null,
+    card_generation_status: parsed.cardGenerationStatus ?? "idle",
+    card_generation_error: parsed.cardGenerationError ?? null,
+    card_generated_at: parsed.cardGeneratedAt ?? null,
     status: parsed.status,
   };
 
@@ -156,6 +196,18 @@ export async function upsertExperienceCampaign(input: z.infer<typeof campaignSch
     .single();
   if (error) throw error;
   return mapDbCampaign(cafe.slug, data);
+}
+
+export async function softDeleteExperienceCampaign(campaignId: string) {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("experience_campaigns")
+    .update({ deleted_at: new Date().toISOString(), status: "ended" })
+    .eq("id", campaignId)
+    .eq("cafe_id", cafe.id);
+
+  if (error) throw error;
 }
 
 const submissionSchema = z.object({

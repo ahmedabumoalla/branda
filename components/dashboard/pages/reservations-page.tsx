@@ -53,6 +53,7 @@ import {
 } from "@/lib/mock/reservations";
 import type { MenuProduct } from "@/lib/mock/menu";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import {
   exportRowsToExcel,
@@ -149,6 +150,7 @@ export function ReservationsPageClient({
   const [cafeMessage, setCafeMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reservationCheckinCode, setReservationCheckinCode] = useState("");
+  const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -332,9 +334,13 @@ export function ReservationsPageClient({
 
   async function confirmReservationAttendance(codeInput?: string) {
     const raw = (codeInput ?? reservationCheckinCode).trim();
-    if (!raw) return alert("أدخل QR أو كود الحجز");
+    if (!raw) {
+      setCheckinMessage("أدخل QR أو كود الحجز");
+      return alert("أدخل QR أو كود الحجز");
+    }
     const code = parseBarndaksaQrPayload(raw, "reservation") ?? raw.toUpperCase();
     setBusy(true);
+    setCheckinMessage(null);
     try {
       const result = await confirmOwnerReservationCodeAction(code);
       setReservationCheckinCode("");
@@ -349,13 +355,19 @@ export function ReservationsPageClient({
             : item,
         ),
       );
-      alert(`تم تأكيد حضور ${String(result.customerName ?? "العميل")}`);
+      const message = `تم تأكيد حضور ${String(result.customerName ?? "العميل")}`;
+      setCheckinMessage(message);
+      alert(message);
     } catch (error) {
-      alert(
-        error instanceof Error
-          ? error.message
-          : "كود الحجز غير صالح أو مستخدم مسبقًا",
-      );
+      const rawMessage =
+        error instanceof Error ? error.message : "كود الحجز غير صالح أو مستخدم مسبقًا";
+      const message = rawMessage.includes("مستخدم") || rawMessage.toLowerCase().includes("used")
+        ? "تم استخدام هذا الكود سابقًا"
+        : rawMessage.includes("غير صالح") || rawMessage.toLowerCase().includes("not found")
+          ? "كود الحجز غير صحيح أو الحجز غير مقبول"
+          : rawMessage;
+      setCheckinMessage(message);
+      alert(message);
     } finally {
       setBusy(false);
     }
@@ -843,22 +855,39 @@ export function ReservationsPageClient({
                 يقبل فقط الحجوزات المقبولة، وبعد التأكيد يتوقف الكود نهائيًا.
               </p>
             </div>
-            <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[1fr_auto] lg:max-w-xl">
-              <NeumoInput
-                value={reservationCheckinCode}
-                onChange={(event) =>
-                  setReservationCheckinCode(event.target.value.toUpperCase())
-                }
-                placeholder="امسح QR الحجز أو اكتب الكود"
-              />
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void confirmReservationAttendance()}
-                className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white disabled:opacity-60"
-              >
-                <QrCode className="inline h-4 w-4" /> تأكيد الحضور
-              </button>
+            <div className="grid min-w-0 flex-1 gap-3 lg:max-w-xl">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <NeumoInput
+                  value={reservationCheckinCode}
+                  onChange={(event) =>
+                    setReservationCheckinCode(event.target.value.toUpperCase())
+                  }
+                  placeholder="امسح QR الحجز أو اكتب الكود"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void confirmReservationAttendance()}
+                  className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white disabled:opacity-60"
+                >
+                  <QrCode className="inline h-4 w-4" /> تأكيد الحضور
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <BarcodeCameraScanner
+                  label="مسح QR بالكاميرا"
+                  expectedKind="reservation"
+                  onDetected={(value) => {
+                    setReservationCheckinCode(value.toUpperCase());
+                    void confirmReservationAttendance(value);
+                  }}
+                />
+                {checkinMessage ? (
+                  <p className="rounded-2xl bg-[#FFF8EA] px-4 py-3 text-sm font-black text-[#6B3A25]">
+                    {checkinMessage}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
         </BentoCard>
@@ -876,104 +905,124 @@ export function ReservationsPageClient({
         </FilterBar>
         <BentoGrid>
           <BentoCard variant="white" span="4">
-            <section className="grid gap-5">
-              {filtered.map((r) => (
-                <SoftCard key={r.id}>
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black text-[#3A2117]">
-                        {r.customerName}
-                      </h2>
-                      <p className="mt-1 font-bold text-[#7A6255]">{r.phone}</p>
-                      <p className="mt-1 font-bold text-[#7A6255]">
-                        {r.type} • {r.date} • {r.time}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() =>
-                          setActionTarget({ id: r.id, kind: "accept" })
-                        }
-                        className="rounded-xl bg-green-100 px-4 py-2 font-black text-green-700"
-                      >
-                        <Check className="inline h-4 w-4" /> قبول
-                      </button>
-                      <button
-                        onClick={() =>
-                          setActionTarget({ id: r.id, kind: "modify" })
-                        }
-                        className="rounded-xl bg-blue-100 px-4 py-2 font-black text-blue-700"
-                      >
-                        <Clock className="inline h-4 w-4" /> تعديل
-                      </button>
-                      <button
-                        onClick={() =>
-                          setActionTarget({ id: r.id, kind: "reject" })
-                        }
-                        className="rounded-xl bg-red-100 px-4 py-2 font-black text-red-700"
-                      >
-                        <X className="inline h-4 w-4" /> رفض
-                      </button>
-                      <button
-                        onClick={() => printReservationThermal(r)}
-                        className="rounded-xl bg-[#F8F4EF] px-4 py-2 font-black text-[#3A2117]"
-                      >
-                        <Printer className="inline h-4 w-4" /> طباعة حرارية
-                      </button>
-                    </div>
-                  </div>
-                  {r.status === "مقبول" && r.reservationCode ? (
-                    <div className="mt-4 rounded-3xl border border-[#E7D7C6] bg-[#FCF8F3] p-4">
-                      <div className="grid gap-4 md:grid-cols-[180px_1fr_auto] md:items-center">
-                        <SecureQrCode
-                          kind="reservation"
-                          value={r.reservationCode}
-                          title={`QR حضور الحجز ${r.reservationCode}`}
-                          size={156}
-                        />
-                        <div>
-                          <p className="font-black text-[#3A2117]">
-                            QR حضور الحجز
-                          </p>
-                          <p className="mt-1 font-mono text-sm font-black tracking-[0.15em] text-[#6B3A25]">
-                            {r.reservationCode}
-                          </p>
-                          <p className="mt-1 text-xs font-bold text-[#7A6255]">
-                            {r.reservationCodeUsedAt
-                              ? "تم استخدام QR وتأكيد الحضور"
-                              : "يستخدم مرة واحدة من صفحة العلامة أو الكاشير"}
-                          </p>
-                        </div>
-                        {!r.reservationCodeUsedAt ? (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              void confirmReservationAttendance(
-                                r.reservationCode,
-                              )
-                            }
-                            className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white disabled:opacity-60"
-                          >
-                            تأكيد الحضور
-                          </button>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] border-separate border-spacing-y-3 text-right">
+                <thead>
+                  <tr className="text-xs font-black text-[#7A6255]">
+                    <th className="px-4 py-2">الفرع</th>
+                    <th className="px-4 py-2">نوع الحجز</th>
+                    <th className="px-4 py-2">الاسم</th>
+                    <th className="px-4 py-2">التاريخ</th>
+                    <th className="px-4 py-2">الوقت</th>
+                    <th className="px-4 py-2">الحالة</th>
+                    <th className="px-4 py-2">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="align-top">
+                      <td className="rounded-r-3xl bg-[#F8F4EF] px-4 py-4 font-bold text-[#3A2117]">
+                        {r.branchName || "-"}
+                      </td>
+                      <td className="bg-[#F8F4EF] px-4 py-4">
+                        <p className="font-black text-[#3A2117]">{r.serviceName || r.type}</p>
+                        <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                          {r.guests} أشخاص {r.reservationPrice ? `• ${formatSar(r.reservationPrice)}` : ""}
+                        </p>
+                      </td>
+                      <td className="bg-[#F8F4EF] px-4 py-4">
+                        <p className="font-black text-[#3A2117]">{r.customerName}</p>
+                        <p className="mt-1 text-xs font-bold text-[#7A6255]">{r.phone}</p>
+                      </td>
+                      <td className="bg-[#F8F4EF] px-4 py-4 font-bold text-[#3A2117]">{r.date}</td>
+                      <td className="bg-[#F8F4EF] px-4 py-4 font-bold text-[#3A2117]">{r.time}</td>
+                      <td className="bg-[#F8F4EF] px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            r.status === "مقبول"
+                              ? "bg-green-100 text-green-700"
+                              : r.status === "مرفوض"
+                                ? "bg-red-100 text-red-700"
+                                : r.status === "طلب تعديل"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                        {r.notes ? (
+                          <p className="mt-2 line-clamp-2 text-xs font-bold text-[#7A6255]">{r.notes}</p>
                         ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="mt-4 grid gap-3 md:grid-cols-4">
-                    <Info
-                      label="الأشخاص"
-                      value={String(r.guests)}
-                      icon={Users}
-                    />
-                    <Info label="الفرع" value={r.branchName || "-"} />
-                    <Info label="الحالة" value={r.status} />
-                    <Info label="ملاحظات" value={r.notes || "-"} />
-                  </div>
-                </SoftCard>
-              ))}
-            </section>
+                      </td>
+                      <td className="rounded-l-3xl bg-[#F8F4EF] px-4 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setActionTarget({ id: r.id, kind: "accept" })}
+                            className="rounded-xl bg-green-100 px-3 py-2 text-xs font-black text-green-700"
+                          >
+                            <Check className="inline h-3.5 w-3.5" /> قبول
+                          </button>
+                          <button
+                            onClick={() => setActionTarget({ id: r.id, kind: "modify" })}
+                            className="rounded-xl bg-blue-100 px-3 py-2 text-xs font-black text-blue-700"
+                          >
+                            <Clock className="inline h-3.5 w-3.5" /> تعديل
+                          </button>
+                          <button
+                            onClick={() => setActionTarget({ id: r.id, kind: "reject" })}
+                            className="rounded-xl bg-red-100 px-3 py-2 text-xs font-black text-red-700"
+                          >
+                            <X className="inline h-3.5 w-3.5" /> رفض
+                          </button>
+                          <button
+                            onClick={() => printReservationThermal(r)}
+                            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-[#3A2117]"
+                          >
+                            <Printer className="inline h-3.5 w-3.5" /> طباعة
+                          </button>
+                        </div>
+                        {r.status === "مقبول" && r.reservationCode ? (
+                          <div className="mt-4 w-full rounded-3xl border border-[#E7D7C6] bg-white p-5">
+                            <div className="grid gap-4 xl:grid-cols-[176px_1fr] xl:items-center">
+                              <SecureQrCode
+                                kind="reservation"
+                                value={r.reservationCode}
+                                title={`QR حضور الحجز ${r.reservationCode}`}
+                                size={160}
+                                className="mx-auto"
+                              />
+                              <div>
+                                <p className="font-black text-[#3A2117]">QR حضور الحجز</p>
+                                <p className="mt-2 break-all font-mono text-xs font-black tracking-[0.12em] text-[#6B3A25]">
+                                  {r.reservationCode}
+                                </p>
+                                {!r.reservationCodeUsedAt ? (
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void confirmReservationAttendance(r.reservationCode)}
+                                    className="mt-3 rounded-2xl bg-[#3A2117] px-4 py-2 text-xs font-black text-white disabled:opacity-60"
+                                  >
+                                    تأكيد الحضور
+                                  </button>
+                                ) : (
+                                  <p className="mt-2 text-xs font-bold text-green-700">تم استخدام QR</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!filtered.length ? (
+                <p className="rounded-3xl bg-[#F8F4EF] p-5 text-center font-bold text-[#7A6255]">
+                  لا توجد حجوزات مطابقة للبحث.
+                </p>
+              ) : null}
+            </div>
           </BentoCard>
         </BentoGrid>
       </DashboardPageShell>

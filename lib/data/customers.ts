@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -113,9 +114,32 @@ export async function getCustomerProfileByUser(
   return data;
 }
 
+function normalizeSlugForCookie(slug: string) {
+  return slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 80);
+}
+
+function getCustomerSessionCookieName(slug: string) {
+  return `barndaksa_customer_session_${normalizeSlugForCookie(slug)}`;
+}
+
+export async function getCustomerProfileForActiveSession(cafeSlug: string) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
+  if (!token) return null;
+  return getCustomerProfileBySessionToken(cafeSlug, token);
+}
+
 /** Requires authenticated Supabase session linked to a customer profile for this cafe */
 export async function requireCustomerProfileForSession(cafeSlug: string) {
-  const supabase = createAdminClient();
+  const sessionProfile = await getCustomerProfileForActiveSession(cafeSlug);
+  if (sessionProfile) {
+    return {
+      user: { id: String(sessionProfile.user_id ?? sessionProfile.id) },
+      profile: sessionProfile,
+    };
+  }
+
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -30,13 +30,27 @@ export function SecureQrCode({ kind, value, title, size = 176, className = "" }:
     const qr = QRCode(0, "Q");
     qr.addData(payload);
     qr.make();
-    return qr.createSvgTag(5, 3);
+    const moduleCount = qr.getModuleCount();
+    const quietZone = 4;
+    const totalSize = moduleCount + quietZone * 2;
+    const cells: string[] = [];
+
+    for (let row = 0; row < moduleCount; row += 1) {
+      for (let col = 0; col < moduleCount; col += 1) {
+        if (!qr.isDark(row, col)) continue;
+        cells.push(
+          `<rect x="${col + quietZone}" y="${row + quietZone}" width="1" height="1" />`,
+        );
+      }
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalSize} ${totalSize}" width="100%" height="100%" shape-rendering="crispEdges"><rect width="${totalSize}" height="${totalSize}" fill="#fff" /> <g fill="#17100d">${cells.join("")}</g></svg>`;
   }, [payload]);
 
   return (
     <div className={className} aria-label={title || "Barndaksa secure QR"} data-qr-value={payload}>
       <div
-        className="mx-auto overflow-hidden rounded-2xl bg-white p-3 text-[#17100d]"
+        className="mx-auto rounded-2xl bg-white p-3 text-[#17100d]"
         style={{ width: size, height: size }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />

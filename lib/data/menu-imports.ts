@@ -219,6 +219,23 @@ async function enrichImages(cafeId: string, analysis: MenuImportAnalysis) {
   };
 }
 
+function isIWaiterAnalysis(analysis: MenuImportAnalysis) {
+  return analysis.rawSummary.adapter === "iwaiter";
+}
+
+function skipPreviewImageProcessing(analysis: MenuImportAnalysis) {
+  if (!isIWaiterAnalysis(analysis)) return analysis;
+
+  return {
+    ...analysis,
+    rawSummary: {
+      ...analysis.rawSummary,
+      previewImageProcessing: "skipped-for-iwaiter",
+      report: analysis.report,
+    },
+  };
+}
+
 async function insertAnalysisItems(cafeId: string, jobId: string, analysis: MenuImportAnalysis) {
   const supabase = await createClient();
   const rows = analysis.items.map((item) => ({
@@ -290,8 +307,11 @@ export async function createMenuImportFromUrl(sourceUrl: string) {
 
   const { cafe, job } = await createImportJob("url", trimmedUrl);
   try {
-    const analysis = await enrichImages(cafe.id, await analyzeMenuUrl(trimmedUrl));
-    await insertAnalysisItems(cafe.id, job.id, analysis);
+    const analysis = await analyzeMenuUrl(trimmedUrl);
+    const previewAnalysis = isIWaiterAnalysis(analysis)
+      ? skipPreviewImageProcessing(analysis)
+      : await enrichImages(cafe.id, analysis);
+    await insertAnalysisItems(cafe.id, job.id, previewAnalysis);
     return getMenuImportJob(job.id);
   } catch (error) {
     const supabase = await createClient();

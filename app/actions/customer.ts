@@ -42,7 +42,12 @@ import type { AppNotification } from "@/lib/mock/notifications";
 
 export async function fetchCustomerOrdersAction(cafeSlug: string) {
 
-  const { profile } = await requireCustomerProfileForSession(cafeSlug);
+  let profile: Awaited<ReturnType<typeof requireCustomerProfileForSession>>["profile"];
+  try {
+    ({ profile } = await requireCustomerProfileForSession(cafeSlug));
+  } catch {
+    return [];
+  }
 
   return getCustomerOrdersForProfile(cafeSlug, profile.id as string);
 
@@ -52,7 +57,12 @@ export async function fetchCustomerOrdersAction(cafeSlug: string) {
 
 export async function fetchCustomerReservationsAction(cafeSlug: string) {
 
-  const { profile } = await requireCustomerProfileForSession(cafeSlug);
+  let profile: Awaited<ReturnType<typeof requireCustomerProfileForSession>>["profile"];
+  try {
+    ({ profile } = await requireCustomerProfileForSession(cafeSlug));
+  } catch {
+    return [];
+  }
 
   return getCustomerReservationsForProfile(cafeSlug, profile.id as string);
 

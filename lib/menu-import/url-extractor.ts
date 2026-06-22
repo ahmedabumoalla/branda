@@ -12,6 +12,7 @@ import type { ExtractedMenuItem, MenuImportAnalysis } from "@/lib/menu-import/ty
 
 const maxRedirects = 4;
 const timeoutMs = 9000;
+const iwaiterTimeoutMs = 8000;
 const maxResponseBytes = 2 * 1024 * 1024;
 const userAgent = "BarndaksaMenuImport/1.0";
 
@@ -61,14 +62,18 @@ async function assertPublicUrl(url: URL) {
   }
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit) {
+async function fetchWithTimeoutMs(url: string, init: RequestInit, timeoutMilliseconds: number) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMilliseconds);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  return fetchWithTimeoutMs(url, init, timeoutMs);
 }
 
 async function readLimitedText(response: Response) {
@@ -251,6 +256,356 @@ function attachImages(items: ExtractedMenuItem[], images: Array<{ url: string; a
   });
 }
 
+function isYallaQrCodesUrl(url: URL) {
+  return url.hostname.toLowerCase().endsWith(".yallaqrcodes.com");
+}
+
+function isIWaiterUrl(url: URL) {
+  const hostname = url.hostname.toLowerCase();
+  return hostname === "iwaiter.net" || hostname.endsWith(".iwaiter.net");
+}
+
+function branchIdFromYallaUrl(url: URL) {
+  const branchMatch = url.pathname.match(/\/branch\/([^/]+)/i);
+  if (branchMatch?.[1]) return branchMatch[1];
+  const queryBranch = url.searchParams.get("branch") ?? url.searchParams.get("branch_id");
+  return queryBranch?.trim() || "1";
+}
+
+async function fetchYallaJson(baseUrl: URL, path: string, branchId: string) {
+  const url = new URL(path, baseUrl.origin);
+  await assertPublicUrl(url);
+  const response = await fetchWithTimeout(url.toString(), {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "User-Agent": userAgent,
+      Accept: "application/json,text/plain;q=0.7,*/*;q=0.5",
+      branch: branchId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Yalla QR Codes API returned ${response.status}`);
+  }
+
+  const text = await readLimitedText(response);
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error("Yalla QR Codes API returned unreadable JSON");
+  }
+}
+
+function asArray(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)));
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["results", "data", "items", "categories", "menus"]) {
+      const nested = record[key];
+      if (Array.isArray(nested)) return asArray(nested);
+    }
+  }
+  return [];
+}
+
+function yallaText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return decodeHtmlEntities(value).trim();
+  }
+  return "";
+}
+
+function yallaNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = parsePrice(value);
+      if (parsed != null) return parsed;
+    }
+  }
+  return null;
+}
+
+function recordArray(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)));
+}
+
+function absolutizeYallaImage(value: string, baseUrl: URL) {
+  if (!value.trim()) return null;
+  try {
+    return new URL(value, baseUrl.origin).toString();
+  } catch {
+    return null;
+  }
+}
+
+async function analyzeYallaQrCodesMenu(sourceUrl: string): Promise<MenuImportAnalysis> {
+  const baseUrl = new URL(sourceUrl.trim());
+  const branchId = branchIdFromYallaUrl(baseUrl);
+
+  const [infoPayload, menuPayload, categoryPayload, itemPayload] = await Promise.all([
+    fetchYallaJson(baseUrl, "/api/info/", branchId).catch(() => null),
+    fetchYallaJson(baseUrl, "/api/menus/", branchId).catch(() => null),
+    fetchYallaJson(baseUrl, "/api/categories/", branchId).catch(() => null),
+    fetchYallaJson(baseUrl, "/api/items-light/", branchId),
+  ]);
+
+  const categoryMap = new Map<string, string>();
+  for (const category of asArray(categoryPayload)) {
+    const id = String(category.id ?? category.category_id ?? "");
+    const name = yallaText(category, ["name_ar", "name", "name_en", "title_ar", "title"]);
+    if (id && name) categoryMap.set(id, name);
+  }
+
+  const items: ExtractedMenuItem[] = [];
+  for (const item of asArray(itemPayload)) {
+    const productName = yallaText(item, ["name_ar", "name", "name_en", "title_ar", "title"]);
+    const description = yallaText(item, ["description_ar", "description", "desc_ar", "desc", "description_en"]);
+    const categoryId = String(item.category ?? item.category_id ?? item.categoryId ?? "");
+    const categoryName =
+      categoryMap.get(categoryId) ||
+      yallaText(item, ["category_name_ar", "category_name", "categoryName", "category"]);
+    const price = yallaNumber(item, ["price", "price_after_discount", "amount", "cost"]);
+    const calories = yallaNumber(item, ["calories", "calorie", "kcal"]);
+    const image =
+      yallaText(item, ["image_full", "image_url", "image", "photo", "photo_url", "thumbnail"]) ||
+      "";
+
+    if (!productName) continue;
+
+    items.push({
+      productName,
+      categoryName: categoryName || "غير مصنف",
+      description: description || null,
+      price,
+      calories,
+      imageUrl: absolutizeYallaImage(image, baseUrl),
+      metadata: {
+        sourceUrl,
+        extraction: "yallaqrcodes-api",
+        branchId,
+        sourceItemId: item.id == null ? null : String(item.id),
+      },
+      status: price == null ? "needs_review" : "ready",
+    });
+  }
+
+  const notes = items.length
+    ? ["تم استخراج المنتجات من واجهة yallaqrcodes API بدون browser rendering."]
+    : ["لم يتم العثور على منتجات في واجهة yallaqrcodes API، ولم يتم اختراع أي منتجات."];
+
+  return buildAnalysis(
+    items,
+    {
+      sourceUrl,
+      finalUrl: sourceUrl,
+      visitedUrls: [
+        new URL("/api/info/", baseUrl.origin).toString(),
+        new URL("/api/menus/", baseUrl.origin).toString(),
+        new URL("/api/categories/", baseUrl.origin).toString(),
+        new URL("/api/items-light/", baseUrl.origin).toString(),
+      ],
+      contentType: "application/json",
+      adapter: "yallaqrcodes",
+      branchId,
+      infoFound: Boolean(infoPayload),
+      menusFound: asArray(menuPayload).length,
+      categoriesFound: categoryMap.size,
+    },
+    notes
+  );
+}
+
+function iwaiterPathParts(url: URL) {
+  const segments = url.pathname.split("/").map((item) => decodeURIComponent(item).trim()).filter(Boolean);
+  const slug =
+    segments.find((item) => !/^(api|v\d+|restaurants?|menu|view|branch|table|qr|appLink\.html)$/i.test(item) && !/^[0-9a-f]{24}$/i.test(item)) ??
+    "";
+  const idSegments = segments.filter((item) => /^[0-9a-f]{24}$/i.test(item));
+  const branchId =
+    url.searchParams.get("branchId") ??
+    url.searchParams.get("branch") ??
+    url.searchParams.get("branch_id") ??
+    idSegments[0] ??
+    "";
+  const tableOrMenuId =
+    url.searchParams.get("tableId") ??
+    url.searchParams.get("table") ??
+    url.searchParams.get("menuId") ??
+    url.searchParams.get("menu_id") ??
+    idSegments.find((item) => item !== branchId) ??
+    "";
+
+  return {
+    slug,
+    branchId: branchId.trim(),
+    tableOrMenuId: tableOrMenuId.trim(),
+    lang: (url.searchParams.get("lang") ?? "").trim().toLowerCase(),
+    segments,
+  };
+}
+
+async function fetchIWaiterJson(slug: string) {
+  const url = new URL(`/api/v1/restaurants/${encodeURIComponent(slug)}`, "https://api.iwaiter.net");
+  await assertPublicUrl(url);
+  const response = await fetchWithTimeoutMs(url.toString(), {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "User-Agent": userAgent,
+      Accept: "application/json,text/plain;q=0.7,*/*;q=0.5",
+    },
+  }, iwaiterTimeoutMs);
+
+  if (!response.ok) {
+    throw new Error(`iWaiter API returned ${response.status}`);
+  }
+
+  const text = await readLimitedText(response);
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error("iWaiter API returned unreadable JSON");
+  }
+}
+
+function iwaiterText(record: Record<string, unknown>, keys: string[], lang: string) {
+  const preferredKeys =
+    lang === "en"
+      ? keys.flatMap((key) => [key.endsWith("_en") ? key : `${key}_en`, key])
+      : lang === "ar"
+        ? keys.flatMap((key) => [key.replace(/_en$/i, ""), key])
+        : keys;
+
+  return yallaText(record, Array.from(new Set(preferredKeys)));
+}
+
+function iwaiterBranchPrice(record: Record<string, unknown>, branchId: string) {
+  const branchPrices = recordArray(record.branchPrices);
+  if (branchId && branchPrices.length) {
+    const branchPrice = branchPrices.find((item) => {
+      const candidate = String(item.branchId ?? item.branch_id ?? item.branch ?? "").trim();
+      return candidate === branchId;
+    });
+    if (branchPrice) {
+      const price = yallaNumber(branchPrice, ["price", "amount", "cost", "finalPrice", "newPrice"]);
+      if (price != null) return price;
+    }
+  }
+
+  return yallaNumber(record, ["price", "amount", "cost", "finalPrice", "newPrice"]);
+}
+
+function iwaiterImage(record: Record<string, unknown>) {
+  const images = recordArray(record.images);
+  const firstImage = images.find((item) => typeof item.url === "string" && item.url.trim());
+  if (firstImage?.url) return String(firstImage.url).trim();
+  return yallaText(record, ["image_url", "imageUrl", "image", "photo", "photo_url", "thumbnail"]);
+}
+
+function isIWaiterUnavailable(record: Record<string, unknown>, branchId: string) {
+  if (record.isAvailable === false || record.isSoldOut === true) return true;
+  if (!branchId) return false;
+  const unavailableIds = [...recordArray(record.notAvailableIn), ...recordArray(record.soldOutIn)];
+  if (unavailableIds.some((item) => String(item.id ?? item._id ?? item.branchId ?? "").trim() === branchId)) return true;
+  const rawUnavailable = [...(Array.isArray(record.notAvailableIn) ? record.notAvailableIn : []), ...(Array.isArray(record.soldOutIn) ? record.soldOutIn : [])];
+  return rawUnavailable.some((item) => String(item ?? "").trim() === branchId);
+}
+
+async function analyzeIWaiterMenu(sourceUrl: string): Promise<MenuImportAnalysis> {
+  const baseUrl = new URL(sourceUrl.trim());
+  const hints = iwaiterPathParts(baseUrl);
+  if (!hints.slug) {
+    return buildAnalysis(
+      [],
+      {
+        sourceUrl,
+        finalUrl: sourceUrl,
+        visitedUrls: [sourceUrl],
+        contentType: "text/html",
+        adapter: "iwaiter",
+        recognized: true,
+        segments: hints.segments,
+      },
+      ["تم التعرف على رابط iWaiter، لكن لم يتم العثور على slug المطعم داخل الرابط."]
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await fetchIWaiterJson(hints.slug);
+  } catch {
+    throw new Error("تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني");
+  }
+  const restaurant =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? ((payload as Record<string, unknown>).restaurant as Record<string, unknown> | undefined)
+      : undefined;
+  const categories = recordArray(restaurant?.menu);
+  const items: ExtractedMenuItem[] = [];
+  const seenItems = new Set<string>();
+
+  for (const category of categories) {
+    const categoryUnavailable = isIWaiterUnavailable(category, hints.branchId);
+    const categoryName = iwaiterText(category, ["name", "title"], hints.lang) || "غير مصنف";
+    for (const food of recordArray(category.foods)) {
+      const productName = iwaiterText(food, ["name", "title"], hints.lang);
+      if (!productName) continue;
+      const price = iwaiterBranchPrice(food, hints.branchId);
+      const unavailable = categoryUnavailable || isIWaiterUnavailable(food, hints.branchId);
+      const duplicateKey = `${String(category.categoryId ?? categoryName).trim().toLowerCase()}:${String(food.foodId ?? productName).trim().toLowerCase()}`;
+      if (seenItems.has(duplicateKey)) continue;
+      seenItems.add(duplicateKey);
+
+      items.push({
+        productName,
+        categoryName,
+        description: iwaiterText(food, ["description", "desc"], hints.lang) || null,
+        price,
+        calories: yallaNumber(food, ["calories", "calorie", "kcal"]),
+        imageUrl: iwaiterImage(food) || null,
+        metadata: {
+          sourceUrl,
+          extraction: "iwaiter-api",
+          restaurantSlug: hints.slug,
+          restaurantId: restaurant?._id == null ? null : String(restaurant._id),
+          branchId: hints.branchId || null,
+          tableOrMenuId: hints.tableOrMenuId || null,
+          sourceCategoryId: category.categoryId == null ? null : String(category.categoryId),
+          sourceItemId: food.foodId == null ? null : String(food.foodId),
+          unavailable,
+        },
+        status: price == null || unavailable ? "needs_review" : "ready",
+      });
+    }
+  }
+
+  const notes = items.length
+    ? ["تم استخراج المنتجات من واجهة iWaiter العامة بناءً على slug الرابط، مع حفظ معرف الفرع إن وجد."]
+    : ["تم التعرف على رابط iWaiter، لكن لم يتم العثور على منتجات واضحة في واجهته العامة."];
+
+  return buildAnalysis(
+    items,
+    {
+      sourceUrl,
+      finalUrl: sourceUrl,
+      visitedUrls: [new URL(`/api/v1/restaurants/${encodeURIComponent(hints.slug)}`, "https://api.iwaiter.net").toString()],
+      contentType: "application/json",
+      adapter: "iwaiter",
+      restaurantSlug: hints.slug,
+      restaurantId: restaurant?._id == null ? null : String(restaurant._id),
+      branchId: hints.branchId || null,
+      tableOrMenuId: hints.tableOrMenuId || null,
+      categoriesFound: categories.length,
+    },
+    notes
+  );
+}
+
 function stripTags(value: string) {
   return htmlToText(value).replace(/\s+/g, " ").trim();
 }
@@ -299,6 +654,14 @@ function extractStructuredHtmlItems(html: string, baseUrl: string) {
 }
 
 export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnalysis> {
+  const parsedUrl = new URL(sourceUrl.trim());
+  if (isYallaQrCodesUrl(parsedUrl)) {
+    return analyzeYallaQrCodesMenu(sourceUrl);
+  }
+  if (isIWaiterUrl(parsedUrl)) {
+    return analyzeIWaiterMenu(sourceUrl);
+  }
+
   const fetched = await fetchPublicMenuUrl(sourceUrl.trim());
   const jsonLdPayloads = extractJsonLd(fetched.text);
   const jsonLdItems = parseMenuItemsFromJsonLd(jsonLdPayloads, fetched.finalUrl);

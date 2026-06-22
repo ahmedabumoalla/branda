@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
+import { getPublicExperienceCampaigns } from "@/lib/data/experience";
 import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
@@ -56,15 +57,25 @@ async function safeReservationServices(slug: string) {
   }
 }
 
+async function safeExperienceCampaigns(slug: string) {
+  try {
+    return await getPublicExperienceCampaigns(slug);
+  } catch (error) {
+    console.warn("[public/menu/experience-campaigns-fallback]", error);
+    return [];
+  }
+}
+
 async function loadPublicMenu(slug: string) {
   const settings = await getPublicCafeSettings(slug);
   if (!settings) return null;
 
-  const [menu, offers, branches, reservationServices] = await Promise.all([
+  const [menu, offers, branches, reservationServices, experienceCampaigns] = await Promise.all([
     safeMenu(slug),
     safeOffers(slug),
     safeBranches(slug),
     safeReservationServices(slug),
+    safeExperienceCampaigns(slug),
   ]);
 
   return {
@@ -75,6 +86,7 @@ async function loadPublicMenu(slug: string) {
     loyaltyRewards: [],
     pages: [],
     reservationServices,
+    experienceCampaigns,
   };
 }
 

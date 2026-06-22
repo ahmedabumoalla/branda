@@ -2,6 +2,17 @@ export type ExperiencePlatform = "tiktok" | "instagram" | "snapchat" | "youtube_
 
 export type ExperienceCampaignStatus = "draft" | "active" | "ended";
 
+export type ExperienceRewardType = "free_order" | "product" | "reservation" | "discount";
+
+export type ExperienceCardGenerationStatus = "idle" | "generating" | "ready" | "failed";
+
+export type ExperienceCampaignRequirements = {
+  views?: number;
+  likes?: number;
+  comments?: number;
+  extra?: string;
+};
+
 export type ExperienceCampaign = {
   id: string;
   cafeSlug: string;
@@ -18,6 +29,16 @@ export type ExperienceCampaign = {
   pointsPerComment: number;
   maxPointsPerSubmission: number;
   requiresManualApproval: boolean;
+  requirements?: ExperienceCampaignRequirements;
+  excludedContentRules?: string[];
+  rewardType?: ExperienceRewardType;
+  rewardProductId?: string;
+  rewardReservationServiceId?: string;
+  rewardDiscountPercent?: number;
+  cardStoragePath?: string;
+  cardGenerationStatus?: ExperienceCardGenerationStatus;
+  cardGenerationError?: string;
+  cardGeneratedAt?: string;
   status: ExperienceCampaignStatus;
   createdAt: string;
 };

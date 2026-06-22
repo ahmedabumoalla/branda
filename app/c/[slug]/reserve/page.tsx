@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -252,6 +252,7 @@ function ModalShell({
 function ReserveForm() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
+  const searchParams = useSearchParams();
   const slug = params.slug;
   const { settings, experience, path, previewThemeId, theme } =
     useCafePageContext(slug);
@@ -283,10 +284,20 @@ function ReserveForm() {
   const [serviceFilterOpen, setServiceFilterOpen] = useState(false);
   const [myFilterOpen, setMyFilterOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [reservationMessage, setReservationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     void getCustomerSession(slug).then(setCustomer);
   }, [slug]);
+
+  useEffect(() => {
+    if (searchParams.get("view") === "my-reservations") {
+      setViewMode("my-reservations");
+      if (searchParams.get("status") === "accepted") {
+        setMyStatusFilter("accepted");
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!customer) {
@@ -440,24 +451,28 @@ function ReserveForm() {
 
   async function submitReservation() {
     if (!customer) {
+      setReservationMessage("سجّل دخولك بحساب العميل لإتمام الحجز.");
       router.push(
         `${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`,
       );
       return;
     }
     if (!selectedService || !selectedBranch || !guests || !date || !time) {
+      setReservationMessage("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص.");
       alert("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص");
       return;
     }
     const guestsCount = Number(guests) || 1;
     if (guestsCount > maxGuests) {
+      setReservationMessage(`العدد الاستيعابي الأقصى لهذا الحجز ${maxGuests}.`);
       alert(`العدد الاستيعابي الأقصى لهذا الحجز ${maxGuests}`);
       return;
     }
 
     setSubmitting(true);
+    setReservationMessage(null);
     try {
-      await createReservationFlowAction({
+      const result = await createReservationFlowAction({
         slug,
         customer,
         branch: selectedBranch,
@@ -480,9 +495,20 @@ function ReserveForm() {
         eventTitle: selectedService.name,
         notes,
       });
+      if (!result.ok) {
+        setReservationMessage(result.message);
+        if (result.code === "login_required") {
+          setCustomer(null);
+          router.push(
+            `${path("login")}?next=${encodeURIComponent(appendPreviewToNextPath(`/c/${slug}/reserve`, previewThemeId))}`,
+          );
+        }
+        return;
+      }
       alert("تم إرسال طلب الحجز بنجاح");
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
+      setReservationMessage("تعذر إرسال الحجز. حاول مرة أخرى.");
       alert("تعذر إرسال الحجز. حاول مرة أخرى.");
     } finally {
       setSubmitting(false);
@@ -887,6 +913,11 @@ function ReserveForm() {
             >
               {submitting ? "جاري الإرسال..." : "إرسال الطلب"}
             </button>
+            {reservationMessage ? (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-black leading-6 text-red-700">
+                {reservationMessage}
+              </p>
+            ) : null}
           </div>
         )}
       </ModalShell>
@@ -1002,7 +1033,7 @@ function CustomerReservationCard({
 
   return (
     <article className={`rounded-[22px] p-4 shadow-[0_14px_40px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/80 ${theme.card}`}>
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-black">{title}</h3>
@@ -1024,19 +1055,21 @@ function CustomerReservationCard({
           </div>
         </div>
         {accepted && reservation.reservationCode ? (
-          <div className="hidden w-[116px] shrink-0 text-center sm:block">
-            <SecureQrCode
-              kind="reservation"
-              value={reservation.reservationCode}
-              title={`QR حجز ${reservation.reservationCode}`}
-              size={104}
-            />
-            <p className={`mt-1 text-[10px] font-black ${theme.muted}`}>
+          <div className="shrink-0 rounded-[22px] border border-[var(--ci-border,#E7D7C6)] bg-white p-4 text-center sm:w-[192px]">
+            <div className="mx-auto w-fit">
+              <SecureQrCode
+                kind="reservation"
+                value={reservation.reservationCode}
+                title={`QR حجز ${reservation.reservationCode}`}
+                size={160}
+              />
+            </div>
+            <p className={`mt-3 break-all font-mono text-xs font-black tracking-[0.12em] ${theme.muted}`}>
               {used ? "تم الاستخدام" : reservation.reservationCode}
             </p>
           </div>
         ) : (
-          <div className={`hidden w-[96px] shrink-0 items-center justify-center rounded-2xl border border-dashed p-3 text-center text-xs font-black sm:flex ${theme.muted}`}>
+          <div className={`flex min-h-24 shrink-0 items-center justify-center rounded-2xl border border-dashed p-3 text-center text-xs font-black sm:w-[160px] ${theme.muted}`}>
             لا يوجد QR صالح
           </div>
         )}

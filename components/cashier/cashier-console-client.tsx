@@ -224,23 +224,29 @@ export function CashierConsoleClient({ initialData }: Props) {
     }
   }
 
-  async function confirmReservation() {
-    if (!reservationCode.trim()) {
+  async function confirmReservation(codeInput?: string) {
+    const rawCode = codeInput ?? reservationCode;
+    if (!rawCode.trim()) {
       setMessage("أدخل كود الحجز أو اقرأ QR");
       return;
     }
     setBusy(true);
     try {
       const parsedReservationCode =
-        parseBarndaksaQrPayload(reservationCode, "reservation") ??
-        reservationCode.trim().toUpperCase();
+        parseBarndaksaQrPayload(rawCode, "reservation") ??
+        rawCode.trim().toUpperCase();
       const result = await confirmReservationCodeAction(parsedReservationCode);
       setMessage(
         `تم تأكيد حضور ${String(result.customerName ?? "العميل")} للحجز`,
       );
       setReservationCode("");
-    } catch {
-      setMessage("كود الحجز غير صالح أو مستخدم مسبقًا");
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "";
+      setMessage(
+        rawMessage.includes("مستخدم") || rawMessage.toLowerCase().includes("used")
+          ? "تم استخدام هذا الكود سابقًا"
+          : "كود الحجز غير صحيح أو الحجز غير مقبول",
+      );
     } finally {
       setBusy(false);
     }
@@ -452,7 +458,7 @@ export function CashierConsoleClient({ initialData }: Props) {
                 }
               />
               <button
-                onClick={confirmReservation}
+                onClick={() => void confirmReservation()}
                 disabled={busy}
                 className="rounded-2xl bg-[#311912] px-5 py-3 font-black text-white disabled:opacity-60"
               >
@@ -462,7 +468,11 @@ export function CashierConsoleClient({ initialData }: Props) {
             <div className="mt-5">
               <BarcodeCameraScanner
                 label="قراءة QR الحجز"
-                onDetected={(value) => setReservationCode(value.toUpperCase())}
+                expectedKind="reservation"
+                onDetected={(value) => {
+                  setReservationCode(value.toUpperCase());
+                  void confirmReservation(value);
+                }}
               />
             </div>
           </section>
