@@ -223,11 +223,11 @@ export async function uploadProductVideo(file: File, entityId: string) {
   const cafe = await requireOwnerCafeContext();
 
   if (file.size <= 0) throw new Error("Missing file");
-  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("ط­ط¬ظ… ط§ظ„ظپظٹط¯ظٹظˆ ظƒط¨ظٹط± ط¬ط¯ظ‹ط§طŒ ط§ط®طھط± ظ…ظ„ظپظ‹ط§ ط£ظ‚ظ„ ظ…ظ† 40MB");
+  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
 
   const mimeType = videoMimeFromFile(file);
   if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
-    throw new Error("طµظٹط؛ط© ط§ظ„ظپظٹط¯ظٹظˆ ط؛ظٹط± ظ…ط¯ط¹ظˆظ…ط©طŒ ط§ط±ظپط¹ MP4 ط£ظˆ WEBM ط£ظˆ MOV");
+    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM أو MOV");
   }
 
   const ext = videoExtensionFromMime(mimeType);
