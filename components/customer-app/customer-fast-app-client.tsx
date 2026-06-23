@@ -431,7 +431,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
   const cafeName = payload?.settings?.cafeName || slug;
   const cafeLogoUrl = payload?.settings?.logoDataUrl ?? payload?.settings?.logoAssetId;
   const copy = getBusinessCopy(payload?.settings?.businessCategory);
-  const HeroIcon = copy.kind === "restaurant" ? Utensils : Coffee;
+  const HeroIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const features = payload?.features ?? [];
   const allow = (feature: string) => featureCodesAllow(features, feature);
   const products = useMemo(() => allow("menu") ? payload?.products?.filter((product) => product.available !== false) ?? [] : [], [features, payload?.products]);

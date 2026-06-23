@@ -19,7 +19,7 @@ import {
   GoldButton,
   StatusBadge,
 } from "@/components/ui/design-system";
-import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+import { BUSINESS_CATEGORIES, type BusinessCategoryId } from "@/lib/platform/business-categories";
 import {
   allPlatformFeatures,
   type PlatformFeature,
@@ -48,7 +48,12 @@ const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> 
   cancelled: "ملغي",
 };
 
-function createPlan(): PlatformPlan {
+const PLAN_CATEGORY_IDS: BusinessCategoryId[] = ["cafes_coffee", "restaurants", "events_conferences"];
+const PLAN_CATEGORIES = BUSINESS_CATEGORIES.filter((category) =>
+  PLAN_CATEGORY_IDS.includes(category.id)
+);
+
+function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
   return {
     id: `plan-${crypto.randomUUID().slice(0, 8)}`,
     name: "باقة جديدة",
@@ -60,7 +65,7 @@ function createPlan(): PlatformPlan {
     active: true,
     isDefault: false,
     features: ["home", "menu", "settings", "subscription"],
-    categoryId: "cafes_coffee",
+    categoryId,
     maxOrdersMonthly: 30,
     maxProductsMonthly: 20,
     maxReservationsMonthly: 10,
@@ -80,10 +85,15 @@ export function AdminPlansPage({
 }: Props) {
   const [plans, setPlans] = useState(initialPlans);
   const [requests, setRequests] = useState(initialRequests);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<BusinessCategoryId>("cafes_coffee");
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   const activeCount = useMemo(() => plans.filter((plan) => plan.active).length, [plans]);
+  const visiblePlans = useMemo(
+    () => plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === selectedCategoryId),
+    [plans, selectedCategoryId]
+  );
   const pendingCount = useMemo(
     () => requests.filter((request) => request.status === "pending_review").length,
     [requests]
@@ -97,11 +107,15 @@ export function AdminPlansPage({
   }
 
   function selectDefault(planId: string) {
+    const target = plans.find((plan) => plan.id === planId);
+    const targetCategoryId = target?.categoryId ?? "cafes_coffee";
     setPlans((current) =>
       current.map((plan) => ({
         ...plan,
         active: plan.id === planId ? true : plan.active,
-        isDefault: plan.id === planId,
+        isDefault: (plan.categoryId ?? "cafes_coffee") === targetCategoryId
+          ? plan.id === planId
+          : plan.isDefault,
       }))
     );
     setDirty(true);
@@ -117,7 +131,7 @@ export function AdminPlansPage({
   }
 
   function addPlan() {
-    setPlans((current) => [createPlan(), ...current]);
+    setPlans((current) => [createPlan(selectedCategoryId), ...current]);
     setDirty(true);
   }
 
@@ -196,6 +210,31 @@ export function AdminPlansPage({
       </BentoGrid>
 
       <div className="mb-6 flex flex-wrap justify-end gap-3">
+        <div className="flex flex-1 flex-wrap gap-2">
+          {PLAN_CATEGORIES.map((category) => {
+            const selected = selectedCategoryId === category.id;
+            const count = plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === category.id).length;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setSelectedCategoryId(category.id)}
+                className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
+                  selected
+                    ? "border-[#F6C35B] bg-[#F6C35B] text-[#22130D]"
+                    : "border-white/10 bg-white/5 text-[#F8F4EF]"
+                }`}
+              >
+                {category.id === "cafes_coffee"
+                  ? "باقات المقاهي والكوفيهات"
+                  : category.id === "restaurants"
+                    ? "باقات المطاعم"
+                    : "باقات الفعاليات والمؤتمرات"}
+                <span className="ms-2 rounded-full bg-black/15 px-2 py-0.5 text-xs">{count}</span>
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={addPlan}
@@ -216,7 +255,7 @@ export function AdminPlansPage({
       </div>
 
       <BentoGrid className="mb-7 xl:grid-cols-3">
-        {plans.map((plan) => (
+        {visiblePlans.map((plan) => (
           <BentoCard key={plan.id} variant={plan.isDefault ? "gold" : "cyber"}>
             <div className="mb-5 flex items-center justify-between gap-2">
               <Layers3 className="h-7 w-7 text-[#F6C35B]" />
@@ -351,7 +390,7 @@ export function AdminPlansPage({
                     value={plan.categoryId ?? "cafes_coffee"}
                     onChange={(event) => updatePlan(plan.id, { categoryId: event.target.value })}
                   >
-                    {BUSINESS_CATEGORIES.map((category) => (
+                    {PLAN_CATEGORIES.map((category) => (
                       <option key={category.id} value={category.id}>{category.label}</option>
                     ))}
                   </AdminSelect>

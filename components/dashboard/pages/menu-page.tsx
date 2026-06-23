@@ -45,6 +45,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const [saving, setSaving] = useState(false);
   const router = useRouter();
   const { toast, showToast } = useAppToast();
+  const menuTitle = copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
+  const importLabel = copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
+  const addLabel = copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -111,7 +114,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
 
   if (configError) {
     return (
-      <DashboardPageShell title="المنيو الرقمي" subtitle={configError}>
+      <DashboardPageShell title={menuTitle} subtitle={configError}>
         <BentoCard variant="white" span="4">
           <p className="font-bold text-[#806A5E]">{configError}</p>
         </BentoCard>
@@ -122,8 +125,8 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="المنيو الرقمي"
-        subtitle={`أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل`}
+        title={menuTitle}
+        subtitle={copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
         action={
           <div className="flex flex-wrap gap-2">
             <button
@@ -133,7 +136,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-[#3A2117] shadow"
             >
               <Upload className="h-5 w-5" />
-              استيراد المنيو
+              {importLabel}
             </button>
             <PrimaryButton
             onClick={() => {
@@ -144,17 +147,17 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
-            إضافة منتج
+            {addLabel}
             </PrimaryButton>
           </div>
         }
       >
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
-            <StatPill label="إجمالي المنتجات" value={products.length} />
+            <StatPill label={copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات"} value={products.length} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label="متاح للبيع" value={availableCount} />
+            <StatPill label={copy.kind === "events" ? "متاح للحجز" : "متاح للبيع"} value={availableCount} />
           </BentoCard>
           <BentoCard variant="white">
             <StatPill label="التصنيفات" value={categories.length} />

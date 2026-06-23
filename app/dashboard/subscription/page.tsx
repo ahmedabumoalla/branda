@@ -4,8 +4,9 @@ export const fetchCache = "force-no-store";
 
 import { SubscriptionPageClient } from "@/components/dashboard/pages/subscription-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getOwnerActivePlanId, getPlatformPlans } from "@/lib/data/admin";
+import { getOwnerActivePlanId } from "@/lib/data/admin";
 import {
+  getAvailablePlans,
   getOwnerPendingSubscription,
   getOwnerSubscriptionHistory,
 } from "@/lib/data/subscription";
@@ -26,7 +27,7 @@ export default async function SubscriptionPage() {
 
   try {
     const [plans, activePlanId, history, pending] = await Promise.all([
-      getPlatformPlans(),
+      getAvailablePlans(),
       getOwnerActivePlanId(),
       getOwnerSubscriptionHistory(),
       getOwnerPendingSubscription(),

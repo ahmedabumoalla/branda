@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Coffee, Gift, Home, Utensils, WalletCards } from "lucide-react";
+import { ArrowRight, CalendarDays, Coffee, Gift, Home, Utensils, WalletCards } from "lucide-react";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
@@ -21,7 +21,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
 
   const { card, program, cafeSlug, cafeName, businessCategory } = view;
   const copy = getBusinessCopy(businessCategory);
-  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
+  const StampIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const features = cafeSlug ? await getPublicCafeFeatureCodesBySlug(cafeSlug).catch(() => []) : [];
   if (!featureCodesAllow(features, "loyalty")) notFound();
 

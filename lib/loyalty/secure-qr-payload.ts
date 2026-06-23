@@ -1,4 +1,4 @@
-export type BarndaksaQrKind = "loyalty-card" | "experience-reward" | "invoice" | "reservation";
+export type BarndaksaQrKind = "loyalty-card" | "experience-reward" | "invoice" | "reservation" | "event-ticket";
 
 const QR_PREFIX = "BARNDAKSA_QR";
 const QR_VERSION = "v1";

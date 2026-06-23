@@ -90,7 +90,11 @@ const planSchema = z.object({
   durationOptions: z.array(z.number().int()).max(4).optional(),
 });
 
-function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): PlatformPlan {
+function normalizePlanCategoryId(value: unknown) {
+  return String(value || "cafes_coffee");
+}
+
+function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): PlatformPlan {
   return {
     id: String(row.id),
     name: String(row.name),
@@ -104,9 +108,9 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanId?: string): Platfo
     durationCount: Number(row.duration_count ?? 1),
     description: String(row.description ?? ""),
     active: Boolean(row.active),
-    isDefault: String(row.id) === defaultPlanId,
+    isDefault: defaultPlanIds?.has(String(row.id)) ?? false,
     features: Array.isArray(row.features) ? (row.features as PlatformPlan["features"]) : [],
-    categoryId: row.category_id ? String(row.category_id) : undefined,
+    categoryId: normalizePlanCategoryId(row.category_id),
     maxOrdersMonthly: row.max_orders_monthly == null ? null : Number(row.max_orders_monthly),
     maxProductsMonthly: row.max_products_monthly == null ? null : Number(row.max_products_monthly),
     maxReservationsMonthly: row.max_reservations_monthly == null ? null : Number(row.max_reservations_monthly),
@@ -140,7 +144,24 @@ export async function getAdminPlatformPlans(): Promise<PlatformPlan[]> {
   if (error) throw error;
   if (settingsError) throw settingsError;
 
-  return (plans ?? []).map((row) => mapDbPlan(row, String(settings.default_plan_id)));
+  const defaultPlanIds = new Set<string>();
+  if (settings.default_plan_id) defaultPlanIds.add(String(settings.default_plan_id));
+
+  try {
+    const admin = createAdminClient();
+    const { data: categoryDefaults, error: defaultsError } = await admin
+      .from("category_default_plans")
+      .select("default_plan_id");
+
+    if (defaultsError && defaultsError.code !== "42P01") throw defaultsError;
+    for (const row of categoryDefaults ?? []) {
+      if (row.default_plan_id) defaultPlanIds.add(String(row.default_plan_id));
+    }
+  } catch (error) {
+    if ((error as { code?: string })?.code !== "42P01") throw error;
+  }
+
+  return (plans ?? []).map((row) => mapDbPlan(row, defaultPlanIds));
 }
 
 export async function getOwnerActivePlanId(): Promise<string> {
@@ -166,8 +187,17 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
 
   const parsed = z.array(planSchema).min(1).max(30).parse(plans);
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);
-  if (defaults.length !== 1) {
-    throw new Error("حدد باقة أساسية مفعلة واحدة فقط");
+  if (defaults.length < 1) {
+    throw new Error("حدد باقة أساسية مفعلة واحدة على الأقل");
+  }
+
+  const defaultCategories = new Set<string>();
+  for (const plan of defaults) {
+    const categoryId = normalizePlanCategoryId(plan.categoryId);
+    if (defaultCategories.has(categoryId)) {
+      throw new Error("حدد باقة أساسية واحدة فقط لكل تصنيف");
+    }
+    defaultCategories.add(categoryId);
   }
 
   const supabase = await createClient();
@@ -229,6 +259,29 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     } else {
       const { error: extraError } = await admin.from("platform_plans").update(extraPayload).eq("id", plan.id);
       if (extraError) throw extraError;
+    }
+  }
+
+  const admin = createAdminClient();
+  for (const plan of defaults) {
+    const { error } = await admin
+      .from("category_default_plans")
+      .upsert(
+        {
+          category_id: normalizePlanCategoryId(plan.categoryId),
+          default_plan_id: plan.id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "category_id" }
+      );
+
+    if (error && error.code !== "42P01") throw error;
+  }
+
+  if (defaults.some((plan) => normalizePlanCategoryId(plan.categoryId) === "cafes_coffee")) {
+    const cafeDefault = defaults.find((plan) => normalizePlanCategoryId(plan.categoryId) === "cafes_coffee");
+    if (cafeDefault) {
+      await admin.from("platform_settings").update({ default_plan_id: cafeDefault.id }).eq("id", "default");
     }
   }
 }

@@ -89,7 +89,7 @@ export function AppLoyaltyCard({
   businessCategory?: string;
 }) {
   const copy = getBusinessCopy(businessCategory);
-  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
+  const StampIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const earnedCups = Math.max(0, Math.min(safeRequired, Number(current || 0)));
   const remaining = Math.max(safeRequired - earnedCups, 0);

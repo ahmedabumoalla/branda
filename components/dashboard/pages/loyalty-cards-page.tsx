@@ -205,7 +205,9 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عنوان البطاقة</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">وصف البطاقة</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
             <label className="space-y-2">
-              <span className="text-sm font-black text-[#6B3A25]">{copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}</span>
+              <span className="text-sm font-black text-[#6B3A25]">
+                {copy.kind === "events" ? "التذكرة أو الترقية المجانية" : copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}
+              </span>
               <NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}>
                 <option value="">بدون ربط منتج</option>
                 {availableRewardProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}

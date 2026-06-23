@@ -28,7 +28,7 @@ export const BUSINESS_CATEGORIES: {
   { id: "retail_stores", label: "متاجر البيع بالتجزئة", available: false, dashboardPath: null, icon: "ShoppingBag" },
   { id: "clothing_stores", label: "متاجر الملابس", available: false, dashboardPath: null, icon: "Shirt" },
   { id: "furniture", label: "المفروشات", available: false, dashboardPath: null, icon: "Armchair" },
-  { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: false, dashboardPath: null, icon: "CalendarDays" },
+  { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: true, dashboardPath: "/dashboard", icon: "CalendarDays" },
 ];
 
 export function getDashboardPathForCategory(category: string | null | undefined) {

@@ -36,6 +36,7 @@ import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import {
   Bell,
+  CalendarDays,
   Coffee,
   Eye,
   EyeOff,
@@ -340,7 +341,7 @@ function CustomerCoffeeLoyaltyCard({
   businessCategory?: string;
 }) {
   const copy = getBusinessCopy(businessCategory);
-  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
+  const StampIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const program = view?.program;
   const card = view?.card;
   const required = Math.max(1, Number(program?.purchasesRequired ?? 7));

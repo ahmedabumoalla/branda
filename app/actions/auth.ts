@@ -169,7 +169,7 @@ export async function loginOwnerAction(email: string, password: string) {
   }
 }
 
-const availableOwnerCategorySchema = z.enum(["cafes_coffee", "restaurants"]);
+const availableOwnerCategorySchema = z.enum(["cafes_coffee", "restaurants", "events_conferences"]);
 
 const cafeOwnerRegistrationSchema = z.object({
   ownerName: z.string().trim().min(2).max(120),

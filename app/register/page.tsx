@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, MapPin, Store, Coffee, Utensils, Dumbbell, Scissors, Stethoscope, Shirt, Sofa, Sparkles, Building2, Flower2, ShoppingBag, Bath, PartyPopper } from "lucide-react";
+import { Eye, EyeOff, MapPin, Store, Coffee, Utensils, Dumbbell, Scissors, Stethoscope, Shirt, Sofa, Flower2, ShoppingBag, Bath, PartyPopper } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent, type ReactNode, type ElementType } from "react";
 import { registerCafeOwnerAction } from "@/app/actions/auth";
@@ -11,19 +11,26 @@ import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
 type BrandCategory = { id: BusinessCategoryId; label: string; available: boolean; icon: ElementType };
+type AvailableOwnerCategory = Extract<BusinessCategoryId, "cafes_coffee" | "restaurants" | "events_conferences">;
+
+const AVAILABLE_OWNER_CATEGORIES: AvailableOwnerCategory[] = ["cafes_coffee", "restaurants", "events_conferences"];
+
+function isAvailableOwnerCategory(category: BusinessCategoryId): category is AvailableOwnerCategory {
+  return AVAILABLE_OWNER_CATEGORIES.includes(category as AvailableOwnerCategory);
+}
 
 const BRAND_CATEGORIES: BrandCategory[] = [
   { id: "cafes_coffee", label: "مقاهي وكوفيهات", available: true, icon: Coffee },
   { id: "restaurants", label: "مطاعم", available: true, icon: Utensils },
+  { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: true, icon: PartyPopper },
   { id: "massage_centers", label: "مراكز مساج", available: false, icon: Bath },
   { id: "beauty_centers", label: "مراكز تجميل", available: false, icon: Flower2 },
   { id: "hair_salons", label: "صالونات العناية بالشعر", available: false, icon: Scissors },
   { id: "clinics_health_centers", label: "العيادات والمراكز الصحية", available: false, icon: Stethoscope },
-  { id: "gyms_fitness", label: "صالات الرياضة واللياقة", available: false, icon: Dumbbell },
+  { id: "gyms_fitness", label: "صالات الرياضة واللياقة البدنية", available: false, icon: Dumbbell },
   { id: "retail_stores", label: "متاجر البيع بالتجزئة", available: false, icon: ShoppingBag },
   { id: "clothing_stores", label: "متاجر الملابس", available: false, icon: Shirt },
   { id: "furniture", label: "المفروشات", available: false, icon: Sofa },
-  { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: false, icon: PartyPopper },
 ];
 
 type SelectedLocation = { lat: number; lng: number };
@@ -58,7 +65,7 @@ export default function RegisterPage() {
     event.preventDefault();
     if (email.trim().toLowerCase() !== emailConfirm.trim().toLowerCase()) return setMessage("البريد الإلكتروني غير متطابق");
     if (password !== passwordConfirm) return setMessage("كلمة المرور غير متطابقة");
-    if (brandCategory !== "cafes_coffee" && brandCategory !== "restaurants") return setMessage("هذا التصنيف قريبًا");
+    if (!isAvailableOwnerCategory(brandCategory)) return setMessage("هذا التصنيف قريبًا");
     if (!selectedLocation) return setMessage("حدد موقع الفرع الأساسي على الخريطة");
     setSubmitting(true); setMessage("");
     const result = await registerCafeOwnerAction({ ownerName, brandName, brandCategory, slug, email, phone, password, primaryBranchName, primaryBranchAddress, primaryBranchCity, primaryBranchLat: selectedLocation.lat, primaryBranchLng: selectedLocation.lng, primaryBranchRadiusMeters: 50, couponCode });

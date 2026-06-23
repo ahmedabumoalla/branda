@@ -5,6 +5,7 @@ import { getPlatformPlans } from "@/lib/data/admin";
 import { roundMoney } from "@/lib/finance/barndaksa-finance";
 import { calculateSubscriptionAmount, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
+import type { PlatformPlan } from "@/lib/platform/admin-data";
 
 function mapDbStatusToPaymentStatus(status: string): SubscriptionRecord["paymentStatus"] {
   if (status === "active" || status === "trialing") return "paid";
@@ -30,6 +31,14 @@ function mapDbRowToRecord(row: Record<string, unknown>): SubscriptionRecord {
 function normalizeCoupon(code?: string | null) {
   const value = code?.trim().toUpperCase() ?? "";
   return value || null;
+}
+
+function normalizeCategoryId(value?: string | null) {
+  return value || "cafes_coffee";
+}
+
+function planMatchesCategory(plan: PlatformPlan, categoryId?: string | null) {
+  return normalizeCategoryId(plan.categoryId) === normalizeCategoryId(categoryId);
 }
 
 export type SubscriptionCouponPreview = {
@@ -153,8 +162,9 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
 }
 
 export async function validateOwnerPlanCoupon(planId: string, couponCode?: string | null, durationMonths = 1) {
+  const cafe = await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
-  const plan = plans.find((item) => item.id === planId);
+  const plan = plans.find((item) => item.id === planId && planMatchesCategory(item, cafe.businessCategory));
   if (!plan) throw new Error("الباقة غير موجودة");
   const amount = calculateSubscriptionAmount(plan, sanitizeDurationMonths(durationMonths));
   return previewCouponForPlan(plan.id, amount, couponCode);
@@ -163,7 +173,7 @@ export async function validateOwnerPlanCoupon(planId: string, couponCode?: strin
 export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null, durationMonths = 1): Promise<string> {
   const cafe = await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
-  const plan = plans.find((item) => item.id === planId);
+  const plan = plans.find((item) => item.id === planId && planMatchesCategory(item, cafe.businessCategory));
   if (!plan) throw new Error("الباقة غير موجودة");
 
   const selectedDurationMonths = sanitizeDurationMonths(durationMonths);
@@ -308,7 +318,9 @@ export async function failOwnerPlanPayment(): Promise<void> {
 }
 
 export async function getAvailablePlans() {
-  return getPlatformPlans();
+  const cafe = await requireOwnerCafeContext();
+  const plans = await getPlatformPlans();
+  return plans.filter((plan) => planMatchesCategory(plan, cafe.businessCategory));
 }
 
 export async function getOwnerActiveSubscription() {

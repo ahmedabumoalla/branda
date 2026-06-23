@@ -167,6 +167,12 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     cafeHasFeature(link.feature, { planId: activePlanId, plans })
   );
   const linkTitle = (item: (typeof links)[number]) => {
+    if (item.href === "/dashboard/menu" && copy.kind === "events") return "التذاكر والباقات";
+    if (item.href === "/dashboard/orders" && copy.kind === "events") return "طلبات التذاكر";
+    if (item.href === "/dashboard/reservations" && copy.kind === "events") return "حجوزات الحضور";
+    if (item.href === "/dashboard/loyalty" && copy.kind === "events") return "ولاء الحضور";
+    if (item.href === "/dashboard/experience-reviews" && copy.kind === "events") return "مكافآت التوثيق";
+    if (item.href === "/dashboard/reports" && copy.kind === "events") return "تقارير الفعالية";
     if (item.href === "/dashboard/orders") return `طلبات ${copy.casualNoun}`;
     if (item.href === "/dashboard/settings") return `إعدادات ${copy.casualNoun}`;
     if (item.href === "/dashboard/theme") return `ثيم ${copy.casualNoun}`;

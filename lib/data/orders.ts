@@ -230,6 +230,33 @@ export async function createPickupOrder(
     throw dbError;
   }
 
+  if (cafe.businessCategory === "events_conferences") {
+    const tickets = orderItems.flatMap((item) =>
+      Array.from({ length: item.quantity }, () => ({
+        cafe_id: cafe.id,
+        customer_profile_id: customerId,
+        order_id: orderId,
+        product_id: item.product_id,
+        status: "valid",
+        valid_from: parsed.pickupAt ?? null,
+      }))
+    );
+
+    if (tickets.length) {
+      const { error: ticketError } = await supabase
+        .from("event_tickets")
+        .insert(tickets);
+
+      if (ticketError) {
+        const dbError = new Error("Database order create failed") as Error & {
+          cause?: unknown;
+        };
+        dbError.cause = ticketError;
+        throw dbError;
+      }
+    }
+  }
+
   await createNotification({
     cafeSlug: cafe.slug,
     audience: "cafe",

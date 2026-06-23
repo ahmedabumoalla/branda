@@ -1,17 +1,27 @@
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 
-export type BusinessKind = "cafe" | "restaurant";
+export type BusinessKind = "cafe" | "restaurant" | "events";
 
 export function resolveBusinessKind(
   category?: string | null
 ): BusinessKind {
-  return category === "restaurants" || category === "restaurant"
-    ? "restaurant"
-    : "cafe";
+  if (category === "restaurants" || category === "restaurant") {
+    return "restaurant";
+  }
+
+  if (category === "events_conferences" || category === "events") {
+    return "events";
+  }
+
+  return "cafe";
 }
 
 export function isRestaurantCategory(category?: string | null) {
   return resolveBusinessKind(category) === "restaurant";
+}
+
+export function isEventsCategory(category?: string | null) {
+  return resolveBusinessKind(category) === "events";
 }
 
 export type BusinessCopy = {
@@ -59,6 +69,24 @@ const restaurantCopy: BusinessCopy = {
   loyaltyUnitLit: "أطباق مضيئة",
 };
 
+const eventsCopy: BusinessCopy = {
+  kind: "events",
+  categoryId: "events_conferences",
+  brandNoun: "فعالية",
+  casualNoun: "فعالية",
+  pageNoun: "صفحة الفعالية",
+  itemSingular: "تذكرة",
+  itemPlural: "تذاكر",
+  menuSearchPlaceholder: "ابحث عن تذكرة أو باقة...",
+  freeRewardName: "تذكرة مجانية",
+  loyaltyUnitSingular: "زيارة",
+  loyaltyUnitPlural: "زيارات",
+  loyaltyUnitLit: "زيارات مضيئة",
+};
+
 export function getBusinessCopy(category?: string | null): BusinessCopy {
-  return isRestaurantCategory(category) ? restaurantCopy : cafeCopy;
+  const kind = resolveBusinessKind(category);
+  if (kind === "restaurant") return restaurantCopy;
+  if (kind === "events") return eventsCopy;
+  return cafeCopy;
 }

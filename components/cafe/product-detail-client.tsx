@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock, Utensils } from "lucide-react";
+import { ArrowRight, CalendarDays, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock, Utensils } from "lucide-react";
 import { createCafeOrderAction } from "@/app/actions/orders";
 import { formatSar } from "@/lib/format";
 import { promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
@@ -38,7 +38,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const router = useRouter();
   const { theme, settings, experience, previewThemeId, path } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
-  const ProductFallbackIcon = copy.kind === "restaurant" ? Utensils : Coffee;
+  const ProductFallbackIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, branches, loading, error } = usePublicCafeMenu(slug);
   const [quantity, setQuantity] = useState(1);
