@@ -259,7 +259,7 @@ export async function getOwnerExperienceRewardReviews(): Promise<
     customerIds.length
       ? supabase
           .from("loyalty_cards")
-          .select("id,customer_profile_id,loyalty_card_events(id)")
+          .select("id,customer_profile_id,loyalty_card_events!loyalty_card_events_card_same_cafe(id)")
           .eq("cafe_id", cafe.id)
           .in("customer_profile_id", customerIds)
       : Promise.resolve({ data: [], error: null }),

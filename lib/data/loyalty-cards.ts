@@ -173,7 +173,7 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
     supabase.from("cafe_cashiers").select("*").eq("cafe_id", cafe.id).order("created_at", { ascending: false }),
     supabase
       .from("loyalty_card_events")
-      .select("*, loyalty_cards(customer_name, card_code), cafe_cashiers(full_name)")
+      .select("*, loyalty_cards!loyalty_card_events_card_same_cafe(customer_name, card_code), cafe_cashiers(full_name)")
       .eq("cafe_id", cafe.id)
       .order("created_at", { ascending: false })
       .limit(50),
@@ -464,7 +464,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
   const supabase = createAdminClient();
   const { data: profileRow, error: profileError } = await supabase
     .from("customer_profiles")
-    .select("id")
+    .select("id,cafe_id,full_name,phone,email")
     .eq("id", customerProfileId)
     .eq("cafe_id", cafe.id)
     .maybeSingle();
@@ -472,7 +472,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
   if (profileError) throw profileError;
   if (!profileRow) return null;
 
-  const { data: cardRow, error } = await supabase
+  let { data: cardRow, error } = await supabase
     .from("loyalty_cards")
     .select("*")
     .eq("cafe_id", cafe.id)
@@ -483,7 +483,6 @@ export async function getCustomerLoyaltyCardViewForProfile(
     .maybeSingle();
 
   if (error) throw error;
-  if (!cardRow) return null;
 
   const { data: programRow } = await supabase
     .from("cafe_loyalty_programs")
@@ -492,12 +491,32 @@ export async function getCustomerLoyaltyCardViewForProfile(
     .eq("enabled", true)
     .maybeSingle();
 
+  const program = mapProgram(programRow);
+  if (!program.enabled) return null;
+
+  if (!cardRow) {
+    const { data: issuedCard, error: issueError } = await supabase
+      .from("loyalty_cards")
+      .upsert({
+        cafe_id: cafe.id,
+        customer_profile_id: customerProfileId,
+        customer_name: String(profileRow.full_name ?? "عميل"),
+        customer_phone: profileRow.phone ? String(profileRow.phone) : null,
+        customer_email: profileRow.email ? String(profileRow.email) : null,
+      }, { onConflict: "cafe_id,customer_profile_id" })
+      .select("*")
+      .single();
+
+    if (issueError) throw issueError;
+    cardRow = issuedCard;
+  }
+
   return {
     card: mapCard(cardRow),
-    program: mapProgram(programRow),
+    program,
     cafeSlug: slug,
     cafeName: cafe.name,
-    businessCategory: cafe.business_category ?? "cafes_coffee",
+    businessCategory: cafe.businessCategory,
   };
 }
 

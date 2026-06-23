@@ -75,6 +75,11 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     [dashboard.cards]
   );
 
+  const availableRewardProducts = useMemo(
+    () => products.filter((product) => product.available),
+    [products]
+  );
+
   const totalPurchases = useMemo(
     () => dashboard.cards.reduce((sum, card) => sum + card.totalPurchases, 0),
     [dashboard.cards]
@@ -98,7 +103,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
         cardAccent,
       });
 
-      const rewardProduct = products.find((product) => product.id === rewardProductId);
+      const rewardProduct = availableRewardProducts.find((product) => product.id === rewardProductId);
       setDashboard((current) => ({
         ...current,
         program: {
@@ -199,7 +204,18 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عدد العمليات للمكافأة</span><NeumoInput type="number" value={purchasesRequired} onChange={(e) => setPurchasesRequired(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عنوان البطاقة</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">وصف البطاقة</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">{copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}</span><NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}><option value="">بدون ربط منتج</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</NeumoSelect></label>
+            <label className="space-y-2">
+              <span className="text-sm font-black text-[#6B3A25]">{copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}</span>
+              <NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}>
+                <option value="">بدون ربط منتج</option>
+                {availableRewardProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+              </NeumoSelect>
+              {availableRewardProducts.length ? (
+                <span className="block text-xs font-bold text-[#806A5E]">تظهر هنا منتجات المنيو المتاحة داخل هذه العلامة فقط.</span>
+              ) : (
+                <span className="block text-xs font-bold text-amber-700">لا توجد منتجات متاحة في منيو هذه العلامة لاختيارها كمكافأة.</span>
+              )}
+            </label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">اسم المكافأة</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون البطاقة</span><NeumoInput value={cardBackground} onChange={(e) => setCardBackground(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون التمييز</span><NeumoInput value={cardAccent} onChange={(e) => setCardAccent(e.target.value)} /></label>
@@ -270,6 +286,19 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div><p className="font-black text-[#311912]">{card.customerName}</p><p className="font-mono text-xs font-black text-[#6B3A25]">{card.cardCode}</p></div>
                   <div className="text-left text-sm font-black text-[#6B3A25]">{card.stampsInCycle} / {dashboard.program.purchasesRequired}</div>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-[116px_minmax(0,1fr)] sm:items-center">
+                  <div className="flex h-[116px] w-[116px] items-center justify-center rounded-2xl bg-white p-2 ring-1 ring-[#E7D7C6]">
+                    <SecureQrCode
+                      kind="loyalty-card"
+                      value={card.cardCode}
+                      title={`QR بطاقة الولاء ${card.cardCode}`}
+                      size={96}
+                    />
+                  </div>
+                  <p className="text-xs font-bold leading-6 text-[#806A5E]">
+                    QR البطاقة خاص بهذه العلامة ويستخدمه الكاشير لاحتساب العمليات أو صرف المكافآت.
+                  </p>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E7D7C6]"><div className="h-full rounded-full bg-[#D9A33F]" style={{ width: `${Math.min(100, (card.stampsInCycle / dashboard.program.purchasesRequired) * 100)}%` }} /></div>
                 <p className="mt-2 text-xs font-bold text-[#806A5E]">مكافآت {card.availableRewards} عمليات {card.totalPurchases}</p>
