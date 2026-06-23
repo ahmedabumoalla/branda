@@ -4,6 +4,7 @@ import { BadgePercent, RotateCcw, Search, SlidersHorizontal } from "lucide-react
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { PriceRangeFilter } from "@/lib/cafe/menu-category-utils";
 import { isFilterActive } from "@/lib/cafe/menu-category-utils";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 export type FilterBarState = {
   query: string;
@@ -19,6 +20,7 @@ type Props = {
   state: FilterBarState;
   onChange: (patch: Partial<FilterBarState>) => void;
   onReset?: () => void;
+  businessCategory?: string;
 };
 
 const SORT_OPTIONS: { value: FilterBarState["sort"]; label: string }[] = [
@@ -78,8 +80,10 @@ export function ThemedFilterBar({
   state,
   onChange,
   onReset,
+  businessCategory,
 }: Props) {
   const { theme } = experience;
+  const copy = getBusinessCopy(businessCategory);
   const fieldClass = `${experience.formInput} h-11 w-full text-sm font-bold outline-none transition focus:ring-2 focus:ring-[var(--ci-accent-bg,var(--ci-accent,#D9A33F))]/30`;
   const hasActive = isFilterActive(state);
 
@@ -115,7 +119,7 @@ export function ThemedFilterBar({
             <input
               value={state.query}
               onChange={(e) => onChange({ query: e.target.value })}
-              placeholder="ابحث عن مشروب أو منتج..."
+              placeholder={copy.menuSearchPlaceholder}
               className={`${fieldClass} pr-10`}
             />
           </div>

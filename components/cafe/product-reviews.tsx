@@ -106,7 +106,7 @@ export function ProductReviews({
                   ) : null}
                   {review.answer ? (
                     <p className={`mt-2 rounded-2xl p-3 font-bold ${theme.card}`}>
-                      رد الكوفي: {review.answer}
+                      رد العلامة: {review.answer}
                     </p>
                   ) : null}
                 </article>

@@ -52,7 +52,7 @@ export async function upsertCustomerProfileForUser(
     });
     if (error) {
       if (error.code === "23505") {
-        throw new Error("رقم الجوال مسجّل لحساب آخر في هذا المقهى");
+        throw new Error("رقم الجوال مسجّل لحساب آخر في هذه العلامة");
       }
       throw error;
     }
@@ -74,7 +74,7 @@ export async function upsertCustomerProfileForUser(
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("رقم الجوال أو الحساب مسجّل مسبقًا في هذا المقهى");
+      throw new Error("رقم الجوال أو الحساب مسجّل مسبقًا في هذه العلامة");
     }
     throw error;
   }

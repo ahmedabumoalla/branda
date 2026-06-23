@@ -62,7 +62,7 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
           <div style="margin:16px 0;padding:14px;border:1px solid #eadfd5;border-radius:14px;background:#fcf8f3">
             <p><strong>رابط المنيو:</strong> <a href="${escapeEmailHtml(parsedUrl.toString())}">${escapeEmailHtml(parsedUrl.toString())}</a></p>
             <p><strong>اسم العلامة التجارية:</strong> ${escapeEmailHtml(cafeName)}</p>
-            <p><strong>معرف المقهى:</strong> ${escapeEmailHtml(cafeId)}</p>
+            <p><strong>معرف العلامة:</strong> ${escapeEmailHtml(cafeId)}</p>
             <p><strong>وقت الإرسال:</strong> ${escapeEmailHtml(submittedAt)}</p>
             <p><strong>المصدر:</strong> ${escapeEmailHtml(source)}</p>
           </div>
@@ -73,7 +73,7 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
         "هناك رابط منيو لم يتم تعريفه أو لم يتم استخراج أصنافه بالكامل داخل نظام استيراد المنيو.",
         `رابط المنيو: ${parsedUrl.toString()}`,
         `اسم العلامة التجارية: ${cafeName}`,
-        `معرف المقهى: ${cafeId}`,
+        `معرف العلامة: ${cafeId}`,
         `وقت الإرسال: ${submittedAt}`,
         `المصدر: ${source}`,
       ].join("\n"),

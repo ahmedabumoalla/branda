@@ -53,7 +53,7 @@ async function loadLegacyCafeThemePageData(slug: string): Promise<CafeThemePageD
     const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}`, { cache: "no-store" });
 
     if (!res.ok) {
-      throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل بيانات المقهى");
+      throw new Error(res.status === 404 ? "العلامة غير موجودة" : "تعذر تحميل بيانات العلامة");
     }
 
     const data = await res.json();

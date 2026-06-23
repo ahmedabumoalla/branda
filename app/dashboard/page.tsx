@@ -22,7 +22,8 @@ export default async function DashboardPage() {
         productCount={0}
         experienceSubmissionCount={0}
         cafeSlug=""
-        cafeName="الكوفي"
+        cafeName="العلامة"
+        businessCategory="cafes_coffee"
         ownerName=""
         configError="قم بإعداد Supabase في env local"
       />
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
         experienceSubmissionCount={experienceData.submissions.length}
         cafeSlug={cafe.slug}
         cafeName={settings.cafeName || cafe.name}
+        businessCategory={cafe.businessCategory}
         ownerName={settings.ownerName || ""}
       />
     );
@@ -72,7 +74,8 @@ export default async function DashboardPage() {
         productCount={0}
         experienceSubmissionCount={0}
         cafeSlug=""
-        cafeName="الكوفي"
+        cafeName="العلامة"
+        businessCategory="cafes_coffee"
         ownerName=""
         configError="تعذر تحميل بيانات لوحة التحكم"
       />

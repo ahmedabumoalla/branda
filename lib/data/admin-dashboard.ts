@@ -122,9 +122,9 @@ function buildMonthlyRevenue(
 
 function getAuditActionLabel(action: string) {
   const actions: Record<string, string> = {
-    admin_insert_cafes: "إضافة كوفي جديد",
-    admin_update_cafes: "تعديل بيانات كوفي",
-    admin_delete_cafes: "حذف كوفي",
+    admin_insert_cafes: "إضافة علامة جديدة",
+    admin_update_cafes: "تعديل بيانات علامة",
+    admin_delete_cafes: "حذف علامة",
     admin_insert_platform_plans: "إضافة باقة جديدة",
     admin_update_platform_plans: "تعديل باقة",
     admin_delete_platform_plans: "حذف باقة",
@@ -156,7 +156,7 @@ function getAuditActionLabel(action: string) {
 
 function getAuditEntityLabel(entityTable: string | null) {
   const entities: Record<string, string> = {
-    cafes: "الكوفيهات",
+    cafes: "العلامات",
     platform_plans: "الباقات",
     platform_settings: "إعدادات المنصة",
     subscriptions: "الاشتراكات",

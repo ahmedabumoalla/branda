@@ -91,10 +91,11 @@ async function getFastDashboardCounts(
   return { pendingReservations, pendingOrders, pendingExperienceReviews };
 }
 
-function fallbackSettings(cafe: { slug: string; name: string }): CafeSettings {
+function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
   return {
     cafeSlug: cafe.slug,
     cafeName: cafe.name,
+    businessCategory: cafe.businessCategory ?? "cafes_coffee",
     ownerName: "",
     ownerEmail: "",
     ownerPhone: "",
@@ -153,6 +154,7 @@ export async function fetchOwnerDashboardShellAction() {
     ? mapDbSettingsToCafeSettings(cafe.slug, settingsResult.data as any)
     : fallbackSettings(cafe);
   settings.cafeName = cafe.name;
+  settings.businessCategory = cafe.businessCategory;
 
   const logoStoragePath = settingsResult.data?.logo_storage_path as string | null | undefined;
   if (logoStoragePath) {

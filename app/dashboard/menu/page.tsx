@@ -18,14 +18,20 @@ export default async function DashboardMenuPage() {
   }
 
   try {
-    const { products, categories } = await getOwnerMenu();
-    return <MenuPageClient initialProducts={products} initialCategories={categories} />;
+    const menu = await getOwnerMenu();
+    return (
+      <MenuPageClient
+        initialProducts={menu.products}
+        initialCategories={menu.categories}
+        businessCategory={menu.cafe.businessCategory}
+      />
+    );
   } catch {
     return (
       <MenuPageClient
         initialProducts={[]}
         initialCategories={[]}
-        configError="تعذر تحميل المنيو — تأكد من تسجيل الدخول وربط المقهى"
+        configError="تعذر تحميل المنيو — تأكد من تسجيل الدخول وربط العلامة"
       />
     );
   }

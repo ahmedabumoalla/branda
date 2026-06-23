@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Coffee, Gift, Home, WalletCards } from "lucide-react";
+import { ArrowRight, Coffee, Gift, Home, Utensils, WalletCards } from "lucide-react";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
 import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   params: Promise<{ cardCode: string }>;
@@ -18,7 +19,9 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
 
   if (!view) notFound();
 
-  const { card, program, cafeSlug, cafeName } = view;
+  const { card, program, cafeSlug, cafeName, businessCategory } = view;
+  const copy = getBusinessCopy(businessCategory);
+  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
   const features = cafeSlug ? await getPublicCafeFeatureCodesBySlug(cafeSlug).catch(() => []) : [];
   if (!featureCodesAllow(features, "loyalty")) notFound();
 
@@ -54,7 +57,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
                   Loyalty Card
                 </p>
                 <p className="mt-2 text-xs font-bold uppercase tracking-[0.08em] text-[#E7D7C6]">
-                  Buy {required} coffees and get the next one free
+                  اشتر {required} مرات واحصل على المكافأة التالية
                 </p>
               </div>
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#D9A33F] text-[#311912]">
@@ -74,7 +77,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
                           : "border-[#8A6B5E] bg-[#6B4A3B] text-[#D8BDAF]"
                       }`}
                     >
-                      <Coffee className="h-7 w-7" />
+                      <StampIcon className="h-7 w-7" />
                       <span
                         className={`absolute -top-2 h-2 w-10 rounded-t-xl ${
                           active ? "bg-[#FFF3C4]" : "bg-[#8A6B5E]"
@@ -104,7 +107,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
             <div className="mt-5 flex items-center justify-between">
               <span className="text-xs font-bold text-[#E7D7C6]">{cafeName}</span>
               <span className="rounded-full bg-[#D9A33F] px-4 py-2 text-sm font-black text-[#311912]">
-                {required} أكواب
+                {required} {copy.loyaltyUnitPlural}
               </span>
             </div>
           </section>
@@ -113,13 +116,13 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
             <p className="text-sm font-black text-[#D9A33F]">{cafeName}</p>
             <h1 className="mt-2 text-4xl font-black">{program.cardTitle}</h1>
             <p className="mt-3 text-base font-bold leading-8 text-[#806A5E]">
-              اعرض هذه البطاقة للكاشير عند كل عملية شراء. بعد قراءة QR البطاقة وQR الفاتورة من الكاشير أو لوحة العلامة يضيء كوب جديد في البطاقة.
+              اعرض هذه البطاقة للكاشير عند كل عملية شراء. بعد قراءة QR البطاقة وQR الفاتورة من الكاشير أو لوحة العلامة يضيء {copy.loyaltyUnitSingular} جديد في البطاقة.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-[#FCF8F3] p-5 text-center">
                 <p className="text-3xl font-black">{lit}</p>
-                <p className="mt-1 text-xs font-bold text-[#806A5E]">أكواب مضيئة</p>
+                <p className="mt-1 text-xs font-bold text-[#806A5E]">{copy.loyaltyUnitLit}</p>
               </div>
               <div className="rounded-2xl bg-[#FCF8F3] p-5 text-center">
                 <p className="text-3xl font-black">{required}</p>

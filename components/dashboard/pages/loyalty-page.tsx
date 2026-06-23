@@ -440,7 +440,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
           <div className="flex items-start gap-4">
             <Sparkles className="mt-1 h-7 w-7 text-[#F6C35B]" />
             <div>
-              <h2 className="text-2xl font-black">تظهر المكافآت في صفحة الكوفي</h2>
+              <h2 className="text-2xl font-black">تظهر المكافآت في صفحة العلامة</h2>
               <p className="mt-2 text-[#E5D8CD]">
                 عند الحفظ تُخزَّن الإعدادات في Supabase وتُحدَّث المكافآت في جدول loyalty_rewards.
               </p>

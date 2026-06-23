@@ -78,12 +78,14 @@ export type CustomerLoyaltyCardView = {
   program: LoyaltyCardProgram;
   cafeSlug: string;
   cafeName: string;
+  businessCategory: string;
 };
 
 export type LoyaltyCardsDashboard = {
   cafeId: string;
   cafeSlug: string;
   cafeName: string;
+  businessCategory: string;
   program: LoyaltyCardProgram;
   cards: LoyaltyBrandCard[];
   cashiers: LoyaltyCashier[];
@@ -194,6 +196,7 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
     cafeId: cafe.id,
     cafeSlug: cafe.slug,
     cafeName: cafe.name,
+    businessCategory: cafe.businessCategory,
     program: mapProgram(programRow),
     cards: (cardRows ?? []).map(mapCard),
     cashiers: (cashierRows ?? []).map((row) => ({
@@ -411,7 +414,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
 
   const { data: cardRow, error } = await admin
     .from("loyalty_cards")
-    .select("*, cafes(slug, name)")
+    .select("*, cafes(slug, name, business_category)")
     .eq("card_code", cardCode.toUpperCase())
     .eq("status", "active")
     .maybeSingle();
@@ -422,6 +425,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
   const cafe = Array.isArray(cardRow.cafes) ? cardRow.cafes[0] : cardRow.cafes;
   const cafeSlug = cafe?.slug ? String(cafe.slug) : "";
   const cafeName = cafe?.name ? String(cafe.name) : "العلامة التجارية";
+  const businessCategory = cafe?.business_category ? String(cafe.business_category) : "cafes_coffee";
 
   const { data: programRow } = await admin
     .from("cafe_loyalty_programs")
@@ -435,6 +439,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
     program: mapProgram(programRow),
     cafeSlug,
     cafeName,
+    businessCategory,
   };
 }
 
@@ -492,6 +497,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
     program: mapProgram(programRow),
     cafeSlug: slug,
     cafeName: cafe.name,
+    businessCategory: cafe.business_category ?? "cafes_coffee",
   };
 }
 

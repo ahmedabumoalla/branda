@@ -85,7 +85,7 @@ function ExperienceCampaignSectionInner({ slug: slugProp, compact }: Props) {
         setVideoUrl("");
         setPlatformUsername("");
         setNote("");
-        alert("تم إرسال مشاركتك — بانتظار مراجعة الكوفي");
+        alert("تم إرسال مشاركتك — بانتظار مراجعة العلامة");
       }
     } catch {
       alert("تعذر إرسال المشاركة");

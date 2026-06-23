@@ -24,14 +24,17 @@ import {
 import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
 import { type MenuProduct } from "@/lib/mock/menu";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   initialProducts: MenuProduct[];
   initialCategories: MenuCategoryRecord[];
+  businessCategory?: string;
   configError?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, configError }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, businessCategory, configError }: Props) {
+  const copy = getBusinessCopy(businessCategory);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
   const [query, setQuery] = useState("");
@@ -120,7 +123,7 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
     <div dir="rtl">
       <DashboardPageShell
         title="المنيو الرقمي"
-        subtitle="أي منتج تضيفه هنا يظهر في صفحة الفرع الالكتروني للعميل"
+        subtitle={`أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل`}
         action={
           <div className="flex flex-wrap gap-2">
             <button
@@ -175,7 +178,7 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
             <NeumoInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث باسم المنتج أو التصنيف"
+              placeholder={`ابحث باسم ${copy.itemSingular} أو منتج أو تصنيف`}
               className="pr-12"
             />
           </div>

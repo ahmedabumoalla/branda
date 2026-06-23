@@ -44,9 +44,11 @@ import {
   Link as LinkIcon,
   QrCode,
   Send,
+  Utensils,
   WalletCards,
   X,
 } from "lucide-react";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Reservation = {
   id: string;
@@ -329,12 +331,16 @@ function CustomerCoffeeLoyaltyCard({
   homeHref,
   onOpenCard,
   loading,
+  businessCategory,
 }: {
   view: CustomerLoyaltyCardView | null;
   homeHref: string;
   onOpenCard: () => void;
   loading: boolean;
+  businessCategory?: string;
 }) {
+  const copy = getBusinessCopy(businessCategory);
+  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
   const program = view?.program;
   const card = view?.card;
   const required = Math.max(1, Number(program?.purchasesRequired ?? 7));
@@ -354,7 +360,7 @@ function CustomerCoffeeLoyaltyCard({
               </p>
               <p className="mt-1 text-xs font-bold text-white/75">
                 اشتر {required} مرات واحصل على{" "}
-                {program?.rewardName || "كوب مجاني"}
+                {program?.rewardName || copy.freeRewardName}
               </p>
             </div>
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] text-[var(--ci-accent-fg,#311912)]">
@@ -374,7 +380,7 @@ function CustomerCoffeeLoyaltyCard({
                         : "border-[#8A6B5E] bg-[#6B4A3B] text-[#D8BDAF]"
                     }`}
                   >
-                    <Coffee className="h-7 w-7" />
+                    <StampIcon className="h-7 w-7" />
                     <span
                       className={`absolute -top-2 h-2 w-10 rounded-t-xl ${
                         active ? "bg-[#FFF3C4]" : "bg-[#8A6B5E]"
@@ -419,14 +425,14 @@ function CustomerCoffeeLoyaltyCard({
             {program?.cardTitle || "بطاقة الولاء"}
           </h2>
           <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
-            كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء كوب جديد حتى
-            تكتمل الأكواب وتظهر مكافأة {program?.rewardName || "كوب مجاني"}
+            كل مرة يقرأ الكاشير QR البطاقة مع QR الفاتورة يضيء {copy.loyaltyUnitSingular} جديد حتى
+            تكتمل {copy.loyaltyUnitPlural} وتظهر مكافأة {program?.rewardName || copy.freeRewardName}
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] p-4 text-center">
               <p className="text-2xl font-black text-[var(--ci-page-fg,#311912)]">{lit}</p>
-              <p className="text-xs font-bold text-[var(--ci-muted-fg,#806A5E)]">أكواب مضيئة</p>
+              <p className="text-xs font-bold text-[var(--ci-muted-fg,#806A5E)]">{copy.loyaltyUnitLit}</p>
             </div>
             <div className="rounded-2xl bg-[var(--ci-page-bg,#FCF8F3)] p-4 text-center">
               <p className="text-2xl font-black text-[var(--ci-page-fg,#311912)]">{required}</p>
@@ -1493,6 +1499,7 @@ function AccountPageInner() {
               homeHref={path()}
               onOpenCard={openLoyaltyCard}
               loading={loyaltyLoading}
+              businessCategory={settings.businessCategory}
             />
           ) : undefined
         }

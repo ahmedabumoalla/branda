@@ -7,13 +7,14 @@ import { useCallback, useState, type FormEvent, type ReactNode, type ElementType
 import { registerCafeOwnerAction } from "@/app/actions/auth";
 import { GoogleMapPicker } from "@/components/maps/google-map-picker";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
+import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
-type BrandCategory = { id: string; label: string; available: boolean; icon: ElementType };
+type BrandCategory = { id: BusinessCategoryId; label: string; available: boolean; icon: ElementType };
 
 const BRAND_CATEGORIES: BrandCategory[] = [
   { id: "cafes_coffee", label: "مقاهي وكوفيهات", available: true, icon: Coffee },
-  { id: "restaurants", label: "مطاعم", available: false, icon: Utensils },
+  { id: "restaurants", label: "مطاعم", available: true, icon: Utensils },
   { id: "massage_centers", label: "مراكز مساج", available: false, icon: Bath },
   { id: "beauty_centers", label: "مراكز تجميل", available: false, icon: Flower2 },
   { id: "hair_salons", label: "صالونات العناية بالشعر", available: false, icon: Scissors },
@@ -35,7 +36,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [ownerName, setOwnerName] = useState("");
   const [brandName, setBrandName] = useState("");
-  const [brandCategory, setBrandCategory] = useState("cafes_coffee");
+  const [brandCategory, setBrandCategory] = useState<BusinessCategoryId>("cafes_coffee");
   const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
   const [emailConfirm, setEmailConfirm] = useState("");
@@ -57,10 +58,10 @@ export default function RegisterPage() {
     event.preventDefault();
     if (email.trim().toLowerCase() !== emailConfirm.trim().toLowerCase()) return setMessage("البريد الإلكتروني غير متطابق");
     if (password !== passwordConfirm) return setMessage("كلمة المرور غير متطابقة");
-    if (brandCategory !== "cafes_coffee") return setMessage("هذا التصنيف قريبًا");
+    if (brandCategory !== "cafes_coffee" && brandCategory !== "restaurants") return setMessage("هذا التصنيف قريبًا");
     if (!selectedLocation) return setMessage("حدد موقع الفرع الأساسي على الخريطة");
     setSubmitting(true); setMessage("");
-    const result = await registerCafeOwnerAction({ ownerName, brandName, brandCategory: "cafes_coffee", slug, email, phone, password, primaryBranchName, primaryBranchAddress, primaryBranchCity, primaryBranchLat: selectedLocation.lat, primaryBranchLng: selectedLocation.lng, primaryBranchRadiusMeters: 50, couponCode });
+    const result = await registerCafeOwnerAction({ ownerName, brandName, brandCategory, slug, email, phone, password, primaryBranchName, primaryBranchAddress, primaryBranchCity, primaryBranchLat: selectedLocation.lat, primaryBranchLng: selectedLocation.lng, primaryBranchRadiusMeters: 50, couponCode });
     setSubmitting(false); setMessage(result.message);
     if (result.ok && result.redirectTo) router.push(result.redirectTo);
   }

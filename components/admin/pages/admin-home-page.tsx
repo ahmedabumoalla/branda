@@ -113,21 +113,21 @@ export function AdminHomePage({
 }: Props) {
   const cards = [
     {
-      title: "الكوفيهات المسجلة",
+      title: "العلامات المسجلة",
       value: overview.totalCafes,
-      hint: `${overview.activeCafes} كوفي نشط`,
+      hint: `${overview.activeCafes} علامة نشطة`,
       icon: Building2,
     },
     {
       title: "المنتجات المعروضة",
       value: overview.totalProducts,
-      hint: "عبر جميع الكوفيهات",
+      hint: "عبر جميع العلامات",
       icon: Boxes,
     },
     {
       title: "العملاء المسجلون",
       value: overview.totalCustomers,
-      hint: "عبر جميع الكوفيهات",
+      hint: "عبر جميع العلامات",
       icon: Users,
     },
     {
@@ -229,7 +229,7 @@ export function AdminHomePage({
               </div>
 
               <p className="mt-2 text-sm font-bold text-[#CBB29C]">
-                القيمة الشهرية للاشتراكات المفعلة لدى جميع الكوفيهات
+                القيمة الشهرية للاشتراكات المفعلة لدى جميع العلامات
               </p>
             </div>
 
@@ -326,7 +326,7 @@ export function AdminHomePage({
             </h2>
 
             <p className="mt-3 text-sm font-bold leading-7 text-[#CBB29C]">
-              إدارة أكواد الإحالة واحتساب الكوفيهات المرتبطة بكل مندوب لمدة
+              إدارة أكواد الإحالة واحتساب العلامات المرتبطة بكل مندوب لمدة
               ستة أشهر من تاريخ الانضمام.
             </p>
 

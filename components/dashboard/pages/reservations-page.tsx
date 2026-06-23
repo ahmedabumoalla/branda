@@ -60,11 +60,13 @@ import {
   exportRowsToPdf,
 } from "@/lib/export/admin-report-export";
 import { printThermalReceipt } from "@/lib/print/thermal";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   initialReservations: CafeReservation[];
   initialServices?: ReservationService[];
   menuProducts?: MenuProduct[];
+  businessCategory?: string;
   configError?: string;
 };
 
@@ -109,8 +111,10 @@ export function ReservationsPageClient({
   initialReservations,
   initialServices = [],
   menuProducts = [],
+  businessCategory,
   configError,
 }: Props) {
+  const copy = getBusinessCopy(businessCategory);
   const [reservations, setReservations] =
     useState<CafeReservation[]>(initialReservations);
   const [services, setServices] =
@@ -559,7 +563,7 @@ export function ReservationsPageClient({
             </div>
             <p className="mt-2 font-bold text-[#7A6255]">
               الحجز متاح للعميل طوال اليوم، والعميل يحدد التاريخ والوقت من صفحة
-              العلامة. الخدمات والمنتجات المجانية اختيارية بالكامل.
+              {copy.brandNoun}. الخدمات والمنتجات المجانية اختيارية بالكامل.
             </p>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <select

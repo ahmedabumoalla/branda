@@ -169,10 +169,12 @@ export async function loginOwnerAction(email: string, password: string) {
   }
 }
 
+const availableOwnerCategorySchema = z.enum(["cafes_coffee", "restaurants"]);
+
 const cafeOwnerRegistrationSchema = z.object({
   ownerName: z.string().trim().min(2).max(120),
   brandName: z.string().trim().min(2).max(120),
-  brandCategory: z.literal("cafes_coffee"),
+  brandCategory: availableOwnerCategorySchema,
   slug: z.string().trim().toLowerCase().min(3).max(60).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   email: z.string().trim().email(),
   phone: z.string().trim().min(8).max(20),
@@ -189,7 +191,7 @@ const cafeOwnerRegistrationSchema = z.object({
 export async function registerCafeOwnerAction(input: {
   ownerName: string;
   brandName: string;
-  brandCategory: "cafes_coffee";
+  brandCategory: z.infer<typeof availableOwnerCategorySchema>;
   slug: string;
   email: string;
   phone: string;
@@ -284,7 +286,7 @@ const parsed = cafeOwnerRegistrationSchema.parse(normalizedInput);
       message: data.session
         ? "تم إنشاء حساب العلامة التجارية وتفعيل الباقة الأساسية"
         : "تم إنشاء الحساب تحقق من بريدك ثم سجل الدخول",
-      redirectTo: data.session ? "/dashboard" : "/login",
+      redirectTo: data.session ? getDashboardPathForCategory(parsed.brandCategory) : "/login",
     };
   } catch (error) {
     console.error("[registerCafeOwnerAction]", error);

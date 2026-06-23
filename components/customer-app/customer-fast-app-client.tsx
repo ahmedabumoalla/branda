@@ -16,6 +16,7 @@ import {
   Menu as MenuIcon,
   RefreshCw,
   ShoppingBag,
+  Utensils,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -34,6 +35,7 @@ import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CustomerLoyaltyCardView, LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import type { ReservationService } from "@/lib/data/platform-upgrade";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type FastTab = "home" | "menu" | "offers" | "reservations" | "loyalty" | "branches";
 
@@ -428,6 +430,8 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
 
   const cafeName = payload?.settings?.cafeName || slug;
   const cafeLogoUrl = payload?.settings?.logoDataUrl ?? payload?.settings?.logoAssetId;
+  const copy = getBusinessCopy(payload?.settings?.businessCategory);
+  const HeroIcon = copy.kind === "restaurant" ? Utensils : Coffee;
   const features = payload?.features ?? [];
   const allow = (feature: string) => featureCodesAllow(features, feature);
   const products = useMemo(() => allow("menu") ? payload?.products?.filter((product) => product.available !== false) ?? [] : [], [features, payload?.products]);
@@ -516,6 +520,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
             isAuthenticated={Boolean(payload.customer)}
             loginHref={getCustomerLoginHref(slug, `/c/${slug}`)}
             onClickHref={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : undefined}
+            businessCategory={payload.settings.businessCategory}
           />
         ) : null}
 
@@ -529,7 +534,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
               </p>
             </div>
             <div className="shrink-0 rounded-[24px] bg-white/12 p-4 shadow-inner">
-              <Coffee className="h-8 w-8 text-[var(--fast-accent)]" />
+              <HeroIcon className="h-8 w-8 text-[var(--fast-accent)]" />
             </div>
           </div>
 

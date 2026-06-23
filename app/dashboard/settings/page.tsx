@@ -22,7 +22,8 @@ export default async function SettingsPage() {
 
           cafeSlug: "test-cafe",
 
-          cafeName: "كوفي",
+          cafeName: "العلامة",
+          businessCategory: "cafes_coffee",
 
           ownerName: "",
 
@@ -62,7 +63,8 @@ export default async function SettingsPage() {
 
           cafeSlug: "test-cafe",
 
-          cafeName: "كوفي",
+          cafeName: "العلامة",
+          businessCategory: "cafes_coffee",
 
           ownerName: "",
 
@@ -85,4 +87,3 @@ export default async function SettingsPage() {
   }
 
 }
-

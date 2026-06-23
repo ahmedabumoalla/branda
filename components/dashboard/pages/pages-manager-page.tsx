@@ -151,7 +151,7 @@ export function PagesManagerPageClient({ initialPages, configError }: Props) {
               <div>
                 <h2 className="text-2xl font-black text-[#3A2117]">تحرير الصفحة</h2>
                 <p className="text-sm font-bold text-[#7A6255]">
-                  المحتوى هنا يستخدم لاحقًا في صفحة الكوفي.
+                  المحتوى هنا يستخدم لاحقًا في صفحة العلامة.
                 </p>
               </div>
             </div>

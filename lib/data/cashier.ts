@@ -12,7 +12,7 @@ import {
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
 export type CashierConsole = {
-  cafe: { id: string; name: string; slug: string };
+  cafe: { id: string; name: string; slug: string; businessCategory?: string };
   cashier: {
     id: string;
     fullName: string;
@@ -29,7 +29,13 @@ function normalizeConsolePayload(data: unknown): CashierConsole | null {
   const payload = data as CashierConsole;
   if (!payload.cafe?.id || !payload.cashier?.id) return null;
   return {
-    cafe: payload.cafe,
+    cafe: {
+      ...payload.cafe,
+      businessCategory:
+        payload.cafe.businessCategory ??
+        (payload.cafe as Record<string, unknown>).business_category?.toString() ??
+        "cafes_coffee",
+    },
     cashier: payload.cashier,
     orders: Array.isArray(payload.orders) ? payload.orders : [],
     reservations: Array.isArray(payload.reservations)
@@ -84,7 +90,20 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
     p_session_token: token,
   });
   if (error || !data) return null;
-  return normalizeConsolePayload(data);
+  const normalized = normalizeConsolePayload(data);
+  if (!normalized?.cafe.id) return normalized;
+  const { data: cafe } = await supabase
+    .from("cafes")
+    .select("business_category")
+    .eq("id", normalized.cafe.id)
+    .maybeSingle();
+  return {
+    ...normalized,
+    cafe: {
+      ...normalized.cafe,
+      businessCategory: cafe?.business_category ?? normalized.cafe.businessCategory ?? "cafes_coffee",
+    },
+  };
 }
 
 export async function logoutCashier() {

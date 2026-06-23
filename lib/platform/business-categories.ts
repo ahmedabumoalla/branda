@@ -19,7 +19,7 @@ export const BUSINESS_CATEGORIES: {
   icon: string;
 }[] = [
   { id: "cafes_coffee", label: "مقاهي وكوفيهات", available: true, dashboardPath: "/dashboard", icon: "Coffee" },
-  { id: "restaurants", label: "مطاعم", available: false, dashboardPath: null, icon: "Utensils" },
+  { id: "restaurants", label: "مطاعم", available: true, dashboardPath: "/dashboard", icon: "Utensils" },
   { id: "massage_centers", label: "مراكز مساج", available: false, dashboardPath: null, icon: "Sparkles" },
   { id: "beauty_centers", label: "مراكز تجميل", available: false, dashboardPath: null, icon: "Scissors" },
   { id: "hair_salons", label: "صالونات العناية بالشعر", available: false, dashboardPath: null, icon: "Scissors" },

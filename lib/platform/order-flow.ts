@@ -118,7 +118,7 @@ export function getCafeOrderFailureMessage(code: CafeOrderFailureCode) {
     case "invalid_customer_session":
       return "جلسة العميل غير صالحة. سجّل الدخول مرة أخرى.";
     case "customer_profile_not_found":
-      return "لا يوجد حساب عميل لهذا المقهى.";
+      return "لا يوجد حساب عميل لهذه العلامة.";
     case "product_unavailable":
       return "المنتج غير متاح حاليًا.";
     case "database_order_failed":
@@ -223,7 +223,7 @@ export async function rejectPickupOrder(
   await updateOrderStatus(
     orderId,
     "مرفوض",
-    reason.trim() || "تم الرفض من الكوفي",
+    reason.trim() || "تم الرفض من العلامة",
   );
 
   const { getOwnerOrders } = await import("@/lib/data/orders");

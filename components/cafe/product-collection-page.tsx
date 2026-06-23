@@ -36,6 +36,7 @@ import {
   PremiumSectionHeader,
   SocialProofPanel,
 } from "@/components/cafe/themes/customer-experience-primitives";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   slug: string;
@@ -45,7 +46,7 @@ type Props = {
 const viewInfo: Record<string, { title: string; desc: string }> = {
   offers: {
     title: "العروض",
-    desc: "كل العروض والخصومات والمنتجات الترويجية المتاحة في الكوفي.",
+    desc: "كل العروض والخصومات والمنتجات الترويجية المتاحة في الفرع الإلكتروني.",
   },
   latest: {
     title: "أحدث المنتجات",
@@ -57,7 +58,7 @@ const viewInfo: Record<string, { title: string; desc: string }> = {
   },
   branches: {
     title: "أقرب الفروع إليك",
-    desc: "استعرض فروع الكوفي القريبة.",
+    desc: "استعرض الفروع القريبة.",
   },
 };
 
@@ -68,6 +69,7 @@ function getScore(product: MenuProduct, index: number) {
 export function ProductCollectionPage({ slug, view }: Props) {
   const searchParams = useSearchParams();
   const { theme, settings, experience, path, previewThemeId } = useCafePageContext(slug);
+  const copy = getBusinessCopy(settings.businessCategory);
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, offers, branches, categories: menuCategories, loading, error } =
     usePublicCafeMenu(slug);
@@ -206,7 +208,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           className={`mb-5 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
         >
           <ArrowRight className="h-4 w-4" />
-          رجوع للكوفي
+          رجوع إلى {copy.casualNoun}
         </Link>
         <section className={`barndaksa-premium-hero overflow-hidden rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-8 ${theme.hero}`}>
           <p className={`inline-flex items-center gap-2 text-sm font-black ${theme.accent}`}>
@@ -549,6 +551,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                     state={filters}
                     onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
                     onReset={resetFilters}
+                    businessCategory={settings.businessCategory}
                   />
                 ) : (
                   <div className="rounded-[24px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-page-bg,#FCF8F3)] p-8 text-center">
@@ -592,7 +595,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
         className={`mb-5 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
       >
         <ArrowRight className="h-4 w-4" />
-        رجوع للكوفي
+        رجوع إلى {copy.casualNoun}
       </Link>
 
       <div className="barndaksa-cinematic-stage space-y-8">
@@ -604,10 +607,10 @@ export function ProductCollectionPage({ slug, view }: Props) {
           <h1
             className={`mt-2 break-words text-4xl font-black leading-tight sm:text-5xl ${experience.headingTracking}`}
           >
-            {viewInfo[view]?.title || "منتجات الكوفي"}
+            {viewInfo[view]?.title || `منتجات ${copy.casualNoun}`}
           </h1>
           <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
-            {viewInfo[view]?.desc || "استعرض منتجات الكوفي."}
+            {viewInfo[view]?.desc || `استعرض منتجات ${copy.casualNoun}.`}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
@@ -639,6 +642,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           state={filters}
           onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
           onReset={resetFilters}
+          businessCategory={settings.businessCategory}
         />
 
         {view === "offers" && activeOffers.length > 0 ? (

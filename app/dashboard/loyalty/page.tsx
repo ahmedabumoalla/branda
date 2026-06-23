@@ -11,6 +11,7 @@ const emptyDashboard: LoyaltyCardsDashboard = {
   cafeId: "",
   cafeSlug: "",
   cafeName: "",
+  businessCategory: "cafes_coffee",
   program: {
     enabled: true,
     cardTitle: "بطاقة الولاء",

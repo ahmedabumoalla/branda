@@ -32,6 +32,7 @@ export async function getPublicCafeSettings(slug: string): Promise<CafeSettings 
     return {
       cafeSlug: slug,
       cafeName: cafe.name,
+      businessCategory: cafe.business_category ?? "cafes_coffee",
       ownerName: "",
       ownerEmail: "",
       ownerPhone: "",
@@ -48,6 +49,7 @@ export async function getPublicCafeSettings(slug: string): Promise<CafeSettings 
   return {
     cafeSlug: slug,
     cafeName: cafe.name,
+    businessCategory: cafe.business_category ?? "cafes_coffee",
     ownerName: "",
     ownerEmail: "",
     ownerPhone: "",
@@ -75,6 +77,7 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
     return {
       cafeSlug: cafe.slug,
       cafeName: cafe.name,
+      businessCategory: cafe.businessCategory,
       ownerName: "",
       ownerEmail: "",
       ownerPhone: "",
@@ -85,6 +88,7 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
 
   const settings = mapDbSettingsToCafeSettings(cafe.slug, data);
   settings.cafeName = cafe.name;
+  settings.businessCategory = cafe.businessCategory;
   if (data.logo_storage_path) {
     settings.logoAssetId = data.logo_storage_path as string;
     settings.logoDataUrl = await resolvePublishedStoragePathToUrl(

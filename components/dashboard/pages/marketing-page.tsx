@@ -107,7 +107,7 @@ export function MarketingPageClient({
     "شارك تجربة العميل المصورة مع علامتك التجارية"
   );
   const [expTerms, setExpTerms] = useState(
-    "يجب أن يظهر اسم الكوفي في الفيديو. المحتوى المسيء مرفوض."
+    "يجب أن يظهر اسم العلامة في الفيديو. المحتوى المسيء مرفوض."
   );
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
@@ -180,7 +180,7 @@ export function MarketingPageClient({
       audience: audience.trim() || "كل العملاء",
       message:
         message.trim() ||
-        "عرض خاص من الكوفي، اكتشف المنيو واحجز طاولتك عبر برندة.",
+        "عرض خاص من العلامة، اكتشف المنيو واحجز طاولتك عبر برندة.",
       code: code.trim() || undefined,
       discountPercent: discountPercent ? Number(discountPercent) : undefined,
       influencerName: influencerName.trim() || undefined,
@@ -319,7 +319,7 @@ export function MarketingPageClient({
         subtitle="حملات ترويجية، روابط مشاركة، وحملة وثّق تجربتك مع مراجعة المشاركات."
         action={
           <LinkButton href={getCafePublicUrl("test-cafe")} variant="outline" target="_blank">
-            صفحة الكوفي
+            صفحة العلامة
           </LinkButton>
         }
       >

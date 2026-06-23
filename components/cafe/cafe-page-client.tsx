@@ -792,6 +792,7 @@ function CafePageInner({ slug }: { slug: string }) {
               isAuthenticated={Boolean(customer)}
               loginHref={customerChecked ? getCustomerLoginHref(slug, `/c/${slug}`, previewThemeId) : undefined}
               onClickHref={customer ? getCafePath(slug, "account", previewThemeId) : undefined}
+              businessCategory={settings.businessCategory}
             />
           </div>
         ) : null}

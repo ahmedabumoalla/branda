@@ -53,7 +53,7 @@ export function AdminRevenuePage({ initialCafes, configError }: Props) {
           />
         </BentoCard>
         <BentoCard variant="dark">
-          <AdminStatPill label="عدد الكوفيهات" value={cafes.length} />
+          <AdminStatPill label="عدد العلامات" value={cafes.length} />
         </BentoCard>
       </BentoGrid>
 

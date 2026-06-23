@@ -74,7 +74,7 @@ export function AdminFinancePage({ data, configError }: Props) {
           <BentoCard variant="cyber"><AdminStatPill label="مستحقات المناديب" value={money(data.summary.totalRepresentativeCommissions)} /></BentoCard>
           <BentoCard variant="gold"><AdminStatPill label="الصب في رأس المال" value={money(data.summary.totalPlatformCapitalReserve)} /></BentoCard>
           <BentoCard variant="dark"><AdminStatPill label="توزيعات الملاك" value={money(data.summary.totalOwnersDistributions)} /></BentoCard>
-          <BentoCard variant="cyber"><AdminStatPill label="كوفيهات بدون كوبون مندوب" value={data.summary.cafesWithoutRepresentativeCoupon} /></BentoCard>
+          <BentoCard variant="cyber"><AdminStatPill label="علامات بدون كوبون مندوب" value={data.summary.cafesWithoutRepresentativeCoupon} /></BentoCard>
         </BentoGrid>
 
         <div className="mb-6 flex flex-wrap gap-3">
@@ -109,7 +109,7 @@ export function AdminFinancePage({ data, configError }: Props) {
         </BentoCard>
 
         <BentoGrid className="mb-6 xl:grid-cols-2">
-          <FinanceTable title="الكوفيهات والاشتراكات" icon="cafe" rows={data.cafes} onSelect={(cafe) => setLedger({ type: "cafe", id: cafe.cafeId, title: cafe.cafeName })} />
+          <FinanceTable title="العلامات والاشتراكات" icon="cafe" rows={data.cafes} onSelect={(cafe) => setLedger({ type: "cafe", id: cafe.cafeId, title: cafe.cafeName })} />
           <RepresentativeTable rows={data.representatives} onSelect={(rep) => setLedger({ type: "representative", id: rep.representativeId, title: rep.representativeName })} />
         </BentoGrid>
 
@@ -122,7 +122,7 @@ export function AdminFinancePage({ data, configError }: Props) {
 }
 
 function FinanceTable({ rows, onSelect }: { title: string; icon: "cafe"; rows: FinanceCafeSummary[]; onSelect: (row: FinanceCafeSummary) => void }) {
-  return <BentoCard variant="cyber"><div className="mb-5 flex items-center gap-3"><Building2 className="h-7 w-7 text-[#F6C35B]" /><h2 className="text-xl font-black">الكوفيهات والاشتراكات</h2></div><div className="overflow-x-auto rounded-3xl border border-white/10"><table className="w-full min-w-[760px] text-right text-sm"><thead className="bg-black/20 text-[#F6C35B]"><tr><th className="p-3">العلامة</th><th>العمر</th><th>الباقة</th><th>التجديد</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>{rows.map((cafe) => <tr key={cafe.cafeId} className="border-t border-white/5 text-[#F8F4EF]"><td className="p-3"><button className="font-black text-[#F6C35B] hover:underline" onClick={() => onSelect(cafe)}>{cafe.cafeName}</button></td><td>{cafe.platformAgeDays} يوم</td><td>{cafe.activePlanName}</td><td>{cafe.renewalsCount}</td><td>{money(cafe.totalGrossAmount)}</td><td>{cafe.registeredWithoutRepresentativeCoupon ? <StatusBadge tone="gold">بدون مندوب</StatusBadge> : <StatusBadge tone="success">بمندوب</StatusBadge>}</td></tr>)}</tbody></table></div></BentoCard>;
+  return <BentoCard variant="cyber"><div className="mb-5 flex items-center gap-3"><Building2 className="h-7 w-7 text-[#F6C35B]" /><h2 className="text-xl font-black">العلامات والاشتراكات</h2></div><div className="overflow-x-auto rounded-3xl border border-white/10"><table className="w-full min-w-[760px] text-right text-sm"><thead className="bg-black/20 text-[#F6C35B]"><tr><th className="p-3">العلامة</th><th>العمر</th><th>الباقة</th><th>التجديد</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>{rows.map((cafe) => <tr key={cafe.cafeId} className="border-t border-white/5 text-[#F8F4EF]"><td className="p-3"><button className="font-black text-[#F6C35B] hover:underline" onClick={() => onSelect(cafe)}>{cafe.cafeName}</button></td><td>{cafe.platformAgeDays} يوم</td><td>{cafe.activePlanName}</td><td>{cafe.renewalsCount}</td><td>{money(cafe.totalGrossAmount)}</td><td>{cafe.registeredWithoutRepresentativeCoupon ? <StatusBadge tone="gold">بدون مندوب</StatusBadge> : <StatusBadge tone="success">بمندوب</StatusBadge>}</td></tr>)}</tbody></table></div></BentoCard>;
 }
 
 function RepresentativeTable({ rows, onSelect }: { rows: FinanceRepresentativeSummary[]; onSelect: (row: FinanceRepresentativeSummary) => void }) {

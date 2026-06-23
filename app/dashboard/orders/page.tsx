@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { OrdersPageClient } from "@/components/dashboard/pages/orders-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerOrders } from "@/lib/data/orders";
 
 export default async function OrdersPage() {
@@ -12,8 +13,8 @@ export default async function OrdersPage() {
   }
 
   try {
-    const orders = await getOwnerOrders();
-    return <OrdersPageClient initialOrders={orders} />;
+    const [orders, cafe] = await Promise.all([getOwnerOrders(), getOwnerCafeContext()]);
+    return <OrdersPageClient initialOrders={orders} businessCategory={cafe?.businessCategory} />;
   } catch {
     return (
       <OrdersPageClient

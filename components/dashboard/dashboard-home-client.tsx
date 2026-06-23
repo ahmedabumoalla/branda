@@ -25,6 +25,7 @@ import { getCafePublicUrl } from "@/lib/platform/cafe-domain";
 import type { CustomerProfile } from "@/lib/mock/customer-activity";
 import type { CafeOrder } from "@/lib/mock/orders";
 import type { CafeReservation } from "@/lib/mock/reservations";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   customers: CustomerProfile[];
@@ -34,6 +35,7 @@ type Props = {
   experienceSubmissionCount: number;
   cafeSlug: string;
   cafeName: string;
+  businessCategory?: string;
   ownerName: string;
   configError?: string;
 };
@@ -85,9 +87,11 @@ export function DashboardHomeClient({
   experienceSubmissionCount,
   cafeSlug,
   cafeName,
+  businessCategory,
   ownerName,
   configError,
 }: Props) {
+  const copy = getBusinessCopy(businessCategory);
   const pendingReservations = reservations.filter(
     (reservation) => reservation.status === "بانتظار الرد"
   );
@@ -101,7 +105,7 @@ export function DashboardHomeClient({
     ["/dashboard/reservations", "متابعة الحجوزات"],
     ["/dashboard/marketing", "توثيق التجربة"],
     ["/dashboard/subscription", "الاشتراك والباقات"],
-    ["/dashboard/settings", "إعدادات الكوفي"],
+    ["/dashboard/settings", `إعدادات ${copy.casualNoun}`],
   ] as const;
 
   return (

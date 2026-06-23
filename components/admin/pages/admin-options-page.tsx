@@ -75,19 +75,19 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
             </div>
             <div>
               <h2 className="text-2xl font-black text-[#F8F4EF]">إعدادات التسجيل والموافقة</h2>
-              <p className="text-sm font-bold text-[#CBB29C]">تحكم في سياسات انضمام الكوفيهات الجديدة.</p>
+              <p className="text-sm font-bold text-[#CBB29C]">تحكم في سياسات انضمام العلامات الجديدة.</p>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Toggle
-              title="السماح بتسجيل كوفيهات جديدة"
+              title="السماح بتسجيل علامات جديدة"
               active={options.allowCafeSignup}
               onClick={() => setOptions((p) => ({ ...p, allowCafeSignup: !p.allowCafeSignup }))}
             />
 
             <Toggle
-              title="مراجعة الكوفي قبل التفعيل"
+              title="مراجعة العلامة قبل التفعيل"
               active={options.requireCafeApproval}
               onClick={() => setOptions((p) => ({ ...p, requireCafeApproval: !p.requireCafeApproval }))}
             />
@@ -126,7 +126,7 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
         <BentoCard variant="cyber" span="2">
           <h3 className="mb-4 text-lg font-black text-[#F8F4EF]">الباقة الافتراضية</h3>
           <p className="mb-4 text-sm font-bold text-[#CBB29C]">
-            تُعيَّن تلقائياً لأي كوفي جديد يسجّل في المنصة.
+            تُعيَّن تلقائياً لأي علامة جديدة تسجّل في المنصة.
           </p>
           <AdminSelect
             value={options.defaultPlanId}

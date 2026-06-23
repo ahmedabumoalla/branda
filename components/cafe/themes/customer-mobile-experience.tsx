@@ -15,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Utensils,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
   promoBadgeText,
   type MenuProduct,
 } from "@/lib/mock/menu";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 export type CustomerDockKey = "home" | "orders" | "menu" | "rewards" | "account";
 
@@ -74,6 +76,7 @@ export function AppLoyaltyCard({
   onClickHref,
   isAuthenticated = true,
   loginHref,
+  businessCategory,
 }: {
   customerName?: string;
   code?: string;
@@ -83,7 +86,10 @@ export function AppLoyaltyCard({
   onClickHref?: string;
   isAuthenticated?: boolean;
   loginHref?: string;
+  businessCategory?: string;
 }) {
+  const copy = getBusinessCopy(businessCategory);
+  const StampIcon = copy.kind === "restaurant" ? Utensils : Coffee;
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const earnedCups = Math.max(0, Math.min(safeRequired, Number(current || 0)));
   const remaining = Math.max(safeRequired - earnedCups, 0);
@@ -101,7 +107,7 @@ export function AppLoyaltyCard({
           <UserRound className="h-6 w-6" />
         </span>
         <h2 className="mt-3 text-xl font-black leading-snug">سجّل دخولك لتحميل بطاقة الولاء الخاصة بك</h2>
-        <p className="mt-2 max-w-xs text-xs font-bold leading-5 text-white/72">بعد الدخول تظهر الأكواب، التقدم، والرمز الخاص بك مباشرة.</p>
+        <p className="mt-2 max-w-xs text-xs font-bold leading-5 text-white/72">بعد الدخول تظهر {copy.loyaltyUnitPlural}، التقدم، والرمز الخاص بك مباشرة.</p>
         {loginHref ? (
           <Link
             href={loginHref}
@@ -159,16 +165,16 @@ export function AppLoyaltyCard({
                       ? "border-white/70 bg-white text-[var(--ci-primary-bg,#174D3B)] shadow-sm"
                       : "border-white/18 bg-white/10 text-white/42"
                   }`}
-                  aria-label={earned ? "كوب مضاء" : "كوب غير مضاء"}
+                  aria-label={earned ? `${copy.loyaltyUnitSingular} مضاء` : `${copy.loyaltyUnitSingular} غير مضاء`}
                 >
-                  <Coffee className={cupIconClass} />
+                  <StampIcon className={cupIconClass} />
                 </span>
               );
             })}
           </div>
 
           <p className="mt-3 text-sm font-black leading-5 text-white/90">
-            {remaining === 0 ? "مكافأتك جاهزة للاستخدام" : `باقي ${remaining} ${remaining === 1 ? "كوب" : "أكواب"} مضاءة للمكافأة`}
+            {remaining === 0 ? "مكافأتك جاهزة للاستخدام" : `باقي ${remaining} ${remaining === 1 ? copy.loyaltyUnitSingular : copy.loyaltyUnitPlural} مضاءة للمكافأة`}
           </p>
         </div>
       </div>

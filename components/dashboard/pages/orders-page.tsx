@@ -32,6 +32,7 @@ import {
 } from "@/lib/export/admin-report-export";
 import { printThermalReceipt } from "@/lib/print/thermal";
 import { type CafeOrder, type OrderStatus } from "@/lib/mock/orders";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 const statusStyle: Record<OrderStatus, string> = {
   "بانتظار موافقة الكوفي":
@@ -58,10 +59,12 @@ function hiddenItemsCount(order: CafeOrder) {
 
 type Props = {
   initialOrders: CafeOrder[];
+  businessCategory?: string;
   configError?: string;
 };
 
-export function OrdersPageClient({ initialOrders, configError }: Props) {
+export function OrdersPageClient({ initialOrders, businessCategory, configError }: Props) {
+  const copy = getBusinessCopy(businessCategory);
   const [orders, setOrders] = useState<CafeOrder[]>(initialOrders);
   const [selected, setSelected] = useState<CafeOrder | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -168,12 +171,16 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
   const acceptedRevenue = orders
     .filter((o) => o.status === "مقبول")
     .reduce((sum, o) => sum + o.total, 0);
+  const displayStatus = (status: OrderStatus) =>
+    status === "بانتظار موافقة الكوفي"
+      ? `بانتظار موافقة ${copy.casualNoun}`
+      : status;
 
   return (
     <div dir="rtl">
       <DashboardPageShell
         title="طلبات الاستلام"
-        subtitle="طلبات الاستلام من صفحة الكوفي — قبول أو رفض مع سبب واضح."
+        subtitle={`طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`}
       >
         {configError ? (
           <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
@@ -251,7 +258,7 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                               <span
                                 className={`inline-flex max-w-full items-center rounded-full border px-3 py-1 text-xs font-black leading-5 ${statusStyle[order.status]}`}
                               >
-                                {order.status}
+                                {displayStatus(order.status)}
                               </span>
                             </div>
                             <div className="mt-3 grid gap-2 text-sm font-bold text-[#7A6255] sm:grid-cols-2 xl:grid-cols-3">
@@ -574,7 +581,7 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
     <div dir="rtl">
       <DashboardPageShell
         title="طلبات الاستلام"
-        subtitle="طلبات الاستلام من صفحة الكوفي — قبول أو رفض مع سبب واضح."
+        subtitle={`طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`}
       >
         {configError ? (
           <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
@@ -629,7 +636,7 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-black ${statusStyle[order.status]}`}
                           >
-                            {order.status}
+                            {displayStatus(order.status)}
                           </span>
                         </div>
                         <p className="mt-1 font-bold text-[#7A6255]">

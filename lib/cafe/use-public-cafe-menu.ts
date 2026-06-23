@@ -74,7 +74,7 @@ function menuFromFastPayload(slug: string, payload: PublicCafeFastPayload) {
 async function loadLegacyPublicMenu(slug: string) {
   return cachedRequest(`public-menu-legacy:${slug}`, TTL_MS, async () => {
     const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`, { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status === 404 ? "المقهى غير موجود" : "تعذر تحميل المنيو");
+    if (!res.ok) throw new Error(res.status === 404 ? "العلامة غير موجودة" : "تعذر تحميل المنيو");
     return cacheMenu(slug, normalizePayload(await res.json()));
   });
 }

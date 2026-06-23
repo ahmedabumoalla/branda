@@ -36,6 +36,7 @@ import { formatSar } from "@/lib/format";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   initialDashboard: LoyaltyCardsDashboard;
@@ -44,6 +45,7 @@ type Props = {
 };
 
 export function LoyaltyCardsPageClient({ initialDashboard, products, configError }: Props) {
+  const copy = getBusinessCopy(initialDashboard.businessCategory);
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [enabled, setEnabled] = useState(initialDashboard.program.enabled);
   const [cardTitle, setCardTitle] = useState(initialDashboard.program.cardTitle);
@@ -197,7 +199,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عدد العمليات للمكافأة</span><NeumoInput type="number" value={purchasesRequired} onChange={(e) => setPurchasesRequired(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عنوان البطاقة</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">وصف البطاقة</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
-            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">المنتج المجاني</span><NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}><option value="">بدون ربط منتج</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</NeumoSelect></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">{copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}</span><NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}><option value="">بدون ربط منتج</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</NeumoSelect></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">اسم المكافأة</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون البطاقة</span><NeumoInput value={cardBackground} onChange={(e) => setCardBackground(e.target.value)} /></label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون التمييز</span><NeumoInput value={cardAccent} onChange={(e) => setCardAccent(e.target.value)} /></label>
@@ -296,4 +298,3 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
     </DashboardPageShell>
   );
 }
-

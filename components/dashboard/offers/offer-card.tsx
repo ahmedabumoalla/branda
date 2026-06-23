@@ -96,7 +96,7 @@ export function OfferCard({
 
         <button onClick={onToggleVisible} className="flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-5 py-3 text-sm font-black">
           {offer.visibleInCafe ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          {offer.visibleInCafe ? "إخفاء من صفحة الكوفي" : "إظهار في صفحة الكوفي"}
+          {offer.visibleInCafe ? "إخفاء من صفحة العلامة" : "إظهار في صفحة العلامة"}
         </button>
 
         <button onClick={onDelete} className="flex items-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-black text-red-700">

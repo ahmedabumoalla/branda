@@ -43,6 +43,7 @@ import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 import {
   buildCustomIdentityCssVars,
   defaultCustomIdentityTheme,
@@ -151,6 +152,7 @@ export function CustomIdentityBuilder({
   initialIsActiveTheme = false,
   onAdopted,
 }: Props) {
+  const copy = getBusinessCopy(preview.cafeSettings.businessCategory);
   const [draft, setDraft] = useState<CustomIdentityTheme>(() => initialIdentity);
   const [savedSnapshot, setSavedSnapshot] = useState<CustomIdentityTheme>(() => initialIdentity);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(() =>
@@ -414,7 +416,7 @@ export function CustomIdentityBuilder({
 
       if (showMessages) {
         setFlowStatus("success");
-        showToast({ type: "success", message: "تم حفظ هوية الكوفي بنجاح" });
+        showToast({ type: "success", message: `تم حفظ هوية ${copy.casualNoun} بنجاح` });
       }
       return true;
     } catch (err) {
@@ -441,7 +443,7 @@ export function CustomIdentityBuilder({
 
   async function handleApplyTheme() {
     setFlowStatus("applying");
-    setToast({ type: "loading", message: "جاري تطبيق الثيم على صفحة الكوفي..." });
+    setToast({ type: "loading", message: `جاري تطبيق الثيم على صفحة ${copy.casualNoun}...` });
 
     try {
       const saved =
@@ -460,8 +462,8 @@ export function CustomIdentityBuilder({
       setFlowStatus("success");
       showToast({
         type: "success",
-        message: "تم تطبيق ثيم الهوية على صفحة الكوفي",
-        action: { label: "عرض صفحة الكوفي", href: `/c/${encodeURIComponent(preview.slug)}` },
+        message: `تم تطبيق ثيم الهوية على صفحة ${copy.casualNoun}`,
+        action: { label: `عرض صفحة ${copy.casualNoun}`, href: `/c/${encodeURIComponent(preview.slug)}` },
       });
     } catch (err) {
       console.error("[custom-identity] apply failed", err);
@@ -517,7 +519,7 @@ export function CustomIdentityBuilder({
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black text-[#F6C35B]/80">بناء مخصص</p>
-            <h2 className="mt-1 text-2xl font-black">أنشئ ثيم بهوية كوفيك</h2>
+            <h2 className="mt-1 text-2xl font-black">أنشئ ثيم بهوية {copy.casualNoun}</h2>
             <p className="mt-2 max-w-2xl text-sm font-bold text-[#E5D8CD]/90">
               الألوان والإعدادات في{" "}
               <span className="font-mono text-xs">cafe_custom_identity</span> — الصور
@@ -800,7 +802,7 @@ export function CustomIdentityBuilder({
                   <Check className="h-4 w-4" />
                 )}
                 {flowStatus === "applying"
-                  ? "جاري تطبيق الثيم على صفحة الكوفي..."
+                  ? `جاري تطبيق الثيم على صفحة ${copy.casualNoun}...`
                   : "اعتماد الثيم وتطبيقه"}
               </button>
             </div>

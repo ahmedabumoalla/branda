@@ -3,6 +3,7 @@ import type { CafeDomainLinkStatus } from "@/lib/platform/cafe-domain";
 export type CafeSettings = {
   cafeSlug: string;
   cafeName: string;
+  businessCategory?: string;
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
@@ -28,6 +29,7 @@ export const CAFE_SETTINGS_KEY = "barndaksa_qatrah_settings";
 export const mockCafeSettings: CafeSettings = {
   cafeSlug: "qatrah",
   cafeName: "كوفي قطرة",
+  businessCategory: "cafes_coffee",
   ownerName: "مالك الكوفي",
   ownerEmail: "owner@qatrah.com",
   ownerPhone: "0550000000",

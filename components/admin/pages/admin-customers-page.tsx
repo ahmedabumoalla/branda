@@ -46,8 +46,8 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
 
   return (
     <AdminPageShell
-      title="عملاء الكوفيهات"
-      subtitle="كل عميل موضح تابع لأي كوفي مع إنفاقه ونقاطه وحالة حسابه."
+      title="عملاء العلامات"
+      subtitle="كل عميل موضح تابع لأي علامة مع إنفاقه ونقاطه وحالة حسابه."
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
@@ -56,7 +56,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
           <AdminInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالاسم، الجوال، الإيميل، أو اسم الكوفي..."
+            placeholder="ابحث بالاسم، الجوال، الإيميل، أو اسم العلامة..."
             className="pr-12"
           />
         </div>
@@ -99,7 +99,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
                   <AdminStatPill label="النقاط" value={customer.loyaltyPoints} />
                 </div>
                 <div className={softPanel}>
-                  <AdminStatPill label="الكوفي" value={customer.cafeName} />
+                  <AdminStatPill label="العلامة" value={customer.cafeName} />
                 </div>
                 <div className={softPanel}>
                   <AdminStatPill label="تاريخ التسجيل" value={customer.createdAt} />

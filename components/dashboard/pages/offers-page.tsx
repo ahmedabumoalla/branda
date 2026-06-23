@@ -43,12 +43,14 @@ import {
   type ExperiencePlatform,
   type ExperienceRewardType,
 } from "@/lib/mock/experience-campaigns";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   initialOffers: CafeOffer[];
   initialProducts: MenuProduct[];
   initialReservationServices?: ReservationService[];
   initialExperienceCampaigns?: ExperienceCampaign[];
+  businessCategory?: string;
   configError?: string;
 };
 
@@ -79,8 +81,12 @@ export function OffersPageClient({
   initialProducts,
   initialReservationServices = [],
   initialExperienceCampaigns = [],
+  businessCategory,
   configError,
 }: Props) {
+  const copy = getBusinessCopy(businessCategory);
+  const placementLabel = (value: OfferPlacement) =>
+    value === "بانر الكوفي" ? `بانر ${copy.casualNoun}` : value;
   const [offers, setOffers] = useState<CafeOffer[]>(initialOffers);
   const [products] = useState<MenuProduct[]>(initialProducts);
   const [reservationServices] = useState<ReservationService[]>(initialReservationServices);
@@ -278,7 +284,7 @@ export function OffersPageClient({
       description:
         description.trim() ||
         promoProductDescription.trim() ||
-        "عرض ترويجي يظهر مباشرة في صفحة الكوفي.",
+        `عرض ترويجي يظهر مباشرة في صفحة ${copy.casualNoun}.`,
       type: offerType,
       status: existing?.status ?? (startDate ? "مجدول" : "نشط"),
       placement,
@@ -576,7 +582,7 @@ export function OffersPageClient({
     <div dir="rtl">
       <DashboardPageShell
         title="العروض والخصومات"
-        subtitle="أضف خصومات، أكواد مسوقين، إعلانات بانر، أو إطلاق منتجات جديدة وتظهر مباشرة في صفحة الكوفي."
+        subtitle={`أضف خصومات، أكواد مسوقين، إعلانات بانر، أو إطلاق منتجات جديدة وتظهر مباشرة في صفحة ${copy.casualNoun}.`}
       >
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
@@ -657,7 +663,7 @@ export function OffersPageClient({
 
                       <div>
                         <p className="text-xs font-black text-[#6B3A25]">
-                          {offer.type} • {offer.placement}
+                          {offer.type} • {placementLabel(offer.placement)}
                         </p>
                         <h2 className="mt-1 text-2xl font-black text-[#3A2117]">
                           {offer.title}
@@ -720,7 +726,7 @@ export function OffersPageClient({
                   {offer.placement !== "قائمة العروض" ? (
                     <div className="mt-4 rounded-2xl bg-[#F8F4EF] p-4">
                       <p className="text-xs font-black text-[#6B3A25]">
-                        إعلان بانر الكوفي
+                        إعلان بانر {copy.casualNoun}
                       </p>
                       <div className="mt-3 grid gap-4 md:grid-cols-[160px_1fr]">
                         <img
@@ -766,8 +772,8 @@ export function OffersPageClient({
                       className="rounded-2xl bg-[#F8F4EF] px-5 py-3 text-sm font-black text-[#3A2117]"
                     >
                       {offer.visibleInCafe
-                        ? "إخفاء من صفحة الكوفي"
-                        : "إظهار في صفحة الكوفي"}
+                        ? `إخفاء من صفحة ${copy.casualNoun}`
+                        : `إظهار في صفحة ${copy.casualNoun}`}
                     </button>
 
                     <button
@@ -949,7 +955,7 @@ export function OffersPageClient({
                   <NeumoTextarea
                     value={packageDescription}
                     onChange={(e) => setPackageDescription(e.target.value)}
-                    placeholder="تفاصيل اختيارية مثل: جلسة + شاشة + شيشة + مشروب مجاني"
+                    placeholder={`تفاصيل اختيارية مثل: جلسة + شاشة + ${copy.itemSingular} مجاني`}
                     className="mt-3 h-20"
                   />
                 </SoftCard>
@@ -1026,7 +1032,7 @@ export function OffersPageClient({
               <SoftCard className="p-4">
                 <p className="mb-3 flex items-center gap-2 font-black text-[#3A2117]">
                   <ImagePlus className="h-5 w-5" />
-                  العروض الترويجية في بانر الكوفي
+                  العروض الترويجية في بانر {copy.casualNoun}
                 </p>
 
                 <div className="space-y-2">
@@ -1120,7 +1126,7 @@ export function OffersPageClient({
               </SoftCard>
 
               <PrimaryButton onClick={addOffer} className="w-full">
-                {editingOfferId ? "حفظ تعديل العرض" : "إضافة العرض وربطه بالكوفي"}
+                {editingOfferId ? "حفظ تعديل العرض" : `إضافة العرض وربطه بـ${copy.casualNoun}`}
               </PrimaryButton>
             </div>
           </BentoCard>

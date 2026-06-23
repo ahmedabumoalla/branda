@@ -111,13 +111,13 @@ export function ReviewsPageClient({ initialReviews, configError }: Props) {
                 </div>
 
                 <div className="rounded-2xl bg-[#F8F4EF] p-4">
-                  <p className="mb-2 font-black">رد الكوفي</p>
+                  <p className="mb-2 font-black">رد العلامة</p>
                   <NeumoTextarea
                     value={replyDrafts[review.id] ?? review.answer ?? ""}
                     onChange={(e) =>
                       setReplyDrafts((prev) => ({ ...prev, [review.id]: e.target.value }))
                     }
-                    placeholder="اكتب رد الكوفي..."
+                    placeholder="اكتب رد العلامة..."
                     className="h-24"
                   />
                   <PrimaryButton

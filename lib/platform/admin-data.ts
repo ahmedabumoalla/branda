@@ -117,7 +117,7 @@ export type PlatformOperation = {
     | "حجز"
     | "دفع"
     | "تقييم"
-    | "تسجيل كوفي"
+    | "تسجيل علامة"
     | "تغيير باقة"
     | "شراء دومين"
     | "ربط دومين";
@@ -140,9 +140,9 @@ export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; hr
   { id: "reviews", title: "الأسئلة والتقييمات", href: "/dashboard/reviews" },
   { id: "marketing", title: "الأدوات التسويقية", href: "/dashboard/marketing" },
   { id: "experience_reviews", title: "مراجعة توثيق التجارب", href: "/dashboard/experience-reviews" },
-  { id: "orders", title: "طلبات الكوفي", href: "/dashboard/orders" },
-  { id: "settings", title: "إعدادات الكوفي", href: "/dashboard/settings" },
-  { id: "theme", title: "ثيم الكوفي", href: "/dashboard/theme" },
+  { id: "orders", title: "طلبات العلامة", href: "/dashboard/orders" },
+  { id: "settings", title: "إعدادات العلامة", href: "/dashboard/settings" },
+  { id: "theme", title: "ثيم العلامة", href: "/dashboard/theme" },
   { id: "subscription", title: "الاشتراك والباقات", href: "/dashboard/subscription" },
 ];
 

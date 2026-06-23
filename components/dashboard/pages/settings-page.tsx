@@ -47,6 +47,7 @@ import {
   type DomainAvailabilityResult,
   type DomainPriceResult,
 } from "@/lib/platform/domain-purchase";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   initialSettings: CafeSettings;
@@ -54,6 +55,7 @@ type Props = {
 };
 
 export function SettingsPageClient({ initialSettings, configError }: Props) {
+  const copy = getBusinessCopy(initialSettings.businessCategory);
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<CafeSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -142,7 +144,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
 
       await saveSettingsAction(next);
       setSettings(next);
-      showToast({ type: "success", message: "تم حفظ إعدادات الكوفي بنجاح" });
+      showToast({ type: "success", message: `تم حفظ إعدادات ${copy.casualNoun} بنجاح` });
     } catch (err) {
       showToast({
         type: "error",
@@ -217,7 +219,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
 
   function copyPublicUrl() {
     void navigator.clipboard.writeText(publicUrl);
-    showToast({ type: "success", message: "تم نسخ رابط الكوفي" });
+    showToast({ type: "success", message: `تم نسخ رابط ${copy.casualNoun}` });
   }
 
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -384,7 +386,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         purchasedDomainConnectedAt: connectedAt,
       };
       await persistDomainSettings(nextSettings);
-      setDomainMessage("تم ربط الدومين بصفحة الكوفي بنجاح.");
+      setDomainMessage(`تم ربط الدومين بصفحة ${copy.casualNoun} بنجاح.`);
     } catch (error) {
       setDomainMessage(error instanceof Error ? error.message : "فشل ربط الدومين");
     } finally {
@@ -407,7 +409,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="إعدادات الكوفي"
+        title={`إعدادات ${copy.casualNoun}`}
         subtitle="الشعار، بيانات الحساب، والوثائق الحكومية الاختيارية."
         action={
           <div className="flex flex-wrap gap-3">
@@ -416,7 +418,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               variant="outline"
               target="_blank"
             >
-              معاينة الكوفي
+              معاينة {copy.casualNoun}
             </LinkButton>
             <PrimaryButton
               onClick={save}
@@ -436,7 +438,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         ) : null}
         <BentoGrid className="mb-6">
           <BentoCard variant="white">
-            <StatPill label="اسم الكوفي" value={settings.cafeName} />
+            <StatPill label={`اسم ${copy.casualNoun}`} value={settings.cafeName} />
           </BentoCard>
           <BentoCard variant="white">
             <StatPill label="المسؤول" value={settings.ownerName} />
@@ -452,7 +454,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
 
         <BentoGrid>
           <BentoCard variant="white" span="2">
-            <h2 className="text-2xl font-black text-[#3A2117]">هوية الكوفي</h2>
+            <h2 className="text-2xl font-black text-[#3A2117]">هوية {copy.casualNoun}</h2>
 
             <SoftCard className="mt-6 text-center">
               <div className="mx-auto flex h-32 w-full max-w-[220px] items-center justify-center overflow-hidden rounded-3xl bg-[#F8F4EF]">
@@ -481,7 +483,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 className="mt-5 inline-flex items-center gap-2"
               >
                 <ImagePlus className="h-5 w-5" />
-                {logoUploading ? "جاري رفع اللوجو..." : "رفع لوجو الكوفي"}
+                {logoUploading ? "جاري رفع اللوجو..." : `رفع لوجو ${copy.casualNoun}`}
               </PrimaryButton>
               {displayLogoUrl ? (
                 <button
@@ -500,7 +502,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Field
-                label="اسم الكوفي"
+                label={`اسم ${copy.casualNoun}`}
                 value={settings.cafeName}
                 onChange={(v) => setSettings((p) => ({ ...p, cafeName: v }))}
               />
@@ -532,13 +534,13 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
             </div>
 
             <label className="mt-4 block">
-              <span className="text-xs font-black text-[#7A6255]">وصف الكوفي</span>
+              <span className="text-xs font-black text-[#7A6255]">وصف {copy.casualNoun}</span>
               <NeumoTextarea
                 value={settings.description || ""}
                 onChange={(e) =>
                   setSettings((p) => ({ ...p, description: e.target.value }))
                 }
-                placeholder="وصف الكوفي"
+                placeholder={`وصف ${copy.casualNoun}`}
                 className="mt-2 h-28"
               />
             </label>
@@ -618,7 +620,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
           <BentoCard variant="white" span="4">
             <h2 className="flex items-center gap-2 text-2xl font-black text-[#3A2117]">
               <Globe className="h-6 w-6" />
-              رابط الكوفي
+              رابط {copy.casualNoun}
             </h2>
             <p className="mt-2 text-sm font-bold text-[#7A6255]">
               يعرض للعميل كدومين احترافي. المسار الحالي يعمل دائمًا كـ fallback.
@@ -626,7 +628,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Field
-                label="معرّف الكوفي (slug)"
+                label={`معرّف ${copy.casualNoun} (slug)`}
                 value={settings.cafeSlug}
                 onChange={(v) =>
                   setSettings((p) => ({
@@ -695,7 +697,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
             <div className="mt-4 flex flex-wrap gap-3">
               <PrimaryButton type="button" onClick={copyPublicUrl} className="inline-flex items-center gap-2">
                 <Copy className="h-4 w-4" />
-                نسخ رابط الكوفي
+                نسخ رابط {copy.casualNoun}
               </PrimaryButton>
               <PrimaryButton type="button" onClick={copyDisplayDomain} className="inline-flex items-center gap-2">
                 <Copy className="h-4 w-4" />
@@ -703,7 +705,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               </PrimaryButton>
               <LinkButton href={publicUrl} target="_blank" variant="outline" className="inline-flex items-center gap-2">
                 <ExternalLink className="h-4 w-4" />
-                فتح صفحة الكوفي
+                فتح صفحة {copy.casualNoun}
               </LinkButton>
             </div>
 
@@ -714,7 +716,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               </div>
 
               <div className="rounded-2xl border border-[#E5D8CD] bg-[#F8F4EF] p-4">
-                <p className="text-sm font-black text-[#3A2117]">2) ربط دومين يملكه الكوفي</p>
+                <p className="text-sm font-black text-[#3A2117]">2) ربط دومين يملكه {copy.casualNoun}</p>
                 <p className="mt-1 text-xs font-bold text-[#7A6255]">
                   أضف CNAME/A Records ثم غيّر الحالة إلى مربوط بعد التحقق.
                 </p>
@@ -812,7 +814,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                           ? "تم الربط"
                           : connecting
                             ? "جاري الربط..."
-                            : "ربط الدومين بصفحة الكوفي"}
+                            : `ربط الدومين بصفحة ${copy.casualNoun}`}
                       </PrimaryButton>
                       <LinkButton
                         href={`https://${purchase.domain}`}

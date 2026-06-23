@@ -12,7 +12,12 @@ import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
 export default async function OffersPage() {
   if (!isSupabaseConfigured()) {
     return (
-      <OffersPageClient initialOffers={[]} initialProducts={[]} configError="قم بإعداد Supabase في .env.local" />
+      <OffersPageClient
+        initialOffers={[]}
+        initialProducts={[]}
+        businessCategory="cafes_coffee"
+        configError="قم بإعداد Supabase في .env.local"
+      />
     );
   }
   try {
@@ -28,11 +33,17 @@ export default async function OffersPage() {
         initialProducts={menu.products}
         initialReservationServices={services}
         initialExperienceCampaigns={experience.campaigns}
+        businessCategory={menu.cafe.businessCategory}
       />
     );
   } catch {
     return (
-      <OffersPageClient initialOffers={[]} initialProducts={[]} configError="تعذر تحميل العروض" />
+      <OffersPageClient
+        initialOffers={[]}
+        initialProducts={[]}
+        businessCategory="cafes_coffee"
+        configError="تعذر تحميل العروض"
+      />
     );
   }
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock } from "lucide-react";
+import { ArrowRight, Coffee, Minus, Plus, ShoppingBag, MapPin, Clock, Utensils } from "lucide-react";
 import { createCafeOrderAction } from "@/app/actions/orders";
 import { formatSar } from "@/lib/format";
 import { promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
@@ -23,6 +23,7 @@ import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { appendPreviewToNextPath, getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 
 
@@ -36,6 +37,8 @@ function defaultPickupTime(leadMinutes = 30) {
 export function ProductDetailClient({ slug, id }: { slug: string; id: string }) {
   const router = useRouter();
   const { theme, settings, experience, previewThemeId, path } = useCafePageContext(slug);
+  const copy = getBusinessCopy(settings.businessCategory);
+  const ProductFallbackIcon = copy.kind === "restaurant" ? Utensils : Coffee;
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, branches, loading, error } = usePublicCafeMenu(slug);
   const [quantity, setQuantity] = useState(1);
@@ -105,7 +108,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         return;
       }
       alert(
-        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.order.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة الكوفي.`
+        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.order.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة ${copy.casualNoun}.`
       );
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
@@ -176,7 +179,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         product={product}
         alt={product.name}
         className="relative z-10 max-h-full w-full object-contain p-6 sm:p-8"
-        fallback={<Coffee className="relative z-10 h-16 w-16 opacity-40" />}
+        fallback={<ProductFallbackIcon className="relative z-10 h-16 w-16 opacity-40" />}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/20 to-transparent" />
     </div>
@@ -294,13 +297,13 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="مثال: بدون سكر، ثلج قليل..."
+              placeholder="ملاحظات على الطلب..."
               className={`mt-2 w-full resize-none rounded-xl border px-4 py-3 text-sm font-bold outline-none ${theme.card}`}
             />
           </label>
 
           <div className={`rounded-xl border border-dashed p-4 text-sm font-bold ${theme.muted}`}>
-            الدفع عند الاستلام — لا يتم خصم أي مبلغ الآن. سيتم تأكيد الطلب بعد موافقة الكوفي.
+            الدفع عند الاستلام — لا يتم خصم أي مبلغ الآن. سيتم تأكيد الطلب بعد موافقة {copy.casualNoun}.
           </div>
         </div>
       ) : (

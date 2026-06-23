@@ -34,6 +34,7 @@ import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-doma
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 import { dashboardPlatformFeatures, type PlatformFeature, type PlatformPlan } from "@/lib/platform/admin-data";
 import { cafeHasFeature } from "@/lib/platform/permissions";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 const featureIcons: Record<PlatformFeature, React.ElementType> = {
   all: Star,
@@ -68,7 +69,8 @@ type SidebarProps = {
 
 const initialCafeSettings: CafeSettings = {
   cafeSlug: "",
-  cafeName: "الكوفي",
+  cafeName: "العلامة",
+  businessCategory: "cafes_coffee",
   ownerName: "",
   ownerEmail: "",
   ownerPhone: "",
@@ -91,7 +93,8 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const [initialNotifications, setInitialNotifications] = useState<AppNotification[]>([]);
 
   const cafeLogoUrl = useResolvedCafeLogoUrl(cafeSettings);
-  const cafeName = cafeSettings.cafeName || "الكوفي";
+  const copy = getBusinessCopy(cafeSettings.businessCategory);
+  const cafeName = cafeSettings.cafeName || copy.casualNoun;
   const cafeSlug = cafeSettings.cafeSlug;
 
   useEffect(() => {
@@ -163,6 +166,12 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const visibleLinks = links.filter((link) =>
     cafeHasFeature(link.feature, { planId: activePlanId, plans })
   );
+  const linkTitle = (item: (typeof links)[number]) => {
+    if (item.href === "/dashboard/orders") return `طلبات ${copy.casualNoun}`;
+    if (item.href === "/dashboard/settings") return `إعدادات ${copy.casualNoun}`;
+    if (item.href === "/dashboard/theme") return `ثيم ${copy.casualNoun}`;
+    return item.title;
+  };
 
   return (
     <aside
@@ -194,7 +203,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
           </div>
 
           <div className="min-w-0 flex-1 text-right">
-            <p className="text-xs font-bold text-[#F2E7D9]">الكوفي الحالي</p>
+            <p className="text-xs font-bold text-[#F2E7D9]">{copy.casualNoun} الحالي</p>
             <h2 className="mt-1 truncate text-xl font-black">{cafeName}</h2>
 
             {cafeSettings.ownerName ? (
@@ -279,7 +288,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
               </span>
 
               <span className="flex items-center gap-3">
-                <span>{item.title}</span>
+                <span>{linkTitle(item)}</span>
                 <Icon
                   className={`h-5 w-5 ${
                     active

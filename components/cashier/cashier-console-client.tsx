@@ -30,6 +30,7 @@ import {
   exportRowsToPdf,
 } from "@/lib/export/admin-report-export";
 import { printThermalReceipt } from "@/lib/print/thermal";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = { initialData: CashierConsole };
 
@@ -58,6 +59,7 @@ export function CashierConsoleClient({ initialData }: Props) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef(true);
+  const copy = getBusinessCopy(data.cafe.businessCategory);
 
   const pendingCount = useMemo(
     () => data.orders.length + data.reservations.length,
@@ -385,7 +387,7 @@ export function CashierConsoleClient({ initialData }: Props) {
               <ScanLine className="h-6 w-6 text-[#6B3A25]" /> قراءة QR بطاقة الولاء
             </h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              اقرأ QR بطاقة العميل فقط، وسيتم احتساب عملية شراء مباشرة وإضاءة كوب في بطاقة الولاء.
+              اقرأ QR بطاقة العميل فقط، وسيتم احتساب عملية شراء مباشرة وإضاءة {copy.loyaltyUnitSingular} في بطاقة الولاء.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
               <input

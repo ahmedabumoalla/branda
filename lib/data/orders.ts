@@ -11,6 +11,7 @@ import {
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
 import { createNotification } from "@/lib/data/notifications";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 export async function getOwnerOrders(): Promise<CafeOrder[]> {
   const cafe = await requireOwnerCafeContext();
@@ -240,6 +241,7 @@ export async function createPickupOrder(
 
   if (isBarndaksaEmailConfigured()) {
     try {
+      const copy = getBusinessCopy(cafe.businessCategory);
       const [{ data: settings }, { data: customer }] = await Promise.all([
         supabase
           .from("cafe_settings")
@@ -258,9 +260,9 @@ export async function createPickupOrder(
       if (ownerEmail) {
         await sendBarndaksaEmail({
           to: ownerEmail,
-          subject: "طلب كوفي جديد وصل عبر برندة",
-          text: `وصل طلب كوفي جديد للفرع ${parsed.branchName ?? "غير محدد"}.`,
-          html: `<div dir="rtl"><h2>طلب كوفي جديد</h2><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
+          subject: `طلب ${copy.casualNoun} جديد وصل عبر برندة`,
+          text: `وصل طلب ${copy.casualNoun} جديد للفرع ${parsed.branchName ?? "غير محدد"}.`,
+          html: `<div dir="rtl"><h2>طلب ${escapeEmailHtml(copy.casualNoun)} جديد</h2><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
         });
       }
       const customerEmail = customer?.email
