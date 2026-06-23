@@ -13,8 +13,11 @@ import type { ExtractedMenuItem, MenuImportAnalysis } from "@/lib/menu-import/ty
 const maxRedirects = 4;
 const timeoutMs = 9000;
 const iwaiterTimeoutMs = 8000;
+const phpCatalogTimeoutMs = 8000;
+const maxPhpCategoryPages = 4;
 const maxResponseBytes = 2 * 1024 * 1024;
 const userAgent = "BarndaksaMenuImport/1.0";
+const phpCatalogFailureMessage = "تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني";
 
 function isPrivateIp(host: string) {
   const normalized = host.toLowerCase().replace(/^\[|\]$/g, "");
@@ -263,6 +266,67 @@ function isYallaQrCodesUrl(url: URL) {
 function isIWaiterUrl(url: URL) {
   const hostname = url.hostname.toLowerCase();
   return hostname === "iwaiter.net" || hostname.endsWith(".iwaiter.net");
+}
+
+function phpCatalogParam(url: URL) {
+  for (const key of ["cat", "category", "menu"]) {
+    const value = url.searchParams.get(key);
+    if (value?.trim()) return { key, value: value.trim() };
+  }
+  return null;
+}
+
+function isPhpCatalogUrl(url: URL) {
+  return /\.php$/i.test(url.pathname) && Boolean(phpCatalogParam(url));
+}
+
+async function fetchPhpCatalogUrl(input: URL) {
+  let current = new URL(input);
+  const visited: string[] = [];
+
+  for (let index = 0; index <= 2; index += 1) {
+    await assertPublicUrl(current);
+    visited.push(current.toString());
+
+    const response = await fetchWithTimeoutMs(current.toString(), {
+      method: "GET",
+      redirect: "manual",
+      cache: "no-store",
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "text/html,text/plain;q=0.7,*/*;q=0.5",
+      },
+    }, phpCatalogTimeoutMs);
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) break;
+      current = new URL(location, current);
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(phpCatalogFailureMessage);
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (
+      !contentType.includes("text/html") &&
+      !contentType.includes("text/plain") &&
+      contentType.trim() !== ""
+    ) {
+      throw new Error(phpCatalogFailureMessage);
+    }
+
+    return {
+      finalUrl: current.toString(),
+      visited,
+      contentType,
+      text: await readLimitedText(response),
+    };
+  }
+
+  throw new Error(phpCatalogFailureMessage);
 }
 
 function branchIdFromYallaUrl(url: URL) {
@@ -610,8 +674,181 @@ function stripTags(value: string) {
   return htmlToText(value).replace(/\s+/g, " ").trim();
 }
 
+function stripPriceFromText(value: string) {
+  return value.replace(/(?:SAR|SR|ر\.س|ريال|﷼)?\s*\d{1,4}(?:[.,]\d{1,2})?\s*(?:SAR|SR|ر\.س|ريال|﷼)?/i, " ").replace(/\s+/g, " ").trim();
+}
+
 function extractAttribute(tag: string, name: string) {
   return tag.match(new RegExp(`\\s${name}=["']([^"']+)["']`, "i"))?.[1] ?? "";
+}
+
+function extractMetaContent(html: string, name: string) {
+  const pattern = new RegExp(`<meta\\b[^>]*(?:name|property)=["']${name}["'][^>]*content=["']([^"']*)["'][^>]*>`, "i");
+  return decodeHtmlEntities(html.match(pattern)?.[1] ?? "").trim();
+}
+
+function extractPhpPageTitle(html: string, url: URL) {
+  const heading =
+    stripTags(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "") ||
+    stripTags(html.match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i)?.[1] ?? "") ||
+    stripTags(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "") ||
+    extractMetaContent(html, "og:title");
+  const param = phpCatalogParam(url);
+  return heading || (param ? `تصنيف ${param.value}` : "غير مصنف");
+}
+
+function extractFirstImageFromBlock(block: string, baseUrl: string) {
+  const imgTag = block.match(/<img\b[^>]*>/i)?.[0] ?? "";
+  if (!imgTag) return null;
+  const src =
+    extractAttribute(imgTag, "src") ||
+    extractAttribute(imgTag, "data-src") ||
+    extractAttribute(imgTag, "data-lazy-src") ||
+    extractAttribute(imgTag, "data-original");
+  return src ? absolutizeUrl(src, baseUrl) : null;
+}
+
+function extractDescriptionFromBlock(block: string, productName: string) {
+  const descriptionBlock =
+    block.match(/<p\b[^>]*class=["'][^"']*(?:desc|description|details)[^"']*["'][^>]*>([\s\S]*?)<\/p>/i)?.[1] ??
+    block.match(/<div\b[^>]*class=["'][^"']*(?:desc|description|details)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1] ??
+    "";
+  const description = stripTags(descriptionBlock);
+  if (description && description !== productName && parsePrice(description) == null) return description;
+
+  const lines = htmlToText(block)
+    .split(/\r?\n/g)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return (
+    lines.find((line) => line !== productName && parsePrice(line) == null && line.length > 8 && line.length < 180) ??
+    null
+  );
+}
+
+function extractProductNameFromBlock(block: string, priceText: string) {
+  const explicit =
+    stripTags(block.match(/<h[1-5]\b[^>]*>([\s\S]*?)<\/h[1-5]>/i)?.[1] ?? "") ||
+    stripTags(block.match(/<[^>]*class=["'][^"']*(?:name|title|product-title|item-title)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "");
+  if (explicit) return stripPriceFromText(explicit);
+
+  const lines = htmlToText(block)
+    .split(/\r?\n/g)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const priceLineIndex = lines.findIndex((line) => line === priceText || parsePrice(line) !== null);
+  const candidate =
+    priceLineIndex > 0
+      ? lines[priceLineIndex - 1]
+      : lines.find((line) => parsePrice(line) == null && line.length >= 2 && line.length <= 90) ?? "";
+  return stripPriceFromText(candidate);
+}
+
+function extractPhpCatalogItemsFromHtml(html: string, pageUrl: string, categoryName: string) {
+  const items: ExtractedMenuItem[] = [];
+  const blockPattern =
+    /<(article|li|tr)\b[^>]*>([\s\S]*?)<\/\1>|<div\b[^>]*class=["'][^"']*(?:product|menu-item|food|dish|meal|item)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi;
+
+  for (const match of html.matchAll(blockPattern)) {
+    const block = match[2] ?? match[3] ?? "";
+    const text = stripTags(block);
+    const price = parsePrice(text);
+    if (price == null) continue;
+
+    const priceText = text.match(/(?:SAR|SR|ر\.س|ريال|﷼)?\s*\d{1,4}(?:[.,]\d{1,2})?\s*(?:SAR|SR|ر\.س|ريال|﷼)?/i)?.[0] ?? "";
+    const productName = extractProductNameFromBlock(block, priceText);
+    if (!productName || productName.length < 2) continue;
+
+    items.push({
+      categoryName,
+      productName,
+      description: extractDescriptionFromBlock(block, productName),
+      price,
+      imageUrl: extractFirstImageFromBlock(block, pageUrl),
+      metadata: { sourceUrl: pageUrl, extraction: "php-catalog-html-block" },
+      status: "needs_review",
+    });
+  }
+
+  const textItems = parseMenuItemsFromText(htmlToText(html), pageUrl).map((item) => ({
+    ...item,
+    categoryName: item.categoryName && item.categoryName !== "غير مصنف" ? item.categoryName : categoryName,
+    metadata: { ...(item.metadata ?? {}), extraction: "php-catalog-text" },
+  }));
+
+  const images = extractImages(html, pageUrl);
+  return attachImages([...items, ...textItems], images);
+}
+
+function extractPhpCategoryLinks(html: string, baseUrl: URL) {
+  const links: string[] = [];
+  const seen = new Set<string>([baseUrl.toString()]);
+
+  for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi)) {
+    const href = decodeHtmlEntities(match[1] ?? "").trim();
+    if (!href) continue;
+    let next: URL;
+    try {
+      next = new URL(href, baseUrl);
+    } catch {
+      continue;
+    }
+    if (next.origin !== baseUrl.origin || !isPhpCatalogUrl(next)) continue;
+    const normalized = next.toString();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    links.push(normalized);
+    if (links.length >= maxPhpCategoryPages) break;
+  }
+
+  return links;
+}
+
+async function analyzePhpCatalogMenu(sourceUrl: string): Promise<MenuImportAnalysis> {
+  const source = new URL(sourceUrl.trim());
+  let firstPage: Awaited<ReturnType<typeof fetchPhpCatalogUrl>>;
+  try {
+    firstPage = await fetchPhpCatalogUrl(source);
+  } catch {
+    throw new Error(phpCatalogFailureMessage);
+  }
+
+  const firstUrl = new URL(firstPage.finalUrl);
+  const categoryLinks = extractPhpCategoryLinks(firstPage.text, firstUrl);
+  const extraPages = await Promise.all(
+    categoryLinks.map(async (link) => {
+      try {
+        return await fetchPhpCatalogUrl(new URL(link));
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const pages = [firstPage, ...extraPages.filter((page): page is typeof firstPage => Boolean(page))];
+  const items = pages.flatMap((page) => {
+    const pageUrl = new URL(page.finalUrl);
+    const categoryName = extractPhpPageTitle(page.text, pageUrl);
+    return extractPhpCatalogItemsFromHtml(page.text, page.finalUrl, categoryName);
+  });
+
+  if (!items.length) {
+    throw new Error(phpCatalogFailureMessage);
+  }
+
+  return buildAnalysis(
+    items,
+    {
+      sourceUrl,
+      finalUrl: firstPage.finalUrl,
+      visitedUrls: pages.flatMap((page) => page.visited),
+      contentType: firstPage.contentType,
+      adapter: "php-catalog",
+      categoryLinksFound: categoryLinks.length,
+      pagesRead: pages.length,
+    },
+    ["تم استخراج المنتجات من صفحة PHP catalog مع قراءة عدد محدود من روابط التصنيفات المتاحة."]
+  );
 }
 
 function extractStructuredHtmlItems(html: string, baseUrl: string) {
@@ -660,6 +897,9 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
   }
   if (isIWaiterUrl(parsedUrl)) {
     return analyzeIWaiterMenu(sourceUrl);
+  }
+  if (isPhpCatalogUrl(parsedUrl)) {
+    return analyzePhpCatalogMenu(sourceUrl);
   }
 
   const fetched = await fetchPublicMenuUrl(sourceUrl.trim());
