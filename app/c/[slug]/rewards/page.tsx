@@ -1101,6 +1101,7 @@ function RewardsPageInner() {
           hasOrders: true,
           hasRewards: loyaltyEnabled || experienceRewardsEnabled,
           isCustomer: true,
+          businessCategory: settings.businessCategory,
         })}
       />
     </>

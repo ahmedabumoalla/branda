@@ -11,7 +11,7 @@ import {
   type DbMenuProduct,
 } from "@/lib/data/mappers";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
-import type { MenuProduct } from "@/lib/mock/menu";
+import type { EventTicketSettings, MenuProduct } from "@/lib/mock/menu";
 
 function invalidatePublicMenuSurfaces(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
@@ -22,6 +22,67 @@ function invalidatePublicMenuSurfaces(slug: string) {
   revalidatePath(`/c/${normalizedSlug}/products/latest`);
   revalidatePath(`/c/${normalizedSlug}/products/popular`);
   revalidatePath(`/c/${normalizedSlug}/products/offers`);
+}
+
+type DbEventTicketSetting = {
+  product_id: string;
+  event_start_at: string | null;
+  event_end_at: string | null;
+  venue_name: string | null;
+  gate_name: string | null;
+  capacity: number | null;
+  ticket_type: string | null;
+  ticket_valid_from: string | null;
+  ticket_valid_until: string | null;
+  max_per_customer: number | null;
+  checkin_policy: "single_use" | "multi_use" | null;
+};
+
+function mapEventTicketSetting(row: DbEventTicketSetting): EventTicketSettings {
+  return {
+    eventStartAt: row.event_start_at,
+    eventEndAt: row.event_end_at,
+    venueName: row.venue_name,
+    gateName: row.gate_name,
+    capacity: row.capacity == null ? null : Number(row.capacity),
+    ticketType: row.ticket_type,
+    ticketValidFrom: row.ticket_valid_from,
+    ticketValidUntil: row.ticket_valid_until,
+    maxPerCustomer: row.max_per_customer == null ? null : Number(row.max_per_customer),
+    checkinPolicy: row.checkin_policy ?? "single_use",
+  };
+}
+
+async function attachEventTicketSettings(
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
+  cafeId: string,
+  products: MenuProduct[]
+) {
+  if (!products.length) return products;
+
+  const productIds = products.map((product) => product.id);
+  const { data, error } = await supabase
+    .from("event_ticket_settings")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .in("product_id", productIds);
+
+  if (error) {
+    if (error.code === "42P01") return products;
+    throw error;
+  }
+
+  const settingsByProductId = new Map(
+    ((data ?? []) as DbEventTicketSetting[]).map((row) => [
+      row.product_id,
+      mapEventTicketSetting(row),
+    ])
+  );
+
+  return products.map((product) => ({
+    ...product,
+    eventTicketSettings: settingsByProductId.get(product.id) ?? product.eventTicketSettings ?? null,
+  }));
 }
 
 export async function getPublicMenuBySlug(slug: string) {
@@ -50,11 +111,13 @@ export async function getPublicMenuBySlug(slug: string) {
   const categoryRows = (categories ?? []) as DbMenuCategory[];
   const categoryMap = new Map(categoryRows.map((c) => [c.id, c.name]));
 
+  const mappedProducts = ((products ?? []) as DbMenuProduct[]).map((p) =>
+    mapDbProductToMenuProduct(p, p.category_id ? categoryMap.get(p.category_id) : undefined)
+  );
+
   return {
     categories: categoryRows.map((c) => mapDbCategoryToRecord(slug, c)),
-    products: ((products ?? []) as DbMenuProduct[]).map((p) =>
-      mapDbProductToMenuProduct(p, p.category_id ? categoryMap.get(p.category_id) : undefined)
-    ),
+    products: await attachEventTicketSettings(supabase, cafe.id, mappedProducts),
   };
 }
 
@@ -80,12 +143,14 @@ export async function getOwnerMenu() {
   const categoryRows = (categories ?? []) as DbMenuCategory[];
   const categoryMap = new Map(categoryRows.map((c) => [c.id, c.name]));
 
+  const mappedProducts = ((products ?? []) as DbMenuProduct[]).map((p) =>
+    mapDbProductToMenuProduct(p, p.category_id ? categoryMap.get(p.category_id) : undefined)
+  );
+
   return {
     cafe,
     categories: categoryRows.map((c) => mapDbCategoryToRecord(cafe.slug, c)),
-    products: ((products ?? []) as DbMenuProduct[]).map((p) =>
-      mapDbProductToMenuProduct(p, p.category_id ? categoryMap.get(p.category_id) : undefined)
-    ),
+    products: await attachEventTicketSettings(supabase, cafe.id, mappedProducts),
   };
 }
 
@@ -129,6 +194,18 @@ const productSchema = z.object({
     mimeType: z.string().optional(),
   })).optional().default([]),
   promo: z.unknown().optional().nullable(),
+  eventTicketSettings: z.object({
+    eventStartAt: z.string().optional().nullable(),
+    eventEndAt: z.string().optional().nullable(),
+    venueName: z.string().optional().nullable(),
+    gateName: z.string().optional().nullable(),
+    capacity: z.number().int().nonnegative().optional().nullable(),
+    ticketType: z.string().optional().nullable(),
+    ticketValidFrom: z.string().optional().nullable(),
+    ticketValidUntil: z.string().optional().nullable(),
+    maxPerCustomer: z.number().int().positive().optional().nullable(),
+    checkinPolicy: z.enum(["single_use", "multi_use"]).optional().default("single_use"),
+  }).optional().nullable(),
 });
 
 type MenuProductPayload = {
@@ -235,6 +312,40 @@ function galleryStoragePaths(gallery: NonNullable<MenuProduct["imageGallery"]>) 
     .filter((path): path is string => Boolean(path));
 }
 
+function nullIfBlank(value?: string | null) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed ? trimmed : null;
+}
+
+async function upsertEventTicketSettings(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cafeId: string,
+  productId: string,
+  settings: EventTicketSettings | null | undefined
+) {
+  const payload = {
+    product_id: productId,
+    cafe_id: cafeId,
+    event_start_at: nullIfBlank(settings?.eventStartAt),
+    event_end_at: nullIfBlank(settings?.eventEndAt),
+    venue_name: nullIfBlank(settings?.venueName),
+    gate_name: nullIfBlank(settings?.gateName),
+    capacity: settings?.capacity ?? null,
+    ticket_type: nullIfBlank(settings?.ticketType) ?? "general_admission",
+    ticket_valid_from: nullIfBlank(settings?.ticketValidFrom),
+    ticket_valid_until: nullIfBlank(settings?.ticketValidUntil),
+    max_per_customer: settings?.maxPerCustomer ?? null,
+    checkin_policy: settings?.checkinPolicy ?? "single_use",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("event_ticket_settings")
+    .upsert(payload, { onConflict: "product_id" });
+
+  if (error) throw error;
+}
+
 export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
@@ -301,6 +412,9 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
 
     if (error) throw error;
     if (data) {
+      if (cafe.businessCategory === "events_conferences") {
+        await upsertEventTicketSettings(supabase, cafe.id, String(data.id), parsed.eventTicketSettings);
+      }
       invalidatePublicMenuSurfaces(cafe.slug);
       return data as DbMenuProduct;
     }
@@ -312,6 +426,9 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       .single();
 
     if (insertError) throw insertError;
+    if (cafe.businessCategory === "events_conferences") {
+      await upsertEventTicketSettings(supabase, cafe.id, String(inserted.id), parsed.eventTicketSettings);
+    }
     invalidatePublicMenuSurfaces(cafe.slug);
     return inserted as DbMenuProduct;
   }
@@ -323,6 +440,9 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     .single();
 
   if (error) throw error;
+  if (cafe.businessCategory === "events_conferences") {
+    await upsertEventTicketSettings(supabase, cafe.id, String(data.id), parsed.eventTicketSettings);
+  }
   invalidatePublicMenuSurfaces(cafe.slug);
   return data as DbMenuProduct;
 }

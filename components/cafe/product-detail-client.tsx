@@ -38,6 +38,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const router = useRouter();
   const { theme, settings, experience, previewThemeId, path } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
+  const isEvents = copy.kind === "events";
   const ProductFallbackIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, branches, loading, error } = usePublicCafeMenu(slug);
@@ -69,18 +70,18 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     if (!product) return;
     const customer = await getCustomerSession(slug);
     if (!customer) {
-      alert("يجب تسجيل الدخول لإرسال الطلب.");
+      alert(isEvents ? "يجب تسجيل الدخول لشراء التذكرة." : "يجب تسجيل الدخول لإرسال الطلب.");
       router.push(getCustomerLoginHref(slug, `/c/${slug}/product/${id}`, previewThemeId));
       return;
     }
 
     if (activeBranches.length > 1 && !branchName) {
-      alert("اختر فرع الاستلام");
+      alert(isEvents ? "اختر موقع أو بوابة الدخول" : "اختر فرع الاستلام");
       return;
     }
 
     if (!pickupAt) {
-      alert("حدد وقت الاستلام");
+      alert(isEvents ? "حدد وقت الدخول" : "حدد وقت الاستلام");
       return;
     }
 
@@ -108,7 +109,9 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         return;
       }
       alert(
-        `تم إرسال طلب الاستلام!\nالإجمالي: ${result.order.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة ${copy.casualNoun}.`
+        isEvents
+          ? `تم إرسال طلب شراء التذكرة!\nالإجمالي: ${result.order.total} ر.س\nبانتظار موافقة ${copy.casualNoun}.`
+          : `تم إرسال طلب الاستلام!\nالإجمالي: ${result.order.total} ر.س\nالدفع عند الاستلام.\nبانتظار موافقة ${copy.casualNoun}.`
       );
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
@@ -142,9 +145,9 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     return (
       <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
-          <h1 className="text-3xl font-black">المنتج غير موجود</h1>
+          <h1 className="text-3xl font-black">{isEvents ? "التذكرة غير موجودة" : "المنتج غير موجود"}</h1>
           <Link href={path()} className={`mt-5 inline-block px-6 py-3 font-black ${theme.button}`}>
-            رجوع للمنيو
+            {isEvents ? "رجوع للتذاكر" : "رجوع للمنيو"}
           </Link>
         </div>
       </CafeLayout>
@@ -189,11 +192,11 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     <>
       <div className="mb-5 grid gap-3 rounded-[24px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
-          <p className={`text-xs font-black ${theme.muted}`}>ملخص الطلب</p>
+          <p className={`text-xs font-black ${theme.muted}`}>{isEvents ? "ملخص شراء التذكرة" : "ملخص الطلب"}</p>
           <p className="mt-1 text-2xl font-black">{formatSar(total)}</p>
         </div>
         <span className={`rounded-2xl px-4 py-3 text-center text-sm font-black ${theme.badge}`}>
-          {pickupAvailable ? "استلام متاح" : "غير متاح للاستلام"}
+          {pickupAvailable ? (isEvents ? "شراء التذكرة متاح" : "استلام متاح") : (isEvents ? "غير متاحة للشراء" : "غير متاح للاستلام")}
         </span>
       </div>
       <p className={`text-sm font-black ${theme.accent}`}>{categoryLabel}</p>
@@ -250,7 +253,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["السعر شامل الضريبة", formatSar(unitPrice)],
+          [isEvents ? "رسوم الدخول شاملة الضريبة" : "السعر شامل الضريبة", formatSar(unitPrice)],
           ["الإجمالي", formatSar(total)],
         ].map(([label, val]) => (
           <div key={label} className={`rounded-2xl p-3 text-center ${theme.card}`}>
@@ -262,13 +265,13 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
       {pickupAvailable ? (
         <div className={`mt-6 space-y-4 rounded-2xl p-4 ${theme.card}`}>
-          <p className="text-sm font-black">تفاصيل الاستلام</p>
+          <p className="text-sm font-black">{isEvents ? "تفاصيل الدخول" : "تفاصيل الاستلام"}</p>
 
           {activeBranches.length > 1 ? (
             <label className="block">
               <span className={`flex items-center gap-1 text-xs font-black ${theme.muted}`}>
                 <MapPin className="h-3.5 w-3.5" />
-                فرع الاستلام
+                {isEvents ? "موقع الفعالية أو بوابة الدخول" : "فرع الاستلام"}
               </span>
               <select value={branchName} onChange={(e) => setBranchName(e.target.value)} className={`mt-2 w-full rounded-xl border px-4 py-3 text-sm font-bold outline-none ${theme.card}`}>
                 {activeBranches.map((branch) => (
@@ -281,7 +284,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           <label className="block">
             <span className={`flex items-center gap-1 text-xs font-black ${theme.muted}`}>
               <Clock className="h-3.5 w-3.5" />
-              وقت الاستلام
+              {isEvents ? "وقت الدخول" : "وقت الاستلام"}
             </span>
             <input
               type="datetime-local"
@@ -297,23 +300,23 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              placeholder="ملاحظات على الطلب..."
+              placeholder={isEvents ? "ملاحظات على شراء التذكرة..." : "ملاحظات على الطلب..."}
               className={`mt-2 w-full resize-none rounded-xl border px-4 py-3 text-sm font-bold outline-none ${theme.card}`}
             />
           </label>
 
           <div className={`rounded-xl border border-dashed p-4 text-sm font-bold ${theme.muted}`}>
-            الدفع عند الاستلام — لا يتم خصم أي مبلغ الآن. سيتم تأكيد الطلب بعد موافقة {copy.casualNoun}.
+            {isEvents ? `سيتم تأكيد شراء التذكرة بعد موافقة ${copy.casualNoun}.` : `الدفع عند الاستلام — لا يتم خصم أي مبلغ الآن. سيتم تأكيد الطلب بعد موافقة ${copy.casualNoun}.`}
           </div>
         </div>
       ) : (
         <div className={`mt-6 rounded-2xl p-4 text-sm font-bold ${theme.card} ${theme.muted}`}>
-          هذا المنتج غير متاح للاستلام حاليًا.
+          {isEvents ? "هذه التذكرة غير متاحة للشراء حاليًا." : "هذا المنتج غير متاح للاستلام حاليًا."}
         </div>
       )}
 
       <div className="mt-6">
-        <h2 className="mb-2 text-lg font-black">المكونات</h2>
+        <h2 className="mb-2 text-lg font-black">{isEvents ? "تشمل التذكرة" : "المكونات"}</h2>
         <div className="flex flex-wrap gap-2">
           {product.ingredients.map((ing) => (
             <span key={ing} className={`rounded-full px-3 py-1.5 text-sm font-black ${theme.badge}`}>
@@ -332,7 +335,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         } ${theme.button}`}
       >
         <ShoppingBag className="h-6 w-6" />
-        {adding ? "جاري الإرسال..." : "اطلب للاستلام — الدفع عند الاستلام"}
+        {adding ? "جاري الإرسال..." : isEvents ? "شراء تذكرة" : "اطلب للاستلام — الدفع عند الاستلام"}
       </button>
     </>
   );
@@ -356,7 +359,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           </div>
           <Link
             href={getCafePath(slug, "products/popular", previewThemeId)}
-            aria-label="رجوع للمنيو"
+            aria-label={isEvents ? "رجوع للتذاكر" : "رجوع للمنيو"}
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
           >
             <ArrowRight className={`h-5 w-5 ${theme.accent}`} />
@@ -388,6 +391,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           hasProducts: true,
           hasOrders: true,
           hasRewards: true,
+          businessCategory: settings.businessCategory,
         })}
       />
     </CafeLayout>
@@ -418,11 +422,11 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
             />
             <InternalAdPanel
               compact
-              title={product!.promo ? promoBadgeText(product!.promo!) : "استكشف منتجات مشابهة"}
-              eyebrow="إعلان داخل تفاصيل المنتج"
-              description="مساحة ذكية تقود العميل إلى قائمة المنتجات أو العروض بعد قراءة تفاصيل المنتج والمراجعات."
+              title={product!.promo ? promoBadgeText(product!.promo!) : isEvents ? "استكشف تذاكر مشابهة" : "استكشف منتجات مشابهة"}
+              eyebrow={isEvents ? "إعلان داخل تفاصيل التذكرة" : "إعلان داخل تفاصيل المنتج"}
+              description={isEvents ? "مساحة ذكية تقود العميل إلى قائمة التذاكر أو العروض بعد قراءة التفاصيل والمراجعات." : "مساحة ذكية تقود العميل إلى قائمة المنتجات أو العروض بعد قراءة تفاصيل المنتج والمراجعات."}
               href={getCafePath(slug, product!.promo ? "products/offers" : "products/popular", previewThemeId)}
-              cta={product!.promo ? "كل العروض" : "كل المنتجات"}
+              cta={product!.promo ? "كل العروض" : isEvents ? "كل التذاكر" : "كل المنتجات"}
             />
           </div>
         }
@@ -435,6 +439,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           hasProducts: true,
           hasOrders: true,
           hasRewards: true,
+          businessCategory: settings.businessCategory,
         })}
       />
     </CafeLayout>

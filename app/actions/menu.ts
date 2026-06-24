@@ -15,6 +15,13 @@ export async function fetchOwnerMenuAction() {
 }
 
 export async function saveMenuProductAction(product: MenuProduct) {
+  const eventTicketSettings = product.eventTicketSettings
+    ? {
+        ...product.eventTicketSettings,
+        checkinPolicy: product.eventTicketSettings.checkinPolicy ?? "single_use",
+      }
+    : null;
+
   const row = await upsertMenuProduct({
     id: /^[0-9a-f-]{36}$/i.test(product.id) ? product.id : undefined,
     name: product.name,
@@ -38,6 +45,7 @@ export async function saveMenuProductAction(product: MenuProduct) {
     videoStoragePath: product.videoAssetId ?? null,
     media: product.media ?? [],
     promo: product.promo ?? null,
+    eventTicketSettings,
   });
   return row.id;
 }

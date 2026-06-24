@@ -2,7 +2,8 @@
 
 import { Headphones, Link as LinkIcon, Send, ShieldCheck, Trophy } from "lucide-react";
 import { useState } from "react";
-import { createPublicSupportTicketAction, submitExperienceProofAction } from "@/app/actions/final-product-release";
+import { createPublicSupportTicketAction } from "@/app/actions/final-product-release";
+import { submitCustomerExperienceRewardProofAction } from "@/app/actions/experience-rewards";
 
 export function PublicExperienceSupportSection({ slug, cafeName }: { slug: string; cafeName: string }) {
   const [supportMessage, setSupportMessage] = useState("");
@@ -13,8 +14,26 @@ export function PublicExperienceSupportSection({ slug, cafeName }: { slug: strin
     setSupportMessage(result.message);
   }
   async function submitExperience(formData: FormData) {
-    const result = await submitExperienceProofAction({ slug, customerName: String(formData.get("customerName") || ""), contact: String(formData.get("contact") || ""), url: String(formData.get("url") || ""), agreed: formData.get("agreed") === "on" });
-    setExperienceMessage(result.message);
+    if (formData.get("agreed") !== "on") {
+      setExperienceMessage("يجب الموافقة على الشروط قبل الإرسال");
+      return;
+    }
+
+    try {
+      await submitCustomerExperienceRewardProofAction({
+        cafeSlug: slug,
+        experienceUrl: String(formData.get("url") || "").trim(),
+        currentViews: 0,
+        currentComments: 0,
+        customerNotes: [
+          String(formData.get("customerName") || "").trim(),
+          String(formData.get("contact") || "").trim(),
+        ].filter(Boolean).join(" - ") || undefined,
+      });
+      setExperienceMessage(`تم إرسال التوثيق إلى ${cafeName} للمراجعة`);
+    } catch {
+      setExperienceMessage("سجل دخولك كعميل لهذه العلامة ثم أعد إرسال رابط التوثيق");
+    }
   }
 
   return (

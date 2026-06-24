@@ -82,3 +82,11 @@ export async function ownerRedeemExperienceRewardAction(rewardCode: string) {
   await assertOwnerExperienceReviewsEnabled();
   return redeemOwnerExperienceReward(rewardCode);
 }
+
+export async function ownerOperationalRedeemExperienceRewardAction(rewardCode: string) {
+  const features = await getOwnerFeatureCodes();
+  if (!featureCodesAllow(features, "cashier")) {
+    throw new Error("خدمات التشغيل غير مفعلة في باقتك الحالية");
+  }
+  return redeemOwnerExperienceReward(rewardCode);
+}

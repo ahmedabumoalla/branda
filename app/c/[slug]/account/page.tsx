@@ -229,12 +229,15 @@ function buildAccountNotifications({
   reservations,
   loyaltyView,
   experienceRewards,
+  businessCategory,
 }: {
   orders: CustomerOrder[];
   reservations: Reservation[];
   loyaltyView: CustomerLoyaltyCardView | null;
   experienceRewards: CustomerExperienceReward[];
+  businessCategory?: string;
 }) {
+  const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const notifications: AccountNotification[] = [];
 
   orders.filter((order) => isAcceptedAccountStatus(order.status)).forEach((order) => {
@@ -244,8 +247,8 @@ function buildAccountNotifications({
       order.status;
     notifications.push({
       id: `order:${order.id}:${statusMarker}`,
-      title: "تمت الموافقة على طلب",
-      body: `${order.items.join("، ") || "طلب منتجات"} - ${formatSar(order.total)}`,
+      title: isEvents ? "تمت الموافقة على شراء التذاكر" : "تمت الموافقة على طلب",
+      body: `${order.items.join("، ") || (isEvents ? "تذاكر" : "طلب منتجات")} - ${formatSar(order.total)}`,
     });
   });
 
@@ -1079,12 +1082,13 @@ function AccountPageInner() {
   );
 
   const latestActivity = useMemo(() => {
+    const isEvents = getBusinessCopy(settings.businessCategory).kind === "events";
     const orderActivities = myOrders.map((order) => ({
       id: order.id,
-      title: `طلب: ${order.items.join("، ")}`,
+      title: `${isEvents ? "تذكرة" : "طلب"}: ${order.items.join("، ")}`,
       desc: `${order.status} • ${formatSar(order.total)}`,
       date: order.createdAt,
-      type: "طلب",
+      type: isEvents ? "تذكرة" : "طلب",
     }));
 
     const reservationActivities = myReservations.map((reservation) => ({
@@ -1124,8 +1128,9 @@ function AccountPageInner() {
         reservations: myReservations,
         loyaltyView,
         experienceRewards,
+        businessCategory: settings.businessCategory,
       }),
-    [experienceRewards, loyaltyView, myOrders, myReservations],
+    [experienceRewards, loyaltyView, myOrders, myReservations, settings.businessCategory],
   );
   const unreadNotificationCount = useMemo(
     () => accountNotifications.filter((item) => !readNotificationIds.has(item.id)).length,
@@ -1140,6 +1145,7 @@ function AccountPageInner() {
       hasOrders: true,
       hasRewards: loyaltyEnabled,
       isCustomer: true,
+      businessCategory: settings.businessCategory,
     });
 
     return {
@@ -1490,6 +1496,7 @@ function AccountPageInner() {
         onEditName={setEditName}
         onEditPhone={setEditPhone}
         onSaveSettings={() => void saveSettings()}
+        businessCategory={settings.businessCategory}
         notifications={accountNotifications}
         unreadNotificationCount={unreadNotificationCount}
         onOpenNotifications={markCurrentNotificationsRead}

@@ -65,6 +65,19 @@ type Props = {
 
 export function OrdersPageClient({ initialOrders, businessCategory, configError }: Props) {
   const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
+  const ordersTitle = isEvents ? "طلبات شراء التذاكر" : "طلبات الاستلام";
+  const ordersSubtitle = isEvents
+    ? `طلبات شراء التذاكر من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`
+    : `طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`;
+  const itemLabel = isEvents ? "تذاكر" : "منتجات";
+  const itemSingular = isEvents ? "تذكرة" : "منتج";
+  const pickupTimeLabel = isEvents ? "وقت الحضور" : "وقت الاستلام";
+  const fulfillmentDetailsLabel = isEvents ? "تفاصيل الدخول" : "تفاصيل الاستلام";
+  const acceptLabel = isEvents ? "قبول شراء التذاكر" : "قبول الطلب";
+  const rejectLabel = isEvents ? "رفض شراء التذاكر" : "رفض الطلب";
+  const detailsLabel = isEvents ? "تفاصيل شراء التذاكر" : "تفاصيل الطلب";
+  const moreItemsLabel = isEvents ? "تذاكر أخرى" : "منتجات أخرى";
   const [orders, setOrders] = useState<CafeOrder[]>(initialOrders);
   const [selected, setSelected] = useState<CafeOrder | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -73,7 +86,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
 
   function printOrderThermal(order: CafeOrder) {
     printThermalReceipt({
-      title: "طلب منيو",
+      title: isEvents ? "شراء تذكرة" : "طلب منيو",
       cafeName: order.cafeSlug || "برندة",
       subtitle: order.status,
       lines: [
@@ -81,7 +94,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
         { label: "العميل", value: order.customerName, strong: true },
         { label: "الجوال", value: order.customerPhone },
         { label: "الفرع", value: order.branchName || "غير محدد" },
-        { label: "وقت الاستلام", value: order.pickupAt || "غير محدد" },
+        { label: pickupTimeLabel, value: order.pickupAt || "غير محدد" },
         { label: "الدفع", value: order.paymentStatus },
         { label: "الإجمالي", value: formatSar(order.total), strong: true },
         { label: "ملاحظات", value: order.notes || "-" },
@@ -107,16 +120,16 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
       createdAt: order.createdAt,
     }));
     const columns = [
-      { key: "id", title: "رقم الطلب" },
+      { key: "id", title: isEvents ? "رقم شراء التذاكر" : "رقم الطلب" },
       { key: "customer", title: "العميل" },
       { key: "phone", title: "الجوال" },
       { key: "status", title: "الحالة" },
       { key: "total", title: "الإجمالي" },
       { key: "branch", title: "الفرع" },
-      { key: "createdAt", title: "تاريخ الطلب" },
+      { key: "createdAt", title: isEvents ? "تاريخ الشراء" : "تاريخ الطلب" },
     ];
-    if (format === "pdf") exportRowsToPdf("تقرير طلبات المنيو", rows, columns);
-    else exportRowsToExcel("menu-orders-report", rows, columns);
+    if (format === "pdf") exportRowsToPdf(isEvents ? "تقرير شراء التذاكر" : "تقرير طلبات المنيو", rows, columns);
+    else exportRowsToExcel(isEvents ? "ticket-orders-report" : "menu-orders-report", rows, columns);
   }
 
   async function refreshOrders() {
@@ -179,8 +192,8 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="طلبات الاستلام"
-        subtitle={`طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`}
+        title={ordersTitle}
+        subtitle={ordersSubtitle}
       >
         {configError ? (
           <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
@@ -205,17 +218,17 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SoftCard className="p-4 sm:p-5">
-            <StatPill label="إجمالي الطلبات" value={orders.length} />
+            <StatPill label={isEvents ? "إجمالي طلبات التذاكر" : "إجمالي الطلبات"} value={orders.length} />
           </SoftCard>
           <SoftCard className="p-4 sm:p-5">
             <StatPill label="بانتظار الموافقة" value={pendingOrders} />
           </SoftCard>
           <SoftCard className="p-4 sm:p-5">
-            <StatPill label="طلبات مقبولة" value={acceptedOrders} />
+            <StatPill label={isEvents ? "تذاكر مقبولة" : "طلبات مقبولة"} value={acceptedOrders} />
           </SoftCard>
           <SoftCard className="p-4 sm:p-5">
             <StatPill
-              label="قيمة الطلبات المقبولة المتوقعة"
+              label={isEvents ? "قيمة رسوم الدخول المقبولة" : "قيمة الطلبات المقبولة المتوقعة"}
               value={formatSar(acceptedRevenue)}
             />
           </SoftCard>
@@ -228,10 +241,11 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFF8EA] text-[#6B3A25]">
                   <Receipt className="h-8 w-8" />
                 </div>
-                <h2 className="mt-4 text-2xl font-black">لا توجد طلبات</h2>
+                <h2 className="mt-4 text-2xl font-black">{isEvents ? "لا توجد طلبات تذاكر" : "لا توجد طلبات"}</h2>
                 <p className="mt-2 max-w-md text-sm font-bold leading-7 text-[#7A6255]">
-                  ستظهر طلبات الاستلام هنا فور وصولها من صفحة المنيو، مع بيانات
-                  العميل والإجراءات المطلوبة.
+                  {isEvents
+                    ? "ستظهر طلبات شراء التذاكر هنا فور وصولها من صفحة التذاكر، مع بيانات العميل والإجراءات المطلوبة."
+                    : "ستظهر طلبات الاستلام هنا فور وصولها من صفحة المنيو، مع بيانات العميل والإجراءات المطلوبة."}
                 </p>
               </SoftCard>
             ) : (
@@ -298,7 +312,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                         <div className="rounded-2xl bg-[#F8F4EF] p-4">
                           <p className="flex items-center gap-1 text-xs font-black text-[#7A6255]">
                             <Clock className="h-4 w-4" />
-                            وقت الاستلام
+                            {pickupTimeLabel}
                           </p>
                           <p className="mt-1 break-words font-black">
                             {order.pickupAt || "غير محدد"}
@@ -316,10 +330,10 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                         <div className="rounded-2xl bg-[#F8F4EF] p-4">
                           <p className="flex items-center gap-1 text-xs font-black text-[#7A6255]">
                             <ShoppingBag className="h-4 w-4" />
-                            المنتجات
+                            {itemLabel}
                           </p>
                           <p className="mt-1 font-black">
-                            {orderItemsCount(order)} منتج
+                            {orderItemsCount(order)} {itemSingular}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-[#F8F4EF] p-4">
@@ -335,7 +349,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                       <div className="mt-4 rounded-2xl border border-[#E7D7C6] bg-white/60 p-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <p className="font-black text-[#311912]">
-                            المنتجات والمجموع
+                            {itemLabel} والمجموع
                           </p>
                           <p className="font-black text-[#6B3A25]">
                             {formatSar(order.total)}
@@ -364,7 +378,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                           ))}
                           {moreItems ? (
                             <p className="rounded-xl bg-[#FFF8EA] px-3 py-2 text-sm font-black text-[#6B3A25]">
-                              + {moreItems} منتجات أخرى
+                              + {moreItems} {moreItemsLabel}
                             </p>
                           ) : null}
                         </div>
@@ -378,7 +392,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                             className={`${actionButtonClass} bg-green-50 text-green-700`}
                           >
                             <Check className="h-4 w-4" />
-                            قبول الطلب
+                            {acceptLabel}
                           </button>
                           <button
                             onClick={() =>
@@ -390,7 +404,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                             className={`${actionButtonClass} bg-red-50 text-red-700`}
                           >
                             <X className="h-4 w-4" />
-                            رفض الطلب
+                            {rejectLabel}
                           </button>
                         </div>
                       ) : null}
@@ -405,7 +419,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                               value={rejectReason}
                               onChange={(e) => setRejectReason(e.target.value)}
                               rows={2}
-                              placeholder="مثال: المنتج غير متوفر حاليًا"
+                              placeholder={isEvents ? "مثال: التذاكر غير متوفرة حاليًا" : "مثال: المنتج غير متوفر حاليًا"}
                               className="mt-2 w-full resize-none rounded-2xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold outline-none"
                             />
                           </label>
@@ -436,7 +450,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                           onClick={() => setSelected(order)}
                           className={`${actionButtonClass} bg-[#F8F4EF] text-[#3A2117]`}
                         >
-                          تفاصيل الطلب
+                          {detailsLabel}
                         </button>
                       </div>
                     </article>
@@ -453,7 +467,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between xl:flex-col">
                     <div className="min-w-0">
                       <p className="text-xs font-black text-[#7A6255]">
-                        تفاصيل الطلب
+                        {detailsLabel}
                       </p>
                       <h2 className="mt-1 break-words text-2xl font-black text-[#3A2117]">
                         {selected.id}
@@ -485,13 +499,13 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                     <div className="rounded-2xl bg-[#F8F4EF] p-4">
                       <p className="font-black text-[#311912]">
-                        تفاصيل الاستلام
+                        {fulfillmentDetailsLabel}
                       </p>
                       <p className="mt-2 break-words text-sm font-bold text-[#7A6255]">
                         الفرع: {selected.branchName || "—"}
                       </p>
                       <p className="break-words text-sm font-bold text-[#7A6255]">
-                        وقت الاستلام: {selected.pickupAt || "—"}
+                        {pickupTimeLabel}: {selected.pickupAt || "—"}
                       </p>
                       <p className="break-words text-sm font-bold text-[#7A6255]">
                         الدفع: {selected.paymentStatus}
@@ -505,7 +519,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                         {formatSar(selected.total)}
                       </p>
                       <p className="mt-1 text-xs font-bold text-[#7A6255]">
-                        {orderItemsCount(selected)} منتج
+                        {orderItemsCount(selected)} {itemSingular}
                       </p>
                     </div>
                   </div>
@@ -549,13 +563,13 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                     onClick={() => printOrderThermal(selected)}
                     className={`${actionButtonClass} mt-5 w-full bg-[#3A2117] text-white`}
                   >
-                    <Printer className="h-4 w-4" /> طباعة الطلب على الطابعة
+                    <Printer className="h-4 w-4" /> {isEvents ? "طباعة شراء التذاكر على الطابعة" : "طباعة الطلب على الطابعة"}
                     الحرارية
                   </button>
 
                   {selected.notes ? (
                     <div className="mt-5 rounded-2xl bg-[#FFF8EF] p-4 font-bold leading-7 text-[#7A6255]">
-                      ملاحظات الطلب: {selected.notes}
+                      {isEvents ? "ملاحظات شراء التذاكر" : "ملاحظات الطلب"}: {selected.notes}
                     </div>
                   ) : null}
                 </>
@@ -564,9 +578,9 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F8F4EF] text-[#6B3A25]">
                     <Receipt className="h-7 w-7" />
                   </div>
-                  <h2 className="mt-4 text-xl font-black">اختر طلبًا</h2>
+                  <h2 className="mt-4 text-xl font-black">{isEvents ? "اختر عملية شراء" : "اختر طلبًا"}</h2>
                   <p className="mt-2 max-w-xs text-sm font-bold leading-7 text-[#7A6255]">
-                    اضغط تفاصيل الطلب لعرض كامل البيانات.
+                    {isEvents ? "اضغط تفاصيل شراء التذاكر لعرض كامل البيانات." : "اضغط تفاصيل الطلب لعرض كامل البيانات."}
                   </p>
                 </div>
               )}
@@ -580,8 +594,8 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
   return (
     <div dir="rtl">
       <DashboardPageShell
-        title="طلبات الاستلام"
-        subtitle={`طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`}
+        title={ordersTitle}
+        subtitle={ordersSubtitle}
       >
         {configError ? (
           <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
@@ -756,9 +770,9 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
 
               {orders.length === 0 ? (
                 <SoftCard className="text-center">
-                  <h2 className="text-2xl font-black">لا توجد طلبات</h2>
+                  <h2 className="text-2xl font-black">{isEvents ? "لا توجد طلبات تذاكر" : "لا توجد طلبات"}</h2>
                   <p className="mt-2 text-[#7A6255]">
-                    ستظهر طلبات الاستلام هنا عند إنشائها.
+                    {isEvents ? "ستظهر طلبات شراء التذاكر هنا عند إنشائها." : "ستظهر طلبات الاستلام هنا عند إنشائها."}
                   </p>
                 </SoftCard>
               ) : null}

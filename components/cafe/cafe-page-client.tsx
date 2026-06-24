@@ -39,6 +39,7 @@ import { buildCustomIdentityCssVars, defaultCustomIdentityTheme, OVERLAY_OPACITY
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
 import { formatSar } from "@/lib/format";
@@ -64,11 +65,15 @@ function ProductShowcaseCard({
   slug,
   product,
   previewThemeId,
+  businessCategory,
 }: {
   slug: string;
   product: MenuProduct;
   previewThemeId?: string | null;
+  businessCategory?: string | null;
 }) {
+  const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
   const promoOn = product.promo ? isPromoActive(product.promo) : false;
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscount = promoOn && finalPrice < product.price;
@@ -106,12 +111,12 @@ function ProductShowcaseCard({
           </span>
           {product.preparationTimeMinutes ? (
             <span className="rounded-full bg-[var(--ci-page-bg)] px-3 py-1 text-xs font-black text-[var(--ci-muted-fg)]">
-              {product.preparationTimeMinutes} دقيقة
+              {isEvents ? `مدة ${product.preparationTimeMinutes} دقيقة` : `${product.preparationTimeMinutes} دقيقة`}
             </span>
           ) : null}
           {product.availableForPickup === false ? (
             <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-700">
-              غير متاح للاستلام
+              {isEvents ? "غير متاح للشراء" : "غير متاح للاستلام"}
             </span>
           ) : null}
         </div>
@@ -136,7 +141,9 @@ function ProductShowcaseCard({
 
         <div className="mt-auto flex flex-wrap items-end justify-between gap-4 pt-5">
           <div>
-            <p className="text-xs font-black text-[var(--ci-muted-fg)]">السعر شامل الضريبة</p>
+            <p className="text-xs font-black text-[var(--ci-muted-fg)]">
+              {isEvents ? "رسوم الدخول شاملة الضريبة" : "السعر شامل الضريبة"}
+            </p>
             <div className="mt-1 flex items-end gap-2">
               <span className="text-3xl font-black text-[var(--ci-page-fg)]">{formatSar(finalPrice)}</span>
               {hasDiscount ? (
@@ -153,7 +160,7 @@ function ProductShowcaseCard({
             </span>
           ) : (
             <span className="rounded-2xl bg-[var(--ci-button-bg)] px-4 py-2 text-sm font-black text-[var(--ci-button-fg)]">
-              عرض التفاصيل
+              {isEvents ? "تفاصيل التذكرة" : "عرض التفاصيل"}
             </span>
           )}
         </div>
@@ -636,6 +643,9 @@ function CafePageInner({ slug }: { slug: string }) {
 
   const cafeName = settings.cafeName || slug;
   const logoUrl = settings.logoDataUrl ?? settings.logoAssetId;
+  const copy = getBusinessCopy(settings.businessCategory);
+  const isEvents = copy.kind === "events";
+  const itemPluralLabel = isEvents ? "التذاكر والباقات" : "المنتجات";
   const availableProducts = hasFeature("menu") ? products.filter((product) => product.available) : [];
   const activeOffers = hasFeature("offers")
     ? offers.filter(
@@ -805,14 +815,14 @@ function CafePageInner({ slug }: { slug: string }) {
           <section className="mt-8">
             <div className="flex items-start justify-between gap-3">
               <PremiumSectionHeader
-                eyebrow="أحدث المنتجات"
-                title="منتجات مختارة"
+                eyebrow={isEvents ? "أحدث التذاكر" : "أحدث المنتجات"}
+                title={isEvents ? "تذاكر وباقات مختارة" : "منتجات مختارة"}
               />
               <Link
                 href={getCafePath(slug, "products/latest", previewThemeId)}
                 className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[var(--ci-button-bg)] px-4 py-2 text-xs font-black text-[var(--ci-button-fg)]"
               >
-                كل المنتجات
+                {isEvents ? "كل التذاكر" : "كل المنتجات"}
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </div>
@@ -831,7 +841,7 @@ function CafePageInner({ slug }: { slug: string }) {
         ) : hasFeature("menu") ? (
           <section className="mt-8 rounded-[28px] border border-dashed border-[var(--ci-border)] bg-[var(--ci-surface-bg)]/75 p-6 text-center">
             <p className="text-sm font-black text-[var(--ci-muted-fg)]">
-              {menuFallbackActive ? "تعذر تحميل المنيو الآن، وستظهر المنتجات عند توفرها." : "لا توجد منتجات متاحة حاليا."}
+              {menuFallbackActive ? `تعذر تحميل المنيو الآن، وستظهر ${itemPluralLabel} عند توفرها.` : isEvents ? "لا توجد تذاكر متاحة حاليا." : "لا توجد منتجات متاحة حاليا."}
             </p>
           </section>
         ) : null}
@@ -853,6 +863,7 @@ function CafePageInner({ slug }: { slug: string }) {
           hasProducts: hasFeature("menu"),
           hasOrders: hasFeature("reservations") || hasFeature("menu"),
           hasRewards: hasFeature("loyalty"),
+          businessCategory: settings.businessCategory,
           active: "home",
         })}
       />

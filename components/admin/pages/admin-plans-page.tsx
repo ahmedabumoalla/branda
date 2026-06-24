@@ -64,7 +64,7 @@ function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
     description: "",
     active: true,
     isDefault: false,
-    features: ["home", "menu", "settings", "subscription"],
+    features: ["home", "menu", "cashier", "settings", "subscription"],
     categoryId,
     maxOrdersMonthly: 30,
     maxProductsMonthly: 20,
@@ -76,6 +76,13 @@ function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
     offerEndsAt: null,
     durationOptions: [1, 2, 12, 24],
   };
+}
+
+function featureTitle(feature: PlatformFeature, categoryId?: string) {
+  if (feature === "cashier") {
+    return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
+  }
+  return allPlatformFeatures.find((item) => item.id === feature)?.title ?? feature;
 }
 
 export function AdminPlansPage({
@@ -458,7 +465,7 @@ export function AdminPlansPage({
                         : "border-white/10 bg-white/5 text-[#CBB29C]"
                     }`}
                   >
-                    <span>{feature.title}</span>
+                    <span>{featureTitle(feature.id, plan.categoryId ?? selectedCategoryId)}</span>
                     {enabled ? <Check className="h-4 w-4" /> : <span>—</span>}
                   </button>
                 );

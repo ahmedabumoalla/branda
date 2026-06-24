@@ -39,6 +39,19 @@ export type ProductPromo = {
   endDate: string;
 };
 
+export type EventTicketSettings = {
+  eventStartAt?: string | null;
+  eventEndAt?: string | null;
+  venueName?: string | null;
+  gateName?: string | null;
+  capacity?: number | null;
+  ticketType?: string | null;
+  ticketValidFrom?: string | null;
+  ticketValidUntil?: string | null;
+  maxPerCustomer?: number | null;
+  checkinPolicy?: "single_use" | "multi_use";
+};
+
 export type MenuProduct = {
   id: string;
   name: string;
@@ -63,6 +76,7 @@ export type MenuProduct = {
   ingredients: string[];
   available: boolean;
   promo?: ProductPromo | null;
+  eventTicketSettings?: EventTicketSettings | null;
 };
 
 export const MENU_CATEGORIES: MenuCategory[] = [

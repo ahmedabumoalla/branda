@@ -11,6 +11,7 @@ import type { CustomerInvoice, CustomerOrder, CustomerTransaction } from "@/lib/
 import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
 type AccountView = "main" | "security" | "profile" | "orders" | "notifications";
@@ -74,6 +75,7 @@ export type ThemedAccountPanelProps = {
   onEditPhone: (v: string) => void;
   onSaveSettings: () => void;
   loyaltyFeatureEnabled?: boolean;
+  businessCategory?: string | null;
   loyaltySlot?: ReactNode;
   experienceRewardsSlot?: ReactNode;
   passwordSlot?: ReactNode;
@@ -227,10 +229,12 @@ function isAcceptedStatus(status?: string) {
   );
 }
 
-function summarizeLatestOrder(orders: CustomerOrder[]) {
+function summarizeLatestOrder(orders: CustomerOrder[], isEvents = false) {
   const latest = orders[0];
-  if (!latest) return "لا توجد طلبات مسجلة حتى الآن";
-  return `${orders.length} طلب - آخر طلب ${formatSar(latest.total)}`;
+  if (!latest) return isEvents ? "لا توجد تذاكر مسجلة حتى الآن" : "لا توجد طلبات مسجلة حتى الآن";
+  return isEvents
+    ? `${orders.length} تذكرة - آخر شراء ${formatSar(latest.total)}`
+    : `${orders.length} طلب - آخر طلب ${formatSar(latest.total)}`;
 }
 
 function summarizeLatestReservation(reservations: Reservation[]) {
@@ -251,19 +255,22 @@ function makeNotifications({
   reservations,
   loyaltyView,
   experienceRewards,
+  businessCategory,
 }: {
   orders: CustomerOrder[];
   reservations: Reservation[];
   loyaltyView?: CustomerLoyaltyCardView | null;
   experienceRewards: CustomerExperienceReward[];
+  businessCategory?: string;
 }) {
+  const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const notifications: AccountNotification[] = [];
 
   orders.filter((order) => isAcceptedStatus(order.status)).forEach((order) => {
     notifications.push({
       id: `order-${order.id}`,
-      title: "تمت الموافقة على طلب",
-      body: `${order.items.join("، ") || "طلب منتجات"} - ${formatSar(order.total)}`,
+      title: isEvents ? "تمت الموافقة على شراء التذاكر" : "تمت الموافقة على طلب",
+      body: `${order.items.join("، ") || (isEvents ? "تذاكر" : "طلب منتجات")} - ${formatSar(order.total)}`,
     });
   });
 
@@ -297,14 +304,18 @@ function makeNotifications({
   return notifications;
 }
 
-function OrdersView({ orders }: { orders: CustomerOrder[] }) {
+function OrdersView({ orders, isEvents = false }: { orders: CustomerOrder[]; isEvents?: boolean }) {
   if (!orders.length) {
     return (
       <Card className="mt-5 text-center">
         <PackageCheck className="mx-auto h-9 w-9 text-[#8d7666]" />
-        <h2 className="mt-3 text-base font-black text-[#2d231d]">لا توجد طلبات حتى الآن</h2>
+        <h2 className="mt-3 text-base font-black text-[#2d231d]">
+          {isEvents ? "لا توجد تذاكر حتى الآن" : "لا توجد طلبات حتى الآن"}
+        </h2>
         <p className="mt-2 text-xs font-bold leading-6 text-[#7d6f66]">
-          عندما تؤكد العلامة طلبات الاستلام ستظهر هنا من بيانات الحساب الحالية.
+          {isEvents
+            ? "عند شراء التذاكر أو الباقات ستظهر هنا كتذاكرك الخاصة بالفعالية."
+            : "عندما تؤكد العلامة طلبات الاستلام ستظهر هنا من بيانات الحساب الحالية."}
         </p>
       </Card>
     );
@@ -320,7 +331,7 @@ function OrdersView({ orders }: { orders: CustomerOrder[] }) {
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="line-clamp-1 text-sm font-black text-[#2d231d]">
-                {order.items[0] || "طلب منتجات"}
+                {order.items[0] || (isEvents ? "تذكرة فعالية" : "طلب منتجات")}
               </h3>
               <p className="mt-1 text-xs font-bold leading-5 text-[#7d6f66]">
                 {order.items.join("، ") || "لا توجد تفاصيل عناصر في السناب شوت الحالي"}
@@ -331,7 +342,7 @@ function OrdersView({ orders }: { orders: CustomerOrder[] }) {
                 {order.branchName ? <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{order.branchName}</span> : null}
                 {order.pickupAt ? <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{order.pickupAt}</span> : null}
               </div>
-              {order.notes ? <p className="mt-2 text-xs font-bold text-[#7d6f66]">تفاصيل الطلب: {order.notes}</p> : null}
+              {order.notes ? <p className="mt-2 text-xs font-bold text-[#7d6f66]">{isEvents ? "تفاصيل التذكرة" : "تفاصيل الطلب"}: {order.notes}</p> : null}
               {order.rejectionReason ? <p className="mt-2 text-xs font-bold text-red-600">رد العلامة: {order.rejectionReason}</p> : null}
             </div>
           </div>
@@ -344,6 +355,8 @@ function OrdersView({ orders }: { orders: CustomerOrder[] }) {
 export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
   const { customer } = props;
   const [view, setView] = useState<AccountView>("main");
+  const copy = getBusinessCopy(props.businessCategory);
+  const isEvents = copy.kind === "events";
 
   const rewardsHref = `/c/${encodeURIComponent(props.slug)}/rewards`;
   const reserveHref = `/c/${encodeURIComponent(props.slug)}/reserve`;
@@ -357,8 +370,9 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         reservations: props.myReservations,
         loyaltyView: props.loyaltyView,
         experienceRewards: props.experienceRewards ?? [],
+        businessCategory: props.businessCategory ?? undefined,
       }),
-    [props.experienceRewards, props.loyaltyView, props.myOrders, props.myReservations, props.notifications],
+    [props.businessCategory, props.experienceRewards, props.loyaltyView, props.myOrders, props.myReservations, props.notifications],
   );
   const unreadNotificationCount = props.unreadNotificationCount ?? notifications.length;
 
@@ -372,18 +386,18 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
       },
       {
         icon: ClipboardList,
-        title: "الطلبات",
-        subtitle: summarizeLatestOrder(props.myOrders),
+        title: isEvents ? "شراء التذاكر" : "الطلبات",
+        subtitle: summarizeLatestOrder(props.myOrders, isEvents),
         onClick: () => setView("orders"),
       },
       {
         icon: CalendarDays,
-        title: "الحجوزات",
-        subtitle: summarizeLatestReservation(props.myReservations),
-        href: reserveHref,
+        title: isEvents ? "تذاكري" : "الحجوزات",
+        subtitle: isEvents ? "تذاكر الدخول الخاصة بك" : summarizeLatestReservation(props.myReservations),
+        ...(isEvents ? { onClick: () => setView("orders") } : { href: reserveHref }),
       },
     ],
-    [props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, reserveHref, rewardsHref],
+    [isEvents, props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, reserveHref, rewardsHref],
   );
 
   function openProfile() {
@@ -481,8 +495,8 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           </button>
           {view === "orders" ? (
             <>
-              <h1 className="text-lg font-black">طلباتك</h1>
-              <OrdersView orders={props.myOrders} />
+              <h1 className="text-lg font-black">{isEvents ? "تذاكري" : "طلباتك"}</h1>
+              <OrdersView orders={props.myOrders} isEvents={isEvents} />
             </>
           ) : (
             <>

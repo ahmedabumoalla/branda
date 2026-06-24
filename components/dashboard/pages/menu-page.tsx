@@ -87,10 +87,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       } else {
         setProducts((prev) => [saved, ...prev]);
       }
-      showToast({ type: "success", message: "تم حفظ المنتج" });
+      showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ التذكرة أو الباقة" : "تم حفظ المنتج" });
       router.refresh();
     } catch {
-      showToast({ type: "error", message: "تعذر حفظ المنتج" });
+      showToast({ type: "error", message: copy.kind === "events" ? "تعذر حفظ التذكرة أو الباقة" : "تعذر حفظ المنتج" });
     } finally {
       setSaving(false);
     }
@@ -102,7 +102,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       const saved = await saveMenuCategoriesAction(next);
       setCategories(saved);
       router.refresh();
-      showToast({ type: "success", message: "تم حفظ تصنيفات المنيو" });
+      showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ فئات التذاكر" : "تم حفظ تصنيفات المنيو" });
       return saved;
     } catch {
       showToast({ type: "error", message: "تعذر حفظ التصنيفات" });
@@ -172,6 +172,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             categories={categories}
             products={products}
             onChange={handleCategoriesChange}
+            businessCategory={businessCategory}
           />
         </BentoGrid>
 
@@ -181,7 +182,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             <NeumoInput
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`ابحث باسم ${copy.itemSingular} أو منتج أو تصنيف`}
+              placeholder={`ابحث باسم ${copy.itemSingular} أو ${copy.itemPlural} أو تصنيف`}
               className="pr-12"
             />
           </div>
@@ -216,7 +217,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         <BentoGrid>
           <BentoCard variant="white" span="4">
             {filtered.length === 0 ? (
-              <p className="py-12 text-center font-bold text-[#806A5E]">لا توجد منتجات بعد</p>
+              <p className="py-12 text-center font-bold text-[#806A5E]">
+                {copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+              </p>
             ) : (
               <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((product) => (
@@ -243,9 +246,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                     onDelete={() => {
                       void deleteMenuProductAction(product.id).then(() => {
                         setProducts((prev) => prev.filter((p) => p.id !== product.id));
-                        showToast({ type: "success", message: "تم حذف المنتج" });
+                        showToast({ type: "success", message: copy.kind === "events" ? "تم حذف التذكرة أو الباقة" : "تم حذف المنتج" });
                       });
                     }}
+                    businessCategory={businessCategory}
                   />
                 ))}
               </section>
@@ -259,6 +263,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           editingProduct={editing}
           productList={products}
           categories={categories}
+          businessCategory={businessCategory}
           onCategoriesChange={handleCategoriesChange}
           onClose={() => setOpen(false)}
           onSave={saveProduct}

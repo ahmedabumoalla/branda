@@ -37,6 +37,7 @@ import {
   getCategoryNameById,
   type MenuCategoryRecord,
 } from "@/lib/mock/menu-categories";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   open: boolean;
@@ -44,6 +45,7 @@ type Props = {
   editingProduct: MenuProduct | null;
   productList: MenuProduct[];
   categories: MenuCategoryRecord[];
+  businessCategory?: string;
   onCategoriesChange: (
     categories: MenuCategoryRecord[]
   ) => Promise<MenuCategoryRecord[]> | MenuCategoryRecord[] | void;
@@ -143,11 +145,23 @@ export function MenuProductFormModal({
   editingProduct,
   productList,
   categories,
+  businessCategory,
   onCategoriesChange,
   onClose,
   onSave,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
+  const productNoun = isEvents ? "التذكرة أو الباقة" : "المنتج";
+  const productNameLabel = isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const categoryLabel = isEvents ? "نوع التذكرة أو الفئة" : "التصنيف";
+  const descriptionLabel = isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
+  const priceLabel = isEvents ? "رسوم الدخول ر.س *" : "السعر ر.س *";
+  const detailsLabel = isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
+  const detailsPlaceholder = isEvents ? "مثال: حضور، ورشة، شهادة..." : "مثال: حليب، قهوة...";
+  const defaultProductName = isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const defaultDescription = isEvents ? "تذكرة أو باقة من قائمة الفعالية" : "منتج من قائمة العلامة التجارية";
 
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -171,6 +185,16 @@ export function MenuProductFormModal({
   const [preparationTimeMinutes, setPreparationTimeMinutes] = useState("");
   const [availableForPickup, setAvailableForPickup] = useState(true);
   const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState("");
+  const [eventStartAt, setEventStartAt] = useState("");
+  const [eventEndAt, setEventEndAt] = useState("");
+  const [venueName, setVenueName] = useState("");
+  const [gateName, setGateName] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [ticketType, setTicketType] = useState("general_admission");
+  const [ticketValidFrom, setTicketValidFrom] = useState("");
+  const [ticketValidUntil, setTicketValidUntil] = useState("");
+  const [maxPerCustomer, setMaxPerCustomer] = useState("");
+  const [checkinPolicy, setCheckinPolicy] = useState<"single_use" | "multi_use">("single_use");
 
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [ingredientDraft, setIngredientDraft] = useState("");
@@ -222,6 +246,16 @@ export function MenuProductFormModal({
           ? ""
           : String(editingProduct.pickupLeadTimeMinutes)
       );
+      setEventStartAt(editingProduct.eventTicketSettings?.eventStartAt?.slice(0, 16) ?? "");
+      setEventEndAt(editingProduct.eventTicketSettings?.eventEndAt?.slice(0, 16) ?? "");
+      setVenueName(editingProduct.eventTicketSettings?.venueName ?? "");
+      setGateName(editingProduct.eventTicketSettings?.gateName ?? "");
+      setCapacity(editingProduct.eventTicketSettings?.capacity == null ? "" : String(editingProduct.eventTicketSettings.capacity));
+      setTicketType(editingProduct.eventTicketSettings?.ticketType ?? "general_admission");
+      setTicketValidFrom(editingProduct.eventTicketSettings?.ticketValidFrom?.slice(0, 16) ?? "");
+      setTicketValidUntil(editingProduct.eventTicketSettings?.ticketValidUntil?.slice(0, 16) ?? "");
+      setMaxPerCustomer(editingProduct.eventTicketSettings?.maxPerCustomer == null ? "" : String(editingProduct.eventTicketSettings.maxPerCustomer));
+      setCheckinPolicy(editingProduct.eventTicketSettings?.checkinPolicy ?? "single_use");
       setIngredients([...editingProduct.ingredients]);
       setAvailable(editingProduct.available);
 
@@ -259,6 +293,16 @@ export function MenuProductFormModal({
       setPreparationTimeMinutes("");
       setAvailableForPickup(true);
       setPickupLeadTimeMinutes("");
+      setEventStartAt("");
+      setEventEndAt("");
+      setVenueName("");
+      setGateName("");
+      setCapacity("");
+      setTicketType("general_admission");
+      setTicketValidFrom("");
+      setTicketValidUntil("");
+      setMaxPerCustomer("");
+      setCheckinPolicy("single_use");
       setIngredients([]);
       setIngredientDraft("");
       setAvailable(true);
@@ -410,10 +454,10 @@ export function MenuProductFormModal({
 
     return {
       id: "preview",
-      name: name.trim() || "اسم المنتج",
+      name: name.trim() || defaultProductName,
       category: displayCategory,
       categoryId: resolvedCategoryId,
-      description: description.trim() || "منتج من قائمة العلامة التجارية",
+      description: description.trim() || defaultDescription,
       imageAssetId,
       imageDataUrl: legacyExternalImageUrl,
       imageGallery: [
@@ -451,8 +495,23 @@ export function MenuProductFormModal({
       ingredients: ingredients.length ? ingredients : ["مكون"],
       available,
       promo,
+      eventTicketSettings: isEvents
+        ? {
+            eventStartAt: eventStartAt || null,
+            eventEndAt: eventEndAt || null,
+            venueName: venueName.trim() || null,
+            gateName: gateName.trim() || null,
+            capacity: capacity.trim() ? Number(capacity) || null : null,
+            ticketType,
+            ticketValidFrom: ticketValidFrom || null,
+            ticketValidUntil: ticketValidUntil || null,
+            maxPerCustomer: maxPerCustomer.trim() ? Number(maxPerCustomer) || null : null,
+            checkinPolicy,
+          }
+        : null,
     };
   }, [
+    isEvents,
     name,
     displayCategory,
     resolvedCategoryId,
@@ -472,6 +531,16 @@ export function MenuProductFormModal({
     preparationTimeMinutes,
     availableForPickup,
     pickupLeadTimeMinutes,
+    eventStartAt,
+    eventEndAt,
+    venueName,
+    gateName,
+    capacity,
+    ticketType,
+    ticketValidFrom,
+    ticketValidUntil,
+    maxPerCustomer,
+    checkinPolicy,
     ingredients,
     available,
     promoLinked,
@@ -493,7 +562,7 @@ export function MenuProductFormModal({
     e.preventDefault();
 
     if (!name.trim()) {
-      alert("اكتب اسم المنتج");
+      alert(isEvents ? "اكتب اسم التذكرة أو الباقة" : "اكتب اسم المنتج");
       return;
     }
 
@@ -508,7 +577,7 @@ export function MenuProductFormModal({
     }
 
     if (!creatingCategory && !categoryId) {
-      alert("اختر تصنيفًا للمنتج");
+      alert(isEvents ? "اختر نوع التذكرة أو الفئة" : "اختر تصنيفًا للمنتج");
       return;
     }
 
@@ -522,7 +591,7 @@ export function MenuProductFormModal({
     const categoryName = categoryRecord.name;
 
     if (promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
-      alert("اختر المنتج المجاني");
+      alert(isEvents ? "اختر التذكرة أو الباقة المجانية" : "اختر المنتج المجاني");
       return;
     }
 
@@ -571,7 +640,7 @@ export function MenuProductFormModal({
         finalVideoAssetId = uploaded.storagePath;
       }
     } catch {
-      alert("تعذر حفظ صورة المنتج محليًا");
+      alert(isEvents ? "تعذر حفظ صورة التذكرة أو الباقة محليًا" : "تعذر حفظ صورة المنتج محليًا");
       return;
     }
 
@@ -580,7 +649,7 @@ export function MenuProductFormModal({
       name: name.trim(),
       category: categoryName,
       categoryId: nextCategoryId,
-      description: description.trim() || "منتج من قائمة العلامة التجارية",
+      description: description.trim() || defaultDescription,
       imageAssetId: finalAssetId,
       imageDataUrl: isPersistableUrl(legacyExternalImageUrl) ? legacyExternalImageUrl : null,
       imageGallery: finalGallery,
@@ -616,6 +685,20 @@ export function MenuProductFormModal({
       ingredients,
       available,
       promo,
+      eventTicketSettings: isEvents
+        ? {
+            eventStartAt: eventStartAt || null,
+            eventEndAt: eventEndAt || null,
+            venueName: venueName.trim() || null,
+            gateName: gateName.trim() || null,
+            capacity: capacity.trim() ? Number(capacity) || null : null,
+            ticketType,
+            ticketValidFrom: ticketValidFrom || null,
+            ticketValidUntil: ticketValidUntil || null,
+            maxPerCustomer: maxPerCustomer.trim() ? Number(maxPerCustomer) || null : null,
+            checkinPolicy,
+          }
+        : null,
     };
 
     onSave(payload);
@@ -639,7 +722,7 @@ export function MenuProductFormModal({
   return (
     <Modal
       open={open}
-      title={mode === "add" ? "إضافة منتج جديد" : "تعديل المنتج"}
+      title={mode === "add" ? `إضافة ${productNoun}` : `تعديل ${productNoun}`}
       onClose={onClose}
       footer={
         <>
@@ -656,7 +739,7 @@ export function MenuProductFormModal({
             form="menu-product-form"
             className="rounded-2xl bg-[#3A2117] px-6 py-3 text-sm font-black text-[#F8E8D2]"
           >
-            {mode === "add" ? "حفظ المنتج" : "تحديث المنتج"}
+            {mode === "add" ? `حفظ ${productNoun}` : `تحديث ${productNoun}`}
           </button>
         </>
       }
@@ -669,19 +752,19 @@ export function MenuProductFormModal({
         <div className="space-y-5">
           <label className="block">
             <span className="text-xs font-black text-[#7A6255]">
-              اسم المنتج
+              {productNameLabel}
             </span>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="مثال: لاتيه فانيلا"
+              placeholder={isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             />
           </label>
 
           <label className="block">
-            <span className="text-xs font-black text-[#7A6255]">التصنيف</span>
+            <span className="text-xs font-black text-[#7A6255]">{categoryLabel}</span>
             <select
               value={creatingCategory ? "__new__" : categoryId}
               onChange={(e) => {
@@ -720,20 +803,20 @@ export function MenuProductFormModal({
 
           <label className="block">
             <span className="text-xs font-black text-[#7A6255]">
-              وصف المنتج
+              {descriptionLabel}
             </span>
             <textarea
               required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="اكتب وصف المنتج كما سيظهر للعميل"
+              placeholder={isEvents ? "اكتب وصف التذكرة أو الباقة كما سيظهر للعميل" : "اكتب وصف المنتج كما سيظهر للعميل"}
               className="mt-2 w-full resize-none rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             />
           </label>
 
           <div className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
-            <p className="text-xs font-black text-[#7A6255]">صورة المنتج</p>
+            <p className="text-xs font-black text-[#7A6255]">{isEvents ? "صورة التذكرة أو الباقة" : "صورة المنتج"}</p>
 
             <input
               ref={fileRef}
@@ -823,20 +906,20 @@ export function MenuProductFormModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                السعرات الحرارية اختياري
+                {isEvents ? "السعة التقريبية اختياري" : "السعرات الحرارية اختياري"}
               </span>
               <input
                 inputMode="numeric"
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
-                placeholder="مثال: 220"
+                placeholder={isEvents ? "مثال: 120" : "مثال: 220"}
                 className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
               />
             </label>
 
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                السعر ر.س *
+                {priceLabel}
               </span>
               <input
                 required
@@ -854,7 +937,7 @@ export function MenuProductFormModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                وقت التحضير (دقيقة) اختياري
+                {isEvents ? "مدة الدخول أو الجلسة (دقيقة) اختياري" : "وقت التحضير (دقيقة) اختياري"}
               </span>
               <input
                 inputMode="numeric"
@@ -867,7 +950,7 @@ export function MenuProductFormModal({
 
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                مهلة الاستلام (دقيقة) اختياري
+                {isEvents ? "مهلة تجهيز التذكرة (دقيقة) اختياري" : "مهلة الاستلام (دقيقة) اختياري"}
               </span>
               <input
                 inputMode="numeric"
@@ -881,7 +964,7 @@ export function MenuProductFormModal({
 
           <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
-              خيارات الاستلام
+              {isEvents ? "خيارات شراء التذكرة" : "خيارات الاستلام"}
             </legend>
 
             <label className="mt-3 flex items-center gap-2 text-sm font-black text-[#3A2117]">
@@ -890,14 +973,132 @@ export function MenuProductFormModal({
                 checked={availableForPickup}
                 onChange={(e) => setAvailableForPickup(e.target.checked)}
               />
-              متاح للاستلام
+              {isEvents ? "متاحة للشراء" : "متاح للاستلام"}
             </label>
 
           </fieldset>
 
+          {isEvents ? (
+            <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+              <legend className="px-2 text-xs font-black text-[#3A2117]">
+                إعدادات تذكرة الدخول
+              </legend>
+
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">نوع التذكرة</span>
+                  <select
+                    value={ticketType}
+                    onChange={(e) => setTicketType(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  >
+                    <option value="general_admission">دخول عام</option>
+                    <option value="vip">VIP</option>
+                    <option value="workshop">ورشة أو جلسة</option>
+                    <option value="bundle">باقة</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">سياسة الدخول</span>
+                  <select
+                    value={checkinPolicy}
+                    onChange={(e) => setCheckinPolicy(e.target.value as "single_use" | "multi_use")}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  >
+                    <option value="single_use">مرة واحدة</option>
+                    <option value="multi_use">دخول متعدد</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">تاريخ بداية الفعالية</span>
+                  <input
+                    type="datetime-local"
+                    value={eventStartAt}
+                    onChange={(e) => setEventStartAt(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">تاريخ نهاية الفعالية</span>
+                  <input
+                    type="datetime-local"
+                    value={eventEndAt}
+                    onChange={(e) => setEventEndAt(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">تاريخ بداية الصلاحية</span>
+                  <input
+                    type="datetime-local"
+                    value={ticketValidFrom}
+                    onChange={(e) => setTicketValidFrom(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">تاريخ نهاية الصلاحية</span>
+                  <input
+                    type="datetime-local"
+                    value={ticketValidUntil}
+                    onChange={(e) => setTicketValidUntil(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">موقع الفعالية</span>
+                  <input
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                    placeholder="مثال: قاعة المؤتمرات الرئيسية"
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">بوابة الدخول</span>
+                  <input
+                    value={gateName}
+                    onChange={(e) => setGateName(e.target.value)}
+                    placeholder="مثال: البوابة A"
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">السعة</span>
+                  <input
+                    inputMode="numeric"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="مثال: 120"
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black text-[#7A6255]">الحد الأقصى لكل عميل</span>
+                  <input
+                    inputMode="numeric"
+                    value={maxPerCustomer}
+                    onChange={(e) => setMaxPerCustomer(e.target.value)}
+                    placeholder="مثال: 4"
+                    className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
+                  />
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
+
           <div>
             <span className="text-xs font-black text-[#7A6255]">
-              مكونات المنتج
+              {detailsLabel}
             </span>
 
             <div className="mt-2 flex gap-2">
@@ -910,7 +1111,7 @@ export function MenuProductFormModal({
                     addIngredient();
                   }
                 }}
-                placeholder="مثال: حليب، قهوة..."
+                placeholder={detailsPlaceholder}
                 className="min-w-0 flex-1 rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
               />
 
@@ -947,7 +1148,7 @@ export function MenuProductFormModal({
 
           <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
-              حالة المنتج
+              {isEvents ? "حالة التذكرة أو الباقة" : "حالة المنتج"}
             </legend>
 
             <div className="mt-3 flex gap-5">
@@ -1037,7 +1238,7 @@ export function MenuProductFormModal({
                           checked={promoDiscountMode === "fixed_price"}
                           onChange={() => setPromoDiscountMode("fixed_price")}
                         />
-                        سعر المنتج بعد الخصم
+                        {isEvents ? "رسوم الدخول بعد الخصم" : "سعر المنتج بعد الخصم"}
                       </label>
                     </div>
 
@@ -1065,7 +1266,7 @@ export function MenuProductFormModal({
                     onChange={(e) => setPromoFreeId(e.target.value)}
                     className="w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold outline-none"
                   >
-                    <option value="">اختر منتج مجاني</option>
+                    <option value="">{isEvents ? "اختر تذكرة أو باقة مجانية" : "اختر منتج مجاني"}</option>
                     {freeProductOptions.map((product) => (
                       <option key={product.id} value={product.id}>
                         {product.name}

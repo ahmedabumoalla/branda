@@ -328,6 +328,7 @@ export function defaultCustomerDockItems({
   hasRewards = true,
   isCustomer = false,
   accountBadge = 0,
+  businessCategory,
 }: {
   slug: string;
   active: CustomerDockKey;
@@ -337,15 +338,18 @@ export function defaultCustomerDockItems({
   hasRewards?: boolean;
   isCustomer?: boolean;
   accountBadge?: number;
+  businessCategory?: string | null;
 }) {
   const preview = previewThemeId ? `?previewTheme=${encodeURIComponent(previewThemeId)}` : "";
   const base = `/c/${encodeURIComponent(slug)}`;
+  const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
   return {
     active,
     items: [
       { key: "home" as const, href: `${base}${preview}`, label: "الرئيسية", icon: Home },
-      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: "المنتجات", icon: MenuIcon, enabled: hasProducts },
-      { key: "orders" as const, href: `${base}/reserve${preview}`, label: "الحجوزات", icon: CalendarDays, enabled: hasOrders },
+      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "التذاكر" : "المنتجات", icon: MenuIcon, enabled: hasProducts },
+      { key: "orders" as const, href: isEvents ? `${base}/${isCustomer ? "account" : "login"}${preview}` : `${base}/reserve${preview}`, label: isEvents ? "تذاكري" : "الحجوزات", icon: CalendarDays, enabled: hasOrders },
       { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "المكافآت", icon: Sparkles, enabled: hasRewards },
       { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "الحساب", icon: UserRound },
     ],

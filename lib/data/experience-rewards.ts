@@ -114,9 +114,12 @@ export async function submitCustomerExperienceRewardProof(
   const { profile } = await requireCustomerProfileForSession(parsed.cafeSlug);
   const cafe = await getCafeBySlug(parsed.cafeSlug);
   if (!cafe) throw new Error("Cafe not found");
+  if (String(profile.cafe_id ?? "") !== cafe.id) {
+    throw new Error("Forbidden: customer cafe mismatch");
+  }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("experience_reward_submissions")
     .insert({
       cafe_id: cafe.id,
@@ -133,7 +136,6 @@ export async function submitCustomerExperienceRewardProof(
   if (error) throw error;
 
   try {
-    const admin = createAdminClient();
     await admin.from("notifications").insert({
       cafe_id: cafe.id,
       audience: "cafe",
@@ -156,7 +158,7 @@ export async function submitCustomerExperienceRewardProof(
 
   if (isBarndaksaEmailConfigured()) {
     try {
-      const { data: settings } = await supabase
+      const { data: settings } = await admin
         .from("cafe_settings")
         .select("owner_email")
         .eq("cafe_id", cafe.id)
@@ -190,8 +192,11 @@ export async function getCustomerExperienceRewardSubmissions(
     : (await requireCustomerProfileForSession(cafeSlug)).profile;
   const cafe = await getCafeBySlug(cafeSlug);
   if (!cafe) return [];
+  if (!customerId && String(profile.cafe_id ?? "") !== cafe.id) {
+    return [];
+  }
 
-  const supabase = customerId ? createAdminClient() : await createClient();
+  const supabase = createAdminClient();
   if (customerId) {
     const { data: profileRow, error: profileError } = await supabase
       .from("customer_profiles")
@@ -230,12 +235,12 @@ export async function getOwnerExperienceRewardReviews(): Promise<
   OwnerExperienceRewardSubmission[]
 > {
   const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from("experience_reward_submissions")
     .select(
-      "*, experience_reward_items(*), customer_profiles(id, full_name, phone, email, created_at)",
+      "*, experience_reward_items(*), customer_profiles!experience_rewards_customer_same_cafe(id, full_name, phone, email, created_at)",
     )
     .eq("cafe_id", cafe.id)
     .order("created_at", { ascending: false })
@@ -349,11 +354,15 @@ export async function approveOwnerExperienceRewardSubmission(
 ) {
   const parsed = approveSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
+  const userSupabase = await createClient();
+  const {
+    data: { user },
+  } = await userSupabase.auth.getUser();
 
   const { data: submission, error: fetchError } = await supabase
     .from("experience_reward_submissions")
-    .select("*, customer_profiles(full_name, email)")
+    .select("*, customer_profiles!experience_rewards_customer_same_cafe(full_name, email)")
     .eq("id", parsed.submissionId)
     .eq("cafe_id", cafe.id)
     .maybeSingle();
@@ -386,7 +395,7 @@ export async function approveOwnerExperienceRewardSubmission(
       review_notes: parsed.reviewNotes ?? null,
       approved_at: new Date().toISOString(),
       rejected_at: null,
-      reviewed_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+      reviewed_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.submissionId)
@@ -459,11 +468,11 @@ export async function rejectOwnerExperienceRewardSubmission(
   reviewNotes: string,
 ) {
   const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: submission, error: fetchError } = await supabase
     .from("experience_reward_submissions")
-    .select("*, customer_profiles(email, full_name)")
+    .select("*, customer_profiles!experience_rewards_customer_same_cafe(email, full_name)")
     .eq("id", z.string().uuid().parse(submissionId))
     .eq("cafe_id", cafe.id)
     .maybeSingle();

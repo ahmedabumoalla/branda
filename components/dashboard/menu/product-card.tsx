@@ -18,6 +18,7 @@ import {
   type MenuImageVariant,
   type MenuProduct,
 } from "@/lib/mock/menu";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 const variantGradient: Record<MenuImageVariant, string> = {
   latte: "from-[#3b2416] via-[#5c3d2e] to-[#c78a45]",
@@ -34,6 +35,7 @@ type Props = {
   onEdit: () => void;
   onToggleAvailability: () => void;
   onDelete: () => void;
+  businessCategory?: string;
 };
 
 export function MenuProductCard({
@@ -43,7 +45,10 @@ export function MenuProductCard({
   onEdit,
   onToggleAvailability,
   onDelete,
+  businessCategory,
 }: Props) {
+  const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscountedPrice = promoOn && finalPrice < product.price;
@@ -120,7 +125,9 @@ export function MenuProductCard({
 
         <div className="mt-auto grid grid-cols-3 gap-3 border-t border-[#EFE8DF] pt-4 text-center">
           <div>
-            <p className="text-[10px] font-black text-[#7A6255]">السعر</p>
+            <p className="text-[10px] font-black text-[#7A6255]">
+              {isEvents ? "رسوم الدخول" : "السعر"}
+            </p>
             <p className="font-black text-[#3A2117]">
               {hasDiscountedPrice ? formatSar(finalPrice) : formatSar(product.price)}
             </p>
@@ -134,19 +141,31 @@ export function MenuProductCard({
           <div>
             <p className="flex items-center justify-center gap-1 text-[10px] font-black text-[#7A6255]">
               <Flame className="h-3 w-3 text-[#8B5E3C]" />
-              سعرات
+              {isEvents ? "السعة" : "سعرات"}
             </p>
 
             <p className="font-black text-[#3A2117]">
-              {product.calories === undefined
-                ? "غير محدد"
-                : product.calories.toLocaleString("ar-SA")}
+              {isEvents
+                ? product.eventTicketSettings?.capacity == null
+                  ? "غير محدد"
+                  : product.eventTicketSettings.capacity.toLocaleString("ar-SA")
+                : product.calories === undefined
+                  ? "غير محدد"
+                  : product.calories.toLocaleString("ar-SA")}
             </p>
           </div>
 
           <div>
-            <p className="text-[10px] font-black text-[#7A6255]">الاستلام</p>
-            <p className="font-black text-[#8B5E3C]">{product.availableForPickup === false ? "لا" : "متاح"}</p>
+            <p className="text-[10px] font-black text-[#7A6255]">
+              {isEvents ? "الدخول" : "الاستلام"}
+            </p>
+            <p className="font-black text-[#8B5E3C]">
+              {isEvents
+                ? product.eventTicketSettings?.checkinPolicy === "multi_use"
+                  ? "متعدد"
+                  : "مرة"
+                : product.availableForPickup === false ? "لا" : "متاح"}
+            </p>
           </div>
         </div>
 

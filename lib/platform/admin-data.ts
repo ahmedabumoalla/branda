@@ -12,6 +12,7 @@ export type PlatformFeature =
   | "reviews"
   | "marketing"
   | "experience_reviews"
+  | "cashier"
   | "orders"
   | "settings"
   | "theme"
@@ -140,6 +141,7 @@ export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; hr
   { id: "reviews", title: "الأسئلة والتقييمات", href: "/dashboard/reviews" },
   { id: "marketing", title: "الأدوات التسويقية", href: "/dashboard/marketing" },
   { id: "experience_reviews", title: "مراجعة توثيق التجارب", href: "/dashboard/experience-reviews" },
+  { id: "cashier", title: "الكاشير", href: "/dashboard/cashier" },
   { id: "orders", title: "طلبات العلامة", href: "/dashboard/orders" },
   { id: "settings", title: "إعدادات العلامة", href: "/dashboard/settings" },
   { id: "theme", title: "ثيم العلامة", href: "/dashboard/theme" },

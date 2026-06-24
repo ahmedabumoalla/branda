@@ -45,6 +45,18 @@ type Props = {
   configError?: string;
 };
 
+function featureTitle(featureId: string, categoryId?: string) {
+  if (featureId === "cashier") {
+    return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
+  }
+  return allPlatformFeatures.find((feature) => feature.id === featureId)?.title ?? featureId;
+}
+
+function planHasFeature(plan: PlatformPlan | null | undefined, featureId: string) {
+  if (!plan) return false;
+  return plan.features.includes("all") || plan.features.map(String).includes(featureId);
+}
+
 export function SubscriptionPageClient({
   initialPlans,
   initialActivePlanId,
@@ -180,6 +192,14 @@ export function SubscriptionPageClient({
     ];
   }
 
+  function getOperationalFeatureState(plan?: PlatformPlan | null) {
+    const label = featureTitle("cashier", plan?.categoryId);
+    return {
+      label,
+      enabled: planHasFeature(plan, "cashier"),
+    };
+  }
+
   async function refreshRecordAfterPayment(record: SubscriptionRecord) {
     setActivePlanId(record.planId);
     setPending(null);
@@ -228,6 +248,17 @@ export function SubscriptionPageClient({
                       <p className="mt-1 text-sm font-black text-[#F0C568]">{limit.value}</p>
                     </div>
                   ))}
+                  {(() => {
+                    const operational = getOperationalFeatureState(activePlan);
+                    return (
+                      <div className="rounded-2xl bg-white/10 px-4 py-3">
+                        <p className="text-xs font-black text-[#F2E7D9]">{operational.label}</p>
+                        <p className="mt-1 text-sm font-black text-[#F0C568]">
+                          {operational.enabled ? "مشمول في الباقة" : "مقفل - يحتاج ترقية"}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </BentoCard>
@@ -332,7 +363,7 @@ export function SubscriptionPageClient({
                                   : "bg-[#F2E7D9] text-[#806A5E]"
                             }`}
                           >
-                            <span>{feature.title}</span>
+                            <span>{featureTitle(feature.id, plan.categoryId)}</span>
                             {on ? (
                               <Check className={`h-4 w-4 shrink-0 ${isCurrent ? "text-[#F0C568]" : "text-emerald-600"}`} />
                             ) : (
@@ -489,7 +520,7 @@ export function SubscriptionPageClient({
                         on ? "bg-emerald-50 text-emerald-700" : "bg-[#F2E7D9] text-[#806A5E]"
                       }`}
                     >
-                      <span>{feature.title}</span>
+                      <span>{featureTitle(feature.id, selectedPlan.categoryId)}</span>
                       {on ? <Check className="h-5 w-5" /> : <span>—</span>}
                     </div>
                   );

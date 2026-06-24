@@ -70,6 +70,30 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const searchParams = useSearchParams();
   const { theme, settings, experience, path, previewThemeId } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
+  const isEvents = copy.kind === "events";
+  const eventViewInfo: Record<string, { title: string; desc: string }> = {
+    offers: {
+      title: "العروض",
+      desc: "كل عروض وخصومات التذاكر والباقات المتاحة في الفرع الإلكتروني.",
+    },
+    latest: {
+      title: "أحدث التذاكر",
+      desc: "أحدث التذاكر والباقات المضافة أولًا.",
+    },
+    popular: {
+      title: "أكثر التذاكر طلبًا",
+      desc: "التذاكر والباقات الأعلى طلبًا.",
+    },
+    branches: viewInfo.branches,
+  };
+  const currentViewInfo = (isEvents ? eventViewInfo : viewInfo)[view];
+  const itemLabel = isEvents ? "تذكرة" : "منتج";
+  const itemPluralLabel = isEvents ? "التذاكر والباقات" : "المنتجات";
+  const filterLabel = isEvents ? "فلترة التذاكر والباقات" : "فلترة المنتجات";
+  const queryPlaceholder = isEvents ? "ابحث عن تذكرة أو باقة..." : "ابحث عن منتج...";
+  const offersOnlyLabel = isEvents ? "تذاكر العروض فقط" : "العروض فقط";
+  const offersSortLabel = isEvents ? "التذاكر ذات العروض" : "المنتجات ذات العروض";
+  const noMatchesTitle = isEvents ? "لا توجد تذاكر مطابقة" : "لا توجد منتجات مطابقة";
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, offers, branches, categories: menuCategories, loading, error } =
     usePublicCafeMenu(slug);
@@ -278,6 +302,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             hasProducts: true,
             hasOrders: true,
             hasRewards: true,
+            businessCategory: settings.businessCategory,
           })}
         />
       </CafeLayout>
@@ -298,7 +323,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             <div className="min-w-0">
               <p className={`text-xs font-black ${theme.muted}`}>{settings.cafeName || slug}</p>
               <h1 className={`truncate text-3xl font-black leading-tight sm:text-4xl ${experience.headingTracking}`}>
-                منتجات
+                {currentViewInfo?.title || itemPluralLabel}
               </h1>
             </div>
           </div>
@@ -347,7 +372,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
           {!orderedProducts.length ? (
             <div className={`rounded-[28px] border border-dashed border-[var(--ci-border,#E7D7C6)] p-8 text-center shadow-sm ${theme.card}`}>
-              <h3 className="text-xl font-black">لا توجد منتجات مطابقة</h3>
+              <h3 className="text-xl font-black">{noMatchesTitle}</h3>
               <p className={`mt-2 text-sm font-bold leading-7 ${theme.muted}`}>
                 جرّب تصنيفًا آخر أو امسح الفلاتر الحالية.
               </p>
@@ -379,7 +404,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                 >
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={`text-xs font-black ${theme.muted}`}>فلترة المنتجات</p>
+                      <p className={`text-xs font-black ${theme.muted}`}>{filterLabel}</p>
                       <h2 id="products-filter-title" className="truncate text-lg font-black">
                         {settings.cafeName || slug}
                       </h2>
@@ -403,7 +428,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                         <input
                           value={filters.query}
                           onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))}
-                          placeholder="ابحث عن منتج..."
+                          placeholder={queryPlaceholder}
                           className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-4 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
                         />
                       </label>
@@ -451,7 +476,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                             <option value="latest">الأحدث</option>
                             <option value="price-low">السعر: الأقل أولًا</option>
                             <option value="price-high">السعر: الأعلى أولًا</option>
-                            <option value="offers">المنتجات ذات العروض</option>
+                            <option value="offers">{offersSortLabel}</option>
                           </select>
                         </label>
 
@@ -484,7 +509,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                           filters.onlyOffers ? theme.button : theme.buttonOutline
                         }`}
                       >
-                        {filters.onlyOffers ? "✓ العروض فقط" : "العروض فقط"}
+                        {filters.onlyOffers ? `✓ ${offersOnlyLabel}` : offersOnlyLabel}
                       </button>
 
                       <div className="grid grid-cols-2 gap-3 border-t border-[var(--ci-border,#E7D7C6)] pt-4">
@@ -507,7 +532,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                   ) : (
                     <div className="rounded-[24px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-page-bg,#FCF8F3)] p-8 text-center">
                       <SlidersHorizontal className={`mx-auto h-7 w-7 ${theme.accent}`} />
-                      <p className="mt-3 text-sm font-black">لا توجد فلاتر متاحة حاليًا</p>
+                  <p className="mt-3 text-sm font-black">لا توجد فلاتر متاحة حاليًا</p>
                     </div>
                   )}
                 </section>
@@ -583,6 +608,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           hasProducts: true,
           hasOrders: true,
           hasRewards: true,
+          businessCategory: settings.businessCategory,
         })}
       />
     </CafeLayout>
@@ -602,19 +628,19 @@ export function ProductCollectionPage({ slug, view }: Props) {
         <div className={`barndaksa-premium-hero rounded-[36px] p-6 shadow-[0_24px_80px_rgba(49,25,18,0.12)] sm:p-8 ${theme.hero}`}>
           <p className={`inline-flex items-center gap-2 font-black ${theme.accent}`}>
             <Sparkles className="h-4 w-4" />
-            {viewInfo[view]?.title || "المنتجات"}
+            {currentViewInfo?.title || itemPluralLabel}
           </p>
           <h1
             className={`mt-2 break-words text-4xl font-black leading-tight sm:text-5xl ${experience.headingTracking}`}
           >
-            {viewInfo[view]?.title || `منتجات ${copy.casualNoun}`}
+            {currentViewInfo?.title || `${itemPluralLabel} ${copy.casualNoun}`}
           </h1>
           <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
-            {viewInfo[view]?.desc || `استعرض منتجات ${copy.casualNoun}.`}
+            {currentViewInfo?.desc || `استعرض ${itemPluralLabel} ${copy.casualNoun}.`}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
-              {orderedProducts.length} منتج
+              {orderedProducts.length} {itemLabel}
             </span>
             {activeOffers.length ? (
               <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
@@ -670,11 +696,11 @@ export function ProductCollectionPage({ slug, view }: Props) {
         <section className="mt-10">
           <PremiumSectionHeader
             eyebrow="المعرض"
-            title="المنتجات"
-            description="الفلاتر والفرز كما هي، لكن النتائج تظهر الآن بتكوين بصري أوسع مع مساحة إعلان داخلية."
+            title={itemPluralLabel}
+            description={isEvents ? "الفلاتر والفرز كما هي، لكن النتائج تظهر كتذاكر وباقات مع مساحة إعلان داخلية." : "الفلاتر والفرز كما هي، لكن النتائج تظهر الآن بتكوين بصري أوسع مع مساحة إعلان داخلية."}
             action={
               <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
-                {orderedProducts.length} منتج
+                {orderedProducts.length} {itemLabel}
               </span>
             }
           />
@@ -744,6 +770,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           hasProducts: true,
           hasOrders: true,
           hasRewards: true,
+          businessCategory: settings.businessCategory,
         })}
       />
     </CafeLayout>

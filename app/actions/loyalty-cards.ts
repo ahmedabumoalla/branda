@@ -33,6 +33,13 @@ async function assertOwnerLoyaltyEnabled() {
   }
 }
 
+async function assertOwnerCashierEnabled() {
+  const features = await getOwnerFeatureCodes();
+  if (!featureCodesAllow(features, "cashier")) {
+    throw new Error("خدمات التشغيل غير مفعلة في باقتك الحالية");
+  }
+}
+
 export async function fetchLoyaltyCardsDashboardAction() {
   await assertOwnerLoyaltyEnabled();
   return getOwnerLoyaltyCardsDashboard();
@@ -60,12 +67,12 @@ export async function createLoyaltyCashierAction(input: {
   email: string;
   employeeNumber?: string;
 }) {
-  await assertOwnerLoyaltyEnabled();
+  await assertOwnerCashierEnabled();
   return createOwnerCashier(input);
 }
 
 export async function setLoyaltyCashierStatusAction(cashierId: string, active: boolean) {
-  await assertOwnerLoyaltyEnabled();
+  await assertOwnerCashierEnabled();
   await setOwnerCashierStatus(cashierId, active);
 }
 
@@ -75,7 +82,7 @@ export async function recordLoyaltyCardOperationAction(input: {
   invoiceAmount?: number;
   operation?: "stamp" | "redeem";
 }) {
-  await assertOwnerLoyaltyEnabled();
+  await assertOwnerCashierEnabled();
   return recordOwnerLoyaltyOperation(input);
 }
 

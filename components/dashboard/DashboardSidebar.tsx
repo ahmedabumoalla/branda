@@ -8,9 +8,11 @@ import {
   BarChart3,
   CalendarDays,
   CreditCard,
+  DoorOpen,
   FileText,
   Gift,
   Home,
+  LockKeyhole,
   LogOut,
   MapPin,
   Megaphone,
@@ -50,6 +52,7 @@ const featureIcons: Record<PlatformFeature, React.ElementType> = {
   reviews: MessageSquareText,
   marketing: Megaphone,
   experience_reviews: BadgeCheck,
+  cashier: DoorOpen,
   orders: ShoppingBag,
   settings: Settings,
   theme: Palette,
@@ -164,6 +167,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   }
 
   const visibleLinks = links.filter((link) =>
+    link.feature === "cashier" ||
     cafeHasFeature(link.feature, { planId: activePlanId, plans })
   );
   const linkTitle = (item: (typeof links)[number]) => {
@@ -172,6 +176,8 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     if (item.href === "/dashboard/reservations" && copy.kind === "events") return "حجوزات الحضور";
     if (item.href === "/dashboard/loyalty" && copy.kind === "events") return "ولاء الحضور";
     if (item.href === "/dashboard/experience-reviews" && copy.kind === "events") return "مكافآت التوثيق";
+    if (item.href === "/dashboard/cashier" && copy.kind === "events") return "بوابة الدخول";
+    if (item.href === "/dashboard/cashier") return "الكاشير";
     if (item.href === "/dashboard/reports" && copy.kind === "events") return "تقارير الفعالية";
     if (item.href === "/dashboard/orders") return `طلبات ${copy.casualNoun}`;
     if (item.href === "/dashboard/settings") return `إعدادات ${copy.casualNoun}`;
@@ -271,39 +277,57 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         {visibleLinks.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
+          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans });
+          const href = locked ? "/dashboard/subscription" : item.href;
+          const showOperationsLabel = item.feature === "cashier";
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
-                active
-                  ? "bg-gradient-to-l from-[#D9A33F]/25 to-white/10 text-[#F0C568] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
-                  : "text-[#F2E7D9] hover:bg-white/5 hover:text-[#FCF8F3]"
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                {getLinkCounter(item.href) > 0 ? (
-                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
-                    {getLinkCounter(item.href) > 99 ? "99+" : getLinkCounter(item.href)}
-                  </span>
-                ) : (
-                  <span className="w-8" />
-                )}
-              </span>
+            <div key={item.href}>
+              {showOperationsLabel ? (
+                <p className="px-4 pb-2 pt-4 text-[11px] font-black text-[#D8C3AF]">
+                  أدوات التشغيل
+                </p>
+              ) : null}
+              <Link
+                href={href}
+                onClick={onNavigate}
+                className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
+                  active && !locked
+                    ? "bg-gradient-to-l from-[#D9A33F]/25 to-white/10 text-[#F0C568] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                    : locked
+                      ? "border border-white/10 bg-white/5 text-[#D8C3AF] hover:bg-white/10"
+                      : "text-[#F2E7D9] hover:bg-white/5 hover:text-[#FCF8F3]"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  {locked ? (
+                    <LockKeyhole className="h-4 w-4 text-[#F0C568]" />
+                  ) : getLinkCounter(item.href) > 0 ? (
+                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
+                      {getLinkCounter(item.href) > 99 ? "99+" : getLinkCounter(item.href)}
+                    </span>
+                  ) : (
+                    <span className="w-8" />
+                  )}
+                </span>
 
-              <span className="flex items-center gap-3">
-                <span>{linkTitle(item)}</span>
-                <Icon
-                  className={`h-5 w-5 ${
-                    active
-                      ? "text-[#F0C568]"
-                      : "text-[#F2E7D9] group-hover:text-[#FCF8F3]"
-                  }`}
-                />
-              </span>
-            </Link>
+                <span className="flex items-center gap-3">
+                  <span>
+                    {linkTitle(item)}
+                    {locked ? (
+                      <span className="me-2 text-[10px] text-[#F0C568]">ترقية</span>
+                    ) : null}
+                  </span>
+                  <Icon
+                    className={`h-5 w-5 ${
+                      active && !locked
+                        ? "text-[#F0C568]"
+                        : "text-[#F2E7D9] group-hover:text-[#FCF8F3]"
+                    }`}
+                  />
+                </span>
+              </Link>
+            </div>
           );
         })}
       </nav>

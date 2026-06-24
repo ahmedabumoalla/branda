@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDot, ExternalLink, MapPin, Plus, Trash2 } from "lucide-react";
+import { CircleDot, ExternalLink, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { deleteBranchAction, saveBranchAction } from "@/app/actions/branches";
 import {
@@ -30,10 +30,36 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
   const [phone, setPhone] = useState("");
   const [workingHours, setWorkingHours] = useState("");
   const [location, setLocation] = useState<LocationValue | null>(null);
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   const handleMapChange = useCallback((value: LocationValue) => setLocation(value), []);
+
+  function resetForm() {
+    setName("");
+    setAddress("");
+    setCity("");
+    setPhone("");
+    setWorkingHours("");
+    setLocation(null);
+    setEditingBranchId(null);
+  }
+
+  function editBranch(branch: CafeBranch) {
+    setName(branch.name);
+    setAddress(branch.address);
+    setCity(branch.city);
+    setPhone(branch.phone ?? "");
+    setWorkingHours(branch.workingHours ?? "");
+    setLocation(
+      branch.lat != null && branch.lng != null
+        ? { lat: branch.lat, lng: branch.lng }
+        : null
+    );
+    setEditingBranchId(branch.id);
+    setMessage("يمكنك تعديل بيانات الفرع ثم حفظها.");
+  }
 
   function useCurrentLocation() {
     if (!navigator.geolocation) {
@@ -53,7 +79,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
     );
   }
 
-  async function addBranch() {
+  async function saveBranch() {
     if (!name.trim() || !address.trim() || !city.trim() || !location) {
       setMessage("اكتب بيانات الفرع وحدد موقعه على الخريطة");
       return;
@@ -74,17 +100,19 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
         mapUrl: buildMapboxMapUrl(location.lat, location.lng),
         geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
         welcomeMessage: `أهلًا بك في ${name.trim()}، سعداء بزيارتك`,
-        active: true,
-        id: crypto.randomUUID(),
+        active: editingBranchId
+          ? branches.find((branch) => branch.id === editingBranchId)?.active ?? true
+          : true,
+        id: editingBranchId ?? crypto.randomUUID(),
       });
 
-      setBranches((current) => [saved, ...current]);
-      setName("");
-      setAddress("");
-      setCity("");
-      setPhone("");
-      setWorkingHours("");
-      setLocation(null);
+      setBranches((current) => {
+        if (editingBranchId) {
+          return current.map((item) => (item.id === saved.id ? saved : item));
+        }
+        return [saved, ...current];
+      });
+      resetForm();
       setMessage("تم حفظ الفرع");
     } catch {
       setMessage("تعذر حفظ الفرع");
@@ -189,6 +217,14 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
                       </a>
                       <button
                         type="button"
+                        onClick={() => editBranch(branch)}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#FFF8EF] px-5 py-3 font-black text-[#6B3A25]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        تعديل
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => void toggleVisibility(branch)}
                         className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
                       >
@@ -215,7 +251,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
           <BentoCard variant="white" span="2">
             <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
               <Plus className="h-5 w-5" />
-              إضافة فرع
+              {editingBranchId ? "تعديل فرع" : "إضافة فرع"}
             </h2>
 
             <div className="space-y-3">
@@ -272,9 +308,24 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
                 </div>
               </SoftCard>
 
-              <PrimaryButton type="button" onClick={() => void addBranch()} disabled={saving} className="w-full">
-                {saving ? "جاري الحفظ" : "حفظ الفرع والموقع"}
-              </PrimaryButton>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <PrimaryButton type="button" onClick={() => void saveBranch()} disabled={saving} className="w-full">
+                  {saving
+                    ? "جاري الحفظ"
+                    : editingBranchId
+                      ? "حفظ تعديل الفرع والموقع"
+                      : "حفظ الفرع والموقع"}
+                </PrimaryButton>
+                {editingBranchId ? (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+                  >
+                    إلغاء
+                  </button>
+                ) : null}
+              </div>
             </div>
           </BentoCard>
         </BentoGrid>

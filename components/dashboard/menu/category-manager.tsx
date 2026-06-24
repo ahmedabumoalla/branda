@@ -23,12 +23,14 @@ import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset
 import { BentoCard, PrimaryButton, SoftCard } from "@/components/ui/design-system";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type Props = {
   categories: MenuCategoryRecord[];
   products: MenuProduct[];
   cafeSlug?: string;
   onChange: (categories: MenuCategoryRecord[]) => void;
+  businessCategory?: string;
 };
 
 type FormState = {
@@ -51,7 +53,10 @@ export function CategoryManager({
   products,
   cafeSlug = "test-cafe",
   onChange,
+  businessCategory,
 }: Props) {
+  const copy = getBusinessCopy(businessCategory);
+  const isEvents = copy.kind === "events";
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>();
@@ -150,7 +155,7 @@ export function CategoryManager({
   function removeCategory(id: string) {
     const count = linkedCount(id);
     if (count > 0) {
-      alert(`لا يمكن حذف التصنيف — ${count} منتج مرتبط به`);
+      alert(`لا يمكن حذف التصنيف — ${count} ${isEvents ? "تذكرة أو باقة" : "منتج"} مرتبط به`);
       return;
     }
     if (!confirm("حذف هذا التصنيف؟")) return;
@@ -189,7 +194,9 @@ export function CategoryManager({
     <BentoCard variant="white" span="4">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-[#3A2117]">تصنيفات المنيو</h2>
+          <h2 className="text-2xl font-black text-[#3A2117]">
+            {isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
+          </h2>
           <p className="mt-1 text-sm font-bold text-[#7A6255]">
             رتّب التصنيفات وتحكم في ظهورها للعميل.
           </p>
@@ -350,7 +357,7 @@ export function CategoryManager({
                   <p className="mt-1 text-sm font-bold text-[#7A6255]">{category.description}</p>
                 ) : null}
                 <p className="mt-1 text-xs font-bold text-[#7A6255]">
-                  {linkedCount(category.id)} منتج مرتبط
+                  {linkedCount(category.id)} {isEvents ? "تذكرة أو باقة مرتبطة" : "منتج مرتبط"}
                 </p>
               </div>
 

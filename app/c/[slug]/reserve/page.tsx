@@ -41,6 +41,7 @@ import type { ReservationEventType } from "@/lib/mock/reservations";
 import type { ReservationService } from "@/lib/data/platform-upgrade";
 import { appendPreviewToNextPath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { formatSar } from "@/lib/format";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 type ReservationRecord = {
   id: string;
@@ -256,6 +257,15 @@ function ReserveForm() {
   const slug = params.slug;
   const { settings, experience, path, previewThemeId, theme } =
     useCafePageContext(slug);
+  const isEvents = getBusinessCopy(settings.businessCategory).kind === "events";
+  const reservationNoun = isEvents ? "مقعد/ورشة/مساحة حضور" : "حجز";
+  const reservationPlural = isEvents ? "مقاعد وورش ومساحات" : "حجوزات";
+  const myReservationsLabel = isEvents ? "حضوري المؤكد" : "حجوزاتك المؤكدة";
+  const guestLabel = isEvents ? "عدد الحضور" : "عدد الأشخاص";
+  const statusFilters = STATUS_FILTERS.map((item) => ({
+    ...item,
+    label: isEvents ? item.label.replaceAll("حجوزات", "تذاكر حضور") : item.label,
+  }));
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { branches, reservationServices, loading, error } =
     usePublicCafeMenu(slug);
@@ -453,20 +463,20 @@ function ReserveForm() {
     const reserveLoginHref = getCustomerLoginHref(slug, `/c/${slug}/reserve`, previewThemeId);
     const activeCustomer = customer ?? (await getCustomerSession(slug));
     if (!activeCustomer) {
-      setReservationMessage("سجّل دخولك بحساب العميل لإتمام الحجز.");
+      setReservationMessage(isEvents ? "سجّل دخولك بحساب العميل لإتمام طلب الحضور." : "سجّل دخولك بحساب العميل لإتمام الحجز.");
       router.push(reserveLoginHref);
       return;
     }
     if (!customer) setCustomer(activeCustomer);
     if (!selectedService || !selectedBranch || !guests || !date || !time) {
-      setReservationMessage("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص.");
-      alert("اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص");
+      setReservationMessage(isEvents ? "اختر نوع المقعد أو الورشة أو المساحة والتاريخ والوقت وعدد الحضور." : "اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص.");
+      alert(isEvents ? "اختر نوع المقعد أو الورشة أو المساحة والتاريخ والوقت وعدد الحضور" : "اختر نوع الحجز والتاريخ والوقت وعدد الأشخاص");
       return;
     }
     const guestsCount = Number(guests) || 1;
     if (guestsCount > maxGuests) {
-      setReservationMessage(`العدد الاستيعابي الأقصى لهذا الحجز ${maxGuests}.`);
-      alert(`العدد الاستيعابي الأقصى لهذا الحجز ${maxGuests}`);
+      setReservationMessage(`العدد الاستيعابي الأقصى لهذا ${reservationNoun} ${maxGuests}.`);
+      alert(`العدد الاستيعابي الأقصى لهذا ${reservationNoun} ${maxGuests}`);
       return;
     }
 
@@ -504,11 +514,11 @@ function ReserveForm() {
         }
         return;
       }
-      alert("تم إرسال طلب الحجز بنجاح");
+      alert(isEvents ? "تم إرسال طلب الحضور بنجاح" : "تم إرسال طلب الحجز بنجاح");
       router.push(appendPreviewToNextPath(path("account"), previewThemeId));
     } catch {
-      setReservationMessage("تعذر إرسال الحجز. حاول مرة أخرى.");
-      alert("تعذر إرسال الحجز. حاول مرة أخرى.");
+      setReservationMessage(isEvents ? "تعذر إرسال طلب الحضور. حاول مرة أخرى." : "تعذر إرسال الحجز. حاول مرة أخرى.");
+      alert(isEvents ? "تعذر إرسال طلب الحضور. حاول مرة أخرى." : "تعذر إرسال الحجز. حاول مرة أخرى.");
     } finally {
       setSubmitting(false);
     }
@@ -549,7 +559,7 @@ function ReserveForm() {
         <div className="min-w-0">
           <p className={`truncate text-xs font-black ${theme.muted}`}>{settings.cafeName || slug}</p>
           <h1 className={`truncate text-2xl font-black leading-tight ${experience.headingTracking}`}>
-            {viewMode === "services" ? "الحجوزات" : "حجوزاتك المؤكدة"}
+            {viewMode === "services" ? reservationPlural : myReservationsLabel}
           </h1>
         </div>
       </div>
@@ -558,7 +568,7 @@ function ReserveForm() {
           <button
             type="button"
             onClick={() => setServiceFilterOpen(true)}
-            aria-label="فلترة الحجوزات"
+            aria-label={isEvents ? "فلترة المقاعد والورش" : "فلترة الحجوزات"}
             className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
           >
             <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
@@ -568,7 +578,7 @@ function ReserveForm() {
             onClick={() => setViewMode("my-reservations")}
             className={`relative flex h-12 items-center justify-center rounded-2xl border border-black/5 px-3 text-xs font-black shadow-sm transition active:scale-95 ${theme.card}`}
           >
-            حجوزاتك المؤكدة
+            {myReservationsLabel}
             {confirmedReservations.length ? (
               <span className="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
             ) : null}
@@ -579,7 +589,7 @@ function ReserveForm() {
           <button
             type="button"
             onClick={() => setViewMode("services")}
-            aria-label="رجوع إلى صفحة الحجز"
+            aria-label={isEvents ? "رجوع إلى صفحة الحضور" : "رجوع إلى صفحة الحجز"}
             className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
           >
             <ArrowRight className={`h-5 w-5 ${theme.accent}`} />
@@ -587,7 +597,7 @@ function ReserveForm() {
           <button
             type="button"
             onClick={() => setMyFilterOpen(true)}
-            aria-label="فلترة حجوزاتك"
+            aria-label={isEvents ? "فلترة حضورك" : "فلترة حجوزاتك"}
             className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
           >
             <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
@@ -609,7 +619,7 @@ function ReserveForm() {
               <input
                 value={serviceSearch}
                 onChange={(event) => setServiceSearch(event.target.value)}
-                placeholder="ابحث عن نوع حجز..."
+                placeholder={isEvents ? "ابحث عن مقعد أو ورشة أو مساحة..." : "ابحث عن نوع حجز..."}
                 className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-11 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
               />
             </label>
@@ -617,7 +627,7 @@ function ReserveForm() {
             {!reservationServices.length ? (
               <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
                 <CalendarDays className={`mx-auto h-8 w-8 ${theme.accent}`} />
-                <p className="mt-3 font-black">لا توجد أنواع حجوزات متاحة حاليًا</p>
+                <p className="mt-3 font-black">{isEvents ? "لا توجد مقاعد أو ورش أو مساحات متاحة حاليًا" : "لا توجد أنواع حجوزات متاحة حاليًا"}</p>
               </div>
             ) : null}
 
@@ -666,7 +676,7 @@ function ReserveForm() {
                         {service.maxGuests ? (
                           <span className="inline-flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            حتى {service.maxGuests} أشخاص
+                            حتى {service.maxGuests} {isEvents ? "حضور" : "أشخاص"}
                           </span>
                         ) : null}
                         <span className="inline-flex items-center gap-2">
@@ -681,7 +691,7 @@ function ReserveForm() {
                       ) : null}
                       {service.includedProducts.length ? (
                         <p className={`text-xs font-bold leading-6 ${theme.muted}`}>
-                          منتجات مجانية: {service.includedProducts.slice(0, 3).join("، ")}
+                          {isEvents ? "يشمل" : "منتجات مجانية"}: {service.includedProducts.slice(0, 3).join("، ")}
                         </p>
                       ) : null}
                       <button
@@ -689,7 +699,7 @@ function ReserveForm() {
                         onClick={() => openBooking(service)}
                         className={`h-12 w-full rounded-2xl text-sm font-black ${theme.button}`}
                       >
-                        احجز الآن
+                        {isEvents ? "اطلب حضورك" : "احجز الآن"}
                       </button>
                     </div>
                   </article>
@@ -699,7 +709,7 @@ function ReserveForm() {
 
             {reservationServices.length > 0 && !filteredServices.length ? (
               <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
-                <p className="font-black">لا توجد حجوزات مطابقة للبحث أو الفلاتر الحالية</p>
+                <p className="font-black">{isEvents ? "لا توجد مقاعد أو ورش مطابقة للبحث أو الفلاتر الحالية" : "لا توجد حجوزات مطابقة للبحث أو الفلاتر الحالية"}</p>
               </div>
             ) : null}
           </>
@@ -710,14 +720,14 @@ function ReserveForm() {
               <input
                 value={reservationSearch}
                 onChange={(event) => setReservationSearch(event.target.value)}
-                placeholder="ابحث في حجوزاتك..."
+                placeholder={isEvents ? "ابحث في حضورك..." : "ابحث في حجوزاتك..."}
                 className="h-12 w-full rounded-2xl border border-[var(--ci-input-border,#E5D8CD)] bg-white px-11 text-sm font-bold outline-none focus:ring-2 focus:ring-[var(--ci-accent-bg,#D9A33F)]/30"
               />
             </label>
 
             <div className="-mx-4 overflow-x-auto px-4 pb-1">
               <div className="flex w-max gap-2">
-                {STATUS_FILTERS.map((item) => (
+                {statusFilters.map((item) => (
                   <button
                     key={item.value}
                     type="button"
@@ -743,6 +753,7 @@ function ReserveForm() {
                     slug,
                   )}
                   theme={theme}
+                  isEvents={isEvents}
                 />
               ))}
             </div>
@@ -750,7 +761,7 @@ function ReserveForm() {
             {!filteredCustomerReservations.length ? (
               <div className={`rounded-[28px] border border-dashed p-8 text-center ${theme.card}`}>
                 <TicketCheck className={`mx-auto h-8 w-8 ${theme.accent}`} />
-                <p className="mt-3 font-black">لا توجد حجوزات مطابقة حاليًا</p>
+                <p className="mt-3 font-black">{isEvents ? "لا يوجد حضور مطابق حاليًا" : "لا توجد حجوزات مطابقة حاليًا"}</p>
               </div>
             ) : null}
           </>
@@ -758,11 +769,11 @@ function ReserveForm() {
       </div>
 
       <ModalShell
-        title="فلترة الحجوزات"
+        title={isEvents ? "فلترة المقاعد والورش" : "فلترة الحجوزات"}
         open={serviceFilterOpen}
         onClose={() => setServiceFilterOpen(false)}
       >
-        <FilterHeader title="فلترة الحجوزات" onClose={() => setServiceFilterOpen(false)} theme={theme} />
+        <FilterHeader title={isEvents ? "فلترة المقاعد والورش" : "فلترة الحجوزات"} onClose={() => setServiceFilterOpen(false)} theme={theme} label={isEvents ? "الحضور" : "الحجوزات"} />
         <div className="space-y-4">
           <SelectField
             label="الفرع"
@@ -777,16 +788,16 @@ function ReserveForm() {
             ]}
           />
           <SelectField
-            label="نوع الحجز"
+            label={isEvents ? "نوع المقعد/الورشة/المساحة" : "نوع الحجز"}
             value={serviceTypeFilter}
             onChange={setServiceTypeFilter}
             options={[
-              { value: "all", label: "كل أنواع الحجز" },
+              { value: "all", label: isEvents ? "كل أنواع الحضور" : "كل أنواع الحجز" },
               ...serviceTypes.map((name) => ({ value: name, label: name })),
             ]}
           />
           <SelectField
-            label="حالة الحجز"
+            label={isEvents ? "حالة الحضور" : "حالة الحجز"}
             value={serviceStatusFilter}
             onChange={(value) => setServiceStatusFilter(value as ReservationStatusFilter)}
             options={[
@@ -808,11 +819,11 @@ function ReserveForm() {
       </ModalShell>
 
       <ModalShell
-        title="فلترة حجوزاتك"
+        title={isEvents ? "فلترة حضورك" : "فلترة حجوزاتك"}
         open={myFilterOpen}
         onClose={() => setMyFilterOpen(false)}
       >
-        <FilterHeader title="فلترة حجوزاتك" onClose={() => setMyFilterOpen(false)} theme={theme} />
+        <FilterHeader title={isEvents ? "فلترة حضورك" : "فلترة حجوزاتك"} onClose={() => setMyFilterOpen(false)} theme={theme} label={isEvents ? "الحضور" : "الحجوزات"} />
         <div className="grid gap-4 sm:grid-cols-2">
           <InputField label="من تاريخ" type="date" value={myFromDate} onChange={setMyFromDate} />
           <InputField label="إلى تاريخ" type="date" value={myToDate} onChange={setMyToDate} />
@@ -826,7 +837,7 @@ function ReserveForm() {
             ]}
           />
           <SelectField
-            label="نوع الحجز"
+            label={isEvents ? "نوع الحضور" : "نوع الحجز"}
             value={myTypeFilter}
             onChange={setMyTypeFilter}
             options={[
@@ -857,14 +868,14 @@ function ReserveForm() {
       </ModalShell>
 
       <ModalShell
-        title="احجز الآن"
+        title={isEvents ? "اطلب حضورك" : "احجز الآن"}
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
       >
-        <FilterHeader title="احجز الآن" onClose={() => setBookingOpen(false)} theme={theme} />
+        <FilterHeader title={isEvents ? "اطلب حضورك" : "احجز الآن"} onClose={() => setBookingOpen(false)} theme={theme} label={isEvents ? "الحضور" : "الحجوزات"} />
         {!customer ? (
           <div className={`rounded-2xl p-5 ${theme.card}`}>
-            <p className="font-black">سجّل دخولك لإتمام الحجز.</p>
+            <p className="font-black">{isEvents ? "سجّل دخولك لإتمام طلب الحضور." : "سجّل دخولك لإتمام الحجز."}</p>
             <Link
               href={getCustomerLoginHref(slug, `/c/${slug}/reserve`, previewThemeId)}
               className={`mt-4 inline-flex rounded-2xl px-6 py-3 font-black ${theme.button}`}
@@ -882,11 +893,11 @@ function ReserveForm() {
             />
             {usingFallbackBranch ? (
               <p className={`rounded-2xl border border-dashed p-3 text-xs font-bold ${theme.muted}`}>
-                سيتم اعتماد الفرع الرئيسي تلقائيًا لهذا الحجز.
+                سيتم اعتماد الفرع الرئيسي تلقائيًا لهذا {reservationNoun}.
               </p>
             ) : null}
             <InputField
-              label={`عدد الأشخاص${selectedService?.maxGuests ? ` - أقصى حد ${selectedService.maxGuests}` : ""}`}
+              label={`${guestLabel}${selectedService?.maxGuests ? ` - أقصى حد ${selectedService.maxGuests}` : ""}`}
               type="number"
               value={guests}
               onChange={setGuests}
@@ -910,7 +921,7 @@ function ReserveForm() {
               disabled={submitting || !reservationServices.length}
               className={`h-12 rounded-2xl text-sm font-black disabled:opacity-60 ${theme.button}`}
             >
-              {submitting ? "جاري الإرسال..." : "إرسال الطلب"}
+              {submitting ? "جاري الإرسال..." : isEvents ? "إرسال طلب الحضور" : "إرسال الطلب"}
             </button>
             {reservationMessage ? (
               <p className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-black leading-6 text-red-700">
@@ -928,15 +939,17 @@ function FilterHeader({
   title,
   onClose,
   theme,
+  label = "الحجوزات",
 }: {
   title: string;
   onClose: () => void;
   theme: { buttonOutline: string; muted: string };
+  label?: string;
 }) {
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
       <div>
-        <p className={`text-xs font-black ${theme.muted}`}>الحجوزات</p>
+        <p className={`text-xs font-black ${theme.muted}`}>{label}</p>
         <h2 className="text-lg font-black">{title}</h2>
       </div>
       <button
@@ -1014,9 +1027,11 @@ function CustomerReservationCard({
   reservation,
   branchMapUrl,
   theme,
+  isEvents = false,
 }: {
   reservation: ReservationRecord;
   branchMapUrl: string;
+  isEvents?: boolean;
   theme: {
     accent: string;
     badge: string;
@@ -1028,7 +1043,7 @@ function CustomerReservationCard({
   const accepted = isAcceptedStatus(reservation.status);
   const used = Boolean(reservation.reservationCodeUsedAt || reservation.cashierConfirmedAt);
   const duration = reservationDurationLabel(reservation.durationMinutes);
-  const title = reservation.serviceName || reservation.type || "حجز";
+  const title = reservation.serviceName || reservation.type || (isEvents ? "حضور" : "حجز");
 
   return (
     <article className={`rounded-[22px] p-4 shadow-[0_14px_40px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/80 ${theme.card}`}>
@@ -1046,8 +1061,8 @@ function CustomerReservationCard({
               لوكيشن الفرع <ExternalLink className="h-3.5 w-3.5" />
             </a>
             <span>التاريخ: {reservation.date || "-"} - {reservation.time || "-"}</span>
-            <span>عدد الأشخاص: {reservation.guests || "-"}</span>
-            {duration ? <span>مدة الحجز: {duration}</span> : null}
+            <span>{isEvents ? "عدد الحضور" : "عدد الأشخاص"}: {reservation.guests || "-"}</span>
+            {duration ? <span>{isEvents ? "مدة الحضور" : "مدة الحجز"}: {duration}</span> : null}
             {reservation.notes ? <span>الملاحظات: {reservation.notes}</span> : null}
             {reservation.cafeMessage ? <span>رسالة العلامة: {reservation.cafeMessage}</span> : null}
             {reservation.rejectionReason ? <span>سبب الرفض: {reservation.rejectionReason}</span> : null}
@@ -1059,7 +1074,7 @@ function CustomerReservationCard({
               <SecureQrCode
                 kind="reservation"
                 value={reservation.reservationCode}
-                title={`QR حجز ${reservation.reservationCode}`}
+                title={`${isEvents ? "QR حضور" : "QR حجز"} ${reservation.reservationCode}`}
                 size={160}
               />
             </div>
@@ -1077,22 +1092,33 @@ function CustomerReservationCard({
   );
 }
 
+function ReserveBottomDock() {
+  const params = useParams<{ slug: string }>();
+  const { settings, previewThemeId } = useCafePageContext(params.slug);
+
+  return (
+    <CustomerBottomDock
+      {...defaultCustomerDockItems({
+        slug: params.slug,
+        previewThemeId,
+        active: "orders",
+        hasProducts: true,
+        hasOrders: true,
+        hasRewards: true,
+        businessCategory: settings.businessCategory,
+      })}
+    />
+  );
+}
+
 export default function ReservePage() {
   const params = useParams<{ slug: string }>();
   return (
     <CafeLayout slug={params.slug} hideHeader hideFooter hideQuickDock>
       <Suspense fallback={<p className="font-black">جاري التحميل...</p>}>
         <ReserveForm />
+        <ReserveBottomDock />
       </Suspense>
-      <CustomerBottomDock
-        {...defaultCustomerDockItems({
-          slug: params.slug,
-          active: "orders",
-          hasProducts: true,
-          hasOrders: true,
-          hasRewards: true,
-        })}
-      />
     </CafeLayout>
   );
 }

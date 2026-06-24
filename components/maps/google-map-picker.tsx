@@ -60,6 +60,9 @@ const geolocationOptions: PositionOptions = {
 };
 
 function loadMapbox() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return Promise.reject(new Error("Mapbox can only load in the browser"));
+  }
   if (window.mapboxgl) return Promise.resolve();
   if (window.__barndaksaMapboxLoader) return window.__barndaksaMapboxLoader;
 
@@ -74,6 +77,14 @@ function loadMapbox() {
 
     const existing = document.querySelector<HTMLScriptElement>('script[data-barndaksa-mapbox-script="true"]');
     if (existing) {
+      if (window.mapboxgl) {
+        resolve();
+        return;
+      }
+      if (existing.dataset.loaded === "true") {
+        reject(new Error("Mapbox loaded without runtime"));
+        return;
+      }
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("Mapbox failed to load")), { once: true });
       return;
@@ -83,7 +94,10 @@ function loadMapbox() {
     script.src = mapboxScriptUrl;
     script.async = true;
     script.dataset.barndaksaMapboxScript = "true";
-    script.onload = () => resolve();
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
     script.onerror = () => reject(new Error("Mapbox failed to load"));
     document.body.appendChild(script);
   });
@@ -102,6 +116,14 @@ function isSameLocation(first: LocationValue, second: LocationValue) {
   return Math.abs(first.lat - second.lat) < 0.0000001 && Math.abs(first.lng - second.lng) < 0.0000001;
 }
 
+function getMapboxToken() {
+  return (
+    process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ||
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
+    ""
+  ).trim();
+}
+
 export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]" }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<InstanceType<MapboxRuntime["Map"]> | null>(null);
@@ -117,7 +139,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   const [linkMessage, setLinkMessage] = useState("");
   const [resolvingLink, setResolvingLink] = useState(false);
   const [current, setCurrent] = useState<LocationValue>(value ?? fallbackPosition);
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const token = getMapboxToken();
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -179,7 +201,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   useEffect(() => {
     if (!containerRef.current) return;
     if (!token) {
-      setMapError("أضف NEXT_PUBLIC_MAPBOX_TOKEN في ملف البيئة وفي Vercel");
+      setMapError("أضف مفتاح Mapbox العام في إعدادات البيئة لعرض الخريطة، ويمكنك إدخال الرابط أو استخدام تحديد موقعي.");
       return;
     }
 
@@ -230,7 +252,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
           applyLocation(normalize(map.getCenter()), { flyTo: false });
         });
       })
-      .catch(() => setMapError("تعذر تحميل خريطة Mapbox"));
+      .catch(() => setMapError("تعذر تحميل خريطة Mapbox، ويمكنك إدخال رابط الموقع أو استخدام تحديد موقعي."));
 
     return () => {
       cancelled = true;

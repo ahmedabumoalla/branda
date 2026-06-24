@@ -22,7 +22,199 @@ export type CashierConsole = {
   orders: Array<Record<string, unknown>>;
   reservations: Array<Record<string, unknown>>;
   logs: Array<Record<string, unknown>>;
+  operationOrders?: Array<Record<string, unknown>>;
+  operationReservations?: Array<Record<string, unknown>>;
+  operationTickets?: Array<Record<string, unknown>>;
+  operationRewards?: Array<Record<string, unknown>>;
 };
+
+function orderIdOf(order: Record<string, unknown>) {
+  const raw = order.id ?? order.order_id ?? order.orderId;
+  return raw ? String(raw) : "";
+}
+
+async function enrichCashierOrdersWithItems(
+  consoleData: CashierConsole,
+): Promise<CashierConsole> {
+  const ordersWithItems = await attachOrderItems(consoleData.orders, consoleData.cafe.id);
+  return { ...consoleData, orders: ordersWithItems };
+}
+
+async function attachOrderItems(
+  orders: Array<Record<string, unknown>>,
+  cafeId: string,
+) {
+  const orderIds = orders
+    .map((order) => orderIdOf(order))
+    .filter(Boolean);
+  if (!orderIds.length) return orders;
+
+  const admin = createAdminClient();
+  const { data: orderItems } = await admin
+    .from("order_items")
+    .select("id,order_id,product_id,name,quantity,unit_price,notes")
+    .in("order_id", orderIds);
+
+  if (!orderItems?.length) return orders;
+
+  const productIds = Array.from(
+    new Set(
+      orderItems
+        .map((item) => item.product_id)
+        .filter(Boolean)
+        .map(String),
+    ),
+  );
+  const productsById = new Map<string, Record<string, unknown>>();
+  const categoryIds = new Set<string>();
+
+  if (productIds.length) {
+    const { data: products } = await admin
+      .from("menu_products")
+      .select("id,category_id,legacy_category")
+      .in("id", productIds)
+      .eq("cafe_id", cafeId);
+
+    for (const product of products ?? []) {
+      productsById.set(String(product.id), product as Record<string, unknown>);
+      if (product.category_id) categoryIds.add(String(product.category_id));
+    }
+  }
+
+  const categoriesById = new Map<string, string>();
+  if (categoryIds.size) {
+    const { data: categories } = await admin
+      .from("menu_categories")
+      .select("id,name")
+      .in("id", Array.from(categoryIds))
+      .eq("cafe_id", cafeId);
+
+    for (const category of categories ?? []) {
+      categoriesById.set(String(category.id), String(category.name ?? ""));
+    }
+  }
+
+  const itemsByOrder = new Map<string, Record<string, unknown>[]>();
+  for (const item of orderItems) {
+    const product = item.product_id
+      ? productsById.get(String(item.product_id))
+      : undefined;
+    const categoryId = product?.category_id ? String(product.category_id) : "";
+    const categoryName =
+      (categoryId ? categoriesById.get(categoryId) : undefined) ??
+      (product?.legacy_category ? String(product.legacy_category) : "");
+    const quantity = Number(item.quantity ?? 1);
+    const unitPrice = Number(item.unit_price ?? 0);
+    const mapped = {
+      id: String(item.id),
+      productId: item.product_id ? String(item.product_id) : "",
+      product_id: item.product_id ? String(item.product_id) : "",
+      name: String(item.name ?? ""),
+      categoryName,
+      category_name: categoryName,
+      quantity,
+      qty: quantity,
+      unitPrice,
+      unit_price: unitPrice,
+      total: Math.round(quantity * unitPrice * 100) / 100,
+      notes: item.notes ? String(item.notes) : "",
+    };
+    const orderId = String(item.order_id);
+    const list = itemsByOrder.get(orderId) ?? [];
+    list.push(mapped);
+    itemsByOrder.set(orderId, list);
+  }
+
+  return orders.map((order) => {
+    const orderId = orderIdOf(order);
+    const items = itemsByOrder.get(orderId) ?? [];
+    return items.length ? { ...order, items, order_items: items } : order;
+  });
+}
+
+function firstNestedRecord(value: unknown) {
+  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
+  if (value && typeof value === "object") return value as Record<string, unknown>;
+  return undefined;
+}
+
+async function getCashierOperationData(cafeId: string) {
+  const admin = createAdminClient();
+  const [{ data: orders }, { data: reservations }, { data: tickets }, { data: rewards }] =
+    await Promise.all([
+      admin
+        .from("orders")
+        .select("*")
+        .eq("cafe_id", cafeId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      admin
+        .from("reservations")
+        .select("*, customer_profiles(email)")
+        .eq("cafe_id", cafeId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      admin
+        .from("event_tickets")
+        .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
+        .eq("cafe_id", cafeId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      admin
+        .from("experience_reward_submissions")
+        .select("*, experience_reward_items(*), customer_profiles!experience_rewards_customer_same_cafe(full_name,phone,email)")
+        .eq("cafe_id", cafeId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+
+  const operationOrders = await attachOrderItems((orders ?? []) as Array<Record<string, unknown>>, cafeId);
+  const operationReservations = ((reservations ?? []) as Array<Record<string, unknown>>).map((reservation) => {
+    const profile = firstNestedRecord(reservation.customer_profiles);
+    return {
+      ...reservation,
+      customerEmail: profile?.email ? String(profile.email) : "",
+      customer_email: profile?.email ? String(profile.email) : "",
+    };
+  });
+  const operationTickets = ((tickets ?? []) as Array<Record<string, unknown>>).map((ticket) => {
+    const profile = firstNestedRecord(ticket.customer_profiles);
+    const product = firstNestedRecord(ticket.menu_products);
+    return {
+      ...ticket,
+      customerName: profile?.full_name ? String(profile.full_name) : "",
+      customer_name: profile?.full_name ? String(profile.full_name) : "",
+      customerPhone: profile?.phone ? String(profile.phone) : "",
+      customer_phone: profile?.phone ? String(profile.phone) : "",
+      customerEmail: profile?.email ? String(profile.email) : "",
+      customer_email: profile?.email ? String(profile.email) : "",
+      ticketName: product?.name ? String(product.name) : "",
+      ticket_name: product?.name ? String(product.name) : "",
+    };
+  });
+  const operationRewards = ((rewards ?? []) as Array<Record<string, unknown>>).map((reward) => {
+    const profile = firstNestedRecord(reward.customer_profiles);
+    return {
+      ...reward,
+      customerName: profile?.full_name ? String(profile.full_name) : "",
+      customer_name: profile?.full_name ? String(profile.full_name) : "",
+      customerPhone: profile?.phone ? String(profile.phone) : "",
+      customer_phone: profile?.phone ? String(profile.phone) : "",
+      customerEmail: profile?.email ? String(profile.email) : "",
+      customer_email: profile?.email ? String(profile.email) : "",
+      items: reward.experience_reward_items,
+    };
+  });
+
+  return {
+    operationOrders,
+    operationReservations,
+    operationTickets,
+    operationRewards,
+  };
+}
 
 function normalizeConsolePayload(data: unknown): CashierConsole | null {
   if (!data || typeof data !== "object") return null;
@@ -97,12 +289,19 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
     .select("business_category")
     .eq("id", normalized.cafe.id)
     .maybeSingle();
-  return {
+  const cafeWithCategory = {
+    ...normalized.cafe,
+    businessCategory: cafe?.business_category ?? normalized.cafe.businessCategory ?? "cafes_coffee",
+  };
+  const enriched = await enrichCashierOrdersWithItems({
     ...normalized,
-    cafe: {
-      ...normalized.cafe,
-      businessCategory: cafe?.business_category ?? normalized.cafe.businessCategory ?? "cafes_coffee",
-    },
+    cafe: cafeWithCategory,
+  });
+  const operationData = await getCashierOperationData(cafeWithCategory.id);
+  return {
+    ...enriched,
+    ...operationData,
+    cafe: cafeWithCategory,
   };
 }
 
