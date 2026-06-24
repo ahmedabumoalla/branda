@@ -25,8 +25,12 @@ import {
   acceptCashierReservationAction,
   cashierRedeemExperienceRewardAction,
   cashierScanLoyaltyAction,
+  confirmCashierTicketAction,
   confirmReservationCodeAction,
+  fetchCashierConsoleAction,
   logoutCashierAction,
+  updateCashierOrderStatusAction,
+  updateCashierReservationStatusAction,
 } from "@/app/actions/cashier";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
@@ -49,10 +53,14 @@ type ActiveModal =
   | "reservation-details"
   | "operation-details"
   | null;
-type TableFilter = "pending" | "all" | "done";
+type StatusTableFilter = "pending" | "all" | "accepted" | "rejected" | "completed";
 type ConsoleKind = "cafe" | "restaurant" | "events";
 type OperationKind = "order" | "reservation" | "ticket" | "reward";
 type OperationFilter = "all" | "orders" | "reservations" | "tickets" | "rewards" | "accepted" | "rejected" | "completed" | "pending";
+type CashierActionTarget =
+  | { type: "order"; id: string; action: "accept" | "reject"; row: Row }
+  | { type: "reservation"; id: string; action: "accept" | "reject" | "modify"; row: Row }
+  | null;
 type OrderItemView = {
   id: string;
   name: string;
@@ -365,6 +373,31 @@ function statusGroup(row: Row): OperationRow["statusGroup"] {
   return "other";
 }
 
+function filterStatusRows(rows: Row[], filter: StatusTableFilter) {
+  if (filter === "all") return rows;
+  return rows.filter((row) => statusGroup(row) === filter);
+}
+
+function rawStatus(row: Row) {
+  return valueOf(row, ["status"], "").toLowerCase();
+}
+
+function canRespond(row: Row) {
+  return ["pending", "pending_cafe"].includes(rawStatus(row)) || statusGroup(row) === "pending";
+}
+
+function canConfirmReservation(row: Row) {
+  return (
+    statusGroup(row) === "accepted" &&
+    Boolean(valueOf(row, ["reservationCode", "reservation_code", "code"], "").trim()) &&
+    !valueOf(row, ["reservationCodeUsedAt", "reservation_code_used_at"], "").trim()
+  );
+}
+
+function canScanTicket(row: Row) {
+  return rawStatus(row) === "valid";
+}
+
 function reservationName(row: Row, isEvents: boolean) {
   return valueOf(
     row,
@@ -548,10 +581,14 @@ export function CashierConsoleClient({ initialData }: Props) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-  const [orderFilter, setOrderFilter] = useState<TableFilter>("pending");
-  const [reservationFilter, setReservationFilter] = useState<TableFilter>("pending");
+  const [orderFilter, setOrderFilter] = useState<StatusTableFilter>("pending");
+  const [reservationFilter, setReservationFilter] = useState<StatusTableFilter>("pending");
   const [selectedOrder, setSelectedOrder] = useState<Row | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<Row | null>(null);
+  const [actionTarget, setActionTarget] = useState<CashierActionTarget>(null);
+  const [actionMessage, setActionMessage] = useState("");
+  const [proposedDate, setProposedDate] = useState("");
+  const [proposedTime, setProposedTime] = useState("");
   const [loyaltyResult, setLoyaltyResult] = useState<Row | null>(null);
   const [rewardResult, setRewardResult] = useState<Row | null>(null);
   const [checkinResult, setCheckinResult] = useState<Row | null>(null);
@@ -574,19 +611,19 @@ export function CashierConsoleClient({ initialData }: Props) {
   const checkinTitle = isEvents ? "تأكيد الحضور" : "تأكيد حضور الحجز";
   const reportTitle = isEvents ? "تقرير بوابة الدخول" : "تقرير الكاشير";
 
-  const pendingOrders = data.orders.length;
-  const pendingReservations = data.reservations.length;
+  const allOrderRecords = ((data.operationOrders ?? data.orders) as Row[]);
+  const allReservationRecords = ((data.operationReservations ?? data.reservations) as Row[]);
+  const pendingOrders = allOrderRecords.filter((row) => statusGroup(row) === "pending").length;
+  const pendingReservations = allReservationRecords.filter((row) => statusGroup(row) === "pending").length;
   const pendingCount = pendingOrders + pendingReservations;
 
   const orderRows = useMemo(() => {
-    if (orderFilter === "done") return [];
-    return data.orders as Row[];
-  }, [data.orders, orderFilter]);
+    return filterStatusRows(allOrderRecords, orderFilter);
+  }, [allOrderRecords, orderFilter]);
 
   const reservationRows = useMemo(() => {
-    if (reservationFilter === "done") return [];
-    return data.reservations as Row[];
-  }, [data.reservations, reservationFilter]);
+    return filterStatusRows(allReservationRecords, reservationFilter);
+  }, [allReservationRecords, reservationFilter]);
 
   const operationRows = useMemo(() => {
     const query = operationSearch.trim().toLowerCase();
@@ -730,7 +767,30 @@ export function CashierConsoleClient({ initialData }: Props) {
     else exportRowsToExcel(isEvents ? "entry-gate-report" : "cashier-report", rows, columns);
   }
 
+  async function refreshConsole() {
+    const next = await fetchCashierConsoleAction();
+    if (next) setData(next);
+  }
+
+  function openCashierAction(target: CashierActionTarget) {
+    setActionTarget(target);
+    setActionMessage("");
+    setProposedDate("");
+    setProposedTime("");
+  }
+
   async function acceptOrder(orderId: string) {
+    setBusy(true);
+    try {
+      await updateCashierOrderStatusAction(orderId, "accepted");
+      await refreshConsole();
+      setMessage(isEvents ? "تم قبول طلب التذاكر" : "تم قبول الطلب");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر قبول طلب التذاكر" : "تعذر قبول الطلب");
+    } finally {
+      setBusy(false);
+    }
+    return;
     setBusy(true);
     try {
       await acceptCashierOrderAction(orderId);
@@ -754,6 +814,17 @@ export function CashierConsoleClient({ initialData }: Props) {
   async function acceptReservation(reservationId: string) {
     setBusy(true);
     try {
+      await updateCashierReservationStatusAction(reservationId, "accepted");
+      await refreshConsole();
+      setMessage(isEvents ? "تم قبول التسجيل" : "تم قبول الحجز");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر قبول التسجيل" : "تعذر قبول الحجز");
+    } finally {
+      setBusy(false);
+    }
+    return;
+    setBusy(true);
+    try {
       await acceptCashierReservationAction(reservationId);
       setMessage(isEvents ? "تم استقبال الحضور وتسجيل حركة بوابة الدخول" : "تم استقبال الحجز وتسجيل حركة الكاشير");
       setData((current) => ({
@@ -772,6 +843,59 @@ export function CashierConsoleClient({ initialData }: Props) {
     }
   }
 
+  async function rejectOrder(orderId: string, reason: string) {
+    setBusy(true);
+    try {
+      await updateCashierOrderStatusAction(orderId, "rejected", reason);
+      await refreshConsole();
+      setMessage(isEvents ? "تم رفض طلب التذاكر" : "تم رفض الطلب");
+      setActionTarget(null);
+      setActionMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر رفض طلب التذاكر" : "تعذر رفض الطلب");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rejectReservation(reservationId: string, reason: string) {
+    setBusy(true);
+    try {
+      await updateCashierReservationStatusAction(reservationId, "rejected", reason);
+      await refreshConsole();
+      setMessage(isEvents ? "تم رفض التسجيل" : "تم رفض الحجز");
+      setActionTarget(null);
+      setActionMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر رفض التسجيل" : "تعذر رفض الحجز");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function proposeReservationTime(reservationId: string) {
+    const parts = [
+      proposedDate ? `التاريخ المقترح: ${proposedDate}` : "",
+      proposedTime ? `الوقت المقترح: ${proposedTime}` : "",
+      actionMessage.trim(),
+    ].filter(Boolean);
+    const messageText = parts.join(" - ");
+    setBusy(true);
+    try {
+      await updateCashierReservationStatusAction(reservationId, "modification_requested", messageText);
+      await refreshConsole();
+      setMessage(isEvents ? "تم اقتراح وقت بديل للتسجيل" : "تم اقتراح وقت بديل للحجز");
+      setActionTarget(null);
+      setActionMessage("");
+      setProposedDate("");
+      setProposedTime("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر اقتراح وقت بديل للتسجيل" : "تعذر اقتراح وقت بديل للحجز");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function confirmReservation(codeInput?: string, ticketMode = false) {
     const rawCode = codeInput ?? (ticketMode ? ticketCode : reservationCode);
     if (!rawCode.trim()) {
@@ -779,6 +903,33 @@ export function CashierConsoleClient({ initialData }: Props) {
       return;
     }
     setBusy(true);
+    if (ticketMode) {
+      try {
+        const parsedTicketCode =
+          parseBarndaksaQrPayload(rawCode, "event-ticket") ??
+          rawCode.trim().toUpperCase();
+        const result = await confirmCashierTicketAction(parsedTicketCode);
+        setTicketResult(result as Row);
+        setTicketCode("");
+        await refreshConsole();
+        setMessage(`تم تأكيد دخول ${String(result.customerName ?? "العميل")} للتذكرة ${String(result.ticketName ?? "")}`);
+      } catch (error) {
+        const rawMessage = error instanceof Error ? error.message : "";
+        const text =
+          rawMessage.toLowerCase().includes("used")
+            ? "تم استخدام هذه التذكرة سابقًا"
+            : rawMessage.toLowerCase().includes("expired")
+              ? "انتهت صلاحية هذه التذكرة"
+              : rawMessage.toLowerCase().includes("cancelled")
+                ? "هذه التذكرة ملغية"
+                : "كود التذكرة غير صحيح أو غير قابل للدخول";
+        setTicketResult({ status: text });
+        setMessage(text);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const parsedReservationCode =
         parseBarndaksaQrPayload(rawCode, ticketMode ? "event-ticket" : "reservation") ??
@@ -793,6 +944,7 @@ export function CashierConsoleClient({ initialData }: Props) {
         setCheckinResult(next);
         setReservationCode("");
       }
+      await refreshConsole();
       setMessage(
         isEvents
           ? `تم تأكيد دخول ${String(result.customerName ?? "العميل")} للفعالية`
@@ -1054,23 +1206,33 @@ export function CashierConsoleClient({ initialData }: Props) {
         <section className="grid gap-5 xl:grid-cols-2">
           <RecentTable
             title={isEvents ? "سجل آخر طلبات التذاكر" : "سجل آخر الطلبات"}
-            rows={data.orders as Row[]}
+            rows={allOrderRecords}
             isEvents={isEvents}
             consoleKind={consoleKind}
             type="orders"
             emptyText={isEvents ? "لا توجد طلبات تذاكر حالية" : "لا توجد طلبات حالية"}
             onDetails={openOrderDetails}
-            onAccept={(row) => void acceptOrder(valueOf(row, ["id"], ""))}
+            onAction={(row, action) => {
+              const id = valueOf(row, ["id"], "");
+              if (action === "accept") void acceptOrder(id);
+              if (action === "reject") openCashierAction({ type: "order", id, action: "reject", row });
+            }}
           />
           <RecentTable
             title={isEvents ? "سجل آخر الحضور والتسجيلات" : "سجل آخر الحجوزات"}
-            rows={data.reservations as Row[]}
+            rows={allReservationRecords}
             isEvents={isEvents}
             consoleKind={consoleKind}
             type="reservations"
             emptyText={isEvents ? "لا توجد تسجيلات حضور حالية" : "لا توجد حجوزات حالية"}
             onDetails={openReservationDetails}
-            onAccept={(row) => void acceptReservation(valueOf(row, ["id"], ""))}
+            onAction={(row, action) => {
+              const id = valueOf(row, ["id"], "");
+              if (action === "accept") void acceptReservation(id);
+              if (action === "reject") openCashierAction({ type: "reservation", id, action: "reject", row });
+              if (action === "modify") openCashierAction({ type: "reservation", id, action: "modify", row });
+              if (action === "confirm") void confirmReservation(valueOf(row, ["reservationCode", "reservation_code", "code"], ""));
+            }}
           />
         </section>
       </section>
@@ -1136,9 +1298,13 @@ export function CashierConsoleClient({ initialData }: Props) {
           isEvents={isEvents}
           consoleKind={consoleKind}
           type="orders"
-          emptyText={orderFilter === "done" ? "لا توجد طلبات مكتملة في مصدر الكاشير الحالي" : "لا توجد طلبات"}
+          emptyText={orderFilter === "completed" ? "لا توجد طلبات مكتملة في مصدر الكاشير الحالي" : "لا توجد طلبات"}
           onDetails={openOrderDetails}
-          onAccept={(row) => void acceptOrder(valueOf(row, ["id"], ""))}
+          onAction={(row, action) => {
+            const id = valueOf(row, ["id"], "");
+            if (action === "accept") void acceptOrder(id);
+            if (action === "reject") openCashierAction({ type: "order", id, action: "reject", row });
+          }}
         />
       </Modal>
 
@@ -1149,9 +1315,15 @@ export function CashierConsoleClient({ initialData }: Props) {
           isEvents={isEvents}
           consoleKind={consoleKind}
           type="reservations"
-          emptyText={reservationFilter === "done" ? "لا توجد حجوزات مكتملة في مصدر الكاشير الحالي" : "لا توجد حجوزات"}
+          emptyText={reservationFilter === "completed" ? "لا توجد حجوزات مكتملة في مصدر الكاشير الحالي" : "لا توجد حجوزات"}
           onDetails={openReservationDetails}
-          onAccept={(row) => void acceptReservation(valueOf(row, ["id"], ""))}
+          onAction={(row, action) => {
+            const id = valueOf(row, ["id"], "");
+            if (action === "accept") void acceptReservation(id);
+            if (action === "reject") openCashierAction({ type: "reservation", id, action: "reject", row });
+            if (action === "modify") openCashierAction({ type: "reservation", id, action: "modify", row });
+            if (action === "confirm") void confirmReservation(valueOf(row, ["reservationCode", "reservation_code", "code"], ""));
+          }}
         />
       </Modal>
 
@@ -1212,19 +1384,124 @@ export function CashierConsoleClient({ initialData }: Props) {
           <>
             <FieldGrid entries={detailEntries(selectedOrder, false, consoleKind)} />
             <ItemsPanel row={selectedOrder} kind={consoleKind} />
+            <div className="mt-5">
+              <CashierRowActions
+                row={selectedOrder}
+                type="orders"
+                isEvents={isEvents}
+                onAction={(action) => {
+                  const id = valueOf(selectedOrder, ["id"], "");
+                  if (action === "accept") void acceptOrder(id);
+                  if (action === "reject") openCashierAction({ type: "order", id, action: "reject", row: selectedOrder });
+                }}
+              />
+            </div>
           </>
         ) : null}
       </Modal>
 
       <Modal open={activeModal === "reservation-details"} title="تفاصيل الحجز" onClose={closeModal}>
         {selectedReservation ? (
-          <FieldGrid entries={detailEntries(selectedReservation, true, consoleKind)} />
+          <>
+            <FieldGrid entries={detailEntries(selectedReservation, true, consoleKind)} />
+            <div className="mt-5">
+              <CashierRowActions
+                row={selectedReservation}
+                type="reservations"
+                isEvents={isEvents}
+                onAction={(action) => {
+                  const id = valueOf(selectedReservation, ["id"], "");
+                  if (action === "accept") void acceptReservation(id);
+                  if (action === "reject") openCashierAction({ type: "reservation", id, action: "reject", row: selectedReservation });
+                  if (action === "modify") openCashierAction({ type: "reservation", id, action: "modify", row: selectedReservation });
+                  if (action === "confirm") void confirmReservation(valueOf(selectedReservation, ["reservationCode", "reservation_code", "code"], ""));
+                }}
+              />
+            </div>
+          </>
         ) : null}
       </Modal>
 
       <Modal open={activeModal === "operation-details"} title="تفاصيل العملية" onClose={closeModal}>
         {selectedOperation ? (
           <OperationDetails operation={selectedOperation} consoleKind={consoleKind} />
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(actionTarget)}
+        title={actionTarget?.action === "modify" ? "اقتراح وقت بديل" : "تأكيد الإجراء"}
+        onClose={() => setActionTarget(null)}
+      >
+        {actionTarget ? (
+          <div className="grid gap-4">
+            <FieldGrid
+              entries={[
+                ["العميل", valueOf(actionTarget.row, ["customerName", "customer_name"], "عميل")],
+                ["الحالة الحالية", statusLabel(actionTarget.row)],
+                ["العملية", actionTarget.type === "order" ? orderName(actionTarget.row, consoleKind) : reservationSummary(actionTarget.row, isEvents)],
+              ]}
+            />
+            {actionTarget.action === "modify" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2 text-sm font-black text-[#6B3A25]">
+                  التاريخ المقترح
+                  <input
+                    type="date"
+                    value={proposedDate}
+                    onChange={(event) => setProposedDate(event.target.value)}
+                    className="min-h-12 rounded-2xl bg-[#F8F4EF] px-4 text-[#311912] outline-none"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-black text-[#6B3A25]">
+                  الوقت المقترح
+                  <input
+                    type="time"
+                    value={proposedTime}
+                    onChange={(event) => setProposedTime(event.target.value)}
+                    className="min-h-12 rounded-2xl bg-[#F8F4EF] px-4 text-[#311912] outline-none"
+                  />
+                </label>
+              </div>
+            ) : null}
+            <label className="grid gap-2 text-sm font-black text-[#6B3A25]">
+              {actionTarget.action === "reject" ? "سبب الرفض" : "رسالة للعميل"}
+              <textarea
+                value={actionMessage}
+                onChange={(event) => setActionMessage(event.target.value)}
+                rows={4}
+                className="resize-none rounded-2xl bg-[#F8F4EF] px-4 py-3 text-[#311912] outline-none"
+                placeholder={actionTarget.action === "modify" ? "مثال: نقدر نستقبلكم في الموعد المقترح بدل الموعد الحالي" : "اكتب رسالة واضحة للعميل"}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  if (actionTarget.type === "order" && actionTarget.action === "reject") {
+                    void rejectOrder(actionTarget.id, actionMessage);
+                  }
+                  if (actionTarget.type === "reservation" && actionTarget.action === "reject") {
+                    void rejectReservation(actionTarget.id, actionMessage);
+                  }
+                  if (actionTarget.type === "reservation" && actionTarget.action === "modify") {
+                    void proposeReservationTime(actionTarget.id);
+                  }
+                }}
+                className="rounded-2xl bg-[#4A281D] px-5 py-3 font-black text-white disabled:opacity-60"
+              >
+                تأكيد
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionTarget(null)}
+                className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#6B3A25]"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         ) : null}
       </Modal>
     </main>
@@ -1235,13 +1512,15 @@ function FilterTabs({
   value,
   onChange,
 }: {
-  value: TableFilter;
-  onChange: (value: TableFilter) => void;
+  value: StatusTableFilter;
+  onChange: (value: StatusTableFilter) => void;
 }) {
-  const tabs: Array<{ id: TableFilter; label: string }> = [
+  const tabs: Array<{ id: StatusTableFilter; label: string }> = [
     { id: "pending", label: "تحتاج إجراء" },
     { id: "all", label: "كل السجل" },
-    { id: "done", label: "المكتملة" },
+    { id: "accepted", label: "المقبولة" },
+    { id: "rejected", label: "المرفوضة" },
+    { id: "completed", label: "المكتملة" },
   ];
   return (
     <div className="mb-4 flex flex-wrap gap-2">
@@ -1339,7 +1618,7 @@ function OperationsTable({
   type,
   emptyText,
   onDetails,
-  onAccept,
+  onAction,
 }: {
   rows: Row[];
   isEvents: boolean;
@@ -1347,7 +1626,7 @@ function OperationsTable({
   type: "orders" | "reservations";
   emptyText: string;
   onDetails: (row: Row) => void;
-  onAccept: (row: Row) => void;
+  onAction: (row: Row, action: "accept" | "reject" | "modify" | "confirm") => void;
 }) {
   if (!rows.length) {
     return (
@@ -1421,7 +1700,8 @@ function OperationsTable({
                     <button type="button" onClick={() => onDetails(row)} className="rounded-xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#6B3A25]">
                       التفاصيل
                     </button>
-                    <button type="button" onClick={() => onAccept(row)} className="rounded-xl bg-[#4A281D] px-3 py-2 text-xs font-black text-white">
+                    <CashierRowActions row={row} type={type} isEvents={isEvents} onAction={(action) => onAction(row, action)} />
+                    <button type="button" className="hidden" aria-hidden="true" tabIndex={-1}>
                       {type === "orders" ? "استقبال" : "تأكيد"}
                     </button>
                   </div>
@@ -1435,6 +1715,70 @@ function OperationsTable({
   );
 }
 
+function CashierRowActions({
+  row,
+  type,
+  isEvents,
+  onAction,
+}: {
+  row: Row;
+  type: "orders" | "reservations";
+  isEvents: boolean;
+  onAction: (action: "accept" | "reject" | "modify" | "confirm") => void;
+}) {
+  const isPending = canRespond(row);
+  const showConfirm = type === "reservations" && canConfirmReservation(row);
+
+  if (!isPending && !showConfirm) {
+    return (
+      <span className="rounded-xl bg-[#FCF8F3] px-3 py-2 text-xs font-black text-[#806A5E]">
+        لا يوجد إجراء متاح
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {isPending ? (
+        <>
+          <button
+            type="button"
+            onClick={() => onAction("accept")}
+            className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700"
+          >
+            {type === "orders" ? (isEvents ? "قبول طلب التذاكر" : "قبول الطلب") : isEvents ? "قبول التسجيل" : "قبول الحجز"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onAction("reject")}
+            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700"
+          >
+            {type === "orders" ? (isEvents ? "رفض طلب التذاكر" : "رفض الطلب") : isEvents ? "رفض التسجيل" : "رفض الحجز"}
+          </button>
+          {type === "reservations" ? (
+            <button
+              type="button"
+              onClick={() => onAction("modify")}
+              className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700"
+            >
+              اقتراح وقت بديل
+            </button>
+          ) : null}
+        </>
+      ) : null}
+      {showConfirm ? (
+        <button
+          type="button"
+          onClick={() => onAction("confirm")}
+          className="rounded-xl bg-[#4A281D] px-3 py-2 text-xs font-black text-white"
+        >
+          {isEvents ? "تأكيد الدخول" : "تأكيد الحضور"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function RecentTable(props: {
   title: string;
   rows: Row[];
@@ -1443,7 +1787,7 @@ function RecentTable(props: {
   type: "orders" | "reservations";
   emptyText: string;
   onDetails: (row: Row) => void;
-  onAccept: (row: Row) => void;
+  onAction: (row: Row, action: "accept" | "reject" | "modify" | "confirm") => void;
 }) {
   return (
     <section className="rounded-[28px] bg-white p-5 shadow-sm">

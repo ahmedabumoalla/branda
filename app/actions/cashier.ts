@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 import {
   cashierAcceptOrder,
   cashierAcceptReservation,
+  cashierConfirmEventTicket,
   cashierConfirmReservationCode,
   cashierScanLoyalty,
+  cashierUpdateOrderStatus,
+  cashierUpdateReservationStatus,
   getCashierConsole,
   loginCashierWithPassword,
   logoutCashier,
@@ -36,8 +39,28 @@ export async function acceptCashierReservationAction(reservationId: string) {
   await cashierAcceptReservation(reservationId);
 }
 
+export async function updateCashierOrderStatusAction(
+  orderId: string,
+  status: "accepted" | "rejected",
+  rejectionReason?: string,
+) {
+  return cashierUpdateOrderStatus(orderId, status, rejectionReason);
+}
+
+export async function updateCashierReservationStatusAction(
+  reservationId: string,
+  status: "accepted" | "rejected" | "modification_requested",
+  message?: string,
+) {
+  return cashierUpdateReservationStatus(reservationId, status, message);
+}
+
 export async function confirmReservationCodeAction(code: string) {
   return cashierConfirmReservationCode(code);
+}
+
+export async function confirmCashierTicketAction(code: string) {
+  return cashierConfirmEventTicket(code);
 }
 
 export async function cashierScanLoyaltyAction(input: {

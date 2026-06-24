@@ -26,6 +26,7 @@ import {
   storageBucketForLogo,
 } from "@/lib/storage/resolve-storage-url";
 import { createNotification } from "@/lib/data/notifications";
+import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 export type AdminReservationMonitorItem = CafeReservation & {
   cafeId: string;
@@ -86,6 +87,12 @@ function cleanText(value: unknown, fallback = "") {
 function cleanEmail(value: unknown) {
   const email = cleanText(value).toLowerCase();
   return email.includes("@") ? email : undefined;
+}
+
+function reservationDateTime(row: Record<string, unknown>) {
+  return [cleanText(row.reservation_date), cleanText(row.reservation_time)]
+    .filter(Boolean)
+    .join(" ") || "-";
 }
 
 function appBaseUrl() {
@@ -322,10 +329,11 @@ export async function updateReservationStatus(
     throw new Error("Invalid reservation status transition");
   }
 
+  const dbStatus = mapReservationStatusToDb(status);
   const message = (cafeMessage ?? rejectionReason)?.trim() || null;
   const { error } = await supabase.rpc("respond_to_reservation", {
     p_reservation_id: reservationId,
-    p_status: mapReservationStatusToDb(status),
+    p_status: dbStatus,
     p_message: message,
   });
 
@@ -342,6 +350,39 @@ export async function updateReservationStatus(
   const customer = customerId
     ? await getReservationCustomerContact(supabase, customerId)
     : {};
+  const customerPhone = customer.phone || cleanText(reservationRow.phone);
+  if (customerPhone) {
+    const reservationCode = cleanText(
+      reservationRow.reservation_code,
+      reservationId.slice(0, 8).toUpperCase(),
+    );
+    const body =
+      dbStatus === "accepted"
+        ? `تم تأكيد حجزك لدى ${cafe.name}\nالموعد: ${reservationDateTime(
+            reservationRow,
+          )}\nرقم الحجز: ${reservationCode}`
+        : dbStatus === "rejected"
+          ? `تم رفض حجزك لدى ${cafe.name}${
+              message ? `\nالسبب إن وجد: ${message}` : ""
+            }`
+          : `لدى ${cafe.name} اقتراح وقت بديل لحجزك\nالوقت المقترح: ${
+              message ?? "-"
+            }\nرقم الحجز: ${reservationCode}`;
+
+    await sendWhatsAppMessage({
+      to: customerPhone,
+      body,
+      eventType:
+        dbStatus === "accepted"
+          ? "reservation_accepted"
+          : dbStatus === "rejected"
+            ? "reservation_rejected"
+            : "reservation_alternative_time",
+      cafeId: cafe.id,
+      recipientName:
+        customer.fullName || cleanText(reservationRow.customer_name),
+    }).catch(() => undefined);
+  }
 
   if (customerId) {
     await createNotification({

@@ -8,6 +8,7 @@ import {
   isBarndaksaEmailConfigured,
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
+import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
@@ -274,6 +275,128 @@ export async function getCashierToken() {
   return store.get(cashierSessionCookie)?.value ?? null;
 }
 
+type CashierSessionContext = {
+  token: string;
+  cafeId: string;
+  cashierId: string;
+  cashierName: string;
+  cafeName: string;
+  cafeSlug: string;
+  businessCategory: string;
+};
+
+function firstRecord(value: unknown) {
+  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
+  if (value && typeof value === "object") return value as Record<string, unknown>;
+  return undefined;
+}
+
+function shortCashierOrderCode(orderId: string) {
+  return orderId ? orderId.slice(0, 8).toUpperCase() : "-";
+}
+
+function cashierReservationDateTime(row: Record<string, unknown>) {
+  return [row.reservation_date, row.reservation_time]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(" ") || "-";
+}
+
+async function cashierOrderDisplayName(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+) {
+  const { data: items } = await admin
+    .from("order_items")
+    .select("name,quantity")
+    .eq("order_id", orderId);
+  if (!items?.length) return "طلب";
+  const firstName = String(items[0]?.name ?? "طلب");
+  return items.length > 1 ? `${firstName} + ${items.length - 1}` : firstName;
+}
+
+async function requireCashierSessionContext(
+  admin = createAdminClient(),
+): Promise<CashierSessionContext> {
+  const token = await getCashierToken();
+  if (!token) throw new Error("Cashier session expired");
+
+  const { data: session, error } = await admin
+    .from("cafe_cashier_sessions")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers(full_name,email,employee_number),cafes(name,slug,business_category)")
+    .eq("token", token)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!session || session.revoked_at) throw new Error("Cashier session expired");
+
+  const cashier = firstRecord(session.cafe_cashiers);
+  const cafe = firstRecord(session.cafes);
+
+  return {
+    token,
+    cafeId: String(session.cafe_id),
+    cashierId: String(session.cashier_id),
+    cashierName: String(cashier?.full_name ?? "Cashier"),
+    cafeName: String(cafe?.name ?? "Barndaksa"),
+    cafeSlug: String(cafe?.slug ?? ""),
+    businessCategory: String(cafe?.business_category ?? "cafes_coffee"),
+  };
+}
+
+async function writeCashierAudit(
+  admin: ReturnType<typeof createAdminClient>,
+  input: {
+    session: CashierSessionContext;
+    action: string;
+    entityTable: string;
+    entityId: string;
+    oldData?: Record<string, unknown>;
+    newData?: Record<string, unknown>;
+  },
+) {
+  await admin.from("audit_logs").insert({
+    cafe_id: input.session.cafeId,
+    action: input.action,
+    entity_table: input.entityTable,
+    entity_id: input.entityId,
+    old_data: input.oldData ?? null,
+    new_data: {
+      ...(input.newData ?? {}),
+      actorSource: "cashier",
+      cashierId: input.session.cashierId,
+      cashierName: input.session.cashierName,
+    },
+  });
+}
+
+async function writeCashierActivity(
+  admin: ReturnType<typeof createAdminClient>,
+  input: {
+    session: CashierSessionContext;
+    actionType: "order_received" | "reservation_received" | "loyalty_stamp";
+    targetType: string;
+    targetId: string;
+    invoiceBarcode?: string;
+    details?: Record<string, unknown>;
+  },
+) {
+  await admin.from("cafe_cashier_activity_logs").insert({
+    cafe_id: input.session.cafeId,
+    cashier_id: input.session.cashierId,
+    action_type: input.actionType,
+    target_type: input.targetType,
+    target_id: input.targetId,
+    invoice_barcode: input.invoiceBarcode ?? null,
+    details: {
+      source: "cashier_console",
+      cashierName: input.session.cashierName,
+      ...(input.details ?? {}),
+    },
+  });
+}
+
 export async function getCashierConsole(): Promise<CashierConsole | null> {
   const token = await getCashierToken();
   if (!token) return null;
@@ -316,6 +439,7 @@ export async function logoutCashier() {
 }
 
 export async function cashierAcceptOrder(orderId: string) {
+  return cashierUpdateOrderStatus(orderId, "accepted");
   const token = await getCashierToken();
   if (!token) throw new Error("جلسة الكاشير منتهية");
   const supabase = await createClient();
@@ -327,6 +451,7 @@ export async function cashierAcceptOrder(orderId: string) {
 }
 
 export async function cashierAcceptReservation(reservationId: string) {
+  return cashierUpdateReservationStatus(reservationId, "accepted");
   const token = await getCashierToken();
   if (!token) throw new Error("جلسة الكاشير منتهية");
   const supabase = await createClient();
@@ -335,6 +460,405 @@ export async function cashierAcceptReservation(reservationId: string) {
     p_reservation_id: reservationId,
   });
   if (error) throw error;
+}
+
+export async function cashierUpdateOrderStatus(
+  orderId: string,
+  status: "accepted" | "rejected",
+  rejectionReason?: string,
+) {
+  const admin = createAdminClient();
+  const session = await requireCashierSessionContext(admin);
+  const reason = rejectionReason?.trim() ?? "";
+
+  if (!orderId) throw new Error("Order id is required");
+  if (status === "rejected" && !reason) throw new Error("Rejection reason is required");
+
+  const { data: order, error: lookupError } = await admin
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
+  if (!order || String(order.cafe_id) !== session.cafeId) {
+    throw new Error("Order does not belong to this cashier cafe");
+  }
+  if (String(order.status) !== "pending_cafe") {
+    throw new Error("Order status no longer allows this action");
+  }
+
+  const now = new Date().toISOString();
+  const { data: updatedOrder, error: updateError } = await admin
+    .from("orders")
+    .update({
+      status,
+      rejection_reason: status === "rejected" ? reason : null,
+      responded_at: now,
+      updated_at: now,
+    })
+    .eq("id", orderId)
+    .eq("cafe_id", session.cafeId)
+    .eq("status", "pending_cafe")
+    .is("deleted_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (updateError) throw updateError;
+  if (!updatedOrder) throw new Error("Order was updated before this action completed");
+
+  await writeCashierActivity(admin, {
+    session,
+    actionType: "order_received",
+    targetType: "order",
+    targetId: orderId,
+    details: {
+      action: status,
+      statusBefore: String(order.status),
+      statusAfter: status,
+      rejectionReason: status === "rejected" ? reason : null,
+      customerName: String(order.customer_name ?? ""),
+      total: Number(order.total ?? 0),
+    },
+  }).catch(() => undefined);
+
+  await writeCashierAudit(admin, {
+    session,
+    action: "cashier_update_order_status",
+    entityTable: "orders",
+    entityId: orderId,
+    oldData: order as Record<string, unknown>,
+    newData: {
+      status,
+      rejectionReason: status === "rejected" ? reason : null,
+    },
+  }).catch(() => undefined);
+
+  if (order.customer_id && session.cafeSlug) {
+    await createNotification({
+      cafeSlug: session.cafeSlug,
+      audience: "customer",
+      customerId: String(order.customer_id),
+      title: status === "accepted" ? "تم قبول طلبك" : "تم رفض طلبك",
+      body:
+        status === "accepted"
+          ? `تم قبول طلبك من ${session.cafeName}.`
+          : `تم رفض طلبك من ${session.cafeName}. السبب: ${reason}`,
+      type: status === "accepted" ? "order_accepted" : "order_rejected",
+      meta: {
+        orderId,
+        status,
+        actorSource: "cashier",
+        cashierName: session.cashierName,
+      },
+    }).catch(() => undefined);
+  }
+
+  const customerPhone = order.customer_phone ? String(order.customer_phone) : "";
+  if (customerPhone) {
+    const orderName = await cashierOrderDisplayName(admin, orderId);
+    const isEventCafe = session.businessCategory === "events_conferences";
+    const body =
+      status === "accepted"
+        ? isEventCafe
+          ? `تم تأكيد تذكرتك لدى ${session.cafeName}\nالتذكرة: ${orderName}\nرقم التذكرة: ${shortCashierOrderCode(orderId)}`
+          : `تم قبول طلبك من ${session.cafeName}\nالطلب: ${orderName}\nرقم الطلب: ${shortCashierOrderCode(orderId)}`
+        : `تم رفض طلبك من ${session.cafeName}\nالطلب: ${orderName}${
+            reason ? `\nالسبب إن وجد: ${reason}` : ""
+          }`;
+
+    await sendWhatsAppMessage({
+      to: customerPhone,
+      body,
+      eventType:
+        status === "accepted" && isEventCafe
+          ? "event_ticket_order_accepted"
+          : status === "accepted"
+            ? "order_accepted"
+            : "order_rejected",
+      cafeId: session.cafeId,
+      recipientName: order.customer_name ? String(order.customer_name) : undefined,
+    }).catch(() => undefined);
+  }
+
+  return { ok: true as const, order: updatedOrder };
+}
+
+export async function cashierUpdateReservationStatus(
+  reservationId: string,
+  status: "accepted" | "rejected" | "modification_requested",
+  message?: string,
+) {
+  const admin = createAdminClient();
+  const session = await requireCashierSessionContext(admin);
+  const cleanMessage = message?.trim() ?? "";
+
+  if (!reservationId) throw new Error("Reservation id is required");
+  if (status !== "accepted" && !cleanMessage) {
+    throw new Error(status === "rejected" ? "Rejection reason is required" : "Alternative time is required");
+  }
+  if (cleanMessage.length > 500) throw new Error("Message is too long");
+
+  const { data: reservation, error: lookupError } = await admin
+    .from("reservations")
+    .select("*")
+    .eq("id", reservationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
+  if (!reservation || String(reservation.cafe_id) !== session.cafeId) {
+    throw new Error("Reservation does not belong to this cashier cafe");
+  }
+  if (String(reservation.status) !== "pending") {
+    throw new Error("Reservation status no longer allows this action");
+  }
+
+  const { data: updatedReservation, error: updateError } = await admin
+    .from("reservations")
+    .update({
+      status,
+      cafe_message: status === "rejected" ? null : cleanMessage || null,
+      rejection_reason: status === "rejected" ? cleanMessage || "تم رفض الحجز" : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", reservationId)
+    .eq("cafe_id", session.cafeId)
+    .eq("status", "pending")
+    .is("deleted_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (updateError) throw updateError;
+  if (!updatedReservation) throw new Error("Reservation was updated before this action completed");
+
+  await writeCashierActivity(admin, {
+    session,
+    actionType: "reservation_received",
+    targetType: "reservation",
+    targetId: reservationId,
+    details: {
+      action: status,
+      statusBefore: String(reservation.status),
+      statusAfter: status,
+      message: cleanMessage || null,
+      customerName: String(reservation.customer_name ?? ""),
+      eventType: String(reservation.event_type ?? ""),
+      reservationDate: String(reservation.reservation_date ?? ""),
+      reservationTime: String(reservation.reservation_time ?? ""),
+    },
+  }).catch(() => undefined);
+
+  await writeCashierAudit(admin, {
+    session,
+    action: "cashier_update_reservation_status",
+    entityTable: "reservations",
+    entityId: reservationId,
+    oldData: reservation as Record<string, unknown>,
+    newData: { status, message: cleanMessage || null },
+  }).catch(() => undefined);
+
+  if (reservation.customer_id && session.cafeSlug) {
+    await createNotification({
+      cafeSlug: session.cafeSlug,
+      audience: "customer",
+      customerId: String(reservation.customer_id),
+      title:
+        status === "accepted"
+          ? "تم قبول حجزك"
+          : status === "rejected"
+            ? "تم رفض حجزك"
+            : "اقتراح وقت بديل لحجزك",
+      body: cleanMessage || `تم تحديث حالة حجزك في ${session.cafeName}.`,
+      type: status === "accepted" ? "reservation_accepted" : "reservation_rejected",
+      meta: {
+        reservationId,
+        status,
+        message: cleanMessage,
+        actorSource: "cashier",
+        cashierName: session.cashierName,
+      },
+    }).catch(() => undefined);
+  }
+
+  const customerPhone = String(
+    reservation.customer_phone ?? reservation.phone ?? "",
+  ).trim();
+  if (customerPhone) {
+    const reservationCode = String(
+      reservation.reservation_code ?? reservationId.slice(0, 8).toUpperCase(),
+    );
+    const body =
+      status === "accepted"
+        ? `تم تأكيد حجزك لدى ${session.cafeName}\nالموعد: ${cashierReservationDateTime(
+            reservation as Record<string, unknown>,
+          )}\nرقم الحجز: ${reservationCode}`
+        : status === "rejected"
+          ? `تم رفض حجزك لدى ${session.cafeName}${
+              cleanMessage ? `\nالسبب إن وجد: ${cleanMessage}` : ""
+            }`
+          : `لدى ${session.cafeName} اقتراح وقت بديل لحجزك\nالوقت المقترح: ${
+              cleanMessage || "-"
+            }\nرقم الحجز: ${reservationCode}`;
+
+    await sendWhatsAppMessage({
+      to: customerPhone,
+      body,
+      eventType:
+        status === "accepted"
+          ? "reservation_accepted"
+          : status === "rejected"
+            ? "reservation_rejected"
+            : "reservation_alternative_time",
+      cafeId: session.cafeId,
+      recipientName: reservation.customer_name
+        ? String(reservation.customer_name)
+        : undefined,
+    }).catch(() => undefined);
+  }
+
+  return { ok: true as const, reservation: updatedReservation };
+}
+
+export async function cashierConfirmEventTicket(codeInput: string) {
+  const admin = createAdminClient();
+  const session = await requireCashierSessionContext(admin);
+  const code =
+    parseBarndaksaQrPayload(codeInput, "event-ticket") ??
+    codeInput.trim().toUpperCase();
+
+  if (!code) throw new Error("Ticket code is required");
+
+  const { data: ticket, error: lookupError } = await admin
+    .from("event_tickets")
+    .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
+    .eq("cafe_id", session.cafeId)
+    .eq("ticket_code", code)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
+  if (!ticket) throw new Error("Ticket does not belong to this cashier cafe");
+
+  const ticketStatus = String(ticket.status ?? "");
+  if (ticketStatus === "used" || ticket.used_at) throw new Error("Ticket already used");
+  if (ticketStatus === "cancelled") throw new Error("Ticket is cancelled");
+  if (ticketStatus === "expired") throw new Error("Ticket is expired");
+  if (ticketStatus !== "valid") throw new Error("Ticket is not valid");
+
+  const now = new Date();
+  if (ticket.valid_from && new Date(String(ticket.valid_from)) > now) {
+    throw new Error("Ticket is not valid yet");
+  }
+  if (ticket.valid_until && new Date(String(ticket.valid_until)) < now) {
+    await admin
+      .from("event_tickets")
+      .update({ status: "expired", updated_at: now.toISOString() })
+      .eq("id", String(ticket.id))
+      .eq("cafe_id", session.cafeId)
+      .eq("status", "valid");
+    throw new Error("Ticket is expired");
+  }
+
+  const currentScanCount = Number(ticket.scan_count ?? 0);
+  const maxScanCount = Math.max(1, Number(ticket.max_scan_count ?? 1));
+  if (currentScanCount >= maxScanCount) throw new Error("Ticket already used");
+
+  const nextScanCount = currentScanCount + 1;
+  const shouldCloseTicket = nextScanCount >= maxScanCount;
+  const { data: ticketSettings } = ticket.product_id
+    ? await admin
+        .from("event_ticket_settings")
+        .select("gate_name")
+        .eq("product_id", String(ticket.product_id))
+        .eq("cafe_id", session.cafeId)
+        .maybeSingle()
+    : { data: null };
+  const gateName = String(ticketSettings?.gate_name ?? "بوابة الدخول");
+  const usedAt = now.toISOString();
+
+  const { data: updatedTicket, error: updateError } = await admin
+    .from("event_tickets")
+    .update({
+      status: shouldCloseTicket ? "used" : "valid",
+      scan_count: nextScanCount,
+      used_at: shouldCloseTicket ? usedAt : ticket.used_at ?? null,
+      used_by_cashier_id: session.cashierId,
+      used_gate_name: gateName,
+      updated_at: usedAt,
+    })
+    .eq("id", String(ticket.id))
+    .eq("cafe_id", session.cafeId)
+    .eq("status", "valid")
+    .eq("scan_count", currentScanCount)
+    .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
+    .maybeSingle();
+
+  if (updateError) throw updateError;
+  if (!updatedTicket) throw new Error("Ticket was updated from another device");
+
+  const customer = firstRecord(updatedTicket.customer_profiles);
+  const product = firstRecord(updatedTicket.menu_products);
+  const ticketId = String(updatedTicket.id);
+
+  await writeCashierActivity(admin, {
+    session,
+    actionType: "reservation_received",
+    targetType: "event_ticket",
+    targetId: ticketId,
+    invoiceBarcode: code,
+    details: {
+      action: "ticket_checkin",
+      ticketCode: code,
+      statusAfter: String(updatedTicket.status ?? ""),
+      scanCount: nextScanCount,
+      maxScanCount,
+      customerName: String(customer?.full_name ?? ""),
+      ticketName: String(product?.name ?? ""),
+      gateName,
+    },
+  }).catch(() => undefined);
+
+  await writeCashierAudit(admin, {
+    session,
+    action: "cashier_confirm_event_ticket",
+    entityTable: "event_tickets",
+    entityId: ticketId,
+    oldData: ticket as Record<string, unknown>,
+    newData: {
+      status: String(updatedTicket.status ?? ""),
+      scanCount: nextScanCount,
+      gateName,
+    },
+  }).catch(() => undefined);
+
+  const customerPhone = customer?.phone ? String(customer.phone) : "";
+  const ticketName = String(product?.name ?? "تذكرة");
+  const ticketCode = String(updatedTicket.ticket_code ?? code);
+  if (customerPhone) {
+    await sendWhatsAppMessage({
+      to: customerPhone,
+      body: `تم تأكيد تذكرتك لدى ${session.cafeName}\nالتذكرة: ${ticketName}\nرقم التذكرة: ${ticketCode}`,
+      eventType: "event_ticket_confirmed",
+      cafeId: session.cafeId,
+      recipientName: customer?.full_name ? String(customer.full_name) : undefined,
+    }).catch(() => undefined);
+  }
+
+  return {
+    ok: true as const,
+    ticketId,
+    ticketCode,
+    customerName: String(customer?.full_name ?? "عميل"),
+    customerPhone: String(customer?.phone ?? ""),
+    customerEmail: String(customer?.email ?? ""),
+    ticketName: String(product?.name ?? "تذكرة"),
+    status: shouldCloseTicket ? "used" : "valid",
+    scanCount: nextScanCount,
+    maxScanCount,
+    gateName,
+    usedAt,
+  };
 }
 
 export async function cashierConfirmReservationCode(code: string) {

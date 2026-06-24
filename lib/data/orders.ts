@@ -12,6 +12,7 @@ import {
 } from "@/lib/email/resend";
 import { createNotification } from "@/lib/data/notifications";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 export async function getOwnerOrders(): Promise<CafeOrder[]> {
   const cafe = await requireOwnerCafeContext();
@@ -45,6 +46,16 @@ export async function getOwnerOrders(): Promise<CafeOrder[]> {
   );
 }
 
+function shortOrderCode(orderId: string) {
+  return orderId ? orderId.slice(0, 8).toUpperCase() : "-";
+}
+
+function orderDisplayName(items?: Array<Record<string, unknown>>) {
+  if (!items?.length) return "طلب";
+  const firstName = String(items[0]?.name ?? "طلب");
+  return items.length > 1 ? `${firstName} + ${items.length - 1}` : firstName;
+}
+
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
@@ -64,6 +75,59 @@ export async function updateOrderStatus(
   });
 
   if (error) throw error;
+
+  const { data: whatsappOrder } = await supabase
+    .from("orders")
+    .select(
+      "id,cafe_id,customer_id,customer_name,customer_phone,customer_email,branch_name,total,status,rejection_reason,cafes(name,slug,business_category)",
+    )
+    .eq("id", orderId)
+    .maybeSingle();
+
+  const { data: whatsappOrderItems } = await supabase
+    .from("order_items")
+    .select("name,quantity")
+    .eq("order_id", orderId);
+
+  const whatsappCafeRaw = Array.isArray(whatsappOrder?.cafes)
+    ? whatsappOrder?.cafes[0]
+    : whatsappOrder?.cafes;
+  const whatsappCafe =
+    whatsappCafeRaw && typeof whatsappCafeRaw === "object"
+      ? (whatsappCafeRaw as Record<string, unknown>)
+      : null;
+  const whatsappCafeName = String(whatsappCafe?.name ?? "برنداكسه");
+  const isEventCafe =
+    String(whatsappCafe?.business_category ?? "") === "events_conferences";
+  const whatsappCustomerPhone = whatsappOrder?.customer_phone
+    ? String(whatsappOrder.customer_phone)
+    : undefined;
+  if (whatsappCustomerPhone) {
+    const whatsappOrderName = orderDisplayName(whatsappOrderItems ?? undefined);
+    const whatsappBody =
+      dbStatus === "accepted"
+        ? isEventCafe
+          ? `تم تأكيد تذكرتك لدى ${whatsappCafeName}\nالتذكرة: ${whatsappOrderName}\nرقم التذكرة: ${shortOrderCode(orderId)}`
+          : `تم قبول طلبك من ${whatsappCafeName}\nالطلب: ${whatsappOrderName}\nرقم الطلب: ${shortOrderCode(orderId)}`
+        : `تم رفض طلبك من ${whatsappCafeName}\nالطلب: ${whatsappOrderName}${
+            rejectionReason ? `\nالسبب إن وجد: ${rejectionReason}` : ""
+          }`;
+
+    await sendWhatsAppMessage({
+      to: whatsappCustomerPhone,
+      body: whatsappBody,
+      eventType:
+        dbStatus === "accepted" && isEventCafe
+          ? "event_ticket_order_accepted"
+          : dbStatus === "accepted"
+            ? "order_accepted"
+            : "order_rejected",
+      cafeId: whatsappOrder?.cafe_id ? String(whatsappOrder.cafe_id) : undefined,
+      recipientName: whatsappOrder?.customer_name
+        ? String(whatsappOrder.customer_name)
+        : undefined,
+    }).catch(() => undefined);
+  }
 
   if (isBarndaksaEmailConfigured()) {
     const { data: order } = await supabase

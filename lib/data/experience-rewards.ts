@@ -11,6 +11,7 @@ import {
   isBarndaksaEmailConfigured,
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
+import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 export type ExperienceRewardStatus =
   | "pending"
@@ -362,7 +363,7 @@ export async function approveOwnerExperienceRewardSubmission(
 
   const { data: submission, error: fetchError } = await supabase
     .from("experience_reward_submissions")
-    .select("*, customer_profiles!experience_rewards_customer_same_cafe(full_name, email)")
+    .select("*, customer_profiles!experience_rewards_customer_same_cafe(full_name, email, phone)")
     .eq("id", parsed.submissionId)
     .eq("cafe_id", cafe.id)
     .maybeSingle();
@@ -457,6 +458,17 @@ export async function approveOwnerExperienceRewardSubmission(
       subject: "تم اعتماد توثيق تجربتك",
       text: `تم اعتماد توثيق تجربتك. مكافأتك: ${itemsText}.`,
       html: `<div dir="rtl"><h2>تم اعتماد توثيق تجربتك</h2><p>المكافأة: ${escapeEmailHtml(itemsText)}</p><p>كود المكافأة: <strong>${escapeEmailHtml(rewardCode)}</strong></p><p>صالحة حتى: ${escapeEmailHtml(parsed.rewardExpiresAt)}</p></div>`,
+    }).catch(() => undefined);
+  }
+
+  const customerPhone = customer?.phone ? String(customer.phone) : undefined;
+  if (customerPhone) {
+    await sendWhatsAppMessage({
+      to: customerPhone,
+      body: `تم قبول توثيق تجربتك لدى ${cafe.name}\nمكافأتك: ${itemsText}`,
+      eventType: "experience_reward_approved",
+      cafeId: cafe.id,
+      recipientName: customer?.full_name ? String(customer.full_name) : undefined,
     }).catch(() => undefined);
   }
 
