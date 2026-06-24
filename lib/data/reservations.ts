@@ -42,9 +42,6 @@ type ReservationEmailCustomer = {
   email?: string;
   fullName?: string;
   phone?: string;
-  phoneNormalized?: string;
-  phoneVerifiedAt?: string;
-  phoneVerificationRequired?: boolean;
 };
 
 type ReservationEmailBrand = {
@@ -116,9 +113,6 @@ type ReservationCustomerContactRow = {
   email?: string | null;
   full_name?: string | null;
   phone?: string | null;
-  phone_normalized?: string | null;
-  phone_verified_at?: string | null;
-  phone_verification_required?: boolean | null;
 };
 
 type ReservationBranchRow = {
@@ -285,7 +279,7 @@ async function getReservationCustomerContact(
 ): Promise<ReservationEmailCustomer> {
   const { data } = await supabase
     .from("customer_profiles")
-    .select("email, full_name, phone, phone_normalized, phone_verified_at, phone_verification_required")
+    .select("email, full_name, phone")
     .eq("id", customerId)
     .maybeSingle();
   const row = data as ReservationCustomerContactRow | null;
@@ -294,12 +288,6 @@ async function getReservationCustomerContact(
     email: cleanEmail(row?.email),
     fullName: cleanText(row?.full_name),
     phone: cleanText(row?.phone),
-    phoneNormalized: cleanText(row?.phone_normalized),
-    phoneVerifiedAt: cleanText(row?.phone_verified_at),
-    phoneVerificationRequired:
-      typeof row?.phone_verification_required === "boolean"
-        ? row.phone_verification_required
-        : undefined,
   };
 }
 
@@ -469,14 +457,9 @@ export async function updateReservationStatus(
         .maybeSingle()
     : { data: null };
   const reservationBranch = reservationBranchData as ReservationBranchRow | null;
-  const customerPhone =
-    customer.phoneVerifiedAt || customer.phoneVerificationRequired === false
-      ? normalizeWhatsAppPhone(
-          customer.phoneNormalized ||
-            customer.phone ||
-            cleanText(reservationRow.phone),
-        )
-      : null;
+  const customerPhone = normalizeWhatsAppPhone(
+    customer.phone || cleanText(reservationRow.phone),
+  );
   if (customerPhone) {
     const reservationCode = cleanText(
       reservationRow.reservation_code,

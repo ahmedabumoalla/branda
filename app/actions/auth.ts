@@ -13,21 +13,12 @@ import {
   clearPersistedCustomerSession,
   createCustomerPasswordReset,
   getCustomerProfileBySessionToken,
-  loginCustomerByIdentifier,
+  loginCustomerByEmail,
   mapCustomerProfileToSession,
   persistCustomerSession,
   registerCustomer,
   resetCustomerPasswordWithToken,
 } from "@/lib/data/customers";
-import {
-  getCustomerPhoneVerificationState,
-  sendCustomerPhoneVerificationCode,
-  verifyCustomerPhoneCode,
-} from "@/lib/data/customer-phone-verification";
-import type {
-  CustomerPhoneVerificationStateResult,
-  SendCustomerPhoneVerificationResult,
-} from "@/lib/data/customer-phone-verification";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
 import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
@@ -42,21 +33,6 @@ type BasicActionResult = {
 };
 
 type CustomerAuthActionResult = {
-  ok: boolean;
-  message: string;
-  session?: BarndaksaCustomerSession;
-  verificationRequired?: boolean;
-  customerId?: string;
-};
-
-type CustomerPhoneStateActionResult =
-  | CustomerPhoneVerificationStateResult
-  | {
-      ok: false;
-      message: string;
-    };
-
-type VerifyCustomerPhoneActionResult = {
   ok: boolean;
   message: string;
   session?: BarndaksaCustomerSession;
@@ -604,17 +580,8 @@ export async function registerCustomerAction(
 ): Promise<CustomerAuthActionResult> {
   try {
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
-    await sendCustomerPhoneVerificationCode({
-      cafeSlug,
-      customerId: session.id,
-      purpose: "signup",
-    });
-    return {
-      ok: true,
-      message: "تم إنشاء الحساب. أكد رقم الجوال لإكمال الدخول.",
-      verificationRequired: true,
-      customerId: session.id,
-    };
+    await createCustomerSessionCookie(cafeSlug, session.id);
+    return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
   } catch (error) {
     console.error("[registerCustomerAction]", error);
     return {
@@ -626,35 +593,11 @@ export async function registerCustomerAction(
 
 export async function loginCustomerAction(
   cafeSlug: string,
-  identifier: string,
+  email: string,
   password: string
 ): Promise<CustomerAuthActionResult> {
   try {
-    const result = await loginCustomerByIdentifier({
-      cafeSlug,
-      identifier,
-      password,
-    });
-
-    if (result.verificationRequired && result.customerId) {
-      await sendCustomerPhoneVerificationCode({
-        cafeSlug,
-        customerId: result.customerId,
-        purpose: "login",
-      });
-      return {
-        ok: true,
-        message: "يرجى تأكيد رقم الجوال لإكمال الدخول.",
-        verificationRequired: true,
-        customerId: result.customerId,
-      };
-    }
-
-    if (!result.session) {
-      return { ok: false, message: "تعذر إنشاء جلسة العميل." };
-    }
-
-    const session = result.session;
+    const session = await loginCustomerByEmail({ cafeSlug, email, password });
     await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم تسجيل الدخول", session };
   } catch (error) {
@@ -666,71 +609,6 @@ export async function loginCustomerAction(
           ? error.message
           : "بيانات الدخول غير صحيحة",
     };
-  }
-}
-
-export async function getCustomerPhoneVerificationStateAction(
-  cafeSlug: string,
-  customerId: string,
-): Promise<CustomerPhoneStateActionResult> {
-  try {
-    return await getCustomerPhoneVerificationState({ cafeSlug, customerId });
-  } catch (error) {
-    console.error("[getCustomerPhoneVerificationStateAction]", {
-      message: error instanceof Error ? error.message : "unknown_error",
-    });
-    return {
-      ok: false as const,
-      message: "تعذر تحميل حالة التحقق.",
-    };
-  }
-}
-
-export async function resendCustomerPhoneCodeAction(
-  cafeSlug: string,
-  customerId: string,
-): Promise<SendCustomerPhoneVerificationResult> {
-  try {
-    return await sendCustomerPhoneVerificationCode({
-      cafeSlug,
-      customerId,
-      purpose: "signup",
-    });
-  } catch (error) {
-    console.error("[resendCustomerPhoneCodeAction]", {
-      message: error instanceof Error ? error.message : "unknown_error",
-    });
-    return {
-      ok: false as const,
-      code: "send_failed" as const,
-      message: "تعذر إرسال كود التحقق الآن.",
-      cooldownSeconds: 0,
-    };
-  }
-}
-
-export async function verifyCustomerPhoneCodeAction(
-  cafeSlug: string,
-  customerId: string,
-  code: string,
-): Promise<VerifyCustomerPhoneActionResult> {
-  try {
-    const result = await verifyCustomerPhoneCode({ cafeSlug, customerId, code });
-    if (!result.ok) {
-      return { ok: false, message: result.message };
-    }
-
-    await createCustomerSessionCookie(cafeSlug, result.session.id);
-    return {
-      ok: true,
-      message: "تم تأكيد رقم الجوال بنجاح.",
-      session: result.session,
-    };
-  } catch (error) {
-    console.error("[verifyCustomerPhoneCodeAction]", {
-      message: error instanceof Error ? error.message : "unknown_error",
-    });
-    return { ok: false, message: "تعذر تأكيد الكود الآن." };
   }
 }
 

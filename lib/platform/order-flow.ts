@@ -27,7 +27,6 @@ export type CafeOrderFailureCode =
   | "login_required"
   | "invalid_customer_session"
   | "customer_profile_not_found"
-  | "phone_verification_required"
   | "product_unavailable"
   | "database_order_failed"
   | "order_failed";
@@ -98,9 +97,6 @@ export function getCafeOrderFailureCode(error: unknown): CafeOrderFailureCode {
   ) {
     return "customer_profile_not_found";
   }
-  if (message === "Phone verification required") {
-    return "phone_verification_required";
-  }
   if (
     message === "Cafe not found" ||
     message === "Cafe is not available" ||
@@ -123,8 +119,6 @@ export function getCafeOrderFailureMessage(code: CafeOrderFailureCode) {
       return "جلسة العميل غير صالحة. سجّل الدخول مرة أخرى.";
     case "customer_profile_not_found":
       return "لا يوجد حساب عميل لهذه العلامة.";
-    case "phone_verification_required":
-      return "يرجى تأكيد رقم الجوال لاستقبال تفاصيل الطلبات والحجوزات عبر واتساب.";
     case "product_unavailable":
       return "المنتج غير متاح حاليًا.";
     case "database_order_failed":

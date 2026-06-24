@@ -65,9 +65,6 @@ type WhatsAppOrderRow = OrderRow & {
 
 type WhatsAppCustomerRow = DbRow & {
   phone?: string | null;
-  phone_normalized?: string | null;
-  phone_verified_at?: string | null;
-  phone_verification_required?: boolean | null;
 };
 
 export type CreatePickupOrderResult = {
@@ -250,7 +247,7 @@ export async function updateOrderStatus(
   const { data: whatsappCustomerProfileData } = whatsappOrder?.customer_id
     ? await supabase
         .from("customer_profiles")
-        .select("phone, phone_normalized, phone_verified_at, phone_verification_required")
+        .select("phone")
         .eq("id", String(whatsappOrder.customer_id))
         .maybeSingle()
     : { data: null };
@@ -298,20 +295,11 @@ export async function updateOrderStatus(
   const whatsappCafeName = String(whatsappCafe?.name ?? "برنداكسه");
   const isEventCafe =
     String(whatsappCafe?.business_category ?? "") === "events_conferences";
-  const verifiedWhatsAppPhone =
-    whatsappCustomerProfile?.phone_verified_at ||
-    whatsappCustomerProfile?.phone_verification_required === false
-      ? normalizeWhatsAppPhone(
-          String(
-            whatsappCustomerProfile?.phone_normalized ??
-              whatsappCustomerProfile?.phone ??
-              whatsappOrder?.customer_phone ??
-              "",
-          ),
-        )
-      : null;
+  const whatsappCustomerPhone = normalizeWhatsAppPhone(
+    String(whatsappCustomerProfile?.phone ?? whatsappOrder?.customer_phone ?? ""),
+  );
 
-  if (verifiedWhatsAppPhone) {
+  if (whatsappCustomerPhone) {
     const productRows = whatsappProducts;
     const categoryRows = whatsappCategories;
     const productsById = new Map(
@@ -345,7 +333,7 @@ export async function updateOrderStatus(
           )}${rejectionReason ? `\nالسبب إن وجد: ${rejectionReason}` : ""}`;
 
     await sendWhatsAppMessage({
-      to: verifiedWhatsAppPhone,
+      to: whatsappCustomerPhone,
       body: whatsappBody,
       mediaUrls: mediaUrl ? [mediaUrl] : undefined,
       eventType:

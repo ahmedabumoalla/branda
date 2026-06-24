@@ -48,7 +48,6 @@ export async function createReservationFlowAction(
     const loginRequired =
       message === "Unauthorized" ||
       message === "Customer profile not found" ||
-      message === "Phone verification required" ||
       message.includes("customer mismatch");
 
     return {

@@ -22,7 +22,6 @@ import {
   isBarndaksaEmailConfigured,
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
-import { normalizeWhatsAppPhone } from "@/lib/notifications/whatsapp";
 import type { CafeOrder } from "@/lib/mock/orders";
 
 export type CustomerProfileRow = Record<string, unknown> & {
@@ -31,9 +30,6 @@ export type CustomerProfileRow = Record<string, unknown> & {
   user_id?: string | null;
   full_name?: string | null;
   phone?: string | null;
-  phone_normalized?: string | null;
-  phone_verified_at?: string | null;
-  phone_verification_required?: boolean | null;
   email?: string | null;
   avatar_url?: string | null;
   avatar_storage_path?: string | null;
@@ -64,18 +60,6 @@ type RequiredCustomerProfileSession = {
   user: { id: string };
   profile: CustomerProfileRow;
 };
-
-export type CustomerIdentifierLoginResult =
-  | {
-      session: BarndaksaCustomerSession;
-      verificationRequired: false;
-      customerId?: never;
-    }
-  | {
-      session: null;
-      verificationRequired: true;
-      customerId: string;
-    };
 
 type CustomerPasswordResetDetails = {
   token: string;
@@ -234,9 +218,6 @@ export async function requireCustomerProfileForOrderSession(
   if (expectedCustomerId && (profile.id as string) !== expectedCustomerId) {
     throw new Error("Forbidden: customer mismatch");
   }
-  if (requiresPhoneVerification(profile)) {
-    throw new Error("Phone verification required");
-  }
   return profile;
 }
 
@@ -271,9 +252,6 @@ export async function assertCustomerIdMatchesSession(
   if ((profile.id as string) !== customerId) {
     throw new Error("Forbidden: customer mismatch");
   }
-  if (requiresPhoneVerification(profile)) {
-    throw new Error("Phone verification required");
-  }
   return profile;
 }
 
@@ -290,15 +268,6 @@ export function mapCustomerProfileToSession(
     fullName: row.full_name as string,
 
     phone: row.phone as string,
-
-    phoneNormalized: (row.phone_normalized as string) ?? undefined,
-
-    phoneVerifiedAt: (row.phone_verified_at as string) ?? undefined,
-
-    phoneVerificationRequired:
-      typeof row.phone_verification_required === "boolean"
-        ? row.phone_verification_required
-        : undefined,
 
     email: (row.email as string) ?? undefined,
 
@@ -335,13 +304,6 @@ const customerResetTokenTtlMs = 30 * 60 * 1000;
 
 function normalizeCustomerEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-function requiresPhoneVerification(profile: Record<string, unknown>) {
-  return (
-    profile.phone_verification_required !== false &&
-    !profile.phone_verified_at
-  );
 }
 
 function hashSecret(value: string) {
@@ -409,38 +371,10 @@ async function findCustomerProfileByCafeEmail(
 }
 
 async function findCustomerProfileByCafePhone(
-  cafeId: string,
-  phone: string,
+  _cafeId: string,
+  _phone: string,
 ): Promise<CustomerProfileRow | null> {
-  const admin = createAdminClient();
-  const normalizedPhone = normalizeWhatsAppPhone(phone);
-  if (!normalizedPhone) return null;
-
-  const { data: normalizedMatch, error: normalizedError } = await admin
-    .from("customer_profiles")
-    .select("*")
-    .eq("cafe_id", cafeId)
-    .eq("phone_normalized", normalizedPhone)
-    .maybeSingle();
-
-  if (normalizedError) throw normalizedError;
-  if (normalizedMatch) return normalizedMatch as CustomerProfileRow;
-
-  const legacyDigits = normalizedPhone.replace(/^\+/, "");
-  const localDigits = legacyDigits.startsWith("9665")
-    ? `0${legacyDigits.slice(3)}`
-    : legacyDigits;
-
-  const { data, error } = await admin
-    .from("customer_profiles")
-    .select("*")
-    .eq("cafe_id", cafeId)
-    .in("phone", [normalizedPhone, legacyDigits, localDigits])
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data ?? null) as CustomerProfileRow | null;
+  return null;
 }
 
 async function setCustomerPasswordHash(
@@ -532,11 +466,6 @@ export async function registerCustomer(
 
   if (!cafe) throw new Error("Cafe not found");
 
-  const normalizedPhone = normalizeWhatsAppPhone(parsed.phone);
-  if (!normalizedPhone) {
-    throw new Error("رقم الجوال غير صالح.");
-  }
-
   const email = normalizeCustomerEmail(parsed.email);
   const admin = createAdminClient();
 
@@ -551,9 +480,6 @@ export async function registerCustomer(
       cafe_id: cafe.id,
       full_name: parsed.fullName.trim(),
       phone: parsed.phone.replace(/\D/g, ""),
-      phone_normalized: normalizedPhone,
-      phone_verified_at: null,
-      phone_verification_required: true,
       email,
       password_hash: hashCustomerPassword(parsed.password),
       password_updated_at: new Date().toISOString(),
@@ -619,7 +545,7 @@ export async function loginCustomerByIdentifier(input: {
   cafeSlug: string;
   identifier: string;
   password: string;
-}): Promise<CustomerIdentifierLoginResult> {
+}): Promise<BarndaksaCustomerSession> {
   const parsed = z
     .object({
       cafeSlug: z.string().min(1),
@@ -653,18 +579,7 @@ export async function loginCustomerByIdentifier(input: {
       await setCustomerPasswordHash(profile.id as string, parsed.password);
     }
 
-    if (requiresPhoneVerification(profile)) {
-      return {
-        session: null,
-        verificationRequired: true as const,
-        customerId: String(profile.id),
-      };
-    }
-
-    return {
-      session: mapCustomerProfileToSession(parsed.cafeSlug, profile),
-      verificationRequired: false as const,
-    };
+    return mapCustomerProfileToSession(parsed.cafeSlug, profile);
   }
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
@@ -692,18 +607,7 @@ export async function loginCustomerByIdentifier(input: {
     await setCustomerPasswordHash(profile.id as string, parsed.password);
   }
 
-  if (requiresPhoneVerification(profile)) {
-    return {
-      session: null,
-      verificationRequired: true as const,
-      customerId: String(profile.id),
-    };
-  }
-
-  return {
-    session: mapCustomerProfileToSession(parsed.cafeSlug, profile),
-    verificationRequired: false as const,
-  };
+  return mapCustomerProfileToSession(parsed.cafeSlug, profile);
 }
 
 export async function changeCustomerPassword(input: {

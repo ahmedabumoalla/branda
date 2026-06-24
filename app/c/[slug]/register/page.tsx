@@ -112,17 +112,6 @@ function RegisterForm() {
         return;
       }
 
-      if (result.verificationRequired && result.customerId) {
-        const next = safeCustomerNext(rawNext, slug);
-        router.replace(
-          appendPreviewToNextPath(
-            `/c/${slug}/verify-phone?customerId=${encodeURIComponent(result.customerId)}&next=${encodeURIComponent(next)}`,
-            previewThemeId,
-          ),
-        );
-        return;
-      }
-
       const destination = result.session
         ? safeCustomerNext(rawNext, slug)
         : `/c/${slug}/login`;

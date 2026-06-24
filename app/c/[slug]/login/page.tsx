@@ -113,7 +113,7 @@ function LoginForm() {
   function login() {
     if (loading) return;
     if (!email.trim() || !password.trim()) {
-      alert("اكتب البريد أو رقم الجوال وكلمة المرور");
+      alert("اكتب البريد الإلكتروني وكلمة المرور");
       return;
     }
 
@@ -124,16 +124,6 @@ function LoginForm() {
     )
       .then(async (result) => {
         if (!result.ok || !result.session) {
-          if (result.ok && result.verificationRequired && result.customerId) {
-            const destination = safeCustomerNext(rawNext, slug);
-            router.replace(
-              appendPreviewToNextPath(
-                `/c/${slug}/verify-phone?customerId=${encodeURIComponent(result.customerId)}&next=${encodeURIComponent(destination)}`,
-                previewThemeId,
-              ),
-            );
-            return;
-          }
           alert(result.message || "تعذر تسجيل الدخول");
           return;
         }
@@ -198,12 +188,12 @@ function LoginForm() {
         experience={experience}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        placeholder="البريد الإلكتروني أو رقم الجوال"
-        type="text"
-        autoComplete="username"
+        placeholder="البريد الإلكتروني"
+        type="email"
+        autoComplete="email"
       />
       <p className="text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
-        يمكنك الدخول بالبريد أو رقم الجوال الموثق.
+        البريد الإلكتروني وكلمة المرور
       </p>
       <PasswordInput
         experience={experience}
