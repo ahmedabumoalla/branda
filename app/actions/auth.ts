@@ -13,18 +13,68 @@ import {
   clearPersistedCustomerSession,
   createCustomerPasswordReset,
   getCustomerProfileBySessionToken,
-  loginCustomerByEmail,
+  loginCustomerByIdentifier,
   mapCustomerProfileToSession,
   persistCustomerSession,
   registerCustomer,
   resetCustomerPasswordWithToken,
 } from "@/lib/data/customers";
+import {
+  getCustomerPhoneVerificationState,
+  sendCustomerPhoneVerificationCode,
+  verifyCustomerPhoneCode,
+} from "@/lib/data/customer-phone-verification";
+import type {
+  CustomerPhoneVerificationStateResult,
+  SendCustomerPhoneVerificationResult,
+} from "@/lib/data/customer-phone-verification";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
 import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
 
 const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
 const CUSTOMER_SESSION_DAYS = 30;
+
+type BasicActionResult = {
+  ok: boolean;
+  message: string;
+  redirectTo?: string | null;
+};
+
+type CustomerAuthActionResult = {
+  ok: boolean;
+  message: string;
+  session?: BarndaksaCustomerSession;
+  verificationRequired?: boolean;
+  customerId?: string;
+};
+
+type CustomerPhoneStateActionResult =
+  | CustomerPhoneVerificationStateResult
+  | {
+      ok: false;
+      message: string;
+    };
+
+type VerifyCustomerPhoneActionResult = {
+  ok: boolean;
+  message: string;
+  session?: BarndaksaCustomerSession;
+};
+
+type CustomerPasswordResetActionResult = {
+  ok: boolean;
+  message: string;
+};
+
+type OwnerProfileAccessRow = {
+  role?: string | null;
+  status?: string | null;
+};
+
+type CafeMembershipRow = {
+  cafes?: { business_category?: string | null } | Array<{ business_category?: string | null }> | null;
+};
 
 function getAppBaseUrl() {
   return (
@@ -63,7 +113,7 @@ function getCustomerSessionCookieName(slug: string) {
   return `barndaksa_customer_session_${normalizeSlugForCookie(slug)}`;
 }
 
-async function createCustomerSessionCookie(cafeSlug: string, customerId: string) {
+async function createCustomerSessionCookie(cafeSlug: string, customerId: string): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + CUSTOMER_SESSION_DAYS * 24 * 60 * 60 * 1000);
   await persistCustomerSession(customerId, token, expiresAt);
@@ -78,7 +128,7 @@ async function createCustomerSessionCookie(cafeSlug: string, customerId: string)
   });
 }
 
-async function deleteCustomerSessionCookie(cafeSlug: string) {
+async function deleteCustomerSessionCookie(cafeSlug: string): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(getCustomerSessionCookieName(cafeSlug), "", {
     httpOnly: true,
@@ -89,7 +139,10 @@ async function deleteCustomerSessionCookie(cafeSlug: string) {
   });
 }
 
-export async function loginOwnerAction(email: string, password: string) {
+export async function loginOwnerAction(
+  email: string,
+  password: string,
+): Promise<BasicActionResult> {
   try {
     const supabase = await createClient();
     const normalizedEmail = email.trim().toLowerCase();
@@ -124,11 +177,12 @@ export async function loginOwnerAction(email: string, password: string) {
       return { ok: false as const, message: "بيانات الدخول غير صحيحة", redirectTo: null };
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("id, role, status")
       .eq("id", authData.user.id)
       .maybeSingle();
+    const profile = profileData as OwnerProfileAccessRow | null;
 
     if (profileError || !profile) {
       await supabase.auth.signOut();
@@ -145,14 +199,18 @@ export async function loginOwnerAction(email: string, password: string) {
     }
 
     if (["cafe_owner", "cafe_manager", "cafe_staff"].includes(String(profile.role))) {
-      const { data: membership } = await supabase
+      const { data: membershipData } = await supabase
         .from("cafe_members")
         .select("cafes(business_category)")
         .eq("user_id", authData.user.id)
         .limit(1)
         .maybeSingle();
+      const membership = membershipData as CafeMembershipRow | null;
 
-      const cafe = membership?.cafes as unknown as { business_category?: string } | null;
+      const cafeRaw = Array.isArray(membership?.cafes)
+        ? membership?.cafes[0]
+        : membership?.cafes;
+      const cafe = cafeRaw as { business_category?: string | null } | null | undefined;
 
       return {
         ok: true as const,
@@ -203,7 +261,7 @@ export async function registerCafeOwnerAction(input: {
   primaryBranchLng: number;
   primaryBranchRadiusMeters?: number;
   couponCode?: string;
-}) {
+}): Promise<BasicActionResult> {
   try {
     const normalizedSlug =
   String(input.slug ?? "")
@@ -294,7 +352,9 @@ const parsed = cafeOwnerRegistrationSchema.parse(normalizedInput);
   }
 }
 
-export async function requestPasswordResetAction(email: string) {
+export async function requestPasswordResetAction(
+  email: string,
+): Promise<BasicActionResult> {
   const parsed = z.string().trim().email().safeParse(email);
   if (!parsed.success) {
     return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
@@ -313,7 +373,7 @@ export async function requestPasswordResetAction(email: string) {
   };
 }
 
-export async function getPasswordRecoveryStateAction() {
+export async function getPasswordRecoveryStateAction(): Promise<{ ok: boolean }> {
   const cookieStore = await cookies();
   if (cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value !== "1") {
     return { ok: false as const };
@@ -332,7 +392,7 @@ export async function getPasswordRecoveryStateAction() {
   return { ok: true as const };
 }
 
-export async function confirmPasswordRecoverySessionAction() {
+export async function confirmPasswordRecoverySessionAction(): Promise<{ ok: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -355,7 +415,10 @@ export async function confirmPasswordRecoverySessionAction() {
   return { ok: true as const };
 }
 
-export async function updatePasswordAction(password: string, confirmPassword?: string) {
+export async function updatePasswordAction(
+  password: string,
+  confirmPassword?: string,
+): Promise<BasicActionResult> {
   const parsed = z.string().min(8).max(72).safeParse(password);
   if (!parsed.success) {
     return {
@@ -417,7 +480,7 @@ export async function changeOwnerPasswordAction(input: {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}) {
+}): Promise<BasicActionResult> {
   const parsed = changeOwnerPasswordSchema.safeParse(input);
   if (!parsed.success) {
     const errors = parsed.error.flatten().fieldErrors;
@@ -460,11 +523,12 @@ export async function changeOwnerPasswordAction(input: {
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profileData, error: profileError } = await supabase
     .from("profiles")
     .select("role, status")
     .eq("id", user.id)
     .maybeSingle();
+  const profile = profileData as OwnerProfileAccessRow | null;
 
   if (
     profileError ||
@@ -525,7 +589,7 @@ export async function changeOwnerPasswordAction(input: {
   return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح." };
 }
 
-export async function logoutAction() {
+export async function logoutAction(): Promise<never> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
@@ -537,11 +601,20 @@ export async function registerCustomerAction(
   password: string,
   fullName: string,
   phone: string
-): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
+): Promise<CustomerAuthActionResult> {
   try {
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
-    await createCustomerSessionCookie(cafeSlug, session.id);
-    return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
+    await sendCustomerPhoneVerificationCode({
+      cafeSlug,
+      customerId: session.id,
+      purpose: "signup",
+    });
+    return {
+      ok: true,
+      message: "تم إنشاء الحساب. أكد رقم الجوال لإكمال الدخول.",
+      verificationRequired: true,
+      customerId: session.id,
+    };
   } catch (error) {
     console.error("[registerCustomerAction]", error);
     return {
@@ -553,11 +626,35 @@ export async function registerCustomerAction(
 
 export async function loginCustomerAction(
   cafeSlug: string,
-  email: string,
+  identifier: string,
   password: string
-): Promise<{ ok: boolean; message: string; session?: BarndaksaCustomerSession }> {
+): Promise<CustomerAuthActionResult> {
   try {
-    const session = await loginCustomerByEmail({ cafeSlug, email, password });
+    const result = await loginCustomerByIdentifier({
+      cafeSlug,
+      identifier,
+      password,
+    });
+
+    if (result.verificationRequired && result.customerId) {
+      await sendCustomerPhoneVerificationCode({
+        cafeSlug,
+        customerId: result.customerId,
+        purpose: "login",
+      });
+      return {
+        ok: true,
+        message: "يرجى تأكيد رقم الجوال لإكمال الدخول.",
+        verificationRequired: true,
+        customerId: result.customerId,
+      };
+    }
+
+    if (!result.session) {
+      return { ok: false, message: "تعذر إنشاء جلسة العميل." };
+    }
+
+    const session = result.session;
     await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم تسجيل الدخول", session };
   } catch (error) {
@@ -572,7 +669,74 @@ export async function loginCustomerAction(
   }
 }
 
-export async function getCustomerSessionAction(cafeSlug: string) {
+export async function getCustomerPhoneVerificationStateAction(
+  cafeSlug: string,
+  customerId: string,
+): Promise<CustomerPhoneStateActionResult> {
+  try {
+    return await getCustomerPhoneVerificationState({ cafeSlug, customerId });
+  } catch (error) {
+    console.error("[getCustomerPhoneVerificationStateAction]", {
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    return {
+      ok: false as const,
+      message: "تعذر تحميل حالة التحقق.",
+    };
+  }
+}
+
+export async function resendCustomerPhoneCodeAction(
+  cafeSlug: string,
+  customerId: string,
+): Promise<SendCustomerPhoneVerificationResult> {
+  try {
+    return await sendCustomerPhoneVerificationCode({
+      cafeSlug,
+      customerId,
+      purpose: "signup",
+    });
+  } catch (error) {
+    console.error("[resendCustomerPhoneCodeAction]", {
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    return {
+      ok: false as const,
+      code: "send_failed" as const,
+      message: "تعذر إرسال كود التحقق الآن.",
+      cooldownSeconds: 0,
+    };
+  }
+}
+
+export async function verifyCustomerPhoneCodeAction(
+  cafeSlug: string,
+  customerId: string,
+  code: string,
+): Promise<VerifyCustomerPhoneActionResult> {
+  try {
+    const result = await verifyCustomerPhoneCode({ cafeSlug, customerId, code });
+    if (!result.ok) {
+      return { ok: false, message: result.message };
+    }
+
+    await createCustomerSessionCookie(cafeSlug, result.session.id);
+    return {
+      ok: true,
+      message: "تم تأكيد رقم الجوال بنجاح.",
+      session: result.session,
+    };
+  } catch (error) {
+    console.error("[verifyCustomerPhoneCodeAction]", {
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    return { ok: false, message: "تعذر تأكيد الكود الآن." };
+  }
+}
+
+export async function getCustomerSessionAction(
+  cafeSlug: string,
+): Promise<BarndaksaCustomerSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
   if (!token) return null;
@@ -582,7 +746,7 @@ export async function getCustomerSessionAction(cafeSlug: string) {
   return mapCustomerProfileToSession(cafeSlug, profile);
 }
 
-export async function logoutCustomerAction(cafeSlug?: string) {
+export async function logoutCustomerAction(cafeSlug?: string): Promise<void> {
   if (!cafeSlug) return;
 
   const cookieStore = await cookies();
@@ -602,7 +766,7 @@ export async function changeCustomerPasswordAction(input: {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}) {
+}): Promise<CustomerPasswordResetActionResult> {
   try {
     const session = await getCustomerSessionAction(input.cafeSlug);
     if (!session) {
@@ -629,7 +793,10 @@ export async function changeCustomerPasswordAction(input: {
   }
 }
 
-export async function requestCustomerPasswordResetAction(cafeSlug: string, email: string) {
+export async function requestCustomerPasswordResetAction(
+  cafeSlug: string,
+  email: string,
+): Promise<CustomerPasswordResetActionResult> {
   const parsedEmail = z.string().trim().email().safeParse(email);
   if (!parsedEmail.success) {
     return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
@@ -677,7 +844,7 @@ export async function resetCustomerPasswordAction(input: {
   token: string;
   newPassword: string;
   confirmPassword: string;
-}) {
+}): Promise<CustomerPasswordResetActionResult> {
   try {
     await resetCustomerPasswordWithToken(input);
     return {

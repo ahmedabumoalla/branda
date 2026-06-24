@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 export type WhatsAppSendInput = {
   to?: string | null;
   body: string;
+  mediaUrls?: string[];
   eventType: string;
   cafeId?: string | null;
   recipientName?: string | null;
@@ -17,11 +18,11 @@ export type WhatsAppSendResult =
       devHint?: string;
     };
 
-function isEnabled() {
+function isEnabled(): boolean {
   return process.env.TWILIO_WHATSAPP_ENABLED === "true";
 }
 
-function normalizePhone(input?: string | null) {
+export function normalizeWhatsAppPhone(input?: string | null): string | null {
   const raw = input?.trim();
   if (!raw) return null;
 
@@ -40,15 +41,15 @@ function normalizePhone(input?: string | null) {
   return `+${digits}`;
 }
 
-function maskPhone(input?: string | null) {
-  const normalized = normalizePhone(input);
+export function maskWhatsAppPhone(input?: string | null): string | undefined {
+  const normalized = normalizeWhatsAppPhone(input);
   if (!normalized) return undefined;
   const visibleEnd = normalized.slice(-4);
   const visibleStart = normalized.slice(0, 5);
   return `${visibleStart}***${visibleEnd}`;
 }
 
-function safeReason(error: unknown) {
+function safeReason(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message.slice(0, 140);
   }
@@ -59,13 +60,28 @@ function logWhatsAppFailure(
   input: WhatsAppSendInput,
   reason: string,
   normalizedTo?: string | null,
-) {
+): void {
   console.warn("[whatsapp] failed to send", {
     eventType: input.eventType,
     cafeId: input.cafeId ?? null,
     reason,
-    to: maskPhone(normalizedTo ?? input.to),
+    to: maskWhatsAppPhone(normalizedTo ?? input.to),
   });
+}
+
+function safeMediaUrls(urls?: string[]): string[] {
+  return (urls ?? [])
+    .map((url) => url.trim())
+    .filter((url) => {
+      if (!url.startsWith("https://")) return false;
+      try {
+        const parsed = new URL(url);
+        return parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1";
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 10);
 }
 
 // Twilio Sandbox note: during development the recipient number must join the
@@ -77,7 +93,7 @@ export async function sendWhatsAppMessage(
     return { ok: false, skipped: true, reason: "disabled" };
   }
 
-  const normalizedTo = normalizePhone(input.to);
+  const normalizedTo = normalizeWhatsAppPhone(input.to);
   if (!normalizedTo) {
     return { ok: false, skipped: true, reason: "invalid_recipient" };
   }
@@ -93,6 +109,15 @@ export async function sendWhatsAppMessage(
   }
 
   try {
+    const body = new URLSearchParams({
+      From: from,
+      To: `whatsapp:${normalizedTo}`,
+      Body: input.body,
+    });
+    for (const mediaUrl of safeMediaUrls(input.mediaUrls)) {
+      body.append("MediaUrl", mediaUrl);
+    }
+
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
         accountSid,
@@ -105,11 +130,7 @@ export async function sendWhatsAppMessage(
           ).toString("base64")}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          From: from,
-          To: `whatsapp:${normalizedTo}`,
-          Body: input.body,
-        }).toString(),
+        body: body.toString(),
       },
     );
 
@@ -138,4 +159,30 @@ export async function sendWhatsAppMessage(
     logWhatsAppFailure(input, reason, normalizedTo);
     return { ok: false, reason };
   }
+}
+
+export async function sendWhatsAppOtp(input: {
+  to?: string | null;
+  code: string;
+  customerName?: string | null;
+  brandName?: string | null;
+  cafeId?: string | null;
+}): Promise<WhatsAppSendResult> {
+  const customerName = input.customerName?.trim() || "عميلنا العزيز";
+  const brandName = input.brandName?.trim() || "برنداكسه";
+
+  return sendWhatsAppMessage({
+    to: input.to,
+    body: [
+      `مرحبا ${customerName}`,
+      `كود تأكيد رقم جوالك في ${brandName} هو:`,
+      input.code,
+      "",
+      "صالح لمدة 10 دقائق.",
+      "لا تشارك هذا الكود مع أي شخص.",
+    ].join("\n"),
+    eventType: "customer_phone_otp",
+    cafeId: input.cafeId,
+    recipientName: customerName,
+  });
 }

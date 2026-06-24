@@ -12,7 +12,69 @@ import {
 } from "@/lib/email/resend";
 import { createNotification } from "@/lib/data/notifications";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
-import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
+import {
+  normalizeWhatsAppPhone,
+  sendWhatsAppMessage,
+} from "@/lib/notifications/whatsapp";
+import {
+  resolvePublishedStoragePathToUrl,
+  storageBucketForProduct,
+} from "@/lib/storage/resolve-storage-url";
+
+type DbRow = Record<string, unknown>;
+
+type OrderRow = DbRow & {
+  id: string;
+  cafe_id?: string | null;
+};
+
+type OrderItemRow = DbRow & {
+  id?: string | null;
+  order_id?: string | null;
+  product_id?: string | null;
+  name?: string | null;
+  quantity?: number | null;
+  unit_price?: number | null;
+  notes?: string | null;
+};
+
+type ProductMediaRow = DbRow & {
+  id?: string | null;
+  description?: string | null;
+  legacy_category?: string | null;
+  category_id?: string | null;
+  image_url?: string | null;
+  image_storage_path?: string | null;
+};
+
+type CategoryRow = DbRow & {
+  id?: string | null;
+  name?: string | null;
+};
+
+type WhatsAppOrderRow = OrderRow & {
+  customer_id?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  total?: number | null;
+  created_at?: string | null;
+  fulfillment_type?: string | null;
+  cafes?: DbRow | DbRow[] | null;
+};
+
+type WhatsAppCustomerRow = DbRow & {
+  phone?: string | null;
+  phone_normalized?: string | null;
+  phone_verified_at?: string | null;
+  phone_verification_required?: boolean | null;
+};
+
+export type CreatePickupOrderResult = {
+  orderId: string;
+  total: number;
+  loyaltyPointsEarned: number;
+};
 
 export async function getOwnerOrders(): Promise<CafeOrder[]> {
   const cafe = await requireOwnerCafeContext();
@@ -28,39 +90,133 @@ export async function getOwnerOrders(): Promise<CafeOrder[]> {
   if (error) throw error;
   if (!orders?.length) return [];
 
-  const orderIds = orders.map((o) => o.id);
+  const orderRows = orders as OrderRow[];
+  const orderIds = orderRows.map((o) => o.id);
   const { data: items } = await supabase
     .from("order_items")
     .select("*")
     .in("order_id", orderIds);
 
-  const itemsByOrder = new Map<string, Record<string, unknown>[]>();
-  for (const item of items ?? []) {
-    const list = itemsByOrder.get(item.order_id) ?? [];
+  const itemRows = (items ?? []) as OrderItemRow[];
+  const itemsByOrder = new Map<string, DbRow[]>();
+  for (const item of itemRows) {
+    const orderId = String(item.order_id ?? "");
+    const list = itemsByOrder.get(orderId) ?? [];
     list.push(item);
-    itemsByOrder.set(item.order_id, list);
+    itemsByOrder.set(orderId, list);
   }
 
-  return orders.map((o) =>
+  return orderRows.map((o) =>
     mapDbOrderToCafeOrder(cafe.slug, o, itemsByOrder.get(o.id) ?? []),
   );
 }
 
-function shortOrderCode(orderId: string) {
+function shortOrderCode(orderId: string): string {
   return orderId ? orderId.slice(0, 8).toUpperCase() : "-";
 }
 
-function orderDisplayName(items?: Array<Record<string, unknown>>) {
+function orderDisplayName(items?: DbRow[]): string {
   if (!items?.length) return "طلب";
   const firstName = String(items[0]?.name ?? "طلب");
   return items.length > 1 ? `${firstName} + ${items.length - 1}` : firstName;
+}
+
+function formatDatePart(value: unknown, part: "date" | "time"): string {
+  const date = value ? new Date(String(value)) : new Date();
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+    timeZone: "Asia/Riyadh",
+    ...(part === "date"
+      ? { year: "numeric", month: "long", day: "numeric" }
+      : { hour: "2-digit", minute: "2-digit" }),
+  }).format(date);
+}
+
+function money(value: unknown): string {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+}
+
+function isPublicHttpsUrl(value: unknown): boolean {
+  if (typeof value !== "string" || !value.startsWith("https://")) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname !== "localhost" && url.hostname !== "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+async function getProductMediaUrl(product?: ProductMediaRow): Promise<string | undefined> {
+  if (!product) return undefined;
+  if (isPublicHttpsUrl(product.image_url)) return String(product.image_url);
+  return resolvePublishedStoragePathToUrl(
+    storageBucketForProduct(),
+    typeof product.image_storage_path === "string"
+      ? product.image_storage_path
+      : undefined,
+  );
+}
+
+function buildAcceptedOrderWhatsApp(input: {
+  order: DbRow;
+  items: OrderItemRow[];
+  productsById: Map<string, ProductMediaRow>;
+  categoriesById: Map<string, string>;
+  cafeName: string;
+}): string {
+  const order = input.order;
+  const itemsText = input.items
+    .map((item, index) => {
+      const product = input.productsById.get(String(item.product_id ?? ""));
+      const categoryId = product?.category_id ? String(product.category_id) : "";
+      const category =
+        (categoryId && input.categoriesById.get(categoryId)) ||
+        String(product?.legacy_category ?? "").trim();
+      const description = String(product?.description ?? "").trim();
+      const quantity = Number(item.quantity ?? 0);
+      const unitPrice = Number(item.unit_price ?? 0);
+      const lineTotal = quantity * unitPrice;
+      const notes = String(item.notes ?? "").trim();
+      return [
+        `${index + 1}. ${String(item.name ?? "منتج")}`,
+        description ? `   الوصف: ${description}` : "",
+        category ? `   التصنيف: ${category}` : "",
+        `   الكمية: ${quantity}`,
+        `   السعر الفردي: ${money(unitPrice)} ريال`,
+        `   الإجمالي الجزئي: ${money(lineTotal)} ريال`,
+        notes ? `   الملاحظات/الخيارات: ${notes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n\n");
+
+  return [
+    `مرحبا ${String(order.customer_name ?? "عميلنا العزيز")}`,
+    `يسعدنا في ${input.cafeName} تأكيد قبول طلبك بنجاح ✅`,
+    "تمت مراجعة الطلب واعتماده ونعمل الآن على تجهيزه بكل عناية.",
+    "",
+    "بيانات الطلب:",
+    `رقم الطلب: ${shortOrderCode(String(order.id ?? ""))}`,
+    `تاريخ الطلب: ${formatDatePart(order.created_at, "date")}`,
+    `وقت الطلب: ${formatDatePart(order.created_at, "time")}`,
+    `نوع الطلب: ${String(order.fulfillment_type ?? "pickup") === "pickup" ? "استلام" : String(order.fulfillment_type ?? "طلب")}`,
+    "",
+    "محتويات الطلب:",
+    itemsText || orderDisplayName(input.items),
+    "",
+    `الإجمالي النهائي: ${money(order.total)} ريال`,
+    "",
+    `شكرا لاختيارك ${input.cafeName} ونتطلع لأن تكون تجربتك مميزة 🌷`,
+  ].join("\n");
 }
 
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   rejectionReason?: string,
-) {
+): Promise<void> {
   await requireOwnerCafeContext();
   const dbStatus = mapOrderStatusToDb(status);
   if (dbStatus !== "accepted" && dbStatus !== "rejected") {
@@ -76,18 +232,61 @@ export async function updateOrderStatus(
 
   if (error) throw error;
 
-  const { data: whatsappOrder } = await supabase
+  const { data: whatsappOrderData } = await supabase
     .from("orders")
     .select(
-      "id,cafe_id,customer_id,customer_name,customer_phone,customer_email,branch_name,total,status,rejection_reason,cafes(name,slug,business_category)",
+      "id,cafe_id,customer_id,customer_name,customer_phone,customer_email,branch_name,total,status,rejection_reason,created_at,fulfillment_type,cafes(name,slug,business_category)",
     )
     .eq("id", orderId)
     .maybeSingle();
+  const whatsappOrder = whatsappOrderData as WhatsAppOrderRow | null;
 
-  const { data: whatsappOrderItems } = await supabase
+  const { data: whatsappOrderItemsData } = await supabase
     .from("order_items")
-    .select("name,quantity")
+    .select("id,product_id,name,quantity,unit_price,notes")
     .eq("order_id", orderId);
+  const whatsappOrderItems = (whatsappOrderItemsData ?? []) as OrderItemRow[];
+
+  const { data: whatsappCustomerProfileData } = whatsappOrder?.customer_id
+    ? await supabase
+        .from("customer_profiles")
+        .select("phone, phone_normalized, phone_verified_at, phone_verification_required")
+        .eq("id", String(whatsappOrder.customer_id))
+        .maybeSingle()
+    : { data: null };
+  const whatsappCustomerProfile = whatsappCustomerProfileData as WhatsAppCustomerRow | null;
+
+  const productIds = Array.from(
+    new Set(
+      (whatsappOrderItems ?? [])
+        .map((item) => String(item.product_id ?? ""))
+        .filter(Boolean),
+    ),
+  );
+
+  const { data: whatsappProductsData } = productIds.length
+    ? await supabase
+        .from("menu_products")
+        .select("id,description,legacy_category,category_id,image_url,image_storage_path")
+        .in("id", productIds)
+    : { data: [] };
+  const whatsappProducts = (whatsappProductsData ?? []) as ProductMediaRow[];
+
+  const categoryIds = Array.from(
+    new Set(
+      (whatsappProducts ?? [])
+        .map((product) => String(product.category_id ?? ""))
+        .filter(Boolean),
+    ),
+  );
+
+  const { data: whatsappCategoriesData } = categoryIds.length
+    ? await supabase
+        .from("menu_categories")
+        .select("id,name")
+        .in("id", categoryIds)
+    : { data: [] };
+  const whatsappCategories = (whatsappCategoriesData ?? []) as CategoryRow[];
 
   const whatsappCafeRaw = Array.isArray(whatsappOrder?.cafes)
     ? whatsappOrder?.cafes[0]
@@ -99,23 +298,56 @@ export async function updateOrderStatus(
   const whatsappCafeName = String(whatsappCafe?.name ?? "برنداكسه");
   const isEventCafe =
     String(whatsappCafe?.business_category ?? "") === "events_conferences";
-  const whatsappCustomerPhone = whatsappOrder?.customer_phone
-    ? String(whatsappOrder.customer_phone)
-    : undefined;
-  if (whatsappCustomerPhone) {
-    const whatsappOrderName = orderDisplayName(whatsappOrderItems ?? undefined);
+  const verifiedWhatsAppPhone =
+    whatsappCustomerProfile?.phone_verified_at ||
+    whatsappCustomerProfile?.phone_verification_required === false
+      ? normalizeWhatsAppPhone(
+          String(
+            whatsappCustomerProfile?.phone_normalized ??
+              whatsappCustomerProfile?.phone ??
+              whatsappOrder?.customer_phone ??
+              "",
+          ),
+        )
+      : null;
+
+  if (verifiedWhatsAppPhone) {
+    const productRows = whatsappProducts;
+    const categoryRows = whatsappCategories;
+    const productsById = new Map(
+      productRows.map((product) => [
+        String(product.id),
+        product,
+      ]),
+    );
+    const categoriesById = new Map(
+      categoryRows.map((category) => [
+        String(category.id),
+        String(category.name ?? ""),
+      ]),
+    );
+    const firstProduct = productIds.length
+      ? productsById.get(productIds[0])
+      : undefined;
+    const mediaUrl =
+      dbStatus === "accepted" ? await getProductMediaUrl(firstProduct) : undefined;
     const whatsappBody =
       dbStatus === "accepted"
-        ? isEventCafe
-          ? `تم تأكيد تذكرتك لدى ${whatsappCafeName}\nالتذكرة: ${whatsappOrderName}\nرقم التذكرة: ${shortOrderCode(orderId)}`
-          : `تم قبول طلبك من ${whatsappCafeName}\nالطلب: ${whatsappOrderName}\nرقم الطلب: ${shortOrderCode(orderId)}`
-        : `تم رفض طلبك من ${whatsappCafeName}\nالطلب: ${whatsappOrderName}${
-            rejectionReason ? `\nالسبب إن وجد: ${rejectionReason}` : ""
-          }`;
+        ? buildAcceptedOrderWhatsApp({
+            order: whatsappOrder ?? {},
+            items: whatsappOrderItems,
+            productsById,
+            categoriesById,
+            cafeName: whatsappCafeName,
+          })
+        : `تم رفض طلبك من ${whatsappCafeName}\nالطلب: ${orderDisplayName(
+            whatsappOrderItems ?? undefined,
+          )}${rejectionReason ? `\nالسبب إن وجد: ${rejectionReason}` : ""}`;
 
     await sendWhatsAppMessage({
-      to: whatsappCustomerPhone,
+      to: verifiedWhatsAppPhone,
       body: whatsappBody,
+      mediaUrls: mediaUrl ? [mediaUrl] : undefined,
       eventType:
         dbStatus === "accepted" && isEventCafe
           ? "event_ticket_order_accepted"
@@ -178,7 +410,7 @@ const createOrderSchema = z.object({
 /** Creates order with server-verified customer session and database-priced items. */
 export async function createPickupOrder(
   input: z.infer<typeof createOrderSchema>,
-) {
+): Promise<CreatePickupOrderResult> {
   const parsed = createOrderSchema.parse(input);
   const cafe = await getCafeBySlug(parsed.cafeSlug);
   if (!cafe) throw new Error("Cafe not found");

@@ -26,7 +26,10 @@ import {
   storageBucketForLogo,
 } from "@/lib/storage/resolve-storage-url";
 import { createNotification } from "@/lib/data/notifications";
-import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
+import {
+  normalizeWhatsAppPhone,
+  sendWhatsAppMessage,
+} from "@/lib/notifications/whatsapp";
 
 export type AdminReservationMonitorItem = CafeReservation & {
   cafeId: string;
@@ -39,6 +42,9 @@ type ReservationEmailCustomer = {
   email?: string;
   fullName?: string;
   phone?: string;
+  phoneNormalized?: string;
+  phoneVerifiedAt?: string;
+  phoneVerificationRequired?: boolean;
 };
 
 type ReservationEmailBrand = {
@@ -78,24 +84,74 @@ type ReservationEmailDetails = {
   actionLabel?: string;
 };
 
-function cleanText(value: unknown, fallback = "") {
+type DbRow = Record<string, unknown>;
+
+type ReservationRow = DbRow & {
+  id?: string | null;
+  cafe_id?: string | null;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  phone?: string | null;
+  event_type?: string | null;
+  reservation_date?: string | null;
+  reservation_time?: string | null;
+  reservation_code?: string | null;
+  branch_name?: string | null;
+  status?: string | null;
+};
+
+type AdminReservationRow = ReservationRow & {
+  cafes?: DbRow | DbRow[] | null;
+};
+
+type ReservationBrandContactRow = {
+  owner_email?: string | null;
+  owner_name?: string | null;
+  owner_phone?: string | null;
+  logo_url?: string | null;
+  logo_storage_path?: string | null;
+};
+
+type ReservationCustomerContactRow = {
+  email?: string | null;
+  full_name?: string | null;
+  phone?: string | null;
+  phone_normalized?: string | null;
+  phone_verified_at?: string | null;
+  phone_verification_required?: boolean | null;
+};
+
+type ReservationBranchRow = {
+  address?: string | null;
+};
+
+export type ConfirmOwnerReservationCodeResult = {
+  ok: true;
+  reservationId: string;
+  customerName: string;
+  eventType: string;
+  date: string;
+  time: string;
+};
+
+function cleanText(value: unknown, fallback = ""): string {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
   return text || fallback;
 }
 
-function cleanEmail(value: unknown) {
+function cleanEmail(value: unknown): string | undefined {
   const email = cleanText(value).toLowerCase();
   return email.includes("@") ? email : undefined;
 }
 
-function reservationDateTime(row: Record<string, unknown>) {
+function reservationDateTime(row: DbRow): string {
   return [cleanText(row.reservation_date), cleanText(row.reservation_time)]
     .filter(Boolean)
     .join(" ") || "-";
 }
 
-function appBaseUrl() {
+function appBaseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -103,16 +159,16 @@ function appBaseUrl() {
   ).replace(/\/+$/, "");
 }
 
-function confirmedReservationsUrl(slug: string) {
+function confirmedReservationsUrl(slug: string): string {
   return `${appBaseUrl()}/c/${encodeURIComponent(slug)}/reserve?view=my-reservations&status=accepted`;
 }
 
-function htmlRow(label: string, value: unknown) {
+function htmlRow(label: string, value: unknown): string {
   const text = cleanText(value, "-");
   return `<tr><td style="padding:10px 12px;color:#806A5E;font-weight:800;border-bottom:1px solid #E7D7C6;white-space:nowrap">${escapeEmailHtml(label)}</td><td style="padding:10px 12px;color:#311912;font-weight:900;border-bottom:1px solid #E7D7C6">${escapeEmailHtml(text)}</td></tr>`;
 }
 
-function buildReservationEmailHtml(details: ReservationEmailDetails) {
+function buildReservationEmailHtml(details: ReservationEmailDetails): string {
   const logoHtml = details.logoUrl
     ? `<img src="${escapeEmailHtml(details.logoUrl)}" alt="${escapeEmailHtml(details.cafeName)}" style="width:64px;height:64px;border-radius:18px;background:#FCF8F3;object-fit:contain;padding:8px;margin-bottom:12px" />`
     : `<div style="width:64px;height:64px;border-radius:18px;background:#FCF8F3;color:#4A281D;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;margin-bottom:12px">${escapeEmailHtml(details.cafeName.slice(0, 1) || "B")}</div>`;
@@ -156,7 +212,7 @@ function buildReservationEmailHtml(details: ReservationEmailDetails) {
   </div>`;
 }
 
-function buildReservationEmailText(details: ReservationEmailDetails) {
+function buildReservationEmailText(details: ReservationEmailDetails): string {
   return [
     details.title,
     details.intro,
@@ -183,7 +239,7 @@ async function sendReservationEmailSafely(input: {
   subject: string;
   details: ReservationEmailDetails;
   replyTo?: string;
-}) {
+}): Promise<void> {
   if (!input.to || !isBarndaksaEmailConfigured()) return;
   await sendBarndaksaEmail({
     to: input.to,
@@ -206,18 +262,19 @@ async function getReservationBrandContact(
     .eq("cafe_id", cafeId)
     .maybeSingle();
 
+  const row = data as ReservationBrandContactRow | null;
   const logoUrl =
-    data?.logo_storage_path
+    row?.logo_storage_path
       ? await resolvePublishedStoragePathToUrl(
           storageBucketForLogo(),
-          String(data.logo_storage_path),
+          String(row.logo_storage_path),
         )
-      : cleanText(data?.logo_url);
+      : cleanText(row?.logo_url);
 
   return {
-    email: cleanEmail(data?.owner_email),
-    ownerName: cleanText(data?.owner_name),
-    ownerPhone: cleanText(data?.owner_phone),
+    email: cleanEmail(row?.owner_email),
+    ownerName: cleanText(row?.owner_name),
+    ownerPhone: cleanText(row?.owner_phone),
     logoUrl: logoUrl || undefined,
   };
 }
@@ -228,20 +285,27 @@ async function getReservationCustomerContact(
 ): Promise<ReservationEmailCustomer> {
   const { data } = await supabase
     .from("customer_profiles")
-    .select("email, full_name, phone")
+    .select("email, full_name, phone, phone_normalized, phone_verified_at, phone_verification_required")
     .eq("id", customerId)
     .maybeSingle();
+  const row = data as ReservationCustomerContactRow | null;
 
   return {
-    email: cleanEmail(data?.email),
-    fullName: cleanText(data?.full_name),
-    phone: cleanText(data?.phone),
+    email: cleanEmail(row?.email),
+    fullName: cleanText(row?.full_name),
+    phone: cleanText(row?.phone),
+    phoneNormalized: cleanText(row?.phone_normalized),
+    phoneVerifiedAt: cleanText(row?.phone_verified_at),
+    phoneVerificationRequired:
+      typeof row?.phone_verification_required === "boolean"
+        ? row.phone_verification_required
+        : undefined,
   };
 }
 
 function rowReservationDetails(
   cafeName: string,
-  row: Record<string, unknown>,
+  row: DbRow,
   overrides: Partial<ReservationEmailDetails> = {},
 ): ReservationEmailDetails {
   return {
@@ -263,6 +327,49 @@ function rowReservationDetails(
     reservationCode:
       overrides.reservationCode ?? cleanText(row.reservation_code),
   };
+}
+
+function buildAcceptedReservationWhatsApp(input: {
+  cafeName: string;
+  cafeSlug: string;
+  row: DbRow;
+  customer: ReservationEmailCustomer;
+  branchAddress?: string;
+  message?: string | null;
+}): string {
+  const row = input.row;
+  const reservationCode = cleanText(
+    row.reservation_code,
+    String(row.id ?? "").slice(0, 8).toUpperCase(),
+  );
+  const reservationLink = confirmedReservationsUrl(input.cafeSlug);
+  const notes = cleanText(row.notes, "-");
+  const duration = cleanText(row.duration_minutes);
+
+  return [
+    `مرحبا ${input.customer.fullName || cleanText(row.customer_name, "عميلنا العزيز")}`,
+    `يسعدنا في ${input.cafeName} تأكيد قبول حجزك بنجاح ✅`,
+    "نشكرك لثقتك ونتطلع لاستقبالك.",
+    "",
+    "بيانات الحجز:",
+    `رقم الحجز: ${reservationCode}`,
+    `نوع الحجز: ${cleanText(row.event_type, "حجز")}`,
+    `التاريخ: ${cleanText(row.reservation_date, "-")}`,
+    `الوقت: ${cleanText(row.reservation_time, "-")}`,
+    `عدد الأشخاص: ${cleanText(row.guests, "-")}`,
+    duration ? `المدة: ${duration} دقيقة` : "",
+    `الفرع: ${cleanText(row.branch_name, "-")}`,
+    `العنوان: ${input.branchAddress || "-"}`,
+    "",
+    "ملاحظات الحجز:",
+    notes,
+    input.message ? `\nرسالة العلامة:\n${input.message}` : "",
+    "",
+    "يرجى إبراز رمز الحجز QR عند الوصول لتسهيل إجراءات الاستقبال 🌷",
+    `رابط الحجز والـ QR: ${reservationLink}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export async function getOwnerReservations(): Promise<CafeReservation[]> {
@@ -293,8 +400,9 @@ export async function getAdminReservationMonitor(): Promise<
 
   if (error) throw error;
   const now = Date.now();
-  return (data ?? []).map((row) => {
-    const cafe = row.cafes as Record<string, unknown> | null;
+  return ((data ?? []) as AdminReservationRow[]).map((row) => {
+    const cafeRaw = Array.isArray(row.cafes) ? row.cafes[0] : row.cafes;
+    const cafe = cafeRaw as DbRow | null;
     const reservation = mapDbReservationToCafeReservation(
       row as Record<string, unknown>,
     );
@@ -321,7 +429,7 @@ export async function updateReservationStatus(
   status: ReservationStatus,
   cafeMessage?: string,
   rejectionReason?: string,
-) {
+): Promise<void> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
@@ -345,12 +453,30 @@ export async function updateReservationStatus(
     .eq("id", reservationId)
     .maybeSingle();
 
-  const reservationRow = (row ?? {}) as Record<string, unknown>;
+  const reservationRow = (row ?? {}) as ReservationRow;
   const customerId = cleanText(reservationRow.customer_id);
   const customer = customerId
     ? await getReservationCustomerContact(supabase, customerId)
     : {};
-  const customerPhone = customer.phone || cleanText(reservationRow.phone);
+  const { data: reservationBranchData } = reservationRow.branch_name
+    ? await supabase
+        .from("branches")
+        .select("address")
+        .eq("cafe_id", cafe.id)
+        .eq("name", String(reservationRow.branch_name))
+        .is("deleted_at", null)
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+  const reservationBranch = reservationBranchData as ReservationBranchRow | null;
+  const customerPhone =
+    customer.phoneVerifiedAt || customer.phoneVerificationRequired === false
+      ? normalizeWhatsAppPhone(
+          customer.phoneNormalized ||
+            customer.phone ||
+            cleanText(reservationRow.phone),
+        )
+      : null;
   if (customerPhone) {
     const reservationCode = cleanText(
       reservationRow.reservation_code,
@@ -369,9 +495,21 @@ export async function updateReservationStatus(
               message ?? "-"
             }\nرقم الحجز: ${reservationCode}`;
 
+    const detailedBody =
+      dbStatus === "accepted"
+        ? buildAcceptedReservationWhatsApp({
+            cafeName: cafe.name,
+            cafeSlug: cafe.slug,
+            row: reservationRow,
+            customer,
+            branchAddress: cleanText(reservationBranch?.address),
+            message,
+          })
+        : body;
+
     await sendWhatsAppMessage({
       to: customerPhone,
-      body,
+      body: detailedBody,
       eventType:
         dbStatus === "accepted"
           ? "reservation_accepted"
@@ -448,7 +586,9 @@ export async function updateReservationStatus(
   });
 }
 
-export async function confirmOwnerReservationCode(codeInput: string) {
+export async function confirmOwnerReservationCode(
+  codeInput: string,
+): Promise<ConfirmOwnerReservationCodeResult> {
   const cafe = await requireOwnerCafeContext();
   const code =
     parseBarndaksaQrPayload(codeInput, "reservation") ??
@@ -467,7 +607,10 @@ export async function confirmOwnerReservationCode(codeInput: string) {
   if (error) throw error;
   if (!reservation) throw new Error("كود الحجز غير صالح أو الحجز غير مقبول");
 
-  const row = reservation as Record<string, unknown>;
+  const row = reservation as ReservationRow & {
+    customer_profiles?: DbRow | DbRow[] | null;
+    reservation_code_used_at?: string | null;
+  };
   if (row.reservation_code_used_at)
     throw new Error("تم استخدام كود الحجز مسبقًا");
 
@@ -566,7 +709,7 @@ const createReservationSchema = z.object({
 
 export async function createReservation(
   input: z.infer<typeof createReservationSchema>,
-) {
+): Promise<string> {
   const parsed = createReservationSchema.parse(input);
   await assertCustomerIdMatchesSession(parsed.cafeSlug, parsed.customerId);
   const cafe = await getCafeBySlug(parsed.cafeSlug);

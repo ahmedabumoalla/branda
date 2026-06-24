@@ -22,6 +22,67 @@ import {
   isBarndaksaEmailConfigured,
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
+import { normalizeWhatsAppPhone } from "@/lib/notifications/whatsapp";
+import type { CafeOrder } from "@/lib/mock/orders";
+
+export type CustomerProfileRow = Record<string, unknown> & {
+  id: string;
+  cafe_id?: string | null;
+  user_id?: string | null;
+  full_name?: string | null;
+  phone?: string | null;
+  phone_normalized?: string | null;
+  phone_verified_at?: string | null;
+  phone_verification_required?: boolean | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  avatar_storage_path?: string | null;
+  created_at?: string | null;
+  password_hash?: string | null;
+  session_token_hash?: string | null;
+  session_expires_at?: string | null;
+};
+
+type CustomerSessionLookup =
+  | {
+      hasCustomerSession: false;
+      profile: null;
+      reason: "missing_customer_session";
+    }
+  | {
+      hasCustomerSession: true;
+      profile: null;
+      reason: "invalid_customer_session";
+    }
+  | {
+      hasCustomerSession: true;
+      profile: CustomerProfileRow;
+      reason: null;
+    };
+
+type RequiredCustomerProfileSession = {
+  user: { id: string };
+  profile: CustomerProfileRow;
+};
+
+export type CustomerIdentifierLoginResult =
+  | {
+      session: BarndaksaCustomerSession;
+      verificationRequired: false;
+      customerId?: never;
+    }
+  | {
+      session: null;
+      verificationRequired: true;
+      customerId: string;
+    };
+
+type CustomerPasswordResetDetails = {
+  token: string;
+  cafeName: string;
+  customerName: string;
+  email: string;
+};
 
 export async function upsertCustomerProfileForUser(
   cafeSlug: string,
@@ -29,7 +90,7 @@ export async function upsertCustomerProfileForUser(
   userId: string,
 
   profile: { fullName: string; phone: string; email?: string },
-) {
+): Promise<CustomerProfileRow> {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) throw new Error("Cafe not found");
@@ -62,7 +123,7 @@ export async function upsertCustomerProfileForUser(
       .eq("id", existingByUser.id)
       .single();
     if (fetchError) throw fetchError;
-    return data;
+    return data as CustomerProfileRow;
   }
 
   const { data, error } = await supabase.rpc("create_customer_profile", {
@@ -86,13 +147,13 @@ export async function upsertCustomerProfileForUser(
     .single();
 
   if (fetchError) throw fetchError;
-  return created;
+  return created as CustomerProfileRow;
 }
 
 export async function getCustomerProfileByUser(
   cafeSlug: string,
   userId: string,
-) {
+): Promise<CustomerProfileRow | null> {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return null;
@@ -111,7 +172,7 @@ export async function getCustomerProfileByUser(
 
     .maybeSingle();
 
-  return data;
+  return (data ?? null) as CustomerProfileRow | null;
 }
 
 function normalizeSlugForCookie(slug: string) {
@@ -122,14 +183,18 @@ function getCustomerSessionCookieName(slug: string) {
   return `barndaksa_customer_session_${normalizeSlugForCookie(slug)}`;
 }
 
-export async function getCustomerProfileForActiveSession(cafeSlug: string) {
+export async function getCustomerProfileForActiveSession(
+  cafeSlug: string,
+): Promise<CustomerProfileRow | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
   if (!token) return null;
   return getCustomerProfileBySessionToken(cafeSlug, token);
 }
 
-export async function resolveCustomerProfileForOrderSession(cafeSlug: string) {
+export async function resolveCustomerProfileForOrderSession(
+  cafeSlug: string,
+): Promise<CustomerSessionLookup> {
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
 
@@ -160,7 +225,7 @@ export async function resolveCustomerProfileForOrderSession(cafeSlug: string) {
 export async function requireCustomerProfileForOrderSession(
   cafeSlug: string,
   expectedCustomerId?: string,
-) {
+): Promise<CustomerProfileRow> {
   const session = await resolveCustomerProfileForOrderSession(cafeSlug);
   if (!session.hasCustomerSession) throw new Error("Unauthorized");
   if (!session.profile) throw new Error("Invalid customer session");
@@ -169,11 +234,16 @@ export async function requireCustomerProfileForOrderSession(
   if (expectedCustomerId && (profile.id as string) !== expectedCustomerId) {
     throw new Error("Forbidden: customer mismatch");
   }
+  if (requiresPhoneVerification(profile)) {
+    throw new Error("Phone verification required");
+  }
   return profile;
 }
 
 /** Requires authenticated Supabase session linked to a customer profile for this cafe */
-export async function requireCustomerProfileForSession(cafeSlug: string) {
+export async function requireCustomerProfileForSession(
+  cafeSlug: string,
+): Promise<RequiredCustomerProfileSession> {
   const sessionProfile = await getCustomerProfileForActiveSession(cafeSlug);
   if (sessionProfile) {
     return {
@@ -196,10 +266,13 @@ export async function requireCustomerProfileForSession(cafeSlug: string) {
 export async function assertCustomerIdMatchesSession(
   cafeSlug: string,
   customerId: string,
-) {
+): Promise<CustomerProfileRow> {
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
   if ((profile.id as string) !== customerId) {
     throw new Error("Forbidden: customer mismatch");
+  }
+  if (requiresPhoneVerification(profile)) {
+    throw new Error("Phone verification required");
   }
   return profile;
 }
@@ -207,7 +280,7 @@ export async function assertCustomerIdMatchesSession(
 export function mapCustomerProfileToSession(
   slug: string,
 
-  row: Record<string, unknown>,
+  row: CustomerProfileRow | Record<string, unknown>,
 ): BarndaksaCustomerSession {
   return {
     id: row.id as string,
@@ -217,6 +290,15 @@ export function mapCustomerProfileToSession(
     fullName: row.full_name as string,
 
     phone: row.phone as string,
+
+    phoneNormalized: (row.phone_normalized as string) ?? undefined,
+
+    phoneVerifiedAt: (row.phone_verified_at as string) ?? undefined,
+
+    phoneVerificationRequired:
+      typeof row.phone_verification_required === "boolean"
+        ? row.phone_verification_required
+        : undefined,
 
     email: (row.email as string) ?? undefined,
 
@@ -255,6 +337,13 @@ function normalizeCustomerEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function requiresPhoneVerification(profile: Record<string, unknown>) {
+  return (
+    profile.phone_verification_required !== false &&
+    !profile.phone_verified_at
+  );
+}
+
 function hashSecret(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -279,7 +368,7 @@ async function verifyLegacySupabaseCustomerPassword(
   userId: string | null | undefined,
   email: string,
   password: string,
-) {
+): Promise<boolean> {
   if (!userId) return false;
 
   const verifyClient = createSupabaseJsClient(
@@ -303,7 +392,10 @@ async function verifyLegacySupabaseCustomerPassword(
   return !error && data.user?.id === userId;
 }
 
-async function findCustomerProfileByCafeEmail(cafeId: string, email: string) {
+async function findCustomerProfileByCafeEmail(
+  cafeId: string,
+  email: string,
+): Promise<CustomerProfileRow | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("customer_profiles")
@@ -313,14 +405,49 @@ async function findCustomerProfileByCafeEmail(cafeId: string, email: string) {
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return (data ?? null) as CustomerProfileRow | null;
+}
+
+async function findCustomerProfileByCafePhone(
+  cafeId: string,
+  phone: string,
+): Promise<CustomerProfileRow | null> {
+  const admin = createAdminClient();
+  const normalizedPhone = normalizeWhatsAppPhone(phone);
+  if (!normalizedPhone) return null;
+
+  const { data: normalizedMatch, error: normalizedError } = await admin
+    .from("customer_profiles")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .eq("phone_normalized", normalizedPhone)
+    .maybeSingle();
+
+  if (normalizedError) throw normalizedError;
+  if (normalizedMatch) return normalizedMatch as CustomerProfileRow;
+
+  const legacyDigits = normalizedPhone.replace(/^\+/, "");
+  const localDigits = legacyDigits.startsWith("9665")
+    ? `0${legacyDigits.slice(3)}`
+    : legacyDigits;
+
+  const { data, error } = await admin
+    .from("customer_profiles")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .in("phone", [normalizedPhone, legacyDigits, localDigits])
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as CustomerProfileRow | null;
 }
 
 async function setCustomerPasswordHash(
   profileId: string,
   password: string,
   options: { clearSessions?: boolean } = {},
-) {
+): Promise<void> {
   const admin = createAdminClient();
   const updatePayload: Record<string, string | null> = {
     password_hash: hashCustomerPassword(password),
@@ -346,7 +473,7 @@ export async function persistCustomerSession(
   customerId: string,
   token: string,
   expiresAt: Date,
-) {
+): Promise<void> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("customer_profiles")
@@ -360,7 +487,7 @@ export async function persistCustomerSession(
   if (error) throw error;
 }
 
-export async function clearPersistedCustomerSession(customerId: string) {
+export async function clearPersistedCustomerSession(customerId: string): Promise<void> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("customer_profiles")
@@ -376,7 +503,7 @@ export async function clearPersistedCustomerSession(customerId: string) {
 export async function getCustomerProfileBySessionToken(
   cafeSlug: string,
   token: string,
-) {
+): Promise<CustomerProfileRow | null> {
   const cafe = await getCafeBySlug(cafeSlug);
   if (!cafe) return null;
 
@@ -391,21 +518,24 @@ export async function getCustomerProfileBySessionToken(
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return (data ?? null) as CustomerProfileRow | null;
 }
 
 /** Register customer with a cafe-scoped password hash. */
 
 export async function registerCustomer(
   input: z.infer<typeof customerRegisterSchema>,
-) {
+): Promise<BarndaksaCustomerSession> {
   const parsed = customerRegisterSchema.parse(input);
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
 
   if (!cafe) throw new Error("Cafe not found");
 
-  const normalizedPhone = parsed.phone.replace(/\D/g, "");
+  const normalizedPhone = normalizeWhatsAppPhone(parsed.phone);
+  if (!normalizedPhone) {
+    throw new Error("رقم الجوال غير صالح.");
+  }
 
   const email = normalizeCustomerEmail(parsed.email);
   const admin = createAdminClient();
@@ -420,7 +550,10 @@ export async function registerCustomer(
     .insert({
       cafe_id: cafe.id,
       full_name: parsed.fullName.trim(),
-      phone: normalizedPhone,
+      phone: parsed.phone.replace(/\D/g, ""),
+      phone_normalized: normalizedPhone,
+      phone_verified_at: null,
+      phone_verification_required: true,
       email,
       password_hash: hashCustomerPassword(parsed.password),
       password_updated_at: new Date().toISOString(),
@@ -444,14 +577,14 @@ export async function registerCustomer(
     }).catch(() => undefined);
   }
 
-  return mapCustomerProfileToSession(parsed.cafeSlug, profile);
+  return mapCustomerProfileToSession(parsed.cafeSlug, profile as CustomerProfileRow);
 }
 
 /** Customer login requires cafe + email + password, never email/password alone. */
 
 export async function loginCustomerByEmail(
   input: z.infer<typeof customerLoginSchema>,
-) {
+): Promise<BarndaksaCustomerSession> {
   const parsed = customerLoginSchema.parse(input);
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
@@ -482,13 +615,104 @@ export async function loginCustomerByEmail(
   return mapCustomerProfileToSession(parsed.cafeSlug, existing);
 }
 
+export async function loginCustomerByIdentifier(input: {
+  cafeSlug: string;
+  identifier: string;
+  password: string;
+}): Promise<CustomerIdentifierLoginResult> {
+  const parsed = z
+    .object({
+      cafeSlug: z.string().min(1),
+      identifier: z.string().min(3),
+      password: z.string().min(1),
+    })
+    .parse(input);
+
+  if (parsed.identifier.includes("@")) {
+    const cafe = await getCafeBySlug(parsed.cafeSlug);
+    if (!cafe) throw new Error("Cafe not found");
+
+    const email = normalizeCustomerEmail(parsed.identifier);
+    const profile = await findCustomerProfileByCafeEmail(cafe.id, email);
+
+    if (!profile) {
+      throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة. أنشئ حسابا جديدا أولا.");
+    }
+
+    const passwordHash = profile.password_hash as string | null | undefined;
+    const userId = profile.user_id as string | null | undefined;
+    const passwordOk =
+      verifyCustomerPassword(parsed.password, passwordHash) ||
+      (await verifyLegacySupabaseCustomerPassword(userId, email, parsed.password));
+
+    if (!passwordOk) {
+      throw new Error("بيانات الدخول غير صحيحة");
+    }
+
+    if (!passwordHash) {
+      await setCustomerPasswordHash(profile.id as string, parsed.password);
+    }
+
+    if (requiresPhoneVerification(profile)) {
+      return {
+        session: null,
+        verificationRequired: true as const,
+        customerId: String(profile.id),
+      };
+    }
+
+    return {
+      session: mapCustomerProfileToSession(parsed.cafeSlug, profile),
+      verificationRequired: false as const,
+    };
+  }
+
+  const cafe = await getCafeBySlug(parsed.cafeSlug);
+  if (!cafe) throw new Error("Cafe not found");
+
+  const profile = await findCustomerProfileByCafePhone(cafe.id, parsed.identifier);
+  if (!profile) {
+    throw new Error("لا يوجد حساب بهذا رقم الجوال لدى هذه العلامة.");
+  }
+
+  const email = normalizeCustomerEmail(String(profile.email ?? ""));
+  const passwordHash = profile.password_hash as string | null | undefined;
+  const userId = profile.user_id as string | null | undefined;
+  const passwordOk =
+    verifyCustomerPassword(parsed.password, passwordHash) ||
+    (email
+      ? await verifyLegacySupabaseCustomerPassword(userId, email, parsed.password)
+      : false);
+
+  if (!passwordOk) {
+    throw new Error("بيانات الدخول غير صحيحة");
+  }
+
+  if (!passwordHash) {
+    await setCustomerPasswordHash(profile.id as string, parsed.password);
+  }
+
+  if (requiresPhoneVerification(profile)) {
+    return {
+      session: null,
+      verificationRequired: true as const,
+      customerId: String(profile.id),
+    };
+  }
+
+  return {
+    session: mapCustomerProfileToSession(parsed.cafeSlug, profile),
+    verificationRequired: false as const,
+  };
+}
+
 export async function changeCustomerPassword(input: {
   cafeSlug: string;
   customerId: string;
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}) {
+}): Promise<void> {
   const parsed = z
     .object({
       cafeSlug: z.string().min(1),
@@ -534,7 +758,7 @@ export async function changeCustomerPassword(input: {
 export async function createCustomerPasswordReset(input: {
   cafeSlug: string;
   email: string;
-}) {
+}): Promise<CustomerPasswordResetDetails | null> {
   const parsed = z
     .object({
       cafeSlug: z.string().min(1),
@@ -575,7 +799,7 @@ export async function resetCustomerPasswordWithToken(input: {
   token: string;
   newPassword: string;
   confirmPassword: string;
-}) {
+}): Promise<void> {
   const parsed = z
     .object({
       cafeSlug: z.string().min(1),
@@ -609,7 +833,7 @@ export async function resetCustomerPasswordWithToken(input: {
   });
 }
 
-export async function getCafeCustomers() {
+export async function getCafeCustomers(): Promise<CustomerProfileRow[]> {
   const cafe = await requireOwnerCafeContext();
 
   const supabase = await createClient();
@@ -626,14 +850,14 @@ export async function getCafeCustomers() {
 
   if (error) throw error;
 
-  return data ?? [];
+  return (data ?? []) as CustomerProfileRow[];
 }
 
 export async function getCustomerOrdersForProfile(
   cafeSlug: string,
   customerId: string,
   limit = 5,
-) {
+): Promise<CafeOrder[]> {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
@@ -660,7 +884,7 @@ export async function getCustomerOrdersForProfile(
 
   const { mapDbOrderToCafeOrder } = await import("@/lib/data/mappers");
 
-  return orders.map((o) =>
+  return ((orders ?? []) as Array<Record<string, unknown>>).map((o) =>
     mapDbOrderToCafeOrder(
       cafeSlug,
       o,
@@ -673,7 +897,7 @@ export async function getCustomerReservationsForProfile(
   cafeSlug: string,
   customerId: string,
   limit = 5,
-) {
+): Promise<CafeReservation[]> {
   const cafe = await getCafeBySlug(cafeSlug);
 
   if (!cafe) return [];
@@ -701,7 +925,7 @@ export async function getCustomerReservationsForProfile(
   const { mapDbReservationToCafeReservation } =
     await import("@/lib/data/mappers");
 
-  return data.map(mapDbReservationToCafeReservation);
+  return ((data ?? []) as Array<Record<string, unknown>>).map(mapDbReservationToCafeReservation);
 }
 
 export async function getOwnerCustomersDashboard(): Promise<{

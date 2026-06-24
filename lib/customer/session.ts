@@ -3,6 +3,9 @@ export type BarndaksaCustomerSession = {
   cafeSlug: string;
   fullName: string;
   phone: string;
+  phoneNormalized?: string;
+  phoneVerifiedAt?: string;
+  phoneVerificationRequired?: boolean;
   email?: string;
   avatarUrl?: string;
   avatarAssetId?: string;

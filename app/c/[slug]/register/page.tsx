@@ -112,6 +112,17 @@ function RegisterForm() {
         return;
       }
 
+      if (result.verificationRequired && result.customerId) {
+        const next = safeCustomerNext(rawNext, slug);
+        router.replace(
+          appendPreviewToNextPath(
+            `/c/${slug}/verify-phone?customerId=${encodeURIComponent(result.customerId)}&next=${encodeURIComponent(next)}`,
+            previewThemeId,
+          ),
+        );
+        return;
+      }
+
       const destination = result.session
         ? safeCustomerNext(rawNext, slug)
         : `/c/${slug}/login`;
@@ -157,6 +168,9 @@ function RegisterForm() {
         inputMode="tel"
         autoComplete="tel"
       />
+      <p className="text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
+        سنستخدم رقم الجوال لتأكيد الحساب وإرسال تفاصيل الطلبات والحجوزات.
+      </p>
       <PasswordInput
         experience={experience}
         value={password}
