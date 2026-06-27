@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   BarChart3,
   CalendarDays,
+  CircleDollarSign,
   CreditCard,
   DoorOpen,
   FileText,
@@ -49,6 +50,7 @@ const featureIcons: Record<PlatformFeature, React.ElementType> = {
   loyalty: Star,
   branches: MapPin,
   reports: BarChart3,
+  finance: CircleDollarSign,
   reviews: MessageSquareText,
   marketing: Megaphone,
   experience_reviews: BadgeCheck,
@@ -168,6 +170,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
 
   const visibleLinks = links.filter((link) =>
     link.feature === "cashier" ||
+    link.feature === "finance" ||
     cafeHasFeature(link.feature, { planId: activePlanId, plans })
   );
   const linkTitle = (item: (typeof links)[number]) => {
@@ -277,7 +280,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         {visibleLinks.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans });
+          const locked = item.feature === "finance" ? false : !cafeHasFeature(item.feature, { planId: activePlanId, plans });
           const href = locked ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
 
