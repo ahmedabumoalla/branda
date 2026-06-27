@@ -219,18 +219,12 @@ async function enrichImages(cafeId: string, analysis: MenuImportAnalysis) {
   };
 }
 
-function isIWaiterAnalysis(analysis: MenuImportAnalysis) {
-  return analysis.rawSummary.adapter === "iwaiter";
-}
-
 function skipPreviewImageProcessing(analysis: MenuImportAnalysis) {
-  if (!isIWaiterAnalysis(analysis)) return analysis;
-
   return {
     ...analysis,
     rawSummary: {
       ...analysis.rawSummary,
-      previewImageProcessing: "skipped-for-iwaiter",
+      previewImageProcessing: "skipped-for-url-preview",
       report: analysis.report,
     },
   };
@@ -262,6 +256,9 @@ async function insertAnalysisItems(cafeId: string, jobId: string, analysis: Menu
   }
 
   const status = rows.length ? "ready" : "ready";
+  const emptyResultMessage =
+    analysis.report.notes[0] ||
+    "لم يتم استخراج منتجات واضحة. يمكن إدخال الصفوف يدويًا أو تجربة مصدر آخر.";
   const { error: updateError } = await supabase
     .from("menu_import_jobs")
     .update({
@@ -270,7 +267,7 @@ async function insertAnalysisItems(cafeId: string, jobId: string, analysis: Menu
         ...analysis.rawSummary,
         report: analysis.report,
       },
-      error_message: rows.length ? null : "لم يتم استخراج منتجات واضحة. يمكن إدخال الصفوف يدويًا أو تجربة مصدر آخر.",
+      error_message: rows.length ? null : emptyResultMessage,
     })
     .eq("id", jobId)
     .eq("cafe_id", cafeId);
@@ -308,9 +305,7 @@ export async function createMenuImportFromUrl(sourceUrl: string) {
   const { cafe, job } = await createImportJob("url", trimmedUrl);
   try {
     const analysis = await analyzeMenuUrl(trimmedUrl);
-    const previewAnalysis = isIWaiterAnalysis(analysis)
-      ? skipPreviewImageProcessing(analysis)
-      : await enrichImages(cafe.id, analysis);
+    const previewAnalysis = skipPreviewImageProcessing(analysis);
     await insertAnalysisItems(cafe.id, job.id, previewAnalysis);
     return getMenuImportJob(job.id);
   } catch (error) {
