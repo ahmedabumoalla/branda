@@ -193,6 +193,13 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
 
   if (cafeError) {
     logUpdateNameFailure(cafe.id, "cafes_update_failed");
+    console.warn("[brand-settings:update-name] cafe update error", {
+      cafeId: cafe.id,
+      code: cafeError?.code ?? null,
+      message: cafeError?.message ?? null,
+      details: cafeError?.details ?? null,
+      hint: cafeError?.hint ?? null,
+    });
     throw new Error("تعذر حفظ اسم العلامة.");
   }
 
