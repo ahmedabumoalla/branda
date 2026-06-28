@@ -9,14 +9,16 @@ export async function fetchOwnerSettingsAction() {
   return getOwnerCafeSettings();
 }
 
-function revalidateBrandSettingsSurfaces(slug: string) {
-  const normalizedSlug = slug.trim().toLowerCase();
+function revalidateBrandSettingsSurfaces(slug?: string | null) {
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard");
+
+  const normalizedSlug = slug?.trim().toLowerCase();
+  if (!normalizedSlug) return;
 
   clearServerMemoryCache(`public-cafe:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-layout-meta:${normalizedSlug}`);
-  revalidatePath("/dashboard/settings");
-  revalidatePath("/dashboard");
   revalidatePath(`/c/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/reserve`);
   revalidatePath(`/c/${normalizedSlug}/rewards`);

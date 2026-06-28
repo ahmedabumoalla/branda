@@ -143,6 +143,9 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
       }
 
       const saved = await saveSettingsAction(next);
+      if (saved.cafeName.trim() !== next.cafeName.trim()) {
+        throw new Error("تعذر تأكيد حفظ اسم العلامة الجديد.");
+      }
       setSettings(saved);
       showToast({ type: "success", message: `تم حفظ إعدادات ${copy.casualNoun} بنجاح` });
     } catch (err) {

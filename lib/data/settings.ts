@@ -18,6 +18,27 @@ type PublicSettingsRow = {
   theme_id: string;
 };
 
+const DEFAULT_DOMAIN_STATUS = "غير مربوط";
+
+function buildDefaultOwnerSettings(
+  cafe: Awaited<ReturnType<typeof requireOwnerCafeContext>>
+): CafeSettings {
+  return {
+    cafeSlug: cafe.slug,
+    cafeName: cafe.name,
+    businessCategory: cafe.businessCategory,
+    ownerName: "",
+    ownerEmail: "",
+    ownerPhone: "",
+    description: "",
+    domainStatus: DEFAULT_DOMAIN_STATUS,
+  };
+}
+
+function logSettingsLoadFailure(cafeId: string, reason: string, error?: unknown) {
+  console.warn("[brand-settings:load] fallback", { cafeId, reason, error });
+}
+
 export async function getPublicCafeSettings(slug: string): Promise<CafeSettings | null> {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
@@ -71,19 +92,13 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
     .eq("cafe_id", cafe.id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    logSettingsLoadFailure(cafe.id, "settings_select_failed", error);
+    return buildDefaultOwnerSettings(cafe);
+  }
 
   if (!data) {
-    return {
-      cafeSlug: cafe.slug,
-      cafeName: cafe.name,
-      businessCategory: cafe.businessCategory,
-      ownerName: "",
-      ownerEmail: "",
-      ownerPhone: "",
-      description: "",
-      domainStatus: "غير مربوط",
-    };
+    return buildDefaultOwnerSettings(cafe);
   }
 
   const settings = mapDbSettingsToCafeSettings(cafe.slug, data);
@@ -91,10 +106,14 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
   settings.businessCategory = cafe.businessCategory;
   if (data.logo_storage_path) {
     settings.logoAssetId = data.logo_storage_path as string;
-    settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
-      storageBucketForLogo(),
-      data.logo_storage_path as string
-    );
+    try {
+      settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
+        storageBucketForLogo(),
+        data.logo_storage_path as string
+      );
+    } catch (logoError) {
+      logSettingsLoadFailure(cafe.id, "logo_resolve_failed", logoError);
+    }
   }
   return settings;
 }
@@ -156,24 +175,13 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
     theme_id: parsed.themeId,
   };
 
-  const { data: settingsRow, error: settingsError } = await supabase
-    .from("cafe_settings")
-    .upsert(payload, { onConflict: "cafe_id" })
-    .select("*")
-    .single();
-
-  if (settingsError) {
-    logUpdateNameFailure(cafe.id, "settings_upsert_failed");
-    throw new Error("تعذر حفظ إعدادات العلامة.");
-  }
-
   const { data: cafeRow, error: cafeError } = await supabase
     .from("cafes")
     .update({ name: nextCafeName })
     .eq("id", cafe.id)
     .is("deleted_at", null)
     .select("id, slug, name, business_category")
-    .single();
+    .maybeSingle();
 
   if (cafeError) {
     logUpdateNameFailure(cafe.id, "cafes_update_failed");
@@ -188,6 +196,22 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
   if (String(cafeRow.name ?? "") !== nextCafeName) {
     logUpdateNameFailure(cafe.id, "cafes_update_mismatch");
     throw new Error("تعذر تأكيد حفظ اسم العلامة الجديد.");
+  }
+
+  const { data: settingsRow, error: settingsError } = await supabase
+    .from("cafe_settings")
+    .upsert(payload, { onConflict: "cafe_id" })
+    .select("*")
+    .maybeSingle();
+
+  if (settingsError) {
+    logUpdateNameFailure(cafe.id, "settings_upsert_failed");
+    throw new Error("تعذر حفظ إعدادات العلامة.");
+  }
+
+  if (!settingsRow) {
+    logUpdateNameFailure(cafe.id, "settings_upsert_no_row");
+    throw new Error("تعذر تأكيد حفظ إعدادات العلامة.");
   }
 
   const updated = mapDbSettingsToCafeSettings(String(cafeRow.slug), settingsRow as any);
