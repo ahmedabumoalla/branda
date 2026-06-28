@@ -9,6 +9,7 @@ export type PlatformFeature =
   | "loyalty"
   | "branches"
   | "reports"
+  | "finance"
   | "reviews"
   | "marketing"
   | "experience_reviews"
@@ -138,6 +139,7 @@ export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; hr
   { id: "loyalty", title: "بطاقات الولاء", href: "/dashboard/loyalty" },
   { id: "branches", title: "الفروع", href: "/dashboard/branches" },
   { id: "reports", title: "التقارير", href: "/dashboard/reports" },
+  { id: "finance", title: "Branda Finance", href: "/dashboard/branda-finance" },
   { id: "reviews", title: "الأسئلة والتقييمات", href: "/dashboard/reviews" },
   { id: "marketing", title: "الأدوات التسويقية", href: "/dashboard/marketing" },
   { id: "experience_reviews", title: "مراجعة توثيق التجارب", href: "/dashboard/experience-reviews" },
