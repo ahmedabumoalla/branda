@@ -142,8 +142,8 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         setLogoPreviewUrl(undefined);
       }
 
-      await saveSettingsAction(next);
-      setSettings(next);
+      const saved = await saveSettingsAction(next);
+      setSettings(saved);
       showToast({ type: "success", message: `تم حفظ إعدادات ${copy.casualNoun} بنجاح` });
     } catch (err) {
       showToast({
@@ -315,8 +315,8 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   }
 
   async function persistDomainSettings(next: CafeSettings) {
-    await saveSettingsAction(next);
-    setSettings(next);
+    const saved = await saveSettingsAction(next);
+    setSettings(saved);
   }
 
   async function payAndBuyDomain() {

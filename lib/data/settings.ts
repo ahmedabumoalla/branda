@@ -100,6 +100,7 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
 }
 
 const settingsSchema = z.object({
+  cafeName: z.string().trim().min(1).max(120),
   ownerName: z.string().optional(),
   ownerEmail: z.string().email().optional().or(z.literal("")),
   ownerPhone: z.string().optional(),
@@ -117,10 +118,23 @@ const settingsSchema = z.object({
   themeId: z.string().optional(),
 });
 
+function logUpdateNameFailure(cafeId: string, reason: string) {
+  console.warn("[brand-settings:update-name] failed", { cafeId, reason });
+}
+
+function ensureBrandSettingsEditor(cafe: Awaited<ReturnType<typeof requireOwnerCafeContext>>) {
+  if (cafe.role !== "owner" && cafe.role !== "manager") {
+    logUpdateNameFailure(cafe.id, "forbidden_role");
+    throw new Error("غير مصرح لك بتعديل اسم العلامة.");
+  }
+}
+
 export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) {
   const parsed = settingsSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
+  ensureBrandSettingsEditor(cafe);
   const supabase = await createClient();
+  const nextCafeName = parsed.cafeName.trim();
 
   const payload = {
     cafe_id: cafe.id,
@@ -142,7 +156,50 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
     theme_id: parsed.themeId,
   };
 
-  const { error } = await supabase.from("cafe_settings").upsert(payload, { onConflict: "cafe_id" });
-  if (error) throw error;
-}
+  const { data: settingsRow, error: settingsError } = await supabase
+    .from("cafe_settings")
+    .upsert(payload, { onConflict: "cafe_id" })
+    .select("*")
+    .single();
 
+  if (settingsError) {
+    logUpdateNameFailure(cafe.id, "settings_upsert_failed");
+    throw new Error("تعذر حفظ إعدادات العلامة.");
+  }
+
+  const { data: cafeRow, error: cafeError } = await supabase
+    .from("cafes")
+    .update({ name: nextCafeName })
+    .eq("id", cafe.id)
+    .is("deleted_at", null)
+    .select("id, slug, name, business_category")
+    .single();
+
+  if (cafeError) {
+    logUpdateNameFailure(cafe.id, "cafes_update_failed");
+    throw new Error("تعذر حفظ اسم العلامة.");
+  }
+
+  if (!cafeRow) {
+    logUpdateNameFailure(cafe.id, "cafes_update_no_row");
+    throw new Error("تعذر تأكيد حفظ اسم العلامة.");
+  }
+
+  if (String(cafeRow.name ?? "") !== nextCafeName) {
+    logUpdateNameFailure(cafe.id, "cafes_update_mismatch");
+    throw new Error("تعذر تأكيد حفظ اسم العلامة الجديد.");
+  }
+
+  const updated = mapDbSettingsToCafeSettings(String(cafeRow.slug), settingsRow as any);
+  updated.cafeName = String(cafeRow.name);
+  updated.businessCategory = String(cafeRow.business_category ?? cafe.businessCategory);
+  if (settingsRow.logo_storage_path) {
+    updated.logoAssetId = settingsRow.logo_storage_path as string;
+    updated.logoDataUrl = await resolvePublishedStoragePathToUrl(
+      storageBucketForLogo(),
+      settingsRow.logo_storage_path as string
+    );
+  }
+
+  return updated;
+}
