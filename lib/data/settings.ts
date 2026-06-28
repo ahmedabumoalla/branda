@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import {
@@ -153,6 +154,7 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
   const cafe = await requireOwnerCafeContext();
   ensureBrandSettingsEditor(cafe);
   const supabase = await createClient();
+  const admin = createAdminClient();
   const nextCafeName = parsed.cafeName.trim();
 
   const payload = {
@@ -175,13 +177,19 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
     theme_id: parsed.themeId,
   };
 
-  const { data: cafeRow, error: cafeError } = await supabase
+  const { data: cafeRow, error: cafeError } = await admin
     .from("cafes")
     .update({ name: nextCafeName })
     .eq("id", cafe.id)
     .is("deleted_at", null)
     .select("id, slug, name, business_category")
-    .maybeSingle();
+    .single();
+
+  console.warn("[brand-settings:update-name] result", {
+    cafeId: cafe.id,
+    requestedName: nextCafeName,
+    returnedName: cafeRow?.name ?? null,
+  });
 
   if (cafeError) {
     logUpdateNameFailure(cafe.id, "cafes_update_failed");
