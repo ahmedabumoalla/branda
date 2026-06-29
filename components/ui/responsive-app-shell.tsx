@@ -52,7 +52,7 @@ export function ResponsiveAppShell({
   const headerClass =
     variant === "admin"
       ? "border-white/10 bg-[#0f0c0a] text-[#F8E8D2]"
-      : "border-[#E5D8CD]/60 bg-[#3A2117] text-[#F8E8D2]";
+      : "border-white/10 bg-[#120B0A] text-[#F8E8D2]";
 
   return (
     <>
