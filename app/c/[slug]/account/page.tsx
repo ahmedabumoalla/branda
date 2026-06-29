@@ -89,6 +89,13 @@ const AVATAR_MAX_DIMENSION = 1024;
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
   "طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ط³ط§ط¨. ط³ط¬ظ‘ظ„ ط§ظ„ط¯ط®ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰ ط£ظˆ ط£ط¹ط¯ ط§ظ„ظ…ط­ط§ظˆظ„ط©.";
 
+const EMPTY_CUSTOMER_LOYALTY_POINTS = {
+  balance: 0,
+  usedPoints: 0,
+  pointValueSar: 0,
+  minimumRedemptionPoints: 0,
+};
+
 type CompressedAvatar = {
   file: File;
   mimeType: "image/webp" | "image/jpeg";
@@ -370,6 +377,22 @@ function buildAccountLoyaltyCardDesign({
   const foreground = program.cardForeground || "#FFF7ED";
   const accent = program.cardAccent || "#D9A33F";
 
+  if (program.cardDesign) {
+    return {
+      ...program.cardDesign,
+      enabled: true,
+      brandName: program.cardDesign.brandName || view.cafeName || "",
+      cardTitle: program.cardDesign.cardTitle || program.cardTitle || "بطاقة الولاء",
+      subtitle: program.cardDesign.subtitle || program.cardSubtitle || "",
+      rewardTitle: program.cardDesign.rewardTitle || program.rewardName || fallbackReward,
+      stampLabel: program.cardDesign.stampLabel || program.stampLabel || "ختم",
+      terms: program.cardDesign.terms || program.terms || "",
+      stampsRequired: required,
+      completedStamps: current,
+      sampleCode: card.cardCode,
+    };
+  }
+
   return {
     enabled: true,
     brandName: view.cafeName || "",
@@ -430,12 +453,14 @@ function CustomerCoffeeLoyaltyCard({
   onOpenCard,
   loading,
   businessCategory,
+  loyaltyPoints,
 }: {
   view: CustomerLoyaltyCardView | null;
   homeHref: string;
   onOpenCard: () => void;
   loading: boolean;
   businessCategory?: string;
+  loyaltyPoints: typeof EMPTY_CUSTOMER_LOYALTY_POINTS;
 }) {
   const copy = getBusinessCopy(businessCategory);
   const program = view?.program;
@@ -452,7 +477,11 @@ function CustomerCoffeeLoyaltyCard({
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <div className="min-w-0 overflow-hidden rounded-[30px]">
           {realCardDesign ? (
-            <SharedLoyaltyCard card={realCardDesign} pointsBalance={0} pointValueSar={0} />
+            <SharedLoyaltyCard
+              card={realCardDesign}
+              pointsBalance={loyaltyPoints.balance}
+              pointValueSar={loyaltyPoints.pointValueSar}
+            />
           ) : (
             <div className="flex min-h-[280px] items-center justify-center rounded-[30px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-page-bg,#FCF8F3)] p-6 text-center">
               <div>
@@ -941,6 +970,7 @@ function AccountPageInner() {
   );
   const [loyaltyView, setLoyaltyView] =
     useState<CustomerLoyaltyCardView | null>(null);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(EMPTY_CUSTOMER_LOYALTY_POINTS);
   const [loyaltyLoading, setLoyaltyLoading] = useState(true);
   const [experienceRewards, setExperienceRewards] = useState<
     CustomerExperienceReward[]
@@ -984,6 +1014,7 @@ function AccountPageInner() {
       setRedirectingToLogin(false);
       setLoyaltyLoading(true);
       setAccountFeatures([]);
+      setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
 
       const result = await withTimeout(
         fetchCustomerAccountSnapshotOnce(slug, loadKey),
@@ -1063,6 +1094,7 @@ function AccountPageInner() {
       );
 
       setLoyaltyView(snapshot.loyalty);
+      setLoyaltyPoints(snapshot.loyaltyPoints);
       setExperienceRewards(snapshot.experienceRewards);
       finishLoading();
     }
@@ -1110,8 +1142,8 @@ function AccountPageInner() {
   );
 
   const loyaltyBalance = useMemo(
-    () => myTransactions.reduce((sum, item) => sum + (item.points || 0), 0),
-    [myTransactions],
+    () => loyaltyPoints.balance,
+    [loyaltyPoints.balance],
   );
 
   const totalInvoices = useMemo(
@@ -1551,6 +1583,7 @@ function AccountPageInner() {
               onOpenCard={openLoyaltyCard}
               loading={loyaltyLoading}
               businessCategory={settings.businessCategory}
+              loyaltyPoints={loyaltyPoints}
             />
           ) : undefined
         }

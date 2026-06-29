@@ -3,16 +3,32 @@
 import { getCustomerOrdersForProfile, getCustomerReservationsForProfile } from "@/lib/data/customers";
 import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-rewards";
+import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getCustomerSessionAction } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
+import type { LoyaltySettings } from "@/lib/mock/loyalty";
 
 type CustomerAccountErrorCode = "invalid_session" | "load_failed";
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
   "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
+
+type CustomerLoyaltyPointsSnapshot = {
+  balance: number;
+  usedPoints: number;
+  pointValueSar: number;
+  minimumRedemptionPoints: number;
+};
+
+const emptyLoyaltyPoints: CustomerLoyaltyPointsSnapshot = {
+  balance: 0,
+  usedPoints: 0,
+  pointValueSar: 0,
+  minimumRedemptionPoints: 0,
+};
 
 function emptySnapshot(cafeSlug: string) {
   return {
@@ -22,6 +38,7 @@ function emptySnapshot(cafeSlug: string) {
     orders: [] as Awaited<ReturnType<typeof getCustomerOrdersForProfile>>,
     reservations: [] as Awaited<ReturnType<typeof getCustomerReservationsForProfile>>,
     loyalty: null as Awaited<ReturnType<typeof getCustomerLoyaltyCardViewForProfile>> | null,
+    loyaltyPoints: emptyLoyaltyPoints,
     experienceRewards: [] as Awaited<ReturnType<typeof getCustomerExperienceRewardSubmissions>>,
   };
 }
@@ -47,6 +64,49 @@ async function attachCustomerAvatarUrl(customer: BarndaksaCustomerSession) {
 
   if (error || !data?.signedUrl) return customer;
   return { ...customer, avatarUrl: data.signedUrl };
+}
+
+function firstActiveRedemptionRule(settings: LoyaltySettings) {
+  return settings.redemptionRules.find((rule) => rule.enabled) ?? settings.redemptionRules[0] ?? null;
+}
+
+function resolvePointValueSar(settings: LoyaltySettings) {
+  const redemptionRule = firstActiveRedemptionRule(settings);
+  const pointsCost = Number(redemptionRule?.pointsCost ?? 0);
+  if (!redemptionRule || pointsCost <= 0) return 0;
+  if (redemptionRule.type === "fixed_discount" && Number(redemptionRule.discountAmount ?? 0) > 0) {
+    return Math.round((Number(redemptionRule.discountAmount) / pointsCost) * 100) / 100;
+  }
+  return 0;
+}
+
+async function getCustomerLoyaltyAccountBalance(cafeId: string, customerProfileId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("loyalty_accounts")
+    .select("balance")
+    .eq("cafe_id", cafeId)
+    .eq("customer_id", customerProfileId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return Math.max(0, Number(data?.balance ?? 0));
+}
+
+async function getCustomerUsedLoyaltyPoints(cafeId: string, customerProfileId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("loyalty_transactions")
+    .select("amount")
+    .eq("cafe_id", cafeId)
+    .eq("customer_id", customerProfileId)
+    .lt("amount", 0);
+
+  if (error) throw error;
+  return (data ?? []).reduce(
+    (sum: number, row: { amount?: number | string | null }) => sum + Math.abs(Math.min(0, Number(row.amount ?? 0))),
+    0,
+  );
 }
 
 function logRewardsSnapshotLoad(input: {
@@ -159,6 +219,24 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
         : Promise.resolve(snapshot.experienceRewards),
     ]);
 
+    const loyaltyRules = loyaltyEnabled ? await safeResult(getPublicLoyaltyBySlug(normalizedSlug), null) : null;
+    const [loyaltyPointsBalance, loyaltyUsedPoints] = loyaltyEnabled
+      ? await Promise.all([
+          safeResult(getCustomerLoyaltyAccountBalance(cafe.id, String(profileRow.id)), 0),
+          safeResult(getCustomerUsedLoyaltyPoints(cafe.id, String(profileRow.id)), 0),
+        ])
+      : [0, 0];
+
+    const loyaltyPoints =
+      loyaltyRules?.settings.enabled
+        ? {
+            balance: loyaltyPointsBalance,
+            usedPoints: loyaltyUsedPoints,
+            pointValueSar: resolvePointValueSar(loyaltyRules.settings),
+            minimumRedemptionPoints: Number(firstActiveRedemptionRule(loyaltyRules.settings)?.pointsCost ?? 0),
+          }
+        : emptyLoyaltyPoints;
+
     const scopedLoyalty =
       loyalty && loyalty.card.cafeId === cafe.id && loyalty.cafeSlug === normalizedSlug
         ? loyalty
@@ -188,6 +266,7 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
         orders,
         reservations,
         loyalty: scopedLoyalty,
+        loyaltyPoints,
         experienceRewards: scopedExperienceRewards,
       },
     };

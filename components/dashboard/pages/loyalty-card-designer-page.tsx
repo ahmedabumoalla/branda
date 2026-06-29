@@ -18,7 +18,9 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { saveLoyaltyCardProgramAction } from "@/app/actions/loyalty-cards";
+import { saveLoyaltySettingsAction } from "@/app/actions/loyalty";
 import { LoyaltyIconPicker } from "@/components/loyalty/loyalty-icon-picker";
 import {
   LoyaltyCardPreview,
@@ -26,11 +28,12 @@ import {
   type LoyaltyGraphicLayer,
 } from "@/components/loyalty/loyalty-card-preview";
 import { LoyaltyLogoUploader } from "@/components/loyalty/loyalty-logo-uploader";
-import { useLoyaltyDemoState } from "@/components/loyalty/use-loyalty-demo-state";
-import { loyaltyDashboardDemoState } from "@/lib/loyalty/demo-data";
+import { buildLoyaltyDashboardState } from "@/lib/loyalty/production-state";
+import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
+import type { LoyaltySettings } from "@/lib/mock/loyalty";
 import type {
   LoyaltyCardDesign,
-  LoyaltyDashboardDemoState,
+  LoyaltyDashboardState,
   LoyaltyTextAlign,
   LoyaltyTextElementId,
 } from "@/lib/loyalty/types";
@@ -105,6 +108,56 @@ const legacyFieldByTextElement: Partial<Record<LoyaltyTextElementId, keyof Loyal
   helper: "supportingText",
 };
 
+type Props = {
+  initialDashboard: LoyaltyCardsDashboard | null;
+  initialSettings: LoyaltySettings | null;
+  configError?: string;
+};
+
+const emptySettings: LoyaltySettings = {
+  pointsPerSar: 1,
+  welcomePoints: 0,
+  enabled: false,
+  earnRules: [],
+  redemptionRules: [],
+};
+
+function pointsToSettings(current: LoyaltySettings, state: LoyaltyDashboardState): LoyaltySettings {
+  const points = state.points;
+  const earnRule = current.earnRules[0] ?? {
+    id: "designer_earn_rule",
+    type: "purchase_per_sar" as const,
+    title: points.earningRule,
+    enabled: true,
+    pointsPerSar: current.pointsPerSar,
+  };
+  const redemptionRule = current.redemptionRules[0] ?? {
+    id: "designer_redemption_rule",
+    type: "fixed_discount" as const,
+    title: points.redemptionRule,
+    enabled: true,
+    pointsCost: Math.max(1, points.minimumRedemptionPoints || 1),
+    discountAmount: 0,
+    description: points.policyText,
+  };
+
+  return {
+    ...current,
+    enabled: points.enabled,
+    earnRules: [{ ...earnRule, enabled: points.enabled, title: points.earningRule || earnRule.title }, ...current.earnRules.slice(1)],
+    redemptionRules: [
+      {
+        ...redemptionRule,
+        enabled: points.enabled,
+        title: points.redemptionRule || redemptionRule.title,
+        pointsCost: Math.max(1, points.minimumRedemptionPoints || redemptionRule.pointsCost || 1),
+        description: points.policyText,
+      },
+      ...current.redemptionRules.slice(1),
+    ],
+  };
+}
+
 function isGraphicLayer(layer: LoyaltyDesignerLayer | null): layer is LoyaltyGraphicLayer {
   return layer === "logo" || layer === "points" || layer === "barcode" || layer === "qr";
 }
@@ -117,36 +170,93 @@ function textLayerId(layer: `text:${LoyaltyTextElementId}`) {
   return layer.slice(5) as LoyaltyTextElementId;
 }
 
-export function LoyaltyCardDesignerPage() {
-  const [storedState, setStoredState] = useLoyaltyDemoState();
-  const [draft, setDraft] = useState<LoyaltyDashboardDemoState>(storedState);
+export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, configError }: Props) {
+  const [dashboard, setDashboard] = useState(initialDashboard);
+  const [settings, setSettings] = useState<LoyaltySettings>(initialSettings ?? emptySettings);
+  const [initialState, setInitialState] = useState<LoyaltyDashboardState>(() =>
+    buildLoyaltyDashboardState({
+      cafeName: initialDashboard?.cafeName ?? "Branda",
+      program: initialDashboard?.program ?? null,
+      cards: initialDashboard?.cards ?? [],
+      settings: initialSettings ?? emptySettings,
+    }),
+  );
+  const [draft, setDraft] = useState<LoyaltyDashboardState>(initialState);
   const [activeGroup, setActiveGroup] = useState<DesignerGroup>("texts");
   const [activeLayer, setActiveLayer] = useState<LoyaltyDesignerLayer | null>("text:title");
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    setDraft(storedState);
-  }, [storedState]);
+  const [saving, setSaving] = useState(false);
 
   function patchCard(next: Partial<LoyaltyCardDesign>) {
     setDraft((current) => ({ ...current, card: { ...current.card, ...next } }));
   }
 
-  function patchPoints(next: Partial<LoyaltyDashboardDemoState["points"]>) {
+  function patchPoints(next: Partial<LoyaltyDashboardState["points"]>) {
     setDraft((current) => ({ ...current, points: { ...current.points, ...next } }));
   }
 
-  function saveDesign() {
-    setStoredState(draft);
-    setMessage("تم الحفظ محلياً");
-    window.setTimeout(() => setMessage(""), 2200);
+  async function saveDesign() {
+    if (!dashboard) {
+      setMessage(configError || "تعذر تحميل بيانات الولاء للحفظ.");
+      window.setTimeout(() => setMessage(""), 2600);
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+    try {
+      const card = draft.card;
+      const nextSettings = pointsToSettings(settings, draft);
+      await saveLoyaltyCardProgramAction({
+        enabled: card.enabled,
+        cardTitle: card.cardTitle,
+        cardSubtitle: card.subtitle,
+        purchasesRequired: card.stampsRequired,
+        rewardProductId: dashboard.program.rewardProductId,
+        rewardName: card.rewardTitle,
+        stampLabel: card.stampLabel,
+        terms: card.terms,
+        cardBackground: card.cardBackground,
+        cardForeground: card.cardForeground,
+        cardAccent: card.cardAccent,
+        cardDesign: card,
+      });
+      await saveLoyaltySettingsAction(nextSettings);
+
+      const nextDashboard = {
+        ...dashboard,
+        program: {
+          ...dashboard.program,
+          enabled: card.enabled,
+          cardTitle: card.cardTitle,
+          cardSubtitle: card.subtitle,
+          purchasesRequired: card.stampsRequired,
+          rewardName: card.rewardTitle,
+          stampLabel: card.stampLabel,
+          terms: card.terms,
+          cardBackground: card.cardBackground,
+          cardForeground: card.cardForeground,
+          cardAccent: card.cardAccent,
+          cardDesign: card,
+        },
+      };
+      setDashboard(nextDashboard);
+      setSettings(nextSettings);
+      setInitialState(draft);
+      setMessage("تم حفظ تصميم البطاقة في قاعدة البيانات");
+    } catch {
+      setMessage("تعذر حفظ تصميم البطاقة");
+    } finally {
+      setSaving(false);
+      window.setTimeout(() => setMessage(""), 2600);
+    }
   }
 
   function resetPreview() {
-    setDraft(loyaltyDashboardDemoState);
+    setDraft(initialState);
     setActiveGroup("texts");
     setActiveLayer("text:title");
-    setMessage("تمت إعادة ضبط المعاينة");
+    setMessage("تمت إعادة المعاينة لآخر تصميم محفوظ");
     window.setTimeout(() => setMessage(""), 2200);
   }
 
@@ -247,7 +357,7 @@ export function LoyaltyCardDesignerPage() {
   }
 
   function resetTextElement(id: LoyaltyTextElementId) {
-    const defaults = loyaltyDashboardDemoState.card.textElements[id];
+    const defaults = initialState.card.textElements[id];
     patchTextElement(id, defaults);
   }
 
@@ -561,9 +671,9 @@ export function LoyaltyCardDesignerPage() {
               <ArrowRight className="h-4 w-4" />
               العودة للولاء
             </Link>
-            <button type="button" onClick={saveDesign} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4A281D] px-4 text-[12px] font-black text-[#FCF8F3]">
+            <button type="button" onClick={saveDesign} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4A281D] px-4 text-[12px] font-black text-[#FCF8F3] disabled:opacity-60">
               <Save className="h-4 w-4" />
-              حفظ تصميم البطاقة
+              {saving ? "جاري الحفظ" : "حفظ تصميم البطاقة"}
             </button>
           </div>
         </header>

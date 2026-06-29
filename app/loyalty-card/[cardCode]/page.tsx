@@ -42,6 +42,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
       availableRewards={card.availableRewards}
       loyaltyUnitLit={copy.loyaltyUnitLit}
       loyaltyUnitPlural={copy.loyaltyUnitPlural}
+      cardDesign={program.cardDesign}
     />
   );
 }

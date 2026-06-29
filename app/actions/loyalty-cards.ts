@@ -15,6 +15,7 @@ import {
   getPublicCafeFeatureCodesBySlug,
 } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 
 async function publicLoyaltyEnabled(cafeSlug: string) {
   try {
@@ -57,6 +58,7 @@ export async function saveLoyaltyCardProgramAction(input: {
   cardBackground: string;
   cardForeground: string;
   cardAccent: string;
+  cardDesign?: LoyaltyCardDesign | null;
 }) {
   await assertOwnerLoyaltyEnabled();
   await saveOwnerLoyaltyProgram(input);

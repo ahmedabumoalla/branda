@@ -525,6 +525,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
             loginHref={getCustomerLoginHref(slug, `/c/${slug}`)}
             onClickHref={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : undefined}
             businessCategory={payload.settings.businessCategory}
+            cardDesign={payload.loyaltyCard?.program?.cardDesign ?? payload.loyaltyProgram?.cardDesign}
           />
         ) : null}
 

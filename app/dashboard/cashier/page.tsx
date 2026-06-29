@@ -30,6 +30,7 @@ const emptyDashboard: LoyaltyCardsDashboard = {
     cardBackground: "#4A281D",
     cardForeground: "#FCF8F3",
     cardAccent: "#D9A33F",
+    cardDesign: null,
     appleWalletEnabled: false,
     googleWalletEnabled: false,
   },

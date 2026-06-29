@@ -96,3 +96,5 @@ export type LoyaltyDashboardDemoState = {
   card: LoyaltyCardDesign;
   points: LoyaltyPointsSettings;
 };
+
+export type LoyaltyDashboardState = LoyaltyDashboardDemoState;

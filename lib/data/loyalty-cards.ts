@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 
 export type LoyaltyCardProgram = {
   enabled: boolean;
@@ -17,6 +18,7 @@ export type LoyaltyCardProgram = {
   cardBackground: string;
   cardForeground: string;
   cardAccent: string;
+  cardDesign: LoyaltyCardDesign | null;
   appleWalletEnabled: boolean;
   googleWalletEnabled: boolean;
 };
@@ -106,9 +108,15 @@ const defaultProgram: LoyaltyCardProgram = {
   cardBackground: "#4A281D",
   cardForeground: "#FCF8F3",
   cardAccent: "#D9A33F",
+  cardDesign: null,
   appleWalletEnabled: false,
   googleWalletEnabled: false,
 };
+
+function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as LoyaltyCardDesign;
+}
 
 function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCardProgram {
   if (!row) return defaultProgram;
@@ -129,6 +137,7 @@ function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCar
     cardBackground: String(row.card_background ?? defaultProgram.cardBackground),
     cardForeground: String(row.card_foreground ?? defaultProgram.cardForeground),
     cardAccent: String(row.card_accent ?? defaultProgram.cardAccent),
+    cardDesign: mapCardDesign(row.card_design),
     appleWalletEnabled: Boolean(row.apple_wallet_enabled ?? false),
     googleWalletEnabled: Boolean(row.google_wallet_enabled ?? false),
   };
@@ -254,6 +263,7 @@ const programSchema = z.object({
   cardBackground: z.string().min(4).max(20),
   cardForeground: z.string().min(4).max(20),
   cardAccent: z.string().min(4).max(20),
+  cardDesign: z.unknown().optional().nullable(),
 });
 
 export async function saveOwnerLoyaltyProgram(input: z.infer<typeof programSchema>) {
@@ -289,6 +299,15 @@ export async function saveOwnerLoyaltyProgram(input: z.infer<typeof programSchem
   });
 
   if (error) throw error;
+
+  if (Object.prototype.hasOwnProperty.call(parsed, "cardDesign")) {
+    const { error: designError } = await supabase.rpc("set_cafe_loyalty_card_design", {
+      p_cafe_id: cafe.id,
+      p_card_design: parsed.cardDesign ?? {},
+    });
+
+    if (designError) throw designError;
+  }
 }
 
 export async function createOwnerCashier(input: {

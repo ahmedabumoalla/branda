@@ -59,6 +59,12 @@ const REWARDS_LOAD_ERROR =
   "تعذر تحميل المكافآت. سجل الدخول مرة أخرى أو أعد المحاولة.";
 const REWARD_QR_FIT_CLASS =
   "[&>div]:overflow-hidden [&>div]:rounded-[10px] [&>div]:p-2 [&_svg]:block [&_svg]:h-full [&_svg]:w-full";
+const EMPTY_CUSTOMER_LOYALTY_POINTS = {
+  balance: 0,
+  usedPoints: 0,
+  pointValueSar: 0,
+  minimumRedemptionPoints: 0,
+};
 
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
@@ -722,6 +728,7 @@ function RewardsPageInner() {
   const [experienceTab, setExperienceTab] = useState<RewardTab>("current");
   const [loyaltyView, setLoyaltyView] =
     useState<CustomerLoyaltyCardView | null>(null);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(EMPTY_CUSTOMER_LOYALTY_POINTS);
   const [experienceRewards, setExperienceRewards] = useState<
     CustomerExperienceReward[]
   >([]);
@@ -746,6 +753,7 @@ function RewardsPageInner() {
       setLoading(true);
       setLoadError("");
       setLoadedSlug(null);
+      setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
       try {
         const result: CustomerAccountSnapshot =
           await fetchCustomerAccountSnapshotAction(slug);
@@ -754,12 +762,14 @@ function RewardsPageInner() {
         if (!result.success || !result.data?.customer) {
           setLoadError(result.message || REWARDS_LOAD_ERROR);
           setLoyaltyView(null);
+          setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
           setExperienceRewards([]);
           setLoadedSlug(slug);
           return;
         }
 
         setLoyaltyView(result.data.loyalty);
+        setLoyaltyPoints(result.data.loyaltyPoints);
         setExperienceRewards(result.data.experienceRewards);
         setLoadedSlug(slug);
       } catch (error) {
@@ -767,6 +777,7 @@ function RewardsPageInner() {
         console.error("[customer-rewards] load", error);
         setLoadError(REWARDS_LOAD_ERROR);
         setLoyaltyView(null);
+        setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
         setExperienceRewards([]);
         setLoadedSlug(slug);
       } finally {
@@ -784,10 +795,11 @@ function RewardsPageInner() {
   const pageLoading = loading || !hasCurrentSlugData;
   const scopedLoyaltyView = hasCurrentSlugData ? loyaltyView : null;
   const scopedExperienceRewards = hasCurrentSlugData ? experienceRewards : [];
-  const loyaltyPointsBalance = 0;
-  const loyaltyUsedPoints = 0;
-  const loyaltyPointValueSar = 0;
-  const loyaltyMinimumRedemptionPoints = 0;
+  const scopedLoyaltyPoints = hasCurrentSlugData ? loyaltyPoints : EMPTY_CUSTOMER_LOYALTY_POINTS;
+  const loyaltyPointsBalance = scopedLoyaltyPoints.balance;
+  const loyaltyUsedPoints = scopedLoyaltyPoints.usedPoints;
+  const loyaltyPointValueSar = scopedLoyaltyPoints.pointValueSar;
+  const loyaltyMinimumRedemptionPoints = scopedLoyaltyPoints.minimumRedemptionPoints;
 
   const readyExperienceRewards = useMemo(
     () =>

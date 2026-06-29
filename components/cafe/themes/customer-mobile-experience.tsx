@@ -167,6 +167,7 @@ export function AppLoyaltyCard({
   isAuthenticated = true,
   loginHref,
   businessCategory,
+  cardDesign,
 }: {
   customerName?: string;
   code?: string;
@@ -177,18 +178,27 @@ export function AppLoyaltyCard({
   isAuthenticated?: boolean;
   loginHref?: string;
   businessCategory?: string;
+  cardDesign?: LoyaltyCardDesign | null;
 }) {
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const completedStamps = Math.max(0, Math.min(safeRequired, Number(current || 0)));
   const effectiveCode = code?.trim();
   const previewCard = effectiveCode
-    ? publicLoyaltyCardDesign({
-        customerName,
-        code: effectiveCode,
-        current: completedStamps,
-        required: safeRequired,
-        businessCategory,
-      })
+    ? cardDesign
+      ? {
+          ...cardDesign,
+          brandName: cardDesign.brandName || customerName || "عميل العلامة",
+          completedStamps,
+          stampsRequired: safeRequired,
+          sampleCode: effectiveCode,
+        }
+      : publicLoyaltyCardDesign({
+          customerName,
+          code: effectiveCode,
+          current: completedStamps,
+          required: safeRequired,
+          businessCategory,
+        })
     : null;
 
   const content = (

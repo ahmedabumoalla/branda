@@ -807,6 +807,7 @@ function CafePageInner({ slug }: { slug: string }) {
               loginHref={customerChecked ? getCustomerLoginHref(slug, `/c/${slug}`, previewThemeId) : undefined}
               onClickHref={customer ? getCafePath(slug, "account", previewThemeId) : undefined}
               businessCategory={settings.businessCategory}
+              cardDesign={homeLoyalty?.program.cardDesign}
             />
           </div>
         ) : null}

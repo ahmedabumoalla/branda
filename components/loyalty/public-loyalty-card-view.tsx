@@ -19,6 +19,7 @@ type Props = {
   availableRewards: number;
   loyaltyUnitLit: string;
   loyaltyUnitPlural: string;
+  cardDesign?: LoyaltyCardDesign | null;
 };
 
 function textElement(
@@ -123,16 +124,30 @@ export function PublicLoyaltyCardView({
   availableRewards,
   loyaltyUnitLit,
   loyaltyUnitPlural,
+  cardDesign,
 }: Props) {
-  const previewCard = publicCardDesign({
-    cafeName,
-    cardCode,
-    cardTitle,
-    cardSubtitle,
-    rewardName,
-    required,
-    lit,
-  });
+  const previewCard = cardDesign
+    ? {
+        ...cardDesign,
+        enabled: true,
+        brandName: cardDesign.brandName || cafeName,
+        cardTitle: cardDesign.cardTitle || cardTitle,
+        subtitle: cardDesign.subtitle || cardSubtitle,
+        rewardTitle: cardDesign.rewardTitle || rewardName,
+        terms: cardDesign.terms || terms || "",
+        stampsRequired: required,
+        completedStamps: lit,
+        sampleCode: cardCode,
+      }
+    : publicCardDesign({
+        cafeName,
+        cardCode,
+        cardTitle,
+        cardSubtitle,
+        rewardName,
+        required,
+        lit,
+      });
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#F6F0E7] px-4 py-8 text-[#17212B]">
