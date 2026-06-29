@@ -2,7 +2,7 @@ import { FinanceEmptyState } from "@/components/branda-finance/finance-empty-sta
 import { FinancePageShell } from "@/components/branda-finance/finance-page-shell";
 import { FinanceReportTable } from "@/components/branda-finance/finance-report-table";
 import { FinanceStatCard } from "@/components/branda-finance/finance-stat-card";
-import { financeAmount } from "@/lib/branda-finance/calculations";
+import { formatFinanceAmount } from "@/components/branda-finance/invoice-totals";
 import { getFinanceStatement, type FinanceStatementEntityType } from "@/lib/branda-finance/statements";
 
 export default async function BrandaFinanceStatementDetailPage({
@@ -11,7 +11,7 @@ export default async function BrandaFinanceStatementDetailPage({
   params: Promise<{ entityType: string; entityId: string }>;
 }) {
   const { entityType, entityId } = await params;
-  const statement = getFinanceStatement(entityType as FinanceStatementEntityType, entityId);
+  const statement = await getFinanceStatement(entityType as FinanceStatementEntityType, entityId);
 
   if (!statement) {
     return (
@@ -25,16 +25,16 @@ export default async function BrandaFinanceStatementDetailPage({
     <FinancePageShell
       title={statement.title}
       description={statement.description}
-      status="ديمو محلي"
+      status="بيانات حقيقية"
       backHref="/dashboard/branda-finance/statements"
       actions={[{ label: "كل الكشوف", href: "/dashboard/branda-finance/statements", primary: true }]}
     >
       <section className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <FinanceStatCard label="الرصيد الافتتاحي" value={financeAmount(statement.summary.openingBalance)} />
-        <FinanceStatCard label="مدين" value={financeAmount(statement.summary.debit)} tone="green" />
-        <FinanceStatCard label="دائن" value={financeAmount(statement.summary.credit)} tone="gold" />
-        <FinanceStatCard label="صافي الحركة" value={financeAmount(statement.summary.netMovement)} tone="brown" />
-        <FinanceStatCard label="الرصيد الختامي" value={financeAmount(statement.summary.closingBalance)} tone="green" />
+        <FinanceStatCard label="الرصيد الافتتاحي" value={formatFinanceAmount(statement.summary.openingBalance)} />
+        <FinanceStatCard label="مدين" value={formatFinanceAmount(statement.summary.debit)} tone="green" />
+        <FinanceStatCard label="دائن" value={formatFinanceAmount(statement.summary.credit)} tone="gold" />
+        <FinanceStatCard label="صافي الحركة" value={formatFinanceAmount(statement.summary.netMovement)} tone="brown" />
+        <FinanceStatCard label="الرصيد الختامي" value={formatFinanceAmount(statement.summary.closingBalance)} tone="green" />
       </section>
 
       <section className="grid min-w-0 gap-3 rounded-[8px] border border-[#D8C3A2] bg-[#FFFDF8] p-3 sm:grid-cols-2 xl:grid-cols-4">

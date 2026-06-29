@@ -17,7 +17,7 @@ export type CartItem = {
 
 type CashierCartPanelProps = {
   items: CartItem[];
-  customer: FinanceCustomer;
+  customer?: FinanceCustomer | null;
   branch: FinanceBranch;
   warehouse?: FinanceWarehouse | null;
   paymentMethod: FinancePaymentMethod["id"] | "";
@@ -68,6 +68,7 @@ export function CashierCartPanel({
   const payableTotal = totals.total;
   const methodLabel = paymentMethods.find((method) => method.id === paymentMethod)?.name ?? "غير محدد";
   const canCreateInvoice = realInvoicePersistenceReady && Boolean(items.length && paymentMethod);
+  const customerName = customer?.name ?? "عميل نقدي";
 
   return (
     <aside className="w-full max-w-full min-w-0 overflow-hidden rounded-[8px] border border-[#D8C3A2] bg-[#FFFDF8] p-3 shadow-[0_16px_38px_rgba(69,43,28,0.10)] lg:sticky lg:top-5">
@@ -80,7 +81,7 @@ export function CashierCartPanel({
       </div>
 
       <div className="mt-3 grid gap-2 text-[11px] font-bold text-[#6D5544]">
-        <SummaryLine label="العميل" value={customer.name} />
+        <SummaryLine label="العميل" value={customerName} />
         <SummaryLine label="الفرع" value={branch.displayName || branch.name} />
         <SummaryLine label="المستودع" value={warehouse?.name ?? "لا توجد مستودعات مرتبطة بعد"} />
       </div>
@@ -159,7 +160,7 @@ export function CashierCartPanel({
           ))}
         </div>
         <p className="mt-2 text-[11px] font-bold leading-5 text-[#806A58]">
-          مدى والبطاقات تتطلب مزود دفع رسمي. الاختيار هنا محلي ولا يرحل أي عملية مالية.
+          مدى والبطاقات تحفظ كوسيلة دفع داخل الفاتورة، ولا تشغل مزود دفع خارجي من هذه الشاشة.
         </p>
       </div>
 
@@ -192,12 +193,12 @@ export function CashierCartPanel({
           <span className="text-xs font-black text-[#2F5D50]">{methodLabel}</span>
         </div>
         <p className="text-xs font-bold leading-6 text-[#806A58]">
-          {items.length} بند، إجمالي {formatFinanceAmount(payableTotal)}، العميل {customer.name}.
+          {items.length} بند، إجمالي {formatFinanceAmount(payableTotal)}، العميل {customerName}.
           {loyaltyEnabled && loyaltyCode ? ` بطاقة الولاء: ${loyaltyCode}.` : ""}
         </p>
         {invoicePreviewReady ? (
           <div className="mt-3 rounded-[8px] border border-[#CFE2D8] bg-[#EDF7F2] p-3 text-xs font-bold leading-6 text-[#2F5D50]">
-            تم تجهيز ملخص محلي فقط بدون كتابة في قاعدة البيانات.
+            تم حفظ فاتورة الكاشير في قاعدة البيانات.
             <Link
               href="/dashboard/branda-finance/invoicing/create?source=cashier"
               className="mt-3 inline-flex h-10 items-center justify-center rounded-[8px] bg-[#2F5D50] px-4 text-xs font-black text-white"
@@ -220,16 +221,16 @@ export function CashierCartPanel({
         </button>
         {!realInvoicePersistenceReady ? (
           <p className="rounded-[8px] border border-[#D6B677] bg-[#FFF8EA] p-2 text-center text-[11px] font-bold leading-5 text-[#6B431C]">
-            إنشاء الفاتورة الحقيقي معطل حتى تفعيل جداول الفواتير بعد مراجعة قاعدة البيانات.
+            أضف بندًا واختر طريقة دفع لإنشاء فاتورة محفوظة.
           </p>
         ) : null}
         <button
           type="button"
           disabled
-          title="يتطلب ربط قاعدة البيانات"
+          title="الحفظ من هذه اللوحة يتم عبر زر إنشاء فاتورة"
           className="inline-flex h-9 cursor-not-allowed items-center justify-center gap-1.5 rounded-[8px] border border-[#D8C7B2] bg-white text-[12px] font-black text-[#5B3926] opacity-60"
         >
-          حفظ كمسودة - يتطلب ربط قاعدة البيانات
+          حفظ كمسودة من نموذج الفاتورة
         </button>
         <button
           type="button"

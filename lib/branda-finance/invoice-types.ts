@@ -76,6 +76,66 @@ export type FinanceAccount = {
   name: string;
 };
 
+export type FinanceSalesInvoiceStatus =
+  | "draft"
+  | "approved"
+  | "void"
+  | "paid"
+  | "partially_paid"
+  | "unpaid";
+
+export type FinanceSalesInvoiceSummary = {
+  id: string;
+  invoiceNumber?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+  status: FinanceSalesInvoiceStatus;
+  issueDate: string;
+  dueDate?: string | null;
+  subtotal: number;
+  discountTotal: number;
+  taxTotal: number;
+  total: number;
+  amountPaid: number;
+  amountDue: number;
+  source: "branda_finance" | "cashier" | "import";
+  createdAt: string;
+};
+
+export type FinancePaymentSummary = {
+  id: string;
+  invoiceId?: string | null;
+  customerId?: string | null;
+  paymentMethod: "cash" | "card" | "transfer" | "credit" | "other";
+  amount: number;
+  status: "recorded" | "void" | "refunded";
+  paidAt: string;
+};
+
+export type FinanceCashSessionSummary = {
+  id: string;
+  branchId?: string | null;
+  status: "open" | "closed" | "reconciled";
+  openedAt: string;
+  closedAt?: string | null;
+  openingCash: number;
+  closingCash?: number | null;
+};
+
+export type FinanceJournalEntrySummary = {
+  id: string;
+  branchId?: string | null;
+  sourceType: "manual" | "sales_invoice" | "payment" | "cash_session";
+  sourceId?: string | null;
+  entryDate: string;
+  status: "draft" | "posted" | "void";
+  memo?: string | null;
+  totalDebit: number;
+  totalCredit: number;
+};
+
 export type FinanceTaxRate = {
   id: string;
   name: string;
@@ -116,6 +176,13 @@ export type FinanceWorkspaceData = {
   products: FinanceProduct[];
   categories: FinanceCategory[];
   accounts: FinanceAccount[];
+  salesInvoices: FinanceSalesInvoiceSummary[];
+  payments: FinancePaymentSummary[];
+  cashSessions: FinanceCashSessionSummary[];
+  journalEntries: FinanceJournalEntrySummary[];
+  invoiceSequenceCount: number;
+  journalEntryLineCount: number;
+  auditEventCount: number;
   taxRates: FinanceTaxRate[];
   paymentMethods: FinancePaymentMethod[];
   customFields: FinanceCustomField[];

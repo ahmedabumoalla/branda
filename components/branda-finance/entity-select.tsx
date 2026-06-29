@@ -40,6 +40,11 @@ export function EntitySelect({
         onChange={(event) => onChange(event.target.value)}
         className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold text-[#2F241D] outline-none transition focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
       >
+        {!options.length ? (
+          <option value="">لا توجد بيانات</option>
+        ) : value ? null : (
+          <option value="">غير محدد</option>
+        )}
         {options.map((option) => (
           <option key={option.id} value={option.id}>
             {option.meta ? `${option.label} - ${option.meta}` : option.label}

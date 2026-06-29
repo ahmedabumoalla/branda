@@ -184,6 +184,7 @@ export function InvoiceItemsTable({
                       onChange={(event) => onChangeItem(item.id, { warehouseId: event.target.value })}
                       className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-1.5 text-[11px] font-bold outline-none transition focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
                     >
+                      {!warehouses.length ? <option value="">لا توجد مستودعات</option> : null}
                       {warehouses.map((warehouse) => (
                         <option key={warehouse.id} value={warehouse.id}>
                           {warehouse.name}
@@ -197,6 +198,7 @@ export function InvoiceItemsTable({
                       onChange={(event) => onChangeItem(item.id, { accountId: event.target.value })}
                       className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-1.5 text-[11px] font-bold outline-none transition focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
                     >
+                      {!accounts.length ? <option value="">لا توجد حسابات</option> : null}
                       {accounts.map((account) => (
                         <option key={account.id} value={account.id}>
                           {account.code} - {account.name}

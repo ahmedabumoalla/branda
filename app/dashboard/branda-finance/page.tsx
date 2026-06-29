@@ -18,16 +18,16 @@ export default async function BrandaFinancePage() {
     ["المنتجات المرتبطة", String(data.products.length), "من قائمة العلامة الحقيقية", "green"],
     ["الفروع المرتبطة", String(data.branches.length), "من بيانات الفروع الحقيقية", "brown"],
     ["العملاء المرتبطون", String(data.customers.length), "من ملفات العملاء الحقيقية", "gold"],
-    ["المستودعات", "غير مفعلة", "لا توجد جداول تشغيلية بعد", "red"],
-    ["الحسابات المالية", "غير مفعلة", "لا توجد شجرة حسابات تشغيلية بعد", "red"],
-    ["حفظ الفواتير", "معطل", "بانتظار جداول الفواتير والبنود", "red"],
+    ["المستودعات", String(data.warehouses.length), "من finance_warehouses", "green"],
+    ["الحسابات المالية", String(data.accounts.length), "من finance_accounts", "green"],
+    ["حفظ الفواتير", "مفعل", "finance_sales_invoices و البنود", "green"],
     ["نقاط الولاء في الكاشير", loyaltyEnabled ? "مفعلة" : "مخفية", "حسب باقة العلامة", loyaltyEnabled ? "green" : "brown"],
     ["مصدر البيانات", "حقيقي", "بدون أرقام ديمو تشغيلية", "green"],
   ] as const;
 
   const actions = [
-    { title: "إنشاء فاتورة مبيعات", href: "/dashboard/branda-finance/invoicing/create", description: "يقرأ منتجات وفروع وعملاء حقيقيين مع تعطيل الحفظ" },
-    { title: "فتح شاشة المبيعات", href: "/dashboard/branda-finance/sales", description: "كاشير محلي ببيانات مرتبطة وحفظ معطل" },
+    { title: "إنشاء فاتورة مبيعات", href: "/dashboard/branda-finance/invoicing/create", description: "يقرأ بيانات حقيقية ويحفظ في Supabase" },
+    { title: "فتح شاشة المبيعات", href: "/dashboard/branda-finance/sales", description: "كاشير بإنشاء فواتير محفوظة" },
     { title: "طلبات الصالة", href: "/dashboard/branda-finance/hall-orders", description: "واجهة محفوظة كمسار قادم للربط" },
     { title: "إضافة فاتورة مشتريات", href: "/dashboard/branda-finance/purchases", description: "بانتظار جداول الموردين والمشتريات" },
     { title: "إضافة عميل", href: "/dashboard/branda-finance/parties", description: "ملفات العملاء الحالية متاحة للقراءة فقط" },

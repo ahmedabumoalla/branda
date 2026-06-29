@@ -11,14 +11,14 @@ const typeLabels = {
   service: "خدمة",
 } as const;
 
-export default function BrandaFinanceStatementsPage() {
-  const entities = getStatementEntities();
+export default async function BrandaFinanceStatementsPage() {
+  const entities = await getStatementEntities();
 
   return (
     <FinancePageShell
       title="كشوف الحسابات والمنتجات"
-      description="محرك كشوف موحد للعملاء والموردين والمنتجات والخدمات مع فلاتر ديمو وروابط مباشرة."
-      status="ديمو محلي"
+      description="كشوف موحدة مبنية على العملاء والموردين والمنتجات الحقيقية المتاحة في Supabase."
+      status="بيانات حقيقية"
       actions={[
         { label: "تقرير المبيعات", href: "/dashboard/branda-finance/reports/sales" },
         { label: "إنشاء فاتورة", href: "/dashboard/branda-finance/invoicing/create", primary: true },
@@ -28,7 +28,7 @@ export default function BrandaFinanceStatementsPage() {
         <FinanceStatCard label="العملاء" value={String(entities.filter((item) => item.type === "customer").length)} tone="green" />
         <FinanceStatCard label="الموردون" value={String(entities.filter((item) => item.type === "supplier").length)} tone="brown" />
         <FinanceStatCard label="المنتجات" value={String(entities.filter((item) => item.type === "product").length)} tone="gold" />
-        <FinanceStatCard label="الخدمات" value={String(entities.filter((item) => item.type === "service").length)} tone="brown" />
+        <FinanceStatCard label="الخدمات" value="0" tone="brown" />
       </section>
 
       <section className="grid min-w-0 gap-3 rounded-[8px] border border-[#D8C3A2] bg-[#FFFDF8] p-3 sm:grid-cols-2 xl:grid-cols-4">

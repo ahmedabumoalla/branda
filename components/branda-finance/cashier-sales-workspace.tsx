@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { FileText, Languages, ScanLine, Search, ShieldCheck, Utensils } from "lucide-react";
-import { CashierCartPanel, type CartItem } from "@/components/branda-finance/cashier-cart-panel";
+import { CashierCartPanel, type CartItem, cartTotals } from "@/components/branda-finance/cashier-cart-panel";
 import { EntitySelect } from "@/components/branda-finance/entity-select";
 import { FinanceBackButton } from "@/components/branda-finance/finance-back-button";
+import { formatFinanceAmount } from "@/components/branda-finance/invoice-totals";
 import { LoyaltyScanModal } from "@/components/branda-finance/loyalty-scan-modal";
 import { ProductGrid } from "@/components/branda-finance/product-grid";
+import { createCashierInvoiceAction } from "@/lib/branda-finance/actions";
 import type { FinancePaymentMethod, FinanceProduct, FinanceWorkspaceData } from "@/lib/branda-finance/invoice-types";
 
 type CashierSalesWorkspaceProps = {
@@ -41,10 +43,12 @@ export function CashierSalesWorkspace({
   const [loyaltyOpen, setLoyaltyOpen] = useState(false);
   const [loyaltyCode, setLoyaltyCode] = useState("");
   const [invoicePreviewReady, setInvoicePreviewReady] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("تعرض هذه الصفحة المنتجات والفواتير الحقيقية من Supabase.");
+  const [isSaving, startSaving] = useTransition();
 
   const selectedBranch = data.branches.find((branch) => branch.id === selectedBranchId) ?? data.branches[0];
   const selectedWarehouse = data.warehouses.find((warehouse) => warehouse.id === selectedWarehouseId) ?? data.warehouses[0];
-  const selectedCustomer = data.customers.find((customer) => customer.id === selectedCustomerId) ?? data.customers[0];
+  const selectedCustomer = data.customers.find((customer) => customer.id === selectedCustomerId) ?? null;
   const cashierPaymentMethods = data.paymentMethods.filter((method) =>
     ["cash", "card", "mada", "transfer", "credit", ...(loyaltyEnabled ? ["loyalty_points"] : [])].includes(method.id),
   );
@@ -98,6 +102,58 @@ export function CashierSalesWorkspace({
     setCart((current) => current.filter((item) => item.product.id !== productId));
   }
 
+  function createInvoice() {
+    if (!selectedBranch) {
+      setStatusMessage("لا يوجد فرع متاح لحفظ فاتورة الكاشير.");
+      return;
+    }
+
+    if (!paymentMethod) {
+      setStatusMessage("اختر طريقة دفع قبل إنشاء الفاتورة.");
+      return;
+    }
+
+    if (!cart.length) {
+      setStatusMessage("أضف منتجًا واحدًا على الأقل إلى السلة.");
+      return;
+    }
+
+    const totals = cartTotals(cart);
+
+    startSaving(async () => {
+      const result = await createCashierInvoiceAction({
+        branchId: selectedBranch.id,
+        customerId: selectedCustomer?.id ?? null,
+        issueDate: new Date().toISOString().slice(0, 10),
+        dueDate: null,
+        discount: 0,
+        amountPaid: paymentMethod === "credit" ? 0 : totals.total,
+        paymentMethod,
+        source: "cashier",
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          description: item.note ? `${item.product.name} - ${item.note}` : item.product.name,
+          quantity: item.quantity,
+          price: item.product.price,
+          discount: 0,
+          taxRate: item.product.vatRate,
+          accountId: item.product.accountId || null,
+          warehouseId: selectedWarehouse?.id ?? null,
+        })),
+      });
+
+      if (!result.success) {
+        setStatusMessage(result.message);
+        return;
+      }
+
+      setInvoicePreviewReady(true);
+      setCart([]);
+      setPaymentMethod("");
+      setStatusMessage(result.invoiceNumber ? `${result.message}: ${result.invoiceNumber}` : result.message);
+    });
+  }
+
   return (
     <main dir="rtl" className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F5EFE6] px-3 py-4 text-right text-[#2F241D] sm:px-4 lg:px-5">
       <div className="mx-auto grid w-full max-w-full min-w-0 gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -111,11 +167,12 @@ export function CashierSalesWorkspace({
                   </div>
                   <p className="text-xs font-black text-[#9C6B2E]">برندا المالية</p>
                   <h1 className="mt-1 text-xl font-black text-[#2F241D] sm:text-2xl">المبيعات</h1>
+                  <p className="mt-1 text-[12px] font-bold text-[#7D6654]">{statusMessage}</p>
                 </div>
                 <div className="flex min-w-0 flex-wrap gap-1.5">
                   <div className="inline-flex h-9 w-fit items-center gap-1.5 rounded-[8px] border border-[#CFE2D8] bg-[#EDF7F2] px-2.5 text-[11px] font-black text-[#2F5D50]">
                     <ShieldCheck className="h-4 w-4" />
-                    جلسة كاشير محلية بدون حفظ
+                    حفظ فعلي في Supabase
                   </div>
                   <Link
                     href="/dashboard/branda-finance/invoicing/create?source=cashier"
@@ -160,7 +217,7 @@ export function CashierSalesWorkspace({
                     <input
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      placeholder="اسم عربي، إنجليزي، SKU، باركود، تصنيف"
+                      placeholder="اسم، SKU، باركود، تصنيف"
                       className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-9 text-[12px] font-bold text-[#2F241D] outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
                     />
                   </span>
@@ -190,6 +247,30 @@ export function CashierSalesWorkspace({
             </div>
           </header>
 
+          <section className="min-w-0 rounded-[8px] border border-[#D8C3A2] bg-[#FFFDF8] p-3 shadow-[0_16px_38px_rgba(69,43,28,0.08)]">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+              <h2 className="text-[13px] font-black text-[#2F241D]">آخر الفواتير الحقيقية</h2>
+              <span className="text-[11px] font-black text-[#2F5D50]">{data.salesInvoices.length}</span>
+            </div>
+            {data.salesInvoices.length ? (
+              <div className="grid gap-1.5">
+                {data.salesInvoices.slice(0, 5).map((invoice) => (
+                  <div key={invoice.id} className="grid gap-1 rounded-[8px] border border-[#E8D8C2] bg-[#FAF3E8] p-2 text-[11px] font-bold text-[#6D5544] sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                    <span className="min-w-0 truncate font-black text-[#2F241D]">
+                      {invoice.invoiceNumber ?? invoice.id.slice(0, 8)} - {invoice.customerName ?? "عميل نقدي"}
+                    </span>
+                    <span>{invoice.status}</span>
+                    <span dir="ltr">{formatFinanceAmount(invoice.total)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[8px] border border-dashed border-[#D6B677] bg-[#FFF8EA] p-3 text-[12px] font-bold text-[#6B431C]">
+                لا توجد فواتير محفوظة بعد في جدول finance_sales_invoices.
+              </div>
+            )}
+          </section>
+
           <div className="min-w-0 rounded-[8px] border border-[#D8C3A2] bg-[#FFFDF8] p-3 shadow-[0_16px_38px_rgba(69,43,28,0.08)]">
             <div className="flex min-w-0 flex-wrap gap-1.5">
               <button
@@ -218,19 +299,19 @@ export function CashierSalesWorkspace({
 
           {translationPreview ? (
             <div className="rounded-[8px] border border-[#D6B677] bg-[#FFF8EA] p-3 text-[12px] font-bold leading-6 text-[#6B431C]">
-              الترجمة الذكية ستعمل لاحقًا عند ربط مزود الترجمة. المنتجات التي تملك اسمًا إنجليزيًا تعرضه الآن مباشرة بدون أي اتصال خارجي.
+              الترجمة الذكية ستعمل لاحقًا عند ربط مزود الترجمة. المنتجات التي تملك اسمًا إنجليزيًا تعرضه الآن مباشرة بدون اتصال خارجي.
             </div>
           ) : null}
 
           <ProductGrid
             products={filteredProducts}
             showTranslationPreview={translationPreview}
-            emptyMessage={data.products.length ? "لا توجد منتجات مطابقة للبحث الحالي." : "لا توجد منتجات مربوطة بهذه العلامة بعد"}
+            emptyMessage={data.products.length ? "لا توجد منتجات مطابقة للبحث الحالي." : "لا توجد منتجات مرتبطة بهذه العلامة بعد"}
             onAdd={addToCart}
           />
         </section>
 
-        {selectedCustomer && selectedBranch ? (
+        {selectedBranch ? (
           <CashierCartPanel
             items={cart}
             customer={selectedCustomer}
@@ -241,17 +322,21 @@ export function CashierSalesWorkspace({
             loyaltyCode={loyaltyCode}
             loyaltyEnabled={loyaltyEnabled}
             invoicePreviewReady={invoicePreviewReady}
-            realInvoicePersistenceReady={realInvoicePersistenceReady}
+            realInvoicePersistenceReady={realInvoicePersistenceReady && !isSaving}
             onPaymentMethodChange={setPaymentMethod}
             onIncrease={increase}
             onDecrease={decrease}
             onQuantityChange={changeQuantity}
             onNoteChange={changeNote}
             onRemove={remove}
-            onCreateInvoicePreview={() => setInvoicePreviewReady(true)}
+            onCreateInvoicePreview={createInvoice}
             onOpenLoyalty={() => setLoyaltyOpen(true)}
           />
-        ) : null}
+        ) : (
+          <aside className="rounded-[8px] border border-dashed border-[#D6B677] bg-[#FFF8EA] p-4 text-sm font-black text-[#6B431C]">
+            لا يوجد فرع متاح. أضف فرعًا قبل إنشاء فواتير الكاشير.
+          </aside>
+        )}
       </div>
 
       {loyaltyEnabled ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Eye, FileCheck2, Paperclip, Save, ShoppingCart, X } from "lucide-react";
 import { AddBranchModal } from "@/components/branda-finance/add-branch-modal";
 import { AddCustomerModal } from "@/components/branda-finance/add-customer-modal";
@@ -10,7 +10,11 @@ import { FinanceBackButton } from "@/components/branda-finance/finance-back-butt
 import { InvoiceForm } from "@/components/branda-finance/invoice-form";
 import { InvoicePreviewModal } from "@/components/branda-finance/invoice-preview-modal";
 import { calculateInvoiceTotals } from "@/components/branda-finance/invoice-totals";
-import { BRANDA_FINANCE_REAL_PERSISTENCE_DISABLED_MESSAGE } from "@/lib/branda-finance/db-readiness";
+import {
+  approveSalesInvoiceAction,
+  saveSalesInvoiceDraftAction,
+  type SaveSalesInvoiceInput,
+} from "@/lib/branda-finance/actions";
 import type {
   FinanceBranch,
   FinanceCustomField,
@@ -71,8 +75,9 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [customFieldModalOpen, setCustomFieldModalOpen] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(BRANDA_FINANCE_REAL_PERSISTENCE_DISABLED_MESSAGE);
+  const [statusMessage, setStatusMessage] = useState("البيانات تقرأ من Supabase، والحفظ يكتب في جداول Branda Finance.");
   const [items, setItems] = useState<FinanceInvoiceItem[]>([]);
+  const [isSaving, startSaving] = useTransition();
 
   const totals = useMemo(() => calculateInvoiceTotals(items, discount, amountPaid), [amountPaid, discount, items]);
   const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? branches[0];
@@ -87,7 +92,7 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
 
   function addItem() {
     if (!data.products.length) {
-      setStatusMessage("لا توجد بيانات مرتبطة بعد");
+      setStatusMessage("لا توجد منتجات متاحة لإضافة بند.");
       return;
     }
 
@@ -103,25 +108,75 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
 
   function changePaymentMethod(id: FinancePaymentMethod["id"]) {
     setSelectedPaymentMethodId(id);
-    setAmountPaid(id === "cash" || id === "card" || id === "transfer" ? totals.total : 0);
-    setInvoiceStatus(id === "credit" || id === "unpaid" ? "غير مدفوعة" : "جاهزة للاعتماد");
+    setAmountPaid(id === "cash" || id === "card" || id === "mada" || id === "transfer" ? totals.total : 0);
+    setInvoiceStatus(id === "credit" || id === "unpaid" ? "غير مدفوعة" : "جاهزة للحفظ");
+  }
+
+  function buildInvoiceInput(): SaveSalesInvoiceInput {
+    return {
+      branchId: selectedBranchId || null,
+      customerId: selectedCustomerId || null,
+      issueDate,
+      dueDate: dueDate || null,
+      discount,
+      amountPaid,
+      paymentMethod: selectedPaymentMethodId,
+      source: "branda_finance",
+      items: items.map((item) => ({
+        productId: item.productId || null,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        taxRate: item.taxRate,
+        accountId: item.accountId || null,
+        warehouseId: item.warehouseId || selectedWarehouseId || null,
+      })),
+    };
+  }
+
+  function persistInvoice(mode: "draft" | "approved") {
+    if (!realPersistenceReady) {
+      setStatusMessage("جداول Branda Finance غير جاهزة للحفظ.");
+      return;
+    }
+
+    if (!items.length) {
+      setStatusMessage("أضف بندًا واحدًا على الأقل قبل حفظ الفاتورة.");
+      return;
+    }
+
+    startSaving(async () => {
+      const result =
+        mode === "draft"
+          ? await saveSalesInvoiceDraftAction(buildInvoiceInput())
+          : await approveSalesInvoiceAction(buildInvoiceInput());
+
+      if (!result.success) {
+        setStatusMessage(result.message);
+        return;
+      }
+
+      setInvoiceStatus(mode === "draft" ? "مسودة محفوظة" : "محفوظة");
+      setStatusMessage(result.invoiceNumber ? `${result.message}: ${result.invoiceNumber}` : result.message);
+    });
   }
 
   function saveCustomer(customer: FinanceCustomer) {
     setCustomers((current) => [customer, ...current]);
     setSelectedCustomerId(customer.id);
-    setStatusMessage("تمت إضافة العميل محليًا داخل الواجهة");
+    setStatusMessage("تمت إضافة العميل محليًا داخل الواجهة. احفظه في جدول finance_customers لاحقًا عند تفعيل نموذج العملاء.");
   }
 
   function saveBranch(branch: FinanceBranch) {
     setBranches((current) => [branch, ...current]);
     setSelectedBranchId(branch.id);
-    setStatusMessage("تمت إضافة الفرع محليًا داخل الواجهة");
+    setStatusMessage("تمت إضافة الفرع محليًا داخل الواجهة. الفروع الرسمية تقرأ من جدول branches.");
   }
 
   function saveCustomField(field: FinanceCustomField) {
     setCustomFields((current) => [field, ...current]);
-    setStatusMessage("تمت إضافة الحقل المخصص محليًا داخل الواجهة");
+    setStatusMessage("تمت إضافة الحقل المخصص محليًا داخل الواجهة.");
   }
 
   return (
@@ -137,7 +192,7 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
               <h1 className="mt-1 text-2xl font-black text-[#2F241D] sm:text-3xl">إنشاء فاتورة مبيعات</h1>
               <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
                 <span className="rounded-[8px] border border-[#D8BD89] bg-[#F8E8C9] px-2.5 py-1 text-[11px] font-black text-[#6B431C]">
-                  رقم الفاتورة يصدر بعد التفعيل
+                  رقم الفاتورة يصدر عند الحفظ المعتمد
                 </span>
                 <span className="rounded-[8px] border border-[#CFE2D8] bg-[#EDF7F2] px-2.5 py-1 text-[11px] font-black text-[#2F5D50]">
                   {invoiceStatus}
@@ -148,31 +203,17 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
             <div className="flex min-w-0 flex-wrap gap-1.5 xl:justify-end">
               <button
                 type="button"
-                disabled={!realPersistenceReady}
-                onClick={() => {
-                  if (!realPersistenceReady) {
-                    setStatusMessage(BRANDA_FINANCE_REAL_PERSISTENCE_DISABLED_MESSAGE);
-                    return;
-                  }
-                  setInvoiceStatus("جاهزة للاعتماد");
-                  setStatusMessage("تم اعتماد الفاتورة داخل الواجهة بدون كتابة دائمة");
-                }}
+                disabled={!realPersistenceReady || isSaving || !items.length}
+                onClick={() => persistInvoice("approved")}
                 className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-[8px] bg-[#2F5D50] px-3 text-[12px] font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FileCheck2 className="h-4 w-4" />
-                اعتماد الفاتورة
+                حفظ الفاتورة
               </button>
               <button
                 type="button"
-                disabled={!realPersistenceReady}
-                onClick={() => {
-                  if (!realPersistenceReady) {
-                    setStatusMessage(BRANDA_FINANCE_REAL_PERSISTENCE_DISABLED_MESSAGE);
-                    return;
-                  }
-                  setInvoiceStatus("مسودة");
-                  setStatusMessage("تم حفظ المسودة داخل الواجهة بدون كتابة دائمة");
-                }}
+                disabled={!realPersistenceReady || isSaving || !items.length}
+                onClick={() => persistInvoice("draft")}
                 className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-[8px] border border-[#D6B677] bg-[#F8E8C9] px-3 text-[12px] font-black text-[#6B431C] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
@@ -195,7 +236,7 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
               </button>
               <button
                 type="button"
-                onClick={() => setStatusMessage("المرفقات محلية ولا يتم رفع أي ملفات الآن")}
+                onClick={() => setStatusMessage("المرفقات لا ترفع ملفات بعد من هذه الشاشة.")}
                 className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-[8px] border border-[#D8C7B2] bg-white px-3 text-[12px] font-black text-[#5B3926]"
               >
                 <Paperclip className="h-4 w-4" />
@@ -203,7 +244,7 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
               </button>
               <button
                 type="button"
-                onClick={() => setStatusMessage("تم إغلاق مساحة العمل بدون انتقال أو حفظ دائم")}
+                onClick={() => setStatusMessage("تم إغلاق مساحة العمل بدون انتقال.")}
                 className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-[8px] border border-[#E6CFC8] bg-[#FFF7F4] px-3 text-[12px] font-black text-[#9B3327]"
               >
                 <X className="h-4 w-4" />
@@ -215,11 +256,11 @@ export function InvoiceWorkspace({ data, realPersistenceReady = false }: Invoice
 
         <div className="grid min-w-0 gap-4 overflow-hidden">
           <div className="rounded-[8px] border border-[#D6B677] bg-[#FFF8EA] p-3 text-[12px] font-bold leading-6 text-[#6B431C]">
-            {BRANDA_FINANCE_REAL_PERSISTENCE_DISABLED_MESSAGE}. يتم عرض المنتجات والفروع والعملاء الحقيقيين المتاحين فقط، وأي نقص في الجداول يظهر كحالة فارغة بدل بيانات محلية مصطنعة.
+            يتم عرض البيانات الحقيقية المتاحة فقط من Supabase. إذا لم توجد عملاء أو مستودعات أو حسابات ستظهر القوائم فارغة بدون بيانات تجريبية.
           </div>
           {!data.products.length ? (
             <div className="rounded-[8px] border border-dashed border-[#D8C3A2] bg-[#FFFDF8] p-4 text-center text-sm font-black text-[#7D6654]">
-              لا توجد بيانات مرتبطة بعد
+              لا توجد منتجات مرتبطة بهذه العلامة بعد.
             </div>
           ) : null}
           <InvoiceForm
