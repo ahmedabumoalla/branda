@@ -1,22 +1,32 @@
-import type { BrandaFinanceProduct } from "@/lib/branda-finance/invoice-types";
 import { ProductCard } from "@/components/branda-finance/product-card";
+import type { FinanceProduct } from "@/lib/branda-finance/invoice-types";
 
 type ProductGridProps = {
-  products: BrandaFinanceProduct[];
-  onAdd: (product: BrandaFinanceProduct) => void;
+  products: FinanceProduct[];
+  showTranslationPreview: boolean;
+  emptyMessage?: string;
+  onAdd: (product: FinanceProduct) => void;
 };
 
-export function ProductGrid({ products, onAdd }: ProductGridProps) {
+export function ProductGrid({
+  products,
+  showTranslationPreview,
+  emptyMessage = "لا توجد منتجات مطابقة للبحث الحالي.",
+  onAdd,
+}: ProductGridProps) {
+  if (!products.length) {
+    return (
+      <div className="flex min-h-[220px] min-w-0 items-center justify-center rounded-[8px] border border-dashed border-[#D8C3A2] bg-[#FFFDF8] p-6 text-center">
+        <p className="text-sm font-black text-[#7D6654]">{emptyMessage}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+    <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} onAdd={onAdd} />
+        <ProductCard key={product.id} product={product} showTranslationPreview={showTranslationPreview} onAdd={onAdd} />
       ))}
-      {!products.length ? (
-        <div className="col-span-full rounded-[20px] border border-dashed border-[#D9C5AE] bg-white p-8 text-center font-black text-[#806A5E]">
-          لا توجد نتائج مطابقة للبحث الحالي.
-        </div>
-      ) : null}
     </div>
   );
 }

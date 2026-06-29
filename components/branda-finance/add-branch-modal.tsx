@@ -1,78 +1,72 @@
-import { X } from "lucide-react";
-import { useState } from "react";
-import type { BrandaFinanceBranch } from "@/lib/branda-finance/invoice-types";
+import type { FinanceBranch } from "@/lib/branda-finance/invoice-types";
 
 type AddBranchModalProps = {
   open: boolean;
   onClose: () => void;
-  onSave: (branch: BrandaFinanceBranch) => void;
+  onSave: (branch: FinanceBranch) => void;
 };
 
-const branchFields = [
-  "شعار الفرع",
-  "اسم العرض",
-  "اسم الفرع",
-  "الهاتف",
-  "نوع الترخيص",
-  "رقم الترخيص",
-  "العنوان",
-  "الشارع",
-  "رقم المبنى",
-  "الحي",
-  "المدينة",
-  "الرمز البريدي",
-];
-
 export function AddBranchModal({ open, onClose, onSave }: AddBranchModalProps) {
-  const [values, setValues] = useState<Record<string, string>>({ المدينة: "الرياض" });
   if (!open) return null;
 
-  function save() {
-    const displayName = values["اسم العرض"]?.trim() || values["اسم الفرع"]?.trim() || "فرع جديد";
+  function handleSubmit(formData: FormData) {
+    const name = String(formData.get("name") ?? "").trim() || "فرع جديد";
     onSave({
-      id: `local-branch-${Date.now()}`,
-      displayName,
-      legalName: values["اسم الفرع"] || displayName,
-      phone: values["الهاتف"] || "",
-      city: values["المدينة"] || "الرياض",
-      address: values["العنوان"] || "",
-      licenseType: values["نوع الترخيص"] || undefined,
-      licenseNumber: values["رقم الترخيص"] || undefined,
+      id: `branch-local-${Date.now()}`,
+      name,
+      displayName: String(formData.get("displayName") ?? "").trim() || name,
+      city: String(formData.get("city") ?? "").trim() || "الرياض",
+      address: String(formData.get("address") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim() || undefined,
+      licenseType: String(formData.get("licenseType") ?? "").trim() || undefined,
+      licenseNumber: String(formData.get("licenseNumber") ?? "").trim() || undefined,
     });
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/40 p-4">
-      <div className="mx-auto max-w-3xl rounded-[24px] bg-[#FCF8F3] p-5 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-black text-[#311912]">إضافة فرع</h2>
-          <button type="button" onClick={onClose} className="rounded-2xl bg-white p-3 text-[#3A2117]" aria-label="إغلاق">
-            <X className="h-5 w-5" />
+    <div className="fixed inset-0 z-50 flex max-w-full items-center justify-center overflow-hidden bg-[#24160F]/45 p-3">
+      <form action={handleSubmit} className="max-h-[calc(100vh-24px)] w-full max-w-[min(96vw,760px)] min-w-0 overflow-hidden rounded-[8px] border border-[#E3CFB0] bg-[#FFFDF8] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#E8D8C2] px-4 py-3">
+          <h2 className="text-lg font-black text-[#2F241D]">إضافة فرع</h2>
+          <button type="button" onClick={onClose} className="h-9 w-9 rounded-[8px] border border-[#E3CFB0] font-black text-[#6B3F22]">
+            ×
           </button>
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {branchFields.map((label) => (
-            <label key={label} className="grid gap-2 text-sm font-black text-[#3A2117]">
-              <span>{label}</span>
-              <input
-                value={values[label] ?? ""}
-                onChange={(event) => setValues((current) => ({ ...current, [label]: event.target.value }))}
-                className="h-11 rounded-2xl border border-[#E7D7C6] bg-white px-3 font-bold outline-none"
-                placeholder={label === "شعار الفرع" ? "رفع الشعار لاحقًا" : undefined}
-              />
-            </label>
-          ))}
+        <div className="grid max-h-[calc(100vh-150px)] min-w-0 gap-3 overflow-y-auto overflow-x-hidden p-4 sm:grid-cols-2">
+          <p className="rounded-[8px] border border-[#D6B677] bg-[#FFF8EA] p-3 text-[12px] font-bold leading-6 text-[#6B431C] sm:col-span-2">
+            الحفظ هنا محلي داخل الواجهة فقط ولا يضيف فرعًا إلى قاعدة البيانات.
+          </p>
+          <TextField name="displayName" label="اسم العرض" />
+          <TextField name="name" label="اسم الفرع" />
+          <TextField name="phone" label="الهاتف" />
+          <TextField name="licenseType" label="نوع الترخيص" />
+          <TextField name="licenseNumber" label="رقم الترخيص" />
+          <TextField name="address" label="العنوان" />
+          <TextField name="city" label="المدينة" defaultValue="الرياض" />
         </div>
-        <div className="mt-5 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-2xl bg-white px-5 py-3 font-black text-[#6B3A25]">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[#E8D8C2] px-4 py-3">
+          <button type="button" onClick={onClose} className="rounded-[8px] border border-[#D8C7B2] px-4 py-2 text-[12px] font-black text-[#654B3B]">
             إلغاء
           </button>
-          <button type="button" onClick={save} className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white">
+          <button type="submit" className="rounded-[8px] bg-[#5B3926] px-4 py-2 text-[12px] font-black text-white">
             حفظ محلي
           </button>
         </div>
-      </div>
+      </form>
     </div>
+  );
+}
+
+function TextField({ name, label, defaultValue = "" }: { name: string; label: string; defaultValue?: string }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-[11px] font-black text-[#6D5544]">{label}</span>
+      <input
+        name={name}
+        defaultValue={defaultValue}
+        className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold text-[#2F241D] outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
+      />
+    </label>
   );
 }

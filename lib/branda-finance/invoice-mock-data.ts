@@ -1,220 +1,198 @@
-import type { MenuProduct } from "@/lib/mock/menu";
-import type { CafeBranch } from "@/lib/mock/branches";
-import type { CustomerProfileRow } from "@/lib/data/customers";
 import type {
-  BrandaFinanceAccount,
-  BrandaFinanceBranch,
-  BrandaFinanceCategory,
-  BrandaFinanceCustomField,
-  BrandaFinanceCustomer,
-  BrandaFinanceDataset,
-  BrandaFinancePaymentMethod,
-  BrandaFinanceProduct,
-  BrandaFinanceSupplier,
-  BrandaFinanceTaxRate,
-  BrandaFinanceWarehouse,
+  FinanceAccount,
+  FinanceBranch,
+  FinanceCategory,
+  FinanceCustomField,
+  FinanceCustomer,
+  FinancePaymentMethod,
+  FinanceProduct,
+  FinanceSupplier,
+  FinanceTaxRate,
+  FinanceWarehouse,
+  FinanceWorkspaceData,
 } from "@/lib/branda-finance/invoice-types";
 
-export const financeAccounts: BrandaFinanceAccount[] = [
-  { id: "sales-food", code: "4101", name: "مبيعات المنتجات" },
-  { id: "sales-services", code: "4102", name: "مبيعات الخدمات" },
-  { id: "discounts", code: "4201", name: "خصومات مسموحة" },
-];
-
-export const financeTaxRates: BrandaFinanceTaxRate[] = [
-  { id: "vat-15", name: "ضريبة القيمة المضافة 15%", rate: 0.15 },
-  { id: "zero", name: "صفرية", rate: 0 },
-];
-
-export const financePaymentMethods: { id: BrandaFinancePaymentMethod; label: string }[] = [
-  { id: "unpaid", label: "غير مدفوعة" },
-  { id: "cash", label: "كاش" },
-  { id: "card", label: "بطاقة" },
-  { id: "bank_transfer", label: "تحويل" },
-  { id: "credit", label: "آجل" },
-];
-
-export const mockFinanceBranches: BrandaFinanceBranch[] = [
+export const financeMockBranches: FinanceBranch[] = [
   {
-    id: "main-branch",
-    displayName: "الفرع الرئيسي",
-    legalName: "شركة برندة التجريبية",
-    phone: "05xxxxxxxx",
+    id: "branch-main",
+    name: "الفرع الرئيسي",
+    displayName: "برندا - الفرع الرئيسي",
     city: "الرياض",
-    address: "المملكة العربية السعودية",
-    licenseType: "سجل تجاري",
-    licenseNumber: "1010000000",
+    address: "طريق الملك فهد، الرياض",
+    phone: "0110000000",
+    licenseType: "رخصة بلدية",
+    licenseNumber: "BR-1001",
+  },
+  {
+    id: "branch-north",
+    name: "فرع الشمال",
+    displayName: "برندا - فرع الشمال",
+    city: "الرياض",
+    address: "حي النخيل",
+    phone: "0110000001",
+    licenseType: "رخصة بلدية",
+    licenseNumber: "BR-1002",
   },
 ];
 
-export const mockWarehouses: BrandaFinanceWarehouse[] = [
-  // TODO: Replace with a safe Branda Finance warehouses read model when the demo schema exists.
-  { id: "main-warehouse", name: "المستودع الرئيسي", branchId: "main-branch", city: "الرياض", stockStatus: "demo" },
-  { id: "display-warehouse", name: "مخزون واجهة البيع", branchId: "main-branch", city: "الرياض", stockStatus: "available" },
+export const financeMockWarehouses: FinanceWarehouse[] = [
+  { id: "warehouse-main", name: "المستودع الرئيسي", branchId: "branch-main", city: "الرياض" },
+  { id: "warehouse-display", name: "مخزون واجهة البيع", branchId: "branch-north", city: "الرياض" },
 ];
 
-export const mockCustomers: BrandaFinanceCustomer[] = [
+export const financeMockCustomers: FinanceCustomer[] = [
   {
-    id: "customer-1",
-    name: "شركة مذاق نجد",
-    contactName: "عبدالله العتيبي",
-    email: "billing@example.test",
-    phone: "0500000000",
+    id: "customer-sahara",
+    name: "شركة صحارى للضيافة",
     country: "المملكة العربية السعودية",
-    city: "الرياض",
     vatRegistered: true,
-    taxNumber: "300000000000003",
-    billingAddress: "الرياض، حي الصحافة",
+    vatNumber: "300000000000003",
+    city: "الرياض",
+    address: "حي العليا",
+    email: "finance@sahara.example",
+    phone: "0500000001",
     currency: "SAR",
-    paymentTerms: "استحقاق خلال 15 يوم",
+    paymentTerms: "15 يوم",
   },
   {
-    id: "customer-2",
-    name: "عميل نقدي",
-    contactName: "عميل نقطة البيع",
-    email: "",
-    phone: "",
+    id: "customer-noura",
+    name: "نورة القحطاني",
     country: "المملكة العربية السعودية",
-    city: "الرياض",
     vatRegistered: false,
-    billingAddress: "بيع مباشر من الكاشير",
+    city: "جدة",
+    address: "حي السلامة",
+    email: "noura@example.com",
+    phone: "0500000002",
     currency: "SAR",
     paymentTerms: "فوري",
   },
 ];
 
-export const mockSuppliers: BrandaFinanceSupplier[] = [
-  // TODO: Replace with suppliers from the purchase flow once a read-only helper is available.
-  { id: "supplier-1", name: "مورد البن المختص", contactName: "فريق التوريد", phone: "0500000001", email: "supplier@example.test", category: "مواد خام" },
-  { id: "supplier-2", name: "مورد التغليف", contactName: "خدمة العملاء", phone: "0500000002", email: "packaging@example.test", category: "تشغيل" },
-];
-
-export const mockCategories: BrandaFinanceCategory[] = [
-  { id: "hot", name: "قهوة" },
-  { id: "cold", name: "بارد" },
-  { id: "sweets", name: "حلويات" },
-  { id: "services", name: "خدمات" },
-];
-
-export const mockProducts: BrandaFinanceProduct[] = [
+export const financeMockSuppliers: FinanceSupplier[] = [
   {
-    id: "product-1",
-    name: "لاتيه فانيلا",
-    englishName: "Vanilla Latte",
-    description: "مشروب قهوة حار مع حليب وفانيلا.",
+    id: "supplier-roastery",
+    name: "محمصة المورد الذهبي",
+    vatNumber: "300000000000004",
+    phone: "0500000003",
+    email: "supply@example.com",
+  },
+  {
+    id: "supplier-packaging",
+    name: "حلول التغليف العربية",
+    vatNumber: "300000000000005",
+    phone: "0500000004",
+    email: "ops@example.com",
+  },
+];
+
+export const financeMockAccounts: FinanceAccount[] = [
+  { id: "sales-food", code: "4101", name: "إيرادات المنتجات" },
+  { id: "sales-services", code: "4102", name: "إيرادات الخدمات" },
+  { id: "sales-delivery", code: "4103", name: "إيرادات التوصيل" },
+];
+
+export const financeMockTaxRates: FinanceTaxRate[] = [
+  { id: "vat-15", name: "ضريبة القيمة المضافة 15%", rate: 15 },
+  { id: "vat-zero", name: "ضريبة صفرية", rate: 0 },
+];
+
+export const financeMockCategories: FinanceCategory[] = [
+  { id: "cat-coffee", name: "قهوة" },
+  { id: "cat-cold", name: "بارد" },
+  { id: "cat-sweets", name: "حلويات" },
+  { id: "cat-services", name: "خدمات" },
+];
+
+export const financeMockProducts: FinanceProduct[] = [
+  {
+    id: "product-latte",
+    name: "لاتيه فاخر",
+    englishName: "Signature Latte",
+    details: "مشروب قهوة بالحليب للاستخدام في معاينة الفاتورة",
     category: "قهوة",
-    sku: "BR-HOT-001",
+    sku: "BRD-LAT-001",
     barcode: "6281000000011",
+    imageUrl: "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=900&auto=format&fit=crop",
     price: 18,
-    imageUrl: "https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=800&auto=format&fit=crop",
-    taxRateId: "vat-15",
+    vatRate: 15,
+    stock: 48,
     accountId: "sales-food",
-    available: true,
-    stock: 42,
+    revenueRecognition: "عند إصدار الفاتورة",
   },
   {
-    id: "product-2",
-    name: "آيس سبانش لاتيه",
-    englishName: "Iced Spanish Latte",
-    description: "مشروب بارد مناسب للبيع السريع.",
+    id: "product-cold-brew",
+    name: "كولد برو",
+    englishName: "Cold Brew",
+    details: "قهوة باردة محضرة مسبقًا",
     category: "بارد",
-    sku: "BR-CLD-002",
+    sku: "BRD-CBR-002",
     barcode: "6281000000028",
+    imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=900&auto=format&fit=crop",
     price: 21,
-    imageUrl: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=800&auto=format&fit=crop",
-    taxRateId: "vat-15",
+    vatRate: 15,
+    stock: 35,
     accountId: "sales-food",
-    available: true,
-    stock: 31,
+    revenueRecognition: "عند التسليم",
   },
   {
-    id: "product-3",
+    id: "product-cookie",
     name: "كوكيز شوكولاتة",
     englishName: "Chocolate Cookie",
-    description: "قطعة حلى مضافة للفاتورة أو الكاشير.",
+    details: "قطعة مخبوزة يوميًا",
     category: "حلويات",
-    sku: "BR-SWT-003",
+    sku: "BRD-CKI-003",
     barcode: "6281000000035",
+    imageUrl: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=900&auto=format&fit=crop",
     price: 12,
-    imageUrl: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=800&auto=format&fit=crop",
-    taxRateId: "vat-15",
+    vatRate: 15,
+    stock: 72,
     accountId: "sales-food",
-    available: true,
-    stock: 18,
+    revenueRecognition: "عند إصدار الفاتورة",
+  },
+  {
+    id: "product-catering",
+    name: "باقة ضيافة مصغرة",
+    englishName: "Mini Catering Pack",
+    details: "باقة تجهيز مناسبة لاجتماع قصير",
+    category: "خدمات",
+    sku: "BRD-SRV-004",
+    barcode: "6281000000042",
+    imageUrl: "https://images.unsplash.com/photo-1556911220-bff31c812dba?q=80&w=900&auto=format&fit=crop",
+    price: 145,
+    vatRate: 15,
+    stock: 8,
+    accountId: "sales-services",
+    revenueRecognition: "حسب تاريخ الخدمة",
   },
 ];
 
-export const mockCustomFields: BrandaFinanceCustomField[] = [
-  // TODO: Persist custom field definitions only after Branda Finance settings tables are introduced.
-  { id: "po", name: "أمر الشراء", appliesTo: "invoice", fieldType: "text", value: "" },
-  { id: "reference", name: "المرجع", appliesTo: "invoice", fieldType: "text", value: "" },
-  { id: "project", name: "المشروع", appliesTo: "invoice", fieldType: "text", value: "" },
-  { id: "warehouse", name: "المستودع", appliesTo: "invoice", fieldType: "select", value: "المستودع الرئيسي" },
+export const financeMockPaymentMethods: FinancePaymentMethod[] = [
+  { id: "unpaid", name: "غير مدفوعة", ledgerHint: "يبقى الرصيد على ذمة العميل" },
+  { id: "cash", name: "كاش", ledgerHint: "يربط لاحقًا بصندوق الكاشير" },
+  { id: "card", name: "بطاقة", ledgerHint: "يربط لاحقًا بمزود البطاقات" },
+  { id: "mada", name: "مدى", ledgerHint: "يتطلب مزود دفع رسمي لاحقًا" },
+  { id: "transfer", name: "تحويل", ledgerHint: "يربط لاحقًا بالحساب البنكي" },
+  { id: "credit", name: "آجل", ledgerHint: "يرحل لاحقًا إلى الذمم المدينة" },
+  { id: "loyalty_points", name: "نقاط الولاء", ledgerHint: "خصم ولاء محلي للمعاينة فقط" },
 ];
 
-export function branchFromCafeBranch(branch: CafeBranch): BrandaFinanceBranch {
-  return {
-    id: branch.id,
-    displayName: branch.name || "الفرع الرئيسي",
-    legalName: branch.name || "الفرع الرئيسي",
-    phone: branch.phone ?? "",
-    city: branch.city || "الرياض",
-    address: branch.address || "المملكة العربية السعودية",
-  };
-}
+export const financeMockCustomFields: FinanceCustomField[] = [
+  { id: "po", name: "أمر الشراء", appliesTo: "الفاتورة", type: "text" },
+  { id: "reference", name: "المرجع", appliesTo: "الفاتورة", type: "text" },
+  { id: "project", name: "المشروع", appliesTo: "الفاتورة", type: "select" },
+  { id: "warehouse", name: "المستودع", appliesTo: "بند الفاتورة", type: "select" },
+];
 
-export function customerFromProfile(row: CustomerProfileRow): BrandaFinanceCustomer {
-  return {
-    id: row.id,
-    name: String(row.full_name ?? row.name ?? "عميل"),
-    contactName: String(row.full_name ?? row.name ?? "عميل"),
-    email: String(row.email ?? ""),
-    phone: String(row.phone ?? ""),
-    country: "المملكة العربية السعودية",
-    city: String(row.city ?? "الرياض"),
-    vatRegistered: false,
-    billingAddress: String(row.address ?? ""),
-    currency: "SAR",
-    paymentTerms: "فوري",
-  };
-}
-
-export function productFromMenuProduct(product: MenuProduct, index: number): BrandaFinanceProduct {
-  return {
-    id: product.id,
-    name: product.name,
-    englishName: undefined,
-    description: product.description || "صنف من المنيو مرتبط بواجهة برندة.",
-    category: product.category || "أخرى",
-    sku: `MENU-${String(index + 1).padStart(4, "0")}`,
-    barcode: `62810${String(index + 1).padStart(8, "0")}`,
-    price: Number(product.price ?? 0),
-    imageUrl: product.imageDataUrl ?? product.imageGallery?.[0]?.imageDataUrl ?? null,
-    taxRateId: "vat-15",
-    accountId: "sales-food",
-    available: product.available,
-    stock: product.available ? 25 : 0,
-  };
-}
-
-export function createFinanceDataset(input?: {
-  branches?: BrandaFinanceBranch[];
-  customers?: BrandaFinanceCustomer[];
-  products?: BrandaFinanceProduct[];
-  categories?: BrandaFinanceCategory[];
-  dataNotes?: string[];
-}): BrandaFinanceDataset {
-  return {
-    branches: input?.branches?.length ? input.branches : mockFinanceBranches,
-    warehouses: mockWarehouses,
-    customers: input?.customers?.length ? input.customers : mockCustomers,
-    suppliers: mockSuppliers,
-    products: input?.products?.length ? input.products : mockProducts,
-    categories: input?.categories?.length ? input.categories : mockCategories,
-    accounts: financeAccounts,
-    taxRates: financeTaxRates,
-    paymentMethods: financePaymentMethods,
-    customFields: mockCustomFields,
-    dataNotes: input?.dataNotes ?? ["بيانات تجريبية محلية، لا توجد أي كتابة في قاعدة البيانات."],
-  };
-}
+export const financeMockWorkspaceData: FinanceWorkspaceData = {
+  branches: financeMockBranches,
+  warehouses: financeMockWarehouses,
+  customers: financeMockCustomers,
+  suppliers: financeMockSuppliers,
+  products: financeMockProducts,
+  categories: financeMockCategories,
+  accounts: financeMockAccounts,
+  taxRates: financeMockTaxRates,
+  paymentMethods: financeMockPaymentMethods,
+  customFields: financeMockCustomFields,
+  dataSourceNotes: ["بيانات معاينة محلية فقط إلى حين ربط جداول الفوترة الفعلية."],
+};

@@ -1,73 +1,74 @@
-import { X } from "lucide-react";
-import { useState } from "react";
-import type { BrandaFinanceCustomField } from "@/lib/branda-finance/invoice-types";
+import type { FinanceCustomField } from "@/lib/branda-finance/invoice-types";
 
 type CustomFieldModalProps = {
   open: boolean;
   onClose: () => void;
-  onSave: (field: BrandaFinanceCustomField) => void;
+  onSave: (field: FinanceCustomField) => void;
 };
 
-export function CustomFieldModal({ open, onClose, onSave }: CustomFieldModalProps) {
-  const [name, setName] = useState("");
-  const [appliesTo, setAppliesTo] = useState<BrandaFinanceCustomField["appliesTo"]>("invoice");
-  const [fieldType, setFieldType] = useState<BrandaFinanceCustomField["fieldType"]>("text");
+const fieldTypes: Array<{ value: FinanceCustomField["type"]; label: string }> = [
+  { value: "text", label: "نص" },
+  { value: "textarea", label: "نص متعدد الأسطر" },
+  { value: "number", label: "رقم" },
+  { value: "date", label: "تاريخ" },
+  { value: "select", label: "اختيار" },
+];
 
+export function CustomFieldModal({ open, onClose, onSave }: CustomFieldModalProps) {
   if (!open) return null;
 
-  function save() {
+  function handleSubmit(formData: FormData) {
     onSave({
-      id: `local-field-${Date.now()}`,
-      name: name.trim() || "حقل مخصص",
-      appliesTo,
-      fieldType,
-      value: "",
+      id: `custom-local-${Date.now()}`,
+      name: String(formData.get("name") ?? "").trim() || "حقل مخصص",
+      appliesTo: String(formData.get("appliesTo") ?? "").trim() || "الفاتورة",
+      type: String(formData.get("type") ?? "text") as FinanceCustomField["type"],
     });
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-black/40 p-4">
-      <div className="mx-auto mt-16 max-w-xl rounded-[24px] bg-[#FCF8F3] p-5 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-black text-[#311912]">إضافة حقل مخصص</h2>
-          <button type="button" onClick={onClose} className="rounded-2xl bg-white p-3 text-[#3A2117]" aria-label="إغلاق">
-            <X className="h-5 w-5" />
+    <div className="fixed inset-0 z-50 flex max-w-full items-center justify-center overflow-hidden bg-[#24160F]/45 p-3">
+      <form action={handleSubmit} className="max-h-[calc(100vh-24px)] w-full max-w-[min(96vw,520px)] min-w-0 overflow-hidden rounded-[8px] border border-[#E3CFB0] bg-[#FFFDF8] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#E8D8C2] px-4 py-3">
+          <h2 className="text-lg font-black text-[#2F241D]">إضافة حقل مخصص</h2>
+          <button type="button" onClick={onClose} className="h-9 w-9 rounded-[8px] border border-[#E3CFB0] font-black text-[#6B3F22]">
+            ×
           </button>
         </div>
-        <div className="grid gap-3">
-          <label className="grid gap-2 text-sm font-black text-[#3A2117]">
-            <span>الاسم</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} className="h-11 rounded-2xl border border-[#E7D7C6] bg-white px-3 font-bold outline-none" />
+        <div className="max-h-[calc(100vh-150px)] space-y-3 overflow-y-auto overflow-x-hidden p-4">
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-[11px] font-black text-[#6D5544]">الاسم</span>
+            <input name="name" className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20" />
           </label>
-          <label className="grid gap-2 text-sm font-black text-[#3A2117]">
-            <span>ينطبق على</span>
-            <select value={appliesTo} onChange={(event) => setAppliesTo(event.target.value as BrandaFinanceCustomField["appliesTo"])} className="h-11 rounded-2xl border border-[#E7D7C6] bg-white px-3 font-bold outline-none">
-              <option value="invoice">الفاتورة</option>
-              <option value="customer">العميل</option>
-              <option value="item">الصنف</option>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-[11px] font-black text-[#6D5544]">ينطبق على</span>
+            <select name="appliesTo" className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20">
+              <option>الفاتورة</option>
+              <option>العميل</option>
+              <option>بند الفاتورة</option>
             </select>
           </label>
-          <label className="grid gap-2 text-sm font-black text-[#3A2117]">
-            <span>نوع الحقل</span>
-            <select value={fieldType} onChange={(event) => setFieldType(event.target.value as BrandaFinanceCustomField["fieldType"])} className="h-11 rounded-2xl border border-[#E7D7C6] bg-white px-3 font-bold outline-none">
-              <option value="text">نص</option>
-              <option value="textarea">نص متعدد الأسطر</option>
-              <option value="number">رقم</option>
-              <option value="date">تاريخ</option>
-              <option value="select">اختيار</option>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-[11px] font-black text-[#6D5544]">نوع الحقل</span>
+            <select name="type" className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20">
+              {fieldTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
-        <div className="mt-5 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-2xl bg-white px-5 py-3 font-black text-[#6B3A25]">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[#E8D8C2] px-4 py-3">
+          <button type="button" onClick={onClose} className="rounded-[8px] border border-[#D8C7B2] px-4 py-2 text-[12px] font-black text-[#654B3B]">
             إلغاء
           </button>
-          <button type="button" onClick={save} className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white">
+          <button type="submit" className="rounded-[8px] bg-[#5B3926] px-4 py-2 text-[12px] font-black text-white">
             حفظ محلي
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

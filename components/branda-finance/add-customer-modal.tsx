@@ -1,112 +1,84 @@
-import { X } from "lucide-react";
-import { useState } from "react";
-import type { BrandaFinanceCustomer } from "@/lib/branda-finance/invoice-types";
+import type { FinanceCustomer } from "@/lib/branda-finance/invoice-types";
 
 type AddCustomerModalProps = {
   open: boolean;
   onClose: () => void;
-  onSave: (customer: BrandaFinanceCustomer) => void;
+  onSave: (customer: FinanceCustomer) => void;
 };
 
-const fieldLabels = [
-  "اسم المنشأة",
-  "البلد",
-  "رقم التسجيل الضريبي",
-  "العنوان",
-  "المدينة",
-  "الشارع",
-  "رقم المبنى",
-  "الحي",
-  "الرمز البريدي",
-  "بيانات الفوترة",
-  "المعرف",
-  "البريد الإلكتروني",
-  "الهاتف",
-  "العملة",
-  "شروط الدفع",
-  "الحساب الافتراضي للإيرادات",
-  "مركز تكلفة الإيرادات الافتراضي",
-  "معدل الضريبة الافتراضي",
-  "الحقول المخصصة",
-];
-
 export function AddCustomerModal({ open, onClose, onSave }: AddCustomerModalProps) {
-  const [values, setValues] = useState<Record<string, string>>({
-    البلد: "المملكة العربية السعودية",
-    العملة: "SAR",
-    "شروط الدفع": "فوري",
-  });
-  const [vatRegistered, setVatRegistered] = useState(true);
-
   if (!open) return null;
 
-  function save() {
-    const name = values["اسم المنشأة"]?.trim() || "عميل جديد";
+  function handleSubmit(formData: FormData) {
+    const name = String(formData.get("name") ?? "").trim() || "عميل جديد";
+    const country = String(formData.get("country") ?? "").trim() || "المملكة العربية السعودية";
+
     onSave({
-      id: `local-customer-${Date.now()}`,
+      id: `customer-local-${Date.now()}`,
       name,
-      contactName: values["المعرف"] || name,
-      email: values["البريد الإلكتروني"] || "",
-      phone: values["الهاتف"] || "",
-      country: values["البلد"] || "المملكة العربية السعودية",
-      city: values["المدينة"] || "",
-      vatRegistered,
-      taxNumber: values["رقم التسجيل الضريبي"] || undefined,
-      billingAddress: values["بيانات الفوترة"] || values["العنوان"] || "",
+      country,
+      vatRegistered: formData.get("vatRegistered") === "on",
+      vatNumber: String(formData.get("vatNumber") ?? "").trim() || undefined,
+      city: String(formData.get("city") ?? "").trim() || undefined,
+      address: String(formData.get("address") ?? "").trim() || undefined,
+      email: String(formData.get("email") ?? "").trim() || undefined,
+      phone: String(formData.get("phone") ?? "").trim() || undefined,
       currency: "SAR",
-      paymentTerms: values["شروط الدفع"] || "فوري",
+      paymentTerms: String(formData.get("paymentTerms") ?? "").trim() || "فوري",
     });
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/40 p-4">
-      <div className="mx-auto max-w-4xl rounded-[24px] bg-[#FCF8F3] p-5 shadow-2xl">
-        <Header title="إضافة عميل" onClose={onClose} />
-        <label className="mb-4 flex items-center gap-3 rounded-2xl bg-white p-3 text-sm font-black text-[#3A2117]">
-          <input type="checkbox" checked={vatRegistered} onChange={(event) => setVatRegistered(event.target.checked)} />
-          جهة الاتصال مسجلة في ضريبة القيمة المضافة في السعودية
-        </label>
-        <div className="grid gap-3 md:grid-cols-2">
-          {fieldLabels.map((label) => (
-            <Field key={label} label={label} value={values[label] ?? ""} onChange={(value) => setValues((current) => ({ ...current, [label]: value }))} />
-          ))}
+    <div className="fixed inset-0 z-50 flex max-w-full items-center justify-center overflow-hidden bg-[#24160F]/45 p-3">
+      <form action={handleSubmit} className="max-h-[calc(100vh-24px)] w-full max-w-[min(96vw,760px)] min-w-0 overflow-hidden rounded-[8px] border border-[#E3CFB0] bg-[#FFFDF8] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#E8D8C2] px-4 py-3">
+          <div>
+            <h2 className="text-lg font-black text-[#2F241D]">إضافة عميل</h2>
+            <p className="mt-1 text-[11px] font-bold text-[#806A58]">
+              هذه إضافة محلية داخل الواجهة فقط ولا تنشئ سجل عميل في قاعدة البيانات.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="h-9 w-9 rounded-[8px] border border-[#E3CFB0] font-black text-[#6B3F22]">
+            ×
+          </button>
         </div>
-        <Footer onClose={onClose} onSave={save} />
-      </div>
+        <div className="grid max-h-[calc(100vh-150px)] min-w-0 gap-3 overflow-y-auto overflow-x-hidden p-4 sm:grid-cols-2">
+          <TextField name="name" label="اسم المنشأة / العميل" />
+          <TextField name="country" label="البلد" defaultValue="المملكة العربية السعودية" />
+          <TextField name="vatNumber" label="رقم التسجيل الضريبي" />
+          <TextField name="city" label="المدينة" />
+          <TextField name="address" label="العنوان" />
+          <TextField name="email" label="البريد الإلكتروني" />
+          <TextField name="phone" label="الهاتف" />
+          <TextField name="paymentTerms" label="شروط الدفع" defaultValue="فوري" />
+          <label className="flex min-h-9 min-w-0 items-center gap-2 rounded-[8px] border border-[#E8D8C2] bg-[#FAF3E8] px-2.5 text-[12px] font-bold text-[#4A3528]">
+            <input name="vatRegistered" type="checkbox" className="h-4 w-4 accent-[#6B3F22]" />
+            <span>مسجل في ضريبة القيمة المضافة</span>
+          </label>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[#E8D8C2] px-4 py-3">
+          <button type="button" onClick={onClose} className="rounded-[8px] border border-[#D8C7B2] px-4 py-2 text-[12px] font-black text-[#654B3B]">
+            إلغاء
+          </button>
+          <button type="submit" className="rounded-[8px] bg-[#5B3926] px-4 py-2 text-[12px] font-black text-white">
+            حفظ محلي
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
 
-function Header({ title, onClose }: { title: string; onClose: () => void }) {
+function TextField({ name, label, defaultValue = "" }: { name: string; label: string; defaultValue?: string }) {
   return (
-    <div className="mb-5 flex items-center justify-between gap-4">
-      <h2 className="text-2xl font-black text-[#311912]">{title}</h2>
-      <button type="button" onClick={onClose} className="rounded-2xl bg-white p-3 text-[#3A2117]" aria-label="إغلاق">
-        <X className="h-5 w-5" />
-      </button>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="grid gap-2 text-sm font-black text-[#3A2117]">
-      <span>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-2xl border border-[#E7D7C6] bg-white px-3 font-bold outline-none" />
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-[11px] font-black text-[#6D5544]">{label}</span>
+      <input
+        name={name}
+        defaultValue={defaultValue}
+        className="h-9 w-full min-w-0 rounded-[8px] border border-[#E1D1BD] bg-white px-2 text-[12px] font-bold text-[#2F241D] outline-none focus:border-[#B88334] focus:ring-2 focus:ring-[#D9A33F]/20"
+      />
     </label>
-  );
-}
-
-function Footer({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
-  return (
-    <div className="mt-5 flex justify-end gap-3">
-      <button type="button" onClick={onClose} className="rounded-2xl bg-white px-5 py-3 font-black text-[#6B3A25]">
-        إلغاء
-      </button>
-      <button type="button" onClick={onSave} className="rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-white">
-        حفظ محلي
-      </button>
-    </div>
   );
 }

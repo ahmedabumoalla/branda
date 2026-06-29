@@ -1,110 +1,123 @@
-export type BrandaFinanceBranch = {
+export type FinanceBranch = {
   id: string;
+  name: string;
   displayName: string;
-  legalName: string;
-  phone: string;
   city: string;
   address: string;
+  phone?: string;
   licenseType?: string;
   licenseNumber?: string;
 };
 
-export type BrandaFinanceWarehouse = {
+export type FinanceWarehouse = {
   id: string;
   name: string;
   branchId?: string;
   city: string;
-  stockStatus: "available" | "low" | "demo";
 };
 
-export type BrandaFinanceCustomer = {
+export type FinanceCustomer = {
   id: string;
   name: string;
-  contactName: string;
-  email: string;
-  phone: string;
   country: string;
-  city: string;
   vatRegistered: boolean;
-  taxNumber?: string;
-  billingAddress: string;
+  vatNumber?: string;
+  city?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
   currency: "SAR";
   paymentTerms: string;
 };
 
-export type BrandaFinanceSupplier = {
+export type FinanceSupplier = {
   id: string;
   name: string;
-  contactName: string;
-  phone: string;
-  email: string;
-  category: string;
+  vatNumber?: string;
+  phone?: string;
+  email?: string;
 };
 
-export type BrandaFinanceProduct = {
+export type FinanceProduct = {
   id: string;
   name: string;
   englishName?: string;
-  description: string;
+  details: string;
   category: string;
   sku: string;
   barcode: string;
-  price: number;
   imageUrl?: string | null;
-  taxRateId: string;
-  accountId: string;
-  available: boolean;
+  price: number;
+  cost?: number;
+  vatRate: number;
   stock: number;
+  accountId: string;
+  costAccountId?: string;
+  inventoryAccountId?: string;
+  defaultSupplierId?: string;
+  purchaseUnit?: string;
+  defaultWarehouseId?: string;
+  costCenterId?: string;
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRequired?: number;
+  loyaltyEarnEligible?: boolean;
+  loyaltyRedeemEligible?: boolean;
+  revenueRecognition: string;
 };
 
-export type BrandaFinanceCategory = {
+export type FinanceCategory = {
   id: string;
   name: string;
 };
 
-export type BrandaFinanceAccount = {
+export type FinanceAccount = {
   id: string;
-  name: string;
   code: string;
+  name: string;
 };
 
-export type BrandaFinanceTaxRate = {
+export type FinanceTaxRate = {
   id: string;
   name: string;
   rate: number;
 };
 
-export type BrandaFinancePaymentMethod = "unpaid" | "cash" | "card" | "bank_transfer" | "credit";
-
-export type BrandaFinanceCustomField = {
-  id: string;
+export type FinancePaymentMethod = {
+  id: "unpaid" | "cash" | "card" | "mada" | "transfer" | "credit" | "loyalty_points";
   name: string;
-  appliesTo: "invoice" | "customer" | "item";
-  fieldType: "text" | "textarea" | "number" | "date" | "select";
-  value?: string;
+  ledgerHint: string;
 };
 
-export type BrandaFinanceInvoiceLine = {
+export type FinanceCustomField = {
+  id: string;
+  name: string;
+  appliesTo: string;
+  type: "text" | "textarea" | "number" | "date" | "select";
+};
+
+export type FinanceInvoiceItem = {
   id: string;
   productId?: string;
   description: string;
   quantity: number;
-  unitPrice: number;
-  taxRateId: string;
+  price: number;
+  discount: number;
+  taxRate: number;
   accountId: string;
+  warehouseId?: string;
   revenueRecognition: string;
 };
 
-export type BrandaFinanceDataset = {
-  branches: BrandaFinanceBranch[];
-  warehouses: BrandaFinanceWarehouse[];
-  customers: BrandaFinanceCustomer[];
-  suppliers: BrandaFinanceSupplier[];
-  products: BrandaFinanceProduct[];
-  categories: BrandaFinanceCategory[];
-  accounts: BrandaFinanceAccount[];
-  taxRates: BrandaFinanceTaxRate[];
-  paymentMethods: { id: BrandaFinancePaymentMethod; label: string }[];
-  customFields: BrandaFinanceCustomField[];
-  dataNotes: string[];
+export type FinanceWorkspaceData = {
+  branches: FinanceBranch[];
+  warehouses: FinanceWarehouse[];
+  customers: FinanceCustomer[];
+  suppliers: FinanceSupplier[];
+  products: FinanceProduct[];
+  categories: FinanceCategory[];
+  accounts: FinanceAccount[];
+  taxRates: FinanceTaxRate[];
+  paymentMethods: FinancePaymentMethod[];
+  customFields: FinanceCustomField[];
+  dataSourceNotes: string[];
 };
