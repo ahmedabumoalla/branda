@@ -60,6 +60,11 @@ import type {
   PlatformOperation,
   PlatformPlan,
 } from "@/lib/platform/admin-data";
+import {
+  getBrandFeatureOverrides,
+  getEffectiveBrandFeatureAccess,
+  getPlanIncludedFeatures,
+} from "@/lib/platform/feature-access";
 import { formatSar } from "@/lib/format";
 
 const iconMap = {
@@ -145,6 +150,35 @@ function DetailRow({
   );
 }
 
+const featureCategoryLabels: Record<string, string> = {
+  core: "أساسية",
+  commerce: "تجارية",
+  operations: "تشغيلية",
+  growth: "نمو وتسويق",
+  experience: "تجربة العملاء",
+  settings: "إعدادات",
+  finance: "مالية",
+};
+
+const overrideLabels = {
+  default: "إعدادات الباقة",
+  enabled: "مفعلة يدويًا",
+  disabled: "مقفلة يدويًا",
+} as const;
+
+const effectiveResultLabels = {
+  active: "فعالة",
+  locked: "مقفلة",
+  disabled_by_admin: "معطلة من الأدمن",
+  coming_soon: "قريبًا",
+} as const;
+
+function getBrandFeatureRows(cafe: PlatformCafe | null, plans: PlatformPlan[]) {
+  if (!cafe) return [];
+  const planFeatures = getPlanIncludedFeatures(cafe.planId, plans);
+  return getEffectiveBrandFeatureAccess(planFeatures, getBrandFeatureOverrides(cafe.id));
+}
+
 export function AdminCafesPage({
   initialCafes,
   initialPlans,
@@ -200,6 +234,13 @@ export function AdminCafesPage({
     : null;
   const selectedDomainSource = resolveCafeDomainSource(selectedDomainSettings);
   const selectedPlan = plans.find((p) => p.id === selected?.planId);
+  const selectedFeatureRows = useMemo(
+    () => getBrandFeatureRows(selected, plans),
+    [plans, selected],
+  );
+  const selectedIncludedCount = selectedFeatureRows.filter((row) => row.planIncluded).length;
+  const selectedManuallyEnabledCount = selectedFeatureRows.filter((row) => row.override === "enabled").length;
+  const selectedManuallyDisabledCount = selectedFeatureRows.filter((row) => row.override === "disabled").length;
   const categoryStats = countByCategory(cafes);
 
   const cafeCustomers = useMemo(
@@ -534,6 +575,77 @@ export function AdminCafesPage({
 
       {selected ? (
         <BentoGrid className="mt-6">
+          <BentoCard variant="dark" span="4">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-[#F8F4EF]">صلاحيات وخدمات العلامة</h3>
+                <p className="mt-1 text-sm font-bold text-[#CBB29C]">
+                  الباقة الحالية: {selected.planName || resolvePlanName(plans, selected.planId)}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs font-black sm:grid-cols-4">
+                <span className="rounded-xl bg-white/5 px-3 py-2 text-[#F8F4EF]">مشمولة: {selectedIncludedCount}</span>
+                <span className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-300">مفعلة يدويًا: {selectedManuallyEnabledCount}</span>
+                <span className="rounded-xl bg-red-500/10 px-3 py-2 text-red-300">مقفلة يدويًا: {selectedManuallyDisabledCount}</span>
+                <span className="rounded-xl bg-[#F6C35B]/10 px-3 py-2 text-[#F6C35B]">النتيجة: {selectedFeatureRows.filter((row) => row.effectiveEnabled).length}</span>
+              </div>
+            </div>
+            <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-bold text-amber-100">
+              التحكم اليدوي لكل علامة ظاهر كمعاينة فقط لأن قاعدة البيانات الحالية لا تحتوي دعمًا محفوظًا لتجاوزات الخدمات لكل علامة.
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-[1040px] w-full text-right text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-[#CBB29C]">
+                    <th className="px-3 py-3 font-black">الخدمة</th>
+                    <th className="px-3 py-3 font-black">التصنيف</th>
+                    <th className="px-3 py-3 font-black">ضمن الباقة</th>
+                    <th className="px-3 py-3 font-black">التجاوز</th>
+                    <th className="px-3 py-3 font-black">النتيجة النهائية</th>
+                    <th className="px-3 py-3 font-black">تحكم الأدمن</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedFeatureRows.map((row) => (
+                    <tr key={row.feature.id} className="border-b border-white/5 text-[#F8F4EF]">
+                      <td className="px-3 py-3">
+                        <p className="font-black">{row.feature.titleAr}</p>
+                        <p className="mt-1 font-mono text-xs text-[#7A6255]">{row.feature.route}</p>
+                      </td>
+                      <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[row.feature.category] ?? row.feature.category}</td>
+                      <td className="px-3 py-3">{row.planIncluded ? "نعم" : "لا"}</td>
+                      <td className="px-3 py-3">{overrideLabels[row.override]}</td>
+                      <td className="px-3 py-3">
+                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${
+                          row.result === "active"
+                            ? "bg-emerald-500/10 text-emerald-300"
+                            : row.result === "disabled_by_admin"
+                              ? "bg-red-500/10 text-red-300"
+                              : "bg-white/5 text-[#CBB29C]"
+                        }`}>
+                          {effectiveResultLabels[row.result]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" disabled className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-[#7A6255] disabled:cursor-not-allowed">
+                            تفعيل لهذه العلامة
+                          </button>
+                          <button type="button" disabled className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-[#7A6255] disabled:cursor-not-allowed">
+                            إيقاف لهذه العلامة
+                          </button>
+                          <button type="button" disabled className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-[#7A6255] disabled:cursor-not-allowed">
+                            العودة لإعدادات الباقة
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </BentoCard>
+
           <BentoCard variant="dark" span="2">
             <h3 className="mb-4 text-xl font-black text-[#F8F4EF]">
               التحكم بالباقة والحالة

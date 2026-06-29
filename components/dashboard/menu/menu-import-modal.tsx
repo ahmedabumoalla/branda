@@ -65,15 +65,6 @@ function menuImportErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function rawStringArray(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => String(item ?? "").trim()).filter(Boolean);
-}
-
-function rawRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
 export function MenuImportModal({ open, onClose, onImported }: Props) {
   const [mode, setMode] = useState<"pdf" | "url">("pdf");
   const [url, setUrl] = useState("");
@@ -101,17 +92,6 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
     };
   }, [items]);
 
-  const importSummary = useMemo(() => {
-    const raw = rawRecord(job?.rawSummary);
-    const report = rawRecord(raw.report);
-    return {
-      sourceType: typeof raw.sourceType === "string" ? raw.sourceType : typeof raw.adapter === "string" ? "known-platform" : "",
-      confidence: typeof raw.confidence === "number" ? Math.round(raw.confidence * 100) : null,
-      warnings: rawStringArray(raw.warnings).concat(rawStringArray(report.notes)),
-      extractionSteps: rawStringArray(raw.extractionSteps),
-    };
-  }, [job]);
-
   if (!open || !mounted) return null;
 
   function setRow(index: number, patch: Partial<MenuImportEditableItem>) {
@@ -120,16 +100,13 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
 
   async function analyze() {
     setBusy(true);
-    setMessage(mode === "url" ? "جاري قراءة الرابط..." : "جاري قراءة الملف...");
-    const progressMessages = ["جاري البحث عن التصنيفات...", "جاري استخراج المنتجات...", "جاري ترتيب النتائج..."];
-    const progressTimers =
+    setMessage(mode === "url" ? "جاري قراءة المنيو..." : "جاري قراءة الملف...");
+    const progressTimer =
       mode === "url"
-        ? progressMessages.map((nextMessage, index) =>
-            window.setTimeout(() => {
-              setMessage(nextMessage);
-            }, 900 + index * 1200)
-          )
-        : [];
+        ? window.setTimeout(() => {
+            setMessage("جاري ترتيب الأصناف...");
+          }, 900)
+        : undefined;
     try {
       const nextJob =
         mode === "url"
@@ -149,7 +126,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
       console.error("Menu import draft creation failed", error);
       setMessage(menuImportErrorMessage(error, "تعذر إنشاء مسودة الاستيراد."));
     } finally {
-      progressTimers.forEach((timer) => window.clearTimeout(timer));
+      if (progressTimer) window.clearTimeout(progressTimer);
       setBusy(false);
     }
   }
@@ -300,44 +277,6 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
         {message ? (
           <div className="mb-5 rounded-2xl border border-[#E7D7C6] bg-white px-4 py-3 text-sm font-bold text-[#6B3A25]">
             {message}
-          </div>
-        ) : null}
-
-        {busy && mode === "url" ? (
-          <div className="mb-5 grid gap-2 rounded-2xl border border-[#E7D7C6] bg-white p-4 text-sm font-bold text-[#806A5E] sm:grid-cols-4">
-            {["جاري قراءة الرابط", "جاري البحث عن التصنيفات", "جاري استخراج المنتجات", "جاري ترتيب النتائج"].map((step) => (
-              <div key={step} className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-[#6B3A25]" />
-                <span>{step}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {job && (importSummary.sourceType || importSummary.confidence !== null || importSummary.warnings.length || importSummary.extractionSteps.length) ? (
-          <div className="mb-5 rounded-2xl border border-[#E7D7C6] bg-white p-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {importSummary.sourceType ? <Stat label="نوع الاستخراج" value={importSummary.sourceType} /> : null}
-              {importSummary.confidence !== null ? <Stat label="الثقة" value={`${importSummary.confidence}%`} /> : null}
-              <Stat label="التحذيرات" value={importSummary.warnings.length} />
-              <Stat label="خطوات الاستخراج" value={importSummary.extractionSteps.length} />
-            </div>
-            {importSummary.warnings.length ? (
-              <div className="mt-4 rounded-xl bg-[#FCF8F3] p-3 text-sm font-bold text-[#6B3A25]">
-                {Array.from(new Set(importSummary.warnings)).map((warning) => (
-                  <p key={warning}>{warning}</p>
-                ))}
-              </div>
-            ) : null}
-            {importSummary.extractionSteps.length ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {importSummary.extractionSteps.map((step) => (
-                  <span key={step} className="rounded-full bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#806A5E]">
-                    {step}
-                  </span>
-                ))}
-              </div>
-            ) : null}
           </div>
         ) : null}
 
@@ -505,7 +444,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
   return createPortal(modal, document.body);
 }
 
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl bg-white px-4 py-3">
       <p className="text-xs font-black text-[#806A5E]">{label}</p>

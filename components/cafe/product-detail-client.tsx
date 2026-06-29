@@ -11,6 +11,8 @@ import type { CafeBranch } from "@/lib/mock/branches";
 import { ProductReviews } from "@/components/cafe/product-reviews";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
+import { PublicFeatureUnavailable } from "@/components/cafe/public-feature-guard";
 import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-product-detail";
 import { InternalAdPanel } from "@/components/cafe/themes/customer-experience-primitives";
 import {
@@ -24,6 +26,7 @@ import { appendPreviewToNextPath, getCafePath, getCustomerLoginHref } from "@/li
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 
 
 
@@ -36,7 +39,7 @@ function defaultPickupTime(leadMinutes = 30) {
 
 export function ProductDetailClient({ slug, id }: { slug: string; id: string }) {
   const router = useRouter();
-  const { theme, settings, experience, previewThemeId, path } = useCafePageContext(slug);
+  const { theme, settings, experience, previewThemeId, path, features, hydrated } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
   const isEvents = copy.kind === "events";
   const ProductFallbackIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
@@ -61,6 +64,11 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   }, [product]);
 
   const activeBranches = branches.filter((b) => b.active);
+  const menuEnabled = publicFeatureAllows(features, "menu");
+  const orderingEnabled = publicFeatureAllows(features, "menu_ordering");
+  const reviewsEnabled = publicFeatureAllows(features, "comments_reviews");
+  const reservationsEnabled = publicFeatureAllows(features, "reservations");
+  const rewardsEnabled = publicFeatureAllows(features, "loyalty");
 
   const unitPrice = product ? productFinalPrice(product.price, product.promo) : 0;
   const subtotal = product ? unitPrice * quantity : 0;
@@ -68,6 +76,10 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
   async function addToOrder() {
     if (!product) return;
+    if (!orderingEnabled) {
+      alert("طلبات المنيو غير مفعلة في باقة هذه العلامة");
+      return;
+    }
     const customer = await getCustomerSession(slug);
     if (!customer) {
       alert(isEvents ? "يجب تسجيل الدخول لشراء التذكرة." : "يجب تسجيل الدخول لإرسال الطلب.");
@@ -121,7 +133,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     }
   }
 
-  if (loading) {
+  if (loading || !hydrated) {
     return (
       <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
@@ -141,6 +153,15 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     );
   }
 
+  if (!menuEnabled) {
+    return (
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="product" />
+        <PublicFeatureUnavailable slug={slug} feature="menu" previewThemeId={previewThemeId} />
+      </CafeLayout>
+    );
+  }
+
   if (!product) {
     return (
       <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
@@ -154,7 +175,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
     );
   }
 
-  const pickupAvailable = product.availableForPickup !== false;
+  const pickupAvailable = product.availableForPickup !== false && orderingEnabled;
   const categoryLabel = resolveProductCategoryLabel(product);
 
   const metaBadges: { icon?: typeof Clock; text: string }[] = [];
@@ -230,6 +251,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         </div>
       ) : null}
 
+      {orderingEnabled ? (
       <div className="mt-6 flex items-center gap-4">
         <span className="text-sm font-black">الكمية</span>
         <div className={`flex items-center gap-2 rounded-2xl border p-1 ${theme.card}`}>
@@ -250,6 +272,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           </button>
         </div>
       </div>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
@@ -263,7 +286,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         ))}
       </div>
 
-      {pickupAvailable ? (
+      {orderingEnabled && pickupAvailable ? (
         <div className={`mt-6 space-y-4 rounded-2xl p-4 ${theme.card}`}>
           <p className="text-sm font-black">{isEvents ? "تفاصيل الدخول" : "تفاصيل الاستلام"}</p>
 
@@ -326,6 +349,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         </div>
       </div>
 
+      {orderingEnabled ? (
       <button
         type="button"
         onClick={() => void addToOrder()}
@@ -337,12 +361,14 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         <ShoppingBag className="h-6 w-6" />
         {adding ? "جاري الإرسال..." : isEvents ? "شراء تذكرة" : "اطلب للاستلام — الدفع عند الاستلام"}
       </button>
+      ) : null}
     </>
   );
 
   return (
     <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
       <div className="barndaksa-cinematic-stage space-y-5">
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="product" />
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <CafeLogo
@@ -370,7 +396,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           experience={experience}
           imageSlot={imageSlot}
           infoSlot={infoSlot}
-          reviewsSlot={
+          reviewsSlot={reviewsEnabled ? (
             <div className="rounded-[28px] bg-white/60 p-1 shadow-[0_14px_45px_rgba(23,20,18,0.06)] ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
               <ProductReviews
                 slug={slug}
@@ -380,7 +406,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
                 previewThemeId={previewThemeId}
               />
             </div>
-          }
+          ) : null}
         />
       </div>
       <CustomerBottomDock
@@ -389,8 +415,8 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           previewThemeId,
           active: "menu",
           hasProducts: true,
-          hasOrders: true,
-          hasRewards: true,
+          hasOrders: reservationsEnabled,
+          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />
@@ -438,7 +464,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           active: "menu",
           hasProducts: true,
           hasOrders: true,
-          hasRewards: true,
+          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />

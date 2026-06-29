@@ -37,7 +37,7 @@ export function BentoGrid({
 }) {
   return (
     <div
-      className={`grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 ${className}`}
+      className={`grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 ${className}`}
     >
       {children}
     </div>
@@ -57,7 +57,7 @@ export function BentoCard({
 }) {
   return (
     <article
-      className={`min-w-0 rounded-[24px] border p-4 transition sm:rounded-[32px] sm:p-6 ${bentoVariants[variant]} ${spanClasses[span]} ${className}`}
+      className={`min-w-0 rounded-[16px] border p-4 transition ${bentoVariants[variant]} ${spanClasses[span]} ${className}`}
     >
       {children}
     </article>
@@ -78,15 +78,15 @@ export function DashboardPageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto min-h-screen w-full max-w-[1320px] min-w-0 px-3 py-4 sm:px-4 sm:py-5 lg:px-5">
+      <header className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-black text-[#6B3A25]">لوحة برندة</p>
-          <h1 className="mt-2 break-words text-2xl font-black text-[#311912] sm:text-3xl lg:text-4xl">
+          <h1 className="mt-1.5 break-words text-2xl font-black text-[#311912] lg:text-3xl">
             {title}
           </h1>
           {subtitle ? (
-            <p className="mt-2 max-w-2xl font-bold text-[#806A5E]">{subtitle}</p>
+            <p className="mt-2 max-w-2xl text-sm font-bold text-[#806A5E]">{subtitle}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -108,15 +108,15 @@ export function AdminPageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen min-w-0 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto min-h-screen w-full max-w-[1320px] min-w-0 px-3 py-4 sm:px-4 sm:py-5 lg:px-5">
+      <header className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-black text-[#D9A33F]">Barndaksa Admin</p>
-          <h1 className="mt-2 break-words text-2xl font-black text-[#F8F4EF] sm:text-3xl lg:text-4xl">
+          <h1 className="mt-1.5 break-words text-2xl font-black text-[#F8F4EF] lg:text-3xl">
             {title}
           </h1>
           {subtitle ? (
-            <p className="mt-2 max-w-2xl font-bold text-[#CBB29C]">{subtitle}</p>
+            <p className="mt-2 max-w-2xl text-sm font-bold text-[#CBB29C]">{subtitle}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -139,8 +139,8 @@ export function StatPill({
 }) {
   return (
     <div>
-      <p className="text-sm font-black text-[#806A5E]">{label}</p>
-      <p className="mt-2 text-3xl font-black text-[#311912]">{value}</p>
+      <p className="text-xs font-black text-[#806A5E]">{label}</p>
+      <p className="mt-1.5 text-2xl font-black text-[#311912]">{value}</p>
       {hint ? <p className="mt-1 text-xs font-bold text-[#806A5E]">{hint}</p> : null}
     </div>
   );
@@ -157,8 +157,8 @@ export function AdminStatPill({
 }) {
   return (
     <div>
-      <p className="text-sm font-black text-[#CBB29C]">{label}</p>
-      <p className="mt-2 text-3xl font-black text-[#F8F4EF]">{value}</p>
+      <p className="text-xs font-black text-[#CBB29C]">{label}</p>
+      <p className="mt-1.5 text-2xl font-black text-[#F8F4EF]">{value}</p>
       {hint ? <p className="mt-1 text-xs font-bold text-[#7A6255]">{hint}</p> : null}
     </div>
   );
@@ -202,7 +202,7 @@ export function SoftCard({
 }) {
   return (
     <div
-      className={`rounded-[24px] border border-[#E7D7C6] bg-[#FCF8F3] p-5 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.9),6px_8px_20px_rgba(49,25,18,0.06)] ${className}`}
+      className={`rounded-[16px] border border-[#E7D7C6] bg-[#FCF8F3] p-4 shadow-[inset_2px_2px_6px_rgba(255,255,255,0.9),6px_8px_20px_rgba(49,25,18,0.06)] ${className}`}
     >
       {children}
     </div>
@@ -218,7 +218,7 @@ export function FilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-[#E7D7C6] bg-white p-4 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
+      className={`mb-5 flex min-w-0 flex-col gap-3 rounded-[16px] border border-[#E7D7C6] bg-white p-4 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>
@@ -234,7 +234,7 @@ export function AdminFilterBar({
 }) {
   return (
     <div
-      className={`mb-6 flex min-w-0 flex-col gap-4 rounded-[24px] border border-white/10 bg-[#1a1210]/80 p-4 shadow-[0_0_24px_rgba(217,163,63,0.06)] sm:rounded-[28px] sm:p-5 lg:flex-row lg:items-center ${className}`}
+      className={`mb-5 flex min-w-0 flex-col gap-3 rounded-[16px] border border-white/10 bg-[#1a1210]/80 p-4 shadow-[0_0_24px_rgba(217,163,63,0.06)] lg:flex-row lg:items-center ${className}`}
     >
       {children}
     </div>
@@ -244,16 +244,16 @@ export function AdminFilterBar({
 /* ─── Inputs (unified light / dark) ─── */
 
 export const inputLightClass =
-  "h-14 w-full rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 text-right font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06),inset_-2px_-2px_6px_rgba(255,255,255,0.95)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
+  "h-12 w-full rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-3 text-right text-sm font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06),inset_-2px_-2px_6px_rgba(255,255,255,0.95)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
 
 export const inputDarkClass =
-  "h-14 w-full rounded-2xl border border-[#D9A33F]/25 bg-[#211711] px-4 text-right font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25 [&_option]:bg-[#211711] [&_option]:text-[#FCF8F3]";
+  "h-12 w-full rounded-xl border border-[#D9A33F]/25 bg-[#211711] px-3 text-right text-sm font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25 [&_option]:bg-[#211711] [&_option]:text-[#FCF8F3]";
 
 export const textareaLightClass =
-  "min-h-28 w-full resize-none rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 py-3 text-right font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
+  "min-h-24 w-full resize-none rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-3 py-3 text-right text-sm font-bold text-[#311912] outline-none placeholder:text-[#806A5E] shadow-[inset_3px_3px_8px_rgba(49,25,18,0.06)] focus:border-[#6B3A25]/50 focus:ring-2 focus:ring-[#6B3A25]/15";
 
 export const textareaDarkClass =
-  "min-h-28 w-full resize-none rounded-2xl border border-[#D9A33F]/25 bg-[#211711] px-4 py-3 text-right font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25";
+  "min-h-24 w-full resize-none rounded-xl border border-[#D9A33F]/25 bg-[#211711] px-3 py-3 text-right text-sm font-bold text-[#FCF8F3] outline-none placeholder:text-[#F2E7D9]/80 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] focus:border-[#D9A33F]/55 focus:ring-2 focus:ring-[#D9A33F]/25";
 
 type FieldTone = "light" | "dark";
 
@@ -341,7 +341,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className={`rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-[#FCF8F3] shadow-[6px_8px_20px_rgba(49,25,18,0.25),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:bg-[#311912] disabled:opacity-50 ${className}`}
+      className={`rounded-xl bg-[#4A281D] px-5 py-3 text-sm font-black text-[#FCF8F3] shadow-[6px_8px_20px_rgba(49,25,18,0.20),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:bg-[#311912] disabled:opacity-50 ${className}`}
     >
       {children}
     </button>
@@ -356,7 +356,7 @@ export function GoldButton({
   return (
     <button
       {...props}
-      className={`rounded-2xl bg-gradient-to-l from-[#D9A33F] to-[#F0C568] px-6 py-4 font-black text-[#311912] shadow-[0_0_24px_rgba(217,163,63,0.35)] transition hover:brightness-105 disabled:opacity-50 ${className}`}
+      className={`rounded-xl bg-gradient-to-l from-[#D9A33F] to-[#F0C568] px-5 py-3 text-sm font-black text-[#311912] shadow-[0_0_20px_rgba(217,163,63,0.28)] transition hover:brightness-105 disabled:opacity-50 ${className}`}
     >
       {children}
     </button>

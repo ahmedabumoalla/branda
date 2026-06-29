@@ -1,23 +1,11 @@
-export type PlatformFeature =
-  | "all"
-  | "home"
-  | "menu"
-  | "offers"
-  | "pages"
-  | "reservations"
-  | "customers"
-  | "loyalty"
-  | "branches"
-  | "reports"
-  | "finance"
-  | "reviews"
-  | "marketing"
-  | "experience_reviews"
-  | "cashier"
-  | "orders"
-  | "settings"
-  | "theme"
-  | "subscription";
+import {
+  getAllPlatformFeatures,
+  getDashboardSidebarFeatures,
+  getPackageAssignableFeatures,
+} from "@/lib/platform/feature-access";
+import type { PlatformFeatureCode } from "@/lib/platform/feature-registry";
+
+export type PlatformFeature = PlatformFeatureCode;
 
 export type PlanDurationUnit = "day" | "month" | "year";
 
@@ -129,29 +117,29 @@ export type PlatformOperation = {
   createdAt: string;
 };
 
-export const dashboardPlatformFeatures: { id: PlatformFeature; title: string; href: string }[] = [
-  { id: "home", title: "الرئيسية", href: "/dashboard" },
-  { id: "menu", title: "المنيو", href: "/dashboard/menu" },
-  { id: "offers", title: "العروض", href: "/dashboard/offers" },
-  { id: "pages", title: "الصفحات", href: "/dashboard/pages" },
-  { id: "reservations", title: "الحجوزات", href: "/dashboard/reservations" },
-  { id: "customers", title: "العملاء", href: "/dashboard/customers" },
-  { id: "loyalty", title: "بطاقات الولاء", href: "/dashboard/loyalty" },
-  { id: "branches", title: "الفروع", href: "/dashboard/branches" },
-  { id: "reports", title: "التقارير", href: "/dashboard/reports" },
-  { id: "finance", title: "Branda Finance", href: "/dashboard/branda-finance" },
-  { id: "reviews", title: "الأسئلة والتقييمات", href: "/dashboard/reviews" },
-  { id: "marketing", title: "الأدوات التسويقية", href: "/dashboard/marketing" },
-  { id: "experience_reviews", title: "مراجعة توثيق التجارب", href: "/dashboard/experience-reviews" },
-  { id: "cashier", title: "الكاشير", href: "/dashboard/cashier" },
-  { id: "orders", title: "طلبات العلامة", href: "/dashboard/orders" },
-  { id: "settings", title: "إعدادات العلامة", href: "/dashboard/settings" },
-  { id: "theme", title: "ثيم العلامة", href: "/dashboard/theme" },
-  { id: "subscription", title: "الاشتراك والباقات", href: "/dashboard/subscription" },
-];
+export const dashboardPlatformFeatures = getDashboardSidebarFeatures().map((feature) => ({
+  id: feature.id,
+  title: feature.titleAr,
+  href: feature.route,
+}));
 
-export const allPlatformFeatures: { id: PlatformFeature; title: string }[] =
-  dashboardPlatformFeatures.map(({ id, title }) => ({ id, title }));
+export const allPlatformFeatures = getAllPlatformFeatures().map((feature) => ({
+  id: feature.id,
+  title: feature.titleAr,
+  category: feature.category,
+  route: feature.route,
+  status: feature.status,
+  packageAssignable: feature.packageAssignable,
+}));
+
+export const packageAssignablePlatformFeatures = getPackageAssignableFeatures().map((feature) => ({
+  id: feature.id,
+  title: feature.titleAr,
+  category: feature.category,
+  route: feature.route,
+  status: feature.status,
+  packageAssignable: feature.packageAssignable,
+}));
 
 export const mockPlatformPlans: PlatformPlan[] = [];
 export const mockPlatformCafes: PlatformCafe[] = [];

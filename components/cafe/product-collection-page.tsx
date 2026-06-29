@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
+import { PublicFeatureUnavailable } from "@/components/cafe/public-feature-guard";
 import {
   ThemedFilterBar,
   defaultProductFilters,
@@ -31,6 +33,7 @@ import {
   resolveProductCategoryLabel,
 } from "@/lib/cafe/menu-category-utils";
 import type { MenuProduct } from "@/lib/mock/menu";
+import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 import {
   InternalAdPanel,
   PremiumSectionHeader,
@@ -68,7 +71,7 @@ function getScore(product: MenuProduct, index: number) {
 
 export function ProductCollectionPage({ slug, view }: Props) {
   const searchParams = useSearchParams();
-  const { theme, settings, experience, path, previewThemeId } = useCafePageContext(slug);
+  const { theme, settings, experience, path, previewThemeId, features } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
   const isEvents = copy.kind === "events";
   const eventViewInfo: Record<string, { title: string; desc: string }> = {
@@ -203,6 +206,11 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const activeBranches = branches.filter((b) => b.active !== false);
   const gridClass = getCollectionGridClass(experience.collection);
   const hasFilterContent = availableProducts.length > 0 || categories.length > 0;
+  const menuEnabled = publicFeatureAllows(features, "menu");
+  const offersEnabled = publicFeatureAllows(features, "offers");
+  const branchesEnabled = publicFeatureAllows(features, "branches");
+  const reservationsEnabled = publicFeatureAllows(features, "reservations");
+  const rewardsEnabled = publicFeatureAllows(features, "loyalty");
 
   if (loading) {
     return (
@@ -225,8 +233,18 @@ export function ProductCollectionPage({ slug, view }: Props) {
   }
 
   if (view === "branches") {
+    if (!branchesEnabled) {
+      return (
+        <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+          <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
+          <PublicFeatureUnavailable slug={slug} feature="branches" previewThemeId={previewThemeId} title="الفروع" />
+        </CafeLayout>
+      );
+    }
+
     return (
       <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
         <Link
           href={path()}
           className={`mb-5 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition active:scale-95 ${theme.buttonOutline}`}
@@ -300,8 +318,8 @@ export function ProductCollectionPage({ slug, view }: Props) {
             previewThemeId,
             active: "orders",
             hasProducts: true,
-            hasOrders: true,
-            hasRewards: true,
+            hasOrders: reservationsEnabled,
+            hasRewards: rewardsEnabled,
             businessCategory: settings.businessCategory,
           })}
         />
@@ -309,9 +327,28 @@ export function ProductCollectionPage({ slug, view }: Props) {
     );
   }
 
+  if (!menuEnabled) {
+    return (
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
+        <PublicFeatureUnavailable slug={slug} feature="menu" previewThemeId={previewThemeId} />
+      </CafeLayout>
+    );
+  }
+
+  if (view === "offers" && !offersEnabled) {
+    return (
+      <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
+        <PublicFeatureUnavailable slug={slug} feature="offers" previewThemeId={previewThemeId} title="العروض" />
+      </CafeLayout>
+    );
+  }
+
   return (
     <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
       <div className="barndaksa-cinematic-stage space-y-5">
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <CafeLogo
@@ -606,8 +643,8 @@ export function ProductCollectionPage({ slug, view }: Props) {
           previewThemeId,
           active: "menu",
           hasProducts: true,
-          hasOrders: true,
-          hasRewards: true,
+          hasOrders: reservationsEnabled,
+          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />
@@ -768,8 +805,8 @@ export function ProductCollectionPage({ slug, view }: Props) {
           previewThemeId,
           active: "menu",
           hasProducts: true,
-          hasOrders: true,
-          hasRewards: true,
+          hasOrders: reservationsEnabled,
+          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />

@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
+import { SharedLoyaltyCard } from "@/components/loyalty/shared-loyalty-card";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import { formatSar } from "@/lib/format";
+import type { LoyaltyCardDesign, LoyaltyTextElementId } from "@/lib/loyalty/types";
 import {
   isPromoActive,
   productFinalPrice,
@@ -33,10 +35,98 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 
 export type CustomerDockKey = "home" | "orders" | "menu" | "rewards" | "account";
 
+function textElement(
+  id: LoyaltyTextElementId,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fontSize: number,
+  enabled = true,
+) {
+  return {
+    id,
+    text,
+    x,
+    y,
+    width,
+    height,
+    fontSize,
+    fontWeight: 900,
+    color: "#FCF8F3",
+    align: "right" as const,
+    enabled,
+  };
+}
+
+function publicLoyaltyCardDesign(input: {
+  customerName?: string;
+  code: string;
+  current: number;
+  required: number;
+  businessCategory?: string;
+}): LoyaltyCardDesign {
+  const copy = getBusinessCopy(input.businessCategory);
+
+  return {
+    enabled: true,
+    brandName: input.customerName || "عميل العلامة",
+    cardTitle: "بطاقة الولاء",
+    subtitle: copy.kind === "events" ? "مكافآت الحضور" : "مكافآت العميل",
+    rewardTitle: "مكافأة جاهزة",
+    supportingText: "اعرض البطاقة عند الكاشير",
+    stampLabel: copy.loyaltyUnitLit,
+    terms: "",
+    stampsRequired: input.required,
+    completedStamps: input.current,
+    cardBackground: "linear-gradient(135deg,#3A2117 0%,#6B3A25 58%,#B88334 100%)",
+    cardForeground: "#FCF8F3",
+    cardAccent: "#D9A33F",
+    logoRemoveLightBackground: false,
+    logoBackgroundTolerance: 20,
+    logoPlacement: "top-right",
+    logoSize: 18,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
+    logoX: 73,
+    logoY: 8,
+    logoWidth: 16,
+    logoHeight: 16,
+    progressIcon: "star",
+    barcodeVisible: true,
+    barcodeX: 8,
+    barcodeY: 73,
+    barcodeWidth: 34,
+    barcodeHeight: 15,
+    qrX: 8,
+    qrY: 8,
+    qrWidth: 18,
+    qrHeight: 18,
+    pointsBadgeVisible: false,
+    pointsBadgeX: 8,
+    pointsBadgeY: 62,
+    pointsBadgeWidth: 24,
+    pointsBadgeHeight: 10,
+    sampleCode: input.code,
+    textElements: {
+      brand: textElement("brand", input.customerName || "عميل العلامة", 42, 10, 28, 8, 22),
+      title: textElement("title", "بطاقة الولاء", 42, 20, 34, 10, 34),
+      subtitle: textElement("subtitle", copy.loyaltyUnitPlural, 42, 31, 34, 8, 20),
+      reward: textElement("reward", "اعرضها عند الكاشير", 42, 42, 34, 8, 18),
+      helper: textElement("helper", "{{code}}", 44, 73, 28, 8, 18),
+      pointsLabel: textElement("pointsLabel", "النقاط", 0, 0, 1, 1, 1, false),
+      pointsValue: textElement("pointsValue", "{{points}}", 0, 0, 1, 1, 1, false),
+      pointsValueSar: textElement("pointsValueSar", "{{value}}", 0, 0, 1, 1, 1, false),
+      barcodeLabel: textElement("barcodeLabel", "رمز البطاقة", 8, 68, 34, 5, 14),
+    },
+  };
+}
+
 export function BrandaMadeByMark({ className = "" }: { className?: string }) {
   return (
     <div className={`inline-flex items-center justify-center gap-2 rounded-full bg-white/78 px-3 py-1.5 text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)] shadow-sm ring-1 ring-[var(--ci-border,#E7D7C6)] ${className}`}>
-      <span>مصمم بواسطة</span>
+      <span>{"\u0645\u0635\u0645\u0645 \u0628\u0648\u0627\u0633\u0637\u0629"}</span>
       <BrandaLogo width={46} height={18} className="max-h-[16px]" />
     </div>
   );
@@ -88,103 +178,53 @@ export function AppLoyaltyCard({
   loginHref?: string;
   businessCategory?: string;
 }) {
-  const copy = getBusinessCopy(businessCategory);
-  const StampIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
-  const earnedCups = Math.max(0, Math.min(safeRequired, Number(current || 0)));
-  const remaining = Math.max(safeRequired - earnedCups, 0);
-  const progress = Math.max(0, Math.min(100, safeRequired ? (earnedCups / safeRequired) * 100 : 0));
-  const cupSizeClass = safeRequired <= 8 ? "h-8 w-8" : safeRequired <= 14 ? "h-7 w-7" : safeRequired <= 24 ? "h-6 w-6" : "h-5 w-5";
-  const cupIconClass = safeRequired <= 8 ? "h-4 w-4" : safeRequired <= 14 ? "h-3.5 w-3.5" : "h-3 w-3";
-  const cupGapClass = safeRequired <= 14 ? "gap-1.5" : "gap-1";
-
-  const loggedOutContent = (
-    <article className="barndaksa-premium-card relative isolate h-[190px] overflow-hidden rounded-[22px] bg-[var(--ci-primary-bg,#174D3B)] p-5 text-white shadow-[0_18px_50px_rgba(14,60,46,0.22)]">
-      <div aria-hidden className="absolute -left-8 bottom-5 h-28 w-28 rounded-full border-[18px] border-white/8" />
-      <div aria-hidden className="absolute -right-10 top-8 h-28 w-28 rounded-full bg-[var(--ci-accent-bg,#58C98A)]/65" />
-      <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/14 text-white shadow-inner">
-          <UserRound className="h-6 w-6" />
-        </span>
-        <h2 className="mt-3 text-xl font-black leading-snug">سجّل دخولك لتحميل بطاقة الولاء الخاصة بك</h2>
-        <p className="mt-2 max-w-xs text-xs font-bold leading-5 text-white/72">بعد الدخول تظهر {copy.loyaltyUnitPlural}، التقدم، والرمز الخاص بك مباشرة.</p>
-        {loginHref ? (
-          <Link
-            href={loginHref}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-[var(--ci-primary-bg,#174D3B)] shadow-sm transition active:scale-95"
-          >
-            تسجيل الدخول
-          </Link>
-        ) : null}
-      </div>
-    </article>
-  );
-
-  if (!isAuthenticated) return loggedOutContent;
+  const completedStamps = Math.max(0, Math.min(safeRequired, Number(current || 0)));
+  const effectiveCode = code?.trim();
+  const previewCard = effectiveCode
+    ? publicLoyaltyCardDesign({
+        customerName,
+        code: effectiveCode,
+        current: completedStamps,
+        required: safeRequired,
+        businessCategory,
+      })
+    : null;
 
   const content = (
-    <article className="barndaksa-premium-card relative isolate h-[190px] overflow-hidden rounded-[22px] bg-[var(--ci-primary-bg,#174D3B)] p-4 text-white shadow-[0_18px_50px_rgba(14,60,46,0.22)]">
-      <div aria-hidden className="absolute -left-10 bottom-2 h-28 w-28 rounded-full border-[18px] border-white/8" />
-      <div aria-hidden className="absolute -right-9 top-8 h-28 w-28 rounded-full bg-[var(--ci-accent-bg,#58C98A)]/70" />
-      <div aria-hidden className="absolute bottom-3 right-4 grid grid-cols-2 gap-1 opacity-25">
-        {[0, 1, 2, 3].map((item) => (
-          <span key={item} className="h-7 w-7 rounded-full bg-white/20" />
-        ))}
-      </div>
-
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-2xl font-black tracking-wide">{customerName || "عميل العلامة"}</h2>
-            <p className="mt-1 font-mono text-xs font-black tracking-[0.14em] text-white/78">
-              {code || "BARNDAKSA"}
-            </p>
-          </div>
-          <div className="shrink-0 text-left">
-            <p className="text-2xl font-black">{points}</p>
-            <p className="text-[10px] font-bold text-white/65">نقاط متاحة</p>
-          </div>
+    <article className="barndaksa-premium-card relative isolate overflow-hidden rounded-[22px]">
+      {previewCard ? (
+        <SharedLoyaltyCard
+          card={isAuthenticated ? previewCard : { ...previewCard, completedStamps: 0 }}
+          pointsBalance={points}
+          pointValueSar={0}
+          compact
+        />
+      ) : (
+        <div className="rounded-[22px] border border-[var(--ci-border,#E7D7C6)] bg-white p-5 text-center shadow-sm">
+          <WalletCards className="mx-auto h-8 w-8 text-[var(--ci-button-bg,#6B3A25)]" />
+          <h2 className="mt-3 text-sm font-black text-[#17212B]">
+            {isAuthenticated ? "لا توجد بطاقة ولاء مرتبطة بحسابك بعد" : "سجل دخولك لعرض بطاقة الولاء الخاصة بك"}
+          </h2>
         </div>
-
-        <div>
-          <div className="flex items-center gap-3">
-            <p className="shrink-0 text-sm font-black">{earnedCups} / {safeRequired}</p>
-            <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/18">
-              <span className="block h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-
-          <div className={`mt-3 flex max-h-[44px] flex-wrap overflow-hidden ${cupGapClass}`}>
-            {Array.from({ length: safeRequired }).map((_, index) => {
-              const earned = index < earnedCups;
-              return (
-                <span
-                  key={index}
-                  className={`flex ${cupSizeClass} items-center justify-center rounded-full border transition ${
-                    earned
-                      ? "border-white/70 bg-white text-[var(--ci-primary-bg,#174D3B)] shadow-sm"
-                      : "border-white/18 bg-white/10 text-white/42"
-                  }`}
-                  aria-label={earned ? `${copy.loyaltyUnitSingular} مضاء` : `${copy.loyaltyUnitSingular} غير مضاء`}
-                >
-                  <StampIcon className={cupIconClass} />
-                </span>
-              );
-            })}
-          </div>
-
-          <p className="mt-3 text-sm font-black leading-5 text-white/90">
-            {remaining === 0 ? "مكافأتك جاهزة للاستخدام" : `باقي ${remaining} ${remaining === 1 ? copy.loyaltyUnitSingular : copy.loyaltyUnitPlural} مضاءة للمكافأة`}
-          </p>
+      )}
+      {!isAuthenticated && loginHref ? (
+        <div className="absolute inset-x-3 bottom-3 z-30 rounded-2xl bg-white/92 p-3 text-center shadow-[0_12px_30px_rgba(23,33,43,0.16)] backdrop-blur">
+          <h2 className="text-sm font-black text-[#17212B]">{"\u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0644\u0631\u0628\u0637 \u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0648\u0644\u0627\u0621 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0643"}</h2>
+          <Link
+            href={loginHref}
+            className="mt-2 inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#17212B] px-4 text-xs font-black text-white shadow-sm transition active:scale-95"
+          >
+            <UserRound className="h-4 w-4" />
+            {"\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644"}</Link>
         </div>
-      </div>
+      ) : null}
     </article>
   );
 
-  if (!onClickHref) return content;
+  if (!onClickHref || !isAuthenticated) return content;
   return <Link href={onClickHref}>{content}</Link>;
 }
-
 export function BrandAdSlider({
   children,
   count,
@@ -211,7 +251,7 @@ export function BrandAdSlider({
             <button
               key={index}
               type="button"
-              aria-label={`عرض ${index + 1}`}
+              aria-label={`\u0639\u0631\u0636 ${index + 1}`}
               onClick={() => setActive(index)}
               className={`h-2 rounded-full transition-all ${index === active ? "w-8 bg-[var(--ci-button-bg,#2F7A52)]" : "w-2 bg-[var(--ci-muted-fg,#8C8A84)]/28"}`}
             />
@@ -253,7 +293,7 @@ export function ProductPosterCard({
         />
         {product.promo ? (
           <span className="absolute right-2 top-2 rounded-full bg-[var(--ci-button-bg,#2F7A52)] px-2.5 py-1 text-[10px] font-black text-white shadow">
-            {promoOn ? promoBadgeText(product.promo) : "عرض"}
+            {promoOn ? promoBadgeText(product.promo) : "\u0639\u0631\u0636"}
           </span>
         ) : null}
       </div>
@@ -288,7 +328,7 @@ export function CustomerBottomDock({
   if (!visible.length) return null;
 
   return (
-    <nav aria-label="تنقل العميل" className="fixed inset-x-0 bottom-0 z-50 md:hidden">
+    <nav aria-label={"\u062a\u0646\u0642\u0644 \u0627\u0644\u0639\u0645\u064a\u0644"} className="fixed inset-x-0 bottom-0 z-50 md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
         {visible.map((item) => {
           const Icon = item.icon;
@@ -347,11 +387,11 @@ export function defaultCustomerDockItems({
   return {
     active,
     items: [
-      { key: "home" as const, href: `${base}${preview}`, label: "الرئيسية", icon: Home },
-      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "التذاكر" : "المنتجات", icon: MenuIcon, enabled: hasProducts },
-      { key: "orders" as const, href: isEvents ? `${base}/${isCustomer ? "account" : "login"}${preview}` : `${base}/reserve${preview}`, label: isEvents ? "تذاكري" : "الحجوزات", icon: CalendarDays, enabled: hasOrders },
-      { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "المكافآت", icon: Sparkles, enabled: hasRewards },
-      { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "الحساب", icon: UserRound },
+      { key: "home" as const, href: `${base}${preview}`, label: "\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629", icon: Home },
+      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "\u0627\u0644\u062a\u0630\u0627\u0643\u0631" : "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a", icon: MenuIcon, enabled: hasProducts },
+      { key: "orders" as const, href: isEvents ? `${base}/${isCustomer ? "account" : "login"}${preview}` : `${base}/reserve${preview}`, label: isEvents ? "\u062a\u0630\u0627\u0643\u0631\u064a" : "\u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a", icon: CalendarDays, enabled: hasOrders },
+      { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a", icon: Sparkles, enabled: hasRewards },
+      { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "\u0627\u0644\u062d\u0633\u0627\u0628", icon: UserRound },
     ],
   };
 }

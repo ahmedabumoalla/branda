@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+*.zip
+.env.*
+!.env.example
+.barndaksa-backups/
+.barndaksa_patch_backups/
+BARNDAKSA_*_PATCH/
+BARNDAKSA_*_HOTFIX/
+BARNDAKSA_SAFE_CLEANUP_NODE/

@@ -2,13 +2,14 @@
 
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
   sidebar: ReactNode | ((close: () => void) => ReactNode);
   mobileTitle?: string;
   variant?: "dashboard" | "admin";
+  desktopSidebarWidth?: string;
 };
 
 export function ResponsiveAppShell({
@@ -16,9 +17,13 @@ export function ResponsiveAppShell({
   sidebar,
   mobileTitle = "برندة",
   variant = "dashboard",
+  desktopSidebarWidth = "280px",
 }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const sidebarStyle = {
+    "--app-sidebar-width": desktopSidebarWidth,
+  } as CSSProperties;
 
   useEffect(() => {
     setOpen(false);
@@ -78,7 +83,8 @@ export function ResponsiveAppShell({
       ) : null}
 
       <div
-        className={`fixed right-0 top-0 z-[60] h-[100dvh] w-[min(280px,88vw)] transition-transform duration-300 ease-out lg:w-[280px] lg:!translate-x-0 ${
+        style={sidebarStyle}
+        className={`fixed right-0 top-0 z-[60] h-[100dvh] w-[min(var(--app-sidebar-width),88vw)] transition-[width,transform] duration-300 ease-out lg:w-[var(--app-sidebar-width)] lg:!translate-x-0 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -93,8 +99,11 @@ export function ResponsiveAppShell({
         {typeof sidebar === "function" ? sidebar(() => setOpen(false)) : sidebar}
       </div>
 
-      <section className="min-h-[100dvh] min-w-0 overflow-x-hidden pt-14 lg:mr-[280px] lg:pt-0">
-        {children}
+      <section
+        style={sidebarStyle}
+        className="min-h-[100dvh] w-full max-w-full min-w-0 overflow-x-hidden pt-14 transition-[margin] duration-300 lg:mr-[var(--app-sidebar-width)] lg:w-[calc(100%_-_var(--app-sidebar-width))] lg:pt-0"
+      >
+        <div className="mx-auto w-full max-w-[1480px] min-w-0 overflow-x-hidden">{children}</div>
       </section>
     </>
   );

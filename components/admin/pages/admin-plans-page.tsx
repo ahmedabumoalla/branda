@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/design-system";
 import { BUSINESS_CATEGORIES, type BusinessCategoryId } from "@/lib/platform/business-categories";
 import {
-  allPlatformFeatures,
+  packageAssignablePlatformFeatures,
   type PlatformFeature,
   type PlatformPlan,
   type PlanDurationUnit,
@@ -79,11 +79,31 @@ function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
 }
 
 function featureTitle(feature: PlatformFeature, categoryId?: string) {
+  if (feature === "loyalty") {
+    return "الولاء والمكافآت + نقاط الولاء المتقدمة";
+  }
   if (feature === "cashier") {
     return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
   }
-  return allPlatformFeatures.find((item) => item.id === feature)?.title ?? feature;
+  return packageAssignablePlatformFeatures.find((item) => item.id === feature)?.title ?? feature;
 }
+
+const featureCategoryLabels: Record<string, string> = {
+  core: "أساسية",
+  commerce: "تجارية",
+  operations: "تشغيلية",
+  growth: "نمو وتسويق",
+  experience: "تجربة العملاء",
+  settings: "إعدادات",
+  finance: "مالية",
+};
+
+const featureStatusLabels: Record<string, string> = {
+  active: "نشطة",
+  preview: "معاينة",
+  coming_soon: "قريبًا",
+  hidden: "مخفية",
+};
 
 export function AdminPlansPage({
   initialPlans,
@@ -452,7 +472,7 @@ export function AdminPlansPage({
             </div>
 
             <div className="mt-5 grid gap-2">
-              {allPlatformFeatures.map((feature) => {
+              {packageAssignablePlatformFeatures.map((feature) => {
                 const enabled = plan.features.includes(feature.id);
                 return (
                   <button
@@ -465,8 +485,13 @@ export function AdminPlansPage({
                         : "border-white/10 bg-white/5 text-[#CBB29C]"
                     }`}
                   >
-                    <span>{featureTitle(feature.id, plan.categoryId ?? selectedCategoryId)}</span>
-                    {enabled ? <Check className="h-4 w-4" /> : <span>—</span>}
+                    <span className="min-w-0 text-right">
+                      <span className="block">{featureTitle(feature.id, plan.categoryId ?? selectedCategoryId)}</span>
+                      <span className="mt-1 block text-[10px] font-bold opacity-70">
+                        {featureCategoryLabels[feature.category] ?? feature.category} · {feature.route} · {featureStatusLabels[feature.status] ?? feature.status} · قابلة للإسناد
+                      </span>
+                    </span>
+                    {enabled ? <Check className="h-4 w-4 shrink-0" /> : <span className="shrink-0">-</span>}
                   </button>
                 );
               })}
@@ -489,6 +514,61 @@ export function AdminPlansPage({
           </BentoCard>
         ))}
       </BentoGrid>
+
+      <BentoCard variant="dark" span="4" className="mb-7">
+        <div className="mb-5 rounded-2xl border border-[#F6C35B]/20 bg-[#F6C35B]/10 p-4">
+          <h2 className="text-lg font-black text-[#F6C35B]">نقاط الولاء المتقدمة</h2>
+          <p className="mt-1 text-sm font-bold text-[#CBB29C]">
+            تظهر كجزء من ميزة الولاء في عرض الباقات: قواعد كسب واستبدال، نقاط لكل منتج، وسياسات انتهاء وصافي خصم. هذا عرض واجهة فقط ولا يغير منطق الفوترة.
+          </p>
+        </div>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black text-[#F8F4EF]">مصفوفة خدمات الباقات</h2>
+            <p className="mt-1 text-sm font-bold text-[#CBB29C]">
+              نفس الميزات القابلة للإسناد في سجل المنصة، مع حالة تضمينها في كل باقة ضمن التصنيف المحدد.
+            </p>
+          </div>
+          <StatusBadge tone="gold">{packageAssignablePlatformFeatures.length} خدمة</StatusBadge>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-[980px] w-full text-right text-sm">
+            <thead>
+              <tr className="border-b border-white/10 text-[#CBB29C]">
+                <th className="px-3 py-3 font-black">الخدمة</th>
+                <th className="px-3 py-3 font-black">التصنيف</th>
+                <th className="px-3 py-3 font-black">المسار</th>
+                <th className="px-3 py-3 font-black">الحالة</th>
+                <th className="px-3 py-3 font-black">قابلة للإسناد</th>
+                {visiblePlans.map((plan) => (
+                  <th key={plan.id} className="px-3 py-3 font-black">{plan.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {packageAssignablePlatformFeatures.map((feature) => (
+                <tr key={feature.id} className="border-b border-white/5 text-[#F8F4EF]">
+                  <td className="px-3 py-3 font-black">{featureTitle(feature.id, selectedCategoryId)}</td>
+                  <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[feature.category] ?? feature.category}</td>
+                  <td className="px-3 py-3 font-mono text-xs text-[#CBB29C]">{feature.route}</td>
+                  <td className="px-3 py-3">{featureStatusLabels[feature.status] ?? feature.status}</td>
+                  <td className="px-3 py-3">نعم</td>
+                  {visiblePlans.map((plan) => {
+                    const included = plan.features.includes("all") || plan.features.includes(feature.id);
+                    return (
+                      <td key={plan.id} className="px-3 py-3">
+                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${included ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-[#CBB29C]"}`}>
+                          {included ? "مشمولة" : "غير مشمولة"}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </BentoCard>
 
       <BentoCard variant="dark" span="4">
         <div className="mb-5 flex items-center gap-3">

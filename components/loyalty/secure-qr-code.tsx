@@ -10,6 +10,7 @@ type Props = {
   title?: string;
   size?: number;
   className?: string;
+  fit?: boolean;
 };
 
 function normalizeQrValue(kind: BarndaksaQrKind, value: string) {
@@ -24,7 +25,7 @@ function normalizeQrValue(kind: BarndaksaQrKind, value: string) {
   return createBarndaksaQrPayload(kind, normalized);
 }
 
-export function SecureQrCode({ kind, value, title, size = 176, className = "" }: Props) {
+export function SecureQrCode({ kind, value, title, size = 176, className = "", fit = false }: Props) {
   const payload = useMemo(() => normalizeQrValue(kind, value), [kind, value]);
   const svg = useMemo(() => {
     const qr = QRCode(0, "Q");
@@ -50,8 +51,8 @@ export function SecureQrCode({ kind, value, title, size = 176, className = "" }:
   return (
     <div className={className} aria-label={title || "Barndaksa secure QR"} data-qr-value={payload}>
       <div
-        className="mx-auto rounded-2xl bg-white p-3 text-[#17100d]"
-        style={{ width: size, height: size }}
+        className={fit ? "mx-auto h-full w-full rounded-lg bg-white p-1 text-[#17100d]" : "mx-auto rounded-2xl bg-white p-3 text-[#17100d]"}
+        style={fit ? undefined : { width: size, height: size }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>

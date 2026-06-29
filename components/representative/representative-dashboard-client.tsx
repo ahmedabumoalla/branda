@@ -60,10 +60,10 @@ function MetricCard({
   hint?: string;
 }) {
   return (
-    <article className="rounded-[26px] border border-white/10 bg-[#17100d] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <Icon className="mb-4 h-7 w-7 text-[#D9A33F]" />
-      <p className="text-sm font-black text-[#CBB29C]">{title}</p>
-      <p className="mt-2 text-3xl font-black text-[#FCF8F3]">{value}</p>
+    <article className="rounded-[16px] border border-white/10 bg-[#17100d] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <Icon className="mb-3 h-5 w-5 text-[#D9A33F]" />
+      <p className="text-xs font-black text-[#CBB29C]">{title}</p>
+      <p className="mt-1.5 text-2xl font-black text-[#FCF8F3]">{value}</p>
       {hint ? <p className="mt-2 text-xs font-bold text-[#806A5E]">{hint}</p> : null}
     </article>
   );
@@ -152,11 +152,11 @@ export function RepresentativeDashboardClient({
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#100c0a] px-4 py-6 text-[#F8F4EF] sm:px-7 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <main dir="rtl" className="min-h-screen bg-[#100c0a] px-3 py-4 text-[#F8F4EF] sm:px-4 lg:px-5">
+      <div className="mx-auto max-w-[1320px]">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-5">
-            <BarndaksaLogo variant="dark" width={150} height={60} />
+            <BarndaksaLogo variant="dark" width={132} height={52} />
             <div className="hidden border-r border-white/10 pr-5 sm:block">
               <p className="text-xs font-black text-[#D9A33F]">بوابة المندوب</p>
               <p className="mt-1 font-black text-[#FCF8F3]">
@@ -168,7 +168,7 @@ export function RepresentativeDashboardClient({
           <form action={logoutAction}>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-black text-[#F2E7D9] transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-[#F2E7D9] transition hover:bg-white/10"
             >
               <LogOut className="h-5 w-5" />
               تسجيل الخروج
@@ -176,12 +176,12 @@ export function RepresentativeDashboardClient({
           </form>
         </header>
 
-        <section className="mb-6 rounded-[30px] border border-[#D9A33F]/20 bg-gradient-to-l from-[#4A281D] via-[#311912] to-[#17100d] p-6 sm:p-8">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+        <section className="mb-5 rounded-[18px] border border-[#D9A33F]/20 bg-gradient-to-l from-[#4A281D] via-[#311912] to-[#17100d] p-5">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
             <div>
               <p className="text-sm font-black text-[#F6C35B]">مرحبًا {dashboard.representative.fullName}</p>
-              <h1 className="mt-3 text-3xl font-black sm:text-4xl">لوحة أداء المندوب</h1>
-              <div className="mt-5 flex flex-wrap gap-3">
+              <h1 className="mt-2 text-2xl font-black sm:text-3xl">لوحة أداء المندوب</h1>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-black">
                   الرقم الوظيفي {dashboard.representative.employeeNumber}
                 </span>
@@ -191,9 +191,9 @@ export function RepresentativeDashboardClient({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/15 p-5">
+            <div className="rounded-[14px] border border-white/10 bg-black/15 p-4">
               <p className="text-xs font-black text-[#CBB29C]">إجمالي نصيبك المستحق</p>
-              <p className="mt-2 text-3xl font-black text-[#F6C35B]">
+              <p className="mt-1.5 text-2xl font-black text-[#F6C35B]">
                 {formatSar(dashboard.summary.commissionAmount)}
               </p>
               <p className="mt-2 text-xs font-bold text-[#CBB29C]">
@@ -203,7 +203,7 @@ export function RepresentativeDashboardClient({
           </div>
         </section>
 
-        <section className="mb-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <MetricCard
             title="العلامات المسجلة بالكوبون"
             value={dashboard.summary.registeredBrandsCount}
@@ -232,12 +232,12 @@ export function RepresentativeDashboardClient({
           />
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="rounded-[30px] border border-white/10 bg-[#17100d] p-5 sm:p-7">
-            <div className="mb-6 flex items-center gap-3">
-              <Building2 className="h-7 w-7 text-[#D9A33F]" />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="rounded-[18px] border border-white/10 bg-[#17100d] p-4 sm:p-5">
+            <div className="mb-5 flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-[#D9A33F]" />
               <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-black">تفاصيل العلامات التجارية</h2>
+                <h2 className="text-lg font-black">تفاصيل العلامات التجارية</h2>
                 <p className="mt-1 text-sm font-bold text-[#CBB29C]">
                   الاشتراكات والتجديدات والمواقع والمستحقات
                 </p>
@@ -402,7 +402,7 @@ export function RepresentativeDashboardClient({
             </div>
           </section>
 
-          <aside className="rounded-[30px] border border-white/10 bg-[#17100d] p-5 sm:p-7">
+          <aside className="rounded-[18px] border border-white/10 bg-[#17100d] p-4 sm:p-5">
             <div className="mb-6 flex items-center gap-3">
               <KeyRound className="h-7 w-7 text-[#D9A33F]" />
               <div>

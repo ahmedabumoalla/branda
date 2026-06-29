@@ -12,6 +12,7 @@ import {
   getCachedDashboardShellSnapshot,
 } from "@/lib/performance/dashboard-shell-client";
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
+import { canShowBrandaFinance } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
 type GuardState = {
@@ -25,6 +26,8 @@ type MaintenanceBannerSession = {
   maintenanceAccountNumber: string;
   expiresAt: number;
 };
+
+const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "barndaksa-dashboard-sidebar-collapsed";
 
 function UpgradeRequired({ featureTitle }: { featureTitle: string }) {
   return (
@@ -46,6 +49,26 @@ function UpgradeRequired({ featureTitle }: { featureTitle: string }) {
   );
 }
 
+function BrandaFinanceHiddenState() {
+  return (
+    <div dir="rtl" className="mx-auto flex min-h-[60vh] max-w-2xl items-center justify-center px-4 py-12">
+      <div className="rounded-[28px] border border-[#E7D7C6] bg-[#FCF8F3] p-8 text-center shadow-[0_20px_60px_rgba(49,25,18,0.12)]">
+        <p className="text-sm font-black text-[#806A5E]">ميزة مخفية من الباقة الحالية</p>
+        <h1 className="mt-3 text-3xl font-black text-[#311912]">برندة المالية غير مفعلة في هذه الباقة</h1>
+        <p className="mt-4 font-bold leading-8 text-[#806A5E]">
+          لن تظهر روابط أو بطاقات برندة المالية داخل لوحة التحكم حتى يتم تفعيلها من إعدادات الباقة.
+        </p>
+        <Link
+          href="/dashboard"
+          className="mt-6 inline-flex rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-white"
+        >
+          العودة للوحة التحكم
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardAppLayout({
   children,
   maintenanceSession,
@@ -55,6 +78,7 @@ export function DashboardAppLayout({
 }) {
   const pathname = usePathname();
   const [guard, setGuard] = useState<GuardState>({ loading: true, activePlanId: "", plans: [] });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
 
   useEffect(() => {
@@ -80,6 +104,14 @@ export function DashboardAppLayout({
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "true");
+    } catch {
+      setSidebarCollapsed(false);
+    }
+  }, []);
+
   const currentFeature = useMemo(() => {
     const sorted = [...dashboardPlatformFeatures].sort((a, b) => b.href.length - a.href.length);
     return sorted.find((feature) => {
@@ -88,7 +120,12 @@ export function DashboardAppLayout({
     });
   }, [pathname]);
 
-  const allowed = !currentFeature || guard.loading || cafeHasFeature(currentFeature.id, { planId: guard.activePlanId, plans: guard.plans });
+  const allowed =
+    !currentFeature ||
+    guard.loading ||
+    (currentFeature.id === "branda_finance"
+      ? canShowBrandaFinance({ planId: guard.activePlanId, plans: guard.plans })
+      : cafeHasFeature(currentFeature.id, { planId: guard.activePlanId, plans: guard.plans }));
 
   function endMaintenanceMode() {
     startEndingMaintenance(() => {
@@ -100,11 +137,27 @@ export function DashboardAppLayout({
     });
   }
 
+  function handleSidebarCollapsedChange(nextCollapsed: boolean) {
+    setSidebarCollapsed(nextCollapsed);
+    try {
+      localStorage.setItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY, String(nextCollapsed));
+    } catch {
+      // Ignore storage failures; the in-memory state still keeps the UI usable.
+    }
+  }
+
   return (
     <ResponsiveAppShell
       variant="dashboard"
       mobileTitle="لوحة التحكم"
-      sidebar={(close) => <DashboardSidebar onNavigate={close} />}
+      desktopSidebarWidth={sidebarCollapsed ? "64px" : "224px"}
+      sidebar={(close) => (
+        <DashboardSidebar
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={handleSidebarCollapsedChange}
+          onNavigate={close}
+        />
+      )}
     >
       {maintenanceSession ? (
         <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-[#3A2117] shadow-sm">
@@ -129,7 +182,7 @@ export function DashboardAppLayout({
           </div>
         </div>
       ) : null}
-      {allowed ? children : <UpgradeRequired featureTitle={currentFeature.title} />}
+      {allowed ? children : currentFeature.id === "branda_finance" ? <BrandaFinanceHiddenState /> : <UpgradeRequired featureTitle={currentFeature.title} />}
     </ResponsiveAppShell>
   );
 }

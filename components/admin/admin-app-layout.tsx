@@ -9,6 +9,7 @@ export function AdminAppLayout({ children }: { children: ReactNode }) {
     <ResponsiveAppShell
       variant="admin"
       mobileTitle="لوحة المنصة"
+      desktopSidebarWidth="232px"
       sidebar={(close) => <AdminSidebar onNavigate={close} />}
     >
       <div className="barndaksa-admin-fields min-w-0">{children}</div>

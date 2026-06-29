@@ -3,7 +3,6 @@ import { isIP } from "node:net";
 import {
   buildAnalysis,
   decodeHtmlEntities,
-  dedupeItems,
   htmlToText,
   parseMenuItemsFromJsonLd,
   parseMenuItemsFromText,
@@ -16,38 +15,8 @@ const timeoutMs = 9000;
 const iwaiterTimeoutMs = 8000;
 const phpCatalogTimeoutMs = 8000;
 const maxPhpCategoryPages = 4;
-const universalTimeoutMs = 10000;
-const maxUniversalCategoryPages = 20;
-const maxUniversalProducts = 300;
-const maxUniversalApiRequests = 8;
 const maxResponseBytes = 2 * 1024 * 1024;
 const userAgent = "BarndaksaMenuImport/1.0";
-const menuKeywords = [
-  "menu",
-  "menus",
-  "category",
-  "categories",
-  "product",
-  "products",
-  "item",
-  "items",
-  "shop",
-  "order",
-  "cart",
-  "food",
-  "drink",
-  "coffee",
-  "tea",
-  "منيو",
-  "القائمة",
-  "التصنيفات",
-  "منتجات",
-  "مشروبات",
-  "أطعمة",
-  "اطعمة",
-  "شاي",
-  "قهوة",
-];
 const phpCatalogFailureMessage = "تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني";
 
 function isPrivateIp(host: string) {
@@ -67,25 +36,14 @@ function isPrivateIp(host: string) {
     return (
       a === 10 ||
       a === 127 ||
-      a === 0 ||
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 100 && b >= 64 && b <= 127)
+      (a === 192 && b === 168)
     );
   }
 
   if (isIP(normalized) === 6) {
-    return (
-      normalized === "::1" ||
-      normalized === "::" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80") ||
-      normalized.startsWith("::ffff:127.") ||
-      normalized.startsWith("::ffff:10.") ||
-      normalized.startsWith("::ffff:192.168.")
-    );
+    return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80");
   }
 
   return false;
@@ -94,9 +52,6 @@ function isPrivateIp(host: string) {
 async function assertPublicUrl(url: URL) {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only http/https menu URLs are supported");
-  }
-  if (url.username || url.password) {
-    throw new Error("Menu URLs with credentials are not allowed");
   }
   if (isPrivateIp(url.hostname)) {
     throw new Error("Private menu URLs are not allowed");
@@ -124,48 +79,6 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   return fetchWithTimeoutMs(url, init, timeoutMs);
 }
 
-function normalizeInputUrl(input: string) {
-  const trimmed = input.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
-function isTlsCertificateError(error: unknown) {
-  const maybeCause =
-    error && typeof error === "object" && "cause" in error
-      ? (error as { cause?: unknown }).cause
-      : null;
-  const text = `${error instanceof Error ? error.message : ""} ${
-    maybeCause instanceof Error ? maybeCause.message : ""
-  } ${maybeCause && typeof maybeCause === "object" && "code" in maybeCause ? String((maybeCause as { code?: unknown }).code) : ""}`;
-  return /certificate|cert|unable_to_verify|self.?signed|leaf_signature/i.test(text);
-}
-
-function httpFallbackForCertificateError(url: URL, error: unknown) {
-  if (url.protocol !== "https:" || !isTlsCertificateError(error)) return null;
-  const fallback = new URL(url);
-  fallback.protocol = "http:";
-  return fallback;
-}
-
-function detectCharset(contentType: string, sample: string) {
-  const fromHeader = contentType.match(/charset=([^;\s]+)/i)?.[1];
-  const fromMeta =
-    sample.match(/<meta\b[^>]*charset=["']?\s*([^"'\s/>]+)/i)?.[1] ??
-    sample.match(/<meta\b[^>]*content=["'][^"']*charset=([^"'\s;>]+)/i)?.[1];
-  return (fromHeader ?? fromMeta ?? "utf-8").trim().toLowerCase();
-}
-
-function decodeLimitedBytes(buffer: Uint8Array, contentType: string) {
-  const sample = new TextDecoder("utf-8", { fatal: false }).decode(buffer.slice(0, 8192));
-  const charset = detectCharset(contentType, sample);
-  try {
-    return new TextDecoder(charset, { fatal: false }).decode(buffer);
-  } catch {
-    return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-  }
-}
-
 async function readLimitedText(response: Response) {
   const reader = response.body?.getReader();
   if (!reader) return "";
@@ -191,38 +104,26 @@ async function readLimitedText(response: Response) {
     offset += chunk.byteLength;
   }
 
-  return decodeLimitedBytes(buffer, response.headers.get("content-type") ?? "");
+  return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
 }
 
 async function fetchPublicMenuUrl(input: string) {
-  let current = new URL(normalizeInputUrl(input));
+  let current = new URL(input);
   const visited: string[] = [];
-  const warnings: string[] = [];
 
   for (let index = 0; index <= maxRedirects; index += 1) {
     await assertPublicUrl(current);
     visited.push(current.toString());
 
-    let response: Response;
-    try {
-      response = await fetchWithTimeout(current.toString(), {
-        method: "GET",
-        redirect: "manual",
-        cache: "no-store",
-        headers: {
-          "User-Agent": userAgent,
-          Accept: "text/html,application/json;q=0.9,text/plain;q=0.7,*/*;q=0.5",
-        },
-      });
-    } catch (error) {
-      const fallback = httpFallbackForCertificateError(current, error);
-      if (fallback && !visited.includes(fallback.toString())) {
-        warnings.push("تعذر فتح الرابط عبر HTTPS بسبب شهادة غير موثوقة، فتمت تجربة نسخة HTTP العامة لنفس الدومين.");
-        current = fallback;
-        continue;
-      }
-      throw error;
-    }
+    const response = await fetchWithTimeout(current.toString(), {
+      method: "GET",
+      redirect: "manual",
+      cache: "no-store",
+      headers: {
+        "User-Agent": userAgent,
+        Accept: "text/html,application/json;q=0.9,text/plain;q=0.7,*/*;q=0.5",
+      },
+    });
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
@@ -248,7 +149,6 @@ async function fetchPublicMenuUrl(input: string) {
     return {
       finalUrl: current.toString(),
       visited,
-      warnings,
       contentType,
       text: await readLimitedText(response),
     };
@@ -990,425 +890,48 @@ function extractStructuredHtmlItems(html: string, baseUrl: string) {
   return items;
 }
 
-function normalizedSearchText(value: string) {
-  return decodeHtmlEntities(value).replace(/\s+/g, " ").trim().toLowerCase();
-}
-
-function includesMenuKeyword(value: string) {
-  const normalized = normalizedSearchText(value);
-  return menuKeywords.some((keyword) => normalized.includes(keyword.toLowerCase()));
-}
-
-function cleanAnchorText(value: string) {
-  return stripTags(value).replace(/\s+/g, " ").trim();
-}
-
-function looksLikeAssetUrl(url: URL) {
-  return /\.(?:css|js|png|jpe?g|webp|avif|gif|svg|ico|woff2?|ttf|pdf|zip)$/i.test(url.pathname);
-}
-
-function extractCanonicalOrBaseUrl(html: string, fallbackUrl: string) {
-  const baseHref = html.match(/<base\b[^>]*href=["']([^"']+)["'][^>]*>/i)?.[1];
-  const canonicalHref = html.match(/<link\b[^>]*rel=["'][^"']*canonical[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/i)?.[1];
-  return absolutizeUrl(baseHref || canonicalHref || fallbackUrl, fallbackUrl) || fallbackUrl;
-}
-
-function extractStoreName(html: string) {
-  return (
-    extractMetaContent(html, "og:site_name") ||
-    extractMetaContent(html, "og:title") ||
-    stripTags(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "") ||
-    stripTags(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "")
-  );
-}
-
-function extractUniversalLinks(html: string, baseUrl: string) {
-  const base = new URL(baseUrl);
-  const links: Array<{ url: string; label: string; score: number }> = [];
-  const seen = new Set<string>();
-
-  for (const match of html.matchAll(/<a\b([^>]*)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi)) {
-    const before = match[1] ?? "";
-    const href = decodeHtmlEntities(match[2] ?? "").trim();
-    const after = match[3] ?? "";
-    const body = match[4] ?? "";
-    if (!href || /^(?:mailto:|tel:|javascript:|#)/i.test(href)) continue;
-
-    let next: URL;
-    try {
-      next = new URL(href, base);
-    } catch {
-      continue;
-    }
-
-    next.hash = "";
-    if (next.origin !== base.origin || looksLikeAssetUrl(next)) continue;
-    const linkText = cleanAnchorText(body);
-    const title = extractAttribute(`${before} ${after}`, "title");
-    const className = extractAttribute(`${before} ${after}`, "class");
-    const haystack = `${next.pathname} ${next.search} ${linkText} ${title} ${className}`;
-    if (/admin|login|logout|dashboard|wp-admin/i.test(haystack)) continue;
-
-    let score = 0;
-    if (includesMenuKeyword(haystack)) score += 4;
-    if (/(?:^|[?&])(cat|category|menu|id)=/i.test(next.search)) score += 4;
-    if (/category|categories|product|menu|item|shop|catalog/i.test(className)) score += 3;
-    if (linkText && linkText.length <= 70) score += 1;
-    if (score <= 0) continue;
-
-    const normalized = next.toString();
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-    links.push({ url: normalized, label: linkText || decodeHtmlEntities(title).trim(), score });
+export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnalysis> {
+  const parsedUrl = new URL(sourceUrl.trim());
+  if (isYallaQrCodesUrl(parsedUrl)) {
+    return analyzeYallaQrCodesMenu(sourceUrl);
+  }
+  if (isIWaiterUrl(parsedUrl)) {
+    return analyzeIWaiterMenu(sourceUrl);
+  }
+  if (isPhpCatalogUrl(parsedUrl)) {
+    return analyzePhpCatalogMenu(sourceUrl);
   }
 
-  return links.sort((a, b) => b.score - a.score);
-}
-
-function extractUniversalCategoryName(html: string, fallback: string) {
-  const active =
-    html.match(/<a\b[^>]*class=["'][^"']*(?:active|selected|current)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i)?.[1] ??
-    html.match(/<button\b[^>]*class=["'][^"']*(?:active|selected|current)[^"']*["'][^>]*>([\s\S]*?)<\/button>/i)?.[1] ??
-    "";
-  return cleanAnchorText(active) || fallback || "غير مصنف";
-}
-
-function extractBackgroundImages(html: string, baseUrl: string) {
-  const images: Array<{ url: string; alt: string }> = [];
-  for (const match of html.matchAll(/background-image\s*:\s*url\((["']?)([^"')]+)\1\)/gi)) {
-    const url = absolutizeUrl(decodeHtmlEntities(match[2] ?? "").trim(), baseUrl);
-    if (url) images.push({ url, alt: "" });
-  }
-  return images;
-}
-
-function extractAllImages(html: string, baseUrl: string) {
-  return [...extractImages(html, baseUrl), ...extractBackgroundImages(html, baseUrl)];
-}
-
-function normalizeUniversalItem(item: ExtractedMenuItem, sourceUrl: string, extraction: string): ExtractedMenuItem {
-  return {
-    ...item,
-    imageUrl: item.imageUrl ? absolutizeUrl(item.imageUrl, sourceUrl) || item.imageUrl : item.imageUrl,
-    metadata: { ...(item.metadata ?? {}), sourceUrl, extraction },
-  };
-}
-
-function extractUniversalDomItems(html: string, pageUrl: string, categoryName: string) {
-  const blockItems = extractPhpCatalogItemsFromHtml(html, pageUrl, categoryName).map((item) =>
-    normalizeUniversalItem(item, pageUrl, "universal-dom")
-  );
-  if (blockItems.length) return blockItems;
-
-  return parseMenuItemsFromText(htmlToText(html), pageUrl).map((item) =>
-    normalizeUniversalItem(
-      {
-        ...item,
-        categoryName: item.categoryName && item.categoryName !== "غير مصنف" ? item.categoryName : categoryName,
-      },
-      pageUrl,
-      "universal-text"
-    )
-  );
-}
-
-function findBalancedJson(source: string, startIndex: number) {
-  const opener = source[startIndex];
-  const closer = opener === "{" ? "}" : "]";
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-
-  for (let index = startIndex; index < source.length; index += 1) {
-    const char = source[index];
-    if (inString) {
-      if (escape) escape = false;
-      else if (char === "\\") escape = true;
-      else if (char === "\"") inString = false;
-      continue;
-    }
-    if (char === "\"") {
-      inString = true;
-      continue;
-    }
-    if (char === opener) depth += 1;
-    if (char === closer) depth -= 1;
-    if (depth === 0) return source.slice(startIndex, index + 1);
-  }
-
-  return "";
-}
-
-function parseJsonCandidate(raw: string) {
-  try {
-    return JSON.parse(decodeHtmlEntities(raw).trim());
-  } catch {
-    return null;
-  }
-}
-
-function extractWindowJson(html: string, keys: string[]) {
-  const payloads: unknown[] = [];
-  for (const key of keys) {
-    const pattern = new RegExp(`(?:window\\.)?${key}\\s*=\\s*`, "g");
-    for (const match of html.matchAll(pattern)) {
-      const index = (match.index ?? 0) + match[0].length;
-      const start = html.slice(index).search(/[\[{]/);
-      if (start < 0) continue;
-      const raw = findBalancedJson(html, index + start);
-      const parsed = raw ? parseJsonCandidate(raw) : null;
-      if (parsed) payloads.push(parsed);
-    }
-  }
-  return payloads;
-}
-
-function extractScriptJsonPayloads(html: string) {
-  const payloads: unknown[] = [];
-  for (const match of html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
-    const script = decodeHtmlEntities(match[1] ?? "");
-    if (!/(products?|categories|menus?|items?|catalog|الأصناف|التصنيفات|منتجات)/i.test(script)) continue;
-    const start = script.search(/[\[{]/);
-    if (start < 0) continue;
-    const raw = findBalancedJson(script, start);
-    const parsed = raw ? parseJsonCandidate(raw) : null;
-    if (parsed) payloads.push(parsed);
-  }
-  return payloads;
-}
-
-function extractMicrodataItems(html: string, sourceUrl: string) {
-  const items: ExtractedMenuItem[] = [];
-  const blockPattern = /<([a-z0-9-]+)\b[^>]*itemscope[^>]*itemtype=["'][^"']*(?:Product|MenuItem)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi;
-  for (const match of html.matchAll(blockPattern)) {
-    const block = match[2] ?? "";
-    const name =
-      stripTags(block.match(/itemprop=["']name["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "") ||
-      decodeHtmlEntities(block.match(/itemprop=["']name["'][^>]*content=["']([^"']+)["']/i)?.[1] ?? "").trim();
-    const description =
-      stripTags(block.match(/itemprop=["']description["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "") ||
-      decodeHtmlEntities(block.match(/itemprop=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1] ?? "").trim();
-    const priceText =
-      decodeHtmlEntities(block.match(/itemprop=["']price["'][^>]*content=["']([^"']+)["']/i)?.[1] ?? "") ||
-      stripTags(block.match(/itemprop=["']price["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "");
-    const image = decodeHtmlEntities(block.match(/itemprop=["']image["'][^>]*(?:src|content)=["']([^"']+)["']/i)?.[1] ?? "").trim();
-    const price = parsePrice(priceText);
-    if (!name || price == null) continue;
-    items.push({
-      categoryName: "غير مصنف",
-      productName: name,
-      description: description || null,
-      price,
-      imageUrl: image ? absolutizeUrl(image, sourceUrl) : null,
-      metadata: { sourceUrl, extraction: "microdata" },
-      status: image ? "ready" : "needs_review",
-    });
-  }
-  return items;
-}
-
-function extractStructuredJsonItems(html: string, sourceUrl: string) {
-  const payloads: unknown[] = [];
-  const nextData = extractNextData(html);
-  if (nextData) payloads.push(nextData);
-  payloads.push(...extractWindowJson(html, ["__NUXT__", "__INITIAL_STATE__", "__APP_DATA__", "INITIAL_STATE", "APP_DATA"]));
-  payloads.push(...extractScriptJsonPayloads(html));
-
-  const items: ExtractedMenuItem[] = [];
-  for (const payload of payloads) collectObjectsWithPrices(payload, sourceUrl, items);
-  return {
-    items: items.map((item) => normalizeUniversalItem(item, sourceUrl, "embedded-json")),
-    payloadCount: payloads.length,
-  };
-}
-
-function extractApiCandidates(html: string, baseUrl: string) {
-  const base = new URL(baseUrl);
-  const candidates = new Set<string>();
-  const hasApiHints = /(?:\/api\b|wp-json|__NEXT_DATA__|__NUXT__|INITIAL_STATE|APP_DATA)/i.test(html);
-  if (hasApiHints) {
-    for (const path of ["/api/products", "/api/categories", "/api/menu", "/api/items", "/api/store", "/api/catalog", "/wp-json"]) {
-      candidates.add(new URL(path, base.origin).toString());
-    }
-  }
-  for (const match of html.matchAll(/["']((?:https?:)?\/\/[^"']+|\/(?:api|products|categories|menu|items|store|catalog|wp-json)[^"'\s<)]*|\/?index\.php\?cat=[^"'\s<)]*)["']/gi)) {
-    const raw = decodeHtmlEntities(match[1] ?? "");
-    let url: URL;
-    try {
-      url = raw.startsWith("//") ? new URL(`${base.protocol}${raw}`) : new URL(raw, base);
-    } catch {
-      continue;
-    }
-    if (url.origin !== base.origin || looksLikeAssetUrl(url)) continue;
-    candidates.add(url.toString());
-  }
-  return Array.from(candidates).slice(0, maxUniversalApiRequests);
-}
-
-async function fetchUniversalJson(url: string) {
-  const target = new URL(url);
-  await assertPublicUrl(target);
-  const response = await fetchWithTimeoutMs(target.toString(), {
-    method: "GET",
-    redirect: "manual",
-    cache: "no-store",
-    headers: {
-      "User-Agent": userAgent,
-      Accept: "application/json,text/plain;q=0.7,*/*;q=0.4",
-    },
-  }, universalTimeoutMs);
-  if (!response.ok) return null;
-  const text = await readLimitedText(response);
-  const trimmed = text.trim();
-  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
-  return parseJsonCandidate(trimmed);
-}
-
-function dedupeUniversalItems(items: ExtractedMenuItem[]) {
-  const seen = new Set<string>();
-  const out: ExtractedMenuItem[] = [];
-  for (const item of dedupeItems(items)) {
-    const key = [normalizedSearchText(item.productName), item.price == null ? "" : String(item.price), normalizedSearchText(item.imageUrl ?? "")].join(":");
-    if (!item.productName.trim() || seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
-    if (out.length >= maxUniversalProducts) break;
-  }
-  return out;
-}
-
-function inferUniversalSourceType(counts: { api: number; jsonLd: number; structuredJson: number; microdata: number; dom: number; images: number }) {
-  if (counts.api > 0) return "api";
-  if (counts.jsonLd > 0 || counts.structuredJson > 0 || counts.microdata > 0) return "json-ld";
-  if (counts.dom > 0) return "dom";
-  if (counts.images > 0) return "image-only";
-  return "universal";
-}
-
-function inferUniversalConfidence(sourceType: string, itemCount: number, categoryCount: number) {
-  if (!itemCount) return sourceType === "image-only" ? 0.35 : 0.2;
-  if (sourceType === "api") return 0.92;
-  if (sourceType === "json-ld") return 0.88;
-  if (sourceType === "dom" && categoryCount > 1) return 0.82;
-  if (sourceType === "dom") return 0.72;
-  return 0.6;
-}
-
-async function analyzeUniversalMenu(sourceUrl: string): Promise<MenuImportAnalysis> {
-  const fetched = await fetchPublicMenuUrl(sourceUrl);
-  const canonicalBaseUrl = extractCanonicalOrBaseUrl(fetched.text, fetched.finalUrl);
-  const storeName = extractStoreName(fetched.text);
-  const extractionSteps = ["normalize-url", "fetch-html", "detect-charset", "parse-dom", "resolve-relative-urls", "collect-internal-menu-links"];
-  const warnings = [...fetched.warnings];
-  const unreadableUrls: string[] = [];
-
+  const fetched = await fetchPublicMenuUrl(sourceUrl.trim());
   const jsonLdPayloads = extractJsonLd(fetched.text);
-  const jsonLdItems = parseMenuItemsFromJsonLd(jsonLdPayloads, fetched.finalUrl).map((item) => normalizeUniversalItem(item, fetched.finalUrl, "json-ld"));
-  if (jsonLdPayloads.length) extractionSteps.push("read-json-ld");
-
-  const structuredJson = extractStructuredJsonItems(fetched.text, fetched.finalUrl);
-  if (structuredJson.payloadCount) extractionSteps.push("read-embedded-json");
-
-  const microdataItems = extractMicrodataItems(fetched.text, fetched.finalUrl);
-  if (microdataItems.length) extractionSteps.push("read-microdata");
-
-  const apiItems: ExtractedMenuItem[] = [];
-  const apiCandidates = extractApiCandidates(fetched.text, canonicalBaseUrl);
-  if (apiCandidates.length) extractionSteps.push("discover-api-candidates");
-  for (const apiUrl of apiCandidates) {
-    try {
-      const payload = await fetchUniversalJson(apiUrl);
-      if (payload) {
-        const nextItems: ExtractedMenuItem[] = [];
-        collectObjectsWithPrices(payload, apiUrl, nextItems);
-        apiItems.push(...nextItems.map((item) => normalizeUniversalItem(item, apiUrl, "api")));
-      }
-    } catch {
-      unreadableUrls.push(apiUrl);
-    }
-  }
-  if (apiItems.length) extractionSteps.push("extract-api-products");
-
-  const rootCategory = extractUniversalCategoryName(fetched.text, storeName || "غير مصنف");
-  const categoryLinks = extractUniversalLinks(fetched.text, canonicalBaseUrl)
-    .filter((link) => link.url !== fetched.finalUrl)
-    .slice(0, maxUniversalCategoryPages);
-  const categoryPages = await Promise.all(
-    categoryLinks.map(async (link) => {
-      try {
-        const page = await fetchPublicMenuUrl(link.url);
-        return { ...page, categoryName: extractUniversalCategoryName(page.text, link.label) };
-      } catch {
-        unreadableUrls.push(link.url);
-        return null;
-      }
-    })
+  const jsonLdItems = parseMenuItemsFromJsonLd(jsonLdPayloads, fetched.finalUrl);
+  const structuredHtmlItems = fetched.contentType.includes("text/html")
+    ? extractStructuredHtmlItems(fetched.text, fetched.finalUrl)
+    : [];
+  const htmlTextItems = parseMenuItemsFromText(
+    fetched.contentType.includes("application/json") ? fetched.text : htmlToText(fetched.text),
+    fetched.finalUrl
   );
-  if (categoryLinks.length) extractionSteps.push("read-category-pages");
+  const nextDataItems: ExtractedMenuItem[] = [];
+  const nextData = extractNextData(fetched.text);
+  if (nextData) collectObjectsWithPrices(nextData, fetched.finalUrl, nextDataItems);
 
-  const pages = [
-    { ...fetched, categoryName: rootCategory },
-    ...categoryPages.filter((page): page is Awaited<ReturnType<typeof fetchPublicMenuUrl>> & { categoryName: string } => Boolean(page)),
-  ];
-  const domItems = pages.flatMap((page) => extractUniversalDomItems(page.text, page.finalUrl, page.categoryName));
-  if (domItems.length) extractionSteps.push("extract-dom-products");
-
-  const images = pages.flatMap((page) => extractAllImages(page.text, page.finalUrl));
-  const items = dedupeUniversalItems(attachImages([...apiItems, ...jsonLdItems, ...structuredJson.items, ...microdataItems, ...domItems], images));
-  const categoryNames = Array.from(new Set(items.map((item) => String(item.categoryName ?? "").trim()).filter(Boolean)));
-  const sourceType = inferUniversalSourceType({
-    api: apiItems.length,
-    jsonLd: jsonLdItems.length,
-    structuredJson: structuredJson.items.length,
-    microdata: microdataItems.length,
-    dom: domItems.length,
-    images: images.length,
-  });
-  const confidence = inferUniversalConfidence(sourceType, items.length, categoryNames.length);
-
-  if (!items.length && images.length) warnings.push("الرابط يبدو كمنيو صور فقط، نحتاج تفعيل قراءة الصور لاستخراج الأصناف");
-  else if (!items.length) warnings.push("لم يتم العثور على منتجات واضحة في الرابط، وقد يكون المحتوى محميًا أو يحتاج معالجة خاصة.");
-  if (unreadableUrls.length) warnings.push("تعذر فتح بعض روابط التصنيفات أو واجهات API العامة ضمن نفس الدومين.");
+  const images = extractImages(fetched.text, fetched.finalUrl);
+  const items = attachImages([...structuredHtmlItems, ...jsonLdItems, ...nextDataItems, ...htmlTextItems], images);
+  const notes = items.length
+    ? []
+    : ["لم يتم العثور على منتجات واضحة في الرابط. يمكن إنشاء المسودة يدويًا من جدول المراجعة."];
 
   return buildAnalysis(
     items,
     {
-      sourceType,
       sourceUrl,
       finalUrl: fetched.finalUrl,
-      canonicalUrl: canonicalBaseUrl,
-      visitedUrls: pages.flatMap((page) => page.visited),
+      visitedUrls: fetched.visited,
       contentType: fetched.contentType,
-      confidence,
-      storeName,
-      categories: categoryNames,
-      products: items.length,
-      warnings,
-      extractionSteps,
       jsonLdBlocks: jsonLdPayloads.length,
-      embeddedJsonPayloads: structuredJson.payloadCount,
-      apiCandidatesTried: apiCandidates.length,
-      categoryLinksFound: categoryLinks.length,
-      pagesRead: pages.length,
       imagesFound: images.length,
     },
-    warnings,
-    unreadableUrls
+    notes
   );
-}
-
-export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnalysis> {
-  const normalizedUrl = normalizeInputUrl(sourceUrl.trim());
-  const parsedUrl = new URL(normalizedUrl);
-  if (isYallaQrCodesUrl(parsedUrl)) {
-    return analyzeYallaQrCodesMenu(normalizedUrl);
-  }
-  if (isIWaiterUrl(parsedUrl)) {
-    return analyzeIWaiterMenu(normalizedUrl);
-  }
-  if (isPhpCatalogUrl(parsedUrl)) {
-    return analyzePhpCatalogMenu(normalizedUrl);
-  }
-
-  return analyzeUniversalMenu(normalizedUrl);
 }

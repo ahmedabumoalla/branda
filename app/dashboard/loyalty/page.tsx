@@ -1,65 +1,13 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
-
-import { LoyaltyCardsPageClient } from "@/components/dashboard/pages/loyalty-cards-page";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getOwnerLoyaltyCardsDashboard, type LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
-import { getOwnerMenu } from "@/lib/data/menu";
-
-const emptyDashboard: LoyaltyCardsDashboard = {
-  cafeId: "",
-  cafeSlug: "",
-  cafeName: "",
-  businessCategory: "cafes_coffee",
-  program: {
-    enabled: true,
-    cardTitle: "بطاقة الولاء",
-    cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
-    purchasesRequired: 7,
-    rewardProductId: null,
-    rewardProductName: "",
-    rewardName: "منتج مجاني",
-    stampLabel: "ختم",
-    terms: "تطبق الشروط والأحكام الخاصة بالعلامة التجارية",
-    cardBackground: "#4A281D",
-    cardForeground: "#FCF8F3",
-    cardAccent: "#D9A33F",
-    appleWalletEnabled: false,
-    googleWalletEnabled: false,
-  },
-  cards: [],
-  cashiers: [],
-  events: [],
-  activities: [],
-};
+import { LoyaltyDashboardPage } from "@/components/dashboard/pages/loyalty-dashboard-page";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export default async function LoyaltyCardsPage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <LoyaltyCardsPageClient
-        initialDashboard={emptyDashboard}
-        products={[]}
-        configError="قم بإعداد Supabase في ملف البيئة"
-      />
-    );
+  const features = await getOwnerFeatureCodes().catch(() => []);
+  if (!featureCodesAllow(features, "loyalty")) {
+    return <DashboardFeatureBlockedState title="الولاء غير مفعل في هذه الباقة" backHref="/dashboard" />;
   }
 
-  try {
-    const [dashboard, menu] = await Promise.all([
-      getOwnerLoyaltyCardsDashboard(),
-      getOwnerMenu(),
-    ]);
-
-    return <LoyaltyCardsPageClient initialDashboard={dashboard} products={menu.products} />;
-  } catch (error) {
-    console.error("[LoyaltyCardsPage]", error);
-    return (
-      <LoyaltyCardsPageClient
-        initialDashboard={emptyDashboard}
-        products={[]}
-        configError="تعذر تحميل بطاقات الولاء"
-      />
-    );
-  }
+  return <LoyaltyDashboardPage />;
 }

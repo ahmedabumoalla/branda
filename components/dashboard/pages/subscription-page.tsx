@@ -14,7 +14,7 @@ import {
   StatusBadge,
 } from "@/components/ui/design-system";
 import {
-  allPlatformFeatures,
+  packageAssignablePlatformFeatures,
   type PlatformPlan,
 } from "@/lib/platform/admin-data";
 import {
@@ -46,10 +46,13 @@ type Props = {
 };
 
 function featureTitle(featureId: string, categoryId?: string) {
+  if (featureId === "loyalty") {
+    return "الولاء والمكافآت + نقاط الولاء المتقدمة";
+  }
   if (featureId === "cashier") {
     return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
   }
-  return allPlatformFeatures.find((feature) => feature.id === featureId)?.title ?? featureId;
+  return packageAssignablePlatformFeatures.find((feature) => feature.id === featureId)?.title ?? featureId;
 }
 
 function planHasFeature(plan: PlatformPlan | null | undefined, featureId: string) {
@@ -189,6 +192,7 @@ export function SubscriptionPageClient({
       { label: "الحجوزات الشهرية", value: formatLimit(plan.maxReservationsMonthly, "حجز") },
       { label: "الفروع", value: formatLimit(plan.maxBranches, "فرع") },
       { label: "مدة التجربة", value: plan.trialDays && plan.trialDays > 0 ? `${plan.trialDays} يوم` : "بدون تجربة" },
+      { label: "نقاط الولاء المتقدمة", value: planHasFeature(plan, "loyalty") ? "متاحة في الباقة" : "تحتاج ترقية" },
     ];
   }
 
@@ -348,7 +352,7 @@ export function SubscriptionPageClient({
                     </div>
 
                     <ul className="mt-4 flex-1 space-y-1.5">
-                      {allPlatformFeatures.map((feature) => {
+                      {packageAssignablePlatformFeatures.map((feature) => {
                         const on = plan.features.includes(feature.id);
                         return (
                           <li
@@ -511,7 +515,7 @@ export function SubscriptionPageClient({
                 ))}
               </div>
               <div className="mt-4 grid gap-2">
-                {allPlatformFeatures.map((feature) => {
+                {packageAssignablePlatformFeatures.map((feature) => {
                   const on = selectedPlan.features.includes(feature.id);
                   return (
                     <div

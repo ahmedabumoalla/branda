@@ -3,8 +3,11 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { MenuPageClient } from "@/components/dashboard/pages/menu-page";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export default async function DashboardMenuPage() {
   if (!isSupabaseConfigured()) {
@@ -18,6 +21,11 @@ export default async function DashboardMenuPage() {
   }
 
   try {
+    const features = await getOwnerFeatureCodes();
+    if (!featureCodesAllow(features, "menu")) {
+      return <DashboardFeatureBlockedState title="المنيو والمنتجات" />;
+    }
+
     const menu = await getOwnerMenu();
     return (
       <MenuPageClient

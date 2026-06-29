@@ -23,6 +23,8 @@ import { createReservationFlowAction } from "@/app/actions/reservations";
 import { fetchCustomerReservationsAction } from "@/app/actions/customer";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
+import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
+import { PublicFeatureUnavailable } from "@/components/cafe/public-feature-guard";
 import {
   CustomerBottomDock,
   defaultCustomerDockItems,
@@ -42,6 +44,7 @@ import type { ReservationService } from "@/lib/data/platform-upgrade";
 import { appendPreviewToNextPath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { formatSar } from "@/lib/format";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 
 type ReservationRecord = {
   id: string;
@@ -255,7 +258,7 @@ function ReserveForm() {
   const params = useParams<{ slug: string }>();
   const searchParams = useSearchParams();
   const slug = params.slug;
-  const { settings, experience, path, previewThemeId, theme } =
+  const { settings, experience, path, previewThemeId, theme, features, hydrated } =
     useCafePageContext(slug);
   const isEvents = getBusinessCopy(settings.businessCategory).kind === "events";
   const reservationNoun = isEvents ? "مقعد/ورشة/مساحة حضور" : "حجز";
@@ -269,6 +272,7 @@ function ReserveForm() {
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { branches, reservationServices, loading, error } =
     usePublicCafeMenu(slug);
+  const reservationsEnabled = publicFeatureAllows(features, "reservations");
 
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [customerReservations, setCustomerReservations] = useState<ReservationRecord[]>([]);
@@ -534,11 +538,18 @@ function ReserveForm() {
     setBookingOpen(true);
   }
 
-  if (loading)
+  if (loading || !hydrated)
     return (
       <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
         <p className="font-black">جاري التحميل...</p>
       </div>
+    );
+  if (!reservationsEnabled)
+    return (
+      <>
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
+        <PublicFeatureUnavailable slug={slug} feature="reservations" previewThemeId={previewThemeId} />
+      </>
     );
   if (error)
     return (
@@ -610,6 +621,7 @@ function ReserveForm() {
   return (
     <>
       <div className="space-y-5">
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
         {Header}
 
         {viewMode === "services" ? (
@@ -1094,7 +1106,7 @@ function CustomerReservationCard({
 
 function ReserveBottomDock() {
   const params = useParams<{ slug: string }>();
-  const { settings, previewThemeId } = useCafePageContext(params.slug);
+  const { settings, previewThemeId, features } = useCafePageContext(params.slug);
 
   return (
     <CustomerBottomDock
@@ -1102,9 +1114,9 @@ function ReserveBottomDock() {
         slug: params.slug,
         previewThemeId,
         active: "orders",
-        hasProducts: true,
-        hasOrders: true,
-        hasRewards: true,
+        hasProducts: publicFeatureAllows(features, "menu"),
+        hasOrders: publicFeatureAllows(features, "reservations"),
+        hasRewards: publicFeatureAllows(features, "loyalty"),
         businessCategory: settings.businessCategory,
       })}
     />

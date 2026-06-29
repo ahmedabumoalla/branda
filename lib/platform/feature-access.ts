@@ -24,10 +24,6 @@ function normalizeFeatureCodes(features: readonly PlatformFeatureCode[] | readon
   return Array.from(new Set((features ?? []).map(String).filter(Boolean))) as PlatformFeatureCode[];
 }
 
-export function isBrandaFinancePreviewOverrideEnabled() {
-  return process.env.VERCEL_ENV === "preview";
-}
-
 export function getAllPlatformFeatures() {
   return [...platformFeatureRegistry].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -107,10 +103,6 @@ export function isBrandaFinanceEnabledForBrand(
   planFeatures: readonly PlatformFeatureCode[] | readonly string[] | null | undefined,
   brandOverrides: readonly BrandFeatureOverride[] = []
 ) {
-  if (isBrandaFinancePreviewOverrideEnabled()) {
-    return true;
-  }
-
   const access = getEffectiveBrandFeatureAccess(planFeatures, brandOverrides).find(
     (row) => row.feature.id === "branda_finance"
   );
@@ -123,10 +115,6 @@ export function canShowBrandaFinance(context: {
   features?: readonly PlatformFeatureCode[] | readonly string[] | null;
   overrides?: readonly BrandFeatureOverride[];
 }) {
-  if (isBrandaFinancePreviewOverrideEnabled()) {
-    return true;
-  }
-
   const planFeatures = context.features ?? getPlanIncludedFeatures(context.planId, context.plans);
   return isBrandaFinanceEnabledForBrand(planFeatures, context.overrides);
 }

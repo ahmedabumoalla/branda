@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import {
   BadgeCheck,
   BarChart3,
   CalendarDays,
-  CircleDollarSign,
+  ChevronsLeft,
+  ChevronsRight,
   CreditCard,
   DoorOpen,
   FileText,
   Gift,
   Home,
+  Landmark,
   LockKeyhole,
   LogOut,
   MapPin,
@@ -26,20 +28,21 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
-import type { CafeSettings } from "@/lib/mock/cafe-settings";
-import type { AppNotification } from "@/lib/mock/notifications";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
-import { dashboardPlatformFeatures, type PlatformFeature, type PlatformPlan } from "@/lib/platform/admin-data";
+import { getSidebarFeaturesForBrand } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
-import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
+import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import type { AppNotification } from "@/lib/mock/notifications";
+import type { PlatformFeature, PlatformPlan } from "@/lib/platform/admin-data";
 
-const featureIcons: Record<PlatformFeature, React.ElementType> = {
+const featureIcons: Partial<Record<PlatformFeature, ElementType>> = {
   all: Star,
   home: Home,
   menu: Package,
@@ -50,25 +53,21 @@ const featureIcons: Record<PlatformFeature, React.ElementType> = {
   loyalty: Star,
   branches: MapPin,
   reports: BarChart3,
-  finance: CircleDollarSign,
   reviews: MessageSquareText,
   marketing: Megaphone,
   experience_reviews: BadgeCheck,
   cashier: DoorOpen,
+  branda_finance: Landmark,
   orders: ShoppingBag,
   settings: Settings,
   theme: Palette,
+  domains: Settings,
   subscription: CreditCard,
 };
 
-const links = dashboardPlatformFeatures.map((feature) => ({
-  title: feature.title,
-  href: feature.href,
-  icon: featureIcons[feature.id],
-  feature: feature.id,
-}));
-
 type SidebarProps = {
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
   onNavigate?: () => void;
 };
 
@@ -83,7 +82,11 @@ const initialCafeSettings: CafeSettings = {
   domainStatus: "غير مربوط",
 };
 
-export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
+export function DashboardSidebar({
+  collapsed = false,
+  onCollapsedChange,
+  onNavigate,
+}: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -101,6 +104,8 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   const copy = getBusinessCopy(cafeSettings.businessCategory);
   const cafeName = cafeSettings.cafeName || copy.casualNoun;
   const cafeSlug = cafeSettings.cafeSlug;
+  const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
+  const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +137,6 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     };
   }, []);
 
-
   async function handleShare() {
     if (!cafeSlug) return;
     const url = getCafePublicUrl(cafeSlug);
@@ -141,7 +145,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
         await navigator.share({ title: cafeName, url });
       } else {
         await navigator.clipboard.writeText(url);
-        setShareMessage("تم نسخ رابط الفرع الالكتروني");
+        setShareMessage("تم نسخ رابط الفرع الإلكتروني");
         window.setTimeout(() => setShareMessage(""), 2200);
       }
     } catch {
@@ -155,6 +159,9 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     router.push("/login");
   }
 
+  function handleToggleCollapsed() {
+    onCollapsedChange?.(!collapsed);
+  }
 
   function getLinkCounter(href: string) {
     if (href === "/dashboard/reservations") return pendingReservations;
@@ -168,12 +175,15 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  const visibleLinks = links.filter((link) =>
-    link.feature === "cashier" ||
-    link.feature === "finance" ||
-    cafeHasFeature(link.feature, { planId: activePlanId, plans })
-  );
-  const linkTitle = (item: (typeof links)[number]) => {
+  const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans }).map(({ feature, access }) => ({
+    title: feature.titleAr,
+    href: feature.route,
+    icon: featureIcons[feature.id] ?? Star,
+    feature: feature.id,
+    access,
+  }));
+
+  const linkTitle = (item: (typeof visibleLinks)[number]) => {
     if (item.href === "/dashboard/menu" && copy.kind === "events") return "التذاكر والباقات";
     if (item.href === "/dashboard/orders" && copy.kind === "events") return "طلبات التذاكر";
     if (item.href === "/dashboard/reservations" && copy.kind === "events") return "حجوزات الحضور";
@@ -181,6 +191,7 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
     if (item.href === "/dashboard/experience-reviews" && copy.kind === "events") return "مكافآت التوثيق";
     if (item.href === "/dashboard/cashier" && copy.kind === "events") return "بوابة الدخول";
     if (item.href === "/dashboard/cashier") return "الكاشير";
+    if (item.href === "/dashboard/branda-finance") return "برندة المالية";
     if (item.href === "/dashboard/reports" && copy.kind === "events") return "تقارير الفعالية";
     if (item.href === "/dashboard/orders") return `طلبات ${copy.casualNoun}`;
     if (item.href === "/dashboard/settings") return `إعدادات ${copy.casualNoun}`;
@@ -191,158 +202,197 @@ export function DashboardSidebar({ onNavigate }: SidebarProps = {}) {
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E7D7C6]/60 bg-gradient-to-b from-[#4A281D] via-[#311912] to-[#311912] text-[#FCF8F3] shadow-[-12px_0_40px_rgba(49,25,18,0.35)]"
+      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-white/10 bg-[#0F0B12] text-[#F7EFE6] shadow-[-10px_0_34px_rgba(0,0,0,0.42)] transition-colors"
     >
-      <div className="border-b border-white/10 px-6 py-7">
-        <BarndaksaLogo
-          variant="dark"
-          width={160}
-          height={64}
-          priority
-          className="mx-auto"
-        />
-        <p className="mt-3 text-center text-xs font-bold text-[#F2E7D9]">
-          لوحة التحكم
-        </p>
-      </div>
-
-      <div className="mx-5 mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm">
-        <div className="flex items-center gap-4">
-          <div className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#FCF8F3] shadow-lg">
-            <CafeLogo
-              name={cafeName}
-              logoUrl={cafeLogoUrl}
-              size="md"
-              className="!shadow-none"
+      <div className={`border-b border-white/10 ${collapsed ? "px-2 py-3" : "px-4 py-4"}`}>
+        <div className={`flex items-center ${collapsed ? "flex-col gap-2" : "justify-between gap-3"}`}>
+          <div className={collapsed ? "flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08] ring-1 ring-white/10" : "min-w-0"}>
+            <BarndaksaLogo
+              variant="dark"
+              width={collapsed ? 38 : 124}
+              height={collapsed ? 20 : 50}
+              priority
+              className={collapsed ? "scale-90" : ""}
             />
           </div>
 
-          <div className="min-w-0 flex-1 text-right">
-            <p className="text-xs font-bold text-[#F2E7D9]">{copy.casualNoun} الحالي</p>
-            <h2 className="mt-1 truncate text-xl font-black">{cafeName}</h2>
-
-            {cafeSettings.ownerName ? (
-              <p className="mt-1 truncate text-xs font-bold text-[#D8C3AF]">
-                {cafeSettings.ownerName}
-              </p>
-            ) : null}
-
-            <Link
-              href="/dashboard/subscription"
-              onClick={onNavigate}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[#D9A33F]/20 px-3 py-1 text-xs font-black text-[#F0C568] transition hover:bg-[#D9A33F]/30"
-            >
-              {planName}
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <NotificationsPanel initialNotifications={initialNotifications} />
-
           <button
             type="button"
-            onClick={() => void handleShare()}
-            disabled={!cafeSlug}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-[#F0C568] transition hover:bg-white/10 disabled:opacity-50"
-            aria-label="مشاركة رابط الفرع الالكتروني"
+            onClick={handleToggleCollapsed}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#7868FF]/40 bg-[#665CFF]/20 text-[#C4BEFF] shadow-[0_0_18px_rgba(102,92,255,0.18)] transition hover:border-[#9A90FF]/60 hover:bg-[#665CFF]/30 hover:text-white"
+            aria-label={toggleLabel}
+            title={toggleLabel}
           >
-            <Share2 className="h-4 w-4" />
+            <ToggleIcon className="h-4 w-4" />
           </button>
-
-          {cafeSlug ? (
-            <Link
-              href={getCafePublicUrl(cafeSlug)}
-              target="_blank"
-              className="flex h-10 flex-1 items-center justify-center rounded-xl border border-[#D9A33F]/30 bg-[#D9A33F]/15 text-sm font-black text-[#F0C568] transition hover:bg-[#D9A33F]/25"
-            >
-              زيارة الفرع الالكتروني
-            </Link>
-          ) : (
-            <span className="flex h-10 flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-black text-[#D8C3AF]">
-              جاري التحميل
-            </span>
-          )}
         </div>
 
-        {shareMessage ? (
-          <p className="mt-3 text-center text-xs font-black text-[#F0C568]">{shareMessage}</p>
-        ) : null}
-
-        {cafeSlug ? (
-          <p className="mt-3 text-center text-[10px] font-bold text-[#806A5E]">
-            {getCafeDisplayDomain(cafeSlug, cafeSettings)}
-          </p>
+        {!collapsed ? (
+          <p className="mt-2 text-right text-[11px] font-bold text-[#B8A99C]">لوحة التحكم</p>
         ) : null}
       </div>
 
-      <nav className="flex-1 space-y-1.5 px-4 py-6">
+      {!collapsed ? (
+        <div className="mx-3 mt-3 rounded-xl border border-white/10 bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#FCF8F3] shadow-md">
+              <CafeLogo
+                name={cafeName}
+                logoUrl={cafeLogoUrl}
+                size="sm"
+                className="!shadow-none"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1 text-right">
+              <p className="truncate text-[11px] font-bold text-[#B8A99C]">{copy.casualNoun} الحالي</p>
+              <h2 className="mt-0.5 truncate text-sm font-black text-white">{cafeName}</h2>
+
+              {cafeSettings.ownerName ? (
+                <p className="mt-0.5 truncate text-[11px] font-bold text-[#8F8176]">
+                  {cafeSettings.ownerName}
+                </p>
+              ) : null}
+
+              <Link
+                href="/dashboard/subscription"
+                onClick={onNavigate}
+                className="mt-1.5 inline-flex max-w-full items-center truncate rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[11px] font-black text-[#F0C568] transition hover:bg-[#D9A33F]/25"
+              >
+                {planName}
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <NotificationsPanel initialNotifications={initialNotifications} />
+
+            <button
+              type="button"
+              onClick={() => void handleShare()}
+              disabled={!cafeSlug}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.12] bg-white/[0.045] text-[#F0C568] transition hover:bg-white/10 disabled:opacity-50"
+              aria-label="مشاركة رابط الفرع الإلكتروني"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+
+            {cafeSlug ? (
+              <Link
+                href={getCafePublicUrl(cafeSlug)}
+                target="_blank"
+                className="flex h-8 min-w-0 flex-1 items-center justify-center truncate rounded-lg border border-[#D9A33F]/25 bg-[#D9A33F]/12 px-2 text-[11px] font-black text-[#F0C568] transition hover:bg-[#D9A33F]/22"
+              >
+                زيارة الفرع الإلكتروني
+              </Link>
+            ) : (
+              <span className="flex h-8 min-w-0 flex-1 items-center justify-center truncate rounded-lg border border-white/10 bg-white/[0.045] px-2 text-[11px] font-black text-[#B8A99C]">
+                جاري التحميل
+              </span>
+            )}
+          </div>
+
+          {shareMessage ? (
+            <p className="mt-2 text-center text-[11px] font-black text-[#F0C568]">{shareMessage}</p>
+          ) : null}
+
+          {cafeSlug ? (
+            <p className="mt-2 truncate text-center text-[10px] font-bold text-[#7D7067]">
+              {getCafeDisplayDomain(cafeSlug, cafeSettings)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <nav className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-3 py-4"}`}>
         {visibleLinks.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          const locked = item.feature === "finance" ? false : !cafeHasFeature(item.feature, { planId: activePlanId, plans });
+          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans });
           const href = locked ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
+          const title = linkTitle(item);
+          const counter = getLinkCounter(item.href);
 
           return (
             <div key={item.href}>
-              {showOperationsLabel ? (
-                <p className="px-4 pb-2 pt-4 text-[11px] font-black text-[#D8C3AF]">
+              {showOperationsLabel && !collapsed ? (
+                <p className="px-3 pb-1.5 pt-3 text-[10px] font-black uppercase tracking-[0.08em] text-[#80746B]">
                   أدوات التشغيل
                 </p>
               ) : null}
               <Link
                 href={href}
                 onClick={onNavigate}
-                className={`group flex items-center justify-between rounded-2xl px-4 py-3.5 text-[15px] font-black transition ${
+                title={collapsed ? title : undefined}
+                aria-label={collapsed ? title : undefined}
+                className={`group relative flex h-9 items-center rounded-lg text-[13px] font-extrabold transition ${
+                  collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
+                } ${
                   active && !locked
-                    ? "bg-gradient-to-l from-[#D9A33F]/25 to-white/10 text-[#F0C568] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                    ? "bg-[#6F63FF]/20 text-white ring-1 ring-[#8075FF]/45 shadow-[inset_3px_0_0_#A69EFF]"
                     : locked
-                      ? "border border-white/10 bg-white/5 text-[#D8C3AF] hover:bg-white/10"
-                      : "text-[#F2E7D9] hover:bg-white/5 hover:text-[#FCF8F3]"
+                      ? "border border-white/[0.08] bg-white/[0.035] text-[#8F8176] hover:bg-white/[0.065]"
+                      : "text-[#CFC2B7] hover:bg-white/[0.065] hover:text-white"
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  {locked ? (
-                    <LockKeyhole className="h-4 w-4 text-[#F0C568]" />
-                  ) : getLinkCounter(item.href) > 0 ? (
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black text-white">
-                      {getLinkCounter(item.href) > 99 ? "99+" : getLinkCounter(item.href)}
-                    </span>
-                  ) : (
-                    <span className="w-8" />
-                  )}
-                </span>
-
-                <span className="flex items-center gap-3">
-                  <span>
-                    {linkTitle(item)}
-                    {locked ? (
-                      <span className="me-2 text-[10px] text-[#F0C568]">ترقية</span>
-                    ) : null}
-                  </span>
+                <span className={`flex min-w-0 items-center ${collapsed ? "justify-center" : "gap-2"}`}>
                   <Icon
-                    className={`h-5 w-5 ${
+                    className={`h-[18px] w-[18px] shrink-0 ${
                       active && !locked
-                        ? "text-[#F0C568]"
-                        : "text-[#F2E7D9] group-hover:text-[#FCF8F3]"
+                        ? "text-[#C4BEFF]"
+                        : "text-[#B8A99C] group-hover:text-white"
                     }`}
                   />
+                  {!collapsed ? (
+                    <span className="min-w-0 truncate">
+                      {title}
+                      {locked ? (
+                        <span className="me-1.5 text-[10px] text-[#F0C568]">ترقية</span>
+                      ) : null}
+                    </span>
+                  ) : null}
                 </span>
+
+                {collapsed ? (
+                  locked ? (
+                    <span className="absolute left-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#21170F] text-[#F0C568] ring-1 ring-[#F0C568]/45">
+                      <LockKeyhole className="h-2.5 w-2.5" />
+                    </span>
+                  ) : counter > 0 ? (
+                    <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1 text-[9px] font-black leading-3 text-white">
+                      {counter > 99 ? "99+" : counter}
+                    </span>
+                  ) : null
+                ) : (
+                  <span className="flex shrink-0 items-center gap-1">
+                    {locked ? (
+                      <LockKeyhole className="h-3.5 w-3.5 text-[#F0C568]" />
+                    ) : counter > 0 ? (
+                      <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                        {counter > 99 ? "99+" : counter}
+                      </span>
+                    ) : null}
+                  </span>
+                )}
               </Link>
             </div>
           );
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-5">
+      <div className={`border-t border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-4"}`}>
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center justify-between rounded-2xl border border-[#D9A33F]/20 bg-white/5 px-4 py-3.5 text-sm font-black text-[#FCF8F3] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200"
+          className={`flex h-9 w-full items-center rounded-lg border border-white/10 bg-white/[0.045] text-[13px] font-black text-[#F7EFE6] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200 ${
+            collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
+          }`}
+          aria-label={collapsed ? "تسجيل الخروج" : undefined}
+          title={collapsed ? "تسجيل الخروج" : undefined}
         >
-          <span>تسجيل الخروج</span>
-          <LogOut className="h-5 w-5" />
+          {!collapsed ? <span>تسجيل الخروج</span> : null}
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
         </button>
       </div>
     </aside>

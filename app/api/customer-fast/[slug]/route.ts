@@ -75,6 +75,7 @@ export async function GET(_request: Request, { params }: Params) {
     }
 
     const canUseFeature = (feature: string) => {
+      if (feature === "loyalty") return featureCodesAllow(features, "loyalty");
       if (!features.length) return true;
       return featureCodesAllow(features, feature);
     };

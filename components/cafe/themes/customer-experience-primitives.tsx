@@ -263,7 +263,7 @@ export function SocialProofPanel({
           </h2>
           <p className="mt-2 max-w-2xl text-sm font-bold leading-7 text-[var(--ci-muted-fg,var(--barndaksa-muted-text))]">
             عندما لا تتوفر آراء عامة بعد، تعرض الواجهة مؤشرات حقيقية من
-            البيانات الحالية بدل إنشاء بيانات وهمية.
+            البيانات الحالية بدل إنشاء بيانات مصطنعة.
           </p>
         </div>
       </div>

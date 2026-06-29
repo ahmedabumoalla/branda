@@ -20,7 +20,7 @@ import {
   buildCustomerQuickDockItems,
 } from "./customer-experience-primitives";
 import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
-import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 
 type Props = {
   slug: string;
@@ -89,7 +89,8 @@ function ThemedCafeShellInner({
     backgroundUrl &&
     (identityConfig.backgroundScope === "all-customer-pages" ||
       identityConfig.backgroundScope === "home-only");
-  const hasFeature = (feature: string) => featureCodesAllow(features, feature);
+  const hasFeature = (feature: Parameters<typeof publicFeatureAllows>[1]) =>
+    publicFeatureAllows(features, feature);
   const activeDockItem = pathname.includes("/products") || pathname.includes("/product/")
     ? "products"
     : pathname.includes("/reserve")

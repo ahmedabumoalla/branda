@@ -3,6 +3,11 @@ import {
   type PlatformFeature,
   type PlatformPlan,
 } from "@/lib/platform/admin-data";
+import {
+  getEffectiveBrandFeatureAccess,
+  getPackageAssignableFeatures,
+  getPlanIncludedFeatures,
+} from "@/lib/platform/feature-access";
 
 export function getPlatformPlans(): PlatformPlan[] {
   return mockPlatformPlans;
@@ -20,26 +25,38 @@ export function cafeHasFeature(
   feature: PlatformFeature,
   options?: { planId?: string; plans?: PlatformPlan[] }
 ) {
-  if (feature === "home" || feature === "subscription") return true;
+  if (feature === "all" || feature === "home" || feature === "subscription" || feature === "settings") {
+    return true;
+  }
 
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
-  const plan = plans.find((item) => item.id === activePlanId);
-  if (!plan) return false;
-
-  const featureList = plan.features.map(String);
-  if (featureList.includes("all")) return true;
-
-  return featureList.includes(feature);
+  const planFeatures = getPlanIncludedFeatures(activePlanId, plans);
+  const access = getEffectiveBrandFeatureAccess(planFeatures).find((item) => item.feature.id === feature);
+  return Boolean(access?.effectiveEnabled);
 }
 
 export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[] }) {
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
   const plan = plans.find((item) => item.id === activePlanId);
-  const features = (plan?.features || []).map(String) as PlatformFeature[];
-  if (features.includes("all")) {
-    return Array.from(new Set<PlatformFeature>(["home", ...plans.flatMap((item) => item.features), "subscription"]));
+  if (plan?.features.map(String).includes("all")) {
+    return Array.from(
+      new Set<PlatformFeature>([
+        "home",
+        ...getPackageAssignableFeatures().map((feature) => feature.id),
+        "settings",
+        "subscription",
+      ])
+    );
   }
-  return Array.from(new Set<PlatformFeature>(["home", ...features, "subscription"]));
+
+  return Array.from(
+    new Set<PlatformFeature>([
+      "home",
+      ...getPlanIncludedFeatures(activePlanId, plans),
+      "settings",
+      "subscription",
+    ])
+  );
 }

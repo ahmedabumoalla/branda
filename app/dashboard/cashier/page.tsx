@@ -3,11 +3,14 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { OperationalCashierPageClient } from "@/components/dashboard/pages/operational-cashier-page";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import {
   getOwnerLoyaltyCardsDashboard,
   type LoyaltyCardsDashboard,
 } from "@/lib/data/loyalty-cards";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 const emptyDashboard: LoyaltyCardsDashboard = {
   cafeId: "",
@@ -47,6 +50,11 @@ export default async function DashboardCashierPage() {
   }
 
   try {
+    const features = await getOwnerFeatureCodes();
+    if (!featureCodesAllow(features, "cashier")) {
+      return <DashboardFeatureBlockedState title="الكاشير" />;
+    }
+
     const dashboard = await getOwnerLoyaltyCardsDashboard();
     return <OperationalCashierPageClient initialDashboard={dashboard} />;
   } catch (error) {

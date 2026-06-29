@@ -1,7 +1,6 @@
 "use client";
 
 import { Copy, ExternalLink, Eye, EyeOff, Globe, ImagePlus, KeyRound, Save, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { changeOwnerPasswordAction } from "@/app/actions/auth";
@@ -57,7 +56,6 @@ type Props = {
 
 export function SettingsPageClient({ initialSettings, configError }: Props) {
   const copy = getBusinessCopy(initialSettings.businessCategory);
-  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<CafeSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -144,12 +142,8 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         setLogoPreviewUrl(undefined);
       }
 
-      const saved = await saveSettingsAction(next);
-      if (saved.cafeName.trim() !== next.cafeName.trim()) {
-        throw new Error("تعذر تأكيد حفظ اسم العلامة الجديد.");
-      }
-      setSettings(saved);
-      router.refresh();
+      await saveSettingsAction(next);
+      setSettings(next);
       showToast({ type: "success", message: `تم حفظ إعدادات ${copy.casualNoun} بنجاح` });
     } catch (err) {
       showToast({
@@ -321,8 +315,8 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   }
 
   async function persistDomainSettings(next: CafeSettings) {
-    const saved = await saveSettingsAction(next);
-    setSettings(saved);
+    await saveSettingsAction(next);
+    setSettings(next);
   }
 
   async function payAndBuyDomain() {

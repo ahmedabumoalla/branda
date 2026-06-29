@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import {
@@ -18,27 +17,6 @@ type PublicSettingsRow = {
   whatsapp: string | null;
   theme_id: string;
 };
-
-const DEFAULT_DOMAIN_STATUS = "غير مربوط";
-
-function buildDefaultOwnerSettings(
-  cafe: Awaited<ReturnType<typeof requireOwnerCafeContext>>
-): CafeSettings {
-  return {
-    cafeSlug: cafe.slug,
-    cafeName: cafe.name,
-    businessCategory: cafe.businessCategory,
-    ownerName: "",
-    ownerEmail: "",
-    ownerPhone: "",
-    description: "",
-    domainStatus: DEFAULT_DOMAIN_STATUS,
-  };
-}
-
-function logSettingsLoadFailure(cafeId: string, reason: string, error?: unknown) {
-  console.warn("[brand-settings:load] fallback", { cafeId, reason, error });
-}
 
 export async function getPublicCafeSettings(slug: string): Promise<CafeSettings | null> {
   const cafe = await getCafeBySlug(slug);
@@ -93,13 +71,19 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
     .eq("cafe_id", cafe.id)
     .maybeSingle();
 
-  if (error) {
-    logSettingsLoadFailure(cafe.id, "settings_select_failed", error);
-    return buildDefaultOwnerSettings(cafe);
-  }
+  if (error) throw error;
 
   if (!data) {
-    return buildDefaultOwnerSettings(cafe);
+    return {
+      cafeSlug: cafe.slug,
+      cafeName: cafe.name,
+      businessCategory: cafe.businessCategory,
+      ownerName: "",
+      ownerEmail: "",
+      ownerPhone: "",
+      description: "",
+      domainStatus: "غير مربوط",
+    };
   }
 
   const settings = mapDbSettingsToCafeSettings(cafe.slug, data);
@@ -107,20 +91,15 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
   settings.businessCategory = cafe.businessCategory;
   if (data.logo_storage_path) {
     settings.logoAssetId = data.logo_storage_path as string;
-    try {
-      settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
-        storageBucketForLogo(),
-        data.logo_storage_path as string
-      );
-    } catch (logoError) {
-      logSettingsLoadFailure(cafe.id, "logo_resolve_failed", logoError);
-    }
+    settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
+      storageBucketForLogo(),
+      data.logo_storage_path as string
+    );
   }
   return settings;
 }
 
 const settingsSchema = z.object({
-  cafeName: z.string().trim().min(1).max(120),
   ownerName: z.string().optional(),
   ownerEmail: z.string().email().optional().or(z.literal("")),
   ownerPhone: z.string().optional(),
@@ -138,24 +117,10 @@ const settingsSchema = z.object({
   themeId: z.string().optional(),
 });
 
-function logUpdateNameFailure(cafeId: string, reason: string) {
-  console.warn("[brand-settings:update-name] failed", { cafeId, reason });
-}
-
-function ensureBrandSettingsEditor(cafe: Awaited<ReturnType<typeof requireOwnerCafeContext>>) {
-  if (cafe.role !== "owner" && cafe.role !== "manager") {
-    logUpdateNameFailure(cafe.id, "forbidden_role");
-    throw new Error("غير مصرح لك بتعديل اسم العلامة.");
-  }
-}
-
 export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) {
   const parsed = settingsSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
-  ensureBrandSettingsEditor(cafe);
   const supabase = await createClient();
-  const admin = createAdminClient();
-  const nextCafeName = parsed.cafeName.trim();
 
   const payload = {
     cafe_id: cafe.id,
@@ -177,68 +142,7 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
     theme_id: parsed.themeId,
   };
 
-  const { data: cafeRow, error: cafeError } = await admin
-    .from("cafes")
-    .update({ name: nextCafeName })
-    .eq("id", cafe.id)
-    .is("deleted_at", null)
-    .select("id, slug, name, business_category")
-    .single();
-
-  console.warn("[brand-settings:update-name] result", {
-    cafeId: cafe.id,
-    requestedName: nextCafeName,
-    returnedName: cafeRow?.name ?? null,
-  });
-
-  if (cafeError) {
-    logUpdateNameFailure(cafe.id, "cafes_update_failed");
-    console.warn("[brand-settings:update-name] cafe update error", {
-      cafeId: cafe.id,
-      code: cafeError?.code ?? null,
-      message: cafeError?.message ?? null,
-      details: cafeError?.details ?? null,
-      hint: cafeError?.hint ?? null,
-    });
-    throw new Error("تعذر حفظ اسم العلامة.");
-  }
-
-  if (!cafeRow) {
-    logUpdateNameFailure(cafe.id, "cafes_update_no_row");
-    throw new Error("تعذر تأكيد حفظ اسم العلامة.");
-  }
-
-  if (String(cafeRow.name ?? "") !== nextCafeName) {
-    logUpdateNameFailure(cafe.id, "cafes_update_mismatch");
-    throw new Error("تعذر تأكيد حفظ اسم العلامة الجديد.");
-  }
-
-  const { data: settingsRow, error: settingsError } = await supabase
-    .from("cafe_settings")
-    .upsert(payload, { onConflict: "cafe_id" })
-    .select("*")
-    .maybeSingle();
-
-  if (settingsError) {
-    logUpdateNameFailure(cafe.id, "settings_upsert_failed");
-    throw new Error("تعذر حفظ إعدادات العلامة.");
-  }
-
-  if (!settingsRow) {
-    logUpdateNameFailure(cafe.id, "settings_upsert_no_row");
-    throw new Error("تعذر تأكيد حفظ إعدادات العلامة.");
-  }
-
-  const updated = mapDbSettingsToCafeSettings(String(cafeRow.slug), settingsRow as any);
-  updated.cafeName = String(cafeRow.name);
-  updated.businessCategory = String(cafeRow.business_category ?? cafe.businessCategory);
-  if (settingsRow.logo_storage_path) {
-    updated.logoAssetId = settingsRow.logo_storage_path as string;
-    updated.logoDataUrl = await resolvePublishedStoragePathToUrl(
-      storageBucketForLogo(),
-      settingsRow.logo_storage_path as string
-    );
-  }
-
-  return updated;
+  const { error } = await supabase.from("cafe_settings").upsert(payload, { onConflict: "cafe_id" });
+  if (error) throw error;
 }
+

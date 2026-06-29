@@ -17,6 +17,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
+import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { LocalAssetImage } from "@/components/ui/local-asset-image";
@@ -38,7 +39,7 @@ import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 import { buildCustomIdentityCssVars, defaultCustomIdentityTheme, OVERLAY_OPACITY } from "@/lib/mock/custom-identity-theme";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
-import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getCustomerSession, type BarndaksaCustomerSession } from "@/lib/customer/session";
@@ -493,7 +494,8 @@ function markBranchEmailPending(slug: string, branchId: string, customerId: stri
 
 function CafePageInner({ slug }: { slug: string }) {
   const { settings, previewThemeId, loadError: cafeLoadError, customIdentity, features, hydrated } = useCafeThemePage(slug);
-  const hasFeature = (feature: string) => hydrated && featureCodesAllow(features, feature);
+  const hasFeature = (feature: Parameters<typeof publicFeatureAllows>[1]) =>
+    hydrated && publicFeatureAllows(features, feature);
   const { products, offers, branches, categories, experienceCampaigns, loading, error: menuError } = usePublicCafeMenu(slug);
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [customerChecked, setCustomerChecked] = useState(false);
@@ -785,6 +787,8 @@ function CafePageInner({ slug }: { slug: string }) {
 
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="home" />
+
         <MobileBrandMasthead
           cafeName={cafeName}
           logoUrl={appliedLogoUrl}
@@ -795,7 +799,7 @@ function CafePageInner({ slug }: { slug: string }) {
           <div className="mx-auto mt-6 max-w-xl lg:max-w-3xl">
             <AppLoyaltyCard
               customerName={homeLoyalty?.card.customerName || customer?.fullName}
-              code={homeLoyalty?.card.cardCode || customer?.id?.slice(0, 8).toUpperCase()}
+              code={homeLoyalty?.card.cardCode}
               points={homeLoyalty?.card.availableRewards ?? 0}
               current={homeLoyalty?.card.stampsInCycle ?? 0}
               required={homeLoyalty?.program.purchasesRequired ?? 7}
