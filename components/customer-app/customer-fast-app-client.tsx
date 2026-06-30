@@ -170,170 +170,262 @@ function TabButton({
   );
 }
 
-function InstallMiniButton({ slug }: { slug: string }) {
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
-  const [message, setMessage] = useState("");
+type CustomerBeforeInstallPromptEvent = Event & {
+  prompt?: () => Promise<void>;
+  userChoice?: Promise<{ outcome: string }>;
+};
 
-  useEffect(() => {
-    const manifest = document.createElement("link");
-    manifest.rel = "manifest";
-    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-    document.head.appendChild(manifest);
+type FastInstallReadiness = "checking" | "ready" | "opening" | "installed" | "unavailable" | "insecure";
 
-    if ("serviceWorker" in navigator) {
-      const swPath = `/api/pwa/${encodeURIComponent(slug)}/sw`;
-      void navigator.serviceWorker.register(swPath, { scope: `/c/${encodeURIComponent(slug)}` });
-      void navigator.serviceWorker.register(swPath, { scope: `/app/${encodeURIComponent(slug)}` });
-    }
-
-    const handler = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      manifest.remove();
-    };
-  }, [slug]);
-
-  async function install() {
-    const promptEvent = installPrompt as Event & {
-      prompt?: () => Promise<void>;
-      userChoice?: Promise<{ outcome: string }>;
-    };
-
-    if (promptEvent?.prompt) {
-      await promptEvent.prompt();
-      setMessage("إذا لم يظهر التثبيت استخدم إضافة إلى الشاشة الرئيسية من المتصفح");
-      return;
-    }
-
-    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
+declare global {
+  interface Window {
+    __barndaksaPwaInstallPromptEvent?: CustomerBeforeInstallPromptEvent | null;
+    __barndaksaPwaInstallPromptSeen?: boolean;
   }
+}
 
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={install}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur"
-      >
-        <Download className="h-4 w-4" />
-        تثبيت التطبيق
-      </button>
-      {message ? <p className="mt-2 text-xs font-bold leading-6 text-white/80">{message}</p> : null}
-    </div>
+const FAST_ANDROID_CHROME_FALLBACK = "من قائمة Chrome ⋮ اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية";
+const FAST_HTTPS_REQUIRED_MESSAGE = "تثبيت التطبيق يحتاج رابط HTTPS";
+const FAST_UNSUPPORTED_BROWSER_MESSAGE = "التثبيت غير متاح من المتصفح الحالي";
+const FAST_READINESS_TEXT: Record<FastInstallReadiness, string> = {
+  checking: "جاري تجهيز التطبيق",
+  ready: "التطبيق جاهز للتثبيت",
+  opening: "افتح نافذة التثبيت",
+  installed: "التطبيق مثبت",
+  unavailable: "التثبيت غير متاح من المتصفح الحالي",
+  insecure: FAST_HTTPS_REQUIRED_MESSAGE,
+};
+
+function fastInstalledKey(slug: string) {
+  return `barndaksa_pwa_installed_${slug}`;
+}
+
+function fastManifestHref(slug: string, refresh = false) {
+  const base = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
+  return refresh ? `${base}?refresh=${Date.now()}` : base;
+}
+
+function fastCapturedInstallPrompt() {
+  const event = window.__barndaksaPwaInstallPromptEvent;
+  return event?.prompt ? event : null;
+}
+
+function fastClearInstallPrompt() {
+  window.__barndaksaPwaInstallPromptEvent = null;
+}
+
+function fastIsStandalone() {
+  return Boolean(
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone ||
+      document.referrer.startsWith("android-app://"),
   );
 }
 
+function fastIsIos() {
+  const userAgent = window.navigator.userAgent;
+  return (
+    /iphone|ipad|ipod/i.test(userAgent) ||
+    (window.navigator.platform === "MacIntel" && (window.navigator.maxTouchPoints || 0) > 1)
+  );
+}
+
+function fastIsAndroidChrome() {
+  return /android/i.test(window.navigator.userAgent) && /chrome|crios/i.test(window.navigator.userAgent);
+}
+
+function fastIsSecureInstallContext() {
+  return window.isSecureContext || window.location.protocol === "https:";
+}
+
+function fastEnsureManifestLink(slug: string, refresh = false) {
+  const href = fastManifestHref(slug, refresh);
+  let manifest = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
+    (link) => link.getAttribute("href") === href || link.href.includes(fastManifestHref(slug)),
+  );
+
+  if (!manifest) {
+    manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.dataset.barndaksaPwa = slug;
+    document.head.appendChild(manifest);
+  }
+
+  manifest.href = href;
+  return href;
+}
+
+async function fastRegisterCafeServiceWorker(slug: string) {
+  if (!("serviceWorker" in navigator)) return null;
+  return navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
+    scope: `/c/${encodeURIComponent(slug)}`,
+  });
+}
+
 function InstallMiniButtonFixed({ slug }: { slug: string }) {
-  const [installPrompt, setInstallPrompt] = useState<(Event & { prompt?: () => Promise<void>; userChoice?: Promise<{ outcome: string }> }) | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<CustomerBeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("");
   const [isIos, setIsIos] = useState(false);
+  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
+  const [readiness, setReadiness] = useState<FastInstallReadiness>("checking");
+
+  function applyReadiness(androidChrome = isAndroidChrome) {
+    const promptEvent = fastCapturedInstallPrompt();
+
+    if (fastIsStandalone() || localStorage.getItem(fastInstalledKey(slug)) === "1") {
+      setInstalled(true);
+      setReadiness("installed");
+      setMessage("");
+      return null;
+    }
+
+    if (!fastIsSecureInstallContext()) {
+      setInstallPrompt(null);
+      setReadiness("insecure");
+      setMessage(FAST_HTTPS_REQUIRED_MESSAGE);
+      return null;
+    }
+
+    if (promptEvent) {
+      setInstallPrompt(promptEvent);
+      setReadiness("ready");
+      setMessage("");
+      return promptEvent;
+    }
+
+    setInstallPrompt(null);
+    setReadiness("unavailable");
+    setMessage(androidChrome ? FAST_ANDROID_CHROME_FALLBACK : FAST_UNSUPPORTED_BROWSER_MESSAGE);
+    return null;
+  }
+
+  async function checkReadiness() {
+    if (installing) return;
+    setReadiness("checking");
+    setMessage("جاري تجهيز التطبيق");
+    fastEnsureManifestLink(slug);
+    await fastRegisterCafeServiceWorker(slug).catch(() => null);
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    applyReadiness();
+  }
 
   useEffect(() => {
-    const userAgent = window.navigator.userAgent;
-    const ios =
-      /iphone|ipad|ipod/i.test(userAgent) ||
-      (window.navigator.platform === "MacIntel" && (window.navigator.maxTouchPoints || 0) > 1);
-    const installedKey = `barndaksa_pwa_installed_${slug}`;
-    const standalone =
-      window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone) ||
-      document.referrer.startsWith("android-app://");
+    const ios = fastIsIos();
+    const androidChrome = fastIsAndroidChrome();
+    const installedKey = fastInstalledKey(slug);
 
     setIsIos(ios);
-    if (standalone || localStorage.getItem(installedKey) === "1") {
+    setIsAndroidChrome(androidChrome);
+    setReadiness("checking");
+
+    if (fastIsStandalone() || localStorage.getItem(installedKey) === "1") {
       setInstalled(true);
+      setReadiness("installed");
     }
 
-    const manifest = document.createElement("link");
-    manifest.rel = "manifest";
-    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-    document.head.appendChild(manifest);
-
-    if ("serviceWorker" in navigator) {
-      const swPath = `/api/pwa/${encodeURIComponent(slug)}/sw`;
-      void navigator.serviceWorker.register(swPath, { scope: `/c/${encodeURIComponent(slug)}` });
-      void navigator.serviceWorker.register(swPath, { scope: `/app/${encodeURIComponent(slug)}` });
-    }
+    fastEnsureManifestLink(slug);
+    void fastRegisterCafeServiceWorker(slug).catch(() => null);
 
     const handler = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event as Event & { prompt?: () => Promise<void>; userChoice?: Promise<{ outcome: string }> });
+      const promptEvent = event as CustomerBeforeInstallPromptEvent;
+      window.__barndaksaPwaInstallPromptEvent = promptEvent;
+      window.__barndaksaPwaInstallPromptSeen = true;
+      setInstallPrompt(promptEvent);
+      setReadiness("ready");
       setMessage("");
+    };
+
+    const capturedHandler = () => {
+      const promptEvent = fastCapturedInstallPrompt();
+      if (promptEvent) {
+        setInstallPrompt(promptEvent);
+        setReadiness("ready");
+        setMessage("");
+      }
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
       setInstalled(true);
       setInstallPrompt(null);
-      setStage("تم تجهيز التطبيق");
+      fastClearInstallPrompt();
+      setReadiness("installed");
+      setStage("التطبيق مثبت");
       setProgress(100);
     };
 
+    window.setTimeout(() => {
+      applyReadiness(androidChrome);
+    }, 300);
+
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("barndaksa:beforeinstallprompt", capturedHandler);
     window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("barndaksa:beforeinstallprompt", capturedHandler);
       window.removeEventListener("appinstalled", appInstalledHandler);
-      manifest.remove();
     };
   }, [slug]);
 
   async function install() {
     if (installing) return;
-    setInstalling(true);
-    setMessage("");
-    setStage("جاري تجهيز التطبيق");
-    setProgress(0);
-    await new Promise((resolve) => window.setTimeout(resolve, 120));
-    setProgress(25);
-
-    if (!installPrompt?.prompt) {
-      setInstalling(false);
-      setProgress(0);
-      setStage("");
-      setMessage(isIos ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".' : "التثبيت غير جاهز الآن، حدّث الصفحة أو افتح الرابط من Chrome");
+    if (fastIsStandalone()) {
+      localStorage.setItem(fastInstalledKey(slug), "1");
+      setInstalled(true);
+      setReadiness("installed");
       return;
     }
 
-    setStage("فتح نافذة التثبيت");
+    if (!fastIsSecureInstallContext()) {
+      setReadiness("insecure");
+      setMessage(FAST_HTTPS_REQUIRED_MESSAGE);
+      return;
+    }
+
+    const promptEvent = installPrompt?.prompt ? installPrompt : fastCapturedInstallPrompt();
+    if (!promptEvent?.prompt) {
+      setReadiness("unavailable");
+      setMessage(isAndroidChrome ? FAST_ANDROID_CHROME_FALLBACK : FAST_UNSUPPORTED_BROWSER_MESSAGE);
+      return;
+    }
+
+    setInstalling(true);
+    setMessage("");
+    setReadiness("opening");
+    setStage("افتح نافذة التثبيت");
     setProgress(50);
-    await installPrompt.prompt();
+    await promptEvent.prompt();
     setStage("بانتظار تأكيدك");
     setProgress(75);
 
-    const choice = await installPrompt.userChoice?.catch(() => null);
+    const choice = await promptEvent.userChoice?.catch(() => null);
     setInstallPrompt(null);
+    fastClearInstallPrompt();
     setInstalling(false);
 
     if (choice?.outcome === "accepted") {
-      localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
-      setStage("تم تجهيز التطبيق");
+      localStorage.setItem(fastInstalledKey(slug), "1");
+      setStage("التطبيق مثبت");
       setProgress(100);
       setInstalled(true);
+      setReadiness("installed");
       return;
     }
 
     setProgress(0);
     setStage("");
-    setMessage("لم يتم التثبيت. يمكنك المحاولة مرة أخرى لاحقًا.");
+    setReadiness("unavailable");
+    setMessage(isAndroidChrome ? FAST_ANDROID_CHROME_FALLBACK : "لم يتم التثبيت. يمكنك فحص الجاهزية مرة أخرى.");
   }
 
   async function refreshPwa() {
-    const manifestHref = `/api/pwa/${encodeURIComponent(slug)}/manifest?refresh=${Date.now()}`;
-    document.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]').forEach((link) => {
-      if (link.href.includes(`/api/pwa/${encodeURIComponent(slug)}/manifest`)) {
-        link.href = manifestHref;
-      }
-    });
+    const manifestHref = fastEnsureManifestLink(slug, true);
     await fetch(manifestHref, { cache: "reload" }).catch(() => null);
     if ("serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -372,6 +464,26 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
     );
   }
 
+  if (!installPrompt?.prompt) {
+    return (
+      <div className="max-w-xs rounded-2xl bg-white/12 p-3 text-xs font-bold leading-6 text-white/85 backdrop-blur">
+        <p className="font-black">{FAST_READINESS_TEXT[readiness]}</p>
+        {message ? <p className="mt-1">{message}</p> : null}
+        {readiness !== "insecure" && isAndroidChrome ? (
+          <button
+            type="button"
+            onClick={() => void checkReadiness()}
+            disabled={readiness === "checking"}
+            className="mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-2 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-75"
+          >
+            <RefreshCw className={`h-4 w-4 ${readiness === "checking" ? "animate-spin" : ""}`} />
+            فحص الجاهزية مرة أخرى
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div>
       <button
@@ -381,7 +493,7 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-80"
       >
         <Download className="h-4 w-4" />
-        تثبيت التطبيق
+        افتح نافذة التثبيت
       </button>
       {progress > 0 ? (
         <div className="mt-3 max-w-[220px] rounded-2xl bg-white/10 p-3 text-white/85">

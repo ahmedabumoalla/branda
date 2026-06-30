@@ -38,6 +38,10 @@ function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", ver
   return `/api/public/cafe/${encodeURIComponent(slug)}/favicon?${params.toString()}`;
 }
 
+function cafeAppPath(slug: string) {
+  return `/c/${encodeURIComponent(slug)}/`;
+}
+
 async function loadManifest(slug: string) {
   const [cafe, settings, identity, branches] = await Promise.all([
     getCafeBySlug(slug).catch(() => null),
@@ -53,8 +57,9 @@ async function loadManifest(slug: string) {
     branchName && branchName !== brandName
       ? `${brandName} - ${branchName}`
       : brandName;
-  const startUrl = `/c/${encodeURIComponent(slug)}`;
-  const scope = `/c/${encodeURIComponent(slug)}`;
+  const appPath = cafeAppPath(slug);
+  const startUrl = `${appPath}?source=pwa`;
+  const scope = appPath;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,
@@ -65,6 +70,7 @@ async function loadManifest(slug: string) {
   );
 
   return {
+    id: appPath,
     name,
     short_name: brandName.slice(0, 12),
     description: configuredBrandName ? `تطبيق ${name}` : "تطبيق برندة",

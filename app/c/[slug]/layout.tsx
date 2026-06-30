@@ -30,6 +30,7 @@ function getCafePwaBootstrapScript(slug: string) {
   var manifestHref = "/api/pwa/" + encodedSlug + "/manifest";
   var swPath = "/api/pwa/" + encodedSlug + "/sw";
   var scope = "/c/" + encodedSlug;
+  var scopeWithSlash = scope + "/";
   var log = function () {
     if (debug && window.console && console.debug) {
       console.debug.apply(console, ["[branda-pwa]"].concat(Array.prototype.slice.call(arguments)));
@@ -49,7 +50,7 @@ function getCafePwaBootstrapScript(slug: string) {
   log("display-mode standalone", Boolean(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register(swPath, { scope: scope }).then(function (registration) {
-      log("service worker registered", registration.scope);
+      log("service worker registered", registration.scope, "covers", scope, scopeWithSlash);
     }).catch(function (error) {
       log("service worker registration failed", error);
     });
@@ -110,7 +111,12 @@ export default async function CafeSlugLayout({ children, params }: Props) {
 
   return (
     <>
-      <link rel="manifest" href={manifestHref} data-barndaksa-pwa={normalizedSlug} />
+      <link
+        rel="manifest"
+        href={manifestHref}
+        data-barndaksa-pwa={normalizedSlug}
+        data-barndaksa-pwa-scope={`/c/${encodeURIComponent(normalizedSlug)}/`}
+      />
       <script
         id={`barndaksa-cafe-pwa-${normalizedSlug}`}
         dangerouslySetInnerHTML={{ __html: getCafePwaBootstrapScript(normalizedSlug) }}

@@ -4,8 +4,9 @@ type Props = {
 
 export async function GET(_request: Request, { params }: Props) {
   const { slug } = await params;
-  const encodedSlug = encodeURIComponent(slug);
-  const cacheName = `barndaksa-customer-${encodedSlug}-v2`;
+  const normalizedSlug = slug.trim().toLowerCase();
+  const encodedSlug = encodeURIComponent(normalizedSlug);
+  const cacheName = `barndaksa-customer-${encodedSlug}-v3`;
   const cafeScope = `/c/${encodedSlug}`;
   const cafeScopeWithSlash = `/c/${encodedSlug}/`;
   const appScope = `/app/${encodedSlug}`;
@@ -77,7 +78,8 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  const isCafePage = url.pathname === CAFE_SCOPE || url.pathname.startsWith(CAFE_SCOPE_WITH_SLASH);
+  const isCafeRoot = url.pathname === CAFE_SCOPE;
+  const isCafePage = isCafeRoot || url.pathname.startsWith(CAFE_SCOPE_WITH_SLASH);
   const isAppPage = url.pathname === APP_SCOPE || url.pathname.startsWith(APP_SCOPE_WITH_SLASH);
   const isFastApi = url.pathname === FAST_API_PATH;
   const isBrandAsset = url.pathname.startsWith('/brand/');
