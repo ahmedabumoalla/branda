@@ -5,8 +5,10 @@ import {
   createPlatformSocialPost,
   disablePlatformMediaAsset,
   recordPlatformPublicEvent,
+  savePlatformHomePromotions,
   savePlatformContactSettings,
   savePlatformHomeSettings,
+  type PlatformHomePromotionItem,
   type PlatformContactSettings,
   type PlatformHomeSettings,
   type PlatformMediaPlacement,
@@ -54,6 +56,12 @@ export async function savePlatformContactSettingsAction(input: PlatformContactSe
   await savePlatformContactSettings(input);
   revalidatePath("/");
   revalidatePath("/admin/content");
+}
+
+export async function savePlatformHomePromotionsAction(input: PlatformHomePromotionItem[]) {
+  await savePlatformHomePromotions(input);
+  revalidatePath("/");
+  revalidatePath("/admin/client-brands");
 }
 
 export async function uploadPlatformMediaAction(formData: FormData) {

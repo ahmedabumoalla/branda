@@ -4,8 +4,10 @@ import Link from "next/link";
 import {
   BarChart3,
   CalendarDays,
+  ExternalLink,
   Gift,
   LayoutGrid,
+  MapPin,
   Megaphone,
   Play,
   ShoppingBag,
@@ -230,6 +232,27 @@ function ContactModal({
   );
 }
 
+function promotionLabel(type: PublicPlatformHomeData["promotions"][number]["itemType"]) {
+  if (type === "product") return "منتج مختار";
+  if (type === "offer") return "عرض خاص";
+  if (type === "reservation") return "حجز وخدمة";
+  return "فرع إلكتروني";
+}
+
+function promotionCta(type: PublicPlatformHomeData["promotions"][number]["itemType"]) {
+  if (type === "product") return "شاهد المنتج";
+  if (type === "offer") return "استفد من العرض";
+  if (type === "reservation") return "احجز الآن";
+  return "زيارة الفرع الإلكتروني";
+}
+
+function PromotionIcon({ type }: { type: PublicPlatformHomeData["promotions"][number]["itemType"] }) {
+  if (type === "product") return <ShoppingBag className="h-4 w-4" />;
+  if (type === "offer") return <Gift className="h-4 w-4" />;
+  if (type === "reservation") return <CalendarDays className="h-4 w-4" />;
+  return <Store className="h-4 w-4" />;
+}
+
 export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
   const [heroIndex, setHeroIndex] = useState(0);
   const [brandIndex, setBrandIndex] = useState(0);
@@ -339,22 +362,113 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
       </section>
 
       <section className="mx-auto max-w-6xl overflow-hidden px-4 py-14 sm:px-6 sm:py-20">
-        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق ببرندة</h2>
+        <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق بنا</h2>
         {data.brands.length ? (
           <div className="mt-10 overflow-hidden">
             <div className="flex gap-4 transition-transform duration-700" style={{ transform: `translateX(${brandIndex * 8}rem)` }}>
-              {data.brands.map((brand) => (
-                <div key={brand.id} className="flex min-w-32 flex-col items-center rounded-2xl border border-[#E7D7C6] bg-white p-4">
-                  {brand.logoUrl ?   <img src={brand.logoUrl} alt={brand.name} className="h-16 w-16 rounded-xl object-contain" /> : <Store className="h-14 w-14 text-[#6B3A25]" />}
-                  <p className="mt-3 text-center text-xs font-black">{brand.name}</p>
-                </div>
-              ))}
+              {data.brands.map((brand) => {
+                const content = (
+                  <>
+                    {brand.logoUrl ?   <img src={brand.logoUrl} alt={brand.name} className="h-16 w-16 rounded-xl object-contain" /> : <Store className="h-14 w-14 text-[#6B3A25]" />}
+                    <p className="mt-3 text-center text-xs font-black">{brand.name}</p>
+                    {brand.locationLabel ? <p className="mt-1 text-center text-[11px] font-bold text-[#806A5E]">{brand.locationLabel}</p> : null}
+                  </>
+                );
+
+                return brand.href ? (
+                  <Link key={brand.id} href={brand.href} className="flex min-w-32 flex-col items-center rounded-2xl border border-[#E7D7C6] bg-white p-4 transition hover:-translate-y-1 hover:shadow-lg">
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={brand.id} className="flex min-w-32 flex-col items-center rounded-2xl border border-[#E7D7C6] bg-white p-4">
+                    {content}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
           <p className="mt-8 text-center font-bold text-[#806A5E]">ستظهر العلامات التجارية المسجلة هنا</p>
         )}
       </section>
+
+      {data.promotions.length ? (
+        <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6 sm:pb-20">
+          <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <span className="inline-flex rounded-full bg-[#EFE2D3] px-4 py-2 text-xs font-black text-[#6B3A25]">
+                اكتشف علاماتنا وعروضهم
+              </span>
+              <h2 className="mt-4 text-2xl font-black sm:text-3xl">
+                اختيارات جاهزة من فروع برندة الإلكترونية
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
+              منتجات وعروض وخدمات حجز يختارها فريق المنصة من العلامات النشطة لتصل للزائر مباشرة إلى الفرع المناسب.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data.promotions.map((item) => (
+              <article
+                key={`${item.itemType}-${item.id ?? item.itemId ?? item.cafeId}`}
+                className={`overflow-hidden rounded-3xl border border-[#E7D7C6] bg-white shadow-sm ${item.featured ? "md:col-span-2 xl:col-span-1" : ""}`}
+              >
+                <div className="relative h-44 bg-[#EFE2D3]">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <Store className="h-16 w-16 text-[#6B3A25]" />
+                    </div>
+                  )}
+                  <span className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full bg-[#FCF8F3]/95 px-3 py-2 text-xs font-black text-[#6B3A25] shadow-sm">
+                    <PromotionIcon type={item.itemType} />
+                    {item.badge || promotionLabel(item.itemType)}
+                  </span>
+                </div>
+                <div className="p-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    {item.brandLogoUrl ? (
+                      <img src={item.brandLogoUrl} alt={item.brandName} className="h-12 w-12 rounded-2xl border border-[#E7D7C6] bg-white object-contain" />
+                    ) : (
+                      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EFE2D3]">
+                        <Store className="h-5 w-5 text-[#6B3A25]" />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-[#311912]">{item.brandName}</p>
+                      {item.locationLabel ? (
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#806A5E]">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {item.locationLabel}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <h3 className="line-clamp-2 text-xl font-black leading-8 text-[#311912]">{item.title}</h3>
+                  {item.subtitle ? (
+                    <p className="mt-2 line-clamp-2 min-h-14 text-sm font-bold leading-7 text-[#806A5E]">
+                      {item.subtitle}
+                    </p>
+                  ) : (
+                    <p className="mt-2 min-h-14 text-sm font-bold leading-7 text-[#806A5E]">
+                      تجربة مختارة من الفرع الإلكتروني للعلامة.
+                    </p>
+                  )}
+                  <Link
+                    href={item.href}
+                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#4A281D] px-5 text-sm font-black text-white"
+                  >
+                    {promotionCta(item.itemType)}
+                    <ExternalLink className="h-4 w-4" />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section id="about" className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
         <div className="grid gap-4 md:grid-cols-3">

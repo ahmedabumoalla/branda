@@ -18,6 +18,7 @@ const emptyData: PublicPlatformHomeData = {
   heroImages: [],
   loyaltyImages: [],
   brands: [],
+  promotions: [],
   videoViews: 0,
   videoClicks: 0,
 };

@@ -23,6 +23,7 @@ import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 
 const links = [
+  ["إدارة علامات العملاء", "/admin/client-brands", Megaphone],
   ["الرئيسية", "/admin", Home],
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
