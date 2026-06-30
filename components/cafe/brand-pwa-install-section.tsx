@@ -31,6 +31,10 @@ function getSavedInstallPrompt() {
   return saved?.prompt ? saved : null;
 }
 
+function brandScope(encodedSlug: string) {
+  return `/c/${encodedSlug}`;
+}
+
 function ensureBrandManifest(slug: string) {
   const href = `/api/pwa/${encodeURIComponent(slug)}/manifest.json`;
   const existing = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
@@ -100,22 +104,26 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
     if ("serviceWorker" in navigator) {
       const encodedSlug = encodeURIComponent(slug);
+      const currentScope = brandScope(encodedSlug);
       void (async () => {
         const registrations = await navigator.serviceWorker.getRegistrations();
         await Promise.all(
           registrations
-            .filter((registration) => registration.scope.endsWith(`/c/${encodedSlug}/`))
+            .filter((registration) => {
+              const scopePath = new URL(registration.scope).pathname.replace(/\/$/, "");
+              return scopePath === "/c" || scopePath === `${currentScope}/` || scopePath === `${currentScope}`;
+            })
             .map((registration) => registration.unregister()),
         );
 
         const registration = await navigator.serviceWorker.register(`/api/pwa/${encodedSlug}/sw`, {
-          scope: `/c/`,
+          scope: currentScope,
         });
 
         console.warn("[brand-pwa] sw registered", registration.scope);
         await registration.update();
 
-        const refreshKey = `barndaksa_pwa_sw_refreshed_${encodedSlug}`;
+        const refreshKey = `barndaksa_pwa_sw_refreshed_brand_scope_v1_${encodedSlug}`;
         if (!sessionStorage.getItem(refreshKey)) {
           sessionStorage.setItem(refreshKey, "1");
           window.location.reload();
@@ -155,7 +163,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     }
 
     setProgress(90);
-    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية، وفي Chrome تأكد أن الصفحة مفتوحة من المتصفح وليست داخل تطبيق آخر");
+    setMessage("في Chrome على الجوال افتح القائمة واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية، وإذا كان تطبيق علامة أخرى مثبتًا احذفه أولًا ثم أعد فتح الصفحة");
   }
 
   if (installed) return null;
