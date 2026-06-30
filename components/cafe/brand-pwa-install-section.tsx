@@ -366,9 +366,9 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     }
 
     setInstallPrompt(null);
-    setInstallUnavailable(true);
-    setReadiness("unavailable");
-    setMessage(nextDevice === "android-chrome" ? ANDROID_CHROME_INSTALL_FALLBACK : UNSUPPORTED_BROWSER_MESSAGE);
+    setInstallUnavailable(false);
+    setReadiness(nextDevice === "android-chrome" ? "checking" : "unavailable");
+    setMessage("");
     return null;
   }
 
@@ -516,7 +516,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     setReadiness("unavailable");
     setStage("idle");
     setProgress(0);
-    setMessage(device === "android-chrome" ? ANDROID_CHROME_INSTALL_FALLBACK : "لم يتم التثبيت. يمكنك فحص الجاهزية مرة أخرى.");
+    setMessage("لم يتم التثبيت. يمكنك الضغط على حمل التطبيق للمحاولة لاحقًا.");
   }
 
   async function refreshPwa() {
@@ -544,24 +544,8 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     return <IosInstallInstructions compact={compact} />;
   }
 
-  const promptReady = Boolean(installPrompt?.prompt);
-  const canCheckReadiness = readiness !== "insecure" && device === "android-chrome";
-
-  if (!promptReady) {
-    return (
-      <InstallReadinessPanel
-        compact={compact}
-        readiness={readiness}
-        message={message}
-        checking={readiness === "checking"}
-        canCheck={canCheckReadiness}
-        onCheck={() => void checkReadiness()}
-      />
-    );
-  }
-
-  const installButtonLabel = "افتح نافذة التثبيت";
-  const wideInstallButtonLabel = "افتح نافذة التثبيت";
+  const installButtonLabel = "حمل التطبيق";
+  const wideInstallButtonLabel = "حمل التطبيق";
 
   if (compact) {
     return (

@@ -36,6 +36,16 @@ function getCafePwaBootstrapScript(slug: string) {
       console.debug.apply(console, ["[branda-pwa]"].concat(Array.prototype.slice.call(arguments)));
     }
   };
+  if (!window.__barndaksaPwaInstallCaptureReady) {
+    window.__barndaksaPwaInstallCaptureReady = true;
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      window.__barndaksaPwaInstallPromptEvent = event;
+      window.__barndaksaPwaInstallPromptSeen = true;
+      log("beforeinstallprompt captured early");
+      window.dispatchEvent(new CustomEvent("barndaksa:beforeinstallprompt"));
+    });
+  }
   var manifestLink = Array.prototype.slice.call(document.head.querySelectorAll('link[rel="manifest"]')).find(function (link) {
     return link.getAttribute("href") === manifestHref || link.href.indexOf(manifestHref) !== -1;
   });

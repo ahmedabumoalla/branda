@@ -179,6 +179,7 @@ type FastInstallReadiness = "checking" | "ready" | "opening" | "installed" | "un
 
 declare global {
   interface Window {
+    __barndaksaPwaInstallCaptureReady?: boolean;
     __barndaksaPwaInstallPromptEvent?: CustomerBeforeInstallPromptEvent | null;
     __barndaksaPwaInstallPromptSeen?: boolean;
   }
@@ -298,8 +299,8 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
     }
 
     setInstallPrompt(null);
-    setReadiness("unavailable");
-    setMessage(androidChrome ? FAST_ANDROID_CHROME_FALLBACK : FAST_UNSUPPORTED_BROWSER_MESSAGE);
+    setReadiness(androidChrome ? "checking" : "unavailable");
+    setMessage("");
     return null;
   }
 
@@ -421,7 +422,7 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
     setProgress(0);
     setStage("");
     setReadiness("unavailable");
-    setMessage(isAndroidChrome ? FAST_ANDROID_CHROME_FALLBACK : "لم يتم التثبيت. يمكنك فحص الجاهزية مرة أخرى.");
+    setMessage("لم يتم التثبيت. يمكنك الضغط على حمل التطبيق للمحاولة لاحقًا.");
   }
 
   async function refreshPwa() {
@@ -464,26 +465,6 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
     );
   }
 
-  if (!installPrompt?.prompt) {
-    return (
-      <div className="max-w-xs rounded-2xl bg-white/12 p-3 text-xs font-bold leading-6 text-white/85 backdrop-blur">
-        <p className="font-black">{FAST_READINESS_TEXT[readiness]}</p>
-        {message ? <p className="mt-1">{message}</p> : null}
-        {readiness !== "insecure" && isAndroidChrome ? (
-          <button
-            type="button"
-            onClick={() => void checkReadiness()}
-            disabled={readiness === "checking"}
-            className="mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-2 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-75"
-          >
-            <RefreshCw className={`h-4 w-4 ${readiness === "checking" ? "animate-spin" : ""}`} />
-            فحص الجاهزية مرة أخرى
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
     <div>
       <button
@@ -493,7 +474,7 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-80"
       >
         <Download className="h-4 w-4" />
-        افتح نافذة التثبيت
+        حمل التطبيق
       </button>
       {progress > 0 ? (
         <div className="mt-3 max-w-[220px] rounded-2xl bg-white/10 p-3 text-white/85">
