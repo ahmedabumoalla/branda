@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${name} | برندة`,
     description: `الفرع الإلكتروني لـ ${name} على منصة برندة`,
-    manifest: `/api/pwa/${encodeURIComponent(normalizedSlug)}/manifest`,
+    manifest: `/api/pwa/${encodeURIComponent(normalizedSlug)}/manifest.json`,
     icons: {
       icon: [{ url: iconRoute }],
       shortcut: [{ url: `${iconRoute}?shortcut=1` }],
