@@ -52,7 +52,14 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
           scope: `/c/`,
         });
 
-          console.warn("[brand-pwa] sw registered", registration.scope);
+        console.warn("[brand-pwa] sw registered", registration.scope);
+        await registration.update();
+
+        const refreshKey = "barndaksa_pwa_sw_refreshed";
+        if (navigator.serviceWorker.controller && !sessionStorage.getItem(refreshKey)) {
+          sessionStorage.setItem(refreshKey, "1");
+          window.location.reload();
+        }
       })();
     }
 
