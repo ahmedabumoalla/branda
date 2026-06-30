@@ -82,22 +82,6 @@ const initialCafeSettings: CafeSettings = {
   domainStatus: "غير مربوط",
 };
 
-const sidebarTitleOverrides: Partial<Record<PlatformFeature, string>> = {
-  home: "لوحة التحكم",
-  pages: "الفرع الإلكتروني",
-  menu: "المنيو / المنتجات",
-  orders: "طلبات كوفي",
-  reservations: "الحجوزات",
-  offers: "العروض",
-  loyalty: "الولاء والمكافآت",
-  cashier: "الكاشير",
-  branches: "الفروع",
-  customers: "العملاء",
-  reports: "التقارير",
-  reviews: "الأسئلة والتقييمات",
-  marketing: "الأدوات التسويقية",
-};
-
 export function DashboardSidebar({
   collapsed = false,
   onCollapsedChange,
@@ -200,7 +184,6 @@ export function DashboardSidebar({
   }));
 
   const linkTitle = (item: (typeof visibleLinks)[number]) => {
-    if (sidebarTitleOverrides[item.feature]) return sidebarTitleOverrides[item.feature];
     if (item.href === "/dashboard/menu" && copy.kind === "events") return "التذاكر والباقات";
     if (item.href === "/dashboard/orders" && copy.kind === "events") return "طلبات التذاكر";
     if (item.href === "/dashboard/reservations" && copy.kind === "events") return "حجوزات الحضور";

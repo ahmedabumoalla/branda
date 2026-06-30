@@ -161,6 +161,7 @@ export function AppLoyaltyCard({
   customerName,
   code,
   points = 0,
+  pointValueSar = 0,
   current = 0,
   required = 7,
   onClickHref,
@@ -172,6 +173,7 @@ export function AppLoyaltyCard({
   customerName?: string;
   code?: string;
   points?: number;
+  pointValueSar?: number;
   current?: number;
   required?: number;
   onClickHref?: string;
@@ -182,6 +184,7 @@ export function AppLoyaltyCard({
 }) {
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const completedStamps = Math.max(0, Math.min(safeRequired, Number(current || 0)));
+  const pointsValue = Math.round(Number(points || 0) * Number(pointValueSar || 0) * 100) / 100;
   const effectiveCode = code?.trim();
   const previewCard = effectiveCode
     ? cardDesign
@@ -207,7 +210,7 @@ export function AppLoyaltyCard({
         <SharedLoyaltyCard
           card={isAuthenticated ? previewCard : { ...previewCard, completedStamps: 0 }}
           pointsBalance={points}
-          pointValueSar={0}
+          pointValueSar={pointValueSar}
           compact
         />
       ) : (
@@ -218,6 +221,18 @@ export function AppLoyaltyCard({
           </h2>
         </div>
       )}
+      {isAuthenticated ? (
+        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/92 p-3 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">{"\u0631\u0635\u064a\u062f \u0646\u0642\u0627\u0637 \u0627\u0644\u0648\u0644\u0627\u0621"}</p>
+            <p className="mt-1 truncate text-lg font-black text-[var(--ci-page-fg,#17212B)]">{points}</p>
+          </div>
+          <div className="min-w-0 text-left">
+            <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">{"\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062a\u0627\u062d\u0629"}</p>
+            <p className="mt-1 truncate text-lg font-black text-[var(--ci-page-fg,#17212B)]">{pointsValue} {"\u0631.\u0633"}</p>
+          </div>
+        </div>
+      ) : null}
       {!isAuthenticated && loginHref ? (
         <div className="absolute inset-x-3 bottom-3 z-30 rounded-2xl bg-white/92 p-3 text-center shadow-[0_12px_30px_rgba(23,33,43,0.16)] backdrop-blur">
           <h2 className="text-sm font-black text-[#17212B]">{"\u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0644\u0631\u0628\u0637 \u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0648\u0644\u0627\u0621 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0643"}</h2>

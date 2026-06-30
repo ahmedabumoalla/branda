@@ -57,6 +57,7 @@ import { sendBranchProximityEmailAction } from "@/app/actions/customer";
 import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
 
 type HomeLoyaltySnapshot = Awaited<ReturnType<typeof fetchCustomerAccountSnapshotAction>>["data"]["loyalty"];
+type HomeLoyaltyPointsSnapshot = Awaited<ReturnType<typeof fetchCustomerAccountSnapshotAction>>["data"]["loyaltyPoints"];
 
 function productScore(product: MenuProduct, index: number) {
   return Number(product.price || 0) + (100 - index);
@@ -500,6 +501,7 @@ function CafePageInner({ slug }: { slug: string }) {
   const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
   const [customerChecked, setCustomerChecked] = useState(false);
   const [homeLoyalty, setHomeLoyalty] = useState<HomeLoyaltySnapshot | null>(null);
+  const [homeLoyaltyPoints, setHomeLoyaltyPoints] = useState<HomeLoyaltyPointsSnapshot | null>(null);
   const [branchWelcome, setBranchWelcome] = useState<{
     branchName: string;
     message: string;
@@ -522,6 +524,7 @@ function CafePageInner({ slug }: { slug: string }) {
   useEffect(() => {
     if (!customer || !hasFeature("loyalty")) {
       setHomeLoyalty(null);
+      setHomeLoyaltyPoints(null);
       return;
     }
 
@@ -530,9 +533,13 @@ function CafePageInner({ slug }: { slug: string }) {
       .then((result) => {
         if (cancelled) return;
         setHomeLoyalty(result.success ? result.data.loyalty : null);
+        setHomeLoyaltyPoints(result.success ? result.data.loyaltyPoints : null);
       })
       .catch(() => {
-        if (!cancelled) setHomeLoyalty(null);
+        if (!cancelled) {
+          setHomeLoyalty(null);
+          setHomeLoyaltyPoints(null);
+        }
       });
 
     return () => {
@@ -800,7 +807,8 @@ function CafePageInner({ slug }: { slug: string }) {
             <AppLoyaltyCard
               customerName={homeLoyalty?.card.customerName || customer?.fullName}
               code={homeLoyalty?.card.cardCode}
-              points={homeLoyalty?.card.availableRewards ?? 0}
+              points={homeLoyaltyPoints?.balance ?? 0}
+              pointValueSar={homeLoyaltyPoints?.pointValueSar ?? 0}
               current={homeLoyalty?.card.stampsInCycle ?? 0}
               required={homeLoyalty?.program.purchasesRequired ?? 7}
               isAuthenticated={Boolean(customer)}
