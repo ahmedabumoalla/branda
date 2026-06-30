@@ -6,8 +6,8 @@ export async function GET(_request: Request, { params }: Props) {
   const { slug } = await params;
   const encodedSlug = encodeURIComponent(slug);
   const cacheName = `barndaksa-customer-${encodedSlug}-v1`;
-  const appScope = `/app/${encodedSlug}`;
-  const appScopeWithSlash = `/app/${encodedSlug}/`;
+  const appScope = `/c/${encodedSlug}`;
+  const appScopeWithSlash = `/c/${encodedSlug}/`;
   const fastApiPath = `/api/customer-fast/${encodedSlug}`;
 
   const body = `

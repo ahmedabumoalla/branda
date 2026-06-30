@@ -8,13 +8,6 @@ type BeforeInstallPromptEvent = Event & {
   userChoice?: Promise<{ outcome: "accepted" | "dismissed"; platform?: string }>;
 };
 
-declare global {
-  interface Window {
-    __barndaksaPwaInstallPromptEvent?: BeforeInstallPromptEvent | null;
-    __barndaksaPwaInstallPromptSeen?: boolean;
-  }
-}
-
 type Props = {
   slug: string;
   cafeName: string;
@@ -26,11 +19,6 @@ function isStandaloneDisplay() {
     window.matchMedia?.("(display-mode: standalone)")?.matches ||
       (window.navigator as Navigator & { standalone?: boolean }).standalone,
   );
-}
-
-function getSavedInstallPrompt() {
-  const promptEvent = window.__barndaksaPwaInstallPromptEvent;
-  return promptEvent?.prompt ? promptEvent : null;
 }
 
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
@@ -52,25 +40,15 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-        scope: `/app/${encodeURIComponent(slug)}/`,
+        scope: `/c/${encodeURIComponent(slug)}/`,
       });
     }
 
     const handler = (event: Event) => {
       event.preventDefault();
       const promptEvent = event as BeforeInstallPromptEvent;
-      window.__barndaksaPwaInstallPromptEvent = promptEvent;
-      window.__barndaksaPwaInstallPromptSeen = true;
       setInstallPrompt(promptEvent);
       setMessage("");
-    };
-
-    const savedPromptHandler = () => {
-      const promptEvent = getSavedInstallPrompt();
-      if (promptEvent) {
-        setInstallPrompt(promptEvent);
-        setMessage("");
-      }
     };
 
     const appInstalledHandler = () => {
@@ -79,13 +57,10 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setProgress(100);
     };
 
-    savedPromptHandler();
     window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("barndaksa:beforeinstallprompt", savedPromptHandler);
     window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("barndaksa:beforeinstallprompt", savedPromptHandler);
       window.removeEventListener("appinstalled", appInstalledHandler);
       manifest.remove();
     };
@@ -93,10 +68,9 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   async function install() {
     setProgress(65);
-    const promptEvent = installPrompt?.prompt ? installPrompt : getSavedInstallPrompt();
+    const promptEvent = installPrompt?.prompt ? installPrompt : null;
 
     if (promptEvent) {
-      setInstallPrompt(promptEvent);
       setMessage("");
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice?.catch(() => null);
