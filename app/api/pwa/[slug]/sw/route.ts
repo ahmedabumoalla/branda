@@ -7,6 +7,11 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
+
+self.addEventListener('fetch', () => {
+  // Keep a fetch handler so Chrome treats the page as PWA-capable.
+  // Do not call respondWith here; the browser should handle requests normally.
+});
 `;
 
   return new Response(body, {
