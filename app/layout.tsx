@@ -1,8 +1,30 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { RoutePrefetcher } from "@/components/performance/route-prefetcher";
 import "./globals.css";
 
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
+const PWA_INSTALL_CAPTURE_SCRIPT = `
+(function () {
+  if (window.__barndaksaPwaInstallCaptureReady) return;
+  var debug = ${process.env.NODE_ENV !== "production" ? "true" : "false"};
+  var log = function () {
+    if (debug && window.console && console.debug) {
+      console.debug.apply(console, ["[branda-pwa]"].concat(Array.prototype.slice.call(arguments)));
+    }
+  };
+  window.__barndaksaPwaInstallCaptureReady = true;
+  window.__barndaksaPwaInstallPromptEvent = window.__barndaksaPwaInstallPromptEvent || null;
+  window.__barndaksaPwaInstallPromptSeen = Boolean(window.__barndaksaPwaInstallPromptSeen);
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    window.__barndaksaPwaInstallPromptEvent = event;
+    window.__barndaksaPwaInstallPromptSeen = true;
+    log("beforeinstallprompt received");
+    window.dispatchEvent(new CustomEvent("barndaksa:beforeinstallprompt"));
+  });
+})();
+`;
 
 export const metadata: Metadata = {
   title: "Barndaksa | برندة",
@@ -48,6 +70,11 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <RoutePrefetcher />
         {children}
+        <Script
+          id="barndaksa-pwa-install-capture"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: PWA_INSTALL_CAPTURE_SCRIPT }}
+        />
       </body>
     </html>
   );

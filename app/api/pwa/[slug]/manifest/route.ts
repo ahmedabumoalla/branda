@@ -46,7 +46,8 @@ async function loadManifest(slug: string) {
     getPublicBranchesBySlug(slug).catch(() => []),
   ]);
 
-  const brandName = cleanText(settings?.cafeName) || cleanText(cafe?.name) || "Barndaksa";
+  const configuredBrandName = cleanText(settings?.cafeName) || cleanText(cafe?.name);
+  const brandName = configuredBrandName || "برندة";
   const branchName = cleanText(branches.find((branch) => branch.active !== false)?.name);
   const name =
     branchName && branchName !== brandName
@@ -66,7 +67,7 @@ async function loadManifest(slug: string) {
   return {
     name,
     short_name: brandName.slice(0, 12),
-    description: `تطبيق ${name} على منصة برندة`,
+    description: configuredBrandName ? `تطبيق ${name}` : "تطبيق برندة",
     start_url: startUrl,
     scope,
     display: "standalone",

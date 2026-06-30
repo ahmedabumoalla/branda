@@ -8,6 +8,14 @@ type BeforeInstallPromptEvent = Event & {
   userChoice?: Promise<{ outcome: string }>;
 };
 
+declare global {
+  interface Window {
+    __barndaksaPwaInstallCaptureReady?: boolean;
+    __barndaksaPwaInstallPromptEvent?: BeforeInstallPromptEvent | null;
+    __barndaksaPwaInstallPromptSeen?: boolean;
+  }
+}
+
 type InstallDevice = "unknown" | "ios" | "android-chrome" | "other";
 type InstallStage = "idle" | "preparing" | "opening" | "waiting" | "done";
 
@@ -24,6 +32,12 @@ const INSTALL_STAGE_TEXT: Record<InstallStage, string> = {
   waiting: "بانتظار تأكيدك",
   done: "تم تجهيز التطبيق",
 };
+const ANDROID_CHROME_INSTALL_FALLBACK =
+  "من قائمة Chrome ⋮ اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية";
+const IOS_INSTALL_FALLBACK =
+  'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".';
+const GENERIC_INSTALL_FALLBACK =
+  "افتح قائمة المتصفح ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية";
 
 function installedStorageKey(slug: string) {
   return `barndaksa_pwa_installed_${slug}`;
@@ -36,6 +50,21 @@ function pwaManifestHref(slug: string, refresh = false) {
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function debugPwa(...args: unknown[]) {
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[branda-pwa]", ...args);
+  }
+}
+
+function getCapturedInstallPrompt() {
+  const event = window.__barndaksaPwaInstallPromptEvent;
+  return event?.prompt ? event : null;
+}
+
+function clearCapturedInstallPrompt() {
+  window.__barndaksaPwaInstallPromptEvent = null;
 }
 
 function detectInstallDevice(): InstallDevice {
@@ -60,11 +89,16 @@ function isStandaloneDisplay() {
   return Boolean(mediaStandalone || navigatorStandalone || androidAppReferrer);
 }
 
+function findManifestLink(slug: string) {
+  const expectedHref = pwaManifestHref(slug);
+  return Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
+    (link) => link.getAttribute("href") === expectedHref || link.href.includes(expectedHref),
+  );
+}
+
 function ensureManifestLink(slug: string, refresh = false) {
   const href = pwaManifestHref(slug, refresh);
-  let manifest = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
-    (link) => link.dataset.barndaksaPwa === slug,
-  );
+  let manifest = findManifestLink(slug);
 
   if (!manifest) {
     manifest = document.createElement("link");
@@ -81,15 +115,18 @@ function ensureManifestLink(slug: string, refresh = false) {
         link.href = href;
       }
     });
+  debugPwa("manifest link present", Boolean(manifest), href);
 
   return { href, manifest };
 }
 
 async function registerCafeServiceWorker(slug: string) {
   if (!("serviceWorker" in navigator)) return null;
-  return navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
+  const registration = await navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
     scope: `/c/${encodeURIComponent(slug)}`,
   });
+  debugPwa("service worker registered", registration.scope);
+  return registration;
 }
 
 async function refreshCafePwa(slug: string) {
@@ -218,6 +255,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(false);
+  const [installUnavailable, setInstallUnavailable] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<InstallStage>("idle");
   const [refreshing, setRefreshing] = useState(false);
@@ -225,69 +263,111 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   useEffect(() => {
     const installedKey = installedStorageKey(slug);
-    setDevice(detectInstallDevice());
-    if (localStorage.getItem(installedKey) === "1" || isStandaloneDisplay()) {
+    const nextDevice = detectInstallDevice();
+    const standalone = isStandaloneDisplay();
+    const capturedPrompt = getCapturedInstallPrompt();
+
+    setDevice(nextDevice);
+    setInstallPrompt(capturedPrompt);
+    setInstallUnavailable(false);
+    debugPwa("manifest link present", Boolean(findManifestLink(slug)), pwaManifestHref(slug));
+    debugPwa("beforeinstallprompt ready", Boolean(capturedPrompt), "seen", Boolean(window.__barndaksaPwaInstallPromptSeen));
+    debugPwa("display-mode standalone", standalone);
+
+    if (localStorage.getItem(installedKey) === "1" || standalone) {
       setInstalled(true);
     }
 
-    const { manifest } = ensureManifestLink(slug);
-    void registerCafeServiceWorker(slug);
+    ensureManifestLink(slug);
+    void registerCafeServiceWorker(slug).catch((error) => {
+      debugPwa("service worker registration failed", error);
+    });
 
     const handler = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      window.__barndaksaPwaInstallPromptEvent = promptEvent;
+      window.__barndaksaPwaInstallPromptSeen = true;
+      setInstallPrompt(promptEvent);
       setInstallDismissed(false);
+      setInstallUnavailable(false);
       setMessage("");
+      debugPwa("beforeinstallprompt received");
+    };
+
+    const capturedHandler = () => {
+      const promptEvent = getCapturedInstallPrompt();
+      setInstallPrompt(promptEvent);
+      if (promptEvent) {
+        setInstallDismissed(false);
+        setInstallUnavailable(false);
+        setMessage("");
+      }
+      debugPwa("beforeinstallprompt captured sync", Boolean(promptEvent));
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
       setInstalled(true);
       setInstallPrompt(null);
+      clearCapturedInstallPrompt();
       setInstallDismissed(false);
+      setInstallUnavailable(false);
       setStage("done");
       setProgress(100);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("barndaksa:beforeinstallprompt", capturedHandler);
     window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("barndaksa:beforeinstallprompt", capturedHandler);
       window.removeEventListener("appinstalled", appInstalledHandler);
-      manifest.remove();
     };
   }, [slug]);
 
   async function install() {
     if (installing) return;
+    if (isStandaloneDisplay()) {
+      localStorage.setItem(installedStorageKey(slug), "1");
+      setInstalled(true);
+      return;
+    }
+
+    const promptEvent = installPrompt?.prompt ? installPrompt : getCapturedInstallPrompt();
+    if (promptEvent) {
+      setInstallPrompt(promptEvent);
+    }
+
     setInstalling(true);
     setMessage("");
+    setInstallUnavailable(false);
     setStage("preparing");
     setProgress(0);
     await wait(120);
     setProgress(25);
     await wait(160);
 
-    if (!installPrompt?.prompt) {
+    if (!promptEvent?.prompt) {
       setInstalling(false);
       setStage("idle");
       setProgress(0);
-      setMessage(
-        device === "ios"
-          ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".'
-          : "التثبيت غير جاهز الآن، حدّث الصفحة أو افتح الرابط من Chrome",
-      );
+      setInstallUnavailable(true);
+      setMessage(device === "ios" ? IOS_INSTALL_FALLBACK : device === "android-chrome" ? ANDROID_CHROME_INSTALL_FALLBACK : GENERIC_INSTALL_FALLBACK);
+      debugPwa("beforeinstallprompt unavailable on click", device);
       return;
     }
 
     setStage("opening");
     setProgress(50);
-    await installPrompt.prompt();
+    await promptEvent.prompt();
     setStage("waiting");
     setProgress(75);
 
-    const choice = await installPrompt.userChoice?.catch(() => null);
+    const choice = await promptEvent.userChoice?.catch(() => null);
     setInstallPrompt(null);
+    clearCapturedInstallPrompt();
 
     if (choice?.outcome === "accepted") {
       localStorage.setItem(installedStorageKey(slug), "1");
@@ -295,15 +375,17 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setProgress(100);
       setMessage("تم تجهيز التطبيق");
       setInstalled(true);
+      setInstallUnavailable(false);
       setInstalling(false);
       return;
     }
 
     setInstalling(false);
     setInstallDismissed(true);
+    setInstallUnavailable(false);
     setStage("idle");
     setProgress(0);
-    setMessage("لم يتم التثبيت. يمكنك المحاولة مرة أخرى من الأيقونة الصغيرة.");
+    setMessage("لم يتم التثبيت. يمكنك المحاولة مرة أخرى.");
   }
 
   async function refreshPwa() {
@@ -331,16 +413,10 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     return <IosInstallInstructions compact={compact} />;
   }
 
-  if (installDismissed) {
-    return (
-      <PwaFloatingAction
-        mode="install"
-        busy={installing}
-        message={message}
-        onClick={() => void install()}
-      />
-    );
-  }
+  const installButtonLabel =
+    installUnavailable || installDismissed ? "حاول مرة أخرى" : "حمل التطبيق لتجربة أكثر جمالية";
+  const wideInstallButtonLabel =
+    installUnavailable || installDismissed ? "حاول مرة أخرى" : "تحميل التطبيق السريع";
 
   if (compact) {
     return (
@@ -353,7 +429,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
             className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
           >
             <Download className="h-5 w-5" />
-            حمل التطبيق لتجربة أكثر جمالية
+            {installButtonLabel}
           </button>
           <InstallProgress progress={progress} stage={stage} />
           {message ? (
@@ -384,7 +460,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))] disabled:cursor-wait disabled:opacity-80"
           >
             <Download className="h-5 w-5" />
-            تحميل التطبيق السريع
+            {wideInstallButtonLabel}
           </button>
         </div>
         <InstallProgress progress={progress} stage={stage} />
