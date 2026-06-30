@@ -1,9 +1,13 @@
 export const DEFAULT_BARNDAKSA_CAFE_LOGO = "/brand/barndaksa-logo-brown.png";
 
-function normalizeLogoCandidate(value?: string | null) {
+export function normalizeCafeDisplayLogoCandidate(value?: string | null) {
   if (typeof value !== "string") return undefined;
   const next = value.trim();
-  if (!next || next.startsWith("data:")) return undefined;
+  if (!next) return undefined;
+
+  if (/^data:image\/[a-z0-9.+-]+;base64,/i.test(next)) {
+    return next;
+  }
 
   if (
     next.startsWith("/") ||
@@ -20,9 +24,13 @@ export function getPreferredCafeDisplayLogoUrl(
   ...candidates: Array<string | null | undefined>
 ) {
   for (const candidate of candidates) {
-    const normalized = normalizeLogoCandidate(candidate);
+    const normalized = normalizeCafeDisplayLogoCandidate(candidate);
     if (normalized) return normalized;
   }
 
   return DEFAULT_BARNDAKSA_CAFE_LOGO;
+}
+
+export function isDefaultBarndaksaCafeLogo(value?: string | null) {
+  return value === DEFAULT_BARNDAKSA_CAFE_LOGO;
 }

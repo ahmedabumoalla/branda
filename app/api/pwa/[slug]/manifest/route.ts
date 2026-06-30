@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity } from "@/lib/data/theme";
@@ -8,10 +9,23 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-const MANIFEST_TTL_SECONDS = 10 * 60;
+const MANIFEST_TTL_SECONDS = 60;
+
+function cleanText(value?: string | null) {
+  return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+}
+
+function hashToken(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 function iconVersion(...candidates: Array<string | null | undefined>) {
-  return candidates.find((candidate) => candidate?.trim())?.trim() ?? "fallback";
+  const source = candidates.map(cleanText).find(Boolean);
+  return source ? hashToken(source) : "fallback";
 }
 
 function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", version: string) {
@@ -25,13 +39,19 @@ function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", ver
 }
 
 async function loadManifest(slug: string) {
-  const [cafe, settings, identity] = await Promise.all([
+  const [cafe, settings, identity, branches] = await Promise.all([
     getCafeBySlug(slug).catch(() => null),
     getPublicCafeSettings(slug).catch(() => null),
     getPublicCustomIdentity(slug).catch(() => null),
+    getPublicBranchesBySlug(slug).catch(() => []),
   ]);
 
-  const name = settings?.cafeName || cafe?.name || "Barndaksa";
+  const brandName = cleanText(settings?.cafeName) || cleanText(cafe?.name) || "Barndaksa";
+  const branchName = cleanText(branches.find((branch) => branch.active !== false)?.name);
+  const name =
+    branchName && branchName !== brandName
+      ? `${brandName} - ${branchName}`
+      : brandName;
   const startUrl = `/c/${encodeURIComponent(slug)}`;
   const scope = `/c/${encodeURIComponent(slug)}`;
   const version = iconVersion(
@@ -39,11 +59,13 @@ async function loadManifest(slug: string) {
     identity?.logoAssetId,
     settings?.logoDataUrl,
     identity?.legacyLogoDataUrl,
+    brandName,
+    branchName,
   );
 
   return {
     name,
-    short_name: name.slice(0, 12),
+    short_name: brandName.slice(0, 12),
     description: `تطبيق ${name} على منصة برندة`,
     start_url: startUrl,
     scope,
@@ -85,7 +107,7 @@ export async function GET(_request: Request, { params }: Props) {
   return NextResponse.json(manifest, {
     headers: {
       "Cache-Control": publicCacheHeader(MANIFEST_TTL_SECONDS),
-      "x-barndaksa-pwa-manifest": "brand-icon-v4",
+      "x-barndaksa-pwa-manifest": "brand-icon-v5",
     },
   });
 }

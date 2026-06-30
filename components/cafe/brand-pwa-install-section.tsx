@@ -1,7 +1,12 @@
 "use client";
 
-import { Download, Smartphone } from "lucide-react";
+import { Download, RefreshCw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
+
+type BeforeInstallPromptEvent = Event & {
+  prompt?: () => Promise<void>;
+  userChoice?: Promise<{ outcome: string }>;
+};
 
 type Props = {
   slug: string;
@@ -9,39 +14,139 @@ type Props = {
   compact?: boolean;
 };
 
+function installedStorageKey(slug: string) {
+  return `barndaksa_pwa_installed_${slug}`;
+}
+
+function pwaManifestHref(slug: string, refresh = false) {
+  const base = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
+  return refresh ? `${base}?refresh=${Date.now()}` : base;
+}
+
+function ensureManifestLink(slug: string, refresh = false) {
+  const href = pwaManifestHref(slug, refresh);
+  let manifest = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
+    (link) => link.dataset.barndaksaPwa === slug,
+  );
+
+  if (!manifest) {
+    manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.dataset.barndaksaPwa = slug;
+    document.head.appendChild(manifest);
+  }
+
+  manifest.href = href;
+  document
+    .querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')
+    .forEach((link) => {
+      if (link.href.includes(`/api/pwa/${encodeURIComponent(slug)}/manifest`)) {
+        link.href = href;
+      }
+    });
+
+  return { href, manifest };
+}
+
+async function registerCafeServiceWorker(slug: string) {
+  if (!("serviceWorker" in navigator)) return null;
+  return navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
+    scope: `/c/${encodeURIComponent(slug)}`,
+  });
+}
+
+async function refreshCafePwa(slug: string) {
+  const { href } = ensureManifestLink(slug, true);
+  await fetch(href, { cache: "reload" }).catch(() => null);
+
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations
+        .filter((registration) => {
+          const encodedSlug = encodeURIComponent(slug);
+          return (
+            registration.scope.includes(`/c/${encodedSlug}`) ||
+            registration.scope.includes(`/app/${encodedSlug}`) ||
+            registration.active?.scriptURL.includes(`/api/pwa/${encodedSlug}/sw`)
+          );
+        })
+        .map((registration) => registration.update().catch(() => undefined)),
+    );
+    navigator.serviceWorker.controller?.postMessage({ type: "BARNDAKSA_PWA_REFRESH" });
+  }
+
+  if ("caches" in window) {
+    const keys = await caches.keys().catch(() => []);
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith(`barndaksa-customer-${encodeURIComponent(slug)}`))
+        .map((key) => caches.delete(key).catch(() => false)),
+    );
+  }
+}
+
+function PwaFloatingAction({
+  mode,
+  busy,
+  message,
+  onClick,
+}: {
+  mode: "install" | "refresh";
+  busy: boolean;
+  message: string;
+  onClick: () => void;
+}) {
+  const Icon = mode === "install" ? Download : RefreshCw;
+  const label = mode === "install" ? "تجربة تثبيت التطبيق" : "تحديث بيانات التطبيق";
+
+  return (
+    <div dir="rtl" className="fixed left-3 top-3 z-50 flex max-w-[230px] flex-col items-start gap-2">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--ci-border,#E7D7C6)] bg-white/88 text-[var(--ci-primary-bg,#6B3A25)] shadow-[0_12px_30px_rgba(23,20,18,0.14)] backdrop-blur transition hover:-translate-y-0.5 active:scale-95"
+      >
+        <Icon className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+      </button>
+      {message ? (
+        <p className="rounded-2xl border border-[var(--ci-border,#E7D7C6)] bg-white/92 px-3 py-2 text-right text-[11px] font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)] shadow-sm backdrop-blur">
+          {message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const installedKey = `barndaksa_pwa_installed_${slug}`;
+    const installedKey = installedStorageKey(slug);
     const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
     const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
     if (localStorage.getItem(installedKey) === "1" || mediaStandalone || navigatorStandalone) {
       setInstalled(true);
     }
 
-    const manifest = document.createElement("link");
-    manifest.rel = "manifest";
-    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-    document.head.appendChild(manifest);
-
-    if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-        scope: `/app/${encodeURIComponent(slug)}/`,
-      });
-    }
+    const { manifest } = ensureManifestLink(slug);
+    void registerCafeServiceWorker(slug);
 
     const handler = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event);
+      setInstallPrompt(event as BeforeInstallPromptEvent);
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
       setInstalled(true);
+      setInstallPrompt(null);
       setProgress(100);
     };
 
@@ -56,16 +161,13 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   async function install() {
     setProgress(65);
-    const promptEvent = installPrompt as Event & {
-      prompt?: () => Promise<void>;
-      userChoice?: Promise<{ outcome: string }>;
-    };
 
-    if (promptEvent?.prompt) {
-      await promptEvent.prompt();
-      const choice = await promptEvent.userChoice?.catch(() => null);
+    if (installPrompt?.prompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice?.catch(() => null);
+      setInstallPrompt(null);
       if (choice?.outcome === "accepted") {
-        localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
+        localStorage.setItem(installedStorageKey(slug), "1");
         setInstalled(true);
         setProgress(100);
         return;
@@ -79,7 +181,24 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
   }
 
-  if (installed) return null;
+  async function refreshPwa() {
+    setRefreshing(true);
+    setMessage("");
+    await refreshCafePwa(slug);
+    setMessage("يتم تحديث اسم التطبيق والشعار عند إعادة فتح التطبيق أو تحديث الصفحة");
+    setRefreshing(false);
+  }
+
+  if (installed) {
+    return (
+      <PwaFloatingAction
+        mode="refresh"
+        busy={refreshing}
+        message={message}
+        onClick={() => void refreshPwa()}
+      />
+    );
+  }
 
   if (compact) {
     return (
@@ -109,7 +228,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="font-black text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]">تطبيق العلامة</p>
-            <h2 className="mt-2 text-3xl font-black">حمّل تطبيق {cafeName}</h2>
+            <h2 className="mt-2 text-3xl font-black">حمل تطبيق {cafeName}</h2>
             <p className="mt-3 max-w-xl font-bold leading-8 text-white/74">
               واجهة عميل أخف وأسرع للمنيو والعروض وبطاقة الولاء، تعمل من شاشة الجوال مباشرة
             </p>

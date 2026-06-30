@@ -181,9 +181,9 @@ function InstallMiniButton({ slug }: { slug: string }) {
     document.head.appendChild(manifest);
 
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-        scope: `/app/${encodeURIComponent(slug)}/`,
-      });
+      const swPath = `/api/pwa/${encodeURIComponent(slug)}/sw`;
+      void navigator.serviceWorker.register(swPath, { scope: `/c/${encodeURIComponent(slug)}` });
+      void navigator.serviceWorker.register(swPath, { scope: `/app/${encodeURIComponent(slug)}` });
     }
 
     const handler = (event: Event) => {

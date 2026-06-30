@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  DEFAULT_BARNDAKSA_CAFE_LOGO,
   getPreferredCafeDisplayLogoUrl,
+  isDefaultBarndaksaCafeLogo,
 } from "@/lib/cafe/cafe-display-logo";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity } from "@/lib/data/theme";
@@ -35,6 +35,25 @@ function fallbackIcon(size: 192 | 512, purpose: "any" | "maskable") {
   return FALLBACK_ANY_ICONS[size];
 }
 
+function dataImageResponse(dataUrl: string) {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl);
+  if (!match) return null;
+
+  try {
+    const body = Uint8Array.from(Buffer.from(match[2], "base64"));
+    return new Response(body, {
+      headers: {
+        "Content-Type": match[1],
+        "Cache-Control": publicCacheHeader(ICON_TTL_SECONDS),
+        "x-barndaksa-cafe-favicon": "cached-v5",
+        "x-barndaksa-cafe-favicon-source": "brand",
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function loadCafeIconUrl(slug: string) {
   const [settings, identity] = await Promise.all([
     getPublicCafeSettings(slug).catch(() => null),
@@ -64,12 +83,17 @@ export async function GET(request: Request, { params }: Props) {
     return null;
   });
   const brandIconUrl =
-    iconUrl && iconUrl !== DEFAULT_BARNDAKSA_CAFE_LOGO ? iconUrl : null;
+    iconUrl && !isDefaultBarndaksaCafeLogo(iconUrl) ? iconUrl : null;
+
+  if (brandIconUrl?.startsWith("data:image/")) {
+    const response = dataImageResponse(brandIconUrl);
+    if (response) return response;
+  }
 
   const redirectUrl = new URL(brandIconUrl ?? fallbackIcon(size, purpose), request.url);
   const response = NextResponse.redirect(redirectUrl, 307);
   response.headers.set("Cache-Control", publicCacheHeader(ICON_TTL_SECONDS));
-  response.headers.set("x-barndaksa-cafe-favicon", "cached-v4");
+  response.headers.set("x-barndaksa-cafe-favicon", "cached-v5");
   response.headers.set("x-barndaksa-cafe-favicon-source", brandIconUrl ? "brand" : "fallback");
   return response;
 }
