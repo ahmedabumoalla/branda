@@ -31,6 +31,26 @@ function getSavedInstallPrompt() {
   return saved?.prompt ? saved : null;
 }
 
+function ensureBrandManifest(slug: string) {
+  const href = `/api/pwa/${encodeURIComponent(slug)}/manifest.json`;
+  const existing = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+
+  if (existing) {
+    existing.href = href;
+    existing.setAttribute("data-brand-pwa-manifest", "true");
+    console.warn("[brand-pwa] manifest linked", existing.href);
+    return existing;
+  }
+
+  const manifest = document.createElement("link");
+  manifest.rel = "manifest";
+  manifest.href = href;
+  manifest.setAttribute("data-brand-pwa-manifest", "true");
+  document.head.appendChild(manifest);
+  console.warn("[brand-pwa] manifest linked", manifest.href);
+  return manifest;
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
@@ -42,6 +62,8 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     if (isStandaloneDisplay()) {
       setInstalled(true);
     }
+
+    ensureBrandManifest(slug);
 
     const syncSavedPrompt = () => {
       const saved = getSavedInstallPrompt();
@@ -111,6 +133,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   async function install() {
     setProgress(65);
+    ensureBrandManifest(slug);
     const promptEvent = installPrompt ?? getSavedInstallPrompt();
     console.warn("[brand-pwa] install clicked", { hasPrompt: Boolean(promptEvent) });
 
