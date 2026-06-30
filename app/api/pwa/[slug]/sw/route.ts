@@ -65,13 +65,14 @@ self.addEventListener('fetch', (event) => {
   const isAppPage = url.pathname === APP_SCOPE || url.pathname.startsWith(APP_SCOPE_WITH_SLASH);
   const isFastApi = url.pathname === FAST_API_PATH;
   const isBrandAsset = url.pathname.startsWith('/brand/');
+  const isPublicCafeAsset = url.pathname.startsWith('/api/public/cafe/');
 
   if (isFastApi) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  if (isAppPage || isBrandAsset) {
+  if (isAppPage || isBrandAsset || isPublicCafeAsset) {
     event.respondWith(staleWhileRevalidate(request));
   }
 });

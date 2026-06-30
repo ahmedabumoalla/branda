@@ -33,7 +33,7 @@ async function loadManifest(slug: string) {
 
   const name = settings?.cafeName || cafe?.name || "Barndaksa";
   const startUrl = `/c/${encodeURIComponent(slug)}`;
-  const scope = `/c/${encodeURIComponent(slug)}/`;
+  const scope = `/c/`;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,

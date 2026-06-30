@@ -39,13 +39,21 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     document.head.appendChild(manifest);
 
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker
-        .register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-          scope: `/c/${encodeURIComponent(slug)}/`,
-        })
-        .then((registration) => {
-          console.warn("[brand-pwa] sw registered", registration.scope);
+      const encodedSlug = encodeURIComponent(slug);
+      void (async () => {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(
+          registrations
+            .filter((registration) => registration.scope.endsWith(`/c/${encodedSlug}/`))
+            .map((registration) => registration.unregister()),
+        );
+
+        const registration = await navigator.serviceWorker.register(`/api/pwa/${encodedSlug}/sw`, {
+          scope: `/c/`,
         });
+
+          console.warn("[brand-pwa] sw registered", registration.scope);
+      })();
     }
 
     const handler = (event: Event) => {
