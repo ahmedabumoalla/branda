@@ -12,6 +12,7 @@ type Props = {
   card: LoyaltyCardDesign;
   pointsBalance?: number;
   pointValueSar?: number;
+  pointsEnabled?: boolean;
   compact?: boolean;
   editable?: boolean;
   activeLayer?: LoyaltyDesignerLayer | null;

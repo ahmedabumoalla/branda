@@ -809,6 +809,7 @@ function CafePageInner({ slug }: { slug: string }) {
               code={homeLoyalty?.card.cardCode}
               points={homeLoyaltyPoints?.balance ?? 0}
               pointValueSar={homeLoyaltyPoints?.pointValueSar ?? 0}
+              pointsEnabled={homeLoyaltyPoints?.enabled ?? false}
               current={homeLoyalty?.card.stampsInCycle ?? 0}
               required={homeLoyalty?.program.purchasesRequired ?? 7}
               isAuthenticated={Boolean(customer)}

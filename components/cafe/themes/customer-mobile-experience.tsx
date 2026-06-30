@@ -72,6 +72,7 @@ function publicLoyaltyCardDesign(input: {
   return {
     enabled: true,
     layoutVersion: "reference-horizontal-v1",
+    pointsEnabled: true,
     brandName: input.customerName || "عميل العلامة",
     cardTitle: "بطاقة الولاء",
     subtitle: copy.kind === "events" ? "اجمع الأختام واستبدل مكافأتك بسهولة" : "اجمع الأختام واستبدل مكافأتك بسهولة",
@@ -170,6 +171,7 @@ export function AppLoyaltyCard({
   loginHref,
   businessCategory,
   cardDesign,
+  pointsEnabled,
 }: {
   customerName?: string;
   code?: string;
@@ -182,6 +184,7 @@ export function AppLoyaltyCard({
   loginHref?: string;
   businessCategory?: string;
   cardDesign?: LoyaltyCardDesign | null;
+  pointsEnabled?: boolean;
 }) {
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const completedStamps = Math.max(0, Math.min(safeRequired, Number(current || 0)));
@@ -212,6 +215,7 @@ export function AppLoyaltyCard({
           pointsBalance={points}
           pointValueSar={pointValueSar}
           compact
+          pointsEnabled={pointsEnabled ?? previewCard.pointsEnabled ?? true}
         />
       ) : (
         <div className="rounded-[22px] border border-[var(--ci-border,#E7D7C6)] bg-white p-5 text-center shadow-sm">

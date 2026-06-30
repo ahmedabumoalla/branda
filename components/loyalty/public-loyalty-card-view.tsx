@@ -20,6 +20,7 @@ type Props = {
   loyaltyUnitLit: string;
   loyaltyUnitPlural: string;
   cardDesign?: LoyaltyCardDesign | null;
+  pointsEnabled?: boolean;
 };
 
 function textElement(
@@ -59,6 +60,7 @@ function publicCardDesign(input: {
   return {
     enabled: true,
     layoutVersion: "reference-horizontal-v1",
+    pointsEnabled: true,
     brandName: input.cafeName,
     cardTitle: input.cardTitle,
     subtitle: input.cardSubtitle,
@@ -126,6 +128,7 @@ export function PublicLoyaltyCardView({
   loyaltyUnitLit,
   loyaltyUnitPlural,
   cardDesign,
+  pointsEnabled,
 }: Props) {
   const previewCard = cardDesign
     ? {
@@ -176,6 +179,7 @@ export function PublicLoyaltyCardView({
               card={previewCard}
               pointsBalance={320}
               pointValueSar={0.25}
+              pointsEnabled={pointsEnabled ?? previewCard.pointsEnabled ?? true}
             />
           </section>
 

@@ -90,6 +90,7 @@ const CUSTOMER_ACCOUNT_LOAD_ERROR =
   "طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ط³ط§ط¨. ط³ط¬ظ‘ظ„ ط§ظ„ط¯ط®ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰ ط£ظˆ ط£ط¹ط¯ ط§ظ„ظ…ط­ط§ظˆظ„ط©.";
 
 const EMPTY_CUSTOMER_LOYALTY_POINTS = {
+  enabled: false,
   balance: 0,
   usedPoints: 0,
   pointValueSar: 0,
@@ -481,6 +482,7 @@ function CustomerCoffeeLoyaltyCard({
               card={realCardDesign}
               pointsBalance={loyaltyPoints.balance}
               pointValueSar={loyaltyPoints.pointValueSar}
+              pointsEnabled={loyaltyPoints.enabled}
             />
           ) : (
             <div className="flex min-h-[280px] items-center justify-center rounded-[30px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-page-bg,#FCF8F3)] p-6 text-center">
@@ -1142,8 +1144,8 @@ function AccountPageInner() {
   );
 
   const loyaltyBalance = useMemo(
-    () => loyaltyPoints.balance,
-    [loyaltyPoints.balance],
+    () => (loyaltyPoints.enabled ? loyaltyPoints.balance : 0),
+    [loyaltyPoints.balance, loyaltyPoints.enabled],
   );
 
   const totalInvoices = useMemo(
@@ -1547,6 +1549,7 @@ function AccountPageInner() {
         myTransactions={myTransactions}
         myInvoices={myInvoices}
         loyaltyBalance={loyaltyBalance}
+        pointsEnabled={loyaltyPoints.enabled}
         totalInvoices={totalInvoices}
         latestActivity={latestActivity}
         onLogout={logout}

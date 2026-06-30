@@ -19,6 +19,7 @@ type Props = {
   pointValueSar?: number;
   compact?: boolean;
   editable?: boolean;
+  pointsEnabled?: boolean;
   activeLayer?: LoyaltyDesignerLayer | null;
   onActiveLayerChange?: (layer: LoyaltyDesignerLayer) => void;
   onCardChange?: (card: LoyaltyCardDesign) => void;
@@ -177,6 +178,7 @@ function safeCardDesign(card: PartialLoyaltyCardDesign): LoyaltyCardDesign & { g
     supportingText: safeText(card.supportingText, ""),
     stampLabel: safeText(card.stampLabel, "ختم"),
     terms: safeText(card.terms, ""),
+    pointsEnabled: card.pointsEnabled ?? card.pointsBadgeVisible ?? true,
     stampsRequired,
     completedStamps,
     cardBackground: colors.background,
@@ -312,6 +314,7 @@ export function SharedLoyaltyCard({
   pointValueSar = 0.25,
   compact = false,
   editable = false,
+  pointsEnabled,
   activeLayer = null,
   onActiveLayerChange,
   onCardChange,
@@ -325,7 +328,8 @@ export function SharedLoyaltyCard({
   const earnedValue = Math.round(safePointsBalance * safePointValueSar * 100) / 100;
   const stamps = Array.from({ length: safeCard.stampsRequired });
   const logoVisible = Boolean(safeCard.logoPreviewUrl);
-  const showPoints = true;
+  const effectivePointsEnabled = Boolean(pointsEnabled ?? safeCard.pointsEnabled ?? safeCard.pointsBadgeVisible);
+  const showPoints = Boolean(effectivePointsEnabled && safeCard.pointsBadgeVisible);
   const showBarcode = true;
   const colors = resolveColors(safeCard);
   const textElements = textElementIds.map((id) => getTextElement(safeCard, id));
@@ -518,6 +522,7 @@ export function SharedLoyaltyCard({
 
       {textElements.map((element) => {
         if (!element.enabled) return null;
+        if (!effectivePointsEnabled && (element.id === "pointsLabel" || element.id === "pointsValue" || element.id === "pointsValueSar")) return null;
         if (element.id === "pointsLabel" || element.id === "pointsValue" || element.id === "pointsValueSar") return null;
         if (!showBarcode && element.id === "barcodeLabel") return null;
         const layer = `text:${element.id}` as const;

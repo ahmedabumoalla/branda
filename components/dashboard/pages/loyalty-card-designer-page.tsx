@@ -205,7 +205,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
     setSaving(true);
     setMessage("");
     try {
-      const card = draft.card;
+      const card = { ...draft.card, pointsEnabled: draft.points.enabled };
       const nextSettings = pointsToSettings(settings, draft);
       await saveLoyaltyCardProgramAction({
         enabled: card.enabled,
@@ -712,6 +712,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
                 pointsBalance={draft.points.customerPointsBalance}
                 pointValueSar={draft.points.pointValueSar}
                 editable
+                pointsEnabled={draft.points.enabled}
                 activeLayer={activeLayer}
                 onActiveLayerChange={(layer) => {
                   setActiveLayer(layer);

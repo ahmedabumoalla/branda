@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getCustomerProfileByUser, mapCustomerProfileToSession } from "@/lib/data/customers";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
+import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
 import { getPublicLoyaltyProgramBySlug, getCurrentCustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
@@ -80,13 +81,14 @@ export async function GET(_request: Request, { params }: Params) {
       return featureCodesAllow(features, feature);
     };
 
-    const [menu, offers, branches, pages, reservationServices, loyaltyProgram, customer] = await Promise.all([
+    const [menu, offers, branches, pages, reservationServices, loyaltyProgram, loyaltyRules, customer] = await Promise.all([
       canUseFeature("menu") ? getPublicMenuBySlug(slug) : Promise.resolve(emptyMenu),
       canUseFeature("offers") ? getPublicOffersBySlug(slug) : Promise.resolve([]),
       canUseFeature("branches") ? getPublicBranchesBySlug(slug) : Promise.resolve([]),
       canUseFeature("pages") ? getPublicPagesBySlug(slug) : Promise.resolve([]),
       canUseFeature("reservations") ? getPublicReservationServicesBySlug(slug) : Promise.resolve([]),
       canUseFeature("loyalty") ? getPublicLoyaltyProgramBySlug(slug).catch(() => null) : Promise.resolve(null),
+      canUseFeature("loyalty") ? getPublicLoyaltyBySlug(slug).catch(() => null) : Promise.resolve(null),
       safeCustomer(slug),
     ]);
 
@@ -113,6 +115,7 @@ export async function GET(_request: Request, { params }: Params) {
         pages,
         reservationServices,
         loyaltyProgram,
+        loyaltyPointsEnabled: Boolean(loyaltyRules?.settings.enabled),
         customer,
         loyaltyCard,
       },

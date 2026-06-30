@@ -60,6 +60,7 @@ const REWARDS_LOAD_ERROR =
 const REWARD_QR_FIT_CLASS =
   "[&>div]:overflow-hidden [&>div]:rounded-[10px] [&>div]:p-2 [&_svg]:block [&_svg]:h-full [&_svg]:w-full";
 const EMPTY_CUSTOMER_LOYALTY_POINTS = {
+  enabled: false,
   balance: 0,
   usedPoints: 0,
   pointValueSar: 0,
@@ -800,6 +801,7 @@ function RewardsPageInner() {
   const loyaltyUsedPoints = scopedLoyaltyPoints.usedPoints;
   const loyaltyPointValueSar = scopedLoyaltyPoints.pointValueSar;
   const loyaltyMinimumRedemptionPoints = scopedLoyaltyPoints.minimumRedemptionPoints;
+  const loyaltyPointsEnabled = Boolean(scopedLoyaltyPoints.enabled);
 
   const readyExperienceRewards = useMemo(
     () =>
@@ -974,6 +976,7 @@ function RewardsPageInner() {
           usedPoints={loyaltyUsedPoints}
           minimumRedemptionPoints={loyaltyMinimumRedemptionPoints}
           preview={false}
+          pointsEnabled={loyaltyPointsEnabled}
         />
         <div className="grid gap-2">
           <p className="text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
@@ -1094,6 +1097,7 @@ function RewardsPageInner() {
               usedPoints={loyaltyUsedPoints}
               minimumRedemptionPoints={loyaltyMinimumRedemptionPoints}
               preview={false}
+              pointsEnabled={loyaltyPointsEnabled}
             />
             <LoyaltyQrPreviewCard
               view={scopedLoyaltyView}

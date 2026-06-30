@@ -17,6 +17,7 @@ const CUSTOMER_ACCOUNT_LOAD_ERROR =
   "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
 
 type CustomerLoyaltyPointsSnapshot = {
+  enabled: boolean;
   balance: number;
   usedPoints: number;
   pointValueSar: number;
@@ -24,6 +25,7 @@ type CustomerLoyaltyPointsSnapshot = {
 };
 
 const emptyLoyaltyPoints: CustomerLoyaltyPointsSnapshot = {
+  enabled: false,
   balance: 0,
   usedPoints: 0,
   pointValueSar: 0,
@@ -230,6 +232,7 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
     const loyaltyPoints =
       loyaltyRules?.settings.enabled
         ? {
+            enabled: true,
             balance: loyaltyPointsBalance,
             usedPoints: loyaltyUsedPoints,
             pointValueSar: resolvePointValueSar(loyaltyRules.settings),

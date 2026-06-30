@@ -76,6 +76,7 @@ export type ThemedAccountPanelProps = {
   onSaveSettings: () => void;
   loyaltyFeatureEnabled?: boolean;
   businessCategory?: string | null;
+  pointsEnabled?: boolean;
   loyaltySlot?: ReactNode;
   experienceRewardsSlot?: ReactNode;
   passwordSlot?: ReactNode;
@@ -243,7 +244,8 @@ function summarizeLatestReservation(reservations: Reservation[]) {
   return `${reservations.length} حجز - آخر حجز ${latest.date}`;
 }
 
-function summarizeRewards(loyaltyBalance: number, transactions: CustomerTransaction[]) {
+function summarizeRewards(loyaltyBalance: number, transactions: CustomerTransaction[], pointsEnabled = true) {
+  if (!pointsEnabled) return "سجل المكافآت والولاء";
   const latestReward = transactions.find((item) => item.points);
   if (loyaltyBalance > 0) return `${loyaltyBalance} نقطة ولاء`;
   if (latestReward?.description) return latestReward.description;
@@ -381,7 +383,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
       {
         icon: Gift,
         title: "المكافآت",
-        subtitle: summarizeRewards(props.loyaltyBalance, props.myTransactions),
+        subtitle: summarizeRewards(props.loyaltyBalance, props.myTransactions, props.pointsEnabled),
         href: rewardsHref,
       },
       {
@@ -397,7 +399,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         ...(isEvents ? { onClick: () => setView("orders") } : { href: reserveHref }),
       },
     ],
-    [isEvents, props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, reserveHref, rewardsHref],
+    [isEvents, props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, props.pointsEnabled, reserveHref, rewardsHref],
   );
 
   function openProfile() {

@@ -8,6 +8,7 @@ type Props = {
   usedPoints?: number;
   minimumRedemptionPoints?: number;
   preview?: boolean;
+  pointsEnabled?: boolean;
 };
 
 const FALLBACK_POINT_VALUE_SAR = 0.25;
@@ -51,7 +52,9 @@ export function CustomerPointsSummary({
   usedPoints = 0,
   minimumRedemptionPoints = 100,
   preview = false,
+  pointsEnabled = true,
 }: Props) {
+  if (!pointsEnabled) return null;
   const balance = safeNumber(pointsBalance);
   const used = Math.min(balance, safeNumber(usedPoints));
   const remaining = Math.max(0, balance - used);

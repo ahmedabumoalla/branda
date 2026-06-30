@@ -51,6 +51,7 @@ type CustomerFastPayload = {
   branches: CafeBranch[];
   reservationServices: ReservationService[];
   loyaltyProgram: LoyaltyCardProgram | null;
+  loyaltyPointsEnabled?: boolean;
   customer: BarndaksaCustomerSession | null;
   loyaltyCard: CustomerLoyaltyCardView | null;
 };
@@ -113,6 +114,7 @@ async function loadPublicCafeFallbackPayload(slug: string): Promise<CustomerFast
     branches: [],
     reservationServices: [],
     loyaltyProgram: null,
+    loyaltyPointsEnabled: false,
     customer: null,
     loyaltyCard: null,
   };
@@ -526,6 +528,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
             onClickHref={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : undefined}
             businessCategory={payload.settings.businessCategory}
             cardDesign={payload.loyaltyCard?.program?.cardDesign ?? payload.loyaltyProgram?.cardDesign}
+            pointsEnabled={Boolean(payload.loyaltyPointsEnabled)}
           />
         ) : null}
 

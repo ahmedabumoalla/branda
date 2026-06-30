@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PublicLoyaltyCardView } from "@/components/loyalty/public-loyalty-card-view";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
+import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
@@ -19,7 +20,12 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
 
   const { card, program, cafeSlug, cafeName, businessCategory } = view;
   const copy = getBusinessCopy(businessCategory);
-  const features = cafeSlug ? await getPublicCafeFeatureCodesBySlug(cafeSlug).catch(() => []) : [];
+  const [features, loyaltyRules] = cafeSlug
+    ? await Promise.all([
+        getPublicCafeFeatureCodesBySlug(cafeSlug).catch(() => []),
+        getPublicLoyaltyBySlug(cafeSlug).catch(() => null),
+      ])
+    : [[], null];
   if (!featureCodesAllow(features, "loyalty")) notFound();
 
   const required = Math.max(1, Number(program.purchasesRequired || 7));
@@ -43,6 +49,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
       loyaltyUnitLit={copy.loyaltyUnitLit}
       loyaltyUnitPlural={copy.loyaltyUnitPlural}
       cardDesign={program.cardDesign}
+      pointsEnabled={Boolean(loyaltyRules?.settings.enabled)}
     />
   );
 }

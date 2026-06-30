@@ -63,6 +63,7 @@ function sanitizeDesign(input: LoyaltyCardDesign, patch: Partial<LoyaltyCardDesi
   return {
     ...next,
     layoutVersion: referenceLayoutVersion,
+    pointsEnabled: next.pointsEnabled ?? next.pointsBadgeVisible ?? true,
     subtitle: safeCardSubtitle(next.subtitle),
     stampsRequired: Math.max(1, Math.min(100, Number(next.stampsRequired || 7))),
     completedStamps: Math.max(0, Math.min(Number(next.stampsRequired || 7), Number(next.completedStamps || 0))),
@@ -142,7 +143,8 @@ export function buildLoyaltyCardDesign(input: {
     qrY: 50,
     qrWidth: 31,
     qrHeight: 42,
-    pointsBadgeVisible: true,
+    pointsBadgeVisible: Boolean(input.pointsVisible ?? true),
+    pointsEnabled: Boolean(input.pointsVisible ?? true),
     pointsBadgeX: 5,
     pointsBadgeY: 8,
     pointsBadgeWidth: 33,
