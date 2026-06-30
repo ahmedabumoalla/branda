@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity } from "@/lib/data/theme";
@@ -9,23 +8,10 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-const MANIFEST_TTL_SECONDS = 60;
-
-function cleanText(value?: string | null) {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
-}
-
-function hashToken(value: string) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) | 0;
-  }
-  return Math.abs(hash).toString(36);
-}
+const MANIFEST_TTL_SECONDS = 10 * 60;
 
 function iconVersion(...candidates: Array<string | null | undefined>) {
-  const source = candidates.map(cleanText).find(Boolean);
-  return source ? hashToken(source) : "fallback";
+  return candidates.find((candidate) => candidate?.trim())?.trim() ?? "fallback";
 }
 
 function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", version: string) {
@@ -38,42 +24,27 @@ function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", ver
   return `/api/public/cafe/${encodeURIComponent(slug)}/favicon?${params.toString()}`;
 }
 
-function cafeAppPath(slug: string) {
-  return `/c/${encodeURIComponent(slug)}/`;
-}
-
 async function loadManifest(slug: string) {
-  const [cafe, settings, identity, branches] = await Promise.all([
+  const [cafe, settings, identity] = await Promise.all([
     getCafeBySlug(slug).catch(() => null),
     getPublicCafeSettings(slug).catch(() => null),
     getPublicCustomIdentity(slug).catch(() => null),
-    getPublicBranchesBySlug(slug).catch(() => []),
   ]);
 
-  const configuredBrandName = cleanText(settings?.cafeName) || cleanText(cafe?.name);
-  const brandName = configuredBrandName || "برندة";
-  const branchName = cleanText(branches.find((branch) => branch.active !== false)?.name);
-  const name =
-    branchName && branchName !== brandName
-      ? `${brandName} - ${branchName}`
-      : brandName;
-  const appPath = cafeAppPath(slug);
-  const startUrl = `${appPath}?source=pwa`;
-  const scope = appPath;
+  const name = settings?.cafeName || cafe?.name || "Barndaksa";
+  const startUrl = `/c/${encodeURIComponent(slug)}`;
+  const scope = `/c/${encodeURIComponent(slug)}`;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,
     settings?.logoDataUrl,
     identity?.legacyLogoDataUrl,
-    brandName,
-    branchName,
   );
 
   return {
-    id: appPath,
     name,
-    short_name: brandName.slice(0, 12),
-    description: configuredBrandName ? `تطبيق ${name}` : "تطبيق برندة",
+    short_name: name.slice(0, 12),
+    description: `تطبيق ${name} على منصة برندة`,
     start_url: startUrl,
     scope,
     display: "standalone",
@@ -114,7 +85,7 @@ export async function GET(_request: Request, { params }: Props) {
   return NextResponse.json(manifest, {
     headers: {
       "Cache-Control": publicCacheHeader(MANIFEST_TTL_SECONDS),
-      "x-barndaksa-pwa-manifest": "brand-icon-v5",
+      "x-barndaksa-pwa-manifest": "brand-icon-v4",
     },
   });
 }

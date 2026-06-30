@@ -170,323 +170,59 @@ function TabButton({
   );
 }
 
-type CustomerBeforeInstallPromptEvent = Event & {
-  prompt?: () => Promise<void>;
-  userChoice?: Promise<{ outcome: string }>;
-};
-
-type FastInstallReadiness = "checking" | "ready" | "opening" | "installed" | "unavailable" | "insecure";
-
-declare global {
-  interface Window {
-    __barndaksaPwaInstallCaptureReady?: boolean;
-    __barndaksaPwaInstallPromptEvent?: CustomerBeforeInstallPromptEvent | null;
-    __barndaksaPwaInstallPromptSeen?: boolean;
-  }
-}
-
-const FAST_ANDROID_CHROME_FALLBACK = "من قائمة Chrome ⋮ اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية";
-const FAST_HTTPS_REQUIRED_MESSAGE = "تثبيت التطبيق يحتاج رابط HTTPS";
-const FAST_UNSUPPORTED_BROWSER_MESSAGE = "التثبيت غير متاح من المتصفح الحالي";
-const FAST_READINESS_TEXT: Record<FastInstallReadiness, string> = {
-  checking: "جاري تجهيز التطبيق",
-  ready: "التطبيق جاهز للتثبيت",
-  opening: "افتح نافذة التثبيت",
-  installed: "التطبيق مثبت",
-  unavailable: "التثبيت غير متاح من المتصفح الحالي",
-  insecure: FAST_HTTPS_REQUIRED_MESSAGE,
-};
-
-function fastInstalledKey(slug: string) {
-  return `barndaksa_pwa_installed_${slug}`;
-}
-
-function fastManifestHref(slug: string, refresh = false) {
-  const base = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-  return refresh ? `${base}?refresh=${Date.now()}` : base;
-}
-
-function fastCapturedInstallPrompt() {
-  const event = window.__barndaksaPwaInstallPromptEvent;
-  return event?.prompt ? event : null;
-}
-
-function fastClearInstallPrompt() {
-  window.__barndaksaPwaInstallPromptEvent = null;
-}
-
-function fastIsStandalone() {
-  return Boolean(
-    window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone ||
-      document.referrer.startsWith("android-app://"),
-  );
-}
-
-function fastIsIos() {
-  const userAgent = window.navigator.userAgent;
-  return (
-    /iphone|ipad|ipod/i.test(userAgent) ||
-    (window.navigator.platform === "MacIntel" && (window.navigator.maxTouchPoints || 0) > 1)
-  );
-}
-
-function fastIsAndroidChrome() {
-  return /android/i.test(window.navigator.userAgent) && /chrome|crios/i.test(window.navigator.userAgent);
-}
-
-function fastIsSecureInstallContext() {
-  return window.isSecureContext || window.location.protocol === "https:";
-}
-
-function fastEnsureManifestLink(slug: string, refresh = false) {
-  const href = fastManifestHref(slug, refresh);
-  let manifest = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
-    (link) => link.getAttribute("href") === href || link.href.includes(fastManifestHref(slug)),
-  );
-
-  if (!manifest) {
-    manifest = document.createElement("link");
-    manifest.rel = "manifest";
-    manifest.dataset.barndaksaPwa = slug;
-    document.head.appendChild(manifest);
-  }
-
-  manifest.href = href;
-  return href;
-}
-
-async function fastRegisterCafeServiceWorker(slug: string) {
-  if (!("serviceWorker" in navigator)) return null;
-  return navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-    scope: `/c/${encodeURIComponent(slug)}`,
-  });
-}
-
-function InstallMiniButtonFixed({ slug }: { slug: string }) {
-  const [installPrompt, setInstallPrompt] = useState<CustomerBeforeInstallPromptEvent | null>(null);
+function InstallMiniButton({ slug }: { slug: string }) {
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [message, setMessage] = useState("");
-  const [installed, setInstalled] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState("");
-  const [isIos, setIsIos] = useState(false);
-  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
-  const [readiness, setReadiness] = useState<FastInstallReadiness>("checking");
-
-  function applyReadiness(androidChrome = isAndroidChrome) {
-    const promptEvent = fastCapturedInstallPrompt();
-
-    if (fastIsStandalone() || localStorage.getItem(fastInstalledKey(slug)) === "1") {
-      setInstalled(true);
-      setReadiness("installed");
-      setMessage("");
-      return null;
-    }
-
-    if (!fastIsSecureInstallContext()) {
-      setInstallPrompt(null);
-      setReadiness("insecure");
-      setMessage(FAST_HTTPS_REQUIRED_MESSAGE);
-      return null;
-    }
-
-    if (promptEvent) {
-      setInstallPrompt(promptEvent);
-      setReadiness("ready");
-      setMessage("");
-      return promptEvent;
-    }
-
-    setInstallPrompt(null);
-    setReadiness(androidChrome ? "checking" : "unavailable");
-    setMessage("");
-    return null;
-  }
-
-  async function checkReadiness() {
-    if (installing) return;
-    setReadiness("checking");
-    setMessage("جاري تجهيز التطبيق");
-    fastEnsureManifestLink(slug);
-    await fastRegisterCafeServiceWorker(slug).catch(() => null);
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    applyReadiness();
-  }
 
   useEffect(() => {
-    const ios = fastIsIos();
-    const androidChrome = fastIsAndroidChrome();
-    const installedKey = fastInstalledKey(slug);
+    const manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
+    document.head.appendChild(manifest);
 
-    setIsIos(ios);
-    setIsAndroidChrome(androidChrome);
-    setReadiness("checking");
-
-    if (fastIsStandalone() || localStorage.getItem(installedKey) === "1") {
-      setInstalled(true);
-      setReadiness("installed");
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
+        scope: `/app/${encodeURIComponent(slug)}/`,
+      });
     }
-
-    fastEnsureManifestLink(slug);
-    void fastRegisterCafeServiceWorker(slug).catch(() => null);
 
     const handler = (event: Event) => {
       event.preventDefault();
-      const promptEvent = event as CustomerBeforeInstallPromptEvent;
-      window.__barndaksaPwaInstallPromptEvent = promptEvent;
-      window.__barndaksaPwaInstallPromptSeen = true;
-      setInstallPrompt(promptEvent);
-      setReadiness("ready");
-      setMessage("");
+      setInstallPrompt(event);
     };
-
-    const capturedHandler = () => {
-      const promptEvent = fastCapturedInstallPrompt();
-      if (promptEvent) {
-        setInstallPrompt(promptEvent);
-        setReadiness("ready");
-        setMessage("");
-      }
-    };
-
-    const appInstalledHandler = () => {
-      localStorage.setItem(installedKey, "1");
-      setInstalled(true);
-      setInstallPrompt(null);
-      fastClearInstallPrompt();
-      setReadiness("installed");
-      setStage("التطبيق مثبت");
-      setProgress(100);
-    };
-
-    window.setTimeout(() => {
-      applyReadiness(androidChrome);
-    }, 300);
 
     window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("barndaksa:beforeinstallprompt", capturedHandler);
-    window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("barndaksa:beforeinstallprompt", capturedHandler);
-      window.removeEventListener("appinstalled", appInstalledHandler);
+      manifest.remove();
     };
   }, [slug]);
 
   async function install() {
-    if (installing) return;
-    if (fastIsStandalone()) {
-      localStorage.setItem(fastInstalledKey(slug), "1");
-      setInstalled(true);
-      setReadiness("installed");
+    const promptEvent = installPrompt as Event & {
+      prompt?: () => Promise<void>;
+      userChoice?: Promise<{ outcome: string }>;
+    };
+
+    if (promptEvent?.prompt) {
+      await promptEvent.prompt();
+      setMessage("إذا لم يظهر التثبيت استخدم إضافة إلى الشاشة الرئيسية من المتصفح");
       return;
     }
 
-    if (!fastIsSecureInstallContext()) {
-      setReadiness("insecure");
-      setMessage(FAST_HTTPS_REQUIRED_MESSAGE);
-      return;
-    }
-
-    const promptEvent = installPrompt?.prompt ? installPrompt : fastCapturedInstallPrompt();
-    if (!promptEvent?.prompt) {
-      setReadiness("unavailable");
-      setMessage(isAndroidChrome ? FAST_ANDROID_CHROME_FALLBACK : FAST_UNSUPPORTED_BROWSER_MESSAGE);
-      return;
-    }
-
-    setInstalling(true);
-    setMessage("");
-    setReadiness("opening");
-    setStage("افتح نافذة التثبيت");
-    setProgress(50);
-    await promptEvent.prompt();
-    setStage("بانتظار تأكيدك");
-    setProgress(75);
-
-    const choice = await promptEvent.userChoice?.catch(() => null);
-    setInstallPrompt(null);
-    fastClearInstallPrompt();
-    setInstalling(false);
-
-    if (choice?.outcome === "accepted") {
-      localStorage.setItem(fastInstalledKey(slug), "1");
-      setStage("التطبيق مثبت");
-      setProgress(100);
-      setInstalled(true);
-      setReadiness("installed");
-      return;
-    }
-
-    setProgress(0);
-    setStage("");
-    setReadiness("unavailable");
-    setMessage("لم يتم التثبيت. يمكنك الضغط على حمل التطبيق للمحاولة لاحقًا.");
-  }
-
-  async function refreshPwa() {
-    const manifestHref = fastEnsureManifestLink(slug, true);
-    await fetch(manifestHref, { cache: "reload" }).catch(() => null);
-    if ("serviceWorker" in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(
-        registrations
-          .filter((registration) => registration.active?.scriptURL.includes(`/api/pwa/${encodeURIComponent(slug)}/sw`))
-          .map((registration) => registration.update().catch(() => undefined)),
-      );
-      navigator.serviceWorker.controller?.postMessage({ type: "BARNDAKSA_PWA_REFRESH" });
-    }
-    setMessage("تم طلب تحديث التطبيق، أعد فتحه لتحديث الاسم واللوجو");
-  }
-
-  if (installed) {
-    return (
-      <div className="fixed left-3 top-3 z-50 flex max-w-[230px] flex-col items-start gap-2">
-        <button
-          type="button"
-          onClick={() => void refreshPwa()}
-          aria-label="تحديث بيانات التطبيق"
-          title="تحديث بيانات التطبيق"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition active:scale-95"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-        {message ? <p className="rounded-2xl bg-black/55 px-3 py-2 text-right text-xs font-bold leading-6 text-white shadow-sm backdrop-blur">{message}</p> : null}
-      </div>
-    );
-  }
-
-  if (isIos) {
-    return (
-      <div className="max-w-xs rounded-2xl bg-white/12 p-3 text-xs font-bold leading-6 text-white/85 backdrop-blur">
-        اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".
-      </div>
-    );
+    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
   }
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => void install()}
-        disabled={installing}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-80"
+        onClick={install}
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur"
       >
         <Download className="h-4 w-4" />
-        حمل التطبيق
+        تثبيت التطبيق
       </button>
-      {progress > 0 ? (
-        <div className="mt-3 max-w-[220px] rounded-2xl bg-white/10 p-3 text-white/85">
-          <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-black">
-            <span>{stage}</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
-            <div className="h-full rounded-full bg-[var(--fast-accent)] transition-all duration-500" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      ) : null}
       {message ? <p className="mt-2 text-xs font-bold leading-6 text-white/80">{message}</p> : null}
     </div>
   );
@@ -871,7 +607,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <InstallMiniButtonFixed slug={slug} />
+            <InstallMiniButton slug={slug} />
             {payload.customer ? (
               <span className="inline-flex items-center gap-2 rounded-2xl bg-white/12 px-4 py-3 text-xs font-black text-white">
                 <CheckCircle2 className="h-4 w-4 text-[var(--fast-accent)]" />
