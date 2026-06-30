@@ -3,23 +3,45 @@
 import { Download, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice?: Promise<{ outcome: "accepted" | "dismissed"; platform?: string }>;
+};
+
+declare global {
+  interface Window {
+    __barndaksaPwaInstallPromptEvent?: BeforeInstallPromptEvent | null;
+    __barndaksaPwaInstallPromptSeen?: boolean;
+  }
+}
+
 type Props = {
   slug: string;
   cafeName: string;
   compact?: boolean;
 };
 
+function isStandaloneDisplay() {
+  return Boolean(
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone,
+  );
+}
+
+function getSavedInstallPrompt() {
+  const promptEvent = window.__barndaksaPwaInstallPromptEvent;
+  return promptEvent?.prompt ? promptEvent : null;
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const installedKey = `barndaksa_pwa_installed_${slug}`;
-    const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
-    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-    if (localStorage.getItem(installedKey) === "1" || mediaStandalone || navigatorStandalone) {
+    if (isStandaloneDisplay()) {
       setInstalled(true);
     }
 
@@ -36,7 +58,19 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
     const handler = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      window.__barndaksaPwaInstallPromptEvent = promptEvent;
+      window.__barndaksaPwaInstallPromptSeen = true;
+      setInstallPrompt(promptEvent);
+      setMessage("");
+    };
+
+    const savedPromptHandler = () => {
+      const promptEvent = getSavedInstallPrompt();
+      if (promptEvent) {
+        setInstallPrompt(promptEvent);
+        setMessage("");
+      }
     };
 
     const appInstalledHandler = () => {
@@ -45,10 +79,13 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setProgress(100);
     };
 
+    savedPromptHandler();
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("barndaksa:beforeinstallprompt", savedPromptHandler);
     window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("barndaksa:beforeinstallprompt", savedPromptHandler);
       window.removeEventListener("appinstalled", appInstalledHandler);
       manifest.remove();
     };
@@ -56,12 +93,11 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   async function install() {
     setProgress(65);
-    const promptEvent = installPrompt as Event & {
-      prompt?: () => Promise<void>;
-      userChoice?: Promise<{ outcome: string }>;
-    };
+    const promptEvent = installPrompt?.prompt ? installPrompt : getSavedInstallPrompt();
 
-    if (promptEvent?.prompt) {
+    if (promptEvent) {
+      setInstallPrompt(promptEvent);
+      setMessage("");
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice?.catch(() => null);
       if (choice?.outcome === "accepted") {
@@ -76,7 +112,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     }
 
     setProgress(90);
-    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
+    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية، وفي Chrome تأكد أن الصفحة مفتوحة من المتصفح وليست داخل تطبيق آخر");
   }
 
   if (installed) return null;
