@@ -8,6 +8,11 @@ type BeforeInstallPromptEvent = Event & {
   userChoice?: Promise<{ outcome: "accepted" | "dismissed"; platform?: string }>;
 };
 
+type PwaInstallWindow = Window & {
+  __barndaksaPwaInstallPromptEvent?: BeforeInstallPromptEvent | null;
+  __barndaksaPwaInstallPromptSeen?: boolean;
+};
+
 type Props = {
   slug: string;
   cafeName: string;
@@ -21,8 +26,13 @@ function isStandaloneDisplay() {
   );
 }
 
+function getSavedInstallPrompt() {
+  const saved = (window as PwaInstallWindow).__barndaksaPwaInstallPromptEvent;
+  return saved?.prompt ? saved : null;
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -33,20 +43,37 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setInstalled(true);
     }
 
+    const syncSavedPrompt = () => {
+      const saved = getSavedInstallPrompt();
+      if (saved) {
+        setInstallPrompt(saved);
+        setMessage("");
+        console.warn("[brand-pwa] saved beforeinstallprompt loaded");
+      }
+    };
+
     const handler = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      (window as PwaInstallWindow).__barndaksaPwaInstallPromptEvent = promptEvent;
+      (window as PwaInstallWindow).__barndaksaPwaInstallPromptSeen = true;
+      setInstallPrompt(promptEvent);
       setMessage("");
       console.warn("[brand-pwa] beforeinstallprompt received");
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
+      (window as PwaInstallWindow).__barndaksaPwaInstallPromptEvent = null;
       setInstalled(true);
       setProgress(100);
     };
 
+    syncSavedPrompt();
+    const syncTimer = window.setTimeout(syncSavedPrompt, 1200);
+
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("barndaksa:beforeinstallprompt", syncSavedPrompt);
     window.addEventListener("appinstalled", appInstalledHandler);
 
     if ("serviceWorker" in navigator) {
@@ -75,20 +102,24 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     }
 
     return () => {
+      window.clearTimeout(syncTimer);
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("barndaksa:beforeinstallprompt", syncSavedPrompt);
       window.removeEventListener("appinstalled", appInstalledHandler);
     };
   }, [slug]);
 
   async function install() {
     setProgress(65);
-    console.warn("[brand-pwa] install clicked", { hasPrompt: Boolean(installPrompt) });
-    const promptEvent = installPrompt as BeforeInstallPromptEvent | null;
+    const promptEvent = installPrompt ?? getSavedInstallPrompt();
+    console.warn("[brand-pwa] install clicked", { hasPrompt: Boolean(promptEvent) });
 
     if (promptEvent?.prompt) {
       setMessage("");
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice?.catch(() => null);
+      (window as PwaInstallWindow).__barndaksaPwaInstallPromptEvent = null;
+      setInstallPrompt(null);
       if (choice?.outcome === "accepted") {
         localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
         setInstalled(true);
