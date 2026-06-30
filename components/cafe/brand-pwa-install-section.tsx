@@ -21,6 +21,12 @@ function isStandaloneDisplay() {
   );
 }
 
+function debugPwa(...args: unknown[]) {
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[branda-pwa-install]", ...args);
+  }
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
@@ -39,9 +45,13 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     document.head.appendChild(manifest);
 
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-        scope: `/c/${encodeURIComponent(slug)}/`,
-      });
+      void navigator.serviceWorker
+        .register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
+          scope: `/c/${encodeURIComponent(slug)}`,
+        })
+        .then((registration) => {
+          debugPwa("service worker registered", registration.scope);
+        });
     }
 
     const handler = (event: Event) => {
@@ -49,6 +59,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       const promptEvent = event as BeforeInstallPromptEvent;
       setInstallPrompt(promptEvent);
       setMessage("");
+      debugPwa("beforeinstallprompt received");
     };
 
     const appInstalledHandler = () => {
@@ -69,6 +80,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
   async function install() {
     setProgress(65);
     const promptEvent = installPrompt?.prompt ? installPrompt : null;
+    debugPwa("install clicked", { hasInstallPrompt: Boolean(promptEvent) });
 
     if (promptEvent) {
       setMessage("");
