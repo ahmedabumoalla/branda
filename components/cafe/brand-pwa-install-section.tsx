@@ -56,7 +56,8 @@ function detectInstallDevice(): InstallDevice {
 function isStandaloneDisplay() {
   const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
   const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-  return Boolean(mediaStandalone || navigatorStandalone);
+  const androidAppReferrer = document.referrer.startsWith("android-app://");
+  return Boolean(mediaStandalone || navigatorStandalone || androidAppReferrer);
 }
 
 function ensureManifestLink(slug: string, refresh = false) {
@@ -274,7 +275,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setMessage(
         device === "ios"
           ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".'
-          : "نافذة التثبيت غير جاهزة الآن. جرّب تحديث الصفحة أو افتحها من Chrome.",
+          : "التثبيت غير جاهز الآن، حدّث الصفحة أو افتح الرابط من Chrome",
       );
       return;
     }
@@ -309,7 +310,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     setRefreshing(true);
     setMessage("");
     await refreshCafePwa(slug);
-    setMessage("أعد فتح التطبيق لتحديث الاسم واللوجو");
+    setMessage("تم طلب تحديث التطبيق، أعد فتحه لتحديث الاسم واللوجو");
     setRefreshing(false);
   }
 

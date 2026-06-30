@@ -245,7 +245,8 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
     const installedKey = `barndaksa_pwa_installed_${slug}`;
     const standalone =
       window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone) ||
+      document.referrer.startsWith("android-app://");
 
     setIsIos(ios);
     if (standalone || localStorage.getItem(installedKey) === "1") {
@@ -299,7 +300,7 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
       setInstalling(false);
       setProgress(0);
       setStage("");
-      setMessage(isIos ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".' : "نافذة التثبيت غير جاهزة الآن. جرّب فتح الصفحة من Chrome.");
+      setMessage(isIos ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".' : "التثبيت غير جاهز الآن، حدّث الصفحة أو افتح الرابط من Chrome");
       return;
     }
 
@@ -343,7 +344,7 @@ function InstallMiniButtonFixed({ slug }: { slug: string }) {
       );
       navigator.serviceWorker.controller?.postMessage({ type: "BARNDAKSA_PWA_REFRESH" });
     }
-    setMessage("أعد فتح التطبيق لتحديث الاسم واللوجو");
+    setMessage("تم طلب تحديث التطبيق، أعد فتحه لتحديث الاسم واللوجو");
   }
 
   if (installed) {
