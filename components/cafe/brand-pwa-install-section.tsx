@@ -33,11 +33,6 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
       setInstalled(true);
     }
 
-    const manifest = document.createElement("link");
-    manifest.rel = "manifest";
-    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-    document.head.appendChild(manifest);
-
     const handler = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event);
@@ -82,7 +77,6 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", appInstalledHandler);
-      manifest.remove();
     };
   }, [slug]);
 
