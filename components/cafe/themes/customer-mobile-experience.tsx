@@ -71,18 +71,19 @@ function publicLoyaltyCardDesign(input: {
 
   return {
     enabled: true,
+    layoutVersion: "reference-horizontal-v1",
     brandName: input.customerName || "عميل العلامة",
     cardTitle: "بطاقة الولاء",
-    subtitle: copy.kind === "events" ? "مكافآت الحضور" : "مكافآت العميل",
-    rewardTitle: "مكافأة جاهزة",
+    subtitle: copy.kind === "events" ? "اجمع الأختام واستبدل مكافأتك بسهولة" : "اجمع الأختام واستبدل مكافأتك بسهولة",
+    rewardTitle: "مشروب مجاني عند اكتمال البطاقة",
     supportingText: "اعرض البطاقة عند الكاشير",
     stampLabel: copy.loyaltyUnitLit,
     terms: "",
     stampsRequired: input.required,
     completedStamps: input.current,
-    cardBackground: "linear-gradient(135deg,#3A2117 0%,#6B3A25 58%,#B88334 100%)",
-    cardForeground: "#FCF8F3",
-    cardAccent: "#D9A33F",
+    cardBackground: "#F6BE18",
+    cardForeground: "#17212B",
+    cardAccent: "#64BFA9",
     logoRemoveLightBackground: false,
     logoBackgroundTolerance: 20,
     logoPlacement: "top-right",
@@ -95,30 +96,30 @@ function publicLoyaltyCardDesign(input: {
     logoHeight: 16,
     progressIcon: "star",
     barcodeVisible: true,
-    barcodeX: 8,
-    barcodeY: 73,
-    barcodeWidth: 34,
-    barcodeHeight: 15,
-    qrX: 8,
-    qrY: 8,
-    qrWidth: 18,
-    qrHeight: 18,
-    pointsBadgeVisible: false,
-    pointsBadgeX: 8,
-    pointsBadgeY: 62,
-    pointsBadgeWidth: 24,
-    pointsBadgeHeight: 10,
+    barcodeX: 40,
+    barcodeY: 46,
+    barcodeWidth: 53,
+    barcodeHeight: 22,
+    qrX: 5,
+    qrY: 50,
+    qrWidth: 31,
+    qrHeight: 42,
+    pointsBadgeVisible: true,
+    pointsBadgeX: 5,
+    pointsBadgeY: 8,
+    pointsBadgeWidth: 33,
+    pointsBadgeHeight: 27,
     sampleCode: input.code,
     textElements: {
-      brand: textElement("brand", input.customerName || "عميل العلامة", 42, 10, 28, 8, 22),
-      title: textElement("title", "بطاقة الولاء", 42, 20, 34, 10, 34),
-      subtitle: textElement("subtitle", copy.loyaltyUnitPlural, 42, 31, 34, 8, 20),
-      reward: textElement("reward", "اعرضها عند الكاشير", 42, 42, 34, 8, 18),
-      helper: textElement("helper", "{{code}}", 44, 73, 28, 8, 18),
-      pointsLabel: textElement("pointsLabel", "النقاط", 0, 0, 1, 1, 1, false),
-      pointsValue: textElement("pointsValue", "{{points}}", 0, 0, 1, 1, 1, false),
-      pointsValueSar: textElement("pointsValueSar", "{{value}}", 0, 0, 1, 1, 1, false),
-      barcodeLabel: textElement("barcodeLabel", "رمز البطاقة", 8, 68, 34, 5, 14),
+      brand: { ...textElement("brand", input.customerName || "عميل العلامة", 48, 7, 28, 6, 11, false), color: "#17212B" },
+      title: { ...textElement("title", "بطاقة الولاء", 49, 13, 44, 14, 34), color: "#17212B" },
+      subtitle: { ...textElement("subtitle", "اجمع الأختام واستبدل مكافأتك بسهولة", 45, 28, 48, 9, 15), color: "#17212B", fontWeight: 800 },
+      reward: { ...textElement("reward", "مشروب مجاني عند اكتمال البطاقة", 40, 38, 53, 7, 15), color: "#64BFA9" },
+      helper: textElement("helper", "", 53, 7, 40, 6, 11, false),
+      pointsLabel: { ...textElement("pointsLabel", "نقاط الولاء", 8, 11, 28, 5, 12, true), color: "#806A5E" },
+      pointsValue: { ...textElement("pointsValue", "{{points}} نقطة", 8, 18, 28, 6, 17, true), color: "#17100D" },
+      pointsValueSar: { ...textElement("pointsValueSar", "{{value}} ر.س", 8, 26, 28, 5, 12, true), color: "#806A5E", fontWeight: 800 },
+      barcodeLabel: { ...textElement("barcodeLabel", "{{code}}", 42, 69, 49, 5, 11), color: "#17100D", align: "center" },
     },
   };
 }
@@ -184,7 +185,6 @@ export function AppLoyaltyCard({
 }) {
   const safeRequired = Math.max(1, Math.min(60, Number(required || 7)));
   const completedStamps = Math.max(0, Math.min(safeRequired, Number(current || 0)));
-  const pointsValue = Math.round(Number(points || 0) * Number(pointValueSar || 0) * 100) / 100;
   const effectiveCode = code?.trim();
   const previewCard = effectiveCode
     ? cardDesign
@@ -221,18 +221,6 @@ export function AppLoyaltyCard({
           </h2>
         </div>
       )}
-      {isAuthenticated ? (
-        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/92 p-3 shadow-sm">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">{"\u0631\u0635\u064a\u062f \u0646\u0642\u0627\u0637 \u0627\u0644\u0648\u0644\u0627\u0621"}</p>
-            <p className="mt-1 truncate text-lg font-black text-[var(--ci-page-fg,#17212B)]">{points}</p>
-          </div>
-          <div className="min-w-0 text-left">
-            <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">{"\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062a\u0627\u062d\u0629"}</p>
-            <p className="mt-1 truncate text-lg font-black text-[var(--ci-page-fg,#17212B)]">{pointsValue} {"\u0631.\u0633"}</p>
-          </div>
-        </div>
-      ) : null}
       {!isAuthenticated && loginHref ? (
         <div className="absolute inset-x-3 bottom-3 z-30 rounded-2xl bg-white/92 p-3 text-center shadow-[0_12px_30px_rgba(23,33,43,0.16)] backdrop-blur">
           <h2 className="text-sm font-black text-[#17212B]">{"\u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0644\u0631\u0628\u0637 \u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0648\u0644\u0627\u0621 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0643"}</h2>

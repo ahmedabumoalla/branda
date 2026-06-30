@@ -58,6 +58,7 @@ function publicCardDesign(input: {
 }): LoyaltyCardDesign {
   return {
     enabled: true,
+    layoutVersion: "reference-horizontal-v1",
     brandName: input.cafeName,
     cardTitle: input.cardTitle,
     subtitle: input.cardSubtitle,
@@ -67,9 +68,9 @@ function publicCardDesign(input: {
     terms: "",
     stampsRequired: input.required,
     completedStamps: input.lit,
-    cardBackground: "linear-gradient(135deg,#3A2117 0%,#6B3A25 58%,#B88334 100%)",
-    cardForeground: "#FCF8F3",
-    cardAccent: "#D9A33F",
+    cardBackground: "#F6BE18",
+    cardForeground: "#17212B",
+    cardAccent: "#64BFA9",
     logoRemoveLightBackground: false,
     logoBackgroundTolerance: 20,
     logoPlacement: "top-right",
@@ -82,30 +83,30 @@ function publicCardDesign(input: {
     logoHeight: 16,
     progressIcon: "star",
     barcodeVisible: true,
-    barcodeX: 8,
-    barcodeY: 73,
-    barcodeWidth: 34,
-    barcodeHeight: 15,
-    qrX: 8,
-    qrY: 8,
-    qrWidth: 18,
-    qrHeight: 18,
-    pointsBadgeVisible: false,
-    pointsBadgeX: 8,
-    pointsBadgeY: 62,
-    pointsBadgeWidth: 24,
-    pointsBadgeHeight: 10,
+    barcodeX: 40,
+    barcodeY: 46,
+    barcodeWidth: 53,
+    barcodeHeight: 22,
+    qrX: 5,
+    qrY: 50,
+    qrWidth: 31,
+    qrHeight: 42,
+    pointsBadgeVisible: true,
+    pointsBadgeX: 5,
+    pointsBadgeY: 8,
+    pointsBadgeWidth: 33,
+    pointsBadgeHeight: 27,
     sampleCode: input.cardCode,
     textElements: {
-      brand: textElement("brand", input.cafeName, 42, 10, 28, 8, 22),
-      title: textElement("title", input.cardTitle, 42, 20, 34, 10, 34),
-      subtitle: textElement("subtitle", input.cardSubtitle, 42, 31, 34, 8, 20),
-      reward: textElement("reward", input.rewardName, 42, 42, 34, 8, 18),
-      helper: textElement("helper", "{{code}}", 44, 73, 28, 8, 18),
-      pointsLabel: textElement("pointsLabel", "النقاط", 0, 0, 1, 1, 1, false),
-      pointsValue: textElement("pointsValue", "{{points}}", 0, 0, 1, 1, 1, false),
-      pointsValueSar: textElement("pointsValueSar", "{{value}}", 0, 0, 1, 1, 1, false),
-      barcodeLabel: textElement("barcodeLabel", "رمز البطاقة", 8, 68, 34, 5, 14),
+      brand: { ...textElement("brand", input.cafeName, 48, 7, 28, 6, 11, false), color: "#17212B" },
+      title: { ...textElement("title", input.cardTitle, 49, 13, 44, 14, 34), color: "#17212B" },
+      subtitle: { ...textElement("subtitle", input.cardSubtitle, 45, 28, 48, 9, 15), color: "#17212B", fontWeight: 800 },
+      reward: { ...textElement("reward", input.rewardName, 40, 38, 53, 7, 15), color: "#64BFA9" },
+      helper: textElement("helper", "", 53, 7, 40, 6, 11, false),
+      pointsLabel: { ...textElement("pointsLabel", "نقاط الولاء", 8, 11, 28, 5, 12, true), color: "#806A5E" },
+      pointsValue: { ...textElement("pointsValue", "{{points}} نقطة", 8, 18, 28, 6, 17, true), color: "#17100D" },
+      pointsValueSar: { ...textElement("pointsValueSar", "{{value}} ر.س", 8, 26, 28, 5, 12, true), color: "#806A5E", fontWeight: 800 },
+      barcodeLabel: { ...textElement("barcodeLabel", "{{code}}", 42, 69, 49, 5, 11), color: "#17100D", align: "center" },
     },
   };
 }
@@ -173,8 +174,8 @@ export function PublicLoyaltyCardView({
           <section>
             <SharedLoyaltyCard
               card={previewCard}
-              pointsBalance={0}
-              pointValueSar={0}
+              pointsBalance={320}
+              pointValueSar={0.25}
             />
           </section>
 

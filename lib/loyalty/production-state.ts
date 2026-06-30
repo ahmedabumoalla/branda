@@ -10,15 +10,28 @@ import type { LoyaltySettings } from "@/lib/mock/loyalty";
 const fallbackProgram = {
   enabled: true,
   cardTitle: "بطاقة الولاء",
-  cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
+  cardSubtitle: "اجمع الأختام واستبدل مكافأتك بسهولة",
   purchasesRequired: 7,
-  rewardName: "منتج مجاني",
+  rewardName: "مشروب مجاني عند اكتمال البطاقة",
   stampLabel: "ختم",
   terms: "",
-  cardBackground: "#4A281D",
-  cardForeground: "#FCF8F3",
-  cardAccent: "#D9A33F",
+  cardBackground: "#F6BE18",
+  cardForeground: "#17212B",
+  cardAccent: "#64BFA9",
 };
+
+const referenceLayoutVersion = "reference-horizontal-v1" as const;
+const oldDefaultBackgrounds = new Set(["#4A281D", "#3A2117"]);
+
+function safeCardBackground(value: string | undefined) {
+  const normalized = String(value ?? "").trim();
+  return oldDefaultBackgrounds.has(normalized.toUpperCase()) ? fallbackProgram.cardBackground : normalized || fallbackProgram.cardBackground;
+}
+
+function safeCardSubtitle(value: string | undefined) {
+  const normalized = String(value ?? "").trim();
+  return !normalized || normalized === "اجمع الأختام واحصل على مكافأتك" ? fallbackProgram.cardSubtitle : normalized;
+}
 
 function textElement(
   id: LoyaltyTextElementId,
@@ -39,7 +52,7 @@ function textElement(
     height,
     fontSize,
     fontWeight: 900,
-    color: "#FCF8F3",
+    color: "#17212B",
     align: "right" as const,
     enabled,
   };
@@ -49,11 +62,37 @@ function sanitizeDesign(input: LoyaltyCardDesign, patch: Partial<LoyaltyCardDesi
   const next = { ...input, ...patch };
   return {
     ...next,
+    layoutVersion: referenceLayoutVersion,
+    subtitle: safeCardSubtitle(next.subtitle),
     stampsRequired: Math.max(1, Math.min(100, Number(next.stampsRequired || 7))),
     completedStamps: Math.max(0, Math.min(Number(next.stampsRequired || 7), Number(next.completedStamps || 0))),
+    cardBackground: safeCardBackground(next.cardBackground),
+    cardForeground: next.cardForeground || fallbackProgram.cardForeground,
+    cardAccent: next.cardAccent || fallbackProgram.cardAccent,
+    barcodeX: 40,
+    barcodeY: 46,
+    barcodeWidth: 53,
+    barcodeHeight: 22,
+    qrX: 5,
+    qrY: 50,
+    qrWidth: 31,
+    qrHeight: 42,
+    pointsBadgeX: 5,
+    pointsBadgeY: 8,
+    pointsBadgeWidth: 33,
+    pointsBadgeHeight: 27,
     textElements: {
       ...input.textElements,
       ...(next.textElements ?? {}),
+      brand: { ...input.textElements.brand, ...(next.textElements?.brand ?? {}), enabled: false, color: "#17212B", x: 48, y: 7, width: 28, height: 6, fontSize: 11 },
+      title: { ...input.textElements.title, ...(next.textElements?.title ?? {}), text: next.cardTitle || input.cardTitle, color: "#17212B", x: 49, y: 13, width: 44, height: 14, fontSize: 34 },
+      subtitle: { ...input.textElements.subtitle, ...(next.textElements?.subtitle ?? {}), text: safeCardSubtitle(next.subtitle || input.subtitle), color: "#17212B", x: 45, y: 28, width: 48, height: 9, fontSize: 15, fontWeight: 800 },
+      reward: { ...input.textElements.reward, ...(next.textElements?.reward ?? {}), text: next.rewardTitle || input.rewardTitle, color: next.cardAccent || fallbackProgram.cardAccent, x: 40, y: 38, width: 53, height: 7, fontSize: 15 },
+      helper: { ...input.textElements.helper, ...(next.textElements?.helper ?? {}), enabled: false, x: 53, y: 7, width: 40, height: 6, fontSize: 11 },
+      pointsLabel: { ...input.textElements.pointsLabel, ...(next.textElements?.pointsLabel ?? {}), text: "نقاط الولاء", enabled: true, x: 8, y: 11, width: 28, height: 5, fontSize: 12, color: "#806A5E" },
+      pointsValue: { ...input.textElements.pointsValue, ...(next.textElements?.pointsValue ?? {}), text: "{{points}} نقطة", enabled: true, x: 8, y: 18, width: 28, height: 6, fontSize: 17, color: "#17100D" },
+      pointsValueSar: { ...input.textElements.pointsValueSar, ...(next.textElements?.pointsValueSar ?? {}), text: "{{value}} ر.س", enabled: true, x: 8, y: 26, width: 28, height: 5, fontSize: 12, color: "#806A5E" },
+      barcodeLabel: { ...input.textElements.barcodeLabel, ...(next.textElements?.barcodeLabel ?? {}), text: "{{code}}", x: 42, y: 69, width: 49, height: 5, fontSize: 11, color: "#17100D", align: "center" },
     },
   };
 }
@@ -69,17 +108,18 @@ export function buildLoyaltyCardDesign(input: {
   const completed = Math.max(0, Math.min(required, Number(input.card?.stampsInCycle ?? 0)));
   const code = String(input.card?.cardCode ?? "");
   const base: LoyaltyCardDesign = {
+    layoutVersion: referenceLayoutVersion,
     enabled: Boolean(program.enabled ?? true),
     brandName: input.cafeName,
     cardTitle: String(program.cardTitle || fallbackProgram.cardTitle),
-    subtitle: String(program.cardSubtitle || fallbackProgram.cardSubtitle),
+    subtitle: safeCardSubtitle(String(program.cardSubtitle || fallbackProgram.cardSubtitle)),
     rewardTitle: String(program.rewardName || fallbackProgram.rewardName),
     supportingText: "اعرض البطاقة عند الكاشير",
     stampLabel: String(program.stampLabel || fallbackProgram.stampLabel),
     terms: String(program.terms || ""),
     stampsRequired: required,
     completedStamps: completed,
-    cardBackground: String(program.cardBackground || fallbackProgram.cardBackground),
+    cardBackground: safeCardBackground(String(program.cardBackground || fallbackProgram.cardBackground)),
     cardForeground: String(program.cardForeground || fallbackProgram.cardForeground),
     cardAccent: String(program.cardAccent || fallbackProgram.cardAccent),
     logoRemoveLightBackground: false,
@@ -94,30 +134,30 @@ export function buildLoyaltyCardDesign(input: {
     logoHeight: 16,
     progressIcon: "star",
     barcodeVisible: true,
-    barcodeX: 8,
-    barcodeY: 73,
-    barcodeWidth: 34,
-    barcodeHeight: 15,
-    qrX: 8,
-    qrY: 8,
-    qrWidth: 18,
-    qrHeight: 18,
-    pointsBadgeVisible: Boolean(input.pointsVisible),
-    pointsBadgeX: 8,
-    pointsBadgeY: 62,
-    pointsBadgeWidth: 24,
-    pointsBadgeHeight: 10,
+    barcodeX: 40,
+    barcodeY: 46,
+    barcodeWidth: 53,
+    barcodeHeight: 22,
+    qrX: 5,
+    qrY: 50,
+    qrWidth: 31,
+    qrHeight: 42,
+    pointsBadgeVisible: true,
+    pointsBadgeX: 5,
+    pointsBadgeY: 8,
+    pointsBadgeWidth: 33,
+    pointsBadgeHeight: 27,
     sampleCode: code || "LOYALTY-CARD",
     textElements: {
-      brand: textElement("brand", input.cafeName, 42, 10, 28, 8, 22),
-      title: textElement("title", String(program.cardTitle || fallbackProgram.cardTitle), 42, 20, 34, 10, 34),
-      subtitle: textElement("subtitle", String(program.cardSubtitle || fallbackProgram.cardSubtitle), 42, 31, 34, 8, 20),
-      reward: textElement("reward", String(program.rewardName || fallbackProgram.rewardName), 42, 42, 34, 8, 18),
-      helper: textElement("helper", "{{code}}", 44, 73, 28, 8, 18),
-      pointsLabel: textElement("pointsLabel", "النقاط", 8, 56, 22, 5, 12, Boolean(input.pointsVisible)),
-      pointsValue: textElement("pointsValue", "{{points}}", 8, 61, 22, 7, 20, Boolean(input.pointsVisible)),
-      pointsValueSar: textElement("pointsValueSar", "{{value}}", 8, 68, 22, 5, 11, Boolean(input.pointsVisible)),
-      barcodeLabel: textElement("barcodeLabel", "رمز البطاقة", 8, 68, 34, 5, 14),
+      brand: { ...textElement("brand", input.cafeName, 48, 7, 28, 6, 11, false), color: "#17212B" },
+      title: textElement("title", String(program.cardTitle || fallbackProgram.cardTitle), 49, 13, 44, 14, 34),
+      subtitle: { ...textElement("subtitle", safeCardSubtitle(String(program.cardSubtitle || fallbackProgram.cardSubtitle)), 45, 28, 48, 9, 15), fontWeight: 800 },
+      reward: { ...textElement("reward", String(program.rewardName || fallbackProgram.rewardName), 40, 38, 53, 7, 15), color: String(program.cardAccent || fallbackProgram.cardAccent) },
+      helper: textElement("helper", "", 53, 7, 40, 6, 11, false),
+      pointsLabel: { ...textElement("pointsLabel", "نقاط الولاء", 8, 11, 28, 5, 12, true), color: "#806A5E" },
+      pointsValue: { ...textElement("pointsValue", "{{points}} نقطة", 8, 18, 28, 6, 17, true), color: "#17100D" },
+      pointsValueSar: { ...textElement("pointsValueSar", "{{value}} ر.س", 8, 26, 28, 5, 12, true), color: "#806A5E", fontWeight: 800 },
+      barcodeLabel: { ...textElement("barcodeLabel", "{{code}}", 42, 69, 49, 5, 11), color: "#17100D", align: "center" },
     },
   };
 
@@ -144,13 +184,13 @@ export function buildLoyaltyPointsState(settings: LoyaltySettings): LoyaltyPoint
   const firstEarn = settings.earnRules.find((rule) => rule.enabled) ?? settings.earnRules[0];
   return {
     enabled: Boolean(settings.enabled),
-    pointValueSar: 0,
+    pointValueSar: 0.25,
     minimumRedemptionPoints: Number(firstRedemption?.pointsCost ?? 0),
     earningRule: firstEarn?.title || `${settings.pointsPerSar} نقطة لكل ريال`,
     redemptionRule: firstRedemption?.title || "لا توجد قاعدة استبدال مفعلة",
     expiryDays: 0,
     policyText: firstRedemption?.description || "تظهر نقاط الولاء حسب القواعد المحفوظة في لوحة التحكم.",
-    customerPointsBalance: 0,
+    customerPointsBalance: 320,
     usedPoints: 0,
     earnedLastOperation: 0,
     sampleInvoiceAmount: 0,

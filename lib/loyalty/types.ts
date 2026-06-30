@@ -34,6 +34,7 @@ export type LoyaltyLogoPlacement =
   | "custom";
 
 export type LoyaltyCardDesign = {
+  layoutVersion?: "reference-horizontal-v1";
   enabled: boolean;
   brandName: string;
   cardTitle: string;

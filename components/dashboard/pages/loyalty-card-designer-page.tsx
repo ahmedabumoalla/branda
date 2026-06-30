@@ -71,9 +71,9 @@ const layerLabels: Record<LoyaltyGraphicLayer, string> = {
 
 const layerDefaults: Record<LoyaltyGraphicLayer, { x: number; y: number; width: number; height: number }> = {
   logo: { x: 84, y: 6, width: 10, height: 10 },
-  points: { x: 7, y: 13, width: 29, height: 19 },
-  barcode: { x: 42, y: 45, width: 48, height: 21 },
-  qr: { x: 7, y: 54, width: 25, height: 36 },
+  points: { x: 5, y: 8, width: 33, height: 27 },
+  barcode: { x: 40, y: 46, width: 53, height: 22 },
+  qr: { x: 5, y: 50, width: 31, height: 42 },
 };
 
 const textElementOrder: LoyaltyTextElementId[] = [

@@ -98,20 +98,34 @@ export type LoyaltyCardsDashboard = {
 const defaultProgram: LoyaltyCardProgram = {
   enabled: true,
   cardTitle: "بطاقة الولاء",
-  cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
+  cardSubtitle: "اجمع الأختام واستبدل مكافأتك بسهولة",
   purchasesRequired: 7,
   rewardProductId: null,
   rewardProductName: "",
-  rewardName: "منتج مجاني",
+  rewardName: "مشروب مجاني عند اكتمال البطاقة",
   stampLabel: "ختم",
   terms: "تطبق الشروط والأحكام الخاصة بالعلامة التجارية",
-  cardBackground: "#4A281D",
-  cardForeground: "#FCF8F3",
-  cardAccent: "#D9A33F",
+  cardBackground: "#F6BE18",
+  cardForeground: "#17212B",
+  cardAccent: "#64BFA9",
   cardDesign: null,
   appleWalletEnabled: false,
   googleWalletEnabled: false,
 };
+
+function safeCardBackground(value: unknown) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || normalized.toUpperCase() === "#4A281D" || normalized.toUpperCase() === "#3A2117") {
+    return defaultProgram.cardBackground;
+  }
+  return normalized;
+}
+
+function safeCardSubtitle(value: unknown) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || normalized === "اجمع الأختام واحصل على مكافأتك") return defaultProgram.cardSubtitle;
+  return normalized;
+}
 
 function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -124,7 +138,7 @@ function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCar
   return {
     enabled: Boolean(row.enabled ?? true),
     cardTitle: String(row.card_title ?? defaultProgram.cardTitle),
-    cardSubtitle: String(row.card_subtitle ?? defaultProgram.cardSubtitle),
+    cardSubtitle: safeCardSubtitle(row.card_subtitle ?? defaultProgram.cardSubtitle),
     purchasesRequired: Number(row.purchases_required ?? 7),
     rewardProductId: row.reward_product_id ? String(row.reward_product_id) : null,
     rewardProductName:
@@ -134,7 +148,7 @@ function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCar
     rewardName: String(row.reward_name ?? defaultProgram.rewardName),
     stampLabel: String(row.stamp_label ?? defaultProgram.stampLabel),
     terms: String(row.terms ?? defaultProgram.terms),
-    cardBackground: String(row.card_background ?? defaultProgram.cardBackground),
+    cardBackground: safeCardBackground(row.card_background ?? defaultProgram.cardBackground),
     cardForeground: String(row.card_foreground ?? defaultProgram.cardForeground),
     cardAccent: String(row.card_accent ?? defaultProgram.cardAccent),
     cardDesign: mapCardDesign(row.card_design),
