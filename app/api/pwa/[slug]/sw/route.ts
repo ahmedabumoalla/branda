@@ -8,9 +8,29 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', () => {
-  // Keep a fetch handler so Chrome treats the page as PWA-capable.
-  // Do not call respondWith here; the browser should handle requests normally.
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+
+  if (!request || request.method !== 'GET') {
+    return;
+  }
+
+  event.respondWith(
+    fetch(request).catch(() => {
+      if (request.mode === 'navigate') {
+        return new Response('', {
+          status: 504,
+          statusText: 'Offline',
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      }
+
+      return new Response('', {
+        status: 504,
+        statusText: 'Offline',
+      });
+    })
+  );
 });
 `;
 
