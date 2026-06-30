@@ -18,21 +18,6 @@ function getCafeIconRoute(slug: string) {
   return `/api/public/cafe/${encodeURIComponent(slug)}/favicon`;
 }
 
-function getPwaInstallPromptCaptureScript() {
-  return `
-(function () {
-  window.__barndaksaDeferredInstallPrompt = null;
-  window.__barndaksaPwaInstallReady = false;
-  window.addEventListener("beforeinstallprompt", function (event) {
-    event.preventDefault();
-    window.__barndaksaDeferredInstallPrompt = event;
-    window.__barndaksaPwaInstallReady = true;
-    window.dispatchEvent(new Event("barndaksa:pwa-install-ready"));
-  });
-})();
-`;
-}
-
 async function loadCafeMeta(slug: string) {
   const [cafe, settings, identity] = await Promise.all([
     getCafeBySlug(slug).catch(() => null),
@@ -81,10 +66,6 @@ export default async function CafeSlugLayout({ children, params }: Props) {
 
   return (
     <>
-      <script
-        id="barndaksa-pwa-install-prompt-capture"
-        dangerouslySetInnerHTML={{ __html: getPwaInstallPromptCaptureScript() }}
-      />
       <CafeFaviconController slug={slug} />
       {children}
     </>

@@ -1,19 +1,7 @@
 "use client";
 
-import { Download, RefreshCw, Smartphone } from "lucide-react";
+import { Download, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: string }>;
-};
-
-declare global {
-  interface Window {
-    __barndaksaDeferredInstallPrompt?: BeforeInstallPromptEvent | null;
-    __barndaksaPwaInstallReady?: boolean;
-  }
-}
 
 type Props = {
   slug: string;
@@ -21,209 +9,77 @@ type Props = {
   compact?: boolean;
 };
 
-const ANDROID_CHROME_INSTALL_FALLBACK =
-  "من قائمة Chrome اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية";
-
-function detectInstallDevice() {
-  const userAgent = window.navigator.userAgent;
-  const platform = window.navigator.platform;
-  const touchPoints = window.navigator.maxTouchPoints || 0;
-  const isIos =
-    /iphone|ipad|ipod/i.test(userAgent) ||
-    (platform === "MacIntel" && touchPoints > 1);
-
-  return {
-    isIos,
-    isAndroidChrome: /android/i.test(userAgent) && /chrome|crios/i.test(userAgent),
-  };
-}
-
-function isStandaloneDisplay() {
-  return Boolean(
-    window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone ||
-      document.referrer.startsWith("android-app://"),
-  );
-}
-
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [installing, setInstalling] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isIos, setIsIos] = useState(false);
-  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
 
   useEffect(() => {
     const installedKey = `barndaksa_pwa_installed_${slug}`;
-    const device = detectInstallDevice();
-    setIsIos(device.isIos);
-    setIsAndroidChrome(device.isAndroidChrome);
-
-    if (localStorage.getItem(installedKey) === "1" || isStandaloneDisplay()) {
+    const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
+    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+    if (localStorage.getItem(installedKey) === "1" || mediaStandalone || navigatorStandalone) {
       setInstalled(true);
     }
 
-    const manifestHref = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
-    let manifest = Array.from(document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]')).find(
-      (link) => link.getAttribute("href") === manifestHref || link.href.includes(manifestHref),
-    );
-    if (!manifest) {
-      manifest = document.createElement("link");
-      manifest.rel = "manifest";
-      manifest.href = manifestHref;
-      document.head.appendChild(manifest);
-    }
+    const manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
+    document.head.appendChild(manifest);
 
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker.register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-        scope: `/c/${encodeURIComponent(slug)}`,
+        scope: `/app/${encodeURIComponent(slug)}/`,
       });
     }
 
-    const syncInstallPrompt = () => {
-      const promptEvent = window.__barndaksaDeferredInstallPrompt;
-      if (promptEvent) {
-        setMessage("");
-      }
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
-      window.__barndaksaDeferredInstallPrompt = null;
-      window.__barndaksaPwaInstallReady = false;
       setInstalled(true);
       setProgress(100);
-      setMessage("");
     };
 
-    syncInstallPrompt();
-    const fallbackTimer = window.setTimeout(() => {
-      if (device.isAndroidChrome && !window.__barndaksaDeferredInstallPrompt && !isStandaloneDisplay()) {
-        setMessage(ANDROID_CHROME_INSTALL_FALLBACK);
-      }
-    }, 5000);
-
-    window.addEventListener("barndaksa:pwa-install-ready", syncInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
-      window.clearTimeout(fallbackTimer);
-      window.removeEventListener("barndaksa:pwa-install-ready", syncInstallPrompt);
+      window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", appInstalledHandler);
+      manifest.remove();
     };
   }, [slug]);
 
   async function install() {
-    if (installing) return;
-    if (isStandaloneDisplay()) {
-      localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
-      setInstalled(true);
-      return;
-    }
+    setProgress(65);
+    const promptEvent = installPrompt as Event & {
+      prompt?: () => Promise<void>;
+      userChoice?: Promise<{ outcome: string }>;
+    };
 
-    const promptEvent = window.__barndaksaDeferredInstallPrompt;
-    if (promptEvent) {
-      setInstalling(true);
-      setMessage("");
-      setProgress(65);
+    if (promptEvent?.prompt) {
       await promptEvent.prompt();
-      let choice: { outcome: string } | null = null;
-      try {
-        choice = await promptEvent.userChoice;
-      } catch {}
-      setInstalling(false);
-
+      const choice = await promptEvent.userChoice?.catch(() => null);
       if (choice?.outcome === "accepted") {
-        window.__barndaksaDeferredInstallPrompt = null;
-        window.__barndaksaPwaInstallReady = false;
         localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
         setInstalled(true);
         setProgress(100);
         return;
       }
-
       setProgress(90);
-      setMessage("");
+      setMessage("إذا لم يظهر التثبيت استخدم إضافة إلى الشاشة الرئيسية من المتصفح");
       return;
     }
 
-    if (isIos) {
-      setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
-      return;
-    }
-
-    if (isAndroidChrome) {
-      setMessage((current) => (current === ANDROID_CHROME_INSTALL_FALLBACK ? current : ""));
-      return;
-    }
-
-    setMessage("التثبيت غير متاح من المتصفح الحالي");
+    setProgress(90);
+    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
   }
 
-  async function refreshPwa() {
-    setRefreshing(true);
-    setMessage("");
-
-    const manifestHref = `/api/pwa/${encodeURIComponent(slug)}/manifest?refresh=${Date.now()}`;
-    await fetch(manifestHref, { cache: "reload" }).catch(() => null);
-
-    if ("serviceWorker" in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(
-        registrations
-          .filter((registration) => registration.active?.scriptURL.includes(`/api/pwa/${encodeURIComponent(slug)}/sw`))
-          .map((registration) => registration.update().catch(() => undefined)),
-      );
-      navigator.serviceWorker.controller?.postMessage({ type: "BARNDAKSA_PWA_REFRESH" });
-    }
-
-    setRefreshing(false);
-    setMessage("تم طلب تحديث التطبيق، أعد فتحه لتحديث الاسم واللوجو");
-  }
-
-  if (installed) {
-    return (
-      <div dir="rtl" className="fixed left-3 top-3 z-50 flex max-w-[230px] flex-col items-start gap-2">
-        <button
-          type="button"
-          onClick={() => void refreshPwa()}
-          disabled={refreshing}
-          aria-label="تحديث بيانات التطبيق"
-          title="تحديث بيانات التطبيق"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--ci-border,#E7D7C6)] bg-white/88 text-[var(--ci-primary-bg,#6B3A25)] shadow-[0_12px_30px_rgba(23,20,18,0.14)] backdrop-blur transition active:scale-95 disabled:cursor-wait disabled:opacity-80"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
-        {message ? (
-          <p className="rounded-2xl border border-[var(--ci-border,#E7D7C6)] bg-white/92 px-3 py-2 text-right text-[11px] font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)] shadow-sm backdrop-blur">
-            {message}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (isIos) {
-    const iosMessage = 'في iPhone افتح المشاركة ثم اختر "إضافة إلى الشاشة الرئيسية"';
-    if (compact) {
-      return (
-        <section dir="rtl" className="w-full">
-          <div className="mx-auto max-w-[320px] rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 p-3 text-center text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur">
-            {iosMessage}
-          </div>
-        </section>
-      );
-    }
-
-    return (
-      <section dir="rtl" className="mx-auto w-full max-w-6xl px-4 py-8">
-        <div className="rounded-[28px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 p-5 text-center text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur">
-          {iosMessage}
-        </div>
-      </section>
-    );
-  }
+  if (installed) return null;
 
   if (compact) {
     return (
@@ -231,12 +87,11 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
         <div className="mx-auto flex w-full max-w-[320px] flex-col items-center gap-2">
           <button
             type="button"
-            onClick={() => void install()}
-            disabled={installing}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
+            onClick={install}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98]"
           >
             <Download className="h-5 w-5" />
-            حمل التطبيق
+            حمل التطبيق لتجربة أكثر جمالية
           </button>
           {message ? (
             <p className="max-w-xs text-center text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
@@ -261,12 +116,11 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
           </div>
           <button
             type="button"
-            onClick={() => void install()}
-            disabled={installing}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))] disabled:cursor-wait disabled:opacity-80"
+            onClick={install}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))]"
           >
             <Download className="h-5 w-5" />
-            حمل التطبيق
+            تحميل التطبيق السريع
           </button>
         </div>
         {progress > 0 ? (
