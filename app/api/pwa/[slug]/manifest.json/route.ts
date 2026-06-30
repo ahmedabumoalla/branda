@@ -42,7 +42,7 @@ async function loadManifest(slug: string) {
 
   const name = settings?.cafeName || cafe?.name || "Barndaksa";
   const startUrl = `/c/${encodeURIComponent(slug)}`;
-  const scope = `/c/`;
+  const scope = startUrl;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,
@@ -80,7 +80,7 @@ export async function GET(_request: Request, { params }: Props) {
     headers: {
       "Cache-Control": publicCacheHeader(MANIFEST_TTL_SECONDS),
       "Content-Type": "application/manifest+json; charset=utf-8",
-      "x-barndaksa-pwa-manifest": "brand-icon-json-v2",
+      "x-barndaksa-pwa-manifest": "brand-scoped-v1",
     },
   });
 }
