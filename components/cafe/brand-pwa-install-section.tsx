@@ -21,14 +21,8 @@ function isStandaloneDisplay() {
   );
 }
 
-function debugPwa(...args: unknown[]) {
-  if (process.env.NODE_ENV !== "production") {
-    console.debug("[branda-pwa-install]", ...args);
-  }
-}
-
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,19 +41,18 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     if ("serviceWorker" in navigator) {
       void navigator.serviceWorker
         .register(`/api/pwa/${encodeURIComponent(slug)}/sw`, {
-          scope: `/c/${encodeURIComponent(slug)}`,
+          scope: `/c/${encodeURIComponent(slug)}/`,
         })
         .then((registration) => {
-          debugPwa("service worker registered", registration.scope);
+          console.warn("[brand-pwa] sw registered", registration.scope);
         });
     }
 
     const handler = (event: Event) => {
       event.preventDefault();
-      const promptEvent = event as BeforeInstallPromptEvent;
-      setInstallPrompt(promptEvent);
+      setInstallPrompt(event);
       setMessage("");
-      debugPwa("beforeinstallprompt received");
+      console.warn("[brand-pwa] beforeinstallprompt received");
     };
 
     const appInstalledHandler = () => {
@@ -79,10 +72,10 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
   async function install() {
     setProgress(65);
-    const promptEvent = installPrompt?.prompt ? installPrompt : null;
-    debugPwa("install clicked", { hasInstallPrompt: Boolean(promptEvent) });
+    console.warn("[brand-pwa] install clicked", { hasPrompt: Boolean(installPrompt) });
+    const promptEvent = installPrompt as BeforeInstallPromptEvent | null;
 
-    if (promptEvent) {
+    if (promptEvent?.prompt) {
       setMessage("");
       await promptEvent.prompt();
       const choice = await promptEvent.userChoice?.catch(() => null);
