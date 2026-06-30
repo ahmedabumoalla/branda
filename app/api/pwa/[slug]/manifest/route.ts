@@ -24,6 +24,15 @@ function iconSrc(slug: string, size: 192 | 512, purpose: "any" | "maskable", ver
   return `/api/public/cafe/${encodeURIComponent(slug)}/favicon?${params.toString()}`;
 }
 
+function manifestIcon(slug: string, size: 192 | 512, purpose: "any" | "maskable", version: string) {
+  return {
+    src: iconSrc(slug, size, purpose, version),
+    sizes: `${size}x${size}`,
+    type: "image/svg+xml",
+    purpose,
+  };
+}
+
 async function loadManifest(slug: string) {
   const [cafe, settings, identity] = await Promise.all([
     getCafeBySlug(slug).catch(() => null),
@@ -33,7 +42,7 @@ async function loadManifest(slug: string) {
 
   const name = settings?.cafeName || cafe?.name || "Barndaksa";
   const startUrl = `/c/${encodeURIComponent(slug)}`;
-  const scope = `/c/`;
+  const scope = startUrl;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,
@@ -42,6 +51,7 @@ async function loadManifest(slug: string) {
   );
 
   return {
+    id: startUrl,
     name,
     short_name: name.slice(0, 12),
     description: `تطبيق ${name} على منصة برندة`,
@@ -53,26 +63,10 @@ async function loadManifest(slug: string) {
     background_color: "#F8F4EF",
     theme_color: "#4A281D",
     icons: [
-      {
-        src: iconSrc(slug, 192, "any", version),
-        sizes: "192x192",
-        purpose: "any",
-      },
-      {
-        src: iconSrc(slug, 512, "any", version),
-        sizes: "512x512",
-        purpose: "any",
-      },
-      {
-        src: iconSrc(slug, 192, "maskable", version),
-        sizes: "192x192",
-        purpose: "maskable",
-      },
-      {
-        src: iconSrc(slug, 512, "maskable", version),
-        sizes: "512x512",
-        purpose: "maskable",
-      },
+      manifestIcon(slug, 192, "any", version),
+      manifestIcon(slug, 512, "any", version),
+      manifestIcon(slug, 192, "maskable", version),
+      manifestIcon(slug, 512, "maskable", version),
     ],
   };
 }
@@ -85,7 +79,8 @@ export async function GET(_request: Request, { params }: Props) {
   return NextResponse.json(manifest, {
     headers: {
       "Cache-Control": publicCacheHeader(MANIFEST_TTL_SECONDS),
-      "x-barndaksa-pwa-manifest": "brand-icon-v4",
+      "Content-Type": "application/manifest+json; charset=utf-8",
+      "x-barndaksa-pwa-manifest": "brand-scoped-legacy-v1",
     },
   });
 }
