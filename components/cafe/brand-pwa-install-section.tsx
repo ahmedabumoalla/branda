@@ -8,10 +8,21 @@ type BeforeInstallPromptEvent = Event & {
   userChoice?: Promise<{ outcome: string }>;
 };
 
+type InstallDevice = "unknown" | "ios" | "android-chrome" | "other";
+type InstallStage = "idle" | "preparing" | "opening" | "waiting" | "done";
+
 type Props = {
   slug: string;
   cafeName: string;
   compact?: boolean;
+};
+
+const INSTALL_STAGE_TEXT: Record<InstallStage, string> = {
+  idle: "",
+  preparing: "جاري تجهيز التطبيق",
+  opening: "فتح نافذة التثبيت",
+  waiting: "بانتظار تأكيدك",
+  done: "تم تجهيز التطبيق",
 };
 
 function installedStorageKey(slug: string) {
@@ -21,6 +32,31 @@ function installedStorageKey(slug: string) {
 function pwaManifestHref(slug: string, refresh = false) {
   const base = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
   return refresh ? `${base}?refresh=${Date.now()}` : base;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function detectInstallDevice(): InstallDevice {
+  const userAgent = window.navigator.userAgent;
+  const platform = window.navigator.platform;
+  const touchPoints = window.navigator.maxTouchPoints || 0;
+  const isIos =
+    /iphone|ipad|ipod/i.test(userAgent) ||
+    (platform === "MacIntel" && touchPoints > 1);
+
+  if (isIos) return "ios";
+  if (/android/i.test(userAgent) && /chrome|crios/i.test(userAgent)) {
+    return "android-chrome";
+  }
+  return "other";
+}
+
+function isStandaloneDisplay() {
+  const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
+  const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+  return Boolean(mediaStandalone || navigatorStandalone);
 }
 
 function ensureManifestLink(slug: string, refresh = false) {
@@ -98,7 +134,7 @@ function PwaFloatingAction({
   onClick: () => void;
 }) {
   const Icon = mode === "install" ? Download : RefreshCw;
-  const label = mode === "install" ? "تجربة تثبيت التطبيق" : "تحديث بيانات التطبيق";
+  const label = mode === "install" ? "إعادة محاولة تثبيت التطبيق" : "تحديث بيانات التطبيق";
 
   return (
     <div dir="rtl" className="fixed left-3 top-3 z-50 flex max-w-[230px] flex-col items-start gap-2">
@@ -120,18 +156,76 @@ function PwaFloatingAction({
   );
 }
 
+function InstallProgress({ progress, stage }: { progress: number; stage: InstallStage }) {
+  if (progress <= 0 || stage === "idle") return null;
+
+  return (
+    <div className="mt-4 rounded-2xl bg-white/10 p-3">
+      <div className="mb-2 flex items-center justify-between text-xs font-black text-current/75">
+        <span>{INSTALL_STAGE_TEXT[stage]}</span>
+        <span>{progress}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-current/15">
+        <div
+          className="h-full rounded-full bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function IosInstallInstructions({ compact }: { compact: boolean }) {
+  const content = (
+    <>
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--ci-button-bg,#6B3A25)]/10 text-[var(--ci-button-bg,#6B3A25)]">
+          <Smartphone className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 text-right">
+          <p className="text-sm font-black text-[var(--ci-page-fg,#171412)]">تثبيت التطبيق على iPhone</p>
+          <p className="mt-1 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
+            اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".
+          </p>
+        </div>
+      </div>
+    </>
+  );
+
+  if (compact) {
+    return (
+      <section dir="rtl" className="w-full">
+        <div className="mx-auto w-full max-w-[320px] rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 p-3 shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur">
+          {content}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section dir="rtl" className="mx-auto w-full max-w-6xl px-4 py-8">
+      <div className="rounded-[28px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 p-5 shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur">
+        {content}
+      </div>
+    </section>
+  );
+}
+
 export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
+  const [device, setDevice] = useState<InstallDevice>("unknown");
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState<InstallStage>("idle");
   const [refreshing, setRefreshing] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     const installedKey = installedStorageKey(slug);
-    const mediaStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
-    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-    if (localStorage.getItem(installedKey) === "1" || mediaStandalone || navigatorStandalone) {
+    setDevice(detectInstallDevice());
+    if (localStorage.getItem(installedKey) === "1" || isStandaloneDisplay()) {
       setInstalled(true);
     }
 
@@ -141,12 +235,16 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     const handler = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
+      setInstallDismissed(false);
+      setMessage("");
     };
 
     const appInstalledHandler = () => {
       localStorage.setItem(installedKey, "1");
       setInstalled(true);
       setInstallPrompt(null);
+      setInstallDismissed(false);
+      setStage("done");
       setProgress(100);
     };
 
@@ -160,34 +258,62 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
   }, [slug]);
 
   async function install() {
-    setProgress(65);
+    if (installing) return;
+    setInstalling(true);
+    setMessage("");
+    setStage("preparing");
+    setProgress(0);
+    await wait(120);
+    setProgress(25);
+    await wait(160);
 
-    if (installPrompt?.prompt) {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice?.catch(() => null);
-      setInstallPrompt(null);
-      if (choice?.outcome === "accepted") {
-        localStorage.setItem(installedStorageKey(slug), "1");
-        setInstalled(true);
-        setProgress(100);
-        return;
-      }
-      setProgress(90);
-      setMessage("إذا لم يظهر التثبيت استخدم إضافة إلى الشاشة الرئيسية من المتصفح");
+    if (!installPrompt?.prompt) {
+      setInstalling(false);
+      setStage("idle");
+      setProgress(0);
+      setMessage(
+        device === "ios"
+          ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".'
+          : "نافذة التثبيت غير جاهزة الآن. جرّب تحديث الصفحة أو افتحها من Chrome.",
+      );
       return;
     }
 
-    setProgress(90);
-    setMessage("في iPhone افتح المشاركة ثم اختر إضافة إلى الشاشة الرئيسية");
+    setStage("opening");
+    setProgress(50);
+    await installPrompt.prompt();
+    setStage("waiting");
+    setProgress(75);
+
+    const choice = await installPrompt.userChoice?.catch(() => null);
+    setInstallPrompt(null);
+
+    if (choice?.outcome === "accepted") {
+      localStorage.setItem(installedStorageKey(slug), "1");
+      setStage("done");
+      setProgress(100);
+      setMessage("تم تجهيز التطبيق");
+      setInstalled(true);
+      setInstalling(false);
+      return;
+    }
+
+    setInstalling(false);
+    setInstallDismissed(true);
+    setStage("idle");
+    setProgress(0);
+    setMessage("لم يتم التثبيت. يمكنك المحاولة مرة أخرى من الأيقونة الصغيرة.");
   }
 
   async function refreshPwa() {
     setRefreshing(true);
     setMessage("");
     await refreshCafePwa(slug);
-    setMessage("يتم تحديث اسم التطبيق والشعار عند إعادة فتح التطبيق أو تحديث الصفحة");
+    setMessage("أعد فتح التطبيق لتحديث الاسم واللوجو");
     setRefreshing(false);
   }
+
+  if (device === "unknown") return null;
 
   if (installed) {
     return (
@@ -200,18 +326,35 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     );
   }
 
+  if (device === "ios") {
+    return <IosInstallInstructions compact={compact} />;
+  }
+
+  if (installDismissed) {
+    return (
+      <PwaFloatingAction
+        mode="install"
+        busy={installing}
+        message={message}
+        onClick={() => void install()}
+      />
+    );
+  }
+
   if (compact) {
     return (
       <section dir="rtl" className="w-full">
         <div className="mx-auto flex w-full max-w-[320px] flex-col items-center gap-2">
           <button
             type="button"
-            onClick={install}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98]"
+            onClick={() => void install()}
+            disabled={installing}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white/86 px-5 py-3 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-[0_12px_34px_rgba(23,20,18,0.08)] backdrop-blur transition hover:-translate-y-0.5 active:scale-[0.98] disabled:cursor-wait disabled:opacity-80"
           >
             <Download className="h-5 w-5" />
             حمل التطبيق لتجربة أكثر جمالية
           </button>
+          <InstallProgress progress={progress} stage={stage} />
           {message ? (
             <p className="max-w-xs text-center text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
               {message}
@@ -235,24 +378,15 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
           </div>
           <button
             type="button"
-            onClick={install}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))]"
+            onClick={() => void install()}
+            disabled={installing}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-6 py-4 font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))] disabled:cursor-wait disabled:opacity-80"
           >
             <Download className="h-5 w-5" />
             تحميل التطبيق السريع
           </button>
         </div>
-        {progress > 0 ? (
-          <div className="mt-5 rounded-2xl bg-white/10 p-3">
-            <div className="mb-2 flex items-center justify-between text-xs font-black text-white/74">
-              <span>تجهيز التطبيق السريع</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/15">
-              <div className="h-full rounded-full bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] transition-all duration-500" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-        ) : null}
+        <InstallProgress progress={progress} stage={stage} />
         {message ? (
           <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/10 p-4 text-sm font-bold">
             <Smartphone className="h-5 w-5" />

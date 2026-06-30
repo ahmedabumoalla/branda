@@ -228,6 +228,176 @@ function InstallMiniButton({ slug }: { slug: string }) {
   );
 }
 
+function InstallMiniButtonFixed({ slug }: { slug: string }) {
+  const [installPrompt, setInstallPrompt] = useState<(Event & { prompt?: () => Promise<void>; userChoice?: Promise<{ outcome: string }> }) | null>(null);
+  const [message, setMessage] = useState("");
+  const [installed, setInstalled] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState("");
+  const [isIos, setIsIos] = useState(false);
+
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent;
+    const ios =
+      /iphone|ipad|ipod/i.test(userAgent) ||
+      (window.navigator.platform === "MacIntel" && (window.navigator.maxTouchPoints || 0) > 1);
+    const installedKey = `barndaksa_pwa_installed_${slug}`;
+    const standalone =
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+
+    setIsIos(ios);
+    if (standalone || localStorage.getItem(installedKey) === "1") {
+      setInstalled(true);
+    }
+
+    const manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
+    document.head.appendChild(manifest);
+
+    if ("serviceWorker" in navigator) {
+      const swPath = `/api/pwa/${encodeURIComponent(slug)}/sw`;
+      void navigator.serviceWorker.register(swPath, { scope: `/c/${encodeURIComponent(slug)}` });
+      void navigator.serviceWorker.register(swPath, { scope: `/app/${encodeURIComponent(slug)}` });
+    }
+
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as Event & { prompt?: () => Promise<void>; userChoice?: Promise<{ outcome: string }> });
+      setMessage("");
+    };
+
+    const appInstalledHandler = () => {
+      localStorage.setItem(installedKey, "1");
+      setInstalled(true);
+      setInstallPrompt(null);
+      setStage("تم تجهيز التطبيق");
+      setProgress(100);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", appInstalledHandler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", appInstalledHandler);
+      manifest.remove();
+    };
+  }, [slug]);
+
+  async function install() {
+    if (installing) return;
+    setInstalling(true);
+    setMessage("");
+    setStage("جاري تجهيز التطبيق");
+    setProgress(0);
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    setProgress(25);
+
+    if (!installPrompt?.prompt) {
+      setInstalling(false);
+      setProgress(0);
+      setStage("");
+      setMessage(isIos ? 'اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".' : "نافذة التثبيت غير جاهزة الآن. جرّب فتح الصفحة من Chrome.");
+      return;
+    }
+
+    setStage("فتح نافذة التثبيت");
+    setProgress(50);
+    await installPrompt.prompt();
+    setStage("بانتظار تأكيدك");
+    setProgress(75);
+
+    const choice = await installPrompt.userChoice?.catch(() => null);
+    setInstallPrompt(null);
+    setInstalling(false);
+
+    if (choice?.outcome === "accepted") {
+      localStorage.setItem(`barndaksa_pwa_installed_${slug}`, "1");
+      setStage("تم تجهيز التطبيق");
+      setProgress(100);
+      setInstalled(true);
+      return;
+    }
+
+    setProgress(0);
+    setStage("");
+    setMessage("لم يتم التثبيت. يمكنك المحاولة مرة أخرى لاحقًا.");
+  }
+
+  async function refreshPwa() {
+    const manifestHref = `/api/pwa/${encodeURIComponent(slug)}/manifest?refresh=${Date.now()}`;
+    document.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]').forEach((link) => {
+      if (link.href.includes(`/api/pwa/${encodeURIComponent(slug)}/manifest`)) {
+        link.href = manifestHref;
+      }
+    });
+    await fetch(manifestHref, { cache: "reload" }).catch(() => null);
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations
+          .filter((registration) => registration.active?.scriptURL.includes(`/api/pwa/${encodeURIComponent(slug)}/sw`))
+          .map((registration) => registration.update().catch(() => undefined)),
+      );
+      navigator.serviceWorker.controller?.postMessage({ type: "BARNDAKSA_PWA_REFRESH" });
+    }
+    setMessage("أعد فتح التطبيق لتحديث الاسم واللوجو");
+  }
+
+  if (installed) {
+    return (
+      <div className="fixed left-3 top-3 z-50 flex max-w-[230px] flex-col items-start gap-2">
+        <button
+          type="button"
+          onClick={() => void refreshPwa()}
+          aria-label="تحديث بيانات التطبيق"
+          title="تحديث بيانات التطبيق"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition active:scale-95"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+        {message ? <p className="rounded-2xl bg-black/55 px-3 py-2 text-right text-xs font-bold leading-6 text-white shadow-sm backdrop-blur">{message}</p> : null}
+      </div>
+    );
+  }
+
+  if (isIos) {
+    return (
+      <div className="max-w-xs rounded-2xl bg-white/12 p-3 text-xs font-bold leading-6 text-white/85 backdrop-blur">
+        اضغط مشاركة ثم اختر "إضافة إلى الشاشة الرئيسية".
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => void install()}
+        disabled={installing}
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 text-xs font-black text-white backdrop-blur disabled:cursor-wait disabled:opacity-80"
+      >
+        <Download className="h-4 w-4" />
+        تثبيت التطبيق
+      </button>
+      {progress > 0 ? (
+        <div className="mt-3 max-w-[220px] rounded-2xl bg-white/10 p-3 text-white/85">
+          <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-black">
+            <span>{stage}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-[var(--fast-accent)] transition-all duration-500" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      ) : null}
+      {message ? <p className="mt-2 text-xs font-bold leading-6 text-white/80">{message}</p> : null}
+    </div>
+  );
+}
+
 function ProductCard({ slug, product }: { slug: string; product: MenuProduct }) {
   const image = firstImage(product);
   const promoOn = product.promo ? isPromoActive(product.promo) : false;
@@ -607,7 +777,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <InstallMiniButton slug={slug} />
+            <InstallMiniButtonFixed slug={slug} />
             {payload.customer ? (
               <span className="inline-flex items-center gap-2 rounded-2xl bg-white/12 px-4 py-3 text-xs font-black text-white">
                 <CheckCircle2 className="h-4 w-4 text-[var(--fast-accent)]" />
