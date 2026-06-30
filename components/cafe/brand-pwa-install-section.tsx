@@ -38,6 +38,22 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     manifest.href = `/api/pwa/${encodeURIComponent(slug)}/manifest`;
     document.head.appendChild(manifest);
 
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+      setMessage("");
+      console.warn("[brand-pwa] beforeinstallprompt received");
+    };
+
+    const appInstalledHandler = () => {
+      localStorage.setItem(installedKey, "1");
+      setInstalled(true);
+      setProgress(100);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", appInstalledHandler);
+
     if ("serviceWorker" in navigator) {
       const encodedSlug = encodeURIComponent(slug);
       void (async () => {
@@ -55,29 +71,14 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
         console.warn("[brand-pwa] sw registered", registration.scope);
         await registration.update();
 
-        const refreshKey = "barndaksa_pwa_sw_refreshed";
-        if (navigator.serviceWorker.controller && !sessionStorage.getItem(refreshKey)) {
+        const refreshKey = `barndaksa_pwa_sw_refreshed_${encodedSlug}`;
+        if (!sessionStorage.getItem(refreshKey)) {
           sessionStorage.setItem(refreshKey, "1");
           window.location.reload();
         }
       })();
     }
 
-    const handler = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-      setMessage("");
-      console.warn("[brand-pwa] beforeinstallprompt received");
-    };
-
-    const appInstalledHandler = () => {
-      localStorage.setItem(installedKey, "1");
-      setInstalled(true);
-      setProgress(100);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", appInstalledHandler);
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", appInstalledHandler);
