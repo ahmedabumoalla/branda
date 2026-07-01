@@ -346,7 +346,10 @@ export function CustomerBottomDock({
 
   return (
     <nav aria-label={"\u062a\u0646\u0642\u0644 \u0627\u0644\u0639\u0645\u064a\u0644"} className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
+      <div
+        className="grid w-full gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl"
+        style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}
+      >
         {visible.map((item) => {
           const Icon = item.icon;
           const selected = item.key === active;
@@ -405,7 +408,7 @@ export function defaultCustomerDockItems({
     active,
     items: [
       { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "\u0627\u0644\u062a\u0630\u0627\u0643\u0631" : "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a", icon: MenuIcon, enabled: hasProducts },
-      { key: "home" as const, href: `${base}${preview}`, label: "\u0627\u0644\u0639\u0631\u0648\u0636", icon: Home },
+      { key: "home" as const, href: `${base}/offers${preview}`, label: "\u0627\u0644\u0639\u0631\u0648\u0636", icon: Home },
       { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a", icon: Sparkles, enabled: hasRewards },
       { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "\u0627\u0644\u062d\u0633\u0627\u0628", icon: UserRound },
     ],

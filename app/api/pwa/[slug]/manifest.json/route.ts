@@ -41,8 +41,8 @@ async function loadManifest(slug: string) {
   ]);
 
   const name = settings?.cafeName || cafe?.name || "Barndaksa";
-  const startUrl = `/c/${encodeURIComponent(slug)}`;
-  const scope = startUrl;
+  const scope = `/c/${encodeURIComponent(slug)}`;
+  const startUrl = `${scope}/products/popular`;
   const version = iconVersion(
     settings?.logoAssetId,
     identity?.logoAssetId,
@@ -51,7 +51,7 @@ async function loadManifest(slug: string) {
   );
 
   return {
-    id: startUrl,
+    id: scope,
     name,
     short_name: name.slice(0, 12),
     description: `تطبيق ${name} على منصة برندة`,
