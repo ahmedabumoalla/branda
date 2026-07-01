@@ -404,9 +404,8 @@ export function defaultCustomerDockItems({
   return {
     active,
     items: [
-      { key: "home" as const, href: `${base}${preview}`, label: "\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629", icon: Home },
       { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "\u0627\u0644\u062a\u0630\u0627\u0643\u0631" : "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a", icon: MenuIcon, enabled: hasProducts },
-      { key: "orders" as const, href: isEvents ? `${base}/${isCustomer ? "account" : "login"}${preview}` : `${base}/reserve${preview}`, label: isEvents ? "\u062a\u0630\u0627\u0643\u0631\u064a" : "\u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a", icon: CalendarDays, enabled: hasOrders },
+      { key: "home" as const, href: `${base}${preview}`, label: "\u0627\u0644\u0639\u0631\u0648\u0636", icon: Home },
       { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a", icon: Sparkles, enabled: hasRewards },
       { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "\u0627\u0644\u062d\u0633\u0627\u0628", icon: UserRound },
     ],
