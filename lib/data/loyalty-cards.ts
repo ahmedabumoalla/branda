@@ -421,6 +421,11 @@ export async function recordOwnerLoyaltyOperation(input: {
 }
 
 export async function issueCurrentCustomerLoyaltyCard(slug: string) {
+  const program = await getPublicLoyaltyProgramBySlug(slug);
+  if (!program?.enabled) {
+    throw new Error("بطاقة الولاء غير مفعلة لهذه العلامة التجارية");
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("issue_loyalty_card_for_customer", {
     p_cafe_slug: slug,
@@ -464,12 +469,13 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
     .from("cafe_loyalty_programs")
     .select("*, menu_products(name)")
     .eq("cafe_id", String(cardRow.cafe_id))
-    .eq("enabled", true)
     .maybeSingle();
+  const program = mapProgram(programRow);
+  if (programRow && !program.enabled) return null;
 
   return {
     card: mapCard(cardRow),
-    program: mapProgram(programRow),
+    program,
     cafeSlug,
     cafeName,
     businessCategory,
@@ -521,11 +527,10 @@ export async function getCustomerLoyaltyCardViewForProfile(
     .from("cafe_loyalty_programs")
     .select("*, menu_products(name)")
     .eq("cafe_id", cafe.id)
-    .eq("enabled", true)
     .maybeSingle();
 
   const program = mapProgram(programRow);
-  if (!program.enabled) return null;
+  if (programRow && !program.enabled) return null;
 
   if (!cardRow) {
     const { data: issuedCard, error: issueError } = await supabase
@@ -557,12 +562,11 @@ export async function getPublicLoyaltyProgramBySlug(slug: string) {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("cafe_loyalty_programs")
     .select("*, menu_products(name)")
     .eq("cafe_id", cafe.id)
-    .eq("enabled", true)
     .maybeSingle();
 
   return data ? mapProgram(data) : defaultProgram;

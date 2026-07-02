@@ -49,7 +49,9 @@ function normalizeDetectedValue(rawValue: string, expectedKind?: BarndaksaQrKind
   }
 
   if (
-    (expectedKind === "reservation" || expectedKind === "experience-reward") &&
+    (expectedKind === "reservation" ||
+      expectedKind === "customer-reward" ||
+      expectedKind === "experience-reward") &&
     !raw.startsWith("BARNDAKSA_QR:")
   ) {
     return raw.trim().toUpperCase();
@@ -72,7 +74,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
       ? "كود البطاقة"
       : expectedKind === "reservation"
         ? "كود الحجز"
-        : expectedKind === "experience-reward"
+        : expectedKind === "customer-reward" || expectedKind === "experience-reward"
           ? "كود المكافأة"
           : "الكود";
 

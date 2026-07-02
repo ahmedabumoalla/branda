@@ -48,6 +48,7 @@ import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
 import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
+import type { CustomerRewardInstance } from "@/lib/data/customer-rewards";
 
 type ViewMode = "home" | "loyalty" | "experience";
 type RewardTab = "current" | "expired";
@@ -101,6 +102,25 @@ function isExperienceRewardExpired(reward: CustomerExperienceReward) {
   );
 }
 
+function isCustomerRewardExpired(reward: CustomerRewardInstance) {
+  const remaining = daysUntil(reward.expiresAt ?? undefined);
+  return (
+    reward.status === "redeemed" ||
+    reward.status === "expired" ||
+    reward.status === "cancelled" ||
+    (remaining !== null && remaining < 0)
+  );
+}
+
+function customerRewardStatusLabel(reward: CustomerRewardInstance) {
+  if (reward.status === "available" && !isCustomerRewardExpired(reward)) {
+    return "متاحة";
+  }
+  if (reward.status === "redeemed") return "مستخدمة";
+  if (reward.status === "cancelled") return "ملغاة";
+  return "منتهية";
+}
+
 function rewardStatusLabel(reward: CustomerExperienceReward) {
   if (reward.status === "approved" && !isExperienceRewardExpired(reward)) {
     return "حالية";
@@ -133,6 +153,20 @@ function matchesExperienceReward(
     reward.reviewNotes,
     reward.status,
     reward.rewardCode,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
+function matchesCustomerReward(reward: CustomerRewardInstance, query: string) {
+  if (!query) return true;
+  const haystack = [
+    reward.rewardTitle,
+    reward.rewardDescription,
+    reward.rewardCode,
+    reward.status,
+    reward.sourceType,
   ]
     .join(" ")
     .toLowerCase();
@@ -353,9 +387,11 @@ function LoyaltyQrPreviewCard({
 
 function LoyaltyRewardCard({
   view,
+  rewards,
   expired,
 }: {
   view: CustomerLoyaltyCardView;
+  rewards: CustomerRewardInstance[];
   expired?: boolean;
 }) {
   const card = view.card;
@@ -364,7 +400,7 @@ function LoyaltyRewardCard({
   const current = Math.max(0, Math.min(required, Number(card.stampsInCycle || 0)));
   const remaining = Math.max(required - current, 0);
   const progress = Math.max(0, Math.min(100, (current / required) * 100));
-  const readyRewards = Math.max(0, Number(card.availableRewards || 0));
+  const readyRewards = rewards.length;
 
   return (
     <article className="overflow-hidden rounded-[24px] border border-[var(--ci-border,#E7D7C6)] bg-white shadow-[0_14px_38px_rgba(23,20,18,0.08)]">
@@ -419,25 +455,36 @@ function LoyaltyRewardCard({
           </div>
         ) : null}
 
-        {card.cardCode ? (
-          <div className="mt-3 grid grid-cols-[92px_minmax(0,1fr)] items-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white p-2.5">
-            <div className="flex h-[92px] w-[92px] shrink-0 items-center justify-center rounded-[14px] bg-white p-1 ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
-              <SecureQrCode
-                kind="loyalty-card"
-                value={card.cardCode}
-                title={`QR بطاقة الولاء ${card.cardCode}`}
-                size={78}
-                className={REWARD_QR_FIT_CLASS}
-              />
-            </div>
-            <div className="min-w-0 self-center">
-              <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">
-                QR البطاقة
-              </p>
-              <p className="mt-1 truncate font-mono text-[11px] font-black tracking-[0.08em] text-[var(--ci-page-fg,#311912)]">
-                {card.cardCode}
-              </p>
-            </div>
+        {rewards.length ? (
+          <div className="mt-3 grid gap-2">
+            {rewards.map((reward) => (
+              <div
+                key={reward.id}
+                className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white p-2.5"
+              >
+                <div className="flex h-[92px] w-[92px] shrink-0 items-center justify-center rounded-[14px] bg-white p-1 ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
+                  <SecureQrCode
+                    kind="customer-reward"
+                    value={reward.rewardCode}
+                    title={`QR مكافأة الولاء ${reward.rewardCode}`}
+                    size={78}
+                    className={REWARD_QR_FIT_CLASS}
+                  />
+                </div>
+                <div className="min-w-0 self-center">
+                  <p className="text-[10px] font-black text-[var(--ci-muted-fg,#806A5E)]">
+                    QR المكافأة
+                  </p>
+                  <p className="mt-1 truncate font-mono text-[11px] font-black tracking-[0.08em] text-[var(--ci-page-fg,#311912)]">
+                    {reward.rewardCode}
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold text-[var(--ci-muted-fg,#806A5E)]">
+                    {customerRewardStatusLabel(reward)}
+                    {reward.expiresAt ? ` · تنتهي في ${formatRewardDate(reward.expiresAt)}` : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>
@@ -445,10 +492,18 @@ function LoyaltyRewardCard({
   );
 }
 
-function ExperienceRewardCard({ reward }: { reward: CustomerExperienceReward }) {
+function ExperienceRewardCard({
+  reward,
+  instance,
+}: {
+  reward: CustomerExperienceReward;
+  instance?: CustomerRewardInstance;
+}) {
   const expired = isExperienceRewardExpired(reward);
   const ready = reward.status === "approved" && Boolean(reward.rewardCode) && !expired;
   const remaining = daysUntil(reward.rewardExpiresAt);
+  const qrCode = instance?.rewardCode || reward.rewardCode;
+  const qrKind = instance ? "customer-reward" : "experience-reward";
 
   return (
     <article className="rounded-[24px] border border-[var(--ci-border,#E7D7C6)] bg-white p-4 shadow-[0_14px_38px_rgba(23,20,18,0.08)]">
@@ -539,9 +594,9 @@ function ExperienceRewardCard({ reward }: { reward: CustomerExperienceReward }) 
         <div className="mt-3 grid grid-cols-[92px_minmax(0,1fr)] items-center gap-2 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-white p-2.5">
           <div className="flex h-[92px] w-[92px] shrink-0 items-center justify-center rounded-[14px] bg-white p-1 ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
             <SecureQrCode
-              kind="experience-reward"
-              value={reward.rewardCode}
-              title={`QR مكافأة توثيق التجربة ${reward.rewardCode}`}
+              kind={qrKind}
+              value={qrCode}
+              title={`QR مكافأة توثيق التجربة ${qrCode}`}
               size={78}
               className={REWARD_QR_FIT_CLASS}
             />
@@ -551,7 +606,7 @@ function ExperienceRewardCard({ reward }: { reward: CustomerExperienceReward }) 
               QR المكافأة
             </p>
             <p className="mt-1 truncate font-mono text-[11px] font-black tracking-[0.08em] text-[var(--ci-page-fg,#311912)]">
-              {reward.rewardCode}
+              {qrCode}
             </p>
           </div>
         </div>
@@ -733,6 +788,9 @@ function RewardsPageInner() {
   const [experienceRewards, setExperienceRewards] = useState<
     CustomerExperienceReward[]
   >([]);
+  const [customerRewards, setCustomerRewards] = useState<
+    CustomerRewardInstance[]
+  >([]);
   const [proofOpen, setProofOpen] = useState(false);
   const [experienceUrl, setExperienceUrl] = useState("");
   const [experienceViews, setExperienceViews] = useState("");
@@ -744,7 +802,7 @@ function RewardsPageInner() {
   const experienceRewardsEnabled = publicFeatureAllows(features, "experience_reviews");
   const productsEnabled = publicFeatureAllows(features, "menu");
   const reservationsEnabled = publicFeatureAllows(features, "reservations");
-  const rewardsPageEnabled = loyaltyEnabled;
+  const rewardsPageEnabled = loyaltyEnabled || experienceRewardsEnabled;
   const loginHref = getCustomerLoginHref(slug, `/c/${slug}/rewards`, previewThemeId);
 
   useEffect(() => {
@@ -765,6 +823,7 @@ function RewardsPageInner() {
           setLoyaltyView(null);
           setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
           setExperienceRewards([]);
+          setCustomerRewards([]);
           setLoadedSlug(slug);
           return;
         }
@@ -772,6 +831,7 @@ function RewardsPageInner() {
         setLoyaltyView(result.data.loyalty);
         setLoyaltyPoints(result.data.loyaltyPoints);
         setExperienceRewards(result.data.experienceRewards);
+        setCustomerRewards(result.data.customerRewards);
         setLoadedSlug(slug);
       } catch (error) {
         if (cancelled) return;
@@ -780,6 +840,7 @@ function RewardsPageInner() {
         setLoyaltyView(null);
         setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
         setExperienceRewards([]);
+        setCustomerRewards([]);
         setLoadedSlug(slug);
       } finally {
         if (!cancelled) setLoading(false);
@@ -796,6 +857,7 @@ function RewardsPageInner() {
   const pageLoading = loading || !hasCurrentSlugData;
   const scopedLoyaltyView = hasCurrentSlugData ? loyaltyView : null;
   const scopedExperienceRewards = hasCurrentSlugData ? experienceRewards : [];
+  const scopedCustomerRewards = hasCurrentSlugData ? customerRewards : [];
   const scopedLoyaltyPoints = hasCurrentSlugData ? loyaltyPoints : EMPTY_CUSTOMER_LOYALTY_POINTS;
   const loyaltyPointsBalance = scopedLoyaltyPoints.balance;
   const loyaltyUsedPoints = scopedLoyaltyPoints.usedPoints;
@@ -818,10 +880,31 @@ function RewardsPageInner() {
     () => scopedExperienceRewards.filter(isExperienceRewardExpired),
     [scopedExperienceRewards],
   );
-  const loyaltyReadyCount = Math.max(
-    0,
-    Number(scopedLoyaltyView?.card.availableRewards ?? 0),
+  const loyaltyRewardInstances = useMemo(
+    () =>
+      scopedCustomerRewards.filter(
+        (reward) => reward.sourceType === "loyalty",
+      ),
+    [scopedCustomerRewards],
   );
+  const currentLoyaltyRewards = useMemo(
+    () => loyaltyRewardInstances.filter((reward) => !isCustomerRewardExpired(reward)),
+    [loyaltyRewardInstances],
+  );
+  const expiredLoyaltyRewards = useMemo(
+    () => loyaltyRewardInstances.filter(isCustomerRewardExpired),
+    [loyaltyRewardInstances],
+  );
+  const experienceRewardInstancesBySourceId = useMemo(
+    () =>
+      new Map(
+        scopedCustomerRewards
+          .filter((reward) => reward.sourceType === "experience" && reward.sourceId)
+          .map((reward) => [reward.sourceId, reward]),
+      ),
+    [scopedCustomerRewards],
+  );
+  const loyaltyReadyCount = currentLoyaltyRewards.length;
   const hasReadyLoyaltyReward = loyaltyReadyCount > 0;
   const normalizedQuery = normalizeText(query);
 
@@ -831,7 +914,7 @@ function RewardsPageInner() {
         {
           key: "loyalty" as const,
           title: "بطاقة ولاء",
-          enabled: loyaltyEnabled,
+          enabled: loyaltyEnabled && Boolean(scopedLoyaltyView),
           activeCount: loyaltyReadyCount,
         },
         {
@@ -850,6 +933,7 @@ function RewardsPageInner() {
       loyaltyReadyCount,
       normalizedQuery,
       readyExperienceRewards.length,
+      scopedLoyaltyView,
     ],
   );
 
@@ -874,12 +958,12 @@ function RewardsPageInner() {
       scopedLoyaltyView?.program.cardTitle,
       scopedLoyaltyView?.program.rewardName,
       scopedLoyaltyView?.program.rewardProductName,
-      scopedLoyaltyView?.card.cardCode,
+      ...loyaltyRewardInstances.map((reward) => `${reward.rewardTitle} ${reward.rewardCode}`),
     ]
       .join(" ")
       .toLowerCase();
     return text.includes(normalizedQuery);
-  }, [scopedLoyaltyView, normalizedQuery]);
+  }, [loyaltyRewardInstances, scopedLoyaltyView, normalizedQuery]);
 
   async function submitExperienceProof(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -952,8 +1036,13 @@ function RewardsPageInner() {
       </div>
     );
   } else if (viewMode === "loyalty") {
-    const currentCount = hasReadyLoyaltyReward ? 1 : 0;
-    const expiredCount = 0;
+    const currentCount = currentLoyaltyRewards.length;
+    const expiredCount = expiredLoyaltyRewards.length;
+    const visibleLoyaltyRewards =
+      loyaltyTab === "current" ? currentLoyaltyRewards : expiredLoyaltyRewards;
+    const filteredLoyaltyRewards = visibleLoyaltyRewards.filter((reward) =>
+      matchesCustomerReward(reward, normalizedQuery),
+    );
     content = (
       <>
         <BrandHeader
@@ -994,17 +1083,21 @@ function RewardsPageInner() {
           expiredCount={expiredCount}
         />
         <div className="grid gap-3">
-          {loyaltyTab === "current" && hasReadyLoyaltyReward && scopedLoyaltyView && loyaltyMatches ? (
-            <LoyaltyRewardCard view={scopedLoyaltyView} />
+          {filteredLoyaltyRewards.length && scopedLoyaltyView && loyaltyMatches ? (
+            <LoyaltyRewardCard
+              view={scopedLoyaltyView}
+              rewards={filteredLoyaltyRewards}
+              expired={loyaltyTab === "expired"}
+            />
           ) : loyaltyTab === "expired" ? (
             <EmptyState
               title="لا توجد مكافآت منتهية"
-              desc="أي مكافآت ولاء منتهية ستظهر هنا عند توفرها من النظام الحالي."
+              desc="أي مكافآت ولاء مستخدمة أو منتهية ستظهر هنا."
             />
           ) : (
             <EmptyState
               title="لا توجد مكافآت حالية لهذه العلامة"
-              desc="ستظهر بطاقة الولاء والمكافآت الجاهزة هنا عند توفرها."
+              desc="ستظهر مكافأة الولاء هنا عند اكتمال شروط البطاقة."
             />
           )}
         </div>
@@ -1046,7 +1139,11 @@ function RewardsPageInner() {
         <div className="grid gap-3">
           {filteredExperienceRewards.length ? (
             filteredExperienceRewards.map((reward) => (
-              <ExperienceRewardCard key={reward.id} reward={reward} />
+              <ExperienceRewardCard
+                key={reward.id}
+                reward={reward}
+                instance={experienceRewardInstancesBySourceId.get(reward.id)}
+              />
             ))
           ) : (
             <EmptyState

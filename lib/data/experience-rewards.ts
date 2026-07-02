@@ -12,6 +12,7 @@ import {
   sendBarndaksaEmail,
 } from "@/lib/email/resend";
 import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
+import { upsertExperienceCustomerRewardInstance } from "@/lib/data/customer-rewards";
 
 export type ExperienceRewardStatus =
   | "pending"
@@ -427,6 +428,16 @@ export async function approveOwnerExperienceRewardSubmission(
   const itemsText = parsed.items
     .map((item) => `${item.productName} × ${item.quantity}`)
     .join("، ");
+
+  await upsertExperienceCustomerRewardInstance({
+    cafeId: cafe.id,
+    customerId: String(submission.customer_id),
+    submissionId: parsed.submissionId,
+    rewardCode,
+    rewardTitle: itemsText || "مكافأة توثيق تجربة",
+    rewardDescription: String(submission.experience_url ?? ""),
+    expiresAt: parsed.rewardExpiresAt,
+  });
 
   await createNotification({
     cafeSlug: cafe.slug,

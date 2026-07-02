@@ -23,6 +23,7 @@ import {
 import {
   acceptCashierOrderAction,
   acceptCashierReservationAction,
+  cashierLookupRewardAction,
   cashierRedeemExperienceRewardAction,
   cashierScanLoyaltyAction,
   confirmCashierTicketAction,
@@ -605,7 +606,8 @@ export function CashierConsoleClient({ initialData }: Props) {
   const cashierTitle = isEvents ? "بوابة الدخول" : "الكاشير";
   const consoleTitle = isEvents ? "بوابة الدخول" : "لوحة الكاشير";
   const languageTitle = isEvents ? "لغة بوابة الدخول" : "لغة الكاشير";
-  const rewardTitle = isEvents ? "صرف مكافأة حضور" : "صرف مكافأة توثيق التجربة";
+  const rewardTitle = isEvents ? "صرف مكافأة حضور" : "صرف المكافآت";
+  const loyaltyCardEnabled = data.cafe.loyaltyCardEnabled !== false;
   const orderTitle = isEvents ? "استقبال طلبات التذاكر" : "استقبال الطلبات";
   const reservationTitle = isEvents ? "استقبال تسجيلات الحضور" : "استقبال الحجوزات";
   const checkinTitle = isEvents ? "تأكيد الحضور" : "تأكيد حضور الحجز";
@@ -966,16 +968,50 @@ export function CashierConsoleClient({ initialData }: Props) {
     }
   }
 
-  async function redeemExperienceReward(codeInput?: string) {
+  async function lookupReward(codeInput?: string) {
     const rawRewardCode = codeInput ?? experienceRewardCode;
     if (!rawRewardCode.trim()) {
-      setMessage("أدخل QR مكافأة توثيق التجربة");
+      setMessage("أدخل QR المكافأة");
       return;
     }
 
     setBusy(true);
     try {
       const rewardCode =
+        parseBarndaksaQrPayload(rawRewardCode, "customer-reward") ??
+        parseBarndaksaQrPayload(rawRewardCode, "experience-reward") ??
+        rawRewardCode.trim().toUpperCase();
+      const result = await cashierLookupRewardAction(rewardCode);
+      setRewardResult({ ...result, status: result.invalidReason ?? "صالحة للصرف" } as Row);
+      setExperienceRewardCode(rewardCode);
+      setMessage(
+        result.canRedeem
+          ? `المكافأة صالحة للصرف للعميل ${String(result.customerName ?? "عميل")}`
+          : String(result.invalidReason ?? "هذه المكافأة غير قابلة للصرف"),
+      );
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "";
+      const text = rawMessage.includes("علامة تجارية أخرى")
+        ? "هذه المكافأة تابعة لعلامة تجارية أخرى"
+        : "QR المكافأة غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية";
+      setRewardResult({ status: text });
+      setMessage(text);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function redeemExperienceReward(codeInput?: string) {
+    const rawRewardCode = codeInput ?? experienceRewardCode;
+    if (!rawRewardCode.trim()) {
+      setMessage("أدخل QR المكافأة");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const rewardCode =
+        parseBarndaksaQrPayload(rawRewardCode, "customer-reward") ??
         parseBarndaksaQrPayload(rawRewardCode, "experience-reward") ??
         rawRewardCode.trim().toUpperCase();
       const result = await cashierRedeemExperienceRewardAction(rewardCode);
@@ -983,15 +1019,17 @@ export function CashierConsoleClient({ initialData }: Props) {
         ? result.items
             .map((item) => `${String(item.productName ?? "")} × ${String(item.quantity ?? 1)}`)
             .join("، ")
-        : "مكافأة";
+        : "rewardName" in result
+          ? String(result.rewardName ?? "مكافأة")
+          : "مكافأة";
       setRewardResult({ ...result, rewardItems: items, status: "تم الصرف" } as Row);
-      setMessage(`تم صرف مكافأة توثيق التجربة للعميل ${String(result.customerName ?? "عميل")} — ${items}`);
+      setMessage(`تم صرف المكافأة للعميل ${String(result.customerName ?? "عميل")} — ${items}`);
       setExperienceRewardCode("");
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : "";
       const text = rawMessage.includes("علامة تجارية أخرى")
         ? "هذه المكافأة تابعة لعلامة تجارية أخرى"
-        : "QR مكافأة التوثيق غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية";
+        : "QR المكافأة غير صالح أو مستخدم مسبقًا أو منتهي الصلاحية";
       setRewardResult({ status: text });
       setMessage(text);
     } finally {
@@ -1031,13 +1069,17 @@ export function CashierConsoleClient({ initialData }: Props) {
   }
 
   const actions = [
-    {
-      key: "loyalty" as const,
-      title: "قراءة بطاقة الولاء",
-      description: isEvents ? "تسجيل حضور ولاء عبر QR" : "احتساب عملية شراء عبر QR",
-      icon: ScanLine,
-      count: 0,
-    },
+    ...(loyaltyCardEnabled
+      ? [
+          {
+            key: "loyalty" as const,
+            title: "قراءة بطاقة الولاء",
+            description: isEvents ? "تسجيل حضور ولاء عبر QR" : "احتساب عملية شراء عبر QR",
+            icon: ScanLine,
+            count: 0,
+          },
+        ]
+      : []),
     {
       key: "reward" as const,
       title: rewardTitle,
@@ -1269,15 +1311,18 @@ export function CashierConsoleClient({ initialData }: Props) {
         <ScannerForm
           inputValue={experienceRewardCode}
           onInputChange={setExperienceRewardCode}
-          placeholder={isEvents ? "QR مكافأة الحضور أو الكود" : "QR مكافأة التوثيق أو الكود"}
+          placeholder={isEvents ? "QR مكافأة الحضور أو الكود" : "QR المكافأة أو الكود"}
           scannerLabel="قراءة QR المكافأة"
-          expectedKind="experience-reward"
+          expectedKind={undefined}
           busy={busy}
-          buttonLabel="صرف المكافأة"
-          onSubmit={() => void redeemExperienceReward()}
+          buttonLabel={rewardResult?.canRedeem ? "تأكيد الصرف" : "قراءة المكافأة"}
+          onSubmit={() => {
+            if (rewardResult?.canRedeem) void redeemExperienceReward();
+            else void lookupReward();
+          }}
           onDetected={(value) => {
             setExperienceRewardCode(value.toUpperCase());
-            void redeemExperienceReward(value);
+            void lookupReward(value);
           }}
         />
         <ResultPanel
@@ -1286,6 +1331,10 @@ export function CashierConsoleClient({ initialData }: Props) {
           entries={[
             ["اسم العميل", valueOf(rewardResult, ["customerName", "customer_name"])],
             ["اسم المكافأة", valueOf(rewardResult, ["rewardItems", "rewardName", "reward_name"], "-")],
+            ["نوع المكافأة", valueOf(rewardResult, ["rewardType", "reward_type"], "-")],
+            ["تاريخ الإنشاء", valueOf(rewardResult, ["issuedAt", "issued_at"], "-")],
+            ["تاريخ الانتهاء", valueOf(rewardResult, ["expiresAt", "expires_at"], "-")],
+            ["المتبقي", valueOf(rewardResult, ["remainingText", "remaining_text"], "-")],
             ["حالة الصرف", valueOf(rewardResult, ["status"], message || "-")],
           ]}
         />
@@ -1555,7 +1604,7 @@ function ScannerForm({
   onInputChange: (value: string) => void;
   placeholder: string;
   scannerLabel: string;
-  expectedKind: "loyalty-card" | "experience-reward" | "reservation" | "event-ticket";
+  expectedKind?: "loyalty-card" | "customer-reward" | "experience-reward" | "reservation" | "event-ticket";
   busy: boolean;
   buttonLabel: string;
   onSubmit: () => void;

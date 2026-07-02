@@ -13,7 +13,13 @@ import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
 export type CashierConsole = {
-  cafe: { id: string; name: string; slug: string; businessCategory?: string };
+  cafe: {
+    id: string;
+    name: string;
+    slug: string;
+    businessCategory?: string;
+    loyaltyCardEnabled?: boolean;
+  };
   cashier: {
     id: string;
     fullName: string;
@@ -407,14 +413,23 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
   if (error || !data) return null;
   const normalized = normalizeConsolePayload(data);
   if (!normalized?.cafe.id) return normalized;
-  const { data: cafe } = await supabase
-    .from("cafes")
-    .select("business_category")
-    .eq("id", normalized.cafe.id)
-    .maybeSingle();
+  const admin = createAdminClient();
+  const [{ data: cafe }, { data: loyaltyProgram }] = await Promise.all([
+    admin
+      .from("cafes")
+      .select("business_category")
+      .eq("id", normalized.cafe.id)
+      .maybeSingle(),
+    admin
+      .from("cafe_loyalty_programs")
+      .select("enabled")
+      .eq("cafe_id", normalized.cafe.id)
+      .maybeSingle(),
+  ]);
   const cafeWithCategory = {
     ...normalized.cafe,
     businessCategory: cafe?.business_category ?? normalized.cafe.businessCategory ?? "cafes_coffee",
+    loyaltyCardEnabled: loyaltyProgram ? Boolean(loyaltyProgram.enabled) : true,
   };
   const enriched = await enrichCashierOrdersWithItems({
     ...normalized,

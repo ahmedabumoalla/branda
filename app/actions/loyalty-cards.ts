@@ -6,6 +6,7 @@ import {
   issueCurrentCustomerLoyaltyCard,
   getCurrentCustomerLoyaltyCardView,
   getLoyaltyCardViewByCode,
+  getPublicLoyaltyProgramBySlug,
   recordOwnerLoyaltyOperation,
   saveOwnerLoyaltyProgram,
   setOwnerCashierStatus,
@@ -20,7 +21,9 @@ import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 async function publicLoyaltyEnabled(cafeSlug: string) {
   try {
     const features = await getPublicCafeFeatureCodesBySlug(cafeSlug);
-    return featureCodesAllow(features, "loyalty");
+    if (!featureCodesAllow(features, "loyalty")) return false;
+    const program = await getPublicLoyaltyProgramBySlug(cafeSlug);
+    return program?.enabled !== false;
   } catch (error) {
     console.warn("[loyalty-cards/public-feature-gate]", error);
     return false;

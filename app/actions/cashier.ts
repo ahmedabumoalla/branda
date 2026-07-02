@@ -15,6 +15,10 @@ import {
   logoutCashier,
 } from "@/lib/data/cashier";
 import { redeemCashierExperienceReward } from "@/lib/data/experience-rewards";
+import {
+  lookupCashierCustomerReward,
+  redeemCashierCustomerReward,
+} from "@/lib/data/customer-rewards";
 
 export async function loginCashierAction(email: string, password: string) {
   const result = await loginCashierWithPassword(email, password);
@@ -75,5 +79,15 @@ export async function cashierScanLoyaltyAction(input: {
 
 
 export async function cashierRedeemExperienceRewardAction(rewardCode: string) {
-  return redeemCashierExperienceReward(rewardCode);
+  try {
+    return await redeemCashierCustomerReward(rewardCode);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("مكافأة غير موجودة")) throw error;
+    return redeemCashierExperienceReward(rewardCode);
+  }
+}
+
+export async function cashierLookupRewardAction(rewardCode: string) {
+  return lookupCashierCustomerReward(rewardCode);
 }

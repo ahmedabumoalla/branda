@@ -9,6 +9,7 @@ import {
   rejectOwnerExperienceRewardSubmission,
   submitCustomerExperienceRewardProof,
 } from "@/lib/data/experience-rewards";
+import { redeemCashierCustomerReward } from "@/lib/data/customer-rewards";
 import {
   getOwnerFeatureCodes,
   getPublicCafeFeatureCodesBySlug,
@@ -75,7 +76,13 @@ export async function rejectExperienceRewardSubmissionAction(
 }
 
 export async function cashierRedeemExperienceRewardAction(rewardCode: string) {
-  return redeemCashierExperienceReward(rewardCode);
+  try {
+    return await redeemCashierCustomerReward(rewardCode);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("مكافأة غير موجودة")) throw error;
+    return redeemCashierExperienceReward(rewardCode);
+  }
 }
 
 export async function ownerRedeemExperienceRewardAction(rewardCode: string) {

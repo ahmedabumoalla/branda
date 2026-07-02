@@ -3,6 +3,7 @@
 import { getCustomerOrdersForProfile, getCustomerReservationsForProfile } from "@/lib/data/customers";
 import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-rewards";
+import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
 import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
@@ -42,6 +43,7 @@ function emptySnapshot(cafeSlug: string) {
     loyalty: null as Awaited<ReturnType<typeof getCustomerLoyaltyCardViewForProfile>> | null,
     loyaltyPoints: emptyLoyaltyPoints,
     experienceRewards: [] as Awaited<ReturnType<typeof getCustomerExperienceRewardSubmissions>>,
+    customerRewards: [] as Awaited<ReturnType<typeof getCustomerRewardInstances>>,
   };
 }
 
@@ -206,7 +208,7 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
     const loyaltyEnabled = featureCodesAllow(features, "loyalty");
     const experienceEnabled = featureCodesAllow(features, "experience_reviews");
 
-    const [orders, reservations, loyalty, experienceRewards] = await Promise.all([
+    const [orders, reservations, loyalty, experienceRewards, customerRewards] = await Promise.all([
       ordersEnabled
         ? safeResult(getCustomerOrdersForProfile(normalizedSlug, customer.id, 5), snapshot.orders)
         : Promise.resolve(snapshot.orders),
@@ -219,6 +221,9 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
       experienceEnabled
         ? safeResult(getCustomerExperienceRewardSubmissions(normalizedSlug, customer.id, 5), snapshot.experienceRewards)
         : Promise.resolve(snapshot.experienceRewards),
+      loyaltyEnabled || experienceEnabled
+        ? safeResult(getCustomerRewardInstances(normalizedSlug, customer.id, 50), snapshot.customerRewards)
+        : Promise.resolve(snapshot.customerRewards),
     ]);
 
     const loyaltyRules = loyaltyEnabled ? await safeResult(getPublicLoyaltyBySlug(normalizedSlug), null) : null;
@@ -247,6 +252,9 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
     const scopedExperienceRewards = experienceRewards.filter(
       (reward) => reward.cafeId === cafe.id,
     );
+    const scopedCustomerRewards = customerRewards.filter(
+      (reward) => reward.cafeId === cafe.id,
+    );
 
     logRewardsSnapshotLoad({
       slug: normalizedSlug,
@@ -271,6 +279,7 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
         loyalty: scopedLoyalty,
         loyaltyPoints,
         experienceRewards: scopedExperienceRewards,
+        customerRewards: scopedCustomerRewards,
       },
     };
   } catch (error) {
