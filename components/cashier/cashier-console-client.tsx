@@ -126,7 +126,9 @@ const googleTranslateElementId = "google_translate_element";
 const googleTranslateScriptId = "google-translate-element-script";
 const googleTranslateScriptSrc = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
 const googleTranslateIncludedLanguages = translateLanguages.map((language) => language.code).join(",");
-const googleTranslateErrorMessage = "تعذر تحميل الترجمة، حاول مرة أخرى";
+const googleTranslateLoadTimeoutMs = 10_000;
+const googleTranslatePollMs = 200;
+const googleTranslateErrorMessage = "تعذر تحميل الترجمة، تأكد من اتصال الجهاز أو جرّب متصفحًا آخر";
 
 const operationFilters: Array<{ id: OperationFilter; label: string }> = [
   { id: "all", label: "الكل" },
@@ -601,19 +603,41 @@ function clearGoogleTranslateCookie() {
   document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
 }
 
-function applyGoogleTranslateLanguage(languageCode: string) {
-  if (typeof document === "undefined") return false;
+function getGoogleTranslateCombo() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLSelectElement>("select.goog-te-combo");
+}
 
+function waitForGoogleTranslateCombo(timeoutMs = googleTranslateLoadTimeoutMs) {
+  return new Promise<HTMLSelectElement | null>((resolve) => {
+    const startedAt = Date.now();
+
+    const poll = () => {
+      const combo = getGoogleTranslateCombo();
+      if (combo) {
+        resolve(combo);
+        return;
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        resolve(null);
+        return;
+      }
+
+      setTimeout(poll, googleTranslatePollMs);
+    };
+
+    poll();
+  });
+}
+
+function applyGoogleTranslateLanguage(combo: HTMLSelectElement, languageCode: string) {
   if (languageCode === "ar") {
     clearGoogleTranslateCookie();
   }
 
-  const combo = document.querySelector<HTMLSelectElement>("select.goog-te-combo");
-  if (!combo) return languageCode === "ar";
-
   combo.value = languageCode === "ar" ? "" : languageCode;
   combo.dispatchEvent(new Event("change", { bubbles: true }));
-  return true;
 }
 
 export function CashierConsoleClient({ initialData }: Props) {
@@ -701,6 +725,27 @@ export function CashierConsoleClient({ initialData }: Props) {
     if (typeof window === "undefined") return;
 
     let cancelled = false;
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    const markReadyWhenComboExists = () => {
+      void waitForGoogleTranslateCombo().then((combo) => {
+        if (cancelled) return;
+
+        if (combo) {
+          setGoogleTranslateReady(true);
+          setGoogleTranslateFailed(false);
+          if (pendingTranslateLanguage.current) {
+            void requestGoogleTranslateLanguage(pendingTranslateLanguage.current);
+          }
+          return;
+        }
+
+        setGoogleTranslateFailed(true);
+        if (pendingTranslateLanguage.current) {
+          setLanguageHint(googleTranslateErrorMessage);
+        }
+      });
+    };
+
     const initializeTranslateElement = () => {
       try {
         const TranslateElement = window.google?.translate?.TranslateElement;
@@ -719,18 +764,10 @@ export function CashierConsoleClient({ initialData }: Props) {
           );
         }
 
-        if (!cancelled) {
-          setGoogleTranslateReady(true);
-          setGoogleTranslateFailed(false);
-        }
-
-        if (pendingTranslateLanguage.current) {
-          requestGoogleTranslateLanguage(pendingTranslateLanguage.current);
-        }
+        markReadyWhenComboExists();
       } catch {
         if (!cancelled) {
           setGoogleTranslateFailed(true);
-          setLanguageHint(googleTranslateErrorMessage);
         }
       }
     };
@@ -741,8 +778,8 @@ export function CashierConsoleClient({ initialData }: Props) {
       initializeTranslateElement();
       return () => {
         cancelled = true;
-        if (window.googleTranslateElementInit === initializeTranslateElement) {
-          delete window.googleTranslateElementInit;
+        if (loadTimer) {
+          clearTimeout(loadTimer);
         }
       };
     }
@@ -756,23 +793,33 @@ export function CashierConsoleClient({ initialData }: Props) {
       script.onerror = () => {
         if (!cancelled) {
           setGoogleTranslateFailed(true);
-          setLanguageHint(googleTranslateErrorMessage);
         }
       };
       document.body.appendChild(script);
+    } else {
+      markReadyWhenComboExists();
     }
+
+    loadTimer = setTimeout(() => {
+      if (!cancelled && !getGoogleTranslateCombo()) {
+        setGoogleTranslateFailed(true);
+        if (pendingTranslateLanguage.current) {
+          setLanguageHint(googleTranslateErrorMessage);
+        }
+      }
+    }, googleTranslateLoadTimeoutMs);
 
     return () => {
       cancelled = true;
-      if (window.googleTranslateElementInit === initializeTranslateElement) {
-        delete window.googleTranslateElementInit;
+      if (loadTimer) {
+        clearTimeout(loadTimer);
       }
     };
   }, []);
 
   useEffect(() => {
     if (activeTranslateLanguage !== "ar" && googleTranslateReady) {
-      requestGoogleTranslateLanguage(activeTranslateLanguage);
+      void requestGoogleTranslateLanguage(activeTranslateLanguage);
     }
   }, [activeModal, activeTranslateLanguage, data, googleTranslateReady]);
 
@@ -795,21 +842,22 @@ export function CashierConsoleClient({ initialData }: Props) {
     setActiveModal("operation-details");
   }
 
-  function requestGoogleTranslateLanguage(languageCode: string, attempt = 0) {
-    const applied = applyGoogleTranslateLanguage(languageCode);
-    if (applied) {
+  async function requestGoogleTranslateLanguage(languageCode: string) {
+    if (languageCode === "ar") {
+      clearGoogleTranslateCookie();
+    }
+
+    const combo = await waitForGoogleTranslateCombo();
+    if (combo) {
+      applyGoogleTranslateLanguage(combo, languageCode);
       pendingTranslateLanguage.current = null;
       setLanguageHint("");
       return;
     }
 
-    if (attempt >= 20) {
-      pendingTranslateLanguage.current = null;
-      setLanguageHint(googleTranslateErrorMessage);
-      return;
-    }
-
-    setTimeout(() => requestGoogleTranslateLanguage(languageCode, attempt + 1), 250);
+    pendingTranslateLanguage.current = null;
+    setGoogleTranslateFailed(true);
+    setLanguageHint(googleTranslateErrorMessage);
   }
 
   function changeCashierLanguage(languageCode: string) {
@@ -818,22 +866,16 @@ export function CashierConsoleClient({ initialData }: Props) {
 
     if (languageCode === "ar") {
       pendingTranslateLanguage.current = null;
-      requestGoogleTranslateLanguage(languageCode);
-      return;
-    }
-
-    if (googleTranslateFailed) {
-      setLanguageHint(googleTranslateErrorMessage);
+      void requestGoogleTranslateLanguage(languageCode);
       return;
     }
 
     pendingTranslateLanguage.current = languageCode;
-    if (!googleTranslateReady) {
+    if (!googleTranslateReady && !googleTranslateFailed) {
       setLanguageHint("جاري تحميل الترجمة...");
-      return;
     }
 
-    requestGoogleTranslateLanguage(languageCode);
+    void requestGoogleTranslateLanguage(languageCode);
   }
 
   function printOrder(order: Row) {
@@ -1278,7 +1320,13 @@ export function CashierConsoleClient({ initialData }: Props) {
       <div
         id={googleTranslateElementId}
         aria-hidden="true"
-        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: "-9999px",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
       />
       <section className="mx-auto max-w-7xl">
         <header className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
