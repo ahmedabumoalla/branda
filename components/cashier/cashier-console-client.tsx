@@ -77,6 +77,12 @@ type TranslateLanguage = {
   code: string;
   label: string;
 };
+type GoogleTranslateElementConstructor = {
+  new (options: Record<string, unknown>, element: string): unknown;
+  InlineLayout?: {
+    SIMPLE?: string;
+  };
+};
 type OperationRow = {
   id: string;
   key: string;
@@ -95,6 +101,17 @@ type OperationRow = {
   searchText: string;
 };
 
+declare global {
+  interface Window {
+    google?: {
+      translate?: {
+        TranslateElement?: GoogleTranslateElementConstructor;
+      };
+    };
+    googleTranslateElementInit?: () => void;
+  }
+}
+
 const translateLanguages: TranslateLanguage[] = [
   { code: "ar", label: "العربية" },
   { code: "en", label: "English" },
@@ -104,6 +121,12 @@ const translateLanguages: TranslateLanguage[] = [
   { code: "tl", label: "Filipino" },
   { code: "id", label: "Indonesian" },
 ];
+
+const googleTranslateElementId = "google_translate_element";
+const googleTranslateScriptId = "google-translate-element-script";
+const googleTranslateScriptSrc = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+const googleTranslateIncludedLanguages = translateLanguages.map((language) => language.code).join(",");
+const googleTranslateErrorMessage = "تعذر تحميل الترجمة، حاول مرة أخرى";
 
 const operationFilters: Array<{ id: OperationFilter; label: string }> = [
   { id: "all", label: "الكل" },
@@ -573,6 +596,26 @@ function StatusPill({ children }: { children: React.ReactNode }) {
   );
 }
 
+function clearGoogleTranslateCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
+}
+
+function applyGoogleTranslateLanguage(languageCode: string) {
+  if (typeof document === "undefined") return false;
+
+  if (languageCode === "ar") {
+    clearGoogleTranslateCookie();
+  }
+
+  const combo = document.querySelector<HTMLSelectElement>("select.goog-te-combo");
+  if (!combo) return languageCode === "ar";
+
+  combo.value = languageCode === "ar" ? "" : languageCode;
+  combo.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+}
+
 export function CashierConsoleClient({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [cardCode, setCardCode] = useState("");
@@ -596,10 +639,14 @@ export function CashierConsoleClient({ initialData }: Props) {
   const [ticketResult, setTicketResult] = useState<Row | null>(null);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [languageHint, setLanguageHint] = useState("");
+  const [googleTranslateReady, setGoogleTranslateReady] = useState(false);
+  const [googleTranslateFailed, setGoogleTranslateFailed] = useState(false);
+  const [activeTranslateLanguage, setActiveTranslateLanguage] = useState("ar");
   const [operationFilter, setOperationFilter] = useState<OperationFilter>("all");
   const [operationSearch, setOperationSearch] = useState("");
   const [selectedOperation, setSelectedOperation] = useState<OperationRow | null>(null);
   const first = useRef(true);
+  const pendingTranslateLanguage = useRef<string | null>(null);
   const copy = getBusinessCopy(data.cafe.businessCategory);
   const consoleKind = copy.kind as ConsoleKind;
   const isEvents = consoleKind === "events";
@@ -650,6 +697,85 @@ export function CashierConsoleClient({ initialData }: Props) {
     if (pendingCount > 0) playAlert();
   }, [pendingCount]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    const initializeTranslateElement = () => {
+      try {
+        const TranslateElement = window.google?.translate?.TranslateElement;
+        const container = document.getElementById(googleTranslateElementId);
+        if (!TranslateElement || !container) throw new Error("Google Translate Element is unavailable.");
+
+        if (!container.hasChildNodes()) {
+          new TranslateElement(
+            {
+              pageLanguage: "ar",
+              includedLanguages: googleTranslateIncludedLanguages,
+              autoDisplay: false,
+              layout: TranslateElement.InlineLayout?.SIMPLE,
+            },
+            googleTranslateElementId,
+          );
+        }
+
+        if (!cancelled) {
+          setGoogleTranslateReady(true);
+          setGoogleTranslateFailed(false);
+        }
+
+        if (pendingTranslateLanguage.current) {
+          requestGoogleTranslateLanguage(pendingTranslateLanguage.current);
+        }
+      } catch {
+        if (!cancelled) {
+          setGoogleTranslateFailed(true);
+          setLanguageHint(googleTranslateErrorMessage);
+        }
+      }
+    };
+
+    window.googleTranslateElementInit = initializeTranslateElement;
+
+    if (window.google?.translate?.TranslateElement) {
+      initializeTranslateElement();
+      return () => {
+        cancelled = true;
+        if (window.googleTranslateElementInit === initializeTranslateElement) {
+          delete window.googleTranslateElementInit;
+        }
+      };
+    }
+
+    let script = document.getElementById(googleTranslateScriptId) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = googleTranslateScriptId;
+      script.src = googleTranslateScriptSrc;
+      script.async = true;
+      script.onerror = () => {
+        if (!cancelled) {
+          setGoogleTranslateFailed(true);
+          setLanguageHint(googleTranslateErrorMessage);
+        }
+      };
+      document.body.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      if (window.googleTranslateElementInit === initializeTranslateElement) {
+        delete window.googleTranslateElementInit;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeTranslateLanguage !== "ar" && googleTranslateReady) {
+      requestGoogleTranslateLanguage(activeTranslateLanguage);
+    }
+  }, [activeModal, activeTranslateLanguage, data, googleTranslateReady]);
+
   function closeModal() {
     setActiveModal(null);
   }
@@ -669,19 +795,45 @@ export function CashierConsoleClient({ initialData }: Props) {
     setActiveModal("operation-details");
   }
 
-  function openTranslatedPage(languageCode: string) {
-    if (typeof window === "undefined") return;
-    const currentUrl = window.location.href;
-    const host = window.location.hostname;
-    const localHost = ["localhost", "127.0.0.1", "::1"].includes(host);
-    if (localHost) {
-      setLanguageHint("الترجمة تعمل بشكل أفضل على رابط عام أو دومين الإنتاج.");
-    } else {
+  function requestGoogleTranslateLanguage(languageCode: string, attempt = 0) {
+    const applied = applyGoogleTranslateLanguage(languageCode);
+    if (applied) {
+      pendingTranslateLanguage.current = null;
       setLanguageHint("");
+      return;
     }
-    const translateUrl = `https://translate.google.com/translate?sl=auto&tl=${languageCode}&u=${encodeURIComponent(currentUrl)}`;
-    window.open(translateUrl, "_blank", "noopener,noreferrer");
+
+    if (attempt >= 20) {
+      pendingTranslateLanguage.current = null;
+      setLanguageHint(googleTranslateErrorMessage);
+      return;
+    }
+
+    setTimeout(() => requestGoogleTranslateLanguage(languageCode, attempt + 1), 250);
+  }
+
+  function changeCashierLanguage(languageCode: string) {
     setLanguageMenuOpen(false);
+    setActiveTranslateLanguage(languageCode);
+
+    if (languageCode === "ar") {
+      pendingTranslateLanguage.current = null;
+      requestGoogleTranslateLanguage(languageCode);
+      return;
+    }
+
+    if (googleTranslateFailed) {
+      setLanguageHint(googleTranslateErrorMessage);
+      return;
+    }
+
+    pendingTranslateLanguage.current = languageCode;
+    if (!googleTranslateReady) {
+      setLanguageHint("جاري تحميل الترجمة...");
+      return;
+    }
+
+    requestGoogleTranslateLanguage(languageCode);
   }
 
   function printOrder(order: Row) {
@@ -1123,6 +1275,11 @@ export function CashierConsoleClient({ initialData }: Props) {
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-4 py-6 text-[#311912] sm:py-8">
+      <div
+        id={googleTranslateElementId}
+        aria-hidden="true"
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
+      />
       <section className="mx-auto max-w-7xl">
         <header className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1152,7 +1309,7 @@ export function CashierConsoleClient({ initialData }: Props) {
                       <button
                         key={language.code}
                         type="button"
-                        onClick={() => openTranslatedPage(language.code)}
+                        onClick={() => changeCashierLanguage(language.code)}
                         className="block w-full rounded-xl px-3 py-2 text-right text-sm font-black text-[#311912] hover:bg-[#F8F4EF]"
                       >
                         {language.label}
