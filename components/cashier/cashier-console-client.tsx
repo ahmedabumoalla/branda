@@ -1306,33 +1306,33 @@ export function CashierConsoleClient({ initialData }: Props) {
   ];
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-4 py-6 text-[#311912] sm:py-8">
+    <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-3 py-5 text-[#311912] sm:px-4 sm:py-8">
       <div ref={translateRootRef} data-cashier-translate-root>
       <section className="mx-auto max-w-7xl">
-        <header className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="font-black text-[#6B3A25]">{consoleTitle}</p>
-              <h1 className="mt-1 text-3xl font-black">{data.cafe.name}</h1>
-              <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
+        <header className="mb-4 rounded-[24px] bg-white p-4 shadow-sm sm:mb-5 sm:rounded-[28px] sm:p-5">
+          <div className="grid gap-5">
+            <div className="min-w-0">
+              <p className="text-sm font-black text-[#6B3A25] sm:text-base">{consoleTitle}</p>
+              <h1 className="mt-1 break-words text-2xl font-black leading-tight sm:text-3xl">{data.cafe.name}</h1>
+              <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
                 {isEvents ? "تشغيل بوابة الدخول والتذاكر والحضور" : "تشغيل الطلبات والحجوزات والولاء"} — {data.cashier.fullName}
                 {data.cashier.employeeNumber ? ` رقم ${data.cashier.employeeNumber}` : ""}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={playAlert} className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white">
-                <BellRing className="h-4 w-4" /> تنبيه
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              <button type="button" onClick={playAlert} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-3 py-3 text-sm font-black text-white">
+                <BellRing className="h-5 w-5 shrink-0" /> تنبيه
               </button>
-              <div className="relative" data-no-translate>
+              <div className="relative w-full" data-no-translate>
                 <button
                   type="button"
                   onClick={() => setLanguageMenuOpen((current) => !current)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#311912]"
+                  className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F8F4EF] px-3 py-3 text-sm font-black text-[#311912]"
                 >
-                  <Languages className="h-4 w-4" /> {languageTitle} / Language
+                  <Languages className="h-5 w-5 shrink-0" /> <span className="truncate">{languageTitle} / Language</span>
                 </button>
                 <div
-                  className={`absolute left-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white p-2 text-right shadow-xl transition ${
+                  className={`absolute right-0 z-20 mt-2 w-full min-w-[16rem] overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white p-2 text-right shadow-xl transition sm:w-72 ${
                     languageMenuOpen ? "visible opacity-100" : "invisible opacity-0"
                   }`}
                   aria-hidden={!languageMenuOpen}
@@ -1355,18 +1355,18 @@ export function CashierConsoleClient({ initialData }: Props) {
                   ) : null}
                 </div>
               </div>
-              <button type="button" onClick={printCashierReport} className="inline-flex items-center gap-2 rounded-2xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912]">
-                <Printer className="h-4 w-4" /> طباعة تقرير
+              <button type="button" onClick={printCashierReport} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#D9A33F] px-3 py-3 text-sm font-black text-[#311912]">
+                <Printer className="h-5 w-5 shrink-0" /> <span className="truncate">طباعة تقرير</span>
               </button>
-              <button type="button" onClick={() => exportCashierReport("pdf")} className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#311912]">
-                <FileSpreadsheet className="h-4 w-4" /> PDF
+              <button type="button" onClick={() => exportCashierReport("pdf")} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F8F4EF] px-3 py-3 text-sm font-black text-[#311912]">
+                <FileSpreadsheet className="h-5 w-5 shrink-0" /> PDF
               </button>
-              <button type="button" onClick={() => exportCashierReport("excel")} className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#311912]">
-                <FileSpreadsheet className="h-4 w-4" /> Excel
+              <button type="button" onClick={() => exportCashierReport("excel")} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#F8F4EF] px-3 py-3 text-sm font-black text-[#311912]">
+                <FileSpreadsheet className="h-5 w-5 shrink-0" /> Excel
               </button>
-              <form action={logoutCashierAction}>
-                <button className="inline-flex items-center gap-2 rounded-2xl bg-[#311912] px-4 py-3 text-sm font-black text-white">
-                  <LogOut className="h-4 w-4" /> خروج
+              <form action={logoutCashierAction} className="w-full">
+                <button className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#311912] px-3 py-3 text-sm font-black text-white">
+                  <LogOut className="h-5 w-5 shrink-0" /> خروج
                 </button>
               </form>
             </div>
@@ -1374,17 +1374,17 @@ export function CashierConsoleClient({ initialData }: Props) {
         </header>
 
         <section className="mb-5 grid gap-3 md:grid-cols-3">
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-xs font-black text-[#806A5E]">{isEvents ? "طلبات تذاكر تحتاج استقبال" : "طلبات تحتاج استقبال"}</p>
-            <p className="mt-1 text-3xl font-black text-[#6B3A25]">{pendingOrders}</p>
+          <div className="min-h-24 rounded-3xl bg-white p-5 shadow-sm">
+            <p className="text-sm font-black leading-6 text-[#806A5E]">{isEvents ? "طلبات تذاكر تحتاج استقبال" : "طلبات تحتاج استقبال"}</p>
+            <p className="mt-2 text-4xl font-black leading-none text-[#6B3A25]">{pendingOrders}</p>
           </div>
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-xs font-black text-[#806A5E]">{isEvents ? "حضور أو تسجيلات معلقة" : "حجوزات تحتاج استقبال"}</p>
-            <p className="mt-1 text-3xl font-black text-[#6B3A25]">{pendingReservations}</p>
+          <div className="min-h-24 rounded-3xl bg-white p-5 shadow-sm">
+            <p className="text-sm font-black leading-6 text-[#806A5E]">{isEvents ? "حضور أو تسجيلات معلقة" : "حجوزات تحتاج استقبال"}</p>
+            <p className="mt-2 text-4xl font-black leading-none text-[#6B3A25]">{pendingReservations}</p>
           </div>
-          <div className="rounded-3xl bg-white p-4 shadow-sm">
-            <p className="text-xs font-black text-[#806A5E]">حركة اليوم</p>
-            <p className="mt-1 text-3xl font-black text-[#6B3A25]">{data.logs.length}</p>
+          <div className="min-h-24 rounded-3xl bg-white p-5 shadow-sm">
+            <p className="text-sm font-black leading-6 text-[#806A5E]">حركة اليوم</p>
+            <p className="mt-2 text-4xl font-black leading-none text-[#6B3A25]">{data.logs.length}</p>
           </div>
         </section>
 
@@ -1399,7 +1399,7 @@ export function CashierConsoleClient({ initialData }: Props) {
           </div>
         ) : null}
 
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
           {actions.map((action) => {
             const Icon = action.icon;
             return (
@@ -2040,13 +2040,93 @@ function RecentTable(props: {
   onDetails: (row: Row) => void;
   onAction: (row: Row, action: "accept" | "reject" | "modify" | "confirm") => void;
 }) {
+  const { rows, type, consoleKind, isEvents, onDetails, onAction } = props;
+
   return (
-    <section className="rounded-[28px] bg-white p-5 shadow-sm">
+    <section className="rounded-[24px] bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-xl font-black text-[#311912]">{props.title}</h2>
         <StatusPill>{props.rows.length}</StatusPill>
       </div>
-      <OperationsTable {...props} />
+      <div className="grid gap-3 lg:hidden">
+        {rows.length ? (
+          rows.map((row) => {
+            const id = valueOf(row, ["id"], "-");
+            const when = type === "orders"
+              ? rowDateTime(row, ["createdAt", "created_at"], [])
+              : rowDateTime(row, ["reservationDate", "reservation_date"], ["reservationTime", "reservation_time"]);
+            const typeLabel = type === "orders"
+              ? orderKind(row, consoleKind)
+              : valueOf(row, ["eventType", "event_type", "type"], isEvents ? "حضور" : "حجز");
+            const title = type === "orders" ? orderName(row, consoleKind) : reservationSummary(row, isEvents);
+            const summary = type === "orders"
+              ? orderDetails(row, consoleKind)
+              : valueOf(row, ["notes", "description", "details"], isEvents ? "حضور" : "حجز");
+
+            return (
+              <article
+                key={id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onDetails(row)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") onDetails(row);
+                }}
+                className="w-full rounded-3xl border border-[#E7D7C6] bg-[#FCF8F3] p-4 text-right"
+              >
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-[#806A5E]">{type === "orders" ? "رقم الطلب" : "رقم الحجز"}</p>
+                      <p className="mt-1 break-all text-sm font-black text-[#311912]">{id}</p>
+                    </div>
+                    <StatusPill>{valueOf(row, ["status"])}</StatusPill>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <h3 className="break-words text-lg font-black leading-7 text-[#311912]">{title}</h3>
+                    <p className="break-words text-sm font-bold leading-6 text-[#6B3A25]">{typeLabel}</p>
+                    <p className="break-words text-sm font-bold leading-6 text-[#806A5E]">{summary}</p>
+                  </div>
+
+                  <div className="grid gap-2 rounded-2xl bg-white p-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs font-black text-[#806A5E]">العميل</p>
+                        <p className="mt-1 break-words font-black text-[#311912]">{valueOf(row, ["customerName", "customer_name"], "عميل")}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-[#806A5E]">التاريخ/الوقت</p>
+                        <p className="mt-1 break-words font-black text-[#311912]">{when.date} {when.time}</p>
+                      </div>
+                    </div>
+                    {type === "orders" ? (
+                      <div>
+                        <p className="text-xs font-black text-[#806A5E]">المبلغ</p>
+                        <p className="mt-1 break-words font-black text-[#311912]">{amountOf(row)}</p>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
+                    <button type="button" onClick={() => onDetails(row)} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-[#6B3A25]">
+                      التفاصيل
+                    </button>
+                    <CashierRowActions row={row} type={type} isEvents={isEvents} onAction={(action) => onAction(row, action)} />
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className="rounded-3xl border border-dashed border-[#E7D7C6] p-6 text-center font-bold text-[#806A5E]">
+            {props.emptyText}
+          </div>
+        )}
+      </div>
+      <div className="hidden lg:block">
+        <OperationsTable {...props} />
+      </div>
     </section>
   );
 }
