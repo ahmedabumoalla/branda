@@ -77,12 +77,6 @@ type TranslateLanguage = {
   code: string;
   label: string;
 };
-type GoogleTranslateElementConstructor = {
-  new (options: Record<string, unknown>, element: string): unknown;
-  InlineLayout?: {
-    SIMPLE?: string;
-  };
-};
 type OperationRow = {
   id: string;
   key: string;
@@ -101,17 +95,6 @@ type OperationRow = {
   searchText: string;
 };
 
-declare global {
-  interface Window {
-    google?: {
-      translate?: {
-        TranslateElement?: GoogleTranslateElementConstructor;
-      };
-    };
-    googleTranslateElementInit?: () => void;
-  }
-}
-
 const translateLanguages: TranslateLanguage[] = [
   { code: "ar", label: "العربية" },
   { code: "en", label: "English" },
@@ -122,13 +105,12 @@ const translateLanguages: TranslateLanguage[] = [
   { code: "id", label: "Indonesian" },
 ];
 
-const googleTranslateElementId = "google_translate_element";
-const googleTranslateScriptId = "google-translate-element-script";
-const googleTranslateScriptSrc = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-const googleTranslateIncludedLanguages = translateLanguages.map((language) => language.code).join(",");
-const googleTranslateLoadTimeoutMs = 10_000;
-const googleTranslatePollMs = 200;
-const googleTranslateErrorMessage = "تعذر تحميل الترجمة، تأكد من اتصال الجهاز أو جرّب متصفحًا آخر";
+const cashierTranslateCachePrefix = "cashier-translation:";
+const cashierTranslationBatchSize = 80;
+const cashierTranslateLoadingMessage = "جاري الترجمة...";
+const cashierTranslateSuccessMessage = "تم تغيير اللغة";
+const cashierTranslatePartialMessage = "تعذر ترجمة بعض النصوص، وباقي الصفحة يعمل";
+const rejectionReasonRequiredMessage = "اكتب سبب الرفض أولًا";
 
 const operationFilters: Array<{ id: OperationFilter; label: string }> = [
   { id: "all", label: "الكل" },
@@ -598,46 +580,58 @@ function StatusPill({ children }: { children: React.ReactNode }) {
   );
 }
 
-function clearGoogleTranslateCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
+function shouldSkipTranslationElement(element: Element | null) {
+  if (!element) return true;
+  return Boolean(
+    element.closest(
+      "script,style,svg,path,input,textarea,select,option,code,pre,.hidden,[data-no-translate],[hidden],[aria-hidden='true']",
+    ),
+  );
 }
 
-function getGoogleTranslateCombo() {
-  if (typeof document === "undefined") return null;
-  return document.querySelector<HTMLSelectElement>("select.goog-te-combo");
+function shouldTranslateText(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (/^[\d\s.,:;#/+()[\]\-_%]+$/.test(trimmed)) return false;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) return false;
+  if (/^[A-Z0-9_-]{8,}$/i.test(trimmed) && /\d/.test(trimmed) && !/\s/.test(trimmed)) return false;
+  return true;
 }
 
-function waitForGoogleTranslateCombo(timeoutMs = googleTranslateLoadTimeoutMs) {
-  return new Promise<HTMLSelectElement | null>((resolve) => {
-    const startedAt = Date.now();
-
-    const poll = () => {
-      const combo = getGoogleTranslateCombo();
-      if (combo) {
-        resolve(combo);
-        return;
-      }
-
-      if (Date.now() - startedAt >= timeoutMs) {
-        resolve(null);
-        return;
-      }
-
-      setTimeout(poll, googleTranslatePollMs);
-    };
-
-    poll();
+function collectCashierTextNodes(root: HTMLElement) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (shouldSkipTranslationElement(parent)) return NodeFilter.FILTER_REJECT;
+      if (!shouldTranslateText(node.nodeValue ?? "")) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
   });
+  const nodes: Text[] = [];
+  let next = walker.nextNode();
+  while (next) {
+    nodes.push(next as Text);
+    next = walker.nextNode();
+  }
+  return nodes;
 }
 
-function applyGoogleTranslateLanguage(combo: HTMLSelectElement, languageCode: string) {
-  if (languageCode === "ar") {
-    clearGoogleTranslateCookie();
-  }
+function getTranslationCacheKey(languageCode: string, text: string) {
+  return `${cashierTranslateCachePrefix}${languageCode}:${text}`;
+}
 
-  combo.value = languageCode === "ar" ? "" : languageCode;
-  combo.dispatchEvent(new Event("change", { bubbles: true }));
+function readTranslationCache(languageCode: string, text: string) {
+  try {
+    return sessionStorage.getItem(getTranslationCacheKey(languageCode, text));
+  } catch {
+    return null;
+  }
+}
+
+function writeTranslationCache(languageCode: string, text: string, translation: string) {
+  try {
+    sessionStorage.setItem(getTranslationCacheKey(languageCode, text), translation);
+  } catch {}
 }
 
 export function CashierConsoleClient({ initialData }: Props) {
@@ -663,14 +657,14 @@ export function CashierConsoleClient({ initialData }: Props) {
   const [ticketResult, setTicketResult] = useState<Row | null>(null);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [languageHint, setLanguageHint] = useState("");
-  const [googleTranslateReady, setGoogleTranslateReady] = useState(false);
-  const [googleTranslateFailed, setGoogleTranslateFailed] = useState(false);
   const [activeTranslateLanguage, setActiveTranslateLanguage] = useState("ar");
   const [operationFilter, setOperationFilter] = useState<OperationFilter>("all");
   const [operationSearch, setOperationSearch] = useState("");
   const [selectedOperation, setSelectedOperation] = useState<OperationRow | null>(null);
   const first = useRef(true);
-  const pendingTranslateLanguage = useRef<string | null>(null);
+  const translateRootRef = useRef<HTMLDivElement | null>(null);
+  const originalTextByNode = useRef<WeakMap<Text, string>>(new WeakMap());
+  const translationRequestSeq = useRef(0);
   const copy = getBusinessCopy(data.cafe.businessCategory);
   const consoleKind = copy.kind as ConsoleKind;
   const isEvents = consoleKind === "events";
@@ -721,107 +715,110 @@ export function CashierConsoleClient({ initialData }: Props) {
     if (pendingCount > 0) playAlert();
   }, [pendingCount]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  async function translateCashierDom(languageCode: string, options?: { quiet?: boolean }) {
+    const root = translateRootRef.current;
+    if (!root) return;
 
-    let cancelled = false;
-    let loadTimer: ReturnType<typeof setTimeout> | null = null;
-    const markReadyWhenComboExists = () => {
-      void waitForGoogleTranslateCombo().then((combo) => {
-        if (cancelled) return;
+    const requestId = ++translationRequestSeq.current;
+    const nodes = collectCashierTextNodes(root);
 
-        if (combo) {
-          setGoogleTranslateReady(true);
-          setGoogleTranslateFailed(false);
-          if (pendingTranslateLanguage.current) {
-            void requestGoogleTranslateLanguage(pendingTranslateLanguage.current);
-          }
-          return;
-        }
-
-        setGoogleTranslateFailed(true);
-        if (pendingTranslateLanguage.current) {
-          setLanguageHint(googleTranslateErrorMessage);
+    if (languageCode === "ar") {
+      nodes.forEach((node) => {
+        const original = originalTextByNode.current.get(node);
+        if (original && node.nodeValue !== original) {
+          node.nodeValue = original;
         }
       });
-    };
+      if (!options?.quiet) {
+        setLanguageHint(cashierTranslateSuccessMessage);
+        setLanguageMenuOpen(false);
+      }
+      return;
+    }
 
-    const initializeTranslateElement = () => {
+    if (!options?.quiet) setLanguageHint(cashierTranslateLoadingMessage);
+
+    const pendingByText = new Map<string, Text[]>();
+    let partialFailure = false;
+
+    nodes.forEach((node) => {
+      if (!originalTextByNode.current.has(node)) {
+        originalTextByNode.current.set(node, node.nodeValue ?? "");
+      }
+      const original = originalTextByNode.current.get(node) ?? "";
+      if (!shouldTranslateText(original)) return;
+
+      const cached = readTranslationCache(languageCode, original);
+      if (cached) {
+        if (node.nodeValue !== cached) node.nodeValue = cached;
+        return;
+      }
+
+      const existing = pendingByText.get(original);
+      if (existing) existing.push(node);
+      else pendingByText.set(original, [node]);
+    });
+
+    const uniqueTexts = Array.from(pendingByText.keys());
+    for (let index = 0; index < uniqueTexts.length; index += cashierTranslationBatchSize) {
+      const chunk = uniqueTexts.slice(index, index + cashierTranslationBatchSize);
       try {
-        const TranslateElement = window.google?.translate?.TranslateElement;
-        const container = document.getElementById(googleTranslateElementId);
-        if (!TranslateElement || !container) throw new Error("Google Translate Element is unavailable.");
+        const response = await fetch("/api/cashier/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target: languageCode, texts: chunk }),
+        });
+        if (!response.ok) throw new Error("translation request failed");
+        const payload = (await response.json()) as { translations?: unknown };
+        const translations = Array.isArray(payload.translations) ? payload.translations : [];
 
-        if (!container.hasChildNodes()) {
-          new TranslateElement(
-            {
-              pageLanguage: "ar",
-              includedLanguages: googleTranslateIncludedLanguages,
-              autoDisplay: false,
-              layout: TranslateElement.InlineLayout?.SIMPLE,
-            },
-            googleTranslateElementId,
-          );
-        }
-
-        markReadyWhenComboExists();
+        chunk.forEach((original, chunkIndex) => {
+          const translated = typeof translations[chunkIndex] === "string" ? translations[chunkIndex] : original;
+          if (typeof translations[chunkIndex] !== "string") partialFailure = true;
+          writeTranslationCache(languageCode, original, translated);
+          if (translationRequestSeq.current !== requestId) return;
+          pendingByText.get(original)?.forEach((node) => {
+            if (node.nodeValue !== translated) node.nodeValue = translated;
+          });
+        });
       } catch {
-        if (!cancelled) {
-          setGoogleTranslateFailed(true);
-        }
+        partialFailure = true;
+        chunk.forEach((original) => {
+          pendingByText.get(original)?.forEach((node) => {
+            if (translationRequestSeq.current === requestId && node.nodeValue !== original) {
+              node.nodeValue = original;
+            }
+          });
+        });
       }
-    };
-
-    window.googleTranslateElementInit = initializeTranslateElement;
-
-    if (window.google?.translate?.TranslateElement) {
-      initializeTranslateElement();
-      return () => {
-        cancelled = true;
-        if (loadTimer) {
-          clearTimeout(loadTimer);
-        }
-      };
     }
 
-    let script = document.getElementById(googleTranslateScriptId) as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.id = googleTranslateScriptId;
-      script.src = googleTranslateScriptSrc;
-      script.async = true;
-      script.onerror = () => {
-        if (!cancelled) {
-          setGoogleTranslateFailed(true);
-        }
-      };
-      document.body.appendChild(script);
-    } else {
-      markReadyWhenComboExists();
+    if (translationRequestSeq.current !== requestId) return;
+    if (!options?.quiet) {
+      setLanguageHint(partialFailure ? cashierTranslatePartialMessage : cashierTranslateSuccessMessage);
+      setLanguageMenuOpen(false);
     }
-
-    loadTimer = setTimeout(() => {
-      if (!cancelled && !getGoogleTranslateCombo()) {
-        setGoogleTranslateFailed(true);
-        if (pendingTranslateLanguage.current) {
-          setLanguageHint(googleTranslateErrorMessage);
-        }
-      }
-    }, googleTranslateLoadTimeoutMs);
-
-    return () => {
-      cancelled = true;
-      if (loadTimer) {
-        clearTimeout(loadTimer);
-      }
-    };
-  }, []);
+  }
 
   useEffect(() => {
-    if (activeTranslateLanguage !== "ar" && googleTranslateReady) {
-      void requestGoogleTranslateLanguage(activeTranslateLanguage);
-    }
-  }, [activeModal, activeTranslateLanguage, data, googleTranslateReady]);
+    if (activeTranslateLanguage === "ar") return;
+    const root = translateRootRef.current;
+    if (!root) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new MutationObserver(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void translateCashierDom(activeTranslateLanguage, { quiet: true });
+      }, 250);
+    });
+
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [activeTranslateLanguage]);
 
   function closeModal() {
     setActiveModal(null);
@@ -842,40 +839,9 @@ export function CashierConsoleClient({ initialData }: Props) {
     setActiveModal("operation-details");
   }
 
-  async function requestGoogleTranslateLanguage(languageCode: string) {
-    if (languageCode === "ar") {
-      clearGoogleTranslateCookie();
-    }
-
-    const combo = await waitForGoogleTranslateCombo();
-    if (combo) {
-      applyGoogleTranslateLanguage(combo, languageCode);
-      pendingTranslateLanguage.current = null;
-      setLanguageHint("");
-      return;
-    }
-
-    pendingTranslateLanguage.current = null;
-    setGoogleTranslateFailed(true);
-    setLanguageHint(googleTranslateErrorMessage);
-  }
-
   function changeCashierLanguage(languageCode: string) {
-    setLanguageMenuOpen(false);
     setActiveTranslateLanguage(languageCode);
-
-    if (languageCode === "ar") {
-      pendingTranslateLanguage.current = null;
-      void requestGoogleTranslateLanguage(languageCode);
-      return;
-    }
-
-    pendingTranslateLanguage.current = languageCode;
-    if (!googleTranslateReady && !googleTranslateFailed) {
-      setLanguageHint("جاري تحميل الترجمة...");
-    }
-
-    void requestGoogleTranslateLanguage(languageCode);
+    void translateCashierDom(languageCode);
   }
 
   function printOrder(order: Row) {
@@ -1040,30 +1006,54 @@ export function CashierConsoleClient({ initialData }: Props) {
   }
 
   async function rejectOrder(orderId: string, reason: string) {
+    const cleanReason = reason.trim();
+    if (!cleanReason) {
+      setActionMessage("");
+      setMessage(rejectionReasonRequiredMessage);
+      return;
+    }
+
     setBusy(true);
     try {
-      await updateCashierOrderStatusAction(orderId, "rejected", reason);
+      await updateCashierOrderStatusAction(orderId, "rejected", cleanReason);
       await refreshConsole();
       setMessage(isEvents ? "تم رفض طلب التذاكر" : "تم رفض الطلب");
       setActionTarget(null);
       setActionMessage("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر رفض طلب التذاكر" : "تعذر رفض الطلب");
+      const rawMessage = error instanceof Error ? error.message : "";
+      setMessage(
+        rawMessage.includes("Rejection reason")
+          ? rejectionReasonRequiredMessage
+          : rawMessage || (isEvents ? "تعذر رفض طلب التذاكر" : "تعذر رفض الطلب"),
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function rejectReservation(reservationId: string, reason: string) {
+    const cleanReason = reason.trim();
+    if (!cleanReason) {
+      setActionMessage("");
+      setMessage(rejectionReasonRequiredMessage);
+      return;
+    }
+
     setBusy(true);
     try {
-      await updateCashierReservationStatusAction(reservationId, "rejected", reason);
+      await updateCashierReservationStatusAction(reservationId, "rejected", cleanReason);
       await refreshConsole();
       setMessage(isEvents ? "تم رفض التسجيل" : "تم رفض الحجز");
       setActionTarget(null);
       setActionMessage("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر رفض التسجيل" : "تعذر رفض الحجز");
+      const rawMessage = error instanceof Error ? error.message : "";
+      setMessage(
+        rawMessage.includes("Rejection reason")
+          ? rejectionReasonRequiredMessage
+          : rawMessage || (isEvents ? "تعذر رفض التسجيل" : "تعذر رفض الحجز"),
+      );
     } finally {
       setBusy(false);
     }
@@ -1317,17 +1307,7 @@ export function CashierConsoleClient({ initialData }: Props) {
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-4 py-6 text-[#311912] sm:py-8">
-      <div
-        id={googleTranslateElementId}
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "-9999px",
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-      />
+      <div ref={translateRootRef} data-cashier-translate-root>
       <section className="mx-auto max-w-7xl">
         <header className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1343,7 +1323,7 @@ export function CashierConsoleClient({ initialData }: Props) {
               <button type="button" onClick={playAlert} className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white">
                 <BellRing className="h-4 w-4" /> تنبيه
               </button>
-              <div className="relative">
+              <div className="relative" data-no-translate>
                 <button
                   type="button"
                   onClick={() => setLanguageMenuOpen((current) => !current)}
@@ -1351,20 +1331,29 @@ export function CashierConsoleClient({ initialData }: Props) {
                 >
                   <Languages className="h-4 w-4" /> {languageTitle} / Language
                 </button>
-                {languageMenuOpen ? (
-                  <div className="absolute left-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white p-2 text-right shadow-xl">
-                    {translateLanguages.map((language) => (
-                      <button
-                        key={language.code}
-                        type="button"
-                        onClick={() => changeCashierLanguage(language.code)}
-                        className="block w-full rounded-xl px-3 py-2 text-right text-sm font-black text-[#311912] hover:bg-[#F8F4EF]"
-                      >
-                        {language.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
+                <div
+                  className={`absolute left-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white p-2 text-right shadow-xl transition ${
+                    languageMenuOpen ? "visible opacity-100" : "invisible opacity-0"
+                  }`}
+                  aria-hidden={!languageMenuOpen}
+                  style={{ pointerEvents: languageMenuOpen ? "auto" : "none" }}
+                >
+                  {translateLanguages.map((language) => (
+                    <button
+                      key={language.code}
+                      type="button"
+                      onClick={() => changeCashierLanguage(language.code)}
+                      className="block w-full rounded-xl px-3 py-2 text-right text-sm font-black text-[#311912] hover:bg-[#F8F4EF]"
+                    >
+                      {language.label}
+                    </button>
+                  ))}
+                  {languageHint ? (
+                    <p className="mt-2 rounded-xl bg-[#FFF8EA] px-3 py-2 text-xs font-black text-[#6B3A25]">
+                      {languageHint}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               <button type="button" onClick={printCashierReport} className="inline-flex items-center gap-2 rounded-2xl bg-[#D9A33F] px-4 py-3 text-sm font-black text-[#311912]">
                 <Printer className="h-4 w-4" /> طباعة تقرير
@@ -1382,11 +1371,6 @@ export function CashierConsoleClient({ initialData }: Props) {
               </form>
             </div>
           </div>
-          {languageHint ? (
-            <p className="mt-3 rounded-2xl bg-[#FFF8EA] px-4 py-3 text-xs font-black text-[#6B3A25]">
-              {languageHint}
-            </p>
-          ) : null}
         </header>
 
         <section className="mb-5 grid gap-3 md:grid-cols-3">
@@ -1722,12 +1706,24 @@ export function CashierConsoleClient({ initialData }: Props) {
               {actionTarget.action === "reject" ? "سبب الرفض" : "رسالة للعميل"}
               <textarea
                 value={actionMessage}
-                onChange={(event) => setActionMessage(event.target.value)}
+                onChange={(event) => {
+                  setActionMessage(event.target.value);
+                  if (message === rejectionReasonRequiredMessage) setMessage("");
+                }}
                 rows={4}
                 className="resize-none rounded-2xl bg-[#F8F4EF] px-4 py-3 text-[#311912] outline-none"
-                placeholder={actionTarget.action === "modify" ? "مثال: نقدر نستقبلكم في الموعد المقترح بدل الموعد الحالي" : "اكتب رسالة واضحة للعميل"}
+                placeholder={
+                  actionTarget.action === "modify"
+                    ? "مثال: نقدر نستقبلكم في الموعد المقترح بدل الموعد الحالي"
+                    : "اكتب سبب الرفض بوضوح"
+                }
               />
             </label>
+            {actionTarget.action === "reject" && message === rejectionReasonRequiredMessage ? (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700">
+                {rejectionReasonRequiredMessage}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1758,6 +1754,7 @@ export function CashierConsoleClient({ initialData }: Props) {
           </div>
         ) : null}
       </Modal>
+      </div>
     </main>
   );
 }

@@ -329,7 +329,7 @@ async function requireCashierSessionContext(
 
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers(full_name,email,employee_number),cafes(name,slug,business_category)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,employee_number),cafes(name,slug,business_category)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
