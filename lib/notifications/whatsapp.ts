@@ -1,4 +1,8 @@
-import { Buffer } from "node:buffer";
+import {
+  isMetaWhatsAppConfigured,
+  normalizeWhatsAppToNumber,
+  sendMetaWhatsAppText,
+} from "@/lib/whatsapp/meta-cloud";
 
 export type WhatsAppSendInput = {
   to?: string | null;
@@ -10,16 +14,19 @@ export type WhatsAppSendInput = {
 };
 
 export type WhatsAppSendResult =
-  | { ok: true; sid?: string }
+  | { ok: true; sid?: string; messageId?: string }
   | {
       ok: false;
       skipped?: boolean;
       reason: string;
+      status?: number;
+      errorCode?: string;
+      errorType?: string;
       devHint?: string;
     };
 
 function isEnabled(): boolean {
-  return process.env.TWILIO_WHATSAPP_ENABLED === "true";
+  return isMetaWhatsAppConfigured();
 }
 
 export function normalizeWhatsAppPhone(input?: string | null): string | null {
@@ -49,13 +56,6 @@ export function maskWhatsAppPhone(input?: string | null): string | undefined {
   return `${visibleStart}***${visibleEnd}`;
 }
 
-function safeReason(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message.slice(0, 140);
-  }
-  return "unknown_error";
-}
-
 function logWhatsAppFailure(
   input: WhatsAppSendInput,
   reason: string,
@@ -69,23 +69,6 @@ function logWhatsAppFailure(
   });
 }
 
-function safeMediaUrls(urls?: string[]): string[] {
-  return (urls ?? [])
-    .map((url) => url.trim())
-    .filter((url) => {
-      if (!url.startsWith("https://")) return false;
-      try {
-        const parsed = new URL(url);
-        return parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1";
-      } catch {
-        return false;
-      }
-    })
-    .slice(0, 10);
-}
-
-// Twilio Sandbox note: during development the recipient number must join the
-// configured WhatsApp Sandbox before Twilio will deliver messages.
 export async function sendWhatsAppMessage(
   input: WhatsAppSendInput,
 ): Promise<WhatsAppSendResult> {
@@ -98,67 +81,17 @@ export async function sendWhatsAppMessage(
     return { ok: false, skipped: true, reason: "invalid_recipient" };
   }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
-  const from = process.env.TWILIO_WHATSAPP_FROM?.trim();
+  const result = await sendMetaWhatsAppText({
+    to: normalizeWhatsAppToNumber(normalizedTo) ?? normalizedTo,
+    body: input.body,
+  });
 
-  if (!accountSid || !authToken || !from) {
-    const reason = "missing_config";
-    logWhatsAppFailure(input, reason, normalizedTo);
-    return { ok: false, skipped: true, reason };
+  if (!result.ok) {
+    logWhatsAppFailure(input, result.reason, normalizedTo);
+    return result;
   }
 
-  try {
-    const body = new URLSearchParams({
-      From: from,
-      To: `whatsapp:${normalizedTo}`,
-      Body: input.body,
-    });
-    for (const mediaUrl of safeMediaUrls(input.mediaUrls)) {
-      body.append("MediaUrl", mediaUrl);
-    }
-
-    const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
-        accountSid,
-      )}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${accountSid}:${authToken}`,
-          ).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: body.toString(),
-      },
-    );
-
-    if (!response.ok) {
-      const reason = `twilio_http_${response.status}`;
-      logWhatsAppFailure(input, reason, normalizedTo);
-      return {
-        ok: false,
-        reason,
-        devHint:
-          process.env.NODE_ENV === "development"
-            ? "Twilio WhatsApp Sandbox recipients must opt in before delivery."
-            : undefined,
-      };
-    }
-
-    const payload = (await response.json().catch(() => null)) as
-      | { sid?: unknown }
-      | null;
-    return {
-      ok: true,
-      sid: typeof payload?.sid === "string" ? payload.sid : undefined,
-    };
-  } catch (error) {
-    const reason = safeReason(error);
-    logWhatsAppFailure(input, reason, normalizedTo);
-    return { ok: false, reason };
-  }
+  return { ok: true, messageId: result.messageId };
 }
 
 export async function sendWhatsAppOtp(input: {
