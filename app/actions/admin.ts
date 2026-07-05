@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import {
   approveSubscriptionRequest,
+  type CafeFeatureOverrideInput,
   getAdminCafes,
   getAdminCustomers,
   getAdminOperations,
@@ -10,10 +12,12 @@ import {
   getOwnerActivePlanId,
   getPlatformPlans,
   rejectSubscriptionRequest,
+  saveCafeFeatureOverrides,
   savePlatformPlans,
   updateCafePlan,
   updateCafeStatus,
 } from "@/lib/data/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 
 export async function fetchPlatformPlansAction() {
@@ -65,6 +69,28 @@ export async function updateCafePlanAction(cafeId: string, planId: string) {
 
 export async function updateCafeStatusAction(cafeId: string, active: boolean) {
   await updateCafeStatus(cafeId, active);
+}
+
+export async function saveCafeFeatureOverridesAction(
+  cafeId: string,
+  overrides: CafeFeatureOverrideInput[]
+) {
+  const saved = await saveCafeFeatureOverrides(cafeId, overrides);
+  const admin = createAdminClient();
+  const { data: cafe } = await admin
+    .from("cafes")
+    .select("slug")
+    .eq("id", cafeId)
+    .maybeSingle();
+
+  revalidatePath("/admin/cafes");
+  revalidatePath("/dashboard", "layout");
+  if (cafe?.slug) {
+    revalidatePath(`/c/${cafe.slug}`);
+    revalidatePath("/c/[slug]", "layout");
+  }
+
+  return saved;
 }
 
 export async function savePlatformSettingsAction(

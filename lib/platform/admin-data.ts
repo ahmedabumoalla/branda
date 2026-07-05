@@ -1,5 +1,6 @@
 import {
   getAllPlatformFeatures,
+  type BrandFeatureOverride,
   getDashboardSidebarFeatures,
   getPackageAssignableFeatures,
 } from "@/lib/platform/feature-access";
@@ -82,6 +83,7 @@ export type PlatformCafe = {
   purchasedDomainStatus?: "غير مربوط" | "بانتظار التحقق" | "مربوط";
   purchasedDomainCreatedAt?: string;
   purchasedDomainConnectedAt?: string;
+  featureOverrides?: BrandFeatureOverride[];
 };
 
 export type PlatformCustomer = {

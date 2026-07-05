@@ -1,7 +1,7 @@
 "use server";
 
 import { getOwnerCafeContext } from "@/lib/data/cafes";
-import { getPlatformPlans } from "@/lib/data/admin";
+import { getCafeFeatureOverrides, getPlatformPlans } from "@/lib/data/admin";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
@@ -111,6 +111,7 @@ export async function fetchOwnerDashboardShellAction() {
       unauthenticated: true as const,
       planId: "",
       plans: await getPlatformPlans().catch(() => []),
+      featureOverrides: [],
       settings: fallbackSettings({ slug: "", name: "" }),
       notifications: [],
       pendingReservations: 0,
@@ -121,8 +122,9 @@ export async function fetchOwnerDashboardShellAction() {
 
   const supabase = await createClient();
 
-  const [plans, subscriptionResult, settingsResult, notificationsResult, fastCounts] = await Promise.all([
+  const [plans, featureOverrides, subscriptionResult, settingsResult, notificationsResult, fastCounts] = await Promise.all([
     getPlatformPlans(),
+    getCafeFeatureOverrides(cafe.id).catch(() => []),
     supabase
       .from("subscriptions")
       .select("plan_id")
@@ -168,6 +170,7 @@ export async function fetchOwnerDashboardShellAction() {
   return {
     planId: String(subscriptionResult.data?.plan_id ?? ""),
     plans,
+    featureOverrides,
     settings,
     notifications: ((notificationsResult.data ?? []) as Record<string, unknown>[]).map((row) =>
       mapNotification(cafe.slug, row),

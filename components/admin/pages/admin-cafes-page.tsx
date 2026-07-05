@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState, useTransition, type ElementType } from "react";
 import {
+  saveCafeFeatureOverridesAction,
   updateCafePlanAction,
   updateCafeStatusAction,
 } from "@/app/actions/admin";
@@ -61,10 +62,13 @@ import type {
   PlatformPlan,
 } from "@/lib/platform/admin-data";
 import {
+  type BrandFeatureOverride,
+  type EffectiveBrandFeatureAccess,
   getBrandFeatureOverrides,
   getEffectiveBrandFeatureAccess,
   getPlanIncludedFeatures,
 } from "@/lib/platform/feature-access";
+import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
 import { formatSar } from "@/lib/format";
 
 const iconMap = {
@@ -173,10 +177,28 @@ const effectiveResultLabels = {
   coming_soon: "قريبًا",
 } as const;
 
+type FeatureOverrideChoice = EffectiveBrandFeatureAccess["override"];
+type FeatureOverrideDraft = Record<string, FeatureOverrideChoice>;
+
 function getBrandFeatureRows(cafe: PlatformCafe | null, plans: PlatformPlan[]) {
   if (!cafe) return [];
   const planFeatures = getPlanIncludedFeatures(cafe.planId, plans);
-  return getEffectiveBrandFeatureAccess(planFeatures, getBrandFeatureOverrides(cafe.id));
+  return getEffectiveBrandFeatureAccess(planFeatures, getBrandFeatureOverrides(cafe));
+}
+
+function buildFeatureOverrideDraft(rows: EffectiveBrandFeatureAccess[]) {
+  return Object.fromEntries(
+    rows.map((row) => [row.feature.id, row.override])
+  ) as FeatureOverrideDraft;
+}
+
+function draftToOverrides(draft: FeatureOverrideDraft): BrandFeatureOverride[] {
+  return Object.entries(draft)
+    .filter(([, override]) => override !== "default")
+    .map(([featureId, override]) => ({
+      featureId: featureId as PlatformFeatureId,
+      enabled: override === "enabled",
+    }));
 }
 
 export function AdminCafesPage({
@@ -201,7 +223,10 @@ export function AdminCafesPage({
   );
   const [modalCafe, setModalCafe] = useState<PlatformCafe | null>(null);
   const [updatingPlanCafeId, setUpdatingPlanCafeId] = useState<string | null>(null);
+  const [featureOverrideDrafts, setFeatureOverrideDrafts] = useState<Record<string, FeatureOverrideDraft>>({});
+  const [savingFeatureOverridesCafeId, setSavingFeatureOverridesCafeId] = useState<string | null>(null);
   const [isPlanUpdatePending, startPlanUpdateTransition] = useTransition();
+  const [isFeatureOverridePending, startFeatureOverrideTransition] = useTransition();
 
   const filtered = useMemo(() => {
     return cafes.filter((cafe) => {
@@ -324,6 +349,174 @@ export function AdminCafesPage({
         }
       })();
     });
+  }
+
+  function getFeatureDraft(cafe: PlatformCafe, rows: EffectiveBrandFeatureAccess[]) {
+    return featureOverrideDrafts[cafe.id] ?? buildFeatureOverrideDraft(rows);
+  }
+
+  function updateFeatureOverrideDraft(
+    cafe: PlatformCafe,
+    rows: EffectiveBrandFeatureAccess[],
+    featureId: PlatformFeatureId,
+    override: FeatureOverrideChoice,
+  ) {
+    const baseDraft = getFeatureDraft(cafe, rows);
+    setFeatureOverrideDrafts((prev) => ({
+      ...prev,
+      [cafe.id]: {
+        ...baseDraft,
+        [featureId]: override,
+      },
+    }));
+  }
+
+  function saveFeatureOverrides(cafe: PlatformCafe, rows: EffectiveBrandFeatureAccess[]) {
+    const draft = getFeatureDraft(cafe, rows);
+    const payload = rows.map((row) => ({
+      featureId: row.feature.id,
+      override: draft[row.feature.id] ?? row.override,
+    }));
+
+    setSavingFeatureOverridesCafeId(cafe.id);
+    startFeatureOverrideTransition(() => {
+      void (async () => {
+        try {
+          const saved = await saveCafeFeatureOverridesAction(cafe.id, payload);
+          setCafes((prev) =>
+            prev.map((item) =>
+              item.id === cafe.id ? { ...item, featureOverrides: saved } : item,
+            ),
+          );
+          setModalCafe((current) =>
+            current?.id === cafe.id ? { ...current, featureOverrides: saved } : current,
+          );
+          setFeatureOverrideDrafts((prev) => {
+            const next = { ...prev };
+            delete next[cafe.id];
+            return next;
+          });
+        } catch (error) {
+          console.error("[AdminCafesPage:saveFeatureOverrides]", error);
+          alert("طھط¹ط°ط± ط­ظپط¸ طھط­ظƒظ… ط®ط¯ظ…ط§طھ ط§ظ„ط¹ظ„ط§ظ…ط©");
+        } finally {
+          setSavingFeatureOverridesCafeId(null);
+        }
+      })();
+    });
+  }
+
+  function renderFeatureOverridesPanel(cafe: PlatformCafe) {
+    const rows = getBrandFeatureRows(cafe, plans);
+    const draft = getFeatureDraft(cafe, rows);
+    const draftOverrides = draftToOverrides(draft);
+    const effectiveRows = getEffectiveBrandFeatureAccess(
+      getPlanIncludedFeatures(cafe.planId, plans),
+      draftOverrides,
+    );
+    const includedCount = effectiveRows.filter((row) => row.planIncluded).length;
+    const manuallyEnabledCount = Object.values(draft).filter((item) => item === "enabled").length;
+    const manuallyDisabledCount = Object.values(draft).filter((item) => item === "disabled").length;
+    const hasDraft = Boolean(featureOverrideDrafts[cafe.id]);
+    const saving = isFeatureOverridePending && savingFeatureOverridesCafeId === cafe.id;
+
+    return (
+      <div className={softPanel}>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-black text-[#F8F4EF]">ط§ظ„طھط­ظƒظ… ظپظٹ ط®ط¯ظ…ط§طھ ط§ظ„ط¹ظ„ط§ظ…ط©</h3>
+            <p className="mt-1 text-sm font-bold text-[#CBB29C]">
+              ط§ظ„ط¨ط§ظ‚ط© ط§ظ„ط­ط§ظ„ظٹط©: {cafe.planName || resolvePlanName(plans, cafe.planId)}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs font-black sm:grid-cols-4">
+            <span className="rounded-xl bg-white/5 px-3 py-2 text-[#F8F4EF]">ظ…ط´ظ…ظˆظ„ط©: {includedCount}</span>
+            <span className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-300">ظ…ظپط¹ظ„ط© ظٹط¯ظˆظٹظ‹ط§: {manuallyEnabledCount}</span>
+            <span className="rounded-xl bg-red-500/10 px-3 py-2 text-red-300">ظ…ظ‚ظپظ„ط© ظٹط¯ظˆظٹظ‹ط§: {manuallyDisabledCount}</span>
+            <span className="rounded-xl bg-[#F6C35B]/10 px-3 py-2 text-[#F6C35B]">ط§ظ„ظ†طھظٹط¬ط©: {effectiveRows.filter((row) => row.effectiveEnabled).length}</span>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-[1040px] w-full text-right text-sm">
+            <thead>
+              <tr className="border-b border-white/10 text-[#CBB29C]">
+                <th className="px-3 py-3 font-black">ط§ظ„ط®ط¯ظ…ط©</th>
+                <th className="px-3 py-3 font-black">ط§ظ„طھطµظ†ظٹظپ</th>
+                <th className="px-3 py-3 font-black">ط¶ظ…ظ† ط§ظ„ط¨ط§ظ‚ط©</th>
+                <th className="px-3 py-3 font-black">ط§ظ„طھط¬ط§ظˆط²</th>
+                <th className="px-3 py-3 font-black">ط§ظ„ط­ط§ظ„ط© ط§ظ„ظپط¹ظ„ظٹط©</th>
+                <th className="px-3 py-3 font-black">طھط­ظƒظ… ط§ظ„ط£ط¯ظ…ظ†</th>
+              </tr>
+            </thead>
+            <tbody>
+              {effectiveRows.map((row) => {
+                const selectedOverride = draft[row.feature.id] ?? row.override;
+                const cannotManuallyEnable = row.feature.status === "coming_soon" || row.feature.status === "hidden";
+                return (
+                  <tr key={row.feature.id} className="border-b border-white/5 text-[#F8F4EF]">
+                    <td className="px-3 py-3">
+                      <p className="font-black">{row.feature.titleAr}</p>
+                      <p className="mt-1 text-xs font-bold text-[#CBB29C]">{row.feature.descriptionAr}</p>
+                      <p className="mt-1 font-mono text-xs text-[#7A6255]">{row.feature.route}</p>
+                    </td>
+                    <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[row.feature.category] ?? row.feature.category}</td>
+                    <td className="px-3 py-3">{row.planIncluded ? "ظ†ط¹ظ…" : "ظ„ط§"}</td>
+                    <td className="px-3 py-3">{overrideLabels[selectedOverride]}</td>
+                    <td className="px-3 py-3">
+                      <span className={`rounded-xl px-3 py-1 text-xs font-black ${
+                        row.result === "active"
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : row.result === "disabled_by_admin"
+                            ? "bg-red-500/10 text-red-300"
+                            : "bg-white/5 text-[#CBB29C]"
+                      }`}>
+                        {effectiveResultLabels[row.result]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <AdminSelect
+                        value={selectedOverride}
+                        disabled={saving}
+                        onChange={(event) =>
+                          updateFeatureOverrideDraft(
+                            cafe,
+                            effectiveRows,
+                            row.feature.id,
+                            event.target.value as FeatureOverrideChoice,
+                          )
+                        }
+                        className="h-11 min-w-[190px] text-xs"
+                      >
+                        <option value="default">ط­ط³ط¨ ط§ظ„ط¨ط§ظ‚ط©</option>
+                        <option value="enabled" disabled={cannotManuallyEnable}>
+                          ظ…ظپط¹ظ„ط© ظٹط¯ظˆظٹظ‹ط§
+                        </option>
+                        <option value="disabled">ظ…ظ‚ظپظ„ط© ظٹط¯ظˆظٹظ‹ط§</option>
+                      </AdminSelect>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-bold text-[#CBB29C]">
+            ط§ظ„ط§ط³طھط«ظ†ط§ط، ظٹط·ط¨ظ‚ ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ط¹ظ„ط§ظ…ط© ظپظ‚ط· ظˆظ„ط§ ظٹط؛ظٹط± ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¨ط§ظ‚ط©.
+          </p>
+          <button
+            type="button"
+            onClick={() => saveFeatureOverrides(cafe, effectiveRows)}
+            disabled={saving || !hasDraft}
+            className="rounded-2xl bg-[#F6C35B] px-5 py-3 text-sm font-black text-[#241610] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸" : "ط­ظپط¸ طھط­ظƒظ… ط§ظ„ط®ط¯ظ…ط§طھ"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -576,6 +769,9 @@ export function AdminCafesPage({
       {selected ? (
         <BentoGrid className="mt-6">
           <BentoCard variant="dark" span="4">
+            {renderFeatureOverridesPanel(selected)}
+            {false ? (
+              <>
             <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-black text-[#F8F4EF]">صلاحيات وخدمات العلامة</h3>
@@ -644,6 +840,8 @@ export function AdminCafesPage({
                 </tbody>
               </table>
             </div>
+              </>
+            ) : null}
           </BentoCard>
 
           <BentoCard variant="dark" span="2">
@@ -846,6 +1044,10 @@ export function AdminCafesPage({
                 label="إيراد الطلبات"
                 value={formatSar(modalCafe.totalRevenue)}
               />
+            </div>
+
+            <div className="mt-5">
+              {renderFeatureOverridesPanel(modalCafe)}
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">

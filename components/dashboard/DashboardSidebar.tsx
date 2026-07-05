@@ -35,7 +35,10 @@ import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
-import { getSidebarFeaturesForBrand } from "@/lib/platform/feature-access";
+import {
+  getSidebarFeaturesForBrand,
+  type BrandFeatureOverride,
+} from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
@@ -92,6 +95,7 @@ export function DashboardSidebar({
 
   const [activePlanId, setActivePlanId] = useState("starter");
   const [plans, setPlans] = useState<PlatformPlan[]>([]);
+  const [featureOverrides, setFeatureOverrides] = useState<BrandFeatureOverride[]>([]);
   const [planName, setPlanName] = useState("Starter");
   const [cafeSettings, setCafeSettings] = useState<CafeSettings>(initialCafeSettings);
   const [shareMessage, setShareMessage] = useState("");
@@ -118,6 +122,7 @@ export function DashboardSidebar({
 
         setActivePlanId(snapshot.planId);
         setPlans(snapshot.plans);
+        setFeatureOverrides(snapshot.featureOverrides ?? []);
         setCafeSettings(snapshot.settings);
         setInitialNotifications(snapshot.notifications);
 
@@ -175,7 +180,7 @@ export function DashboardSidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans }).map(({ feature, access }) => ({
+  const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans, overrides: featureOverrides }).map(({ feature, access }) => ({
     title: feature.titleAr,
     href: feature.route,
     icon: featureIcons[feature.id] ?? Star,
@@ -315,7 +320,7 @@ export function DashboardSidebar({
         {visibleLinks.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans });
+          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans, overrides: featureOverrides });
           const href = locked ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
           const title = linkTitle(item);

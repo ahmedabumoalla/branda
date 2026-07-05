@@ -1,6 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import {
+  getEffectiveBrandFeatureCodes,
+  type BrandFeatureOverride,
+} from "@/lib/platform/feature-access";
+import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
 
 function normalizeFeatures(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
@@ -17,19 +22,33 @@ function normalizeFeatures(raw: unknown): string[] {
 
 export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("subscriptions")
-    .select("plan_id, platform_plans(features)")
-    .eq("cafe_id", cafeId)
-    .in("status", ["active", "trialing"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [subscriptionResult, overridesResult] = await Promise.all([
+    admin
+      .from("subscriptions")
+      .select("plan_id, platform_plans(features)")
+      .eq("cafe_id", cafeId)
+      .in("status", ["active", "trialing"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("brand_feature_overrides")
+      .select("feature_id, enabled")
+      .eq("cafe_id", cafeId),
+  ]);
 
+  const { data, error } = subscriptionResult;
   if (error) throw error;
+  if (overridesResult.error) throw overridesResult.error;
+
   const plan = data?.platform_plans as { features?: unknown } | null | undefined;
   const features = normalizeFeatures(plan?.features);
-  return Array.from(new Set(["home", ...features, "subscription", "settings"]));
+  const overrides = ((overridesResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
+    featureId: String(row.feature_id) as PlatformFeatureId,
+    enabled: Boolean(row.enabled),
+  })) satisfies BrandFeatureOverride[];
+  const effectiveFeatures = getEffectiveBrandFeatureCodes(features, overrides);
+  return Array.from(new Set(["home", ...effectiveFeatures, "subscription", "settings"]));
 }
 
 export async function getOwnerFeatureCodes() {

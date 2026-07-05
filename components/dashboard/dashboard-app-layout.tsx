@@ -12,13 +12,14 @@ import {
   getCachedDashboardShellSnapshot,
 } from "@/lib/performance/dashboard-shell-client";
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
-import { canShowBrandaFinance } from "@/lib/platform/feature-access";
+import { canShowBrandaFinance, type BrandFeatureOverride } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
 type GuardState = {
   loading: boolean;
   activePlanId: string;
   plans: PlatformPlan[];
+  featureOverrides: BrandFeatureOverride[];
 };
 
 type MaintenanceBannerSession = {
@@ -77,7 +78,7 @@ export function DashboardAppLayout({
   maintenanceSession?: MaintenanceBannerSession | null;
 }) {
   const pathname = usePathname();
-  const [guard, setGuard] = useState<GuardState>({ loading: true, activePlanId: "", plans: [] });
+  const [guard, setGuard] = useState<GuardState>({ loading: true, activePlanId: "", plans: [], featureOverrides: [] });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
 
@@ -87,10 +88,15 @@ export function DashboardAppLayout({
       .then((snapshot) => {
         if (cancelled) return;
         if ((snapshot as { unauthenticated?: boolean }).unauthenticated) {
-          setGuard({ loading: false, activePlanId: "", plans: [] });
+          setGuard({ loading: false, activePlanId: "", plans: [], featureOverrides: [] });
           return;
         }
-        setGuard({ loading: false, activePlanId: snapshot.planId, plans: snapshot.plans });
+        setGuard({
+          loading: false,
+          activePlanId: snapshot.planId,
+          plans: snapshot.plans,
+          featureOverrides: snapshot.featureOverrides ?? [],
+        });
       })
       .catch((error) => {
         if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) {
@@ -124,8 +130,16 @@ export function DashboardAppLayout({
     !currentFeature ||
     guard.loading ||
     (currentFeature.id === "branda_finance"
-      ? canShowBrandaFinance({ planId: guard.activePlanId, plans: guard.plans })
-      : cafeHasFeature(currentFeature.id, { planId: guard.activePlanId, plans: guard.plans }));
+      ? canShowBrandaFinance({
+          planId: guard.activePlanId,
+          plans: guard.plans,
+          overrides: guard.featureOverrides,
+        })
+      : cafeHasFeature(currentFeature.id, {
+          planId: guard.activePlanId,
+          plans: guard.plans,
+          overrides: guard.featureOverrides,
+        }));
 
   function endMaintenanceMode() {
     startEndingMaintenance(() => {

@@ -4,8 +4,8 @@ import {
   type PlatformPlan,
 } from "@/lib/platform/admin-data";
 import {
+  type BrandFeatureOverride,
   getEffectiveBrandFeatureAccess,
-  getPackageAssignableFeatures,
   getPlanIncludedFeatures,
 } from "@/lib/platform/feature-access";
 
@@ -23,7 +23,7 @@ export function setActiveCafePlanId(_planId: string) {
 
 export function cafeHasFeature(
   feature: PlatformFeature,
-  options?: { planId?: string; plans?: PlatformPlan[] }
+  options?: { planId?: string; plans?: PlatformPlan[]; overrides?: BrandFeatureOverride[] }
 ) {
   if (feature === "all" || feature === "home" || feature === "subscription" || feature === "settings") {
     return true;
@@ -32,29 +32,19 @@ export function cafeHasFeature(
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
   const planFeatures = getPlanIncludedFeatures(activePlanId, plans);
-  const access = getEffectiveBrandFeatureAccess(planFeatures).find((item) => item.feature.id === feature);
+  const access = getEffectiveBrandFeatureAccess(planFeatures, options?.overrides).find((item) => item.feature.id === feature);
   return Boolean(access?.effectiveEnabled);
 }
 
-export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[] }) {
+export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[]; overrides?: BrandFeatureOverride[] }) {
   const plans = options?.plans ?? mockPlatformPlans;
   const activePlanId = options?.planId ?? "pro";
-  const plan = plans.find((item) => item.id === activePlanId);
-  if (plan?.features.map(String).includes("all")) {
-    return Array.from(
-      new Set<PlatformFeature>([
-        "home",
-        ...getPackageAssignableFeatures().map((feature) => feature.id),
-        "settings",
-        "subscription",
-      ])
-    );
-  }
-
   return Array.from(
     new Set<PlatformFeature>([
       "home",
-      ...getPlanIncludedFeatures(activePlanId, plans),
+      ...getEffectiveBrandFeatureAccess(getPlanIncludedFeatures(activePlanId, plans), options?.overrides)
+        .filter((row) => row.effectiveEnabled)
+        .map((row) => row.feature.id),
       "settings",
       "subscription",
     ])

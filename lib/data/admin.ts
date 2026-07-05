@@ -10,6 +10,12 @@ import type {
   PlatformPlan,
   PlanDurationUnit,
 } from "@/lib/platform/admin-data";
+import {
+  getPlatformFeatureDefinition,
+  platformFeatureIds,
+  type PlatformFeatureId,
+} from "@/lib/platform/feature-registry";
+import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 
@@ -63,6 +69,122 @@ async function safeSumOrders(
   } catch {
     return 0;
   }
+}
+
+const featureOverrideSchema = z.object({
+  featureId: z.string().min(1).max(80),
+  override: z.enum(["default", "enabled", "disabled"]),
+});
+
+export type CafeFeatureOverrideInput = z.infer<typeof featureOverrideSchema>;
+
+function mapFeatureOverride(row: Record<string, unknown>): BrandFeatureOverride | null {
+  const featureId = String(row.feature_id ?? "");
+  if (!platformFeatureIds.includes(featureId as PlatformFeatureId)) return null;
+  return {
+    featureId: featureId as PlatformFeatureId,
+    enabled: Boolean(row.enabled),
+  };
+}
+
+export async function getCafeFeatureOverrides(cafeId: string): Promise<BrandFeatureOverride[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("brand_feature_overrides")
+    .select("feature_id, enabled")
+    .eq("cafe_id", cafeId)
+    .order("feature_id");
+
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => mapFeatureOverride(row as Record<string, unknown>))
+    .filter((row): row is BrandFeatureOverride => Boolean(row));
+}
+
+async function getCafeFeatureOverridesByCafeIds(cafeIds: string[]) {
+  if (!cafeIds.length) return new Map<string, BrandFeatureOverride[]>();
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("brand_feature_overrides")
+    .select("cafe_id, feature_id, enabled")
+    .in("cafe_id", cafeIds);
+
+  if (error) throw error;
+
+  const map = new Map<string, BrandFeatureOverride[]>();
+  for (const row of (data ?? []) as Record<string, unknown>[]) {
+    const cafeId = String(row.cafe_id ?? "");
+    const override = mapFeatureOverride(row);
+    if (!cafeId || !override) continue;
+    const list = map.get(cafeId) ?? [];
+    list.push(override);
+    map.set(cafeId, list);
+  }
+  return map;
+}
+
+export async function saveCafeFeatureOverrides(
+  cafeId: string,
+  overrides: CafeFeatureOverrideInput[]
+): Promise<BrandFeatureOverride[]> {
+  const user = await requirePlatformAdmin();
+  const parsed = z.array(featureOverrideSchema).max(platformFeatureIds.length).parse(overrides);
+  const admin = createAdminClient();
+
+  const { data: cafe, error: cafeError } = await admin
+    .from("cafes")
+    .select("id")
+    .eq("id", cafeId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (cafeError) throw cafeError;
+  if (!cafe) throw new Error("ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©");
+
+  const unique = new Map<PlatformFeatureId, CafeFeatureOverrideInput["override"]>();
+  for (const item of parsed) {
+    const definition = getPlatformFeatureDefinition(item.featureId);
+    if (!definition) throw new Error("ظ…ظٹط²ط© ط؛ظٹط± ظ…ط¹ط±ظˆظپط©");
+    if (!definition.packageAssignable) {
+      throw new Error("ظ‡ط°ظ‡ ط§ظ„ظ…ظٹط²ط© ظ„ط§ طھظ‚ط¨ظ„ طھط¬ط§ظˆط²ظ‹ط§ ظٹط¯ظˆظٹظ‹ط§");
+    }
+    if (item.override === "enabled" && ["coming_soon", "hidden"].includes(definition.status)) {
+      throw new Error("ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ…ظٹط²ط© ط؛ظٹط± ظ…طھط§ط­ط© ظٹط¯ظˆظٹظ‹ط§");
+    }
+    unique.set(definition.id, item.override);
+  }
+
+  const defaultFeatureIds = [...unique.entries()]
+    .filter(([, override]) => override === "default")
+    .map(([featureId]) => featureId);
+
+  if (defaultFeatureIds.length) {
+    const { error } = await admin
+      .from("brand_feature_overrides")
+      .delete()
+      .eq("cafe_id", cafeId)
+      .in("feature_id", defaultFeatureIds);
+    if (error) throw error;
+  }
+
+  const rows = [...unique.entries()]
+    .filter(([, override]) => override !== "default")
+    .map(([featureId, override]) => ({
+      cafe_id: cafeId,
+      feature_id: featureId,
+      enabled: override === "enabled",
+      updated_by: user.id,
+    }));
+
+  if (rows.length) {
+    const { error } = await admin
+      .from("brand_feature_overrides")
+      .upsert(rows, { onConflict: "cafe_id,feature_id" });
+    if (error) throw error;
+  }
+
+  return getCafeFeatureOverrides(cafeId);
 }
 
 
@@ -359,6 +481,9 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
   if (error) throw error;
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
+  const featureOverridesByCafeId = await getCafeFeatureOverridesByCafeIds(
+    rows.map((row) => String(row.id)).filter(Boolean)
+  );
 
   return Promise.all(
     rows.map(async (row) => {
@@ -463,6 +588,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         purchasedDomainConnectedAt: settings?.purchased_domain_connected_at
           ? String(settings.purchased_domain_connected_at).slice(0, 10)
           : undefined,
+        featureOverrides: featureOverridesByCafeId.get(cafeId) ?? [],
       };
     })
   );

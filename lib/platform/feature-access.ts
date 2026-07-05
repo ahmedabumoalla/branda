@@ -59,8 +59,20 @@ export function getPlanIncludedFeatures(
   );
 }
 
-export function getBrandFeatureOverrides(_brandId: string): BrandFeatureOverride[] {
-  return [];
+export function getBrandFeatureOverrides(
+  brand: { featureOverrides?: readonly BrandFeatureOverride[] | null } | null | undefined
+): BrandFeatureOverride[] {
+  return [...(brand?.featureOverrides ?? [])];
+}
+
+export function getEffectiveBrandFeatureCodes(
+  planFeatures: readonly PlatformFeatureCode[] | readonly string[] | null | undefined,
+  brandOverrides: readonly BrandFeatureOverride[] = []
+) {
+  const accessRows = getEffectiveBrandFeatureAccess(planFeatures, brandOverrides);
+  return accessRows
+    .filter((row) => row.effectiveEnabled)
+    .map((row) => row.feature.id);
 }
 
 export function getEffectiveBrandFeatureAccess(
