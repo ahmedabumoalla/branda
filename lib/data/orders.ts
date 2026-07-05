@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCustomerProfileForOrderSession } from "@/lib/data/customers";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { mapDbOrderToCafeOrder, mapOrderStatusToDb } from "@/lib/data/mappers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
 import {
@@ -237,6 +238,28 @@ export async function updateOrderStatus(
     .eq("id", orderId)
     .maybeSingle();
   const whatsappOrder = whatsappOrderData as WhatsAppOrderRow | null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (whatsappOrder?.cafe_id) {
+    await recordOperationEvent({
+      cafeId: String(whatsappOrder.cafe_id),
+      eventType: dbStatus === "accepted" ? operationEventTypes.orderAccepted : operationEventTypes.orderRejected,
+      actorType: "brand_user",
+      actorId: user?.id ?? null,
+      actorName: user?.user_metadata?.full_name ? String(user.user_metadata.full_name) : null,
+      actorEmail: user?.email ?? null,
+      entityType: "order",
+      entityId: orderId,
+      metadata: {
+        status: dbStatus,
+        rejectionReason: dbStatus === "rejected" ? rejectionReason ?? null : null,
+        customerName: String(whatsappOrder.customer_name ?? ""),
+        total: Number(whatsappOrder.total ?? 0),
+      },
+    });
+  }
 
   const { data: whatsappOrderItemsData } = await supabase
     .from("order_items")

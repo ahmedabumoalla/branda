@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 
 export type LoyaltyCardProgram = {
@@ -417,6 +418,29 @@ export async function recordOwnerLoyaltyOperation(input: {
   });
 
   if (error) throw error;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const operationResult = Array.isArray(data) ? data[0] : data;
+
+  await recordOperationEvent({
+    cafeId: cafe.id,
+    eventType: operationEventTypes.loyaltyScan,
+    actorType: "brand_user",
+    actorId: user?.id ?? null,
+    actorName: user?.user_metadata?.full_name ? String(user.user_metadata.full_name) : null,
+    actorEmail: user?.email ?? null,
+    entityType: "loyalty_card",
+    entityId: scannedCard?.id ? String(scannedCard.id) : null,
+    metadata: {
+      cardCode: normalizedCardCode,
+      invoiceBarcode: normalizedInvoiceBarcode,
+      invoiceAmount: parsed.invoiceAmount ?? 0,
+      operation: parsed.operation ?? "stamp",
+      result: operationResult ?? null,
+    },
+  });
+
   return data as Record<string, unknown>;
 }
 

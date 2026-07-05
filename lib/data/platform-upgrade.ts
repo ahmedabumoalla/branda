@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { recordPublicCafeVisit } from "@/lib/data/operation-events";
 
 import type { ReservationDurationUnit } from "@/lib/mock/reservation-services";
 
@@ -180,12 +181,5 @@ export async function trackCafeVisit(input: {
   referrer?: string;
   durationSeconds?: number;
 }) {
-  const supabase = await createClient();
-  await supabase.rpc("track_cafe_visit", {
-    p_slug: input.slug,
-    p_session_id: input.sessionId,
-    p_path: input.path,
-    p_referrer: input.referrer ?? null,
-    p_duration_seconds: input.durationSeconds ?? null,
-  });
+  await recordPublicCafeVisit(input);
 }

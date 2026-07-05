@@ -2,6 +2,7 @@
 
 import { Download, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
+import { recordPwaInstallClickAction } from "@/app/actions/operation-events";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -144,6 +145,11 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     ensureBrandManifest(slug);
     const promptEvent = installPrompt ?? getSavedInstallPrompt();
     console.warn("[brand-pwa] install clicked", { hasPrompt: Boolean(promptEvent) });
+    await recordPwaInstallClickAction({
+      cafeSlug: slug,
+      path: window.location.pathname,
+      hasPrompt: Boolean(promptEvent),
+    }).catch((error) => console.warn("[brand-pwa] install click tracking skipped", error));
 
     if (promptEvent?.prompt) {
       setMessage("");

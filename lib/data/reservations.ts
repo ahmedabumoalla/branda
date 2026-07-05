@@ -7,6 +7,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/data/cafes";
 import { assertCustomerIdMatchesSession } from "@/lib/data/customers";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import {
   mapDbReservationToCafeReservation,
   mapReservationStatusToDb,
@@ -442,6 +443,34 @@ export async function updateReservationStatus(
     .maybeSingle();
 
   const reservationRow = (row ?? {}) as ReservationRow;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  await recordOperationEvent({
+    cafeId: cafe.id,
+    eventType:
+      dbStatus === "accepted"
+        ? operationEventTypes.reservationAccepted
+        : dbStatus === "rejected"
+          ? operationEventTypes.reservationRejected
+          : operationEventTypes.reservationModificationRequested,
+    actorType: "brand_user",
+    actorId: user?.id ?? null,
+    actorName: user?.user_metadata?.full_name ? String(user.user_metadata.full_name) : null,
+    actorEmail: user?.email ?? null,
+    entityType: "reservation",
+    entityId: reservationId,
+    metadata: {
+      status: dbStatus,
+      message,
+      customerName: cleanText(reservationRow.customer_name),
+      eventType: cleanText(reservationRow.event_type),
+      reservationDate: cleanText(reservationRow.reservation_date),
+      reservationTime: cleanText(reservationRow.reservation_time),
+    },
+  });
+
   const customerId = cleanText(reservationRow.customer_id);
   const customer = customerId
     ? await getReservationCustomerContact(supabase, customerId)

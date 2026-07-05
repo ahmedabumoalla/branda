@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CafeFaviconController } from "@/components/cafe/cafe-favicon-controller";
+import { PublicCafeVisitTracker } from "@/components/cafe/public-cafe-visit-tracker";
 import { getPreferredCafeDisplayLogoUrl } from "@/lib/cafe/cafe-display-logo";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
@@ -67,6 +68,7 @@ export default async function CafeSlugLayout({ children, params }: Props) {
   return (
     <>
       <CafeFaviconController slug={slug} />
+      <PublicCafeVisitTracker slug={slug} />
       {children}
     </>
   );

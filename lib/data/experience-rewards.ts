@@ -13,6 +13,7 @@ import {
 } from "@/lib/email/resend";
 import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 import { upsertExperienceCustomerRewardInstance } from "@/lib/data/customer-rewards";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 
 export type ExperienceRewardStatus =
   | "pending"
@@ -64,6 +65,12 @@ function makeRewardCode() {
     value += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return value;
+}
+
+function firstRecord(value: unknown) {
+  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
+  if (value && typeof value === "object") return value as Record<string, unknown>;
+  return undefined;
 }
 
 function normalizeRewardItems(rows: unknown): ExperienceRewardItem[] {
@@ -611,6 +618,28 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
     .eq("status", "approved");
 
   if (updateError) throw updateError;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  await recordOperationEvent({
+    cafeId: cafe.id,
+    eventType: operationEventTypes.rewardRedeemed,
+    actorType: "brand_user",
+    actorId: user?.id ?? null,
+    actorName: user?.user_metadata?.full_name ? String(user.user_metadata.full_name) : null,
+    actorEmail: user?.email ?? null,
+    entityType: "experience_reward_submission",
+    entityId: String(row.id),
+    metadata: {
+      rewardCode: code,
+      rewardSource: "experience",
+      customerName,
+      customerId: String(row.customer_id ?? ""),
+      items,
+    },
+  });
 
   const customerEmail =
     customer && typeof customer === "object"
@@ -651,13 +680,14 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
 
   const { data: session, error: sessionError } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
   if (sessionError) throw sessionError;
   if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
+  const cashier = firstRecord(session.cafe_cashiers);
 
   const { data: submission, error: submissionError } = await admin
     .from("experience_reward_submissions")
@@ -739,6 +769,24 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
       customerName,
       rewardCode: code,
       experienceUrl: String(row.experience_url ?? ""),
+      items,
+    },
+  });
+
+  await recordOperationEvent({
+    cafeId: currentCafeId,
+    eventType: operationEventTypes.rewardRedeemed,
+    actorType: "cashier",
+    actorId: String(session.cashier_id),
+    actorName: String(cashier?.full_name ?? ""),
+    actorEmail: String(cashier?.email ?? ""),
+    entityType: "experience_reward_submission",
+    entityId: String(row.id),
+    metadata: {
+      rewardCode: code,
+      rewardSource: "experience",
+      customerName,
+      customerId: String(row.customer_id ?? ""),
       items,
     },
   });

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createNotification } from "@/lib/data/notifications";
 import {
@@ -223,6 +224,58 @@ async function getCashierOperationData(cafeId: string) {
   };
 }
 
+async function recordCashierConsoleEntry(input: {
+  cafeId: string;
+  cafeSlug: string;
+  cashierId: string;
+  cashierName: string;
+  cashierEmail: string;
+}) {
+  const admin = createAdminClient();
+  const windowStart = new Date(Date.now() - 60_000).toISOString();
+  const { count } = await admin
+    .from("cafe_cashier_activity_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("cafe_id", input.cafeId)
+    .eq("cashier_id", input.cashierId)
+    .eq("action_type", "login")
+    .gte("created_at", windowStart);
+
+  if (!count) {
+    await admin
+      .from("cafe_cashier_activity_logs")
+      .insert({
+        cafe_id: input.cafeId,
+        cashier_id: input.cashierId,
+        action_type: "login",
+        target_type: "cashier_session",
+        target_id: input.cashierId,
+        details: {
+          source: "cashier_console_entry",
+          cashierName: input.cashierName,
+          email: input.cashierEmail,
+        },
+      })
+      .then(({ error }) => {
+        if (error) console.warn("[recordCashierConsoleEntry:activity]", error.message);
+      });
+  }
+
+  await recordOperationEvent({
+    cafeId: input.cafeId,
+    eventType: operationEventTypes.cashierLogin,
+    actorType: "cashier",
+    actorId: input.cashierId,
+    actorName: input.cashierName,
+    actorEmail: input.cashierEmail,
+    entityType: "cashier_session",
+    metadata: {
+      cafeSlug: input.cafeSlug,
+      source: "cashier_console_entry",
+    },
+  });
+}
+
 function normalizeConsolePayload(data: unknown): CashierConsole | null {
   if (!data || typeof data !== "object") return null;
   const payload = data as CashierConsole;
@@ -266,10 +319,57 @@ export async function loginCashierWithPassword(
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
+
+  const admin = createAdminClient();
+  const cashierId = String(data[0].cashier_id);
+  const cafeId = String(data[0].cafe_id);
+  const loginWindowStart = new Date(Date.now() - 10_000).toISOString();
+  const { count: recentLoginCount } = await admin
+    .from("cafe_cashier_activity_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("cafe_id", cafeId)
+    .eq("cashier_id", cashierId)
+    .eq("action_type", "login")
+    .gte("created_at", loginWindowStart);
+
+  if (!recentLoginCount) {
+    await admin
+      .from("cafe_cashier_activity_logs")
+      .insert({
+        cafe_id: cafeId,
+        cashier_id: cashierId,
+        action_type: "login",
+        target_type: "cashier_session",
+        target_id: cashierId,
+        details: {
+          email: email.trim().toLowerCase(),
+          cashierName: String(data[0].cashier_name),
+          source: "server_login_fallback",
+        },
+      })
+      .then(({ error }) => {
+        if (error) console.warn("[loginCashierWithPassword:activity]", error.message);
+      });
+  }
+
+  await recordOperationEvent({
+    cafeId,
+    eventType: operationEventTypes.cashierLogin,
+    actorType: "cashier",
+    actorId: cashierId,
+    actorName: String(data[0].cashier_name),
+    actorEmail: email.trim().toLowerCase(),
+    entityType: "cashier_session",
+    metadata: {
+      cafeSlug: String(data[0].cafe_slug),
+      source: "cashier_login",
+    },
+  });
+
   return {
     token,
-    cafeId: String(data[0].cafe_id),
-    cashierId: String(data[0].cashier_id),
+    cafeId,
+    cashierId,
     cashierName: String(data[0].cashier_name),
     cafeName: String(data[0].cafe_name),
     cafeSlug: String(data[0].cafe_slug),
@@ -286,6 +386,7 @@ type CashierSessionContext = {
   cafeId: string;
   cashierId: string;
   cashierName: string;
+  cashierEmail: string;
   cafeName: string;
   cafeSlug: string;
   businessCategory: string;
@@ -345,6 +446,7 @@ async function requireCashierSessionContext(
     cafeId: String(session.cafe_id),
     cashierId: String(session.cashier_id),
     cashierName: String(cashier?.full_name ?? "Cashier"),
+    cashierEmail: String(cashier?.email ?? ""),
     cafeName: String(cafe?.name ?? "Barndaksa"),
     cafeSlug: String(cafe?.slug ?? ""),
     businessCategory: String(cafe?.business_category ?? "cafes_coffee"),
@@ -413,6 +515,13 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
   if (error || !data) return null;
   const normalized = normalizeConsolePayload(data);
   if (!normalized?.cafe.id) return normalized;
+  await recordCashierConsoleEntry({
+    cafeId: normalized.cafe.id,
+    cafeSlug: normalized.cafe.slug,
+    cashierId: normalized.cashier.id,
+    cashierName: normalized.cashier.fullName,
+    cashierEmail: normalized.cashier.email,
+  }).catch((error) => console.warn("[getCashierConsole:entry]", error));
   const admin = createAdminClient();
   const [{ data: cafe }, { data: loyaltyProgram }] = await Promise.all([
     admin
@@ -550,6 +659,23 @@ export async function cashierUpdateOrderStatus(
     },
   }).catch(() => undefined);
 
+  await recordOperationEvent({
+    cafeId: session.cafeId,
+    eventType: status === "accepted" ? operationEventTypes.orderAccepted : operationEventTypes.orderRejected,
+    actorType: "cashier",
+    actorId: session.cashierId,
+    actorName: session.cashierName,
+    actorEmail: session.cashierEmail,
+    entityType: "order",
+    entityId: orderId,
+    metadata: {
+      status,
+      rejectionReason: status === "rejected" ? reason : null,
+      customerName: String(order.customer_name ?? ""),
+      total: Number(order.total ?? 0),
+    },
+  });
+
   if (order.customer_id && session.cafeSlug) {
     await createNotification({
       cafeSlug: session.cafeSlug,
@@ -673,6 +799,30 @@ export async function cashierUpdateReservationStatus(
     oldData: reservation as Record<string, unknown>,
     newData: { status, message: cleanMessage || null },
   }).catch(() => undefined);
+
+  await recordOperationEvent({
+    cafeId: session.cafeId,
+    eventType:
+      status === "accepted"
+        ? operationEventTypes.reservationAccepted
+        : status === "rejected"
+          ? operationEventTypes.reservationRejected
+          : operationEventTypes.reservationModificationRequested,
+    actorType: "cashier",
+    actorId: session.cashierId,
+    actorName: session.cashierName,
+    actorEmail: session.cashierEmail,
+    entityType: "reservation",
+    entityId: reservationId,
+    metadata: {
+      status,
+      message: cleanMessage || null,
+      customerName: String(reservation.customer_name ?? ""),
+      eventType: String(reservation.event_type ?? ""),
+      reservationDate: String(reservation.reservation_date ?? ""),
+      reservationTime: String(reservation.reservation_time ?? ""),
+    },
+  });
 
   if (reservation.customer_id && session.cafeSlug) {
     await createNotification({
@@ -968,13 +1118,14 @@ export async function cashierScanLoyalty(input: {
   const admin = createAdminClient();
   const { data: session, error: sessionError } = await admin
     .from("cafe_cashier_sessions")
-    .select("cafe_id,revoked_at,expires_at")
+    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
   if (sessionError) throw sessionError;
   if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
+  const cashier = firstRecord(session.cafe_cashiers);
 
   const currentCafeId = String(session.cafe_id);
   if (input.cafeId && input.cafeId !== currentCafeId) {
@@ -1007,5 +1158,23 @@ export async function cashierScanLoyalty(input: {
     p_cashier_session_token: token,
   });
   if (error) throw error;
+  const operationResult = Array.isArray(data) ? data[0] : data;
+  await recordOperationEvent({
+    cafeId: currentCafeId,
+    eventType: operationEventTypes.loyaltyScan,
+    actorType: "cashier",
+    actorId: String((session as Record<string, unknown>).cashier_id ?? ""),
+    actorName: String(cashier?.full_name ?? ""),
+    actorEmail: String(cashier?.email ?? ""),
+    entityType: "loyalty_card",
+    entityId: scannedCard?.id ? String(scannedCard.id) : null,
+    metadata: {
+      cardCode: normalizedCardCode,
+      invoiceBarcode: normalizedInvoiceBarcode,
+      invoiceAmount: input.invoiceAmount ?? 0,
+      operation: input.operation ?? "stamp",
+      result: operationResult ?? null,
+    },
+  });
   return data as Record<string, unknown>;
 }

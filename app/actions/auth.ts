@@ -22,6 +22,7 @@ import {
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
 import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 
 const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
 const CUSTOMER_SESSION_DAYS = 30;
@@ -44,12 +45,15 @@ type CustomerPasswordResetActionResult = {
 };
 
 type OwnerProfileAccessRow = {
+  full_name?: string | null;
+  email?: string | null;
   role?: string | null;
   status?: string | null;
 };
 
 type CafeMembershipRow = {
-  cafes?: { business_category?: string | null } | Array<{ business_category?: string | null }> | null;
+  cafe_id?: string | null;
+  cafes?: { id?: string | null; name?: string | null; slug?: string | null; business_category?: string | null } | Array<{ id?: string | null; name?: string | null; slug?: string | null; business_category?: string | null }> | null;
 };
 
 function getAppBaseUrl() {
@@ -155,7 +159,7 @@ export async function loginOwnerAction(
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("id, role, status")
+      .select("id, full_name, email, role, status")
       .eq("id", authData.user.id)
       .maybeSingle();
     const profile = profileData as OwnerProfileAccessRow | null;
@@ -177,7 +181,7 @@ export async function loginOwnerAction(
     if (["cafe_owner", "cafe_manager", "cafe_staff"].includes(String(profile.role))) {
       const { data: membershipData } = await supabase
         .from("cafe_members")
-        .select("cafes(business_category)")
+        .select("cafe_id,cafes(id,name,slug,business_category)")
         .eq("user_id", authData.user.id)
         .limit(1)
         .maybeSingle();
@@ -187,6 +191,24 @@ export async function loginOwnerAction(
         ? membership?.cafes[0]
         : membership?.cafes;
       const cafe = cafeRaw as { business_category?: string | null } | null | undefined;
+      const cafeId = String(cafeRaw?.id ?? membership?.cafe_id ?? "");
+
+      if (cafeId) {
+        await recordOperationEvent({
+          cafeId,
+          eventType: operationEventTypes.brandLogin,
+          actorType: "brand_user",
+          actorId: authData.user.id,
+          actorName: profile.full_name ?? authData.user.user_metadata?.full_name ?? "",
+          actorEmail: profile.email ?? authData.user.email ?? normalizedEmail,
+          entityType: "dashboard",
+          metadata: {
+            role: profile.role ?? "",
+            cafeName: cafeRaw?.name ?? "",
+            cafeSlug: cafeRaw?.slug ?? "",
+          },
+        });
+      }
 
       return {
         ok: true as const,

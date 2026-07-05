@@ -84,7 +84,7 @@ export function ResponsiveAppShell({
 
       <div
         style={sidebarStyle}
-        className={`fixed right-0 top-0 z-[60] h-[100dvh] w-[min(var(--app-sidebar-width),88vw)] transition-[width,transform] duration-300 ease-out lg:w-[var(--app-sidebar-width)] lg:!translate-x-0 ${
+        className={`fixed right-0 top-0 z-[60] h-[100dvh] w-[min(320px,88vw)] transition-[width,transform] duration-300 ease-out lg:w-[var(--app-sidebar-width)] lg:!translate-x-0 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

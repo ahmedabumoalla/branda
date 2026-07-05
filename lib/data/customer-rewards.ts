@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCashierToken } from "@/lib/data/cashier";
+import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import {
   createBarndaksaQrPayload,
@@ -47,6 +48,12 @@ function rewardCodeFromInput(rawValue: string) {
     parseBarndaksaQrPayload(raw, "experience-reward") ??
     raw;
   return parsed.trim().toUpperCase();
+}
+
+function firstRecord(value: unknown) {
+  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
+  if (value && typeof value === "object") return value as Record<string, unknown>;
+  return undefined;
 }
 
 function mapReward(row: Record<string, unknown>): CustomerRewardInstance {
@@ -149,7 +156,7 @@ async function getValidCashierSession() {
   const admin = createAdminClient();
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -165,6 +172,8 @@ async function getValidCashierSession() {
     token,
     cafeId: String(session.cafe_id),
     cashierId: String(session.cashier_id),
+    cashierName: String(firstRecord(session.cafe_cashiers)?.full_name ?? ""),
+    cashierEmail: String(firstRecord(session.cafe_cashiers)?.email ?? ""),
   };
 }
 
@@ -297,7 +306,7 @@ export async function lookupCashierCustomerReward(
 }
 
 export async function redeemCashierCustomerReward(rawRewardCode: string) {
-  const { admin, reward, code, cafeId, cashierId, loyaltyCardEnabled } =
+  const { admin, reward, code, cafeId, cashierId, cashierName, cashierEmail, loyaltyCardEnabled } =
     await findCashierReward(rawRewardCode);
   const preview = previewFromReward(reward, { loyaltyCardEnabled });
   if (!preview.canRedeem) {
@@ -384,6 +393,25 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
       rewardCode: code,
       rewardName: reward.rewardTitle,
       expiresAt: reward.expiresAt,
+    },
+  });
+
+  await recordOperationEvent({
+    cafeId,
+    eventType: operationEventTypes.rewardRedeemed,
+    actorType: "cashier",
+    actorId: cashierId,
+    actorName: cashierName,
+    actorEmail: cashierEmail,
+    entityType: "customer_reward_instance",
+    entityId: reward.id,
+    metadata: {
+      rewardCode: code,
+      rewardName: reward.rewardTitle,
+      rewardSource: reward.sourceType,
+      customerName: reward.customerName,
+      customerId: reward.customerId,
+      loyaltyCardId: reward.loyaltyCardId,
     },
   });
 

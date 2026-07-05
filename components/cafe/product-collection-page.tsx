@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
+import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
 import { PublicFeatureUnavailable } from "@/components/cafe/public-feature-guard";
@@ -798,6 +799,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           offerCount={activeOffers.length}
           branchCount={activeBranches.length}
         />
+        <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} compact />
       </div>
       <CustomerBottomDock
         {...defaultCustomerDockItems({
