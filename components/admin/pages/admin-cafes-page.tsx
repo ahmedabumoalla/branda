@@ -398,7 +398,7 @@ export function AdminCafesPage({
           });
         } catch (error) {
           console.error("[AdminCafesPage:saveFeatureOverrides]", error);
-          alert("طھط¹ط°ط± ط­ظپط¸ طھط­ظƒظ… ط®ط¯ظ…ط§طھ ط§ظ„ط¹ظ„ط§ظ…ط©");
+          alert("تعذر حفظ تحكم خدمات العلامة");
         } finally {
           setSavingFeatureOverridesCafeId(null);
         }
@@ -424,16 +424,16 @@ export function AdminCafesPage({
       <div className={softPanel}>
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-xl font-black text-[#F8F4EF]">ط§ظ„طھط­ظƒظ… ظپظٹ ط®ط¯ظ…ط§طھ ط§ظ„ط¹ظ„ط§ظ…ط©</h3>
+            <h3 className="text-xl font-black text-[#F8F4EF]">التحكم في خدمات العلامة</h3>
             <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-              ط§ظ„ط¨ط§ظ‚ط© ط§ظ„ط­ط§ظ„ظٹط©: {cafe.planName || resolvePlanName(plans, cafe.planId)}
+              الباقة الحالية: {cafe.planName || resolvePlanName(plans, cafe.planId)}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs font-black sm:grid-cols-4">
-            <span className="rounded-xl bg-white/5 px-3 py-2 text-[#F8F4EF]">ظ…ط´ظ…ظˆظ„ط©: {includedCount}</span>
-            <span className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-300">ظ…ظپط¹ظ„ط© ظٹط¯ظˆظٹظ‹ط§: {manuallyEnabledCount}</span>
-            <span className="rounded-xl bg-red-500/10 px-3 py-2 text-red-300">ظ…ظ‚ظپظ„ط© ظٹط¯ظˆظٹظ‹ط§: {manuallyDisabledCount}</span>
-            <span className="rounded-xl bg-[#F6C35B]/10 px-3 py-2 text-[#F6C35B]">ط§ظ„ظ†طھظٹط¬ط©: {effectiveRows.filter((row) => row.effectiveEnabled).length}</span>
+            <span className="rounded-xl bg-white/5 px-3 py-2 text-[#F8F4EF]">مشمولة: {includedCount}</span>
+            <span className="rounded-xl bg-emerald-500/10 px-3 py-2 text-emerald-300">مفعلة يدويًا: {manuallyEnabledCount}</span>
+            <span className="rounded-xl bg-red-500/10 px-3 py-2 text-red-300">مقفلة يدويًا: {manuallyDisabledCount}</span>
+            <span className="rounded-xl bg-[#F6C35B]/10 px-3 py-2 text-[#F6C35B]">النتيجة: {effectiveRows.filter((row) => row.effectiveEnabled).length}</span>
           </div>
         </div>
 
@@ -441,12 +441,12 @@ export function AdminCafesPage({
           <table className="min-w-[1040px] w-full text-right text-sm">
             <thead>
               <tr className="border-b border-white/10 text-[#CBB29C]">
-                <th className="px-3 py-3 font-black">ط§ظ„ط®ط¯ظ…ط©</th>
-                <th className="px-3 py-3 font-black">ط§ظ„طھطµظ†ظٹظپ</th>
-                <th className="px-3 py-3 font-black">ط¶ظ…ظ† ط§ظ„ط¨ط§ظ‚ط©</th>
-                <th className="px-3 py-3 font-black">ط§ظ„طھط¬ط§ظˆط²</th>
-                <th className="px-3 py-3 font-black">ط§ظ„ط­ط§ظ„ط© ط§ظ„ظپط¹ظ„ظٹط©</th>
-                <th className="px-3 py-3 font-black">طھط­ظƒظ… ط§ظ„ط£ط¯ظ…ظ†</th>
+                <th className="px-3 py-3 font-black">الخدمة</th>
+                <th className="px-3 py-3 font-black">التصنيف</th>
+                <th className="px-3 py-3 font-black">ضمن الباقة</th>
+                <th className="px-3 py-3 font-black">التجاوز</th>
+                <th className="px-3 py-3 font-black">الحالة الفعلية</th>
+                <th className="px-3 py-3 font-black">تحكم الأدمن</th>
               </tr>
             </thead>
             <tbody>
@@ -461,7 +461,7 @@ export function AdminCafesPage({
                       <p className="mt-1 font-mono text-xs text-[#7A6255]">{row.feature.route}</p>
                     </td>
                     <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[row.feature.category] ?? row.feature.category}</td>
-                    <td className="px-3 py-3">{row.planIncluded ? "ظ†ط¹ظ…" : "ظ„ط§"}</td>
+                    <td className="px-3 py-3">{row.planIncluded ? "نعم" : "لا"}</td>
                     <td className="px-3 py-3">{overrideLabels[selectedOverride]}</td>
                     <td className="px-3 py-3">
                       <span className={`rounded-xl px-3 py-1 text-xs font-black ${
@@ -488,11 +488,11 @@ export function AdminCafesPage({
                         }
                         className="h-11 min-w-[190px] text-xs"
                       >
-                        <option value="default">ط­ط³ط¨ ط§ظ„ط¨ط§ظ‚ط©</option>
+                        <option value="default">حسب الباقة</option>
                         <option value="enabled" disabled={cannotManuallyEnable}>
-                          ظ…ظپط¹ظ„ط© ظٹط¯ظˆظٹظ‹ط§
+                          مفعلة يدويًا
                         </option>
-                        <option value="disabled">ظ…ظ‚ظپظ„ط© ظٹط¯ظˆظٹظ‹ط§</option>
+                        <option value="disabled">مقفلة يدويًا</option>
                       </AdminSelect>
                     </td>
                   </tr>
@@ -504,7 +504,7 @@ export function AdminCafesPage({
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-bold text-[#CBB29C]">
-            ط§ظ„ط§ط³طھط«ظ†ط§ط، ظٹط·ط¨ظ‚ ط¹ظ„ظ‰ ظ‡ط°ظ‡ ط§ظ„ط¹ظ„ط§ظ…ط© ظپظ‚ط· ظˆظ„ط§ ظٹط؛ظٹط± ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¨ط§ظ‚ط©.
+            الاستثناء يطبق على هذه العلامة فقط ولا يغير إعدادات الباقة.
           </p>
           <button
             type="button"
@@ -512,7 +512,7 @@ export function AdminCafesPage({
             disabled={saving || !hasDraft}
             className="rounded-2xl bg-[#F6C35B] px-5 py-3 text-sm font-black text-[#241610] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? "ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸" : "ط­ظپط¸ طھط­ظƒظ… ط§ظ„ط®ط¯ظ…ط§طھ"}
+            {saving ? "جاري الحفظ" : "حفظ تحكم الخدمات"}
           </button>
         </div>
       </div>

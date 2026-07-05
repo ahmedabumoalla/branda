@@ -140,17 +140,17 @@ export async function saveCafeFeatureOverrides(
     .maybeSingle();
 
   if (cafeError) throw cafeError;
-  if (!cafe) throw new Error("ط§ظ„ط¹ظ„ط§ظ…ط© ط§ظ„طھط¬ط§ط±ظٹط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©");
+  if (!cafe) throw new Error("العلامة التجارية غير موجودة");
 
   const unique = new Map<PlatformFeatureId, CafeFeatureOverrideInput["override"]>();
   for (const item of parsed) {
     const definition = getPlatformFeatureDefinition(item.featureId);
-    if (!definition) throw new Error("ظ…ظٹط²ط© ط؛ظٹط± ظ…ط¹ط±ظˆظپط©");
+    if (!definition) throw new Error("ميزة غير معروفة");
     if (!definition.packageAssignable) {
-      throw new Error("ظ‡ط°ظ‡ ط§ظ„ظ…ظٹط²ط© ظ„ط§ طھظ‚ط¨ظ„ طھط¬ط§ظˆط²ظ‹ط§ ظٹط¯ظˆظٹظ‹ط§");
+      throw new Error("هذه الميزة لا تقبل تجاوزًا يدويًا");
     }
     if (item.override === "enabled" && ["coming_soon", "hidden"].includes(definition.status)) {
-      throw new Error("ظ„ط§ ظٹظ…ظƒظ† طھظپط¹ظٹظ„ ظ…ظٹط²ط© ط؛ظٹط± ظ…طھط§ط­ط© ظٹط¯ظˆظٹظ‹ط§");
+      throw new Error("لا يمكن تفعيل ميزة غير متاحة يدويًا");
     }
     unique.set(definition.id, item.override);
   }

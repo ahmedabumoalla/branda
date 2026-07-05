@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "next dev --turbopack",
+    "check:text": "node scripts/check-text-integrity.mjs",
     "build": "next build",
     "security:source": "node scripts/security-source-gate.mjs",
     "start": "next start",
