@@ -37,6 +37,28 @@ const forbiddenPatterns = [
   { label: "\\u0637\\u00a7", value: "\u0637\u00a7" },
   { label: "\\u00d8\\u00a7", value: "\u00d8\u00a7" },
   { label: "\\u00d9\\u2026", value: "\u00d9\u2026" },
+  { label: "mojibake \\u0638\\u2026", value: "\u0638\u2026" },
+  { label: "mojibake \\u0637\\u061b\\u0638\\u0679", value: "\u0637\u061b\u0638\u0679" },
+  {
+    label: "mojibake \\u0637\\u00b7\\u0622\\u00b7\\u0637\\u00b8",
+    value: String.fromCodePoint(0x0637, 0x00b7, 0x0622, 0x00b7, 0x0637, 0x00b8),
+  },
+  {
+    label: "mojibake \\u0637\\u00b7\\u0639\\u00be\\u0637\\u00b8",
+    value: String.fromCodePoint(0x0637, 0x00b7, 0x0639, 0x00be, 0x0637, 0x00b8),
+  },
+  {
+    label: "mojibake \\u0637\\u00b8\\u00e2\\u20ac\\u00a6\\u0637\\u00b8",
+    value: String.fromCodePoint(0x0637, 0x00b8, 0x00e2, 0x20ac, 0x00a6, 0x0637, 0x00b8),
+  },
+  {
+    label: "mojibake \\u0623\\u00a2\\u00e2\\u201a\\u00ac\\u0022",
+    value: String.fromCodePoint(0x0623, 0x00a2, 0x00e2, 0x201a, 0x00ac, 0x0022),
+  },
+  {
+    label: "mojibake \\u0623\\u00a2\\u00e2\\u20ac\\u00a2\\u0639\\u00af",
+    value: String.fromCodePoint(0x0623, 0x00a2, 0x00e2, 0x20ac, 0x00a2, 0x0639, 0x00af),
+  },
 ];
 
 function extensionOf(filePath) {

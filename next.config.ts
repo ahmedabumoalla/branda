@@ -3,6 +3,8 @@
 const nextConfig = {
   experimental: {
     cpus: 1,
+    preloadEntriesOnStart: false,
+    webpackMemoryOptimizations: true,
     serverActions: {
       bodySizeLimit: "50mb",
     },
