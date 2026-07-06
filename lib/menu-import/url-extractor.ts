@@ -1,4 +1,5 @@
 import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import {
   buildAnalysis,
@@ -15,8 +16,15 @@ const timeoutMs = 9000;
 const iwaiterTimeoutMs = 8000;
 const phpCatalogTimeoutMs = 8000;
 const maxPhpCategoryPages = 4;
+const maxGeneralCategoryPages = 12;
 const maxResponseBytes = 2 * 1024 * 1024;
 const userAgent = "BarndaksaMenuImport/1.0";
+const menuPageTlsFallbackCodes = new Set([
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "CERT_HAS_EXPIRED",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+]);
 const phpCatalogFailureMessage = "تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني";
 
 function isPrivateIp(host: string) {
@@ -79,6 +87,114 @@ async function fetchWithTimeout(url: string, init: RequestInit) {
   return fetchWithTimeoutMs(url, init, timeoutMs);
 }
 
+function fetchErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const record = error as Record<string, unknown>;
+  if (typeof record.code === "string") return record.code;
+  const causeCode = fetchErrorCode(record.cause);
+  if (causeCode) return causeCode;
+  const errors = record.errors;
+  if (Array.isArray(errors)) {
+    for (const item of errors) {
+      const code = fetchErrorCode(item);
+      if (code) return code;
+    }
+  }
+  return null;
+}
+
+function shouldRetryMenuPageWithTlsFallback(error: unknown) {
+  const code = fetchErrorCode(error);
+  return Boolean(code && menuPageTlsFallbackCodes.has(code));
+}
+
+function headersToRecord(headers: HeadersInit | undefined) {
+  const record: Record<string, string> = {};
+  new Headers(headers).forEach((value, key) => {
+    record[key] = value;
+  });
+  return record;
+}
+
+function headersFromIncoming(headers: Record<string, string | string[] | number | undefined>) {
+  const next = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) next.append(key, item);
+    } else if (value != null) {
+      next.set(key, String(value));
+    }
+  }
+  return next;
+}
+
+function fetchPublicMenuPageWithCertificateFallback(url: string, init: RequestInit, timeoutMilliseconds: number) {
+  const target = new URL(url);
+  return new Promise<Response>((resolve, reject) => {
+    const request = httpsRequest(
+      target,
+      {
+        method: init.method ?? "GET",
+        headers: headersToRecord(init.headers),
+        rejectUnauthorized: false,
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        let total = 0;
+
+        response.on("data", (chunk: Buffer | string) => {
+          const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+          total += buffer.byteLength;
+          if (total > maxResponseBytes) {
+            request.destroy(new Error("Menu URL response is too large"));
+            return;
+          }
+          chunks.push(buffer);
+        });
+
+        response.on("end", () => {
+          clearTimeout(timeout);
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: response.statusCode ?? 200,
+              statusText: response.statusMessage,
+              headers: headersFromIncoming(response.headers),
+            })
+          );
+        });
+      }
+    );
+
+    const timeout = setTimeout(() => {
+      request.destroy(new DOMException("The operation was aborted", "AbortError"));
+    }, timeoutMilliseconds);
+
+    request.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    request.end();
+  });
+}
+
+async function fetchPublicMenuPageWithTimeoutMs(url: string, init: RequestInit, timeoutMilliseconds: number) {
+  try {
+    return await fetchWithTimeoutMs(url, init, timeoutMilliseconds);
+  } catch (error) {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || !shouldRetryMenuPageWithTlsFallback(error)) {
+      throw error;
+    }
+
+    // Scoped only to public menu pages submitted by brand owners; global TLS settings remain untouched.
+    return fetchPublicMenuPageWithCertificateFallback(url, init, timeoutMilliseconds);
+  }
+}
+
+async function fetchPublicMenuPageWithTimeout(url: string, init: RequestInit) {
+  return fetchPublicMenuPageWithTimeoutMs(url, init, timeoutMs);
+}
+
 async function readLimitedText(response: Response) {
   const reader = response.body?.getReader();
   if (!reader) return "";
@@ -115,7 +231,7 @@ async function fetchPublicMenuUrl(input: string) {
     await assertPublicUrl(current);
     visited.push(current.toString());
 
-    const response = await fetchWithTimeout(current.toString(), {
+    const response = await fetchPublicMenuPageWithTimeout(current.toString(), {
       method: "GET",
       redirect: "manual",
       cache: "no-store",
@@ -288,7 +404,7 @@ async function fetchPhpCatalogUrl(input: URL) {
     await assertPublicUrl(current);
     visited.push(current.toString());
 
-    const response = await fetchWithTimeoutMs(current.toString(), {
+    const response = await fetchPublicMenuPageWithTimeoutMs(current.toString(), {
       method: "GET",
       redirect: "manual",
       cache: "no-store",
@@ -687,6 +803,61 @@ function extractMetaContent(html: string, name: string) {
   return decodeHtmlEntities(html.match(pattern)?.[1] ?? "").trim();
 }
 
+function extractClassName(tag: string) {
+  return decodeHtmlEntities(extractAttribute(tag, "class")).trim();
+}
+
+function imageUrlFromSource(src: string, baseUrl: string) {
+  const normalized = src.trim();
+  if (!normalized || /(?:^|\/)assets\/no-image\.(?:png|jpe?g|webp|gif|svg)(?:[?#].*)?$/i.test(normalized)) {
+    return null;
+  }
+  return absolutizeUrl(normalized, baseUrl) || null;
+}
+
+function extractCategoryLabelFromAnchor(anchor: string) {
+  return (
+    stripTags(anchor.match(/<span\b[^>]*class=["'][^"']*category-name[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1] ?? "") ||
+    decodeHtmlEntities(extractAttribute(anchor, "title")).trim() ||
+    decodeHtmlEntities(extractAttribute(anchor, "aria-label")).trim() ||
+    decodeHtmlEntities(anchor.match(/<img\b[^>]*\salt=["']([^"']*)["'][^>]*>/i)?.[1] ?? "").trim() ||
+    stripTags(anchor)
+  );
+}
+
+function extractGeneralCategoryLinks(html: string, baseUrl: URL) {
+  const links: Array<{ url: string; label: string }> = [];
+  const seen = new Set<string>([baseUrl.toString()]);
+
+  for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi)) {
+    const anchor = match[0];
+    const href = decodeHtmlEntities(match[1] ?? "").trim();
+    if (!href) continue;
+
+    let next: URL;
+    try {
+      next = new URL(href, baseUrl);
+    } catch {
+      continue;
+    }
+
+    const className = extractClassName(anchor);
+    const isCategoryLink =
+      /\bcategory-item\b/i.test(className) ||
+      /(?:^|[?&])cat=/i.test(next.search) ||
+      /category/i.test(next.href);
+    if (!isCategoryLink || next.origin !== baseUrl.origin) continue;
+
+    const normalized = next.toString();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    links.push({ url: normalized, label: extractCategoryLabelFromAnchor(anchor) });
+    if (links.length >= maxGeneralCategoryPages) break;
+  }
+
+  return links;
+}
+
 function extractPhpPageTitle(html: string, url: URL) {
   const heading =
     stripTags(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "") ||
@@ -705,7 +876,7 @@ function extractFirstImageFromBlock(block: string, baseUrl: string) {
     extractAttribute(imgTag, "data-src") ||
     extractAttribute(imgTag, "data-lazy-src") ||
     extractAttribute(imgTag, "data-original");
-  return src ? absolutizeUrl(src, baseUrl) : null;
+  return src ? imageUrlFromSource(src, baseUrl) : null;
 }
 
 function extractDescriptionFromBlock(block: string, productName: string) {
@@ -744,7 +915,47 @@ function extractProductNameFromBlock(block: string, priceText: string) {
   return stripPriceFromText(candidate);
 }
 
+function extractProductCardItemsFromHtml(html: string, pageUrl: string, categoryName: string) {
+  const items: ExtractedMenuItem[] = [];
+  const cardPattern = /<div\b[^>]*class=["'][^"']*product-card[^"']*["'][^>]*>([\s\S]*?)(?=<div\b[^>]*class=["'][^"']*product-card|<\/section>|$)/gi;
+
+  for (const match of html.matchAll(cardPattern)) {
+    const block = match[1] ?? "";
+    const productName = stripTags(block.match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i)?.[1] ?? "") ||
+      extractProductNameFromBlock(block, "");
+    const priceText =
+      stripTags(block.match(/<[^>]*class=["'][^"']*\bprice\b[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "") ||
+      stripTags(block);
+    const price = parsePrice(priceText);
+    if (!productName || productName.length < 2 || price == null) continue;
+
+    const imgTag = block.match(/<img\b[^>]*>/i)?.[0] ?? "";
+    const src =
+      extractAttribute(imgTag, "src") ||
+      extractAttribute(imgTag, "data-src") ||
+      extractAttribute(imgTag, "data-lazy-src") ||
+      extractAttribute(imgTag, "data-original");
+
+    items.push({
+      categoryName,
+      productName,
+      description:
+        stripTags(block.match(/<[^>]*class=["'][^"']*\bdesc\b[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "") ||
+        extractDescriptionFromBlock(block, productName),
+      price,
+      imageUrl: src ? imageUrlFromSource(src, pageUrl) : null,
+      metadata: { sourceUrl: pageUrl, extraction: "product-card" },
+      status: "needs_review",
+    });
+  }
+
+  return items;
+}
+
 function extractPhpCatalogItemsFromHtml(html: string, pageUrl: string, categoryName: string) {
+  const productCardItems = extractProductCardItemsFromHtml(html, pageUrl, categoryName);
+  if (productCardItems.length) return productCardItems;
+
   const items: ExtractedMenuItem[] = [];
   const blockPattern =
     /<(article|li|tr)\b[^>]*>([\s\S]*?)<\/\1>|<div\b[^>]*class=["'][^"']*(?:product|menu-item|food|dish|meal|item)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi;
@@ -917,7 +1128,29 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
   if (nextData) collectObjectsWithPrices(nextData, fetched.finalUrl, nextDataItems);
 
   const images = extractImages(fetched.text, fetched.finalUrl);
-  const items = attachImages([...structuredHtmlItems, ...jsonLdItems, ...nextDataItems, ...htmlTextItems], images);
+  let categoryLinks: Array<{ url: string; label: string }> = [];
+  let categoryPages: Array<{ page: Awaited<ReturnType<typeof fetchPublicMenuUrl>>; label: string }> = [];
+  let items = attachImages([...structuredHtmlItems, ...jsonLdItems, ...nextDataItems, ...htmlTextItems], images);
+
+  if (!items.length && fetched.contentType.includes("text/html")) {
+    const baseUrl = new URL(fetched.finalUrl);
+    categoryLinks = extractGeneralCategoryLinks(fetched.text, baseUrl);
+    const fetchedCategoryPages = await Promise.all(
+      categoryLinks.map(async (link) => {
+        try {
+          return { page: await fetchPublicMenuUrl(link.url), label: link.label };
+        } catch {
+          return null;
+        }
+      })
+    );
+    categoryPages = fetchedCategoryPages.filter((page): page is { page: Awaited<ReturnType<typeof fetchPublicMenuUrl>>; label: string } => Boolean(page));
+    items = categoryPages.flatMap(({ page, label }) => {
+      const pageUrl = new URL(page.finalUrl);
+      const categoryName = label || extractPhpPageTitle(page.text, pageUrl);
+      return extractPhpCatalogItemsFromHtml(page.text, page.finalUrl, categoryName);
+    });
+  }
   const notes = items.length
     ? []
     : ["لم يتم العثور على منتجات واضحة في الرابط. يمكن إنشاء المسودة يدويًا من جدول المراجعة."];
@@ -927,10 +1160,12 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
     {
       sourceUrl,
       finalUrl: fetched.finalUrl,
-      visitedUrls: fetched.visited,
+      visitedUrls: [...fetched.visited, ...categoryPages.flatMap(({ page }) => page.visited)],
       contentType: fetched.contentType,
       jsonLdBlocks: jsonLdPayloads.length,
-      imagesFound: images.length,
+      imagesFound: images.length + categoryPages.reduce((total, { page }) => total + extractImages(page.text, page.finalUrl).length, 0),
+      categoryLinksFound: categoryLinks.length,
+      pagesRead: 1 + categoryPages.length,
     },
     notes
   );
