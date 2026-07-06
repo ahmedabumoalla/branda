@@ -153,6 +153,8 @@ export type DbMenuCategory = {
 const ORDER_STATUS_TO_UI: Record<string, OrderStatus> = {
   pending_cafe: "بانتظار موافقة الكوفي",
   accepted: "مقبول",
+  completed: "مكتمل",
+  not_completed: "غير مكتمل",
   rejected: "مرفوض",
   cancelled_by_customer: "ملغي من العميل",
 };
@@ -160,6 +162,8 @@ const ORDER_STATUS_TO_UI: Record<string, OrderStatus> = {
 const ORDER_STATUS_FROM_UI: Record<OrderStatus, string> = {
   "بانتظار موافقة الكوفي": "pending_cafe",
   مقبول: "accepted",
+  مكتمل: "completed",
+  "غير مكتمل": "not_completed",
   مرفوض: "rejected",
   "ملغي من العميل": "cancelled_by_customer",
 };

@@ -45,7 +45,7 @@ export async function acceptCashierReservationAction(reservationId: string) {
 
 export async function updateCashierOrderStatusAction(
   orderId: string,
-  status: "accepted" | "rejected",
+  status: "accepted" | "rejected" | "completed" | "not_completed",
   rejectionReason?: string,
 ) {
   return cashierUpdateOrderStatus(orderId, status, rejectionReason);

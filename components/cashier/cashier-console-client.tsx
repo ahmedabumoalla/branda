@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   Ticket,
   UserRound,
+  XCircle,
 } from "lucide-react";
 import {
   acceptCashierOrderAction,
@@ -48,18 +49,19 @@ type ActiveModal =
   | "reward"
   | "orders"
   | "reservations"
+  | "operations"
   | "checkin"
   | "ticket"
   | "order-details"
   | "reservation-details"
   | "operation-details"
   | null;
-type StatusTableFilter = "pending" | "all" | "accepted" | "rejected" | "completed";
+type StatusTableFilter = "pending" | "all" | "accepted" | "rejected" | "completed" | "not_completed";
 type ConsoleKind = "cafe" | "restaurant" | "events";
 type OperationKind = "order" | "reservation" | "ticket" | "reward";
-type OperationFilter = "all" | "orders" | "reservations" | "tickets" | "rewards" | "accepted" | "rejected" | "completed" | "pending";
+type OperationFilter = "all" | "orders" | "reservations" | "tickets" | "rewards" | "accepted" | "rejected" | "completed" | "not_completed" | "pending";
 type CashierActionTarget =
-  | { type: "order"; id: string; action: "accept" | "reject"; row: Row }
+  | { type: "order"; id: string; action: "accept" | "reject" | "not_complete"; row: Row }
   | { type: "reservation"; id: string; action: "accept" | "reject" | "modify"; row: Row }
   | null;
 type OrderItemView = {
@@ -90,7 +92,7 @@ type OperationRow = {
   phone: string;
   email: string;
   status: string;
-  statusGroup: "accepted" | "rejected" | "completed" | "pending" | "other";
+  statusGroup: "accepted" | "rejected" | "completed" | "not_completed" | "pending" | "other";
   summary: string;
   searchText: string;
 };
@@ -106,11 +108,34 @@ const translateLanguages: TranslateLanguage[] = [
 ];
 
 const cashierTranslateCachePrefix = "cashier-translation:";
+const cashierLanguageStorageKey = "barndaksa:cashier:language";
 const cashierTranslationBatchSize = 80;
 const cashierTranslateLoadingMessage = "جاري الترجمة...";
 const cashierTranslateSuccessMessage = "تم تغيير اللغة";
 const cashierTranslatePartialMessage = "تعذر ترجمة بعض النصوص، وباقي الصفحة يعمل";
 const rejectionReasonRequiredMessage = "اكتب سبب الرفض أولًا";
+const notCompletedReasonRequiredMessage = "اكتب سبب عدم إكمال الطلب أولًا";
+
+function isSupportedCashierLanguage(languageCode: string) {
+  return translateLanguages.some((language) => language.code === languageCode);
+}
+
+function readStoredCashierLanguage() {
+  if (typeof window === "undefined") return "ar";
+  try {
+    const stored = window.localStorage.getItem(cashierLanguageStorageKey);
+    return stored && isSupportedCashierLanguage(stored) ? stored : "ar";
+  } catch {
+    return "ar";
+  }
+}
+
+function writeStoredCashierLanguage(languageCode: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(cashierLanguageStorageKey, isSupportedCashierLanguage(languageCode) ? languageCode : "ar");
+  } catch {}
+}
 
 const operationFilters: Array<{ id: OperationFilter; label: string }> = [
   { id: "all", label: "الكل" },
@@ -121,6 +146,7 @@ const operationFilters: Array<{ id: OperationFilter; label: string }> = [
   { id: "accepted", label: "المقبولة" },
   { id: "rejected", label: "المرفوضة" },
   { id: "completed", label: "المكتملة" },
+  { id: "not_completed", label: "غير مكتملة" },
   { id: "pending", label: "تحتاج إجراء" },
 ];
 
@@ -283,6 +309,72 @@ function orderDetails(row: Row, kind: ConsoleKind) {
   return valueOf(row, ["notes", "description", "details", "specialRequests", "special_requests"], kind === "events" ? "تفاصيل التذكرة" : "تفاصيل الطلب");
 }
 
+function firstOrderItemRecord(row: Row) {
+  const rawItems = row.items ?? row.orderItems ?? row.order_items ?? row.products ?? row.tickets;
+  if (!Array.isArray(rawItems) || !rawItems.length) return null;
+  const firstItem = rawItems[0];
+  return firstItem && typeof firstItem === "object" ? (firstItem as Row) : null;
+}
+
+function imageUrlFrom(row: Row | null) {
+  if (!row) return "";
+  return valueOf(
+    row,
+    [
+      "imageUrl",
+      "image_url",
+      "productImage",
+      "product_image",
+      "thumbnail",
+      "thumbnailUrl",
+      "thumbnail_url",
+      "photoUrl",
+      "photo_url",
+      "mediaUrl",
+      "media_url",
+    ],
+    "",
+  );
+}
+
+function orderImageUrl(row: Row) {
+  return imageUrlFrom(firstOrderItemRecord(row)) || imageUrlFrom(row);
+}
+
+function orderPickupText(row: Row) {
+  const direct = valueOf(
+    row,
+    [
+      "pickupTime",
+      "pickup_time",
+      "requestedPickupTime",
+      "requested_pickup_time",
+      "fulfillmentTime",
+      "fulfillment_time",
+      "deliveryTime",
+      "delivery_time",
+      "preferredTime",
+      "preferred_time",
+    ],
+    "",
+  );
+  if (direct) return direct;
+  const scheduled = rowDateTime(
+    row,
+    ["pickupDate", "pickup_date", "requestedPickupDate", "requested_pickup_date", "fulfillmentDate", "fulfillment_date", "deliveryDate", "delivery_date"],
+    ["pickupTime", "pickup_time", "requestedPickupTime", "requested_pickup_time", "fulfillmentTime", "fulfillment_time", "deliveryTime", "delivery_time"],
+  );
+  return [scheduled.date, scheduled.time].filter((part) => part && part !== "-").join(" ") || "-";
+}
+
+function orderCustomerNotes(row: Row) {
+  return valueOf(row, ["customerNotes", "customer_notes", "notes", "note", "specialInstructions", "special_instructions"], "-");
+}
+
+function isLiveAcceptedOrder(row: Row) {
+  return statusGroup(row) === "accepted";
+}
+
 function dateParts(value: string) {
   if (!value || value === "-") return { date: "-", time: "-" };
   const date = new Date(value);
@@ -361,12 +453,13 @@ function statusLabel(row: Row) {
     rejected: "مرفوض",
     completed: "مكتمل",
     complete: "مكتمل",
+    not_completed: "غير مكتمل",
     redeemed: "مكتمل",
     pending: "قيد الانتظار",
     pending_cafe: "قيد الانتظار",
     used: "تم الاستخدام",
-    cancelled: "مرفوض",
-    cancelled_by_customer: "مرفوض",
+    cancelled: "ملغي",
+    cancelled_by_customer: "ملغي من العميل",
   };
   return map[raw] ?? raw;
 }
@@ -375,8 +468,9 @@ function statusGroup(row: Row): OperationRow["statusGroup"] {
   const raw = valueOf(row, ["status"], "").toLowerCase();
   const label = statusLabel(row);
   if (["accepted", "approved", "valid"].includes(raw) || label === "مقبول") return "accepted";
-  if (["rejected", "cancelled", "cancelled_by_customer"].includes(raw) || label === "مرفوض") return "rejected";
+  if (raw === "rejected" || label === "مرفوض") return "rejected";
   if (["completed", "complete", "redeemed", "used"].includes(raw) || ["مكتمل", "تم الاستخدام", "تم الاستقبال"].includes(label)) return "completed";
+  if (raw === "not_completed" || label === "غير مكتمل") return "not_completed";
   if (["pending", "pending_cafe"].includes(raw) || label === "قيد الانتظار") return "pending";
   return "other";
 }
@@ -580,6 +674,125 @@ function StatusPill({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LiveAcceptedOrdersSection({
+  rows,
+  isEvents,
+  consoleKind,
+  busy,
+  onComplete,
+  onIncomplete,
+}: {
+  rows: Row[];
+  isEvents: boolean;
+  consoleKind: ConsoleKind;
+  busy: boolean;
+  onComplete: (row: Row) => void;
+  onIncomplete: (row: Row) => void;
+}) {
+  return (
+    <section className="mb-6 rounded-[28px] border border-[#E7D7C6] bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-black text-[#6B3A25]">طلبات قيد التجهيز</p>
+          <h2 className="mt-1 text-2xl font-black leading-tight text-[#311912]">
+            {isEvents ? "طلبات التذاكر المقبولة" : "الطلبات المقبولة الحية"}
+          </h2>
+        </div>
+        <StatusPill>{rows.length} نشط</StatusPill>
+      </div>
+
+      {rows.length ? (
+        <div className="mt-4 grid gap-3">
+          {rows.map((row) => {
+            const id = valueOf(row, ["id"], "");
+            const imageUrl = orderImageUrl(row);
+            const items = orderItems(row, consoleKind);
+            const itemCount = items.length || 1;
+            return (
+              <article
+                key={id}
+                className="grid min-w-0 gap-3 rounded-3xl border border-[#EFE3D6] bg-[#FFFDF9] p-3 sm:grid-cols-[88px_1fr] lg:grid-cols-[96px_1fr_auto]"
+              >
+                <div className="h-20 w-20 overflow-hidden rounded-2xl bg-[#F8F4EF] sm:h-[88px] sm:w-[88px]">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[#6B3A25]">
+                      <ShoppingBag className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="break-words text-lg font-black leading-7 text-[#311912]">{orderName(row, consoleKind)}</h3>
+                      <p className="text-xs font-black text-[#806A5E]">
+                        {itemCount} عنصر - {orderKind(row, consoleKind)}
+                      </p>
+                    </div>
+                    <p className="shrink-0 rounded-2xl bg-[#FFF8EA] px-3 py-2 text-sm font-black text-[#6B3A25]">{amountOf(row)}</p>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 text-sm font-bold text-[#5C463D] sm:grid-cols-2">
+                    <p className="break-words">
+                      <span className="font-black text-[#311912]">تفاصيل الطلب: </span>
+                      {orderDetails(row, consoleKind)}
+                    </p>
+                    <p className="break-words">
+                      <span className="font-black text-[#311912]">وقت الاستلام: </span>
+                      {orderPickupText(row)}
+                    </p>
+                    <p className="break-words">
+                      <span className="font-black text-[#311912]">العميل: </span>
+                      {valueOf(row, ["customerName", "customer_name"], "عميل")}
+                    </p>
+                    <p className="break-words">
+                      <span className="font-black text-[#311912]">الجوال: </span>
+                      {valueOf(row, ["customerPhone", "customer_phone", "phone"], "-")}
+                    </p>
+                    <p className="break-words sm:col-span-2">
+                      <span className="font-black text-[#311912]">ملاحظات العميل: </span>
+                      {orderCustomerNotes(row)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-2 lg:w-44">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onComplete(row)}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 py-3 text-sm font-black text-white disabled:opacity-60"
+                  >
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                    <span>تم إنهاء الطلب</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onIncomplete(row)}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-3 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                  >
+                    <XCircle className="h-5 w-5 shrink-0" />
+                    <span>لم يتم إكمال الطلب</span>
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-3xl border border-dashed border-[#E7D7C6] bg-[#F8F4EF] p-6 text-center">
+          <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-600" />
+          <p className="mt-3 text-lg font-black text-[#311912]">لا توجد طلبات مقبولة قيد التجهيز الآن</p>
+          <p className="mt-1 text-sm font-bold text-[#806A5E]">عند قبول طلب جديد سيظهر هنا فورًا لمتابعة التجهيز.</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function shouldSkipTranslationElement(element: Element | null) {
   if (!element) return true;
   return Boolean(
@@ -706,6 +919,16 @@ export function CashierConsoleClient({ initialData }: Props) {
       return filterMatches && searchMatches;
     });
   }, [consoleKind, data, operationFilter, operationSearch]);
+
+  const liveAcceptedOrders = useMemo(() => allOrderRecords.filter(isLiveAcceptedOrder), [allOrderRecords]);
+
+  useEffect(() => {
+    const storedLanguage = readStoredCashierLanguage();
+    setActiveTranslateLanguage(storedLanguage);
+    if (storedLanguage !== "ar") {
+      void translateCashierDom(storedLanguage, { quiet: true });
+    }
+  }, []);
 
   useEffect(() => {
     if (first.current) {
@@ -840,8 +1063,10 @@ export function CashierConsoleClient({ initialData }: Props) {
   }
 
   function changeCashierLanguage(languageCode: string) {
-    setActiveTranslateLanguage(languageCode);
-    void translateCashierDom(languageCode);
+    const nextLanguage = isSupportedCashierLanguage(languageCode) ? languageCode : "ar";
+    writeStoredCashierLanguage(nextLanguage);
+    setActiveTranslateLanguage(nextLanguage);
+    void translateCashierDom(nextLanguage);
   }
 
   function printOrder(order: Row) {
@@ -1027,6 +1252,41 @@ export function CashierConsoleClient({ initialData }: Props) {
           ? rejectionReasonRequiredMessage
           : rawMessage || (isEvents ? "تعذر رفض طلب التذاكر" : "تعذر رفض الطلب"),
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function completeLiveOrder(orderId: string) {
+    setBusy(true);
+    try {
+      await updateCashierOrderStatusAction(orderId, "completed");
+      await refreshConsole();
+      setMessage(isEvents ? "تم إنهاء طلب التذاكر" : "تم إنهاء الطلب");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر إنهاء طلب التذاكر" : "تعذر إنهاء الطلب");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function markLiveOrderNotCompleted(orderId: string, reason: string) {
+    const cleanReason = reason.trim();
+    if (!cleanReason) {
+      setActionMessage("");
+      setMessage(notCompletedReasonRequiredMessage);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await updateCashierOrderStatusAction(orderId, "not_completed", cleanReason);
+      await refreshConsole();
+      setMessage(isEvents ? "تم تسجيل طلب التذاكر كغير مكتمل" : "تم تسجيل الطلب كغير مكتمل");
+      setActionTarget(null);
+      setActionMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : isEvents ? "تعذر تسجيل طلب التذاكر كغير مكتمل" : "تعذر تسجيل الطلب كغير مكتمل");
     } finally {
       setBusy(false);
     }
@@ -1286,6 +1546,13 @@ export function CashierConsoleClient({ initialData }: Props) {
       count: pendingReservations,
     },
     {
+      key: "operations" as const,
+      title: isEvents ? "سجل بوابة الدخول" : "سجل العمليات العام",
+      description: "كل العمليات والفلاتر داخل نافذة منظمة",
+      icon: FileSpreadsheet,
+      count: operationRows.length,
+    },
+    {
       key: "checkin" as const,
       title: checkinTitle,
       description: "تأكيد كود أو QR صالح لمرة واحدة",
@@ -1306,9 +1573,9 @@ export function CashierConsoleClient({ initialData }: Props) {
   ];
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#F8F4EF] px-3 py-5 text-[#311912] sm:px-4 sm:py-8">
+    <main dir="rtl" className="min-h-screen overflow-x-hidden bg-[#F8F4EF] px-3 py-5 text-[#311912] sm:px-4 sm:py-8">
       <div ref={translateRootRef} data-cashier-translate-root>
-      <section className="mx-auto max-w-7xl">
+      <section className="mx-auto max-w-7xl min-w-0">
         <header className="mb-4 rounded-[24px] bg-white p-4 shadow-sm sm:mb-5 sm:rounded-[28px] sm:p-5">
           <div className="grid gap-5">
             <div className="min-w-0">
@@ -1399,6 +1666,18 @@ export function CashierConsoleClient({ initialData }: Props) {
           </div>
         ) : null}
 
+        <LiveAcceptedOrdersSection
+          rows={liveAcceptedOrders}
+          isEvents={isEvents}
+          consoleKind={consoleKind}
+          busy={busy}
+          onComplete={(row) => void completeLiveOrder(valueOf(row, ["id"], ""))}
+          onIncomplete={(row) => {
+            const id = valueOf(row, ["id"], "");
+            openCashierAction({ type: "order", id, action: "not_complete", row });
+          }}
+        />
+
         <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
           {actions.map((action) => {
             const Icon = action.icon;
@@ -1422,49 +1701,6 @@ export function CashierConsoleClient({ initialData }: Props) {
               </button>
             );
           })}
-        </section>
-
-        <OperationLogSection
-          title={isEvents ? "سجل بوابة الدخول والطلبات" : "سجل العمليات العام"}
-          rows={operationRows}
-          filter={operationFilter}
-          onFilterChange={setOperationFilter}
-          search={operationSearch}
-          onSearchChange={setOperationSearch}
-          onDetails={openOperationDetails}
-        />
-
-        <section className="grid gap-5 xl:grid-cols-2">
-          <RecentTable
-            title={isEvents ? "سجل آخر طلبات التذاكر" : "سجل آخر الطلبات"}
-            rows={allOrderRecords}
-            isEvents={isEvents}
-            consoleKind={consoleKind}
-            type="orders"
-            emptyText={isEvents ? "لا توجد طلبات تذاكر حالية" : "لا توجد طلبات حالية"}
-            onDetails={openOrderDetails}
-            onAction={(row, action) => {
-              const id = valueOf(row, ["id"], "");
-              if (action === "accept") void acceptOrder(id);
-              if (action === "reject") openCashierAction({ type: "order", id, action: "reject", row });
-            }}
-          />
-          <RecentTable
-            title={isEvents ? "سجل آخر الحضور والتسجيلات" : "سجل آخر الحجوزات"}
-            rows={allReservationRecords}
-            isEvents={isEvents}
-            consoleKind={consoleKind}
-            type="reservations"
-            emptyText={isEvents ? "لا توجد تسجيلات حضور حالية" : "لا توجد حجوزات حالية"}
-            onDetails={openReservationDetails}
-            onAction={(row, action) => {
-              const id = valueOf(row, ["id"], "");
-              if (action === "accept") void acceptReservation(id);
-              if (action === "reject") openCashierAction({ type: "reservation", id, action: "reject", row });
-              if (action === "modify") openCashierAction({ type: "reservation", id, action: "modify", row });
-              if (action === "confirm") void confirmReservation(valueOf(row, ["reservationCode", "reservation_code", "code"], ""));
-            }}
-          />
         </section>
       </section>
 
@@ -1530,13 +1766,20 @@ export function CashierConsoleClient({ initialData }: Props) {
       </Modal>
 
       <Modal open={activeModal === "orders"} title={orderTitle} onClose={closeModal}>
-        <FilterTabs value={orderFilter} onChange={setOrderFilter} />
-        <OperationsTable
+        <FilterTabs value={orderFilter} onChange={setOrderFilter} includeNotCompleted />
+        <RecentTable
+          title={isEvents ? "سجل طلبات التذاكر" : "سجل الطلبات"}
           rows={orderRows}
           isEvents={isEvents}
           consoleKind={consoleKind}
           type="orders"
-          emptyText={orderFilter === "completed" ? "لا توجد طلبات مكتملة في مصدر الكاشير الحالي" : "لا توجد طلبات"}
+          emptyText={
+            orderFilter === "completed"
+              ? "لا توجد طلبات مكتملة في مصدر الكاشير الحالي"
+              : orderFilter === "not_completed"
+                ? "لا توجد طلبات غير مكتملة في مصدر الكاشير الحالي"
+                : "لا توجد طلبات"
+          }
           onDetails={openOrderDetails}
           onAction={(row, action) => {
             const id = valueOf(row, ["id"], "");
@@ -1548,7 +1791,8 @@ export function CashierConsoleClient({ initialData }: Props) {
 
       <Modal open={activeModal === "reservations"} title={reservationTitle} onClose={closeModal}>
         <FilterTabs value={reservationFilter} onChange={setReservationFilter} />
-        <OperationsTable
+        <RecentTable
+          title={isEvents ? "سجل الحضور والتسجيلات" : "سجل الحجوزات"}
           rows={reservationRows}
           isEvents={isEvents}
           consoleKind={consoleKind}
@@ -1562,6 +1806,22 @@ export function CashierConsoleClient({ initialData }: Props) {
             if (action === "modify") openCashierAction({ type: "reservation", id, action: "modify", row });
             if (action === "confirm") void confirmReservation(valueOf(row, ["reservationCode", "reservation_code", "code"], ""));
           }}
+        />
+      </Modal>
+
+      <Modal
+        open={activeModal === "operations"}
+        title={isEvents ? "سجل بوابة الدخول والطلبات" : "سجل العمليات العام"}
+        onClose={closeModal}
+      >
+        <OperationLogSection
+          title={isEvents ? "سجل بوابة الدخول والطلبات" : "سجل العمليات العام"}
+          rows={operationRows}
+          filter={operationFilter}
+          onFilterChange={setOperationFilter}
+          search={operationSearch}
+          onSearchChange={setOperationSearch}
+          onDetails={openOperationDetails}
         />
       </Modal>
 
@@ -1668,7 +1928,13 @@ export function CashierConsoleClient({ initialData }: Props) {
 
       <Modal
         open={Boolean(actionTarget)}
-        title={actionTarget?.action === "modify" ? "اقتراح وقت بديل" : "تأكيد الإجراء"}
+        title={
+          actionTarget?.action === "modify"
+            ? "اقتراح وقت بديل"
+            : actionTarget?.action === "not_complete"
+              ? "سبب عدم إكمال الطلب"
+              : "تأكيد الإجراء"
+        }
         onClose={() => setActionTarget(null)}
       >
         {actionTarget ? (
@@ -1703,18 +1969,24 @@ export function CashierConsoleClient({ initialData }: Props) {
               </div>
             ) : null}
             <label className="grid gap-2 text-sm font-black text-[#6B3A25]">
-              {actionTarget.action === "reject" ? "سبب الرفض" : "رسالة للعميل"}
+              {actionTarget.action === "reject"
+                ? "سبب الرفض"
+                : actionTarget.action === "not_complete"
+                  ? "سبب عدم إكمال الطلب"
+                  : "رسالة للعميل"}
               <textarea
                 value={actionMessage}
                 onChange={(event) => {
                   setActionMessage(event.target.value);
-                  if (message === rejectionReasonRequiredMessage) setMessage("");
+                  if (message === rejectionReasonRequiredMessage || message === notCompletedReasonRequiredMessage) setMessage("");
                 }}
                 rows={4}
                 className="resize-none rounded-2xl bg-[#F8F4EF] px-4 py-3 text-[#311912] outline-none"
                 placeholder={
                   actionTarget.action === "modify"
                     ? "مثال: نقدر نستقبلكم في الموعد المقترح بدل الموعد الحالي"
+                    : actionTarget.action === "not_complete"
+                      ? "اكتب سبب عدم إكمال الطلب بوضوح"
                     : "اكتب سبب الرفض بوضوح"
                 }
               />
@@ -1724,6 +1996,11 @@ export function CashierConsoleClient({ initialData }: Props) {
                 {rejectionReasonRequiredMessage}
               </p>
             ) : null}
+            {actionTarget.action === "not_complete" && message === notCompletedReasonRequiredMessage ? (
+              <p className="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-black text-orange-700">
+                {notCompletedReasonRequiredMessage}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1731,6 +2008,9 @@ export function CashierConsoleClient({ initialData }: Props) {
                 onClick={() => {
                   if (actionTarget.type === "order" && actionTarget.action === "reject") {
                     void rejectOrder(actionTarget.id, actionMessage);
+                  }
+                  if (actionTarget.type === "order" && actionTarget.action === "not_complete") {
+                    void markLiveOrderNotCompleted(actionTarget.id, actionMessage);
                   }
                   if (actionTarget.type === "reservation" && actionTarget.action === "reject") {
                     void rejectReservation(actionTarget.id, actionMessage);
@@ -1762,9 +2042,11 @@ export function CashierConsoleClient({ initialData }: Props) {
 function FilterTabs({
   value,
   onChange,
+  includeNotCompleted = false,
 }: {
   value: StatusTableFilter;
   onChange: (value: StatusTableFilter) => void;
+  includeNotCompleted?: boolean;
 }) {
   const tabs: Array<{ id: StatusTableFilter; label: string }> = [
     { id: "pending", label: "تحتاج إجراء" },
@@ -1772,6 +2054,7 @@ function FilterTabs({
     { id: "accepted", label: "المقبولة" },
     { id: "rejected", label: "المرفوضة" },
     { id: "completed", label: "المكتملة" },
+    ...(includeNotCompleted ? [{ id: "not_completed" as const, label: "غير مكتملة" }] : []),
   ];
   return (
     <div className="mb-4 flex flex-wrap gap-2">
@@ -2136,6 +2419,7 @@ function OperationStatusBadge({ row }: { row: OperationRow }) {
     accepted: "bg-emerald-50 text-emerald-700",
     rejected: "bg-red-50 text-red-700",
     completed: "bg-blue-50 text-blue-700",
+    not_completed: "bg-orange-50 text-orange-700",
     pending: "bg-amber-50 text-amber-700",
     other: "bg-[#F8F4EF] text-[#6B3A25]",
   };

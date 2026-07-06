@@ -38,6 +38,8 @@ const statusStyle: Record<OrderStatus, string> = {
   "بانتظار موافقة الكوفي":
     "border-amber-200 bg-amber-50 text-amber-800",
   مقبول: "border-green-200 bg-green-50 text-green-700",
+  مكتمل: "border-blue-200 bg-blue-50 text-blue-700",
+  "غير مكتمل": "border-orange-200 bg-orange-50 text-orange-700",
   مرفوض: "border-red-200 bg-red-50 text-red-700",
   "ملغي من العميل": "border-[#E7D7C6] bg-[#F8F4EF] text-[#7A6255]",
 };

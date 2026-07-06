@@ -9,6 +9,8 @@ export const operationEventTypes = {
   rewardRedeemed: "reward_redeemed",
   orderAccepted: "order_accepted",
   orderRejected: "order_rejected",
+  orderCompleted: "order_completed",
+  orderNotCompleted: "order_not_completed",
   reservationAccepted: "reservation_accepted",
   reservationRejected: "reservation_rejected",
   reservationModificationRequested: "reservation_modification_requested",

@@ -588,7 +588,7 @@ export async function cashierAcceptReservation(reservationId: string) {
 
 export async function cashierUpdateOrderStatus(
   orderId: string,
-  status: "accepted" | "rejected",
+  status: "accepted" | "rejected" | "completed" | "not_completed",
   rejectionReason?: string,
 ) {
   const admin = createAdminClient();
@@ -597,6 +597,7 @@ export async function cashierUpdateOrderStatus(
 
   if (!orderId) throw new Error("Order id is required");
   if (status === "rejected" && !reason) throw new Error("Rejection reason is required");
+  if (status === "not_completed" && !reason) throw new Error("Not completed reason is required");
 
   const { data: order, error: lookupError } = await admin
     .from("orders")
@@ -609,7 +610,10 @@ export async function cashierUpdateOrderStatus(
   if (!order || String(order.cafe_id) !== session.cafeId) {
     throw new Error("Order does not belong to this cashier cafe");
   }
-  if (String(order.status) !== "pending_cafe") {
+  const currentStatus = String(order.status);
+  const canHandlePending = ["pending", "pending_cafe"].includes(currentStatus) && ["accepted", "rejected"].includes(status);
+  const canCloseAccepted = ["accepted", "approved"].includes(currentStatus) && ["completed", "not_completed"].includes(status);
+  if (!canHandlePending && !canCloseAccepted) {
     throw new Error("Order status no longer allows this action");
   }
 
@@ -619,12 +623,13 @@ export async function cashierUpdateOrderStatus(
     .update({
       status,
       rejection_reason: status === "rejected" ? reason : null,
+      not_completed_reason: status === "not_completed" ? reason : null,
       responded_at: now,
       updated_at: now,
     })
     .eq("id", orderId)
     .eq("cafe_id", session.cafeId)
-    .eq("status", "pending_cafe")
+    .eq("status", currentStatus)
     .is("deleted_at", null)
     .select("*")
     .maybeSingle();
@@ -639,9 +644,10 @@ export async function cashierUpdateOrderStatus(
     targetId: orderId,
     details: {
       action: status,
-      statusBefore: String(order.status),
+      statusBefore: currentStatus,
       statusAfter: status,
       rejectionReason: status === "rejected" ? reason : null,
+      notCompletedReason: status === "not_completed" ? reason : null,
       customerName: String(order.customer_name ?? ""),
       total: Number(order.total ?? 0),
     },
@@ -656,12 +662,20 @@ export async function cashierUpdateOrderStatus(
     newData: {
       status,
       rejectionReason: status === "rejected" ? reason : null,
+      notCompletedReason: status === "not_completed" ? reason : null,
     },
   }).catch(() => undefined);
 
   await recordOperationEvent({
     cafeId: session.cafeId,
-    eventType: status === "accepted" ? operationEventTypes.orderAccepted : operationEventTypes.orderRejected,
+    eventType:
+      status === "accepted"
+        ? operationEventTypes.orderAccepted
+        : status === "completed"
+          ? operationEventTypes.orderCompleted
+          : status === "not_completed"
+            ? operationEventTypes.orderNotCompleted
+          : operationEventTypes.orderRejected,
     actorType: "cashier",
     actorId: session.cashierId,
     actorName: session.cashierName,
@@ -671,12 +685,13 @@ export async function cashierUpdateOrderStatus(
     metadata: {
       status,
       rejectionReason: status === "rejected" ? reason : null,
+      notCompletedReason: status === "not_completed" ? reason : null,
       customerName: String(order.customer_name ?? ""),
       total: Number(order.total ?? 0),
     },
   });
 
-  if (order.customer_id && session.cafeSlug) {
+  if ((status === "accepted" || status === "rejected") && order.customer_id && session.cafeSlug) {
     await createNotification({
       cafeSlug: session.cafeSlug,
       audience: "customer",
@@ -697,7 +712,7 @@ export async function cashierUpdateOrderStatus(
   }
 
   const customerPhone = order.customer_phone ? String(order.customer_phone) : "";
-  if (customerPhone) {
+  if ((status === "accepted" || status === "rejected") && customerPhone) {
     const orderName = await cashierOrderDisplayName(admin, orderId);
     const isEventCafe = session.businessCategory === "events_conferences";
     const body =
