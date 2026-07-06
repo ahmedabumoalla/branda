@@ -6,6 +6,8 @@ type QueryBuilder = {
   eq: (column: string, value: unknown) => CountQuery;
   in: (column: string, values: unknown[]) => CountQuery;
   is: (column: string, value: unknown) => CountQuery;
+  gte: (column: string, value: string) => CountQuery;
+  lte: (column: string, value: string) => CountQuery;
 };
 
 type CountQuery = QueryBuilder & PromiseLike<{ count: number | null; error: unknown }>;
@@ -144,12 +146,24 @@ export type AdminOperationsCenterBrand = {
 
 export type AdminOperationsCenterData = {
   brands: AdminOperationsCenterBrand[];
+  brandOptions: Array<{ id: string; name: string }>;
+  activeFilters: {
+    brandId: string;
+    from: string;
+    to: string;
+  };
   diagnostics: Array<{
     metric: string;
     source: string;
     status: OperationsSourceStatus;
     note: string;
   }>;
+};
+
+export type AdminOperationsCenterFilters = {
+  brandId?: string | null;
+  from?: string | null;
+  to?: string | null;
 };
 
 function asRows(value: unknown): DbRow[] {
@@ -176,10 +190,45 @@ function sourceStatus(count: number | null): OperationsSourceStatus {
   return count > 0 ? "available" : "empty";
 }
 
+function validDateOnly(value?: string | null) {
+  const normalized = String(value ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return "";
+  const date = new Date(`${normalized}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? "" : normalized;
+}
+
+function normalizeFilters(filters?: AdminOperationsCenterFilters, allowedBrandIds: Set<string> = new Set()) {
+  let from = validDateOnly(filters?.from);
+  let to = validDateOnly(filters?.to);
+  if (from && to && from > to) {
+    [from, to] = [to, from];
+  }
+
+  const brandId = String(filters?.brandId ?? "").trim();
+  return {
+    brandId: brandId && allowedBrandIds.has(brandId) ? brandId : "",
+    from,
+    to,
+  };
+}
+
+type CreatedAtFilterQuery<T> = T & {
+  gte: (column: string, value: string) => T;
+  lte: (column: string, value: string) => T;
+};
+
+function applyCreatedAtFilters<T>(query: T, filters: AdminOperationsCenterData["activeFilters"]) {
+  let next = query as CreatedAtFilterQuery<T>;
+  if (filters.from) next = next.gte("created_at", `${filters.from}T00:00:00.000Z`) as CreatedAtFilterQuery<T>;
+  if (filters.to) next = next.lte("created_at", `${filters.to}T23:59:59.999Z`) as CreatedAtFilterQuery<T>;
+  return next as T;
+}
+
 async function safeCount(
   supabase: Awaited<ReturnType<typeof createClient>>,
   table: string,
   cafeId: string,
+  filters: AdminOperationsCenterData["activeFilters"],
   extra?: (query: CountQuery) => CountQuery,
 ) {
   try {
@@ -187,6 +236,7 @@ async function safeCount(
       .from(table)
       .select("id", { count: "exact", head: true })
       .eq("cafe_id", cafeId) as unknown as CountQuery;
+    query = applyCreatedAtFilters(query, filters);
     if (extra) query = extra(query);
     const result = await query;
     if (result.error) return null;
@@ -274,7 +324,7 @@ function auditActor(
   };
 }
 
-export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterData> {
+export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFilters): Promise<AdminOperationsCenterData> {
   await requirePlatformAdmin();
 
   const supabase = await createClient();
@@ -286,11 +336,14 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
 
   if (cafeError) throw cafeError;
 
-  const cafes = asRows(cafeRows);
+  const allCafes = asRows(cafeRows);
+  const brandOptions = allCafes.map((row) => ({ id: text(row.id), name: text(row.name, "علامة بدون اسم") })).filter((row) => row.id);
+  const activeFilters = normalizeFilters(filters, new Set(brandOptions.map((row) => row.id)));
+  const cafes = activeFilters.brandId ? allCafes.filter((row) => text(row.id) === activeFilters.brandId) : allCafes;
   const cafeIds = cafes.map((row) => text(row.id)).filter(Boolean);
 
   if (cafeIds.length === 0) {
-    return { brands: [], diagnostics: [] };
+    return { brands: [], brandOptions, activeFilters, diagnostics: [] };
   }
 
   const [
@@ -304,10 +357,13 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
     auditResult,
   ] = await Promise.all([
     safeRows(
-      supabase
-        .from("cafe_visit_events")
-        .select("id,cafe_id,session_id,path,duration_seconds,created_at")
-        .in("cafe_id", cafeIds)
+      applyCreatedAtFilters(
+        supabase
+          .from("cafe_visit_events")
+          .select("id,cafe_id,session_id,path,duration_seconds,created_at")
+          .in("cafe_id", cafeIds),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(800),
       (row): OperationsVisitDetail & { cafeId: string } => ({
@@ -320,20 +376,26 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       }),
     ),
     safeRows(
-      supabase
-        .from("cafe_operation_events")
-        .select("id,cafe_id,event_type,actor_type,actor_id,actor_name,actor_email,entity_type,entity_id,metadata,created_at")
-        .in("cafe_id", cafeIds)
+      applyCreatedAtFilters(
+        supabase
+          .from("cafe_operation_events")
+          .select("id,cafe_id,event_type,actor_type,actor_id,actor_name,actor_email,entity_type,entity_id,metadata,created_at")
+          .in("cafe_id", cafeIds),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(1600),
       (row): DbRow & { cafeId: string } => ({ ...row, cafeId: text(row.cafe_id) }),
     ),
     safeRows(
-      supabase
-        .from("cafe_cashier_activity_logs")
-        .select("id,cafe_id,created_at,cafe_cashiers(full_name,email)")
-        .in("cafe_id", cafeIds)
-        .eq("action_type", "login")
+      applyCreatedAtFilters(
+        supabase
+          .from("cafe_cashier_activity_logs")
+          .select("id,cafe_id,created_at,cafe_cashiers(full_name,email)")
+          .in("cafe_id", cafeIds)
+          .eq("action_type", "login"),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(800),
       (row): OperationsCashierLoginDetail & { cafeId: string } => {
@@ -348,10 +410,13 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       },
     ),
     safeRows(
-      supabase
-        .from("loyalty_card_events")
-        .select("id,cafe_id,event_type,invoice_barcode,invoice_amount,created_at,loyalty_cards!loyalty_card_events_card_same_cafe(customer_name,card_code),cafe_cashiers(full_name,email)")
-        .in("cafe_id", cafeIds)
+      applyCreatedAtFilters(
+        supabase
+          .from("loyalty_card_events")
+          .select("id,cafe_id,event_type,invoice_barcode,invoice_amount,created_at,loyalty_cards!loyalty_card_events_card_same_cafe(customer_name,card_code),cafe_cashiers(full_name,email)")
+          .in("cafe_id", cafeIds),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(800),
       (row): OperationsLoyaltyScanDetail & { cafeId: string } => {
@@ -372,10 +437,13 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       },
     ),
     safeRows(
-      supabase
-        .from("customer_reward_redemptions")
-        .select("id,cafe_id,scanned_code,created_at,customer_reward_instances(reward_title,source_type),customer_profiles(full_name,email),cafe_cashiers(full_name,email)")
-        .in("cafe_id", cafeIds)
+      applyCreatedAtFilters(
+        supabase
+          .from("customer_reward_redemptions")
+          .select("id,cafe_id,scanned_code,created_at,customer_reward_instances(reward_title,source_type),customer_profiles(full_name,email),cafe_cashiers(full_name,email)")
+          .in("cafe_id", cafeIds),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(800),
       (row): OperationsRewardRedemptionDetail & { cafeId: string } => {
@@ -397,11 +465,14 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       },
     ),
     safeRows(
-      supabase
-        .from("orders")
-        .select("id,cafe_id,customer_name,status,total,branch_name,rejection_reason,responded_at,created_at")
-        .in("cafe_id", cafeIds)
-        .is("deleted_at", null)
+      applyCreatedAtFilters(
+        supabase
+          .from("orders")
+          .select("id,cafe_id,customer_name,status,total,branch_name,rejection_reason,responded_at,created_at")
+          .in("cafe_id", cafeIds)
+          .is("deleted_at", null),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(1000),
       (row): Omit<OperationsOrderDetail, "actorType" | "actorName" | "actorEmail" | "products"> & { cafeId: string } => ({
@@ -417,11 +488,14 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       }),
     ),
     safeRows(
-      supabase
-        .from("reservations")
-        .select("id,cafe_id,customer_name,phone,status,event_type,guests,reservation_date,reservation_time,branch_name,space_type,event_title,rejection_reason,cafe_message,created_at")
-        .in("cafe_id", cafeIds)
-        .is("deleted_at", null)
+      applyCreatedAtFilters(
+        supabase
+          .from("reservations")
+          .select("id,cafe_id,customer_name,phone,status,event_type,guests,reservation_date,reservation_time,branch_name,space_type,event_title,rejection_reason,cafe_message,created_at")
+          .in("cafe_id", cafeIds)
+          .is("deleted_at", null),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(1000),
       (row): Omit<OperationsReservationDetail, "actorType" | "actorName" | "actorEmail"> & { cafeId: string } => ({
@@ -441,11 +515,14 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
       }),
     ),
     safeRows(
-      supabase
-        .from("audit_logs")
-        .select("id,cafe_id,actor_id,action,entity_table,entity_id,new_data,created_at")
-        .in("cafe_id", cafeIds)
-        .in("entity_table", ["orders", "reservations"])
+      applyCreatedAtFilters(
+        supabase
+          .from("audit_logs")
+          .select("id,cafe_id,actor_id,action,entity_table,entity_id,new_data,created_at")
+          .in("cafe_id", cafeIds)
+          .in("entity_table", ["orders", "reservations"]),
+        activeFilters
+      )
         .order("created_at", { ascending: false })
         .limit(2000),
       (row): DbRow => row,
@@ -516,18 +593,18 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
         reservationsAcceptedCount,
         reservationsRejectedCount,
       ] = await Promise.all([
-        safeCount(supabase, "cafe_visit_events", cafeId),
-        safeCount(supabase, "cafe_operation_events", cafeId, (query) => query.eq("event_type", operationEventTypes.appInstallClicked)),
-        safeCount(supabase, "cafe_operation_events", cafeId, (query) => query.eq("event_type", operationEventTypes.brandLogin)),
-        safeCount(supabase, "cafe_cashier_activity_logs", cafeId, (query) => query.eq("action_type", "login")),
-        safeCount(supabase, "loyalty_card_events", cafeId),
-        safeCount(supabase, "customer_reward_redemptions", cafeId),
-        safeCount(supabase, "orders", cafeId, (query) => query.is("deleted_at", null)),
-        safeCount(supabase, "orders", cafeId, (query) => query.eq("status", "accepted").is("deleted_at", null)),
-        safeCount(supabase, "orders", cafeId, (query) => query.eq("status", "rejected").is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, (query) => query.is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, (query) => query.eq("status", "accepted").is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, (query) => query.eq("status", "rejected").is("deleted_at", null)),
+        safeCount(supabase, "cafe_visit_events", cafeId, activeFilters),
+        safeCount(supabase, "cafe_operation_events", cafeId, activeFilters, (query) => query.eq("event_type", operationEventTypes.appInstallClicked)),
+        safeCount(supabase, "cafe_operation_events", cafeId, activeFilters, (query) => query.eq("event_type", operationEventTypes.brandLogin)),
+        safeCount(supabase, "cafe_cashier_activity_logs", cafeId, activeFilters, (query) => query.eq("action_type", "login")),
+        safeCount(supabase, "loyalty_card_events", cafeId, activeFilters),
+        safeCount(supabase, "customer_reward_redemptions", cafeId, activeFilters),
+        safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.is("deleted_at", null)),
+        safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.eq("status", "accepted").is("deleted_at", null)),
+        safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.eq("status", "rejected").is("deleted_at", null)),
+        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.is("deleted_at", null)),
+        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.eq("status", "accepted").is("deleted_at", null)),
+        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.eq("status", "rejected").is("deleted_at", null)),
       ]);
 
       const brandOrders = ordersResult.rows
@@ -651,5 +728,5 @@ export async function getAdminOperationsCenter(): Promise<AdminOperationsCenterD
     }),
   );
 
-  return { brands, diagnostics: [] };
+  return { brands, brandOptions, activeFilters, diagnostics: [] };
 }

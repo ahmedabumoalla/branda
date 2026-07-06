@@ -12,15 +12,18 @@ import {
   Store,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   AdminFilterBar,
   AdminInput,
   AdminPageShell,
+  AdminSelect,
   AdminStatPill,
   BentoCard,
   StatusBadge,
 } from "@/components/ui/design-system";
+import { exportOperationsCenterReportToPdf } from "@/lib/export/admin-report-export";
 import type {
   AdminOperationsCenterBrand,
   AdminOperationsCenterData,
@@ -72,6 +75,19 @@ function statusTone(status: string) {
   if (status.includes("مرفوض")) return "danger" as const;
   if (status.includes("انتظار") || status.includes("تعديل")) return "warning" as const;
   return "neutral" as const;
+}
+
+const adminActionButtonClass =
+  "inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-black text-[#F8F4EF] transition hover:bg-white/10";
+
+const adminGoldButtonClass =
+  "inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#D9A33F] px-4 text-sm font-black text-[#211711] transition hover:bg-[#fbcf72]";
+
+function filterPeriodText(from: string, to: string) {
+  if (from && to) return `${from} - ${to}`;
+  if (from) return `من ${from}`;
+  if (to) return `حتى ${to}`;
+  return "كل الفترات";
 }
 
 function EmptyState({ message = "لم تسجل عمليات بعد" }: { message?: string }) {
@@ -297,9 +313,13 @@ function DetailRows({
 
 function BrandModal({
   brand,
+  filters,
+  onExportBrand,
   onClose,
 }: {
   brand: AdminOperationsCenterBrand;
+  filters: AdminOperationsCenterData["activeFilters"];
+  onExportBrand: (brand: AdminOperationsCenterBrand) => void;
   onClose: () => void;
 }) {
   const [selectedMetric, setSelectedMetric] = useState<OperationsMetricSummary | null>(null);
@@ -311,16 +331,22 @@ function BrandModal({
           <div className="min-w-0">
             <p className="text-xs font-black text-[#D9A33F]">مركز العمليات</p>
             <h2 className="mt-1 break-words text-xl font-black text-[#F8F4EF] sm:text-2xl">{brand.name}</h2>
-            <p className="mt-1 break-words text-xs font-bold text-[#CBB29C]">{brand.publicUrl}</p>
+            <p className="mt-1 break-words text-xs font-bold text-[#CBB29C]">{brand.publicUrl} - {filterPeriodText(filters.from, filters.to)}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#F8F4EF] transition hover:bg-white/10"
-            aria-label="إغلاق"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={() => onExportBrand(brand)} className={adminGoldButtonClass}>
+              <Download className="h-4 w-4" />
+              تصدير تقرير العلامة
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#F8F4EF] transition hover:bg-white/10"
+              aria-label="إغلاق"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -379,8 +405,19 @@ function BrandModal({
 }
 
 export function AdminOperationsCenterPage({ data, configError }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useState("");
+  const [from, setFrom] = useState(data.activeFilters.from);
+  const [to, setTo] = useState(data.activeFilters.to);
+  const [brandId, setBrandId] = useState(data.activeFilters.brandId);
   const [selectedBrand, setSelectedBrand] = useState<AdminOperationsCenterBrand | null>(null);
+
+  useEffect(() => {
+    setFrom(data.activeFilters.from);
+    setTo(data.activeFilters.to);
+    setBrandId(data.activeFilters.brandId);
+  }, [data.activeFilters.brandId, data.activeFilters.from, data.activeFilters.to]);
 
   const filteredBrands = useMemo(() => {
     const normalized = query.trim();
@@ -389,6 +426,41 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
       [brand.name, brand.slug, brand.status, brand.businessCategory].some((value) => value.includes(normalized)),
     );
   }, [data.brands, query]);
+
+  function pushFilters(next: { brandId?: string; from?: string; to?: string }) {
+    const params = new URLSearchParams();
+    if (next.brandId) params.set("brandId", next.brandId);
+    if (next.from) params.set("from", next.from);
+    if (next.to) params.set("to", next.to);
+    const search = params.toString();
+    router.push(search ? `${pathname}?${search}` : pathname, { scroll: false });
+  }
+
+  function applyFilters() {
+    pushFilters({ brandId, from, to });
+  }
+
+  function resetFilters() {
+    setFrom("");
+    setTo("");
+    setBrandId("");
+    pushFilters({});
+  }
+
+  function exportGeneralReport() {
+    exportOperationsCenterReportToPdf({
+      brands: filteredBrands,
+      filters: data.activeFilters,
+    });
+  }
+
+  function exportBrandReport(brand: AdminOperationsCenterBrand) {
+    exportOperationsCenterReportToPdf({
+      brands: data.brands,
+      filters: data.activeFilters,
+      brand,
+    });
+  }
 
   return (
     <AdminPageShell
@@ -405,8 +477,39 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
             className="pr-12"
           />
         </div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[150px_150px_220px_auto_auto_auto]">
+          <label className="min-w-0 text-xs font-black text-[#CBB29C]">
+            من
+            <AdminInput type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="mt-2 text-left" />
+          </label>
+          <label className="min-w-0 text-xs font-black text-[#CBB29C]">
+            إلى
+            <AdminInput type="date" value={to} onChange={(event) => setTo(event.target.value)} className="mt-2 text-left" />
+          </label>
+          <label className="min-w-0 text-xs font-black text-[#CBB29C]">
+            العلامة التجارية
+            <AdminSelect value={brandId} onChange={(event) => setBrandId(event.target.value)} className="mt-2">
+              <option value="">كل العلامات</option>
+              {data.brandOptions.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </AdminSelect>
+          </label>
+          <button type="button" onClick={applyFilters} className={`${adminGoldButtonClass} self-end`}>
+            تطبيق الفلاتر
+          </button>
+          <button type="button" onClick={resetFilters} className={`${adminActionButtonClass} self-end`}>
+            إعادة تعيين
+          </button>
+          <button type="button" onClick={exportGeneralReport} className={`${adminActionButtonClass} self-end`}>
+            <Download className="h-4 w-4" />
+            تصدير PDF
+          </button>
+        </div>
         <div className="min-w-0 rounded-[16px] border border-white/10 bg-[#0f0c0a]/60 p-4 sm:min-w-[180px]">
-          <AdminStatPill label="العلامات" value={filteredBrands.length} hint={`من ${data.brands.length} علامة`} />
+          <AdminStatPill label="العلامات" value={filteredBrands.length} hint={`${filterPeriodText(data.activeFilters.from, data.activeFilters.to)} - من ${data.brands.length} علامة`} />
         </div>
       </AdminFilterBar>
 
@@ -435,8 +538,8 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
 
       <div className="hidden max-w-full overflow-hidden rounded-[16px] border border-white/10 md:block">
         <div className="max-w-full overflow-x-auto overscroll-x-contain">
-          <table className="w-full min-w-[860px] table-auto text-right text-sm">
-            <Head labels={["العلامة", "الرابط", "الحالة", "الزيارات", "طلبات", "حجوزات", "الكاشير", "الولاء"]} />
+          <table className="w-full min-w-[980px] table-auto text-right text-sm">
+            <Head labels={["العلامة", "الرابط", "الحالة", "الزيارات", "طلبات", "حجوزات", "الكاشير", "الولاء", "تقرير"]} />
             <tbody className="divide-y divide-white/10 bg-[#0f0c0a]/70">
               {filteredBrands.map((brand) => {
                 const visits = brand.metrics.find((item) => item.key === "visits")?.value ?? 0;
@@ -465,6 +568,19 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
                     <Cell>مقبول {reservations?.accepted ?? 0} / مرفوض {reservations?.rejected ?? 0}</Cell>
                     <Cell>{cashierLogins}</Cell>
                     <Cell>{loyaltyScans}</Cell>
+                    <Cell>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          exportBrandReport(brand);
+                        }}
+                        className={adminActionButtonClass}
+                      >
+                        <Download className="h-4 w-4" />
+                        تصدير PDF
+                      </button>
+                    </Cell>
                   </tr>
                 );
               })}
@@ -479,10 +595,14 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
           const orders = brand.metrics.find((item) => item.key === "orders");
           const reservations = brand.metrics.find((item) => item.key === "reservations");
           return (
-            <button
-              type="button"
+            <div
               key={brand.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedBrand(brand)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") setSelectedBrand(brand);
+              }}
               className="min-w-0 rounded-[16px] border border-white/10 bg-[#0f0c0a]/70 p-4 text-right"
             >
               <div className="flex items-start justify-between gap-3">
@@ -498,7 +618,18 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
                 <span className="rounded-xl bg-white/5 p-3">حجوزات مقبولة: {reservations?.accepted ?? 0}</span>
                 <span className="rounded-xl bg-white/5 p-3">حجوزات مرفوضة: {reservations?.rejected ?? 0}</span>
               </div>
-            </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  exportBrandReport(brand);
+                }}
+                className={`${adminActionButtonClass} mt-4 w-full`}
+              >
+                <Download className="h-4 w-4" />
+                تصدير تقرير PDF
+              </button>
+            </div>
           );
         })}
       </div>
@@ -509,7 +640,14 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
         </BentoCard>
       ) : null}
 
-      {selectedBrand ? <BrandModal brand={selectedBrand} onClose={() => setSelectedBrand(null)} /> : null}
+      {selectedBrand ? (
+        <BrandModal
+          brand={selectedBrand}
+          filters={data.activeFilters}
+          onExportBrand={exportBrandReport}
+          onClose={() => setSelectedBrand(null)}
+        />
+      ) : null}
     </AdminPageShell>
   );
 }
