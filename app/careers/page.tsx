@@ -30,6 +30,7 @@ export default function CareersPage() {
     "h-14 w-full rounded-2xl border border-[#E7D7C6] bg-white px-4 text-right font-bold text-[#311912] outline-none focus:border-[#D9A33F]";
   const textAreaClass =
     "min-h-32 w-full rounded-2xl border border-[#E7D7C6] bg-white p-4 text-right font-bold text-[#311912] outline-none focus:border-[#D9A33F]";
+  const labelTextClass = "mb-2 block text-sm font-black text-[#6B3A25]";
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#FCF8F3] text-[#311912]">
@@ -84,27 +85,49 @@ export default function CareersPage() {
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <input required name="fullName" placeholder="الاسم كامل" className={fieldClass} />
-            <input required name="birthDate" type="date" className={fieldClass} />
+            <label>
+              <span className={labelTextClass}>الاسم كامل</span>
+              <input required name="fullName" placeholder="الاسم كامل" className={fieldClass} />
+            </label>
+            <label>
+              <span className={labelTextClass}>تاريخ الميلاد</span>
+              <input required name="birthDate" type="date" className={fieldClass} />
+            </label>
 
-            <select required name="gender" className={fieldClass} defaultValue="">
-              <option value="" disabled>
-                الجنس
-              </option>
-              <option value="male">ذكر</option>
-              <option value="female">أنثى</option>
-            </select>
+            <label>
+              <span className={labelTextClass}>الجنس</span>
+              <select required name="gender" className={fieldClass} defaultValue="">
+                <option value="" disabled>
+                  الجنس
+                </option>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </label>
 
-            <input required name="region" placeholder="المنطقة" className={fieldClass} />
-            <input required name="phone" placeholder="رقم الجوال" className={fieldClass} />
-            <input required name="email" type="email" placeholder="البريد الإلكتروني" className={fieldClass} />
-            <input required name="languages" placeholder="اللغات" className={`${fieldClass} sm:col-span-2`} />
-            <textarea name="experience" placeholder="الخبرات السابقة" className={`${textAreaClass} sm:col-span-2`} />
+            <label>
+              <span className={labelTextClass}>المنطقة</span>
+              <input required name="region" placeholder="المنطقة" className={fieldClass} />
+            </label>
+            <label>
+              <span className={labelTextClass}>رقم الجوال</span>
+              <input required name="phone" placeholder="رقم الجوال" className={fieldClass} />
+            </label>
+            <label>
+              <span className={labelTextClass}>البريد الإلكتروني</span>
+              <input required name="email" type="email" placeholder="البريد الإلكتروني" className={fieldClass} />
+            </label>
+            <label className="sm:col-span-2">
+              <span className={labelTextClass}>اللغات</span>
+              <input required name="languages" placeholder="اللغات" className={fieldClass} />
+            </label>
+            <label className="sm:col-span-2">
+              <span className={labelTextClass}>الخبرات السابقة</span>
+              <textarea name="experience" placeholder="الخبرات السابقة" className={textAreaClass} />
+            </label>
 
             <label className="sm:col-span-2">
-              <span className="mb-2 block text-sm font-black text-[#6B3A25]">
-                السيرة الذاتية PDF
-              </span>
+              <span className={labelTextClass}>السيرة الذاتية PDF</span>
               <input
                 required
                 name="cv"

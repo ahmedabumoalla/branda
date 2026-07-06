@@ -20,7 +20,15 @@ import {
   Camera,
   Globe,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DependencyList,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   recordIntroVideoEventAction,
   submitContactRequestAction,
@@ -53,6 +61,95 @@ function controlledFontSize(value: number, min: number, max: number) {
   const safeValue = Number.isFinite(value) ? Math.round(value) : min;
   const clamped = Math.min(max, Math.max(min, safeValue));
   return `clamp(${min}px, ${clamped}px, ${max}px)`;
+}
+
+function useOverflowingRow(dependencies: DependencyList) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    const measure = () => {
+      setIsOverflowing(content.scrollWidth > container.clientWidth + 1);
+    };
+
+    measure();
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(container);
+    resizeObserver.observe(content);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, dependencies);
+
+  return { containerRef, contentRef, isOverflowing };
+}
+
+function OverflowMarquee({
+  children,
+  itemCount,
+  durationSeconds,
+  itemSetClassName = "",
+}: {
+  children: ReactNode;
+  itemCount: number;
+  durationSeconds: number;
+  itemSetClassName?: string;
+}) {
+  const { containerRef, contentRef, isOverflowing } = useOverflowingRow([itemCount]);
+  const marqueeStyle = isOverflowing
+    ? ({ "--branda-marquee-duration": `${durationSeconds}s` } as CSSProperties)
+    : undefined;
+
+  return (
+    <div ref={containerRef} className="w-full overflow-hidden" dir="ltr">
+      <div
+        className={
+          isOverflowing
+            ? "flex w-max animate-branda-marquee-right"
+            : "flex w-full justify-center"
+        }
+        style={marqueeStyle}
+      >
+        <div
+          ref={contentRef}
+          className={`flex min-w-0 shrink-0 flex-row-reverse gap-4 pe-4 ${itemSetClassName}`}
+          dir="rtl"
+        >
+          {children}
+        </div>
+        {isOverflowing ? (
+          <div
+            aria-hidden="true"
+            className={`flex shrink-0 flex-row-reverse gap-4 pe-4 ${itemSetClassName}`}
+            dir="rtl"
+          >
+            {children}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M20.52 3.48A11.86 11.86 0 0 0 12.08 0C5.5 0 .15 5.35.15 11.93c0 2.1.55 4.16 1.6 5.97L.05 24l6.24-1.64a11.9 11.9 0 0 0 5.79 1.47h.01c6.58 0 11.93-5.35 11.93-11.93 0-3.18-1.24-6.18-3.5-8.42ZM12.09 21.8h-.01a9.88 9.88 0 0 1-5.03-1.38l-.36-.21-3.7.97.99-3.61-.23-.37a9.85 9.85 0 0 1-1.51-5.27c0-5.44 4.43-9.87 9.87-9.87a9.8 9.8 0 0 1 6.98 2.9 9.8 9.8 0 0 1 2.89 6.96c-.01 5.45-4.44 9.88-9.89 9.88Zm5.41-7.39c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.87 1.21 3.07c.15.2 2.09 3.19 5.06 4.47.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.69.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35Z" />
+    </svg>
+  );
 }
 
 const FEATURES = [
@@ -253,9 +350,32 @@ function PromotionIcon({ type }: { type: PublicPlatformHomeData["promotions"][nu
   return <Store className="h-4 w-4" />;
 }
 
+function PromotionImage({ item }: { item: PublicPlatformHomeData["promotions"][number] }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (item.imageUrl && !imageFailed) {
+    return (
+      <img
+        src={item.imageUrl}
+        alt={item.title}
+        className="h-full w-full object-cover"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center bg-[#EFE2D3] text-[#6B3A25]">
+      <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D9A33F]/45 bg-[#FCF8F3] shadow-sm">
+        <Store className="h-8 w-8" />
+      </span>
+      <span className="mt-3 text-sm font-black">برندة</span>
+    </div>
+  );
+}
+
 export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
   const [heroIndex, setHeroIndex] = useState(0);
-  const [brandIndex, setBrandIndex] = useState(0);
   const [videoOpen, setVideoOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const heroImages = data.heroImages.length ? data.heroImages : null;
@@ -270,15 +390,6 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
     return () => window.clearInterval(interval);
   }, [heroImages, data.settings.carouselIntervalSeconds]);
 
-  useEffect(() => {
-    if (data.brands.length < 5) return;
-    const interval = window.setInterval(
-      () => setBrandIndex((current) => (current + 1) % data.brands.length),
-      4500
-    );
-    return () => window.clearInterval(interval);
-  }, [data.brands.length]);
-
   function openVideo() {
     setVideoOpen(true);
     void recordIntroVideoEventAction("intro_video_click").catch((error) => {
@@ -288,6 +399,24 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
 
   return (
     <main dir="rtl" className="min-h-screen overflow-x-hidden" style={{ background: C.creamBase, color: C.espressoDark, fontFamily: homeFontFamily }}>
+      <style>{`
+        @keyframes branda-marquee-right {
+          from { transform: translateX(-50%); }
+          to { transform: translateX(0); }
+        }
+
+        .animate-branda-marquee-right {
+          animation: branda-marquee-right var(--branda-marquee-duration, 34s) linear infinite;
+          will-change: transform;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-branda-marquee-right {
+            animation: none;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
       <header className="sticky top-0 z-50 border-b backdrop-blur-md" style={{ borderColor: C.borderSand, background: `${C.creamBase}ed` }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href="/"><BarndaksaLogo variant="brown" width={140} height={56} priority /></Link>
@@ -364,12 +493,12 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
       <section className="mx-auto max-w-6xl overflow-hidden px-4 py-14 sm:px-6 sm:py-20">
         <h2 className="text-center text-2xl font-black sm:text-3xl">علامات تجارية تثق بنا</h2>
         {data.brands.length ? (
-          <div className="mt-10 overflow-hidden">
-            <div className="flex gap-4 transition-transform duration-700" style={{ transform: `translateX(${brandIndex * 8}rem)` }}>
+          <div className="mt-10">
+            <OverflowMarquee itemCount={data.brands.length} durationSeconds={32} itemSetClassName="items-stretch">
               {data.brands.map((brand) => {
                 const content = (
                   <>
-                    {brand.logoUrl ?   <img src={brand.logoUrl} alt={brand.name} className="h-16 w-16 rounded-xl object-contain" /> : <Store className="h-14 w-14 text-[#6B3A25]" />}
+                    {brand.logoUrl ? <img src={brand.logoUrl} alt={brand.name} className="h-16 w-16 rounded-xl object-contain" /> : <Store className="h-14 w-14 text-[#6B3A25]" />}
                     <p className="mt-3 text-center text-xs font-black">{brand.name}</p>
                     {brand.locationLabel ? <p className="mt-1 text-center text-[11px] font-bold text-[#806A5E]">{brand.locationLabel}</p> : null}
                   </>
@@ -385,7 +514,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
                   </div>
                 );
               })}
-            </div>
+            </OverflowMarquee>
           </div>
         ) : (
           <p className="mt-8 text-center font-bold text-[#806A5E]">ستظهر العلامات التجارية المسجلة هنا</p>
@@ -408,20 +537,14 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <OverflowMarquee itemCount={data.promotions.length} durationSeconds={44} itemSetClassName="items-stretch">
             {data.promotions.map((item) => (
               <article
                 key={`${item.itemType}-${item.id ?? item.itemId ?? item.cafeId}`}
-                className={`overflow-hidden rounded-3xl border border-[#E7D7C6] bg-white shadow-sm ${item.featured ? "md:col-span-2 xl:col-span-1" : ""}`}
+                className="flex h-full w-[min(20rem,calc(100vw-2rem))] shrink-0 flex-col overflow-hidden rounded-3xl border border-[#E7D7C6] bg-white shadow-sm sm:w-80"
               >
                 <div className="relative h-44 bg-[#EFE2D3]">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Store className="h-16 w-16 text-[#6B3A25]" />
-                    </div>
-                  )}
+                  <PromotionImage item={item} />
                   <span className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full bg-[#FCF8F3]/95 px-3 py-2 text-xs font-black text-[#6B3A25] shadow-sm">
                     <PromotionIcon type={item.itemType} />
                     {item.badge || promotionLabel(item.itemType)}
@@ -466,7 +589,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
                 </div>
               </article>
             ))}
-          </div>
+          </OverflowMarquee>
         </section>
       ) : null}
 
@@ -503,8 +626,17 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
             <button type="button" onClick={() => setContactOpen(true)}>طرق التواصل</button>
             {data.contacts.instagram ? <a href={data.contacts.instagram}><Camera className="h-5 w-5" /></a> : null}
             {data.contacts.facebook ? <a href={data.contacts.facebook}><Globe className="h-5 w-5" /></a> : null}
+            <a
+              href="https://wa.me/966508424401"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="التواصل عبر واتساب"
+              className="text-[#25D366]"
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+            </a>
           </div>
-          <p className="text-sm font-bold text-[#806A5E]">© بارنداكسا جميع الحقوق محفوظة</p>
+          <p className="text-sm font-bold text-[#806A5E]">© برندة جميع الحقوق محفوظة</p>
         </div>
       </footer>
 
