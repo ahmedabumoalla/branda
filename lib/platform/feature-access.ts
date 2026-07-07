@@ -168,15 +168,18 @@ export function getSidebarFeaturesForBrand(context: {
   const accessRows = getEffectiveBrandFeatureAccess(planFeatures, context.overrides);
   const accessMap = new Map(accessRows.map((row) => [row.feature.id, row]));
 
-  return getDashboardSidebarFeatures()
+  return getAllPlatformFeatures()
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
     }))
     .filter(({ feature, access }) => {
+      if (access?.override === "disabled") return false;
       if (feature.defaultEnabled) return true;
       if (feature.id === "branda_finance") return Boolean(access?.effectiveEnabled);
       if (feature.id === "cashier") return true;
-      return Boolean(access?.effectiveEnabled);
+      if (feature.sidebarVisible) return Boolean(access?.effectiveEnabled);
+      if (feature.showInSidebarWhenEnabled) return Boolean(access?.effectiveEnabled);
+      return false;
     });
 }

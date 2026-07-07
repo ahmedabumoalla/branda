@@ -6,9 +6,11 @@ import { useEffect, useState, type ElementType } from "react";
 import {
   BadgeCheck,
   BarChart3,
+  Building2,
   CalendarDays,
   ChevronsLeft,
   ChevronsRight,
+  Coffee,
   CreditCard,
   DoorOpen,
   FileText,
@@ -25,6 +27,7 @@ import {
   Settings,
   Share2,
   ShoppingBag,
+  Sparkles,
   Star,
   Users,
 } from "lucide-react";
@@ -66,6 +69,17 @@ const featureIcons: Partial<Record<PlatformFeature, ElementType>> = {
   theme: Palette,
   domains: Settings,
   subscription: CreditCard,
+  growth_os: Sparkles,
+  customer_segments: Users,
+  whatsapp_campaigns: MessageSquareText,
+  advanced_coupons: Gift,
+  gift_cards_wallet: CreditCard,
+  coffee_subscriptions: Coffee,
+  advanced_direct_orders: ShoppingBag,
+  marketplace_boost: Megaphone,
+  pos_integrations: Settings,
+  company_accounts: Building2,
+  ai_menu_engineer: Sparkles,
 };
 
 type SidebarProps = {
@@ -181,10 +195,11 @@ export function DashboardSidebar({
   }
 
   const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans, overrides: featureOverrides }).map(({ feature, access }) => ({
-    title: feature.titleAr,
-    href: feature.route,
+    title: feature.sidebarLabel ?? feature.titleAr,
+    href: feature.dashboardPath ?? feature.route,
     icon: featureIcons[feature.id] ?? Star,
     feature: feature.id,
+    group: feature.sidebarGroup,
     access,
   }));
 
@@ -317,77 +332,110 @@ export function DashboardSidebar({
       ) : null}
 
       <nav className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
-        {visibleLinks.map((item) => {
+        {visibleLinks.map((item, index) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
-          const locked = !cafeHasFeature(item.feature, { planId: activePlanId, plans, overrides: featureOverrides });
+          const hasRoute = Boolean(item.href);
+          const active = hasRoute && isActive(item.href);
+          const locked = hasRoute && !cafeHasFeature(item.feature, { planId: activePlanId, plans, overrides: featureOverrides });
           const href = locked ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
+          const showFeatureGroupLabel = Boolean(item.group) && !collapsed && visibleLinks[index - 1]?.group !== item.group;
           const title = linkTitle(item);
           const counter = getLinkCounter(item.href);
+          const itemClassName = `group relative flex h-8 w-full items-center overflow-hidden rounded-lg text-[12px] font-extrabold transition ${
+            collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
+          } ${
+            !hasRoute
+              ? "cursor-not-allowed border border-[#F0C568]/15 bg-[#F0C568]/[0.06] text-[#CFC2B7] opacity-90 hover:bg-[#F0C568]/[0.06]"
+              : active && !locked
+              ? "bg-gradient-to-l from-[#4D409A]/65 via-[#2A2448]/90 to-[#1A1117]/80 text-white ring-1 ring-[#897DFF]/50 shadow-[0_0_24px_rgba(111,99,255,0.18)] before:absolute before:right-0 before:top-1.5 before:h-5 before:w-1 before:rounded-l-full before:bg-[#B4A9FF]"
+              : locked
+                ? "border border-white/[0.08] bg-white/[0.035] text-[#8F8176] hover:bg-white/[0.065]"
+                : "text-[#CFC2B7] hover:bg-white/[0.065] hover:text-white"
+          }`;
+          const itemContent = (
+            <>
+              <span className={`flex min-w-0 items-center ${collapsed ? "justify-center" : "gap-2"}`}>
+                <Icon
+                  className={`h-4 w-4 shrink-0 ${
+                    active && !locked
+                      ? "text-[#C4BEFF]"
+                      : "text-[#B8A99C] group-hover:text-white"
+                  }`}
+                />
+                {!collapsed ? (
+                  <span className="min-w-0 truncate">
+                    {title}
+                    {locked ? (
+                      <span className="me-1.5 text-[10px] text-[#F0C568]">ترقية</span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </span>
+
+              {collapsed ? (
+                locked ? (
+                  <span className="absolute left-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#21170F] text-[#F0C568] ring-1 ring-[#F0C568]/45">
+                    <LockKeyhole className="h-2.5 w-2.5" />
+                  </span>
+                ) : !hasRoute ? (
+                  <span className="absolute left-1 top-1 h-2 w-2 rounded-full bg-[#F0C568]" />
+                ) : counter > 0 ? (
+                  <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1 text-[9px] font-black leading-3 text-white">
+                    {counter > 99 ? "99+" : counter}
+                  </span>
+                ) : null
+              ) : (
+                <span className="flex shrink-0 items-center gap-1">
+                  {locked ? (
+                    <LockKeyhole className="h-3.5 w-3.5 text-[#F0C568]" />
+                  ) : !hasRoute ? (
+                    <span className="rounded-full bg-[#F0C568]/15 px-2 py-0.5 text-[10px] font-black text-[#F0C568]">
+                      قريبًا
+                    </span>
+                  ) : counter > 0 ? (
+                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                      {counter > 99 ? "99+" : counter}
+                    </span>
+                  ) : null}
+                </span>
+              )}
+            </>
+          );
 
           return (
-            <div key={item.href}>
+            <div key={`${item.feature}-${item.href || "disabled"}`}>
               {showOperationsLabel && !collapsed ? (
                 <p className="px-3 pb-1.5 pt-3 text-[10px] font-black uppercase text-[#8F8176]">
                   أدوات التشغيل
                 </p>
               ) : null}
-              <Link
-                href={href}
-                onClick={onNavigate}
-                title={collapsed ? title : undefined}
-                aria-label={collapsed ? title : undefined}
-                className={`group relative flex h-8 items-center overflow-hidden rounded-lg text-[12px] font-extrabold transition ${
-                  collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
-                } ${
-                  active && !locked
-                    ? "bg-gradient-to-l from-[#4D409A]/65 via-[#2A2448]/90 to-[#1A1117]/80 text-white ring-1 ring-[#897DFF]/50 shadow-[0_0_24px_rgba(111,99,255,0.18)] before:absolute before:right-0 before:top-1.5 before:h-5 before:w-1 before:rounded-l-full before:bg-[#B4A9FF]"
-                    : locked
-                      ? "border border-white/[0.08] bg-white/[0.035] text-[#8F8176] hover:bg-white/[0.065]"
-                      : "text-[#CFC2B7] hover:bg-white/[0.065] hover:text-white"
-                }`}
-              >
-                <span className={`flex min-w-0 items-center ${collapsed ? "justify-center" : "gap-2"}`}>
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${
-                      active && !locked
-                        ? "text-[#C4BEFF]"
-                        : "text-[#B8A99C] group-hover:text-white"
-                    }`}
-                  />
-                  {!collapsed ? (
-                    <span className="min-w-0 truncate">
-                      {title}
-                      {locked ? (
-                        <span className="me-1.5 text-[10px] text-[#F0C568]">ترقية</span>
-                      ) : null}
-                    </span>
-                  ) : null}
-                </span>
-
-                {collapsed ? (
-                  locked ? (
-                    <span className="absolute left-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#21170F] text-[#F0C568] ring-1 ring-[#F0C568]/45">
-                      <LockKeyhole className="h-2.5 w-2.5" />
-                    </span>
-                  ) : counter > 0 ? (
-                    <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1 text-[9px] font-black leading-3 text-white">
-                      {counter > 99 ? "99+" : counter}
-                    </span>
-                  ) : null
-                ) : (
-                  <span className="flex shrink-0 items-center gap-1">
-                    {locked ? (
-                      <LockKeyhole className="h-3.5 w-3.5 text-[#F0C568]" />
-                    ) : counter > 0 ? (
-                      <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
-                        {counter > 99 ? "99+" : counter}
-                      </span>
-                    ) : null}
-                  </span>
-                )}
-              </Link>
+              {showFeatureGroupLabel ? (
+                <p className="px-3 pb-1.5 pt-3 text-[10px] font-black uppercase text-[#8F8176]">
+                  {item.group}
+                </p>
+              ) : null}
+              {hasRoute ? (
+                <Link
+                  href={href}
+                  onClick={() => onNavigate?.()}
+                  title={collapsed ? title : undefined}
+                  aria-label={collapsed ? title : undefined}
+                  className={itemClassName}
+                >
+                  {itemContent}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title={collapsed ? `${title} - قريبًا` : undefined}
+                  aria-label={collapsed ? `${title} - قريبًا` : undefined}
+                  className={itemClassName}
+                >
+                  {itemContent}
+                </button>
+              )}
             </div>
           );
         })}
