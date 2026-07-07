@@ -384,7 +384,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     descriptionAr: "توصيات ومؤشرات تساعد العلامة على زيادة المبيعات.",
     category: "growth",
     route: "",
-    dashboardPath: null,
+    dashboardPath: "/dashboard/growth",
     sidebarGroup: "ميزات مفعلة",
     showInSidebarWhenEnabled: true,
     sidebarVisible: false,
