@@ -149,7 +149,7 @@ export async function saveCafeFeatureOverrides(
     if (!definition.packageAssignable) {
       throw new Error("هذه الميزة لا تقبل تجاوزًا يدويًا");
     }
-    if (item.override === "enabled" && ["coming_soon", "hidden"].includes(definition.status)) {
+    if (item.override === "enabled" && definition.status === "hidden") {
       throw new Error("لا يمكن تفعيل ميزة غير متاحة يدويًا");
     }
     unique.set(definition.id, item.override);

@@ -5,7 +5,7 @@ import {
   getEffectiveBrandFeatureCodes,
   type BrandFeatureOverride,
 } from "@/lib/platform/feature-access";
-import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
+import { getPlatformFeatureDefinition, type PlatformFeatureId } from "@/lib/platform/feature-registry";
 
 function normalizeFeatures(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
@@ -49,6 +49,12 @@ export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {
   })) satisfies BrandFeatureOverride[];
   const effectiveFeatures = getEffectiveBrandFeatureCodes(features, overrides);
   return Array.from(new Set(["home", ...effectiveFeatures, "subscription", "settings"]));
+}
+
+export async function hasBrandFeature(brandId: string, featureKey: string): Promise<boolean> {
+  if (!brandId || !getPlatformFeatureDefinition(featureKey)) return false;
+  const features = await getCafeFeatureCodes(brandId);
+  return featureCodesAllow(features, featureKey);
 }
 
 export async function getOwnerFeatureCodes() {

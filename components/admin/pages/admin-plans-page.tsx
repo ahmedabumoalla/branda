@@ -488,7 +488,7 @@ export function AdminPlansPage({
                     <span className="min-w-0 text-right">
                       <span className="block">{featureTitle(feature.id, plan.categoryId ?? selectedCategoryId)}</span>
                       <span className="mt-1 block text-[10px] font-bold opacity-70">
-                        {featureCategoryLabels[feature.category] ?? feature.category} · {feature.route} · {featureStatusLabels[feature.status] ?? feature.status} · قابلة للإسناد
+                        {featureCategoryLabels[feature.category] ?? feature.category} · {feature.route || "بدون صفحة حاليًا"} · {featureStatusLabels[feature.status] ?? feature.status} · قابلة للإسناد
                       </span>
                     </span>
                     {enabled ? <Check className="h-4 w-4 shrink-0" /> : <span className="shrink-0">-</span>}
@@ -550,7 +550,7 @@ export function AdminPlansPage({
                 <tr key={feature.id} className="border-b border-white/5 text-[#F8F4EF]">
                   <td className="px-3 py-3 font-black">{featureTitle(feature.id, selectedCategoryId)}</td>
                   <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[feature.category] ?? feature.category}</td>
-                  <td className="px-3 py-3 font-mono text-xs text-[#CBB29C]">{feature.route}</td>
+                  <td className="px-3 py-3 font-mono text-xs text-[#CBB29C]">{feature.route || "بدون صفحة حاليًا"}</td>
                   <td className="px-3 py-3">{featureStatusLabels[feature.status] ?? feature.status}</td>
                   <td className="px-3 py-3">نعم</td>
                   {visiblePlans.map((plan) => {

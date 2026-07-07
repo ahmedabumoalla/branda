@@ -1,5 +1,6 @@
 import {
   getPlatformFeatureDefinition,
+  platformPlanFeatureDefaults,
   platformFeatureRegistry,
   type PlatformFeatureCode,
   type PlatformFeatureDefinition,
@@ -24,6 +25,19 @@ function normalizeFeatureCodes(features: readonly PlatformFeatureCode[] | readon
   return Array.from(new Set((features ?? []).map(String).filter(Boolean))) as PlatformFeatureCode[];
 }
 
+function normalizePlanKey(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+export function getRegistryDefaultFeaturesForPlan(planKey: string | null | undefined) {
+  const normalized = normalizePlanKey(planKey);
+  const defaults = platformPlanFeatureDefaults as Record<string, readonly PlatformFeatureId[]>;
+  return [...(defaults[normalized] ?? [])];
+}
+
 export function getAllPlatformFeatures() {
   return [...platformFeatureRegistry].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -38,10 +52,17 @@ export function getDashboardSidebarFeatures() {
 
 export function getPlanIncludedFeatures(
   planId: string | null | undefined,
-  plans: readonly Pick<PlatformPlan, "id" | "features">[] = []
+  plans: readonly (Pick<PlatformPlan, "id" | "features"> & Partial<Pick<PlatformPlan, "name">>)[] = []
 ) {
   const plan = plans.find((item) => item.id === planId);
-  const planFeatures = normalizeFeatureCodes(plan?.features);
+  const planFeatures = normalizeFeatureCodes(
+    plan?.features?.length
+      ? plan.features
+      : [
+          ...getRegistryDefaultFeaturesForPlan(plan?.id ?? planId),
+          ...getRegistryDefaultFeaturesForPlan(plan?.name),
+        ]
+  );
 
   if (planFeatures.includes("all")) {
     return getPackageAssignableFeatures().map((feature) => feature.id);
@@ -91,15 +112,22 @@ export function getEffectiveBrandFeatureAccess(
     const overrideValue = overrideMap.get(feature.id);
     const override =
       overrideValue === true ? "enabled" : overrideValue === false ? "disabled" : "default";
-    const comingSoon = feature.status === "coming_soon" || feature.status === "hidden";
-    const effectiveEnabled = !comingSoon && (overrideValue ?? planIncluded);
-    const result = comingSoon
+    const hidden = feature.status === "hidden";
+    const comingSoon = feature.status === "coming_soon";
+    const effectiveEnabled =
+      !hidden &&
+      (overrideValue === true || (overrideValue !== false && !comingSoon && planIncluded));
+    const result = hidden
       ? "coming_soon"
       : overrideValue === false
         ? "disabled_by_admin"
-        : effectiveEnabled
+        : overrideValue === true
           ? "active"
-          : "locked";
+          : comingSoon
+            ? "coming_soon"
+            : effectiveEnabled
+              ? "active"
+              : "locked";
 
     return {
       feature,

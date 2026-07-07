@@ -8,7 +8,7 @@ export type PublicFeatureKey =
   | "loyalty_card"
   | "loyalty_points";
 
-const PUBLIC_FEATURE_MAP: Record<PublicFeatureKey, PlatformFeatureId[]> = {
+const PUBLIC_FEATURE_MAP: Partial<Record<PublicFeatureKey, PlatformFeatureId[]>> = {
   home: ["home"],
   pages: ["pages"],
   menu: ["menu"],

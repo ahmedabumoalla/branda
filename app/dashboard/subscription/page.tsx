@@ -4,13 +4,15 @@ export const fetchCache = "force-no-store";
 
 import { SubscriptionPageClient } from "@/components/dashboard/pages/subscription-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getOwnerActivePlanId } from "@/lib/data/admin";
+import { getCafeFeatureOverrides, getOwnerActivePlanId } from "@/lib/data/admin";
+import { getOwnerCafeContext } from "@/lib/data/cafes";
 import {
   getAvailablePlans,
   getOwnerPendingSubscription,
   getOwnerSubscriptionHistory,
 } from "@/lib/data/subscription";
 import { mockPlatformPlans } from "@/lib/platform/admin-data";
+import { getEffectiveBrandFeatureAccess, getPlanIncludedFeatures } from "@/lib/platform/feature-access";
 
 export default async function SubscriptionPage() {
   if (!isSupabaseConfigured()) {
@@ -20,18 +22,25 @@ export default async function SubscriptionPage() {
         initialActivePlanId=""
         initialHistory={[]}
         initialPending={null}
+        initialFeatureAccess={[]}
         configError="قم بإعداد Supabase في .env.local"
       />
     );
   }
 
   try {
-    const [plans, activePlanId, history, pending] = await Promise.all([
+    const [plans, activePlanId, history, pending, cafe] = await Promise.all([
       getAvailablePlans(),
       getOwnerActivePlanId(),
       getOwnerSubscriptionHistory(),
       getOwnerPendingSubscription(),
+      getOwnerCafeContext(),
     ]);
+    const featureOverrides = cafe ? await getCafeFeatureOverrides(cafe.id).catch(() => []) : [];
+    const initialFeatureAccess = getEffectiveBrandFeatureAccess(
+      getPlanIncludedFeatures(activePlanId, plans),
+      featureOverrides,
+    );
 
     return (
       <SubscriptionPageClient
@@ -39,6 +48,7 @@ export default async function SubscriptionPage() {
         initialActivePlanId={activePlanId}
         initialHistory={history}
         initialPending={pending}
+        initialFeatureAccess={initialFeatureAccess}
       />
     );
   } catch (error) {
@@ -49,6 +59,7 @@ export default async function SubscriptionPage() {
         initialActivePlanId=""
         initialHistory={[]}
         initialPending={null}
+        initialFeatureAccess={[]}
         configError="تعذر تحميل الاشتراك والباقات"
       />
     );

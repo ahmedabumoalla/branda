@@ -17,6 +17,7 @@ import {
   packageAssignablePlatformFeatures,
   type PlatformPlan,
 } from "@/lib/platform/admin-data";
+import type { EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
 import {
   fetchOwnerPendingSubscriptionAction,
   fetchOwnerSubscriptionHistoryAction,
@@ -42,6 +43,7 @@ type Props = {
   initialActivePlanId: string;
   initialHistory: SubscriptionRecord[];
   initialPending: PendingSubscription | null;
+  initialFeatureAccess: EffectiveBrandFeatureAccess[];
   configError?: string;
 };
 
@@ -65,6 +67,7 @@ export function SubscriptionPageClient({
   initialActivePlanId,
   initialHistory,
   initialPending,
+  initialFeatureAccess,
   configError,
 }: Props) {
   const [plans, setPlans] = useState<PlatformPlan[]>(initialPlans);
@@ -90,6 +93,9 @@ export function SubscriptionPageClient({
   const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
   const selectedHistoryRecord = history.find((record) => record.id === selectedHistoryRecordId) ?? null;
   const selectedHistoryPlan = selectedHistoryRecord ? plans.find((plan) => plan.id === selectedHistoryRecord.planId) : null;
+  const enabledFeatureRows = initialFeatureAccess.filter((row) => row.effectiveEnabled);
+  const comingFeatureRows = initialFeatureAccess.filter((row) => row.result === "coming_soon");
+  const lockedFeatureRows = initialFeatureAccess.filter((row) => !row.effectiveEnabled && row.result !== "coming_soon");
 
   const selectedPlanAmount = useMemo(() => {
     if (!selectedPlan) return 0;
@@ -204,6 +210,48 @@ export function SubscriptionPageClient({
     };
   }
 
+  function brandFeatureBadge(row: EffectiveBrandFeatureAccess) {
+    if (row.effectiveEnabled && row.override === "enabled" && !row.planIncluded) return "متاحة كتجربة";
+    if (row.effectiveEnabled && row.planIncluded) return "ضمن باقتك";
+    if (row.effectiveEnabled) return "مفعلة";
+    if (row.result === "coming_soon") return "قريبًا";
+    return "تواصل مع الأدمن";
+  }
+
+  function brandFeatureTone(row: EffectiveBrandFeatureAccess) {
+    if (row.effectiveEnabled) return "bg-emerald-50 text-emerald-700";
+    if (row.result === "coming_soon") return "bg-[#F2E7D9] text-[#6B3A25]";
+    return "bg-white text-[#806A5E]";
+  }
+
+  function renderBrandFeatureGroup(title: string, rows: EffectiveBrandFeatureAccess[], empty: string) {
+    return (
+      <div className="rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-black text-[#311912]">{title}</h3>
+          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-[#806A5E]">{rows.length}</span>
+        </div>
+        <div className="space-y-2">
+          {rows.length ? rows.slice(0, 8).map((row) => (
+            <div key={row.feature.id} className="rounded-xl bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-[#311912]">{featureTitle(row.feature.id, activePlan?.categoryId)}</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-[#806A5E]">{row.feature.descriptionAr}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${brandFeatureTone(row)}`}>
+                  {brandFeatureBadge(row)}
+                </span>
+              </div>
+            </div>
+          )) : (
+            <p className="py-5 text-center text-sm font-bold text-[#806A5E]">{empty}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   async function refreshRecordAfterPayment(record: SubscriptionRecord) {
     setActivePlanId(record.planId);
     setPending(null);
@@ -282,6 +330,22 @@ export function SubscriptionPageClient({
                 }
               />
             </BentoCard>
+            <BentoCard variant="white" span="4">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black text-[#311912]">ميزات علامتك الحالية</h2>
+                  <p className="mt-1 text-sm font-bold text-[#806A5E]">
+                    هذه الحالة تجمع ميزات الباقة مع أي تفعيل أو تعطيل من الأدمن.
+                  </p>
+                </div>
+                <StatusBadge tone="gold">{enabledFeatureRows.length} مفعلة</StatusBadge>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-3">
+                {renderBrandFeatureGroup("المفعلة حاليًا", enabledFeatureRows, "لا توجد ميزات مفعلة بعد.")}
+                {renderBrandFeatureGroup("غير المفعلة", lockedFeatureRows, "لا توجد ميزات مقفلة.")}
+                {renderBrandFeatureGroup("القادمة", comingFeatureRows, "لا توجد ميزات قادمة.")}
+              </div>
+            </BentoCard>
           </BentoGrid>
         ) : null}
 
@@ -353,7 +417,7 @@ export function SubscriptionPageClient({
 
                     <ul className="mt-4 flex-1 space-y-1.5">
                       {packageAssignablePlatformFeatures.map((feature) => {
-                        const on = plan.features.includes(feature.id);
+                        const on = planHasFeature(plan, feature.id);
                         return (
                           <li
                             key={feature.id}
@@ -516,7 +580,7 @@ export function SubscriptionPageClient({
               </div>
               <div className="mt-4 grid gap-2">
                 {packageAssignablePlatformFeatures.map((feature) => {
-                  const on = selectedPlan.features.includes(feature.id);
+                  const on = planHasFeature(selectedPlan, feature.id);
                   return (
                     <div
                       key={feature.id}

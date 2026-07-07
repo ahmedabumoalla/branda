@@ -452,13 +452,13 @@ export function AdminCafesPage({
             <tbody>
               {effectiveRows.map((row) => {
                 const selectedOverride = draft[row.feature.id] ?? row.override;
-                const cannotManuallyEnable = row.feature.status === "coming_soon" || row.feature.status === "hidden";
+                const cannotManuallyEnable = row.feature.status === "hidden";
                 return (
                   <tr key={row.feature.id} className="border-b border-white/5 text-[#F8F4EF]">
                     <td className="px-3 py-3">
                       <p className="font-black">{row.feature.titleAr}</p>
                       <p className="mt-1 text-xs font-bold text-[#CBB29C]">{row.feature.descriptionAr}</p>
-                      <p className="mt-1 font-mono text-xs text-[#7A6255]">{row.feature.route}</p>
+                      <p className="mt-1 font-mono text-xs text-[#7A6255]">{row.feature.route || "بدون صفحة حاليًا"}</p>
                     </td>
                     <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[row.feature.category] ?? row.feature.category}</td>
                     <td className="px-3 py-3">{row.planIncluded ? "نعم" : "لا"}</td>
