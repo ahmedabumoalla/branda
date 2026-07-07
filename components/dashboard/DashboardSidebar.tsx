@@ -196,7 +196,7 @@ export function DashboardSidebar({
 
   const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans, overrides: featureOverrides }).map(({ feature, access }) => ({
     title: feature.sidebarLabel ?? feature.titleAr,
-    href: feature.dashboardPath ?? feature.route,
+    href: feature.dashboardPath ?? (feature.sidebarVisible ? feature.route : ""),
     icon: featureIcons[feature.id] ?? Star,
     feature: feature.id,
     group: feature.sidebarGroup,
@@ -334,9 +334,10 @@ export function DashboardSidebar({
       <nav className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
         {visibleLinks.map((item, index) => {
           const Icon = item.icon;
+          const hasFeatureAccess = item.access?.effectiveEnabled ?? cafeHasFeature(item.feature, { planId: activePlanId, plans, overrides: featureOverrides });
           const hasRoute = Boolean(item.href);
           const active = hasRoute && isActive(item.href);
-          const locked = hasRoute && !cafeHasFeature(item.feature, { planId: activePlanId, plans, overrides: featureOverrides });
+          const locked = hasRoute && !hasFeatureAccess;
           const href = locked ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
           const showFeatureGroupLabel = Boolean(item.group) && !collapsed && visibleLinks[index - 1]?.group !== item.group;
