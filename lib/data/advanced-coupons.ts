@@ -44,6 +44,64 @@ export type AdvancedCouponSuggestion = {
   hasEnoughData: boolean;
 };
 
+export type BrandCouponDiscountType = "percentage" | "fixed";
+export type BrandCouponStatus = "draft" | "active" | "paused" | "expired";
+export type BrandCouponTargetSegment =
+  | "all"
+  | "new_customers"
+  | "inactive_customers"
+  | "loyalty_customers"
+  | "high_value_customers";
+
+export type BrandCouponFormInput = {
+  code: unknown;
+  title: unknown;
+  description?: unknown;
+  discountType: unknown;
+  discountValue: unknown;
+  startsAt?: unknown;
+  endsAt?: unknown;
+  maxRedemptions?: unknown;
+  maxRedemptionsPerCustomer?: unknown;
+  minimumOrderAmount?: unknown;
+  targetSegment: unknown;
+  status: unknown;
+};
+
+export type BrandCouponPayload = {
+  code: string;
+  title: string;
+  description: string | null;
+  discountType: BrandCouponDiscountType;
+  discountValue: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  maxRedemptions: number | null;
+  maxRedemptionsPerCustomer: number | null;
+  minimumOrderAmount: number;
+  targetSegment: BrandCouponTargetSegment;
+  status: BrandCouponStatus;
+};
+
+export type BrandCouponRow = BrandCouponPayload & {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  usageCount: number;
+  totalDiscountAmount: number;
+};
+
+export type BrandCouponRedemptionRow = {
+  id: string;
+  couponId: string;
+  couponCode: string;
+  couponTitle: string;
+  customerName: string;
+  orderId: string | null;
+  discountAmount: number;
+  redeemedAt: string;
+};
+
 export type AdvancedCouponsDashboardData =
   | {
       enabled: false;
@@ -55,6 +113,10 @@ export type AdvancedCouponsDashboardData =
       metrics: AdvancedCouponMetric[];
       latestOffers: AdvancedCouponOfferRow[];
       suggestions: AdvancedCouponSuggestion[];
+      brandCoupons: BrandCouponRow[];
+      latestRedemptions: BrandCouponRedemptionRow[];
+      couponUsageTotal: number;
+      couponDiscountTotal: number;
       totalOffers: number | null;
       missingSources: string[];
     };
@@ -117,6 +179,43 @@ type RewardRedemptionSource = {
   customerId: string | null;
 };
 
+type BrandCouponSource = {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  discountType: BrandCouponDiscountType;
+  discountValue: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  maxRedemptions: number | null;
+  maxRedemptionsPerCustomer: number | null;
+  minimumOrderAmount: number;
+  targetSegment: BrandCouponTargetSegment;
+  status: BrandCouponStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type RedemptionSource = {
+  id: string;
+  couponId: string;
+  customerId: string | null;
+  orderId: string | null;
+  discountAmount: number;
+  redeemedAt: string;
+};
+
+const discountTypes = ["percentage", "fixed"] as const;
+const couponStatuses = ["draft", "active", "paused", "expired"] as const;
+const targetSegments = [
+  "all",
+  "new_customers",
+  "inactive_customers",
+  "loyalty_customers",
+  "high_value_customers",
+] as const;
+
 function advancedCouponsDb(client: Awaited<ReturnType<typeof createClient>>) {
   return client as unknown as AdvancedCouponsQueryClient;
 }
@@ -135,6 +234,12 @@ function nullableText(value: unknown) {
 function numberValue(value: unknown) {
   const next = Number(value ?? 0);
   return Number.isFinite(next) ? next : 0;
+}
+
+function nullableNumber(value: unknown) {
+  if (value === null || value === undefined || text(value) === "") return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
 }
 
 function isValidDate(value: string | null | undefined) {
@@ -156,6 +261,69 @@ function formatDate(value: string | null) {
     dateStyle: "medium",
     timeZone: "Asia/Riyadh",
   }).format(date);
+}
+
+function normalizeDateInput(value: unknown, fieldName: string) {
+  const raw = nullableText(value);
+  if (!raw) return null;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${fieldName} غير صالح.`);
+  }
+  return date.toISOString();
+}
+
+function positiveNumberInput(value: unknown, fieldName: string) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(`${fieldName} يجب أن يكون أكبر من صفر.`);
+  }
+  return amount;
+}
+
+function nonNegativeNumberInput(value: unknown, fieldName: string) {
+  if (value === null || value === undefined || text(value) === "") return 0;
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`${fieldName} يجب أن يكون صفرًا أو أكثر.`);
+  }
+  return amount;
+}
+
+function optionalPositiveIntegerInput(value: unknown, fieldName: string) {
+  if (value === null || value === undefined || text(value) === "") return null;
+  const amount = Number(value);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error(`${fieldName} يجب أن يكون رقمًا صحيحًا أكبر من صفر.`);
+  }
+  return amount;
+}
+
+function isDiscountType(value: string): value is BrandCouponDiscountType {
+  return discountTypes.includes(value as BrandCouponDiscountType);
+}
+
+function isCouponStatus(value: string): value is BrandCouponStatus {
+  return couponStatuses.includes(value as BrandCouponStatus);
+}
+
+function isTargetSegment(value: string): value is BrandCouponTargetSegment {
+  return targetSegments.includes(value as BrandCouponTargetSegment);
+}
+
+function mapDbError(error: unknown) {
+  const record = error as { code?: string; message?: string } | null;
+  const message = record?.message ?? "";
+
+  if (record?.code === "23505" || message.includes("idx_brand_coupons_cafe_code_lower")) {
+    return new Error("كود الكوبون مستخدم بالفعل لهذه العلامة.");
+  }
+
+  if (record?.code === "42501" || message.toLowerCase().includes("permission")) {
+    return new Error("لا تملك صلاحية إدارة كوبونات هذه العلامة.");
+  }
+
+  return error instanceof Error ? error : new Error("تعذر حفظ الكوبون. حاول مرة أخرى.");
 }
 
 async function safePagedRows<T>(
@@ -282,7 +450,7 @@ function buildSuggestions(input: {
         : atRiskCustomers > 0
           ? `يوجد ${atRiskCustomers} عميل لديهم نشاط سابق بدون طلب حديث.`
           : "لا توجد شريحة فقد واضحة في الفترة الحالية.",
-      suggestedAction: "يمكن لاحقًا إنشاء عرض استرجاع مخصص لهذه الشريحة من نظام العروض.",
+      suggestedAction: "يمكن لاحقًا إنشاء عرض استرجاع مخصص لهذه الشريحة من نظام الكوبونات.",
       hasEnoughData: !input.orders.missing && atRiskCustomers > 0,
     },
     {
@@ -334,6 +502,201 @@ function buildSuggestions(input: {
   ];
 }
 
+function mapBrandCoupon(row: Record<string, unknown>): BrandCouponSource {
+  const discountType = text(row.discount_type, "fixed");
+  const status = text(row.status, "draft");
+  const targetSegment = text(row.target_segment, "all");
+
+  return {
+    id: text(row.id),
+    code: text(row.code),
+    title: text(row.title, "كوبون بدون اسم"),
+    description: nullableText(row.description),
+    discountType: isDiscountType(discountType) ? discountType : "fixed",
+    discountValue: numberValue(row.discount_value),
+    startsAt: nullableText(row.starts_at),
+    endsAt: nullableText(row.ends_at),
+    maxRedemptions: nullableNumber(row.max_redemptions),
+    maxRedemptionsPerCustomer: nullableNumber(row.max_redemptions_per_customer),
+    minimumOrderAmount: numberValue(row.minimum_order_amount),
+    targetSegment: isTargetSegment(targetSegment) ? targetSegment : "all",
+    status: isCouponStatus(status) ? status : "draft",
+    createdAt: nullableText(row.created_at),
+    updatedAt: nullableText(row.updated_at),
+  };
+}
+
+function mapRedemption(row: Record<string, unknown>): RedemptionSource {
+  return {
+    id: text(row.id),
+    couponId: text(row.coupon_id),
+    customerId: nullableText(row.customer_id),
+    orderId: nullableText(row.order_id),
+    discountAmount: numberValue(row.discount_amount),
+    redeemedAt: text(row.redeemed_at, text(row.created_at, new Date().toISOString())),
+  };
+}
+
+function buildBrandCouponRows(coupons: BrandCouponSource[], redemptions: RedemptionSource[]): BrandCouponRow[] {
+  const usage = new Map<string, { count: number; total: number }>();
+
+  for (const redemption of redemptions) {
+    const current = usage.get(redemption.couponId) ?? { count: 0, total: 0 };
+    current.count += 1;
+    current.total += redemption.discountAmount;
+    usage.set(redemption.couponId, current);
+  }
+
+  return coupons.map((coupon) => {
+    const current = usage.get(coupon.id) ?? { count: 0, total: 0 };
+    return {
+      ...coupon,
+      usageCount: current.count,
+      totalDiscountAmount: current.total,
+    };
+  });
+}
+
+export function validateBrandCouponInput(input: BrandCouponFormInput): BrandCouponPayload {
+  const code = text(input.code).toUpperCase();
+  const title = text(input.title);
+  const discountType = text(input.discountType);
+  const status = text(input.status, "draft");
+  const targetSegment = text(input.targetSegment, "all");
+  const discountValue = positiveNumberInput(input.discountValue, "قيمة الخصم");
+  const minimumOrderAmount = nonNegativeNumberInput(input.minimumOrderAmount, "الحد الأدنى للطلب");
+  const startsAt = normalizeDateInput(input.startsAt, "تاريخ البداية");
+  const endsAt = normalizeDateInput(input.endsAt, "تاريخ النهاية");
+
+  if (!code) throw new Error("كود الكوبون مطلوب.");
+  if (!title) throw new Error("عنوان الكوبون مطلوب.");
+  if (!isDiscountType(discountType)) throw new Error("نوع الخصم غير صالح.");
+  if (!isTargetSegment(targetSegment)) throw new Error("الشريحة المستهدفة غير صالحة.");
+  if (!isCouponStatus(status)) throw new Error("حالة الكوبون غير صالحة.");
+  if (discountType === "percentage" && discountValue > 100) {
+    throw new Error("قيمة الخصم بالنسبة المئوية لا يمكن أن تتجاوز 100.");
+  }
+  if (startsAt && endsAt && new Date(startsAt).getTime() > new Date(endsAt).getTime()) {
+    throw new Error("تاريخ البداية يجب أن يكون قبل تاريخ النهاية.");
+  }
+
+  return {
+    code,
+    title,
+    description: nullableText(input.description),
+    discountType,
+    discountValue,
+    startsAt,
+    endsAt,
+    maxRedemptions: optionalPositiveIntegerInput(input.maxRedemptions, "حد الاستخدام الكلي"),
+    maxRedemptionsPerCustomer: optionalPositiveIntegerInput(input.maxRedemptionsPerCustomer, "حد الاستخدام لكل عميل"),
+    minimumOrderAmount,
+    targetSegment,
+    status,
+  };
+}
+
+async function requireAdvancedCouponsAccess() {
+  const cafe = await requireOwnerCafeContext();
+  const enabled = await hasBrandFeature(cafe.id, "advanced_coupons");
+
+  if (!enabled) {
+    throw new Error("الكوبونات المتقدمة غير مفعلة لهذه العلامة.");
+  }
+
+  const supabase = advancedCouponsDb(await createClient());
+  const {
+    data: { user },
+  } = await (supabase as Awaited<ReturnType<typeof createClient>>).auth.getUser();
+
+  if (!user) {
+    throw new Error("يجب تسجيل الدخول لإدارة الكوبونات.");
+  }
+
+  return { cafe, supabase, userId: user.id };
+}
+
+function toDbPayload(payload: BrandCouponPayload, cafeId: string, userId?: string) {
+  return {
+    cafe_id: cafeId,
+    code: payload.code,
+    title: payload.title,
+    description: payload.description,
+    discount_type: payload.discountType,
+    discount_value: payload.discountValue,
+    starts_at: payload.startsAt,
+    ends_at: payload.endsAt,
+    max_redemptions: payload.maxRedemptions,
+    max_redemptions_per_customer: payload.maxRedemptionsPerCustomer,
+    minimum_order_amount: payload.minimumOrderAmount,
+    target_segment: payload.targetSegment,
+    status: payload.status,
+    ...(userId ? { created_by: userId } : {}),
+  };
+}
+
+export async function createOwnerBrandCoupon(input: BrandCouponFormInput) {
+  const payload = validateBrandCouponInput(input);
+  const { cafe, supabase, userId } = await requireAdvancedCouponsAccess();
+
+  const { error } = await supabase
+    .from("brand_coupons")
+    .insert(toDbPayload(payload, cafe.id, userId));
+
+  if (error) throw mapDbError(error);
+}
+
+export async function updateOwnerBrandCoupon(couponId: string, input: BrandCouponFormInput) {
+  const id = text(couponId);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("معرف الكوبون غير صالح.");
+
+  const payload = validateBrandCouponInput(input);
+  const { cafe, supabase } = await requireAdvancedCouponsAccess();
+
+  const { data: existing, error: lookupError } = await supabase
+    .from("brand_coupons")
+    .select("id")
+    .eq("id", id)
+    .eq("cafe_id", cafe.id)
+    .maybeSingle();
+
+  if (lookupError) throw mapDbError(lookupError);
+  if (!existing) throw new Error("الكوبون غير موجود لهذه العلامة.");
+
+  const { error } = await supabase
+    .from("brand_coupons")
+    .update(toDbPayload(payload, cafe.id))
+    .eq("id", id)
+    .eq("cafe_id", cafe.id);
+
+  if (error) throw mapDbError(error);
+}
+
+export async function updateOwnerBrandCouponStatus(couponId: string, status: BrandCouponStatus) {
+  const id = text(couponId);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("معرف الكوبون غير صالح.");
+  if (!isCouponStatus(status)) throw new Error("حالة الكوبون غير صالحة.");
+
+  const { cafe, supabase } = await requireAdvancedCouponsAccess();
+  const { data: existing, error: lookupError } = await supabase
+    .from("brand_coupons")
+    .select("id")
+    .eq("id", id)
+    .eq("cafe_id", cafe.id)
+    .maybeSingle();
+
+  if (lookupError) throw mapDbError(lookupError);
+  if (!existing) throw new Error("الكوبون غير موجود لهذه العلامة.");
+
+  const { error } = await supabase
+    .from("brand_coupons")
+    .update({ status })
+    .eq("id", id)
+    .eq("cafe_id", cafe.id);
+
+  if (error) throw mapDbError(error);
+}
+
 export async function getOwnerAdvancedCouponsDashboard(): Promise<AdvancedCouponsDashboardData> {
   const cafe = await requireOwnerCafeContext();
   const enabled = await hasBrandFeature(cafe.id, "advanced_coupons");
@@ -348,7 +711,7 @@ export async function getOwnerAdvancedCouponsDashboard(): Promise<AdvancedCoupon
   const supabase = advancedCouponsDb(await createClient());
   const now = new Date();
 
-  const [offers, orders, customers, loyaltyCards, rewardRedemptions] = await Promise.all([
+  const [offers, orders, customers, loyaltyCards, rewardRedemptions, brandCoupons, redemptions] = await Promise.all([
     safePagedRows(
       "offers",
       (from, to) =>
@@ -443,51 +806,102 @@ export async function getOwnerAdvancedCouponsDashboard(): Promise<AdvancedCoupon
         customerId: nullableText(row.customer_id),
       }),
     ),
+    safePagedRows(
+      "brand_coupons",
+      (from, to) =>
+        supabase
+          .from("brand_coupons")
+          .select("id,code,title,description,discount_type,discount_value,starts_at,ends_at,max_redemptions,max_redemptions_per_customer,minimum_order_amount,target_segment,status,created_at,updated_at")
+          .eq("cafe_id", cafe.id)
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      mapBrandCoupon,
+    ),
+    safePagedRows(
+      "brand_coupon_redemptions",
+      (from, to) =>
+        supabase
+          .from("brand_coupon_redemptions")
+          .select("id,coupon_id,customer_id,order_id,discount_amount,redeemed_at,created_at")
+          .eq("cafe_id", cafe.id)
+          .order("redeemed_at", { ascending: false })
+          .range(from, to),
+      mapRedemption,
+    ),
   ]);
 
   const missingSources = Array.from(
     new Set(
-      [offers, orders, customers, loyaltyCards, rewardRedemptions]
+      [offers, orders, customers, loyaltyCards, rewardRedemptions, brandCoupons, redemptions]
         .filter((source) => source.missing)
         .map((source) => source.sourceName),
     ),
   );
 
-  const discountedOrders = orders.rows.filter((order) => order.discountAmount > 0).length;
+  const latestCustomerIds = Array.from(
+    new Set(redemptions.rows.slice(0, 10).map((redemption) => redemption.customerId).filter(Boolean) as string[]),
+  );
+  const customersById = new Map<string, string>();
+
+  if (latestCustomerIds.length > 0) {
+    try {
+      const { data } = await supabase
+        .from("customer_profiles")
+        .select("id,full_name")
+        .eq("cafe_id", cafe.id)
+        .in("id", latestCustomerIds);
+
+      for (const row of (Array.isArray(data) ? data : []) as Record<string, unknown>[]) {
+        customersById.set(text(row.id), text(row.full_name, "عميل بدون اسم"));
+      }
+    } catch {
+      // The main customer profile availability is already represented in missingSources.
+    }
+  }
+
   const offerRows = buildOfferRows(offers.rows, now);
+  const couponRows = buildBrandCouponRows(brandCoupons.rows, redemptions.rows);
   const activeOffers = offerRows.filter((offer) => offer.status === "نشط").length;
+  const activeCoupons = couponRows.filter((coupon) => coupon.status === "active").length;
   const expiredOffers = offerRows.filter((offer) => offer.status === "منتهي").length;
+  const expiredCoupons = couponRows.filter((coupon) => coupon.status === "expired").length;
   const upcomingOffers = offerRows.filter((offer) => offer.status === "قادم").length;
+  const upcomingCoupons = couponRows.filter((coupon) => coupon.startsAt && new Date(coupon.startsAt) > now).length;
+  const discountedOrders = orders.rows.filter((order) => order.discountAmount > 0).length;
   const activeCustomers = countActiveCustomers(orders.rows, daysAgo(now, 30));
+  const couponDiscountTotal = redemptions.rows.reduce((sum, redemption) => sum + redemption.discountAmount, 0);
+  const couponsById = new Map(couponRows.map((coupon) => [coupon.id, coupon]));
 
   return {
     enabled: true,
     cafeName: cafe.name,
-    totalOffers: offers.missing ? null : offers.rows.length,
+    totalOffers: offers.missing && brandCoupons.missing ? null : offers.rows.length + couponRows.length,
     metrics: [
       {
         key: "activeOffers",
         label: "العروض والكوبونات النشطة",
-        value: offers.missing ? null : activeOffers,
-        hint: "من جدول العروض الحالي لهذه العلامة",
+        value: offers.missing && brandCoupons.missing ? null : activeOffers + activeCoupons,
+        hint: "من العروض الحالية وكوبونات العلامة الفعلية",
       },
       {
         key: "expiredOffers",
-        label: "العروض المنتهية",
-        value: offers.missing ? null : expiredOffers,
-        hint: "حسب تاريخ النهاية أو حالة العرض",
+        label: "العروض والكوبونات المنتهية",
+        value: offers.missing && brandCoupons.missing ? null : expiredOffers + expiredCoupons,
+        hint: "حسب تاريخ النهاية أو الحالة المسجلة",
       },
       {
         key: "upcomingOffers",
-        label: "العروض القادمة",
-        value: offers.missing ? null : upcomingOffers,
-        hint: "العروض التي يبدأ تاريخها لاحقًا",
+        label: "العروض والكوبونات القادمة",
+        value: offers.missing && brandCoupons.missing ? null : upcomingOffers + upcomingCoupons,
+        hint: "العناصر التي يبدأ تاريخها لاحقًا",
       },
       {
         key: "discountOrders",
         label: "طلبات بها خصم",
         value: orders.missing ? null : discountedOrders,
-        hint: activeCustomers > 0 ? `مرتبطة بنشاط ${activeCustomers} عميل خلال آخر 30 يومًا` : "حسب قيمة الخصم في الطلبات",
+        hint: activeCustomers > 0
+          ? `مرتبطة بنشاط ${activeCustomers} عميل خلال آخر 30 يومًا`
+          : "حسب قيمة الخصم في الطلبات",
       },
     ],
     latestOffers: offerRows.slice(0, 20),
@@ -498,6 +912,22 @@ export async function getOwnerAdvancedCouponsDashboard(): Promise<AdvancedCoupon
       rewardRedemptions,
       now,
     }),
+    brandCoupons: couponRows,
+    latestRedemptions: redemptions.rows.slice(0, 10).map((redemption) => {
+      const coupon = couponsById.get(redemption.couponId);
+      return {
+        id: redemption.id,
+        couponId: redemption.couponId,
+        couponCode: coupon?.code ?? "كوبون غير معروف",
+        couponTitle: coupon?.title ?? "كوبون غير معروف",
+        customerName: redemption.customerId ? customersById.get(redemption.customerId) ?? "عميل بدون اسم" : "عميل بدون اسم",
+        orderId: redemption.orderId,
+        discountAmount: redemption.discountAmount,
+        redeemedAt: redemption.redeemedAt,
+      };
+    }),
+    couponUsageTotal: redemptions.rows.length,
+    couponDiscountTotal,
     missingSources,
   };
 }
