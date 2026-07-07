@@ -479,7 +479,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     descriptionAr: "باقات شهرية مثل 10 أكواب أو كوب يومي.",
     category: "commerce",
     route: "",
-    dashboardPath: null,
+    dashboardPath: "/dashboard/coffee-subscriptions",
     sidebarGroup: "ميزات مفعلة",
     showInSidebarWhenEnabled: true,
     sidebarVisible: false,
@@ -488,7 +488,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     requiredPlanLevel: "growth",
     iconKey: "Coffee",
     riskLevel: "business",
-    status: "coming_soon",
+    status: "preview",
     sortOrder: 260,
   },
   {
