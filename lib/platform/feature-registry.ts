@@ -441,7 +441,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     descriptionAr: "كوبونات ذكية حسب العميل والفترة والمنتج.",
     category: "growth",
     route: "",
-    dashboardPath: null,
+    dashboardPath: "/dashboard/advanced-coupons",
     sidebarGroup: "ميزات مفعلة",
     showInSidebarWhenEnabled: true,
     sidebarVisible: false,
@@ -450,7 +450,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     requiredPlanLevel: "growth",
     iconKey: "BadgePercent",
     riskLevel: "business",
-    status: "coming_soon",
+    status: "preview",
     sortOrder: 240,
   },
   {
