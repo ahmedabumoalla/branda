@@ -403,7 +403,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     descriptionAr: "تقسيم العملاء حسب النشاط والتكرار والولاء.",
     category: "experience",
     route: "",
-    dashboardPath: null,
+    dashboardPath: "/dashboard/customer-segments",
     sidebarGroup: "ميزات مفعلة",
     showInSidebarWhenEnabled: true,
     sidebarVisible: false,
@@ -412,7 +412,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     requiredPlanLevel: "growth",
     iconKey: "UsersRound",
     riskLevel: "business",
-    status: "coming_soon",
+    status: "preview",
     sortOrder: 220,
   },
   {
