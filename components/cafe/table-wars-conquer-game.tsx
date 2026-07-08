@@ -27,20 +27,102 @@ type MovingUnit = {
   lane: number;
 };
 
+type BattleSpark = {
+  id: string;
+  x: number;
+  y: number;
+  createdAt: number;
+};
+
 type GameResult = "playing" | "won" | "lost";
 
 const ROUND_SECONDS = 180;
-const UNIT_DURATION = 980;
+const UNIT_DURATION = 1800;
+const COLLISION_DISTANCE = 0.06;
+const SOLDIER_TRAIL_SPACING = 0.045;
+const BATTLE_SPARK_MS = 650;
 
 const initialTowers: Tower[] = [
-  { id: "blue-base", label: "طاولتك", owner: "player", soldiers: 28, maxSoldiers: 56, x: 18, y: 72, links: ["middle-left", "center"] },
-  { id: "middle-left", label: "طاولة 2", owner: "neutral", soldiers: 14, maxSoldiers: 44, x: 28, y: 45, links: ["blue-base", "top-left", "center"] },
-  { id: "top-left", label: "طاولة 3", owner: "neutral", soldiers: 18, maxSoldiers: 46, x: 20, y: 20, links: ["middle-left", "top-center"] },
-  { id: "top-center", label: "طاولة 4", owner: "neutral", soldiers: 22, maxSoldiers: 52, x: 50, y: 15, links: ["top-left", "center", "red-base"] },
-  { id: "center", label: "الوسط", owner: "neutral", soldiers: 20, maxSoldiers: 58, x: 51, y: 49, links: ["blue-base", "middle-left", "top-center", "middle-right", "bottom-right"] },
-  { id: "middle-right", label: "طاولة 6", owner: "neutral", soldiers: 16, maxSoldiers: 44, x: 75, y: 41, links: ["center", "red-base", "bottom-right"] },
-  { id: "red-base", label: "طاولة الخصم", owner: "enemy", soldiers: 30, maxSoldiers: 56, x: 82, y: 20, links: ["top-center", "middle-right"] },
-  { id: "bottom-right", label: "طاولة 8", owner: "enemy", soldiers: 24, maxSoldiers: 50, x: 78, y: 74, links: ["center", "middle-right"] },
+  {
+    id: "blue-base",
+    label: "طاولتك",
+    owner: "player",
+    soldiers: 28,
+    maxSoldiers: 56,
+    x: 18,
+    y: 72,
+    links: ["middle-left", "center"],
+  },
+  {
+    id: "middle-left",
+    label: "طاولة 2",
+    owner: "neutral",
+    soldiers: 14,
+    maxSoldiers: 44,
+    x: 28,
+    y: 45,
+    links: ["blue-base", "top-left", "center"],
+  },
+  {
+    id: "top-left",
+    label: "طاولة 3",
+    owner: "neutral",
+    soldiers: 18,
+    maxSoldiers: 46,
+    x: 20,
+    y: 20,
+    links: ["middle-left", "top-center"],
+  },
+  {
+    id: "top-center",
+    label: "طاولة 4",
+    owner: "neutral",
+    soldiers: 22,
+    maxSoldiers: 52,
+    x: 50,
+    y: 15,
+    links: ["top-left", "center", "red-base"],
+  },
+  {
+    id: "center",
+    label: "الوسط",
+    owner: "neutral",
+    soldiers: 20,
+    maxSoldiers: 58,
+    x: 51,
+    y: 49,
+    links: ["blue-base", "middle-left", "top-center", "middle-right", "bottom-right"],
+  },
+  {
+    id: "middle-right",
+    label: "طاولة 6",
+    owner: "neutral",
+    soldiers: 16,
+    maxSoldiers: 44,
+    x: 75,
+    y: 41,
+    links: ["center", "red-base", "bottom-right"],
+  },
+  {
+    id: "red-base",
+    label: "طاولة الخصم",
+    owner: "enemy",
+    soldiers: 30,
+    maxSoldiers: 56,
+    x: 82,
+    y: 20,
+    links: ["top-center", "middle-right"],
+  },
+  {
+    id: "bottom-right",
+    label: "طاولة 8",
+    owner: "enemy",
+    soldiers: 24,
+    maxSoldiers: 50,
+    x: 78,
+    y: 74,
+    links: ["center", "middle-right"],
+  },
 ];
 
 function ownerClasses(owner: Owner) {
@@ -84,8 +166,31 @@ function getTower(towers: Tower[], id: string) {
   return towers.find((tower) => tower.id === id);
 }
 
-function canSendFrom(tower: Tower | undefined, owner: "player" | "enemy") {
-  return Boolean(tower && tower.owner === owner && tower.soldiers >= 2);
+function canSendFrom(tower: Tower | undefined, owner: "player" | "enemy", minSoldiers = 2) {
+  return Boolean(tower && tower.owner === owner && tower.soldiers >= minSoldiers);
+}
+
+function getUnitProgress(unit: MovingUnit, timestamp: number) {
+  return Math.min(1, Math.max(0, (timestamp - unit.startedAt) / unit.duration));
+}
+
+function getVisualCount(soldiers: number) {
+  if (soldiers <= 0) return 0;
+  if (soldiers <= 6) return soldiers;
+  return Math.min(12, Math.max(6, Math.ceil(soldiers * 0.65)));
+}
+
+function getEdgePoint(from: Tower, to: Tower, progress: number, lane: number) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const offsetX = (-dy / length) * lane;
+  const offsetY = (dx / length) * lane;
+
+  return {
+    x: from.x + dx * progress + offsetX,
+    y: from.y + dy * progress + offsetY,
+  };
 }
 
 function uniqueLinks(towers: Tower[]) {
@@ -102,10 +207,19 @@ function uniqueLinks(towers: Tower[]) {
   );
 }
 
+function areOpposingUnits(unitA: MovingUnit, unitB: MovingUnit) {
+  return (
+    unitA.owner !== unitB.owner &&
+    unitA.fromId === unitB.toId &&
+    unitA.toId === unitB.fromId
+  );
+}
+
 export function TableWarsConquerGame() {
   const [towers, setTowers] = useState<Tower[]>(initialTowers);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [units, setUnits] = useState<MovingUnit[]>([]);
+  const [battleSparks, setBattleSparks] = useState<BattleSpark[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<GameResult>("playing");
@@ -143,7 +257,8 @@ export function TableWarsConquerGame() {
     (fromId: string, toId: string, owner: "player" | "enemy") => {
       const from = getTower(towersRef.current, fromId);
       const to = getTower(towersRef.current, toId);
-      if (!canSendFrom(from, owner) || !to || !from?.links.includes(toId)) return false;
+      const minSoldiers = owner === "enemy" ? 8 : 2;
+      if (!canSendFrom(from, owner, minSoldiers) || !to || !from?.links.includes(toId)) return false;
 
       const soldiers = Math.floor(from.soldiers / 2);
       if (soldiers < 1) return false;
@@ -156,7 +271,7 @@ export function TableWarsConquerGame() {
         soldiers,
         startedAt: Date.now(),
         duration: UNIT_DURATION,
-        lane: (Math.random() - 0.5) * 5,
+        lane: (Math.random() - 0.5) * 4,
       };
 
       setTowers((current) => {
@@ -219,7 +334,7 @@ export function TableWarsConquerGame() {
     if (resultRef.current !== "playing") return;
 
     const enemySources = currentTowers
-      .filter((tower) => canSendFrom(tower, "enemy"))
+      .filter((tower) => canSendFrom(tower, "enemy", 8))
       .sort((a, b) => b.soldiers - a.soldiers);
 
     for (const source of enemySources) {
@@ -249,6 +364,7 @@ export function TableWarsConquerGame() {
     setTowers(initialTowers);
     setSelectedId(null);
     setUnits([]);
+    setBattleSparks([]);
     setNow(Date.now());
     setElapsed(0);
     setResult("playing");
@@ -270,12 +386,9 @@ export function TableWarsConquerGame() {
       setElapsed((value) => value + 1);
       setTowers((current) =>
         current.map((tower) => {
-          if (tower.owner === "neutral") {
-            if (tower.soldiers >= tower.maxSoldiers || Math.random() > 0.25) return tower;
-            return { ...tower, soldiers: Math.min(tower.maxSoldiers, tower.soldiers + 1) };
-          }
+          if (tower.owner === "neutral" || tower.soldiers >= tower.maxSoldiers) return tower;
 
-          return { ...tower, soldiers: Math.min(tower.maxSoldiers, tower.soldiers + 2) };
+          return { ...tower, soldiers: Math.min(tower.maxSoldiers, tower.soldiers + 1) };
         }),
       );
     }, 1000);
@@ -288,17 +401,69 @@ export function TableWarsConquerGame() {
 
     const frame = window.setInterval(() => {
       const frameNow = Date.now();
+      const currentTowers = towersRef.current;
+
       setNow(frameNow);
+      setBattleSparks((current) => current.filter((spark) => frameNow - spark.createdAt < BATTLE_SPARK_MS));
       setUnits((current) => {
         const active: MovingUnit[] = [];
+
         current.forEach((unit) => {
           if (frameNow - unit.startedAt >= unit.duration) {
             resolveArrival(unit);
           } else {
-            active.push(unit);
+            active.push({ ...unit });
           }
         });
-        return active;
+
+        const removedIds = new Set<string>();
+        const newSparks: BattleSpark[] = [];
+
+        for (let i = 0; i < active.length; i += 1) {
+          const unitA = active[i];
+          if (!unitA || removedIds.has(unitA.id)) continue;
+
+          for (let j = i + 1; j < active.length; j += 1) {
+            const unitB = active[j];
+            if (!unitB || removedIds.has(unitB.id) || !areOpposingUnits(unitA, unitB)) continue;
+
+            const progressA = getUnitProgress(unitA, frameNow);
+            const progressB = getUnitProgress(unitB, frameNow);
+            if (Math.abs(progressA - (1 - progressB)) >= COLLISION_DISTANCE) continue;
+
+            const from = getTower(currentTowers, unitA.fromId);
+            const to = getTower(currentTowers, unitA.toId);
+            if (from && to) {
+              const point = getEdgePoint(from, to, progressA, (unitA.lane - unitB.lane) / 2);
+              newSparks.push({
+                id: `battle-${frameNow}-${unitA.id}-${unitB.id}`,
+                x: point.x,
+                y: point.y,
+                createdAt: frameNow,
+              });
+            }
+
+            if (unitA.soldiers > unitB.soldiers) {
+              unitA.soldiers -= unitB.soldiers;
+              removedIds.add(unitB.id);
+            } else if (unitB.soldiers > unitA.soldiers) {
+              unitB.soldiers -= unitA.soldiers;
+              removedIds.add(unitA.id);
+              break;
+            } else {
+              removedIds.add(unitA.id);
+              removedIds.add(unitB.id);
+              break;
+            }
+          }
+        }
+
+        if (newSparks.length) {
+          setBattleSparks((currentSparks) => [...currentSparks, ...newSparks]);
+          setMessage("اشتباك في الطريق!");
+        }
+
+        return active.filter((unit) => !removedIds.has(unit.id) && unit.soldiers > 0);
       });
     }, 32);
 
@@ -309,7 +474,7 @@ export function TableWarsConquerGame() {
     if (result !== "playing") return;
 
     function scheduleEnemy() {
-      const delay = 2500 + Math.random() * 1500;
+      const delay = 3500 + Math.random() * 1500;
       enemyTimerRef.current = window.setTimeout(() => {
         enemyMove();
         scheduleEnemy();
@@ -339,7 +504,10 @@ export function TableWarsConquerGame() {
   const overlayButton = result === "won" ? "إعادة اللعب" : "إعادة المحاولة";
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#E7D7C6] bg-white shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
+    <section
+      dir="rtl"
+      className="overflow-hidden rounded-3xl border border-[#E7D7C6] bg-white shadow-[8px_8px_28px_rgba(49,25,18,0.06)]"
+    >
       <div className="border-b border-[#F2E7D9] bg-[#FFFDF9] p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -392,24 +560,49 @@ export function TableWarsConquerGame() {
           })}
         </svg>
 
-        {units.map((unit) => {
+        {units.flatMap((unit) => {
           const from = getTower(towers, unit.fromId);
           const to = getTower(towers, unit.toId);
-          if (!from || !to) return null;
+          if (!from || !to) return [];
 
-          const progress = Math.min(1, Math.max(0, (now - unit.startedAt) / unit.duration));
-          const x = from.x + (to.x - from.x) * progress;
-          const y = from.y + (to.y - from.y) * progress + unit.lane;
+          const baseProgress = getUnitProgress(unit, now);
+          const visualCount = getVisualCount(unit.soldiers);
           const classes = ownerClasses(unit.owner);
 
-          return (
-            <span
-              key={unit.id}
-              className={`absolute z-20 h-3.5 w-3.5 rounded-full ring-4 ring-white/70 ${classes.dot}`}
-              style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%, -50%)" }}
-            />
-          );
+          return Array.from({ length: visualCount }).flatMap((_, index) => {
+            const progress = baseProgress - index * SOLDIER_TRAIL_SPACING;
+            if (progress <= 0 || progress >= 1) return [];
+
+            const staggerLane = unit.lane + ((index % 3) - 1) * 0.35;
+            const point = getEdgePoint(from, to, progress, staggerLane);
+            const isLead = index === 0;
+
+            return (
+              <span
+                key={`${unit.id}-${index}`}
+                className={`absolute z-20 rounded-full ring-white/70 ${classes.dot} ${
+                  isLead ? "h-3.5 w-3.5 ring-4" : "h-3 w-3 ring-[3px]"
+                }`}
+                style={{ left: `${point.x}%`, top: `${point.y}%`, transform: "translate(-50%, -50%)" }}
+              />
+            );
+          });
         })}
+
+        {battleSparks.map((spark) => (
+          <span
+            key={spark.id}
+            className="absolute z-20 flex h-10 w-10 items-center justify-center rounded-full bg-amber-300/80 text-[11px] font-black text-[#311912] ring-4 ring-white/80"
+            style={{
+              left: `${spark.x}%`,
+              top: `${spark.y}%`,
+              opacity: Math.max(0, 1 - (now - spark.createdAt) / BATTLE_SPARK_MS),
+              transform: "translate(-50%, -50%) scale(1.05)",
+            }}
+          >
+            ×
+          </span>
+        ))}
 
         {towers.map((tower) => {
           const selected = selectedId === tower.id;
@@ -441,7 +634,7 @@ export function TableWarsConquerGame() {
               <Sparkles className="mx-auto h-9 w-9 text-[#D9A33F]" />
               <h3 className="mt-3 text-2xl font-black text-[#311912]">{overlayTitle}</h3>
               <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-                هذه تجربة لعب تجريبية، النقاط والجوائز ستفعّل لاحقًا.
+                هذه تجربة لعب تجريبية، النقاط والجوائز ستفعل لاحقًا.
               </p>
               <button
                 type="button"
@@ -467,7 +660,10 @@ export function TableWarsConquerGame() {
               اختر طاولة زرقاء ثم اختر طاولة متصلة للهجوم.
             </p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              هذه تجربة لعب تجريبية، النقاط والجوائز ستفعّل لاحقًا.
+              قد تتقاتل الجنود في الطريق إذا تقابلت من اتجاهين متعاكسين.
+            </p>
+            <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
+              هذه تجربة لعب تجريبية، النقاط والجوائز ستفعل لاحقًا.
             </p>
           </div>
         </div>
