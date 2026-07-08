@@ -213,6 +213,7 @@ export function ProductCollectionPage({ slug, view, tableWarsEntryHref }: Props)
   const branchesEnabled = publicFeatureAllows(features, "branches");
   const reservationsEnabled = publicFeatureAllows(features, "reservations");
   const rewardsEnabled = publicFeatureAllows(features, "loyalty");
+  const showTableWarsEntryCard = Boolean(tableWarsEntryHref) && view !== "branches";
 
   if (loading) {
     return (
@@ -376,7 +377,7 @@ export function ProductCollectionPage({ slug, view, tableWarsEntryHref }: Props)
           </button>
         </header>
 
-        {view === "popular" && tableWarsEntryHref ? (
+        {showTableWarsEntryCard && tableWarsEntryHref ? (
           <section className="overflow-hidden rounded-[28px] border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#311912] shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
             <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
               <div className="flex min-w-0 items-start gap-3">

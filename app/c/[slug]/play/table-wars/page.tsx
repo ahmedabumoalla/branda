@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { Castle, LockKeyhole, QrCode, Shield, Sparkles, Swords } from "lucide-react";
-import { TableWarsDemoGame } from "@/components/cafe/table-wars-demo-game";
+import { TableWarsConquerGame } from "@/components/cafe/table-wars-conquer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicTableWarsEntry } from "@/lib/data/table-wars";
 
@@ -78,7 +78,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
             </span>
           </div>
           <p className="mt-5 max-w-2xl text-sm font-bold leading-8 text-[#806A5E]">
-            كل طاولة تمثل قلعة داخل الفرع. اجمع فريق الطاولة، راقب حالة الجولة، واستعد للهجوم عند فتح اللعب في المرحلة القادمة.
+            كل طاولة تمثل برجًا داخل الفرع. اختر طاولتك، أرسل الجنود عبر الخطوط المتصلة، وحاول السيطرة قبل الخصم.
           </p>
         </header>
 
@@ -114,7 +114,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
                 <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
                   {entry.table
                     ? "تم التحقق من أن رمز الطاولة تابع لهذا الفرع."
-                    : "يمكنك تجربة الهجوم محليًا بدون حفظ أي نتيجة."}
+                    : "يمكنك لعب الجولة محليًا بدون حفظ أي نتيجة."}
                 </p>
               </article>
               <article className="rounded-2xl border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#4A281D]">
@@ -126,7 +126,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
                 </p>
               </article>
             </section>
-            <TableWarsDemoGame />
+            <TableWarsConquerGame />
           </>
         )}
 

@@ -92,7 +92,7 @@ export function TableWarsPage({ data, configError }: Props) {
           <p className="font-black text-[#6B3A25]">Branda Play</p>
           <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">ألعاب العلامة التجارية</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-7 text-[#806A5E]">
-            مساحة لإدارة التجارب التفاعلية داخل الفرع، تبدأ بلعبة حرب الطاولات.
+            مساحة لإدارة التجارب التفاعلية داخل الفرع. حرب الطاولات الآن لعبة تفاعلية تجريبية داخل الفرع.
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9A33F]/35 bg-[#FFF7E3] px-4 py-2 text-xs font-black text-[#6B3A25]">
@@ -109,7 +109,7 @@ export function TableWarsPage({ data, configError }: Props) {
             </span>
             <h2 className="mt-4 text-xl font-black text-[#311912]">حرب الطاولات</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              لعبة جماعية داخل الفرع تحول الطاولات إلى قلاع.
+              لعبة تفاعلية محلية تجعل الطاولات أبراجًا متصلة يتحرك بينها اللاعب والخصم.
             </p>
           </div>
           <div className="rounded-xl border border-[#F2E7D9] bg-[#FCF8F3] p-4">
