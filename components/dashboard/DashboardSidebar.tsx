@@ -29,6 +29,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Swords,
   Users,
 } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -79,6 +80,7 @@ const featureIcons: Partial<Record<PlatformFeature, ElementType>> = {
   marketplace_boost: Megaphone,
   pos_integrations: Settings,
   company_accounts: Building2,
+  in_store_table_wars: Swords,
   ai_menu_engineer: Sparkles,
 };
 

@@ -49,6 +49,7 @@ export type PlatformFeatureDefinition = {
     | "marketplace_boost"
     | "pos_integrations"
     | "company_accounts"
+    | "in_store_table_wars"
     | "ai_menu_engineer";
   titleAr: string;
   titleEn: string;
@@ -568,6 +569,25 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     riskLevel: "financial",
     status: "preview",
     sortOrder: 300,
+  },
+  {
+    id: "in_store_table_wars",
+    titleAr: "حرب الطاولات",
+    titleEn: "Table Wars",
+    descriptionAr: "لعبة جماعية داخل الفرع تحول الطاولات إلى قلاع وتزيد تفاعل العملاء أثناء الانتظار.",
+    category: "experience",
+    route: "",
+    dashboardPath: "/dashboard/table-wars",
+    sidebarGroup: "ميزات مفعلة",
+    showInSidebarWhenEnabled: true,
+    sidebarVisible: false,
+    packageAssignable: true,
+    defaultEnabled: false,
+    requiredPlanLevel: "growth",
+    iconKey: "Swords",
+    riskLevel: "business",
+    status: "preview",
+    sortOrder: 305,
   },
   {
     id: "ai_menu_engineer",
