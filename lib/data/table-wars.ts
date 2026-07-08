@@ -27,11 +27,13 @@ export type TableWarsDashboardData =
   | {
       enabled: false;
       cafeName: string;
+      gameEnabled: false;
     }
   | {
       enabled: true;
       cafeName: string;
       cafeSlug: string;
+      gameEnabled: boolean;
       tableCount: number;
       activeRoundCount: number;
       currentRounds: TableWarsRoundSummary[];
@@ -44,7 +46,8 @@ export type PublicTableWarsEntry =
   | {
       cafeFound: false;
       cafeName: null;
-      enabled: false;
+      featureEnabled: false;
+      gameEnabled: false;
       tableCode: string | null;
       table: null;
       currentRound: null;
@@ -53,7 +56,8 @@ export type PublicTableWarsEntry =
   | {
       cafeFound: true;
       cafeName: string;
-      enabled: boolean;
+      featureEnabled: boolean;
+      gameEnabled: boolean;
       tableCode: string | null;
       table: {
         id: string;
@@ -71,6 +75,12 @@ type SafeResponse = {
 
 type QueryClient = {
   from(table: string): any;
+};
+
+type PublicCafeRecord = {
+  id: string;
+  name: string;
+  slug?: string | null;
 };
 
 function db(client: Awaited<ReturnType<typeof createClient>>) {
@@ -140,6 +150,64 @@ async function safeCount(sourceName: string, promise: PromiseLike<SafeResponse>)
   }
 }
 
+async function getActiveTableCount(cafeId: string) {
+  const supabase = adminDb(createAdminClient());
+  const result = await safeCount(
+    "table_wars_tables",
+    supabase
+      .from("table_wars_tables")
+      .select("id", { count: "exact", head: true })
+      .eq("cafe_id", cafeId)
+      .eq("is_active", true),
+  );
+
+  return result.missing ? { count: 0, missing: true } : { count: result.value, missing: false };
+}
+
+async function getPublicTableWarsVisibilityForCafe(cafe: PublicCafeRecord) {
+  const featureEnabled = await hasBrandFeature(String(cafe.id), TABLE_WARS_FEATURE_KEY);
+  if (!featureEnabled) {
+    return {
+      featureEnabled: false,
+      gameEnabled: false,
+      missingTableSource: false,
+    };
+  }
+
+  const activeTables = await getActiveTableCount(String(cafe.id));
+  return {
+    featureEnabled: true,
+    gameEnabled: activeTables.count > 0,
+    missingTableSource: activeTables.missing,
+  };
+}
+
+export async function getPublicTableWarsVisibilityBySlug(slug: string) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) {
+    return {
+      cafeFound: false,
+      showPublicEntryCard: false,
+      entryHref: null,
+    };
+  }
+
+  const visibility = await getPublicTableWarsVisibilityForCafe({
+    id: String(cafe.id),
+    name: String(cafe.name),
+    slug: String(cafe.slug ?? slug),
+  });
+
+  return {
+    cafeFound: true,
+    showPublicEntryCard: visibility.featureEnabled && visibility.gameEnabled,
+    entryHref:
+      visibility.featureEnabled && visibility.gameEnabled
+        ? `/c/${encodeURIComponent(slug)}/play/table-wars`
+        : null,
+  };
+}
+
 async function safeRows<T>(
   sourceName: string,
   promise: PromiseLike<SafeResponse>,
@@ -167,6 +235,7 @@ export async function getOwnerTableWarsDashboard(): Promise<TableWarsDashboardDa
     return {
       enabled: false,
       cafeName: cafe.name,
+      gameEnabled: false,
     };
   }
 
@@ -243,6 +312,7 @@ export async function getOwnerTableWarsDashboard(): Promise<TableWarsDashboardDa
     enabled: true,
     cafeName: cafe.name,
     cafeSlug: cafe.slug,
+    gameEnabled: tableCount.value > 0,
     tableCount: tableCount.value,
     activeRoundCount: activeRoundCount.value,
     currentRounds: currentRounds.rows,
@@ -263,7 +333,8 @@ export async function getPublicTableWarsEntry(
     return {
       cafeFound: false,
       cafeName: null,
-      enabled: false,
+      featureEnabled: false,
+      gameEnabled: false,
       tableCode,
       table: null,
       currentRound: null,
@@ -271,16 +342,35 @@ export async function getPublicTableWarsEntry(
     };
   }
 
-  const enabled = await hasBrandFeature(String(cafe.id), TABLE_WARS_FEATURE_KEY);
-  if (!enabled) {
+  const visibility = await getPublicTableWarsVisibilityForCafe({
+    id: String(cafe.id),
+    name: String(cafe.name),
+    slug: String(cafe.slug ?? slug),
+  });
+
+  if (!visibility.featureEnabled) {
     return {
       cafeFound: true,
       cafeName: String(cafe.name),
-      enabled: false,
+      featureEnabled: false,
+      gameEnabled: false,
       tableCode,
       table: null,
       currentRound: null,
-      errorMessage: "حرب الطاولات غير مفعّلة حاليًا.",
+      errorMessage: "الميزة غير مفعّلة لهذا الفرع.",
+    };
+  }
+
+  if (!visibility.gameEnabled) {
+    return {
+      cafeFound: true,
+      cafeName: String(cafe.name),
+      featureEnabled: true,
+      gameEnabled: false,
+      tableCode,
+      table: null,
+      currentRound: null,
+      errorMessage: "اللعبة غير متاحة حاليًا",
     };
   }
 
@@ -302,7 +392,8 @@ export async function getPublicTableWarsEntry(
     return {
       cafeFound: true,
       cafeName: String(cafe.name),
-      enabled: true,
+      featureEnabled: true,
+      gameEnabled: true,
       tableCode: null,
       table: null,
       currentRound: currentRoundResult.rows[0] ?? null,
@@ -327,10 +418,78 @@ export async function getPublicTableWarsEntry(
   return {
     cafeFound: true,
     cafeName: String(cafe.name),
-    enabled: true,
+    featureEnabled: true,
+    gameEnabled: true,
     tableCode,
     table: tableResult.rows[0] ?? null,
     currentRound: currentRoundResult.rows[0] ?? null,
     errorMessage: tableResult.rows[0] ? undefined : "رمز الطاولة غير صالح لهذا الفرع.",
   };
+}
+
+export async function enableOwnerTableWarsDemoTable() {
+  const cafe = await requireOwnerCafeContext();
+  const enabled = await hasBrandFeature(cafe.id, TABLE_WARS_FEATURE_KEY);
+  if (!enabled) {
+    throw new Error("الميزة غير مفعّلة لهذه العلامة.");
+  }
+
+  const supabase = db(await createClient());
+  const qrCode = `demo-${cafe.slug}-table-wars`;
+
+  const existing = await safeRows(
+    "table_wars_tables",
+    supabase
+      .from("table_wars_tables")
+      .select("id")
+      .eq("cafe_id", cafe.id)
+      .eq("qr_code", qrCode)
+      .limit(1),
+    (row) => ({ id: text(row.id) }),
+  );
+
+  if (existing.missing) {
+    throw new Error("تعذر الوصول إلى جدول طاولات اللعبة.");
+  }
+
+  const existingId = existing.rows[0]?.id;
+  const result = existingId
+    ? await supabase
+        .from("table_wars_tables")
+        .update({ is_active: true, label: "طاولة تجريبية" })
+        .eq("id", existingId)
+        .eq("cafe_id", cafe.id)
+    : await supabase.from("table_wars_tables").insert({
+        cafe_id: cafe.id,
+        label: "طاولة تجريبية",
+        qr_code: qrCode,
+        is_active: true,
+      });
+
+  if (result.error) {
+    throw new Error(result.error.message || "تعذر تفعيل اللعبة.");
+  }
+
+  return cafe.slug;
+}
+
+export async function disableOwnerTableWarsTables() {
+  const cafe = await requireOwnerCafeContext();
+  const enabled = await hasBrandFeature(cafe.id, TABLE_WARS_FEATURE_KEY);
+  if (!enabled) {
+    throw new Error("الميزة غير مفعّلة لهذه العلامة.");
+  }
+
+  const supabase = db(await createClient());
+  const result = await supabase
+    .from("table_wars_tables")
+    .update({ is_active: false })
+    .eq("cafe_id", cafe.id)
+    .eq("is_active", true);
+
+  if (result.error) {
+    throw new Error(result.error.message || "تعذر تعطيل اللعبة.");
+  }
+
+  return cafe.slug;
 }

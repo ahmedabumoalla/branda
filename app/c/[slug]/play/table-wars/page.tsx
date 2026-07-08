@@ -3,6 +3,7 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { Castle, LockKeyhole, QrCode, Shield, Sparkles, Swords } from "lucide-react";
+import { TableWarsDemoGame } from "@/components/cafe/table-wars-demo-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicTableWarsEntry } from "@/lib/data/table-wars";
 
@@ -49,7 +50,8 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
     entry = {
       cafeFound: false as const,
       cafeName: null,
-      enabled: false,
+      featureEnabled: false,
+      gameEnabled: false,
       tableCode: null,
       table: null,
       currentRound: null,
@@ -82,58 +84,74 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
 
         {!entry.cafeFound ? (
           <MessageBox message={entry.errorMessage} />
-        ) : !entry.enabled ? (
+        ) : !entry.featureEnabled ? (
           <div className="rounded-2xl border border-[#E7D7C6] bg-white p-5 text-center shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
             <LockKeyhole className="mx-auto h-9 w-9 text-[#6B3A25]" />
             <p className="mx-auto mt-3 max-w-xl text-sm font-black leading-7 text-[#311912]">
-              {entry.errorMessage ?? "حرب الطاولات غير مفعّلة حاليًا."}
+              {entry.errorMessage ?? "الميزة غير مفعّلة لهذا الفرع."}
             </p>
           </div>
-        ) : !hasTableQuery ? (
-          <MessageBox message="امسح QR الطاولة للدخول إلى حرب الطاولات" />
-        ) : entry.table ? (
-          <section className="grid gap-3 md:grid-cols-3">
-            <article className="rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] md:col-span-2">
-              <Castle className="h-8 w-8 text-[#6B3A25]" />
-              <p className="mt-4 text-xs font-black text-[#806A5E]">طاولتك</p>
-              <h2 className="mt-1 text-2xl font-black text-[#311912]">{entry.table.label}</h2>
-              <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
-                تم التحقق من أن رمز الطاولة تابع لهذا الفرع.
-              </p>
-            </article>
-            <article className="rounded-2xl border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#4A281D]">
-              <Shield className="h-8 w-8" />
-              <p className="mt-4 text-xs font-black text-[#6B3A25]">حالة اللعبة</p>
-              <h2 className="mt-1 text-xl font-black">{gameStatus}</h2>
-              <p className="mt-3 text-sm font-bold leading-7 text-[#6B3A25]">
-                الدخول للعب سيُفتح قريبًا.
-              </p>
-            </article>
-          </section>
-        ) : (
+        ) : !entry.gameEnabled ? (
+          <div className="rounded-2xl border border-[#E7D7C6] bg-white p-5 text-center shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
+            <LockKeyhole className="mx-auto h-9 w-9 text-[#6B3A25]" />
+            <p className="mx-auto mt-3 max-w-xl text-sm font-black leading-7 text-[#311912]">
+              {entry.errorMessage ?? "اللعبة غير متاحة حاليًا"}
+            </p>
+          </div>
+        ) : hasTableQuery && !entry.table ? (
           <MessageBox message={entry.errorMessage ?? "رمز الطاولة غير صالح لهذا الفرع."} />
+        ) : (
+          <>
+            <section className="grid gap-3 md:grid-cols-3">
+              <article className="rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] md:col-span-2">
+                <Castle className="h-8 w-8 text-[#6B3A25]" />
+                <p className="mt-4 text-xs font-black text-[#806A5E]">
+                  {entry.table ? "طاولتك" : "دخول عام"}
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-[#311912]">
+                  {entry.table?.label ?? "تجربة حرب الطاولات"}
+                </h2>
+                <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
+                  {entry.table
+                    ? "تم التحقق من أن رمز الطاولة تابع لهذا الفرع."
+                    : "يمكنك تجربة الهجوم محليًا بدون حفظ أي نتيجة."}
+                </p>
+              </article>
+              <article className="rounded-2xl border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#4A281D]">
+                <Shield className="h-8 w-8" />
+                <p className="mt-4 text-xs font-black text-[#6B3A25]">حالة اللعبة</p>
+                <h2 className="mt-1 text-xl font-black">{gameStatus}</h2>
+                <p className="mt-3 text-sm font-bold leading-7 text-[#6B3A25]">
+                  التجربة الحالية لا تحفظ نتائج ولا تمنح نقاطًا.
+                </p>
+              </article>
+            </section>
+            <TableWarsDemoGame />
+          </>
         )}
 
-        <section className="rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FCF8F3] text-[#6B3A25]">
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-base font-black text-[#311912]">نسخة تجريبية آمنة</h2>
-              <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
-                لا توجد نقاط ولاء أو مكافآت فعلية في هذه المرحلة، واللعبة لا تستخدم الموقع الجغرافي أو الدفع.
-              </p>
+        {entry.cafeFound && entry.featureEnabled && entry.gameEnabled ? (
+          <section className="rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FCF8F3] text-[#6B3A25]">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-black text-[#311912]">نسخة تجريبية آمنة</h2>
+                <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
+                  لا توجد نقاط ولاء أو مكافآت فعلية في هذه المرحلة، واللعبة لا تستخدم الموقع الجغرافي أو الدفع.
+                </p>
+              </div>
             </div>
-          </div>
-          <button
-            type="button"
-            disabled
-            className="mt-5 h-12 w-full cursor-not-allowed rounded-xl bg-[#311912]/10 px-4 text-sm font-black text-[#6B3A25] opacity-80"
-          >
-            الدخول إلى الجولة — قريبًا
-          </button>
-        </section>
+            <button
+              type="button"
+              disabled
+              className="mt-5 h-12 w-full cursor-not-allowed rounded-xl bg-[#311912]/10 px-4 text-sm font-black text-[#6B3A25] opacity-80"
+            >
+              لا توجد نقاط فعلية
+            </button>
+          </section>
+        ) : null}
       </div>
     </main>
   );

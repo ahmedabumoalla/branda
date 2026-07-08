@@ -9,6 +9,10 @@ import {
   Swords,
   Trophy,
 } from "lucide-react";
+import {
+  disableOwnerTableWarsAction,
+  enableOwnerTableWarsDemoAction,
+} from "@/app/actions/table-wars";
 import type { TableWarsDashboardData, TableWarsRoundSummary } from "@/lib/data/table-wars";
 
 type Props = {
@@ -32,10 +36,10 @@ function LockedTableWarsPage() {
           <LockKeyhole className="h-7 w-7" />
         </span>
         <h1 className="mt-4 text-2xl font-black text-[#311912]">
-          حرب الطاولات غير مفعّلة في باقتك الحالية
+          ألعاب العلامة التجارية غير مفعّلة في باقتك الحالية
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
-          فعّل الميزة من الباقة أو من إعدادات الأدمن لتظهر أدوات اللعبة داخل لوحة التحكم.
+          فعّل الميزة من الباقة أو من إعدادات الأدمن لتظهر أدوات ألعاب العلامة داخل لوحة التحكم.
         </p>
       </div>
     </div>
@@ -73,7 +77,7 @@ export function TableWarsPage({ data, configError }: Props) {
     return (
       <div dir="rtl" className="mx-auto min-h-screen w-full max-w-[1180px] px-3 py-4 sm:px-4 lg:px-5">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-black text-amber-800">
-          {configError ?? "تعذر تحميل حرب الطاولات"}
+          {configError ?? "تعذر تحميل ألعاب العلامة التجارية"}
         </div>
       </div>
     );
@@ -86,9 +90,9 @@ export function TableWarsPage({ data, configError }: Props) {
       <header className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-black text-[#6B3A25]">Branda Play</p>
-          <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">حرب الطاولات</h1>
+          <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">ألعاب العلامة التجارية</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-7 text-[#806A5E]">
-            لعبة جماعية داخل الفرع تحول كل طاولة إلى قلعة وتزيد تفاعل العملاء أثناء الانتظار.
+            مساحة لإدارة التجارب التفاعلية داخل الفرع، تبدأ بلعبة حرب الطاولات.
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9A33F]/35 bg-[#FFF7E3] px-4 py-2 text-xs font-black text-[#6B3A25]">
@@ -103,18 +107,32 @@ export function TableWarsPage({ data, configError }: Props) {
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#4A281D]/10 text-[#4A281D]">
               <Swords className="h-6 w-6" />
             </span>
-            <h2 className="mt-4 text-xl font-black text-[#311912]">كل طاولة قلعة داخل الجولة</h2>
+            <h2 className="mt-4 text-xl font-black text-[#311912]">حرب الطاولات</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              v1 للعرض والتجهيز فقط: لا نقاط ولاء، لا مكافآت فعلية، ولا تشغيل realtime معقد في هذه المرحلة.
+              لعبة جماعية داخل الفرع تحول الطاولات إلى قلاع.
             </p>
           </div>
-          <button
-            type="button"
-            disabled
-            className="h-12 w-full cursor-not-allowed rounded-xl bg-[#311912]/10 px-4 text-sm font-black text-[#6B3A25] opacity-80 lg:w-auto"
-          >
-            بدء جولة — قريبًا
-          </button>
+          <div className="rounded-xl border border-[#F2E7D9] bg-[#FCF8F3] p-4">
+            <p className="text-xs font-black text-[#806A5E]">حالة اللعبة</p>
+            <p className="mt-1 text-xl font-black text-[#311912]">
+              {data.gameEnabled ? "مفعّلة" : "غير مفعّلة"}
+            </p>
+            <form
+              action={data.gameEnabled ? disableOwnerTableWarsAction : enableOwnerTableWarsDemoAction}
+              className="mt-4"
+            >
+              <button
+                type="submit"
+                className={`h-12 w-full rounded-xl px-4 text-sm font-black transition active:scale-[0.98] ${
+                  data.gameEnabled
+                    ? "border border-[#D8C4B3] bg-white text-[#6B3A25]"
+                    : "bg-[#311912] text-white"
+                }`}
+              >
+                {data.gameEnabled ? "تعطيل حرب الطاولات" : "تفعيل حرب الطاولات"}
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 
@@ -132,7 +150,9 @@ export function TableWarsPage({ data, configError }: Props) {
         <article className="rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
           <Shield className="h-6 w-6 text-[#6B3A25]" />
           <p className="mt-4 text-xs font-black text-[#806A5E]">الحالة</p>
-          <p className="mt-1.5 text-xl font-black text-[#311912]">تجريبية</p>
+          <p className="mt-1.5 text-xl font-black text-[#311912]">
+            {data.gameEnabled ? "مفعّلة" : "غير مفعّلة"}
+          </p>
         </article>
         <article className="rounded-2xl border border-[#D9A33F]/35 bg-[#FFF7E3] p-4 text-[#4A281D]">
           <Trophy className="h-6 w-6" />
@@ -188,7 +208,17 @@ export function TableWarsPage({ data, configError }: Props) {
             ))}
           </div>
         ) : (
-          <EmptyState message="لم تُضف طاولات حرب الطاولات بعد. ستظهر روابط QR هنا بعد إنشاء الطاولات." />
+          <div className="space-y-4">
+            <EmptyState message="لم تُضف طاولات حرب الطاولات بعد. أنشئ طاولة تجريبية نشطة لتفعيل ظهور اللعبة في الفرع الإلكتروني." />
+            <form action={enableOwnerTableWarsDemoAction}>
+              <button
+                type="submit"
+                className="h-12 rounded-xl bg-[#311912] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+              >
+                إنشاء طاولة تجريبية نشطة
+              </button>
+            </form>
+          </div>
         )}
       </section>
 

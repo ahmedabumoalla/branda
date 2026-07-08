@@ -24,7 +24,7 @@ export default async function DashboardTableWarsPage() {
     return (
       <TableWarsPage
         data={null}
-        configError="تعذر تحميل حرب الطاولات"
+        configError="تعذر تحميل ألعاب العلامة التجارية"
       />
     );
   }

@@ -572,9 +572,9 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "in_store_table_wars",
-    titleAr: "حرب الطاولات",
+    titleAr: "ألعاب العلامة التجارية",
     titleEn: "Table Wars",
-    descriptionAr: "لعبة جماعية داخل الفرع تحول الطاولات إلى قلاع وتزيد تفاعل العملاء أثناء الانتظار.",
+    descriptionAr: "ألعاب تفاعلية داخل الفرع تزيد تفاعل العملاء أثناء الانتظار، تبدأ بلعبة حرب الطاولات.",
     category: "experience",
     route: "",
     dashboardPath: "/dashboard/table-wars",

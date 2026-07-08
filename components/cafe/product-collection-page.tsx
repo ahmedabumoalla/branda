@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, Swords, X } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
@@ -45,6 +45,7 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 type Props = {
   slug: string;
   view: string;
+  tableWarsEntryHref?: string | null;
 };
 
 const viewInfo: Record<string, { title: string; desc: string }> = {
@@ -70,7 +71,7 @@ function getScore(product: MenuProduct, index: number) {
   return Number(product.price || 0) + (100 - index);
 }
 
-export function ProductCollectionPage({ slug, view }: Props) {
+export function ProductCollectionPage({ slug, view, tableWarsEntryHref }: Props) {
   const searchParams = useSearchParams();
   const { theme, settings, experience, path, previewThemeId, features } = useCafePageContext(slug);
   const copy = getBusinessCopy(settings.businessCategory);
@@ -374,6 +375,30 @@ export function ProductCollectionPage({ slug, view }: Props) {
             <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
           </button>
         </header>
+
+        {view === "popular" && tableWarsEntryHref ? (
+          <section className="overflow-hidden rounded-[28px] border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#311912] shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#6B3A25]">
+                  <Swords className="h-6 w-6" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-black text-[#311912]">ألعب وانت تنتظر</h2>
+                  <p className="mt-1 text-sm font-bold leading-7 text-[#6B3A25]">
+                    ادخل حرب الطاولات ونافس الطاولات داخل الفرع.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={tableWarsEntryHref}
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-[#311912] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+              >
+                دخول حرب الطاولات
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         {categories.length > 1 ? (
           <div className="-mx-4 overflow-x-auto px-4 pb-1">
