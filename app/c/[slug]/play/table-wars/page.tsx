@@ -2,9 +2,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-import { Castle, LockKeyhole, QrCode, Shield, Sparkles, Swords } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Castle, LockKeyhole, QrCode, Shield, Sparkles, Swords } from "lucide-react";
 import { TableWarsConquerGame } from "@/components/cafe/table-wars-conquer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getCafePath } from "@/lib/cafe/theme-links";
 import { getPublicTableWarsEntry } from "@/lib/data/table-wars";
 
 type Props = {
@@ -62,6 +64,10 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
   const cafeName = entry.cafeName ?? "الفرع";
   const hasTableQuery = Boolean(entry.tableCode);
   const gameStatus = entry.currentRound?.statusLabel ?? "بانتظار التجهيز";
+  const previewThemeId = Array.isArray(resolvedSearchParams.previewTheme)
+    ? resolvedSearchParams.previewTheme[0]
+    : resolvedSearchParams.previewTheme;
+  const productsHref = getCafePath(slug, "products/popular", previewThemeId);
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#FCF8F3] px-4 py-6 text-[#311912] sm:py-10">
@@ -73,9 +79,18 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
               <h1 className="mt-4 text-3xl font-black text-[#311912]">حرب الطاولات</h1>
               <p className="mt-2 text-sm font-bold text-[#6B3A25]">{cafeName}</p>
             </div>
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4A281D]/10 text-[#4A281D]">
-              <Swords className="h-7 w-7" />
-            </span>
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4A281D]/10 text-[#4A281D]">
+                <Swords className="h-7 w-7" />
+              </span>
+              <Link
+                href={productsHref}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 py-3 text-sm font-black text-[#6B3A25] transition hover:bg-[#FFF7E3] active:scale-95"
+              >
+                <ArrowRight className="h-4 w-4" />
+                رجوع للمنتجات
+              </Link>
+            </div>
           </div>
           <p className="mt-5 max-w-2xl text-sm font-bold leading-8 text-[#806A5E]">
             كل طاولة تمثل برجًا داخل الفرع. اختر طاولتك، أرسل الجنود عبر الخطوط المتصلة، وحاول السيطرة قبل الخصم.
