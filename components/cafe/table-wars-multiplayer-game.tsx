@@ -23,6 +23,11 @@ type Props = {
   initialSnapshot: TableWarsV2Snapshot;
 };
 
+const POLLING_MS = 1800;
+const MAX_VISUAL_PACKETS = 12;
+const MIN_VISUAL_PACKETS = 4;
+const PACKET_TRAIL_DELAY = 0.045;
+
 function teamLabel(team: TableWarsTeam | "neutral" | null) {
   if (team === "blue") return "الأزرق";
   if (team === "red") return "الأحمر";
@@ -124,8 +129,11 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [message, setMessage] = useState("الجولة متصلة بالخادم.");
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [roadBattleFlash, setRoadBattleFlash] = useState(false);
   const [isSending, startSending] = useTransition();
   const pollingRef = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastRoadBattleEventRef = useRef<string | null>(null);
 
   const cells = useMemo(
     () => [...snapshot.cells].sort((a, b) => a.slotIndex - b.slotIndex),
@@ -134,7 +142,6 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const cellById = useMemo(() => new Map(cells.map((cell) => [cell.id, cell])), [cells]);
   const controlledCellIds = useMemo(() => new Set(snapshot.controlledCellIds), [snapshot.controlledCellIds]);
   const currentPlayer = snapshot.currentPlayer;
-  const selectedCell = selectedCellId ? cellById.get(selectedCellId) ?? null : null;
   const isPlayer = snapshot.role === "player";
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round;
@@ -149,9 +156,20 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }, [slug]);
 
   useEffect(() => {
-    const frame = window.setInterval(() => setNow(Date.now()), 50);
-    return () => window.clearInterval(frame);
-  }, []);
+    if (snapshot.units.length === 0) return;
+
+    function updateFrame() {
+      setNow(Date.now());
+      animationFrameRef.current = window.requestAnimationFrame(updateFrame);
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(updateFrame);
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [snapshot.units.length]);
 
   useEffect(() => {
     const poll = window.setInterval(() => {
@@ -171,10 +189,20 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         .finally(() => {
           pollingRef.current = false;
         });
-    }, 1800);
+    }, POLLING_MS);
 
     return () => window.clearInterval(poll);
   }, [refreshSnapshot]);
+
+  useEffect(() => {
+    const latestRoadBattle = snapshot.events.find((event) => event.eventType === "road_battle");
+    if (!latestRoadBattle || latestRoadBattle.id === lastRoadBattleEventRef.current) return;
+
+    lastRoadBattleEventRef.current = latestRoadBattle.id;
+    setRoadBattleFlash(true);
+    const timeout = window.setTimeout(() => setRoadBattleFlash(false), 900);
+    return () => window.clearTimeout(timeout);
+  }, [snapshot.events]);
 
   function handleCellClick(cell: TableWarsV2Cell) {
     if (!isPlayer) return;
@@ -269,6 +297,12 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         ) : null}
 
         <div className="relative h-[620px] max-h-[74vh] min-h-[540px] bg-[#F7EFE7]">
+          {roadBattleFlash ? (
+            <div className="pointer-events-none absolute inset-x-4 top-4 z-30 rounded-lg border border-amber-200 bg-amber-100/95 px-4 py-3 text-sm font-black text-amber-900 shadow">
+              اشتباك في الطريق
+            </div>
+          ) : null}
+
           <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
             {snapshot.units.flatMap((unit) => {
               const from = cellById.get(unit.fromCellId);
@@ -303,16 +337,18 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
             const progress = unitProgress(unit, now);
             const point = edgePoint(from, to, progress, getLaneOffset(unit));
-            const visualCount = Math.min(10, Math.max(2, Math.ceil(unit.soldiers / 4)));
+            const visualCount = Math.min(MAX_VISUAL_PACKETS, Math.max(MIN_VISUAL_PACKETS, Math.ceil(unit.soldiers / 4)));
 
             return Array.from({ length: visualCount }).flatMap((_, index) => {
-              const trailProgress = progress - index * 0.035;
+              const trailProgress = progress - index * PACKET_TRAIL_DELAY;
               if (trailProgress <= 0 || trailProgress >= 1) return [];
-              const trailPoint = edgePoint(from, to, trailProgress, getLaneOffset(unit) + ((index % 3) - 1) * 0.25);
+              const trailPoint = edgePoint(from, to, trailProgress, getLaneOffset(unit) + ((index % 3) - 1) * 0.3);
               return (
                 <span
                   key={`${unit.id}-${index}`}
-                  className="absolute z-20 h-3 w-3 rounded-full ring-[3px] ring-white/75"
+                  className={`absolute z-20 rounded-full ring-white/75 ${
+                    index === 0 ? "h-3.5 w-3.5 ring-4" : "h-3 w-3 ring-[3px]"
+                  }`}
                   style={{
                     left: `${index === 0 ? point.x : trailPoint.x}%`,
                     top: `${index === 0 ? point.y : trailPoint.y}%`,

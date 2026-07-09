@@ -34,7 +34,7 @@ import type {
 } from "@/lib/table-wars/v2-types";
 
 const TABLE_WARS_FEATURE_KEY = "in_store_table_wars";
-const TABLE_WARS_V2_TOTAL_CELLS = 50;
+const TABLE_WARS_V2_TOTAL_CELLS = 40;
 const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 10;
 const TABLE_WARS_V2_BASE_SOLDIERS = 25;
 const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
@@ -215,16 +215,16 @@ function cellKey(slotIndex: number) {
 function buildCellSeed(round: TableWarsV2Round) {
   return Array.from({ length: TABLE_WARS_V2_TOTAL_CELLS }, (_, index) => {
     const slotIndex = index + 1;
-    const column = index % 10;
-    const row = Math.floor(index / 10);
-    const stagger = row % 2 === 0 ? 0 : 3.5;
+    const column = index % 8;
+    const row = Math.floor(index / 8);
+    const rowOffset = row % 2 === 0 ? 0 : 4;
 
     return {
       cafe_id: round.cafeId,
       round_id: round.id,
       cell_key: cellKey(slotIndex),
       slot_index: slotIndex,
-      x: Math.min(94, 6 + column * 9.8 + stagger),
+      x: Math.min(92, 8 + column * 12 + rowOffset),
       y: 10 + row * 20,
       team: "neutral",
       is_base: false,
@@ -236,7 +236,7 @@ function buildCellSeed(round: TableWarsV2Round) {
 
 function homeSlotsForTeam(team: TableWarsTeam) {
   if (team === "blue") return Array.from({ length: 10 }, (_, index) => index + 1);
-  return Array.from({ length: 10 }, (_, index) => index + 41);
+  return Array.from({ length: 10 }, (_, index) => index + 31);
 }
 
 function emptyTeamCounts(): TableWarsV2TeamCounts {
@@ -415,7 +415,9 @@ async function getRoundCells(round: TableWarsV2Round) {
     .order("slot_index", { ascending: true });
 
   if (error) throw new Error(error.message || "تعذر جلب خلايا حرب الطاولات.");
-  return (Array.isArray(data) ? data : []).map((row) => mapCell(row as Record<string, unknown>));
+  return (Array.isArray(data) ? data : [])
+    .map((row) => mapCell(row as Record<string, unknown>))
+    .filter((cell) => cell.slotIndex <= TABLE_WARS_V2_TOTAL_CELLS);
 }
 
 async function getRoundMovingUnits(round: TableWarsV2Round) {
@@ -833,6 +835,12 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
     getCellById(toCellId),
   ]);
   if (!fromCell || !toCell) throw new Error("Cell not found.");
+  if (
+    fromCell.slotIndex > TABLE_WARS_V2_TOTAL_CELLS ||
+    toCell.slotIndex > TABLE_WARS_V2_TOTAL_CELLS
+  ) {
+    throw new Error("Cell is outside the active table wars map.");
+  }
   if (fromCell.cafeId !== toCell.cafeId || fromCell.roundId !== toCell.roundId) {
     throw new Error("Cells are not in the same round.");
   }
