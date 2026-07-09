@@ -13,7 +13,6 @@ type Tower = {
   maxSoldiers: number;
   x: number;
   y: number;
-  links: string[];
 };
 
 type MovingUnit = {
@@ -24,7 +23,8 @@ type MovingUnit = {
   soldiers: number;
   startedAt: number;
   duration: number;
-  lane: number;
+  laneIndex: number;
+  laneCount: number;
 };
 
 type BattleSpark = {
@@ -35,94 +35,23 @@ type BattleSpark = {
 };
 
 type GameResult = "playing" | "won" | "lost";
+type SendResult = "sent" | "busy" | "invalid";
 
 const ROUND_SECONDS = 180;
-const UNIT_DURATION = 1800;
+const UNIT_DURATION = 2100;
 const COLLISION_DISTANCE = 0.06;
 const SOLDIER_TRAIL_SPACING = 0.045;
 const BATTLE_SPARK_MS = 650;
 
 const initialTowers: Tower[] = [
-  {
-    id: "blue-base",
-    label: "طاولتك",
-    owner: "player",
-    soldiers: 28,
-    maxSoldiers: 56,
-    x: 18,
-    y: 72,
-    links: ["middle-left", "center"],
-  },
-  {
-    id: "middle-left",
-    label: "طاولة 2",
-    owner: "neutral",
-    soldiers: 14,
-    maxSoldiers: 44,
-    x: 28,
-    y: 45,
-    links: ["blue-base", "top-left", "center"],
-  },
-  {
-    id: "top-left",
-    label: "طاولة 3",
-    owner: "neutral",
-    soldiers: 18,
-    maxSoldiers: 46,
-    x: 20,
-    y: 20,
-    links: ["middle-left", "top-center"],
-  },
-  {
-    id: "top-center",
-    label: "طاولة 4",
-    owner: "neutral",
-    soldiers: 22,
-    maxSoldiers: 52,
-    x: 50,
-    y: 15,
-    links: ["top-left", "center", "red-base"],
-  },
-  {
-    id: "center",
-    label: "الوسط",
-    owner: "neutral",
-    soldiers: 20,
-    maxSoldiers: 58,
-    x: 51,
-    y: 49,
-    links: ["blue-base", "middle-left", "top-center", "middle-right", "bottom-right"],
-  },
-  {
-    id: "middle-right",
-    label: "طاولة 6",
-    owner: "neutral",
-    soldiers: 16,
-    maxSoldiers: 44,
-    x: 75,
-    y: 41,
-    links: ["center", "red-base", "bottom-right"],
-  },
-  {
-    id: "red-base",
-    label: "طاولة الخصم",
-    owner: "enemy",
-    soldiers: 30,
-    maxSoldiers: 56,
-    x: 82,
-    y: 20,
-    links: ["top-center", "middle-right"],
-  },
-  {
-    id: "bottom-right",
-    label: "طاولة 8",
-    owner: "enemy",
-    soldiers: 24,
-    maxSoldiers: 50,
-    x: 78,
-    y: 74,
-    links: ["center", "middle-right"],
-  },
+  { id: "blue-base", label: "طاولتك", owner: "player", soldiers: 28, maxSoldiers: 56, x: 18, y: 72 },
+  { id: "middle-left", label: "طاولة 2", owner: "neutral", soldiers: 14, maxSoldiers: 44, x: 28, y: 45 },
+  { id: "top-left", label: "طاولة 3", owner: "neutral", soldiers: 18, maxSoldiers: 46, x: 20, y: 20 },
+  { id: "top-center", label: "طاولة 4", owner: "neutral", soldiers: 22, maxSoldiers: 52, x: 50, y: 15 },
+  { id: "center", label: "الوسط", owner: "neutral", soldiers: 20, maxSoldiers: 58, x: 51, y: 49 },
+  { id: "middle-right", label: "طاولة 6", owner: "neutral", soldiers: 16, maxSoldiers: 44, x: 75, y: 41 },
+  { id: "red-base", label: "طاولة الخصم", owner: "enemy", soldiers: 30, maxSoldiers: 56, x: 82, y: 20 },
+  { id: "bottom-right", label: "طاولة 8", owner: "enemy", soldiers: 24, maxSoldiers: 50, x: 78, y: 74 },
 ];
 
 function ownerClasses(owner: Owner) {
@@ -170,6 +99,43 @@ function canSendFrom(tower: Tower | undefined, owner: "player" | "enemy", minSol
   return Boolean(tower && tower.owner === owner && tower.soldiers >= minSoldiers);
 }
 
+function getAvailableLanes(soldiers: number) {
+  if (soldiers <= 20) return 1;
+  if (soldiers <= 40) return 2;
+  return 3;
+}
+
+function getOutgoingUnits(units: MovingUnit[], towerId: string) {
+  return units.filter((unit) => unit.fromId === towerId);
+}
+
+function getNextLaneIndex(units: MovingUnit[], towerId: string, laneCount: number) {
+  const usedLaneIndexes = new Set(getOutgoingUnits(units, towerId).map((unit) => unit.laneIndex));
+
+  for (let index = 0; index < laneCount; index += 1) {
+    if (!usedLaneIndexes.has(index)) return index;
+  }
+
+  return 0;
+}
+
+function getLaneCapacity(tower: Tower, units: MovingUnit[]) {
+  const activeCapacity = getOutgoingUnits(units, tower.id).reduce(
+    (highest, unit) => Math.max(highest, unit.laneCount),
+    0,
+  );
+
+  return Math.max(getAvailableLanes(tower.soldiers), activeCapacity);
+}
+
+function getLaneOffset(unit: MovingUnit) {
+  return (unit.laneIndex - (unit.laneCount - 1) / 2) * 2.8;
+}
+
+function getDistance(source: Tower, target: Tower) {
+  return Math.hypot(target.x - source.x, target.y - source.y);
+}
+
 function getUnitProgress(unit: MovingUnit, timestamp: number) {
   return Math.min(1, Math.max(0, (timestamp - unit.startedAt) / unit.duration));
 }
@@ -193,20 +159,6 @@ function getEdgePoint(from: Tower, to: Tower, progress: number, lane: number) {
   };
 }
 
-function uniqueLinks(towers: Tower[]) {
-  const seen = new Set<string>();
-  return towers.flatMap((tower) =>
-    tower.links.flatMap((targetId) => {
-      const key = [tower.id, targetId].sort().join("-");
-      if (seen.has(key)) return [];
-      const target = getTower(towers, targetId);
-      if (!target) return [];
-      seen.add(key);
-      return [{ from: tower, to: target }];
-    }),
-  );
-}
-
 function areOpposingUnits(unitA: MovingUnit, unitB: MovingUnit) {
   return (
     unitA.owner !== unitB.owner &&
@@ -223,16 +175,14 @@ export function TableWarsConquerGame() {
   const [now, setNow] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<GameResult>("playing");
-  const [message, setMessage] = useState("اختر طاولة زرقاء ثم اختر طاولة متصلة للهجوم.");
+  const [message, setMessage] = useState("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم.");
   const enemyTimerRef = useRef<number | null>(null);
   const towersRef = useRef(towers);
+  const unitsRef = useRef(units);
   const resultRef = useRef(result);
 
   const playerCount = useMemo(() => towers.filter((tower) => tower.owner === "player").length, [towers]);
   const enemyCount = useMemo(() => towers.filter((tower) => tower.owner === "enemy").length, [towers]);
-  const links = useMemo(() => uniqueLinks(towers), [towers]);
-  const selectedTower = selectedId ? getTower(towers, selectedId) : undefined;
-  const reachableIds = useMemo(() => new Set(selectedTower?.links ?? []), [selectedTower]);
   const timeLeft = Math.max(0, ROUND_SECONDS - elapsed);
 
   const resolveArrival = useCallback((unit: MovingUnit) => {
@@ -254,14 +204,20 @@ export function TableWarsConquerGame() {
   }, []);
 
   const sendUnits = useCallback(
-    (fromId: string, toId: string, owner: "player" | "enemy") => {
+    (fromId: string, toId: string, owner: "player" | "enemy"): SendResult => {
+      if (fromId === toId) return "invalid";
+
       const from = getTower(towersRef.current, fromId);
       const to = getTower(towersRef.current, toId);
       const minSoldiers = owner === "enemy" ? 8 : 2;
-      if (!canSendFrom(from, owner, minSoldiers) || !to || !from?.links.includes(toId)) return false;
+      if (!from || !to || from.owner !== owner || from.soldiers < minSoldiers) return "invalid";
+
+      const laneCount = getLaneCapacity(from, unitsRef.current);
+      const outgoingUnits = getOutgoingUnits(unitsRef.current, fromId);
+      if (outgoingUnits.length >= laneCount) return "busy";
 
       const soldiers = Math.floor(from.soldiers / 2);
-      if (soldiers < 1) return false;
+      if (soldiers < 1) return "invalid";
 
       const createdUnit: MovingUnit = {
         id: `${owner}-${fromId}-${toId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -271,17 +227,23 @@ export function TableWarsConquerGame() {
         soldiers,
         startedAt: Date.now(),
         duration: UNIT_DURATION,
-        lane: (Math.random() - 0.5) * 4,
+        laneIndex: getNextLaneIndex(unitsRef.current, fromId, laneCount),
+        laneCount,
       };
 
-      setTowers((current) => {
-        return current.map((tower) =>
+      setTowers((current) =>
+        current.map((tower) =>
           tower.id === fromId ? { ...tower, soldiers: Math.max(0, tower.soldiers - soldiers) } : tower,
-        );
+        ),
+      );
+
+      setUnits((current) => {
+        const next = [...current, createdUnit];
+        unitsRef.current = next;
+        return next;
       });
 
-      setUnits((current) => [...current, createdUnit]);
-      return true;
+      return "sent";
     },
     [],
   );
@@ -293,7 +255,7 @@ export function TableWarsConquerGame() {
       if (!selectedId) {
         if (tower.owner === "player" && tower.soldiers >= 2) {
           setSelectedId(tower.id);
-          setMessage("اختر طاولة متصلة لإرسال نصف الجنود.");
+          setMessage("اختر أي طاولة أخرى لإرسال نصف الجنود.");
         } else {
           setMessage("اختر طاولة زرقاء فيها جنديان على الأقل.");
         }
@@ -313,48 +275,49 @@ export function TableWarsConquerGame() {
         return;
       }
 
-      if (!source.links.includes(tower.id)) {
-        setMessage("هذه الطاولة غير متصلة بالمصدر.");
+      const sent = sendUnits(source.id, tower.id, "player");
+      if (sent === "sent") {
+        setSelectedId(null);
+        setMessage("انطلقت وحداتك نحو الطاولة الهدف.");
         return;
       }
 
-      const sent = sendUnits(source.id, tower.id, "player");
-      if (sent) {
-        setSelectedId(null);
-        setMessage("انطلقت وحداتك نحو الطاولة الهدف.");
-      } else {
-        setMessage("لا يمكن الإرسال الآن، انتظر زيادة الجنود.");
+      if (sent === "busy") {
+        setMessage("كل خطوط الإرسال مشغولة، انتظر وصول الجنود.");
+        return;
       }
+
+      setMessage("لا يمكن الإرسال الآن، انتظر زيادة الجنود.");
     },
     [result, selectedId, sendUnits, towers],
   );
 
   const enemyMove = useCallback(() => {
     const currentTowers = towersRef.current;
+    const currentUnits = unitsRef.current;
     if (resultRef.current !== "playing") return;
 
     const enemySources = currentTowers
-      .filter((tower) => canSendFrom(tower, "enemy", 8))
+      .filter((tower) => {
+        if (!canSendFrom(tower, "enemy", 8)) return false;
+        return getOutgoingUnits(currentUnits, tower.id).length < getLaneCapacity(tower, currentUnits);
+      })
       .sort((a, b) => b.soldiers - a.soldiers);
 
     for (const source of enemySources) {
-      const candidates = source.links
-        .map((id) => getTower(currentTowers, id))
-        .filter((tower): tower is Tower => Boolean(tower && tower.owner !== "enemy"));
-
+      const candidates = currentTowers.filter((tower) => tower.id !== source.id && tower.owner !== "enemy");
       if (!candidates.length) continue;
 
-      const target =
-        candidates
-          .filter((tower) => tower.owner === "neutral")
-          .sort((a, b) => a.soldiers - b.soldiers)[0] ??
-        candidates
-          .filter((tower) => tower.owner === "player")
-          .sort((a, b) => a.soldiers - b.soldiers)[0] ??
-        candidates[0];
+      const bySoldiersThenDistance = (a: Tower, b: Tower) =>
+        a.soldiers - b.soldiers || getDistance(source, a) - getDistance(source, b);
 
-      if (target && sendUnits(source.id, target.id, "enemy")) {
-        setMessage("الخصم تحرك نحو طاولة قريبة.");
+      const target =
+        candidates.filter((tower) => tower.owner === "neutral").sort(bySoldiersThenDistance)[0] ??
+        candidates.filter((tower) => tower.owner === "player").sort(bySoldiersThenDistance)[0] ??
+        candidates.sort(bySoldiersThenDistance)[0];
+
+      if (target && sendUnits(source.id, target.id, "enemy") === "sent") {
+        setMessage("الخصم تحرك نحو طاولة ضعيفة.");
         return;
       }
     }
@@ -364,16 +327,21 @@ export function TableWarsConquerGame() {
     setTowers(initialTowers);
     setSelectedId(null);
     setUnits([]);
+    unitsRef.current = [];
     setBattleSparks([]);
     setNow(Date.now());
     setElapsed(0);
     setResult("playing");
-    setMessage("اختر طاولة زرقاء ثم اختر طاولة متصلة للهجوم.");
+    setMessage("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم.");
   }
 
   useEffect(() => {
     towersRef.current = towers;
   }, [towers]);
+
+  useEffect(() => {
+    unitsRef.current = units;
+  }, [units]);
 
   useEffect(() => {
     resultRef.current = result;
@@ -383,7 +351,7 @@ export function TableWarsConquerGame() {
     if (result !== "playing") return;
 
     const growthTimer = window.setInterval(() => {
-      setElapsed((value) => value + 1);
+      setElapsed((value) => value + 2);
       setTowers((current) =>
         current.map((tower) => {
           if (tower.owner === "neutral" || tower.soldiers >= tower.maxSoldiers) return tower;
@@ -391,7 +359,7 @@ export function TableWarsConquerGame() {
           return { ...tower, soldiers: Math.min(tower.maxSoldiers, tower.soldiers + 1) };
         }),
       );
-    }, 1000);
+    }, 2000);
 
     return () => window.clearInterval(growthTimer);
   }, [result]);
@@ -434,7 +402,7 @@ export function TableWarsConquerGame() {
             const from = getTower(currentTowers, unitA.fromId);
             const to = getTower(currentTowers, unitA.toId);
             if (from && to) {
-              const point = getEdgePoint(from, to, progressA, (unitA.lane - unitB.lane) / 2);
+              const point = getEdgePoint(from, to, progressA, (getLaneOffset(unitA) - getLaneOffset(unitB)) / 2);
               newSparks.push({
                 id: `battle-${frameNow}-${unitA.id}-${unitB.id}`,
                 x: point.x,
@@ -463,7 +431,9 @@ export function TableWarsConquerGame() {
           setMessage("اشتباك في الطريق!");
         }
 
-        return active.filter((unit) => !removedIds.has(unit.id) && unit.soldiers > 0);
+        const next = active.filter((unit) => !removedIds.has(unit.id) && unit.soldiers > 0);
+        unitsRef.current = next;
+        return next;
       });
     }, 32);
 
@@ -541,19 +511,27 @@ export function TableWarsConquerGame() {
       </div>
 
       <div className="relative mx-auto h-[560px] max-h-[70vh] min-h-[500px] w-full bg-[#F7EFE7] sm:h-[620px]">
-        <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
-          {links.map(({ from, to }) => {
-            const sourceColor = ownerClasses(from.owner).line;
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          {units.flatMap((unit) => {
+            const from = getTower(towers, unit.fromId);
+            const to = getTower(towers, unit.toId);
+            if (!from || !to) return [];
+
+            const laneOffset = getLaneOffset(unit);
+            const start = getEdgePoint(from, to, 0, laneOffset);
+            const end = getEdgePoint(from, to, 1, laneOffset);
+
             return (
               <line
-                key={`${from.id}-${to.id}`}
-                x1={`${from.x}%`}
-                y1={`${from.y}%`}
-                x2={`${to.x}%`}
-                y2={`${to.y}%`}
-                stroke={sourceColor}
-                strokeOpacity="0.42"
-                strokeWidth="5"
+                key={unit.id}
+                x1={`${start.x}%`}
+                y1={`${start.y}%`}
+                x2={`${end.x}%`}
+                y2={`${end.y}%`}
+                stroke={ownerClasses(unit.owner).line}
+                strokeDasharray="7 9"
+                strokeOpacity="0.38"
+                strokeWidth="4"
                 strokeLinecap="round"
               />
             );
@@ -568,12 +546,13 @@ export function TableWarsConquerGame() {
           const baseProgress = getUnitProgress(unit, now);
           const visualCount = getVisualCount(unit.soldiers);
           const classes = ownerClasses(unit.owner);
+          const laneOffset = getLaneOffset(unit);
 
           return Array.from({ length: visualCount }).flatMap((_, index) => {
             const progress = baseProgress - index * SOLDIER_TRAIL_SPACING;
             if (progress <= 0 || progress >= 1) return [];
 
-            const staggerLane = unit.lane + ((index % 3) - 1) * 0.35;
+            const staggerLane = laneOffset + ((index % 3) - 1) * 0.35;
             const point = getEdgePoint(from, to, progress, staggerLane);
             const isLead = index === 0;
 
@@ -600,14 +579,16 @@ export function TableWarsConquerGame() {
               transform: "translate(-50%, -50%) scale(1.05)",
             }}
           >
-            ×
+            *
           </span>
         ))}
 
         {towers.map((tower) => {
           const selected = selectedId === tower.id;
-          const reachable = reachableIds.has(tower.id);
+          const canTarget = Boolean(selectedId && selectedId !== tower.id);
           const classes = ownerClasses(tower.owner);
+          const laneCount = getLaneCapacity(tower, units);
+          const usedLaneCount = Math.min(laneCount, getOutgoingUnits(units, tower.id).length);
 
           return (
             <button
@@ -617,13 +598,26 @@ export function TableWarsConquerGame() {
               className={`absolute z-10 flex h-[74px] w-[74px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-4 text-center transition active:scale-95 sm:h-[86px] sm:w-[86px] ${
                 classes.tower
               } ${selected ? "ring-4 ring-[#D9A33F] ring-offset-4 ring-offset-[#F7EFE7]" : ""} ${
-                reachable ? "scale-105 ring-4 ring-white/80" : ""
+                canTarget ? "scale-105 ring-4 ring-white/80" : ""
               }`}
               style={{ left: `${tower.x}%`, top: `${tower.y}%` }}
               aria-label={`${tower.label} ${ownerLabel(tower.owner)} ${tower.soldiers} جندي`}
             >
               <span className="text-[10px] font-black leading-none sm:text-xs">{tower.label}</span>
               <span className="mt-1 text-xl font-black leading-none sm:text-2xl">{tower.soldiers}</span>
+              <span
+                className="pointer-events-none absolute -bottom-7 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-white/75 px-2 py-1 shadow-[0_6px_16px_rgba(49,25,18,0.12)]"
+                aria-hidden="true"
+              >
+                {Array.from({ length: laneCount }).map((_, index) => (
+                  <span
+                    key={`${tower.id}-lane-${index}`}
+                    className={`h-1.5 w-1.5 rounded-full border ${
+                      index < usedLaneCount ? "border-[#311912] bg-[#311912]" : "border-[#806A5E] bg-white"
+                    }`}
+                  />
+                ))}
+              </span>
             </button>
           );
         })}
@@ -657,7 +651,10 @@ export function TableWarsConquerGame() {
           <div>
             <p className="text-sm font-black text-[#311912]">{message}</p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              اختر طاولة زرقاء ثم اختر طاولة متصلة للهجوم.
+              اختر طاولة زرقاء ثم اختر أي طاولة للهجوم. عدد النقاط تحت الطاولة يوضح عدد خطوط الإرسال المتاحة.
+            </p>
+            <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
+              كلما زاد عدد الجنود زادت خطوط الإرسال حتى 3 خطوط.
             </p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
               قد تتقاتل الجنود في الطريق إذا تقابلت من اتجاهين متعاكسين.
