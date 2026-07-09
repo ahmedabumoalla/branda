@@ -1,28 +1,32 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, type PointerEvent } from "react";
 import type {
+  TableWarsTeam,
   TableWarsV2Cell,
-  TableWarsV2Event,
+  TableWarsV2CellTeam,
   TableWarsV2Player,
   TableWarsV2Snapshot,
-  TableWarsV2Unit,
 } from "@/lib/table-wars/v2-types";
+import type {
+  TableWarsRealtimeLiteEvent,
+  TableWarsRealtimeLiteMoveEvent,
+} from "@/lib/table-wars/realtime-lite";
 
 type Props = {
   cells: TableWarsV2Cell[];
-  units: TableWarsV2Unit[];
-  events: TableWarsV2Event[];
-  selectedCellId: string | null;
-  controlledCellIds: string[];
-  capturedCellIds: string[];
+  players: TableWarsV2Player[];
+  externalEvents: TableWarsRealtimeLiteEvent[];
   currentPlayer: TableWarsV2Player | null;
   isPlayer: boolean;
-  isSending: boolean;
-  isRoundFinished: boolean;
-  winnerMessage: string | null;
+  isHost: boolean;
+  realtimeReady: boolean;
+  initialRoundFinished: boolean;
+  initialWinnerMessage: string | null;
   role: TableWarsV2Snapshot["role"];
-  onCellClick: (cell: TableWarsV2Cell) => void;
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void;
+  onRoundFinished: (winningTeam: TableWarsTeam) => void;
+  onMessage: (message: string) => void;
 };
 
 type Size = {
@@ -31,10 +35,19 @@ type Size = {
   dpr: number;
 };
 
-type GameState = Omit<Props, "onCellClick"> & {
-  controlledCellSet: Set<string>;
-  capturedCellSet: Set<string>;
-  cellById: Map<string, TableWarsV2Cell>;
+type LiteCell = TableWarsV2Cell & {
+  localUpdatedAt: number;
+};
+
+type MovingUnit = {
+  id: string;
+  fromCellId: string;
+  toCellId: string;
+  team: TableWarsTeam;
+  soldiers: number;
+  startedAtMs: number;
+  travelMs: number;
+  laneIndex: number;
 };
 
 type Spark = {
@@ -50,28 +63,133 @@ type CapturePulse = {
   startedAt: number;
 };
 
+type GameState = {
+  cells: LiteCell[];
+  cellById: Map<string, LiteCell>;
+  players: TableWarsV2Player[];
+  currentPlayer: TableWarsV2Player | null;
+  isPlayer: boolean;
+  isHost: boolean;
+  realtimeReady: boolean;
+  role: TableWarsV2Snapshot["role"];
+  selectedCellId: string | null;
+  movingUnits: MovingUnit[];
+  finished: boolean;
+  winningTeam: TableWarsTeam | null;
+  winnerMessage: string | null;
+  lastGrowthAt: number;
+  lastAiMoveAtByTeam: Partial<Record<TableWarsTeam, number>>;
+  seenEvents: Set<string>;
+};
+
 const MAX_DPR = 2;
-const POLISH_GOLD = "#D9A33F";
+const TOTAL_CELLS = 10;
+const TEAM_SEATS = 2;
+const BASE_SOLDIERS = 25;
+const DEFAULT_SOLDIERS = 10;
+const MAX_SOLDIERS = 60;
+const MIN_SEND_SOLDIERS = 2;
+const GROWTH_INTERVAL_MS = 2_200;
+const AI_INTERVAL_MS = 1_700;
+const SPARK_MS = 700;
+const CAPTURE_PULSE_MS = 900;
+const PACKET_TRAIL_DELAY = 0.04;
 const BLUE = "#38BDF8";
 const RED = "#FB7185";
 const NEUTRAL = "#B9A48F";
+const GOLD = "#D9A33F";
 const TABLE_TOP = "#6B3A25";
 const TABLE_EDGE = "#3A2118";
 const FLOOR = "#F4E7D7";
-const PACKET_TRAIL_DELAY = 0.038;
-const CAPTURE_PULSE_MS = 900;
-const SPARK_MS = 700;
 
-function teamColor(team: TableWarsV2Cell["team"] | TableWarsV2Unit["team"]) {
+const HOME_SLOTS: Record<TableWarsTeam, number[]> = {
+  blue: [1, 2],
+  red: [9, 10],
+};
+
+function teamColor(team: TableWarsV2CellTeam) {
   if (team === "blue") return BLUE;
   if (team === "red") return RED;
   return NEUTRAL;
 }
 
-function teamShadow(team: TableWarsV2Cell["team"]) {
-  if (team === "blue") return "rgba(56,189,248,0.38)";
-  if (team === "red") return "rgba(251,113,133,0.34)";
-  return "rgba(107,58,37,0.14)";
+function oppositeTeam(team: TableWarsTeam): TableWarsTeam {
+  return team === "blue" ? "red" : "blue";
+}
+
+function eventId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+}
+
+function winnerMessage(team: TableWarsTeam | null) {
+  if (team === "blue") return "فاز الفريق الأزرق";
+  if (team === "red") return "فاز الفريق الأحمر";
+  return "انتهت الجولة";
+}
+
+function homeTeamForSlot(slotIndex: number): TableWarsTeam | null {
+  if (HOME_SLOTS.blue.includes(slotIndex)) return "blue";
+  if (HOME_SLOTS.red.includes(slotIndex)) return "red";
+  return null;
+}
+
+function realPlayersForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
+  return players.filter((player) => player.team === team && player.role === "player" && player.customerId);
+}
+
+function hasAiSeat(players: TableWarsV2Player[], team: TableWarsTeam) {
+  return realPlayersForTeam(players, team).length < TEAM_SEATS;
+}
+
+function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) {
+  return cells
+    .filter((cell) => cell.slotIndex <= TOTAL_CELLS)
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .map((cell) => {
+      const homeTeam = homeTeamForSlot(cell.slotIndex);
+      const shouldFillAiSeat = homeTeam && !cell.assignedPlayerId && hasAiSeat(players, homeTeam);
+      const team = shouldFillAiSeat ? homeTeam : cell.team;
+      return {
+        ...cell,
+        team,
+        isBase: cell.isBase || Boolean(shouldFillAiSeat),
+        soldiers: shouldFillAiSeat && cell.team === "neutral" ? BASE_SOLDIERS : Math.max(DEFAULT_SOLDIERS, cell.soldiers),
+        localUpdatedAt: Date.now(),
+      };
+    });
+}
+
+function makeCellMap(cells: LiteCell[]) {
+  return new Map(cells.map((cell) => [cell.id, cell]));
+}
+
+function createInitialState(props: Props): GameState {
+  const cells = normalizeCells(props.cells, props.players);
+  return {
+    cells,
+    cellById: makeCellMap(cells),
+    players: props.players,
+    currentPlayer: props.currentPlayer,
+    isPlayer: props.isPlayer,
+    isHost: props.isHost,
+    realtimeReady: props.realtimeReady,
+    role: props.role,
+    selectedCellId: null,
+    movingUnits: [],
+    finished: props.initialRoundFinished,
+    winningTeam: null,
+    winnerMessage: props.initialWinnerMessage,
+    lastGrowthAt: Date.now(),
+    lastAiMoveAtByTeam: {},
+    seenEvents: new Set(),
+  };
+}
+
+function updateCellMap(state: GameState) {
+  state.cellById = makeCellMap(state.cells);
 }
 
 function percentToPoint(cell: TableWarsV2Cell, size: Size) {
@@ -84,24 +202,29 @@ function percentToPoint(cell: TableWarsV2Cell, size: Size) {
 function tableSize(size: Size) {
   const base = Math.min(size.width, size.height);
   return {
-    width: Math.max(54, Math.min(82, base * 0.15)),
-    height: Math.max(40, Math.min(58, base * 0.105)),
+    width: Math.max(60, Math.min(94, base * 0.19)),
+    height: Math.max(44, Math.min(66, base * 0.13)),
   };
 }
 
-function unitProgress(unit: TableWarsV2Unit, now: number) {
-  const startedAt = unit.startedAt ? Date.parse(unit.startedAt) : now;
-  const arrivesAt = unit.arrivesAt ? Date.parse(unit.arrivesAt) : startedAt + 1;
-  const duration = Math.max(1, arrivesAt - startedAt);
-  const raw = Math.min(1, Math.max(0, (now - startedAt) / duration));
+function distanceBetween(from: TableWarsV2Cell, to: TableWarsV2Cell) {
+  return Math.hypot(to.x - from.x, to.y - from.y);
+}
+
+function travelMs(from: TableWarsV2Cell, to: TableWarsV2Cell) {
+  return Math.round(900 + distanceBetween(from, to) * 14);
+}
+
+function unitProgress(unit: MovingUnit, now: number) {
+  const raw = Math.min(1, Math.max(0, (now - unit.startedAtMs) / Math.max(1, unit.travelMs)));
   return raw * raw * (3 - 2 * raw);
 }
 
-function laneOffset(from: { x: number; y: number }, to: { x: number; y: number }, unit: TableWarsV2Unit) {
+function laneOffset(from: { x: number; y: number }, to: { x: number; y: number }, laneIndex: number) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.max(1, Math.hypot(dx, dy));
-  const offset = (unit.laneIndex - 1) * 8;
+  const offset = (laneIndex - 1) * 9;
   return {
     x: (-dy / length) * offset,
     y: (dx / length) * offset,
@@ -142,6 +265,254 @@ function roundRect(
   ctx.closePath();
 }
 
+function canCurrentPlayerControl(state: GameState, cell: LiteCell) {
+  const player = state.currentPlayer;
+  if (!state.isPlayer || !player || state.finished) return false;
+  if (cell.id === player.baseCellId || cell.assignedPlayerId === player.id) return true;
+  return cell.team === player.team && !cell.assignedPlayerId;
+}
+
+function canAiControl(state: GameState, cell: LiteCell, team: TableWarsTeam) {
+  return state.isHost && hasAiSeat(state.players, team) && cell.team === team && !cell.assignedPlayerId;
+}
+
+function applyMove(state: GameState, event: TableWarsRealtimeLiteMoveEvent) {
+  if (state.seenEvents.has(event.eventId)) return false;
+  state.seenEvents.add(event.eventId);
+
+  const from = state.cellById.get(event.fromCellId);
+  const to = state.cellById.get(event.toCellId);
+  if (!from || !to || state.finished) return false;
+  if (from.team !== event.team || from.soldiers < MIN_SEND_SOLDIERS) return false;
+
+  const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.min(event.soldiers, Math.floor(from.soldiers / 2)));
+  from.soldiers = Math.max(0, from.soldiers - soldiers);
+  from.localUpdatedAt = Date.now();
+  state.movingUnits.push({
+    id: event.eventId,
+    fromCellId: event.fromCellId,
+    toCellId: event.toCellId,
+    team: event.team,
+    soldiers,
+    startedAtMs: Date.parse(event.startedAt),
+    travelMs: event.travelMs,
+    laneIndex: 1 + (state.movingUnits.length % 3),
+  });
+  return true;
+}
+
+function emitMove(
+  state: GameState,
+  type: "player_move" | "ai_move",
+  from: LiteCell,
+  to: LiteCell,
+  soldiers: number,
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+) {
+  const event: TableWarsRealtimeLiteMoveEvent = {
+    type,
+    eventId: eventId(type),
+    fromCellId: from.id,
+    toCellId: to.id,
+    team: from.team as TableWarsTeam,
+    soldiers,
+    startedAt: new Date().toISOString(),
+    travelMs: travelMs(from, to),
+  };
+  applyMove(state, event);
+  onLocalEvent(event);
+}
+
+function resolveArrival(
+  state: GameState,
+  unit: MovingUnit,
+  capturePulses: Map<string, CapturePulse>,
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+) {
+  const target = state.cellById.get(unit.toCellId);
+  if (!target) return;
+
+  if (target.team === unit.team) {
+    target.soldiers = Math.min(MAX_SOLDIERS, target.soldiers + unit.soldiers);
+  } else if (unit.soldiers > target.soldiers) {
+    const survivors = unit.soldiers - target.soldiers;
+    target.team = unit.team;
+    target.assignedPlayerId = target.isBase ? target.assignedPlayerId : null;
+    target.soldiers = Math.min(MAX_SOLDIERS, survivors);
+    target.localUpdatedAt = Date.now();
+    capturePulses.set(target.id, { id: target.id, startedAt: performance.now() });
+    if (state.isHost) {
+      onLocalEvent({
+        type: "capture",
+        eventId: eventId("capture"),
+        cellId: target.id,
+        team: target.team,
+        soldiers: target.soldiers,
+        occurredAt: new Date().toISOString(),
+      });
+    }
+  } else if (unit.soldiers < target.soldiers) {
+    target.soldiers -= unit.soldiers;
+  } else {
+    target.soldiers = 0;
+    if (target.team === "neutral") target.assignedPlayerId = null;
+  }
+
+  target.localUpdatedAt = Date.now();
+}
+
+function resolveRoadBattles(
+  state: GameState,
+  size: Size,
+  sparks: Spark[],
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+) {
+  const now = Date.now();
+  const removed = new Set<string>();
+
+  for (let indexA = 0; indexA < state.movingUnits.length; indexA += 1) {
+    const unitA = state.movingUnits[indexA];
+    if (!unitA || removed.has(unitA.id)) continue;
+
+    for (let indexB = indexA + 1; indexB < state.movingUnits.length; indexB += 1) {
+      const unitB = state.movingUnits[indexB];
+      if (!unitB || removed.has(unitB.id)) continue;
+      if (unitA.team === unitB.team) continue;
+      if (unitA.fromCellId !== unitB.toCellId || unitA.toCellId !== unitB.fromCellId) continue;
+
+      const progressA = unitProgress(unitA, now);
+      const progressB = unitProgress(unitB, now);
+      if (Math.abs(progressA - (1 - progressB)) > 0.07) continue;
+
+      const from = state.cellById.get(unitA.fromCellId);
+      const to = state.cellById.get(unitA.toCellId);
+      if (from && to) {
+        const fromPoint = percentToPoint(from, size);
+        const toPoint = percentToPoint(to, size);
+        sparks.push({
+          id: eventId("battle-spark"),
+          x: (fromPoint.x + toPoint.x) / 2,
+          y: (fromPoint.y + toPoint.y) / 2,
+          startedAt: performance.now(),
+          color: GOLD,
+        });
+      }
+
+      if (unitA.soldiers > unitB.soldiers) {
+        unitA.soldiers -= unitB.soldiers;
+        removed.add(unitB.id);
+      } else if (unitB.soldiers > unitA.soldiers) {
+        unitB.soldiers -= unitA.soldiers;
+        removed.add(unitA.id);
+      } else {
+        removed.add(unitA.id);
+        removed.add(unitB.id);
+      }
+
+      if (state.isHost) {
+        onLocalEvent({
+          type: "battle",
+          eventId: eventId("battle"),
+          fromCellId: unitA.fromCellId,
+          toCellId: unitA.toCellId,
+          occurredAt: new Date().toISOString(),
+        });
+      }
+      break;
+    }
+  }
+
+  if (removed.size > 0) {
+    state.movingUnits = state.movingUnits.filter((unit) => !removed.has(unit.id));
+  }
+}
+
+function growCells(state: GameState, now: number) {
+  if (now - state.lastGrowthAt < GROWTH_INTERVAL_MS) return;
+  state.lastGrowthAt = now;
+  for (const cell of state.cells) {
+    if (cell.team !== "neutral" && cell.soldiers < MAX_SOLDIERS) {
+      cell.soldiers += 1;
+    }
+  }
+}
+
+function checkWinner(state: GameState) {
+  if (state.finished || state.cells.length === 0) return null;
+  const firstTeam = state.cells[0]?.team;
+  if (firstTeam !== "blue" && firstTeam !== "red") return null;
+  return state.cells.every((cell) => cell.team === firstTeam) ? firstTeam : null;
+}
+
+function chooseAiMove(state: GameState, team: TableWarsTeam, now: number) {
+  if (!state.isHost || state.finished || !hasAiSeat(state.players, team)) return null;
+  const lastMoveAt = state.lastAiMoveAtByTeam[team] ?? 0;
+  if (now - lastMoveAt < AI_INTERVAL_MS + (team === "red" ? 450 : 0)) return null;
+
+  const sources = state.cells
+    .filter((cell) => canAiControl(state, cell, team) && cell.soldiers >= 8)
+    .sort((a, b) => b.soldiers - a.soldiers || a.slotIndex - b.slotIndex);
+  const source = sources[0];
+  if (!source) return null;
+
+  const target = state.cells
+    .filter((cell) => cell.id !== source.id && cell.team !== team)
+    .sort((a, b) => a.soldiers - b.soldiers || distanceBetween(source, a) - distanceBetween(source, b))[0];
+  if (!target) return null;
+
+  state.lastAiMoveAtByTeam[team] = now;
+  return {
+    source,
+    target,
+    soldiers: Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2)),
+  };
+}
+
+function applyExternalEvent(
+  state: GameState,
+  event: TableWarsRealtimeLiteEvent,
+  capturePulses: Map<string, CapturePulse>,
+  sparks: Spark[],
+  size: Size,
+) {
+  if (event.type === "player_move" || event.type === "ai_move") {
+    applyMove(state, event);
+    return;
+  }
+  if (state.seenEvents.has(event.eventId)) return;
+  state.seenEvents.add(event.eventId);
+
+  if (event.type === "capture") {
+    const cell = state.cellById.get(event.cellId);
+    if (!cell) return;
+    cell.team = event.team;
+    cell.soldiers = event.soldiers;
+    cell.localUpdatedAt = Date.now();
+    capturePulses.set(cell.id, { id: cell.id, startedAt: performance.now() });
+    return;
+  }
+  if (event.type === "battle") {
+    const from = state.cellById.get(event.fromCellId);
+    const to = state.cellById.get(event.toCellId);
+    if (!from || !to) return;
+    const fromPoint = percentToPoint(from, size);
+    const toPoint = percentToPoint(to, size);
+    sparks.push({
+      id: event.eventId,
+      x: (fromPoint.x + toPoint.x) / 2,
+      y: (fromPoint.y + toPoint.y) / 2,
+      startedAt: performance.now(),
+      color: GOLD,
+    });
+    return;
+  }
+  if (event.type === "round_finished") {
+    state.finished = true;
+    state.winningTeam = event.winningTeam;
+    state.winnerMessage = winnerMessage(event.winningTeam);
+  }
+}
+
 function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
   const gradient = ctx.createLinearGradient(0, 0, size.width, size.height);
   gradient.addColorStop(0, "#FAF2E8");
@@ -151,10 +522,10 @@ function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
   ctx.fillRect(0, 0, size.width, size.height);
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
+  ctx.globalAlpha = 0.16;
   ctx.strokeStyle = "#B9906F";
   ctx.lineWidth = 1;
-  const tile = Math.max(34, size.width / 9);
+  const tile = Math.max(34, size.width / 8);
   for (let x = -tile; x < size.width + tile; x += tile) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -169,8 +540,8 @@ function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
   }
   ctx.restore();
 
-  drawZoneGlow(ctx, size.width * 0.18, size.height * 0.28, size.width * 0.44, "rgba(56,189,248,0.16)");
-  drawZoneGlow(ctx, size.width * 0.82, size.height * 0.72, size.width * 0.46, "rgba(251,113,133,0.14)");
+  drawZoneGlow(ctx, size.width * 0.18, size.height * 0.32, size.width * 0.52, "rgba(56,189,248,0.16)");
+  drawZoneGlow(ctx, size.width * 0.82, size.height * 0.68, size.width * 0.52, "rgba(251,113,133,0.14)");
 
   ctx.save();
   ctx.strokeStyle = "rgba(107,58,37,0.18)";
@@ -178,9 +549,9 @@ function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
   ctx.setLineDash([8, 14]);
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(size.width * 0.12, size.height * 0.62);
-  ctx.bezierCurveTo(size.width * 0.32, size.height * 0.45, size.width * 0.36, size.height * 0.76, size.width * 0.52, size.height * 0.56);
-  ctx.bezierCurveTo(size.width * 0.66, size.height * 0.38, size.width * 0.75, size.height * 0.42, size.width * 0.9, size.height * 0.58);
+  ctx.moveTo(size.width * 0.14, size.height * 0.76);
+  ctx.bezierCurveTo(size.width * 0.28, size.height * 0.52, size.width * 0.4, size.height * 0.72, size.width * 0.52, size.height * 0.5);
+  ctx.bezierCurveTo(size.width * 0.62, size.height * 0.32, size.width * 0.72, size.height * 0.48, size.width * 0.86, size.height * 0.24);
   ctx.stroke();
   ctx.restore();
 }
@@ -194,14 +565,14 @@ function drawZoneGlow(ctx: CanvasRenderingContext2D, x: number, y: number, radiu
 }
 
 function drawMovement(ctx: CanvasRenderingContext2D, state: GameState, size: Size, now: number) {
-  for (const unit of state.units) {
+  for (const unit of state.movingUnits) {
     const fromCell = state.cellById.get(unit.fromCellId);
     const toCell = state.cellById.get(unit.toCellId);
     if (!fromCell || !toCell) continue;
 
     const from = percentToPoint(fromCell, size);
     const to = percentToPoint(toCell, size);
-    const offset = laneOffset(from, to, unit);
+    const offset = laneOffset(from, to, unit.laneIndex);
     const color = teamColor(unit.team);
     const progress = unitProgress(unit, now);
 
@@ -244,7 +615,7 @@ function drawMovement(ctx: CanvasRenderingContext2D, state: GameState, size: Siz
 
 function drawTable(
   ctx: CanvasRenderingContext2D,
-  cell: TableWarsV2Cell,
+  cell: LiteCell,
   state: GameState,
   size: Size,
   now: number,
@@ -253,44 +624,36 @@ function drawTable(
   const point = percentToPoint(cell, size);
   const dimensions = tableSize(size);
   const selected = state.selectedCellId === cell.id;
-  const controlled = state.controlledCellSet.has(cell.id);
+  const controlled = canCurrentPlayerControl(state, cell);
   const color = teamColor(cell.team);
-  const aura = teamShadow(cell.team);
   const isOwnBase = state.currentPlayer?.baseCellId === cell.id && cell.assignedPlayerId === state.currentPlayer.id;
-  const isTargetPreview = Boolean(state.selectedCellId && state.selectedCellId !== cell.id);
+  const targetPreview = Boolean(state.selectedCellId && state.selectedCellId !== cell.id);
   const pulse = 0.5 + Math.sin(now / 150) * 0.5;
 
   ctx.save();
   ctx.translate(point.x, point.y);
-
-  ctx.shadowColor = aura;
-  ctx.shadowBlur = selected ? 26 : 18;
-  ctx.fillStyle = aura;
+  ctx.shadowColor = cell.team === "blue" ? "rgba(56,189,248,0.38)" : cell.team === "red" ? "rgba(251,113,133,0.34)" : "rgba(107,58,37,0.14)";
+  ctx.shadowBlur = selected ? 28 : 18;
+  ctx.fillStyle = ctx.shadowColor;
   ctx.beginPath();
-  ctx.ellipse(0, dimensions.height * 0.14, dimensions.width * 0.78, dimensions.height * 0.7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, dimensions.height * 0.14, dimensions.width * 0.82, dimensions.height * 0.74, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  if (selected) {
-    ctx.strokeStyle = POLISH_GOLD;
-    ctx.globalAlpha = 0.52 + pulse * 0.34;
-    ctx.lineWidth = 4;
+  if (selected || targetPreview) {
+    ctx.strokeStyle = selected ? GOLD : "rgba(255,255,255,0.86)";
+    ctx.globalAlpha = selected ? 0.58 + pulse * 0.34 : 0.8;
+    ctx.lineWidth = selected ? 5 : 3;
     ctx.beginPath();
-    ctx.ellipse(0, 0, dimensions.width * 0.78 + pulse * 8, dimensions.height * 0.75 + pulse * 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, dimensions.width * 0.82 + (selected ? pulse * 8 : 0), dimensions.height * 0.78, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.globalAlpha = 1;
-  } else if (isTargetPreview) {
-    ctx.strokeStyle = "rgba(255,255,255,0.84)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, dimensions.width * 0.72, dimensions.height * 0.68, 0, 0, Math.PI * 2);
-    ctx.stroke();
   }
 
   const capture = capturePulses.get(cell.id);
   if (capture) {
-    const progress = Math.min(1, (now - capture.startedAt) / CAPTURE_PULSE_MS);
-    ctx.strokeStyle = POLISH_GOLD;
+    const progress = Math.min(1, (performance.now() - capture.startedAt) / CAPTURE_PULSE_MS);
+    ctx.strokeStyle = GOLD;
     ctx.globalAlpha = 1 - progress;
     ctx.lineWidth = 5;
     ctx.beginPath();
@@ -299,51 +662,39 @@ function drawTable(
     ctx.globalAlpha = 1;
   }
 
-  drawChair(ctx, -dimensions.width * 0.52, -dimensions.height * 0.16, dimensions, color);
-  drawChair(ctx, dimensions.width * 0.52, -dimensions.height * 0.16, dimensions, color);
-  drawChair(ctx, -dimensions.width * 0.28, dimensions.height * 0.58, dimensions, color);
-  drawChair(ctx, dimensions.width * 0.28, dimensions.height * 0.58, dimensions, color);
+  drawChair(ctx, -dimensions.width * 0.54, -dimensions.height * 0.16, dimensions, color);
+  drawChair(ctx, dimensions.width * 0.54, -dimensions.height * 0.16, dimensions, color);
+  drawChair(ctx, -dimensions.width * 0.3, dimensions.height * 0.58, dimensions, color);
+  drawChair(ctx, dimensions.width * 0.3, dimensions.height * 0.58, dimensions, color);
 
   ctx.fillStyle = TABLE_EDGE;
-  roundRect(ctx, -dimensions.width * 0.48, -dimensions.height * 0.34, dimensions.width * 0.96, dimensions.height * 0.76, 14);
+  roundRect(ctx, -dimensions.width * 0.5, -dimensions.height * 0.34, dimensions.width, dimensions.height * 0.78, 14);
   ctx.fill();
 
   const topGradient = ctx.createLinearGradient(0, -dimensions.height * 0.38, 0, dimensions.height * 0.42);
   topGradient.addColorStop(0, "#8B5737");
   topGradient.addColorStop(1, TABLE_TOP);
   ctx.fillStyle = topGradient;
-  roundRect(ctx, -dimensions.width * 0.44, -dimensions.height * 0.38, dimensions.width * 0.88, dimensions.height * 0.7, 12);
+  roundRect(ctx, -dimensions.width * 0.45, -dimensions.height * 0.38, dimensions.width * 0.9, dimensions.height * 0.72, 12);
   ctx.fill();
 
   ctx.strokeStyle = color;
   ctx.lineWidth = cell.team === "neutral" ? 3 : 5;
-  roundRect(ctx, -dimensions.width * 0.44, -dimensions.height * 0.38, dimensions.width * 0.88, dimensions.height * 0.7, 12);
+  roundRect(ctx, -dimensions.width * 0.45, -dimensions.height * 0.38, dimensions.width * 0.9, dimensions.height * 0.72, 12);
   ctx.stroke();
 
-  if (cell.isBase) {
-    drawCastleCrown(ctx, dimensions, color);
-  }
-
-  if (controlled) {
-    ctx.fillStyle = POLISH_GOLD;
-    ctx.beginPath();
-    ctx.moveTo(-dimensions.width * 0.46, -dimensions.height * 0.52);
-    ctx.lineTo(-dimensions.width * 0.32, -dimensions.height * 0.64);
-    ctx.lineTo(-dimensions.width * 0.18, -dimensions.height * 0.52);
-    ctx.lineTo(-dimensions.width * 0.32, -dimensions.height * 0.4);
-    ctx.closePath();
-    ctx.fill();
-  }
+  if (cell.isBase) drawCastleCrown(ctx, dimensions, color);
+  if (controlled) drawControlMarker(ctx, dimensions);
 
   ctx.fillStyle = "#FFFDF9";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `900 ${Math.max(18, dimensions.height * 0.45)}px Arial`;
+  ctx.font = `900 ${Math.max(18, dimensions.height * 0.46)}px Arial`;
   ctx.fillText(String(cell.soldiers), 0, -1);
 
   ctx.fillStyle = "rgba(255,255,255,0.82)";
   ctx.font = `900 ${Math.max(9, dimensions.height * 0.22)}px Arial`;
-  ctx.fillText(String(cell.slotIndex), 0, dimensions.height * 0.23);
+  ctx.fillText(String(cell.slotIndex), 0, dimensions.height * 0.24);
 
   if (isOwnBase && state.currentPlayer?.displayName) {
     drawNameTag(ctx, state.currentPlayer.displayName, dimensions);
@@ -374,7 +725,7 @@ function drawCastleCrown(
   dimensions: { width: number; height: number },
   color: string,
 ) {
-  const top = -dimensions.height * 0.62;
+  const top = -dimensions.height * 0.64;
   ctx.save();
   ctx.fillStyle = color;
   ctx.strokeStyle = "#FFFDF9";
@@ -393,15 +744,21 @@ function drawCastleCrown(
   ctx.restore();
 }
 
-function drawNameTag(
-  ctx: CanvasRenderingContext2D,
-  name: string,
-  dimensions: { width: number; height: number },
-) {
-  const label = name.length > 14 ? `${name.slice(0, 13)}…` : name;
-  const width = Math.min(128, Math.max(72, label.length * 8));
-  const y = -dimensions.height * 1.02;
+function drawControlMarker(ctx: CanvasRenderingContext2D, dimensions: { width: number; height: number }) {
+  ctx.fillStyle = GOLD;
+  ctx.beginPath();
+  ctx.moveTo(-dimensions.width * 0.48, -dimensions.height * 0.54);
+  ctx.lineTo(-dimensions.width * 0.33, -dimensions.height * 0.66);
+  ctx.lineTo(-dimensions.width * 0.18, -dimensions.height * 0.54);
+  ctx.lineTo(-dimensions.width * 0.33, -dimensions.height * 0.42);
+  ctx.closePath();
+  ctx.fill();
+}
 
+function drawNameTag(ctx: CanvasRenderingContext2D, name: string, dimensions: { width: number; height: number }) {
+  const label = name.length > 14 ? `${name.slice(0, 13)}...` : name;
+  const width = Math.min(128, Math.max(72, label.length * 8));
+  const y = -dimensions.height * 1.08;
   ctx.save();
   ctx.fillStyle = "rgba(255,253,249,0.94)";
   ctx.strokeStyle = "rgba(107,58,37,0.18)";
@@ -421,7 +778,6 @@ function drawSparks(ctx: CanvasRenderingContext2D, sparks: Spark[], now: number)
   for (const spark of sparks) {
     const progress = Math.min(1, (now - spark.startedAt) / SPARK_MS);
     if (progress >= 1) continue;
-
     ctx.save();
     ctx.translate(spark.x, spark.y);
     ctx.globalAlpha = 1 - progress;
@@ -449,65 +805,34 @@ function drawWinnerBanner(ctx: CanvasRenderingContext2D, size: Size, message: st
   ctx.save();
   ctx.fillStyle = "rgba(49,25,18,0.54)";
   ctx.fillRect(0, 0, size.width, size.height);
-
   const cardWidth = Math.min(size.width - 36, 360);
   const cardHeight = 150;
   const x = (size.width - cardWidth) / 2;
   const y = (size.height - cardHeight) / 2;
-
   ctx.shadowColor = "rgba(49,25,18,0.28)";
   ctx.shadowBlur = 32;
   ctx.fillStyle = "#FFFDF9";
   roundRect(ctx, x, y, cardWidth, cardHeight, 18);
   ctx.fill();
   ctx.shadowBlur = 0;
-
-  ctx.fillStyle = POLISH_GOLD;
+  ctx.fillStyle = GOLD;
   ctx.beginPath();
   ctx.arc(size.width / 2, y + 36, 18, 0, Math.PI * 2);
   ctx.fill();
-
   ctx.fillStyle = "#311912";
   ctx.font = "900 24px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(message ?? "انتهت الجولة", size.width / 2, y + 78);
-
   ctx.fillStyle = "#806A5E";
   ctx.font = "800 14px Arial";
   ctx.fillText("انتهت الجولة", size.width / 2, y + 110);
   ctx.restore();
 }
 
-function drawScene(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
-  size: Size,
-  now: number,
-  sparks: Spark[],
-  capturePulses: Map<string, CapturePulse>,
-) {
-  drawBackground(ctx, size);
-  drawMovement(ctx, state, size, now);
-
-  const sortedCells = [...state.cells].sort((a, b) => a.y - b.y || a.slotIndex - b.slotIndex);
-  for (const cell of sortedCells) {
-    drawTable(ctx, cell, state, size, now, capturePulses);
-  }
-
-  drawSparks(ctx, sparks, now);
-
-  if (!state.isPlayer && state.role === "spectator" && !state.isRoundFinished) {
-    drawStatusChip(ctx, size, "مشاهدة الجولة");
-  }
-
-  if (state.isRoundFinished) {
-    drawWinnerBanner(ctx, size, state.winnerMessage);
-  }
-}
-
-function drawStatusChip(ctx: CanvasRenderingContext2D, size: Size, label: string) {
+function drawStatusChip(ctx: CanvasRenderingContext2D, size: Size, state: GameState) {
   ctx.save();
+  const label = state.realtimeReady ? (state.isHost ? "المضيف" : "متصل") : "بدون تزامن";
   const width = 126;
   const x = size.width - width - 16;
   const y = 16;
@@ -524,101 +849,97 @@ function drawStatusChip(ctx: CanvasRenderingContext2D, size: Size, label: string
   ctx.restore();
 }
 
-function nearestCellAt(
-  point: { x: number; y: number },
-  cells: TableWarsV2Cell[],
+function drawScene(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
   size: Size,
+  now: number,
+  sparks: Spark[],
+  capturePulses: Map<string, CapturePulse>,
 ) {
-  const dimensions = tableSize(size);
-  let nearest: { cell: TableWarsV2Cell; distance: number } | null = null;
+  drawBackground(ctx, size);
+  drawMovement(ctx, state, size, now);
+  const sortedCells = [...state.cells].sort((a, b) => a.y - b.y || a.slotIndex - b.slotIndex);
+  for (const cell of sortedCells) {
+    drawTable(ctx, cell, state, size, now, capturePulses);
+  }
+  drawSparks(ctx, sparks, performance.now());
+  drawStatusChip(ctx, size, state);
+  if (state.finished) drawWinnerBanner(ctx, size, state.winnerMessage);
+}
 
+function nearestCellAt(point: { x: number; y: number }, cells: LiteCell[], size: Size) {
+  const dimensions = tableSize(size);
+  let nearest: { cell: LiteCell; distance: number } | null = null;
   for (const cell of cells) {
     const center = percentToPoint(cell, size);
     const dx = Math.abs(point.x - center.x);
     const dy = Math.abs(point.y - center.y);
-    if (dx > dimensions.width * 0.62 || dy > dimensions.height * 0.82) continue;
-
+    if (dx > dimensions.width * 0.7 || dy > dimensions.height * 0.9) continue;
     const distance = Math.hypot(point.x - center.x, point.y - center.y);
-    if (!nearest || distance < nearest.distance) {
-      nearest = { cell, distance };
-    }
+    if (!nearest || distance < nearest.distance) nearest = { cell, distance };
   }
-
   return nearest?.cell ?? null;
 }
 
-function eventCellId(event: TableWarsV2Event, key: string) {
-  const value = event.payload[key];
-  return typeof value === "string" ? value : null;
-}
-
 export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
-  onCellClick,
+  onLocalEvent,
+  onRoundFinished,
+  onMessage,
   ...props
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef<GameState>({
-    ...props,
-    controlledCellSet: new Set(props.controlledCellIds),
-    capturedCellSet: new Set(props.capturedCellIds),
-    cellById: new Map(props.cells.map((cell) => [cell.id, cell])),
-  });
+  const stateRef = useRef<GameState>(createInitialState({ ...props, onLocalEvent, onRoundFinished, onMessage }));
   const sizeRef = useRef<Size>({ width: 0, height: 0, dpr: 1 });
   const sparksRef = useRef<Spark[]>([]);
   const capturePulsesRef = useRef<Map<string, CapturePulse>>(new Map());
-  const seenRoadBattleEventsRef = useRef<Set<string>>(new Set());
-  const onCellClickRef = useRef(onCellClick);
-
-  const controlledKey = useMemo(() => props.controlledCellIds.join("|"), [props.controlledCellIds]);
-  const capturedKey = useMemo(() => props.capturedCellIds.join("|"), [props.capturedCellIds]);
-
-  useEffect(() => {
-    onCellClickRef.current = onCellClick;
-  }, [onCellClick]);
+  const onLocalEventRef = useRef(onLocalEvent);
+  const onRoundFinishedRef = useRef(onRoundFinished);
+  const onMessageRef = useRef(onMessage);
+  const externalEventsKey = useMemo(
+    () => props.externalEvents.map((event) => event.eventId).join("|"),
+    [props.externalEvents],
+  );
 
   useEffect(() => {
-    stateRef.current = {
-      ...props,
-      controlledCellSet: new Set(props.controlledCellIds),
-      capturedCellSet: new Set(props.capturedCellIds),
-      cellById: new Map(props.cells.map((cell) => [cell.id, cell])),
-    };
-  }, [props, controlledKey, capturedKey]);
-
-  useEffect(() => {
-    const now = performance.now();
-    for (const id of props.capturedCellIds) {
-      capturePulsesRef.current.set(id, { id, startedAt: now });
-    }
-  }, [capturedKey, props.capturedCellIds]);
+    onLocalEventRef.current = onLocalEvent;
+    onRoundFinishedRef.current = onRoundFinished;
+    onMessageRef.current = onMessage;
+  }, [onLocalEvent, onRoundFinished, onMessage]);
 
   useEffect(() => {
     const state = stateRef.current;
-    const now = performance.now();
+    const normalizedCells = normalizeCells(props.cells, props.players);
+    state.cells = normalizedCells;
+    state.cellById = makeCellMap(normalizedCells);
+    state.players = props.players;
+    state.currentPlayer = props.currentPlayer;
+    state.isPlayer = props.isPlayer;
+    state.isHost = props.isHost;
+    state.realtimeReady = props.realtimeReady;
+    state.role = props.role;
+    state.finished = props.initialRoundFinished || state.finished;
+    state.winnerMessage = props.initialWinnerMessage ?? state.winnerMessage;
+    state.selectedCellId = state.selectedCellId && state.cellById.has(state.selectedCellId) ? state.selectedCellId : null;
+  }, [
+    props.cells,
+    props.players,
+    props.currentPlayer,
+    props.isPlayer,
+    props.isHost,
+    props.realtimeReady,
+    props.role,
+    props.initialRoundFinished,
+    props.initialWinnerMessage,
+  ]);
 
-    for (const event of props.events) {
-      if (event.eventType !== "road_battle" || seenRoadBattleEventsRef.current.has(event.id)) continue;
-      seenRoadBattleEventsRef.current.add(event.id);
-
-      const fromCellId = eventCellId(event, "fromCellId");
-      const toCellId = eventCellId(event, "toCellId");
-      const from = fromCellId ? state.cellById.get(fromCellId) : null;
-      const to = toCellId ? state.cellById.get(toCellId) : null;
-      if (!from || !to) continue;
-
-      const size = sizeRef.current;
-      const fromPoint = percentToPoint(from, size);
-      const toPoint = percentToPoint(to, size);
-      sparksRef.current.push({
-        id: event.id,
-        x: (fromPoint.x + toPoint.x) / 2,
-        y: (fromPoint.y + toPoint.y) / 2,
-        startedAt: now,
-        color: POLISH_GOLD,
-      });
+  useEffect(() => {
+    const state = stateRef.current;
+    for (const event of props.externalEvents) {
+      applyExternalEvent(state, event, capturePulsesRef.current, sparksRef.current, sizeRef.current);
     }
-  }, [props.events]);
+  }, [externalEventsKey, props.externalEvents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -654,24 +975,61 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+    const canvasElement = canvas;
     let frameId = 0;
-    function frame(now: number) {
-      const ctx = canvas?.getContext("2d");
+
+    function frame() {
+      const ctx = canvasElement.getContext("2d");
       if (!ctx) return;
 
+      const now = Date.now();
+      const state = stateRef.current;
       const size = sizeRef.current;
       ctx.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
       ctx.clearRect(0, 0, size.width, size.height);
 
-      sparksRef.current = sparksRef.current.filter((spark) => now - spark.startedAt < SPARK_MS);
-      for (const [id, pulse] of capturePulsesRef.current.entries()) {
-        if (now - pulse.startedAt >= CAPTURE_PULSE_MS) {
-          capturePulsesRef.current.delete(id);
+      growCells(state, now);
+      resolveRoadBattles(state, size, sparksRef.current, onLocalEventRef.current);
+
+      const arrivedUnits = state.movingUnits.filter((unit) => now - unit.startedAtMs >= unit.travelMs);
+      if (arrivedUnits.length > 0) {
+        state.movingUnits = state.movingUnits.filter((unit) => now - unit.startedAtMs < unit.travelMs);
+        for (const unit of arrivedUnits) {
+          resolveArrival(state, unit, capturePulsesRef.current, onLocalEventRef.current);
         }
       }
 
-      drawScene(ctx, stateRef.current, size, Date.now(), sparksRef.current, capturePulsesRef.current);
+      for (const team of ["blue", "red"] as const) {
+        const aiMove = chooseAiMove(state, team, now);
+        if (aiMove) {
+          emitMove(state, "ai_move", aiMove.source, aiMove.target, aiMove.soldiers, onLocalEventRef.current);
+        }
+      }
+
+      const winningTeam = checkWinner(state);
+      if (winningTeam) {
+        state.finished = true;
+        state.winningTeam = winningTeam;
+        state.winnerMessage = winnerMessage(winningTeam);
+        if (state.isHost) {
+          const event: TableWarsRealtimeLiteEvent = {
+            type: "round_finished",
+            eventId: eventId("round-finished"),
+            winningTeam,
+            occurredAt: new Date().toISOString(),
+          };
+          onLocalEventRef.current(event);
+          onRoundFinishedRef.current(winningTeam);
+        }
+      }
+
+      sparksRef.current = sparksRef.current.filter((spark) => performance.now() - spark.startedAt < SPARK_MS);
+      for (const [id, pulse] of capturePulsesRef.current.entries()) {
+        if (performance.now() - pulse.startedAt >= CAPTURE_PULSE_MS) capturePulsesRef.current.delete(id);
+      }
+
+      updateCellMap(state);
+      drawScene(ctx, state, size, now, sparksRef.current, capturePulsesRef.current);
       frameId = window.requestAnimationFrame(frame);
     }
 
@@ -679,9 +1037,13 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     return () => window.cancelAnimationFrame(frameId);
   }, []);
 
-  function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
+  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
     const state = stateRef.current;
-    if (!state.isPlayer || state.isSending || state.isRoundFinished) return;
+    if (!state.isPlayer || state.finished) return;
+    if (!state.realtimeReady) {
+      onMessageRef.current("الاتصال اللحظي غير جاهز، لا يمكن إرسال حركة الآن.");
+      return;
+    }
 
     const rect = event.currentTarget.getBoundingClientRect();
     const cell = nearestCellAt(
@@ -692,7 +1054,39 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
       state.cells,
       sizeRef.current,
     );
-    if (cell) onCellClickRef.current(cell);
+    if (!cell) return;
+
+    if (!state.selectedCellId) {
+      if (!canCurrentPlayerControl(state, cell)) {
+        onMessageRef.current("اختر طاولتك الأساسية أو طاولة غير مخصصة يملكها فريقك.");
+        return;
+      }
+      if (cell.soldiers < MIN_SEND_SOLDIERS) {
+        onMessageRef.current("تحتاج الطاولة إلى جنديين على الأقل.");
+        return;
+      }
+      state.selectedCellId = cell.id;
+      onMessageRef.current("اختر الهدف.");
+      return;
+    }
+
+    if (state.selectedCellId === cell.id) {
+      state.selectedCellId = null;
+      onMessageRef.current("تم إلغاء الاختيار.");
+      return;
+    }
+
+    const source = state.cellById.get(state.selectedCellId);
+    if (!source || source.team !== state.currentPlayer?.team) {
+      state.selectedCellId = null;
+      onMessageRef.current("اختر مصدرًا صالحًا.");
+      return;
+    }
+
+    const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2));
+    emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);
+    state.selectedCellId = null;
+    onMessageRef.current(cell.team === source.team ? "الدعم في الطريق." : "الهجوم في الطريق.");
   }
 
   return (

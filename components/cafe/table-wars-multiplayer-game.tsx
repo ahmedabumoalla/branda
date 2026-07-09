@@ -3,30 +3,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Activity, Eye, Radio, Swords, Users } from "lucide-react";
 import {
-  getTableWarsV2SnapshotAction,
+  finishTableWarsV2RealtimeLiteRoundAction,
   joinTableWarsV2Team,
-  sendTableWarsV2UnitsAction,
-  tickTableWarsV2Action,
 } from "@/app/actions/table-wars";
 import { TableWarsLegends } from "@/components/cafe/table-wars-legends";
 import { TableWarsCanvasGame } from "@/components/cafe/table-wars-canvas-game";
 import { TableWarsTeamPicker } from "@/components/cafe/table-wars-team-picker";
+import {
+  createTableWarsRealtimeLiteChannel,
+  type TableWarsRealtimeLiteEvent,
+} from "@/lib/table-wars/realtime-lite";
 import type {
   TableWarsTeam,
-  TableWarsV2Cell,
   TableWarsV2Event,
   TableWarsV2Snapshot,
-  TableWarsV2Unit,
 } from "@/lib/table-wars/v2-types";
 
 type Props = {
   slug: string;
   initialSnapshot: TableWarsV2Snapshot;
 };
-
-const POLLING_MS = 1800;
-const OPTIMISTIC_TRAVEL_MS = 1_000;
-const TABLE_WARS_VISUAL_MIN_SOLDIERS = 2;
 
 function teamLabel(team: TableWarsTeam | "neutral" | null) {
   if (team === "blue") return "الأزرق";
@@ -77,170 +73,106 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
-  const [message, setMessage] = useState("الجولة متصلة بالخادم.");
+  const [message, setMessage] = useState("الجولة تعمل بتزامن لحظي خفيف.");
   const [error, setError] = useState<string | null>(null);
-  const [optimisticUnits, setOptimisticUnits] = useState<TableWarsV2Unit[]>([]);
-  const [capturedCellIds, setCapturedCellIds] = useState<Set<string>>(() => new Set());
-  const [roadBattleFlash, setRoadBattleFlash] = useState(false);
-  const [isSending, startSending] = useTransition();
-  const pollingRef = useRef(false);
-  const lastRoadBattleEventRef = useRef<string | null>(null);
-  const previousCellTeamsRef = useRef<Map<string, TableWarsV2Cell["team"]>>(new Map());
+  const [realtimeReady, setRealtimeReady] = useState(false);
+  const [realtimeEvents, setRealtimeEvents] = useState<TableWarsRealtimeLiteEvent[]>([]);
+  const [, startFinishing] = useTransition();
+  const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
+  const finishedSaveRef = useRef(false);
 
   const cells = useMemo(
     () => [...snapshot.cells].sort((a, b) => a.slotIndex - b.slotIndex),
     [snapshot.cells],
   );
-  const cellById = useMemo(() => new Map(cells.map((cell) => [cell.id, cell])), [cells]);
-  const controlledCellIds = useMemo(() => new Set(snapshot.controlledCellIds), [snapshot.controlledCellIds]);
   const currentPlayer = snapshot.currentPlayer;
   const isRoundFinished = snapshot.roundEnded || snapshot.round?.status === "finished";
   const isPlayer = snapshot.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
   const visibleEvents = snapshot.events.slice(0, 5);
-  const visibleUnits = useMemo(() => {
-    const realUnitIds = new Set(snapshot.units.map((unit) => unit.id));
-    const currentTime = Date.now();
-    const activeOptimisticUnits = optimisticUnits.filter((unit) => {
-      if (realUnitIds.has(unit.id)) return false;
-      const arrivesAt = unit.arrivesAt ? Date.parse(unit.arrivesAt) : currentTime;
-      return arrivesAt > currentTime;
-    });
-
-    return [...snapshot.units, ...activeOptimisticUnits];
-  }, [optimisticUnits, snapshot.units]);
-
-  const refreshSnapshot = useCallback(async () => {
-    const nextSnapshot = await getTableWarsV2SnapshotAction(slug);
-    setSnapshot(nextSnapshot);
-    setSelectedCellId((current) =>
-      current && nextSnapshot.controlledCellIds.includes(current) ? current : null,
-    );
-  }, [slug]);
+  const hostPlayer = useMemo(
+    () =>
+      snapshot.players
+        .filter((player) => player.role === "player" && player.customerId)
+        .sort((a, b) => {
+          const aTime = a.joinedAt ? Date.parse(a.joinedAt) : 0;
+          const bTime = b.joinedAt ? Date.parse(b.joinedAt) : 0;
+          return aTime - bTime || a.id.localeCompare(b.id);
+        })[0] ?? null,
+    [snapshot.players],
+  );
+  const isHost = Boolean(currentPlayer && hostPlayer && currentPlayer.id === hostPlayer.id);
 
   useEffect(() => {
-    if (isRoundFinished) return;
-
-    const poll = window.setInterval(() => {
-      if (pollingRef.current) return;
-      pollingRef.current = true;
-      tickTableWarsV2Action()
-        .then((nextSnapshot) => {
-          setSnapshot(nextSnapshot);
-          setSelectedCellId((current) =>
-            current && nextSnapshot.controlledCellIds.includes(current) ? current : null,
-          );
-          setError(null);
-        })
-        .catch(() => {
-          void refreshSnapshot().catch(() => undefined);
-        })
-        .finally(() => {
-          pollingRef.current = false;
-        });
-    }, POLLING_MS);
-
-    return () => window.clearInterval(poll);
-  }, [isRoundFinished, refreshSnapshot]);
-
-  useEffect(() => {
-    const latestRoadBattle = snapshot.events.find((event) => event.eventType === "road_battle");
-    if (!latestRoadBattle || latestRoadBattle.id === lastRoadBattleEventRef.current) return;
-
-    lastRoadBattleEventRef.current = latestRoadBattle.id;
-    setRoadBattleFlash(true);
-    const timeout = window.setTimeout(() => setRoadBattleFlash(false), 900);
-    return () => window.clearTimeout(timeout);
-  }, [snapshot.events]);
-
-  useEffect(() => {
-    const changedCellIds: string[] = [];
-
-    for (const cell of cells) {
-      const previousTeam = previousCellTeamsRef.current.get(cell.id);
-      if (previousTeam && previousTeam !== cell.team) {
-        changedCellIds.push(cell.id);
-      }
-      previousCellTeamsRef.current.set(cell.id, cell.team);
-    }
-
-    if (changedCellIds.length === 0) return;
-
-    setCapturedCellIds(new Set(changedCellIds));
-    const timeout = window.setTimeout(() => setCapturedCellIds(new Set()), 950);
-    return () => window.clearTimeout(timeout);
-  }, [cells]);
-
-  function handleCellClick(cell: TableWarsV2Cell) {
-    if (!isPlayer) return;
-    setError(null);
-
-    if (!selectedCellId) {
-      if (!controlledCellIds.has(cell.id)) {
-        setMessage("اختر قلعتك أو خلية تابعة لفريقك.");
-        return;
-      }
-      if (cell.soldiers < 2) {
-        setMessage("تحتاج الخلية إلى جنديين على الأقل.");
-        return;
-      }
-      setSelectedCellId(cell.id);
-      setMessage("اختر الهدف.");
+    if (!snapshot.round?.id || isRoundFinished) {
+      realtimeChannelRef.current?.close();
+      realtimeChannelRef.current = null;
+      setRealtimeReady(false);
       return;
     }
 
-    if (selectedCellId === cell.id) {
-      setSelectedCellId(null);
-      setMessage("تم إلغاء الاختيار.");
+    const channel = createTableWarsRealtimeLiteChannel({
+      roundId: snapshot.round.id,
+      cafeSlug: snapshot.cafeSlug,
+      onEvent: (event) => {
+        setRealtimeEvents((current) => [...current.slice(-80), event]);
+      },
+      onStatus: (status) => {
+        setRealtimeReady(status === "ready");
+        if (status === "ready") {
+          setMessage("الاتصال اللحظي جاهز.");
+        } else if (status === "error") {
+          setMessage("تعذر تشغيل الاتصال اللحظي لهذه الجولة.");
+        }
+      },
+    });
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      channel.close();
+      if (realtimeChannelRef.current === channel) {
+        realtimeChannelRef.current = null;
+      }
+      setRealtimeReady(false);
+    };
+  }, [isRoundFinished, snapshot.cafeSlug, snapshot.round?.id]);
+
+  const handleLocalRealtimeEvent = useCallback((event: TableWarsRealtimeLiteEvent) => {
+    if (event.type === "battle") {
+      setMessage("اشتباك في الطريق.");
+    } else if (event.type === "capture") {
+      setMessage("تمت السيطرة على طاولة.");
+    } else if (event.type === "round_finished") {
+      setMessage("انتهت الجولة.");
+    }
+
+    const channel = realtimeChannelRef.current;
+    if (!channel) {
+      setMessage("الاتصال اللحظي غير جاهز، لن تصل الحركة لباقي اللاعبين.");
       return;
     }
+    void channel.send(event);
+  }, []);
 
-    const sourceCell = cellById.get(selectedCellId);
-    const relationMessage = cell.team === snapshot.team ? "تم إرسال الدعم." : "تم إطلاق الهجوم.";
-    const optimisticUnit =
-      sourceCell && snapshot.team && currentPlayer && snapshot.round
-        ? {
-            id: `optimistic-${sourceCell.id}-${cell.id}-${Date.now()}`,
-            cafeId: snapshot.cafeId,
-            roundId: snapshot.round.id,
-            fromCellId: sourceCell.id,
-            toCellId: cell.id,
-            team: snapshot.team,
-            ownerPlayerId: currentPlayer.id,
-            soldiers: Math.max(TABLE_WARS_VISUAL_MIN_SOLDIERS, Math.floor(sourceCell.soldiers / 2)),
-            startedAt: new Date().toISOString(),
-            arrivesAt: new Date(Date.now() + OPTIMISTIC_TRAVEL_MS).toISOString(),
-            laneIndex: 1,
-            status: "moving" as const,
-          }
-        : null;
-
-    if (optimisticUnit) {
-      setOptimisticUnits((current) => [...current.slice(-2), optimisticUnit]);
-      setMessage(cell.team === snapshot.team ? "الدعم في الطريق." : "الهجوم في الطريق.");
-    }
-
-    startSending(() => {
-      void sendTableWarsV2UnitsAction({
-        fromCellId: selectedCellId,
-        toCellId: cell.id,
-      })
-        .then((result) => {
-          setSnapshot(result.snapshot);
-          setOptimisticUnits([]);
-          setSelectedCellId(null);
-          setMessage(relationMessage);
-        })
-        .catch((sendError) => {
-          if (optimisticUnit) {
-            setOptimisticUnits((current) => current.filter((unit) => unit.id !== optimisticUnit.id));
-          }
-          setError(sendError instanceof Error ? sendError.message : "تعذر إرسال الجنود.");
-        });
-    });
-  }
+  const handleRealtimeRoundFinished = useCallback(
+    (winningTeam: TableWarsTeam) => {
+      if (finishedSaveRef.current) return;
+      finishedSaveRef.current = true;
+      startFinishing(() => {
+        void finishTableWarsV2RealtimeLiteRoundAction(slug, winningTeam)
+          .then((nextSnapshot) => {
+            setSnapshot(nextSnapshot);
+            setError(null);
+          })
+          .catch((finishError) => {
+            finishedSaveRef.current = false;
+            setError(finishError instanceof Error ? finishError.message : "تعذر حفظ نتيجة الجولة.");
+          });
+      });
+    },
+    [slug],
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -295,25 +227,20 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         ) : null}
 
         <div className="relative">
-          {roadBattleFlash ? (
-            <div className="pointer-events-none absolute inset-x-4 top-4 z-30 rounded-lg border border-amber-200 bg-amber-100/95 px-4 py-3 text-sm font-black text-amber-900 shadow">
-              اشتباك في الطريق
-            </div>
-          ) : null}
           <TableWarsCanvasGame
             cells={cells}
-            units={visibleUnits}
-            events={snapshot.events}
-            selectedCellId={selectedCellId}
-            controlledCellIds={snapshot.controlledCellIds}
-            capturedCellIds={[...capturedCellIds]}
+            players={snapshot.players}
+            externalEvents={realtimeEvents}
             currentPlayer={currentPlayer}
             isPlayer={isPlayer}
-            isSending={isSending}
-            isRoundFinished={isRoundFinished}
-            winnerMessage={snapshot.winnerMessage}
+            isHost={isHost}
+            realtimeReady={realtimeReady}
+            initialRoundFinished={isRoundFinished}
+            initialWinnerMessage={snapshot.winnerMessage}
             role={snapshot.role}
-            onCellClick={handleCellClick}
+            onLocalEvent={handleLocalRealtimeEvent}
+            onRoundFinished={handleRealtimeRoundFinished}
+            onMessage={setMessage}
           />
         </div>
       </section>
@@ -354,12 +281,12 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
               <span className="text-[#311912]">{cells.length}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-[#FCF8F3] p-3 text-sm font-bold">
-              <span className="text-[#806A5E]">وحدات متحركة</span>
-              <span className="text-[#311912]">{visibleUnits.length}</span>
+              <span className="text-[#806A5E]">أحداث لحظية</span>
+              <span className="text-[#311912]">{realtimeEvents.length}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-[#FCF8F3] p-3 text-sm font-bold">
-              <span className="text-[#806A5E]">خلايا تتحكم بها</span>
-              <span className="text-[#311912]">{snapshot.controlledCellIds.length}</span>
+              <span className="text-[#806A5E]">المضيف</span>
+              <span className="text-[#311912]">{isHost ? "أنت" : hostPlayer?.displayName ?? "غير متاح"}</span>
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-[#FFF7E3] p-3 text-xs font-black text-[#6B3A25]">

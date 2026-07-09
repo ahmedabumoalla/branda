@@ -35,8 +35,8 @@ import type {
 } from "@/lib/table-wars/v2-types";
 
 const TABLE_WARS_FEATURE_KEY = "in_store_table_wars";
-const TABLE_WARS_V2_TOTAL_CELLS = 20;
-const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 5;
+const TABLE_WARS_V2_TOTAL_CELLS = 10;
+const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 2;
 const TABLE_WARS_V2_BASE_SOLDIERS = 25;
 const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
 const TABLE_WARS_V2_MAX_SOLDIERS = 60;
@@ -215,26 +215,16 @@ function cellKey(slotIndex: number) {
 
 function cellPosition(slotIndex: number) {
   const positions: Record<number, { x: number; y: number }> = {
-    1: { x: 18, y: 78 },
-    2: { x: 12, y: 62 },
-    3: { x: 22, y: 46 },
-    4: { x: 14, y: 30 },
-    5: { x: 28, y: 16 },
-    6: { x: 40, y: 70 },
-    7: { x: 36, y: 52 },
-    8: { x: 44, y: 34 },
-    9: { x: 50, y: 84 },
-    10: { x: 52, y: 18 },
-    11: { x: 58, y: 66 },
-    12: { x: 62, y: 48 },
-    13: { x: 56, y: 30 },
-    14: { x: 70, y: 82 },
-    15: { x: 72, y: 20 },
-    16: { x: 82, y: 72 },
-    17: { x: 88, y: 56 },
-    18: { x: 78, y: 40 },
-    19: { x: 86, y: 26 },
-    20: { x: 74, y: 12 },
+    1: { x: 18, y: 76 },
+    2: { x: 20, y: 24 },
+    3: { x: 38, y: 64 },
+    4: { x: 36, y: 38 },
+    5: { x: 50, y: 82 },
+    6: { x: 50, y: 50 },
+    7: { x: 50, y: 18 },
+    8: { x: 64, y: 62 },
+    9: { x: 82, y: 76 },
+    10: { x: 80, y: 24 },
   };
 
   return positions[slotIndex] ?? { x: 50, y: 50 };
@@ -262,7 +252,7 @@ function buildCellSeed(round: TableWarsV2Round) {
 
 function homeSlotsForTeam(team: TableWarsTeam) {
   if (team === "blue") return Array.from({ length: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM }, (_, index) => index + 1);
-  return Array.from({ length: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM }, (_, index) => index + 16);
+  return Array.from({ length: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM }, (_, index) => index + 9);
 }
 
 function emptyTeamCounts(): TableWarsV2TeamCounts {
@@ -442,7 +432,11 @@ async function getRoundCells(round: TableWarsV2Round) {
 
   if (error) throw new Error(error.message || "تعذر جلب خلايا حرب الطاولات.");
   return (Array.isArray(data) ? data : [])
-    .map((row) => mapCell(row as Record<string, unknown>))
+    .map((row) => {
+      const cell = mapCell(row as Record<string, unknown>);
+      const position = cellPosition(cell.slotIndex);
+      return { ...cell, x: position.x, y: position.y };
+    })
     .filter((cell) => cell.slotIndex <= TABLE_WARS_V2_TOTAL_CELLS);
 }
 
@@ -739,6 +733,7 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
       roundEnded: false,
       winnerMessage: null,
       currentPlayer: null,
+      players: [],
       role: null,
       team: null,
       controlledCellIds: [],
@@ -795,6 +790,7 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     roundEnded: round.status === "finished",
     winnerMessage: winnerMessage(round.winningTeam),
     currentPlayer,
+    players,
     role: currentPlayer?.role ?? null,
     team: currentPlayer?.team ?? null,
     controlledCellIds,
@@ -854,10 +850,6 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
           role: "spectator",
           displayName,
         });
-
-  if (player.role === "player") {
-    await maybeCreateAiPlaceholder(round, team);
-  }
 
   const refreshed = await refreshRoundTeamCounts(round);
   round = refreshed.round;
@@ -1022,6 +1014,42 @@ export async function tickTableWarsV2ForActiveSession() {
     await tickTableWarsV2Round(round);
   }
 
+  return getTableWarsV2SnapshotForCustomer(cafe.slug);
+}
+
+export async function finishTableWarsV2RealtimeLiteRoundForCustomer(slug: string, winningTeam: TableWarsTeam) {
+  const team = normalizeTeam(winningTeam);
+  const cafe = await ensurePublicTableWarsV2Playable(slug);
+  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  if (!customer) throw new Error("Unauthorized.");
+
+  const round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  if (round.status === "finished") {
+    return getTableWarsV2SnapshotForCustomer(cafe.slug);
+  }
+  if (round.status !== "active" && round.status !== "waiting") {
+    throw new Error("No active table wars round.");
+  }
+
+  const players = await getRoundPlayers(round);
+  const currentPlayer = players.find((player) => player.customerId === String(customer.id)) ?? null;
+  if (!currentPlayer || currentPlayer.role !== "player") {
+    throw new Error("Only players can finish table wars rounds.");
+  }
+
+  const hostPlayer = players
+    .filter((player) => player.role === "player" && player.customerId)
+    .sort((a, b) => {
+      const aTime = a.joinedAt ? Date.parse(a.joinedAt) : 0;
+      const bTime = b.joinedAt ? Date.parse(b.joinedAt) : 0;
+      return aTime - bTime || a.id.localeCompare(b.id);
+    })[0];
+
+  if (!hostPlayer || hostPlayer.id !== currentPlayer.id) {
+    throw new Error("Only the table wars host can finish the realtime round.");
+  }
+
+  await finishTableWarsV2Round(round, players, team, new Date());
   return getTableWarsV2SnapshotForCustomer(cafe.slug);
 }
 

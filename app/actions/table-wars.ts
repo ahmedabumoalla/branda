@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/table-wars";
 import {
   getTableWarsV2SnapshotForCustomer,
+  finishTableWarsV2RealtimeLiteRoundForCustomer,
   joinTableWarsV2Customer,
   sendTableWarsV2UnitsForCustomer,
   tickTableWarsV2ForActiveSession,
@@ -53,6 +54,12 @@ export async function sendTableWarsV2UnitsAction(input: {
 
 export async function tickTableWarsV2Action() {
   const snapshot = await tickTableWarsV2ForActiveSession();
+  revalidateTableWarsPaths(snapshot.cafeSlug);
+  return snapshot;
+}
+
+export async function finishTableWarsV2RealtimeLiteRoundAction(slug: string, winningTeam: TableWarsTeam) {
+  const snapshot = await finishTableWarsV2RealtimeLiteRoundForCustomer(slug, winningTeam);
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;
 }

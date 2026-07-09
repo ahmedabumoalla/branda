@@ -111,6 +111,7 @@ export type TableWarsV2Snapshot = {
   roundEnded: boolean;
   winnerMessage: string | null;
   currentPlayer: TableWarsV2Player | null;
+  players: TableWarsV2Player[];
   role: TableWarsRole | null;
   team: TableWarsTeam | null;
   controlledCellIds: string[];
