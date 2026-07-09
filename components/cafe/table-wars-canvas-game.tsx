@@ -1089,8 +1089,6 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     state.currentPlayer = props.currentPlayer;
     state.isPlayer = props.isPlayer;
     state.isHost = props.isHost;
-    state.realtimeReady = props.realtimeReady;
-    state.realtimeStatus = props.realtimeStatus;
     state.role = props.role;
     const localWinner = confirmedWinnerFromCells(normalizedCells);
     if (props.initialRoundFinished && localWinner) {
@@ -1109,12 +1107,16 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     props.currentPlayer,
     props.isPlayer,
     props.isHost,
-    props.realtimeReady,
-    props.realtimeStatus,
     props.role,
     props.initialRoundFinished,
     props.initialWinnerMessage,
   ]);
+
+  useEffect(() => {
+    const state = stateRef.current;
+    state.realtimeReady = props.realtimeReady;
+    state.realtimeStatus = props.realtimeStatus;
+  }, [props.realtimeReady, props.realtimeStatus]);
 
   useEffect(() => {
     const state = stateRef.current;
@@ -1220,15 +1222,27 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   }, []);
 
   function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
+    event.preventDefault();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture can fail for synthetic or already-ended events.
+    }
+
     const state = stateRef.current;
     const rect = event.currentTarget.getBoundingClientRect();
+    const pointerSize =
+      sizeRef.current.width > 0 && sizeRef.current.height > 0
+        ? sizeRef.current
+        : { width: Math.max(1, rect.width), height: Math.max(1, rect.height), dpr: 1 };
+    sizeRef.current = pointerSize;
     const point = {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
     };
 
     if (state.finished) {
-      if (isPointInsideRect(point, winnerButtonRect(sizeRef.current))) {
+      if (isPointInsideRect(point, winnerButtonRect(pointerSize))) {
         resetLocalRound(state);
         capturePulsesRef.current.clear();
         sparksRef.current = [];
@@ -1246,7 +1260,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
 
     if (!state.isPlayer) return;
 
-    const cell = nearestCellAt(point, state.cells, sizeRef.current);
+    const cell = nearestCellAt(point, state.cells, pointerSize);
     if (!cell) return;
 
     if (!state.selectedCellId) {
@@ -1306,7 +1320,8 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     <div ref={containerRef} className="relative h-[76dvh] min-h-[560px] max-h-[680px] overflow-hidden bg-[#F4E7D7]">
       <canvas
         ref={canvasRef}
-        className="block h-full w-full touch-manipulation"
+        className="block h-full w-full touch-none select-none pointer-events-auto"
+        style={{ touchAction: "none" }}
         onPointerDown={handlePointerDown}
         aria-label="خريطة حرب الطاولات"
       />

@@ -15,6 +15,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(request.url);
+  if (request.mode === 'navigate' && /^\/c\/[^/]+\/play\/table-wars\/?$/.test(url.pathname)) {
+    return;
+  }
+
   event.respondWith(
     fetch(request).catch(() => {
       if (request.mode === 'navigate') {

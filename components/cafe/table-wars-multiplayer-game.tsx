@@ -74,6 +74,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 }
 
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
+  const [mounted, setMounted] = useState(false);
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [message, setMessage] = useState("الجولة تعمل بتزامن لحظي خفيف.");
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +109,11 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const isHost = Boolean(currentPlayer && hostPlayer && currentPlayer.id === hostPlayer.id);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (!snapshot.round?.id || isRoundFinished) {
       realtimeChannelRef.current?.close();
       realtimeChannelRef.current = null;
@@ -141,7 +147,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       }
       setRealtimeStatus("disconnected");
     };
-  }, [isRoundFinished, snapshot.cafeSlug, snapshot.round?.id]);
+  }, [isRoundFinished, mounted, snapshot.cafeSlug, snapshot.round?.id]);
 
   const handleLocalRealtimeEvent = useCallback((event: TableWarsRealtimeLiteEvent) => {
     if (event.type === "battle") {
@@ -205,6 +211,14 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         });
     });
   }, [slug]);
+
+  if (!mounted) {
+    return (
+      <section className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
+        <div className="h-[76dvh] min-h-[560px] max-h-[680px] bg-[#F4E7D7]" aria-label="تحميل حرب الطاولات" />
+      </section>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
