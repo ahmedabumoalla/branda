@@ -35,8 +35,8 @@ import type {
 } from "@/lib/table-wars/v2-types";
 
 const TABLE_WARS_FEATURE_KEY = "in_store_table_wars";
-const TABLE_WARS_V2_TOTAL_CELLS = 40;
-const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 10;
+const TABLE_WARS_V2_TOTAL_CELLS = 20;
+const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 5;
 const TABLE_WARS_V2_BASE_SOLDIERS = 25;
 const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
 const TABLE_WARS_V2_MAX_SOLDIERS = 60;
@@ -213,20 +213,45 @@ function cellKey(slotIndex: number) {
   return `cell-${String(slotIndex).padStart(2, "0")}`;
 }
 
+function cellPosition(slotIndex: number) {
+  const positions: Record<number, { x: number; y: number }> = {
+    1: { x: 18, y: 78 },
+    2: { x: 12, y: 62 },
+    3: { x: 22, y: 46 },
+    4: { x: 14, y: 30 },
+    5: { x: 28, y: 16 },
+    6: { x: 40, y: 70 },
+    7: { x: 36, y: 52 },
+    8: { x: 44, y: 34 },
+    9: { x: 50, y: 84 },
+    10: { x: 52, y: 18 },
+    11: { x: 58, y: 66 },
+    12: { x: 62, y: 48 },
+    13: { x: 56, y: 30 },
+    14: { x: 70, y: 82 },
+    15: { x: 72, y: 20 },
+    16: { x: 82, y: 72 },
+    17: { x: 88, y: 56 },
+    18: { x: 78, y: 40 },
+    19: { x: 86, y: 26 },
+    20: { x: 74, y: 12 },
+  };
+
+  return positions[slotIndex] ?? { x: 50, y: 50 };
+}
+
 function buildCellSeed(round: TableWarsV2Round) {
   return Array.from({ length: TABLE_WARS_V2_TOTAL_CELLS }, (_, index) => {
     const slotIndex = index + 1;
-    const column = index % 8;
-    const row = Math.floor(index / 8);
-    const rowOffset = row % 2 === 0 ? 0 : 4;
+    const position = cellPosition(slotIndex);
 
     return {
       cafe_id: round.cafeId,
       round_id: round.id,
       cell_key: cellKey(slotIndex),
       slot_index: slotIndex,
-      x: Math.min(92, 8 + column * 12 + rowOffset),
-      y: 10 + row * 20,
+      x: position.x,
+      y: position.y,
       team: "neutral",
       is_base: false,
       soldiers: TABLE_WARS_V2_DEFAULT_SOLDIERS,
@@ -236,8 +261,8 @@ function buildCellSeed(round: TableWarsV2Round) {
 }
 
 function homeSlotsForTeam(team: TableWarsTeam) {
-  if (team === "blue") return Array.from({ length: 10 }, (_, index) => index + 1);
-  return Array.from({ length: 10 }, (_, index) => index + 31);
+  if (team === "blue") return Array.from({ length: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM }, (_, index) => index + 1);
+  return Array.from({ length: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM }, (_, index) => index + 16);
 }
 
 function emptyTeamCounts(): TableWarsV2TeamCounts {
@@ -729,14 +754,29 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     };
   }
 
-  const [round, customer] = await Promise.all([
+  const [initialRound, customer] = await Promise.all([
     getOrCreateActiveTableWarsV2Round(cafe.id),
     getCustomerProfileForActiveSession(cafe.slug),
   ]);
-  const [players, cells, units, legendsPreview, events] = await Promise.all([
+  let round = initialRound;
+  const [players, cells, initialUnits] = await Promise.all([
     getRoundPlayers(round),
     getRoundCells(round),
     getRoundMovingUnits(round),
+  ]);
+
+  const snapshotWinningTeam =
+    round.status === "active" || round.status === "waiting" ? determineWinningTeam(cells) : null;
+  const units =
+    snapshotWinningTeam || round.status === "finished"
+      ? []
+      : initialUnits;
+
+  if (snapshotWinningTeam) {
+    round = await finishTableWarsV2Round(round, players, snapshotWinningTeam, new Date());
+  }
+
+  const [legendsPreview, events] = await Promise.all([
     getLegendsPreview(cafe.id),
     getRoundRecentEvents(round),
   ]);
@@ -880,6 +920,12 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
     getRoundCells(round),
     getRoundMovingUnits(round),
   ]);
+  const alreadyWinningTeam = determineWinningTeam(cells);
+  if (alreadyWinningTeam) {
+    const players = await getRoundPlayers(round);
+    await finishTableWarsV2Round(round, players, alreadyWinningTeam, new Date());
+    throw new Error("This table wars round has already finished.");
+  }
   const freshFromCell = cells.find((cell) => cell.id === fromCell.id) ?? fromCell;
   const freshToCell = cells.find((cell) => cell.id === toCell.id) ?? toCell;
   const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells);
@@ -1099,21 +1145,26 @@ async function finishTableWarsV2Round(
   now: Date,
 ) {
   const supabase = tableWarsV2Db(createAdminClient());
-  const finished = await assertNoDbError(
-    await supabase
-      .from("table_wars_v2_rounds")
-      .update({
-        status: "finished",
-        winning_team: winningTeam,
-        ended_at: now.toISOString(),
-      })
-      .eq("id", round.id)
-      .eq("cafe_id", round.cafeId)
-      .in("status", ["waiting", "active"])
-      .select("*")
-      .single(),
-    "Unable to finish table wars round.",
-  );
+  const { data: finished, error } = await supabase
+    .from("table_wars_v2_rounds")
+    .update({
+      status: "finished",
+      winning_team: winningTeam,
+      ended_at: now.toISOString(),
+    })
+    .eq("id", round.id)
+    .eq("cafe_id", round.cafeId)
+    .in("status", ["waiting", "active"])
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message || "Unable to finish table wars round.");
+  if (!finished) {
+    const existing = await getRoundById(round.id, round.cafeId);
+    if (existing?.status === "finished") return existing;
+    throw new Error("Unable to finish table wars round.");
+  }
+
   const finishedRound = mapRound(finished as Record<string, unknown>);
 
   await Promise.all([
@@ -1165,11 +1216,13 @@ async function updateDailyPlayerStatsForRound(
   winningTeam: TableWarsTeam,
   now: Date,
 ) {
-  const realPlayers = players.filter((player) => player.role === "player" && player.customerId);
-  if (realPlayers.length === 0) return;
+  const realWinningPlayers = players.filter(
+    (player) => player.role === "player" && player.customerId && player.team === winningTeam,
+  );
+  if (realWinningPlayers.length === 0) return;
 
   const supabase = tableWarsV2Db(createAdminClient());
-  const customerIds = realPlayers.map((player) => player.customerId).filter((id): id is string => Boolean(id));
+  const customerIds = realWinningPlayers.map((player) => player.customerId).filter((id): id is string => Boolean(id));
   const { data, error } = await supabase
     .from("table_wars_v2_daily_player_stats")
     .select("customer_id,play_seconds,wins,last_win_at")
@@ -1193,11 +1246,10 @@ async function updateDailyPlayerStatsForRound(
     }),
   );
 
-  const rows = realPlayers.map((player) => {
+  const rows = realWinningPlayers.map((player) => {
     const customerId = player.customerId as string;
     const existing = existingByCustomer.get(customerId);
     const playedSeconds = estimatePlayerRoundSeconds(round, player, now);
-    const isWinner = player.team === winningTeam;
 
     return {
       cafe_id: round.cafeId,
@@ -1206,8 +1258,8 @@ async function updateDailyPlayerStatsForRound(
       display_name: player.displayName,
       team: player.team,
       play_seconds: (existing?.playSeconds ?? 0) + playedSeconds,
-      wins: (existing?.wins ?? 0) + (isWinner ? 1 : 0),
-      last_win_at: isWinner ? now.toISOString() : existing?.lastWinAt ?? null,
+      wins: (existing?.wins ?? 0) + 1,
+      last_win_at: now.toISOString(),
     };
   });
 
