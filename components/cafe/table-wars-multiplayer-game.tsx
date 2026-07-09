@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Activity, Eye, Radio, Shield, Swords, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Activity, Eye, Radio, Swords, Users } from "lucide-react";
 import {
   getTableWarsV2SnapshotAction,
   joinTableWarsV2Team,
@@ -9,6 +9,7 @@ import {
   tickTableWarsV2Action,
 } from "@/app/actions/table-wars";
 import { TableWarsLegends } from "@/components/cafe/table-wars-legends";
+import { TableWarsCanvasGame } from "@/components/cafe/table-wars-canvas-game";
 import { TableWarsTeamPicker } from "@/components/cafe/table-wars-team-picker";
 import type {
   TableWarsTeam,
@@ -24,9 +25,6 @@ type Props = {
 };
 
 const POLLING_MS = 1800;
-const MAX_VISUAL_PACKETS = 12;
-const MIN_VISUAL_PACKETS = 4;
-const PACKET_TRAIL_DELAY = 0.045;
 const OPTIMISTIC_TRAVEL_MS = 1_000;
 const TABLE_WARS_VISUAL_MIN_SOLDIERS = 2;
 
@@ -50,54 +48,6 @@ function roundStatusLabel(status: string | null | undefined) {
   if (status === "finished") return "منتهية";
   if (status === "cancelled") return "ملغاة";
   return "غير متاحة";
-}
-
-function cellClasses(cell: TableWarsV2Cell, selected: boolean, selectable: boolean, canTarget: boolean) {
-  const base =
-    "absolute z-10 flex h-[58px] w-[58px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-2 text-center transition active:scale-95 sm:h-[70px] sm:w-[70px]";
-  const team =
-    cell.team === "blue"
-      ? "border-sky-200 bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.28)]"
-      : cell.team === "red"
-        ? "border-rose-200 bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.24)]"
-        : "border-[#D9C8B8] bg-[#EDE1D4] text-[#4A281D]";
-  const state = selected
-    ? "animate-pulse ring-4 ring-[#D9A33F] ring-offset-2 ring-offset-[#F7EFE7]"
-    : canTarget
-      ? "ring-4 ring-white/80"
-      : selectable
-        ? "hover:scale-105"
-        : "";
-
-  return `${base} ${team} ${state}`;
-}
-
-function unitColor(team: TableWarsTeam) {
-  return team === "blue" ? "#38BDF8" : "#FB7185";
-}
-
-function getLaneOffset(unit: TableWarsV2Unit) {
-  return (unit.laneIndex - 1) * 2.4;
-}
-
-function unitProgress(unit: TableWarsV2Unit, now: number) {
-  const startedAt = unit.startedAt ? Date.parse(unit.startedAt) : now;
-  const arrivesAt = unit.arrivesAt ? Date.parse(unit.arrivesAt) : startedAt + 1;
-  const duration = Math.max(1, arrivesAt - startedAt);
-  return Math.min(1, Math.max(0, (now - startedAt) / duration));
-}
-
-function edgePoint(from: TableWarsV2Cell, to: TableWarsV2Cell, progress: number, laneOffset: number) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.max(1, Math.hypot(dx, dy));
-  const offsetX = (-dy / length) * laneOffset;
-  const offsetY = (dx / length) * laneOffset;
-
-  return {
-    x: from.x + dx * progress + offsetX,
-    y: from.y + dy * progress + offsetY,
-  };
 }
 
 function eventLabel(event: TableWarsV2Event) {
@@ -124,95 +74,6 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
-
-const MovingUnitsLayer = memo(function MovingUnitsLayer({
-  units,
-  cellById,
-}: {
-  units: TableWarsV2Unit[];
-  cellById: Map<string, TableWarsV2Cell>;
-}) {
-  const [now, setNow] = useState(() => Date.now());
-  const animationFrameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (units.length === 0) return;
-
-    function updateFrame() {
-      setNow(Date.now());
-      animationFrameRef.current = window.requestAnimationFrame(updateFrame);
-    }
-
-    animationFrameRef.current = window.requestAnimationFrame(updateFrame);
-    return () => {
-      if (animationFrameRef.current !== null) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [units.length]);
-
-  return (
-    <>
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
-        {units.flatMap((unit) => {
-          const from = cellById.get(unit.fromCellId);
-          const to = cellById.get(unit.toCellId);
-          if (!from || !to) return [];
-
-          const laneOffset = getLaneOffset(unit);
-          const start = edgePoint(from, to, 0, laneOffset);
-          const end = edgePoint(from, to, 1, laneOffset);
-
-          return (
-            <line
-              key={unit.id}
-              x1={`${start.x}%`}
-              y1={`${start.y}%`}
-              x2={`${end.x}%`}
-              y2={`${end.y}%`}
-              stroke={unitColor(unit.team)}
-              strokeDasharray="6 8"
-              strokeOpacity="0.5"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              filter="drop-shadow(0 0 5px rgba(255,255,255,0.9))"
-            />
-          );
-        })}
-      </svg>
-
-      {units.flatMap((unit) => {
-        const from = cellById.get(unit.fromCellId);
-        const to = cellById.get(unit.toCellId);
-        if (!from || !to) return [];
-
-        const progress = unitProgress(unit, now);
-        const visualCount = Math.min(MAX_VISUAL_PACKETS, Math.max(MIN_VISUAL_PACKETS, Math.ceil(unit.soldiers / 4)));
-
-        return Array.from({ length: visualCount }).flatMap((_, index) => {
-          const trailProgress = progress - index * PACKET_TRAIL_DELAY;
-          if (trailProgress <= 0 || trailProgress >= 1) return [];
-          const trailPoint = edgePoint(from, to, trailProgress, getLaneOffset(unit) + ((index % 3) - 1) * 0.35);
-          return (
-            <span
-              key={`${unit.id}-${index}`}
-              className={`absolute z-20 rounded-full ring-white/75 ${
-                index === 0 ? "h-4 w-4 ring-4" : "h-3 w-3 ring-[3px]"
-              }`}
-              style={{
-                left: `${trailPoint.x}%`,
-                top: `${trailPoint.y}%`,
-                backgroundColor: unitColor(unit.team),
-                boxShadow: `0 0 16px ${unitColor(unit.team)}`,
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          );
-        });
-      })}
-    </>
-  );
-});
 
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
@@ -433,96 +294,27 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           <p className="border-b border-rose-200 bg-rose-50 p-3 text-sm font-black text-rose-700">{error}</p>
         ) : null}
 
-        <div className="relative h-[76dvh] min-h-[560px] max-h-[680px] overflow-hidden bg-[radial-gradient(circle_at_20%_18%,rgba(56,189,248,0.18),transparent_26%),radial-gradient(circle_at_82%_78%,rgba(251,113,133,0.16),transparent_28%),linear-gradient(145deg,#F8F0E6_0%,#F3E5D6_50%,#EFE0D2_100%)]">
-          {isRoundFinished ? (
-            <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#311912]/55 p-5 backdrop-blur-sm">
-              <div className="w-full max-w-sm rounded-lg border border-white/50 bg-white p-6 text-center shadow-[0_24px_70px_rgba(49,25,18,0.24)]">
-                <Swords className="mx-auto h-10 w-10 text-[#D9A33F]" />
-                <h3 className="mt-3 text-2xl font-black text-[#311912]">
-                  {snapshot.winnerMessage ?? "انتهت الجولة"}
-                </h3>
-                <p className="mt-2 text-sm font-bold text-[#806A5E]">انتهت الجولة</p>
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="mt-5 h-11 w-full rounded-lg bg-[#311912] px-4 text-sm font-black text-white transition active:scale-95"
-                >
-                  تحديث الصفحة
-                </button>
-              </div>
-            </div>
-          ) : null}
-
+        <div className="relative">
           {roadBattleFlash ? (
             <div className="pointer-events-none absolute inset-x-4 top-4 z-30 rounded-lg border border-amber-200 bg-amber-100/95 px-4 py-3 text-sm font-black text-amber-900 shadow">
               اشتباك في الطريق
             </div>
           ) : null}
-
-          <svg
-            className="pointer-events-none absolute inset-0 h-full w-full opacity-80"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M 14 62 C 29 48, 34 72, 49 55 S 69 33, 86 56"
-              fill="none"
-              stroke="#D9C8B8"
-              strokeDasharray="4 9"
-              strokeLinecap="round"
-              strokeWidth="4"
-              vectorEffect="non-scaling-stroke"
-            />
-            <path
-              d="M 27 17 C 39 30, 43 18, 56 31 S 71 48, 82 72"
-              fill="none"
-              stroke="#E5D6C6"
-              strokeDasharray="3 8"
-              strokeLinecap="round"
-              strokeWidth="3"
-              vectorEffect="non-scaling-stroke"
-            />
-            <circle cx="50%" cy="50%" r="18%" fill="none" stroke="#E7D7C6" strokeDasharray="5 10" strokeWidth="2" />
-          </svg>
-
-          <MovingUnitsLayer units={visibleUnits} cellById={cellById} />
-
-          {cells.map((cell) => {
-            const selected = selectedCellId === cell.id;
-            const selectable = isPlayer && controlledCellIds.has(cell.id);
-            const canTarget = Boolean(selectedCellId && selectedCellId !== cell.id);
-            const isOwnBase = currentPlayer?.baseCellId === cell.id && cell.assignedPlayerId === currentPlayer.id;
-            const captured = capturedCellIds.has(cell.id);
-
-            return (
-              <button
-                key={cell.id}
-                type="button"
-                disabled={!isPlayer || isSending}
-                onClick={() => handleCellClick(cell)}
-                className={cellClasses(cell, selected, selectable, canTarget)}
-                style={{ left: `${cell.x}%`, top: `${cell.y}%` }}
-                aria-label={`table ${cell.slotIndex} ${teamLabel(cell.team)} ${cell.soldiers}`}
-              >
-                {captured ? (
-                  <span className="pointer-events-none absolute inset-[-10px] rounded-full border-4 border-[#D9A33F]/70 opacity-80 animate-ping" />
-                ) : null}
-                <span className="text-[9px] font-black leading-none sm:text-[10px]">{cell.slotIndex}</span>
-                <span className="mt-1 text-lg font-black leading-none sm:text-xl">{cell.soldiers}</span>
-                {isOwnBase ? (
-                  <span className="absolute -bottom-6 left-1/2 max-w-[86px] -translate-x-1/2 truncate rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-[#311912] shadow">
-                    {currentPlayer.displayName}
-                  </span>
-                ) : null}
-                {selectable ? (
-                  <span className="absolute -top-2 -left-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#D9A33F] text-[#311912] ring-2 ring-white">
-                    <Shield className="h-3 w-3" />
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
+          <TableWarsCanvasGame
+            cells={cells}
+            units={visibleUnits}
+            events={snapshot.events}
+            selectedCellId={selectedCellId}
+            controlledCellIds={snapshot.controlledCellIds}
+            capturedCellIds={[...capturedCellIds]}
+            currentPlayer={currentPlayer}
+            isPlayer={isPlayer}
+            isSending={isSending}
+            isRoundFinished={isRoundFinished}
+            winnerMessage={snapshot.winnerMessage}
+            role={snapshot.role}
+            onCellClick={handleCellClick}
+          />
         </div>
       </section>
 
