@@ -1,14 +1,27 @@
 import { randomUUID } from "crypto";
 
+import { cookies } from "next/headers";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { getCustomerProfileForActiveSession, type CustomerProfileRow } from "@/lib/data/customers";
 import { hasBrandFeature } from "@/lib/data/feature-entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  buildUnitTravelTime,
+  calculateAvailableLanes,
+  canPlayerControlCell,
+  chooseAiMove,
+  growCells,
+  resolveArrivedUnits,
+  resolveRoadBattles,
+  type TableWarsV2CellUpdate,
+  type TableWarsV2UnitUpdate,
+} from "@/lib/table-wars/v2-engine";
 import type {
   TableWarsRole,
   TableWarsTeam,
   TableWarsV2Cell,
   TableWarsV2CellTeam,
+  TableWarsV2Event,
   TableWarsV2JoinResult,
   TableWarsV2LegendPreview,
   TableWarsV2Player,
@@ -26,6 +39,9 @@ const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 10;
 const TABLE_WARS_V2_BASE_SOLDIERS = 25;
 const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
 const TABLE_WARS_V2_MAX_SOLDIERS = 60;
+const TABLE_WARS_V2_CONTROL_LIMIT = 5;
+const TABLE_WARS_V2_EVENT_LIMIT = 12;
+const TABLE_WARS_V2_MIN_SEND_SOLDIERS = 2;
 
 type QueryClient = {
   from(table: string): any;
@@ -169,6 +185,22 @@ function mapLegend(row: Record<string, unknown>): TableWarsV2LegendPreview {
     playSeconds: intValue(row.play_seconds),
     wins: intValue(row.wins),
     lastWinAt: nullableText(row.last_win_at),
+  };
+}
+
+function mapEvent(row: Record<string, unknown>): TableWarsV2Event {
+  const payload =
+    row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+      ? (row.payload as Record<string, unknown>)
+      : {};
+
+  return {
+    id: text(row.id),
+    cafeId: text(row.cafe_id),
+    roundId: text(row.round_id),
+    eventType: text(row.event_type),
+    payload,
+    createdAt: nullableText(row.created_at),
   };
 }
 
@@ -400,6 +432,41 @@ async function getRoundMovingUnits(round: TableWarsV2Round) {
   return (Array.isArray(data) ? data : []).map((row) => mapUnit(row as Record<string, unknown>));
 }
 
+async function getRoundRecentEvents(round: TableWarsV2Round, limit = TABLE_WARS_V2_EVENT_LIMIT) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase
+    .from("table_wars_v2_events")
+    .select("*")
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message || "Unable to load table wars events.");
+  return (Array.isArray(data) ? data : []).map((row) => mapEvent(row as Record<string, unknown>));
+}
+
+async function getCafeByIdAdmin(cafeId: string): Promise<PublicCafe | null> {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase
+    .from("cafes")
+    .select("id,slug,name,status")
+    .eq("id", cafeId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message || "Unable to load cafe.");
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const status = nullableText(row.status);
+  if (status && !["active", "published"].includes(status)) return null;
+  return {
+    id: text(row.id),
+    slug: text(row.slug),
+    name: text(row.name),
+  };
+}
+
 async function getLegendsPreview(cafeId: string) {
   const supabase = tableWarsV2Db(createAdminClient());
   const { data, error } = await supabase
@@ -593,6 +660,35 @@ async function maybeCreateAiPlaceholder(round: TableWarsV2Round, joinedTeam: Tab
   }
 }
 
+function controlledCellIdsForPlayer(player: TableWarsV2Player | null, cells: TableWarsV2Cell[]) {
+  if (!player || (player.role !== "player" && player.role !== "ai")) return [];
+
+  const ids = new Set<string>();
+  const baseCell = cells.find((cell) => cell.assignedPlayerId === player.id || cell.id === player.baseCellId);
+  if (baseCell) ids.add(baseCell.id);
+
+  cells
+    .filter((cell) => cell.team === player.team && !cell.assignedPlayerId)
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .slice(0, TABLE_WARS_V2_CONTROL_LIMIT)
+    .forEach((cell) => ids.add(cell.id));
+
+  return [...ids];
+}
+
+function messagesFromEvents(events: TableWarsV2Event[]) {
+  const messages: string[] = [];
+
+  for (const event of events) {
+    if (event.eventType === "road_battle") messages.push("road_battle");
+    if (event.eventType === "ai_move") messages.push("ai_move");
+    if (event.eventType === "send_units") messages.push("send_units");
+    if (event.eventType === "arrival") messages.push("arrival");
+  }
+
+  return messages;
+}
+
 export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<TableWarsV2Snapshot> {
   const playability = await getPublicTableWarsV2Playability(slug);
   const cafe = playability.cafe;
@@ -606,10 +702,15 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
       gameEnabled: false,
       round: null,
       currentPlayer: null,
+      role: null,
+      team: null,
+      controlledCellIds: [],
       teamCounts: fallbackCounts,
       cells: [],
       units: [],
       legendsPreview: cafe ? await getLegendsPreview(cafe.id) : [],
+      events: [],
+      messages: [],
       isSpectator: false,
       canJoinBlue: false,
       canJoinRed: false,
@@ -620,16 +721,18 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     getOrCreateActiveTableWarsV2Round(cafe.id),
     getCustomerProfileForActiveSession(cafe.slug),
   ]);
-  const [players, cells, units, legendsPreview] = await Promise.all([
+  const [players, cells, units, legendsPreview, events] = await Promise.all([
     getRoundPlayers(round),
     getRoundCells(round),
     getRoundMovingUnits(round),
     getLegendsPreview(cafe.id),
+    getRoundRecentEvents(round),
   ]);
   const teamCounts = countPlayers(players);
   const currentPlayer = customer
     ? players.find((player) => player.customerId === String(customer.id)) ?? null
     : null;
+  const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells);
 
   return {
     cafeId: cafe.id,
@@ -638,10 +741,15 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     gameEnabled: true,
     round,
     currentPlayer,
+    role: currentPlayer?.role ?? null,
+    team: currentPlayer?.team ?? null,
+    controlledCellIds,
     teamCounts,
     cells,
     units,
     legendsPreview,
+    events,
+    messages: messagesFromEvents(events),
     isSpectator: currentPlayer?.role === "spectator",
     canJoinBlue: teamCounts.bluePlayers < round.maxPlayersPerTeam,
     canJoinRed: teamCounts.redPlayers < round.maxPlayersPerTeam,
@@ -707,4 +815,407 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
     player,
     snapshot,
   };
+}
+
+export async function sendTableWarsV2UnitsForCustomer(input: {
+  fromCellId: string;
+  toCellId: string;
+  soldiers?: number;
+  percentage?: number;
+}) {
+  const fromCellId = text(input.fromCellId);
+  const toCellId = text(input.toCellId);
+  if (!fromCellId || !toCellId) throw new Error("Missing cell id.");
+  if (fromCellId === toCellId) throw new Error("Source and target cells must be different.");
+
+  const [fromCell, toCell] = await Promise.all([
+    getCellById(fromCellId),
+    getCellById(toCellId),
+  ]);
+  if (!fromCell || !toCell) throw new Error("Cell not found.");
+  if (fromCell.cafeId !== toCell.cafeId || fromCell.roundId !== toCell.roundId) {
+    throw new Error("Cells are not in the same round.");
+  }
+
+  const [round, cafe] = await Promise.all([
+    getRoundById(fromCell.roundId, fromCell.cafeId),
+    getCafeByIdAdmin(fromCell.cafeId),
+  ]);
+  if (!round || round.status !== "active") throw new Error("No active table wars round.");
+  if (!cafe) throw new Error("Cafe not found.");
+  await ensurePublicTableWarsV2Playable(cafe.slug);
+
+  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  if (!customer) throw new Error("Unauthorized.");
+
+  const currentPlayer = await getCurrentPlayer(round, String(customer.id));
+  if (!currentPlayer || currentPlayer.role !== "player") throw new Error("Only players can send units.");
+
+  const [cells, movingUnits] = await Promise.all([
+    getRoundCells(round),
+    getRoundMovingUnits(round),
+  ]);
+  const freshFromCell = cells.find((cell) => cell.id === fromCell.id) ?? fromCell;
+  const freshToCell = cells.find((cell) => cell.id === toCell.id) ?? toCell;
+  const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells);
+  const otherControlledUnassignedCount = cells.filter(
+    (cell) => cell.id !== freshFromCell.id && cell.team === currentPlayer.team && !cell.assignedPlayerId,
+  ).length;
+  const canControl =
+    controlledCellIds.includes(freshFromCell.id) ||
+    canPlayerControlCell(currentPlayer, freshFromCell, otherControlledUnassignedCount);
+
+  if (!canControl) throw new Error("Forbidden cell control.");
+  if (freshFromCell.team !== currentPlayer.team) throw new Error("Source cell is not owned by your team.");
+
+  const soldiers = resolveSendSoldiers(input, freshFromCell.soldiers);
+  if (soldiers < TABLE_WARS_V2_MIN_SEND_SOLDIERS) throw new Error("Not enough soldiers to send.");
+
+  const laneCount = calculateAvailableLanes(freshFromCell.soldiers);
+  const laneIndex = firstAvailableLane(movingUnits, freshFromCell.id, laneCount);
+  if (laneIndex === null) throw new Error("All outgoing lanes are busy.");
+
+  const now = new Date();
+  const travelMs = buildUnitTravelTime(freshFromCell, freshToCell);
+  const arrivesAt = new Date(now.getTime() + travelMs);
+  const supabase = tableWarsV2Db(createAdminClient());
+
+  const updatedCell = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_cells")
+      .update({ soldiers: freshFromCell.soldiers - soldiers })
+      .eq("id", freshFromCell.id)
+      .eq("cafe_id", round.cafeId)
+      .eq("round_id", round.id)
+      .gte("soldiers", soldiers)
+      .select("*")
+      .single(),
+    "Unable to update source cell.",
+  );
+
+  const sourceAfterSend = mapCell(updatedCell as Record<string, unknown>);
+  const createdUnit = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_units")
+      .insert({
+        cafe_id: round.cafeId,
+        round_id: round.id,
+        from_cell_id: sourceAfterSend.id,
+        to_cell_id: freshToCell.id,
+        team: currentPlayer.team,
+        owner_player_id: currentPlayer.id,
+        soldiers,
+        started_at: now.toISOString(),
+        arrives_at: arrivesAt.toISOString(),
+        lane_index: laneIndex,
+        status: "moving",
+      })
+      .select("*")
+      .single(),
+    "Unable to send units.",
+  );
+
+  const unit = mapUnit(createdUnit as Record<string, unknown>);
+  await insertRoundEvents(round, [
+    {
+      eventType: "send_units",
+      payload: {
+        playerId: currentPlayer.id,
+        team: currentPlayer.team,
+        fromCellId: sourceAfterSend.id,
+        toCellId: freshToCell.id,
+        soldiers,
+        laneIndex,
+        unitId: unit.id,
+      },
+    },
+  ]);
+
+  return {
+    ok: true as const,
+    unit,
+    snapshot: await getTableWarsV2SnapshotForCustomer(cafe.slug),
+  };
+}
+
+export async function tickTableWarsV2ForActiveSession() {
+  const slug = await getTableWarsV2SessionSlugFromCookies();
+  if (!slug) throw new Error("Unauthorized.");
+
+  const cafe = await ensurePublicTableWarsV2Playable(slug);
+  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  if (!customer) throw new Error("Unauthorized.");
+
+  const round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  if (round.status === "active") {
+    await tickTableWarsV2Round(round);
+  }
+
+  return getTableWarsV2SnapshotForCustomer(cafe.slug);
+}
+
+async function getCellById(cellId: string) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase
+    .from("table_wars_v2_cells")
+    .select("*")
+    .eq("id", cellId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message || "Unable to load cell.");
+  return data ? mapCell(data as Record<string, unknown>) : null;
+}
+
+async function getRoundById(roundId: string, cafeId: string) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase
+    .from("table_wars_v2_rounds")
+    .select("*")
+    .eq("id", roundId)
+    .eq("cafe_id", cafeId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message || "Unable to load round.");
+  return data ? mapRound(data as Record<string, unknown>) : null;
+}
+
+function resolveSendSoldiers(
+  input: { soldiers?: number; percentage?: number },
+  availableSoldiers: number,
+) {
+  const maxSend = Math.floor(availableSoldiers / 2);
+  if (maxSend < TABLE_WARS_V2_MIN_SEND_SOLDIERS) return 0;
+
+  if (input.soldiers !== undefined) {
+    const soldiers = Math.trunc(Number(input.soldiers));
+    if (!Number.isFinite(soldiers) || soldiers < TABLE_WARS_V2_MIN_SEND_SOLDIERS) return 0;
+    if (soldiers > maxSend) throw new Error("Cannot send more than half of the soldiers.");
+    return soldiers;
+  }
+
+  if (input.percentage !== undefined) {
+    const percentage = Number(input.percentage);
+    if (!Number.isFinite(percentage) || percentage <= 0 || percentage > 50) {
+      throw new Error("Invalid send percentage.");
+    }
+    return Math.min(maxSend, Math.floor((availableSoldiers * percentage) / 100));
+  }
+
+  return maxSend;
+}
+
+function firstAvailableLane(units: TableWarsV2Unit[], fromCellId: string, laneCount: number) {
+  const usedLaneIndexes = new Set(
+    units
+      .filter((unit) => unit.status === "moving" && unit.fromCellId === fromCellId)
+      .map((unit) => unit.laneIndex),
+  );
+
+  for (let index = 0; index < laneCount; index += 1) {
+    if (!usedLaneIndexes.has(index)) return index;
+  }
+
+  return null;
+}
+
+async function tickTableWarsV2Round(round: TableWarsV2Round) {
+  const now = new Date();
+  const [cells, units, players, recentEvents] = await Promise.all([
+    getRoundCells(round),
+    getRoundMovingUnits(round),
+    getRoundPlayers(round),
+    getRoundRecentEvents(round, 30),
+  ]);
+
+  const growth = growCells(cells, round.lastTickAt, now);
+  await applyCellUpdates(round, growth.changedCells);
+
+  let updatedRound = round;
+  if (growth.didGrow) {
+    updatedRound = await updateRoundLastTickAt(round, now);
+  }
+
+  const roadBattles = resolveRoadBattles(units, now);
+  await applyUnitUpdates(round, roadBattles.changedUnits);
+  await insertRoundEvents(round, roadBattles.events);
+
+  const arrivals = resolveArrivedUnits(growth.cells, roadBattles.units, now);
+  await Promise.all([
+    applyCellUpdates(round, arrivals.changedCells),
+    applyUnitUpdates(round, arrivals.changedUnits),
+    insertRoundEvents(round, arrivals.events),
+  ]);
+
+  const aiMove = chooseAiMove({
+    cells: arrivals.cells,
+    units: arrivals.units.filter((unit) => unit.status === "moving"),
+    players,
+    now,
+    lastAiMoveAtByTeam: lastAiMoveAtByTeam(recentEvents),
+  });
+
+  if (aiMove) {
+    await applyAiMove(round, aiMove, arrivals.cells, now);
+  }
+
+  return updatedRound;
+}
+
+async function updateRoundLastTickAt(round: TableWarsV2Round, now: Date) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const updated = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_rounds")
+      .update({ last_tick_at: now.toISOString() })
+      .eq("id", round.id)
+      .eq("cafe_id", round.cafeId)
+      .select("*")
+      .single(),
+    "Unable to update round tick.",
+  );
+  return mapRound(updated as Record<string, unknown>);
+}
+
+async function applyCellUpdates(round: TableWarsV2Round, updates: TableWarsV2CellUpdate[]) {
+  if (updates.length === 0) return;
+  const supabase = tableWarsV2Db(createAdminClient());
+  await Promise.all(
+    updates.map(async (cell) => {
+      const { error } = await supabase
+        .from("table_wars_v2_cells")
+        .update({
+          team: cell.team,
+          assigned_player_id: cell.assignedPlayerId,
+          soldiers: cell.soldiers,
+        })
+        .eq("id", cell.id)
+        .eq("cafe_id", round.cafeId)
+        .eq("round_id", round.id);
+
+      if (error) throw new Error(error.message || "Unable to update cell.");
+    }),
+  );
+}
+
+async function applyUnitUpdates(round: TableWarsV2Round, updates: TableWarsV2UnitUpdate[]) {
+  if (updates.length === 0) return;
+  const supabase = tableWarsV2Db(createAdminClient());
+  await Promise.all(
+    updates.map(async (unit) => {
+      const { error } = await supabase
+        .from("table_wars_v2_units")
+        .update({
+          soldiers: unit.soldiers,
+          status: unit.status,
+        })
+        .eq("id", unit.id)
+        .eq("cafe_id", round.cafeId)
+        .eq("round_id", round.id);
+
+      if (error) throw new Error(error.message || "Unable to update unit.");
+    }),
+  );
+}
+
+async function insertRoundEvents(
+  round: TableWarsV2Round,
+  events: Array<{ eventType: string; payload: Record<string, unknown> }>,
+) {
+  if (events.length === 0) return;
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { error } = await supabase.from("table_wars_v2_events").insert(
+    events.map((event) => ({
+      cafe_id: round.cafeId,
+      round_id: round.id,
+      event_type: event.eventType,
+      payload: event.payload,
+    })),
+  );
+
+  if (error) throw new Error(error.message || "Unable to record table wars event.");
+}
+
+function lastAiMoveAtByTeam(events: TableWarsV2Event[]) {
+  const result: Partial<Record<TableWarsTeam, string | null>> = {};
+
+  for (const event of events) {
+    if (event.eventType !== "ai_move") continue;
+    const team = event.payload.team;
+    if ((team === "blue" || team === "red") && !result[team]) {
+      result[team] = event.createdAt;
+    }
+  }
+
+  return result;
+}
+
+async function applyAiMove(
+  round: TableWarsV2Round,
+  aiMove: NonNullable<ReturnType<typeof chooseAiMove>>,
+  cells: TableWarsV2Cell[],
+  now: Date,
+) {
+  const source = cells.find((cell) => cell.id === aiMove.fromCellId);
+  const target = cells.find((cell) => cell.id === aiMove.toCellId);
+  if (!source || !target || source.soldiers < aiMove.soldiers) return;
+
+  const supabase = tableWarsV2Db(createAdminClient());
+  const arrivesAt = new Date(now.getTime() + aiMove.travelMs);
+  const updatedSource = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_cells")
+      .update({ soldiers: source.soldiers - aiMove.soldiers })
+      .eq("id", source.id)
+      .eq("cafe_id", round.cafeId)
+      .eq("round_id", round.id)
+      .gte("soldiers", aiMove.soldiers)
+      .select("*")
+      .single(),
+    "Unable to update AI source cell.",
+  );
+  const sourceAfterSend = mapCell(updatedSource as Record<string, unknown>);
+
+  const createdUnit = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_units")
+      .insert({
+        cafe_id: round.cafeId,
+        round_id: round.id,
+        from_cell_id: sourceAfterSend.id,
+        to_cell_id: target.id,
+        team: aiMove.team,
+        owner_player_id: aiMove.playerId,
+        soldiers: aiMove.soldiers,
+        started_at: now.toISOString(),
+        arrives_at: arrivesAt.toISOString(),
+        lane_index: aiMove.laneIndex,
+        status: "moving",
+      })
+      .select("*")
+      .single(),
+    "Unable to create AI unit.",
+  );
+  const unit = mapUnit(createdUnit as Record<string, unknown>);
+
+  await insertRoundEvents(round, [
+    {
+      eventType: "ai_move",
+      payload: {
+        team: aiMove.team,
+        playerId: aiMove.playerId,
+        fromCellId: sourceAfterSend.id,
+        toCellId: target.id,
+        soldiers: aiMove.soldiers,
+        laneIndex: aiMove.laneIndex,
+        unitId: unit.id,
+      },
+    },
+  ]);
+}
+
+async function getTableWarsV2SessionSlugFromCookies() {
+  const cookieStore = await cookies();
+  const prefix = "barndaksa_customer_session_";
+  const sessionCookie = cookieStore.getAll().find((cookie) => cookie.name.startsWith(prefix));
+  return sessionCookie ? sessionCookie.name.slice(prefix.length) : null;
 }

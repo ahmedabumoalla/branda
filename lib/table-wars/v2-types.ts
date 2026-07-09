@@ -84,6 +84,15 @@ export type TableWarsV2LegendPreview = {
   lastWinAt: string | null;
 };
 
+export type TableWarsV2Event = {
+  id: string;
+  cafeId: string;
+  roundId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string | null;
+};
+
 export type TableWarsV2TeamCounts = {
   bluePlayers: number;
   redPlayers: number;
@@ -100,10 +109,15 @@ export type TableWarsV2Snapshot = {
   gameEnabled: boolean;
   round: TableWarsV2Round | null;
   currentPlayer: TableWarsV2Player | null;
+  role: TableWarsRole | null;
+  team: TableWarsTeam | null;
+  controlledCellIds: string[];
   teamCounts: TableWarsV2TeamCounts;
   cells: TableWarsV2Cell[];
   units: TableWarsV2Unit[];
   legendsPreview: TableWarsV2LegendPreview[];
+  events: TableWarsV2Event[];
+  messages: string[];
   isSpectator: boolean;
   canJoinBlue: boolean;
   canJoinRed: boolean;

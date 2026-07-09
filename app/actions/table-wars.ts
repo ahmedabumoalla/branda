@@ -8,6 +8,8 @@ import {
 import {
   getTableWarsV2SnapshotForCustomer,
   joinTableWarsV2Customer,
+  sendTableWarsV2UnitsForCustomer,
+  tickTableWarsV2ForActiveSession,
 } from "@/lib/table-wars/v2-data";
 import type { TableWarsTeam } from "@/lib/table-wars/v2-types";
 
@@ -36,4 +38,21 @@ export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam) {
 
 export async function getTableWarsV2SnapshotAction(slug: string) {
   return getTableWarsV2SnapshotForCustomer(slug);
+}
+
+export async function sendTableWarsV2UnitsAction(input: {
+  fromCellId: string;
+  toCellId: string;
+  soldiers?: number;
+  percentage?: number;
+}) {
+  const result = await sendTableWarsV2UnitsForCustomer(input);
+  revalidateTableWarsPaths(result.snapshot.cafeSlug);
+  return result;
+}
+
+export async function tickTableWarsV2Action() {
+  const snapshot = await tickTableWarsV2ForActiveSession();
+  revalidateTableWarsPaths(snapshot.cafeSlug);
+  return snapshot;
 }
