@@ -109,6 +109,19 @@ const HOME_SLOTS: Record<TableWarsTeam, number[]> = {
   red: [9, 10],
 };
 
+const TABLE_PATHS: Record<number, number[]> = {
+  1: [2, 3],
+  2: [1, 4],
+  3: [1, 4, 5],
+  4: [2, 3, 6],
+  5: [3, 6, 7],
+  6: [4, 5, 8],
+  7: [5, 8, 9],
+  8: [6, 7, 10],
+  9: [7, 10],
+  10: [8, 9],
+};
+
 function teamColor(team: TableWarsV2CellTeam) {
   if (team === "blue") return BLUE;
   if (team === "red") return RED;
@@ -136,6 +149,10 @@ function homeTeamForSlot(slotIndex: number): TableWarsTeam | null {
   if (HOME_SLOTS.blue.includes(slotIndex)) return "blue";
   if (HOME_SLOTS.red.includes(slotIndex)) return "red";
   return null;
+}
+
+function areCellsConnected(from: TableWarsV2Cell, to: TableWarsV2Cell) {
+  return Boolean(TABLE_PATHS[from.slotIndex]?.includes(to.slotIndex));
 }
 
 function realPlayersForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
@@ -288,6 +305,7 @@ function applyMove(state: GameState, event: TableWarsRealtimeLiteMoveEvent) {
   const to = state.cellById.get(event.toCellId);
   if (!from || !to || state.finished) return false;
   if (from.team !== event.team || from.soldiers < MIN_SEND_SOLDIERS) return false;
+  if (!areCellsConnected(from, to)) return false;
 
   const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.min(event.soldiers, Math.floor(from.soldiers / 2)));
   from.soldiers = Math.max(0, from.soldiers - soldiers);
@@ -313,6 +331,8 @@ function emitMove(
   soldiers: number,
   onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
 ) {
+  if (!areCellsConnected(from, to)) return false;
+
   const event: TableWarsRealtimeLiteMoveEvent = {
     type,
     eventId: eventId(type),
@@ -323,8 +343,9 @@ function emitMove(
     startedAt: new Date().toISOString(),
     travelMs: travelMs(from, to),
   };
-  applyMove(state, event);
+  if (!applyMove(state, event)) return false;
   onLocalEvent(event);
+  return true;
 }
 
 function resolveArrival(
@@ -464,9 +485,19 @@ function chooseAiMove(state: GameState, team: TableWarsTeam, now: number) {
   const source = sources[0];
   if (!source) return null;
 
-  const target = state.cells
-    .filter((cell) => cell.id !== source.id && cell.team !== team)
-    .sort((a, b) => a.soldiers - b.soldiers || distanceBetween(source, a) - distanceBetween(source, b))[0];
+  const connectedTargets = state.cells.filter((cell) => cell.id !== source.id && areCellsConnected(source, cell));
+  const weakTargetSort = (a: LiteCell, b: LiteCell) =>
+    a.soldiers - b.soldiers || distanceBetween(source, a) - distanceBetween(source, b);
+  const target =
+    connectedTargets
+      .filter((cell) => cell.team === "neutral")
+      .sort(weakTargetSort)[0] ??
+    connectedTargets
+      .filter((cell) => cell.team !== team && cell.team !== "neutral")
+      .sort(weakTargetSort)[0] ??
+    connectedTargets
+      .filter((cell) => cell.team === team && cell.soldiers < source.soldiers && cell.soldiers < 18)
+      .sort(weakTargetSort)[0];
   if (!target) return null;
 
   state.lastAiMoveAtByTeam[team] = now;
@@ -659,6 +690,61 @@ function drawMovement(ctx: CanvasRenderingContext2D, state: GameState, size: Siz
   }
 }
 
+function drawPathCurve(
+  ctx: CanvasRenderingContext2D,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  bend: number,
+) {
+  const midX = (from.x + to.x) / 2;
+  const midY = (from.y + to.y) / 2;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const control = {
+    x: midX + (-dy / length) * bend,
+    y: midY + (dx / length) * bend,
+  };
+
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.quadraticCurveTo(control.x, control.y, to.x, to.y);
+}
+
+function drawPaths(ctx: CanvasRenderingContext2D, state: GameState, size: Size, now: number) {
+  const cellsBySlot = new Map(state.cells.map((cell) => [cell.slotIndex, cell]));
+  const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
+  const pulse = 0.5 + Math.sin(now / 180) * 0.5;
+
+  for (const fromCell of state.cells) {
+    for (const targetSlot of TABLE_PATHS[fromCell.slotIndex] ?? []) {
+      if (targetSlot <= fromCell.slotIndex) continue;
+      const toCell = cellsBySlot.get(targetSlot);
+      if (!toCell) continue;
+
+      const from = percentToPoint(fromCell, size);
+      const to = percentToPoint(toCell, size);
+      const isAvailable =
+        Boolean(selectedSource) && (selectedSource?.id === fromCell.id || selectedSource?.id === toCell.id);
+      const bend = ((fromCell.slotIndex + targetSlot) % 2 === 0 ? 1 : -1) * Math.min(18, size.width * 0.035);
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = isAvailable ? `rgba(217,163,63,${0.4 + pulse * 0.32})` : "rgba(107,58,37,0.16)";
+      ctx.lineWidth = isAvailable ? 12 : 8;
+      drawPathCurve(ctx, from, to, bend);
+      ctx.stroke();
+
+      ctx.strokeStyle = isAvailable ? "rgba(255,253,249,0.88)" : "rgba(255,253,249,0.42)";
+      ctx.lineWidth = isAvailable ? 4 : 2;
+      drawPathCurve(ctx, from, to, bend);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
 function drawTable(
   ctx: CanvasRenderingContext2D,
   cell: LiteCell,
@@ -673,11 +759,15 @@ function drawTable(
   const controlled = canCurrentPlayerControl(state, cell);
   const color = teamColor(cell.team);
   const isOwnBase = state.currentPlayer?.baseCellId === cell.id && cell.assignedPlayerId === state.currentPlayer.id;
-  const targetPreview = Boolean(state.selectedCellId && state.selectedCellId !== cell.id);
+  const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
+  const connectedToSelected = Boolean(selectedSource && selectedSource.id !== cell.id && areCellsConnected(selectedSource, cell));
+  const targetPreview = connectedToSelected;
+  const baseAlpha = selectedSource && !selected && !connectedToSelected ? 0.44 : 1;
   const pulse = 0.5 + Math.sin(now / 150) * 0.5;
 
   ctx.save();
   ctx.translate(point.x, point.y);
+  ctx.globalAlpha = baseAlpha;
   ctx.shadowColor = cell.team === "blue" ? "rgba(56,189,248,0.38)" : cell.team === "red" ? "rgba(251,113,133,0.34)" : "rgba(107,58,37,0.14)";
   ctx.shadowBlur = selected ? 28 : 18;
   ctx.fillStyle = ctx.shadowColor;
@@ -693,7 +783,7 @@ function drawTable(
     ctx.beginPath();
     ctx.ellipse(0, 0, dimensions.width * 0.82 + (selected ? pulse * 8 : 0), dimensions.height * 0.78, 0, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = baseAlpha;
   }
 
   const capture = capturePulses.get(cell.id);
@@ -705,7 +795,7 @@ function drawTable(
     ctx.beginPath();
     ctx.ellipse(0, 0, dimensions.width * (0.78 + progress * 0.45), dimensions.height * (0.78 + progress * 0.5), 0, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = baseAlpha;
   }
 
   drawChair(ctx, -dimensions.width * 0.54, -dimensions.height * 0.16, dimensions, color);
@@ -928,6 +1018,7 @@ function drawScene(
   capturePulses: Map<string, CapturePulse>,
 ) {
   drawBackground(ctx, size);
+  drawPaths(ctx, state, size, now);
   drawMovement(ctx, state, size, now);
   const sortedCells = [...state.cells].sort((a, b) => a.y - b.y || a.slotIndex - b.slotIndex);
   for (const cell of sortedCells) {
@@ -1180,7 +1271,15 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2));
-    emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);
+    if (!areCellsConnected(source, cell)) {
+      onMessageRef.current("لا يوجد مسار مباشر لهذه الطاولة");
+      return;
+    }
+    const didSend = emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);
+    if (!didSend) {
+      onMessageRef.current("لا يمكن إرسال الجنود عبر هذا المسار.");
+      return;
+    }
     state.selectedCellId = null;
     onMessageRef.current(cell.team === source.team ? "الدعم في الطريق." : "الهجوم في الطريق.");
   }
