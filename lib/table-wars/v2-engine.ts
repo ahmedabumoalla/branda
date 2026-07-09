@@ -34,6 +34,13 @@ export type TableWarsV2AiMove = {
   travelMs: number;
 };
 
+export function determineWinningTeam(cells: TableWarsV2Cell[]): TableWarsTeam | null {
+  if (cells.length === 0) return null;
+  const firstTeam = cells[0]?.team;
+  if (firstTeam !== "blue" && firstTeam !== "red") return null;
+  return cells.every((cell) => cell.team === firstTeam) ? firstTeam : null;
+}
+
 export function calculateAvailableLanes(soldiers: number) {
   if (soldiers <= 20) return 1;
   if (soldiers <= 40) return 2;

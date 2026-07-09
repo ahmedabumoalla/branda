@@ -10,6 +10,7 @@ import {
   calculateAvailableLanes,
   canPlayerControlCell,
   chooseAiMove,
+  determineWinningTeam,
   growCells,
   resolveArrivedUnits,
   resolveRoadBattles,
@@ -285,7 +286,7 @@ async function getActiveTableWarsV2Round(cafeId: string): Promise<TableWarsV2Rou
     .from("table_wars_v2_rounds")
     .select("*")
     .eq("cafe_id", cafeId)
-    .in("status", ["waiting", "active"])
+    .in("status", ["waiting", "active", "finished"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -686,9 +687,16 @@ function messagesFromEvents(events: TableWarsV2Event[]) {
     if (event.eventType === "ai_move") messages.push("ai_move");
     if (event.eventType === "send_units") messages.push("send_units");
     if (event.eventType === "arrival") messages.push("arrival");
+    if (event.eventType === "round_finished") messages.push("round_finished");
   }
 
   return messages;
+}
+
+function winnerMessage(team: TableWarsTeam | null) {
+  if (team === "blue") return "فاز الفريق الأزرق";
+  if (team === "red") return "فاز الفريق الأحمر";
+  return null;
 }
 
 export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<TableWarsV2Snapshot> {
@@ -703,6 +711,8 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
       featureEnabled: Boolean(playability.featureEnabled),
       gameEnabled: false,
       round: null,
+      roundEnded: false,
+      winnerMessage: null,
       currentPlayer: null,
       role: null,
       team: null,
@@ -742,6 +752,8 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     featureEnabled: true,
     gameEnabled: true,
     round,
+    roundEnded: round.status === "finished",
+    winnerMessage: winnerMessage(round.winningTeam),
     currentPlayer,
     role: currentPlayer?.role ?? null,
     team: currentPlayer?.team ?? null,
@@ -753,8 +765,8 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     events,
     messages: messagesFromEvents(events),
     isSpectator: currentPlayer?.role === "spectator",
-    canJoinBlue: teamCounts.bluePlayers < round.maxPlayersPerTeam,
-    canJoinRed: teamCounts.redPlayers < round.maxPlayersPerTeam,
+    canJoinBlue: round.status !== "finished" && teamCounts.bluePlayers < round.maxPlayersPerTeam,
+    canJoinRed: round.status !== "finished" && teamCounts.redPlayers < round.maxPlayersPerTeam,
   };
 }
 
@@ -776,6 +788,9 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
       player: existingPlayer,
       snapshot,
     };
+  }
+  if (round.status === "finished") {
+    throw new Error("This table wars round has already finished.");
   }
 
   const { counts } = await refreshRoundTeamCounts(round);
@@ -849,7 +864,9 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
     getRoundById(fromCell.roundId, fromCell.cafeId),
     getCafeByIdAdmin(fromCell.cafeId),
   ]);
-  if (!round || round.status !== "active") throw new Error("No active table wars round.");
+  if (!round || (round.status !== "active" && round.status !== "waiting")) {
+    throw new Error("No active table wars round.");
+  }
   if (!cafe) throw new Error("Cafe not found.");
   await ensurePublicTableWarsV2Playable(cafe.slug);
 
@@ -955,7 +972,7 @@ export async function tickTableWarsV2ForActiveSession() {
   if (!customer) throw new Error("Unauthorized.");
 
   const round = await getOrCreateActiveTableWarsV2Round(cafe.id);
-  if (round.status === "active") {
+  if (round.status === "active" || round.status === "waiting") {
     await tickTableWarsV2Round(round);
   }
 
@@ -1054,6 +1071,12 @@ async function tickTableWarsV2Round(round: TableWarsV2Round) {
     insertRoundEvents(round, arrivals.events),
   ]);
 
+  const winningTeam = determineWinningTeam(arrivals.cells);
+  if (winningTeam) {
+    updatedRound = await finishTableWarsV2Round(round, players, winningTeam, now);
+    return updatedRound;
+  }
+
   const aiMove = chooseAiMove({
     cells: arrivals.cells,
     units: arrivals.units.filter((unit) => unit.status === "moving"),
@@ -1069,6 +1092,44 @@ async function tickTableWarsV2Round(round: TableWarsV2Round) {
   return updatedRound;
 }
 
+async function finishTableWarsV2Round(
+  round: TableWarsV2Round,
+  players: TableWarsV2Player[],
+  winningTeam: TableWarsTeam,
+  now: Date,
+) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const finished = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_rounds")
+      .update({
+        status: "finished",
+        winning_team: winningTeam,
+        ended_at: now.toISOString(),
+      })
+      .eq("id", round.id)
+      .eq("cafe_id", round.cafeId)
+      .in("status", ["waiting", "active"])
+      .select("*")
+      .single(),
+    "Unable to finish table wars round.",
+  );
+  const finishedRound = mapRound(finished as Record<string, unknown>);
+
+  await Promise.all([
+    markWinningPlayers(finishedRound, winningTeam),
+    updateDailyPlayerStatsForRound(finishedRound, players, winningTeam, now),
+    insertRoundEvents(finishedRound, [
+      {
+        eventType: "round_finished",
+        payload: { winningTeam },
+      },
+    ]),
+  ]);
+
+  return finishedRound;
+}
+
 async function updateRoundLastTickAt(round: TableWarsV2Round, now: Date) {
   const supabase = tableWarsV2Db(createAdminClient());
   const updated = await assertNoDbError(
@@ -1082,6 +1143,87 @@ async function updateRoundLastTickAt(round: TableWarsV2Round, now: Date) {
     "Unable to update round tick.",
   );
   return mapRound(updated as Record<string, unknown>);
+}
+
+async function markWinningPlayers(round: TableWarsV2Round, winningTeam: TableWarsTeam) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { error } = await supabase
+    .from("table_wars_v2_players")
+    .update({ won_this_round: true })
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id)
+    .eq("team", winningTeam)
+    .eq("role", "player")
+    .not("customer_id", "is", null);
+
+  if (error) throw new Error(error.message || "Unable to update winning table wars players.");
+}
+
+async function updateDailyPlayerStatsForRound(
+  round: TableWarsV2Round,
+  players: TableWarsV2Player[],
+  winningTeam: TableWarsTeam,
+  now: Date,
+) {
+  const realPlayers = players.filter((player) => player.role === "player" && player.customerId);
+  if (realPlayers.length === 0) return;
+
+  const supabase = tableWarsV2Db(createAdminClient());
+  const customerIds = realPlayers.map((player) => player.customerId).filter((id): id is string => Boolean(id));
+  const { data, error } = await supabase
+    .from("table_wars_v2_daily_player_stats")
+    .select("customer_id,play_seconds,wins,last_win_at")
+    .eq("cafe_id", round.cafeId)
+    .eq("day", todayInRiyadh())
+    .in("customer_id", customerIds);
+
+  if (error) throw new Error(error.message || "Unable to load table wars daily stats.");
+
+  const existingByCustomer = new Map(
+    (Array.isArray(data) ? data : []).map((row) => {
+      const item = row as Record<string, unknown>;
+      return [
+        text(item.customer_id),
+        {
+          playSeconds: intValue(item.play_seconds),
+          wins: intValue(item.wins),
+          lastWinAt: nullableText(item.last_win_at),
+        },
+      ] as const;
+    }),
+  );
+
+  const rows = realPlayers.map((player) => {
+    const customerId = player.customerId as string;
+    const existing = existingByCustomer.get(customerId);
+    const playedSeconds = estimatePlayerRoundSeconds(round, player, now);
+    const isWinner = player.team === winningTeam;
+
+    return {
+      cafe_id: round.cafeId,
+      day: todayInRiyadh(),
+      customer_id: customerId,
+      display_name: player.displayName,
+      team: player.team,
+      play_seconds: (existing?.playSeconds ?? 0) + playedSeconds,
+      wins: (existing?.wins ?? 0) + (isWinner ? 1 : 0),
+      last_win_at: isWinner ? now.toISOString() : existing?.lastWinAt ?? null,
+    };
+  });
+
+  const { error: upsertError } = await supabase
+    .from("table_wars_v2_daily_player_stats")
+    .upsert(rows, { onConflict: "cafe_id,day,customer_id" });
+
+  if (upsertError) throw new Error(upsertError.message || "Unable to update table wars daily stats.");
+}
+
+function estimatePlayerRoundSeconds(round: TableWarsV2Round, player: TableWarsV2Player, now: Date) {
+  const joinedAt = player.joinedAt ? Date.parse(player.joinedAt) : NaN;
+  const startedAt = round.startedAt ? Date.parse(round.startedAt) : NaN;
+  const startTime = Number.isFinite(joinedAt) ? joinedAt : startedAt;
+  if (!Number.isFinite(startTime)) return Math.max(1, player.playSeconds);
+  return Math.max(1, Math.floor((now.getTime() - startTime) / 1000));
 }
 
 async function applyCellUpdates(round: TableWarsV2Round, updates: TableWarsV2CellUpdate[]) {

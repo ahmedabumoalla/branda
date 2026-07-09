@@ -142,9 +142,10 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const cellById = useMemo(() => new Map(cells.map((cell) => [cell.id, cell])), [cells]);
   const controlledCellIds = useMemo(() => new Set(snapshot.controlledCellIds), [snapshot.controlledCellIds]);
   const currentPlayer = snapshot.currentPlayer;
-  const isPlayer = snapshot.role === "player";
+  const isRoundFinished = snapshot.roundEnded || snapshot.round?.status === "finished";
+  const isPlayer = snapshot.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
-  const canJoin = !snapshot.currentPlayer && snapshot.round;
+  const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
   const visibleEvents = snapshot.events.slice(0, 5);
 
   const refreshSnapshot = useCallback(async () => {
@@ -172,6 +173,8 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }, [snapshot.units.length]);
 
   useEffect(() => {
+    if (isRoundFinished) return;
+
     const poll = window.setInterval(() => {
       if (pollingRef.current) return;
       pollingRef.current = true;
@@ -192,7 +195,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     }, POLLING_MS);
 
     return () => window.clearInterval(poll);
-  }, [refreshSnapshot]);
+  }, [isRoundFinished, refreshSnapshot]);
 
   useEffect(() => {
     const latestRoadBattle = snapshot.events.find((event) => event.eventType === "road_battle");
@@ -297,6 +300,25 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         ) : null}
 
         <div className="relative h-[620px] max-h-[74vh] min-h-[540px] bg-[#F7EFE7]">
+          {isRoundFinished ? (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#311912]/55 p-5 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-lg border border-white/50 bg-white p-6 text-center shadow-[0_24px_70px_rgba(49,25,18,0.24)]">
+                <Swords className="mx-auto h-10 w-10 text-[#D9A33F]" />
+                <h3 className="mt-3 text-2xl font-black text-[#311912]">
+                  {snapshot.winnerMessage ?? "انتهت الجولة"}
+                </h3>
+                <p className="mt-2 text-sm font-bold text-[#806A5E]">انتهت الجولة</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-5 h-11 w-full rounded-lg bg-[#311912] px-4 text-sm font-black text-white transition active:scale-95"
+                >
+                  تحديث الصفحة
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {roadBattleFlash ? (
             <div className="pointer-events-none absolute inset-x-4 top-4 z-30 rounded-lg border border-amber-200 bg-amber-100/95 px-4 py-3 text-sm font-black text-amber-900 shadow">
               اشتباك في الطريق

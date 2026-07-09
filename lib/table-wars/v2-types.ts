@@ -108,6 +108,8 @@ export type TableWarsV2Snapshot = {
   featureEnabled: boolean;
   gameEnabled: boolean;
   round: TableWarsV2Round | null;
+  roundEnded: boolean;
+  winnerMessage: string | null;
   currentPlayer: TableWarsV2Player | null;
   role: TableWarsRole | null;
   team: TableWarsTeam | null;
