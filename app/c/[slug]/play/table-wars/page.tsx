@@ -3,10 +3,12 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Castle, LockKeyhole, QrCode, Shield, Sparkles, Swords } from "lucide-react";
 import { TableWarsConquerGame } from "@/components/cafe/table-wars-conquer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getCafePath } from "@/lib/cafe/theme-links";
+import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
+import { getCustomerProfileForActiveSession } from "@/lib/data/customers";
 import { getPublicTableWarsEntry } from "@/lib/data/table-wars";
 
 type Props = {
@@ -68,6 +70,13 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
     ? resolvedSearchParams.previewTheme[0]
     : resolvedSearchParams.previewTheme;
   const productsHref = getCafePath(slug, "products/popular", previewThemeId);
+
+  if (entry.cafeFound && entry.featureEnabled && entry.gameEnabled) {
+    const customer = await getCustomerProfileForActiveSession(slug);
+    if (!customer) {
+      redirect(getCustomerLoginHref(slug, `/c/${slug}/play/table-wars`, previewThemeId));
+    }
+  }
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#FCF8F3] px-4 py-6 text-[#311912] sm:py-10">
