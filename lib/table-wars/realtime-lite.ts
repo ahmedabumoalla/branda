@@ -38,11 +38,18 @@ export type TableWarsRealtimeLiteRoundFinishedEvent = {
   occurredAt: string;
 };
 
+export type TableWarsRealtimeLiteRoundResetEvent = {
+  type: "round_reset";
+  eventId: string;
+  resetAt: string;
+};
+
 export type TableWarsRealtimeLiteEvent =
   | TableWarsRealtimeLiteMoveEvent
   | TableWarsRealtimeLiteBattleEvent
   | TableWarsRealtimeLiteCaptureEvent
-  | TableWarsRealtimeLiteRoundFinishedEvent;
+  | TableWarsRealtimeLiteRoundFinishedEvent
+  | TableWarsRealtimeLiteRoundResetEvent;
 
 type RealtimeLiteInput = {
   roundId: string | null;
@@ -132,6 +139,9 @@ function isTableWarsRealtimeLiteEvent(value: unknown): value is TableWarsRealtim
   }
   if (event.type === "round_finished") {
     return (event.winningTeam === "blue" || event.winningTeam === "red") && typeof event.occurredAt === "string";
+  }
+  if (event.type === "round_reset") {
+    return typeof event.resetAt === "string";
   }
   return false;
 }

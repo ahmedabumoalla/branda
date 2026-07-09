@@ -26,6 +26,7 @@ type Props = {
   role: TableWarsV2Snapshot["role"];
   onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void;
   onRoundFinished: (winningTeam: TableWarsTeam) => void;
+  onNewRound: () => void;
   onMessage: (message: string) => void;
 };
 
@@ -80,6 +81,7 @@ type GameState = {
   lastGrowthAt: number;
   lastAiMoveAtByTeam: Partial<Record<TableWarsTeam, number>>;
   seenEvents: Set<string>;
+  ignoredFinishedEvents: Set<string>;
 };
 
 const MAX_DPR = 2;
@@ -168,6 +170,7 @@ function makeCellMap(cells: LiteCell[]) {
 
 function createInitialState(props: Props): GameState {
   const cells = normalizeCells(props.cells, props.players);
+  const localWinner = confirmedWinnerFromCells(cells);
   return {
     cells,
     cellById: makeCellMap(cells),
@@ -179,12 +182,13 @@ function createInitialState(props: Props): GameState {
     role: props.role,
     selectedCellId: null,
     movingUnits: [],
-    finished: props.initialRoundFinished,
-    winningTeam: null,
-    winnerMessage: props.initialWinnerMessage,
+    finished: props.initialRoundFinished && Boolean(localWinner),
+    winningTeam: localWinner,
+    winnerMessage: localWinner ? props.initialWinnerMessage ?? winnerMessage(localWinner) : null,
     lastGrowthAt: Date.now(),
     lastAiMoveAtByTeam: {},
     seenEvents: new Set(),
+    ignoredFinishedEvents: new Set(),
   };
 }
 
@@ -437,11 +441,16 @@ function growCells(state: GameState, now: number) {
   }
 }
 
+function confirmedWinnerFromCells(cells: LiteCell[]) {
+  if (cells.length !== TOTAL_CELLS) return null;
+  if (cells.every((cell) => cell.team === "blue")) return "blue";
+  if (cells.every((cell) => cell.team === "red")) return "red";
+  return null;
+}
+
 function checkWinner(state: GameState) {
-  if (state.finished || state.cells.length === 0) return null;
-  const firstTeam = state.cells[0]?.team;
-  if (firstTeam !== "blue" && firstTeam !== "red") return null;
-  return state.cells.every((cell) => cell.team === firstTeam) ? firstTeam : null;
+  if (state.finished) return null;
+  return confirmedWinnerFromCells(state.cells);
 }
 
 function chooseAiMove(state: GameState, team: TableWarsTeam, now: number) {
@@ -507,10 +516,47 @@ function applyExternalEvent(
     return;
   }
   if (event.type === "round_finished") {
+    const localWinner = confirmedWinnerFromCells(state.cells);
+    if (localWinner !== event.winningTeam) {
+      state.ignoredFinishedEvents.add(event.eventId);
+      return;
+    }
     state.finished = true;
     state.winningTeam = event.winningTeam;
     state.winnerMessage = winnerMessage(event.winningTeam);
+    return;
   }
+  if (event.type === "round_reset") {
+    resetLocalRound(state);
+  }
+}
+
+function resetLocalRound(state: GameState) {
+  const resetCells = normalizeCells(state.cells, state.players).map((cell) => {
+    const homeTeam = homeTeamForSlot(cell.slotIndex);
+    const isRealBase = state.players.some((player) => player.baseCellId === cell.id && player.role === "player");
+    const nextTeam: TableWarsV2CellTeam = homeTeam ?? "neutral";
+    return {
+      ...cell,
+      team: nextTeam,
+      isBase: Boolean(homeTeam) || isRealBase,
+      assignedPlayerId: isRealBase ? cell.assignedPlayerId : null,
+      soldiers: homeTeam ? BASE_SOLDIERS : DEFAULT_SOLDIERS,
+      localUpdatedAt: Date.now(),
+    };
+  });
+
+  state.cells = resetCells;
+  state.cellById = makeCellMap(resetCells);
+  state.selectedCellId = null;
+  state.movingUnits = [];
+  state.finished = false;
+  state.winningTeam = null;
+  state.winnerMessage = null;
+  state.lastGrowthAt = Date.now();
+  state.lastAiMoveAtByTeam = {};
+  state.seenEvents = new Set();
+  state.ignoredFinishedEvents = new Set();
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
@@ -801,12 +847,28 @@ function drawSparks(ctx: CanvasRenderingContext2D, sparks: Spark[], now: number)
   }
 }
 
+function winnerButtonRect(size: Size) {
+  const cardHeight = 178;
+  const width = Math.min(size.width - 76, 260);
+  const height = 42;
+  return {
+    x: (size.width - width) / 2,
+    y: (size.height - cardHeight) / 2 + 120,
+    width,
+    height,
+  };
+}
+
+function isPointInsideRect(point: { x: number; y: number }, rect: { x: number; y: number; width: number; height: number }) {
+  return point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height;
+}
+
 function drawWinnerBanner(ctx: CanvasRenderingContext2D, size: Size, message: string | null) {
   ctx.save();
   ctx.fillStyle = "rgba(49,25,18,0.54)";
   ctx.fillRect(0, 0, size.width, size.height);
   const cardWidth = Math.min(size.width - 36, 360);
-  const cardHeight = 150;
+  const cardHeight = 178;
   const x = (size.width - cardWidth) / 2;
   const y = (size.height - cardHeight) / 2;
   ctx.shadowColor = "rgba(49,25,18,0.28)";
@@ -827,6 +889,14 @@ function drawWinnerBanner(ctx: CanvasRenderingContext2D, size: Size, message: st
   ctx.fillStyle = "#806A5E";
   ctx.font = "800 14px Arial";
   ctx.fillText("انتهت الجولة", size.width / 2, y + 110);
+
+  const button = winnerButtonRect(size);
+  ctx.fillStyle = "#311912";
+  roundRect(ctx, button.x, button.y, button.width, button.height, 12);
+  ctx.fill();
+  ctx.fillStyle = "#FFFDF9";
+  ctx.font = "900 14px Arial";
+  ctx.fillText("بدء جولة جديدة", size.width / 2, button.y + button.height / 2);
   ctx.restore();
 }
 
@@ -885,17 +955,19 @@ function nearestCellAt(point: { x: number; y: number }, cells: LiteCell[], size:
 export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   onLocalEvent,
   onRoundFinished,
+  onNewRound,
   onMessage,
   ...props
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef<GameState>(createInitialState({ ...props, onLocalEvent, onRoundFinished, onMessage }));
+  const stateRef = useRef<GameState>(createInitialState({ ...props, onLocalEvent, onRoundFinished, onNewRound, onMessage }));
   const sizeRef = useRef<Size>({ width: 0, height: 0, dpr: 1 });
   const sparksRef = useRef<Spark[]>([]);
   const capturePulsesRef = useRef<Map<string, CapturePulse>>(new Map());
   const onLocalEventRef = useRef(onLocalEvent);
   const onRoundFinishedRef = useRef(onRoundFinished);
+  const onNewRoundRef = useRef(onNewRound);
   const onMessageRef = useRef(onMessage);
   const externalEventsKey = useMemo(
     () => props.externalEvents.map((event) => event.eventId).join("|"),
@@ -905,8 +977,9 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   useEffect(() => {
     onLocalEventRef.current = onLocalEvent;
     onRoundFinishedRef.current = onRoundFinished;
+    onNewRoundRef.current = onNewRound;
     onMessageRef.current = onMessage;
-  }, [onLocalEvent, onRoundFinished, onMessage]);
+  }, [onLocalEvent, onRoundFinished, onNewRound, onMessage]);
 
   useEffect(() => {
     const state = stateRef.current;
@@ -919,8 +992,16 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     state.isHost = props.isHost;
     state.realtimeReady = props.realtimeReady;
     state.role = props.role;
-    state.finished = props.initialRoundFinished || state.finished;
-    state.winnerMessage = props.initialWinnerMessage ?? state.winnerMessage;
+    const localWinner = confirmedWinnerFromCells(normalizedCells);
+    if (props.initialRoundFinished && localWinner) {
+      state.finished = true;
+      state.winningTeam = localWinner;
+      state.winnerMessage = props.initialWinnerMessage ?? winnerMessage(localWinner);
+    } else if (props.initialRoundFinished && !localWinner) {
+      state.finished = false;
+      state.winningTeam = null;
+      state.winnerMessage = null;
+    }
     state.selectedCellId = state.selectedCellId && state.cellById.has(state.selectedCellId) ? state.selectedCellId : null;
   }, [
     props.cells,
@@ -1039,21 +1120,36 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
 
   function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
     const state = stateRef.current;
-    if (!state.isPlayer || state.finished) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const point = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+
+    if (state.finished) {
+      if (isPointInsideRect(point, winnerButtonRect(sizeRef.current))) {
+        resetLocalRound(state);
+        capturePulsesRef.current.clear();
+        sparksRef.current = [];
+        const resetEvent: TableWarsRealtimeLiteEvent = {
+          type: "round_reset",
+          eventId: eventId("round-reset"),
+          resetAt: new Date().toISOString(),
+        };
+        onLocalEventRef.current(resetEvent);
+        onNewRoundRef.current();
+        onMessageRef.current("بدأت جولة جديدة.");
+      }
+      return;
+    }
+
+    if (!state.isPlayer) return;
     if (!state.realtimeReady) {
       onMessageRef.current("الاتصال اللحظي غير جاهز، لا يمكن إرسال حركة الآن.");
       return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const cell = nearestCellAt(
-      {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      },
-      state.cells,
-      sizeRef.current,
-    );
+    const cell = nearestCellAt(point, state.cells, sizeRef.current);
     if (!cell) return;
 
     if (!state.selectedCellId) {

@@ -5,6 +5,7 @@ import { Activity, Eye, Radio, Swords, Users } from "lucide-react";
 import {
   finishTableWarsV2RealtimeLiteRoundAction,
   joinTableWarsV2Team,
+  startNewTableWarsLiteRoundAction,
 } from "@/app/actions/table-wars";
 import { TableWarsLegends } from "@/components/cafe/table-wars-legends";
 import { TableWarsCanvasGame } from "@/components/cafe/table-wars-canvas-game";
@@ -174,6 +175,22 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     [slug],
   );
 
+  const handleStartNewRound = useCallback(() => {
+    finishedSaveRef.current = false;
+    setRealtimeEvents([]);
+    setError(null);
+    startFinishing(() => {
+      void startNewTableWarsLiteRoundAction(slug)
+        .then((nextSnapshot) => {
+          setSnapshot(nextSnapshot);
+          setMessage("بدأت جولة جديدة.");
+        })
+        .catch((startError) => {
+          setError(startError instanceof Error ? startError.message : "تعذر بدء جولة جديدة.");
+        });
+    });
+  }, [slug]);
+
   return (
     <div className="flex flex-col gap-5">
       <section className="grid gap-3 md:grid-cols-5">
@@ -240,6 +257,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
             role={snapshot.role}
             onLocalEvent={handleLocalRealtimeEvent}
             onRoundFinished={handleRealtimeRoundFinished}
+            onNewRound={handleStartNewRound}
             onMessage={setMessage}
           />
         </div>

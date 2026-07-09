@@ -9,6 +9,7 @@ import {
   getTableWarsV2SnapshotForCustomer,
   finishTableWarsV2RealtimeLiteRoundForCustomer,
   joinTableWarsV2Customer,
+  startNewTableWarsLiteRoundForCustomer,
   sendTableWarsV2UnitsForCustomer,
   tickTableWarsV2ForActiveSession,
 } from "@/lib/table-wars/v2-data";
@@ -60,6 +61,12 @@ export async function tickTableWarsV2Action() {
 
 export async function finishTableWarsV2RealtimeLiteRoundAction(slug: string, winningTeam: TableWarsTeam) {
   const snapshot = await finishTableWarsV2RealtimeLiteRoundForCustomer(slug, winningTeam);
+  revalidateTableWarsPaths(snapshot.cafeSlug);
+  return snapshot;
+}
+
+export async function startNewTableWarsLiteRoundAction(slug: string) {
+  const snapshot = await startNewTableWarsLiteRoundForCustomer(slug);
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;
 }
