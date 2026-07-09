@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Download, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, Swords, X } from "lucide-react";
+import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, Swords, X } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
@@ -154,10 +154,6 @@ export function ProductCollectionPage({ slug, view, tableWarsEntryHref }: Props)
         sort: view === "popular" ? "popular" : view === "latest" ? "latest" : "popular",
       })
     );
-  }
-
-  function requestBrandAppInstall() {
-    window.dispatchEvent(new Event("barndaksa:pwa-install-click"));
   }
 
   const offerProductIds = useMemo(
@@ -372,15 +368,7 @@ export function ProductCollectionPage({ slug, view, tableWarsEntryHref }: Props)
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={requestBrandAppInstall}
-              aria-label="تحميل تطبيق العلامة"
-              title="تحميل تطبيق العلامة"
-              className={`flex h-12 w-12 items-center justify-center rounded-full border border-black/5 bg-white shadow-sm transition active:scale-95 ${theme.accent}`}
-            >
-              <Download className="h-5 w-5" />
-            </button>
+            <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} variant="icon" />
             <button
               type="button"
               onClick={() => setFilterOpen(true)}

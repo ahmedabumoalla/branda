@@ -18,6 +18,7 @@ type Props = {
   slug: string;
   cafeName: string;
   compact?: boolean;
+  variant?: "section" | "compact" | "icon";
 };
 
 function isStandaloneDisplay() {
@@ -56,7 +57,7 @@ function ensureBrandManifest(slug: string) {
   return manifest;
 }
 
-export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Props) {
+export function BrandPwaInstallSection({ slug, cafeName, compact = false, variant = "section" }: Props) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState("");
   const [installed, setInstalled] = useState(false);
@@ -172,18 +173,30 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     setMessage("في Chrome على الجوال افتح القائمة واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية، وإذا كان تطبيق علامة أخرى مثبتًا احذفه أولًا ثم أعد فتح الصفحة");
   }, [installPrompt, slug]);
 
-  useEffect(() => {
-    const handler = () => {
-      void install();
-    };
-
-    window.addEventListener("barndaksa:pwa-install-click", handler);
-    return () => window.removeEventListener("barndaksa:pwa-install-click", handler);
-  }, [install]);
-
   if (installed) return null;
 
-  if (compact) {
+  if (variant === "icon") {
+    return (
+      <div dir="rtl" className="relative shrink-0">
+        <button
+          type="button"
+          onClick={install}
+          aria-label="تحميل تطبيق العلامة"
+          title="تحميل تطبيق العلامة"
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-black/5 bg-white text-[var(--ci-primary-bg,var(--barndaksa-coffee-brown))] shadow-sm transition active:scale-95"
+        >
+          <Download className="h-5 w-5" />
+        </button>
+        {message ? (
+          <p className="absolute left-0 top-14 z-30 w-64 rounded-2xl border border-[var(--ci-border,#E7D7C6)] bg-white p-3 text-right text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)] shadow-[0_12px_34px_rgba(23,20,18,0.12)]">
+            {message}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (compact || variant === "compact") {
     return (
       <section dir="rtl" className="w-full">
         <div className="mx-auto flex w-full max-w-[320px] flex-col items-center gap-2">
