@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { recordPwaInstallClickAction } from "@/app/actions/operation-events";
 
 type BeforeInstallPromptEvent = Event & {
@@ -140,7 +140,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
     };
   }, [slug]);
 
-  async function install() {
+  const install = useCallback(async () => {
     setProgress(65);
     ensureBrandManifest(slug);
     const promptEvent = installPrompt ?? getSavedInstallPrompt();
@@ -170,7 +170,16 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false }: Prop
 
     setProgress(90);
     setMessage("في Chrome على الجوال افتح القائمة واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية، وإذا كان تطبيق علامة أخرى مثبتًا احذفه أولًا ثم أعد فتح الصفحة");
-  }
+  }, [installPrompt, slug]);
+
+  useEffect(() => {
+    const handler = () => {
+      void install();
+    };
+
+    window.addEventListener("barndaksa:pwa-install-click", handler);
+    return () => window.removeEventListener("barndaksa:pwa-install-click", handler);
+  }, [install]);
 
   if (installed) return null;
 
