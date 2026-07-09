@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, type PointerEvent } from "react";
+import { memo, useEffect, useMemo, useRef, type MouseEvent, type PointerEvent } from "react";
 import type {
   TableWarsTeam,
   TableWarsV2Cell,
@@ -85,6 +85,7 @@ type GameState = {
   lastAiMoveAtByTeam: Partial<Record<TableWarsTeam, number>>;
   seenEvents: Set<string>;
   ignoredFinishedEvents: Set<string>;
+  lastInputDebug: string;
 };
 
 const MAX_DPR = 2;
@@ -177,7 +178,7 @@ function isRealPlayer(player: TableWarsV2Player | null) {
 function hasBlockingRealAssignee(players: TableWarsV2Player[], cell: TableWarsV2Cell, currentPlayerId?: string | null) {
   if (!cell.assignedPlayerId || cell.assignedPlayerId === currentPlayerId) return false;
   const assignee = assignedPlayerForCell(players, cell);
-  return !assignee || isRealPlayer(assignee);
+  return isRealPlayer(assignee);
 }
 
 function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) {
@@ -229,6 +230,7 @@ function createInitialState(props: Props): GameState {
     lastAiMoveAtByTeam: {},
     seenEvents: new Set(),
     ignoredFinishedEvents: new Set(),
+    lastInputDebug: "آخر ضغطة: لم تضغط بعد",
   };
 }
 
@@ -613,6 +615,7 @@ function resetLocalRound(state: GameState) {
   state.lastAiMoveAtByTeam = {};
   state.seenEvents = new Set();
   state.ignoredFinishedEvents = new Set();
+  state.lastInputDebug = "آخر ضغطة: بدأت جولة جديدة";
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
@@ -1017,6 +1020,28 @@ function drawStatusChip(ctx: CanvasRenderingContext2D, size: Size, state: GameSt
   ctx.restore();
 }
 
+function drawInputDebug(ctx: CanvasRenderingContext2D, size: Size, state: GameState) {
+  const label = state.lastInputDebug;
+  const width = Math.min(size.width - 32, Math.max(220, label.length * 8.4));
+  const height = 32;
+  const x = 16;
+  const y = size.height - height - 16;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(49,25,18,0.72)";
+  ctx.strokeStyle = "rgba(255,253,249,0.32)";
+  ctx.lineWidth = 1;
+  roundRect(ctx, x, y, width, height, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#FFFDF9";
+  ctx.font = "800 12px Arial";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, x + width - 12, y + height / 2);
+  ctx.restore();
+}
+
 function drawScene(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -1034,18 +1059,18 @@ function drawScene(
   }
   drawSparks(ctx, sparks, performance.now());
   drawStatusChip(ctx, size, state);
+  drawInputDebug(ctx, size, state);
   if (state.finished) drawWinnerBanner(ctx, size, state.winnerMessage);
 }
 
 function nearestCellAt(point: { x: number; y: number }, cells: LiteCell[], size: Size) {
   const dimensions = tableSize(size);
+  const hitRadius = Math.max(52, Math.min(72, Math.max(dimensions.width, dimensions.height) * 0.72));
   let nearest: { cell: LiteCell; distance: number } | null = null;
   for (const cell of cells) {
     const center = percentToPoint(cell, size);
-    const dx = Math.abs(point.x - center.x);
-    const dy = Math.abs(point.y - center.y);
-    if (dx > dimensions.width * 0.7 || dy > dimensions.height * 0.9) continue;
     const distance = Math.hypot(point.x - center.x, point.y - center.y);
+    if (distance > hitRadius) continue;
     if (!nearest || distance < nearest.distance) nearest = { cell, distance };
   }
   return nearest?.cell ?? null;
@@ -1068,6 +1093,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   const onRoundFinishedRef = useRef(onRoundFinished);
   const onNewRoundRef = useRef(onNewRound);
   const onMessageRef = useRef(onMessage);
+  const lastPointerDownAtRef = useRef(0);
   const externalEventsKey = useMemo(
     () => props.externalEvents.map((event) => event.eventId).join("|"),
     [props.externalEvents],
@@ -1221,28 +1247,34 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     return () => window.cancelAnimationFrame(frameId);
   }, []);
 
-  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
-    event.preventDefault();
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture can fail for synthetic or already-ended events.
-    }
-
-    const state = stateRef.current;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const pointerSize =
+  function canvasPointFromClient(canvas: HTMLCanvasElement, clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    const logicalSize =
       sizeRef.current.width > 0 && sizeRef.current.height > 0
         ? sizeRef.current
         : { width: Math.max(1, rect.width), height: Math.max(1, rect.height), dpr: 1 };
-    sizeRef.current = pointerSize;
-    const point = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+    sizeRef.current = logicalSize;
+    return {
+      point: {
+        x: ((clientX - rect.left) / Math.max(1, rect.width)) * logicalSize.width,
+        y: ((clientY - rect.top) / Math.max(1, rect.height)) * logicalSize.height,
+      },
+      size: logicalSize,
     };
+  }
+
+  function noteInput(debugMessage: string, userMessage?: string) {
+    stateRef.current.lastInputDebug = debugMessage;
+    onMessageRef.current(userMessage ?? debugMessage.replace(/^آخر ضغطة:\s*/, ""));
+  }
+
+  function handleCanvasPress(canvas: HTMLCanvasElement, clientX: number, clientY: number) {
+    const state = stateRef.current;
+    const { point, size } = canvasPointFromClient(canvas, clientX, clientY);
+    const pointLabel = `${Math.round(point.x)},${Math.round(point.y)}`;
 
     if (state.finished) {
-      if (isPointInsideRect(point, winnerButtonRect(pointerSize))) {
+      if (isPointInsideRect(point, winnerButtonRect(size))) {
         resetLocalRound(state);
         capturePulsesRef.current.clear();
         sparksRef.current = [];
@@ -1253,67 +1285,91 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
         };
         onLocalEventRef.current(resetEvent);
         onNewRoundRef.current();
-        onMessageRef.current("بدأت جولة جديدة.");
+        noteInput("آخر ضغطة: بدأت جولة جديدة");
+      } else {
+        state.lastInputDebug = `آخر ضغطة: ${pointLabel} — الجولة منتهية`;
       }
       return;
     }
 
-    if (!state.isPlayer) return;
+    if (!state.isPlayer) {
+      noteInput(`آخر ضغطة: ${pointLabel} — لست لاعبًا في هذه الجولة`);
+      return;
+    }
 
-    const cell = nearestCellAt(point, state.cells, pointerSize);
-    if (!cell) return;
+    const cell = nearestCellAt(point, state.cells, size);
+    if (!cell) {
+      noteInput(`آخر ضغطة: ${pointLabel} — لم تصب طاولة`, "اختر طاولة من فريقك أولًا");
+      return;
+    }
 
     if (!state.selectedCellId) {
       if (!canCurrentPlayerControl(state, cell)) {
-        onMessageRef.current("هذه الطاولة ليست ضمن تحكمك");
+        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — هذه الطاولة ليست ضمن تحكمك`, "هذه الطاولة ليست ضمن تحكمك");
         return;
       }
       if (cell.soldiers < MIN_SEND_SOLDIERS) {
-        onMessageRef.current("تحتاج الطاولة إلى جنديين على الأقل.");
+        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل.`);
         return;
       }
       state.selectedCellId = cell.id;
-      onMessageRef.current("اختر طاولة متصلة كهدف.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ضمن تحكمك`, "اختر طاولة متصلة كهدف.");
       return;
     }
 
     if (state.selectedCellId === cell.id) {
       state.selectedCellId = null;
-      onMessageRef.current("تم إلغاء الاختيار.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تم إلغاء الاختيار.`);
       return;
     }
 
     const source = state.cellById.get(state.selectedCellId);
     if (!source || !canCurrentPlayerControl(state, source)) {
       state.selectedCellId = null;
-      onMessageRef.current("هذه الطاولة ليست ضمن تحكمك");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — هذه الطاولة ليست ضمن تحكمك`, "هذه الطاولة ليست ضمن تحكمك");
       return;
     }
 
     if (source.team !== state.currentPlayer?.team) {
       state.selectedCellId = null;
-      onMessageRef.current("اختر مصدرًا صالحًا.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا.`);
       return;
     }
 
     if (source.soldiers < MIN_SEND_SOLDIERS) {
       state.selectedCellId = null;
-      onMessageRef.current("تحتاج الطاولة إلى جنديين على الأقل.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل.`);
       return;
     }
 
     const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2));
     if (!areCellsConnected(source, cell)) {
-      onMessageRef.current("لا يوجد مسار مباشر لهذه الطاولة");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — لا يوجد مسار مباشر لهذه الطاولة`, "لا يوجد مسار مباشر لهذه الطاولة");
       return;
     }
     const didSend = emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);
     if (!didSend) {
-      onMessageRef.current("لا يمكن إرسال الجنود عبر هذا المسار.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — لا يمكن إرسال الجنود عبر هذا المسار.`);
       return;
     }
     state.selectedCellId = null;
-    onMessageRef.current(cell.team === source.team ? "الدعم في الطريق." : "الهجوم في الطريق.");
+    noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${cell.team === source.team ? "الدعم في الطريق." : "الهجوم في الطريق."}`);
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
+    event.preventDefault();
+    lastPointerDownAtRef.current = Date.now();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture can fail for synthetic or already-ended events.
+    }
+    handleCanvasPress(event.currentTarget, event.clientX, event.clientY);
+  }
+
+  function handleClick(event: MouseEvent<HTMLCanvasElement>) {
+    if (Date.now() - lastPointerDownAtRef.current < 450) return;
+    handleCanvasPress(event.currentTarget, event.clientX, event.clientY);
   }
 
   return (
@@ -1323,6 +1379,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
         className="block h-full w-full touch-none select-none pointer-events-auto"
         style={{ touchAction: "none" }}
         onPointerDown={handlePointerDown}
+        onClick={handleClick}
         aria-label="خريطة حرب الطاولات"
       />
     </div>
