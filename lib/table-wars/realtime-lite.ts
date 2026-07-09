@@ -51,12 +51,20 @@ export type TableWarsRealtimeLiteEvent =
   | TableWarsRealtimeLiteRoundFinishedEvent
   | TableWarsRealtimeLiteRoundResetEvent;
 
+export type TableWarsRealtimeLiteConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+
+export type TableWarsRealtimeLiteSendStatus = "ok" | "queued" | "error";
+
 type RealtimeLiteInput = {
   roundId: string | null;
   cafeSlug: string;
   onEvent: (event: TableWarsRealtimeLiteEvent) => void;
-  onStatus?: (status: "ready" | "closed" | "error") => void;
+  onStatus?: (status: TableWarsRealtimeLiteConnectionStatus) => void;
 };
+
+const MAX_QUEUED_EVENTS = 120;
+const INITIAL_RETRY_MS = 2_000;
+const MAX_RETRY_MS = 15_000;
 
 function safeChannelPart(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80);
@@ -74,36 +82,135 @@ export function createTableWarsRealtimeLiteChannel({
   onStatus,
 }: RealtimeLiteInput) {
   const supabase = createClient();
-  const channel = supabase.channel(tableWarsRealtimeLiteChannelName(roundId, cafeSlug), {
-    config: { broadcast: { self: false } },
-  });
+  const channelName = tableWarsRealtimeLiteChannelName(roundId, cafeSlug);
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+  let status: TableWarsRealtimeLiteConnectionStatus = "connecting";
+  let closed = false;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryDelayMs = INITIAL_RETRY_MS;
+  let queuedEvents: TableWarsRealtimeLiteEvent[] = [];
 
-  channel.on("broadcast", { event: "table_wars_lite" }, ({ payload }) => {
-    if (isTableWarsRealtimeLiteEvent(payload)) {
-      onEvent(payload);
-    }
-  });
+  function setStatus(nextStatus: TableWarsRealtimeLiteConnectionStatus) {
+    status = nextStatus;
+    onStatus?.(nextStatus);
+  }
 
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      onStatus?.("ready");
-    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-      onStatus?.("error");
-    } else if (status === "CLOSED") {
-      onStatus?.("closed");
-    }
-  });
+  function queueEvent(event: TableWarsRealtimeLiteEvent) {
+    queuedEvents = [...queuedEvents.slice(-(MAX_QUEUED_EVENTS - 1)), event];
+  }
 
-  return {
-    send(event: TableWarsRealtimeLiteEvent) {
-      return channel.send({
+  async function sendNow(event: TableWarsRealtimeLiteEvent): Promise<TableWarsRealtimeLiteSendStatus> {
+    if (!channel || status !== "connected") return "queued";
+
+    try {
+      const result = await channel.send({
         type: "broadcast",
         event: "table_wars_lite",
         payload: event,
       });
+      return result === "ok" ? "ok" : "error";
+    } catch {
+      return "error";
+    }
+  }
+
+  async function flushQueue() {
+    if (status !== "connected" || queuedEvents.length === 0) return;
+
+    const pending = queuedEvents;
+    queuedEvents = [];
+
+    for (const event of pending) {
+      const result = await sendNow(event);
+      if (result !== "ok") {
+        queueEvent(event);
+        scheduleReconnect("error");
+        break;
+      }
+    }
+  }
+
+  function clearRetryTimer() {
+    if (!retryTimer) return;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
+  function scheduleReconnect(nextStatus: "disconnected" | "error") {
+    if (closed) return;
+    setStatus(nextStatus);
+    if (retryTimer) return;
+
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      if (closed) return;
+      connect();
+      retryDelayMs = Math.min(MAX_RETRY_MS, retryDelayMs * 1.6);
+    }, retryDelayMs);
+  }
+
+  function connect() {
+    if (closed) return;
+    clearRetryTimer();
+    setStatus("connecting");
+
+    if (channel) {
+      void supabase.removeChannel(channel);
+      channel = null;
+    }
+
+    const nextChannel = supabase.channel(channelName, {
+      config: { broadcast: { self: false } },
+    });
+    channel = nextChannel;
+
+    nextChannel.on("broadcast", { event: "table_wars_lite" }, ({ payload }) => {
+      if (isTableWarsRealtimeLiteEvent(payload)) {
+        onEvent(payload);
+      }
+    });
+
+    nextChannel.subscribe((subscribeStatus) => {
+      if (closed || channel !== nextChannel) return;
+
+      if (subscribeStatus === "SUBSCRIBED") {
+        retryDelayMs = INITIAL_RETRY_MS;
+        setStatus("connected");
+        void flushQueue();
+      } else if (subscribeStatus === "CHANNEL_ERROR" || subscribeStatus === "TIMED_OUT") {
+        scheduleReconnect("error");
+      } else if (subscribeStatus === "CLOSED") {
+        scheduleReconnect("disconnected");
+      }
+    });
+  }
+
+  connect();
+
+  return {
+    send(event: TableWarsRealtimeLiteEvent): Promise<TableWarsRealtimeLiteSendStatus> {
+      if (status !== "connected") {
+        queueEvent(event);
+        if (status !== "connecting") scheduleReconnect(status === "error" ? "error" : "disconnected");
+        return Promise.resolve("queued");
+      }
+
+      return sendNow(event).then((result) => {
+        if (result === "ok") return "ok";
+        queueEvent(event);
+        scheduleReconnect("error");
+        return "queued";
+      });
+    },
+    getStatus() {
+      return status;
     },
     close() {
-      void supabase.removeChannel(channel);
+      closed = true;
+      clearRetryTimer();
+      if (channel) void supabase.removeChannel(channel);
+      channel = null;
+      setStatus("disconnected");
     },
   };
 }

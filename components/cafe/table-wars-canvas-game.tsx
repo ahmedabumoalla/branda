@@ -9,6 +9,7 @@ import type {
   TableWarsV2Snapshot,
 } from "@/lib/table-wars/v2-types";
 import type {
+  TableWarsRealtimeLiteConnectionStatus,
   TableWarsRealtimeLiteEvent,
   TableWarsRealtimeLiteMoveEvent,
 } from "@/lib/table-wars/realtime-lite";
@@ -21,6 +22,7 @@ type Props = {
   isPlayer: boolean;
   isHost: boolean;
   realtimeReady: boolean;
+  realtimeStatus: TableWarsRealtimeLiteConnectionStatus;
   initialRoundFinished: boolean;
   initialWinnerMessage: string | null;
   role: TableWarsV2Snapshot["role"];
@@ -72,6 +74,7 @@ type GameState = {
   isPlayer: boolean;
   isHost: boolean;
   realtimeReady: boolean;
+  realtimeStatus: TableWarsRealtimeLiteConnectionStatus;
   role: TableWarsV2Snapshot["role"];
   selectedCellId: string | null;
   movingUnits: MovingUnit[];
@@ -215,6 +218,7 @@ function createInitialState(props: Props): GameState {
     isPlayer: props.isPlayer,
     isHost: props.isHost,
     realtimeReady: props.realtimeReady,
+    realtimeStatus: props.realtimeStatus,
     role: props.role,
     selectedCellId: null,
     movingUnits: [],
@@ -980,16 +984,32 @@ function drawWinnerBanner(ctx: CanvasRenderingContext2D, size: Size, message: st
 
 function drawStatusChip(ctx: CanvasRenderingContext2D, size: Size, state: GameState) {
   ctx.save();
-  const label = state.realtimeReady ? (state.isHost ? "المضيف" : "متصل") : "بدون تزامن";
-  const width = 126;
+  const label =
+    state.realtimeStatus === "connected"
+      ? "متصل"
+      : state.realtimeStatus === "connecting"
+        ? "جاري الاتصال"
+        : "المزامنة غير مستقرة";
+  const width = state.realtimeStatus === "connected" ? 104 : state.realtimeStatus === "connecting" ? 136 : 172;
   const x = size.width - width - 16;
   const y = 16;
-  ctx.fillStyle = "rgba(255,247,227,0.94)";
-  ctx.strokeStyle = "rgba(217,163,63,0.38)";
+  ctx.fillStyle =
+    state.realtimeStatus === "connected"
+      ? "rgba(236,253,245,0.94)"
+      : state.realtimeStatus === "connecting"
+        ? "rgba(255,247,227,0.94)"
+        : "rgba(255,241,242,0.94)";
+  ctx.strokeStyle =
+    state.realtimeStatus === "connected"
+      ? "rgba(16,185,129,0.34)"
+      : state.realtimeStatus === "connecting"
+        ? "rgba(217,163,63,0.38)"
+        : "rgba(251,113,133,0.36)";
   roundRect(ctx, x, y, width, 34, 12);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "#6B3A25";
+  ctx.fillStyle =
+    state.realtimeStatus === "connected" ? "#047857" : state.realtimeStatus === "connecting" ? "#6B3A25" : "#9F1239";
   ctx.font = "900 13px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -1070,6 +1090,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     state.isPlayer = props.isPlayer;
     state.isHost = props.isHost;
     state.realtimeReady = props.realtimeReady;
+    state.realtimeStatus = props.realtimeStatus;
     state.role = props.role;
     const localWinner = confirmedWinnerFromCells(normalizedCells);
     if (props.initialRoundFinished && localWinner) {
@@ -1089,6 +1110,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     props.isPlayer,
     props.isHost,
     props.realtimeReady,
+    props.realtimeStatus,
     props.role,
     props.initialRoundFinished,
     props.initialWinnerMessage,

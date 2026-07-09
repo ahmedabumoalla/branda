@@ -12,6 +12,7 @@ import { TableWarsCanvasGame } from "@/components/cafe/table-wars-canvas-game";
 import { TableWarsTeamPicker } from "@/components/cafe/table-wars-team-picker";
 import {
   createTableWarsRealtimeLiteChannel,
+  type TableWarsRealtimeLiteConnectionStatus,
   type TableWarsRealtimeLiteEvent,
 } from "@/lib/table-wars/realtime-lite";
 import type {
@@ -76,7 +77,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [message, setMessage] = useState("الجولة تعمل بتزامن لحظي خفيف.");
   const [error, setError] = useState<string | null>(null);
-  const [realtimeReady, setRealtimeReady] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<TableWarsRealtimeLiteConnectionStatus>("connecting");
   const [realtimeEvents, setRealtimeEvents] = useState<TableWarsRealtimeLiteEvent[]>([]);
   const [, startFinishing] = useTransition();
   const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
@@ -92,6 +93,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
   const visibleEvents = snapshot.events.slice(0, 5);
+  const realtimeReady = realtimeStatus === "connected";
   const hostPlayer = useMemo(
     () =>
       snapshot.players
@@ -109,7 +111,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     if (!snapshot.round?.id || isRoundFinished) {
       realtimeChannelRef.current?.close();
       realtimeChannelRef.current = null;
-      setRealtimeReady(false);
+      setRealtimeStatus("disconnected");
       return;
     }
 
@@ -120,11 +122,13 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         setRealtimeEvents((current) => [...current.slice(-80), event]);
       },
       onStatus: (status) => {
-        setRealtimeReady(status === "ready");
-        if (status === "ready") {
+        setRealtimeStatus(status);
+        if (status === "connected") {
           setMessage("الاتصال اللحظي جاهز.");
-        } else if (status === "error") {
-          setMessage("تعذر تشغيل الاتصال اللحظي لهذه الجولة.");
+        } else if (status === "connecting") {
+          setMessage("جاري الاتصال بالمزامنة اللحظية.");
+        } else if (status === "error" || status === "disconnected") {
+          setMessage("اللعب المحلي مستمر، المزامنة تحاول الاتصال.");
         }
       },
     });
@@ -135,13 +139,11 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       if (realtimeChannelRef.current === channel) {
         realtimeChannelRef.current = null;
       }
-      setRealtimeReady(false);
+      setRealtimeStatus("disconnected");
     };
   }, [isRoundFinished, snapshot.cafeSlug, snapshot.round?.id]);
 
   const handleLocalRealtimeEvent = useCallback((event: TableWarsRealtimeLiteEvent) => {
-    const broadcastFailureMessage = "تعذر إرسال الحركة لباقي اللاعبين.";
-
     if (event.type === "battle") {
       setMessage("اشتباك في الطريق.");
     } else if (event.type === "capture") {
@@ -152,22 +154,20 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
     const channel = realtimeChannelRef.current;
     if (!channel) {
-      setError(broadcastFailureMessage);
-      setMessage("الاتصال اللحظي غير جاهز، لن تصل الحركة لباقي اللاعبين.");
+      setMessage("اللعب المحلي مستمر، المزامنة تحاول الاتصال.");
       return Promise.resolve();
     }
 
     return channel
       .send(event)
       .then((status) => {
-        if (status !== "ok") {
-          setError(broadcastFailureMessage);
+        if (status === "queued") {
+          setMessage("اللعب المحلي مستمر، المزامنة تحاول الاتصال.");
           return;
         }
-        if (event.type === "player_move") setError(null);
       })
       .catch(() => {
-        setError(broadcastFailureMessage);
+        setMessage("اللعب المحلي مستمر، المزامنة تحاول الاتصال.");
       });
   }, []);
 
@@ -267,6 +267,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
             isPlayer={isPlayer}
             isHost={isHost}
             realtimeReady={realtimeReady}
+            realtimeStatus={realtimeStatus}
             initialRoundFinished={isRoundFinished}
             initialWinnerMessage={snapshot.winnerMessage}
             role={snapshot.role}
