@@ -272,8 +272,8 @@ function countPlayers(players: TableWarsV2Player[]): TableWarsV2TeamCounts {
     if (player.team === "red" && player.role === "player") counts.redPlayers += 1;
     if (player.team === "blue" && player.role === "ai") counts.blueAi += 1;
     if (player.team === "red" && player.role === "ai") counts.redAi += 1;
-    if (player.team === "blue" && player.role === "spectator") counts.blueSpectators += 1;
-    if (player.team === "red" && player.role === "spectator") counts.redSpectators += 1;
+    if (player.team === "blue" && player.role === "spectator" && player.customerId) counts.blueSpectators += 1;
+    if (player.team === "red" && player.role === "spectator" && player.customerId) counts.redSpectators += 1;
     return counts;
   }, emptyTeamCounts());
 }
@@ -639,6 +639,35 @@ async function convertPlayerToSpectator(round: TableWarsV2Round, player: TableWa
   return mapPlayer(updated as Record<string, unknown>);
 }
 
+async function releaseAiPlaceholdersForTeam(round: TableWarsV2Round, team: TableWarsTeam) {
+  const players = await getRoundPlayers(round);
+  const aiPlayerIds = players
+    .filter((player) => player.team === team && player.role === "ai")
+    .map((player) => player.id);
+
+  if (aiPlayerIds.length === 0) return;
+
+  const supabase = tableWarsV2Db(createAdminClient());
+  const cellResult = await supabase
+    .from("table_wars_v2_cells")
+    .update({ assigned_player_id: null })
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id)
+    .in("assigned_player_id", aiPlayerIds);
+
+  if (cellResult.error) throw new Error(cellResult.error.message || "تعذر تحرير مقاعد الكمبيوتر.");
+
+  const playerResult = await supabase
+    .from("table_wars_v2_players")
+    .update({ role: "spectator", base_cell_id: null, is_connected: false })
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id)
+    .eq("team", team)
+    .eq("role", "ai");
+
+  if (playerResult.error) throw new Error(playerResult.error.message || "تعذر تعطيل مقاعد الكمبيوتر.");
+}
+
 async function createPlayerWithBase(input: {
   round: TableWarsV2Round;
   customerId: string | null;
@@ -834,6 +863,7 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
     throw new Error("This table wars round has already finished.");
   }
 
+  await releaseAiPlaceholdersForTeam(round, team);
   const { counts } = await refreshRoundTeamCounts(round);
   const teamPlayerCount = team === "blue" ? counts.bluePlayers : counts.redPlayers;
   const role: TableWarsRole = teamPlayerCount < round.maxPlayersPerTeam ? "player" : "spectator";

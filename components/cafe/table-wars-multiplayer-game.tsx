@@ -140,6 +140,8 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }, [isRoundFinished, snapshot.cafeSlug, snapshot.round?.id]);
 
   const handleLocalRealtimeEvent = useCallback((event: TableWarsRealtimeLiteEvent) => {
+    const broadcastFailureMessage = "تعذر إرسال الحركة لباقي اللاعبين.";
+
     if (event.type === "battle") {
       setMessage("اشتباك في الطريق.");
     } else if (event.type === "capture") {
@@ -150,10 +152,23 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
     const channel = realtimeChannelRef.current;
     if (!channel) {
+      setError(broadcastFailureMessage);
       setMessage("الاتصال اللحظي غير جاهز، لن تصل الحركة لباقي اللاعبين.");
-      return;
+      return Promise.resolve();
     }
-    void channel.send(event);
+
+    return channel
+      .send(event)
+      .then((status) => {
+        if (status !== "ok") {
+          setError(broadcastFailureMessage);
+          return;
+        }
+        if (event.type === "player_move") setError(null);
+      })
+      .catch(() => {
+        setError(broadcastFailureMessage);
+      });
   }, []);
 
   const handleRealtimeRoundFinished = useCallback(

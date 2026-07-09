@@ -24,7 +24,7 @@ type Props = {
   initialRoundFinished: boolean;
   initialWinnerMessage: string | null;
   role: TableWarsV2Snapshot["role"];
-  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void;
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void | Promise<unknown>;
   onRoundFinished: (winningTeam: TableWarsTeam) => void;
   onNewRound: () => void;
   onMessage: (message: string) => void;
@@ -86,7 +86,6 @@ type GameState = {
 
 const MAX_DPR = 2;
 const TOTAL_CELLS = 10;
-const TEAM_SEATS = 2;
 const BASE_SOLDIERS = 25;
 const DEFAULT_SOLDIERS = 10;
 const MAX_SOLDIERS = 60;
@@ -112,12 +111,12 @@ const HOME_SLOTS: Record<TableWarsTeam, number[]> = {
 const TABLE_PATHS: Record<number, number[]> = {
   1: [2, 3],
   2: [1, 4],
-  3: [1, 4, 5],
-  4: [2, 3, 6],
-  5: [3, 6, 7],
-  6: [4, 5, 8],
-  7: [5, 8, 9],
-  8: [6, 7, 10],
+  3: [1, 5],
+  4: [2, 6],
+  5: [3, 7],
+  6: [4, 8],
+  7: [5, 9],
+  8: [6, 10],
   9: [7, 10],
   10: [8, 9],
 };
@@ -159,8 +158,23 @@ function realPlayersForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
   return players.filter((player) => player.team === team && player.role === "player" && player.customerId);
 }
 
-function hasAiSeat(players: TableWarsV2Player[], team: TableWarsTeam) {
-  return realPlayersForTeam(players, team).length < TEAM_SEATS;
+function teamHasRealPlayers(players: TableWarsV2Player[], team: TableWarsTeam) {
+  return realPlayersForTeam(players, team).length > 0;
+}
+
+function assignedPlayerForCell(players: TableWarsV2Player[], cell: TableWarsV2Cell) {
+  if (!cell.assignedPlayerId) return null;
+  return players.find((player) => player.id === cell.assignedPlayerId) ?? null;
+}
+
+function isRealPlayer(player: TableWarsV2Player | null) {
+  return Boolean(player?.role === "player" && player.customerId);
+}
+
+function hasBlockingRealAssignee(players: TableWarsV2Player[], cell: TableWarsV2Cell, currentPlayerId?: string | null) {
+  if (!cell.assignedPlayerId || cell.assignedPlayerId === currentPlayerId) return false;
+  const assignee = assignedPlayerForCell(players, cell);
+  return !assignee || isRealPlayer(assignee);
 }
 
 function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) {
@@ -169,13 +183,18 @@ function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) 
     .sort((a, b) => a.slotIndex - b.slotIndex)
     .map((cell) => {
       const homeTeam = homeTeamForSlot(cell.slotIndex);
-      const shouldFillAiSeat = homeTeam && !cell.assignedPlayerId && hasAiSeat(players, homeTeam);
-      const team = shouldFillAiSeat ? homeTeam : cell.team;
+      const hasRealAssignee = isRealPlayer(assignedPlayerForCell(players, cell));
+      const shouldFillOpenHomeSeat =
+        Boolean(homeTeam) && !hasRealAssignee && (cell.team === "neutral" || cell.team === homeTeam);
+      const team: TableWarsV2CellTeam = shouldFillOpenHomeSeat && homeTeam ? homeTeam : cell.team;
       return {
         ...cell,
         team,
-        isBase: cell.isBase || Boolean(shouldFillAiSeat),
-        soldiers: shouldFillAiSeat && cell.team === "neutral" ? BASE_SOLDIERS : Math.max(DEFAULT_SOLDIERS, cell.soldiers),
+        isBase: cell.isBase || shouldFillOpenHomeSeat,
+        soldiers:
+          shouldFillOpenHomeSeat && cell.team === "neutral"
+            ? BASE_SOLDIERS
+            : Math.max(DEFAULT_SOLDIERS, cell.soldiers),
         localUpdatedAt: Date.now(),
       };
     });
@@ -290,11 +309,13 @@ function canCurrentPlayerControl(state: GameState, cell: LiteCell) {
   const player = state.currentPlayer;
   if (!state.isPlayer || !player || state.finished) return false;
   if (cell.id === player.baseCellId || cell.assignedPlayerId === player.id) return true;
-  return cell.team === player.team && !cell.assignedPlayerId;
+  if (cell.team !== player.team) return false;
+  return !hasBlockingRealAssignee(state.players, cell, player.id);
 }
 
 function canAiControl(state: GameState, cell: LiteCell, team: TableWarsTeam) {
-  return state.isHost && hasAiSeat(state.players, team) && cell.team === team && !cell.assignedPlayerId;
+  if (!state.isHost || state.finished || teamHasRealPlayers(state.players, team) || cell.team !== team) return false;
+  return !hasBlockingRealAssignee(state.players, cell, null);
 }
 
 function applyMove(state: GameState, event: TableWarsRealtimeLiteMoveEvent) {
@@ -329,7 +350,7 @@ function emitMove(
   from: LiteCell,
   to: LiteCell,
   soldiers: number,
-  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void | Promise<unknown>,
 ) {
   if (!areCellsConnected(from, to)) return false;
 
@@ -352,7 +373,7 @@ function resolveArrival(
   state: GameState,
   unit: MovingUnit,
   capturePulses: Map<string, CapturePulse>,
-  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void | Promise<unknown>,
 ) {
   const target = state.cellById.get(unit.toCellId);
   if (!target) return;
@@ -390,7 +411,7 @@ function resolveRoadBattles(
   state: GameState,
   size: Size,
   sparks: Spark[],
-  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void,
+  onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void | Promise<unknown>,
 ) {
   const now = Date.now();
   const removed = new Set<string>();
@@ -475,7 +496,7 @@ function checkWinner(state: GameState) {
 }
 
 function chooseAiMove(state: GameState, team: TableWarsTeam, now: number) {
-  if (!state.isHost || state.finished || !hasAiSeat(state.players, team)) return null;
+  if (!state.isHost || state.finished || teamHasRealPlayers(state.players, team)) return null;
   const lastMoveAt = state.lastAiMoveAtByTeam[team] ?? 0;
   if (now - lastMoveAt < AI_INTERVAL_MS + (team === "red" ? 450 : 0)) return null;
 
@@ -592,53 +613,20 @@ function resetLocalRound(state: GameState) {
 
 function drawBackground(ctx: CanvasRenderingContext2D, size: Size) {
   const gradient = ctx.createLinearGradient(0, 0, size.width, size.height);
-  gradient.addColorStop(0, "#FAF2E8");
-  gradient.addColorStop(0.48, FLOOR);
-  gradient.addColorStop(1, "#EBDAC8");
+  gradient.addColorStop(0, "#FBF4EA");
+  gradient.addColorStop(0.58, FLOOR);
+  gradient.addColorStop(1, "#EFE0CF");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size.width, size.height);
 
   ctx.save();
-  ctx.globalAlpha = 0.16;
-  ctx.strokeStyle = "#B9906F";
+  ctx.fillStyle = "rgba(255,253,249,0.34)";
+  ctx.fillRect(size.width * 0.04, size.height * 0.05, size.width * 0.92, size.height * 0.9);
+  ctx.strokeStyle = "rgba(107,58,37,0.08)";
   ctx.lineWidth = 1;
-  const tile = Math.max(34, size.width / 8);
-  for (let x = -tile; x < size.width + tile; x += tile) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + size.height * 0.28, size.height);
-    ctx.stroke();
-  }
-  for (let y = 0; y < size.height; y += tile) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(size.width, y - size.width * 0.28);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  drawZoneGlow(ctx, size.width * 0.18, size.height * 0.32, size.width * 0.52, "rgba(56,189,248,0.16)");
-  drawZoneGlow(ctx, size.width * 0.82, size.height * 0.68, size.width * 0.52, "rgba(251,113,133,0.14)");
-
-  ctx.save();
-  ctx.strokeStyle = "rgba(107,58,37,0.18)";
-  ctx.lineWidth = Math.max(4, size.width * 0.01);
-  ctx.setLineDash([8, 14]);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(size.width * 0.14, size.height * 0.76);
-  ctx.bezierCurveTo(size.width * 0.28, size.height * 0.52, size.width * 0.4, size.height * 0.72, size.width * 0.52, size.height * 0.5);
-  ctx.bezierCurveTo(size.width * 0.62, size.height * 0.32, size.width * 0.72, size.height * 0.48, size.width * 0.86, size.height * 0.24);
+  roundRect(ctx, size.width * 0.04, size.height * 0.05, size.width * 0.92, size.height * 0.9, 20);
   ctx.stroke();
   ctx.restore();
-}
-
-function drawZoneGlow(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string) {
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, color);
-  gradient.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 function drawMovement(ctx: CanvasRenderingContext2D, state: GameState, size: Size, now: number) {
@@ -1235,17 +1223,13 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     if (!state.isPlayer) return;
-    if (!state.realtimeReady) {
-      onMessageRef.current("الاتصال اللحظي غير جاهز، لا يمكن إرسال حركة الآن.");
-      return;
-    }
 
     const cell = nearestCellAt(point, state.cells, sizeRef.current);
     if (!cell) return;
 
     if (!state.selectedCellId) {
       if (!canCurrentPlayerControl(state, cell)) {
-        onMessageRef.current("اختر طاولتك الأساسية أو طاولة غير مخصصة يملكها فريقك.");
+        onMessageRef.current("هذه الطاولة ليست ضمن تحكمك");
         return;
       }
       if (cell.soldiers < MIN_SEND_SOLDIERS) {
@@ -1253,7 +1237,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
         return;
       }
       state.selectedCellId = cell.id;
-      onMessageRef.current("اختر الهدف.");
+      onMessageRef.current("اختر طاولة متصلة كهدف.");
       return;
     }
 
@@ -1264,9 +1248,21 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     const source = state.cellById.get(state.selectedCellId);
-    if (!source || source.team !== state.currentPlayer?.team) {
+    if (!source || !canCurrentPlayerControl(state, source)) {
+      state.selectedCellId = null;
+      onMessageRef.current("هذه الطاولة ليست ضمن تحكمك");
+      return;
+    }
+
+    if (source.team !== state.currentPlayer?.team) {
       state.selectedCellId = null;
       onMessageRef.current("اختر مصدرًا صالحًا.");
+      return;
+    }
+
+    if (source.soldiers < MIN_SEND_SOLDIERS) {
+      state.selectedCellId = null;
+      onMessageRef.current("تحتاج الطاولة إلى جنديين على الأقل.");
       return;
     }
 
