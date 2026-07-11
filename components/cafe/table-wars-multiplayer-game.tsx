@@ -75,12 +75,9 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [mounted, setMounted] = useState(false);
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [nickname, setNickname] = useState(() =>
-    isValidNickname(initialSnapshot.currentPlayer?.displayName)
-      ? normalizeNickname(initialSnapshot.currentPlayer?.displayName ?? "")
-      : "",
-  );
-  const [nicknameInput, setNicknameInput] = useState(nickname);
+  const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
+  const [pendingNickname, setPendingNickname] = useState("");
+  const [nicknameInput, setNicknameInput] = useState("");
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [message, setMessage] = useState("الجولة تعمل بتزامن لحظي خفيف.");
   const [error, setError] = useState<string | null>(null);
@@ -99,10 +96,10 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const isRoundFinished = snapshot.roundEnded || snapshot.round?.status === "finished";
   const isPlayer = currentPlayer?.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
-  const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
-  const currentPlayerNeedsNickname = Boolean(currentPlayer && !isValidNickname(currentPlayer.displayName));
-  const needsNickname = Boolean(snapshot.round && !isRoundFinished && (!isValidNickname(nickname) || currentPlayerNeedsNickname));
-  const canPickTeam = canJoin && !needsNickname && isValidNickname(nickname);
+  const canJoin = !snapshot.currentPlayer && snapshot.gameEnabled && !isRoundFinished;
+  const needsNickname = Boolean(snapshot.gameEnabled && !isRoundFinished && !nicknameConfirmed);
+  const canPickTeam = canJoin && nicknameConfirmed && isValidNickname(pendingNickname);
+  const canShowGame = Boolean(snapshot.currentPlayer && nicknameConfirmed);
   const realtimeReady = realtimeStatus === "connected";
   const hostPlayer = useMemo(
     () =>
@@ -120,14 +117,6 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!isValidNickname(snapshot.currentPlayer?.displayName)) return;
-    const nextNickname = normalizeNickname(snapshot.currentPlayer?.displayName ?? "");
-    setNickname(nextNickname);
-    setNicknameInput(nextNickname);
-    setNicknameError(null);
-  }, [snapshot.currentPlayer?.displayName]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -239,14 +228,18 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       }
 
       setNicknameError(null);
-      setNickname(nextNickname);
+      setPendingNickname(nextNickname);
 
-      if (!currentPlayer?.team || !currentPlayerNeedsNickname) return;
+      if (!currentPlayer?.team) {
+        setNicknameConfirmed(true);
+        return;
+      }
 
       startNicknameTransition(() => {
         void joinTableWarsV2Team(slug, currentPlayer.team, nextNickname)
           .then((result) => {
             setSnapshot(result.snapshot);
+            setNicknameConfirmed(true);
             setError(null);
             setMessage("تم حفظ اسمك المستعار.");
           })
@@ -255,7 +248,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           });
       });
     },
-    [currentPlayer?.team, currentPlayerNeedsNickname, nicknameInput, slug],
+    [currentPlayer?.team, nicknameInput, slug],
   );
 
   if (!mounted) {
@@ -268,16 +261,18 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-5">
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-6 sm:gap-3">
-        <StatTile label="فريقك" value={teamLabel(snapshot.team)} />
-        <StatTile label="دورك" value={roleLabel(snapshot.role)} />
-        <StatTile label="الأزرق" value={snapshot.teamCounts.bluePlayers} />
-        <StatTile label="الأحمر" value={snapshot.teamCounts.redPlayers} />
-        <StatTile label="الغرفة" value={roomLabel(snapshot.round?.id)} />
-        <div className="col-span-2 sm:col-span-1">
-          <StatTile label="الجولة" value={roundStatusLabel(snapshot.round?.status)} />
-        </div>
-      </section>
+      {canShowGame ? (
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-6 sm:gap-3">
+          <StatTile label="فريقك" value={teamLabel(snapshot.team)} />
+          <StatTile label="دورك" value={roleLabel(snapshot.role)} />
+          <StatTile label="الأزرق" value={snapshot.teamCounts.bluePlayers} />
+          <StatTile label="الأحمر" value={snapshot.teamCounts.redPlayers} />
+          <StatTile label="الغرفة" value={roomLabel(snapshot.round?.id)} />
+          <div className="col-span-2 sm:col-span-1">
+            <StatTile label="الجولة" value={roundStatusLabel(snapshot.round?.status)} />
+          </div>
+        </section>
+      ) : null}
 
       {needsNickname ? (
         <section className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
@@ -327,20 +322,22 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         <TableWarsTeamPicker
           canJoinBlue={snapshot.canJoinBlue}
           canJoinRed={snapshot.canJoinRed}
-          onJoin={(team) => joinTableWarsV2Team(slug, team, nickname)}
+          onJoin={(team) => joinTableWarsV2Team(slug, team, pendingNickname)}
           onJoined={(nextSnapshot) => {
             setSnapshot(nextSnapshot);
+            setNicknameConfirmed(true);
             setMessage("تم الانضمام للجولة.");
           }}
         />
       ) : null}
 
-      {isSpectator ? (
+      {canShowGame && isSpectator ? (
         <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-black text-amber-800">
           الفريق ممتلئ، يمكنك مشاهدة الجولة الحالية حتى تنتهي.
         </section>
       ) : null}
 
+      {canShowGame ? (
       <section className="overflow-hidden rounded-lg border border-[#E7D7C6] bg-white shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
         <div className="grid gap-3 border-b border-[#F2E7D9] bg-[#FFFDF9] p-4 md:grid-cols-[1fr_auto] md:items-center">
           <div className="flex items-center gap-3">
@@ -385,6 +382,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           />
         </div>
       </section>
+      ) : null}
 
       <TableWarsLegends legends={snapshot.legendsPreview} />
     </div>

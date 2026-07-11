@@ -33,7 +33,12 @@ export async function disableOwnerTableWarsAction() {
 }
 
 export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam, nickname: string) {
-  const result = await joinTableWarsV2Customer(slug, team, nickname);
+  const normalizedNickname = typeof nickname === "string" ? nickname.trim().replace(/\s+/g, " ") : "";
+  if (normalizedNickname.length < 2 || normalizedNickname.length > 20) {
+    throw new Error("الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا.");
+  }
+
+  const result = await joinTableWarsV2Customer(slug, team, normalizedNickname);
   revalidateTableWarsPaths(result.snapshot.cafeSlug);
   return result;
 }

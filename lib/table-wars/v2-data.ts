@@ -954,21 +954,6 @@ async function getOpenTableWarsV2RoomForCustomer(cafeId: string, customerId: str
   })[0] ?? null;
 }
 
-async function getLatestTableWarsV2PlayerForCustomer(cafeId: string, customerId: string) {
-  const supabase = tableWarsV2Db(createAdminClient());
-  const { data, error } = await supabase
-    .from("table_wars_v2_players")
-    .select("*")
-    .eq("cafe_id", cafeId)
-    .eq("customer_id", customerId)
-    .order("joined_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message || "Unable to load table wars player.");
-  return data ? mapPlayer(data as Record<string, unknown>) : null;
-}
-
 export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<TableWarsV2Snapshot> {
   const playability = await getPublicTableWarsV2Playability(slug);
   const cafe = playability.cafe;
@@ -1004,16 +989,34 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
   const customerRoom = customer
     ? await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id))
     : null;
-  const latestPlayer = !customerRoom && customer
-    ? await getLatestTableWarsV2PlayerForCustomer(cafe.id, String(customer.id))
-    : null;
-  const latestPlayerRound = latestPlayer
-    ? await getRoundById(latestPlayer.roundId, cafe.id)
-    : null;
-  let round =
-    customerRoom?.round ??
-    (latestPlayerRound?.status === "finished" ? latestPlayerRound : null) ??
-    await getOrCreateAvailableTableWarsV2Room(cafe.id);
+
+  if (!customerRoom) {
+    return {
+      cafeId: cafe.id,
+      cafeSlug: cafe.slug,
+      featureEnabled: true,
+      gameEnabled: true,
+      round: null,
+      roundEnded: false,
+      winnerMessage: null,
+      currentPlayer: null,
+      players: [],
+      role: null,
+      team: null,
+      controlledCellIds: [],
+      teamCounts: fallbackCounts,
+      cells: [],
+      units: [],
+      legendsPreview: await getLegendsPreview(cafe.id),
+      events: [],
+      messages: [],
+      isSpectator: false,
+      canJoinBlue: true,
+      canJoinRed: true,
+    };
+  }
+
+  let round = customerRoom.round;
   const [players, cells, initialUnits] = await Promise.all([
     getRoundPlayers(round),
     getRoundCells(round),
@@ -1318,7 +1321,11 @@ export async function tickTableWarsV2ForActiveSession() {
   if (!customer) throw new Error("Unauthorized.");
 
   const customerRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
-  const round = customerRoom?.round ?? await getOrCreateAvailableTableWarsV2Room(cafe.id);
+  if (!customerRoom) {
+    return getTableWarsV2SnapshotForCustomer(cafe.slug);
+  }
+
+  const round = customerRoom.round;
   if (round.status === "active" || round.status === "waiting") {
     await tickTableWarsV2Round(round);
   }
@@ -1378,30 +1385,6 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
   const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
   if (currentRoom) {
     return getTableWarsV2SnapshotForCustomer(cafe.slug);
-  }
-
-  const previousPlayer = await getLatestTableWarsV2PlayerForCustomer(cafe.id, String(customer.id));
-  const round = await createTableWarsV2Room(cafe.id);
-
-  if (previousPlayer?.team && isValidTableWarsV2Nickname(previousPlayer.displayName)) {
-    if (previousPlayer.role === "player") {
-      await createPlayerWithBase({
-        round,
-        customerId: String(customer.id),
-        team: previousPlayer.team,
-        role: "player",
-        displayName: previousPlayer.displayName,
-      });
-    } else {
-      await createRoundPlayer({
-        round,
-        customerId: String(customer.id),
-        team: previousPlayer.team,
-        role: "spectator",
-        displayName: previousPlayer.displayName,
-      });
-    }
-    await ensureAiPlaceholdersForRoom(round);
   }
 
   return getTableWarsV2SnapshotForCustomer(cafe.slug);
