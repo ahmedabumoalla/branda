@@ -759,36 +759,38 @@ function drawPathCurve(
 }
 
 function drawPaths(ctx: CanvasRenderingContext2D, state: GameState, size: Size, now: number) {
-  const cellsBySlot = new Map(state.cells.map((cell) => [cell.slotIndex, cell]));
   const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
+  if (!selectedSource) return;
+
+  const sourceReason = controlReason(state, selectedSource);
+  if (!sourceReason.ok || selectedSource.team !== state.currentPlayer?.team || selectedSource.soldiers < MIN_SEND_SOLDIERS) {
+    return;
+  }
+
+  const cellsBySlot = new Map(state.cells.map((cell) => [cell.slotIndex, cell]));
   const pulse = 0.5 + Math.sin(now / 180) * 0.5;
 
-  for (const fromCell of state.cells) {
-    for (const targetSlot of TABLE_PATHS[fromCell.slotIndex] ?? []) {
-      if (targetSlot <= fromCell.slotIndex) continue;
-      const toCell = cellsBySlot.get(targetSlot);
-      if (!toCell) continue;
+  for (const targetSlot of TABLE_PATHS[selectedSource.slotIndex] ?? []) {
+    const toCell = cellsBySlot.get(targetSlot);
+    if (!toCell || !areCellsConnected(selectedSource, toCell)) continue;
 
-      const from = percentToPoint(fromCell, size);
-      const to = percentToPoint(toCell, size);
-      const isAvailable =
-        Boolean(selectedSource) && (selectedSource?.id === fromCell.id || selectedSource?.id === toCell.id);
-      const bend = ((fromCell.slotIndex + targetSlot) % 2 === 0 ? 1 : -1) * Math.min(18, size.width * 0.035);
+    const from = percentToPoint(selectedSource, size);
+    const to = percentToPoint(toCell, size);
+    const bend = ((selectedSource.slotIndex + targetSlot) % 2 === 0 ? 1 : -1) * Math.min(18, size.width * 0.035);
 
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = isAvailable ? `rgba(217,163,63,${0.4 + pulse * 0.32})` : "rgba(107,58,37,0.16)";
-      ctx.lineWidth = isAvailable ? 12 : 8;
-      drawPathCurve(ctx, from, to, bend);
-      ctx.stroke();
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = `rgba(217,163,63,${0.34 + pulse * 0.22})`;
+    ctx.lineWidth = 10;
+    drawPathCurve(ctx, from, to, bend);
+    ctx.stroke();
 
-      ctx.strokeStyle = isAvailable ? "rgba(255,253,249,0.88)" : "rgba(255,253,249,0.42)";
-      ctx.lineWidth = isAvailable ? 4 : 2;
-      drawPathCurve(ctx, from, to, bend);
-      ctx.stroke();
-      ctx.restore();
-    }
+    ctx.strokeStyle = "rgba(255,253,249,0.82)";
+    ctx.lineWidth = 3;
+    drawPathCurve(ctx, from, to, bend);
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
