@@ -32,8 +32,8 @@ export async function disableOwnerTableWarsAction() {
   revalidateTableWarsPaths(slug);
 }
 
-export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam) {
-  const result = await joinTableWarsV2Customer(slug, team);
+export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam, nickname: string) {
+  const result = await joinTableWarsV2Customer(slug, team, nickname);
   revalidateTableWarsPaths(result.snapshot.cafeSlug);
   return result;
 }

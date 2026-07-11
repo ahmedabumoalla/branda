@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Eye, Swords } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
+import { Eye, Swords, UserRound } from "lucide-react";
 import {
   finishTableWarsV2RealtimeLiteRoundAction,
   joinTableWarsV2Team,
@@ -24,6 +24,18 @@ type Props = {
   slug: string;
   initialSnapshot: TableWarsV2Snapshot;
 };
+
+const NICKNAME_MIN_LENGTH = 2;
+const NICKNAME_MAX_LENGTH = 20;
+
+function normalizeNickname(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function isValidNickname(value: string | null | undefined) {
+  const nickname = normalizeNickname(value ?? "");
+  return nickname.length >= NICKNAME_MIN_LENGTH && nickname.length <= NICKNAME_MAX_LENGTH;
+}
 
 function teamLabel(team: TableWarsTeam | "neutral" | null) {
   if (team === "blue") return "الأزرق";
@@ -63,11 +75,19 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [mounted, setMounted] = useState(false);
   const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const [nickname, setNickname] = useState(() =>
+    isValidNickname(initialSnapshot.currentPlayer?.displayName)
+      ? normalizeNickname(initialSnapshot.currentPlayer?.displayName ?? "")
+      : "",
+  );
+  const [nicknameInput, setNicknameInput] = useState(nickname);
+  const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [message, setMessage] = useState("الجولة تعمل بتزامن لحظي خفيف.");
   const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<TableWarsRealtimeLiteConnectionStatus>("connecting");
   const [realtimeEvents, setRealtimeEvents] = useState<TableWarsRealtimeLiteEvent[]>([]);
   const [, startFinishing] = useTransition();
+  const [isNicknamePending, startNicknameTransition] = useTransition();
   const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
   const finishedSaveRef = useRef(false);
 
@@ -80,6 +100,9 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const isPlayer = currentPlayer?.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
+  const currentPlayerNeedsNickname = Boolean(currentPlayer && !isValidNickname(currentPlayer.displayName));
+  const needsNickname = Boolean(snapshot.round && !isRoundFinished && (!isValidNickname(nickname) || currentPlayerNeedsNickname));
+  const canPickTeam = canJoin && !needsNickname && isValidNickname(nickname);
   const realtimeReady = realtimeStatus === "connected";
   const hostPlayer = useMemo(
     () =>
@@ -97,6 +120,14 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isValidNickname(snapshot.currentPlayer?.displayName)) return;
+    const nextNickname = normalizeNickname(snapshot.currentPlayer?.displayName ?? "");
+    setNickname(nextNickname);
+    setNicknameInput(nextNickname);
+    setNicknameError(null);
+  }, [snapshot.currentPlayer?.displayName]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -198,6 +229,35 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     });
   }, [slug]);
 
+  const handleNicknameSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const nextNickname = normalizeNickname(nicknameInput);
+      if (!isValidNickname(nextNickname)) {
+        setNicknameError("اكتب اسمًا مستعارًا من 2 إلى 20 حرفًا.");
+        return;
+      }
+
+      setNicknameError(null);
+      setNickname(nextNickname);
+
+      if (!currentPlayer?.team || !currentPlayerNeedsNickname) return;
+
+      startNicknameTransition(() => {
+        void joinTableWarsV2Team(slug, currentPlayer.team, nextNickname)
+          .then((result) => {
+            setSnapshot(result.snapshot);
+            setError(null);
+            setMessage("تم حفظ اسمك المستعار.");
+          })
+          .catch((joinError) => {
+            setNicknameError(joinError instanceof Error ? joinError.message : "تعذر حفظ الاسم المستعار.");
+          });
+      });
+    },
+    [currentPlayer?.team, currentPlayerNeedsNickname, nicknameInput, slug],
+  );
+
   if (!mounted) {
     return (
       <section className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
@@ -219,11 +279,55 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         </div>
       </section>
 
-      {canJoin ? (
+      {needsNickname ? (
+        <section className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#4A281D]/10 text-[#4A281D]">
+              <UserRound className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-black text-[#311912]">اختر اسمك في الجولة</h2>
+              <p className="mt-1 text-xs font-bold text-[#806A5E]">
+                هذا الاسم سيظهر للاعبين بدل اسم حسابك الحقيقي.
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleNicknameSubmit} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <label className="min-w-0">
+              <span className="mb-2 block text-xs font-black text-[#806A5E]">الاسم المستعار</span>
+              <input
+                value={nicknameInput}
+                onChange={(event) => {
+                  setNicknameInput(event.target.value);
+                  setNicknameError(null);
+                }}
+                minLength={NICKNAME_MIN_LENGTH}
+                maxLength={NICKNAME_MAX_LENGTH}
+                required
+                className="h-12 w-full rounded-lg border border-[#E7D7C6] bg-[#FFFDF9] px-4 text-sm font-black text-[#311912] outline-none transition focus:border-[#6B3A25]"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={isNicknamePending}
+              className="self-end rounded-lg bg-[#311912] px-5 py-3 text-sm font-black text-white transition hover:bg-[#4A281D] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              متابعة
+            </button>
+          </form>
+          {nicknameError ? (
+            <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-black text-rose-700">
+              {nicknameError}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {canPickTeam ? (
         <TableWarsTeamPicker
           canJoinBlue={snapshot.canJoinBlue}
           canJoinRed={snapshot.canJoinRed}
-          onJoin={(team) => joinTableWarsV2Team(slug, team)}
+          onJoin={(team) => joinTableWarsV2Team(slug, team, nickname)}
           onJoined={(nextSnapshot) => {
             setSnapshot(nextSnapshot);
             setMessage("تم الانضمام للجولة.");

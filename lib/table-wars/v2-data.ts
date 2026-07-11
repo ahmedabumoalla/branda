@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 
 import { cookies } from "next/headers";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
-import { getCustomerProfileForActiveSession, type CustomerProfileRow } from "@/lib/data/customers";
+import { getCustomerProfileForActiveSession } from "@/lib/data/customers";
 import { hasBrandFeature } from "@/lib/data/feature-entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -41,6 +41,8 @@ const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
 const TABLE_WARS_V2_MAX_SOLDIERS = 60;
 const TABLE_WARS_V2_EVENT_LIMIT = 12;
 const TABLE_WARS_V2_MIN_SEND_SOLDIERS = 2;
+const TABLE_WARS_V2_NICKNAME_MIN_LENGTH = 2;
+const TABLE_WARS_V2_NICKNAME_MAX_LENGTH = 20;
 
 type QueryClient = {
   from(table: string): any;
@@ -126,7 +128,7 @@ function mapPlayer(row: Record<string, unknown>): TableWarsV2Player {
     customerId: nullableText(row.customer_id),
     team: normalizeTeam(row.team),
     role: text(row.role, "player") as TableWarsRole,
-    displayName: text(row.display_name, "لاعب"),
+    displayName: text(row.display_name),
     baseCellId: nullableText(row.base_cell_id),
     isConnected: boolValue(row.is_connected),
     joinedAt: nullableText(row.joined_at),
@@ -199,8 +201,24 @@ function mapEvent(row: Record<string, unknown>): TableWarsV2Event {
   };
 }
 
-function customerDisplayName(profile: CustomerProfileRow) {
-  return text(profile.full_name) || text(profile.phone) || text(profile.email) || "لاعب";
+function normalizeTableWarsV2Nickname(value: unknown) {
+  return text(value).replace(/\s+/g, " ");
+}
+
+function isValidTableWarsV2Nickname(value: unknown) {
+  const nickname = normalizeTableWarsV2Nickname(value);
+  return (
+    nickname.length >= TABLE_WARS_V2_NICKNAME_MIN_LENGTH &&
+    nickname.length <= TABLE_WARS_V2_NICKNAME_MAX_LENGTH
+  );
+}
+
+function assertValidTableWarsV2Nickname(value: unknown) {
+  const nickname = normalizeTableWarsV2Nickname(value);
+  if (!isValidTableWarsV2Nickname(nickname)) {
+    throw new Error("الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا.");
+  }
+  return nickname;
 }
 
 function cellKey(slotIndex: number) {
@@ -724,6 +742,28 @@ async function updatePlayerSeatForJoin(
   return mapPlayer(updated as Record<string, unknown>);
 }
 
+async function updatePlayerDisplayName(
+  round: TableWarsV2Round,
+  player: TableWarsV2Player,
+  displayName: string,
+) {
+  if (player.displayName === displayName) return player;
+
+  const supabase = tableWarsV2Db(createAdminClient());
+  const updated = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_players")
+      .update({ display_name: displayName })
+      .eq("id", player.id)
+      .eq("cafe_id", round.cafeId)
+      .eq("round_id", round.id)
+      .select("*")
+      .single(),
+    "تعذر تحديث الاسم المستعار.",
+  );
+  return mapPlayer(updated as Record<string, unknown>);
+}
+
 async function createRoundPlayer(input: {
   round: TableWarsV2Round;
   customerId: string | null;
@@ -1026,14 +1066,18 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
   };
 }
 
-export async function joinTableWarsV2Customer(slug: string, requestedTeam: TableWarsTeam): Promise<TableWarsV2JoinResult> {
+export async function joinTableWarsV2Customer(
+  slug: string,
+  requestedTeam: TableWarsTeam,
+  nickname: string,
+): Promise<TableWarsV2JoinResult> {
   const team = normalizeTeam(requestedTeam);
   const cafe = await ensurePublicTableWarsV2Playable(slug);
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("يجب تسجيل الدخول قبل دخول حرب الطاولات.");
 
   const customerId = String(customer.id);
-  const displayName = customerDisplayName(customer);
+  const displayName = assertValidTableWarsV2Nickname(nickname);
   const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, customerId);
   let round =
     currentRoom?.player.role === "player"
@@ -1055,6 +1099,7 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
       !existingBaseCell ||
       existingPlayer.baseCellId !== existingBaseCell.id ||
       existingBaseCell.assignedPlayerId !== existingPlayer.id;
+    let updatedPlayer = existingPlayer;
 
     if (needsSeatRepair) {
       await releaseAiPlaceholdersForTeam(round, team);
@@ -1071,9 +1116,11 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
           team,
           displayName,
         });
+        updatedPlayer = (await getCurrentPlayer(round, customerId)) ?? existingPlayer;
         await ensureAiPlaceholdersForRoom(round);
       }
     }
+    await updatePlayerDisplayName(round, updatedPlayer, displayName);
     const snapshot = await getTableWarsV2SnapshotForCustomer(cafe.slug);
     const nextPlayer = snapshot.currentPlayer ?? existingPlayer;
     return {
@@ -1336,14 +1383,14 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
   const previousPlayer = await getLatestTableWarsV2PlayerForCustomer(cafe.id, String(customer.id));
   const round = await createTableWarsV2Room(cafe.id);
 
-  if (previousPlayer?.team) {
+  if (previousPlayer?.team && isValidTableWarsV2Nickname(previousPlayer.displayName)) {
     if (previousPlayer.role === "player") {
       await createPlayerWithBase({
         round,
         customerId: String(customer.id),
         team: previousPlayer.team,
         role: "player",
-        displayName: customerDisplayName(customer),
+        displayName: previousPlayer.displayName,
       });
     } else {
       await createRoundPlayer({
@@ -1351,7 +1398,7 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
         customerId: String(customer.id),
         team: previousPlayer.team,
         role: "spectator",
-        displayName: customerDisplayName(customer),
+        displayName: previousPlayer.displayName,
       });
     }
     await ensureAiPlaceholdersForRoom(round);
