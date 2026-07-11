@@ -62,17 +62,38 @@ type Bases = {
 const MAX_ENERGY = 10;
 const START_ENERGY = 5;
 const BASE_HP = 160;
-const LANES: Record<Lane, number> = { top: 31, middle: 50, bottom: 69 };
+const LANES: Record<Lane, number> = { top: 27, middle: 50, bottom: 73 };
 const LANE_ORDER: Lane[] = ["top", "middle", "bottom"];
-const LANE_BAND = 8.5;
-const BASE_REACH_RADIUS = 9;
-const DEFENSE_RADIUS = 25;
+const LANE_BAND = 7.5;
+const BASE_REACH_RADIUS = 7.5;
+const DEFENSE_RADIUS = 22;
 const MIN_SEPARATION = 4.2;
+const MOVEMENT_SPEED_SCALE = 0.74;
 const ENERGY_PER_SECOND = 0.72;
 const BOT_SPAWN_SECONDS = 3.4;
 const DEFEAT_ANIMATION_MS = 420;
 const PLAYER_COLOR = "#7C2948";
 const BOT_COLOR = "#14645E";
+const RIVER_Y = 50;
+const BRIDGE_Y = 50;
+const BRIDGES = {
+  left: { x: 28, y: BRIDGE_Y },
+  right: { x: 72, y: BRIDGE_Y },
+} as const;
+const ARENA_POINTS = {
+  playerMainBase: { x: 50, y: 88 },
+  botMainBase: { x: 50, y: 12 },
+  playerSideTowers: [
+    { x: 29, y: 72 },
+    { x: 71, y: 72 },
+  ],
+  botSideTowers: [
+    { x: 29, y: 28 },
+    { x: 71, y: 28 },
+  ],
+  playerSpawnY: 82,
+  botSpawnY: 18,
+};
 
 const CARDS: CardDef[] = [
   {
@@ -137,7 +158,17 @@ function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number 
 }
 
 function basePoint(team: Team) {
-  return { x: team === "player" ? 6 : 94, y: 50 };
+  return team === "player" ? ARENA_POINTS.playerMainBase : ARENA_POINTS.botMainBase;
+}
+
+function defensePoints(team: Team) {
+  return team === "player"
+    ? [ARENA_POINTS.playerMainBase, ...ARENA_POINTS.playerSideTowers]
+    : [ARENA_POINTS.botMainBase, ...ARENA_POINTS.botSideTowers];
+}
+
+function nearestDefensePoint(unit: Unit, team: Team) {
+  return defensePoints(team).sort((a, b) => distanceBetween(unit, a) - distanceBetween(unit, b))[0] ?? basePoint(team);
 }
 
 function enemyTeam(team: Team): Team {
@@ -145,12 +176,44 @@ function enemyTeam(team: Team): Team {
 }
 
 function isNearBase(unit: Unit, team: Team, radius = DEFENSE_RADIUS) {
-  return distanceBetween(unit, basePoint(team)) <= radius;
+  return defensePoints(team).some((point) => distanceBetween(unit, point) <= radius);
 }
 
 function targetPoint(unit: Unit, target: Unit | null) {
   if (target) return { x: target.x, y: target.y };
   return basePoint(enemyTeam(unit.team));
+}
+
+function isAcrossRiver(fromY: number, toY: number) {
+  return (fromY - RIVER_Y) * (toY - RIVER_Y) < 0;
+}
+
+function bridgeForLane(lane: Lane) {
+  if (lane === "top") return BRIDGES.left;
+  if (lane === "bottom") return BRIDGES.right;
+  return Math.random() < 0.5 ? BRIDGES.left : BRIDGES.right;
+}
+
+function bridgeForRoute(unit: Unit, destination: { x: number; y: number }) {
+  if (unit.lane === "middle") {
+    const leftDistance = Math.abs(unit.x - BRIDGES.left.x) + Math.abs(destination.x - BRIDGES.left.x);
+    const rightDistance = Math.abs(unit.x - BRIDGES.right.x) + Math.abs(destination.x - BRIDGES.right.x);
+    return leftDistance <= rightDistance ? BRIDGES.left : BRIDGES.right;
+  }
+
+  return bridgeForLane(unit.lane);
+}
+
+function routePoint(unit: Unit, destination: { x: number; y: number }) {
+  if (!isAcrossRiver(unit.y, destination.y)) return destination;
+
+  const bridge = bridgeForRoute(unit, destination);
+  const reachedBridgeX = Math.abs(unit.x - bridge.x) <= 3.2;
+  const reachedBridgeY = Math.abs(unit.y - bridge.y) <= 3.2;
+
+  if (!reachedBridgeX) return { x: bridge.x, y: unit.y };
+  if (!reachedBridgeY) return bridge;
+  return destination;
 }
 
 function laneFromPressure(units: Unit[]) {
@@ -159,7 +222,7 @@ function laneFromPressure(units: Unit[]) {
 
   for (const lane of LANE_ORDER) {
     const score = units.reduce((total, unit) => {
-      if (unit.team !== "player" || unit.hp <= 0 || unit.x < 44 || Math.abs(unit.y - laneCenter(lane)) > LANE_BAND + 3) {
+      if (unit.team !== "player" || unit.hp <= 0 || unit.y > 55 || Math.abs(unit.x - laneCenter(lane)) > LANE_BAND + 3) {
         return total;
       }
 
@@ -181,7 +244,7 @@ function randomLane() {
 
 function chooseBestEnemyTarget(unit: Unit, enemies: Unit[]) {
   const defendersCanHelp =
-    distanceBetween(unit, basePoint(unit.team)) <= DEFENSE_RADIUS + 26 || unit.role === "ranged";
+    distanceBetween(unit, nearestDefensePoint(unit, unit.team)) <= DEFENSE_RADIUS + 26 || unit.role === "ranged";
 
   const invadingEnemy = enemies
     .filter((enemy) => enemy.hp > 0 && isNearBase(enemy, unit.team, DEFENSE_RADIUS))
@@ -353,25 +416,6 @@ function CounterBase({ team, hp }: { team: Team; hp: number }) {
       style={{ "--team": color } as CSSProperties}
     >
       <span className="ba-defense-zone" />
-      <div className="ba-base-flag">
-        <span className="ba-flag-mark" />
-      </div>
-      <div className="ba-base-rail" />
-      <div className="ba-base-machine-shell">
-        <span className="ba-base-dial" />
-        <span className="ba-base-portafilter" />
-      </div>
-      <div className="ba-base-canopy">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="ba-base-counter">
-        <span className="ba-base-machine" />
-        <span className="ba-base-cups" />
-        <span className="ba-base-cup-foam" />
-      </div>
-      <p className="ba-base-label">{isPlayer ? "كاونترك" : "كاونتر البوت"}</p>
       <div className="ba-base-health">
         <span style={{ width: basePercent(hp) }} />
       </div>
@@ -426,7 +470,7 @@ export function BattleArenaGame() {
         (team === "player" ? LANE_ORDER[nextLaneRef.current % LANE_ORDER.length] : randomLane()) ??
         "middle";
       if (team === "player") nextLaneRef.current += 1;
-      const laneOffset = (Math.random() - 0.5) * 7;
+      const laneOffset = (Math.random() - 0.5) * 5.5;
 
       const nextUnit: Unit = {
         id: `${team}-${nextUnitIdRef.current}`,
@@ -438,8 +482,8 @@ export function BattleArenaGame() {
         damage: card.damage,
         role: card.role,
         team,
-        x: team === "player" ? 14 : 86,
-        y: clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+        x: clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+        y: team === "player" ? ARENA_POINTS.playerSpawnY + Math.random() * 3 : ARENA_POINTS.botSpawnY - Math.random() * 3,
         lane,
         laneOffset,
         intent: "advance",
@@ -555,22 +599,19 @@ export function BattleArenaGame() {
           }
 
           unit.state = "moving";
-          const desired = target ?? {
+          const destination = target ?? {
             x: baseTarget.x,
-            y: clamp(laneCenter(unit.lane) + unit.laneOffset, laneCenter(unit.lane) - LANE_BAND, laneCenter(unit.lane) + LANE_BAND),
+            y: baseTarget.y,
           };
+          const desired = routePoint(unit, destination);
           const dx = desired.x - unit.x;
           const dy = desired.y - unit.y;
           const distance = Math.max(Math.hypot(dx, dy), 0.001);
-          const lanePull = target ? 0.6 : 1;
-          const step = unit.speed * deltaSeconds;
+          const lanePull = target ? 0.72 : 1;
+          const step = unit.speed * MOVEMENT_SPEED_SCALE * deltaSeconds;
 
-          unit.x = clamp(unit.x + (dx / distance) * step, 6, 94);
-          unit.y = clamp(
-            unit.y + (dy / distance) * step * lanePull,
-            laneCenter(unit.lane) - LANE_BAND,
-            laneCenter(unit.lane) + LANE_BAND,
-          );
+          unit.x = clamp(unit.x + (dx / distance) * step * lanePull, 12, 88);
+          unit.y = clamp(unit.y + (dy / distance) * step, 10, 90);
         }
 
         for (let i = 0; i < activeUnits.length; i += 1) {
@@ -587,10 +628,10 @@ export function BattleArenaGame() {
             const push = (MIN_SEPARATION - distance) * 0.5;
             const nx = dx / distance;
             const ny = dy / distance;
-            first.x = clamp(first.x - nx * push, 6, 94);
-            second.x = clamp(second.x + nx * push, 6, 94);
-            first.y = clamp(first.y - ny * push, laneCenter(first.lane) - LANE_BAND, laneCenter(first.lane) + LANE_BAND);
-            second.y = clamp(second.y + ny * push, laneCenter(second.lane) - LANE_BAND, laneCenter(second.lane) + LANE_BAND);
+            first.x = clamp(first.x - nx * push, 12, 88);
+            second.x = clamp(second.x + nx * push, 12, 88);
+            first.y = clamp(first.y - ny * push, 10, 90);
+            second.y = clamp(second.y + ny * push, 10, 90);
           }
         }
 
@@ -641,37 +682,7 @@ export function BattleArenaGame() {
           </button>
         </div>
 
-        <div className="ba-arena relative h-[430px] min-h-[400px] overflow-hidden sm:h-[540px] lg:h-[590px]">
-          <div className="ba-cafe-backdrop" aria-hidden="true">
-            <span className="ba-cafe-shelf">
-              <span className="ba-shelf-grinder" />
-              <span className="ba-shelf-cups" />
-              <span className="ba-shelf-menu" />
-            </span>
-            <span className="ba-cafe-plant ba-cafe-plant-left" />
-            <span className="ba-cafe-plant ba-cafe-plant-right" />
-          </div>
-          <div className="ba-corner-lamp ba-corner-lamp-left" aria-hidden="true" />
-          <div className="ba-corner-lamp ba-corner-lamp-right" aria-hidden="true" />
-          <div className="ba-rail ba-rail-top" aria-hidden="true" />
-          <div className="ba-rail ba-rail-bottom" aria-hidden="true" />
-          <div className="ba-team-carpet ba-team-carpet-player" aria-hidden="true" />
-          <div className="ba-team-carpet ba-team-carpet-bot" aria-hidden="true" />
-          <div className="ba-floor" />
-          <div className="ba-watermark" aria-hidden="true">
-            <span className="ba-watermark-bean" />
-            <span className="ba-watermark-text">BRANDA</span>
-          </div>
-          <div className="ba-center-line" />
-          <div className="ba-side-line ba-side-line-player" />
-          <div className="ba-side-line ba-side-line-bot" />
-
-          {LANE_ORDER.map((lane) => (
-            <div key={lane} className="ba-lane" style={{ top: `${laneCenter(lane)}%` }}>
-              <span />
-            </div>
-          ))}
-
+        <div className="ba-arena relative overflow-hidden">
           <CounterBase team="player" hp={bases.player} />
           <CounterBase team="bot" hp={bases.bot} />
 
@@ -2045,6 +2056,72 @@ export function BattleArenaGame() {
           animation: ba-hit 180ms ease-out forwards;
         }
 
+        .ba-arena {
+          width: min(100%, 620px);
+          aspect-ratio: 959 / 1640;
+          min-height: 0;
+          margin-inline: auto;
+          isolation: isolate;
+          background: url("/battle-arena/arena-bg.png") center / 100% 100% no-repeat;
+          box-shadow:
+            0 24px 58px rgba(27, 14, 9, 0.22),
+            inset 0 0 0 1px rgba(255, 224, 162, 0.38);
+        }
+
+        .ba-arena::before,
+        .ba-arena::after {
+          display: none;
+        }
+
+        .ba-base {
+          z-index: 18;
+          width: 104px;
+          transform: translate(-50%, -50%);
+          filter: drop-shadow(0 8px 10px rgba(20, 9, 5, 0.24));
+        }
+
+        .ba-base-player {
+          left: 50%;
+          top: 86%;
+          right: auto;
+        }
+
+        .ba-base-bot {
+          left: 50%;
+          top: 13%;
+          right: auto;
+        }
+
+        .ba-defense-zone {
+          display: none;
+        }
+
+        .ba-base-health {
+          height: 8px;
+          margin: 0 10px;
+          border: 1px solid rgba(255, 225, 167, 0.72);
+          background: rgba(34, 20, 14, 0.46);
+          box-shadow:
+            0 4px 8px rgba(20, 9, 5, 0.22),
+            inset 0 0 0 1px rgba(36, 20, 15, 0.1);
+        }
+
+        .ba-base-hp {
+          display: inline-flex;
+          min-width: 34px;
+          height: 18px;
+          margin-top: 2px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 225, 167, 0.62);
+          background: rgba(35, 20, 15, 0.68);
+          color: #fff3d3;
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1;
+        }
+
         @keyframes ba-bob {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
@@ -2127,28 +2204,24 @@ export function BattleArenaGame() {
         }
 
         @media (max-width: 640px) {
-          .ba-cafe-shelf,
-          .ba-cafe-plant,
-          .ba-corner-lamp {
-            opacity: 0.58;
-            transform: scale(0.82);
-          }
-
-          .ba-floor {
-            inset: 16% 10% 9%;
+          .ba-arena {
+            width: min(100%, 460px);
           }
 
           .ba-base {
-            width: 104px;
-            transform: translateY(-50%) scale(0.78);
+            width: 88px;
+            transform: translate(-50%, -50%) scale(0.88);
           }
 
           .ba-base-player {
-            left: -8px;
+            left: 50%;
+            top: 86%;
           }
 
           .ba-base-bot {
-            right: -8px;
+            left: 50%;
+            top: 13%;
+            right: auto;
           }
 
           .ba-unit {
@@ -2161,11 +2234,6 @@ export function BattleArenaGame() {
             transform-origin: center bottom;
           }
 
-          .ba-lane {
-            left: 17%;
-            right: 17%;
-            height: 46px;
-          }
         }
       `}</style>
     </section>
