@@ -90,7 +90,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   );
   const currentPlayer = snapshot.currentPlayer;
   const isRoundFinished = snapshot.roundEnded || snapshot.round?.status === "finished";
-  const isPlayer = snapshot.role === "player" && !isRoundFinished;
+  const isPlayer = currentPlayer?.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
   const visibleEvents = snapshot.events.slice(0, 5);

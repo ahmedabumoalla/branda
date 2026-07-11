@@ -106,6 +106,11 @@ const GOLD = "#D9A33F";
 const TABLE_TOP = "#6B3A25";
 const TABLE_EDGE = "#3A2118";
 const FLOOR = "#F4E7D7";
+const SEAT_NOT_BOUND_MESSAGE = "لم يتم ربط مقعدك بعد، أعد اختيار الفريق";
+const TEAM_CELL_CONTROL_MESSAGE = "هذه طاولة فريقك ويمكنك التحكم بها";
+const ENEMY_CELL_MESSAGE = "هذه طاولة خصم";
+const OTHER_PLAYER_CELL_MESSAGE = "هذه طاولة لاعب آخر";
+const DISCONNECTED_CELL_MESSAGE = "هذه طاولة غير متصلة";
 
 const HOME_SLOTS: Record<TableWarsTeam, number[]> = {
   blue: [1, 2],
@@ -171,14 +176,14 @@ function assignedPlayerForCell(players: TableWarsV2Player[], cell: TableWarsV2Ce
   return players.find((player) => player.id === cell.assignedPlayerId) ?? null;
 }
 
-function isRealPlayer(player: TableWarsV2Player | null) {
-  return Boolean(player?.role === "player" && player.customerId);
+function isBlockingRealPlayer(player: TableWarsV2Player | null) {
+  return Boolean(player?.role === "player" && player.customerId && player.isConnected);
 }
 
 function hasBlockingRealAssignee(players: TableWarsV2Player[], cell: TableWarsV2Cell, currentPlayerId?: string | null) {
   if (!cell.assignedPlayerId || cell.assignedPlayerId === currentPlayerId) return false;
   const assignee = assignedPlayerForCell(players, cell);
-  return isRealPlayer(assignee);
+  return isBlockingRealPlayer(assignee);
 }
 
 function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) {
@@ -187,7 +192,7 @@ function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) 
     .sort((a, b) => a.slotIndex - b.slotIndex)
     .map((cell) => {
       const homeTeam = homeTeamForSlot(cell.slotIndex);
-      const hasRealAssignee = isRealPlayer(assignedPlayerForCell(players, cell));
+      const hasRealAssignee = isBlockingRealPlayer(assignedPlayerForCell(players, cell));
       const shouldFillOpenHomeSeat =
         Boolean(homeTeam) && !hasRealAssignee && (cell.team === "neutral" || cell.team === homeTeam);
       const team: TableWarsV2CellTeam = shouldFillOpenHomeSeat && homeTeam ? homeTeam : cell.team;
@@ -313,10 +318,57 @@ function roundRect(
 
 function canCurrentPlayerControl(state: GameState, cell: LiteCell) {
   const player = state.currentPlayer;
-  if (!state.isPlayer || !player || state.finished) return false;
-  if (cell.id === player.baseCellId || cell.assignedPlayerId === player.id) return true;
+  if (!player || player.role !== "player" || state.finished) return false;
   if (cell.team !== player.team) return false;
+  const baseCell = currentPlayerBaseCell(state);
+  if (cell.id === baseCell?.id || cell.assignedPlayerId === player.id) return true;
   return !hasBlockingRealAssignee(state.players, cell, player.id);
+}
+
+function currentPlayerBaseCell(state: GameState) {
+  const player = state.currentPlayer;
+  if (!player?.id || player.role !== "player") return null;
+
+  const validBase = (cell: LiteCell | undefined) =>
+    Boolean(
+      cell &&
+        cell.team === player.team &&
+        cell.isBase &&
+        !hasBlockingRealAssignee(state.players, cell, player.id),
+    );
+
+  const explicitBase = player.baseCellId ? state.cellById.get(player.baseCellId) : undefined;
+  if (validBase(explicitBase)) return explicitBase ?? null;
+
+  return state.cells.find((cell) => validBase(cell) && cell.assignedPlayerId === player.id) ?? null;
+}
+
+function currentPlayerSeatProblem(state: GameState) {
+  const player = state.currentPlayer;
+  if (!player?.id || !player.team) return SEAT_NOT_BOUND_MESSAGE;
+  if (player.role !== "player") return SEAT_NOT_BOUND_MESSAGE;
+  if (!currentPlayerBaseCell(state)) return SEAT_NOT_BOUND_MESSAGE;
+  return null;
+}
+
+function controlReason(state: GameState, cell: LiteCell) {
+  const seatProblem = currentPlayerSeatProblem(state);
+  if (seatProblem) return { ok: false, message: seatProblem };
+
+  const player = state.currentPlayer as TableWarsV2Player;
+  if (cell.team !== player.team) return { ok: false, message: ENEMY_CELL_MESSAGE };
+
+  const baseCell = currentPlayerBaseCell(state);
+  if (cell.id === baseCell?.id || cell.assignedPlayerId === player.id) {
+    return { ok: true, message: TEAM_CELL_CONTROL_MESSAGE };
+  }
+
+  const assignee = assignedPlayerForCell(state.players, cell);
+  if (cell.assignedPlayerId && isBlockingRealPlayer(assignee) && assignee?.id !== player.id) {
+    return { ok: false, message: OTHER_PLAYER_CELL_MESSAGE };
+  }
+
+  return { ok: true, message: TEAM_CELL_CONTROL_MESSAGE };
 }
 
 function canAiControl(state: GameState, cell: LiteCell, team: TableWarsTeam) {
@@ -753,7 +805,10 @@ function drawTable(
   const selected = state.selectedCellId === cell.id;
   const controlled = canCurrentPlayerControl(state, cell);
   const color = teamColor(cell.team);
-  const isOwnBase = state.currentPlayer?.baseCellId === cell.id && cell.assignedPlayerId === state.currentPlayer.id;
+  const isOwnBase =
+    state.currentPlayer?.role === "player" &&
+    state.currentPlayer?.team === cell.team &&
+    currentPlayerBaseCell(state)?.id === cell.id;
   const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
   const connectedToSelected = Boolean(selectedSource && selectedSource.id !== cell.id && areCellsConnected(selectedSource, cell));
   const targetPreview = connectedToSelected;
@@ -1292,8 +1347,9 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
       return;
     }
 
-    if (!state.isPlayer) {
-      noteInput(`آخر ضغطة: ${pointLabel} — لست لاعبًا في هذه الجولة`);
+    const seatProblem = currentPlayerSeatProblem(state);
+    if (seatProblem) {
+      noteInput(`آخر ضغطة: ${pointLabel} — ${seatProblem}`, seatProblem);
       return;
     }
 
@@ -1304,8 +1360,9 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     if (!state.selectedCellId) {
-      if (!canCurrentPlayerControl(state, cell)) {
-        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — هذه الطاولة ليست ضمن تحكمك`, "هذه الطاولة ليست ضمن تحكمك");
+      const reason = controlReason(state, cell);
+      if (!reason.ok) {
+        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${reason.message}`, reason.message);
         return;
       }
       if (cell.soldiers < MIN_SEND_SOLDIERS) {
@@ -1313,7 +1370,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
         return;
       }
       state.selectedCellId = cell.id;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ضمن تحكمك`, "اختر طاولة متصلة كهدف.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${reason.message}`, "اختر طاولة متصلة كهدف.");
       return;
     }
 
@@ -1324,9 +1381,16 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     const source = state.cellById.get(state.selectedCellId);
-    if (!source || !canCurrentPlayerControl(state, source)) {
+    if (!source) {
       state.selectedCellId = null;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — هذه الطاولة ليست ضمن تحكمك`, "هذه الطاولة ليست ضمن تحكمك");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا.`);
+      return;
+    }
+
+    const sourceReason = controlReason(state, source);
+    if (!sourceReason.ok) {
+      state.selectedCellId = null;
+      noteInput(`آخر ضغطة: طاولة ${source.slotIndex} — ${sourceReason.message}`, sourceReason.message);
       return;
     }
 
@@ -1344,7 +1408,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
 
     const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2));
     if (!areCellsConnected(source, cell)) {
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — لا يوجد مسار مباشر لهذه الطاولة`, "لا يوجد مسار مباشر لهذه الطاولة");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${DISCONNECTED_CELL_MESSAGE}`, DISCONNECTED_CELL_MESSAGE);
       return;
     }
     const didSend = emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);

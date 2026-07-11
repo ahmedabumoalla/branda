@@ -8,7 +8,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildUnitTravelTime,
   calculateAvailableLanes,
-  canPlayerControlCell,
   chooseAiMove,
   determineWinningTeam,
   growCells,
@@ -40,7 +39,6 @@ const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 2;
 const TABLE_WARS_V2_BASE_SOLDIERS = 25;
 const TABLE_WARS_V2_DEFAULT_SOLDIERS = 10;
 const TABLE_WARS_V2_MAX_SOLDIERS = 60;
-const TABLE_WARS_V2_CONTROL_LIMIT = 5;
 const TABLE_WARS_V2_EVENT_LIMIT = 12;
 const TABLE_WARS_V2_MIN_SEND_SOLDIERS = 2;
 
@@ -543,10 +541,64 @@ async function refreshRoundTeamCounts(round: TableWarsV2Round) {
   };
 }
 
+function realPlayerIds(players: TableWarsV2Player[]) {
+  return new Set(
+    players
+      .filter((player) => player.role === "player" && player.customerId && player.isConnected)
+      .map((player) => player.id),
+  );
+}
+
+function hasBlockingRealAssignee(
+  players: TableWarsV2Player[],
+  cell: TableWarsV2Cell,
+  currentPlayerId?: string | null,
+) {
+  if (!cell.assignedPlayerId || cell.assignedPlayerId === currentPlayerId) return false;
+  const assignee = players.find((player) => player.id === cell.assignedPlayerId) ?? null;
+  return Boolean(assignee?.role === "player" && assignee.customerId && assignee.isConnected);
+}
+
+function baseCellForPlayer(
+  player: TableWarsV2Player | null,
+  cells: TableWarsV2Cell[],
+  players: TableWarsV2Player[],
+) {
+  if (!player || player.role !== "player") return null;
+
+  const validBase = (cell: TableWarsV2Cell | undefined) =>
+    Boolean(
+      cell &&
+        cell.team === player.team &&
+        cell.isBase &&
+        !hasBlockingRealAssignee(players, cell, player.id),
+    );
+
+  const explicitBase = player.baseCellId ? cells.find((cell) => cell.id === player.baseCellId) : undefined;
+  if (validBase(explicitBase)) return explicitBase ?? null;
+
+  return cells.find((cell) => validBase(cell) && cell.assignedPlayerId === player.id) ?? null;
+}
+
+function canPlayerControlRoundCell(
+  player: TableWarsV2Player,
+  cell: TableWarsV2Cell,
+  cells: TableWarsV2Cell[],
+  players: TableWarsV2Player[],
+) {
+  if (player.role !== "player") return false;
+  if (cell.roundId !== player.roundId || cell.cafeId !== player.cafeId) return false;
+  if (cell.team !== player.team) return false;
+  const baseCell = baseCellForPlayer(player, cells, players);
+  if (cell.id === baseCell?.id || cell.assignedPlayerId === player.id) return true;
+  return !hasBlockingRealAssignee(players, cell, player.id);
+}
+
 async function candidateBaseCells(round: TableWarsV2Round, team: TableWarsTeam) {
-  const cells = await getRoundCells(round);
+  const [cells, players] = await Promise.all([getRoundCells(round), getRoundPlayers(round)]);
   const teamSlots = new Set(homeSlotsForTeam(team));
-  const available = cells.filter((cell) => !cell.assignedPlayerId);
+  const blockedPlayerIds = realPlayerIds(players);
+  const available = cells.filter((cell) => !cell.assignedPlayerId || !blockedPlayerIds.has(cell.assignedPlayerId));
   const bySlot = available.filter((cell) => teamSlots.has(cell.slotIndex) && (cell.team === team || cell.team === "neutral"));
   const byTeam = available.filter((cell) => cell.team === team && !teamSlots.has(cell.slotIndex));
   const byNeutral = available.filter((cell) => cell.team === "neutral" && !teamSlots.has(cell.slotIndex));
@@ -558,7 +610,7 @@ async function assignBaseCell(round: TableWarsV2Round, team: TableWarsTeam, play
   const candidates = await candidateBaseCells(round, team);
 
   for (const candidate of candidates) {
-    const { data, error } = await supabase
+    const updateQuery = supabase
       .from("table_wars_v2_cells")
       .update({
         team,
@@ -568,10 +620,11 @@ async function assignBaseCell(round: TableWarsV2Round, team: TableWarsTeam, play
       })
       .eq("id", candidate.id)
       .eq("cafe_id", round.cafeId)
-      .eq("round_id", round.id)
-      .is("assigned_player_id", null)
-      .select("*")
-      .maybeSingle();
+      .eq("round_id", round.id);
+    const guardedQuery = candidate.assignedPlayerId
+      ? updateQuery.eq("assigned_player_id", candidate.assignedPlayerId)
+      : updateQuery.is("assigned_player_id", null);
+    const { data, error } = await guardedQuery.select("*").maybeSingle();
 
     if (error) throw new Error(error.message || "تعذر تعيين قلعة اللاعب.");
     if (data) return mapCell(data as Record<string, unknown>);
@@ -592,6 +645,45 @@ async function updatePlayerBase(round: TableWarsV2Round, playerId: string, baseC
       .select("*")
       .single(),
     "تعذر تحديث قلعة اللاعب.",
+  );
+  return mapPlayer(updated as Record<string, unknown>);
+}
+
+async function releasePlayerCellAssignments(round: TableWarsV2Round, playerId: string) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { error } = await supabase
+    .from("table_wars_v2_cells")
+    .update({ assigned_player_id: null })
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id)
+    .eq("assigned_player_id", playerId);
+
+  if (error) throw new Error(error.message || "تعذر تحرير مقعد اللاعب القديم.");
+}
+
+async function updatePlayerSeatForJoin(
+  round: TableWarsV2Round,
+  player: TableWarsV2Player,
+  team: TableWarsTeam,
+  displayName: string,
+) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const updated = await assertNoDbError(
+    await supabase
+      .from("table_wars_v2_players")
+      .update({
+        team,
+        role: "player",
+        display_name: displayName,
+        base_cell_id: null,
+        is_connected: true,
+      })
+      .eq("id", player.id)
+      .eq("cafe_id", round.cafeId)
+      .eq("round_id", round.id)
+      .select("*")
+      .single(),
+    "تعذر ربط مقعد اللاعب.",
   );
   return mapPlayer(updated as Record<string, unknown>);
 }
@@ -684,6 +776,19 @@ async function createPlayerWithBase(input: {
   return updatePlayerBase(input.round, player.id, baseCell.id);
 }
 
+async function promoteExistingPlayerWithBase(input: {
+  round: TableWarsV2Round;
+  player: TableWarsV2Player;
+  team: TableWarsTeam;
+  displayName: string;
+}) {
+  await releasePlayerCellAssignments(input.round, input.player.id);
+  const player = await updatePlayerSeatForJoin(input.round, input.player, input.team, input.displayName);
+  const baseCell = await assignBaseCell(input.round, input.team, player.id);
+  if (!baseCell) return convertPlayerToSpectator(input.round, player);
+  return updatePlayerBase(input.round, player.id, baseCell.id);
+}
+
 async function ensureAiPlaceholder(round: TableWarsV2Round, team: TableWarsTeam) {
   const players = await getRoundPlayers(round);
   const existingAi = players.find((player) => player.team === team && player.role === "ai");
@@ -711,17 +816,20 @@ async function maybeCreateAiPlaceholder(round: TableWarsV2Round, joinedTeam: Tab
   }
 }
 
-function controlledCellIdsForPlayer(player: TableWarsV2Player | null, cells: TableWarsV2Cell[]) {
-  if (!player || (player.role !== "player" && player.role !== "ai")) return [];
+function controlledCellIdsForPlayer(
+  player: TableWarsV2Player | null,
+  cells: TableWarsV2Cell[],
+  players: TableWarsV2Player[],
+) {
+  if (!player || player.role !== "player") return [];
 
   const ids = new Set<string>();
-  const baseCell = cells.find((cell) => cell.assignedPlayerId === player.id || cell.id === player.baseCellId);
+  const baseCell = baseCellForPlayer(player, cells, players);
   if (baseCell) ids.add(baseCell.id);
 
   cells
-    .filter((cell) => cell.team === player.team && !cell.assignedPlayerId)
+    .filter((cell) => canPlayerControlRoundCell(player, cell, cells, players))
     .sort((a, b) => a.slotIndex - b.slotIndex)
-    .slice(0, TABLE_WARS_V2_CONTROL_LIMIT)
     .forEach((cell) => ids.add(cell.id));
 
   return [...ids];
@@ -813,7 +921,7 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
   const currentPlayer = customer
     ? players.find((player) => player.customerId === String(customer.id)) ?? null
     : null;
-  const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells);
+  const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells, players);
 
   return {
     cafeId: cafe.id,
@@ -847,15 +955,47 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
   if (!customer) throw new Error("يجب تسجيل الدخول قبل دخول حرب الطاولات.");
 
   let round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  const displayName = customerDisplayName(customer);
   const existingPlayer = await getCurrentPlayer(round, String(customer.id));
   if (existingPlayer) {
+    const [existingCells, existingPlayers] = await Promise.all([
+      getRoundCells(round),
+      getRoundPlayers(round),
+    ]);
+    const existingBaseCell = baseCellForPlayer(existingPlayer, existingCells, existingPlayers);
+    const needsSeatRepair =
+      existingPlayer.role !== "player" ||
+      existingPlayer.team !== team ||
+      !existingBaseCell ||
+      existingPlayer.baseCellId !== existingBaseCell.id ||
+      existingBaseCell.assignedPlayerId !== existingPlayer.id;
+
+    if (needsSeatRepair) {
+      await releaseAiPlaceholdersForTeam(round, team);
+      const { counts } = await refreshRoundTeamCounts(round);
+      const teamPlayerCount = team === "blue" ? counts.bluePlayers : counts.redPlayers;
+      const canUsePlayerSeat =
+        existingPlayer.role === "player" && existingPlayer.team === team
+          ? teamPlayerCount <= round.maxPlayersPerTeam
+          : teamPlayerCount < round.maxPlayersPerTeam;
+      if (canUsePlayerSeat) {
+        await promoteExistingPlayerWithBase({
+          round,
+          player: existingPlayer,
+          team,
+          displayName,
+        });
+        await refreshRoundTeamCounts(round);
+      }
+    }
     const snapshot = await getTableWarsV2SnapshotForCustomer(cafe.slug);
+    const nextPlayer = snapshot.currentPlayer ?? existingPlayer;
     return {
       ok: true,
-      status: "existing",
-      team: existingPlayer.team,
-      role: existingPlayer.role,
-      player: existingPlayer,
+      status: nextPlayer.role === "spectator" ? "spectator" : "existing",
+      team: nextPlayer.team,
+      role: nextPlayer.role,
+      player: nextPlayer,
       snapshot,
     };
   }
@@ -867,7 +1007,6 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
   const { counts } = await refreshRoundTeamCounts(round);
   const teamPlayerCount = team === "blue" ? counts.bluePlayers : counts.redPlayers;
   const role: TableWarsRole = teamPlayerCount < round.maxPlayersPerTeam ? "player" : "spectator";
-  const displayName = customerDisplayName(customer);
 
   let player =
     role === "player"
@@ -943,25 +1082,19 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
   const currentPlayer = await getCurrentPlayer(round, String(customer.id));
   if (!currentPlayer || currentPlayer.role !== "player") throw new Error("Only players can send units.");
 
-  const [cells, movingUnits] = await Promise.all([
+  const [cells, movingUnits, players] = await Promise.all([
     getRoundCells(round),
     getRoundMovingUnits(round),
+    getRoundPlayers(round),
   ]);
   const alreadyWinningTeam = completeMapWinningTeam(cells);
   if (alreadyWinningTeam) {
-    const players = await getRoundPlayers(round);
     await finishTableWarsV2Round(round, players, alreadyWinningTeam, new Date());
     throw new Error("This table wars round has already finished.");
   }
   const freshFromCell = cells.find((cell) => cell.id === fromCell.id) ?? fromCell;
   const freshToCell = cells.find((cell) => cell.id === toCell.id) ?? toCell;
-  const controlledCellIds = controlledCellIdsForPlayer(currentPlayer, cells);
-  const otherControlledUnassignedCount = cells.filter(
-    (cell) => cell.id !== freshFromCell.id && cell.team === currentPlayer.team && !cell.assignedPlayerId,
-  ).length;
-  const canControl =
-    controlledCellIds.includes(freshFromCell.id) ||
-    canPlayerControlCell(currentPlayer, freshFromCell, otherControlledUnassignedCount);
+  const canControl = canPlayerControlRoundCell(currentPlayer, freshFromCell, cells, players);
 
   if (!canControl) throw new Error("Forbidden cell control.");
   if (freshFromCell.team !== currentPlayer.team) throw new Error("Source cell is not owned by your team.");
