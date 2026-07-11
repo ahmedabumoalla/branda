@@ -47,6 +47,10 @@ function roundStatusLabel(status: string | null | undefined) {
   return "غير متاحة";
 }
 
+function roomLabel(roundId: string | null | undefined) {
+  return roundId ? `غرفة #${roundId.slice(0, 4)}` : "غرفة #----";
+}
+
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="min-w-0 rounded-lg border border-[#E7D7C6] bg-white px-3 py-2 shadow-[4px_4px_14px_rgba(49,25,18,0.04)]">
@@ -164,7 +168,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       if (finishedSaveRef.current) return;
       finishedSaveRef.current = true;
       startFinishing(() => {
-        void finishTableWarsV2RealtimeLiteRoundAction(slug, winningTeam)
+        void finishTableWarsV2RealtimeLiteRoundAction(slug, winningTeam, snapshot.round?.id)
           .then((nextSnapshot) => {
             setSnapshot(nextSnapshot);
             setError(null);
@@ -175,7 +179,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           });
       });
     },
-    [slug],
+    [slug, snapshot.round?.id],
   );
 
   const handleStartNewRound = useCallback(() => {
@@ -204,11 +208,12 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-5">
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-6 sm:gap-3">
         <StatTile label="فريقك" value={teamLabel(snapshot.team)} />
         <StatTile label="دورك" value={roleLabel(snapshot.role)} />
         <StatTile label="الأزرق" value={snapshot.teamCounts.bluePlayers} />
         <StatTile label="الأحمر" value={snapshot.teamCounts.redPlayers} />
+        <StatTile label="الغرفة" value={roomLabel(snapshot.round?.id)} />
         <div className="col-span-2 sm:col-span-1">
           <StatTile label="الجولة" value={roundStatusLabel(snapshot.round?.status)} />
         </div>

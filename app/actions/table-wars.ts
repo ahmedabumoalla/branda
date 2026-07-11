@@ -59,8 +59,12 @@ export async function tickTableWarsV2Action() {
   return snapshot;
 }
 
-export async function finishTableWarsV2RealtimeLiteRoundAction(slug: string, winningTeam: TableWarsTeam) {
-  const snapshot = await finishTableWarsV2RealtimeLiteRoundForCustomer(slug, winningTeam);
+export async function finishTableWarsV2RealtimeLiteRoundAction(
+  slug: string,
+  winningTeam: TableWarsTeam,
+  roundId?: string | null,
+) {
+  const snapshot = await finishTableWarsV2RealtimeLiteRoundForCustomer(slug, winningTeam, roundId);
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;
 }

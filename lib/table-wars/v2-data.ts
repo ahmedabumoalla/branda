@@ -97,10 +97,6 @@ function normalizeTeam(value: unknown): TableWarsTeam {
   throw new Error("فريق حرب الطاولات غير صالح.");
 }
 
-function oppositeTeam(team: TableWarsTeam): TableWarsTeam {
-  return team === "blue" ? "red" : "blue";
-}
-
 function mapRound(row: Record<string, unknown>): TableWarsV2Round {
   return {
     id: text(row.id),
@@ -293,19 +289,42 @@ async function assertNoDbError<T>(
   return result.data;
 }
 
-async function getActiveTableWarsV2Round(cafeId: string): Promise<TableWarsV2Round | null> {
+function maxRealPlayersPerTeam(round: TableWarsV2Round) {
+  return Math.min(
+    TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM,
+    Math.max(1, round.maxPlayersPerTeam || TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM),
+  );
+}
+
+function realPlayerCountForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
+  return players.filter((player) => player.team === team && player.role === "player" && player.customerId).length;
+}
+
+function roomHasAvailableSeat(
+  round: TableWarsV2Round,
+  players: TableWarsV2Player[],
+  team?: TableWarsTeam,
+) {
+  if (round.status !== "waiting" && round.status !== "active") return false;
+  const maxPlayers = maxRealPlayersPerTeam(round);
+  const blueHasSeat = realPlayerCountForTeam(players, "blue") < maxPlayers;
+  const redHasSeat = realPlayerCountForTeam(players, "red") < maxPlayers;
+  if (team === "blue") return blueHasSeat;
+  if (team === "red") return redHasSeat;
+  return blueHasSeat || redHasSeat;
+}
+
+async function getOpenTableWarsV2Rooms(cafeId: string): Promise<TableWarsV2Round[]> {
   const supabase = tableWarsV2Db(createAdminClient());
   const { data, error } = await supabase
     .from("table_wars_v2_rounds")
     .select("*")
     .eq("cafe_id", cafeId)
-    .in("status", ["waiting", "active", "finished"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .in("status", ["waiting", "active"])
+    .order("created_at", { ascending: true });
 
-  if (error) throw new Error(error.message || "تعذر جلب جولة حرب الطاولات.");
-  return data ? mapRound(data as Record<string, unknown>) : null;
+  if (error) throw new Error(error.message || "Unable to load table wars rooms.");
+  return (Array.isArray(data) ? data : []).map((row) => mapRound(row as Record<string, unknown>));
 }
 
 async function getActivePhysicalTableCount(cafeId: string) {
@@ -372,13 +391,7 @@ export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
   }
 }
 
-export async function getOrCreateActiveTableWarsV2Round(cafeId: string): Promise<TableWarsV2Round> {
-  const existing = await getActiveTableWarsV2Round(cafeId);
-  if (existing) {
-    await seedTableWarsV2RoundCells(existing);
-    return existing;
-  }
-
+async function createTableWarsV2Room(cafeId: string): Promise<TableWarsV2Round> {
   const supabase = tableWarsV2Db(createAdminClient());
   const now = new Date().toISOString();
   const created = await assertNoDbError(
@@ -404,6 +417,29 @@ export async function getOrCreateActiveTableWarsV2Round(cafeId: string): Promise
   const round = mapRound(created as Record<string, unknown>);
   await seedTableWarsV2RoundCells(round);
   return round;
+}
+
+export async function getOrCreateAvailableTableWarsV2Room(
+  cafeId: string,
+  requestedTeam?: TableWarsTeam,
+): Promise<TableWarsV2Round> {
+  const rooms = await getOpenTableWarsV2Rooms(cafeId);
+  const roomsWithPlayers = await Promise.all(
+    rooms.map(async (round) => ({
+      round,
+      players: await getRoundPlayers(round),
+    })),
+  );
+  const availableRoom = roomsWithPlayers.find(({ round, players }) =>
+    roomHasAvailableSeat(round, players, requestedTeam),
+  );
+
+  if (availableRoom) {
+    await seedTableWarsV2RoundCells(availableRoom.round);
+    return availableRoom.round;
+  }
+
+  return createTableWarsV2Room(cafeId);
 }
 
 async function getRoundPlayers(round: TableWarsV2Round) {
@@ -789,31 +825,28 @@ async function promoteExistingPlayerWithBase(input: {
   return updatePlayerBase(input.round, player.id, baseCell.id);
 }
 
-async function ensureAiPlaceholder(round: TableWarsV2Round, team: TableWarsTeam) {
+async function ensureAiPlaceholdersForTeam(round: TableWarsV2Round, team: TableWarsTeam) {
   const players = await getRoundPlayers(round);
-  const existingAi = players.find((player) => player.team === team && player.role === "ai");
-  if (existingAi) return existingAi;
+  const maxPlayers = maxRealPlayersPerTeam(round);
+  const realPlayers = realPlayerCountForTeam(players, team);
+  const aiPlayers = players.filter((player) => player.team === team && player.role === "ai").length;
+  const missingAiSeats = Math.max(0, maxPlayers - realPlayers - aiPlayers);
 
-  return createPlayerWithBase({
-    round,
-    customerId: null,
-    team,
-    role: "ai",
-    displayName: "الكمبيوتر",
-  });
+  for (let index = 0; index < missingAiSeats; index += 1) {
+    await createPlayerWithBase({
+      round,
+      customerId: null,
+      team,
+      role: "ai",
+      displayName: "الكمبيوتر",
+    });
+  }
 }
 
-async function maybeCreateAiPlaceholder(round: TableWarsV2Round, joinedTeam: TableWarsTeam) {
-  const players = await getRoundPlayers(round);
-  const counts = countPlayers(players);
-  const humanPlayerCount = counts.bluePlayers + counts.redPlayers;
-  const enemyTeam = oppositeTeam(joinedTeam);
-  const enemyHumanCount = enemyTeam === "blue" ? counts.bluePlayers : counts.redPlayers;
-  const enemyAiCount = enemyTeam === "blue" ? counts.blueAi : counts.redAi;
-
-  if (humanPlayerCount === 1 && enemyHumanCount === 0 && enemyAiCount === 0) {
-    await ensureAiPlaceholder(round, enemyTeam);
-  }
+async function ensureAiPlaceholdersForRoom(round: TableWarsV2Round) {
+  await ensureAiPlaceholdersForTeam(round, "blue");
+  await ensureAiPlaceholdersForTeam(round, "red");
+  await refreshRoundTeamCounts(round);
 }
 
 function controlledCellIdsForPlayer(
@@ -860,6 +893,42 @@ function completeMapWinningTeam(cells: TableWarsV2Cell[]) {
   return determineWinningTeam(cells);
 }
 
+async function getOpenTableWarsV2RoomForCustomer(cafeId: string, customerId: string) {
+  const rooms = await getOpenTableWarsV2Rooms(cafeId);
+  const matches = (
+    await Promise.all(
+      rooms.map(async (round) => {
+        const players = await getRoundPlayers(round);
+        const player = players.find((item) => item.customerId === customerId) ?? null;
+        return player ? { round, player } : null;
+      }),
+    )
+  ).filter((match): match is { round: TableWarsV2Round; player: TableWarsV2Player } => Boolean(match));
+
+  return matches.sort((a, b) => {
+    const aPlayerSeat = a.player.role === "player" ? 1 : 0;
+    const bPlayerSeat = b.player.role === "player" ? 1 : 0;
+    const aTime = a.player.joinedAt ? Date.parse(a.player.joinedAt) : 0;
+    const bTime = b.player.joinedAt ? Date.parse(b.player.joinedAt) : 0;
+    return bPlayerSeat - aPlayerSeat || bTime - aTime || b.round.id.localeCompare(a.round.id);
+  })[0] ?? null;
+}
+
+async function getLatestTableWarsV2PlayerForCustomer(cafeId: string, customerId: string) {
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase
+    .from("table_wars_v2_players")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .eq("customer_id", customerId)
+    .order("joined_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message || "Unable to load table wars player.");
+  return data ? mapPlayer(data as Record<string, unknown>) : null;
+}
+
 export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<TableWarsV2Snapshot> {
   const playability = await getPublicTableWarsV2Playability(slug);
   const cafe = playability.cafe;
@@ -891,11 +960,20 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     };
   }
 
-  const [initialRound, customer] = await Promise.all([
-    getOrCreateActiveTableWarsV2Round(cafe.id),
-    getCustomerProfileForActiveSession(cafe.slug),
-  ]);
-  let round = initialRound;
+  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customerRoom = customer
+    ? await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id))
+    : null;
+  const latestPlayer = !customerRoom && customer
+    ? await getLatestTableWarsV2PlayerForCustomer(cafe.id, String(customer.id))
+    : null;
+  const latestPlayerRound = latestPlayer
+    ? await getRoundById(latestPlayer.roundId, cafe.id)
+    : null;
+  let round =
+    customerRoom?.round ??
+    (latestPlayerRound?.status === "finished" ? latestPlayerRound : null) ??
+    await getOrCreateAvailableTableWarsV2Room(cafe.id);
   const [players, cells, initialUnits] = await Promise.all([
     getRoundPlayers(round),
     getRoundCells(round),
@@ -943,8 +1021,8 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     events,
     messages: messagesFromEvents(events),
     isSpectator: currentPlayer?.role === "spectator",
-    canJoinBlue: round.status !== "finished" && teamCounts.bluePlayers < round.maxPlayersPerTeam,
-    canJoinRed: round.status !== "finished" && teamCounts.redPlayers < round.maxPlayersPerTeam,
+    canJoinBlue: round.status !== "finished",
+    canJoinRed: round.status !== "finished",
   };
 }
 
@@ -954,9 +1032,17 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("يجب تسجيل الدخول قبل دخول حرب الطاولات.");
 
-  let round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  const customerId = String(customer.id);
   const displayName = customerDisplayName(customer);
-  const existingPlayer = await getCurrentPlayer(round, String(customer.id));
+  const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, customerId);
+  let round =
+    currentRoom?.player.role === "player"
+      ? currentRoom.round
+      : await getOrCreateAvailableTableWarsV2Room(cafe.id, team);
+  const existingPlayer =
+    currentRoom?.round.id === round.id
+      ? currentRoom.player
+      : await getCurrentPlayer(round, customerId);
   if (existingPlayer) {
     const [existingCells, existingPlayers] = await Promise.all([
       getRoundCells(round),
@@ -976,8 +1062,8 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
       const teamPlayerCount = team === "blue" ? counts.bluePlayers : counts.redPlayers;
       const canUsePlayerSeat =
         existingPlayer.role === "player" && existingPlayer.team === team
-          ? teamPlayerCount <= round.maxPlayersPerTeam
-          : teamPlayerCount < round.maxPlayersPerTeam;
+          ? teamPlayerCount <= maxRealPlayersPerTeam(round)
+          : teamPlayerCount < maxRealPlayersPerTeam(round);
       if (canUsePlayerSeat) {
         await promoteExistingPlayerWithBase({
           round,
@@ -985,7 +1071,7 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
           team,
           displayName,
         });
-        await refreshRoundTeamCounts(round);
+        await ensureAiPlaceholdersForRoom(round);
       }
     }
     const snapshot = await getTableWarsV2SnapshotForCustomer(cafe.slug);
@@ -1004,30 +1090,37 @@ export async function joinTableWarsV2Customer(slug: string, requestedTeam: Table
   }
 
   await releaseAiPlaceholdersForTeam(round, team);
-  const { counts } = await refreshRoundTeamCounts(round);
-  const teamPlayerCount = team === "blue" ? counts.bluePlayers : counts.redPlayers;
-  const role: TableWarsRole = teamPlayerCount < round.maxPlayersPerTeam ? "player" : "spectator";
+  await refreshRoundTeamCounts(round);
+  const freshPlayers = await getRoundPlayers(round);
+  if (!roomHasAvailableSeat(round, freshPlayers, team)) {
+    round = await createTableWarsV2Room(cafe.id);
+  }
+
+  await releaseAiPlaceholdersForTeam(round, team);
+  const latestPlayers = await getRoundPlayers(round);
+  const role: TableWarsRole = roomHasAvailableSeat(round, latestPlayers, team) ? "player" : "spectator";
 
   let player =
     role === "player"
       ? await createPlayerWithBase({
           round,
-          customerId: String(customer.id),
+          customerId,
           team,
           role: "player",
           displayName,
         })
       : await createRoundPlayer({
           round,
-          customerId: String(customer.id),
+          customerId,
           team,
           role: "spectator",
           displayName,
         });
 
+  await ensureAiPlaceholdersForRoom(round);
   const refreshed = await refreshRoundTeamCounts(round);
   round = refreshed.round;
-  player = (await getCurrentPlayer(round, String(customer.id))) ?? player;
+  player = (await getCurrentPlayer(round, customerId)) ?? player;
   const snapshot = await getTableWarsV2SnapshotForCustomer(cafe.slug);
 
   return {
@@ -1177,7 +1270,8 @@ export async function tickTableWarsV2ForActiveSession() {
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
-  const round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  const customerRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
+  const round = customerRoom?.round ?? await getOrCreateAvailableTableWarsV2Room(cafe.id);
   if (round.status === "active" || round.status === "waiting") {
     await tickTableWarsV2Round(round);
   }
@@ -1185,13 +1279,21 @@ export async function tickTableWarsV2ForActiveSession() {
   return getTableWarsV2SnapshotForCustomer(cafe.slug);
 }
 
-export async function finishTableWarsV2RealtimeLiteRoundForCustomer(slug: string, winningTeam: TableWarsTeam) {
+export async function finishTableWarsV2RealtimeLiteRoundForCustomer(
+  slug: string,
+  winningTeam: TableWarsTeam,
+  roundId?: string | null,
+) {
   const team = normalizeTeam(winningTeam);
   const cafe = await ensurePublicTableWarsV2Playable(slug);
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
-  const round = await getOrCreateActiveTableWarsV2Round(cafe.id);
+  const customerRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
+  const round = roundId
+    ? await getRoundById(roundId, cafe.id)
+    : customerRoom?.round ?? null;
+  if (!round) throw new Error("No active table wars round.");
   if (round.status === "finished") {
     return getTableWarsV2SnapshotForCustomer(cafe.slug);
   }
@@ -1226,40 +1328,13 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
-  const existing = await getActiveTableWarsV2Round(cafe.id);
-  if (existing && existing.status !== "finished") {
+  const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
+  if (currentRoom) {
     return getTableWarsV2SnapshotForCustomer(cafe.slug);
   }
 
-  const previousPlayer = existing
-    ? await getCurrentPlayer(existing, String(customer.id))
-    : null;
-
-  const supabase = tableWarsV2Db(createAdminClient());
-  const now = new Date().toISOString();
-  const created = await assertNoDbError(
-    await supabase
-      .from("table_wars_v2_rounds")
-      .insert({
-        cafe_id: cafe.id,
-        status: "active",
-        ai_blue_enabled: false,
-        ai_red_enabled: false,
-        blue_player_count: 0,
-        red_player_count: 0,
-        max_players_per_team: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM,
-        total_cells: TABLE_WARS_V2_TOTAL_CELLS,
-        seed: randomUUID(),
-        started_at: now,
-        last_tick_at: now,
-      })
-      .select("*")
-      .single(),
-    "تعذر بدء جولة حرب الطاولات الجديدة.",
-  );
-
-  const round = mapRound(created as Record<string, unknown>);
-  await seedTableWarsV2RoundCells(round);
+  const previousPlayer = await getLatestTableWarsV2PlayerForCustomer(cafe.id, String(customer.id));
+  const round = await createTableWarsV2Room(cafe.id);
 
   if (previousPlayer?.team) {
     if (previousPlayer.role === "player") {
@@ -1279,7 +1354,7 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
         displayName: customerDisplayName(customer),
       });
     }
-    await refreshRoundTeamCounts(round);
+    await ensureAiPlaceholdersForRoom(round);
   }
 
   return getTableWarsV2SnapshotForCustomer(cafe.slug);
