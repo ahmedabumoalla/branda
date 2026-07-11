@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { Activity, Eye, Radio, Swords, Users } from "lucide-react";
+import { Eye, Swords } from "lucide-react";
 import {
   finishTableWarsV2RealtimeLiteRoundAction,
   joinTableWarsV2Team,
@@ -17,7 +17,6 @@ import {
 } from "@/lib/table-wars/realtime-lite";
 import type {
   TableWarsTeam,
-  TableWarsV2Event,
   TableWarsV2Snapshot,
 } from "@/lib/table-wars/v2-types";
 
@@ -48,27 +47,11 @@ function roundStatusLabel(status: string | null | undefined) {
   return "غير متاحة";
 }
 
-function eventLabel(event: TableWarsV2Event) {
-  if (event.eventType === "road_battle") return "اشتباك في الطريق";
-  if (event.eventType === "ai_move") return "تحرك الكمبيوتر";
-  if (event.eventType === "send_units") return "إرسال جنود";
-  if (event.eventType === "arrival") return "وصول جنود";
-  return "حدث في الجولة";
-}
-
-function formatEventTime(value: string | null) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("ar-SA", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-[#F2E7D9] bg-[#FCF8F3] px-3 py-3">
-      <p className="text-[11px] font-black text-[#806A5E]">{label}</p>
-      <p className="mt-1 text-lg font-black text-[#311912]">{value}</p>
+    <div className="min-w-0 rounded-lg border border-[#E7D7C6] bg-white px-3 py-2 shadow-[4px_4px_14px_rgba(49,25,18,0.04)]">
+      <p className="truncate text-[10px] font-black text-[#806A5E]">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-black text-[#311912] sm:text-base">{value}</p>
     </div>
   );
 }
@@ -93,7 +76,6 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const isPlayer = currentPlayer?.role === "player" && !isRoundFinished;
   const isSpectator = snapshot.role === "spectator";
   const canJoin = !snapshot.currentPlayer && snapshot.round && !isRoundFinished;
-  const visibleEvents = snapshot.events.slice(0, 5);
   const realtimeReady = realtimeStatus === "connected";
   const hostPlayer = useMemo(
     () =>
@@ -221,13 +203,15 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="grid gap-3 md:grid-cols-5">
+    <div className="flex flex-col gap-3 sm:gap-5">
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
         <StatTile label="فريقك" value={teamLabel(snapshot.team)} />
         <StatTile label="دورك" value={roleLabel(snapshot.role)} />
         <StatTile label="الأزرق" value={snapshot.teamCounts.bluePlayers} />
         <StatTile label="الأحمر" value={snapshot.teamCounts.redPlayers} />
-        <StatTile label="الجولة" value={roundStatusLabel(snapshot.round?.status)} />
+        <div className="col-span-2 sm:col-span-1">
+          <StatTile label="الجولة" value={roundStatusLabel(snapshot.round?.status)} />
+        </div>
       </section>
 
       {canJoin ? (
@@ -291,57 +275,6 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
             onMessage={setMessage}
           />
         </div>
-      </section>
-
-      <section className="grid gap-3 lg:grid-cols-[1fr_320px]">
-        <article className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
-          <div className="flex items-center gap-3">
-            <Activity className="h-5 w-5 text-[#6B3A25]" />
-            <h2 className="text-base font-black text-[#311912]">أحداث مختصرة</h2>
-          </div>
-          {visibleEvents.length === 0 ? (
-            <p className="mt-4 rounded-lg border border-[#F2E7D9] bg-[#FCF8F3] p-4 text-sm font-bold text-[#806A5E]">
-              لا توجد أحداث حديثة بعد.
-            </p>
-          ) : (
-            <div className="mt-4 grid gap-2">
-              {visibleEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-[#F2E7D9] bg-[#FCF8F3] p-3"
-                >
-                  <span className="text-sm font-black text-[#311912]">{eventLabel(event)}</span>
-                  <span className="text-xs font-bold text-[#806A5E]">{formatEventTime(event.createdAt)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
-
-        <article className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
-          <div className="flex items-center gap-3">
-            <Radio className="h-5 w-5 text-[#6B3A25]" />
-            <h2 className="text-base font-black text-[#311912]">حالة الجولة</h2>
-          </div>
-          <div className="mt-4 grid gap-2">
-            <div className="flex items-center justify-between rounded-lg bg-[#FCF8F3] p-3 text-sm font-bold">
-              <span className="text-[#806A5E]">الخلايا</span>
-              <span className="text-[#311912]">{cells.length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-[#FCF8F3] p-3 text-sm font-bold">
-              <span className="text-[#806A5E]">أحداث لحظية</span>
-              <span className="text-[#311912]">{realtimeEvents.length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-[#FCF8F3] p-3 text-sm font-bold">
-              <span className="text-[#806A5E]">المضيف</span>
-              <span className="text-[#311912]">{isHost ? "أنت" : hostPlayer?.displayName ?? "غير متاح"}</span>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-[#FFF7E3] p-3 text-xs font-black text-[#6B3A25]">
-            <Users className="h-4 w-4" />
-            تحديث مباشر للجولة
-          </div>
-        </article>
       </section>
 
       <TableWarsLegends legends={snapshot.legendsPreview} />

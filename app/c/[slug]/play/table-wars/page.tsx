@@ -4,7 +4,7 @@ export const fetchCache = "force-no-store";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Castle, LockKeyhole, QrCode, Shield, Swords } from "lucide-react";
+import { ArrowRight, LockKeyhole, QrCode, Swords } from "lucide-react";
 import { getTableWarsV2SnapshotAction } from "@/app/actions/table-wars";
 import { TableWarsMultiplayerGame } from "@/components/cafe/table-wars-multiplayer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
@@ -33,15 +33,6 @@ function MessageBox({ message }: { message: string }) {
       <p className="mx-auto mt-3 max-w-xl text-sm font-black leading-7 text-[#311912]">{message}</p>
     </div>
   );
-}
-
-function roundStatusLabel(snapshot: TableWarsV2Snapshot | null, fallback: string) {
-  const status = snapshot?.round?.status;
-  if (status === "active") return "نشطة";
-  if (status === "waiting") return "بانتظار اللاعبين";
-  if (status === "finished") return "منتهية";
-  if (status === "cancelled") return "ملغاة";
-  return fallback;
 }
 
 export default async function PublicTableWarsPage({ params, searchParams }: Props) {
@@ -134,34 +125,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
         ) : hasTableQuery && !entry.table ? (
           <MessageBox message={entry.errorMessage ?? "رمز الطاولة غير صالح لهذا الفرع."} />
         ) : (
-          <>
-            <section className="grid gap-3 md:grid-cols-3">
-              <article className="rounded-lg border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)] md:col-span-2">
-                <Castle className="h-8 w-8 text-[#6B3A25]" />
-                <p className="mt-4 text-xs font-black text-[#806A5E]">
-                  {entry.table ? "طاولتك" : "دخول عام"}
-                </p>
-                <h2 className="mt-1 text-2xl font-black text-[#311912]">
-                  {entry.table?.label ?? "جولة متعددة اللاعبين"}
-                </h2>
-                <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">
-                  انضم إلى فريق، راقب الخريطة، وسيطر على الطاولات من خلال محرك الجولة على الخادم.
-                </p>
-              </article>
-              <article className="rounded-lg border border-[#D9A33F]/35 bg-[#FFF7E3] p-5 text-[#4A281D]">
-                <Shield className="h-8 w-8" />
-                <p className="mt-4 text-xs font-black text-[#6B3A25]">حالة الجولة</p>
-                <h2 className="mt-1 text-xl font-black">
-                  {roundStatusLabel(initialSnapshot, entry.currentRound?.statusLabel ?? "بانتظار التجهيز")}
-                </h2>
-                <p className="mt-3 text-sm font-bold leading-7 text-[#6B3A25]">
-                  الواجهة تعرض بيانات الجولة الحالية من نظام Multiplayer v2.
-                </p>
-              </article>
-            </section>
-
-            {initialSnapshot ? <TableWarsMultiplayerGame slug={slug} initialSnapshot={initialSnapshot} /> : null}
-          </>
+          initialSnapshot ? <TableWarsMultiplayerGame slug={slug} initialSnapshot={initialSnapshot} /> : null
         )}
       </div>
     </main>
