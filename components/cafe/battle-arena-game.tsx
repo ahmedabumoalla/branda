@@ -232,18 +232,21 @@ function CharacterFigure({
   team = "player",
   state = "moving",
   compact = false,
+  face,
 }: {
   kind: UnitKind;
   team?: Team;
   state?: UnitState;
   compact?: boolean;
+  face?: number;
 }) {
   const isAttacking = state === "attacking";
+  const faceDirection = face ?? (team === "player" ? 1 : -1);
 
   return (
     <span
       className={`ba-character ${compact ? "ba-character-mini" : ""} ba-${kind} ba-${team} ba-${state}`}
-      style={{ "--team": teamColor(team), "--face": team === "player" ? 1 : -1 } as CSSProperties}
+      style={{ "--team": teamColor(team), "--face": faceDirection } as CSSProperties}
       aria-hidden="true"
     >
       <span className="ba-shadow" />
@@ -252,13 +255,16 @@ function CharacterFigure({
           <span className="ba-leg ba-leg-left" />
           <span className="ba-leg ba-leg-right" />
           <span className="ba-body">
+            <span className="ba-collar" />
             <span className="ba-apron" />
+            <span className="ba-belt" />
             {kind === "branch_guard" ? <span className="ba-shield-mark" /> : null}
           </span>
           <span className="ba-arm ba-arm-left" />
           <span className="ba-arm ba-arm-right" />
           <span className="ba-head">
             <span className="ba-hair" />
+            <span className="ba-face-detail" />
             {kind === "strong_chef" ? (
               <span className="ba-chef-hat">
                 <span />
@@ -282,6 +288,7 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
       <span className={`ba-accessory ba-tray ${active ? "ba-accessory-active" : ""}`}>
         <span className="ba-tray-plate" />
         <span className="ba-cup" />
+        <span className="ba-steam" />
       </span>
     );
   }
@@ -291,6 +298,8 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
       <span className={`ba-accessory ba-pan ${active ? "ba-accessory-active" : ""}`}>
         <span className="ba-pan-head" />
         <span className="ba-pan-handle" />
+        <span className="ba-bean ba-bean-one" />
+        <span className="ba-bean ba-bean-two" />
       </span>
     );
   }
@@ -307,6 +316,8 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
 
 function ArenaUnit({ unit }: { unit: Unit }) {
   const hpPercent = `${clamp((unit.hp / unit.maxHp) * 100, 0, 100)}%`;
+  const face =
+    unit.state === "attacking" && unit.attackTargetX !== null ? (unit.attackTargetX >= unit.x ? 1 : -1) : undefined;
 
   return (
     <div
@@ -321,7 +332,7 @@ function ArenaUnit({ unit }: { unit: Unit }) {
       }
       title={unit.name}
     >
-      <CharacterFigure kind={unit.kind} team={unit.team} state={unit.state} />
+      <CharacterFigure kind={unit.kind} team={unit.team} state={unit.state} face={face} />
       <span className="ba-hp-track">
         <span className="ba-hp-fill" />
       </span>
@@ -342,6 +353,14 @@ function CounterBase({ team, hp }: { team: Team; hp: number }) {
       style={{ "--team": color } as CSSProperties}
     >
       <span className="ba-defense-zone" />
+      <div className="ba-base-flag">
+        <span className="ba-flag-mark" />
+      </div>
+      <div className="ba-base-rail" />
+      <div className="ba-base-machine-shell">
+        <span className="ba-base-dial" />
+        <span className="ba-base-portafilter" />
+      </div>
       <div className="ba-base-canopy">
         <span />
         <span />
@@ -350,6 +369,7 @@ function CounterBase({ team, hp }: { team: Team; hp: number }) {
       <div className="ba-base-counter">
         <span className="ba-base-machine" />
         <span className="ba-base-cups" />
+        <span className="ba-base-cup-foam" />
       </div>
       <p className="ba-base-label">{isPlayer ? "كاونترك" : "كاونتر البوت"}</p>
       <div className="ba-base-health">
@@ -622,7 +642,26 @@ export function BattleArenaGame() {
         </div>
 
         <div className="ba-arena relative h-[430px] min-h-[400px] overflow-hidden sm:h-[540px] lg:h-[590px]">
+          <div className="ba-cafe-backdrop" aria-hidden="true">
+            <span className="ba-cafe-shelf">
+              <span className="ba-shelf-grinder" />
+              <span className="ba-shelf-cups" />
+              <span className="ba-shelf-menu" />
+            </span>
+            <span className="ba-cafe-plant ba-cafe-plant-left" />
+            <span className="ba-cafe-plant ba-cafe-plant-right" />
+          </div>
+          <div className="ba-corner-lamp ba-corner-lamp-left" aria-hidden="true" />
+          <div className="ba-corner-lamp ba-corner-lamp-right" aria-hidden="true" />
+          <div className="ba-rail ba-rail-top" aria-hidden="true" />
+          <div className="ba-rail ba-rail-bottom" aria-hidden="true" />
+          <div className="ba-team-carpet ba-team-carpet-player" aria-hidden="true" />
+          <div className="ba-team-carpet ba-team-carpet-bot" aria-hidden="true" />
           <div className="ba-floor" />
+          <div className="ba-watermark" aria-hidden="true">
+            <span className="ba-watermark-bean" />
+            <span className="ba-watermark-text">BRANDA</span>
+          </div>
           <div className="ba-center-line" />
           <div className="ba-side-line ba-side-line-player" />
           <div className="ba-side-line ba-side-line-bot" />
@@ -640,15 +679,25 @@ export function BattleArenaGame() {
             {units
               .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
               .map((unit) => (
-                <line
+                <g
                   key={`${unit.id}-${unit.attackFxId}`}
-                  className="ba-attack-beam"
-                  x1={unit.x}
-                  y1={unit.y}
-                  x2={unit.attackTargetX ?? unit.x}
-                  y2={unit.attackTargetY ?? unit.y}
+                  className={`ba-attack-fx ba-attack-fx-${unit.kind}`}
                   style={{ "--team": teamColor(unit.team) } as CSSProperties}
-                />
+                >
+                  <line
+                    className={`ba-attack-beam ba-attack-beam-${unit.kind}`}
+                    x1={unit.x}
+                    y1={unit.y}
+                    x2={unit.attackTargetX ?? unit.x}
+                    y2={unit.attackTargetY ?? unit.y}
+                  />
+                  <circle
+                    className={`ba-impact-dot ba-impact-dot-${unit.kind}`}
+                    cx={unit.attackTargetX ?? unit.x}
+                    cy={unit.attackTargetY ?? unit.y}
+                    r="1.5"
+                  />
+                </g>
               ))}
           </svg>
 
@@ -675,7 +724,7 @@ export function BattleArenaGame() {
       </div>
 
       <aside className="grid gap-3 lg:flex lg:flex-col">
-        <div className="rounded-lg border border-[#CEB89C] bg-white p-3 shadow-[0_12px_30px_rgba(49,25,18,0.08)]">
+        <div className="ba-game-panel rounded-lg border border-[#CEB89C] bg-white p-3 shadow-[0_12px_30px_rgba(49,25,18,0.08)]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-black text-[#7A4D2A]">الطاقة</p>
@@ -687,9 +736,9 @@ export function BattleArenaGame() {
               <Zap className="h-5 w-5" />
             </span>
           </div>
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#EFE3D1] shadow-inner" aria-hidden="true">
+          <div className="ba-energy-track mt-3 h-3 overflow-hidden rounded-full bg-[#EFE3D1] shadow-inner" aria-hidden="true">
             <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,#F0B33F,#E06D3C,#14645E)] transition-[width] duration-200"
+              className="ba-energy-fill h-full rounded-full bg-[linear-gradient(90deg,#F0B33F,#E06D3C,#14645E)] transition-[width] duration-200"
               style={{ width: energyPercent }}
             />
           </div>
@@ -705,7 +754,7 @@ export function BattleArenaGame() {
                 type="button"
                 onClick={() => playCard(card)}
                 disabled={result !== "playing"}
-                className={`group min-h-[92px] rounded-lg border p-2.5 text-right shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed ${
+                className={`ba-card-button group min-h-[92px] rounded-lg border p-2.5 text-right shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed ${
                   canPlay
                     ? "border-[#D69C38]/70 bg-[#FFF8E8] text-[#24140F] hover:border-[#B9712D] hover:bg-[#FFF0CC]"
                     : "border-[#D9CCBA] bg-white text-[#6F625A] opacity-80"
@@ -713,7 +762,7 @@ export function BattleArenaGame() {
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#F8EAD5] shadow-inner">
+                    <span className="ba-card-avatar inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#F8EAD5] shadow-inner">
                       <CharacterFigure kind={card.kind} compact />
                     </span>
                     <span className="min-w-0">
@@ -723,7 +772,7 @@ export function BattleArenaGame() {
                       </span>
                     </span>
                   </span>
-                  <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#14645E] px-2 text-xs font-black text-white shadow-sm">
+                  <span className="ba-cost-badge inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#14645E] px-2 text-xs font-black text-white shadow-sm">
                     {card.cost}
                   </span>
                 </span>
@@ -738,51 +787,360 @@ export function BattleArenaGame() {
       </aside>
 
       <style>{`
-        .ba-arena {
+        .ba-game-panel,
+        .ba-card-button {
           background:
-            radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.58), transparent 34%),
-            linear-gradient(180deg, #fff7e8 0%, #ecd4b5 60%, #d4b28a 100%);
+            linear-gradient(180deg, rgba(255, 250, 237, 0.96), rgba(244, 223, 188, 0.9)),
+            #fff9ef;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.78),
+            0 12px 26px rgba(49, 25, 18, 0.1);
+        }
+
+        .ba-energy-track {
+          border: 1px solid rgba(122, 77, 42, 0.16);
+          background: linear-gradient(180deg, #d5b98c, #f3e6cf);
+        }
+
+        .ba-energy-fill {
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.38),
+            0 0 12px rgba(240, 179, 63, 0.34);
+        }
+
+        .ba-card-button {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .ba-card-button::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(circle at 18% 0%, rgba(255, 225, 151, 0.38), transparent 34%);
+        }
+
+        .ba-card-button > * {
+          position: relative;
+          z-index: 1;
+        }
+
+        .ba-card-avatar {
+          border: 1px solid rgba(214, 156, 56, 0.36);
+          background:
+            radial-gradient(circle at 50% 34%, rgba(255, 248, 219, 0.9), transparent 62%),
+            linear-gradient(180deg, #f4dcb7, #c9955f);
+        }
+
+        .ba-cost-badge {
+          border: 1px solid rgba(255, 232, 178, 0.48);
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent),
+            #14645e;
+        }
+
+        .ba-arena {
+          isolation: isolate;
+          background:
+            radial-gradient(circle at 50% 34%, rgba(255, 234, 181, 0.42), transparent 34%),
+            radial-gradient(circle at 14% 12%, rgba(255, 213, 142, 0.3), transparent 24%),
+            radial-gradient(circle at 88% 12%, rgba(113, 203, 190, 0.2), transparent 24%),
+            linear-gradient(180deg, #321b14 0%, #71412a 18%, #c08a55 54%, #5d3323 100%);
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 224, 162, 0.5),
+            inset 0 34px 90px rgba(15, 8, 5, 0.48),
+            inset 0 -44px 95px rgba(15, 8, 5, 0.48);
+        }
+
+        .ba-arena::before,
+        .ba-arena::after {
+          content: "";
+          position: absolute;
+          inset-inline: 0;
+          z-index: 9;
+          pointer-events: none;
+        }
+
+        .ba-arena::before {
+          top: 0;
+          height: 18%;
+          background:
+            linear-gradient(180deg, rgba(29, 15, 10, 0.72), transparent),
+            radial-gradient(ellipse at center, rgba(255, 218, 141, 0.22), transparent 62%);
+        }
+
+        .ba-arena::after {
+          bottom: 0;
+          height: 17%;
+          background:
+            radial-gradient(ellipse at 50% 100%, rgba(33, 16, 10, 0.72), transparent 68%),
+            linear-gradient(0deg, rgba(26, 13, 9, 0.58), transparent);
+        }
+
+        .ba-cafe-backdrop {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+        }
+
+        .ba-cafe-shelf {
+          position: absolute;
+          left: 23%;
+          right: 23%;
+          top: 3%;
+          height: 9%;
+          border-radius: 0 0 16px 16px;
+          border: 1px solid rgba(255, 214, 140, 0.28);
+          background: linear-gradient(180deg, #7d4a31, #4a291b);
+          box-shadow:
+            0 14px 22px rgba(20, 10, 7, 0.36),
+            inset 0 1px 0 rgba(255, 232, 186, 0.22);
+        }
+
+        .ba-shelf-grinder,
+        .ba-shelf-cups,
+        .ba-shelf-menu {
+          position: absolute;
+          bottom: 18%;
+          background: linear-gradient(180deg, #f5d291, #80522e);
+          box-shadow: 0 5px 8px rgba(20, 10, 7, 0.28);
+        }
+
+        .ba-shelf-grinder {
+          left: 16%;
+          width: 30px;
+          height: 38px;
+          border-radius: 16px 16px 7px 7px;
+        }
+
+        .ba-shelf-grinder::before {
+          content: "";
+          position: absolute;
+          left: 6px;
+          right: 6px;
+          top: -10px;
+          height: 13px;
+          border-radius: 50% 50% 4px 4px;
+          background: #1f1715;
+        }
+
+        .ba-shelf-cups {
+          left: 43%;
+          width: 70px;
+          height: 24px;
+          border-radius: 9px 9px 6px 6px;
+          background:
+            radial-gradient(circle at 15px 10px, #fff8e8 0 7px, transparent 8px),
+            radial-gradient(circle at 36px 10px, #fff8e8 0 7px, transparent 8px),
+            radial-gradient(circle at 57px 10px, #fff8e8 0 7px, transparent 8px),
+            linear-gradient(180deg, #7d4a31, #3b2118);
+        }
+
+        .ba-shelf-menu {
+          right: 15%;
+          width: 42px;
+          height: 48px;
+          border-radius: 4px;
+          background:
+            linear-gradient(180deg, rgba(255, 216, 144, 0.22), transparent),
+            #2e241d;
+          border: 2px solid #b78143;
+        }
+
+        .ba-cafe-plant {
+          position: absolute;
+          top: 3.5%;
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          background:
+            radial-gradient(ellipse at 24% 32%, #98a94f 0 18%, transparent 19%),
+            radial-gradient(ellipse at 58% 30%, #718437 0 20%, transparent 21%),
+            radial-gradient(ellipse at 38% 66%, #63752f 0 22%, transparent 23%),
+            radial-gradient(circle at 50% 70%, #5a3420 0 22%, transparent 23%);
+          filter: drop-shadow(0 10px 12px rgba(13, 8, 5, 0.35));
+        }
+
+        .ba-cafe-plant-left {
+          left: 8%;
+        }
+
+        .ba-cafe-plant-right {
+          right: 8%;
+        }
+
+        .ba-corner-lamp {
+          position: absolute;
+          top: 11%;
+          z-index: 8;
+          width: 15px;
+          height: 54px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #ffe09a, #6d4029);
+          box-shadow: 0 0 20px rgba(255, 215, 134, 0.38);
+        }
+
+        .ba-corner-lamp::before {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: -8px;
+          width: 28px;
+          height: 24px;
+          transform: translateX(-50%);
+          border-radius: 14px 14px 7px 7px;
+          background: radial-gradient(circle, #fff3c5, #7b4a2e 70%);
+        }
+
+        .ba-corner-lamp-left {
+          left: 5.5%;
+        }
+
+        .ba-corner-lamp-right {
+          right: 5.5%;
+        }
+
+        .ba-rail {
+          position: absolute;
+          left: 9%;
+          right: 9%;
+          z-index: 7;
+          height: 6px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #7d4c29, #f4cd7a, #8a552e);
+          box-shadow: 0 4px 10px rgba(26, 12, 7, 0.34);
+        }
+
+        .ba-rail-top {
+          top: 17%;
+        }
+
+        .ba-rail-bottom {
+          bottom: 9%;
+        }
+
+        .ba-team-carpet {
+          position: absolute;
+          top: 16%;
+          bottom: 9%;
+          z-index: 2;
+          width: 13%;
+          opacity: 0.88;
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.08) 25%, transparent 25% 50%, rgba(255, 255, 255, 0.08) 50% 75%, transparent 75%),
+            var(--team);
+          background-size: 22px 22px, 100% 100%;
+          box-shadow: inset 0 0 34px rgba(255, 222, 160, 0.18);
+        }
+
+        .ba-team-carpet-player {
+          --team: #7c2948;
+          left: 0;
+        }
+
+        .ba-team-carpet-bot {
+          --team: #14645e;
+          right: 0;
         }
 
         .ba-floor {
           position: absolute;
-          inset: 0;
+          inset: 17% 8.5% 9%;
+          z-index: 3;
+          overflow: hidden;
+          border-radius: 22px;
+          border: 2px solid rgba(225, 168, 84, 0.82);
           background:
-            linear-gradient(90deg, rgba(36, 20, 15, 0.08) 1px, transparent 1px),
-            linear-gradient(0deg, rgba(20, 100, 94, 0.08) 1px, transparent 1px),
-            radial-gradient(ellipse at center, rgba(255, 250, 237, 0.7), rgba(194, 145, 91, 0.24));
-          background-size: 44px 44px, 44px 44px, 100% 100%;
+            linear-gradient(90deg, rgba(116, 71, 37, 0.13) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(116, 71, 37, 0.12) 1px, transparent 1px),
+            radial-gradient(circle at 50% 47%, rgba(255, 247, 218, 0.96), rgba(231, 190, 135, 0.86) 58%, rgba(185, 122, 68, 0.78));
+          background-size: 42px 42px, 42px 42px, 100% 100%;
+          box-shadow:
+            0 24px 54px rgba(20, 9, 5, 0.42),
+            inset 0 0 0 5px rgba(105, 57, 30, 0.22),
+            inset 0 28px 48px rgba(255, 255, 255, 0.22),
+            inset 0 -24px 42px rgba(99, 52, 28, 0.16);
         }
 
         .ba-floor::after {
           content: "";
           position: absolute;
-          inset: 8% 11%;
-          border-radius: 26px;
-          border: 1px solid rgba(255, 255, 255, 0.6);
+          inset: 3% 4%;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 248, 225, 0.72);
           box-shadow:
             inset 0 30px 55px rgba(255, 255, 255, 0.22),
             inset 0 -24px 45px rgba(84, 48, 31, 0.16);
           transform: perspective(720px) rotateX(4deg);
         }
 
+        .ba-watermark {
+          position: absolute;
+          left: 50%;
+          top: 56%;
+          z-index: 4;
+          width: 210px;
+          height: 120px;
+          transform: translate(-50%, -50%);
+          color: rgba(143, 86, 41, 0.16);
+          pointer-events: none;
+          text-align: center;
+        }
+
+        .ba-watermark-bean {
+          position: relative;
+          display: block;
+          width: 72px;
+          height: 52px;
+          margin: 0 auto 4px;
+          border: 7px solid currentColor;
+          border-radius: 52% 48% 48% 52%;
+          transform: rotate(-18deg);
+        }
+
+        .ba-watermark-bean::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 8px;
+          width: 8px;
+          height: 34px;
+          border-radius: 999px;
+          background: currentColor;
+          transform: translateX(-50%) rotate(14deg);
+        }
+
+        .ba-watermark-text {
+          display: block;
+          font-family: Georgia, serif;
+          font-size: 34px;
+          font-weight: 900;
+          letter-spacing: 0;
+        }
+
         .ba-center-line {
           position: absolute;
-          inset-block: 8%;
+          inset-block: 18% 10%;
           left: 50%;
+          z-index: 5;
           width: 6px;
           transform: translateX(-50%);
           border-radius: 999px;
-          background: linear-gradient(180deg, transparent, rgba(122, 77, 42, 0.28), transparent);
-          box-shadow: 0 0 24px rgba(255, 255, 255, 0.48);
+          background: linear-gradient(180deg, transparent, rgba(195, 121, 52, 0.7), transparent);
+          box-shadow:
+            0 0 20px rgba(255, 229, 170, 0.65),
+            inset 0 0 0 1px rgba(91, 45, 23, 0.2);
         }
 
         .ba-side-line {
           position: absolute;
-          inset-block: 10%;
+          inset-block: 18% 10%;
+          z-index: 5;
           width: 4px;
           border-radius: 999px;
-          opacity: 0.35;
+          opacity: 0.55;
         }
 
         .ba-side-line-player {
@@ -799,13 +1157,17 @@ export function BattleArenaGame() {
           position: absolute;
           left: 13%;
           right: 13%;
-          height: 54px;
-          transform: translateY(-50%) perspective(760px) rotateX(8deg);
+          z-index: 6;
+          height: 58px;
+          transform: translateY(-50%) perspective(760px) rotateX(7deg);
           border-radius: 999px;
-          background: linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.24));
+          background:
+            linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 250, 229, 0.56), rgba(255, 255, 255, 0.14)),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(177, 112, 58, 0.08));
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.78),
-            inset 0 -18px 30px rgba(96, 56, 35, 0.08);
+            0 9px 18px rgba(78, 43, 24, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -18px 30px rgba(96, 56, 35, 0.1);
         }
 
         .ba-lane span {
@@ -820,10 +1182,11 @@ export function BattleArenaGame() {
           position: absolute;
           top: 50%;
           z-index: 12;
-          width: 86px;
+          width: 118px;
           transform: translateY(-50%);
           text-align: center;
           color: #24140f;
+          filter: drop-shadow(0 20px 18px rgba(20, 9, 5, 0.34));
         }
 
         .ba-defense-zone {
@@ -841,22 +1204,146 @@ export function BattleArenaGame() {
         }
 
         .ba-base-player {
-          left: 10px;
+          left: 8px;
         }
 
         .ba-base-bot {
-          right: 10px;
+          right: 8px;
+        }
+
+        .ba-base-flag {
+          position: absolute;
+          top: -112px;
+          left: 50%;
+          width: 46px;
+          height: 78px;
+          transform: translateX(-50%);
+          border-radius: 9px 9px 16px 16px;
+          border: 2px solid #d6aa5d;
+          background:
+            radial-gradient(circle at 50% 38%, rgba(255, 244, 212, 0.92) 0 7px, transparent 8px),
+            linear-gradient(180deg, color-mix(in srgb, var(--team) 88%, #000), var(--team));
+          box-shadow:
+            0 10px 20px rgba(20, 9, 5, 0.26),
+            inset 0 0 0 1px rgba(255, 240, 196, 0.18);
+        }
+
+        .ba-base-flag::before {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: -15px;
+          width: 58px;
+          height: 8px;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          background: linear-gradient(90deg, #7f4d26, #f5d17c, #7f4d26);
+        }
+
+        .ba-base-flag::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: -24px;
+          width: 12px;
+          height: 12px;
+          transform: translateX(-50%);
+          border-radius: 50%;
+          background: #ffd884;
+          box-shadow: 0 0 12px rgba(255, 216, 132, 0.55);
+        }
+
+        .ba-flag-mark {
+          position: absolute;
+          left: 50%;
+          top: 30px;
+          width: 22px;
+          height: 17px;
+          transform: translateX(-50%) rotate(-22deg);
+          border-radius: 50%;
+          background: #fff4d3;
+        }
+
+        .ba-flag-mark::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 2px;
+          width: 4px;
+          height: 14px;
+          transform: translateX(-50%) rotate(17deg);
+          border-radius: 999px;
+          background: color-mix(in srgb, var(--team) 72%, #3c2116);
+        }
+
+        .ba-base-rail {
+          position: absolute;
+          left: 50%;
+          top: -6px;
+          width: 148px;
+          height: 116px;
+          transform: translateX(-50%);
+          border: 4px solid rgba(225, 171, 89, 0.82);
+          border-radius: 44px 44px 18px 18px;
+          border-bottom-color: transparent;
+          box-shadow:
+            inset 0 0 18px rgba(255, 224, 151, 0.2),
+            0 12px 22px rgba(20, 9, 5, 0.2);
+        }
+
+        .ba-base-machine-shell {
+          position: relative;
+          z-index: 2;
+          height: 76px;
+          margin-inline: 15px;
+          border-radius: 32px 32px 12px 12px;
+          border: 2px solid rgba(139, 84, 40, 0.5);
+          background:
+            radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.95) 0 14px, transparent 15px),
+            linear-gradient(180deg, #fff2d8, #d39a62 58%, color-mix(in srgb, var(--team) 55%, #4b2a1b));
+          box-shadow:
+            inset 0 8px 16px rgba(255, 255, 255, 0.42),
+            inset 0 -13px 16px rgba(47, 25, 15, 0.18),
+            0 16px 20px rgba(20, 9, 5, 0.24);
+        }
+
+        .ba-base-dial {
+          position: absolute;
+          left: 50%;
+          top: 20px;
+          width: 20px;
+          height: 20px;
+          transform: translateX(-50%);
+          border-radius: 50%;
+          border: 3px solid #a56e36;
+          background: #fff6df;
+        }
+
+        .ba-base-portafilter {
+          position: absolute;
+          left: 50%;
+          top: 46px;
+          width: 42px;
+          height: 9px;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          background: #4b2a1d;
+          box-shadow: 18px 5px 0 -2px #4b2a1d;
         }
 
         .ba-base-canopy {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          height: 20px;
+          position: relative;
+          z-index: 3;
+          height: 18px;
+          margin-inline: 7px;
+          margin-top: -1px;
           overflow: hidden;
-          border-radius: 10px 10px 3px 3px;
-          border: 1px solid color-mix(in srgb, var(--team) 55%, white);
+          border-radius: 7px 7px 3px 3px;
+          border: 1px solid #d9a65b;
           background: #fff8e7;
-          box-shadow: 0 10px 18px rgba(42, 24, 16, 0.14);
+          box-shadow: 0 8px 14px rgba(42, 24, 16, 0.16);
         }
 
         .ba-base-canopy span:nth-child(odd) {
@@ -869,32 +1356,36 @@ export function BattleArenaGame() {
 
         .ba-base-counter {
           position: relative;
-          height: 58px;
-          margin-inline: 5px;
-          border-radius: 4px 4px 12px 12px;
-          border: 1px solid rgba(74, 40, 29, 0.16);
-          background: linear-gradient(180deg, #fffdf7, #d9b88d);
+          z-index: 3;
+          height: 76px;
+          margin-inline: 3px;
+          border-radius: 8px 8px 17px 17px;
+          border: 1px solid rgba(74, 40, 29, 0.22);
+          background:
+            linear-gradient(180deg, rgba(255, 246, 223, 0.9), transparent 34%),
+            linear-gradient(180deg, color-mix(in srgb, var(--team) 32%, #fff4d8), color-mix(in srgb, var(--team) 44%, #6f3c24));
           box-shadow:
-            0 14px 24px rgba(42, 24, 16, 0.2),
+            0 14px 24px rgba(42, 24, 16, 0.24),
             inset 0 1px 0 rgba(255, 255, 255, 0.85);
         }
 
         .ba-base-machine {
           position: absolute;
-          left: 15px;
-          bottom: 12px;
-          width: 26px;
-          height: 26px;
-          border-radius: 6px 6px 4px 4px;
-          background: linear-gradient(180deg, #364b4d, #182a2b);
+          left: 19px;
+          bottom: 19px;
+          width: 32px;
+          height: 30px;
+          border-radius: 8px 8px 5px 5px;
+          background: linear-gradient(180deg, #44595b, #182a2b);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         }
 
         .ba-base-machine::after {
           content: "";
           position: absolute;
-          right: -10px;
+          right: -13px;
           top: 9px;
-          width: 13px;
+          width: 17px;
           height: 4px;
           border-radius: 999px;
           background: #182a2b;
@@ -902,13 +1393,41 @@ export function BattleArenaGame() {
 
         .ba-base-cups {
           position: absolute;
-          right: 14px;
-          bottom: 13px;
-          width: 18px;
-          height: 18px;
-          border-radius: 3px 3px 7px 7px;
-          border: 2px solid var(--team);
-          background: rgba(255, 255, 255, 0.8);
+          right: 18px;
+          bottom: 14px;
+          width: 32px;
+          height: 28px;
+          border-radius: 4px 4px 12px 12px;
+          border: 3px solid #fff4d6;
+          background:
+            radial-gradient(circle at 50% 24%, #ead29c 0 8px, transparent 9px),
+            color-mix(in srgb, var(--team) 68%, #ffffff);
+          box-shadow:
+            0 8px 12px rgba(20, 9, 5, 0.18),
+            inset 0 -5px 0 rgba(40, 22, 15, 0.12);
+        }
+
+        .ba-base-cups::after {
+          content: "";
+          position: absolute;
+          right: -11px;
+          top: 8px;
+          width: 12px;
+          height: 10px;
+          border: 3px solid #fff4d6;
+          border-left: 0;
+          border-radius: 0 999px 999px 0;
+        }
+
+        .ba-base-cup-foam {
+          position: absolute;
+          right: 24px;
+          bottom: 39px;
+          width: 20px;
+          height: 6px;
+          border-radius: 50%;
+          background: #fff6da;
+          box-shadow: 0 0 10px rgba(255, 244, 210, 0.7);
         }
 
         .ba-base-label,
@@ -919,16 +1438,36 @@ export function BattleArenaGame() {
         }
 
         .ba-base-label {
-          color: var(--team);
+          height: 21px;
+          margin-inline: 12px;
+          border-radius: 3px 3px 8px 8px;
+          background: linear-gradient(180deg, #5b321f, #2b1710);
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 209, 129, 0.3),
+            0 8px 12px rgba(20, 9, 5, 0.2);
+          color: transparent;
+          font-size: 0;
+          line-height: 21px;
+        }
+
+        .ba-base-label::after {
+          content: "BRANDA";
+          color: #ffe3a2;
+          font-family: Georgia, serif;
+          font-size: 13px;
+          font-weight: 900;
+          letter-spacing: 0;
         }
 
         .ba-base-health {
-          height: 7px;
-          margin-top: 5px;
+          height: 9px;
+          margin: 6px 14px 0;
           overflow: hidden;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.68);
-          box-shadow: inset 0 0 0 1px rgba(74, 40, 29, 0.09);
+          background: rgba(255, 244, 217, 0.72);
+          box-shadow:
+            inset 0 0 0 1px rgba(74, 40, 29, 0.16),
+            0 3px 8px rgba(20, 9, 5, 0.18);
         }
 
         .ba-base-health span {
@@ -949,19 +1488,59 @@ export function BattleArenaGame() {
 
         .ba-attack-beam {
           stroke: var(--team);
-          stroke-width: 0.7;
+          stroke-width: 0.8;
           stroke-linecap: round;
-          stroke-dasharray: 1.6 1.1;
-          filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.72));
-          animation: ba-beam 260ms ease-out forwards;
+          stroke-dasharray: 1.4 1;
+          filter:
+            drop-shadow(0 0 3px rgba(255, 243, 207, 0.88))
+            drop-shadow(0 0 7px color-mix(in srgb, var(--team) 42%, transparent));
+          animation: ba-beam 340ms ease-out forwards;
+        }
+
+        .ba-attack-beam-swift_waiter {
+          stroke: #f8e8bc;
+          stroke-width: 1;
+          stroke-dasharray: 2.5 2.2;
+        }
+
+        .ba-attack-beam-strong_chef {
+          stroke: #5a2e1d;
+          stroke-width: 1.35;
+          stroke-dasharray: 0.9 1.4;
+        }
+
+        .ba-attack-beam-branch_guard {
+          stroke: #f6c45a;
+          stroke-width: 1.25;
+          stroke-dasharray: 1.8 1.6;
+        }
+
+        .ba-impact-dot {
+          fill: #fff2c8;
+          stroke: var(--team);
+          stroke-width: 0.55;
+          transform-box: fill-box;
+          transform-origin: center;
+          filter: drop-shadow(0 0 5px rgba(255, 232, 181, 0.78));
+          animation: ba-impact-dot 340ms ease-out forwards;
+        }
+
+        .ba-impact-dot-strong_chef {
+          fill: #5a2e1d;
+          stroke: #f0b96a;
+        }
+
+        .ba-impact-dot-branch_guard {
+          fill: #f6c45a;
+          stroke: #7a4d2a;
         }
 
         .ba-unit {
           position: absolute;
           z-index: 20;
-          width: 70px;
-          height: 76px;
-          transform: translate(-50%, -63%);
+          width: 76px;
+          height: 84px;
+          transform: translate(-50%, -68%);
           pointer-events: none;
         }
 
@@ -972,45 +1551,53 @@ export function BattleArenaGame() {
         .ba-character {
           position: relative;
           display: inline-block;
-          width: 62px;
-          height: 66px;
+          width: 68px;
+          height: 74px;
         }
 
         .ba-character-mini {
-          width: 40px;
-          height: 42px;
-          transform: scale(0.76);
+          width: 46px;
+          height: 48px;
+          transform: scale(0.68);
           transform-origin: center bottom;
         }
 
         .ba-shadow {
           position: absolute;
-          left: 8px;
-          right: 8px;
+          left: 7px;
+          right: 7px;
           bottom: 0;
-          height: 10px;
+          height: 12px;
           border-radius: 50%;
-          background: rgba(43, 26, 17, 0.22);
-          filter: blur(1px);
-          animation: ba-shadow 760ms ease-in-out infinite;
+          background: rgba(43, 26, 17, 0.28);
+          filter: blur(1.5px);
+          animation: ba-shadow 640ms ease-in-out infinite;
         }
 
         .ba-sprite {
           position: absolute;
           inset: 0;
-          animation: ba-bob 760ms ease-in-out infinite;
+          animation: ba-bob 640ms ease-in-out infinite;
         }
 
         .ba-attacking .ba-sprite {
           animation: ba-strike 360ms ease-in-out infinite;
         }
 
+        .ba-swift_waiter.ba-moving .ba-sprite {
+          animation: ba-run 480ms ease-in-out infinite;
+        }
+
+        .ba-branch_guard.ba-moving .ba-sprite {
+          animation-duration: 780ms;
+        }
+
         .ba-figure {
           position: absolute;
-          left: 12px;
-          bottom: 8px;
-          width: 38px;
-          height: 52px;
+          left: 13px;
+          bottom: 10px;
+          width: 42px;
+          height: 58px;
           transform: scaleX(var(--face));
           transform-origin: center bottom;
         }
@@ -1019,64 +1606,108 @@ export function BattleArenaGame() {
           position: absolute;
           left: 10px;
           top: 3px;
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           background: linear-gradient(180deg, #f1bd84, #c9784d);
-          box-shadow: inset 0 -2px 0 rgba(80, 37, 24, 0.18);
+          box-shadow:
+            inset 0 -2px 0 rgba(80, 37, 24, 0.18),
+            0 3px 4px rgba(36, 20, 15, 0.12);
         }
 
         .ba-hair {
           position: absolute;
-          left: 2px;
-          top: -1px;
-          width: 14px;
-          height: 7px;
+          left: 1px;
+          top: -2px;
+          width: 17px;
+          height: 8px;
           border-radius: 8px 8px 4px 4px;
           background: #38231d;
+        }
+
+        .ba-face-detail {
+          position: absolute;
+          left: 5px;
+          top: 8px;
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background: #2a1712;
+          box-shadow:
+            8px 0 0 #2a1712,
+            4px 6px 0 -1px rgba(105, 46, 30, 0.78);
         }
 
         .ba-body {
           position: absolute;
           left: 7px;
-          top: 20px;
-          width: 24px;
-          height: 25px;
-          border-radius: 9px 9px 7px 7px;
-          background: linear-gradient(180deg, #fffdf7 0 39%, var(--team) 40% 100%);
+          top: 23px;
+          width: 28px;
+          height: 28px;
+          border-radius: 11px 11px 8px 8px;
+          background:
+            linear-gradient(90deg, transparent 47%, rgba(255, 255, 255, 0.28) 48% 52%, transparent 53%),
+            linear-gradient(180deg, #fffdf7 0 39%, var(--team) 40% 100%);
           box-shadow:
             inset 0 0 0 1px rgba(36, 20, 15, 0.12),
             0 8px 12px rgba(36, 20, 15, 0.14);
         }
 
+        .ba-collar {
+          position: absolute;
+          left: 4px;
+          top: 1px;
+          width: 20px;
+          height: 12px;
+          background:
+            linear-gradient(135deg, #fffdf7 0 47%, transparent 48%),
+            linear-gradient(225deg, #fffdf7 0 47%, transparent 48%);
+        }
+
         .ba-apron {
           position: absolute;
-          left: 7px;
-          top: 6px;
-          width: 10px;
-          height: 17px;
+          left: 8px;
+          top: 8px;
+          width: 12px;
+          height: 18px;
           border-radius: 0 0 5px 5px;
           background: rgba(255, 255, 255, 0.88);
         }
 
+        .ba-belt {
+          position: absolute;
+          left: 3px;
+          right: 3px;
+          bottom: 6px;
+          height: 4px;
+          border-radius: 999px;
+          background: rgba(44, 25, 19, 0.72);
+        }
+
         .ba-swift_waiter .ba-body {
-          background: linear-gradient(180deg, #fffdf7 0 35%, var(--team) 36% 100%);
+          background:
+            linear-gradient(90deg, transparent 47%, rgba(255, 255, 255, 0.28) 48% 52%, transparent 53%),
+            linear-gradient(180deg, #fffdf7 0 35%, var(--team) 36% 100%);
         }
 
         .ba-strong_chef .ba-body {
-          background: linear-gradient(180deg, #fffdf7 0 72%, #d64d34 73% 100%);
+          background:
+            linear-gradient(90deg, transparent 47%, rgba(191, 72, 49, 0.22) 48% 52%, transparent 53%),
+            linear-gradient(180deg, #fffdf7 0 72%, #d64d34 73% 100%);
         }
 
         .ba-branch_guard .ba-body {
-          background: linear-gradient(180deg, #3f5e64, var(--team));
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 36%),
+            linear-gradient(180deg, #3f5e64, var(--team));
         }
 
         .ba-shield-mark {
           position: absolute;
-          left: 7px;
-          top: 7px;
-          width: 10px;
-          height: 12px;
+          left: 9px;
+          top: 8px;
+          width: 11px;
+          height: 13px;
           clip-path: polygon(50% 0, 100% 20%, 88% 78%, 50% 100%, 12% 78%, 0 20%);
           background: #f6c45a;
         }
@@ -1088,12 +1719,12 @@ export function BattleArenaGame() {
         }
 
         .ba-arm {
-          top: 24px;
+          top: 27px;
           width: 8px;
-          height: 22px;
+          height: 24px;
           border-radius: 999px;
           transform-origin: top center;
-          animation: ba-arm-swing 760ms ease-in-out infinite;
+          animation: ba-arm-swing 640ms ease-in-out infinite;
         }
 
         .ba-arm-left {
@@ -1102,7 +1733,7 @@ export function BattleArenaGame() {
 
         .ba-arm-right {
           right: 2px;
-          animation-delay: -380ms;
+          animation-delay: -320ms;
         }
 
         .ba-attacking .ba-arm-right {
@@ -1111,11 +1742,22 @@ export function BattleArenaGame() {
 
         .ba-leg {
           bottom: 0;
-          width: 8px;
-          height: 17px;
+          width: 9px;
+          height: 18px;
           border-radius: 999px 999px 4px 4px;
           transform-origin: top center;
-          animation: ba-step 760ms ease-in-out infinite;
+          animation: ba-step 640ms ease-in-out infinite;
+        }
+
+        .ba-leg::after {
+          content: "";
+          position: absolute;
+          left: -2px;
+          bottom: -3px;
+          width: 13px;
+          height: 5px;
+          border-radius: 999px;
+          background: #24140f;
         }
 
         .ba-leg-left {
@@ -1124,15 +1766,15 @@ export function BattleArenaGame() {
 
         .ba-leg-right {
           right: 9px;
-          animation-delay: -380ms;
+          animation-delay: -320ms;
         }
 
         .ba-chef-hat {
           position: absolute;
-          left: -3px;
-          top: -11px;
-          width: 24px;
-          height: 14px;
+          left: -5px;
+          top: -12px;
+          width: 29px;
+          height: 17px;
         }
 
         .ba-chef-hat span {
@@ -1150,7 +1792,7 @@ export function BattleArenaGame() {
         }
 
         .ba-chef-hat span:nth-child(2) {
-          left: 6px;
+          left: 8px;
           top: -2px;
         }
 
@@ -1160,10 +1802,10 @@ export function BattleArenaGame() {
 
         .ba-cap {
           position: absolute;
-          left: -2px;
-          top: -5px;
-          width: 22px;
-          height: 9px;
+          left: -3px;
+          top: -6px;
+          width: 25px;
+          height: 10px;
           border-radius: 9px 9px 3px 3px;
           background: #20383a;
         }
@@ -1181,10 +1823,10 @@ export function BattleArenaGame() {
 
         .ba-bowtie {
           position: absolute;
-          left: 6px;
-          bottom: -6px;
-          width: 7px;
-          height: 5px;
+          left: 7px;
+          bottom: -7px;
+          width: 8px;
+          height: 6px;
           background: var(--team);
           clip-path: polygon(0 0, 50% 45%, 100% 0, 100% 100%, 50% 55%, 0 100%);
         }
@@ -1195,10 +1837,10 @@ export function BattleArenaGame() {
         }
 
         .ba-tray {
-          right: -10px;
-          top: 26px;
-          width: 23px;
-          height: 16px;
+          right: -12px;
+          top: 29px;
+          width: 28px;
+          height: 18px;
           transform-origin: left center;
         }
 
@@ -1206,28 +1848,52 @@ export function BattleArenaGame() {
           position: absolute;
           left: 0;
           bottom: 0;
-          width: 24px;
-          height: 5px;
+          width: 29px;
+          height: 6px;
           border-radius: 50%;
-          background: #2e4042;
+          background: linear-gradient(180deg, #526568, #202d2f);
+          box-shadow: 0 3px 4px rgba(20, 9, 5, 0.25);
         }
 
         .ba-cup {
           position: absolute;
-          left: 8px;
-          top: 0;
-          width: 8px;
-          height: 10px;
+          left: 10px;
+          top: -1px;
+          width: 10px;
+          height: 12px;
           border-radius: 2px 2px 5px 5px;
           background: #fffdf7;
           border: 1px solid #2e4042;
         }
 
+        .ba-cup::after {
+          content: "";
+          position: absolute;
+          right: -5px;
+          top: 3px;
+          width: 5px;
+          height: 5px;
+          border: 1px solid #2e4042;
+          border-left: 0;
+          border-radius: 0 999px 999px 0;
+        }
+
+        .ba-steam {
+          position: absolute;
+          left: 13px;
+          top: -9px;
+          width: 4px;
+          height: 11px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), transparent);
+          animation: ba-steam 900ms ease-in-out infinite;
+        }
+
         .ba-pan {
-          right: -13px;
-          top: 28px;
-          width: 28px;
-          height: 15px;
+          right: -17px;
+          top: 31px;
+          width: 35px;
+          height: 18px;
           transform-origin: left center;
         }
 
@@ -1235,8 +1901,8 @@ export function BattleArenaGame() {
           position: absolute;
           right: 0;
           bottom: 0;
-          width: 17px;
-          height: 12px;
+          width: 22px;
+          height: 15px;
           border-radius: 50%;
           background: #273234;
           box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.16);
@@ -1245,18 +1911,46 @@ export function BattleArenaGame() {
         .ba-pan-handle {
           position: absolute;
           left: 0;
-          bottom: 5px;
-          width: 17px;
-          height: 4px;
+          bottom: 6px;
+          width: 20px;
+          height: 5px;
           border-radius: 999px;
           background: #273234;
         }
 
+        .ba-bean {
+          position: absolute;
+          width: 6px;
+          height: 8px;
+          border-radius: 50%;
+          background: #5a2e1d;
+          box-shadow: inset 2px 0 0 rgba(255, 211, 147, 0.2);
+          opacity: 0;
+        }
+
+        .ba-bean-one {
+          left: 19px;
+          top: -7px;
+        }
+
+        .ba-bean-two {
+          left: 28px;
+          top: -2px;
+        }
+
+        .ba-accessory-active .ba-bean-one {
+          animation: ba-bean-pop 520ms ease-out infinite;
+        }
+
+        .ba-accessory-active .ba-bean-two {
+          animation: ba-bean-pop 520ms 120ms ease-out infinite;
+        }
+
         .ba-badge-shield {
-          right: -8px;
-          top: 24px;
-          width: 24px;
-          height: 28px;
+          right: -12px;
+          top: 25px;
+          width: 30px;
+          height: 34px;
           transform-origin: left center;
         }
 
@@ -1285,14 +1979,17 @@ export function BattleArenaGame() {
 
         .ba-hp-track {
           position: absolute;
-          left: 10px;
-          right: 10px;
-          bottom: 0;
-          height: 6px;
+          left: 9px;
+          right: 9px;
+          top: -2px;
+          height: 7px;
           overflow: hidden;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.78);
-          box-shadow: inset 0 0 0 1px rgba(36, 20, 15, 0.12);
+          background: rgba(35, 20, 15, 0.42);
+          border: 1px solid rgba(255, 232, 184, 0.72);
+          box-shadow:
+            0 4px 7px rgba(25, 12, 7, 0.24),
+            inset 0 0 0 1px rgba(36, 20, 15, 0.1);
         }
 
         .ba-hp-fill {
@@ -1300,7 +1997,9 @@ export function BattleArenaGame() {
           width: var(--hp);
           height: 100%;
           border-radius: inherit;
-          background: var(--team);
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent),
+            var(--team);
           transition: width 140ms ease;
         }
 
@@ -1313,9 +2012,9 @@ export function BattleArenaGame() {
 
         .ba-target-lock {
           left: 50%;
-          bottom: 2px;
-          width: 42px;
-          height: 18px;
+          bottom: 4px;
+          width: 48px;
+          height: 20px;
           transform: translateX(-50%);
           border: 1px solid color-mix(in srgb, var(--team) 70%, white);
           border-radius: 50%;
@@ -1325,10 +2024,10 @@ export function BattleArenaGame() {
         }
 
         .ba-attack-ring {
-          left: 44px;
-          top: 20px;
-          width: 26px;
-          height: 26px;
+          left: 47px;
+          top: 25px;
+          width: 30px;
+          height: 30px;
           border: 2px solid rgba(246, 196, 90, 0.85);
           border-radius: 50%;
           animation: ba-impact 520ms ease-out infinite;
@@ -1351,6 +2050,11 @@ export function BattleArenaGame() {
           50% { transform: translateY(-4px); }
         }
 
+        @keyframes ba-run {
+          0%, 100% { transform: translateY(0) rotate(-1deg); }
+          50% { transform: translateY(-5px) rotate(2deg); }
+        }
+
         @keyframes ba-shadow {
           0%, 100% { transform: scaleX(1); opacity: 0.22; }
           50% { transform: scaleX(0.78); opacity: 0.15; }
@@ -1368,7 +2072,7 @@ export function BattleArenaGame() {
 
         @keyframes ba-strike {
           0%, 100% { transform: translateY(0) translateX(0); }
-          45% { transform: translateY(-2px) translateX(4px); }
+          45% { transform: translateY(-3px) translateX(6px); }
         }
 
         @keyframes ba-attack-arm {
@@ -1378,12 +2082,28 @@ export function BattleArenaGame() {
 
         @keyframes ba-accessory-strike {
           0%, 100% { transform: rotate(0deg) translateX(0); }
-          50% { transform: rotate(-16deg) translateX(5px); }
+          50% { transform: rotate(-18deg) translateX(7px); }
+        }
+
+        @keyframes ba-steam {
+          0%, 100% { opacity: 0.2; transform: translateY(2px) scaleY(0.82); }
+          50% { opacity: 0.8; transform: translateY(-3px) scaleY(1.18); }
+        }
+
+        @keyframes ba-bean-pop {
+          0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+          40% { opacity: 1; }
+          100% { opacity: 0; transform: translate(13px, -12px) rotate(220deg); }
         }
 
         @keyframes ba-impact {
           0% { transform: scale(0.25); opacity: 0.9; }
           100% { transform: scale(1.45); opacity: 0; }
+        }
+
+        @keyframes ba-impact-dot {
+          0% { opacity: 0.95; transform: scale(0.42); }
+          100% { opacity: 0; transform: scale(2.8); }
         }
 
         @keyframes ba-beam {
@@ -1402,26 +2122,38 @@ export function BattleArenaGame() {
         }
 
         @keyframes ba-defeat {
-          0% { opacity: 1; transform: translate(-50%, -63%) scale(1); }
-          100% { opacity: 0; transform: translate(-50%, -63%) scale(0.58); }
+          0% { opacity: 1; transform: translate(-50%, -68%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -68%) scale(0.58); }
         }
 
         @media (max-width: 640px) {
+          .ba-cafe-shelf,
+          .ba-cafe-plant,
+          .ba-corner-lamp {
+            opacity: 0.58;
+            transform: scale(0.82);
+          }
+
+          .ba-floor {
+            inset: 16% 10% 9%;
+          }
+
           .ba-base {
-            width: 74px;
+            width: 104px;
+            transform: translateY(-50%) scale(0.78);
           }
 
           .ba-base-player {
-            left: 6px;
+            left: -8px;
           }
 
           .ba-base-bot {
-            right: 6px;
+            right: -8px;
           }
 
           .ba-unit {
-            width: 60px;
-            height: 68px;
+            width: 64px;
+            height: 72px;
           }
 
           .ba-character:not(.ba-character-mini) {
@@ -1430,8 +2162,8 @@ export function BattleArenaGame() {
           }
 
           .ba-lane {
-            left: 16%;
-            right: 16%;
+            left: 17%;
+            right: 17%;
             height: 46px;
           }
         }
