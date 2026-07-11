@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Home, ShoppingBag, UserRound, WalletCards } from "lucide-react";
+import { ArrowRight, Gift, Home, ShoppingBag, Swords, UserRound, WalletCards } from "lucide-react";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import {
   publicFeatureAllows,
   type PublicFeatureKey,
 } from "@/lib/platform/public-feature-access";
 
-type NavKey = "home" | "products" | "product" | "rewards" | "account";
+type NavKey = "home" | "products" | "product" | "offers" | "games" | "rewards" | "account";
 
 type Props = {
   slug: string;
@@ -44,6 +44,20 @@ export function PublicBrowserNav({
       label: "المنتجات",
       icon: ShoppingBag,
       feature: "menu",
+    },
+    {
+      key: "offers",
+      href: getCafePath(slug, "offers", previewThemeId),
+      label: "العروض",
+      icon: Gift,
+      feature: "offers",
+    },
+    {
+      key: "games",
+      href: getCafePath(slug, "games", previewThemeId),
+      label: "الألعاب",
+      icon: Swords,
+      feature: "in_store_table_wars",
     },
     {
       key: "rewards",
