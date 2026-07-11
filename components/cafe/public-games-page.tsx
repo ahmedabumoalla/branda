@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LockKeyhole, Sparkles, Swords, Trophy } from "lucide-react";
+import { Coffee, Sparkles, Swords, Trophy } from "lucide-react";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
@@ -62,22 +62,28 @@ export function PublicGamesPage({ slug, tableWarsEntryHref }: Props) {
             </article>
           ) : null}
 
-          <article className={`rounded-[28px] border border-dashed p-5 opacity-70 ${theme.card}`}>
+          <article className="overflow-hidden rounded-[28px] border border-[#205B54]/25 bg-[#F1FAF7] p-5 text-[#173D39] shadow-[0_18px_45px_rgba(23,61,57,0.08)]">
             <div className="flex min-w-0 items-start gap-3">
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${theme.badge}`}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#205B54]">
                 <Trophy className="h-6 w-6" />
               </span>
               <div className="min-w-0">
-                <p className={`inline-flex items-center gap-1.5 text-xs font-black ${theme.muted}`}>
-                  <LockKeyhole className="h-3.5 w-3.5" />
-                  قريبًا
+                <p className="inline-flex items-center gap-1.5 text-xs font-black text-[#2F7A6F]">
+                  <Coffee className="h-3.5 w-3.5" />
+                  متاحة الآن
                 </p>
-                <h2 className="mt-1 text-xl font-black">حلبة الأبطال</h2>
-                <p className={`mt-1 text-sm font-bold leading-7 ${theme.muted}`}>
-                  لعبة قادمة، ولم يتم تفعيل مسارها بعد.
+                <h2 className="mt-1 text-xl font-black text-[#173D39]">حلبة الأبطال</h2>
+                <p className="mt-1 text-sm font-bold leading-7 text-[#365F58]">
+                  معركة قهوة خفيفة ضد بوت محلي، بدون تسجيل دخول أو حفظ نتائج.
                 </p>
               </div>
             </div>
+            <Link
+              href={`/c/${encodeURIComponent(slug)}/play/battle-arena`}
+              className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#205B54] px-5 text-sm font-black text-white transition active:scale-[0.98]"
+            >
+              دخول حلبة الأبطال
+            </Link>
           </article>
         </section>
       </div>
