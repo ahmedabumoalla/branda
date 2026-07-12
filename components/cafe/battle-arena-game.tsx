@@ -17,7 +17,6 @@ type AssignedLane = "left" | "right" | "center";
 type UnitMode = "attack" | "defend";
 type UnitPathStage = "toBridgeEntry" | "toBridgeExit" | "toTarget";
 type UnitAnchor = "feet" | "center";
-type SpriteDirection = "up" | "down" | "side";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -120,53 +119,15 @@ const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
 const SPRITE_ENABLED_UNITS = new Set<UnitKind>(["swift_waiter"]);
-const UNIT_SPRITE_FRAMES: Record<UnitKind, Partial<Record<SpriteState, Partial<Record<SpriteDirection, string[]>>>>> = {
-  swift_waiter: {
-    idle: {
-      up: ["/assets/arena/units/waiter/idle-up.png"],
-      down: ["/assets/arena/units/waiter/idle-down.png"],
-      side: ["/assets/arena/units/waiter/idle-side.png"],
-    },
-    walk: {
-      up: [
-        "/assets/arena/units/waiter/walk-up-1.png",
-        "/assets/arena/units/waiter/walk-up-2.png",
-        "/assets/arena/units/waiter/walk-up-3.png",
-        "/assets/arena/units/waiter/walk-up-4.png",
-      ],
-      down: [
-        "/assets/arena/units/waiter/walk-down-1.png",
-        "/assets/arena/units/waiter/walk-down-2.png",
-        "/assets/arena/units/waiter/walk-down-3.png",
-        "/assets/arena/units/waiter/walk-down-4.png",
-      ],
-      side: [
-        "/assets/arena/units/waiter/walk-side-1.png",
-        "/assets/arena/units/waiter/walk-side-2.png",
-        "/assets/arena/units/waiter/walk-side-3.png",
-        "/assets/arena/units/waiter/walk-side-4.png",
-      ],
-    },
-    attack: {
-      up: ["/assets/arena/units/waiter/attack-up.png"],
-      down: ["/assets/arena/units/waiter/attack-down.png"],
-      side: ["/assets/arena/units/waiter/attack-side.png"],
-    },
-    hit: {
-      up: ["/assets/arena/units/waiter/hit-1.png"],
-      down: ["/assets/arena/units/waiter/hit-1.png"],
-      side: ["/assets/arena/units/waiter/hit-1.png"],
-    },
-    die: {
-      up: ["/assets/arena/units/waiter/die-1.png"],
-      down: ["/assets/arena/units/waiter/die-1.png"],
-      side: ["/assets/arena/units/waiter/die-1.png"],
-    },
-  },
-  strong_chef: {
-  },
-  branch_guard: {
-  },
+const WAITER_360_BASE_PATH = "/assets/arena/units/waiter/360";
+const WAITER_360_ANGLES = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315] as const;
+type Waiter360Angle = (typeof WAITER_360_ANGLES)[number];
+const WAITER_360_FRAME_COUNTS: Record<SpriteState, number> = {
+  idle: 1,
+  walk: 4,
+  attack: 3,
+  hit: 2,
+  die: 4,
 };
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
@@ -974,16 +935,36 @@ function unitSpriteState(unit: Unit, animationTime: number): SpriteState {
   return "idle";
 }
 
-function facingFromVector(dx: number, dy: number, fallback: UnitFacing) {
-  if (Math.hypot(dx, dy) <= 0.2) return fallback;
-  if (Math.abs(dx) >= Math.abs(dy) * 1.1) return dx >= 0 ? "right" : "left";
-  return dy >= 0 ? "down" : "up";
+function angleDelta(a: number, b: number) {
+  return Math.abs(((a - b + 540) % 360) - 180);
 }
 
-function unitFacing(unit: Unit): UnitFacing {
-  const fallback = unit.team === "player" ? "up" : "down";
+function nearestWaiterAngle(degrees: number): Waiter360Angle {
+  return WAITER_360_ANGLES.reduce((best, angle) => (angleDelta(degrees, angle) < angleDelta(degrees, best) ? angle : best), WAITER_360_ANGLES[0]);
+}
+
+function waiterAngleLabel(angle: Waiter360Angle) {
+  const [whole = "0", decimal] = String(angle).split(".");
+  return `${whole.padStart(3, "0")}${decimal ? `_${decimal}` : ""}`;
+}
+
+function angleVector(angle: Waiter360Angle) {
+  const radians = (angle * Math.PI) / 180;
+  return {
+    x: Math.sin(radians),
+    y: Math.cos(radians),
+  };
+}
+
+function angleFromVector(dx: number, dy: number, fallback: Waiter360Angle) {
+  if (Math.hypot(dx, dy) <= 0.2) return fallback;
+  return nearestWaiterAngle((Math.atan2(dx, dy) * 180) / Math.PI + 360);
+}
+
+function unitSpriteAngle(unit: Unit): Waiter360Angle {
+  const fallback: Waiter360Angle = unit.team === "player" ? 180 : 0;
   if (unit.attackTargetX !== null && unit.attackTargetY !== null) {
-    return facingFromVector(unit.attackTargetX - unit.x, unit.attackTargetY - unit.y, fallback);
+    return angleFromVector(unit.attackTargetX - unit.x, unit.attackTargetY - unit.y, fallback);
   }
 
   if (unit.state === "moving") {
@@ -993,24 +974,30 @@ function unitFacing(unit: Unit): UnitFacing {
         : unit.pathStage === "toBridgeExit"
           ? bridgeExit(unit.team, unit.assignedBridge)
           : structureById(unit.strategicTargetId);
-    return facingFromVector(destination.x - unit.x, destination.y - unit.y, fallback);
+    return angleFromVector(destination.x - unit.x, destination.y - unit.y, fallback);
   }
 
   return fallback;
 }
 
-function spriteDirectionFromFacing(facing: UnitFacing): SpriteDirection {
-  return facing === "left" || facing === "right" ? "side" : facing;
+function facingFromAngle(angle: Waiter360Angle): UnitFacing {
+  if (angleDelta(angle, 90) <= 45) return "right";
+  if (angleDelta(angle, 270) <= 45) return "left";
+  return angleDelta(angle, 0) < angleDelta(angle, 180) ? "down" : "up";
 }
 
-function spriteFrames(kind: UnitKind, spriteState: SpriteState, facing: UnitFacing) {
-  const direction = spriteDirectionFromFacing(facing);
-  const stateFrames = UNIT_SPRITE_FRAMES[kind][spriteState] ?? UNIT_SPRITE_FRAMES[kind].walk ?? UNIT_SPRITE_FRAMES[kind].idle;
-  return stateFrames?.[direction] ?? stateFrames?.up ?? stateFrames?.down ?? stateFrames?.side ?? [];
+function spriteFrames(kind: UnitKind, spriteState: SpriteState, spriteAngle: Waiter360Angle) {
+  if (!SPRITE_ENABLED_UNITS.has(kind)) return [];
+  const label = waiterAngleLabel(spriteAngle);
+  const frameCount = WAITER_360_FRAME_COUNTS[spriteState] ?? 1;
+  return Array.from(
+    { length: frameCount },
+    (_, index) => `${WAITER_360_BASE_PATH}/${spriteState}/waiter-${spriteState}-${label}-${index + 1}.png`,
+  );
 }
 
-function unitAnimationFrame(unit: Unit, spriteState: SpriteState, facing: UnitFacing, animationTime: number) {
-  const frames = spriteFrames(unit.kind, spriteState, facing);
+function unitAnimationFrame(unit: Unit, spriteState: SpriteState, spriteAngle: Waiter360Angle, animationTime: number) {
+  const frames = spriteFrames(unit.kind, spriteState, spriteAngle);
   if (frames.length <= 1) return 0;
   const seed = Number(unit.id.replace(/\D/g, "")) * 37;
 
@@ -1027,12 +1014,11 @@ function unitAnimationFrame(unit: Unit, spriteState: SpriteState, facing: UnitFa
   return Math.floor((animationTime + seed) / frameMs) % frames.length;
 }
 
-function attackOrigin(unit: Unit, facing: UnitFacing) {
-  const sideOffset = facing === "left" ? -1.15 : facing === "right" ? 1.15 : 0.45;
-  const verticalOffset = facing === "down" ? -1.7 : -2.25;
+function attackOrigin(unit: Unit, spriteAngle: Waiter360Angle) {
+  const direction = angleVector(spriteAngle);
   return {
-    x: unit.x + sideOffset,
-    y: unit.y + verticalOffset,
+    x: unit.x + direction.x * 1.18,
+    y: unit.y - 1.9 + direction.y * 1.18,
   };
 }
 
@@ -1040,21 +1026,22 @@ function UnitSprite({
   kind,
   spriteState,
   facing,
+  spriteAngle,
   animationFrame,
 }: {
   kind: UnitKind;
   spriteState: SpriteState;
   facing: UnitFacing;
+  spriteAngle: Waiter360Angle;
   animationFrame: number;
 }) {
-  const frames = spriteFrames(kind, spriteState, facing);
+  const frames = spriteFrames(kind, spriteState, spriteAngle);
   const spriteSrc = frames[animationFrame % Math.max(frames.length, 1)];
 
   if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
 
   return (
     <img
-      key={spriteSrc}
       className={`ba-unit-sprite ba-unit-sprite-${facing}`}
       src={spriteSrc}
       alt=""
@@ -1071,6 +1058,7 @@ function UnitVisual({
   team = "player",
   spriteState = "idle",
   facing = "up",
+  spriteAngle = 0,
   animationFrame = 0,
   anchoredPosition = "feet",
   compact = false,
@@ -1079,6 +1067,7 @@ function UnitVisual({
   team?: Team;
   spriteState?: SpriteState;
   facing?: UnitFacing;
+  spriteAngle?: Waiter360Angle;
   animationFrame?: number;
   anchoredPosition?: UnitAnchor;
   compact?: boolean;
@@ -1091,7 +1080,7 @@ function UnitVisual({
     >
       <span className="ba-unit-ground" />
       <span className="ba-unit-placeholder">
-        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} animationFrame={animationFrame} />
+        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} spriteAngle={spriteAngle} animationFrame={animationFrame} />
         <span className="ba-unit-placeholder-body">
           <span className="ba-unit-placeholder-head" />
           <span className="ba-unit-placeholder-mark" />
@@ -1106,8 +1095,9 @@ function ArenaUnit({ unit }: { unit: Unit }) {
   const depthScale = 0.76 + (unit.y / 100) * 0.18;
   const animationTime = typeof performance === "undefined" ? 0 : performance.now();
   const spriteState = unitSpriteState(unit, animationTime);
-  const facing = unitFacing(unit);
-  const animationFrame = unitAnimationFrame(unit, spriteState, facing, animationTime);
+  const spriteAngle = unitSpriteAngle(unit);
+  const facing = facingFromAngle(spriteAngle);
+  const animationFrame = unitAnimationFrame(unit, spriteState, spriteAngle, animationTime);
 
   return (
     <div
@@ -1129,6 +1119,7 @@ function ArenaUnit({ unit }: { unit: Unit }) {
         team={unit.team}
         spriteState={spriteState}
         facing={facing}
+        spriteAngle={spriteAngle}
         animationFrame={animationFrame}
         anchoredPosition="feet"
       />
@@ -1563,7 +1554,7 @@ export function BattleArenaGame() {
               {units
                 .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
                 .map((unit) => {
-                  const origin = attackOrigin(unit, unitFacing(unit));
+                  const origin = attackOrigin(unit, unitSpriteAngle(unit));
                   const targetX = unit.attackTargetX ?? unit.x;
                   const targetY = unit.attackTargetY ?? unit.y;
                   return (
@@ -2846,10 +2837,6 @@ export function BattleArenaGame() {
           object-position: center bottom;
         }
 
-        .ba-unit-facing-left .ba-unit-sprite {
-          transform: translateX(-50%) scaleX(-1);
-        }
-
         .ba-unit-visual-idle.ba-unit-visual-swift_waiter .ba-unit-sprite {
           animation: ba-waiter-breathe 900ms ease-in-out infinite;
         }
@@ -2859,7 +2846,6 @@ export function BattleArenaGame() {
         }
 
         .ba-unit-visual-attack.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          height: 96%;
           animation: ba-waiter-attack-snap 285ms steps(3, end) infinite;
         }
 
