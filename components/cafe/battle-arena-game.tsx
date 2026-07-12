@@ -10,6 +10,15 @@ type GameResult = "playing" | "won" | "lost";
 type UnitRole = "melee" | "ranged" | "tank" | "support";
 type Lane = "top" | "middle" | "bottom";
 type UnitIntent = "advance" | "attack" | "defend";
+type StructureKind = "mainCastle" | "sideTower";
+type StructureSide = "center" | "left" | "right";
+type StructureId =
+  | "player-main"
+  | "player-left-tower"
+  | "player-right-tower"
+  | "bot-main"
+  | "bot-left-tower"
+  | "bot-right-tower";
 
 type CardDef = {
   kind: UnitKind;
@@ -54,26 +63,45 @@ type Unit = {
   attackTargetY: number | null;
 };
 
-type Bases = {
-  player: number;
-  bot: number;
+type StructureDef = {
+  id: StructureId;
+  team: Team;
+  kind: StructureKind;
+  side: StructureSide;
+  x: number;
+  y: number;
+  maxHp: number;
+  collisionRadius: number;
+  targetRadius: number;
+  width: number;
+  asset: string;
 };
+
+type ArenaStructure = StructureDef & {
+  hp: number;
+  targetable: boolean;
+};
+
+type StructureHp = Record<StructureId, number>;
 
 const MAX_ENERGY = 10;
 const START_ENERGY = 5;
 const BASE_HP = 160;
+const SIDE_TOWER_HP = 94;
 const LANES: Record<Lane, number> = { top: 27, middle: 50, bottom: 73 };
 const LANE_ORDER: Lane[] = ["top", "middle", "bottom"];
 const LANE_BAND = 7.5;
-const BASE_REACH_RADIUS = 7.5;
 const DEFENSE_RADIUS = 22;
 const MIN_SEPARATION = 4.2;
+const UNIT_COLLISION_RADIUS = 2.2;
 const MOVEMENT_SPEED_SCALE = 0.74;
 const ENERGY_PER_SECOND = 0.72;
 const BOT_SPAWN_SECONDS = 3.4;
 const DEFEAT_ANIMATION_MS = 420;
 const PLAYER_COLOR = "#7C2948";
 const BOT_COLOR = "#14645E";
+const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
+const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
 const BRIDGES = {
@@ -94,6 +122,87 @@ const ARENA_POINTS = {
   playerSpawnY: 82,
   botSpawnY: 18,
 };
+
+const STRUCTURE_DEFS: StructureDef[] = [
+  {
+    id: "bot-main",
+    team: "bot",
+    kind: "mainCastle",
+    side: "center",
+    x: ARENA_POINTS.botMainBase.x,
+    y: ARENA_POINTS.botMainBase.y,
+    maxHp: BASE_HP,
+    collisionRadius: 8.8,
+    targetRadius: 7.8,
+    width: 36,
+    asset: MAIN_CASTLE_ASSET,
+  },
+  {
+    id: "bot-left-tower",
+    team: "bot",
+    kind: "sideTower",
+    side: "left",
+    x: ARENA_POINTS.botSideTowers[0].x,
+    y: ARENA_POINTS.botSideTowers[0].y,
+    maxHp: SIDE_TOWER_HP,
+    collisionRadius: 5.8,
+    targetRadius: 5.4,
+    width: 18,
+    asset: SIDE_TOWER_ASSET,
+  },
+  {
+    id: "bot-right-tower",
+    team: "bot",
+    kind: "sideTower",
+    side: "right",
+    x: ARENA_POINTS.botSideTowers[1].x,
+    y: ARENA_POINTS.botSideTowers[1].y,
+    maxHp: SIDE_TOWER_HP,
+    collisionRadius: 5.8,
+    targetRadius: 5.4,
+    width: 18,
+    asset: SIDE_TOWER_ASSET,
+  },
+  {
+    id: "player-left-tower",
+    team: "player",
+    kind: "sideTower",
+    side: "left",
+    x: ARENA_POINTS.playerSideTowers[0].x,
+    y: ARENA_POINTS.playerSideTowers[0].y,
+    maxHp: SIDE_TOWER_HP,
+    collisionRadius: 5.8,
+    targetRadius: 5.4,
+    width: 18,
+    asset: SIDE_TOWER_ASSET,
+  },
+  {
+    id: "player-right-tower",
+    team: "player",
+    kind: "sideTower",
+    side: "right",
+    x: ARENA_POINTS.playerSideTowers[1].x,
+    y: ARENA_POINTS.playerSideTowers[1].y,
+    maxHp: SIDE_TOWER_HP,
+    collisionRadius: 5.8,
+    targetRadius: 5.4,
+    width: 18,
+    asset: SIDE_TOWER_ASSET,
+  },
+  {
+    id: "player-main",
+    team: "player",
+    kind: "mainCastle",
+    side: "center",
+    x: ARENA_POINTS.playerMainBase.x,
+    y: ARENA_POINTS.playerMainBase.y,
+    maxHp: BASE_HP,
+    collisionRadius: 8.8,
+    targetRadius: 7.8,
+    width: 36,
+    asset: MAIN_CASTLE_ASSET,
+  },
+];
 
 const CARDS: CardDef[] = [
   {
@@ -137,16 +246,19 @@ const CARDS: CardDef[] = [
   },
 ];
 
-function makeInitialBases(): Bases {
-  return { player: BASE_HP, bot: BASE_HP };
+function makeInitialStructureHp(): StructureHp {
+  return STRUCTURE_DEFS.reduce((hp, structure) => {
+    hp[structure.id] = structure.maxHp;
+    return hp;
+  }, {} as StructureHp);
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function basePercent(value: number) {
-  return `${clamp((value / BASE_HP) * 100, 0, 100)}%`;
+function hpPercent(value: number, maxHp: number) {
+  return `${clamp((value / maxHp) * 100, 0, 100)}%`;
 }
 
 function laneCenter(lane: Lane) {
@@ -155,6 +267,127 @@ function laneCenter(lane: Lane) {
 
 function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function getStructureHp(structureHp: StructureHp, id: StructureId) {
+  return structureHp[id] ?? 0;
+}
+
+function hasLiveSideTower(team: Team, structureHp: StructureHp) {
+  return STRUCTURE_DEFS.some(
+    (structure) => structure.team === team && structure.kind === "sideTower" && getStructureHp(structureHp, structure.id) > 0,
+  );
+}
+
+function isStructureTargetable(structure: StructureDef, structureHp: StructureHp) {
+  if (getStructureHp(structureHp, structure.id) <= 0) return false;
+  if (structure.kind === "sideTower") return true;
+  return !hasLiveSideTower(structure.team, structureHp);
+}
+
+function getArenaStructures(structureHp: StructureHp): ArenaStructure[] {
+  return STRUCTURE_DEFS.map((structure) => ({
+    ...structure,
+    hp: getStructureHp(structureHp, structure.id),
+    targetable: isStructureTargetable(structure, structureHp),
+  }));
+}
+
+function targetableStructures(team: Team, structureHp: StructureHp) {
+  const structures = getArenaStructures(structureHp).filter((structure) => structure.team === team && structure.targetable);
+  const sideTowers = structures.filter((structure) => structure.kind === "sideTower");
+  return sideTowers.length > 0 ? sideTowers : structures.filter((structure) => structure.kind === "mainCastle");
+}
+
+function chooseStructureTarget(unit: Unit, structureHp: StructureHp) {
+  const enemyStructures = targetableStructures(enemyTeam(unit.team), structureHp);
+  return (
+    enemyStructures.sort((a, b) => {
+      const aLanePull = Math.abs(a.x - laneCenter(unit.lane)) * 0.22;
+      const bLanePull = Math.abs(b.x - laneCenter(unit.lane)) * 0.22;
+      return distanceBetween(unit, a) + aLanePull - (distanceBetween(unit, b) + bLanePull);
+    })[0] ?? null
+  );
+}
+
+function distanceToStructure(unit: { x: number; y: number }, structure: ArenaStructure) {
+  return Math.max(0, distanceBetween(unit, structure) - structure.targetRadius);
+}
+
+function segmentDistanceToPoint(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  point: { x: number; y: number },
+) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared <= 0.001) return distanceBetween(start, point);
+
+  const t = clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared, 0, 1);
+  return distanceBetween({ x: start.x + dx * t, y: start.y + dy * t }, point);
+}
+
+function detourAroundStructures(
+  unit: Unit,
+  waypoint: { x: number; y: number },
+  structures: ArenaStructure[],
+  targetStructureId: StructureId | null,
+) {
+  const blocking = structures
+    .filter((structure) => structure.hp > 0 && structure.id !== targetStructureId)
+    .filter((structure) => segmentDistanceToPoint(unit, waypoint, structure) < structure.collisionRadius + UNIT_COLLISION_RADIUS + 1.8)
+    .sort((a, b) => distanceBetween(unit, a) - distanceBetween(unit, b))[0];
+
+  if (!blocking) return waypoint;
+
+  const dx = waypoint.x - unit.x;
+  const dy = waypoint.y - unit.y;
+  const distance = Math.max(Math.hypot(dx, dy), 0.001);
+  const px = -dy / distance;
+  const py = dx / distance;
+  const side = (unit.x - blocking.x) * px + (unit.y - blocking.y) * py >= 0 ? 1 : -1;
+  const clearance = blocking.collisionRadius + UNIT_COLLISION_RADIUS + 3.2;
+
+  return {
+    x: clamp(blocking.x + px * clearance * side, 12, 88),
+    y: clamp(blocking.y + py * clearance * side, 10, 90),
+  };
+}
+
+function keepOutsideStructures(
+  point: { x: number; y: number },
+  structures: ArenaStructure[],
+  previous?: { x: number; y: number },
+) {
+  let next = { ...point };
+
+  for (const structure of structures) {
+    if (structure.hp <= 0) continue;
+
+    const minimumDistance = structure.collisionRadius + UNIT_COLLISION_RADIUS;
+    let dx = next.x - structure.x;
+    let dy = next.y - structure.y;
+    let distance = Math.hypot(dx, dy);
+    if (distance >= minimumDistance) continue;
+
+    if (distance <= 0.001) {
+      dx = previous ? point.x - previous.x : next.x >= structure.x ? 1 : -1;
+      dy = previous ? point.y - previous.y : 0;
+      distance = Math.max(Math.hypot(dx, dy), 0.001);
+    }
+
+    next = {
+      x: clamp(structure.x + (dx / distance) * minimumDistance, 12, 88),
+      y: clamp(structure.y + (dy / distance) * minimumDistance, 10, 90),
+    };
+  }
+
+  return next;
+}
+
+function damageStructure(structureHp: StructureHp, id: StructureId, damage: number) {
+  structureHp[id] = clamp((structureHp[id] ?? 0) - damage, 0, STRUCTURE_DEFS.find((structure) => structure.id === id)?.maxHp ?? BASE_HP);
 }
 
 function basePoint(team: Team) {
@@ -179,11 +412,6 @@ function isNearBase(unit: Unit, team: Team, radius = DEFENSE_RADIUS) {
   return defensePoints(team).some((point) => distanceBetween(unit, point) <= radius);
 }
 
-function targetPoint(unit: Unit, target: Unit | null) {
-  if (target) return { x: target.x, y: target.y };
-  return basePoint(enemyTeam(unit.team));
-}
-
 function isAcrossRiver(fromY: number, toY: number) {
   return (fromY - RIVER_Y) * (toY - RIVER_Y) < 0;
 }
@@ -204,16 +432,21 @@ function bridgeForRoute(unit: Unit, destination: { x: number; y: number }) {
   return bridgeForLane(unit.lane);
 }
 
-function routePoint(unit: Unit, destination: { x: number; y: number }) {
-  if (!isAcrossRiver(unit.y, destination.y)) return destination;
+function routePoint(
+  unit: Unit,
+  destination: { x: number; y: number },
+  structures: ArenaStructure[],
+  targetStructureId: StructureId | null,
+) {
+  if (!isAcrossRiver(unit.y, destination.y)) return detourAroundStructures(unit, destination, structures, targetStructureId);
 
   const bridge = bridgeForRoute(unit, destination);
   const reachedBridgeX = Math.abs(unit.x - bridge.x) <= 3.2;
   const reachedBridgeY = Math.abs(unit.y - bridge.y) <= 3.2;
 
-  if (!reachedBridgeX) return { x: bridge.x, y: unit.y };
-  if (!reachedBridgeY) return bridge;
-  return destination;
+  if (!reachedBridgeX) return detourAroundStructures(unit, { x: bridge.x, y: unit.y }, structures, targetStructureId);
+  if (!reachedBridgeY) return detourAroundStructures(unit, bridge, structures, targetStructureId);
+  return detourAroundStructures(unit, destination, structures, targetStructureId);
 }
 
 function laneFromPressure(units: Unit[]) {
@@ -258,8 +491,8 @@ function chooseBestEnemyTarget(unit: Unit, enemies: Unit[]) {
   const candidates = enemies
     .filter((enemy) => enemy.hp > 0 && distanceBetween(unit, enemy) <= unit.aggroRange)
     .sort((a, b) => {
-      const aBasePressure = a.intent === "attack" && a.targetId === `base:${unit.team}` ? -8 : 0;
-      const bBasePressure = b.intent === "attack" && b.targetId === `base:${unit.team}` ? -8 : 0;
+      const aBasePressure = a.intent === "attack" && a.targetId?.startsWith(`structure:${unit.team}-`) ? -8 : 0;
+      const bBasePressure = b.intent === "attack" && b.targetId?.startsWith(`structure:${unit.team}-`) ? -8 : 0;
       return distanceBetween(unit, a) + aBasePressure - (distanceBetween(unit, b) + bBasePressure);
     });
 
@@ -406,33 +639,43 @@ function ArenaUnit({ unit }: { unit: Unit }) {
   );
 }
 
-function CounterBase({ team, hp }: { team: Team; hp: number }) {
-  const isPlayer = team === "player";
-  const color = teamColor(team);
+function ArenaStructureObject({ structure }: { structure: ArenaStructure }) {
+  const healthPercent = hpPercent(structure.hp, structure.maxHp);
+  const destroyed = structure.hp <= 0;
 
   return (
     <div
-      className={`ba-base ${isPlayer ? "ba-base-player" : "ba-base-bot"}`}
-      style={{ "--team": color } as CSSProperties}
+      className={`ba-structure ba-structure-${structure.kind} ba-structure-${structure.team} ba-structure-${structure.side} ${
+        destroyed ? "ba-structure-destroyed" : ""
+      } ${structure.targetable ? "ba-structure-targetable" : ""}`}
+      style={
+        {
+          left: `${structure.x}%`,
+          top: `${structure.y}%`,
+          width: `${structure.width}%`,
+          "--team": teamColor(structure.team),
+          "--hp": healthPercent,
+        } as CSSProperties
+      }
+      aria-hidden="true"
     >
-      <span className="ba-defense-zone" />
+      <img className="ba-structure-asset" src={structure.asset} alt="" draggable={false} />
       <div className="ba-base-health">
-        <span style={{ width: basePercent(hp) }} />
+        <span />
       </div>
-      <p className="ba-base-hp">{hp}</p>
     </div>
   );
 }
 
 export function BattleArenaGame() {
   const [units, setUnits] = useState<Unit[]>([]);
-  const [bases, setBases] = useState<Bases>(() => makeInitialBases());
+  const [structureHp, setStructureHp] = useState<StructureHp>(() => makeInitialStructureHp());
   const [energy, setEnergy] = useState(START_ENERGY);
   const [result, setResult] = useState<GameResult>("playing");
   const [notice, setNotice] = useState("اختر بطاقة لإرسالها إلى الممر.");
 
   const unitsRef = useRef<Unit[]>([]);
-  const basesRef = useRef<Bases>(makeInitialBases());
+  const structureHpRef = useRef<StructureHp>(makeInitialStructureHp());
   const energyRef = useRef(START_ENERGY);
   const resultRef = useRef<GameResult>("playing");
   const nextUnitIdRef = useRef(1);
@@ -447,9 +690,9 @@ export function BattleArenaGame() {
     setUnits(nextUnits);
   }, []);
 
-  const syncBases = useCallback((nextBases: Bases) => {
-    basesRef.current = nextBases;
-    setBases(nextBases);
+  const syncStructureHp = useCallback((nextStructureHp: StructureHp) => {
+    structureHpRef.current = nextStructureHp;
+    setStructureHp(nextStructureHp);
   }, []);
 
   const syncEnergy = useCallback((nextEnergy: number) => {
@@ -487,7 +730,7 @@ export function BattleArenaGame() {
         lane,
         laneOffset,
         intent: "advance",
-        targetId: `base:${enemyTeam(team)}`,
+        targetId: null,
         aggroRange: card.aggroRange,
         attackRange: card.attackRange,
         attackCooldown: card.attackCooldown,
@@ -525,7 +768,7 @@ export function BattleArenaGame() {
 
   const resetGame = useCallback(() => {
     syncUnits([]);
-    syncBases(makeInitialBases());
+    syncStructureHp(makeInitialStructureHp());
     syncEnergy(START_ENERGY);
     syncResult("playing");
     setNotice("جولة جديدة بدأت.");
@@ -534,7 +777,7 @@ export function BattleArenaGame() {
     botTimerRef.current = 1.4;
     botCardIndexRef.current = 0;
     lastFrameRef.current = null;
-  }, [syncBases, syncEnergy, syncResult, syncUnits]);
+  }, [syncEnergy, syncResult, syncStructureHp, syncUnits]);
 
   useEffect(() => {
     function frame(now: number) {
@@ -557,9 +800,10 @@ export function BattleArenaGame() {
           botTimerRef.current = BOT_SPAWN_SECONDS + Math.random() * 0.85 + (botCardIndexRef.current % 2) * 0.35;
         }
 
-        const nextBases = { ...basesRef.current };
+        const nextStructureHp = { ...structureHpRef.current };
         const nextUnits = unitsRef.current.map((unit) => ({ ...unit }));
         const activeUnits = nextUnits.filter((unit) => unit.hp > 0);
+        const frameStructures = getArenaStructures(nextStructureHp);
 
         for (const unit of activeUnits) {
           if (unit.hp <= 0) continue;
@@ -568,28 +812,28 @@ export function BattleArenaGame() {
           unit.attackTargetY = null;
           const enemies = activeUnits.filter((candidate) => candidate.team !== unit.team && candidate.hp > 0);
           const { target, intent } = chooseBestEnemyTarget(unit, enemies);
-          const enemyBase = enemyTeam(unit.team);
-          const baseTarget = basePoint(enemyBase);
-          const point = targetPoint(unit, target);
-          const targetDistance = distanceBetween(unit, point);
-          const baseDistance = distanceBetween(unit, baseTarget);
-          const shouldAttackBase = !target && baseDistance <= BASE_REACH_RADIUS + unit.attackRange;
+          const structureTarget = target ? null : chooseStructureTarget(unit, nextStructureHp);
+          const destination = target ?? structureTarget ?? basePoint(enemyTeam(unit.team));
+          const targetDistance = target
+            ? distanceBetween(unit, target)
+            : structureTarget
+              ? distanceToStructure(unit, structureTarget)
+              : distanceBetween(unit, destination);
+          const shouldAttackStructure = Boolean(structureTarget && targetDistance <= unit.attackRange);
 
-          unit.intent = shouldAttackBase ? "attack" : intent;
-          unit.targetId = target?.id ?? `base:${enemyBase}`;
+          unit.intent = shouldAttackStructure ? "attack" : intent;
+          unit.targetId = target?.id ?? (structureTarget ? `structure:${structureTarget.id}` : null);
 
-          if ((target && targetDistance <= unit.attackRange) || shouldAttackBase) {
+          if ((target && targetDistance <= unit.attackRange) || shouldAttackStructure) {
             unit.state = "attacking";
-            unit.attackTargetX = target?.x ?? baseTarget.x;
-            unit.attackTargetY = target?.y ?? baseTarget.y;
+            unit.attackTargetX = target?.x ?? structureTarget?.x ?? destination.x;
+            unit.attackTargetY = target?.y ?? structureTarget?.y ?? destination.y;
 
             if (now - unit.lastAttackAt >= unit.attackCooldown) {
               if (target) {
                 applyDamage(target, unit.damage, now);
-              } else if (unit.team === "player") {
-                nextBases.bot -= unit.damage;
-              } else {
-                nextBases.player -= unit.damage;
+              } else if (structureTarget) {
+                damageStructure(nextStructureHp, structureTarget.id, unit.damage);
               }
 
               unit.lastAttackAt = now;
@@ -599,19 +843,23 @@ export function BattleArenaGame() {
           }
 
           unit.state = "moving";
-          const destination = target ?? {
-            x: baseTarget.x,
-            y: baseTarget.y,
-          };
-          const desired = routePoint(unit, destination);
+          const desired = routePoint(unit, destination, frameStructures, structureTarget?.id ?? null);
           const dx = desired.x - unit.x;
           const dy = desired.y - unit.y;
           const distance = Math.max(Math.hypot(dx, dy), 0.001);
           const lanePull = target ? 0.72 : 1;
           const step = unit.speed * MOVEMENT_SPEED_SCALE * deltaSeconds;
 
-          unit.x = clamp(unit.x + (dx / distance) * step * lanePull, 12, 88);
-          unit.y = clamp(unit.y + (dy / distance) * step, 10, 90);
+          const moved = keepOutsideStructures(
+            {
+              x: clamp(unit.x + (dx / distance) * step * lanePull, 12, 88),
+              y: clamp(unit.y + (dy / distance) * step, 10, 90),
+            },
+            frameStructures,
+            unit,
+          );
+          unit.x = moved.x;
+          unit.y = moved.y;
         }
 
         for (let i = 0; i < activeUnits.length; i += 1) {
@@ -628,26 +876,37 @@ export function BattleArenaGame() {
             const push = (MIN_SEPARATION - distance) * 0.5;
             const nx = dx / distance;
             const ny = dy / distance;
-            first.x = clamp(first.x - nx * push, 12, 88);
-            second.x = clamp(second.x + nx * push, 12, 88);
-            first.y = clamp(first.y - ny * push, 10, 90);
-            second.y = clamp(second.y + ny * push, 10, 90);
+            const nextFirst = keepOutsideStructures(
+              { x: clamp(first.x - nx * push, 12, 88), y: clamp(first.y - ny * push, 10, 90) },
+              frameStructures,
+              first,
+            );
+            const nextSecond = keepOutsideStructures(
+              { x: clamp(second.x + nx * push, 12, 88), y: clamp(second.y + ny * push, 10, 90) },
+              frameStructures,
+              second,
+            );
+            first.x = nextFirst.x;
+            first.y = nextFirst.y;
+            second.x = nextSecond.x;
+            second.y = nextSecond.y;
           }
         }
 
-        nextBases.player = clamp(nextBases.player, 0, BASE_HP);
-        nextBases.bot = clamp(nextBases.bot, 0, BASE_HP);
-        syncBases(nextBases);
+        for (const structure of STRUCTURE_DEFS) {
+          nextStructureHp[structure.id] = clamp(nextStructureHp[structure.id], 0, structure.maxHp);
+        }
+        syncStructureHp(nextStructureHp);
         syncUnits(
           nextUnits.filter(
             (unit) => unit.hp > 0 || (unit.defeatedAt !== null && now - unit.defeatedAt < DEFEAT_ANIMATION_MS),
           ),
         );
 
-        if (nextBases.bot <= 0) {
+        if (nextStructureHp["bot-main"] <= 0) {
           syncResult("won");
           setNotice("فزت");
-        } else if (nextBases.player <= 0) {
+        } else if (nextStructureHp["player-main"] <= 0) {
           syncResult("lost");
           setNotice("خسرت");
         }
@@ -660,9 +919,10 @@ export function BattleArenaGame() {
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
-  }, [spawnUnit, syncBases, syncEnergy, syncResult, syncUnits]);
+  }, [spawnUnit, syncEnergy, syncResult, syncStructureHp, syncUnits]);
 
   const energyPercent = `${(energy / MAX_ENERGY) * 100}%`;
+  const arenaStructures = getArenaStructures(structureHp);
 
   return (
     <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_288px]" aria-label="لعبة حلبة الأبطال">
@@ -683,8 +943,9 @@ export function BattleArenaGame() {
         </div>
 
         <div className="ba-arena relative overflow-hidden">
-          <CounterBase team="player" hp={bases.player} />
-          <CounterBase team="bot" hp={bases.bot} />
+          {arenaStructures.map((structure) => (
+            <ArenaStructureObject key={structure.id} structure={structure} />
+          ))}
 
           <svg className="ba-attack-fx-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             {units
@@ -2066,6 +2327,68 @@ export function BattleArenaGame() {
           box-shadow:
             0 24px 58px rgba(27, 14, 9, 0.22),
             inset 0 0 0 1px rgba(255, 224, 162, 0.38);
+        }
+
+        .ba-structure {
+          position: absolute;
+          z-index: 17;
+          transform: translate(-50%, -60%);
+          pointer-events: none;
+          filter: drop-shadow(0 11px 10px rgba(20, 9, 5, 0.26));
+        }
+
+        .ba-structure-mainCastle {
+          z-index: 16;
+          transform: translate(-50%, -60%);
+        }
+
+        .ba-structure-sideTower {
+          z-index: 18;
+          transform: translate(-50%, -61%);
+        }
+
+        .ba-structure-player {
+          z-index: 18;
+        }
+
+        .ba-structure-asset {
+          display: block;
+          width: 100%;
+          height: auto;
+          user-select: none;
+          -webkit-user-drag: none;
+        }
+
+        .ba-structure-destroyed .ba-structure-asset {
+          opacity: 0.38;
+          filter: grayscale(0.8) saturate(0.55) brightness(0.72);
+        }
+
+        .ba-structure-destroyed {
+          z-index: 10;
+        }
+
+        .ba-structure .ba-base-health {
+          position: absolute;
+          left: 50%;
+          bottom: 8%;
+          width: 58%;
+          margin: 0;
+          transform: translateX(-50%);
+          opacity: 0.95;
+        }
+
+        .ba-structure-mainCastle .ba-base-health {
+          bottom: 10%;
+          width: 46%;
+        }
+
+        .ba-structure-destroyed .ba-base-health {
+          display: none;
+        }
+
+        .ba-structure .ba-base-health span {
+          width: var(--hp);
         }
 
         .ba-arena::before,
