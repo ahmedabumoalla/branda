@@ -10,7 +10,7 @@ type GameResult = "playing" | "won" | "lost";
 type UnitRole = "melee" | "ranged" | "tank" | "support";
 type Lane = "top" | "middle" | "bottom";
 type UnitIntent = "advance" | "attack" | "defend";
-type SpriteState = "idle" | "walk" | "attack" | "hit" | "die";
+type SpriteState = "idle" | "walk" | "run_to_stop" | "attack" | "hit" | "die";
 type WaiterAnimationState = SpriteState;
 type UnitFacing = "left" | "right" | "up" | "down";
 type BridgeId = "left" | "right";
@@ -129,23 +129,23 @@ const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
 const SPRITE_ENABLED_UNITS = new Set<UnitKind>(["swift_waiter"]);
-const WAITER_360_BASE_PATH = "/assets/arena/units/waiter/360";
+const WAITER_FRAME_BASE_PATH = "/assets/battle-arena/waiter/frames";
 const WAITER_360_ANGLES = [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315] as const;
 type Waiter360Angle = (typeof WAITER_360_ANGLES)[number];
-const WAITER_360_FRAME_COUNTS: Record<SpriteState, number> = {
-  idle: 1,
-  walk: 4,
-  attack: 3,
-  hit: 2,
-  die: 4,
+const WAITER_ANIMATION_CONFIG: Record<WaiterAnimationState, { frameCount: number; frameMs: number; loop: boolean }> = {
+  idle: { frameCount: 8, frameMs: 150, loop: true },
+  walk: { frameCount: 12, frameMs: 70, loop: true },
+  run_to_stop: { frameCount: 8, frameMs: 55, loop: false },
+  attack: { frameCount: 10, frameMs: 80, loop: false },
+  hit: { frameCount: 6, frameMs: 30, loop: false },
+  die: { frameCount: 12, frameMs: 35, loop: false },
 };
-const WAITER_HIT_DURATION_MS = 150;
+const WAITER_HIT_DURATION_MS = WAITER_ANIMATION_CONFIG.hit.frameCount * WAITER_ANIMATION_CONFIG.hit.frameMs;
 const WAITER_FACING_TURN_THRESHOLD_DEGREES = 10;
 const WAITER_WALK_MOVEMENT_THRESHOLD = 0.018;
-const WAITER_WALK_FRAME_DISTANCE_MS = 135;
 const WAITER_WALK_ANIMATION_MS_PER_ARENA_UNIT = 220;
 const WAITER_ATTACK_EXIT_PADDING = 0.65;
-const WAITER_ATTACK_STRIKE_FRAME = 1;
+const WAITER_ATTACK_STRIKE_FRAME = 3;
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
 const BRIDGES = {
@@ -965,11 +965,6 @@ function nearestWaiterAngle(degrees: number): Waiter360Angle {
   return WAITER_360_ANGLES.reduce((best, angle) => (angleDelta(degrees, angle) < angleDelta(degrees, best) ? angle : best), WAITER_360_ANGLES[0]);
 }
 
-function waiterAngleLabel(angle: Waiter360Angle) {
-  const [whole = "0", decimal] = String(angle).split(".");
-  return `${whole.padStart(3, "0")}${decimal ? `_${decimal}` : ""}`;
-}
-
 function angleVector(angle: Waiter360Angle) {
   const radians = (angle * Math.PI) / 180;
   return {
@@ -1002,13 +997,16 @@ function waiterAttackCycleMs(unit: Unit) {
 function waiterAttackFrame(unit: Unit, now: number) {
   if (unit.lastAttackAt <= 0) return 0;
 
-  const frameMs = waiterAttackCycleMs(unit) / WAITER_360_FRAME_COUNTS.attack;
-  return clamp(Math.floor((now - unit.lastAttackAt) / frameMs), 0, WAITER_360_FRAME_COUNTS.attack - 1);
+  const frameCount = WAITER_ANIMATION_CONFIG.attack.frameCount;
+  const frameMs = waiterAttackCycleMs(unit) / frameCount;
+  return clamp(Math.floor((now - unit.lastAttackAt) / frameMs), 0, frameCount - 1);
 }
 
 function waiterFrameIndex(unit: Unit, now: number) {
+  const config = WAITER_ANIMATION_CONFIG[unit.waiterAnimationState];
+
   if (unit.waiterAnimationState === "walk") {
-    return Math.floor(unit.animationTime / WAITER_WALK_FRAME_DISTANCE_MS) % WAITER_360_FRAME_COUNTS.walk;
+    return Math.floor(unit.animationTime / config.frameMs) % config.frameCount;
   }
 
   if (unit.waiterAnimationState === "attack") {
@@ -1016,14 +1014,16 @@ function waiterFrameIndex(unit: Unit, now: number) {
   }
 
   if (unit.waiterAnimationState === "hit") {
-    return clamp(Math.floor(Math.max(0, now - unit.damagedAt) / (WAITER_HIT_DURATION_MS / WAITER_360_FRAME_COUNTS.hit)), 0, WAITER_360_FRAME_COUNTS.hit - 1);
+    return clamp(Math.floor(Math.max(0, now - unit.damagedAt) / config.frameMs), 0, config.frameCount - 1);
   }
 
   if (unit.waiterAnimationState === "die" && unit.defeatedAt !== null) {
-    return clamp(Math.floor((now - unit.defeatedAt) / (DEFEAT_ANIMATION_MS / WAITER_360_FRAME_COUNTS.die)), 0, WAITER_360_FRAME_COUNTS.die - 1);
+    return clamp(Math.floor((now - unit.defeatedAt) / config.frameMs), 0, config.frameCount - 1);
   }
 
-  return 0;
+  const elapsed = Math.max(0, now - unit.stateStartedAt);
+  const frameIndex = Math.floor(elapsed / config.frameMs);
+  return config.loop ? frameIndex % config.frameCount : clamp(frameIndex, 0, config.frameCount - 1);
 }
 
 function setWaiterAnimationState(unit: Unit, nextState: WaiterAnimationState, now: number, restart = false) {
@@ -1054,7 +1054,17 @@ function updateWaiterAnimationController(
   unit.lastFacingAngle = stableWaiterFacingAngle(unit, desiredFacingAngle);
 
   const isFreshHit = unit.damagedAt > 0 && now - unit.damagedAt < WAITER_HIT_DURATION_MS;
-  const nextState = isFreshHit ? "hit" : desiredState;
+  const runToStopDuration = WAITER_ANIMATION_CONFIG.run_to_stop.frameCount * WAITER_ANIMATION_CONFIG.run_to_stop.frameMs;
+  let nextState: WaiterAnimationState = isFreshHit ? "hit" : desiredState;
+
+  if (!isFreshHit && desiredState === "idle") {
+    if (unit.waiterAnimationState === "walk") {
+      nextState = "run_to_stop";
+    } else if (unit.waiterAnimationState === "run_to_stop" && now - unit.stateStartedAt < runToStopDuration) {
+      nextState = "run_to_stop";
+    }
+  }
+
   setWaiterAnimationState(unit, nextState, now, nextState === "hit" && unit.damagedAt > unit.stateStartedAt);
 
   if (nextState === "walk" && movementDistance > WAITER_WALK_MOVEMENT_THRESHOLD) {
@@ -1115,18 +1125,17 @@ function facingFromAngle(angle: Waiter360Angle): UnitFacing {
   return angleDelta(angle, 0) < angleDelta(angle, 180) ? "down" : "up";
 }
 
-function spriteFrames(kind: UnitKind, spriteState: SpriteState, spriteAngle: Waiter360Angle) {
+function spriteFrames(kind: UnitKind, spriteState: SpriteState) {
   if (!SPRITE_ENABLED_UNITS.has(kind)) return [];
-  const label = waiterAngleLabel(spriteAngle);
-  const frameCount = WAITER_360_FRAME_COUNTS[spriteState] ?? 1;
+  const frameCount = WAITER_ANIMATION_CONFIG[spriteState].frameCount;
   return Array.from(
     { length: frameCount },
-    (_, index) => `${WAITER_360_BASE_PATH}/${spriteState}/waiter-${spriteState}-${label}-${index + 1}.png`,
+    (_, index) => `${WAITER_FRAME_BASE_PATH}/${spriteState}/${spriteState}_${String(index).padStart(3, "0")}.png`,
   );
 }
 
-function unitAnimationFrame(unit: Unit, spriteState: SpriteState, spriteAngle: Waiter360Angle, animationTime: number) {
-  const frames = spriteFrames(unit.kind, spriteState, spriteAngle);
+function unitAnimationFrame(unit: Unit, spriteState: SpriteState, animationTime: number) {
+  const frames = spriteFrames(unit.kind, spriteState);
   if (frames.length <= 1) return 0;
   if (unit.kind === "swift_waiter") return clamp(unit.frameIndex, 0, frames.length - 1);
 
@@ -1157,16 +1166,14 @@ function UnitSprite({
   kind,
   spriteState,
   facing,
-  spriteAngle,
   animationFrame,
 }: {
   kind: UnitKind;
   spriteState: SpriteState;
   facing: UnitFacing;
-  spriteAngle: Waiter360Angle;
   animationFrame: number;
 }) {
-  const frames = spriteFrames(kind, spriteState, spriteAngle);
+  const frames = spriteFrames(kind, spriteState);
   const spriteSrc = frames[animationFrame % Math.max(frames.length, 1)];
 
   if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
@@ -1189,7 +1196,6 @@ function UnitVisual({
   team = "player",
   spriteState = "idle",
   facing = "up",
-  spriteAngle = 0,
   animationFrame = 0,
   anchoredPosition = "feet",
   compact = false,
@@ -1198,7 +1204,6 @@ function UnitVisual({
   team?: Team;
   spriteState?: SpriteState;
   facing?: UnitFacing;
-  spriteAngle?: Waiter360Angle;
   animationFrame?: number;
   anchoredPosition?: UnitAnchor;
   compact?: boolean;
@@ -1211,7 +1216,7 @@ function UnitVisual({
     >
       <span className="ba-unit-ground" />
       <span className="ba-unit-placeholder">
-        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} spriteAngle={spriteAngle} animationFrame={animationFrame} />
+        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} animationFrame={animationFrame} />
         <span className="ba-unit-placeholder-body">
           <span className="ba-unit-placeholder-head" />
           <span className="ba-unit-placeholder-mark" />
@@ -1228,7 +1233,7 @@ function ArenaUnit({ unit }: { unit: Unit }) {
   const spriteState = unitSpriteState(unit, animationTime);
   const spriteAngle = unitSpriteAngle(unit);
   const facing = facingFromAngle(spriteAngle);
-  const animationFrame = unitAnimationFrame(unit, spriteState, spriteAngle, animationTime);
+  const animationFrame = unitAnimationFrame(unit, spriteState, animationTime);
 
   return (
     <div
@@ -1250,7 +1255,6 @@ function ArenaUnit({ unit }: { unit: Unit }) {
         team={unit.team}
         spriteState={spriteState}
         facing={facing}
-        spriteAngle={spriteAngle}
         animationFrame={animationFrame}
         anchoredPosition="feet"
       />
@@ -3052,7 +3056,11 @@ export function BattleArenaGame() {
         }
 
         .ba-unit-visual-hit.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-hit 150ms ease-out infinite;
+          animation: ba-waiter-hit 180ms ease-out infinite;
+        }
+
+        .ba-unit-visual-run_to_stop.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          animation: none;
         }
 
         .ba-unit-visual-die.ba-unit-visual-swift_waiter .ba-unit-sprite {
@@ -3060,6 +3068,7 @@ export function BattleArenaGame() {
         }
 
         .ba-unit-visual-swift_waiter.ba-unit-visual-walk .ba-unit-placeholder,
+        .ba-unit-visual-swift_waiter.ba-unit-visual-run_to_stop .ba-unit-placeholder,
         .ba-unit-visual-swift_waiter.ba-unit-visual-attack .ba-unit-placeholder {
           animation: none;
         }
