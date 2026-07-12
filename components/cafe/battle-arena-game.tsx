@@ -15,6 +15,7 @@ type UnitFacing = "left" | "right" | "up" | "down";
 type BridgeId = "left" | "right";
 type AssignedLane = "left" | "right" | "center";
 type UnitMode = "attack" | "defend";
+type UnitPathStage = "toBridgeEntry" | "toBridgeExit" | "toTarget";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -59,6 +60,7 @@ type Unit = {
   primaryTowerId: StructureId;
   strategicTargetId: StructureId;
   mode: UnitMode;
+  pathStage: UnitPathStage;
   lane: Lane;
   laneOffset: number;
   intent: UnitIntent;
@@ -140,6 +142,10 @@ const DEPLOYMENT_ZONE = {
   maxY: 84,
 } as const;
 const BRIDGE_BLOCK_RADIUS = 8;
+const WAYPOINT_REACHED_THRESHOLD = 1.5;
+const BRIDGE_ZONE_HALF_WIDTH = 4.8;
+const BRIDGE_ZONE_HALF_HEIGHT = 5.4;
+const STRUCTURE_ATTACK_RING_MIN = 1.2;
 const DEPLOYMENT_STRUCTURE_PADDING = 3.4;
 const ARENA_POINTS = {
   playerMainBase: { x: 50, y: 88 },
@@ -339,6 +345,19 @@ function bridgeExit(team: Team, bridge: BridgeId) {
   return { x: point.x, y: team === "player" ? RIVER_Y - 4.2 : RIVER_Y + 4.2 };
 }
 
+function isInBridgeZone(point: { x: number; y: number }, bridgeId?: BridgeId) {
+  const bridges = bridgeId ? [bridgePoint(bridgeId)] : Object.values(BRIDGES);
+  return bridges.some(
+    (bridge) =>
+      Math.abs(point.x - bridge.x) <= BRIDGE_ZONE_HALF_WIDTH && Math.abs(point.y - bridge.y) <= BRIDGE_ZONE_HALF_HEIGHT,
+  );
+}
+
+function hasPassedBridgeExit(unit: Unit) {
+  const exit = bridgeExit(unit.team, unit.assignedBridge);
+  return unit.team === "player" ? unit.y <= exit.y + WAYPOINT_REACHED_THRESHOLD : unit.y >= exit.y - WAYPOINT_REACHED_THRESHOLD;
+}
+
 function primaryTowerId(team: Team, bridge: BridgeId): StructureId {
   if (team === "player") return bridge === "left" ? "bot-left-tower" : "bot-right-tower";
   return bridge === "left" ? "player-left-tower" : "player-right-tower";
@@ -437,18 +456,65 @@ function chooseStrategicStructure(unit: Unit, structureHp: StructureHp) {
   };
 }
 
+function advancePathStage(unit: Unit, structureHp: StructureHp) {
+  unit.strategicTargetId = getStructureHp(structureHp, unit.primaryTowerId) > 0 ? unit.primaryTowerId : mainCastleId(unit.team);
+
+  if (unit.pathStage === "toTarget" && !isOnEnemySide(unit) && !isInBridgeZone(unit, unit.assignedBridge)) {
+    unit.pathStage = "toBridgeEntry";
+  }
+
+  if (unit.pathStage === "toBridgeEntry") {
+    const entry = bridgeEntry(unit.team, unit.assignedBridge);
+    if (distanceBetween(unit, entry) <= WAYPOINT_REACHED_THRESHOLD || isInBridgeZone(unit, unit.assignedBridge)) {
+      unit.pathStage = "toBridgeExit";
+    }
+  }
+
+  if (unit.pathStage === "toBridgeExit") {
+    const exit = bridgeExit(unit.team, unit.assignedBridge);
+    if (distanceBetween(unit, exit) <= WAYPOINT_REACHED_THRESHOLD || hasPassedBridgeExit(unit)) {
+      unit.pathStage = "toTarget";
+    }
+  }
+}
+
+function structureAttackPoint(unit: Unit, structure: ArenaStructure) {
+  const approach = unit.pathStage === "toTarget" || isOnEnemySide(unit) ? bridgeExit(unit.team, unit.assignedBridge) : unit;
+  let dx = approach.x - structure.x;
+  let dy = approach.y - structure.y;
+  let distance = Math.hypot(dx, dy);
+
+  if (distance <= 0.001) {
+    dx = unit.x - structure.x;
+    dy = unit.y - structure.y;
+    distance = Math.hypot(dx, dy);
+  }
+
+  if (distance <= 0.001) {
+    dx = 0;
+    dy = unit.team === "player" ? 1 : -1;
+    distance = 1;
+  }
+
+  const ringDistance = structure.targetRadius + Math.max(STRUCTURE_ATTACK_RING_MIN, unit.attackRange * 0.72);
+  return {
+    x: clamp(structure.x + (dx / distance) * ringDistance, 12, 88),
+    y: clamp(structure.y + (dy / distance) * ringDistance, 10, 90),
+  };
+}
+
 function strategicWaypoint(unit: Unit, structureHp: StructureHp) {
-  if (unit.mode === "defend" && !isOnEnemySide(unit)) {
+  advancePathStage(unit, structureHp);
+
+  if (unit.pathStage === "toBridgeEntry") {
     return bridgeEntry(unit.team, unit.assignedBridge);
   }
 
-  if (!isOnEnemySide(unit)) {
-    const entry = bridgeEntry(unit.team, unit.assignedBridge);
-    if (distanceBetween(unit, entry) > 3.4) return entry;
+  if (unit.pathStage === "toBridgeExit") {
     return bridgeExit(unit.team, unit.assignedBridge);
   }
 
-  return chooseStrategicStructure(unit, structureHp);
+  return structureAttackPoint(unit, chooseStrategicStructure(unit, structureHp));
 }
 
 function getStructureHp(structureHp: StructureHp, id: StructureId) {
@@ -516,6 +582,8 @@ function detourAroundStructures(
   structures: ArenaStructure[],
   targetStructureId: StructureId | null,
 ) {
+  if (isInBridgeZone(unit, unit.assignedBridge) || isInBridgeZone(waypoint, unit.assignedBridge)) return waypoint;
+
   const blocking = structures
     .filter((structure) => structure.hp > 0 && structure.id !== targetStructureId)
     .filter((structure) => segmentDistanceToPoint(unit, waypoint, structure) < structure.collisionRadius + UNIT_COLLISION_RADIUS + 2.8)
@@ -545,6 +613,8 @@ function keepOutsideStructures(
   structures: ArenaStructure[],
   previous?: { x: number; y: number },
 ) {
+  if (isInBridgeZone(point) || (previous && isInBridgeZone(previous))) return point;
+
   let next = { ...point };
 
   for (const structure of structures) {
@@ -588,6 +658,42 @@ function isDeployablePoint(point: { x: number; y: number }, structures: ArenaStr
       structure.hp > 0 &&
       distanceBetween(point, structure) <= structure.collisionRadius + UNIT_COLLISION_RADIUS + DEPLOYMENT_STRUCTURE_PADDING,
   );
+}
+
+function blockingStructureAt(point: { x: number; y: number }, structures: ArenaStructure[]) {
+  return (
+    structures
+      .filter((structure) => structure.hp > 0)
+      .filter((structure) => distanceBetween(point, structure) < structure.collisionRadius + UNIT_COLLISION_RADIUS + 0.8)
+      .sort((a, b) => distanceBetween(point, a) - distanceBetween(point, b))[0] ?? null
+  );
+}
+
+function normalizeSpawnPoint(team: Team, lane: Lane, point: { x: number; y: number }, structures: ArenaStructure[]) {
+  const bridge = nearestBridgeFromX(point.x);
+  const frontDirection = team === "player" ? -1 : 1;
+  let next = {
+    x:
+      team === "player"
+        ? clamp(point.x, DEPLOYMENT_ZONE.minX, DEPLOYMENT_ZONE.maxX)
+        : clamp(point.x, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+    y:
+      team === "player"
+        ? clamp(point.y, bridgeExit("bot", bridge).y + 2, DEPLOYMENT_ZONE.maxY)
+        : clamp(point.y, ARENA_POINTS.botSpawnY, bridgeEntry("bot", bridge).y - 2),
+  };
+
+  for (let index = 0; index < 4; index += 1) {
+    const blocking = blockingStructureAt(next, structures);
+    if (!blocking) break;
+
+    next = {
+      x: clamp(next.x, 12, 88),
+      y: clamp(blocking.y + frontDirection * (blocking.collisionRadius + UNIT_COLLISION_RADIUS + 3), 10, 90),
+    };
+  }
+
+  return next;
 }
 
 function damageStructure(structureHp: StructureHp, id: StructureId, damage: number) {
@@ -642,15 +748,16 @@ function routePoint(
   structures: ArenaStructure[],
   targetStructureId: StructureId | null,
 ) {
+  if (isInBridgeZone(unit, unit.assignedBridge) || isInBridgeZone(destination, unit.assignedBridge)) return destination;
   if (!isAcrossRiver(unit.y, destination.y)) return detourAroundStructures(unit, destination, structures, targetStructureId);
 
-  const bridge = bridgePoint(unit.assignedBridge);
-  const reachedBridgeX = Math.abs(unit.x - bridge.x) <= 3.2;
-  const reachedBridgeY = Math.abs(unit.y - bridge.y) <= 3.2;
+  const entry = bridgeEntry(unit.team, unit.assignedBridge);
 
-  if (!reachedBridgeX) return detourAroundStructures(unit, { x: bridge.x, y: unit.y }, structures, targetStructureId);
-  if (!reachedBridgeY) return detourAroundStructures(unit, bridge, structures, targetStructureId);
-  return detourAroundStructures(unit, destination, structures, targetStructureId);
+  if (distanceBetween(unit, entry) > WAYPOINT_REACHED_THRESHOLD) {
+    return detourAroundStructures(unit, entry, structures, targetStructureId);
+  }
+
+  return bridgeExit(unit.team, unit.assignedBridge);
 }
 
 function laneFromPressure(units: Unit[]) {
@@ -987,17 +1094,19 @@ export function BattleArenaGame() {
         (team === "player" ? LANE_ORDER[nextLaneRef.current % LANE_ORDER.length] : randomLane()) ??
         "middle";
       if (team === "player" && !spawnPoint) nextLaneRef.current += 1;
-      const laneOffset = spawnPoint ? spawnPoint.x - laneCenter(lane) : (Math.random() - 0.5) * 5.5;
-      const spawn = {
+      const rawLaneOffset = spawnPoint ? spawnPoint.x - laneCenter(lane) : (Math.random() - 0.5) * 5.5;
+      const rawSpawn = {
         x: spawnPoint
           ? spawnPoint.x
-          : clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+          : clamp(laneCenter(lane) + rawLaneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
         y: spawnPoint
           ? spawnPoint.y
           : team === "player"
             ? ARENA_POINTS.playerSpawnY + Math.random() * 3
-            : ARENA_POINTS.botSpawnY - Math.random() * 3,
+            : ARENA_POINTS.botSpawnY + 15 + Math.random() * 3,
       };
+      const spawn = normalizeSpawnPoint(team, lane, rawSpawn, getArenaStructures(structureHpRef.current));
+      const laneOffset = spawn.x - laneCenter(lane);
       const spawnIntent = chooseSpawnIntent(team, spawn, unitsRef.current);
 
       const nextUnit: Unit = {
@@ -1020,6 +1129,7 @@ export function BattleArenaGame() {
         primaryTowerId: spawnIntent.primaryTowerId,
         strategicTargetId: spawnIntent.strategicTargetId,
         mode: spawnIntent.mode,
+        pathStage: "toBridgeEntry",
         lane,
         laneOffset,
         intent: "advance",
@@ -1137,6 +1247,7 @@ export function BattleArenaGame() {
 
           unit.attackTargetX = null;
           unit.attackTargetY = null;
+          unit.targetId = null;
           const enemies = activeUnits.filter((candidate) => candidate.team !== unit.team && candidate.hp > 0);
           let destination = strategicWaypoint(unit, nextStructureHp);
           let target = findLocalThreat(unit, enemies, destination);
@@ -1146,6 +1257,8 @@ export function BattleArenaGame() {
             unit.assignedBridge = nearestBridgeFromX(unit.x);
             unit.assignedLane = assignedLaneFromX(unit.x);
             unit.primaryTowerId = primaryTowerId(unit.team, unit.assignedBridge);
+            unit.strategicTargetId = unit.primaryTowerId;
+            unit.pathStage = isOnEnemySide(unit) ? "toTarget" : isInBridgeZone(unit, unit.assignedBridge) ? "toBridgeExit" : "toBridgeEntry";
             destination = strategicWaypoint(unit, nextStructureHp);
             target = findLocalThreat(unit, enemies, destination);
           }
@@ -1158,7 +1271,11 @@ export function BattleArenaGame() {
             : structureTarget
               ? distanceToStructure(unit, structureTarget)
               : distanceBetween(unit, moveDestination);
-          const shouldAttackStructure = Boolean(structureTarget && targetDistance <= unit.attackRange);
+          const shouldAttackStructure = Boolean(
+            structureTarget &&
+              unit.pathStage === "toTarget" &&
+              (targetDistance <= unit.attackRange || distanceBetween(unit, moveDestination) <= WAYPOINT_REACHED_THRESHOLD),
+          );
 
           unit.intent = target ? (unit.mode === "defend" ? "defend" : "attack") : shouldAttackStructure ? "attack" : "advance";
           unit.targetId = target?.id ?? (structureTarget ? `structure:${structureTarget.id}` : null);
@@ -1171,8 +1288,10 @@ export function BattleArenaGame() {
             if (now - unit.lastAttackAt >= unit.attackCooldown) {
               if (target) {
                 applyDamage(target, unit.damage, now);
+                if (target.hp <= 0) unit.targetId = null;
               } else if (structureTarget) {
                 damageStructure(nextStructureHp, structureTarget.id, unit.damage);
+                if (getStructureHp(nextStructureHp, structureTarget.id) <= 0) unit.targetId = null;
               }
 
               unit.lastAttackAt = now;
@@ -1418,15 +1537,23 @@ export function BattleArenaGame() {
 
       <style>{`
         .ba-game-shell {
+          height: 100%;
+          max-height: 100dvh;
+          min-height: 0;
           width: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
         }
 
         .ba-game-frame {
           position: relative;
           display: flex;
           height: 100%;
-          min-height: 100%;
+          max-height: 100dvh;
+          min-height: 0;
           flex-direction: column;
+          overflow: hidden;
+          overscroll-behavior: none;
           border: 0 !important;
           border-radius: 0 !important;
           background: #160f0c !important;
@@ -1480,6 +1607,7 @@ export function BattleArenaGame() {
           display: flex;
           min-height: 0;
           flex: 1;
+          flex-basis: 0;
           align-items: center;
           justify-content: center;
           background:
@@ -1490,6 +1618,7 @@ export function BattleArenaGame() {
         .ba-bottom-hud {
           position: relative;
           z-index: 40;
+          flex: 0 0 auto;
           border-top: 1px solid rgba(206, 184, 156, 0.82);
           padding: 8px 10px 10px;
           background:
@@ -3310,14 +3439,17 @@ export function BattleArenaGame() {
         @media (max-width: 640px) {
           .ba-game-shell {
             height: 100dvh;
-            min-height: 100dvh;
+            max-height: 100dvh;
+            min-height: 0;
             width: 100vw;
             overflow: hidden;
+            overscroll-behavior: none;
           }
 
           .ba-game-frame {
             height: 100dvh;
-            min-height: 100dvh;
+            max-height: 100dvh;
+            min-height: 0;
             border: 0;
             border-radius: 0;
           }
@@ -3340,6 +3472,7 @@ export function BattleArenaGame() {
           .ba-playfield {
             min-height: 0;
             flex: 1;
+            flex-basis: 0;
             align-items: stretch;
           }
 
@@ -3354,32 +3487,66 @@ export function BattleArenaGame() {
           }
 
           .ba-bottom-hud {
-            padding: 7px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+            padding: 5px max(7px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left));
           }
 
           .ba-card-slots {
-            gap: 5px;
-            margin-top: 6px;
+            gap: 4px;
+            margin-top: 5px;
           }
 
           .ba-card-button,
           .ba-card-future {
-            min-height: 62px;
+            min-height: 56px;
+            padding: 5px 4px 4px;
           }
 
           .ba-card-avatar {
-            height: 34px;
-            width: 34px;
+            height: 31px;
+            width: 31px;
+          }
+
+          .ba-cost-badge {
+            height: 19px;
+            min-width: 19px;
+            padding-inline: 5px;
+            font-size: 10px;
           }
 
           .ba-card-name {
+            font-size: 10px;
+          }
+
+          .ba-energy-row {
+            grid-template-columns: 20px minmax(0, 1fr) auto;
+            gap: 6px;
+          }
+
+          .ba-energy-icon {
+            height: 20px;
+            width: 20px;
+            border-radius: 7px;
+          }
+
+          .ba-energy-icon svg {
+            height: 13px;
+            width: 13px;
+          }
+
+          .ba-energy-track {
+            height: 7px;
+          }
+
+          .ba-energy-value {
+            min-width: 42px;
             font-size: 11px;
           }
 
           .ba-notice {
-            min-height: 18px;
-            margin-top: 6px;
-            font-size: 11px;
+            min-height: 16px;
+            margin-top: 4px;
+            font-size: 10px;
+            line-height: 1.15;
           }
 
           .ba-base {

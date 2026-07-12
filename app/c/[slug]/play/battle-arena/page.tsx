@@ -57,7 +57,7 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
   return (
     <main
       dir="rtl"
-      className="relative h-[100dvh] w-screen overflow-hidden bg-[#160F0C] text-[#FFF3D3] sm:grid sm:min-h-screen sm:place-items-center sm:p-5"
+      className="relative h-[100dvh] max-h-[100dvh] w-screen overflow-hidden overscroll-none bg-[#160F0C] text-[#FFF3D3] sm:grid sm:place-items-center sm:p-5"
     >
       <Link
         href={gamesHref}
@@ -67,7 +67,7 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
         رجوع للألعاب
       </Link>
 
-      <div className="h-full w-full sm:h-[min(100dvh-40px,920px)] sm:max-w-[520px] sm:overflow-hidden sm:rounded-xl sm:border sm:border-[#FFE0A2]/18 sm:shadow-[0_30px_80px_rgba(0,0,0,0.34)]">
+      <div className="min-h-0 h-full max-h-[100dvh] w-full overflow-hidden sm:h-[min(100dvh-40px,920px)] sm:max-w-[520px] sm:rounded-xl sm:border sm:border-[#FFE0A2]/18 sm:shadow-[0_30px_80px_rgba(0,0,0,0.34)]">
         {!cafe ? <MessageBox message={errorMessage} /> : <BattleArenaGame />}
       </div>
     </main>
