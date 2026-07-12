@@ -11,6 +11,7 @@ type UnitRole = "melee" | "ranged" | "tank" | "support";
 type Lane = "top" | "middle" | "bottom";
 type UnitIntent = "advance" | "attack" | "defend";
 type SpriteState = "idle" | "walk" | "attack" | "hit" | "die";
+type WaiterAnimationState = SpriteState;
 type UnitFacing = "left" | "right" | "up" | "down";
 type BridgeId = "left" | "right";
 type AssignedLane = "left" | "right" | "center";
@@ -75,8 +76,17 @@ type Unit = {
   defeatedAt: number | null;
   hitId: number;
   attackFxId: number;
+  attackFxStartedAt: number;
   attackTargetX: number | null;
   attackTargetY: number | null;
+  waiterAnimationState: WaiterAnimationState;
+  animationTime: number;
+  frameIndex: number;
+  previousState: WaiterAnimationState;
+  stateStartedAt: number;
+  lastFacingAngle: Waiter360Angle;
+  isAttackLocked: boolean;
+  isDeadAnimationComplete: boolean;
 };
 
 type StructureDef = {
@@ -129,6 +139,13 @@ const WAITER_360_FRAME_COUNTS: Record<SpriteState, number> = {
   hit: 2,
   die: 4,
 };
+const WAITER_HIT_DURATION_MS = 150;
+const WAITER_FACING_TURN_THRESHOLD_DEGREES = 10;
+const WAITER_WALK_MOVEMENT_THRESHOLD = 0.018;
+const WAITER_WALK_FRAME_DISTANCE_MS = 135;
+const WAITER_WALK_ANIMATION_MS_PER_ARENA_UNIT = 220;
+const WAITER_ATTACK_EXIT_PADDING = 0.65;
+const WAITER_ATTACK_STRIKE_FRAME = 1;
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
 const BRIDGES = {
@@ -837,6 +854,10 @@ function applyDamage(target: Unit, damage: number, now: number) {
     target.hp = 0;
     target.state = "defeated";
     target.defeatedAt = now;
+    startWaiterDieAnimation(target, now);
+  } else if (target.kind === "swift_waiter") {
+    setWaiterAnimationState(target, "hit", now, true);
+    target.frameIndex = waiterFrameIndex(target, now);
   }
 }
 
@@ -928,6 +949,7 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
 }
 
 function unitSpriteState(unit: Unit, animationTime: number): SpriteState {
+  if (unit.kind === "swift_waiter") return unit.waiterAnimationState;
   if (unit.state === "defeated") return "die";
   if (unit.damagedAt > 0 && animationTime - unit.damagedAt < 180) return "hit";
   if (unit.state === "attacking") return "attack";
@@ -961,7 +983,114 @@ function angleFromVector(dx: number, dy: number, fallback: Waiter360Angle) {
   return nearestWaiterAngle((Math.atan2(dx, dy) * 180) / Math.PI + 360);
 }
 
+function initialWaiterFacingAngle(team: Team): Waiter360Angle {
+  return team === "player" ? 180 : 0;
+}
+
+function stableWaiterFacingAngle(unit: Unit, desiredAngle: Waiter360Angle) {
+  if (angleDelta(desiredAngle, unit.lastFacingAngle) < WAITER_FACING_TURN_THRESHOLD_DEGREES) {
+    return unit.lastFacingAngle;
+  }
+
+  return desiredAngle;
+}
+
+function waiterAttackCycleMs(unit: Unit) {
+  return Math.max(330, unit.attackCooldown);
+}
+
+function waiterAttackFrame(unit: Unit, now: number) {
+  if (unit.lastAttackAt <= 0) return 0;
+
+  const frameMs = waiterAttackCycleMs(unit) / WAITER_360_FRAME_COUNTS.attack;
+  return clamp(Math.floor((now - unit.lastAttackAt) / frameMs), 0, WAITER_360_FRAME_COUNTS.attack - 1);
+}
+
+function waiterFrameIndex(unit: Unit, now: number) {
+  if (unit.waiterAnimationState === "walk") {
+    return Math.floor(unit.animationTime / WAITER_WALK_FRAME_DISTANCE_MS) % WAITER_360_FRAME_COUNTS.walk;
+  }
+
+  if (unit.waiterAnimationState === "attack") {
+    return waiterAttackFrame(unit, now);
+  }
+
+  if (unit.waiterAnimationState === "hit") {
+    return clamp(Math.floor(Math.max(0, now - unit.damagedAt) / (WAITER_HIT_DURATION_MS / WAITER_360_FRAME_COUNTS.hit)), 0, WAITER_360_FRAME_COUNTS.hit - 1);
+  }
+
+  if (unit.waiterAnimationState === "die" && unit.defeatedAt !== null) {
+    return clamp(Math.floor((now - unit.defeatedAt) / (DEFEAT_ANIMATION_MS / WAITER_360_FRAME_COUNTS.die)), 0, WAITER_360_FRAME_COUNTS.die - 1);
+  }
+
+  return 0;
+}
+
+function setWaiterAnimationState(unit: Unit, nextState: WaiterAnimationState, now: number, restart = false) {
+  if (unit.waiterAnimationState !== nextState || restart) {
+    unit.previousState = unit.waiterAnimationState;
+    unit.waiterAnimationState = nextState;
+    unit.stateStartedAt = now;
+    unit.animationTime = 0;
+  } else if (nextState !== "walk") {
+    unit.animationTime = Math.max(0, now - unit.stateStartedAt);
+  }
+}
+
+function updateWaiterAnimationController(
+  unit: Unit,
+  now: number,
+  desiredState: WaiterAnimationState,
+  desiredFacingAngle: Waiter360Angle,
+  movementDistance: number,
+) {
+  if (unit.kind !== "swift_waiter") return;
+
+  if (unit.hp <= 0) {
+    startWaiterDieAnimation(unit, now);
+    return;
+  }
+
+  unit.lastFacingAngle = stableWaiterFacingAngle(unit, desiredFacingAngle);
+
+  const isFreshHit = unit.damagedAt > 0 && now - unit.damagedAt < WAITER_HIT_DURATION_MS;
+  const nextState = isFreshHit ? "hit" : desiredState;
+  setWaiterAnimationState(unit, nextState, now, nextState === "hit" && unit.damagedAt > unit.stateStartedAt);
+
+  if (nextState === "walk" && movementDistance > WAITER_WALK_MOVEMENT_THRESHOLD) {
+    unit.animationTime += movementDistance * WAITER_WALK_ANIMATION_MS_PER_ARENA_UNIT;
+  }
+
+  unit.frameIndex = waiterFrameIndex(unit, now);
+}
+
+function startWaiterDieAnimation(unit: Unit, now: number) {
+  if (unit.kind !== "swift_waiter") return;
+
+  if (unit.waiterAnimationState !== "die") {
+    unit.previousState = unit.waiterAnimationState;
+    unit.waiterAnimationState = "die";
+    unit.stateStartedAt = unit.defeatedAt ?? now;
+    unit.animationTime = 0;
+    unit.frameIndex = 0;
+    unit.isAttackLocked = false;
+  }
+
+  const dieStartedAt = unit.defeatedAt ?? unit.stateStartedAt;
+  unit.animationTime = Math.max(0, now - dieStartedAt);
+  unit.frameIndex = waiterFrameIndex(unit, now);
+  unit.isDeadAnimationComplete = unit.animationTime >= DEFEAT_ANIMATION_MS;
+}
+
+function waiterAttackDecisionRange(unit: Unit) {
+  return unit.kind === "swift_waiter" && (unit.waiterAnimationState === "attack" || unit.state === "attacking")
+    ? unit.attackRange + WAITER_ATTACK_EXIT_PADDING
+    : unit.attackRange;
+}
+
 function unitSpriteAngle(unit: Unit): Waiter360Angle {
+  if (unit.kind === "swift_waiter") return unit.lastFacingAngle;
+
   const fallback: Waiter360Angle = unit.team === "player" ? 180 : 0;
   if (unit.attackTargetX !== null && unit.attackTargetY !== null) {
     return angleFromVector(unit.attackTargetX - unit.x, unit.attackTargetY - unit.y, fallback);
@@ -999,6 +1128,8 @@ function spriteFrames(kind: UnitKind, spriteState: SpriteState, spriteAngle: Wai
 function unitAnimationFrame(unit: Unit, spriteState: SpriteState, spriteAngle: Waiter360Angle, animationTime: number) {
   const frames = spriteFrames(unit.kind, spriteState, spriteAngle);
   if (frames.length <= 1) return 0;
+  if (unit.kind === "swift_waiter") return clamp(unit.frameIndex, 0, frames.length - 1);
+
   const seed = Number(unit.id.replace(/\D/g, "")) * 37;
 
   if (spriteState === "attack") {
@@ -1101,7 +1232,7 @@ function ArenaUnit({ unit }: { unit: Unit }) {
 
   return (
     <div
-      className={`ba-unit ba-unit-${unit.team} ${unit.state === "defeated" ? "ba-unit-defeated" : ""}`}
+      className={`ba-unit ba-unit-${unit.team} ba-unit-kind-${unit.kind} ${unit.state === "defeated" ? "ba-unit-defeated" : ""}`}
       style={
         {
           left: `${unit.x}%`,
@@ -1223,6 +1354,7 @@ export function BattleArenaGame() {
       const spawn = normalizeSpawnPoint(team, lane, rawSpawn, getArenaStructures(structureHpRef.current));
       const laneOffset = spawn.x - laneCenter(lane);
       const spawnIntent = chooseSpawnIntent(team, spawn, unitsRef.current);
+      const initialFacingAngle = initialWaiterFacingAngle(team);
 
       const nextUnit: Unit = {
         id: `${team}-${nextUnitIdRef.current}`,
@@ -1258,8 +1390,17 @@ export function BattleArenaGame() {
         defeatedAt: null,
         hitId: 0,
         attackFxId: 0,
+        attackFxStartedAt: 0,
         attackTargetX: null,
         attackTargetY: null,
+        waiterAnimationState: "idle",
+        animationTime: 0,
+        frameIndex: 0,
+        previousState: "idle",
+        stateStartedAt: 0,
+        lastFacingAngle: initialFacingAngle,
+        isAttackLocked: false,
+        isDeadAnimationComplete: false,
       };
 
       nextUnitIdRef.current += 1;
@@ -1360,6 +1501,8 @@ export function BattleArenaGame() {
         for (const unit of activeUnits) {
           if (unit.hp <= 0) continue;
 
+          const frameStartX = unit.x;
+          const frameStartY = unit.y;
           unit.attackTargetX = null;
           unit.attackTargetY = null;
           unit.targetId = null;
@@ -1391,18 +1534,46 @@ export function BattleArenaGame() {
             structureTarget &&
               unit.pathStage === "toTarget" &&
               distanceToBuildingStop <= WAYPOINT_REACHED_THRESHOLD &&
-              targetDistance <= buildingAttackEdgeRange(unit, structureTarget),
+              targetDistance <=
+                buildingAttackEdgeRange(unit, structureTarget) +
+                  (unit.kind === "swift_waiter" && unit.waiterAnimationState === "attack" ? WAITER_ATTACK_EXIT_PADDING : 0),
           );
 
           unit.intent = target ? (unit.mode === "defend" ? "defend" : "attack") : shouldAttackStructure ? "attack" : "advance";
           unit.targetId = target?.id ?? (structureTarget ? `structure:${structureTarget.id}` : null);
 
-          if ((target && targetDistance <= unit.attackRange) || shouldAttackStructure) {
+          if ((target && targetDistance <= waiterAttackDecisionRange(unit)) || shouldAttackStructure) {
             unit.state = "attacking";
-            unit.attackTargetX = target?.x ?? structureTarget?.x ?? destination.x;
-            unit.attackTargetY = target?.y ?? structureTarget?.y ?? destination.y;
+            unit.attackTargetX = target?.x ?? moveDestination.x;
+            unit.attackTargetY = target?.y ?? moveDestination.y;
+            const attackFacingAngle = angleFromVector(
+              unit.attackTargetX - unit.x,
+              unit.attackTargetY - unit.y,
+              unit.lastFacingAngle,
+            );
 
-            if (now - unit.lastAttackAt >= unit.attackCooldown) {
+            if (unit.kind === "swift_waiter") {
+              if (unit.lastAttackAt <= 0 || now - unit.lastAttackAt >= unit.attackCooldown) {
+                unit.lastAttackAt = now;
+                unit.isAttackLocked = true;
+              }
+
+              if (unit.isAttackLocked && waiterAttackFrame(unit, now) >= WAITER_ATTACK_STRIKE_FRAME) {
+                if (target) {
+                  applyDamage(target, unit.damage, now);
+                  if (target.hp <= 0) unit.targetId = null;
+                } else if (structureTarget) {
+                  damageStructure(nextStructureHp, structureTarget.id, unit.damage);
+                  if (getStructureHp(nextStructureHp, structureTarget.id) <= 0) unit.targetId = null;
+                }
+
+                unit.isAttackLocked = false;
+                unit.attackFxId += 1;
+                unit.attackFxStartedAt = now;
+              }
+
+              updateWaiterAnimationController(unit, now, "attack", attackFacingAngle, 0);
+            } else if (now - unit.lastAttackAt >= unit.attackCooldown) {
               if (target) {
                 applyDamage(target, unit.damage, now);
                 if (target.hp <= 0) unit.targetId = null;
@@ -1413,10 +1584,12 @@ export function BattleArenaGame() {
 
               unit.lastAttackAt = now;
               unit.attackFxId += 1;
+              unit.attackFxStartedAt = now;
             }
             continue;
           }
 
+          if (unit.kind === "swift_waiter") unit.isAttackLocked = false;
           unit.state = "moving";
           const desired = routePoint(unit, moveDestination, frameStructures, structureTarget?.id ?? null);
           const dx = desired.x - unit.x;
@@ -1435,6 +1608,21 @@ export function BattleArenaGame() {
           );
           unit.x = moved.x;
           unit.y = moved.y;
+
+          if (unit.kind === "swift_waiter") {
+            const movementDistance = Math.hypot(unit.x - frameStartX, unit.y - frameStartY);
+            const walkFacingAngle =
+              movementDistance > WAITER_WALK_MOVEMENT_THRESHOLD
+                ? angleFromVector(unit.x - frameStartX, unit.y - frameStartY, unit.lastFacingAngle)
+                : unit.lastFacingAngle;
+            updateWaiterAnimationController(
+              unit,
+              now,
+              movementDistance > WAITER_WALK_MOVEMENT_THRESHOLD ? "walk" : "idle",
+              walkFacingAngle,
+              movementDistance,
+            );
+          }
         }
 
         for (let i = 0; i < activeUnits.length; i += 1) {
@@ -1468,13 +1656,22 @@ export function BattleArenaGame() {
           }
         }
 
+        for (const unit of nextUnits) {
+          if (unit.kind === "swift_waiter" && unit.hp <= 0 && unit.defeatedAt !== null) {
+            startWaiterDieAnimation(unit, now);
+          }
+        }
+
         for (const structure of STRUCTURE_DEFS) {
           nextStructureHp[structure.id] = clamp(nextStructureHp[structure.id], 0, structure.maxHp);
         }
         syncStructureHp(nextStructureHp);
         syncUnits(
           nextUnits.filter(
-            (unit) => unit.hp > 0 || (unit.defeatedAt !== null && now - unit.defeatedAt < DEFEAT_ANIMATION_MS),
+            (unit) =>
+              unit.hp > 0 ||
+              (unit.defeatedAt !== null &&
+                (unit.kind === "swift_waiter" ? !unit.isDeadAnimationComplete : now - unit.defeatedAt < DEFEAT_ANIMATION_MS)),
           ),
         );
 
@@ -1500,6 +1697,7 @@ export function BattleArenaGame() {
 
   const energyPercent = `${(energy / MAX_ENERGY) * 100}%`;
   const arenaStructures = getArenaStructures(structureHp);
+  const renderNow = typeof performance === "undefined" ? 0 : performance.now();
   const selectedCard = CARDS.find((card) => card.kind === selectedCardKind) ?? null;
 
   return (
@@ -1553,6 +1751,7 @@ export function BattleArenaGame() {
             <svg className="ba-attack-fx-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               {units
                 .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
+                .filter((unit) => unit.kind !== "swift_waiter" || (unit.attackFxId > 0 && renderNow - unit.attackFxStartedAt < 340))
                 .map((unit) => {
                   const origin = attackOrigin(unit, unitSpriteAngle(unit));
                   const targetX = unit.attackTargetX ?? unit.x;
@@ -2721,6 +2920,10 @@ export function BattleArenaGame() {
           animation: ba-defeat 420ms ease forwards;
         }
 
+        .ba-unit-kind-swift_waiter.ba-unit-defeated {
+          animation: ba-waiter-defeat 420ms ease forwards;
+        }
+
         .ba-unit-visual {
           position: relative;
           display: block;
@@ -2829,32 +3032,36 @@ export function BattleArenaGame() {
           left: 50%;
           bottom: 0;
           z-index: 2;
-          width: auto;
+          width: 100%;
           height: 100%;
-          max-width: none;
           transform: translateX(-50%);
           object-fit: contain;
           object-position: center bottom;
         }
 
         .ba-unit-visual-idle.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-breathe 900ms ease-in-out infinite;
+          animation: none;
         }
 
         .ba-unit-visual-walk.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-footfall 460ms steps(4, end) infinite;
+          animation: none;
         }
 
         .ba-unit-visual-attack.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-attack-snap 285ms steps(3, end) infinite;
+          animation: none;
         }
 
         .ba-unit-visual-hit.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-hit 180ms ease-out infinite;
+          animation: ba-waiter-hit 150ms ease-out infinite;
         }
 
         .ba-unit-visual-die.ba-unit-visual-swift_waiter .ba-unit-sprite {
-          animation: ba-waiter-die 420ms ease forwards;
+          animation: none;
+        }
+
+        .ba-unit-visual-swift_waiter.ba-unit-visual-walk .ba-unit-placeholder,
+        .ba-unit-visual-swift_waiter.ba-unit-visual-attack .ba-unit-placeholder {
+          animation: none;
         }
 
         .ba-unit-sprite:not([hidden]) ~ .ba-unit-placeholder-body {
@@ -3522,8 +3729,8 @@ export function BattleArenaGame() {
         }
 
         @keyframes ba-waiter-hit {
-          0% { translate: 0 0; filter: brightness(1.5); }
-          100% { translate: -3px -1px; filter: brightness(1); }
+          0% { filter: brightness(1.55); }
+          100% { filter: brightness(1); }
         }
 
         @keyframes ba-waiter-die {
@@ -3625,6 +3832,11 @@ export function BattleArenaGame() {
         @keyframes ba-defeat {
           0% { opacity: 1; transform: translate(-50%, -100%) scale(var(--depth)); }
           100% { opacity: 0; transform: translate(-50%, -100%) scale(calc(var(--depth) * 0.58)); }
+        }
+
+        @keyframes ba-waiter-defeat {
+          0% { opacity: 1; transform: translate(-50%, -100%) scale(var(--depth)); }
+          100% { opacity: 0; transform: translate(-50%, -100%) scale(var(--depth)); }
         }
 
         @media (max-width: 640px) {
