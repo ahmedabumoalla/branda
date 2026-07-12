@@ -17,6 +17,7 @@ type AssignedLane = "left" | "right" | "center";
 type UnitMode = "attack" | "defend";
 type UnitPathStage = "toBridgeEntry" | "toBridgeExit" | "toTarget";
 type UnitAnchor = "feet" | "center";
+type SpriteDirection = "up" | "down" | "side";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -119,22 +120,48 @@ const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
 const SPRITE_ENABLED_UNITS = new Set<UnitKind>(["swift_waiter"]);
-const UNIT_SPRITE_FRAMES: Record<UnitKind, Partial<Record<SpriteState, string[]>>> = {
+const UNIT_SPRITE_FRAMES: Record<UnitKind, Partial<Record<SpriteState, Partial<Record<SpriteDirection, string[]>>>>> = {
   swift_waiter: {
-    idle: ["/assets/arena/units/waiter/idle.png"],
-    walk: [
-      "/assets/arena/units/waiter/walk-1.png",
-      "/assets/arena/units/waiter/walk-2.png",
-      "/assets/arena/units/waiter/walk-3.png",
-      "/assets/arena/units/waiter/walk-4.png",
-    ],
-    attack: [
-      "/assets/arena/units/waiter/attack-1.png",
-      "/assets/arena/units/waiter/attack-2.png",
-      "/assets/arena/units/waiter/attack-3.png",
-    ],
-    hit: ["/assets/arena/units/waiter/hit-1.png"],
-    die: ["/assets/arena/units/waiter/die-1.png", "/assets/arena/units/waiter/die-2.png"],
+    idle: {
+      up: ["/assets/arena/units/waiter/idle-up.png"],
+      down: ["/assets/arena/units/waiter/idle-down.png"],
+      side: ["/assets/arena/units/waiter/idle-side.png"],
+    },
+    walk: {
+      up: [
+        "/assets/arena/units/waiter/walk-up-1.png",
+        "/assets/arena/units/waiter/walk-up-2.png",
+        "/assets/arena/units/waiter/walk-up-3.png",
+        "/assets/arena/units/waiter/walk-up-4.png",
+      ],
+      down: [
+        "/assets/arena/units/waiter/walk-down-1.png",
+        "/assets/arena/units/waiter/walk-down-2.png",
+        "/assets/arena/units/waiter/walk-down-3.png",
+        "/assets/arena/units/waiter/walk-down-4.png",
+      ],
+      side: [
+        "/assets/arena/units/waiter/walk-side-1.png",
+        "/assets/arena/units/waiter/walk-side-2.png",
+        "/assets/arena/units/waiter/walk-side-3.png",
+        "/assets/arena/units/waiter/walk-side-4.png",
+      ],
+    },
+    attack: {
+      up: ["/assets/arena/units/waiter/attack-up.png"],
+      down: ["/assets/arena/units/waiter/attack-down.png"],
+      side: ["/assets/arena/units/waiter/attack-side.png"],
+    },
+    hit: {
+      up: ["/assets/arena/units/waiter/hit-1.png"],
+      down: ["/assets/arena/units/waiter/hit-1.png"],
+      side: ["/assets/arena/units/waiter/hit-1.png"],
+    },
+    die: {
+      up: ["/assets/arena/units/waiter/die-1.png"],
+      down: ["/assets/arena/units/waiter/die-1.png"],
+      side: ["/assets/arena/units/waiter/die-1.png"],
+    },
   },
   strong_chef: {
   },
@@ -158,6 +185,8 @@ const WAYPOINT_REACHED_THRESHOLD = 1.5;
 const BRIDGE_ZONE_HALF_WIDTH = 4.8;
 const BRIDGE_ZONE_HALF_HEIGHT = 5.4;
 const STRUCTURE_ATTACK_RING_MIN = 1.2;
+const BUILDING_EDGE_STOP_RANGE = 1.05;
+const BUILDING_ATTACK_EDGE_RANGE = 1.35;
 const DEPLOYMENT_STRUCTURE_PADDING = 3.4;
 const ARENA_POINTS = {
   playerMainBase: { x: 50, y: 88 },
@@ -508,7 +537,7 @@ function structureAttackPoint(unit: Unit, structure: ArenaStructure) {
     distance = 1;
   }
 
-  const ringDistance = structure.targetRadius + Math.max(STRUCTURE_ATTACK_RING_MIN, unit.attackRange * 0.72);
+  const ringDistance = structure.targetRadius + Math.max(STRUCTURE_ATTACK_RING_MIN, BUILDING_EDGE_STOP_RANGE);
   return {
     x: clamp(structure.x + (dx / distance) * ringDistance, 12, 88),
     y: clamp(structure.y + (dy / distance) * ringDistance, 10, 90),
@@ -572,6 +601,10 @@ function chooseStructureTarget(unit: Unit, structureHp: StructureHp) {
 
 function distanceToStructure(unit: { x: number; y: number }, structure: ArenaStructure) {
   return Math.max(0, distanceBetween(unit, structure) - structure.targetRadius);
+}
+
+function buildingAttackEdgeRange(_unit: Unit, _structure: ArenaStructure) {
+  return BUILDING_ATTACK_EDGE_RANGE;
 }
 
 function segmentDistanceToPoint(
@@ -941,29 +974,43 @@ function unitSpriteState(unit: Unit, animationTime: number): SpriteState {
   return "idle";
 }
 
+function facingFromVector(dx: number, dy: number, fallback: UnitFacing) {
+  if (Math.hypot(dx, dy) <= 0.2) return fallback;
+  if (Math.abs(dx) >= Math.abs(dy) * 1.1) return dx >= 0 ? "right" : "left";
+  return dy >= 0 ? "down" : "up";
+}
+
 function unitFacing(unit: Unit): UnitFacing {
+  const fallback = unit.team === "player" ? "up" : "down";
   if (unit.attackTargetX !== null && unit.attackTargetY !== null) {
-    const dx = unit.attackTargetX - unit.x;
-    const dy = unit.attackTargetY - unit.y;
-    if (Math.abs(dx) > Math.abs(dy)) return dx >= 0 ? "right" : "left";
-    return dy >= 0 ? "down" : "up";
+    return facingFromVector(unit.attackTargetX - unit.x, unit.attackTargetY - unit.y, fallback);
   }
 
   if (unit.state === "moving") {
-    const destinationX = unit.pathStage === "toTarget" ? structureById(unit.strategicTargetId).x : bridgePoint(unit.assignedBridge).x;
-    const dx = destinationX - unit.x;
-    if (Math.abs(dx) > 1.2) return dx >= 0 ? "right" : "left";
+    const destination =
+      unit.pathStage === "toBridgeEntry"
+        ? bridgeEntry(unit.team, unit.assignedBridge)
+        : unit.pathStage === "toBridgeExit"
+          ? bridgeExit(unit.team, unit.assignedBridge)
+          : structureById(unit.strategicTargetId);
+    return facingFromVector(destination.x - unit.x, destination.y - unit.y, fallback);
   }
 
-  return unit.team === "player" ? "up" : "down";
+  return fallback;
 }
 
-function spriteFrames(kind: UnitKind, spriteState: SpriteState) {
-  return UNIT_SPRITE_FRAMES[kind][spriteState] ?? UNIT_SPRITE_FRAMES[kind].walk ?? UNIT_SPRITE_FRAMES[kind].idle ?? [];
+function spriteDirectionFromFacing(facing: UnitFacing): SpriteDirection {
+  return facing === "left" || facing === "right" ? "side" : facing;
 }
 
-function unitAnimationFrame(unit: Unit, spriteState: SpriteState, animationTime: number) {
-  const frames = spriteFrames(unit.kind, spriteState);
+function spriteFrames(kind: UnitKind, spriteState: SpriteState, facing: UnitFacing) {
+  const direction = spriteDirectionFromFacing(facing);
+  const stateFrames = UNIT_SPRITE_FRAMES[kind][spriteState] ?? UNIT_SPRITE_FRAMES[kind].walk ?? UNIT_SPRITE_FRAMES[kind].idle;
+  return stateFrames?.[direction] ?? stateFrames?.up ?? stateFrames?.down ?? stateFrames?.side ?? [];
+}
+
+function unitAnimationFrame(unit: Unit, spriteState: SpriteState, facing: UnitFacing, animationTime: number) {
+  const frames = spriteFrames(unit.kind, spriteState, facing);
   if (frames.length <= 1) return 0;
   const seed = Number(unit.id.replace(/\D/g, "")) * 37;
 
@@ -1000,7 +1047,7 @@ function UnitSprite({
   facing: UnitFacing;
   animationFrame: number;
 }) {
-  const frames = spriteFrames(kind, spriteState);
+  const frames = spriteFrames(kind, spriteState, facing);
   const spriteSrc = frames[animationFrame % Math.max(frames.length, 1)];
 
   if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
@@ -1059,8 +1106,8 @@ function ArenaUnit({ unit }: { unit: Unit }) {
   const depthScale = 0.76 + (unit.y / 100) * 0.18;
   const animationTime = typeof performance === "undefined" ? 0 : performance.now();
   const spriteState = unitSpriteState(unit, animationTime);
-  const animationFrame = unitAnimationFrame(unit, spriteState, animationTime);
   const facing = unitFacing(unit);
+  const animationFrame = unitAnimationFrame(unit, spriteState, facing, animationTime);
 
   return (
     <div
@@ -1348,10 +1395,12 @@ export function BattleArenaGame() {
             : structureTarget
               ? distanceToStructure(unit, structureTarget)
               : distanceBetween(unit, moveDestination);
+          const distanceToBuildingStop = structureTarget ? distanceBetween(unit, moveDestination) : Number.POSITIVE_INFINITY;
           const shouldAttackStructure = Boolean(
             structureTarget &&
               unit.pathStage === "toTarget" &&
-              (targetDistance <= unit.attackRange || distanceBetween(unit, moveDestination) <= WAYPOINT_REACHED_THRESHOLD),
+              distanceToBuildingStop <= WAYPOINT_REACHED_THRESHOLD &&
+              targetDistance <= buildingAttackEdgeRange(unit, structureTarget),
           );
 
           unit.intent = target ? (unit.mode === "defend" ? "defend" : "attack") : shouldAttackStructure ? "attack" : "advance";
