@@ -12,6 +12,9 @@ type Lane = "top" | "middle" | "bottom";
 type UnitIntent = "advance" | "attack" | "defend";
 type SpriteState = "idle" | "walk" | "attack" | "hit" | "die";
 type UnitFacing = "left" | "right" | "up" | "down";
+type BridgeId = "left" | "right";
+type AssignedLane = "left" | "right" | "center";
+type UnitMode = "attack" | "defend";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -48,6 +51,14 @@ type Unit = {
   team: Team;
   x: number;
   y: number;
+  spawnX: number;
+  spawnY: number;
+  homeTeam: Team;
+  assignedBridge: BridgeId;
+  assignedLane: AssignedLane;
+  primaryTowerId: StructureId;
+  strategicTargetId: StructureId;
+  mode: UnitMode;
   lane: Lane;
   laneOffset: number;
   intent: UnitIntent;
@@ -293,8 +304,151 @@ function laneFromX(x: number): Lane {
   return "middle";
 }
 
+function assignedLaneFromX(x: number): AssignedLane {
+  if (x < 42) return "left";
+  if (x > 58) return "right";
+  return "center";
+}
+
 function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function bridgePoint(bridge: BridgeId) {
+  return BRIDGES[bridge];
+}
+
+function nearestBridgeFromX(x: number): BridgeId {
+  return Math.abs(x - BRIDGES.left.x) <= Math.abs(x - BRIDGES.right.x) ? "left" : "right";
+}
+
+function lessCrowdedBridge(team: Team, units: Unit[]) {
+  const liveTeamUnits = units.filter((unit) => unit.team === team && unit.hp > 0);
+  const leftCount = liveTeamUnits.filter((unit) => unit.assignedBridge === "left" && distanceBetween(unit, BRIDGES.left) < 28).length;
+  const rightCount = liveTeamUnits.filter((unit) => unit.assignedBridge === "right" && distanceBetween(unit, BRIDGES.right) < 28).length;
+  return leftCount <= rightCount ? "left" : "right";
+}
+
+function bridgeEntry(team: Team, bridge: BridgeId) {
+  const point = bridgePoint(bridge);
+  return { x: point.x, y: team === "player" ? RIVER_Y + 4.2 : RIVER_Y - 4.2 };
+}
+
+function bridgeExit(team: Team, bridge: BridgeId) {
+  const point = bridgePoint(bridge);
+  return { x: point.x, y: team === "player" ? RIVER_Y - 4.2 : RIVER_Y + 4.2 };
+}
+
+function primaryTowerId(team: Team, bridge: BridgeId): StructureId {
+  if (team === "player") return bridge === "left" ? "bot-left-tower" : "bot-right-tower";
+  return bridge === "left" ? "player-left-tower" : "player-right-tower";
+}
+
+function mainCastleId(team: Team): StructureId {
+  return team === "player" ? "bot-main" : "player-main";
+}
+
+function structureById(id: StructureId) {
+  return STRUCTURE_DEFS.find((structure) => structure.id === id) ?? STRUCTURE_DEFS[0]!;
+}
+
+function isOnEnemySide(unit: Unit) {
+  return unit.team === "player" ? unit.y < RIVER_Y - 1.8 : unit.y > RIVER_Y + 1.8;
+}
+
+function enemyInHomeSide(enemy: Unit, team: Team) {
+  return team === "player" ? enemy.y > RIVER_Y + 1.8 : enemy.y < RIVER_Y - 1.8;
+}
+
+function findLocalThreat(
+  unit: Pick<Unit, "team" | "x" | "y" | "aggroRange" | "assignedBridge" | "mode">,
+  enemies: Unit[],
+  waypoint: { x: number; y: number },
+) {
+  const localRadius = unit.mode === "defend" ? unit.aggroRange + 7 : unit.aggroRange;
+  const laneWidth = unit.mode === "defend" ? 18 : 12;
+
+  return (
+    enemies
+      .filter((enemy) => enemy.hp > 0)
+      .filter((enemy) => {
+        const distance = distanceBetween(unit, enemy);
+        if (distance <= localRadius) return true;
+
+        const onRoute = segmentDistanceToPoint(unit, waypoint, enemy) <= laneWidth && distance <= unit.aggroRange + 12;
+        if (!onRoute) return false;
+
+        const bridge = bridgePoint(unit.assignedBridge);
+        return Math.abs(enemy.x - bridge.x) <= 20 || enemyInHomeSide(enemy, unit.team);
+      })
+      .sort((a, b) => distanceBetween(unit, a) - distanceBetween(unit, b))[0] ?? null
+  );
+}
+
+function nearestDefensiveThreat(team: Team, point: { x: number; y: number }, enemies: Unit[]) {
+  return (
+    enemies
+      .filter((enemy) => enemy.hp > 0 && enemyInHomeSide(enemy, team))
+      .filter((enemy) => distanceBetween(point, enemy) <= DEFENSE_RADIUS)
+      .sort((a, b) => distanceBetween(point, a) - distanceBetween(point, b))[0] ?? null
+  );
+}
+
+function chooseSpawnIntent(team: Team, spawn: { x: number; y: number }, units: Unit[]) {
+  const assignedLane = assignedLaneFromX(spawn.x);
+  const enemies = units.filter((unit) => unit.team !== team && unit.hp > 0);
+  const defensiveThreat = nearestDefensiveThreat(team, spawn, enemies);
+
+  let assignedBridge: BridgeId;
+  let mode: UnitMode = "attack";
+
+  if (assignedLane === "left") {
+    assignedBridge = "left";
+  } else if (assignedLane === "right") {
+    assignedBridge = "right";
+  } else if (defensiveThreat && distanceBetween(spawn, defensiveThreat) + 4 < distanceBetween(spawn, bridgePoint(nearestBridgeFromX(spawn.x)))) {
+    assignedBridge = nearestBridgeFromX(spawn.x);
+    mode = "defend";
+  } else {
+    const nearest = nearestBridgeFromX(spawn.x);
+    const crowded = lessCrowdedBridge(team, units);
+    assignedBridge = Math.abs(spawn.x - 50) <= 5 ? crowded : nearest;
+  }
+
+  const towerId = primaryTowerId(team, assignedBridge);
+
+  return {
+    assignedBridge,
+    assignedLane,
+    primaryTowerId: towerId,
+    strategicTargetId: towerId,
+    mode,
+  };
+}
+
+function chooseStrategicStructure(unit: Unit, structureHp: StructureHp) {
+  const primaryHp = getStructureHp(structureHp, unit.primaryTowerId);
+  const strategicTargetId = primaryHp > 0 ? unit.primaryTowerId : mainCastleId(unit.team);
+  const structure = structureById(strategicTargetId);
+  return {
+    ...structure,
+    hp: getStructureHp(structureHp, structure.id),
+    targetable: true,
+  };
+}
+
+function strategicWaypoint(unit: Unit, structureHp: StructureHp) {
+  if (unit.mode === "defend" && !isOnEnemySide(unit)) {
+    return bridgeEntry(unit.team, unit.assignedBridge);
+  }
+
+  if (!isOnEnemySide(unit)) {
+    const entry = bridgeEntry(unit.team, unit.assignedBridge);
+    if (distanceBetween(unit, entry) > 3.4) return entry;
+    return bridgeExit(unit.team, unit.assignedBridge);
+  }
+
+  return chooseStrategicStructure(unit, structureHp);
 }
 
 function getStructureHp(structureHp: StructureHp, id: StructureId) {
@@ -490,7 +644,7 @@ function routePoint(
 ) {
   if (!isAcrossRiver(unit.y, destination.y)) return detourAroundStructures(unit, destination, structures, targetStructureId);
 
-  const bridge = bridgeForRoute(unit, destination);
+  const bridge = bridgePoint(unit.assignedBridge);
   const reachedBridgeX = Math.abs(unit.x - bridge.x) <= 3.2;
   const reachedBridgeY = Math.abs(unit.y - bridge.y) <= 3.2;
 
@@ -834,6 +988,17 @@ export function BattleArenaGame() {
         "middle";
       if (team === "player" && !spawnPoint) nextLaneRef.current += 1;
       const laneOffset = spawnPoint ? spawnPoint.x - laneCenter(lane) : (Math.random() - 0.5) * 5.5;
+      const spawn = {
+        x: spawnPoint
+          ? spawnPoint.x
+          : clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+        y: spawnPoint
+          ? spawnPoint.y
+          : team === "player"
+            ? ARENA_POINTS.playerSpawnY + Math.random() * 3
+            : ARENA_POINTS.botSpawnY - Math.random() * 3,
+      };
+      const spawnIntent = chooseSpawnIntent(team, spawn, unitsRef.current);
 
       const nextUnit: Unit = {
         id: `${team}-${nextUnitIdRef.current}`,
@@ -845,14 +1010,16 @@ export function BattleArenaGame() {
         damage: card.damage,
         role: card.role,
         team,
-        x: spawnPoint
-          ? spawnPoint.x
-          : clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
-        y: spawnPoint
-          ? spawnPoint.y
-          : team === "player"
-            ? ARENA_POINTS.playerSpawnY + Math.random() * 3
-            : ARENA_POINTS.botSpawnY - Math.random() * 3,
+        x: spawn.x,
+        y: spawn.y,
+        spawnX: spawn.x,
+        spawnY: spawn.y,
+        homeTeam: team,
+        assignedBridge: spawnIntent.assignedBridge,
+        assignedLane: spawnIntent.assignedLane,
+        primaryTowerId: spawnIntent.primaryTowerId,
+        strategicTargetId: spawnIntent.strategicTargetId,
+        mode: spawnIntent.mode,
         lane,
         laneOffset,
         intent: "advance",
@@ -971,17 +1138,29 @@ export function BattleArenaGame() {
           unit.attackTargetX = null;
           unit.attackTargetY = null;
           const enemies = activeUnits.filter((candidate) => candidate.team !== unit.team && candidate.hp > 0);
-          const { target, intent } = chooseBestEnemyTarget(unit, enemies);
-          const structureTarget = target ? null : chooseStructureTarget(unit, nextStructureHp);
-          const destination = target ?? structureTarget ?? basePoint(enemyTeam(unit.team));
+          let destination = strategicWaypoint(unit, nextStructureHp);
+          let target = findLocalThreat(unit, enemies, destination);
+
+          if (unit.mode === "defend" && !target) {
+            unit.mode = "attack";
+            unit.assignedBridge = nearestBridgeFromX(unit.x);
+            unit.assignedLane = assignedLaneFromX(unit.x);
+            unit.primaryTowerId = primaryTowerId(unit.team, unit.assignedBridge);
+            destination = strategicWaypoint(unit, nextStructureHp);
+            target = findLocalThreat(unit, enemies, destination);
+          }
+
+          const structureTarget = target ? null : chooseStrategicStructure(unit, nextStructureHp);
+          if (structureTarget) unit.strategicTargetId = structureTarget.id;
+          const moveDestination: { x: number; y: number } = target ?? destination;
           const targetDistance = target
             ? distanceBetween(unit, target)
             : structureTarget
               ? distanceToStructure(unit, structureTarget)
-              : distanceBetween(unit, destination);
+              : distanceBetween(unit, moveDestination);
           const shouldAttackStructure = Boolean(structureTarget && targetDistance <= unit.attackRange);
 
-          unit.intent = shouldAttackStructure ? "attack" : intent;
+          unit.intent = target ? (unit.mode === "defend" ? "defend" : "attack") : shouldAttackStructure ? "attack" : "advance";
           unit.targetId = target?.id ?? (structureTarget ? `structure:${structureTarget.id}` : null);
 
           if ((target && targetDistance <= unit.attackRange) || shouldAttackStructure) {
@@ -1003,7 +1182,7 @@ export function BattleArenaGame() {
           }
 
           unit.state = "moving";
-          const desired = routePoint(unit, destination, frameStructures, structureTarget?.id ?? null);
+          const desired = routePoint(unit, moveDestination, frameStructures, structureTarget?.id ?? null);
           const dx = desired.x - unit.x;
           const dy = desired.y - unit.y;
           const distance = Math.max(Math.hypot(dx, dy), 0.001);
