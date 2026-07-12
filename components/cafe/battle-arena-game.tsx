@@ -109,6 +109,8 @@ type ArenaStructure = StructureDef & {
 };
 
 type StructureHp = Record<StructureId, number>;
+type WaiterCropRect = { sx: number; sy: number; sw: number; sh: number };
+type WaiterFrameResource = { image: HTMLImageElement; crop: WaiterCropRect };
 
 const MAX_ENERGY = 10;
 const START_ENERGY = 5;
@@ -146,6 +148,8 @@ const WAITER_WALK_MOVEMENT_THRESHOLD = 0.018;
 const WAITER_WALK_ANIMATION_MS_PER_ARENA_UNIT = 220;
 const WAITER_ATTACK_EXIT_PADDING = 0.65;
 const WAITER_ATTACK_STRIKE_FRAME = 3;
+const WAITER_ALPHA_CROP_THRESHOLD = 10;
+const WAITER_CANVAS_SIZE = 176;
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
 const BRIDGES = {
@@ -1134,6 +1138,114 @@ function spriteFrames(kind: UnitKind, spriteState: SpriteState) {
   );
 }
 
+const waiterFrameCache = new Map<string, Promise<WaiterFrameResource>>();
+
+function fullImageCrop(image: HTMLImageElement): WaiterCropRect {
+  return {
+    sx: 0,
+    sy: 0,
+    sw: Math.max(1, image.naturalWidth || image.width),
+    sh: Math.max(1, image.naturalHeight || image.height),
+  };
+}
+
+function cropWaiterFrame(image: HTMLImageElement): WaiterCropRect {
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  if (width <= 0 || height <= 0) return fullImageCrop(image);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return fullImageCrop(image);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.globalAlpha = 1;
+  ctx.drawImage(image, 0, 0);
+
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const alpha = pixels[(y * width + x) * 4 + 3] ?? 0;
+      if (alpha <= WAITER_ALPHA_CROP_THRESHOLD) continue;
+
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return fullImageCrop(image);
+
+  return {
+    sx: minX,
+    sy: minY,
+    sw: maxX - minX + 1,
+    sh: maxY - minY + 1,
+  };
+}
+
+function loadWaiterFrame(src: string) {
+  const cachedFrame = waiterFrameCache.get(src);
+  if (cachedFrame) return cachedFrame;
+
+  const frameRequest = new Promise<WaiterFrameResource>((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => {
+      try {
+        resolve({ image, crop: cropWaiterFrame(image) });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    image.onerror = () => reject(new Error(`Failed to load waiter frame: ${src}`));
+    image.src = src;
+  });
+
+  waiterFrameCache.set(src, frameRequest);
+  return frameRequest;
+}
+
+function drawWaiterFrame(canvas: HTMLCanvasElement, frame: WaiterFrameResource, facing: UnitFacing) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return false;
+
+  const { image, crop } = frame;
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
+  const maxDrawWidth = canvasWidth * 0.98;
+  const maxDrawHeight = canvasHeight * 0.98;
+  const scale = Math.min(maxDrawWidth / crop.sw, maxDrawHeight / crop.sh);
+  const dw = crop.sw * scale;
+  const dh = crop.sh * scale;
+  const dx = (canvasWidth - dw) / 2;
+  const dy = canvasHeight - dh;
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  if (facing === "left") {
+    ctx.translate(canvasWidth, 0);
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
+  ctx.restore();
+  return true;
+}
+
 function unitAnimationFrame(unit: Unit, spriteState: SpriteState, animationTime: number) {
   const frames = spriteFrames(unit.kind, spriteState);
   if (frames.length <= 1) return 0;
@@ -1175,18 +1287,44 @@ function UnitSprite({
 }) {
   const frames = spriteFrames(kind, spriteState);
   const spriteSrc = frames[animationFrame % Math.max(frames.length, 1)];
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawable, setIsDrawable] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const canvas = canvasRef.current;
+
+    if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc || !canvas) {
+      setIsDrawable(false);
+      return;
+    }
+
+    loadWaiterFrame(spriteSrc)
+      .then((frame) => {
+        if (!isCurrent || canvasRef.current !== canvas) return;
+        setIsDrawable(drawWaiterFrame(canvas, frame, facing));
+      })
+      .catch(() => {
+        if (!isCurrent || canvasRef.current !== canvas) return;
+        const ctx = canvas.getContext("2d");
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        setIsDrawable(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [facing, kind, spriteSrc]);
 
   if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
 
   return (
-    <img
+    <canvas
+      ref={canvasRef}
       className={`ba-unit-sprite ba-unit-sprite-${facing}`}
-      src={spriteSrc}
-      alt=""
-      draggable={false}
-      onError={(event) => {
-        event.currentTarget.hidden = true;
-      }}
+      width={WAITER_CANVAS_SIZE}
+      height={WAITER_CANVAS_SIZE}
+      hidden={!isDrawable}
     />
   );
 }
@@ -2920,12 +3058,17 @@ export function BattleArenaGame() {
           overflow: visible;
         }
 
+        .ba-unit-kind-swift_waiter {
+          width: clamp(64px, 8vw, 88px);
+          height: clamp(64px, 8vw, 88px);
+        }
+
         .ba-unit-defeated {
           animation: ba-defeat 420ms ease forwards;
         }
 
         .ba-unit-kind-swift_waiter.ba-unit-defeated {
-          animation: ba-waiter-defeat 420ms ease forwards;
+          animation: none;
         }
 
         .ba-unit-visual {
@@ -2958,6 +3101,12 @@ export function BattleArenaGame() {
           transform: translateX(-50%);
           place-items: center;
           overflow: visible;
+        }
+
+        .ba-unit-visual-swift_waiter .ba-unit-placeholder {
+          width: 100%;
+          height: 100%;
+          place-items: end center;
         }
 
         .ba-unit-placeholder-body {
@@ -3031,6 +3180,10 @@ export function BattleArenaGame() {
           opacity: 0.72;
         }
 
+        .ba-unit-visual-die.ba-unit-visual-swift_waiter {
+          opacity: 1;
+        }
+
         .ba-unit-sprite {
           position: absolute;
           left: 50%;
@@ -3039,8 +3192,7 @@ export function BattleArenaGame() {
           width: 100%;
           height: 100%;
           transform: translateX(-50%);
-          object-fit: contain;
-          object-position: center bottom;
+          display: block;
         }
 
         .ba-unit-visual-idle.ba-unit-visual-swift_waiter .ba-unit-sprite {
@@ -3980,6 +4132,11 @@ export function BattleArenaGame() {
           .ba-unit {
             width: clamp(34px, 9vw, 50px);
             height: clamp(48px, 12vw, 66px);
+          }
+
+          .ba-unit-kind-swift_waiter {
+            width: clamp(64px, 15vw, 78px);
+            height: clamp(64px, 15vw, 78px);
           }
 
           .ba-character:not(.ba-character-mini) {
