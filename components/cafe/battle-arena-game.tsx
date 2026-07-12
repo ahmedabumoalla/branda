@@ -117,16 +117,18 @@ const PLAYER_COLOR = "#7C2948";
 const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
-const USE_UNIT_SPRITES = false;
+const SPRITE_ENABLED_UNITS = new Set<UnitKind>(["swift_waiter"]);
 const UNIT_SPRITES: Record<UnitKind, Partial<Record<SpriteState, string>>> = {
   swift_waiter: {
+    idle: "/assets/arena/units/waiter/idle.png",
     walk: "/assets/arena/units/waiter/walk.png",
+    attack: "/assets/arena/units/waiter/attack.png",
+    hit: "/assets/arena/units/waiter/hit.png",
+    die: "/assets/arena/units/waiter/die.png",
   },
   strong_chef: {
-    walk: "/assets/arena/units/chef/walk.png",
   },
   branch_guard: {
-    walk: "/assets/arena/units/guard/walk.png",
   },
 };
 const RIVER_Y = 50;
@@ -950,9 +952,19 @@ function UnitSprite({
 }) {
   const spriteSrc = UNIT_SPRITES[kind][spriteState] ?? UNIT_SPRITES[kind].walk;
 
-  if (!USE_UNIT_SPRITES || !spriteSrc) return null;
+  if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
 
-  return <img className={`ba-unit-sprite ba-unit-sprite-${facing}`} src={spriteSrc} alt="" draggable={false} />;
+  return (
+    <img
+      className={`ba-unit-sprite ba-unit-sprite-${facing}`}
+      src={spriteSrc}
+      alt=""
+      draggable={false}
+      onError={(event) => {
+        event.currentTarget.hidden = true;
+      }}
+    />
+  );
 }
 
 function UnitVisual({
@@ -2696,7 +2708,7 @@ export function BattleArenaGame() {
           object-fit: contain;
         }
 
-        .ba-unit-sprite ~ .ba-unit-placeholder-body {
+        .ba-unit-sprite:not([hidden]) ~ .ba-unit-placeholder-body {
           display: none;
         }
 
