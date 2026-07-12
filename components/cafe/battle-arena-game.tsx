@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { RotateCcw, Zap } from "lucide-react";
 
 type Team = "player" | "bot";
@@ -94,7 +94,7 @@ const LANE_BAND = 7.5;
 const DEFENSE_RADIUS = 22;
 const MIN_SEPARATION = 4.2;
 const UNIT_COLLISION_RADIUS = 2.2;
-const MOVEMENT_SPEED_SCALE = 0.74;
+const MOVEMENT_SPEED_SCALE = 0.64;
 const ENERGY_PER_SECOND = 0.72;
 const BOT_SPAWN_SECONDS = 3.4;
 const DEFEAT_ANIMATION_MS = 420;
@@ -108,6 +108,14 @@ const BRIDGES = {
   left: { x: 28, y: BRIDGE_Y },
   right: { x: 72, y: BRIDGE_Y },
 } as const;
+const DEPLOYMENT_ZONE = {
+  minX: 14,
+  maxX: 86,
+  minY: 55,
+  maxY: 84,
+} as const;
+const BRIDGE_BLOCK_RADIUS = 8;
+const DEPLOYMENT_STRUCTURE_PADDING = 3.4;
 const ARENA_POINTS = {
   playerMainBase: { x: 50, y: 88 },
   botMainBase: { x: 50, y: 12 },
@@ -145,9 +153,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.botSideTowers[0].x,
     y: ARENA_POINTS.botSideTowers[0].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 5.8,
-    targetRadius: 5.4,
-    width: 18,
+    collisionRadius: 4.7,
+    targetRadius: 4.6,
+    width: 15.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -158,9 +166,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.botSideTowers[1].x,
     y: ARENA_POINTS.botSideTowers[1].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 5.8,
-    targetRadius: 5.4,
-    width: 18,
+    collisionRadius: 4.7,
+    targetRadius: 4.6,
+    width: 15.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -171,9 +179,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.playerSideTowers[0].x,
     y: ARENA_POINTS.playerSideTowers[0].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 5.8,
-    targetRadius: 5.4,
-    width: 18,
+    collisionRadius: 4.7,
+    targetRadius: 4.6,
+    width: 15.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -184,9 +192,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.playerSideTowers[1].x,
     y: ARENA_POINTS.playerSideTowers[1].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 5.8,
-    targetRadius: 5.4,
-    width: 18,
+    collisionRadius: 4.7,
+    targetRadius: 4.6,
+    width: 15.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -265,6 +273,12 @@ function laneCenter(lane: Lane) {
   return LANES[lane];
 }
 
+function laneFromX(x: number): Lane {
+  if (x < 40) return "top";
+  if (x > 60) return "bottom";
+  return "middle";
+}
+
 function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -336,7 +350,7 @@ function detourAroundStructures(
 ) {
   const blocking = structures
     .filter((structure) => structure.hp > 0 && structure.id !== targetStructureId)
-    .filter((structure) => segmentDistanceToPoint(unit, waypoint, structure) < structure.collisionRadius + UNIT_COLLISION_RADIUS + 1.8)
+    .filter((structure) => segmentDistanceToPoint(unit, waypoint, structure) < structure.collisionRadius + UNIT_COLLISION_RADIUS + 2.8)
     .sort((a, b) => distanceBetween(unit, a) - distanceBetween(unit, b))[0];
 
   if (!blocking) return waypoint;
@@ -346,12 +360,15 @@ function detourAroundStructures(
   const distance = Math.max(Math.hypot(dx, dy), 0.001);
   const px = -dy / distance;
   const py = dx / distance;
-  const side = (unit.x - blocking.x) * px + (unit.y - blocking.y) * py >= 0 ? 1 : -1;
-  const clearance = blocking.collisionRadius + UNIT_COLLISION_RADIUS + 3.2;
+  const projectedSide = (unit.x - blocking.x) * px + (unit.y - blocking.y) * py;
+  const laneSide = unit.lane === "top" ? -1 : unit.lane === "bottom" ? 1 : unit.x <= blocking.x ? -1 : 1;
+  const side = Math.abs(projectedSide) > 0.4 ? (projectedSide >= 0 ? 1 : -1) : laneSide;
+  const clearance = blocking.collisionRadius + UNIT_COLLISION_RADIUS + 4.2;
+  const forwardNudge = blocking.kind === "sideTower" ? 2.4 : 1.4;
 
   return {
-    x: clamp(blocking.x + px * clearance * side, 12, 88),
-    y: clamp(blocking.y + py * clearance * side, 10, 90),
+    x: clamp(blocking.x + px * clearance * side + (dx / distance) * forwardNudge, 12, 88),
+    y: clamp(blocking.y + py * clearance * side + (dy / distance) * forwardNudge, 10, 90),
   };
 }
 
@@ -384,6 +401,25 @@ function keepOutsideStructures(
   }
 
   return next;
+}
+
+function isDeployablePoint(point: { x: number; y: number }, structures: ArenaStructure[]) {
+  const insidePlayerHalf =
+    point.x >= DEPLOYMENT_ZONE.minX &&
+    point.x <= DEPLOYMENT_ZONE.maxX &&
+    point.y >= DEPLOYMENT_ZONE.minY &&
+    point.y <= DEPLOYMENT_ZONE.maxY;
+
+  if (!insidePlayerHalf) return false;
+
+  const onBridge = Object.values(BRIDGES).some((bridge) => distanceBetween(point, bridge) <= BRIDGE_BLOCK_RADIUS);
+  if (onBridge) return false;
+
+  return !structures.some(
+    (structure) =>
+      structure.hp > 0 &&
+      distanceBetween(point, structure) <= structure.collisionRadius + UNIT_COLLISION_RADIUS + DEPLOYMENT_STRUCTURE_PADDING,
+  );
 }
 
 function damageStructure(structureHp: StructureHp, id: StructureId, damage: number) {
@@ -672,7 +708,8 @@ export function BattleArenaGame() {
   const [structureHp, setStructureHp] = useState<StructureHp>(() => makeInitialStructureHp());
   const [energy, setEnergy] = useState(START_ENERGY);
   const [result, setResult] = useState<GameResult>("playing");
-  const [notice, setNotice] = useState("اختر بطاقة لإرسالها إلى الممر.");
+  const [notice, setNotice] = useState("اختر بطاقة ثم ضعها داخل منطقتك.");
+  const [selectedCardKind, setSelectedCardKind] = useState<UnitKind | null>(null);
 
   const unitsRef = useRef<Unit[]>([]);
   const structureHpRef = useRef<StructureHp>(makeInitialStructureHp());
@@ -707,13 +744,14 @@ export function BattleArenaGame() {
   }, []);
 
   const spawnUnit = useCallback(
-    (team: Team, card: CardDef, laneOverride?: Lane) => {
+    (team: Team, card: CardDef, laneOverride?: Lane, spawnPoint?: { x: number; y: number }) => {
       const lane =
         laneOverride ??
+        (spawnPoint ? laneFromX(spawnPoint.x) : null) ??
         (team === "player" ? LANE_ORDER[nextLaneRef.current % LANE_ORDER.length] : randomLane()) ??
         "middle";
-      if (team === "player") nextLaneRef.current += 1;
-      const laneOffset = (Math.random() - 0.5) * 5.5;
+      if (team === "player" && !spawnPoint) nextLaneRef.current += 1;
+      const laneOffset = spawnPoint ? spawnPoint.x - laneCenter(lane) : (Math.random() - 0.5) * 5.5;
 
       const nextUnit: Unit = {
         id: `${team}-${nextUnitIdRef.current}`,
@@ -725,8 +763,14 @@ export function BattleArenaGame() {
         damage: card.damage,
         role: card.role,
         team,
-        x: clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
-        y: team === "player" ? ARENA_POINTS.playerSpawnY + Math.random() * 3 : ARENA_POINTS.botSpawnY - Math.random() * 3,
+        x: spawnPoint
+          ? spawnPoint.x
+          : clamp(laneCenter(lane) + laneOffset, laneCenter(lane) - LANE_BAND, laneCenter(lane) + LANE_BAND),
+        y: spawnPoint
+          ? spawnPoint.y
+          : team === "player"
+            ? ARENA_POINTS.playerSpawnY + Math.random() * 3
+            : ARENA_POINTS.botSpawnY - Math.random() * 3,
         lane,
         laneOffset,
         intent: "advance",
@@ -750,20 +794,53 @@ export function BattleArenaGame() {
     [syncUnits],
   );
 
-  const playCard = useCallback(
+  const selectCard = useCallback(
     (card: CardDef) => {
       if (resultRef.current !== "playing") return;
 
       if (energyRef.current < card.cost) {
         setNotice("الطاقة غير كافية لهذه البطاقة.");
+        setSelectedCardKind(null);
+        return;
+      }
+
+      setSelectedCardKind(card.kind);
+      setNotice(`${card.shortName}: اختر مكان الاستدعاء.`);
+    },
+    [],
+  );
+
+  const deploySelectedCard = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (resultRef.current !== "playing" || !selectedCardKind) return;
+
+      const card = CARDS.find((candidate) => candidate.kind === selectedCardKind);
+      if (!card) return;
+
+      if (energyRef.current < card.cost) {
+        setNotice("الطاقة غير كافية لهذه البطاقة.");
+        setSelectedCardKind(null);
+        return;
+      }
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const point = {
+        x: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
+        y: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
+      };
+      const arenaStructures = getArenaStructures(structureHpRef.current);
+
+      if (!isDeployablePoint(point, arenaStructures)) {
+        setNotice("اختر مكانًا داخل منطقتك");
         return;
       }
 
       syncEnergy(energyRef.current - card.cost);
-      spawnUnit("player", card);
-      setNotice(`${card.name} دخل أرض المعركة.`);
+      spawnUnit("player", card, laneFromX(point.x), point);
+      setSelectedCardKind(null);
+      setNotice(`تم إرسال ${card.shortName}.`);
     },
-    [spawnUnit, syncEnergy],
+    [selectedCardKind, spawnUnit, syncEnergy],
   );
 
   const resetGame = useCallback(() => {
@@ -771,6 +848,7 @@ export function BattleArenaGame() {
     syncStructureHp(makeInitialStructureHp());
     syncEnergy(START_ENERGY);
     syncResult("playing");
+    setSelectedCardKind(null);
     setNotice("جولة جديدة بدأت.");
     nextUnitIdRef.current = 1;
     nextLaneRef.current = 0;
@@ -905,9 +983,11 @@ export function BattleArenaGame() {
 
         if (nextStructureHp["bot-main"] <= 0) {
           syncResult("won");
+          setSelectedCardKind(null);
           setNotice("فزت");
         } else if (nextStructureHp["player-main"] <= 0) {
           syncResult("lost");
+          setSelectedCardKind(null);
           setNotice("خسرت");
         }
       }
@@ -923,13 +1003,14 @@ export function BattleArenaGame() {
 
   const energyPercent = `${(energy / MAX_ENERGY) * 100}%`;
   const arenaStructures = getArenaStructures(structureHp);
+  const selectedCard = CARDS.find((card) => card.kind === selectedCardKind) ?? null;
 
   return (
-    <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_288px]" aria-label="لعبة حلبة الأبطال">
-      <div className="overflow-hidden rounded-lg border border-[#CEB89C] bg-[#FFF9EF] shadow-[0_22px_55px_rgba(41,24,17,0.14)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[#E1CCAD] bg-[#FFFDF7]/95 px-3 py-2.5 sm:px-4">
+    <section className="ba-game-shell" aria-label="لعبة حلبة براندا">
+      <div className="ba-game-frame overflow-hidden rounded-lg border border-[#CEB89C] bg-[#FFF9EF] shadow-[0_22px_55px_rgba(41,24,17,0.14)]">
+        <div className="ba-game-topbar flex items-center justify-between gap-3 border-b border-[#E1CCAD] bg-[#FFFDF7]/95 px-3 py-2.5 sm:px-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-black text-[#7A4D2A]">جولة محلية ضد البوت</p>
+            <p className="text-[11px] font-black text-[#7A4D2A]">حلبة براندا</p>
             <h2 className="text-lg font-black text-[#24140F] sm:text-xl">{resultLabel(result)}</h2>
           </div>
           <button
@@ -942,147 +1023,276 @@ export function BattleArenaGame() {
           </button>
         </div>
 
-        <div className="ba-arena relative overflow-hidden">
-          {arenaStructures.map((structure) => (
-            <ArenaStructureObject key={structure.id} structure={structure} />
-          ))}
-
-          <svg className="ba-attack-fx-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            {units
-              .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
-              .map((unit) => (
-                <g
-                  key={`${unit.id}-${unit.attackFxId}`}
-                  className={`ba-attack-fx ba-attack-fx-${unit.kind}`}
-                  style={{ "--team": teamColor(unit.team) } as CSSProperties}
-                >
-                  <line
-                    className={`ba-attack-beam ba-attack-beam-${unit.kind}`}
-                    x1={unit.x}
-                    y1={unit.y}
-                    x2={unit.attackTargetX ?? unit.x}
-                    y2={unit.attackTargetY ?? unit.y}
-                  />
-                  <circle
-                    className={`ba-impact-dot ba-impact-dot-${unit.kind}`}
-                    cx={unit.attackTargetX ?? unit.x}
-                    cy={unit.attackTargetY ?? unit.y}
-                    r="1.5"
-                  />
-                </g>
-              ))}
-          </svg>
-
-          {units.map((unit) => (
-            <ArenaUnit key={unit.id} unit={unit} />
-          ))}
-
-          {result !== "playing" ? (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#24140F]/58 px-4 backdrop-blur-[2px]">
-              <div className="w-full max-w-xs rounded-lg bg-white p-5 text-center shadow-xl">
-                <p className="text-3xl font-black text-[#24140F]">{resultLabel(result)}</p>
-                <button
-                  type="button"
-                  onClick={resetGame}
-                  className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#14645E] px-4 text-sm font-black text-white transition active:scale-95"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  إعادة الجولة
-                </button>
+        <div className="ba-playfield">
+          <div
+            className={`ba-arena relative overflow-hidden ${selectedCard ? "ba-arena-selecting" : ""}`}
+            onPointerDown={deploySelectedCard}
+          >
+            {selectedCard ? (
+              <div className="ba-deploy-overlay" aria-hidden="true">
+                <span className="ba-deploy-label">منطقتك</span>
+                {arenaStructures
+                  .filter((structure) => structure.hp > 0 && structure.team === "player")
+                  .map((structure) => (
+                    <span
+                      key={`blocked-${structure.id}`}
+                      className="ba-deploy-block"
+                      style={
+                        {
+                          left: `${structure.x}%`,
+                          top: `${structure.y}%`,
+                          width: `${(structure.collisionRadius + DEPLOYMENT_STRUCTURE_PADDING) * 2}%`,
+                        } as CSSProperties
+                      }
+                    />
+                  ))}
               </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
+            ) : null}
 
-      <aside className="grid gap-3 lg:flex lg:flex-col">
-        <div className="ba-game-panel rounded-lg border border-[#CEB89C] bg-white p-3 shadow-[0_12px_30px_rgba(49,25,18,0.08)]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black text-[#7A4D2A]">الطاقة</p>
-              <p className="text-xl font-black text-[#24140F]">
-                {Math.floor(energy)} / {MAX_ENERGY}
-              </p>
+            {arenaStructures.map((structure) => (
+              <ArenaStructureObject key={structure.id} structure={structure} />
+            ))}
+
+            <svg className="ba-attack-fx-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {units
+                .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
+                .map((unit) => (
+                  <g
+                    key={`${unit.id}-${unit.attackFxId}`}
+                    className={`ba-attack-fx ba-attack-fx-${unit.kind}`}
+                    style={{ "--team": teamColor(unit.team) } as CSSProperties}
+                  >
+                    <line
+                      className={`ba-attack-beam ba-attack-beam-${unit.kind}`}
+                      x1={unit.x}
+                      y1={unit.y}
+                      x2={unit.attackTargetX ?? unit.x}
+                      y2={unit.attackTargetY ?? unit.y}
+                    />
+                    <circle
+                      className={`ba-impact-dot ba-impact-dot-${unit.kind}`}
+                      cx={unit.attackTargetX ?? unit.x}
+                      cy={unit.attackTargetY ?? unit.y}
+                      r="1.5"
+                    />
+                  </g>
+                ))}
+            </svg>
+
+            {units.map((unit) => (
+              <ArenaUnit key={unit.id} unit={unit} />
+            ))}
+
+            {result !== "playing" ? (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#24140F]/58 px-4 backdrop-blur-[2px]">
+                <div className="w-full max-w-xs rounded-lg bg-white p-5 text-center shadow-xl">
+                  <p className="text-3xl font-black text-[#24140F]">{resultLabel(result)}</p>
+                  <button
+                    type="button"
+                    onClick={resetGame}
+                    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#14645E] px-4 text-sm font-black text-white transition active:scale-95"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    إعادة الجولة
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="ba-bottom-hud">
+          <div className="ba-energy-row">
+            <span className="ba-energy-icon" aria-hidden="true">
+              <Zap className="h-4 w-4" />
+            </span>
+            <div className="ba-energy-track" aria-hidden="true">
+              <div className="ba-energy-fill" style={{ width: energyPercent }} />
             </div>
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFF1C8] text-[#8A5B00]">
-              <Zap className="h-5 w-5" />
+            <span className="ba-energy-value">
+              {Math.floor(energy)} / {MAX_ENERGY}
             </span>
           </div>
-          <div className="ba-energy-track mt-3 h-3 overflow-hidden rounded-full bg-[#EFE3D1] shadow-inner" aria-hidden="true">
-            <div
-              className="ba-energy-fill h-full rounded-full bg-[linear-gradient(90deg,#F0B33F,#E06D3C,#14645E)] transition-[width] duration-200"
-              style={{ width: energyPercent }}
-            />
-          </div>
-          <p className="mt-3 min-h-10 text-sm font-bold leading-5 text-[#5C3B2B]">{notice}</p>
-        </div>
 
-        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="ba-card-slots">
           {CARDS.map((card) => {
             const canPlay = result === "playing" && energy >= card.cost;
+            const isSelected = selectedCardKind === card.kind;
             return (
               <button
                 key={card.kind}
                 type="button"
-                onClick={() => playCard(card)}
+                onClick={() => selectCard(card)}
                 disabled={result !== "playing"}
-                className={`ba-card-button group min-h-[92px] rounded-lg border p-2.5 text-right shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed ${
-                  canPlay
-                    ? "border-[#D69C38]/70 bg-[#FFF8E8] text-[#24140F] hover:border-[#B9712D] hover:bg-[#FFF0CC]"
-                    : "border-[#D9CCBA] bg-white text-[#6F625A] opacity-80"
+                className={`ba-card-button group ${isSelected ? "ba-card-selected" : ""} ${
+                  canPlay ? "ba-card-ready" : "ba-card-low-energy"
                 }`}
+                aria-pressed={isSelected}
               >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="ba-card-avatar inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#F8EAD5] shadow-inner">
-                      <CharacterFigure kind={card.kind} compact />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-black">{card.name}</span>
-                      <span className="mt-1 block text-[11px] font-bold text-[#6F625A]">
-                        HP {card.hp} · ضرر {card.damage}
-                      </span>
-                    </span>
-                  </span>
-                  <span className="ba-cost-badge inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-[#14645E] px-2 text-xs font-black text-white shadow-sm">
-                    {card.cost}
-                  </span>
+                <span className="ba-cost-badge">{card.cost}</span>
+                <span className="ba-card-avatar">
+                  <CharacterFigure kind={card.kind} compact />
                 </span>
-                <span className="mt-2 flex items-center justify-between gap-2 text-[11px] font-black text-[#7A4D2A]">
-                  <span>{card.shortName}</span>
-                  <span>سرعة {card.speed}</span>
-                </span>
+                <span className="ba-card-name">{card.shortName}</span>
               </button>
             );
           })}
+            <div className="ba-card-future" aria-hidden="true">
+              <span />
+            </div>
+          </div>
+
+          <p className="ba-notice">
+            {selectedCard ? (
+              <>
+                <span>{selectedCard.shortName}</span>
+                <span>اختر مكانًا داخل منطقتك</span>
+              </>
+            ) : (
+              notice
+            )}
+          </p>
         </div>
-      </aside>
+      </div>
 
       <style>{`
-        .ba-game-panel,
-        .ba-card-button {
+        .ba-game-shell {
+          width: 100%;
+        }
+
+        .ba-game-frame {
+          display: flex;
+          min-height: min(100dvh, 920px);
+          flex-direction: column;
+        }
+
+        .ba-playfield {
+          display: flex;
+          min-height: 0;
+          flex: 1;
+          align-items: center;
+          justify-content: center;
           background:
-            linear-gradient(180deg, rgba(255, 250, 237, 0.96), rgba(244, 223, 188, 0.9)),
+            linear-gradient(180deg, rgba(50, 27, 20, 0.08), rgba(36, 20, 15, 0.16)),
+            #7b4f35;
+        }
+
+        .ba-bottom-hud {
+          position: relative;
+          z-index: 40;
+          border-top: 1px solid rgba(206, 184, 156, 0.82);
+          padding: 10px 12px 12px;
+          background:
+            linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(244, 223, 188, 0.96)),
             #fff9ef;
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.78),
-            0 12px 26px rgba(49, 25, 18, 0.1);
+            0 -12px 26px rgba(49, 25, 18, 0.16);
+        }
+
+        .ba-energy-row {
+          display: grid;
+          grid-template-columns: 30px minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .ba-energy-icon {
+          display: inline-flex;
+          height: 30px;
+          width: 30px;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(122, 77, 42, 0.18);
+          border-radius: 8px;
+          background: #fff1c8;
+          color: #8a5b00;
+        }
+
+        .ba-energy-value {
+          min-width: 48px;
+          color: #24140f;
+          font-size: 13px;
+          font-weight: 900;
+          text-align: end;
         }
 
         .ba-energy-track {
+          height: 13px;
+          overflow: hidden;
+          border-radius: 999px;
           border: 1px solid rgba(122, 77, 42, 0.16);
           background: linear-gradient(180deg, #d5b98c, #f3e6cf);
+          box-shadow: inset 0 2px 4px rgba(74, 40, 29, 0.2);
         }
 
         .ba-energy-fill {
+          height: 100%;
+          border-radius: inherit;
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.48), transparent),
+            linear-gradient(90deg, #f0b33f, #d66a42, #14645e);
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.38),
             0 0 12px rgba(240, 179, 63, 0.34);
+          transition: width 200ms ease;
+        }
+
+        .ba-card-slots {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 9px;
         }
 
         .ba-card-button {
           position: relative;
           overflow: hidden;
+          display: grid;
+          min-height: 82px;
+          grid-template-rows: 1fr auto;
+          align-items: center;
+          justify-items: center;
+          border: 1px solid rgba(214, 156, 56, 0.56);
+          border-radius: 8px;
+          padding: 7px 5px 6px;
+          color: #24140f;
+          text-align: center;
+          transition:
+            transform 140ms ease,
+            border-color 140ms ease,
+            filter 140ms ease,
+            box-shadow 140ms ease;
+          touch-action: manipulation;
+          background:
+            radial-gradient(circle at 50% 16%, rgba(255, 225, 151, 0.36), transparent 42%),
+            linear-gradient(180deg, #fff8e8, #e9c792);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.78),
+            0 6px 12px rgba(49, 25, 18, 0.13);
+        }
+
+        .ba-card-button:active {
+          transform: scale(0.97);
+        }
+
+        .ba-card-button:disabled {
+          cursor: not-allowed;
+        }
+
+        .ba-card-low-energy {
+          border-color: rgba(148, 132, 113, 0.5);
+          filter: saturate(0.72);
+          opacity: 0.72;
+        }
+
+        .ba-card-selected {
+          border-color: #14645e;
+          box-shadow:
+            inset 0 0 0 2px rgba(20, 100, 94, 0.5),
+            0 0 0 2px rgba(255, 243, 207, 0.92),
+            0 10px 18px rgba(20, 100, 94, 0.18);
+          transform: translateY(-4px);
         }
 
         .ba-card-button::before {
@@ -1099,6 +1309,12 @@ export function BattleArenaGame() {
         }
 
         .ba-card-avatar {
+          display: inline-flex;
+          height: 48px;
+          width: 48px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
           border: 1px solid rgba(214, 156, 56, 0.36);
           background:
             radial-gradient(circle at 50% 34%, rgba(255, 248, 219, 0.9), transparent 62%),
@@ -1106,10 +1322,115 @@ export function BattleArenaGame() {
         }
 
         .ba-cost-badge {
+          position: absolute;
+          top: 5px;
+          inset-inline-start: 5px;
+          display: inline-flex;
+          height: 22px;
+          min-width: 22px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          padding-inline: 6px;
           border: 1px solid rgba(255, 232, 178, 0.48);
           background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent),
             #14645e;
+          color: white;
+          font-size: 11px;
+          font-weight: 900;
+          box-shadow: 0 3px 8px rgba(20, 9, 5, 0.14);
+        }
+
+        .ba-card-name {
+          display: block;
+          max-width: 100%;
+          overflow: hidden;
+          color: #3d2419;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.1;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .ba-card-future {
+          display: grid;
+          min-height: 82px;
+          place-items: center;
+          border: 1px dashed rgba(122, 77, 42, 0.3);
+          border-radius: 8px;
+          background:
+            linear-gradient(180deg, rgba(255, 253, 247, 0.72), rgba(214, 190, 155, 0.32)),
+            rgba(255, 249, 239, 0.62);
+        }
+
+        .ba-card-future span {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background:
+            linear-gradient(90deg, transparent 44%, rgba(122, 77, 42, 0.28) 45% 55%, transparent 56%),
+            linear-gradient(0deg, transparent 44%, rgba(122, 77, 42, 0.28) 45% 55%, transparent 56%);
+        }
+
+        .ba-notice {
+          display: flex;
+          min-height: 22px;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 8px;
+          color: #5c3b2b;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.25;
+          text-align: center;
+        }
+
+        .ba-notice span:first-child {
+          color: #14645e;
+        }
+
+        .ba-deploy-overlay {
+          position: absolute;
+          left: ${DEPLOYMENT_ZONE.minX}%;
+          top: ${DEPLOYMENT_ZONE.minY}%;
+          z-index: 14;
+          width: ${DEPLOYMENT_ZONE.maxX - DEPLOYMENT_ZONE.minX}%;
+          height: ${DEPLOYMENT_ZONE.maxY - DEPLOYMENT_ZONE.minY}%;
+          pointer-events: none;
+          border: 1px solid rgba(20, 100, 94, 0.46);
+          border-radius: 18px;
+          background:
+            linear-gradient(180deg, rgba(255, 243, 207, 0.22), rgba(20, 100, 94, 0.16)),
+            repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0 8px, transparent 8px 18px);
+          box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.38),
+            0 0 22px rgba(20, 100, 94, 0.16);
+        }
+
+        .ba-deploy-label {
+          position: absolute;
+          left: 50%;
+          bottom: 8px;
+          transform: translateX(-50%);
+          border-radius: 999px;
+          padding: 4px 9px;
+          background: rgba(36, 20, 15, 0.72);
+          color: #fff3d3;
+          font-size: 11px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .ba-deploy-block {
+          position: absolute;
+          aspect-ratio: 1;
+          transform: translate(-50%, -50%);
+          border-radius: 50%;
+          border: 1px dashed rgba(124, 41, 72, 0.52);
+          background: rgba(124, 41, 72, 0.16);
         }
 
         .ba-arena {
@@ -2329,6 +2650,10 @@ export function BattleArenaGame() {
             inset 0 0 0 1px rgba(255, 224, 162, 0.38);
         }
 
+        .ba-arena-selecting {
+          cursor: crosshair;
+        }
+
         .ba-structure {
           position: absolute;
           z-index: 17;
@@ -2527,8 +2852,76 @@ export function BattleArenaGame() {
         }
 
         @media (max-width: 640px) {
+          .ba-game-shell {
+            min-height: 100dvh;
+            overflow: hidden;
+          }
+
+          .ba-game-frame {
+            height: 100dvh;
+            min-height: 100dvh;
+            border: 0;
+            border-radius: 0;
+          }
+
+          .ba-game-topbar {
+            min-height: 54px;
+            padding-block: 7px;
+          }
+
+          .ba-game-topbar h2 {
+            font-size: 16px;
+            line-height: 1.05;
+          }
+
+          .ba-game-topbar button {
+            height: 34px;
+            padding-inline: 10px;
+          }
+
+          .ba-playfield {
+            min-height: 0;
+            flex: 1;
+            align-items: stretch;
+          }
+
           .ba-arena {
-            width: min(100%, 460px);
+            width: 100%;
+            height: 100%;
+            aspect-ratio: auto;
+            border-radius: 0;
+            box-shadow:
+              inset 0 0 0 1px rgba(255, 224, 162, 0.28),
+              inset 0 -18px 42px rgba(20, 9, 5, 0.2);
+          }
+
+          .ba-bottom-hud {
+            padding: 8px max(10px, env(safe-area-inset-right)) calc(9px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+          }
+
+          .ba-card-slots {
+            gap: 6px;
+            margin-top: 7px;
+          }
+
+          .ba-card-button,
+          .ba-card-future {
+            min-height: 76px;
+          }
+
+          .ba-card-avatar {
+            height: 43px;
+            width: 43px;
+          }
+
+          .ba-card-name {
+            font-size: 11px;
+          }
+
+          .ba-notice {
+            min-height: 18px;
+            margin-top: 6px;
+            font-size: 11px;
           }
 
           .ba-base {
@@ -2548,15 +2941,20 @@ export function BattleArenaGame() {
           }
 
           .ba-unit {
-            width: 64px;
-            height: 72px;
+            width: 58px;
+            height: 66px;
           }
 
           .ba-character:not(.ba-character-mini) {
-            transform: scale(0.88);
+            transform: scale(0.8);
             transform-origin: center bottom;
           }
 
+          .ba-hp-track {
+            left: 13px;
+            right: 13px;
+            height: 6px;
+          }
         }
       `}</style>
     </section>
