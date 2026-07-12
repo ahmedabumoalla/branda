@@ -386,6 +386,7 @@ export function defaultCustomerDockItems({
   previewThemeId,
   hasProducts = true,
   hasOrders = true,
+  hasGames = false,
   hasRewards = true,
   isCustomer = false,
   accountBadge = 0,
@@ -396,6 +397,7 @@ export function defaultCustomerDockItems({
   previewThemeId?: string | null;
   hasProducts?: boolean;
   hasOrders?: boolean;
+  hasGames?: boolean;
   hasRewards?: boolean;
   isCustomer?: boolean;
   accountBadge?: number;
@@ -410,7 +412,7 @@ export function defaultCustomerDockItems({
     items: [
       { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "\u0627\u0644\u062a\u0630\u0627\u0643\u0631" : "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a", icon: MenuIcon, enabled: hasProducts },
       { key: "home" as const, href: `${base}/offers${preview}`, label: "\u0627\u0644\u0639\u0631\u0648\u0636", icon: Home },
-      { key: "games" as const, href: `${base}/games${preview}`, label: "\u0627\u0644\u0623\u0644\u0639\u0627\u0628", icon: Swords },
+      { key: "games" as const, href: `${base}/games${preview}`, label: "\u0627\u0644\u0623\u0644\u0639\u0627\u0628", icon: Swords, enabled: hasGames },
       { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a", icon: Sparkles, enabled: hasRewards },
       { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "\u0627\u0644\u062d\u0633\u0627\u0628", icon: UserRound },
     ],

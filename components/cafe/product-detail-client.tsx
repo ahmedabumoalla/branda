@@ -69,6 +69,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const reviewsEnabled = publicFeatureAllows(features, "comments_reviews");
   const reservationsEnabled = publicFeatureAllows(features, "reservations");
   const rewardsEnabled = publicFeatureAllows(features, "loyalty");
+  const gamesEnabled = publicFeatureAllows(features, "in_store_table_wars");
 
   const unitPrice = product ? productFinalPrice(product.price, product.promo) : 0;
   const subtotal = product ? unitPrice * quantity : 0;
@@ -416,6 +417,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           active: "menu",
           hasProducts: true,
           hasOrders: reservationsEnabled,
+          hasGames: gamesEnabled,
           hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
@@ -464,6 +466,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           active: "menu",
           hasProducts: true,
           hasOrders: true,
+          hasGames: gamesEnabled,
           hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}

@@ -12,11 +12,13 @@ import {
 
 type Props = {
   slug: string;
+  battleArenaEntryHref?: string | null;
   tableWarsEntryHref?: string | null;
 };
 
-export function PublicGamesPage({ slug, tableWarsEntryHref }: Props) {
+export function PublicGamesPage({ slug, battleArenaEntryHref, tableWarsEntryHref }: Props) {
   const { theme, settings, experience, previewThemeId, features } = useCafePageContext(slug);
+  const hasPlayableGames = Boolean(battleArenaEntryHref || tableWarsEntryHref);
 
   return (
     <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
@@ -62,6 +64,7 @@ export function PublicGamesPage({ slug, tableWarsEntryHref }: Props) {
             </article>
           ) : null}
 
+          {battleArenaEntryHref ? (
           <article className="overflow-hidden rounded-[28px] border border-[#205B54]/25 bg-[#F1FAF7] p-5 text-[#173D39] shadow-[0_18px_45px_rgba(23,61,57,0.08)]">
             <div className="flex min-w-0 items-start gap-3">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#205B54]">
@@ -79,13 +82,19 @@ export function PublicGamesPage({ slug, tableWarsEntryHref }: Props) {
               </div>
             </div>
             <Link
-              href={`/c/${encodeURIComponent(slug)}/play/battle-arena`}
+              href={battleArenaEntryHref}
               className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#205B54] px-5 text-sm font-black text-white transition active:scale-[0.98]"
             >
               دخول حلبة الأبطال
             </Link>
           </article>
+          ) : null}
         </section>
+        {!hasPlayableGames ? (
+          <div className="rounded-[28px] border border-[#E7D7C6] bg-white p-6 text-center text-sm font-black leading-7 text-[#311912] shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
+            لا توجد ألعاب متاحة لهذه العلامة حاليًا
+          </div>
+        ) : null}
       </div>
       <CustomerBottomDock
         {...defaultCustomerDockItems({
@@ -94,6 +103,7 @@ export function PublicGamesPage({ slug, tableWarsEntryHref }: Props) {
           active: "games",
           hasProducts: true,
           hasOrders: false,
+          hasGames: hasPlayableGames,
           hasRewards: true,
           businessCategory: settings.businessCategory,
         })}

@@ -1116,6 +1116,7 @@ function ReserveBottomDock() {
         active: "orders",
         hasProducts: publicFeatureAllows(features, "menu"),
         hasOrders: publicFeatureAllows(features, "reservations"),
+        hasGames: publicFeatureAllows(features, "in_store_table_wars"),
         hasRewards: publicFeatureAllows(features, "loyalty"),
         businessCategory: settings.businessCategory,
       })}

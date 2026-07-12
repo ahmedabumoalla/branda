@@ -212,6 +212,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const branchesEnabled = publicFeatureAllows(features, "branches");
   const reservationsEnabled = publicFeatureAllows(features, "reservations");
   const rewardsEnabled = publicFeatureAllows(features, "loyalty");
+  const gamesEnabled = publicFeatureAllows(features, "in_store_table_wars");
 
   if (loading) {
     return (
@@ -320,6 +321,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             active: "orders",
             hasProducts: true,
             hasOrders: reservationsEnabled,
+            hasGames: gamesEnabled,
             hasRewards: rewardsEnabled,
             businessCategory: settings.businessCategory,
           })}
@@ -648,6 +650,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           active: "menu",
           hasProducts: true,
           hasOrders: reservationsEnabled,
+          hasGames: gamesEnabled,
           hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
@@ -811,6 +814,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           active: "menu",
           hasProducts: true,
           hasOrders: reservationsEnabled,
+          hasGames: gamesEnabled,
           hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}

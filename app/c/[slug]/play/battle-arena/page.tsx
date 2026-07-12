@@ -8,11 +8,14 @@ import { BattleArenaGame } from "@/components/cafe/battle-arena-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
+import { hasBrandFeature } from "@/lib/data/feature-entitlements";
 
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const PUBLIC_GAMES_FEATURE_KEY = "in_store_table_wars";
 
 function firstQueryValue(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0];
@@ -26,6 +29,24 @@ function MessageBox({ message }: { message: string }) {
         {message}
       </p>
     </div>
+  );
+}
+
+function GameUnavailablePage({ slug, previewThemeId }: { slug: string; previewThemeId?: string | null }) {
+  const productsHref = getCafePath(slug, "products/popular", previewThemeId);
+
+  return (
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-[#160F0C] px-4 text-[#311912]">
+      <div className="w-full max-w-xl rounded-lg border border-[#E7D7C6]/70 bg-white/95 p-5 text-center shadow-[0_18px_44px_rgba(12,7,5,0.22)]">
+        <p className="text-sm font-black leading-7">هذه اللعبة غير متاحة لهذه العلامة حاليًا</p>
+        <Link
+          href={productsHref}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-[#24140F] px-4 text-xs font-black text-[#FFF3D3] transition active:scale-95"
+        >
+          رجوع إلى العلامة
+        </Link>
+      </div>
+    </main>
   );
 }
 
@@ -45,13 +66,19 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
   }
 
   let cafe: Awaited<ReturnType<typeof getPublicCafeBySlugAdmin>> | null = null;
+  let gameEnabled = false;
   let errorMessage = "لم يتم العثور على الفرع.";
 
   try {
     cafe = await getPublicCafeBySlugAdmin(slug);
+    gameEnabled = cafe ? await hasBrandFeature(String(cafe.id), PUBLIC_GAMES_FEATURE_KEY) : false;
   } catch (error) {
     console.error("[PublicBattleArenaPage]", error);
     errorMessage = "تعذر تحميل صفحة حلبة براندا.";
+  }
+
+  if (!cafe || !gameEnabled) {
+    return <GameUnavailablePage slug={slug} previewThemeId={previewThemeId} />;
   }
 
   return (

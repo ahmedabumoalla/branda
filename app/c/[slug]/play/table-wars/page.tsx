@@ -35,6 +35,27 @@ function MessageBox({ message }: { message: string }) {
   );
 }
 
+function GameUnavailablePage({ slug, previewThemeId }: { slug: string; previewThemeId?: string | null }) {
+  const productsHref = getCafePath(slug, "products/popular", previewThemeId);
+
+  return (
+    <main dir="rtl" className="grid min-h-screen place-items-center bg-[#FCF8F3] px-4 text-[#311912]">
+      <div className="w-full max-w-xl rounded-lg border border-[#E7D7C6] bg-white p-5 text-center shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
+        <LockKeyhole className="mx-auto h-9 w-9 text-[#6B3A25]" />
+        <p className="mx-auto mt-3 max-w-xl text-sm font-black leading-7 text-[#311912]">
+          هذه اللعبة غير متاحة لهذه العلامة حاليًا
+        </p>
+        <Link
+          href={productsHref}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-[#4A281D] px-4 text-xs font-black text-white transition active:scale-95"
+        >
+          رجوع إلى العلامة
+        </Link>
+      </div>
+    </main>
+  );
+}
+
 export default async function PublicTableWarsPage({ params, searchParams }: Props) {
   const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
 
@@ -73,6 +94,10 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
   const productsHref = getCafePath(slug, "products/popular", previewThemeId);
   let initialSnapshot: TableWarsV2Snapshot | null = null;
 
+  if (!entry.cafeFound || !entry.featureEnabled || !entry.gameEnabled) {
+    return <GameUnavailablePage slug={slug} previewThemeId={previewThemeId} />;
+  }
+
   if (entry.cafeFound && entry.featureEnabled && entry.gameEnabled) {
     const customer = await getCustomerProfileForActiveSession(slug);
     if (!customer) {
@@ -107,7 +132,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
         </header>
 
         {!entry.cafeFound ? (
-          <MessageBox message={entry.errorMessage} />
+          <MessageBox message={entry.errorMessage ?? "هذه اللعبة غير متاحة لهذه العلامة حاليًا"} />
         ) : !entry.featureEnabled ? (
           <div className="rounded-lg border border-[#E7D7C6] bg-white p-5 text-center shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
             <LockKeyhole className="mx-auto h-9 w-9 text-[#6B3A25]" />

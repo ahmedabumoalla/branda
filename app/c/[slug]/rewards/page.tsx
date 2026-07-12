@@ -802,6 +802,7 @@ function RewardsPageInner() {
   const experienceRewardsEnabled = publicFeatureAllows(features, "experience_reviews");
   const productsEnabled = publicFeatureAllows(features, "menu");
   const reservationsEnabled = publicFeatureAllows(features, "reservations");
+  const gamesEnabled = publicFeatureAllows(features, "in_store_table_wars");
   const rewardsPageEnabled = loyaltyEnabled || experienceRewardsEnabled;
   const loginHref = getCustomerLoginHref(slug, `/c/${slug}/rewards`, previewThemeId);
 
@@ -1247,6 +1248,7 @@ function RewardsPageInner() {
           active: "rewards",
           hasProducts: productsEnabled,
           hasOrders: reservationsEnabled,
+          hasGames: gamesEnabled,
           hasRewards: loyaltyEnabled,
           isCustomer: true,
           businessCategory: settings.businessCategory,

@@ -1192,6 +1192,7 @@ function AccountPageInner() {
   const experienceRewardsEnabled = publicFeatureAllows(accountFeatures, "experience_reviews");
   const productsEnabled = publicFeatureAllows(accountFeatures, "menu");
   const reservationsEnabled = publicFeatureAllows(accountFeatures, "reservations");
+  const gamesEnabled = publicFeatureAllows(accountFeatures, "in_store_table_wars");
   const notificationStorageKey = customer
     ? `barndaksa_read_notifications_${slug}_${customer.id}`
     : "";
@@ -1217,6 +1218,7 @@ function AccountPageInner() {
       active: "account",
       hasProducts: productsEnabled,
       hasOrders: reservationsEnabled,
+      hasGames: gamesEnabled,
       hasRewards: loyaltyEnabled,
       isCustomer: true,
       businessCategory: settings.businessCategory,
@@ -1228,7 +1230,7 @@ function AccountPageInner() {
         item.key === "account" ? { ...item, badge: unreadNotificationCount } : item,
       ),
     };
-  }, [loyaltyEnabled, previewThemeId, productsEnabled, reservationsEnabled, settings.businessCategory, slug, unreadNotificationCount]);
+  }, [gamesEnabled, loyaltyEnabled, previewThemeId, productsEnabled, reservationsEnabled, settings.businessCategory, slug, unreadNotificationCount]);
 
   useEffect(() => {
     if (!notificationStorageKey) {
