@@ -16,6 +16,7 @@ type BridgeId = "left" | "right";
 type AssignedLane = "left" | "right" | "center";
 type UnitMode = "attack" | "defend";
 type UnitPathStage = "toBridgeEntry" | "toBridgeExit" | "toTarget";
+type UnitAnchor = "feet" | "center";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -118,13 +119,22 @@ const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
 const SPRITE_ENABLED_UNITS = new Set<UnitKind>(["swift_waiter"]);
-const UNIT_SPRITES: Record<UnitKind, Partial<Record<SpriteState, string>>> = {
+const UNIT_SPRITE_FRAMES: Record<UnitKind, Partial<Record<SpriteState, string[]>>> = {
   swift_waiter: {
-    idle: "/assets/arena/units/waiter/idle.png",
-    walk: "/assets/arena/units/waiter/walk.png",
-    attack: "/assets/arena/units/waiter/attack.png",
-    hit: "/assets/arena/units/waiter/hit.png",
-    die: "/assets/arena/units/waiter/die.png",
+    idle: ["/assets/arena/units/waiter/idle.png"],
+    walk: [
+      "/assets/arena/units/waiter/walk-1.png",
+      "/assets/arena/units/waiter/walk-2.png",
+      "/assets/arena/units/waiter/walk-3.png",
+      "/assets/arena/units/waiter/walk-4.png",
+    ],
+    attack: [
+      "/assets/arena/units/waiter/attack-1.png",
+      "/assets/arena/units/waiter/attack-2.png",
+      "/assets/arena/units/waiter/attack-3.png",
+    ],
+    hit: ["/assets/arena/units/waiter/hit-1.png"],
+    die: ["/assets/arena/units/waiter/die-1.png", "/assets/arena/units/waiter/die-2.png"],
   },
   strong_chef: {
   },
@@ -923,8 +933,9 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
   );
 }
 
-function unitSpriteState(unit: Unit): SpriteState {
+function unitSpriteState(unit: Unit, animationTime: number): SpriteState {
   if (unit.state === "defeated") return "die";
+  if (unit.damagedAt > 0 && animationTime - unit.damagedAt < 180) return "hit";
   if (unit.state === "attacking") return "attack";
   if (unit.state === "moving") return "walk";
   return "idle";
@@ -938,24 +949,65 @@ function unitFacing(unit: Unit): UnitFacing {
     return dy >= 0 ? "down" : "up";
   }
 
+  if (unit.state === "moving") {
+    const destinationX = unit.pathStage === "toTarget" ? structureById(unit.strategicTargetId).x : bridgePoint(unit.assignedBridge).x;
+    const dx = destinationX - unit.x;
+    if (Math.abs(dx) > 1.2) return dx >= 0 ? "right" : "left";
+  }
+
   return unit.team === "player" ? "up" : "down";
+}
+
+function spriteFrames(kind: UnitKind, spriteState: SpriteState) {
+  return UNIT_SPRITE_FRAMES[kind][spriteState] ?? UNIT_SPRITE_FRAMES[kind].walk ?? UNIT_SPRITE_FRAMES[kind].idle ?? [];
+}
+
+function unitAnimationFrame(unit: Unit, spriteState: SpriteState, animationTime: number) {
+  const frames = spriteFrames(unit.kind, spriteState);
+  if (frames.length <= 1) return 0;
+  const seed = Number(unit.id.replace(/\D/g, "")) * 37;
+
+  if (spriteState === "attack") {
+    const elapsed = Math.max(0, animationTime - (unit.lastAttackAt || seed));
+    return Math.floor(elapsed / 95) % frames.length;
+  }
+
+  if (spriteState === "die" && unit.defeatedAt !== null) {
+    return clamp(Math.floor((animationTime - unit.defeatedAt) / 160), 0, frames.length - 1);
+  }
+
+  const frameMs = spriteState === "walk" ? 115 : 260;
+  return Math.floor((animationTime + seed) / frameMs) % frames.length;
+}
+
+function attackOrigin(unit: Unit, facing: UnitFacing) {
+  const sideOffset = facing === "left" ? -1.15 : facing === "right" ? 1.15 : 0.45;
+  const verticalOffset = facing === "down" ? -1.7 : -2.25;
+  return {
+    x: unit.x + sideOffset,
+    y: unit.y + verticalOffset,
+  };
 }
 
 function UnitSprite({
   kind,
   spriteState,
   facing,
+  animationFrame,
 }: {
   kind: UnitKind;
   spriteState: SpriteState;
   facing: UnitFacing;
+  animationFrame: number;
 }) {
-  const spriteSrc = UNIT_SPRITES[kind][spriteState] ?? UNIT_SPRITES[kind].walk;
+  const frames = spriteFrames(kind, spriteState);
+  const spriteSrc = frames[animationFrame % Math.max(frames.length, 1)];
 
   if (!SPRITE_ENABLED_UNITS.has(kind) || !spriteSrc) return null;
 
   return (
     <img
+      key={spriteSrc}
       className={`ba-unit-sprite ba-unit-sprite-${facing}`}
       src={spriteSrc}
       alt=""
@@ -972,23 +1024,27 @@ function UnitVisual({
   team = "player",
   spriteState = "idle",
   facing = "up",
+  animationFrame = 0,
+  anchoredPosition = "feet",
   compact = false,
 }: {
   kind: UnitKind;
   team?: Team;
   spriteState?: SpriteState;
   facing?: UnitFacing;
+  animationFrame?: number;
+  anchoredPosition?: UnitAnchor;
   compact?: boolean;
 }) {
   return (
     <span
-      className={`ba-unit-visual ${compact ? "ba-unit-visual-compact" : ""} ba-unit-visual-${kind} ba-unit-visual-${team} ba-unit-visual-${spriteState} ba-unit-facing-${facing}`}
+      className={`ba-unit-visual ${compact ? "ba-unit-visual-compact" : ""} ba-unit-visual-${kind} ba-unit-visual-${team} ba-unit-visual-${spriteState} ba-unit-facing-${facing} ba-unit-anchor-${anchoredPosition}`}
       style={{ "--team": teamColor(team) } as CSSProperties}
       aria-hidden="true"
     >
       <span className="ba-unit-ground" />
       <span className="ba-unit-placeholder">
-        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} />
+        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} animationFrame={animationFrame} />
         <span className="ba-unit-placeholder-body">
           <span className="ba-unit-placeholder-head" />
           <span className="ba-unit-placeholder-mark" />
@@ -1001,7 +1057,9 @@ function UnitVisual({
 function ArenaUnit({ unit }: { unit: Unit }) {
   const hpPercent = `${clamp((unit.hp / unit.maxHp) * 100, 0, 100)}%`;
   const depthScale = 0.76 + (unit.y / 100) * 0.18;
-  const spriteState = unitSpriteState(unit);
+  const animationTime = typeof performance === "undefined" ? 0 : performance.now();
+  const spriteState = unitSpriteState(unit, animationTime);
+  const animationFrame = unitAnimationFrame(unit, spriteState, animationTime);
   const facing = unitFacing(unit);
 
   return (
@@ -1019,7 +1077,14 @@ function ArenaUnit({ unit }: { unit: Unit }) {
       }
       title={unit.name}
     >
-      <UnitVisual kind={unit.kind} team={unit.team} spriteState={spriteState} facing={facing} />
+      <UnitVisual
+        kind={unit.kind}
+        team={unit.team}
+        spriteState={spriteState}
+        facing={facing}
+        animationFrame={animationFrame}
+        anchoredPosition="feet"
+      />
       <span className="ba-hp-track">
         <span className="ba-hp-fill" />
       </span>
@@ -1448,27 +1513,40 @@ export function BattleArenaGame() {
             <svg className="ba-attack-fx-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               {units
                 .filter((unit) => unit.state === "attacking" && unit.attackTargetX !== null && unit.attackTargetY !== null)
-                .map((unit) => (
-                  <g
-                    key={`${unit.id}-${unit.attackFxId}`}
-                    className={`ba-attack-fx ba-attack-fx-${unit.kind}`}
-                    style={{ "--team": teamColor(unit.team) } as CSSProperties}
-                  >
-                    <line
-                      className={`ba-attack-beam ba-attack-beam-${unit.kind}`}
-                      x1={unit.x}
-                      y1={unit.y}
-                      x2={unit.attackTargetX ?? unit.x}
-                      y2={unit.attackTargetY ?? unit.y}
-                    />
-                    <circle
-                      className={`ba-impact-dot ba-impact-dot-${unit.kind}`}
-                      cx={unit.attackTargetX ?? unit.x}
-                      cy={unit.attackTargetY ?? unit.y}
-                      r="1.5"
-                    />
-                  </g>
-                ))}
+                .map((unit) => {
+                  const origin = attackOrigin(unit, unitFacing(unit));
+                  const targetX = unit.attackTargetX ?? unit.x;
+                  const targetY = unit.attackTargetY ?? unit.y;
+                  return (
+                    <g
+                      key={`${unit.id}-${unit.attackFxId}`}
+                      className={`ba-attack-fx ba-attack-fx-${unit.kind}`}
+                      style={{ "--team": teamColor(unit.team) } as CSSProperties}
+                    >
+                      <line
+                        className={`ba-attack-beam ba-attack-beam-${unit.kind}`}
+                        x1={origin.x}
+                        y1={origin.y}
+                        x2={targetX}
+                        y2={targetY}
+                      />
+                      {unit.kind === "swift_waiter" ? (
+                        <circle
+                          className="ba-coffee-projectile"
+                          cx={(origin.x + targetX) / 2}
+                          cy={(origin.y + targetY) / 2}
+                          r="0.85"
+                        />
+                      ) : null}
+                      <circle
+                        className={`ba-impact-dot ba-impact-dot-${unit.kind}`}
+                        cx={targetX}
+                        cy={targetY}
+                        r="1.5"
+                      />
+                    </g>
+                  );
+                })}
             </svg>
 
             {units.map((unit) => (
@@ -2542,9 +2620,19 @@ export function BattleArenaGame() {
         }
 
         .ba-attack-beam-swift_waiter {
-          stroke: #f8e8bc;
-          stroke-width: 1;
-          stroke-dasharray: 2.5 2.2;
+          stroke: #7a3f24;
+          stroke-width: 1.15;
+          stroke-dasharray: 2.3 1.7;
+        }
+
+        .ba-coffee-projectile {
+          fill: #6a351f;
+          stroke: #fff2d2;
+          stroke-width: 0.32;
+          filter:
+            drop-shadow(0 0 2px rgba(255, 242, 210, 0.9))
+            drop-shadow(0 0 4px rgba(106, 53, 31, 0.55));
+          animation: ba-coffee-projectile 280ms ease-out forwards;
         }
 
         .ba-attack-beam-strong_chef {
@@ -2581,11 +2669,12 @@ export function BattleArenaGame() {
 
         .ba-unit {
           position: absolute;
-          width: 26px;
-          height: 32px;
-          transform: translate(-50%, -74%) scale(var(--depth));
+          width: clamp(34px, 7vw, 58px);
+          height: clamp(48px, 9vw, 74px);
+          transform: translate(-50%, -100%) scale(var(--depth));
           transform-origin: center bottom;
           pointer-events: none;
+          overflow: visible;
         }
 
         .ba-unit-defeated {
@@ -2603,9 +2692,9 @@ export function BattleArenaGame() {
         .ba-unit-ground {
           position: absolute;
           left: 50%;
-          bottom: 1px;
-          width: 19px;
-          height: 7px;
+          bottom: -2px;
+          width: 62%;
+          height: 14%;
           transform: translateX(-50%);
           border-radius: 50%;
           background: rgba(27, 14, 9, 0.28);
@@ -2615,12 +2704,13 @@ export function BattleArenaGame() {
         .ba-unit-placeholder {
           position: absolute;
           left: 50%;
-          bottom: 5px;
+          bottom: 0;
           display: grid;
-          width: 18px;
-          height: 24px;
+          width: 72%;
+          height: 86%;
           transform: translateX(-50%);
           place-items: center;
+          overflow: visible;
         }
 
         .ba-unit-placeholder-body {
@@ -2694,18 +2784,42 @@ export function BattleArenaGame() {
           opacity: 0.72;
         }
 
-        .ba-unit-facing-left .ba-unit-placeholder,
-        .ba-unit-facing-up .ba-unit-placeholder {
+        .ba-unit-sprite {
+          position: absolute;
+          left: 50%;
+          bottom: 0;
+          z-index: 2;
+          width: auto;
+          height: 100%;
+          max-width: none;
+          transform: translateX(-50%);
+          object-fit: contain;
+          object-position: center bottom;
+        }
+
+        .ba-unit-facing-left .ba-unit-sprite {
           transform: translateX(-50%) scaleX(-1);
         }
 
-        .ba-unit-sprite {
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
+        .ba-unit-visual-idle.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          animation: ba-waiter-breathe 900ms ease-in-out infinite;
+        }
+
+        .ba-unit-visual-walk.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          animation: ba-waiter-footfall 460ms steps(4, end) infinite;
+        }
+
+        .ba-unit-visual-attack.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          height: 96%;
+          animation: ba-waiter-attack-snap 285ms steps(3, end) infinite;
+        }
+
+        .ba-unit-visual-hit.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          animation: ba-waiter-hit 180ms ease-out infinite;
+        }
+
+        .ba-unit-visual-die.ba-unit-visual-swift_waiter .ba-unit-sprite {
+          animation: ba-waiter-die 420ms ease forwards;
         }
 
         .ba-unit-sprite:not([hidden]) ~ .ba-unit-placeholder-body {
@@ -3159,9 +3273,9 @@ export function BattleArenaGame() {
 
         .ba-hp-track {
           position: absolute;
-          left: 7px;
-          right: 7px;
-          top: 0;
+          left: 12%;
+          right: 12%;
+          top: -7px;
           height: 5px;
           overflow: hidden;
           border-radius: 999px;
@@ -3357,6 +3471,36 @@ export function BattleArenaGame() {
           line-height: 1;
         }
 
+        @keyframes ba-waiter-breathe {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -1px; }
+        }
+
+        @keyframes ba-waiter-footfall {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -2px; }
+        }
+
+        @keyframes ba-waiter-attack-snap {
+          0%, 100% { translate: 0 0; }
+          45% { translate: 5px -1px; }
+        }
+
+        @keyframes ba-waiter-hit {
+          0% { translate: 0 0; filter: brightness(1.5); }
+          100% { translate: -3px -1px; filter: brightness(1); }
+        }
+
+        @keyframes ba-waiter-die {
+          0% { opacity: 1; translate: 0 0; }
+          100% { opacity: 0.36; translate: 0 3px; }
+        }
+
+        @keyframes ba-coffee-projectile {
+          0% { opacity: 0.95; transform: scale(0.72); }
+          100% { opacity: 0; transform: scale(1.45); }
+        }
+
         @keyframes ba-bob {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
@@ -3444,8 +3588,8 @@ export function BattleArenaGame() {
         }
 
         @keyframes ba-defeat {
-          0% { opacity: 1; transform: translate(-50%, -74%) scale(var(--depth)); }
-          100% { opacity: 0; transform: translate(-50%, -74%) scale(calc(var(--depth) * 0.58)); }
+          0% { opacity: 1; transform: translate(-50%, -100%) scale(var(--depth)); }
+          100% { opacity: 0; transform: translate(-50%, -100%) scale(calc(var(--depth) * 0.58)); }
         }
 
         @media (max-width: 640px) {
@@ -3578,8 +3722,8 @@ export function BattleArenaGame() {
           }
 
           .ba-unit {
-            width: 21px;
-            height: 28px;
+            width: clamp(34px, 9vw, 50px);
+            height: clamp(48px, 12vw, 66px);
           }
 
           .ba-character:not(.ba-character-mini) {
@@ -3588,8 +3732,9 @@ export function BattleArenaGame() {
           }
 
           .ba-hp-track {
-            left: 6px;
-            right: 6px;
+            left: 12%;
+            right: 12%;
+            top: -6px;
             height: 4px;
           }
         }
