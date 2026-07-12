@@ -10,6 +10,8 @@ type GameResult = "playing" | "won" | "lost";
 type UnitRole = "melee" | "ranged" | "tank" | "support";
 type Lane = "top" | "middle" | "bottom";
 type UnitIntent = "advance" | "attack" | "defend";
+type SpriteState = "idle" | "walk" | "attack" | "hit" | "die";
+type UnitFacing = "left" | "right" | "up" | "down";
 type StructureKind = "mainCastle" | "sideTower";
 type StructureSide = "center" | "left" | "right";
 type StructureId =
@@ -94,14 +96,26 @@ const LANE_BAND = 7.5;
 const DEFENSE_RADIUS = 22;
 const MIN_SEPARATION = 4.2;
 const UNIT_COLLISION_RADIUS = 2.2;
-const MOVEMENT_SPEED_SCALE = 0.64;
-const ENERGY_PER_SECOND = 0.72;
-const BOT_SPAWN_SECONDS = 3.4;
+const MOVEMENT_SPEED_SCALE = 0.6;
+const ENERGY_PER_SECOND = 0.66;
+const BOT_SPAWN_SECONDS = 4.25;
 const DEFEAT_ANIMATION_MS = 420;
 const PLAYER_COLOR = "#7C2948";
 const BOT_COLOR = "#14645E";
 const MAIN_CASTLE_ASSET = "/assets/arena/branda-main-castle-neutral.png";
 const SIDE_TOWER_ASSET = "/assets/arena/branda-side-tower-neutral-v2.png";
+const USE_UNIT_SPRITES = false;
+const UNIT_SPRITES: Record<UnitKind, Partial<Record<SpriteState, string>>> = {
+  swift_waiter: {
+    walk: "/assets/arena/units/waiter/walk.png",
+  },
+  strong_chef: {
+    walk: "/assets/arena/units/chef/walk.png",
+  },
+  branch_guard: {
+    walk: "/assets/arena/units/guard/walk.png",
+  },
+};
 const RIVER_Y = 50;
 const BRIDGE_Y = 50;
 const BRIDGES = {
@@ -153,9 +167,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.botSideTowers[0].x,
     y: ARENA_POINTS.botSideTowers[0].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 4.7,
-    targetRadius: 4.6,
-    width: 15.5,
+    collisionRadius: 4.2,
+    targetRadius: 4.25,
+    width: 14.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -166,9 +180,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.botSideTowers[1].x,
     y: ARENA_POINTS.botSideTowers[1].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 4.7,
-    targetRadius: 4.6,
-    width: 15.5,
+    collisionRadius: 4.2,
+    targetRadius: 4.25,
+    width: 14.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -179,9 +193,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.playerSideTowers[0].x,
     y: ARENA_POINTS.playerSideTowers[0].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 4.7,
-    targetRadius: 4.6,
-    width: 15.5,
+    collisionRadius: 4.2,
+    targetRadius: 4.25,
+    width: 14.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -192,9 +206,9 @@ const STRUCTURE_DEFS: StructureDef[] = [
     x: ARENA_POINTS.playerSideTowers[1].x,
     y: ARENA_POINTS.playerSideTowers[1].y,
     maxHp: SIDE_TOWER_HP,
-    collisionRadius: 4.7,
-    targetRadius: 4.6,
-    width: 15.5,
+    collisionRadius: 4.2,
+    targetRadius: 4.25,
+    width: 14.5,
     asset: SIDE_TOWER_ASSET,
   },
   {
@@ -646,10 +660,76 @@ function Accessory({ kind, active }: { kind: UnitKind; active: boolean }) {
   );
 }
 
+function unitSpriteState(unit: Unit): SpriteState {
+  if (unit.state === "defeated") return "die";
+  if (unit.state === "attacking") return "attack";
+  if (unit.state === "moving") return "walk";
+  return "idle";
+}
+
+function unitFacing(unit: Unit): UnitFacing {
+  if (unit.attackTargetX !== null && unit.attackTargetY !== null) {
+    const dx = unit.attackTargetX - unit.x;
+    const dy = unit.attackTargetY - unit.y;
+    if (Math.abs(dx) > Math.abs(dy)) return dx >= 0 ? "right" : "left";
+    return dy >= 0 ? "down" : "up";
+  }
+
+  return unit.team === "player" ? "up" : "down";
+}
+
+function UnitSprite({
+  kind,
+  spriteState,
+  facing,
+}: {
+  kind: UnitKind;
+  spriteState: SpriteState;
+  facing: UnitFacing;
+}) {
+  const spriteSrc = UNIT_SPRITES[kind][spriteState] ?? UNIT_SPRITES[kind].walk;
+
+  if (!USE_UNIT_SPRITES || !spriteSrc) return null;
+
+  return <img className={`ba-unit-sprite ba-unit-sprite-${facing}`} src={spriteSrc} alt="" draggable={false} />;
+}
+
+function UnitVisual({
+  kind,
+  team = "player",
+  spriteState = "idle",
+  facing = "up",
+  compact = false,
+}: {
+  kind: UnitKind;
+  team?: Team;
+  spriteState?: SpriteState;
+  facing?: UnitFacing;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={`ba-unit-visual ${compact ? "ba-unit-visual-compact" : ""} ba-unit-visual-${kind} ba-unit-visual-${team} ba-unit-visual-${spriteState} ba-unit-facing-${facing}`}
+      style={{ "--team": teamColor(team) } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className="ba-unit-ground" />
+      <span className="ba-unit-placeholder">
+        <UnitSprite kind={kind} spriteState={spriteState} facing={facing} />
+        <span className="ba-unit-placeholder-body">
+          <span className="ba-unit-placeholder-head" />
+          <span className="ba-unit-placeholder-mark" />
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function ArenaUnit({ unit }: { unit: Unit }) {
   const hpPercent = `${clamp((unit.hp / unit.maxHp) * 100, 0, 100)}%`;
-  const face =
-    unit.state === "attacking" && unit.attackTargetX !== null ? (unit.attackTargetX >= unit.x ? 1 : -1) : undefined;
+  const depthScale = 0.76 + (unit.y / 100) * 0.18;
+  const spriteState = unitSpriteState(unit);
+  const facing = unitFacing(unit);
 
   return (
     <div
@@ -660,11 +740,13 @@ function ArenaUnit({ unit }: { unit: Unit }) {
           top: `${unit.y}%`,
           "--hp": hpPercent,
           "--team": teamColor(unit.team),
+          "--depth": depthScale,
+          zIndex: 80 + Math.round(unit.y),
         } as CSSProperties
       }
       title={unit.name}
     >
-      <CharacterFigure kind={unit.kind} team={unit.team} state={unit.state} face={face} />
+      <UnitVisual kind={unit.kind} team={unit.team} spriteState={spriteState} facing={facing} />
       <span className="ba-hp-track">
         <span className="ba-hp-fill" />
       </span>
@@ -717,7 +799,7 @@ export function BattleArenaGame() {
   const resultRef = useRef<GameResult>("playing");
   const nextUnitIdRef = useRef(1);
   const nextLaneRef = useRef(0);
-  const botTimerRef = useRef(1.4);
+  const botTimerRef = useRef(3.2);
   const botCardIndexRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
@@ -852,7 +934,7 @@ export function BattleArenaGame() {
     setNotice("جولة جديدة بدأت.");
     nextUnitIdRef.current = 1;
     nextLaneRef.current = 0;
-    botTimerRef.current = 1.4;
+    botTimerRef.current = 3.2;
     botCardIndexRef.current = 0;
     lastFrameRef.current = null;
   }, [syncEnergy, syncResult, syncStructureHp, syncUnits]);
@@ -875,7 +957,7 @@ export function BattleArenaGame() {
           const card = pressureLane && Math.random() < 0.48 ? CARDS[2] : (botDeck[botCardIndexRef.current % botDeck.length] ?? CARDS[0]);
           botCardIndexRef.current += 1;
           spawnUnit("bot", card, pressureLane ?? randomLane());
-          botTimerRef.current = BOT_SPAWN_SECONDS + Math.random() * 0.85 + (botCardIndexRef.current % 2) * 0.35;
+          botTimerRef.current = BOT_SPAWN_SECONDS + Math.random() * 1.25 + (botCardIndexRef.current % 2) * 0.45;
         }
 
         const nextStructureHp = { ...structureHpRef.current };
@@ -1131,7 +1213,7 @@ export function BattleArenaGame() {
               >
                 <span className="ba-cost-badge">{card.cost}</span>
                 <span className="ba-card-avatar">
-                  <CharacterFigure kind={card.kind} compact />
+                  <UnitVisual kind={card.kind} compact />
                 </span>
                 <span className="ba-card-name">{card.shortName}</span>
               </button>
@@ -1161,9 +1243,58 @@ export function BattleArenaGame() {
         }
 
         .ba-game-frame {
+          position: relative;
           display: flex;
-          min-height: min(100dvh, 920px);
+          height: 100%;
+          min-height: 100%;
           flex-direction: column;
+          border: 0 !important;
+          border-radius: 0 !important;
+          background: #160f0c !important;
+          box-shadow: none !important;
+        }
+
+        .ba-game-topbar {
+          position: absolute;
+          left: 10px;
+          top: 10px;
+          z-index: 46;
+          min-height: 0;
+          border: 0 !important;
+          background: transparent !important;
+          padding: 0 !important;
+          pointer-events: none;
+        }
+
+        .ba-game-topbar > * {
+          pointer-events: auto;
+        }
+
+        .ba-game-topbar p {
+          display: none;
+        }
+
+        .ba-game-topbar h2 {
+          border: 1px solid rgba(255, 224, 162, 0.24);
+          border-radius: 999px;
+          background: rgba(36, 20, 15, 0.72);
+          padding: 6px 9px;
+          color: #fff3d3;
+          font-size: 11px;
+          line-height: 1;
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+          backdrop-filter: blur(8px);
+        }
+
+        .ba-game-topbar button {
+          height: 32px;
+          min-width: 32px;
+          border-color: rgba(255, 224, 162, 0.24);
+          background: rgba(36, 20, 15, 0.72);
+          color: #fff3d3;
+          padding-inline: 8px;
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+          backdrop-filter: blur(8px);
         }
 
         .ba-playfield {
@@ -1173,15 +1304,15 @@ export function BattleArenaGame() {
           align-items: center;
           justify-content: center;
           background:
-            linear-gradient(180deg, rgba(50, 27, 20, 0.08), rgba(36, 20, 15, 0.16)),
-            #7b4f35;
+            linear-gradient(180deg, rgba(10, 7, 5, 0.42), rgba(36, 20, 15, 0.24)),
+            #160f0c;
         }
 
         .ba-bottom-hud {
           position: relative;
           z-index: 40;
           border-top: 1px solid rgba(206, 184, 156, 0.82);
-          padding: 10px 12px 12px;
+          padding: 8px 10px 10px;
           background:
             linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(244, 223, 188, 0.96)),
             #fff9ef;
@@ -1192,15 +1323,15 @@ export function BattleArenaGame() {
 
         .ba-energy-row {
           display: grid;
-          grid-template-columns: 30px minmax(0, 1fr) auto;
+          grid-template-columns: 24px minmax(0, 1fr) auto;
           align-items: center;
           gap: 8px;
         }
 
         .ba-energy-icon {
           display: inline-flex;
-          height: 30px;
-          width: 30px;
+          height: 24px;
+          width: 24px;
           align-items: center;
           justify-content: center;
           border: 1px solid rgba(122, 77, 42, 0.18);
@@ -1218,7 +1349,7 @@ export function BattleArenaGame() {
         }
 
         .ba-energy-track {
-          height: 13px;
+          height: 10px;
           overflow: hidden;
           border-radius: 999px;
           border: 1px solid rgba(122, 77, 42, 0.16);
@@ -1241,15 +1372,15 @@ export function BattleArenaGame() {
         .ba-card-slots {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 8px;
-          margin-top: 9px;
+          gap: 7px;
+          margin-top: 7px;
         }
 
         .ba-card-button {
           position: relative;
           overflow: hidden;
           display: grid;
-          min-height: 82px;
+          min-height: 68px;
           grid-template-rows: 1fr auto;
           align-items: center;
           justify-items: center;
@@ -1310,8 +1441,8 @@ export function BattleArenaGame() {
 
         .ba-card-avatar {
           display: inline-flex;
-          height: 48px;
-          width: 48px;
+          height: 38px;
+          width: 38px;
           align-items: center;
           justify-content: center;
           border-radius: 8px;
@@ -1356,7 +1487,7 @@ export function BattleArenaGame() {
 
         .ba-card-future {
           display: grid;
-          min-height: 82px;
+          min-height: 68px;
           place-items: center;
           border: 1px dashed rgba(122, 77, 42, 0.3);
           border-radius: 8px;
@@ -1376,11 +1507,11 @@ export function BattleArenaGame() {
 
         .ba-notice {
           display: flex;
-          min-height: 22px;
+          min-height: 18px;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          margin-top: 8px;
+          margin-top: 6px;
           color: #5c3b2b;
           font-size: 12px;
           font-weight: 900;
@@ -2130,15 +2261,151 @@ export function BattleArenaGame() {
 
         .ba-unit {
           position: absolute;
-          z-index: 20;
-          width: 76px;
-          height: 84px;
-          transform: translate(-50%, -68%);
+          width: 26px;
+          height: 32px;
+          transform: translate(-50%, -74%) scale(var(--depth));
+          transform-origin: center bottom;
           pointer-events: none;
         }
 
         .ba-unit-defeated {
           animation: ba-defeat 420ms ease forwards;
+        }
+
+        .ba-unit-visual {
+          position: relative;
+          display: block;
+          width: 100%;
+          height: 100%;
+          transform-origin: center bottom;
+        }
+
+        .ba-unit-ground {
+          position: absolute;
+          left: 50%;
+          bottom: 1px;
+          width: 19px;
+          height: 7px;
+          transform: translateX(-50%);
+          border-radius: 50%;
+          background: rgba(27, 14, 9, 0.28);
+          filter: blur(1px);
+        }
+
+        .ba-unit-placeholder {
+          position: absolute;
+          left: 50%;
+          bottom: 5px;
+          display: grid;
+          width: 18px;
+          height: 24px;
+          transform: translateX(-50%);
+          place-items: center;
+        }
+
+        .ba-unit-placeholder-body {
+          position: relative;
+          width: 14px;
+          height: 19px;
+          border: 1px solid rgba(255, 243, 207, 0.5);
+          border-radius: 9px 9px 7px 7px;
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 40%),
+            var(--team);
+          box-shadow:
+            inset 0 -5px 0 rgba(36, 20, 15, 0.18),
+            0 5px 8px rgba(20, 9, 5, 0.18);
+        }
+
+        .ba-unit-placeholder-head {
+          position: absolute;
+          left: 50%;
+          top: -7px;
+          width: 10px;
+          height: 10px;
+          transform: translateX(-50%);
+          border-radius: 50%;
+          background: #d89562;
+          box-shadow: inset 0 -2px 0 rgba(80, 37, 24, 0.18);
+        }
+
+        .ba-unit-placeholder-mark {
+          position: absolute;
+          left: 50%;
+          top: 6px;
+          width: 5px;
+          height: 6px;
+          transform: translateX(-50%);
+          border-radius: 2px;
+          background: rgba(255, 246, 218, 0.85);
+        }
+
+        .ba-unit-visual-strong_chef .ba-unit-placeholder-body {
+          width: 16px;
+          height: 21px;
+          border-radius: 10px 10px 8px 8px;
+          background:
+            linear-gradient(180deg, #fffdf7 0 48%, transparent 49%),
+            #bf4c34;
+        }
+
+        .ba-unit-visual-branch_guard .ba-unit-placeholder-body {
+          width: 15px;
+          height: 22px;
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 36%),
+            #3f5e64;
+        }
+
+        .ba-unit-visual-branch_guard .ba-unit-placeholder-mark {
+          clip-path: polygon(50% 0, 100% 24%, 84% 78%, 50% 100%, 16% 78%, 0 24%);
+          background: #f6c45a;
+        }
+
+        .ba-unit-visual-walk .ba-unit-placeholder {
+          animation: ba-unit-walk 540ms ease-in-out infinite;
+        }
+
+        .ba-unit-visual-attack .ba-unit-placeholder {
+          animation: ba-unit-attack 360ms ease-in-out infinite;
+        }
+
+        .ba-unit-visual-die {
+          opacity: 0.72;
+        }
+
+        .ba-unit-facing-left .ba-unit-placeholder,
+        .ba-unit-facing-up .ba-unit-placeholder {
+          transform: translateX(-50%) scaleX(-1);
+        }
+
+        .ba-unit-sprite {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .ba-unit-sprite ~ .ba-unit-placeholder-body {
+          display: none;
+        }
+
+        .ba-unit-visual-compact {
+          width: 36px;
+          height: 36px;
+          transform: scale(0.88);
+        }
+
+        .ba-unit-visual-compact .ba-unit-ground {
+          width: 26px;
+          height: 8px;
+        }
+
+        .ba-unit-visual-compact .ba-unit-placeholder {
+          width: 24px;
+          height: 30px;
         }
 
         .ba-character {
@@ -2572,10 +2839,10 @@ export function BattleArenaGame() {
 
         .ba-hp-track {
           position: absolute;
-          left: 9px;
-          right: 9px;
-          top: -2px;
-          height: 7px;
+          left: 7px;
+          right: 7px;
+          top: 0;
+          height: 5px;
           overflow: hidden;
           border-radius: 999px;
           background: rgba(35, 20, 15, 0.42);
@@ -2775,6 +3042,16 @@ export function BattleArenaGame() {
           50% { transform: translateY(-4px); }
         }
 
+        @keyframes ba-unit-walk {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -2px; }
+        }
+
+        @keyframes ba-unit-attack {
+          0%, 100% { translate: 0 0; }
+          45% { translate: 2px -1px; }
+        }
+
         @keyframes ba-run {
           0%, 100% { transform: translateY(0) rotate(-1deg); }
           50% { transform: translateY(-5px) rotate(2deg); }
@@ -2847,13 +3124,15 @@ export function BattleArenaGame() {
         }
 
         @keyframes ba-defeat {
-          0% { opacity: 1; transform: translate(-50%, -68%) scale(1); }
-          100% { opacity: 0; transform: translate(-50%, -68%) scale(0.58); }
+          0% { opacity: 1; transform: translate(-50%, -74%) scale(var(--depth)); }
+          100% { opacity: 0; transform: translate(-50%, -74%) scale(calc(var(--depth) * 0.58)); }
         }
 
         @media (max-width: 640px) {
           .ba-game-shell {
+            height: 100dvh;
             min-height: 100dvh;
+            width: 100vw;
             overflow: hidden;
           }
 
@@ -2865,18 +3144,18 @@ export function BattleArenaGame() {
           }
 
           .ba-game-topbar {
-            min-height: 54px;
-            padding-block: 7px;
+            left: 8px;
+            top: 9px;
           }
 
           .ba-game-topbar h2 {
-            font-size: 16px;
-            line-height: 1.05;
+            font-size: 10px;
           }
 
           .ba-game-topbar button {
-            height: 34px;
-            padding-inline: 10px;
+            width: 32px;
+            padding: 0;
+            font-size: 0;
           }
 
           .ba-playfield {
@@ -2896,22 +3175,22 @@ export function BattleArenaGame() {
           }
 
           .ba-bottom-hud {
-            padding: 8px max(10px, env(safe-area-inset-right)) calc(9px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+            padding: 7px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
           }
 
           .ba-card-slots {
-            gap: 6px;
-            margin-top: 7px;
+            gap: 5px;
+            margin-top: 6px;
           }
 
           .ba-card-button,
           .ba-card-future {
-            min-height: 76px;
+            min-height: 62px;
           }
 
           .ba-card-avatar {
-            height: 43px;
-            width: 43px;
+            height: 34px;
+            width: 34px;
           }
 
           .ba-card-name {
@@ -2941,8 +3220,8 @@ export function BattleArenaGame() {
           }
 
           .ba-unit {
-            width: 58px;
-            height: 66px;
+            width: 21px;
+            height: 28px;
           }
 
           .ba-character:not(.ba-character-mini) {
@@ -2951,9 +3230,9 @@ export function BattleArenaGame() {
           }
 
           .ba-hp-track {
-            left: 13px;
-            right: 13px;
-            height: 6px;
+            left: 6px;
+            right: 6px;
+            height: 4px;
           }
         }
       `}</style>
