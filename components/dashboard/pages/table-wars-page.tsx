@@ -106,74 +106,84 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
         </div>
       </header>
 
-      <section className="mb-5 rounded-2xl border border-[#B9DDD6] bg-[#F1FAF7] p-5 shadow-[8px_8px_24px_rgba(23,61,57,0.05)]">
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#205B54]">
-              <Trophy className="h-6 w-6" />
-            </span>
-            <h2 className="mt-4 text-xl font-black text-[#173D39]">حلبة الأبطال</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#365F58]">
-              لعبة معركة قهوة خفيفة يمكن إظهارها أو إخفاؤها من صفحة ألعاب العلامة.
-            </p>
-          </div>
-          <div className="rounded-xl border border-[#CFE9E3] bg-white/80 p-4">
-            <p className="text-xs font-black text-[#52736E]">حالة اللعبة</p>
-            <p className="mt-1 text-xl font-black text-[#173D39]">
-              {battleArenaEnabled ? "مفعّلة" : "غير مفعّلة"}
-            </p>
-            <form
-              action={battleArenaEnabled ? disableOwnerBattleArenaAction : enableOwnerBattleArenaAction}
-              className="mt-4"
-            >
-              <button
-                type="submit"
-                className={`h-12 w-full rounded-xl px-4 text-sm font-black transition active:scale-[0.98] ${
-                  battleArenaEnabled
-                    ? "border border-[#B9DDD6] bg-white text-[#205B54]"
-                    : "bg-[#205B54] text-white"
-                }`}
+      <section className="mb-5 grid gap-4 lg:grid-cols-2" aria-label="إدارة ألعاب العلامة التجارية">
+        <article className="rounded-2xl border border-[#B9DDD6] bg-[#F1FAF7] p-5 shadow-[8px_8px_24px_rgba(23,61,57,0.05)]">
+          <div className="flex h-full flex-col">
+            <div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#205B54]">
+                <Trophy className="h-6 w-6" />
+              </span>
+              <h2 className="mt-4 text-xl font-black text-[#173D39]">حلبة الأبطال</h2>
+              <p className="mt-2 text-sm font-bold leading-7 text-[#365F58]">
+                لعبة معركة قهوة خفيفة يمكن إظهارها أو إخفاؤها من صفحة ألعاب العلامة.
+              </p>
+            </div>
+            <div className="mt-5 rounded-xl border border-[#CFE9E3] bg-white/80 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-black text-[#52736E]">حالة اللعبة</p>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-black ${
+                    battleArenaEnabled
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {battleArenaEnabled ? "مفعّلة" : "متوقفة"}
+                </span>
+              </div>
+              <form
+                action={battleArenaEnabled ? disableOwnerBattleArenaAction : enableOwnerBattleArenaAction}
+                className="mt-4"
               >
-                {battleArenaEnabled ? "إيقاف حلبة الأبطال" : "تفعيل حلبة الأبطال"}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className={`h-12 w-full rounded-xl px-4 text-sm font-black transition active:scale-[0.98] ${
+                    battleArenaEnabled
+                      ? "border border-[#B9DDD6] bg-white text-[#205B54]"
+                      : "bg-[#205B54] text-white"
+                  }`}
+                >
+                  {battleArenaEnabled ? "إيقاف" : "تفعيل"}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      </section>
+        </article>
 
-      <section className="mb-5 rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#4A281D]/10 text-[#4A281D]">
-              <Swords className="h-6 w-6" />
-            </span>
-            <h2 className="mt-4 text-xl font-black text-[#311912]">حرب الطاولات</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              لعبة تفاعلية محلية تجعل الطاولات أبراجًا متصلة يتحرك بينها اللاعب والخصم.
-            </p>
-          </div>
-          <div className="rounded-xl border border-[#F2E7D9] bg-[#FCF8F3] p-4">
-            <p className="text-xs font-black text-[#806A5E]">حالة اللعبة</p>
-            <p className="mt-1 text-xl font-black text-[#311912]">
-              {data.gameEnabled ? "مفعّلة" : "غير مفعّلة"}
-            </p>
-            <form
-              action={data.gameEnabled ? disableOwnerTableWarsAction : enableOwnerTableWarsDemoAction}
-              className="mt-4"
-            >
-              <button
-                type="submit"
-                className={`h-12 w-full rounded-xl px-4 text-sm font-black transition active:scale-[0.98] ${
-                  data.gameEnabled
-                    ? "border border-[#D8C4B3] bg-white text-[#6B3A25]"
-                    : "bg-[#311912] text-white"
-                }`}
+        <article className="rounded-2xl border border-[#E7D7C6] bg-white p-5 shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
+          <div className="flex h-full flex-col">
+            <div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#4A281D]/10 text-[#4A281D]">
+                <Swords className="h-6 w-6" />
+              </span>
+              <h2 className="mt-4 text-xl font-black text-[#311912]">حرب الطاولات</h2>
+              <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
+                لعبة تفاعلية محلية تجعل الطاولات أبراجًا متصلة يتحرك بينها اللاعب والخصم.
+              </p>
+            </div>
+            <div className="mt-5 rounded-xl border border-[#F2E7D9] bg-[#FCF8F3] p-4">
+              <p className="text-xs font-black text-[#806A5E]">حالة اللعبة</p>
+              <p className="mt-1 text-xl font-black text-[#311912]">
+                {data.gameEnabled ? "مفعّلة" : "غير مفعّلة"}
+              </p>
+              <form
+                action={data.gameEnabled ? disableOwnerTableWarsAction : enableOwnerTableWarsDemoAction}
+                className="mt-4"
               >
-                {data.gameEnabled ? "تعطيل حرب الطاولات" : "تفعيل حرب الطاولات"}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className={`h-12 w-full rounded-xl px-4 text-sm font-black transition active:scale-[0.98] ${
+                    data.gameEnabled
+                      ? "border border-[#D8C4B3] bg-white text-[#6B3A25]"
+                      : "bg-[#311912] text-white"
+                  }`}
+                >
+                  {data.gameEnabled ? "تعطيل حرب الطاولات" : "تفعيل حرب الطاولات"}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        </article>
       </section>
 
       <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
