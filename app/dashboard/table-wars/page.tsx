@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { TableWarsPage } from "@/components/dashboard/pages/table-wars-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getOwnerBattleArenaEnabled } from "@/lib/data/brand-games";
 import { getOwnerTableWarsDashboard } from "@/lib/data/table-wars";
 
 export default async function DashboardTableWarsPage() {
@@ -17,8 +18,11 @@ export default async function DashboardTableWarsPage() {
   }
 
   try {
-    const data = await getOwnerTableWarsDashboard();
-    return <TableWarsPage data={data} />;
+    const [data, battleArenaEnabled] = await Promise.all([
+      getOwnerTableWarsDashboard(),
+      getOwnerBattleArenaEnabled(),
+    ]);
+    return <TableWarsPage data={data} battleArenaEnabled={battleArenaEnabled} />;
   } catch (error) {
     console.error("[DashboardTableWarsPage]", error);
     return (

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { PublicGamesPage } from "@/components/cafe/public-games-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { isBattleArenaEnabledForCafe } from "@/lib/data/brand-games";
+import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { getPublicTableWarsVisibilityBySlug } from "@/lib/data/table-wars";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -31,9 +33,14 @@ export default async function CafeGamesPage({ params }: Props) {
   const gamesFeatureEnabled = featureCodesAllow(features, PUBLIC_GAMES_FEATURE_KEY);
   if (!gamesFeatureEnabled) return <GamesUnavailableState />;
 
-  const tableWarsVisibility =
-    await getPublicTableWarsVisibilityBySlug(slug).catch(() => null);
-  const battleArenaEntryHref = `/c/${encodeURIComponent(slug)}/play/battle-arena`;
+  const cafe = await getPublicCafeBySlugAdmin(slug).catch(() => null);
+  const [tableWarsVisibility, battleArenaEnabled] = await Promise.all([
+    getPublicTableWarsVisibilityBySlug(slug).catch(() => null),
+    cafe ? isBattleArenaEnabledForCafe(String(cafe.id)).catch(() => false) : Promise.resolve(false),
+  ]);
+  const battleArenaEntryHref = battleArenaEnabled
+    ? `/c/${encodeURIComponent(slug)}/play/battle-arena`
+    : null;
 
   return (
     <Suspense fallback={<div className="min-h-screen" />}>

@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { BattleArenaGame } from "@/components/cafe/battle-arena-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getCafePath } from "@/lib/cafe/theme-links";
+import { isBattleArenaEnabledForCafe } from "@/lib/data/brand-games";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { hasBrandFeature } from "@/lib/data/feature-entitlements";
 
@@ -71,7 +72,13 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
 
   try {
     cafe = await getPublicCafeBySlugAdmin(slug);
-    gameEnabled = cafe ? await hasBrandFeature(String(cafe.id), PUBLIC_GAMES_FEATURE_KEY) : false;
+    if (cafe) {
+      const [gamesFeatureEnabled, battleArenaEnabled] = await Promise.all([
+        hasBrandFeature(String(cafe.id), PUBLIC_GAMES_FEATURE_KEY),
+        isBattleArenaEnabledForCafe(String(cafe.id)),
+      ]);
+      gameEnabled = gamesFeatureEnabled && battleArenaEnabled;
+    }
   } catch (error) {
     console.error("[PublicBattleArenaPage]", error);
     errorMessage = "تعذر تحميل صفحة حلبة براندا.";
