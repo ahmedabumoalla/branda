@@ -382,7 +382,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
         {categories.length > 1 ? (
           <div className="-mx-4 overflow-x-auto px-4 pb-1">
-            <div className="flex w-max gap-2">
+            <div className="flex w-max gap-2 rounded-[24px] border border-white/70 bg-white/45 p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150">
               {categories.map((name) => {
                 const selected = filters.category === name;
                 return (
@@ -390,8 +390,10 @@ export function ProductCollectionPage({ slug, view }: Props) {
                     key={name}
                     type="button"
                     onClick={() => setFilters((prev) => ({ ...prev, category: name }))}
-                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-black transition active:scale-95 ${
-                      selected ? theme.button : theme.buttonOutline
+                    className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 active:scale-95 ${
+                      selected
+                        ? "border-white/90 bg-white/95 text-slate-950 shadow-[0_4px_14px_rgba(15,23,42,0.18)] ring-1 ring-black/10"
+                        : "border-white/70 bg-white/65 text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.1)] hover:border-white/90 hover:bg-white/85 hover:text-slate-950 hover:shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
                     }`}
                   >
                     {name}
