@@ -153,8 +153,8 @@ function homeTeamForSlot(slotIndex: number): TableWarsTeam | null {
   return null;
 }
 
-function areCellsConnected(from: TableWarsV2Cell, to: TableWarsV2Cell) {
-  return areTableWarsSlotsConnected(from.slotIndex, to.slotIndex);
+function areCellsConnected(cells: TableWarsV2Cell[], from: TableWarsV2Cell, to: TableWarsV2Cell) {
+  return areTableWarsSlotsConnected(cells, from.slotIndex, to.slotIndex);
 }
 
 function realPlayersForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
@@ -186,12 +186,15 @@ function normalizeCells(cells: TableWarsV2Cell[], players: TableWarsV2Player[]) 
     .sort((a, b) => a.slotIndex - b.slotIndex)
     .map((cell) => {
       const homeTeam = homeTeamForSlot(cell.slotIndex);
-      const hasRealAssignee = isBlockingRealPlayer(assignedPlayerForCell(players, cell));
+      const assignee = assignedPlayerForCell(players, cell);
+      const hasRealAssignee = isBlockingRealPlayer(assignee);
+      const hasActiveAssignee = hasRealAssignee || assignee?.role === "ai";
       const shouldFillOpenHomeSeat =
         Boolean(homeTeam) && !hasRealAssignee && (cell.team === "neutral" || cell.team === homeTeam);
       const team: TableWarsV2CellTeam = shouldFillOpenHomeSeat && homeTeam ? homeTeam : cell.team;
       return {
         ...cell,
+        assignedPlayerId: hasActiveAssignee ? cell.assignedPlayerId : null,
         team,
         isBase: cell.isBase || shouldFillOpenHomeSeat,
         soldiers:
@@ -247,8 +250,8 @@ function percentToPoint(cell: TableWarsV2Cell, size: Size) {
 function tableSize(size: Size) {
   const base = Math.min(size.width, size.height);
   return {
-    width: Math.max(60, Math.min(94, base * 0.19)),
-    height: Math.max(44, Math.min(66, base * 0.13)),
+    width: Math.max(46, Math.min(68, base * 0.145)),
+    height: Math.max(34, Math.min(48, base * 0.1)),
   };
 }
 
@@ -378,7 +381,7 @@ function applyMove(state: GameState, event: TableWarsRealtimeLiteMoveEvent) {
   const to = state.cellById.get(event.toCellId);
   if (!from || !to || state.finished) return false;
   if (from.team !== event.team || from.soldiers < MIN_SEND_SOLDIERS) return false;
-  if (!areCellsConnected(from, to)) return false;
+  if (!areCellsConnected(state.cells, from, to)) return false;
 
   const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.min(event.soldiers, Math.floor(from.soldiers / 2)));
   from.soldiers = Math.max(0, from.soldiers - soldiers);
@@ -405,7 +408,7 @@ function emitMove(
   soldiers: number,
   onLocalEvent: (event: TableWarsRealtimeLiteEvent) => void | Promise<unknown>,
 ) {
-  if (!areCellsConnected(from, to)) return false;
+  if (!areCellsConnected(state.cells, from, to)) return false;
 
   const event: TableWarsRealtimeLiteMoveEvent = {
     type,
@@ -558,30 +561,31 @@ function chooseAiMove(state: GameState, team: TableWarsTeam, now: number) {
   const sources = state.cells
     .filter((cell) => canAiControl(state, cell, team) && cell.soldiers >= 8)
     .sort((a, b) => b.soldiers - a.soldiers || a.slotIndex - b.slotIndex);
-  const source = sources[0];
-  if (!source) return null;
 
-  const connectedTargets = state.cells.filter((cell) => cell.id !== source.id && areCellsConnected(source, cell));
-  const weakTargetSort = (a: LiteCell, b: LiteCell) =>
-    a.soldiers - b.soldiers || distanceBetween(source, a) - distanceBetween(source, b);
-  const target =
-    connectedTargets
-      .filter((cell) => cell.team === "neutral")
-      .sort(weakTargetSort)[0] ??
-    connectedTargets
-      .filter((cell) => cell.team !== team && cell.team !== "neutral")
-      .sort(weakTargetSort)[0] ??
-    connectedTargets
-      .filter((cell) => cell.team === team && cell.soldiers < source.soldiers && cell.soldiers < 18)
-      .sort(weakTargetSort)[0];
-  if (!target) return null;
+  for (const source of sources) {
+    const connectedTargets = state.cells.filter(
+      (cell) => cell.id !== source.id && areCellsConnected(state.cells, source, cell),
+    );
+    const weakTargetSort = (a: LiteCell, b: LiteCell) =>
+      a.soldiers - b.soldiers || distanceBetween(source, a) - distanceBetween(source, b);
+    const target =
+      connectedTargets
+        .filter((cell) => cell.team === "neutral")
+        .sort(weakTargetSort)[0] ??
+      connectedTargets
+        .filter((cell) => cell.team !== team)
+        .sort(weakTargetSort)[0];
+    if (!target) continue;
 
-  state.lastAiMoveAtByTeam[team] = now;
-  return {
-    source,
-    target,
-    soldiers: Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2)),
-  };
+    state.lastAiMoveAtByTeam[team] = now;
+    return {
+      source,
+      target,
+      soldiers: Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2)),
+    };
+  }
+
+  return null;
 }
 
 function applyExternalEvent(
@@ -768,9 +772,9 @@ function drawPaths(ctx: CanvasRenderingContext2D, state: GameState, size: Size, 
   const cellsBySlot = new Map(state.cells.map((cell) => [cell.slotIndex, cell]));
   const pulse = 0.5 + Math.sin(now / 180) * 0.5;
 
-  for (const targetSlot of tableWarsConnectedSlots(selectedSource.slotIndex)) {
+  for (const targetSlot of tableWarsConnectedSlots(state.cells, selectedSource.slotIndex)) {
     const toCell = cellsBySlot.get(targetSlot);
-    if (!toCell || !areCellsConnected(selectedSource, toCell)) continue;
+    if (!toCell || !areCellsConnected(state.cells, selectedSource, toCell)) continue;
 
     const from = percentToPoint(selectedSource, size);
     const to = percentToPoint(toCell, size);
@@ -810,7 +814,11 @@ function drawTable(
     cell.team !== "neutral" &&
     (!teamHasRealPlayers(state.players, cell.team) || (cell.isBase && !isBlockingRealPlayer(assignedPlayer)));
   const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
-  const connectedToSelected = Boolean(selectedSource && selectedSource.id !== cell.id && areCellsConnected(selectedSource, cell));
+  const connectedToSelected = Boolean(
+    selectedSource &&
+      selectedSource.id !== cell.id &&
+      areCellsConnected(state.cells, selectedSource, cell),
+  );
   const targetPreview = connectedToSelected;
   const baseAlpha = selectedSource && !selected && !connectedToSelected ? 0.44 : 1;
   const pulse = 0.5 + Math.sin(now / 150) * 0.5;
@@ -819,10 +827,10 @@ function drawTable(
   ctx.translate(point.x, point.y);
   ctx.globalAlpha = baseAlpha;
   ctx.shadowColor = cell.team === "blue" ? "rgba(56,189,248,0.38)" : cell.team === "red" ? "rgba(251,113,133,0.34)" : "rgba(107,58,37,0.14)";
-  ctx.shadowBlur = selected ? 28 : 18;
+  ctx.shadowBlur = selected ? 18 : 10;
   ctx.fillStyle = ctx.shadowColor;
   ctx.beginPath();
-  ctx.ellipse(0, dimensions.height * 0.14, dimensions.width * 0.82, dimensions.height * 0.74, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, dimensions.height * 0.14, dimensions.width * 0.62, dimensions.height * 0.62, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
 
@@ -831,7 +839,7 @@ function drawTable(
     ctx.globalAlpha = selected ? 0.58 + pulse * 0.34 : 0.8;
     ctx.lineWidth = selected ? 5 : 3;
     ctx.beginPath();
-    ctx.ellipse(0, 0, dimensions.width * 0.82 + (selected ? pulse * 8 : 0), dimensions.height * 0.78, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, dimensions.width * 0.68 + (selected ? pulse * 5 : 0), dimensions.height * 0.7, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.globalAlpha = baseAlpha;
   }
@@ -944,18 +952,18 @@ function drawControlMarker(ctx: CanvasRenderingContext2D, dimensions: { width: n
 }
 
 function drawNameTag(ctx: CanvasRenderingContext2D, name: string, dimensions: { width: number; height: number }) {
-  const label = name.length > 14 ? `${name.slice(0, 13)}...` : name;
-  const width = Math.min(128, Math.max(72, label.length * 8));
-  const y = -dimensions.height * 1.08;
+  const label = name.length > 11 ? `${name.slice(0, 10)}...` : name;
+  const width = Math.min(94, Math.max(56, label.length * 6.5));
+  const y = -dimensions.height * 1.02;
   ctx.save();
   ctx.fillStyle = "rgba(255,253,249,0.94)";
   ctx.strokeStyle = "rgba(107,58,37,0.18)";
   ctx.lineWidth = 1;
-  roundRect(ctx, -width / 2, y - 12, width, 24, 10);
+  roundRect(ctx, -width / 2, y - 9, width, 18, 8);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = "#311912";
-  ctx.font = "900 11px Arial";
+  ctx.font = "900 9px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(label, 0, y);
@@ -1168,11 +1176,6 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     const normalizedCells = normalizeCells(props.cells, props.players);
     state.cells = normalizedCells;
     state.cellById = makeCellMap(normalizedCells);
-    state.players = props.players;
-    state.currentPlayer = props.currentPlayer;
-    state.isPlayer = props.isPlayer;
-    state.isHost = props.isHost;
-    state.role = props.role;
     const localWinner = confirmedWinnerFromCells(normalizedCells);
     if (props.initialRoundFinished && localWinner) {
       state.finished = true;
@@ -1184,15 +1187,36 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
       state.winnerMessage = null;
     }
     state.selectedCellId = state.selectedCellId && state.cellById.has(state.selectedCellId) ? state.selectedCellId : null;
+  }, [props.cells, props.initialRoundFinished, props.initialWinnerMessage]);
+
+  useEffect(() => {
+    const state = stateRef.current;
+    state.players = props.players;
+    state.currentPlayer = props.currentPlayer;
+    state.isPlayer = props.isPlayer;
+    state.isHost = props.isHost;
+    state.role = props.role;
+    const validAssigneeIds = new Set(
+      props.players
+        .filter(
+          (player) =>
+            player.role === "ai" ||
+            (player.role === "player" && player.isConnected && !player.leftAt),
+        )
+        .map((player) => player.id),
+    );
+    state.cells = state.cells.map((cell) =>
+      cell.assignedPlayerId && !validAssigneeIds.has(cell.assignedPlayerId)
+        ? { ...cell, assignedPlayerId: null }
+        : cell,
+    );
+    updateCellMap(state);
   }, [
-    props.cells,
     props.players,
     props.currentPlayer,
     props.isPlayer,
     props.isHost,
     props.role,
-    props.initialRoundFinished,
-    props.initialWinnerMessage,
   ]);
 
   useEffect(() => {
@@ -1409,7 +1433,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
 
     const soldiers = Math.max(MIN_SEND_SOLDIERS, Math.floor(source.soldiers / 2));
-    if (!areCellsConnected(source, cell)) {
+    if (!areCellsConnected(state.cells, source, cell)) {
       noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${DISCONNECTED_CELL_MESSAGE}`, DISCONNECTED_CELL_MESSAGE);
       return;
     }
@@ -1439,7 +1463,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   }
 
   return (
-    <div ref={containerRef} className="relative h-[68dvh] min-h-[500px] max-h-[620px] overflow-hidden bg-[#F4E7D7]">
+    <div ref={containerRef} className="relative h-[64dvh] min-h-[480px] max-h-[580px] overflow-hidden bg-[#F4E7D7]">
       <canvas
         ref={canvasRef}
         className="block h-full w-full touch-none select-none pointer-events-auto"

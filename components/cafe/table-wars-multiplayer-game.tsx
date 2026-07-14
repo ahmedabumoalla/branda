@@ -6,6 +6,7 @@ import {
   finishTableWarsV2RealtimeLiteRoundAction,
   getTableWarsV2SnapshotAction,
   joinTableWarsV2Team,
+  leaveTableWarsV2RoundAction,
   startNewTableWarsLiteRoundAction,
   startTableWarsV2LobbyRoundAction,
 } from "@/app/actions/table-wars";
@@ -48,9 +49,9 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 }
 
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
-  const initialNickname = initialSnapshot.currentPlayer?.displayName ?? "";
+  const initialNickname = "";
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [nicknameConfirmed, setNicknameConfirmed] = useState(isValidNickname(initialNickname));
+  const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
   const [nicknameInput, setNicknameInput] = useState(initialNickname);
   const [pendingNickname, setPendingNickname] = useState(initialNickname);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
@@ -59,9 +60,11 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [countdown, setCountdown] = useState(secondsUntil(initialSnapshot.round?.lobbyEndsAt));
   const [realtimeStatus, setRealtimeStatus] = useState<TableWarsRealtimeLiteConnectionStatus>("connecting");
   const [realtimeEvents, setRealtimeEvents] = useState<TableWarsRealtimeLiteEvent[]>([]);
+  const [resettingExistingSession, setResettingExistingSession] = useState(Boolean(initialSnapshot.currentPlayer));
   const [isNicknamePending, startNicknameTransition] = useTransition();
   const [, startRoundTransition] = useTransition();
   const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
+  const leaveSentForRoundRef = useRef<string | null>(null);
   const startingRoundRef = useRef<string | null>(null);
   const finishedSaveRef = useRef(false);
 
@@ -78,10 +81,72 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const hostPlayer = useMemo(
     () => snapshot.players
       .filter((player) => player.role === "player" && player.customerId)
+      .filter((player) => player.isConnected && !player.leftAt)
       .sort((a, b) => Date.parse(a.joinedAt ?? "") - Date.parse(b.joinedAt ?? "") || a.id.localeCompare(b.id))[0] ?? null,
     [snapshot.players],
   );
   const isHost = Boolean(currentPlayer && hostPlayer?.id === currentPlayer.id);
+
+  useEffect(() => {
+    const existingRoundId = initialSnapshot.currentPlayer?.roundId;
+    if (!existingRoundId) return;
+
+    void leaveTableWarsV2RoundAction(slug, existingRoundId)
+      .then(() => getTableWarsV2SnapshotAction(slug))
+      .then((nextSnapshot) => {
+        setSnapshot(nextSnapshot);
+        setNicknameInput("");
+        setPendingNickname("");
+        setNicknameConfirmed(false);
+      })
+      .catch((resetError) => {
+        setError(resetError instanceof Error ? resetError.message : "تعذر بدء دخول جديد إلى اللعبة.");
+      })
+      .finally(() => setResettingExistingSession(false));
+  }, [initialSnapshot.currentPlayer?.roundId, slug]);
+
+  useEffect(() => {
+    if (!round?.id || !currentPlayer || round.status === "finished" || round.status === "cancelled") return;
+    const roundId = round.id;
+
+    function sendLeave() {
+      if (leaveSentForRoundRef.current === roundId) return;
+      leaveSentForRoundRef.current = roundId;
+      const endpoint = `/api/public/cafe/${encodeURIComponent(slug)}/table-wars/leave`;
+      const body = JSON.stringify({ roundId });
+      const queued = navigator.sendBeacon?.(endpoint, new Blob([body], { type: "application/json" })) ?? false;
+      if (!queued) {
+        void fetch(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+          credentials: "same-origin",
+          keepalive: true,
+        }).catch(() => undefined);
+      }
+    }
+
+    function handleDocumentClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      const nextUrl = new URL(anchor.href, window.location.href);
+      if (nextUrl.origin === window.location.origin && nextUrl.pathname === window.location.pathname) return;
+      sendLeave();
+    }
+
+    window.addEventListener("pagehide", sendLeave);
+    window.addEventListener("beforeunload", sendLeave);
+    window.addEventListener("popstate", sendLeave);
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      window.removeEventListener("pagehide", sendLeave);
+      window.removeEventListener("beforeunload", sendLeave);
+      window.removeEventListener("popstate", sendLeave);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [currentPlayer, round?.id, round?.status, slug]);
 
   useEffect(() => {
     if (!isLobby || !round?.id) return;
@@ -118,6 +183,20 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     const refreshTimer = window.setTimeout(() => {
       void getTableWarsV2SnapshotAction(slug).then(setSnapshot).catch(() => undefined);
     }, 750);
+    const refreshPoller = window.setInterval(() => {
+      void getTableWarsV2SnapshotAction(slug)
+        .then((nextSnapshot) => {
+          setSnapshot((current) => ({
+            ...current,
+            currentPlayer: nextSnapshot.currentPlayer,
+            players: nextSnapshot.players,
+            role: nextSnapshot.role,
+            team: nextSnapshot.team,
+            teamCounts: nextSnapshot.teamCounts,
+          }));
+        })
+        .catch(() => undefined);
+    }, 3_000);
     const channel = createTableWarsRealtimeLiteChannel({
       roundId: round.id,
       cafeSlug: snapshot.cafeSlug,
@@ -127,6 +206,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     realtimeChannelRef.current = channel;
     return () => {
       window.clearTimeout(refreshTimer);
+      window.clearInterval(refreshPoller);
       channel.close();
       if (realtimeChannelRef.current === channel) realtimeChannelRef.current = null;
     };
@@ -179,7 +259,13 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-3">
-      {currentPlayer ? (
+      {resettingExistingSession ? (
+        <section className="rounded-2xl border border-[#E7D7C6] bg-white p-5 text-center shadow-sm">
+          <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-[#6B3A25]" />
+          <p className="mt-2 text-sm font-black text-[#311912]">جاري تجهيز دخول جديد...</p>
+        </section>
+      ) : null}
+      {!resettingExistingSession && currentPlayer ? (
         <section className="grid grid-cols-3 gap-2">
           <StatTile label="فريقك" value={currentPlayer.team === "blue" ? "الأزرق" : "الأحمر"} />
           <StatTile label="الأزرق" value={`${snapshot.teamCounts.bluePlayers}/2`} />
@@ -187,7 +273,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         </section>
       ) : null}
 
-      {needsNickname ? (
+      {!resettingExistingSession && needsNickname ? (
         <section className="rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#4A281D]/10 text-[#4A281D]"><UserRound className="h-5 w-5" /></span>
@@ -201,14 +287,14 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         </section>
       ) : null}
 
-      {canPickTeam ? (
+      {!resettingExistingSession && canPickTeam ? (
         <TableWarsTeamPicker canJoinBlue={snapshot.canJoinBlue} canJoinRed={snapshot.canJoinRed} onJoin={(team) => joinTableWarsV2Team(slug, team, pendingNickname)} onJoined={(nextSnapshot) => {
           setSnapshot(nextSnapshot);
           setMessage("تم الانضمام إلى ردهة الانتظار.");
         }} />
       ) : null}
 
-      {isLobby ? (
+      {!resettingExistingSession && isLobby ? (
         <section className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-5 text-center shadow-sm">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-amber-700">
             <LoaderCircle className="h-8 w-8 animate-spin" aria-hidden="true" />
@@ -228,7 +314,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
       {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-black text-rose-700">{error}</p> : null}
 
-      {canShowGame ? (
+      {!resettingExistingSession && canShowGame ? (
         <section className="overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white shadow-sm">
           <div className="flex items-center gap-3 border-b border-[#F2E7D9] bg-[#FFFDF9] p-3">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#4A281D]/10 text-[#4A281D]"><Swords className="h-5 w-5" /></span>

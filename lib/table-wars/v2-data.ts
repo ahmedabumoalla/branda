@@ -274,8 +274,9 @@ function emptyTeamCounts(): TableWarsV2TeamCounts {
 
 function countPlayers(players: TableWarsV2Player[]): TableWarsV2TeamCounts {
   return players.reduce((counts, player) => {
-    if (player.team === "blue" && player.role === "player") counts.bluePlayers += 1;
-    if (player.team === "red" && player.role === "player") counts.redPlayers += 1;
+    const connectedPlayer = player.role === "player" && player.isConnected && !player.leftAt;
+    if (player.team === "blue" && connectedPlayer) counts.bluePlayers += 1;
+    if (player.team === "red" && connectedPlayer) counts.redPlayers += 1;
     if (player.team === "blue" && player.role === "ai") counts.blueAi += 1;
     if (player.team === "red" && player.role === "ai") counts.redAi += 1;
     if (player.team === "blue" && player.role === "spectator" && player.customerId) counts.blueSpectators += 1;
@@ -309,7 +310,14 @@ function maxRealPlayersPerTeam(round: TableWarsV2Round) {
 }
 
 function realPlayerCountForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
-  return players.filter((player) => player.team === team && player.role === "player" && player.customerId).length;
+  return players.filter(
+    (player) =>
+      player.team === team &&
+      player.role === "player" &&
+      player.customerId &&
+      player.isConnected &&
+      !player.leftAt,
+  ).length;
 }
 
 function roomHasAvailableSeat(
@@ -383,6 +391,22 @@ async function ensurePublicTableWarsV2Playable(slug: string) {
 
 export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
   const supabase = tableWarsV2Db(createAdminClient());
+  if (
+    round.totalCells !== TABLE_WARS_V2_TOTAL_CELLS ||
+    round.maxPlayersPerTeam !== TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM
+  ) {
+    const roundResult = await supabase
+      .from("table_wars_v2_rounds")
+      .update({
+        total_cells: TABLE_WARS_V2_TOTAL_CELLS,
+        max_players_per_team: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM,
+      })
+      .eq("id", round.id)
+      .eq("cafe_id", round.cafeId);
+    if (roundResult.error) {
+      throw new Error(roundResult.error.message || "تعذر تثبيت إعدادات خريطة حرب الطاولات.");
+    }
+  }
   const { data, error } = await supabase
     .from("table_wars_v2_cells")
     .select("slot_index")
@@ -934,7 +958,14 @@ async function getOpenTableWarsV2RoomForCustomer(cafeId: string, customerId: str
     await Promise.all(
       rooms.map(async (round) => {
         const players = await getRoundPlayers(round);
-        const player = players.find((item) => item.customerId === customerId) ?? null;
+        const player =
+          players.find(
+            (item) =>
+              item.customerId === customerId &&
+              item.role === "player" &&
+              item.isConnected &&
+              !item.leftAt,
+          ) ?? null;
         return player ? { round, player } : null;
       }),
     )
@@ -1012,11 +1043,16 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
   }
 
   let round = customerRoom.round;
-  const [players, cells, initialUnits] = await Promise.all([
+  await seedTableWarsV2RoundCells(round);
+  round = (await getRoundById(round.id, cafe.id)) ?? round;
+  const [roundPlayers, cells, initialUnits] = await Promise.all([
     getRoundPlayers(round),
     getRoundCells(round),
     getRoundMovingUnits(round),
   ]);
+  const players = roundPlayers.filter(
+    (player) => player.role === "ai" || (player.role === "player" && player.isConnected && !player.leftAt),
+  );
 
   const snapshotWinningTeam = round.status === "active" ? completeMapWinningTeam(cells) : null;
   const units =
@@ -1228,7 +1264,7 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
   }
   const freshFromCell = cells.find((cell) => cell.id === fromCell.id) ?? fromCell;
   const freshToCell = cells.find((cell) => cell.id === toCell.id) ?? toCell;
-  if (!areTableWarsSlotsConnected(freshFromCell.slotIndex, freshToCell.slotIndex)) {
+  if (!areTableWarsSlotsConnected(cells, freshFromCell.slotIndex, freshToCell.slotIndex)) {
     throw new Error("يمكن الإرسال عبر المسارات الثلاثة المتصلة بالطاولة فقط.");
   }
   const canControl = canPlayerControlRoundCell(currentPlayer, freshFromCell, cells, players);
@@ -1382,6 +1418,56 @@ export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
   }
 
   return getTableWarsV2SnapshotForCustomer(cafe.slug);
+}
+
+export async function leaveTableWarsV2RoundForCustomer(slug: string, roundId: string) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return { ok: true as const };
+
+  const customer = await getCustomerProfileForActiveSession(String(cafe.slug ?? slug));
+  if (!customer) return { ok: true as const };
+
+  const round = await getRoundById(roundId, String(cafe.id));
+  if (!round || (round.status !== "waiting" && round.status !== "active")) {
+    return { ok: true as const };
+  }
+
+  const player = await getCurrentPlayer(round, String(customer.id));
+  if (!player || player.role !== "player") return { ok: true as const };
+
+  await releasePlayerCellAssignments(round, player.id);
+  const supabase = tableWarsV2Db(createAdminClient());
+  const now = new Date().toISOString();
+  const playerResult = await supabase
+    .from("table_wars_v2_players")
+    .update({
+      role: "spectator",
+      base_cell_id: null,
+      is_connected: false,
+      left_at: now,
+      last_seen_at: now,
+    })
+    .eq("id", player.id)
+    .eq("cafe_id", round.cafeId)
+    .eq("round_id", round.id);
+  if (playerResult.error) {
+    throw new Error(playerResult.error.message || "تعذر تسجيل الانسحاب من حرب الطاولات.");
+  }
+
+  const { counts } = await refreshRoundTeamCounts(round);
+  if (round.status === "waiting" && counts.bluePlayers === 0 && counts.redPlayers === 0) {
+    const roundResult = await supabase
+      .from("table_wars_v2_rounds")
+      .update({ status: "cancelled", ended_at: now })
+      .eq("id", round.id)
+      .eq("cafe_id", round.cafeId)
+      .eq("status", "waiting");
+    if (roundResult.error) {
+      throw new Error(roundResult.error.message || "تعذر إغلاق ردهة الانتظار الفارغة.");
+    }
+  }
+
+  return { ok: true as const };
 }
 
 async function getCellById(cellId: string) {

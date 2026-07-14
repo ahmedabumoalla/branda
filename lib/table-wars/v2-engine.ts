@@ -245,7 +245,7 @@ function chooseAiMoveForPlayer(
       (cell) =>
         cell.id !== source.id &&
         cell.team !== aiPlayer.team &&
-        areTableWarsSlotsConnected(source.slotIndex, cell.slotIndex),
+        areTableWarsSlotsConnected(cells, source.slotIndex, cell.slotIndex),
     );
     if (candidates.length === 0) continue;
 

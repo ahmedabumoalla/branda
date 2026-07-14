@@ -1,25 +1,25 @@
-import type { TableWarsTeam } from "@/lib/table-wars/v2-types";
+import type { TableWarsTeam, TableWarsV2Cell } from "@/lib/table-wars/v2-types";
 
 export const TABLE_WARS_V2_TOTAL_CELLS = 12;
 export const TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM = 2;
 export const TABLE_WARS_V2_LOBBY_SECONDS = 30;
 
 const BASE_POSITIONS: Record<number, { x: number; y: number }> = {
-  1: { x: 16, y: 28 },
-  2: { x: 16, y: 72 },
-  11: { x: 84, y: 28 },
-  12: { x: 84, y: 72 },
+  1: { x: 13, y: 26 },
+  2: { x: 13, y: 74 },
+  11: { x: 87, y: 26 },
+  12: { x: 87, y: 74 },
 };
 
 const NEUTRAL_POSITIONS = [
-  { x: 32, y: 18 },
-  { x: 32, y: 48 },
-  { x: 32, y: 82 },
-  { x: 48, y: 31 },
-  { x: 52, y: 69 },
-  { x: 68, y: 18 },
-  { x: 68, y: 52 },
-  { x: 68, y: 82 },
+  { x: 31, y: 16 },
+  { x: 31, y: 50 },
+  { x: 31, y: 84 },
+  { x: 50, y: 29 },
+  { x: 50, y: 71 },
+  { x: 69, y: 16 },
+  { x: 69, y: 50 },
+  { x: 69, y: 84 },
 ];
 
 function hashSeed(seed: string) {
@@ -51,10 +51,7 @@ function seededNeutralPositions(seed: string) {
     [positions[index], positions[swapIndex]] = [positions[swapIndex], positions[index]];
   }
 
-  return positions.map((position) => ({
-    x: Math.max(27, Math.min(73, position.x + Math.round((random() - 0.5) * 6))),
-    y: Math.max(14, Math.min(86, position.y + Math.round((random() - 0.5) * 8))),
-  }));
+  return positions;
 }
 
 export function tableWarsCellPosition(slotIndex: number, seed: string | null) {
@@ -69,14 +66,23 @@ export function tableWarsHomeSlots(team: TableWarsTeam) {
   return team === "blue" ? [1, 2] : [11, 12];
 }
 
-export function tableWarsConnectedSlots(slotIndex: number) {
-  if (slotIndex < 1 || slotIndex > TABLE_WARS_V2_TOTAL_CELLS) return [];
-  const previous = ((slotIndex + 10) % TABLE_WARS_V2_TOTAL_CELLS) + 1;
-  const next = (slotIndex % TABLE_WARS_V2_TOTAL_CELLS) + 1;
-  const opposite = ((slotIndex + 5) % TABLE_WARS_V2_TOTAL_CELLS) + 1;
-  return [previous, next, opposite];
+type PositionedCell = Pick<TableWarsV2Cell, "slotIndex" | "x" | "y">;
+
+export function tableWarsConnectedSlots(cells: PositionedCell[], slotIndex: number) {
+  const source = cells.find((cell) => cell.slotIndex === slotIndex);
+  if (!source) return [];
+
+  return cells
+    .filter((cell) => cell.slotIndex !== slotIndex)
+    .map((cell) => ({
+      slotIndex: cell.slotIndex,
+      distance: Math.hypot(cell.x - source.x, cell.y - source.y),
+    }))
+    .sort((a, b) => a.distance - b.distance || a.slotIndex - b.slotIndex)
+    .slice(0, 3)
+    .map((cell) => cell.slotIndex);
 }
 
-export function areTableWarsSlotsConnected(fromSlot: number, toSlot: number) {
-  return tableWarsConnectedSlots(fromSlot).includes(toSlot);
+export function areTableWarsSlotsConnected(cells: PositionedCell[], fromSlot: number, toSlot: number) {
+  return tableWarsConnectedSlots(cells, fromSlot).includes(toSlot);
 }
