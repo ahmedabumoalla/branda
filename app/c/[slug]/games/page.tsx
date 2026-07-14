@@ -1,19 +1,13 @@
 import { Suspense } from "react";
 import { PublicGamesPage } from "@/components/cafe/public-games-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { isBattleArenaEnabledForCafe } from "@/lib/data/brand-games";
-import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
-import { getPublicTableWarsVisibilityBySlug } from "@/lib/data/table-wars";
-import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
-import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { getPublicGamesVisibilityBySlug } from "@/lib/data/feature-entitlements";
 
 type Props = {
   params: Promise<{
     slug: string;
   }>;
 };
-
-const PUBLIC_GAMES_FEATURE_KEY = "in_store_table_wars";
 
 function GamesUnavailableState() {
   return (
@@ -29,17 +23,14 @@ export default async function CafeGamesPage({ params }: Props) {
   const { slug } = await params;
   if (!isSupabaseConfigured()) return <GamesUnavailableState />;
 
-  const features = await getPublicCafeFeatureCodesBySlug(slug).catch(() => []);
-  const gamesFeatureEnabled = featureCodesAllow(features, PUBLIC_GAMES_FEATURE_KEY);
-  if (!gamesFeatureEnabled) return <GamesUnavailableState />;
+  const gamesVisibility = await getPublicGamesVisibilityBySlug(slug).catch(() => null);
+  if (!gamesVisibility?.showPublicGamesSection) return <GamesUnavailableState />;
 
-  const cafe = await getPublicCafeBySlugAdmin(slug).catch(() => null);
-  const [tableWarsVisibility, battleArenaEnabled] = await Promise.all([
-    getPublicTableWarsVisibilityBySlug(slug).catch(() => null),
-    cafe ? isBattleArenaEnabledForCafe(String(cafe.id)).catch(() => false) : Promise.resolve(false),
-  ]);
-  const battleArenaEntryHref = battleArenaEnabled
+  const battleArenaEntryHref = gamesVisibility.battleArenaEnabled
     ? `/c/${encodeURIComponent(slug)}/play/battle-arena`
+    : null;
+  const tableWarsEntryHref = gamesVisibility.tableWarsEnabled
+    ? `/c/${encodeURIComponent(slug)}/play/table-wars`
     : null;
 
   return (
@@ -47,7 +38,7 @@ export default async function CafeGamesPage({ params }: Props) {
       <PublicGamesPage
         slug={slug}
         battleArenaEntryHref={battleArenaEntryHref}
-        tableWarsEntryHref={tableWarsVisibility?.entryHref ?? null}
+        tableWarsEntryHref={tableWarsEntryHref}
       />
     </Suspense>
   );

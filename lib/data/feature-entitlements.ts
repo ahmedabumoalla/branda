@@ -65,7 +65,30 @@ export async function getOwnerFeatureCodes() {
   return getCafeFeatureCodes(cafe.id);
 }
 
-async function hasEnabledPublicGame(cafeId: string) {
+export type PublicGamesVisibility = {
+  packageGamesEnabled: boolean;
+  tableWarsEnabled: boolean;
+  battleArenaEnabled: boolean;
+  hasAnyEnabledGame: boolean;
+  showPublicGamesSection: boolean;
+};
+
+const unavailablePublicGames: PublicGamesVisibility = {
+  packageGamesEnabled: false,
+  tableWarsEnabled: false,
+  battleArenaEnabled: false,
+  hasAnyEnabledGame: false,
+  showPublicGamesSection: false,
+};
+
+export async function getPublicGamesVisibilityForCafe(
+  cafeId: string,
+  featureCodes?: string[],
+): Promise<PublicGamesVisibility> {
+  const features = featureCodes ?? await getCafeFeatureCodes(cafeId);
+  const packageGamesEnabled = featureCodesAllow(features, PUBLIC_GAMES_FEATURE_KEY);
+  if (!packageGamesEnabled) return unavailablePublicGames;
+
   const admin = createAdminClient();
   const [battleArenaResult, tableWarsResult] = await Promise.all([
     admin
@@ -83,7 +106,21 @@ async function hasEnabledPublicGame(cafeId: string) {
 
   const battleArenaEnabled = !battleArenaResult.error && Boolean(battleArenaResult.data?.enabled);
   const tableWarsEnabled = !tableWarsResult.error && Number(tableWarsResult.count ?? 0) > 0;
-  return battleArenaEnabled || tableWarsEnabled;
+  const hasAnyEnabledGame = tableWarsEnabled || battleArenaEnabled;
+
+  return {
+    packageGamesEnabled,
+    tableWarsEnabled,
+    battleArenaEnabled,
+    hasAnyEnabledGame,
+    showPublicGamesSection: packageGamesEnabled && hasAnyEnabledGame,
+  };
+}
+
+export async function getPublicGamesVisibilityBySlug(slug: string) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return unavailablePublicGames;
+  return getPublicGamesVisibilityForCafe(String(cafe.id));
 }
 
 export async function getPublicCafeFeatureCodesBySlug(slug: string) {
@@ -92,8 +129,8 @@ export async function getPublicCafeFeatureCodesBySlug(slug: string) {
   const features = await getCafeFeatureCodes(String(cafe.id));
   if (!featureCodesAllow(features, PUBLIC_GAMES_FEATURE_KEY)) return features;
 
-  const gamesAvailable = await hasEnabledPublicGame(String(cafe.id));
-  return gamesAvailable
+  const gamesVisibility = await getPublicGamesVisibilityForCafe(String(cafe.id), features);
+  return gamesVisibility.showPublicGamesSection
     ? features
     : features.filter((feature) => feature !== PUBLIC_GAMES_FEATURE_KEY);
 }

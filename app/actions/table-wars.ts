@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
 import {
   disableOwnerTableWarsTables,
   enableOwnerTableWarsDemoTable,
@@ -22,14 +23,23 @@ function revalidateTableWarsPaths(slug: string) {
   revalidatePath(`/c/${slug}/play/table-wars`);
 }
 
+function revalidateTableWarsAvailabilityPaths(slug: string) {
+  clearServerMemoryCache(`public-cafe-fast:${slug}`);
+  clearServerMemoryCache(`public-cafe:${slug}`);
+  revalidateTableWarsPaths(slug);
+  revalidatePath(`/c/${slug}/games`);
+  revalidatePath(`/api/public/cafe/${slug}`);
+  revalidatePath(`/api/public/cafe/${slug}/fast`);
+}
+
 export async function enableOwnerTableWarsDemoAction() {
   const slug = await enableOwnerTableWarsDemoTable();
-  revalidateTableWarsPaths(slug);
+  revalidateTableWarsAvailabilityPaths(slug);
 }
 
 export async function disableOwnerTableWarsAction() {
   const slug = await disableOwnerTableWarsTables();
-  revalidateTableWarsPaths(slug);
+  revalidateTableWarsAvailabilityPaths(slug);
 }
 
 export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam, nickname: string) {
