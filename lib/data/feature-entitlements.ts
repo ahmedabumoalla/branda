@@ -7,6 +7,9 @@ import {
 } from "@/lib/platform/feature-access";
 import { getPlatformFeatureDefinition, type PlatformFeatureId } from "@/lib/platform/feature-registry";
 
+const PUBLIC_GAMES_FEATURE_KEY = "in_store_table_wars";
+const BATTLE_ARENA_GAME_KEY = "battle_arena";
+
 function normalizeFeatures(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
   if (typeof raw === "string") {
@@ -62,10 +65,37 @@ export async function getOwnerFeatureCodes() {
   return getCafeFeatureCodes(cafe.id);
 }
 
+async function hasEnabledPublicGame(cafeId: string) {
+  const admin = createAdminClient();
+  const [battleArenaResult, tableWarsResult] = await Promise.all([
+    admin
+      .from("brand_feature_overrides")
+      .select("enabled")
+      .eq("cafe_id", cafeId)
+      .eq("feature_id", BATTLE_ARENA_GAME_KEY)
+      .maybeSingle(),
+    admin
+      .from("table_wars_tables")
+      .select("id", { count: "exact", head: true })
+      .eq("cafe_id", cafeId)
+      .eq("is_active", true),
+  ]);
+
+  const battleArenaEnabled = !battleArenaResult.error && Boolean(battleArenaResult.data?.enabled);
+  const tableWarsEnabled = !tableWarsResult.error && Number(tableWarsResult.count ?? 0) > 0;
+  return battleArenaEnabled || tableWarsEnabled;
+}
+
 export async function getPublicCafeFeatureCodesBySlug(slug: string) {
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return [];
-  return getCafeFeatureCodes(String(cafe.id));
+  const features = await getCafeFeatureCodes(String(cafe.id));
+  if (!featureCodesAllow(features, PUBLIC_GAMES_FEATURE_KEY)) return features;
+
+  const gamesAvailable = await hasEnabledPublicGame(String(cafe.id));
+  return gamesAvailable
+    ? features
+    : features.filter((feature) => feature !== PUBLIC_GAMES_FEATURE_KEY);
 }
 
 export function filterPublicCafePayloadByFeatures<T extends Record<string, unknown>>(payload: T, features: string[]): T {
