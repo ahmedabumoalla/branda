@@ -22,6 +22,7 @@ import type {
   TableWarsTeam,
   TableWarsV2JoinActionResult,
   TableWarsV2SnapshotActionResult,
+  TableWarsV2StartActionResult,
 } from "@/lib/table-wars/v2-types";
 
 const SAFE_JOIN_ERROR = "تعذر الانضمام إلى ردهة حرب الطاولات. حاول مرة أخرى.";
@@ -131,13 +132,70 @@ export async function getTableWarsV2SnapshotAction(slug: string): Promise<TableW
 export async function startTableWarsV2LobbyRoundAction(
   slug: string,
   roundId: string,
-): Promise<TableWarsV2SnapshotActionResult> {
+  playerId?: string | null,
+): Promise<TableWarsV2StartActionResult> {
+  const normalizedSlug = slug.trim().toLowerCase();
+  const normalizedRoundId = typeof roundId === "string" ? roundId.trim() : "";
+  const normalizedPlayerId = typeof playerId === "string" ? playerId.trim() : "";
+  let hasCustomerProfile = false;
+  let customerProfileId: string | null = null;
+  let roundStatus: string | null = null;
+  let foundPlayer = false;
+  let playerIsConnected = false;
+
   try {
-    const snapshot = await startTableWarsV2LobbyRoundForCustomer(slug, roundId);
+    const [cafe, customerProfile] = await Promise.all([
+      getPublicCafeBySlugAdmin(normalizedSlug),
+      getCustomerProfileForCustomerSession(normalizedSlug),
+    ]);
+    const cafeId = cafe?.id ? String(cafe.id) : null;
+    customerProfileId = customerProfile?.id ? String(customerProfile.id) : null;
+    const customerCafeId = customerProfile?.cafe_id ? String(customerProfile.cafe_id) : null;
+    hasCustomerProfile = Boolean(customerProfileId && cafeId && customerCafeId === cafeId);
+    if (!hasCustomerProfile || !cafeId || !customerProfileId) {
+      throw Object.assign(new Error("تعذر التحقق من جلسة لاعب حرب الطاولات."), {
+        code: "TABLE_WARS_START_PLAYER_MISSING",
+      });
+    }
+
+    const snapshot = await startTableWarsV2LobbyRoundForCustomer(
+      normalizedSlug,
+      normalizedRoundId,
+      {
+        cafeId,
+        customerProfileId,
+        playerId: normalizedPlayerId || null,
+      },
+    );
     return { ok: true, snapshot };
   } catch (error) {
-    console.error("[table-wars] lobby start failed", error);
-    return { ok: false, message: SAFE_START_ERROR };
+    const value = error && typeof error === "object" ? (error as Record<string, unknown>) : null;
+    const startContext =
+      value?.startContext && typeof value.startContext === "object"
+        ? (value.startContext as Record<string, unknown>)
+        : null;
+    roundStatus = typeof startContext?.roundStatus === "string" ? startContext.roundStatus : null;
+    foundPlayer = startContext?.foundPlayer === true;
+    playerIsConnected = startContext?.playerIsConnected === true;
+    const requiresRejoin = value?.code === "TABLE_WARS_START_PLAYER_MISSING";
+
+    console.error("[table-wars][start-lobby]", {
+      hasCustomerProfile,
+      hasRoundId: Boolean(normalizedRoundId),
+      hasPlayerId: Boolean(normalizedPlayerId),
+      roundStatus,
+      foundPlayer,
+      playerIsConnected,
+      startAttemptResult: requiresRejoin ? "requires-rejoin" : "failed",
+    });
+    return {
+      ok: false,
+      message:
+        requiresRejoin && error instanceof Error
+          ? error.message
+          : SAFE_START_ERROR,
+      requiresRejoin,
+    };
   }
 }
 

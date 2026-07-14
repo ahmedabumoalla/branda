@@ -1179,39 +1179,116 @@ export async function joinTableWarsV2Customer(
   };
 }
 
-export async function startTableWarsV2LobbyRoundForCustomer(slug: string, roundId: string) {
-  const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
-  if (!customer) throw new Error("يجب تسجيل الدخول لبدء الجولة.");
+type TableWarsV2StartCustomerContext = {
+  cafeId: string;
+  customerProfileId: string;
+  playerId?: string | null;
+};
 
-  let round = await getRoundById(roundId, cafe.id);
-  if (!round) throw new Error("ردهة حرب الطاولات غير موجودة.");
-  const player = await getCurrentPlayer(round, String(customer.id));
-  if (!player || player.role !== "player") throw new Error("لا يمكنك بدء ردهة لم تنضم إليها.");
+function tableWarsV2StartError(
+  message: string,
+  context: {
+    roundStatus: TableWarsV2RoundStatus | null;
+    foundPlayer: boolean;
+    playerIsConnected: boolean;
+  },
+) {
+  return Object.assign(new Error(message), {
+    code: "TABLE_WARS_START_PLAYER_MISSING",
+    startContext: context,
+  });
+}
+
+export async function startTableWarsV2LobbyRoundForCustomer(
+  slug: string,
+  requestedRoundId: string,
+  customerContext: TableWarsV2StartCustomerContext,
+) {
+  const cafe = await ensurePublicTableWarsV2Playable(slug);
+  const customerId = text(customerContext.customerProfileId);
+  const customerCafeId = text(customerContext.cafeId);
+  const requestedPlayerId = nullableText(customerContext.playerId);
+  if (!customerId || !customerCafeId || customerCafeId !== cafe.id) {
+    throw tableWarsV2StartError("تعذر التحقق من جلسة لاعب حرب الطاولات.", {
+      roundStatus: null,
+      foundPlayer: false,
+      playerIsConnected: false,
+    });
+  }
+
+  let round = requestedRoundId ? await getRoundById(requestedRoundId, cafe.id) : null;
+  let player = round ? await getCurrentPlayer(round, customerId) : null;
+  const requestedSeatIsValid = Boolean(
+    round &&
+      player &&
+      (!requestedPlayerId || player.id === requestedPlayerId) &&
+      player.role === "player" &&
+      player.isConnected &&
+      !player.leftAt,
+  );
+
+  if (!requestedSeatIsValid) {
+    const latestRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, customerId);
+    if (latestRoom) {
+      round = latestRoom.round;
+      player = latestRoom.player;
+    }
+  }
+
+  if (!round || !player || player.role !== "player" || !player.isConnected || player.leftAt) {
+    throw tableWarsV2StartError("لم يعد مقعدك في الردهة نشطًا. اختر الفريق مجددًا.", {
+      roundStatus: round?.status ?? null,
+      foundPlayer: Boolean(player),
+      playerIsConnected: Boolean(player?.isConnected && !player.leftAt),
+    });
+  }
+
+  if (round.status === "active") {
+    return getTableWarsV2SnapshotForCustomer(cafe.slug);
+  }
+
+  if (round.status !== "waiting") {
+    throw tableWarsV2StartError("انتهت ردهة الانتظار. اختر الفريق مجددًا.", {
+      roundStatus: round.status,
+      foundPlayer: true,
+      playerIsConnected: player.isConnected && !player.leftAt,
+    });
+  }
 
   let startedByThisRequest = false;
-  if (round.status === "waiting") {
-    const supabase = tableWarsV2Db(createAdminClient());
-    const { data, error } = await supabase.rpc("start_table_wars_v2_lobby_round", {
-      p_cafe_id: cafe.id,
-      p_round_id: round.id,
+  const supabase = tableWarsV2Db(createAdminClient());
+  const { data, error } = await supabase.rpc("start_table_wars_v2_lobby_round", {
+    p_cafe_id: cafe.id,
+    p_round_id: round.id,
+  });
+  if (error) {
+    throw Object.assign(error, {
+      startContext: {
+        roundStatus: round.status,
+        foundPlayer: true,
+        playerIsConnected: player.isConnected && !player.leftAt,
+      },
     });
-    if (error) throw new Error(error.message || "تعذر بدء جولة حرب الطاولات.");
-    const rpcResult = Array.isArray(data) ? data[0] : data;
-    startedByThisRequest =
-      rpcResult === true ||
-      (Boolean(rpcResult) &&
-        typeof rpcResult === "object" &&
-        Object.values(rpcResult as Record<string, unknown>).includes(true));
-    round = (await getRoundById(round.id, cafe.id)) ?? round;
   }
+  const rpcResult = Array.isArray(data) ? data[0] : data;
+  startedByThisRequest =
+    rpcResult === true ||
+    (Boolean(rpcResult) &&
+      typeof rpcResult === "object" &&
+      Object.values(rpcResult as Record<string, unknown>).includes(true));
+  round = (await getRoundById(round.id, cafe.id)) ?? round;
 
-  if (round.status === "active" && startedByThisRequest) {
+  if (round.status === "active") {
     await seedTableWarsV2RoundCells(round);
-    await ensureAiPlaceholdersForRoom(round);
+    if (startedByThisRequest) await ensureAiPlaceholdersForRoom(round);
+    return getTableWarsV2SnapshotForCustomer(cafe.slug);
   }
 
-  return getTableWarsV2SnapshotForCustomer(cafe.slug);
+  throw tableWarsV2StartError("لم تنتقل الردهة إلى الجولة النشطة. أعد المحاولة.", {
+    roundStatus: round.status,
+    foundPlayer: true,
+    playerIsConnected: player.isConnected && !player.leftAt,
+  });
 }
 
 export async function sendTableWarsV2UnitsForCustomer(input: {

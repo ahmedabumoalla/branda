@@ -49,9 +49,9 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
 }
 
 export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
-  const initialNickname = "";
+  const initialNickname = initialSnapshot.currentPlayer?.displayName ?? "";
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
+  const [nicknameConfirmed, setNicknameConfirmed] = useState(isValidNickname(initialNickname));
   const [nicknameInput, setNicknameInput] = useState(initialNickname);
   const [pendingNickname, setPendingNickname] = useState(initialNickname);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
@@ -60,9 +60,9 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [countdown, setCountdown] = useState(secondsUntil(initialSnapshot.round?.lobbyEndsAt));
   const [realtimeStatus, setRealtimeStatus] = useState<TableWarsRealtimeLiteConnectionStatus>("connecting");
   const [realtimeEvents, setRealtimeEvents] = useState<TableWarsRealtimeLiteEvent[]>([]);
-  const [resettingExistingSession, setResettingExistingSession] = useState(Boolean(initialSnapshot.currentPlayer));
+  const [startFailure, setStartFailure] = useState<{ message: string; requiresRejoin: boolean } | null>(null);
   const [isNicknamePending, startNicknameTransition] = useTransition();
-  const [, startRoundTransition] = useTransition();
+  const [isRoundPending, startRoundTransition] = useTransition();
   const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
   const leaveSentForRoundRef = useRef<string | null>(null);
   const startingRoundRef = useRef<string | null>(null);
@@ -86,25 +86,6 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     [snapshot.players],
   );
   const isHost = Boolean(currentPlayer && hostPlayer?.id === currentPlayer.id);
-
-  useEffect(() => {
-    const existingRoundId = initialSnapshot.currentPlayer?.roundId;
-    if (!existingRoundId) return;
-
-    void leaveTableWarsV2RoundAction(slug, existingRoundId)
-      .then(() => getTableWarsV2SnapshotAction(slug))
-      .then((result) => {
-        if (!result.ok) throw new Error(result.message);
-        setSnapshot(result.snapshot);
-        setNicknameInput("");
-        setPendingNickname("");
-        setNicknameConfirmed(false);
-      })
-      .catch((resetError) => {
-        setError(resetError instanceof Error ? resetError.message : "تعذر بدء دخول جديد إلى اللعبة.");
-      })
-      .finally(() => setResettingExistingSession(false));
-  }, [initialSnapshot.currentPlayer?.roundId, slug]);
 
   useEffect(() => {
     if (!round?.id || !currentPlayer || round.status === "finished" || round.status === "cancelled") return;
@@ -166,27 +147,58 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     };
   }, [isLobby, round?.id, round?.lobbyEndsAt, slug]);
 
-  useEffect(() => {
-    if (!isLobby || !round?.id || countdown > 0 || startingRoundRef.current === round.id) return;
+  const startLobbyRound = useCallback(() => {
+    if (!round?.id || !currentPlayer?.id || startingRoundRef.current === round.id) return;
     startingRoundRef.current = round.id;
+    setStartFailure(null);
     startRoundTransition(() => {
-      void startTableWarsV2LobbyRoundAction(slug, round.id)
+      void startTableWarsV2LobbyRoundAction(slug, round.id, currentPlayer.id)
         .then((result) => {
           if (!result.ok) {
-            startingRoundRef.current = null;
-            setError(result.message);
+            setStartFailure({ message: result.message, requiresRejoin: result.requiresRejoin });
             return;
           }
           setSnapshot(result.snapshot);
           setMessage("بدأت الجولة باللاعبين الموجودين.");
+          setStartFailure(null);
           setError(null);
         })
         .catch((startError) => {
-          startingRoundRef.current = null;
-          setError(startError instanceof Error ? startError.message : "تعذر بدء الجولة.");
+          setStartFailure({
+            message: startError instanceof Error ? startError.message : "تعذر بدء الجولة.",
+            requiresRejoin: false,
+          });
         });
     });
-  }, [countdown, isLobby, round?.id, slug]);
+  }, [currentPlayer?.id, round?.id, slug]);
+
+  useEffect(() => {
+    if (!isLobby || !round?.id || countdown > 0 || startingRoundRef.current === round.id) return;
+    startLobbyRound();
+  }, [countdown, isLobby, round?.id, startLobbyRound]);
+
+  const retryLobbyStart = useCallback(() => {
+    startingRoundRef.current = null;
+    startLobbyRound();
+  }, [startLobbyRound]);
+
+  const returnToTeamPicker = useCallback(() => {
+    if (!round?.id) return;
+    startRoundTransition(() => {
+      void leaveTableWarsV2RoundAction(slug, round.id)
+        .then(() => getTableWarsV2SnapshotAction(slug))
+        .then((result) => {
+          if (!result.ok) throw new Error(result.message);
+          startingRoundRef.current = null;
+          setStartFailure(null);
+          setSnapshot(result.snapshot);
+          setError(null);
+        })
+        .catch((leaveError) => {
+          setError(leaveError instanceof Error ? leaveError.message : "تعذر الرجوع لاختيار الفريق.");
+        });
+    });
+  }, [round?.id, slug]);
 
   useEffect(() => {
     if (!canShowGame || !round?.id || isRoundFinished) return;
@@ -281,13 +293,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-3">
-      {resettingExistingSession ? (
-        <section className="rounded-2xl border border-[#E7D7C6] bg-white p-5 text-center shadow-sm">
-          <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-[#6B3A25]" />
-          <p className="mt-2 text-sm font-black text-[#311912]">جاري تجهيز دخول جديد...</p>
-        </section>
-      ) : null}
-      {!resettingExistingSession && currentPlayer ? (
+      {currentPlayer ? (
         <section className="grid grid-cols-3 gap-2">
           <StatTile label="فريقك" value={currentPlayer.team === "blue" ? "الأزرق" : "الأحمر"} />
           <StatTile label="الأزرق" value={`${snapshot.teamCounts.bluePlayers}/2`} />
@@ -295,7 +301,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         </section>
       ) : null}
 
-      {!resettingExistingSession && needsNickname ? (
+      {needsNickname ? (
         <section className="rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#4A281D]/10 text-[#4A281D]"><UserRound className="h-5 w-5" /></span>
@@ -309,20 +315,49 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         </section>
       ) : null}
 
-      {!resettingExistingSession && canPickTeam ? (
+      {canPickTeam ? (
         <TableWarsTeamPicker canJoinBlue={snapshot.canJoinBlue} canJoinRed={snapshot.canJoinRed} onJoin={(team) => joinTableWarsV2Team(slug, team, pendingNickname)} onJoined={(nextSnapshot) => {
           setSnapshot(nextSnapshot);
           setMessage("تم الانضمام إلى ردهة الانتظار.");
         }} />
       ) : null}
 
-      {!resettingExistingSession && isLobby ? (
+      {isLobby ? (
         <section className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-5 text-center shadow-sm">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-amber-700">
-            <LoaderCircle className="h-8 w-8 animate-spin" aria-hidden="true" />
-          </div>
-          <h2 className="mt-3 text-lg font-black text-[#311912]">بانتظار المنافسين</h2>
-          <p className="mt-1 text-sm font-bold text-[#806A5E]">سيبدأ اللعب بالمتواجدين، والكمبيوتر يكمل المقاعد الفارغة.</p>
+          {startFailure ? (
+            <>
+              <h2 className="text-lg font-black text-rose-800">تعذر بدء الجولة</h2>
+              <p className="mt-2 text-sm font-bold leading-7 text-rose-700">{startFailure.message}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={isRoundPending}
+                  onClick={retryLobbyStart}
+                  className="rounded-xl bg-[#311912] px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+                >
+                  إعادة المحاولة
+                </button>
+                <button
+                  type="button"
+                  disabled={isRoundPending}
+                  onClick={returnToTeamPicker}
+                  className="rounded-xl border border-[#E7D7C6] bg-white px-4 py-3 text-sm font-black text-[#6B3A25] disabled:opacity-60"
+                >
+                  اختيار الفريق مجددًا
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-amber-700">
+                <LoaderCircle className="h-8 w-8 animate-spin" aria-hidden="true" />
+              </div>
+              <h2 className="mt-3 text-lg font-black text-[#311912]">
+                {isRoundPending ? "جاري بدء الجولة" : "بانتظار المنافسين"}
+              </h2>
+              <p className="mt-1 text-sm font-bold text-[#806A5E]">سيبدأ اللعب بالمتواجدين، والكمبيوتر يكمل المقاعد الفارغة.</p>
+            </>
+          )}
           <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-white px-5 py-2 text-2xl font-black text-amber-800" aria-live="polite">
             <Clock3 className="h-5 w-5" />
             <span>{countdown}</span>
@@ -336,7 +371,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
       {error ? <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-black text-rose-700">{error}</p> : null}
 
-      {!resettingExistingSession && canShowGame ? (
+      {canShowGame ? (
         <section className="overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white shadow-sm">
           <div className="flex items-center gap-3 border-b border-[#F2E7D9] bg-[#FFFDF9] p-3">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#4A281D]/10 text-[#4A281D]"><Swords className="h-5 w-5" /></span>

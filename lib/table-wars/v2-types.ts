@@ -152,3 +152,14 @@ export type TableWarsV2SnapshotActionResult =
       ok: false;
       message: string;
     };
+
+export type TableWarsV2StartActionResult =
+  | {
+      ok: true;
+      snapshot: TableWarsV2Snapshot;
+    }
+  | {
+      ok: false;
+      message: string;
+      requiresRejoin: boolean;
+    };
