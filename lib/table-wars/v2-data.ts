@@ -391,15 +391,11 @@ async function ensurePublicTableWarsV2Playable(slug: string) {
 
 export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
   const supabase = tableWarsV2Db(createAdminClient());
-  if (
-    round.totalCells !== TABLE_WARS_V2_TOTAL_CELLS ||
-    round.maxPlayersPerTeam !== TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM
-  ) {
+  if (round.totalCells !== TABLE_WARS_V2_TOTAL_CELLS) {
     const roundResult = await supabase
       .from("table_wars_v2_rounds")
       .update({
         total_cells: TABLE_WARS_V2_TOTAL_CELLS,
-        max_players_per_team: TABLE_WARS_V2_MAX_PLAYERS_PER_TEAM,
       })
       .eq("id", round.id)
       .eq("cafe_id", round.cafeId);

@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { Shield, Swords } from "lucide-react";
-import type { TableWarsTeam, TableWarsV2JoinResult, TableWarsV2Snapshot } from "@/lib/table-wars/v2-types";
+import type { TableWarsTeam, TableWarsV2JoinActionResult, TableWarsV2Snapshot } from "@/lib/table-wars/v2-types";
 
 type Props = {
   canJoinBlue: boolean;
   canJoinRed: boolean;
-  onJoin: (team: TableWarsTeam) => Promise<TableWarsV2JoinResult>;
+  onJoin: (team: TableWarsTeam) => Promise<TableWarsV2JoinActionResult>;
   onJoined: (snapshot: TableWarsV2Snapshot) => void;
 };
 
@@ -20,6 +20,10 @@ export function TableWarsTeamPicker({ canJoinBlue, canJoinRed, onJoin, onJoined 
     startTransition(() => {
       void onJoin(team)
         .then((result) => {
+          if (!result.ok) {
+            setError(result.message);
+            return;
+          }
           onJoined(result.snapshot);
         })
         .catch((joinError) => {

@@ -135,3 +135,20 @@ export type TableWarsV2JoinResult = {
   player: TableWarsV2Player;
   snapshot: TableWarsV2Snapshot;
 };
+
+export type TableWarsV2JoinActionResult =
+  | TableWarsV2JoinResult
+  | {
+      ok: false;
+      message: string;
+    };
+
+export type TableWarsV2SnapshotActionResult =
+  | {
+      ok: true;
+      snapshot: TableWarsV2Snapshot;
+    }
+  | {
+      ok: false;
+      message: string;
+    };

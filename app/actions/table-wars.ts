@@ -16,7 +16,15 @@ import {
   sendTableWarsV2UnitsForCustomer,
   tickTableWarsV2ForActiveSession,
 } from "@/lib/table-wars/v2-data";
-import type { TableWarsTeam } from "@/lib/table-wars/v2-types";
+import type {
+  TableWarsTeam,
+  TableWarsV2JoinActionResult,
+  TableWarsV2SnapshotActionResult,
+} from "@/lib/table-wars/v2-types";
+
+const SAFE_JOIN_ERROR = "تعذر الانضمام إلى ردهة حرب الطاولات. حاول مرة أخرى.";
+const SAFE_START_ERROR = "تعذر بدء جولة حرب الطاولات حاليًا. حاول مرة أخرى.";
+const SAFE_SNAPSHOT_ERROR = "تعذر تحميل حالة حرب الطاولات حاليًا.";
 
 function revalidateTableWarsPaths(slug: string) {
   revalidatePath("/dashboard/table-wars");
@@ -44,25 +52,49 @@ export async function disableOwnerTableWarsAction() {
   revalidateTableWarsAvailabilityPaths(slug);
 }
 
-export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam, nickname: string) {
+export async function joinTableWarsV2Team(
+  slug: string,
+  team: TableWarsTeam,
+  nickname: string,
+): Promise<TableWarsV2JoinActionResult> {
   const normalizedNickname = typeof nickname === "string" ? nickname.trim().replace(/\s+/g, " ") : "";
   if (normalizedNickname.length < 2 || normalizedNickname.length > 20) {
-    throw new Error("الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا.");
+    return { ok: false, message: "الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا." };
+  }
+  if (team !== "blue" && team !== "red") {
+    return { ok: false, message: SAFE_JOIN_ERROR };
   }
 
-  const result = await joinTableWarsV2Customer(slug, team, normalizedNickname);
-  revalidateTableWarsPaths(result.snapshot.cafeSlug);
-  return result;
+  try {
+    const result = await joinTableWarsV2Customer(slug, team, normalizedNickname);
+    return result;
+  } catch (error) {
+    console.error("[table-wars] lobby join failed", error);
+    return { ok: false, message: SAFE_JOIN_ERROR };
+  }
 }
 
-export async function getTableWarsV2SnapshotAction(slug: string) {
-  return getTableWarsV2SnapshotForCustomer(slug);
+export async function getTableWarsV2SnapshotAction(slug: string): Promise<TableWarsV2SnapshotActionResult> {
+  try {
+    const snapshot = await getTableWarsV2SnapshotForCustomer(slug);
+    return { ok: true, snapshot };
+  } catch (error) {
+    console.error("[table-wars] snapshot load failed", error);
+    return { ok: false, message: SAFE_SNAPSHOT_ERROR };
+  }
 }
 
-export async function startTableWarsV2LobbyRoundAction(slug: string, roundId: string) {
-  const snapshot = await startTableWarsV2LobbyRoundForCustomer(slug, roundId);
-  revalidateTableWarsPaths(snapshot.cafeSlug);
-  return snapshot;
+export async function startTableWarsV2LobbyRoundAction(
+  slug: string,
+  roundId: string,
+): Promise<TableWarsV2SnapshotActionResult> {
+  try {
+    const snapshot = await startTableWarsV2LobbyRoundForCustomer(slug, roundId);
+    return { ok: true, snapshot };
+  } catch (error) {
+    console.error("[table-wars] lobby start failed", error);
+    return { ok: false, message: SAFE_START_ERROR };
+  }
 }
 
 export async function leaveTableWarsV2RoundAction(slug: string, roundId: string) {

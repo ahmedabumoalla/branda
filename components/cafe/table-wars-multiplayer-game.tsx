@@ -93,8 +93,9 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
 
     void leaveTableWarsV2RoundAction(slug, existingRoundId)
       .then(() => getTableWarsV2SnapshotAction(slug))
-      .then((nextSnapshot) => {
-        setSnapshot(nextSnapshot);
+      .then((result) => {
+        if (!result.ok) throw new Error(result.message);
+        setSnapshot(result.snapshot);
         setNicknameInput("");
         setPendingNickname("");
         setNicknameConfirmed(false);
@@ -153,7 +154,11 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     setCountdown(secondsUntil(round.lobbyEndsAt));
     const timer = window.setInterval(() => setCountdown(secondsUntil(round.lobbyEndsAt)), 250);
     const poller = window.setInterval(() => {
-      void getTableWarsV2SnapshotAction(slug).then(setSnapshot).catch(() => undefined);
+      void getTableWarsV2SnapshotAction(slug)
+        .then((result) => {
+          if (result.ok) setSnapshot(result.snapshot);
+        })
+        .catch(() => undefined);
     }, 2_000);
     return () => {
       window.clearInterval(timer);
@@ -166,8 +171,13 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     startingRoundRef.current = round.id;
     startRoundTransition(() => {
       void startTableWarsV2LobbyRoundAction(slug, round.id)
-        .then((nextSnapshot) => {
-          setSnapshot(nextSnapshot);
+        .then((result) => {
+          if (!result.ok) {
+            startingRoundRef.current = null;
+            setError(result.message);
+            return;
+          }
+          setSnapshot(result.snapshot);
           setMessage("بدأت الجولة باللاعبين الموجودين.");
           setError(null);
         })
@@ -181,11 +191,17 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   useEffect(() => {
     if (!canShowGame || !round?.id || isRoundFinished) return;
     const refreshTimer = window.setTimeout(() => {
-      void getTableWarsV2SnapshotAction(slug).then(setSnapshot).catch(() => undefined);
+      void getTableWarsV2SnapshotAction(slug)
+        .then((result) => {
+          if (result.ok) setSnapshot(result.snapshot);
+        })
+        .catch(() => undefined);
     }, 750);
     const refreshPoller = window.setInterval(() => {
       void getTableWarsV2SnapshotAction(slug)
-        .then((nextSnapshot) => {
+        .then((result) => {
+          if (!result.ok) return;
+          const nextSnapshot = result.snapshot;
           setSnapshot((current) => ({
             ...current,
             currentPlayer: nextSnapshot.currentPlayer,
@@ -251,7 +267,13 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     if (currentPlayer?.team) {
       startNicknameTransition(() => {
         void joinTableWarsV2Team(slug, currentPlayer.team, nickname)
-          .then((result) => setSnapshot(result.snapshot))
+          .then((result) => {
+            if (!result.ok) {
+              setNicknameError(result.message);
+              return;
+            }
+            setSnapshot(result.snapshot);
+          })
           .catch((joinError) => setNicknameError(joinError instanceof Error ? joinError.message : "تعذر حفظ الاسم."));
       });
     }

@@ -93,17 +93,34 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
     : resolvedSearchParams.previewTheme;
   const productsHref = getCafePath(slug, "products/popular", previewThemeId);
   let initialSnapshot: TableWarsV2Snapshot | null = null;
+  let pageError: string | null = null;
 
   if (!entry.cafeFound || !entry.featureEnabled || !entry.gameEnabled) {
     return <GameUnavailablePage slug={slug} previewThemeId={previewThemeId} />;
   }
 
   if (entry.cafeFound && entry.featureEnabled && entry.gameEnabled) {
-    const customer = await getCustomerProfileForActiveSession(slug);
-    if (!customer) {
+    let customer = null;
+    try {
+      customer = await getCustomerProfileForActiveSession(slug);
+    } catch (error) {
+      console.error("[table-wars] customer scope load failed", error);
+      pageError = "تعذر التحقق من جلسة اللاعب حاليًا. حاول تحديث الصفحة.";
+    }
+    if (pageError) {
+      customer = null;
+    } else if (!customer) {
       redirect(getCustomerLoginHref(slug, `/c/${slug}/play/table-wars`, previewThemeId));
     }
-    initialSnapshot = await getTableWarsV2SnapshotAction(slug);
+
+    if (customer) {
+      const snapshotResult = await getTableWarsV2SnapshotAction(slug);
+      if (snapshotResult.ok) {
+        initialSnapshot = snapshotResult.snapshot;
+      } else {
+        pageError = snapshotResult.message;
+      }
+    }
   }
 
   return (
@@ -146,6 +163,8 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
           </div>
         ) : hasTableQuery && !entry.table ? (
           <MessageBox message={entry.errorMessage ?? "رمز الطاولة غير صالح لهذا الفرع."} />
+        ) : pageError ? (
+          <MessageBox message={pageError} />
         ) : (
           initialSnapshot ? <TableWarsMultiplayerGame slug={slug} initialSnapshot={initialSnapshot} /> : null
         )}
