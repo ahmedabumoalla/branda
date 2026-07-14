@@ -26,6 +26,21 @@ const SAFE_JOIN_ERROR = "تعذر الانضمام إلى ردهة حرب الط
 const SAFE_START_ERROR = "تعذر بدء جولة حرب الطاولات حاليًا. حاول مرة أخرى.";
 const SAFE_SNAPSHOT_ERROR = "تعذر تحميل حالة حرب الطاولات حاليًا.";
 
+function tableWarsServerErrorDetails(error: unknown) {
+  const value = error && typeof error === "object" ? (error as Record<string, unknown>) : null;
+  return {
+    code: typeof value?.code === "string" ? value.code : undefined,
+    message:
+      typeof value?.message === "string"
+        ? value.message
+        : error instanceof Error
+          ? error.message
+          : undefined,
+    details: typeof value?.details === "string" ? value.details : undefined,
+    hint: typeof value?.hint === "string" ? value.hint : undefined,
+  };
+}
+
 function revalidateTableWarsPaths(slug: string) {
   revalidatePath("/dashboard/table-wars");
   revalidatePath(`/c/${slug}`);
@@ -69,7 +84,7 @@ export async function joinTableWarsV2Team(
     const result = await joinTableWarsV2Customer(slug, team, normalizedNickname);
     return result;
   } catch (error) {
-    console.error("[table-wars] lobby join failed", error);
+    console.error("[table-wars][join-lobby]", tableWarsServerErrorDetails(error));
     return { ok: false, message: SAFE_JOIN_ERROR };
   }
 }

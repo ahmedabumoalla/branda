@@ -1105,7 +1105,14 @@ export async function joinTableWarsV2Customer(
   const customer = await getCustomerProfileForActiveSession(cafe.slug);
   if (!customer) throw new Error("يجب تسجيل الدخول قبل دخول حرب الطاولات.");
 
-  const customerId = String(customer.id);
+  const customerId = text(customer.id);
+  const customerCafeId = text(customer.cafe_id);
+  if (!customerId || !customerCafeId || customerCafeId !== cafe.id) {
+    throw Object.assign(new Error("invalid customer scope"), {
+      code: "TABLE_WARS_CUSTOMER_SCOPE",
+      details: "The active customer profile does not belong to the requested cafe.",
+    });
+  }
   const displayName = assertValidTableWarsV2Nickname(nickname);
   const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, customerId);
   if (currentRoom?.player.role === "player") {
@@ -1127,12 +1134,12 @@ export async function joinTableWarsV2Customer(
 
   const supabase = tableWarsV2Db(createAdminClient());
   const { data, error } = await supabase.rpc("join_table_wars_v2_lobby", {
-    p_cafe_id: cafe.id,
+    p_cafe_id: customerCafeId,
     p_customer_id: customerId,
     p_team: team,
     p_display_name: displayName,
   });
-  if (error) throw new Error(error.message || "تعذر الانضمام إلى ردهة حرب الطاولات.");
+  if (error) throw error;
 
   const rpcRow = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
   const roundId = text(rpcRow?.round_id);
