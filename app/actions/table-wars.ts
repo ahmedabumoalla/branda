@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
+import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
+import { getCustomerProfileForCustomerSession } from "@/lib/data/customers";
 import {
   disableOwnerTableWarsTables,
   enableOwnerTableWarsDemoTable,
@@ -81,7 +83,34 @@ export async function joinTableWarsV2Team(
   }
 
   try {
-    const result = await joinTableWarsV2Customer(slug, team, normalizedNickname);
+    const normalizedSlug = slug.trim().toLowerCase();
+    const [cafe, customerProfile] = await Promise.all([
+      getPublicCafeBySlugAdmin(normalizedSlug),
+      getCustomerProfileForCustomerSession(normalizedSlug),
+    ]);
+    const cafeId = cafe?.id ? String(cafe.id) : null;
+    const customerProfileId = customerProfile?.id ? String(customerProfile.id) : null;
+    const customerCafeId = customerProfile?.cafe_id ? String(customerProfile.cafe_id) : null;
+
+    if (!customerProfileId || !cafeId || customerCafeId !== cafeId) {
+      console.error("[table-wars][join-lobby][auth-context]", {
+        cafeId,
+        slug: normalizedSlug,
+        hasCustomerProfile: Boolean(customerProfile),
+        customerProfileId,
+      });
+      return { ok: false, message: SAFE_JOIN_ERROR };
+    }
+
+    const result = await joinTableWarsV2Customer(
+      normalizedSlug,
+      team,
+      normalizedNickname,
+      {
+        cafeId,
+        customerProfileId,
+      },
+    );
     return result;
   } catch (error) {
     console.error("[table-wars][join-lobby]", tableWarsServerErrorDetails(error));

@@ -9,7 +9,7 @@ import { getTableWarsV2SnapshotAction } from "@/app/actions/table-wars";
 import { TableWarsMultiplayerGame } from "@/components/cafe/table-wars-multiplayer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
-import { getCustomerProfileForActiveSession } from "@/lib/data/customers";
+import { getCustomerProfileForCustomerSession } from "@/lib/data/customers";
 import { getPublicTableWarsEntry } from "@/lib/data/table-wars";
 import type { TableWarsV2Snapshot } from "@/lib/table-wars/v2-types";
 
@@ -102,7 +102,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
   if (entry.cafeFound && entry.featureEnabled && entry.gameEnabled) {
     let customer = null;
     try {
-      customer = await getCustomerProfileForActiveSession(slug);
+      customer = await getCustomerProfileForCustomerSession(slug);
     } catch (error) {
       console.error("[table-wars] customer scope load failed", error);
       pageError = "تعذر التحقق من جلسة اللاعب حاليًا. حاول تحديث الصفحة.";

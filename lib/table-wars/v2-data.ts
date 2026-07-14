@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 
 import { cookies } from "next/headers";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
-import { getCustomerProfileForActiveSession } from "@/lib/data/customers";
+import { getCustomerProfileForCustomerSession } from "@/lib/data/customers";
 import { hasBrandFeature } from "@/lib/data/feature-entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -1007,7 +1007,7 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
     };
   }
 
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   const customerRoom = customer
     ? await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id))
     : null;
@@ -1099,18 +1099,19 @@ export async function joinTableWarsV2Customer(
   slug: string,
   requestedTeam: TableWarsTeam,
   nickname: string,
+  customerContext: {
+    cafeId: string;
+    customerProfileId: string;
+  },
 ): Promise<TableWarsV2JoinResult> {
   const team = normalizeTeam(requestedTeam);
   const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
-  if (!customer) throw new Error("يجب تسجيل الدخول قبل دخول حرب الطاولات.");
-
-  const customerId = text(customer.id);
-  const customerCafeId = text(customer.cafe_id);
+  const customerId = text(customerContext.customerProfileId);
+  const customerCafeId = text(customerContext.cafeId);
   if (!customerId || !customerCafeId || customerCafeId !== cafe.id) {
     throw Object.assign(new Error("invalid customer scope"), {
       code: "TABLE_WARS_CUSTOMER_SCOPE",
-      details: "The active customer profile does not belong to the requested cafe.",
+      details: "The authenticated customer profile does not belong to the requested cafe.",
     });
   }
   const displayName = assertValidTableWarsV2Nickname(nickname);
@@ -1180,7 +1181,7 @@ export async function joinTableWarsV2Customer(
 
 export async function startTableWarsV2LobbyRoundForCustomer(slug: string, roundId: string) {
   const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   if (!customer) throw new Error("يجب تسجيل الدخول لبدء الجولة.");
 
   let round = await getRoundById(roundId, cafe.id);
@@ -1249,7 +1250,7 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
   if (!cafe) throw new Error("Cafe not found.");
   await ensurePublicTableWarsV2Playable(cafe.slug);
 
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
   const currentPlayer = await getCurrentPlayer(round, String(customer.id));
@@ -1350,7 +1351,7 @@ export async function tickTableWarsV2ForActiveSession() {
   if (!slug) throw new Error("Unauthorized.");
 
   const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
   const customerRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
@@ -1373,7 +1374,7 @@ export async function finishTableWarsV2RealtimeLiteRoundForCustomer(
 ) {
   const team = normalizeTeam(winningTeam);
   const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
   const customerRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
@@ -1412,7 +1413,7 @@ export async function finishTableWarsV2RealtimeLiteRoundForCustomer(
 
 export async function startNewTableWarsLiteRoundForCustomer(slug: string) {
   const cafe = await ensurePublicTableWarsV2Playable(slug);
-  const customer = await getCustomerProfileForActiveSession(cafe.slug);
+  const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   if (!customer) throw new Error("Unauthorized.");
 
   const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id));
@@ -1427,7 +1428,7 @@ export async function leaveTableWarsV2RoundForCustomer(slug: string, roundId: st
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return { ok: true as const };
 
-  const customer = await getCustomerProfileForActiveSession(String(cafe.slug ?? slug));
+  const customer = await getCustomerProfileForCustomerSession(String(cafe.slug ?? slug));
   if (!customer) return { ok: true as const };
 
   const round = await getRoundById(roundId, String(cafe.id));

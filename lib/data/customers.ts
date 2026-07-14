@@ -176,6 +176,21 @@ export async function getCustomerProfileForActiveSession(
   return getCustomerProfileBySessionToken(cafeSlug, token);
 }
 
+export async function getCustomerProfileForCustomerSession(
+  cafeSlug: string,
+): Promise<CustomerProfileRow | null> {
+  const sessionProfile = await getCustomerProfileForActiveSession(cafeSlug);
+  if (sessionProfile) return sessionProfile;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  return getCustomerProfileByUser(cafeSlug, user.id);
+}
+
 export async function resolveCustomerProfileForOrderSession(
   cafeSlug: string,
 ): Promise<CustomerSessionLookup> {
