@@ -4,6 +4,7 @@ import type {
   TableWarsV2Player,
   TableWarsV2Unit,
 } from "@/lib/table-wars/v2-types";
+import { areTableWarsSlotsConnected } from "@/lib/table-wars/v2-map";
 
 const GROWTH_INTERVAL_MS = 2_000;
 const ROAD_BATTLE_PROGRESS_WINDOW = 0.08;
@@ -110,7 +111,7 @@ export function resolveArrivedUnits(
       const survivors = unit.soldiers - target.soldiers;
       target.team = unit.team;
       target.soldiers = Math.min(target.maxSoldiers, survivors);
-      if (!target.isBase) target.assignedPlayerId = null;
+      target.assignedPlayerId = unit.ownerPlayerId;
     } else if (unit.soldiers < target.soldiers) {
       target.soldiers -= unit.soldiers;
     } else {
@@ -240,7 +241,12 @@ function chooseAiMoveForPlayer(
     .sort((a, b) => b.soldiers - a.soldiers || a.slotIndex - b.slotIndex);
 
   for (const source of sources) {
-    const candidates = cells.filter((cell) => cell.id !== source.id && cell.team !== aiPlayer.team);
+    const candidates = cells.filter(
+      (cell) =>
+        cell.id !== source.id &&
+        cell.team !== aiPlayer.team &&
+        areTableWarsSlotsConnected(source.slotIndex, cell.slotIndex),
+    );
     if (candidates.length === 0) continue;
 
     const target =

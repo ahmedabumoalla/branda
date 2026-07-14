@@ -9,6 +9,7 @@ export type TableWarsRealtimeLiteMoveEvent = {
   fromCellId: string;
   toCellId: string;
   team: TableWarsTeam;
+  ownerPlayerId?: string | null;
   soldiers: number;
   startedAt: string;
   travelMs: number;
@@ -28,6 +29,7 @@ export type TableWarsRealtimeLiteCaptureEvent = {
   cellId: string;
   team: TableWarsV2CellTeam;
   soldiers: number;
+  assignedPlayerId?: string | null;
   occurredAt: string;
 };
 
@@ -224,6 +226,7 @@ function isTableWarsRealtimeLiteEvent(value: unknown): value is TableWarsRealtim
       typeof event.fromCellId === "string" &&
       typeof event.toCellId === "string" &&
       (event.team === "blue" || event.team === "red") &&
+      (event.ownerPlayerId === undefined || event.ownerPlayerId === null || typeof event.ownerPlayerId === "string") &&
       typeof event.soldiers === "number" &&
       typeof event.startedAt === "string" &&
       typeof event.travelMs === "number"
@@ -240,6 +243,9 @@ function isTableWarsRealtimeLiteEvent(value: unknown): value is TableWarsRealtim
     return (
       typeof event.cellId === "string" &&
       (event.team === "blue" || event.team === "red" || event.team === "neutral") &&
+      (event.assignedPlayerId === undefined ||
+        event.assignedPlayerId === null ||
+        typeof event.assignedPlayerId === "string") &&
       typeof event.soldiers === "number" &&
       typeof event.occurredAt === "string"
     );

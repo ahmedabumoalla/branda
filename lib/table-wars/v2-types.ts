@@ -20,6 +20,7 @@ export type TableWarsV2Round = {
   maxPlayersPerTeam: number;
   totalCells: number;
   seed: string | null;
+  lobbyEndsAt: string | null;
   startedAt: string | null;
   endedAt: string | null;
   lastTickAt: string | null;

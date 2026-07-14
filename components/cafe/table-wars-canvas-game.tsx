@@ -13,6 +13,12 @@ import type {
   TableWarsRealtimeLiteEvent,
   TableWarsRealtimeLiteMoveEvent,
 } from "@/lib/table-wars/realtime-lite";
+import {
+  areTableWarsSlotsConnected,
+  TABLE_WARS_V2_TOTAL_CELLS,
+  tableWarsConnectedSlots,
+  tableWarsHomeSlots,
+} from "@/lib/table-wars/v2-map";
 
 type Props = {
   cells: TableWarsV2Cell[];
@@ -47,6 +53,7 @@ type MovingUnit = {
   fromCellId: string;
   toCellId: string;
   team: TableWarsTeam;
+  ownerPlayerId: string | null;
   soldiers: number;
   startedAtMs: number;
   travelMs: number;
@@ -89,7 +96,7 @@ type GameState = {
 };
 
 const MAX_DPR = 2;
-const TOTAL_CELLS = 10;
+const TOTAL_CELLS = TABLE_WARS_V2_TOTAL_CELLS;
 const BASE_SOLDIERS = 25;
 const DEFAULT_SOLDIERS = 10;
 const MAX_SOLDIERS = 60;
@@ -113,21 +120,8 @@ const OTHER_PLAYER_CELL_MESSAGE = "هذه طاولة لاعب آخر";
 const DISCONNECTED_CELL_MESSAGE = "هذه طاولة غير متصلة";
 
 const HOME_SLOTS: Record<TableWarsTeam, number[]> = {
-  blue: [1, 2],
-  red: [9, 10],
-};
-
-const TABLE_PATHS: Record<number, number[]> = {
-  1: [2, 3],
-  2: [1, 4],
-  3: [1, 5],
-  4: [2, 6],
-  5: [3, 7],
-  6: [4, 8],
-  7: [5, 9],
-  8: [6, 10],
-  9: [7, 10],
-  10: [8, 9],
+  blue: tableWarsHomeSlots("blue"),
+  red: tableWarsHomeSlots("red"),
 };
 
 function teamColor(team: TableWarsV2CellTeam) {
@@ -160,7 +154,7 @@ function homeTeamForSlot(slotIndex: number): TableWarsTeam | null {
 }
 
 function areCellsConnected(from: TableWarsV2Cell, to: TableWarsV2Cell) {
-  return Boolean(TABLE_PATHS[from.slotIndex]?.includes(to.slotIndex));
+  return areTableWarsSlotsConnected(from.slotIndex, to.slotIndex);
 }
 
 function realPlayersForTeam(players: TableWarsV2Player[], team: TableWarsTeam) {
@@ -394,6 +388,7 @@ function applyMove(state: GameState, event: TableWarsRealtimeLiteMoveEvent) {
     fromCellId: event.fromCellId,
     toCellId: event.toCellId,
     team: event.team,
+    ownerPlayerId: event.ownerPlayerId ?? null,
     soldiers,
     startedAtMs: Date.parse(event.startedAt),
     travelMs: event.travelMs,
@@ -418,6 +413,7 @@ function emitMove(
     fromCellId: from.id,
     toCellId: to.id,
     team: from.team as TableWarsTeam,
+    ownerPlayerId: type === "player_move" ? state.currentPlayer?.id ?? null : from.assignedPlayerId,
     soldiers,
     startedAt: new Date().toISOString(),
     travelMs: travelMs(from, to),
@@ -441,7 +437,7 @@ function resolveArrival(
   } else if (unit.soldiers > target.soldiers) {
     const survivors = unit.soldiers - target.soldiers;
     target.team = unit.team;
-    target.assignedPlayerId = target.isBase ? target.assignedPlayerId : null;
+    target.assignedPlayerId = unit.ownerPlayerId;
     target.soldiers = Math.min(MAX_SOLDIERS, survivors);
     target.localUpdatedAt = Date.now();
     capturePulses.set(target.id, { id: target.id, startedAt: performance.now() });
@@ -452,6 +448,7 @@ function resolveArrival(
         cellId: target.id,
         team: target.team,
         soldiers: target.soldiers,
+        assignedPlayerId: target.assignedPlayerId,
         occurredAt: new Date().toISOString(),
       });
     }
@@ -606,6 +603,7 @@ function applyExternalEvent(
     if (!cell) return;
     cell.team = event.team;
     cell.soldiers = event.soldiers;
+    cell.assignedPlayerId = event.assignedPlayerId ?? null;
     cell.localUpdatedAt = Date.now();
     capturePulses.set(cell.id, { id: cell.id, startedAt: performance.now() });
     return;
@@ -770,7 +768,7 @@ function drawPaths(ctx: CanvasRenderingContext2D, state: GameState, size: Size, 
   const cellsBySlot = new Map(state.cells.map((cell) => [cell.slotIndex, cell]));
   const pulse = 0.5 + Math.sin(now / 180) * 0.5;
 
-  for (const targetSlot of TABLE_PATHS[selectedSource.slotIndex] ?? []) {
+  for (const targetSlot of tableWarsConnectedSlots(selectedSource.slotIndex)) {
     const toCell = cellsBySlot.get(targetSlot);
     if (!toCell || !areCellsConnected(selectedSource, toCell)) continue;
 
@@ -807,10 +805,10 @@ function drawTable(
   const selected = state.selectedCellId === cell.id;
   const controlled = canCurrentPlayerControl(state, cell);
   const color = teamColor(cell.team);
-  const isOwnBase =
-    state.currentPlayer?.role === "player" &&
-    state.currentPlayer?.team === cell.team &&
-    currentPlayerBaseCell(state)?.id === cell.id;
+  const assignedPlayer = assignedPlayerForCell(state.players, cell);
+  const computerManaged =
+    cell.team !== "neutral" &&
+    (!teamHasRealPlayers(state.players, cell.team) || (cell.isBase && !isBlockingRealPlayer(assignedPlayer)));
   const selectedSource = state.selectedCellId ? state.cellById.get(state.selectedCellId) ?? null : null;
   const connectedToSelected = Boolean(selectedSource && selectedSource.id !== cell.id && areCellsConnected(selectedSource, cell));
   const targetPreview = connectedToSelected;
@@ -884,8 +882,10 @@ function drawTable(
   ctx.font = `900 ${Math.max(9, dimensions.height * 0.22)}px Arial`;
   ctx.fillText(String(cell.slotIndex), 0, dimensions.height * 0.24);
 
-  if (isOwnBase && state.currentPlayer?.displayName) {
-    drawNameTag(ctx, state.currentPlayer.displayName, dimensions);
+  if (assignedPlayer) {
+    drawNameTag(ctx, assignedPlayer.role === "ai" ? "الكمبيوتر" : assignedPlayer.displayName, dimensions);
+  } else if (computerManaged) {
+    drawNameTag(ctx, "الكمبيوتر", dimensions);
   }
 
   ctx.restore();
@@ -1439,7 +1439,7 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
   }
 
   return (
-    <div ref={containerRef} className="relative h-[76dvh] min-h-[560px] max-h-[680px] overflow-hidden bg-[#F4E7D7]">
+    <div ref={containerRef} className="relative h-[68dvh] min-h-[500px] max-h-[620px] overflow-hidden bg-[#F4E7D7]">
       <canvas
         ref={canvasRef}
         className="block h-full w-full touch-none select-none pointer-events-auto"

@@ -10,6 +10,7 @@ import {
   getTableWarsV2SnapshotForCustomer,
   finishTableWarsV2RealtimeLiteRoundForCustomer,
   joinTableWarsV2Customer,
+  startTableWarsV2LobbyRoundForCustomer,
   startNewTableWarsLiteRoundForCustomer,
   sendTableWarsV2UnitsForCustomer,
   tickTableWarsV2ForActiveSession,
@@ -55,6 +56,12 @@ export async function joinTableWarsV2Team(slug: string, team: TableWarsTeam, nic
 
 export async function getTableWarsV2SnapshotAction(slug: string) {
   return getTableWarsV2SnapshotForCustomer(slug);
+}
+
+export async function startTableWarsV2LobbyRoundAction(slug: string, roundId: string) {
+  const snapshot = await startTableWarsV2LobbyRoundForCustomer(slug, roundId);
+  revalidateTableWarsPaths(snapshot.cafeSlug);
+  return snapshot;
 }
 
 export async function sendTableWarsV2UnitsAction(input: {

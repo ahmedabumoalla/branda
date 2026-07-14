@@ -4,7 +4,7 @@ export const fetchCache = "force-no-store";
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, LockKeyhole, QrCode, Swords } from "lucide-react";
+import { ArrowRight, LockKeyhole, QrCode } from "lucide-react";
 import { getTableWarsV2SnapshotAction } from "@/app/actions/table-wars";
 import { TableWarsMultiplayerGame } from "@/components/cafe/table-wars-multiplayer-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
@@ -107,22 +107,19 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-[#FCF8F3] px-4 py-6 text-[#311912] sm:py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5">
-        <header className="rounded-lg border border-[#E7D7C6] bg-white p-6 shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <main dir="rtl" className="min-h-screen bg-[#FCF8F3] px-3 py-3 text-[#311912] sm:py-5">
+      <div className="mx-auto flex max-w-[520px] flex-col gap-3">
+        <header className="rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-[8px_8px_28px_rgba(49,25,18,0.06)]">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <StatusPill>Branda Play</StatusPill>
-              <h1 className="mt-4 text-3xl font-black text-[#311912]">حرب الطاولات</h1>
-              <p className="mt-2 text-sm font-bold text-[#6B3A25]">{cafeName}</p>
+              <h1 className="mt-3 text-2xl font-black text-[#311912]">حرب الطاولات</h1>
+              <p className="mt-1 text-xs font-bold text-[#6B3A25]">{cafeName}</p>
             </div>
-            <div className="flex flex-col items-start gap-3 sm:items-end">
-              <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#4A281D]/10 text-[#4A281D]">
-                <Swords className="h-7 w-7" />
-              </span>
+            <div className="flex flex-col items-end gap-2">
               <Link
                 href={productsHref}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#E7D7C6] bg-[#FCF8F3] px-4 py-3 text-sm font-black text-[#6B3A25] transition hover:bg-[#FFF7E3] active:scale-95"
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-3 py-2 text-xs font-black text-[#6B3A25] transition hover:bg-[#FFF7E3] active:scale-95"
               >
                 <ArrowRight className="h-4 w-4" />
                 رجوع للمنتجات
