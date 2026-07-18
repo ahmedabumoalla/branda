@@ -65,7 +65,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [isRoundPending, startRoundTransition] = useTransition();
   const realtimeChannelRef = useRef<ReturnType<typeof createTableWarsRealtimeLiteChannel> | null>(null);
   const leaveSentForRoundRef = useRef<string | null>(null);
-  const startingRoundRef = useRef<string | null>(null);
+  const startAttemptedRef = useRef<string | null>(null);
   const finishedSaveRef = useRef(false);
 
   const round = snapshot.round;
@@ -134,28 +134,41 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     if (!isLobby || !round?.id) return;
     setCountdown(secondsUntil(round.lobbyEndsAt));
     const timer = window.setInterval(() => setCountdown(secondsUntil(round.lobbyEndsAt)), 250);
-    const poller = window.setInterval(() => {
-      void getTableWarsV2SnapshotAction(slug)
-        .then((result) => {
-          if (result.ok) setSnapshot(result.snapshot);
-        })
-        .catch(() => undefined);
-    }, 2_000);
     return () => {
       window.clearInterval(timer);
-      window.clearInterval(poller);
     };
-  }, [isLobby, round?.id, round?.lobbyEndsAt, slug]);
+  }, [isLobby, round?.id, round?.lobbyEndsAt]);
 
   const startLobbyRound = useCallback(() => {
-    if (!round?.id || !currentPlayer?.id || startingRoundRef.current === round.id) return;
-    startingRoundRef.current = round.id;
+    if (!round?.id || !currentPlayer?.id || startAttemptedRef.current === round.id) return;
+    startAttemptedRef.current = round.id;
     setStartFailure(null);
+    console.info("[table-wars][start-lobby-client]", {
+      hasRoundId: Boolean(round.id),
+      hasPlayerId: Boolean(currentPlayer.id),
+      roundStatus: round.status,
+      startAttemptResult: "requested",
+    });
     startRoundTransition(() => {
       void startTableWarsV2LobbyRoundAction(slug, round.id, currentPlayer.id)
         .then((result) => {
+          const resultRoundStatus = result.ok ? result.snapshot.round?.status ?? null : "waiting";
+          const resultIsActive = result.ok && resultRoundStatus === "active";
+          console.info("[table-wars][start-lobby-result]", {
+            ok: resultIsActive,
+            roundStatus: resultRoundStatus,
+            requiresRejoin: result.ok ? false : result.requiresRejoin,
+            startAttemptResult: resultIsActive ? "active" : result.ok ? "snapshot-not-active" : "failed",
+          });
           if (!result.ok) {
             setStartFailure({ message: result.message, requiresRejoin: result.requiresRejoin });
+            return;
+          }
+          if (result.snapshot.round?.status !== "active") {
+            setStartFailure({
+              message: "بدأت محاولة الجولة، لكن تعذر تحميل حالتها النشطة. أعد المحاولة.",
+              requiresRejoin: false,
+            });
             return;
           }
           setSnapshot(result.snapshot);
@@ -164,6 +177,12 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           setError(null);
         })
         .catch((startError) => {
+          console.info("[table-wars][start-lobby-result]", {
+            ok: false,
+            roundStatus: "waiting",
+            requiresRejoin: false,
+            startAttemptResult: "request-error",
+          });
           setStartFailure({
             message: startError instanceof Error ? startError.message : "تعذر بدء الجولة.",
             requiresRejoin: false,
@@ -173,12 +192,18 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }, [currentPlayer?.id, round?.id, slug]);
 
   useEffect(() => {
-    if (!isLobby || !round?.id || countdown > 0 || startingRoundRef.current === round.id) return;
+    if (!isLobby || !round?.id || countdown > 0 || startAttemptedRef.current === round.id) return;
+    console.info("[table-wars][lobby-countdown-ended]", {
+      hasRoundId: Boolean(round.id),
+      hasPlayerId: Boolean(currentPlayer?.id),
+      roundStatus: round.status,
+      startAttemptResult: "countdown-ended",
+    });
     startLobbyRound();
-  }, [countdown, isLobby, round?.id, startLobbyRound]);
+  }, [countdown, currentPlayer?.id, isLobby, round?.id, round?.status, startLobbyRound]);
 
   const retryLobbyStart = useCallback(() => {
-    startingRoundRef.current = null;
+    startAttemptedRef.current = null;
     startLobbyRound();
   }, [startLobbyRound]);
 
@@ -189,7 +214,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         .then(() => getTableWarsV2SnapshotAction(slug))
         .then((result) => {
           if (!result.ok) throw new Error(result.message);
-          startingRoundRef.current = null;
+          startAttemptedRef.current = null;
           setStartFailure(null);
           setSnapshot(result.snapshot);
           setError(null);

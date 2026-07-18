@@ -948,7 +948,11 @@ function completeMapWinningTeam(cells: TableWarsV2Cell[]) {
   return determineWinningTeam(cells);
 }
 
-async function getOpenTableWarsV2RoomForCustomer(cafeId: string, customerId: string) {
+async function getOpenTableWarsV2RoomForCustomer(
+  cafeId: string,
+  customerId: string,
+  preferredRoundId?: string | null,
+) {
   const rooms = await getOpenTableWarsV2Rooms(cafeId);
   const matches = (
     await Promise.all(
@@ -968,15 +972,28 @@ async function getOpenTableWarsV2RoomForCustomer(cafeId: string, customerId: str
   ).filter((match): match is { round: TableWarsV2Round; player: TableWarsV2Player } => Boolean(match));
 
   return matches.sort((a, b) => {
+    const aPreferredRound = preferredRoundId && a.round.id === preferredRoundId ? 1 : 0;
+    const bPreferredRound = preferredRoundId && b.round.id === preferredRoundId ? 1 : 0;
+    const aActiveRound = a.round.status === "active" ? 1 : 0;
+    const bActiveRound = b.round.status === "active" ? 1 : 0;
     const aPlayerSeat = a.player.role === "player" ? 1 : 0;
     const bPlayerSeat = b.player.role === "player" ? 1 : 0;
     const aTime = a.player.joinedAt ? Date.parse(a.player.joinedAt) : 0;
     const bTime = b.player.joinedAt ? Date.parse(b.player.joinedAt) : 0;
-    return bPlayerSeat - aPlayerSeat || bTime - aTime || b.round.id.localeCompare(a.round.id);
+    return (
+      bPreferredRound - aPreferredRound ||
+      bActiveRound - aActiveRound ||
+      bPlayerSeat - aPlayerSeat ||
+      bTime - aTime ||
+      b.round.id.localeCompare(a.round.id)
+    );
   })[0] ?? null;
 }
 
-export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<TableWarsV2Snapshot> {
+export async function getTableWarsV2SnapshotForCustomer(
+  slug: string,
+  preferredRoundId?: string | null,
+): Promise<TableWarsV2Snapshot> {
   const playability = await getPublicTableWarsV2Playability(slug);
   const cafe = playability.cafe;
   const fallbackCounts = emptyTeamCounts();
@@ -1009,7 +1026,7 @@ export async function getTableWarsV2SnapshotForCustomer(slug: string): Promise<T
 
   const customer = await getCustomerProfileForCustomerSession(cafe.slug);
   const customerRoom = customer
-    ? await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id))
+    ? await getOpenTableWarsV2RoomForCustomer(cafe.id, String(customer.id), preferredRoundId)
     : null;
 
   if (!customerRoom) {
@@ -1244,7 +1261,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
   }
 
   if (round.status === "active") {
-    return getTableWarsV2SnapshotForCustomer(cafe.slug);
+    return getTableWarsV2SnapshotForCustomer(cafe.slug, round.id);
   }
 
   if (round.status !== "waiting") {
@@ -1281,7 +1298,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
   if (round.status === "active") {
     await seedTableWarsV2RoundCells(round);
     if (startedByThisRequest) await ensureAiPlaceholdersForRoom(round);
-    return getTableWarsV2SnapshotForCustomer(cafe.slug);
+    return getTableWarsV2SnapshotForCustomer(cafe.slug, round.id);
   }
 
   throw tableWarsV2StartError("لم تنتقل الردهة إلى الجولة النشطة. أعد المحاولة.", {

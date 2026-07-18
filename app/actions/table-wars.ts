@@ -167,6 +167,25 @@ export async function startTableWarsV2LobbyRoundAction(
         playerId: normalizedPlayerId || null,
       },
     );
+    const roundStatus = snapshot.round?.status ?? null;
+    const isActive = roundStatus === "active";
+    console.info("[table-wars][start-lobby-result]", {
+      ok: isActive,
+      hasCustomerProfile,
+      hasRoundId: Boolean(normalizedRoundId),
+      hasPlayerId: Boolean(normalizedPlayerId),
+      roundStatus,
+      foundPlayer: Boolean(snapshot.currentPlayer),
+      playerIsConnected: Boolean(snapshot.currentPlayer?.isConnected && !snapshot.currentPlayer.leftAt),
+      startAttemptResult: isActive ? "active" : "snapshot-not-active",
+    });
+    if (!isActive) {
+      return {
+        ok: false,
+        message: "بدأت محاولة الجولة، لكن تعذر تحميل حالتها النشطة. أعد المحاولة.",
+        requiresRejoin: false,
+      };
+    }
     return { ok: true, snapshot };
   } catch (error) {
     const value = error && typeof error === "object" ? (error as Record<string, unknown>) : null;
@@ -180,6 +199,16 @@ export async function startTableWarsV2LobbyRoundAction(
     const requiresRejoin = value?.code === "TABLE_WARS_START_PLAYER_MISSING";
 
     console.error("[table-wars][start-lobby]", {
+      hasCustomerProfile,
+      hasRoundId: Boolean(normalizedRoundId),
+      hasPlayerId: Boolean(normalizedPlayerId),
+      roundStatus,
+      foundPlayer,
+      playerIsConnected,
+      startAttemptResult: requiresRejoin ? "requires-rejoin" : "failed",
+    });
+    console.info("[table-wars][start-lobby-result]", {
+      ok: false,
       hasCustomerProfile,
       hasRoundId: Boolean(normalizedRoundId),
       hasPlayerId: Boolean(normalizedPlayerId),
