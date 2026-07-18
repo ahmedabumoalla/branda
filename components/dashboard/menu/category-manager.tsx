@@ -30,6 +30,7 @@ type Props = {
   products: MenuProduct[];
   cafeSlug?: string;
   onChange: (categories: MenuCategoryRecord[]) => void;
+  onDelete: (categoryId: string) => Promise<boolean>;
   businessCategory?: string;
 };
 
@@ -53,6 +54,7 @@ export function CategoryManager({
   products,
   cafeSlug = "test-cafe",
   onChange,
+  onDelete,
   businessCategory,
 }: Props) {
   const copy = getBusinessCopy(businessCategory);
@@ -62,6 +64,7 @@ export function CategoryManager({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>();
   const [pendingImage, setPendingImage] = useState<OptimizedImageResult | null>(null);
   const [optimizingImage, setOptimizingImage] = useState(false);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -152,14 +155,19 @@ export function CategoryManager({
     setPendingImage(null);
   }
 
-  function removeCategory(id: string) {
+  async function removeCategory(id: string) {
     const count = linkedCount(id);
     if (count > 0) {
       alert(`لا يمكن حذف التصنيف — ${count} ${isEvents ? "تذكرة أو باقة" : "منتج"} مرتبط به`);
       return;
     }
     if (!confirm("حذف هذا التصنيف؟")) return;
-    onChange(categories.filter((c) => c.id !== id));
+    setDeletingCategoryId(id);
+    try {
+      await onDelete(id);
+    } finally {
+      setDeletingCategoryId(null);
+    }
   }
 
   function toggleField(id: string, field: "visible" | "featured") {
@@ -411,7 +419,8 @@ export function CategoryManager({
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeCategory(category.id)}
+                  onClick={() => void removeCategory(category.id)}
+                  disabled={deletingCategoryId === category.id}
                   className="rounded-2xl bg-red-50 p-3 text-red-700"
                 >
                   <Trash2 className="h-4 w-4" />

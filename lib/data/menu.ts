@@ -525,6 +525,46 @@ export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) 
   return record;
 }
 
+export type DeleteMenuCategoryResult =
+  | { ok: true }
+  | { ok: false; reason: "has_products"; linkedProducts: number }
+  | { ok: false; reason: "not_found" };
+
+export async function softDeleteMenuCategory(
+  categoryId: string
+): Promise<DeleteMenuCategoryResult> {
+  const parsedCategoryId = z.string().uuid().parse(categoryId);
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+
+  const { count, error: productsError } = await supabase
+    .from("menu_products")
+    .select("id", { count: "exact", head: true })
+    .eq("cafe_id", cafe.id)
+    .eq("category_id", parsedCategoryId)
+    .is("deleted_at", null);
+
+  if (productsError) throw productsError;
+  if ((count ?? 0) > 0) {
+    return { ok: false, reason: "has_products", linkedProducts: count ?? 0 };
+  }
+
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .update({ deleted_at: new Date().toISOString(), visible: false })
+    .eq("id", parsedCategoryId)
+    .eq("cafe_id", cafe.id)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return { ok: false, reason: "not_found" };
+
+  invalidatePublicMenuSurfaces(cafe.slug);
+  return { ok: true };
+}
+
 export async function saveAllMenuCategories(categories: MenuCategoryRecord[]) {
   const results: MenuCategoryRecord[] = [];
   for (const cat of categories) {

@@ -3,6 +3,7 @@
 import {
   getOwnerMenu,
   saveAllMenuCategories,
+  softDeleteMenuCategory,
   softDeleteMenuProduct,
   upsertMenuCategory,
   upsertMenuProduct,
@@ -56,6 +57,23 @@ export async function deleteMenuProductAction(productId: string) {
 
 export async function saveMenuCategoriesAction(categories: MenuCategoryRecord[]) {
   return saveAllMenuCategories(categories);
+}
+
+export async function deleteMenuCategoryAction(categoryId: string) {
+  try {
+    return await softDeleteMenuCategory(categoryId);
+  } catch (error) {
+    const technicalError =
+      error && typeof error === "object"
+        ? {
+            name: "name" in error ? String(error.name) : "Error",
+            code: "code" in error ? String(error.code) : undefined,
+          }
+        : { name: "UnknownError" };
+
+    console.error("Menu category deletion failed", technicalError);
+    return { ok: false, reason: "error" } as const;
+  }
 }
 
 export async function saveMenuCategoryAction(category: MenuCategoryRecord) {

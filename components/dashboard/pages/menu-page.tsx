@@ -4,6 +4,7 @@ import { Plus, Search, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  deleteMenuCategoryAction,
   deleteMenuProductAction,
   saveMenuCategoriesAction,
   saveMenuProductAction,
@@ -112,6 +113,47 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     }
   }
 
+  async function handleCategoryDelete(categoryId: string) {
+    setSaving(true);
+    try {
+      const result = await deleteMenuCategoryAction(categoryId);
+
+      if (result.ok) {
+        setCategories((current) => current.filter((category) => category.id !== categoryId));
+        router.refresh();
+        showToast({
+          type: "success",
+          message: copy.kind === "events" ? "تم حذف فئة التذاكر" : "تم حذف التصنيف",
+        });
+        return true;
+      }
+
+      if (result.reason === "has_products") {
+        showToast({
+          type: "error",
+          message: `لا يمكن حذف التصنيف — ${result.linkedProducts} ${
+            copy.kind === "events" ? "تذكرة أو باقة" : "منتج"
+          } مرتبط به`,
+        });
+        return false;
+      }
+
+      showToast({
+        type: "error",
+        message: "تعذر حذف التصنيف. حدّث الصفحة وحاول مرة أخرى.",
+      });
+      return false;
+    } catch (error) {
+      console.error("Menu category deletion action failed", {
+        name: error instanceof Error ? error.name : "UnknownError",
+      });
+      showToast({ type: "error", message: "تعذر حذف التصنيف. حاول مرة أخرى." });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (configError) {
     return (
       <DashboardPageShell title={menuTitle} subtitle={configError}>
@@ -172,6 +214,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             categories={categories}
             products={products}
             onChange={handleCategoriesChange}
+            onDelete={handleCategoryDelete}
             businessCategory={businessCategory}
           />
         </BentoGrid>
