@@ -1,0 +1,14 @@
+{
+  "name": "mythic-rift",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Original browser card-battle prototype driven by measured APK data",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.cjs"
+  },
+  "dependencies": {
+    "babylonjs": "^9.17.0",
+    "babylonjs-loaders": "^9.17.0"
+  }
+}

@@ -76,7 +76,7 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
   return (
     <main className="h-[100dvh] w-screen overflow-hidden bg-[#090716]">
       <iframe
-        src="/battle-arena/mythic-rift-preview-v1/index.html?v=20260718-1"
+        src="/battle-arena/game-play-live-v1/index.html?v=20260718-2"
         title="حلبة الأبطال — Mythic Rift"
         className="block h-full w-full border-0"
         allow="autoplay"
