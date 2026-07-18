@@ -4,7 +4,7 @@ export const fetchCache = "force-no-store";
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { BattleArenaGame } from "@/components/cafe/battle-arena-game";
+import { MythicRiftGame } from "@/components/cafe/mythic-rift-game";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { isBattleArenaEnabledForCafe } from "@/lib/data/brand-games";
@@ -102,7 +102,7 @@ export default async function PublicBattleArenaPage({ params, searchParams }: Pr
       </Link>
 
       <div className="min-h-0 h-full max-h-[100dvh] w-full overflow-hidden sm:h-[min(100dvh-40px,920px)] sm:max-w-[520px] sm:rounded-xl sm:border sm:border-[#FFE0A2]/18 sm:shadow-[0_30px_80px_rgba(0,0,0,0.34)]">
-        {!cafe ? <MessageBox message={errorMessage} /> : <BattleArenaGame />}
+        {!cafe ? <MessageBox message={errorMessage} /> : <MythicRiftGame />}
       </div>
     </main>
   );
