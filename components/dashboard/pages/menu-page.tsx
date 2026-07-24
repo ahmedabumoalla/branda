@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Search, Upload } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -10,9 +11,7 @@ import {
   saveMenuProductAction,
 } from "@/app/actions/menu";
 import { CategoryManager } from "@/components/dashboard/menu/category-manager";
-import { MenuImportModal } from "@/components/dashboard/menu/menu-import-modal";
 import { MenuProductCard } from "@/components/dashboard/menu/product-card";
-import { MenuProductFormModal } from "@/components/dashboard/menu/product-modal";
 import {
   BentoCard,
   BentoGrid,
@@ -26,6 +25,40 @@ import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-ca
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
 import { type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+
+function ModalLoadingPlaceholder() {
+  return (
+    <div
+      aria-label="Loading dialog"
+      aria-live="polite"
+      role="status"
+      className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4"
+    >
+      <div className="w-full max-w-md animate-pulse rounded-[24px] border border-[#E7D7C6] bg-[#FCF8F3] p-5 shadow-xl">
+        <div className="h-6 w-40 rounded-lg bg-[#E7D7C6]" />
+        <div className="mt-5 h-12 w-full rounded-2xl bg-[#F0E3D6]" />
+        <div className="mt-3 h-12 w-full rounded-2xl bg-[#F0E3D6]" />
+      </div>
+      <span className="sr-only">Loading</span>
+    </div>
+  );
+}
+
+const MenuProductFormModal = dynamic(
+  () =>
+    import("@/components/dashboard/menu/product-modal").then(
+      (module) => module.MenuProductFormModal
+    ),
+  { loading: ModalLoadingPlaceholder }
+);
+
+const MenuImportModal = dynamic(
+  () =>
+    import("@/components/dashboard/menu/menu-import-modal").then(
+      (module) => module.MenuImportModal
+    ),
+  { loading: ModalLoadingPlaceholder }
+);
 
 type Props = {
   initialProducts: MenuProduct[];
@@ -41,7 +74,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("الكل");
   const [open, setOpen] = useState(false);
+  const [productModalRequested, setProductModalRequested] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importModalRequested, setImportModalRequested] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
@@ -173,7 +208,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setImportOpen(true)}
+              onClick={() => {
+                setImportModalRequested(true);
+                setImportOpen(true);
+              }}
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-[#3A2117] shadow"
             >
@@ -183,6 +221,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             <PrimaryButton
             onClick={() => {
               setEditing(null);
+              setProductModalRequested(true);
               setOpen(true);
             }}
             disabled={saving}
@@ -281,6 +320,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                     }
                     onEdit={() => {
                       setEditing(product);
+                      setProductModalRequested(true);
                       setOpen(true);
                     }}
                     onToggleAvailability={() => {
@@ -300,25 +340,29 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </BentoCard>
         </BentoGrid>
 
-        <MenuProductFormModal
-          open={open}
-          mode={editing ? "edit" : "add"}
-          editingProduct={editing}
-          productList={products}
-          categories={categories}
-          businessCategory={businessCategory}
-          onCategoriesChange={handleCategoriesChange}
-          onClose={() => setOpen(false)}
-          onSave={saveProduct}
-        />
-        <MenuImportModal
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onImported={() => {
-            setImportOpen(false);
-            router.refresh();
-          }}
-        />
+        {productModalRequested ? (
+          <MenuProductFormModal
+            open={open}
+            mode={editing ? "edit" : "add"}
+            editingProduct={editing}
+            productList={products}
+            categories={categories}
+            businessCategory={businessCategory}
+            onCategoriesChange={handleCategoriesChange}
+            onClose={() => setOpen(false)}
+            onSave={saveProduct}
+          />
+        ) : null}
+        {importModalRequested ? (
+          <MenuImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            onImported={() => {
+              setImportOpen(false);
+              router.refresh();
+            }}
+          />
+        ) : null}
       </DashboardPageShell>
       <AppToast toast={toast} />
     </div>
