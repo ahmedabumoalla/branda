@@ -521,6 +521,66 @@ export async function registerCustomer(
   return mapCustomerProfileToSession(parsed.cafeSlug, profile as CustomerProfileRow);
 }
 
+export async function registerVerifiedCustomer(input: {
+  cafeSlug: string;
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  challengeId: string;
+  verificationTokenHash: string;
+}): Promise<BarndaksaCustomerSession> {
+  const parsed = customerRegisterSchema
+    .extend({
+      challengeId: z.string().uuid(),
+      verificationTokenHash: z.string().length(64),
+    })
+    .parse(input);
+  const cafe = await getCafeBySlug(parsed.cafeSlug);
+  if (!cafe) throw new Error("Cafe not found");
+
+  const email = normalizeCustomerEmail(parsed.email);
+  const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
+  if (existing) {
+    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة.");
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("register_verified_customer", {
+    p_challenge_id: parsed.challengeId,
+    p_verification_token_hash: parsed.verificationTokenHash,
+    p_cafe_id: cafe.id,
+    p_phone_normalized: parsed.phone,
+    p_full_name: parsed.fullName.trim(),
+    p_email: email,
+    p_password_hash: hashCustomerPassword(parsed.password),
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة.");
+    }
+    if (error.message?.includes("PHONE_OTP_VERIFICATION_REQUIRED")) {
+      throw new Error("يجب التحقق من رقم الجوال قبل إنشاء الحساب.");
+    }
+    throw error;
+  }
+
+  const profile = (Array.isArray(data) ? data[0] : data) as CustomerProfileRow | null;
+  if (!profile) throw new Error("تعذر إنشاء الحساب بعد التحقق.");
+
+  if (isBarndaksaEmailConfigured()) {
+    await sendBarndaksaEmail({
+      to: email,
+      subject: `مرحبًا بك في ${cafe.name}`,
+      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
+      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
+    }).catch(() => undefined);
+  }
+
+  return mapCustomerProfileToSession(parsed.cafeSlug, profile);
+}
+
 /** Customer login requires cafe + email + password, never email/password alone. */
 
 export async function loginCustomerByEmail(

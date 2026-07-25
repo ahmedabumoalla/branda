@@ -1,0 +1,3 @@
+supabase/migrations/074_fix_phone_auth_pgcrypto.sql
+supabase/tests/010_phone_auth_pgcrypto_fix_test.sql
+.codex-fix-phone-auth-random-bytes-files.txt

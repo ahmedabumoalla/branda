@@ -1,0 +1,15 @@
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+[PublicBattleArenaPage] {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: unable to verify the first certificate; if the root CA is installed locally, try running Node.js with --use-system-ca (UNABLE_TO_VERIFY_LEAF_SIGNATURE)\n' +
+    'Error: unable to verify the first certificate; if the root CA is installed locally, try running Node.js with --use-system-ca\n' +
+    '    at TLSSocket.onConnectSecure (node:_tls_wrap:1631:34)\n' +
+    '    at TLSSocket.emit (node:events:508:28)\n' +
+    '    at TLSSocket._finishInit (node:_tls_wrap:1077:8)\n' +
+    '    at ssl.onhandshakedone (node:_tls_wrap:863:12)\n' +
+    '    at TLSWrap.callbackTrampoline (node:internal/async_hooks:130:17)',
+  hint: '',
+  code: ''
+}

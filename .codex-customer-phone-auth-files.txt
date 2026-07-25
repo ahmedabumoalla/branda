@@ -1,0 +1,10 @@
+app/actions/auth.ts
+app/c/[slug]/login/page.tsx
+app/c/[slug]/register/page.tsx
+app/c/[slug]/reset-password/page.tsx
+components/cafe/customer-phone-auth-form.tsx
+lib/auth/customer-phone-auth.ts
+lib/auth/phone-otp.ts
+supabase/migrations/073_customer_phone_auth.sql
+supabase/tests/009_customer_phone_auth_test.sql
+.codex-customer-phone-auth-files.txt

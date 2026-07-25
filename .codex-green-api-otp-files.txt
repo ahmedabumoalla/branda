@@ -1,0 +1,9 @@
+.env.example
+app/c/[slug]/register/page.tsx
+app/actions/auth.ts
+lib/auth/phone-otp.ts
+lib/data/customers.ts
+lib/whatsapp/green-api.ts
+supabase/migrations/072_green_api_phone_verification_challenges.sql
+supabase/tests/008_phone_otp_test.sql
+.codex-green-api-otp-files.txt

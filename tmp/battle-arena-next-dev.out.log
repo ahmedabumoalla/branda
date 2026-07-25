@@ -1,0 +1,17 @@
+
+> dev
+> next dev --turbopack --hostname 127.0.0.1 --port 3000
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+- Environments: .env.local
+✓ Ready in 754ms
+Creating turbopack project { dir: 'E:\\branda-platform', testMode: true }
+- Experiments (use with caution):
+  · cpus: 1
+  ⨯ preloadEntriesOnStart
+  · serverActions
+  ✓ webpackMemoryOptimizations
+
+ GET /c/demo/play/battle-arena 200 in 8.8s (next.js: 800ms, proxy.ts: 166ms, application-code: 7.8s)

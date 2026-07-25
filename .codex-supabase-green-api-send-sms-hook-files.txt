@@ -1,0 +1,11 @@
+.env.example
+app/actions/auth.ts
+app/api/auth/hooks/send-sms/route.ts
+lib/auth/customer-phone-auth.ts
+lib/auth/phone-otp.ts
+lib/auth/phone-utils.ts
+lib/auth/supabase-hook-signature.ts
+lib/whatsapp/green-api.ts
+supabase/migrations/075_supabase_phone_auth_rate_limits_and_linking.sql
+supabase/tests/011_supabase_phone_auth_flow_test.sql
+.codex-supabase-green-api-send-sms-hook-files.txt

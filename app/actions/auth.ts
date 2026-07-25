@@ -23,6 +23,15 @@ import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { getDashboardPathForCategory } from "@/lib/platform/business-categories";
 import { escapeEmailHtml, isBarndaksaEmailConfigured, sendBarndaksaEmail } from "@/lib/email/resend";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
+import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
+import {
+  isAllowedCustomerOtpPhone,
+  isPhoneOtpRequiredForBrand,
+  normalizeSaudiPhone,
+  requestCustomerPhoneOtp,
+  type CustomerPhoneOtpPurpose,
+} from "@/lib/auth/phone-otp";
+import { linkCustomerAfterSupabasePhoneOtp } from "@/lib/auth/customer-phone-auth";
 
 const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
 const CUSTOMER_SESSION_DAYS = 30;
@@ -601,14 +610,122 @@ export async function registerCustomerAction(
   phone: string
 ): Promise<CustomerAuthActionResult> {
   try {
+    if (isPhoneOtpRequiredForBrand(cafeSlug)) {
+      return {
+        ok: false,
+        message: "استخدم التسجيل برقم الجوال ورمز التحقق.",
+      };
+    }
+
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
     await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
   } catch (error) {
     console.error("[registerCustomerAction]", error);
+    const safeOtpError =
+      error instanceof Error && /[\u0600-\u06ff]/.test(error.message)
+        ? error.message
+        : "تعذر إنشاء الحساب بعد التحقق. حاول مرة أخرى.";
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "تعذر إنشاء الحساب تحقق من البيانات وحاول مرة أخرى",
+      message: isPhoneOtpRequiredForBrand(cafeSlug)
+        ? safeOtpError
+        : error instanceof Error
+          ? error.message
+          : "تعذر إنشاء الحساب تحقق من البيانات وحاول مرة أخرى",
+    };
+  }
+}
+
+export async function requestCustomerPhoneOtpAction(
+  cafeSlug: string,
+  phone: string,
+  purpose: CustomerPhoneOtpPurpose,
+) {
+  try {
+    if (purpose !== "customer_signup" && purpose !== "customer_login") {
+      return {
+        required: true as const,
+        ok: false as const,
+        message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      };
+    }
+    return await requestCustomerPhoneOtp(cafeSlug, phone, purpose);
+  } catch (error) {
+    logAuthError("[requestCustomerPhoneOtpAction]", error);
+    return {
+      required: true as const,
+      ok: false as const,
+      message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+    };
+  }
+}
+
+export async function completeCustomerPhoneOtpAction(
+  cafeSlug: string,
+  phone: string,
+  code: string,
+  purpose: CustomerPhoneOtpPurpose,
+) {
+  try {
+    if (purpose !== "customer_signup" && purpose !== "customer_login") {
+      return { ok: false as const, message: "تعذر التحقق من الرمز." };
+    }
+    if (!isPhoneOtpRequiredForBrand(cafeSlug)) {
+      return { ok: false as const, message: "التحقق غير متاح لهذه العلامة." };
+    }
+    const phoneNormalized = normalizeSaudiPhone(phone);
+    if (
+      !phoneNormalized ||
+      !isAllowedCustomerOtpPhone(phoneNormalized) ||
+      !/^\d{6}$/.test(code)
+    ) {
+      return { ok: false as const, message: "رمز التحقق غير صحيح." };
+    }
+
+    const supabase = await createClient();
+    const { data: verified, error: verificationError } =
+      await supabase.auth.verifyOtp({
+        phone: `+${phoneNormalized}`,
+        token: code,
+        type: "sms",
+      });
+    if (verificationError || !verified.user || !verified.session) {
+      return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي." };
+    }
+    if (normalizeSaudiPhone(verified.user.phone ?? "") !== phoneNormalized) {
+      await supabase.auth.signOut({ scope: "local" });
+      return { ok: false as const, message: "تعذر التحقق من رقم الجوال." };
+    }
+
+    const finalized = await linkCustomerAfterSupabasePhoneOtp({
+      slug: cafeSlug,
+      phone,
+      purpose,
+      authUserId: verified.user.id,
+    });
+    if (!finalized.ok) {
+      await supabase.auth.signOut({ scope: "local" });
+      return {
+        ok: false as const,
+        message: finalized.message,
+        reason: finalized.reason,
+      };
+    }
+    await createCustomerSessionCookie(cafeSlug, finalized.session.id);
+    return {
+      ok: true as const,
+      message:
+        purpose === "customer_signup"
+          ? "تم إنشاء الحساب وتسجيل الدخول."
+          : "تم تسجيل الدخول.",
+      session: finalized.session,
+    };
+  } catch (error) {
+    logAuthError("[completeCustomerPhoneOtpAction]", error);
+    return {
+      ok: false as const,
+      message: "تعذر التحقق من الرمز. حاول مرة أخرى.",
     };
   }
 }
@@ -637,6 +754,24 @@ export async function loginCustomerAction(
 export async function getCustomerSessionAction(
   cafeSlug: string,
 ): Promise<BarndaksaCustomerSession | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const cafe = await getPublicCafeBySlugAdmin(cafeSlug);
+    if (cafe) {
+      const admin = createAdminClient();
+      const { data: profile } = await admin
+        .from("customer_profiles")
+        .select("*")
+        .eq("cafe_id", cafe.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (profile) return mapCustomerProfileToSession(cafeSlug, profile);
+    }
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
   if (!token) return null;
@@ -648,6 +783,8 @@ export async function getCustomerSessionAction(
 
 export async function logoutCustomerAction(cafeSlug?: string): Promise<void> {
   if (!cafeSlug) return;
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "local" });
 
   const cookieStore = await cookies();
   const token = cookieStore.get(getCustomerSessionCookieName(cafeSlug))?.value;
