@@ -1,0 +1,8 @@
+app/actions/auth.ts
+app/actions/customer-account.ts
+app/c/[slug]/account/page.tsx
+components/cafe/customer-phone-auth-form.tsx
+components/cafe/themes/themed-account-panel.tsx
+lib/customer/session.ts
+tests/customer-login-readiness-account-load.test.mjs
+.codex-turbo-customer-login-account-files.txt

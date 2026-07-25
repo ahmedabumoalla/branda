@@ -10,15 +10,10 @@ import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
 import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
-import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getCustomerSessionAction } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { LoyaltySettings } from "@/lib/mock/loyalty";
 
-type CustomerAccountErrorCode =
-  | "invalid_session"
-  | "core_load_failed"
-  | "optional_section_failed";
 type OptionalSection =
   | "orders"
   | "reservations"
@@ -29,16 +24,7 @@ type OptionalSection =
 
 const CORE_LOAD_ERROR = "تعذر تحميل بيانات الحساب الأساسية. حاول مرة أخرى.";
 const OPTIONAL_TIMEOUT_MS = 8_000;
-
-type CustomerLoyaltyPointsSnapshot = {
-  enabled: boolean;
-  balance: number;
-  usedPoints: number;
-  pointValueSar: number;
-  minimumRedemptionPoints: number;
-};
-
-const emptyLoyaltyPoints: CustomerLoyaltyPointsSnapshot = {
+const emptyLoyaltyPoints = {
   enabled: false,
   balance: 0,
   usedPoints: 0,
@@ -46,11 +32,11 @@ const emptyLoyaltyPoints: CustomerLoyaltyPointsSnapshot = {
   minimumRedemptionPoints: 0,
 };
 
-function serializeAccountError(
+function safeError(
   error: unknown,
   input: { context: string; section?: OptionalSection; slug: string },
 ) {
-  const source =
+  const value =
     error && typeof error === "object"
       ? (error as {
           message?: unknown;
@@ -61,24 +47,24 @@ function serializeAccountError(
       : {};
   return {
     message:
-      typeof source.message === "string" ? source.message : "Account load failed",
-    code: typeof source.code === "string" ? source.code : undefined,
-    details: typeof source.details === "string" ? source.details : undefined,
-    hint: typeof source.hint === "string" ? source.hint : undefined,
+      typeof value.message === "string" ? value.message : "Section load failed",
+    code: typeof value.code === "string" ? value.code : undefined,
+    details: typeof value.details === "string" ? value.details : undefined,
+    hint: typeof value.hint === "string" ? value.hint : undefined,
     context: input.context,
     section: input.section,
     slug: input.slug,
   };
 }
 
-async function optionalResult<T>(
+async function withSectionTimeout<T>(
+  section: OptionalSection,
+  slug: string,
   task: Promise<T>,
-  fallback: T,
-  input: { section: OptionalSection; slug: string },
-): Promise<{ value: T; failed: boolean }> {
+) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const value = await Promise.race([
+    return await Promise.race([
       task,
       new Promise<never>((_, reject) => {
         timeout = setTimeout(
@@ -87,20 +73,30 @@ async function optionalResult<T>(
         );
       }),
     ]);
-    return { value, failed: false };
   } catch (error) {
     console.error(
-      "[fetchCustomerAccountOptionalAction]",
-      serializeAccountError(error, {
+      "[customer-account-section]",
+      safeError(error, {
         context: "optional_section_failed",
-        section: input.section,
-        slug: input.slug,
+        section,
+        slug,
       }),
     );
-    return { value: fallback, failed: true };
+    throw error;
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+async function sectionContext(cafeSlug: string) {
+  const slug = cafeSlug.trim().toLowerCase();
+  const [cafe, customer] = await Promise.all([
+    getCafeBySlug(slug),
+    getCustomerSessionAction(slug),
+  ]);
+  if (!customer) return { ok: false as const, code: "invalid_session" as const };
+  if (!cafe) return { ok: false as const, code: "core_load_failed" as const };
+  return { ok: true as const, slug, cafeId: cafe.id, customer };
 }
 
 function firstActiveRedemptionRule(settings: LoyaltySettings) {
@@ -111,44 +107,39 @@ function firstActiveRedemptionRule(settings: LoyaltySettings) {
   );
 }
 
-function resolvePointValueSar(settings: LoyaltySettings) {
+function pointValue(settings: LoyaltySettings) {
   const rule = firstActiveRedemptionRule(settings);
-  const pointsCost = Number(rule?.pointsCost ?? 0);
-  if (!rule || pointsCost <= 0) return 0;
+  const cost = Number(rule?.pointsCost ?? 0);
   if (
-    rule.type === "fixed_discount" &&
-    Number(rule.discountAmount ?? 0) > 0
+    !rule ||
+    cost <= 0 ||
+    rule.type !== "fixed_discount" ||
+    Number(rule.discountAmount ?? 0) <= 0
   ) {
-    return Math.round((Number(rule.discountAmount) / pointsCost) * 100) / 100;
+    return 0;
   }
-  return 0;
+  return Math.round((Number(rule.discountAmount) / cost) * 100) / 100;
 }
 
-async function getCustomerLoyaltyAccountBalance(
-  cafeId: string,
-  customerProfileId: string,
-) {
+async function loyaltyBalance(cafeId: string, customerId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("loyalty_accounts")
     .select("balance")
     .eq("cafe_id", cafeId)
-    .eq("customer_id", customerProfileId)
+    .eq("customer_id", customerId)
     .maybeSingle();
   if (error) throw error;
   return Math.max(0, Number(data?.balance ?? 0));
 }
 
-async function getCustomerUsedLoyaltyPoints(
-  cafeId: string,
-  customerProfileId: string,
-) {
+async function usedLoyaltyPoints(cafeId: string, customerId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("loyalty_transactions")
     .select("amount")
     .eq("cafe_id", cafeId)
-    .eq("customer_id", customerProfileId)
+    .eq("customer_id", customerId)
     .lt("amount", 0);
   if (error) throw error;
   return (data ?? []).reduce(
@@ -161,213 +152,211 @@ async function getCustomerUsedLoyaltyPoints(
 export async function fetchCustomerAccountCoreAction(cafeSlug: string) {
   const slug = cafeSlug.trim().toLowerCase();
   try {
-    const cafe = await getCafeBySlug(slug);
-    if (!cafe) {
-      return {
-        success: false as const,
-        code: "core_load_failed" as CustomerAccountErrorCode,
-        message: CORE_LOAD_ERROR,
-        data: null,
-      };
-    }
-
-    const customer = await getCustomerSessionAction(slug);
+    const [cafe, customer] = await Promise.all([
+      getCafeBySlug(slug),
+      getCustomerSessionAction(slug),
+    ]);
     if (!customer) {
       return {
         success: false as const,
-        code: "invalid_session" as CustomerAccountErrorCode,
+        code: "invalid_session" as const,
         message: "انتهت جلسة العميل. سجّل الدخول مرة أخرى.",
         data: null,
       };
     }
-
-    const admin = createAdminClient();
-    const { data: profile, error } = await admin
-      .from("customer_profiles")
-      .select("id,cafe_id")
-      .eq("id", customer.id)
-      .eq("cafe_id", cafe.id)
-      .maybeSingle();
-    if (error) throw error;
-    if (!profile || String(profile.cafe_id) !== cafe.id) {
+    if (!cafe) {
       return {
         success: false as const,
-        code: "invalid_session" as CustomerAccountErrorCode,
-        message: "تعذر التحقق من ارتباط الحساب بهذه العلامة.",
+        code: "core_load_failed" as const,
+        message: CORE_LOAD_ERROR,
         data: null,
       };
     }
-
-    let features: string[] = [];
-    try {
-      features = await getPublicCafeFeatureCodesBySlug(slug);
-    } catch (error) {
-      console.error(
-        "[fetchCustomerAccountCoreAction]",
-        serializeAccountError(error, {
-          context: "core_features_fallback",
-          slug,
-        }),
-      );
-    }
-
     return {
       success: true as const,
       code: null,
       message: null,
-      data: { customer, cafeId: cafe.id, features },
+      data: { customer, cafeId: cafe.id },
     };
   } catch (error) {
     console.error(
       "[fetchCustomerAccountCoreAction]",
-      serializeAccountError(error, { context: "core_load_failed", slug }),
+      safeError(error, { context: "core_load_failed", slug }),
     );
     return {
       success: false as const,
-      code: "core_load_failed" as CustomerAccountErrorCode,
+      code: "core_load_failed" as const,
       message: CORE_LOAD_ERROR,
       data: null,
     };
   }
 }
 
-export async function fetchCustomerAccountOptionalAction(cafeSlug: string) {
+export async function fetchCustomerAccountFeaturesAction(cafeSlug: string) {
   const slug = cafeSlug.trim().toLowerCase();
-  const core = await fetchCustomerAccountCoreAction(slug);
-  if (!core.success || !core.data) {
+  try {
     return {
-      success: false as const,
-      code: core.code,
-      message: core.message,
-      data: null,
-      failedSections: [] as OptionalSection[],
+      success: true as const,
+      data: await getPublicCafeFeatureCodesBySlug(slug),
     };
-  }
-
-  const { customer, cafeId, features } = core.data;
-  const ordersEnabled =
-    featureCodesAllow(features, "orders") || featureCodesAllow(features, "menu");
-  const reservationsEnabled = featureCodesAllow(features, "reservations");
-  const loyaltyEnabled = featureCodesAllow(features, "loyalty");
-  const experienceEnabled = featureCodesAllow(features, "experience_reviews");
-
-  const [ordersResult, reservationsResult, loyaltyResult, experienceResult, rewardsResult] =
-    await Promise.all([
-      ordersEnabled
-        ? optionalResult(getCustomerOrdersForProfile(slug, customer.id, 5), [], {
-            section: "orders",
-            slug,
-          })
-        : { value: [], failed: false },
-      reservationsEnabled
-        ? optionalResult(
-            getCustomerReservationsForProfile(slug, customer.id, 5),
-            [],
-            { section: "reservations", slug },
-          )
-        : { value: [], failed: false },
-      loyaltyEnabled
-        ? optionalResult(
-            getCustomerLoyaltyCardViewForProfile(slug, customer.id),
-            null,
-            { section: "loyalty", slug },
-          )
-        : { value: null, failed: false },
-      experienceEnabled
-        ? optionalResult(
-            getCustomerExperienceRewardSubmissions(slug, customer.id, 5),
-            [],
-            { section: "experience_rewards", slug },
-          )
-        : { value: [], failed: false },
-      loyaltyEnabled || experienceEnabled
-        ? optionalResult(getCustomerRewardInstances(slug, customer.id, 50), [], {
-            section: "customer_rewards",
-            slug,
-          })
-        : { value: [], failed: false },
-    ]);
-
-  const loyaltyRulesResult = loyaltyEnabled
-    ? await optionalResult(getPublicLoyaltyBySlug(slug), null, {
-        section: "loyalty_points",
+  } catch (error) {
+    console.error(
+      "[customer-account-section]",
+      safeError(error, {
+        context: "optional_section_failed",
         slug,
-      })
-    : { value: null, failed: false };
-  const [balanceResult, usedResult] = loyaltyEnabled
-    ? await Promise.all([
-        optionalResult(getCustomerLoyaltyAccountBalance(cafeId, customer.id), 0, {
-          section: "loyalty_points",
-          slug,
-        }),
-        optionalResult(getCustomerUsedLoyaltyPoints(cafeId, customer.id), 0, {
-          section: "loyalty_points",
-          slug,
-        }),
-      ])
-    : [
-        { value: 0, failed: false },
-        { value: 0, failed: false },
-      ];
-
-  const failedSections = [
-    ordersResult.failed ? "orders" : null,
-    reservationsResult.failed ? "reservations" : null,
-    loyaltyResult.failed ? "loyalty" : null,
-    loyaltyRulesResult.failed || balanceResult.failed || usedResult.failed
-      ? "loyalty_points"
-      : null,
-    experienceResult.failed ? "experience_rewards" : null,
-    rewardsResult.failed ? "customer_rewards" : null,
-  ].filter((section): section is OptionalSection => Boolean(section));
-
-  const loyaltyPoints =
-    loyaltyRulesResult.value?.settings.enabled
-      ? {
-          enabled: true,
-          balance: balanceResult.value,
-          usedPoints: usedResult.value,
-          pointValueSar: resolvePointValueSar(loyaltyRulesResult.value.settings),
-          minimumRedemptionPoints: Number(
-            firstActiveRedemptionRule(loyaltyRulesResult.value.settings)
-              ?.pointsCost ?? 0,
-          ),
-        }
-      : emptyLoyaltyPoints;
-
-  const loyaltyCandidate = loyaltyResult.value;
-  const loyalty =
-    loyaltyCandidate?.card.cafeId === cafeId &&
-    loyaltyCandidate?.cafeSlug === slug
-      ? loyaltyCandidate
-      : null;
-
-  return {
-    success: true as const,
-    code: failedSections.length
-      ? ("optional_section_failed" as CustomerAccountErrorCode)
-      : null,
-    message: null,
-    failedSections,
-    data: {
-      orders: ordersResult.value,
-      reservations: reservationsResult.value,
-      loyalty,
-      loyaltyPoints,
-      experienceRewards: experienceResult.value.filter(
-        (reward) => reward.cafeId === cafeId,
-      ),
-      customerRewards: rewardsResult.value.filter(
-        (reward) => reward.cafeId === cafeId,
-      ),
-    },
-  };
+      }),
+    );
+    return { success: false as const, data: [] as string[] };
+  }
 }
 
+export async function fetchCustomerOrdersSectionAction(cafeSlug: string) {
+  const context = await sectionContext(cafeSlug);
+  if (!context.ok) return { success: false as const, code: context.code, data: [] };
+  try {
+    const data = await withSectionTimeout(
+      "orders",
+      context.slug,
+      getCustomerOrdersForProfile(context.slug, context.customer.id, 5),
+    );
+    return { success: true as const, code: null, data };
+  } catch {
+    return { success: false as const, code: "optional_section_failed" as const, data: [] };
+  }
+}
+
+export async function fetchCustomerReservationsSectionAction(cafeSlug: string) {
+  const context = await sectionContext(cafeSlug);
+  if (!context.ok) return { success: false as const, code: context.code, data: [] };
+  try {
+    const data = await withSectionTimeout(
+      "reservations",
+      context.slug,
+      getCustomerReservationsForProfile(context.slug, context.customer.id, 5),
+    );
+    return { success: true as const, code: null, data };
+  } catch {
+    return { success: false as const, code: "optional_section_failed" as const, data: [] };
+  }
+}
+
+export async function fetchCustomerLoyaltySectionAction(cafeSlug: string) {
+  const context = await sectionContext(cafeSlug);
+  if (!context.ok) {
+    return {
+      success: false as const,
+      code: context.code,
+      data: { loyalty: null, loyaltyPoints: emptyLoyaltyPoints },
+    };
+  }
+  try {
+    const [loyalty, rules, balance, used] = await Promise.all([
+      withSectionTimeout(
+        "loyalty",
+        context.slug,
+        getCustomerLoyaltyCardViewForProfile(
+          context.slug,
+          context.customer.id,
+        ),
+      ),
+      withSectionTimeout(
+        "loyalty_points",
+        context.slug,
+        getPublicLoyaltyBySlug(context.slug),
+      ),
+      withSectionTimeout(
+        "loyalty_points",
+        context.slug,
+        loyaltyBalance(context.cafeId, context.customer.id),
+      ),
+      withSectionTimeout(
+        "loyalty_points",
+        context.slug,
+        usedLoyaltyPoints(context.cafeId, context.customer.id),
+      ),
+    ]);
+    const scoped =
+      loyalty?.card.cafeId === context.cafeId &&
+      loyalty?.cafeSlug === context.slug
+        ? loyalty
+        : null;
+    return {
+      success: true as const,
+      code: null,
+      data: {
+        loyalty: scoped,
+        loyaltyPoints: rules?.settings.enabled
+          ? {
+              enabled: true,
+              balance,
+              usedPoints: used,
+              pointValueSar: pointValue(rules.settings),
+              minimumRedemptionPoints: Number(
+                firstActiveRedemptionRule(rules.settings)?.pointsCost ?? 0,
+              ),
+            }
+          : emptyLoyaltyPoints,
+      },
+    };
+  } catch {
+    return {
+      success: false as const,
+      code: "optional_section_failed" as const,
+      data: { loyalty: null, loyaltyPoints: emptyLoyaltyPoints },
+    };
+  }
+}
+
+export async function fetchCustomerExperienceRewardsSectionAction(
+  cafeSlug: string,
+) {
+  const context = await sectionContext(cafeSlug);
+  if (!context.ok) return { success: false as const, code: context.code, data: [] };
+  try {
+    const data = await withSectionTimeout(
+      "experience_rewards",
+      context.slug,
+      getCustomerExperienceRewardSubmissions(
+        context.slug,
+        context.customer.id,
+        5,
+      ),
+    );
+    return {
+      success: true as const,
+      code: null,
+      data: data.filter((reward) => reward.cafeId === context.cafeId),
+    };
+  } catch {
+    return { success: false as const, code: "optional_section_failed" as const, data: [] };
+  }
+}
+
+export async function fetchCustomerRewardsSectionAction(cafeSlug: string) {
+  const context = await sectionContext(cafeSlug);
+  if (!context.ok) return { success: false as const, code: context.code, data: [] };
+  try {
+    const data = await withSectionTimeout(
+      "customer_rewards",
+      context.slug,
+      getCustomerRewardInstances(context.slug, context.customer.id, 50),
+    );
+    return {
+      success: true as const,
+      code: null,
+      data: data.filter((reward) => reward.cafeId === context.cafeId),
+    };
+  } catch {
+    return { success: false as const, code: "optional_section_failed" as const, data: [] };
+  }
+}
+
+// Compatibility loader for pages that explicitly need the complete snapshot.
 export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
   const slug = cafeSlug.trim().toLowerCase();
   const core = await fetchCustomerAccountCoreAction(slug);
-  const emptyData = {
+  const empty = {
     customer: null,
     cafeSlug: slug,
     features: [] as string[],
@@ -393,21 +382,34 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
       error: core.message,
       errorCode: core.code,
       message: core.message,
-      data: emptyData,
+      data: empty,
     };
   }
-  const optional = await fetchCustomerAccountOptionalAction(slug);
+  const [features, orders, reservations, loyalty, experienceRewards, customerRewards] =
+    await Promise.all([
+      fetchCustomerAccountFeaturesAction(slug),
+      fetchCustomerOrdersSectionAction(slug),
+      fetchCustomerReservationsSectionAction(slug),
+      fetchCustomerLoyaltySectionAction(slug),
+      fetchCustomerExperienceRewardsSectionAction(slug),
+      fetchCustomerRewardsSectionAction(slug),
+    ]);
   return {
     success: true as const,
-    code: optional.code,
+    code: null,
     error: null,
-    errorCode: optional.code,
+    errorCode: null,
     message: null,
     data: {
-      ...emptyData,
+      ...empty,
       customer: core.data.customer,
-      features: core.data.features,
-      ...(optional.data ?? {}),
+      features: features.data,
+      orders: orders.data,
+      reservations: reservations.data,
+      loyalty: loyalty.data.loyalty,
+      loyaltyPoints: loyalty.data.loyaltyPoints,
+      experienceRewards: experienceRewards.data,
+      customerRewards: customerRewards.data,
     },
   };
 }

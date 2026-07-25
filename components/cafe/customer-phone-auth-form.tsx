@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
-  confirmCustomerAccountReadyAction,
   completeCustomerPhoneOtpAction,
   requestCustomerPhoneOtpAction,
 } from "@/app/actions/auth";
@@ -13,7 +12,7 @@ import {
   ThemedInput,
 } from "@/components/cafe/themes/themed-auth-panel";
 import { appendPreviewToNextPath } from "@/lib/cafe/theme-links";
-import { clearCachedCustomerSession } from "@/lib/customer/session";
+import { primeCustomerSessionCache } from "@/lib/customer/session";
 
 type CustomerPhoneAuthMode = "signup" | "login";
 
@@ -55,12 +54,10 @@ export function CustomerPhoneAuthForm({
   const [code, setCode] = useState("");
   const [maskedPhone, setMaskedPhone] = useState("");
   const [stage, setStage] = useState<"phone" | "code">("phone");
-  const [pending, setPending] = useState<
-    "send" | "verify" | "resend" | "ready" | null
-  >(null);
+  const [pending, setPending] = useState<"send" | "verify" | "resend" | null>(
+    null,
+  );
   const [resendSeconds, setResendSeconds] = useState(0);
-  const [accountVerified, setAccountVerified] = useState(false);
-  const [readinessError, setReadinessError] = useState("");
 
   useEffect(() => {
     try {
@@ -111,31 +108,7 @@ export function CustomerPhoneAuthForm({
     setCode("");
     setMaskedPhone("");
     setResendSeconds(0);
-    setAccountVerified(false);
-    setReadinessError("");
     window.sessionStorage.removeItem(storageKey);
-  }
-
-  async function prepareAccount() {
-    setPending("ready");
-    setReadinessError("");
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const readiness = await confirmCustomerAccountReadyAction(slug);
-      if (readiness.ok) {
-        window.sessionStorage.removeItem(storageKey);
-        clearCachedCustomerSession(slug);
-        const destination = safeCustomerNext(rawNext, slug);
-        router.replace(appendPreviewToNextPath(destination, previewThemeId));
-        return;
-      }
-      if (attempt < 2) {
-        await new Promise((resolve) => window.setTimeout(resolve, 250));
-      }
-    }
-    setPending(null);
-    setReadinessError(
-      "تم التحقق من الرقم، لكن تعذر تجهيز الحساب. أعد المحاولة.",
-    );
   }
 
   async function sendOtp(kind: "send" | "resend") {
@@ -203,10 +176,12 @@ export function CustomerPhoneAuthForm({
         return;
       }
 
-      setAccountVerified(true);
-      await prepareAccount();
+      window.sessionStorage.removeItem(storageKey);
+      primeCustomerSessionCache(slug, result.session);
+      const destination = safeCustomerNext(rawNext, slug);
+      router.replace(appendPreviewToNextPath(destination, previewThemeId));
     } finally {
-      setPending((current) => (current === "ready" ? current : null));
+      setPending(null);
     }
   }
 
@@ -226,7 +201,6 @@ export function CustomerPhoneAuthForm({
       loginHref={loginHref}
       onSubmit={() => {
         if (stage === "phone") void sendOtp("send");
-        else if (accountVerified) void prepareAccount();
         else void verifyOtp();
       }}
       submitLabel={
@@ -234,11 +208,7 @@ export function CustomerPhoneAuthForm({
           ? pending === "send"
             ? "جاري إرسال الرمز..."
             : "إرسال رمز التحقق"
-          : pending === "ready"
-            ? "جاري تجهيز حسابك..."
-            : accountVerified
-              ? "إعادة تجهيز الحساب"
-              : pending === "verify"
+          : pending === "verify"
             ? "جاري التحقق..."
             : mode === "signup"
               ? "تحقق وأنشئ الحساب"
@@ -310,26 +280,6 @@ export function CustomerPhoneAuthForm({
                 ? `إعادة الإرسال بعد ${resendSeconds} ثانية`
                 : "إعادة إرسال الرمز"}
           </button>
-          {pending === "ready" ? (
-            <p className="mt-3 text-xs font-black text-[var(--ci-fg,#311912)]">
-              جاري تجهيز حسابك...
-            </p>
-          ) : null}
-          {accountVerified && readinessError ? (
-            <div className="mt-3">
-              <p className="text-xs font-bold leading-5 text-red-600">
-                {readinessError}
-              </p>
-              <button
-                type="button"
-                onClick={() => void prepareAccount()}
-                disabled={pending !== null}
-                className="mt-2 rounded-xl bg-[var(--ci-accent,#6B3A25)] px-4 py-2 text-xs font-black text-white disabled:opacity-50"
-              >
-                إعادة تجهيز الحساب
-              </button>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </ThemedAuthPanel>

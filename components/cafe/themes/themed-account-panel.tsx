@@ -164,6 +164,7 @@ function MenuRow({
   href,
   onClick,
   danger,
+  section,
 }: {
   icon: ElementType;
   title: string;
@@ -171,6 +172,7 @@ function MenuRow({
   href?: string;
   onClick?: () => void;
   danger?: boolean;
+  section?: "orders" | "reservations" | "loyalty" | "experience_rewards";
 }) {
   const content = (
     <>
@@ -188,8 +190,8 @@ function MenuRow({
   );
   const className = "flex w-full items-center gap-3 px-1 py-4 text-right transition active:scale-[0.99]";
 
-  if (href) return <Link href={href} className={className}>{content}</Link>;
-  return <button type="button" onClick={onClick} className={className}>{content}</button>;
+  if (href) return <Link href={href} className={className} data-account-section={section}>{content}</Link>;
+  return <button type="button" onClick={onClick} className={className} data-account-section={section}>{content}</button>;
 }
 
 function Field({
@@ -385,18 +387,21 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         title: "المكافآت",
         subtitle: summarizeRewards(props.loyaltyBalance, props.myTransactions, props.pointsEnabled),
         href: rewardsHref,
+        section: "loyalty" as const,
       },
       {
         icon: ClipboardList,
         title: isEvents ? "شراء التذاكر" : "الطلبات",
         subtitle: summarizeLatestOrder(props.myOrders, isEvents),
         onClick: () => setView("orders"),
+        section: "orders" as const,
       },
       {
         icon: CalendarDays,
         title: isEvents ? "تذاكري" : "الحجوزات",
         subtitle: isEvents ? "تذاكر الدخول الخاصة بك" : summarizeLatestReservation(props.myReservations),
         ...(isEvents ? { onClick: () => setView("orders") } : { href: reserveHref }),
+        section: "reservations" as const,
       },
     ],
     [isEvents, props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, props.pointsEnabled, reserveHref, rewardsHref],
@@ -547,7 +552,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           <Card title="معلومات عامة">
             <div className="divide-y divide-[#f0e7df]">
               {generalRows.map((row) => (
-                <MenuRow key={row.title} icon={row.icon} title={row.title} subtitle={row.subtitle} href={row.href} onClick={row.onClick} />
+                <MenuRow key={row.title} icon={row.icon} title={row.title} subtitle={row.subtitle} href={row.href} onClick={row.onClick} section={row.section} />
               ))}
             </div>
           </Card>

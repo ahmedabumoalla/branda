@@ -17,6 +17,20 @@ const SESSION_TTL_MS = 30_000;
 const sessionCache = new Map<string, { at: number; value: BarndaksaCustomerSession | null }>();
 const sessionRequests = new Map<string, Promise<BarndaksaCustomerSession | null>>();
 
+export function primeCustomerSessionCache(
+  slug: string,
+  session: BarndaksaCustomerSession,
+) {
+  sessionCache.set(slug, { at: Date.now(), value: session });
+  sessionRequests.delete(slug);
+}
+
+export function peekCachedCustomerSession(slug: string) {
+  const cached = sessionCache.get(slug);
+  if (!cached || Date.now() - cached.at >= SESSION_TTL_MS) return null;
+  return cached.value;
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

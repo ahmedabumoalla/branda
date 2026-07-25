@@ -5,7 +5,11 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import {
   fetchCustomerAccountCoreAction,
-  fetchCustomerAccountOptionalAction,
+  fetchCustomerAccountFeaturesAction,
+  fetchCustomerExperienceRewardsSectionAction,
+  fetchCustomerLoyaltySectionAction,
+  fetchCustomerOrdersSectionAction,
+  fetchCustomerReservationsSectionAction,
 } from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import {
@@ -18,6 +22,8 @@ import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
 import { revokeObjectUrl } from "@/lib/cafe/local-asset-store";
 import {
   clearCustomerSession,
+  peekCachedCustomerSession,
+  primeCustomerSessionCache,
   type BarndaksaCustomerSession,
 } from "@/lib/customer/session";
 import {
@@ -897,9 +903,12 @@ function AccountPageInner() {
   );
 
   const defaultTab: TabKey = "orders";
+  const initialCustomer = useRef(peekCachedCustomerSession(slug));
 
-  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(null);
-  const [accountLoading, setAccountLoading] = useState(true);
+  const [customer, setCustomer] = useState<BarndaksaCustomerSession | null>(
+    initialCustomer.current,
+  );
+  const [accountLoading, setAccountLoading] = useState(!initialCustomer.current);
   const [accountError, setAccountError] = useState("");
   const [redirectingToLogin, setRedirectingToLogin] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
@@ -907,6 +916,7 @@ function AccountPageInner() {
   const [optionalFailedSections, setOptionalFailedSections] = useState<string[]>(
     [],
   );
+  const requestedSections = useRef(new Set<string>());
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
@@ -961,11 +971,9 @@ function AccountPageInner() {
     let cancelled = false;
 
     async function load() {
-      setAccountLoading(true);
+      setAccountLoading(!customer);
       setAccountError("");
       setRedirectingToLogin(false);
-      setLoyaltyLoading(true);
-      setOptionalFailedSections([]);
 
       const result = await fetchCustomerAccountCoreAction(slug);
       if (cancelled) return;
@@ -974,68 +982,20 @@ function AccountPageInner() {
         setAccountLoading(false);
         setLoyaltyLoading(false);
         setRedirectingToLogin(result.code === "invalid_session");
+        if (result.code === "invalid_session") setCustomer(null);
         setAccountError(result.message ?? CUSTOMER_ACCOUNT_LOAD_ERROR);
         return;
       }
 
       const session = result.data.customer;
+      primeCustomerSessionCache(slug, session);
       setCustomer(session);
-      setAccountFeatures(result.data.features);
       setEditName(session.fullName);
       setEditPhone(session.phone || "");
       setEditAvatarPreview(session.avatarUrl || "");
       setAvatarAssetId(session.avatarAssetId);
       setAvatarMessage(null);
       setAccountLoading(false);
-
-      const optional = await fetchCustomerAccountOptionalAction(slug);
-      if (cancelled) return;
-      if (!optional.success || !optional.data) {
-        setLoyaltyLoading(false);
-        setOptionalFailedSections(["optional"]);
-        return;
-      }
-      const snapshot = optional.data;
-      setOrders(
-        snapshot.orders.map((o: any) => ({
-          id: o.id,
-          cafeSlug: slug,
-          customerId: o.customerId,
-          customerName: o.customerName,
-          status: o.status as CustomerOrder["status"],
-          items: Array.isArray(o.items) ? o.items.map((item: any) => typeof item === "string" ? item : `${item.name} × ${item.quantity}`) : [],
-          total: o.total,
-          createdAt: o.createdAt,
-          branchName: o.branchName,
-          pickupAt: o.pickupAt,
-          notes: o.notes,
-        })),
-      );
-
-      setReservations(
-        snapshot.reservations.map((r: any) => ({
-          id: r.id,
-          customerName: r.customerName,
-          phone: r.phone,
-          customerId: r.customerId,
-          type: r.type,
-          guests: r.guests,
-          date: r.date,
-          time: r.time,
-          status: r.status,
-          reservationCode: r.reservationCode,
-          reservationCodeUsedAt: r.reservationCodeUsedAt,
-          cashierConfirmedAt: r.cashierConfirmedAt,
-          notes: r.notes,
-          createdAt: r.createdAt,
-        })),
-      );
-
-      setLoyaltyView(snapshot.loyalty);
-      setLoyaltyPoints(snapshot.loyaltyPoints);
-      setExperienceRewards(snapshot.experienceRewards);
-      setOptionalFailedSections(optional.failedSections);
-      setLoyaltyLoading(false);
     }
 
     void load().catch((error) => {
@@ -1056,7 +1016,107 @@ function AccountPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [optionalReloadToken, reloadToken, slug]);
+  }, [reloadToken, slug]);
+
+  useEffect(() => {
+    if (!customer) return;
+    let cancelled = false;
+    void fetchCustomerAccountFeaturesAction(slug).then((result) => {
+      if (!cancelled && result.success) setAccountFeatures(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer, slug]);
+
+  useEffect(() => {
+    if (!customer) return;
+    let cancelled = false;
+
+    async function loadSection(section: string) {
+      if (requestedSections.current.has(section)) return;
+      requestedSections.current.add(section);
+      setOptionalFailedSections((items) =>
+        items.filter((item) => item !== section),
+      );
+
+      if (section === "orders") {
+        const result = await fetchCustomerOrdersSectionAction(slug);
+        if (cancelled) return;
+        if (!result.success) {
+          setOptionalFailedSections((items) => [...new Set([...items, section])]);
+          return;
+        }
+        setOrders(
+          result.data.map((o: any) => ({
+            id: o.id,
+            cafeSlug: slug,
+            customerId: o.customerId,
+            customerName: o.customerName,
+            status: o.status as CustomerOrder["status"],
+            items: Array.isArray(o.items)
+              ? o.items.map((item: any) =>
+                  typeof item === "string"
+                    ? item
+                    : `${item.name} × ${item.quantity}`,
+                )
+              : [],
+            total: o.total,
+            createdAt: o.createdAt,
+            branchName: o.branchName,
+            pickupAt: o.pickupAt,
+            notes: o.notes,
+          })),
+        );
+      } else if (section === "reservations") {
+        const result = await fetchCustomerReservationsSectionAction(slug);
+        if (cancelled) return;
+        if (!result.success) {
+          setOptionalFailedSections((items) => [...new Set([...items, section])]);
+          return;
+        }
+        setReservations(result.data as Reservation[]);
+      } else if (section === "loyalty") {
+        setLoyaltyLoading(true);
+        const result = await fetchCustomerLoyaltySectionAction(slug);
+        if (cancelled) return;
+        setLoyaltyLoading(false);
+        if (!result.success) {
+          setOptionalFailedSections((items) => [...new Set([...items, section])]);
+          return;
+        }
+        setLoyaltyView(result.data.loyalty);
+        setLoyaltyPoints(result.data.loyaltyPoints);
+      } else if (section === "experience_rewards") {
+        const result = await fetchCustomerExperienceRewardsSectionAction(slug);
+        if (cancelled) return;
+        if (!result.success) {
+          setOptionalFailedSections((items) => [...new Set([...items, section])]);
+          return;
+        }
+        setExperienceRewards(result.data);
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const section = (entry.target as HTMLElement).dataset.accountSection;
+          if (section) void loadSection(section);
+        });
+      },
+      { rootMargin: "160px" },
+    );
+    document
+      .querySelectorAll<HTMLElement>("[data-account-section]")
+      .forEach((element) => observer.observe(element));
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [customer, optionalReloadToken, slug]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -1480,7 +1540,12 @@ function AccountPageInner() {
           </p>
           <button
             type="button"
-            onClick={() => setOptionalReloadToken((value) => value + 1)}
+            onClick={() => {
+              optionalFailedSections.forEach((section) =>
+                requestedSections.current.delete(section),
+              );
+              setOptionalReloadToken((value) => value + 1);
+            }}
             className="mt-2 text-xs font-black text-amber-900 underline"
           >
             إعادة تحميل الأقسام
