@@ -3,7 +3,10 @@
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
-import { fetchCustomerAccountSnapshotAction } from "@/app/actions/customer-account";
+import {
+  fetchCustomerAccountCoreAction,
+  fetchCustomerAccountOptionalAction,
+} from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import {
   CustomerBottomDock,
@@ -69,21 +72,12 @@ type Reservation = {
 
 type TabKey = "orders" | "reservations" | "transactions" | "invoices";
 
-type CustomerAccountSnapshot = Awaited<
-  ReturnType<typeof fetchCustomerAccountSnapshotAction>
->;
-
 type AccountNotification = {
   id: string;
   title: string;
   body: string;
 };
 
-const accountSnapshotCache = new Map<
-  string,
-  Promise<CustomerAccountSnapshot> | CustomerAccountSnapshot
->();
-const ACCOUNT_SNAPSHOT_TIMEOUT_MS = 5_000;
 const AVATAR_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const AVATAR_MAX_DIMENSION = 1024;
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
@@ -295,46 +289,6 @@ function buildAccountNotifications({
   }
 
   return notifications;
-}
-
-function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      reject(new Error("timeout"));
-    }, timeoutMs);
-
-    task.then(
-      (value) => {
-        window.clearTimeout(timeout);
-        resolve(value);
-      },
-      (error) => {
-        window.clearTimeout(timeout);
-        reject(error);
-      },
-    );
-  });
-}
-
-function fetchCustomerAccountSnapshotOnce(slug: string, cacheKey: string) {
-  const cached = accountSnapshotCache.get(cacheKey);
-  if (cached) return Promise.resolve(cached);
-
-  const promise = fetchCustomerAccountSnapshotAction(slug).then(
-    (snapshot) => {
-      if (accountSnapshotCache.get(cacheKey) === promise) {
-        accountSnapshotCache.set(cacheKey, snapshot);
-      }
-      return snapshot;
-    },
-    (error) => {
-      accountSnapshotCache.delete(cacheKey);
-      throw error;
-    },
-  );
-
-  accountSnapshotCache.set(cacheKey, promise);
-  return promise;
 }
 
 function accountCardTextElement(
@@ -936,7 +890,6 @@ function AccountPageInner() {
   const { experience, settings, path, previewThemeId } =
     useCafePageContext(slug);
   const fileRef = useRef<HTMLInputElement>(null);
-  const accountSnapshotKey = `${slug}:${previewThemeId ?? "live"}`;
   const accountLoginWithNextHref = getCustomerLoginHref(
     slug,
     `/c/${slug}/account`,
@@ -950,6 +903,10 @@ function AccountPageInner() {
   const [accountError, setAccountError] = useState("");
   const [redirectingToLogin, setRedirectingToLogin] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [optionalReloadToken, setOptionalReloadToken] = useState(0);
+  const [optionalFailedSections, setOptionalFailedSections] = useState<string[]>(
+    [],
+  );
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
@@ -1001,65 +958,44 @@ function AccountPageInner() {
   } | null>(null);
 
   useEffect(() => {
-    const loadKey = `${accountSnapshotKey}:${reloadToken}`;
-
     let cancelled = false;
-
-    function finishLoading() {
-      setLoyaltyLoading(false);
-      setAccountLoading(false);
-    }
 
     async function load() {
       setAccountLoading(true);
       setAccountError("");
       setRedirectingToLogin(false);
       setLoyaltyLoading(true);
-      setAccountFeatures([]);
-      setLoyaltyPoints(EMPTY_CUSTOMER_LOYALTY_POINTS);
+      setOptionalFailedSections([]);
 
-      const result = await withTimeout(
-        fetchCustomerAccountSnapshotOnce(slug, loadKey),
-        ACCOUNT_SNAPSHOT_TIMEOUT_MS,
-      );
+      const result = await fetchCustomerAccountCoreAction(slug);
       if (cancelled) return;
 
-      const errorCode = result.code ?? result.errorCode ?? null;
-      const errorMessage = result.error ?? result.message ?? CUSTOMER_ACCOUNT_LOAD_ERROR;
-      const hasData = Boolean(result.data);
-
-      if (process.env.NODE_ENV === "development") {
-        console.info("[customer-account] snapshot result", {
-          success: result.success,
-          hasData,
-          errorCode,
-        });
-      }
-
       if (!result.success || !result.data) {
-        finishLoading();
-        setRedirectingToLogin(errorCode === "invalid_session");
-        setAccountError(errorMessage);
+        setAccountLoading(false);
+        setLoyaltyLoading(false);
+        setRedirectingToLogin(result.code === "invalid_session");
+        setAccountError(result.message ?? CUSTOMER_ACCOUNT_LOAD_ERROR);
         return;
       }
 
-      const snapshot = result.data;
-      if (!snapshot.customer) {
-        finishLoading();
-        setRedirectingToLogin(true);
-        setAccountError(CUSTOMER_ACCOUNT_LOAD_ERROR);
-        return;
-      }
-
-      const session = snapshot.customer;
+      const session = result.data.customer;
       setCustomer(session);
-      setAccountFeatures(snapshot.features);
+      setAccountFeatures(result.data.features);
       setEditName(session.fullName);
       setEditPhone(session.phone || "");
       setEditAvatarPreview(session.avatarUrl || "");
       setAvatarAssetId(session.avatarAssetId);
       setAvatarMessage(null);
+      setAccountLoading(false);
 
+      const optional = await fetchCustomerAccountOptionalAction(slug);
+      if (cancelled) return;
+      if (!optional.success || !optional.data) {
+        setLoyaltyLoading(false);
+        setOptionalFailedSections(["optional"]);
+        return;
+      }
+      const snapshot = optional.data;
       setOrders(
         snapshot.orders.map((o: any) => ({
           id: o.id,
@@ -1098,25 +1034,29 @@ function AccountPageInner() {
       setLoyaltyView(snapshot.loyalty);
       setLoyaltyPoints(snapshot.loyaltyPoints);
       setExperienceRewards(snapshot.experienceRewards);
-      finishLoading();
+      setOptionalFailedSections(optional.failedSections);
+      setLoyaltyLoading(false);
     }
 
     void load().catch((error) => {
       if (cancelled) return;
-      console.error("[CafeCustomerAccountPage:load]", error);
-      accountSnapshotCache.delete(loadKey);
-      finishLoading();
-      setAccountError(
-        error instanceof Error && error.message === "timeout"
-          ? CUSTOMER_ACCOUNT_LOAD_ERROR
-          : CUSTOMER_ACCOUNT_LOAD_ERROR,
-      );
+      console.error("[CafeCustomerAccountPage:core_load_failed]", {
+        message:
+          error && typeof error === "object" && "message" in error
+            ? String(error.message)
+            : "Account load failed",
+        context: "core_load_failed",
+        slug,
+      });
+      setAccountLoading(false);
+      setLoyaltyLoading(false);
+      setAccountError(CUSTOMER_ACCOUNT_LOAD_ERROR);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [accountSnapshotKey, reloadToken, slug]);
+  }, [optionalReloadToken, reloadToken, slug]);
 
   const myOrders = useMemo(
     () => orders.filter((order) => order.customerId === customer?.id),
@@ -1485,7 +1425,6 @@ function AccountPageInner() {
           <button
             type="button"
             onClick={() => {
-              accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
               setReloadToken((value) => value + 1);
             }}
             className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
@@ -1515,7 +1454,6 @@ function AccountPageInner() {
           <button
             type="button"
             onClick={() => {
-              accountSnapshotCache.delete(`${accountSnapshotKey}:${reloadToken}`);
               setReloadToken((value) => value + 1);
             }}
             className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
@@ -1535,6 +1473,20 @@ function AccountPageInner() {
 
   return (
     <>
+      {optionalFailedSections.length ? (
+        <div className="mx-auto mt-4 w-full max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-center">
+          <p className="text-xs font-bold text-amber-800">
+            بعض أقسام الحساب لم تكتمل، بينما بيانات حسابك الأساسية جاهزة.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOptionalReloadToken((value) => value + 1)}
+            className="mt-2 text-xs font-black text-amber-900 underline"
+          >
+            إعادة تحميل الأقسام
+          </button>
+        </div>
+      ) : null}
       <div className="mx-auto w-full max-w-5xl px-4 pt-4 sm:px-6">
         <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={accountFeatures} active="account" />
       </div>

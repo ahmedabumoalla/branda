@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
+  confirmCustomerAccountReadyAction,
   completeCustomerPhoneOtpAction,
   requestCustomerPhoneOtpAction,
 } from "@/app/actions/auth";
@@ -54,10 +55,12 @@ export function CustomerPhoneAuthForm({
   const [code, setCode] = useState("");
   const [maskedPhone, setMaskedPhone] = useState("");
   const [stage, setStage] = useState<"phone" | "code">("phone");
-  const [pending, setPending] = useState<"send" | "verify" | "resend" | null>(
-    null,
-  );
+  const [pending, setPending] = useState<
+    "send" | "verify" | "resend" | "ready" | null
+  >(null);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [accountVerified, setAccountVerified] = useState(false);
+  const [readinessError, setReadinessError] = useState("");
 
   useEffect(() => {
     try {
@@ -100,6 +103,38 @@ export function CustomerPhoneAuthForm({
         maskedPhone: masked,
         resendAt: Date.now() + seconds * 1000,
       }),
+    );
+  }
+
+  function changePhone() {
+    setStage("phone");
+    setCode("");
+    setMaskedPhone("");
+    setResendSeconds(0);
+    setAccountVerified(false);
+    setReadinessError("");
+    window.sessionStorage.removeItem(storageKey);
+  }
+
+  async function prepareAccount() {
+    setPending("ready");
+    setReadinessError("");
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const readiness = await confirmCustomerAccountReadyAction(slug);
+      if (readiness.ok) {
+        window.sessionStorage.removeItem(storageKey);
+        clearCachedCustomerSession(slug);
+        const destination = safeCustomerNext(rawNext, slug);
+        router.replace(appendPreviewToNextPath(destination, previewThemeId));
+        return;
+      }
+      if (attempt < 2) {
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+    }
+    setPending(null);
+    setReadinessError(
+      "تم التحقق من الرقم، لكن تعذر تجهيز الحساب. أعد المحاولة.",
     );
   }
 
@@ -168,13 +203,10 @@ export function CustomerPhoneAuthForm({
         return;
       }
 
-      window.sessionStorage.removeItem(storageKey);
-      clearCachedCustomerSession(slug);
-      const destination = safeCustomerNext(rawNext, slug);
-      router.refresh();
-      router.replace(appendPreviewToNextPath(destination, previewThemeId));
+      setAccountVerified(true);
+      await prepareAccount();
     } finally {
-      setPending(null);
+      setPending((current) => (current === "ready" ? current : null));
     }
   }
 
@@ -194,6 +226,7 @@ export function CustomerPhoneAuthForm({
       loginHref={loginHref}
       onSubmit={() => {
         if (stage === "phone") void sendOtp("send");
+        else if (accountVerified) void prepareAccount();
         else void verifyOtp();
       }}
       submitLabel={
@@ -201,7 +234,11 @@ export function CustomerPhoneAuthForm({
           ? pending === "send"
             ? "جاري إرسال الرمز..."
             : "إرسال رمز التحقق"
-          : pending === "verify"
+          : pending === "ready"
+            ? "جاري تجهيز حسابك..."
+            : accountVerified
+              ? "إعادة تجهيز الحساب"
+              : pending === "verify"
             ? "جاري التحقق..."
             : mode === "signup"
               ? "تحقق وأنشئ الحساب"
@@ -240,6 +277,14 @@ export function CustomerPhoneAuthForm({
           <p className="text-sm font-black text-[var(--ci-fg,#311912)]">
             أرسلنا رمز التحقق إلى {maskedPhone}
           </p>
+          <button
+            type="button"
+            onClick={changePhone}
+            disabled={pending !== null}
+            className="mt-2 text-xs font-black text-[var(--ci-accent,#6B3A25)] underline underline-offset-4 disabled:opacity-50"
+          >
+            تغيير رقم الجوال ({maskedPhone})
+          </button>
           <ThemedInput
             experience={experience}
             value={code}
@@ -265,6 +310,26 @@ export function CustomerPhoneAuthForm({
                 ? `إعادة الإرسال بعد ${resendSeconds} ثانية`
                 : "إعادة إرسال الرمز"}
           </button>
+          {pending === "ready" ? (
+            <p className="mt-3 text-xs font-black text-[var(--ci-fg,#311912)]">
+              جاري تجهيز حسابك...
+            </p>
+          ) : null}
+          {accountVerified && readinessError ? (
+            <div className="mt-3">
+              <p className="text-xs font-bold leading-5 text-red-600">
+                {readinessError}
+              </p>
+              <button
+                type="button"
+                onClick={() => void prepareAccount()}
+                disabled={pending !== null}
+                className="mt-2 rounded-xl bg-[var(--ci-accent,#6B3A25)] px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+              >
+                إعادة تجهيز الحساب
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </ThemedAuthPanel>

@@ -744,6 +744,52 @@ export async function completeCustomerPhoneOtpAction(
   }
 }
 
+export async function confirmCustomerAccountReadyAction(cafeSlug: string) {
+  const slug = cafeSlug.trim().toLowerCase();
+  try {
+    const cafe = await getPublicCafeBySlugAdmin(slug);
+    if (!cafe) return { ok: false as const };
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false as const };
+
+    const admin = createAdminClient();
+    const { data: profile, error } = await admin
+      .from("customer_profiles")
+      .select("id,cafe_id,full_name,phone")
+      .eq("cafe_id", cafe.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error || !profile || String(profile.cafe_id) !== cafe.id) {
+      return { ok: false as const };
+    }
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get(getCustomerSessionCookieName(slug))?.value;
+    if (!token) return { ok: false as const };
+    const internalProfile = await getCustomerProfileBySessionToken(slug, token);
+    if (!internalProfile || String(internalProfile.id) !== String(profile.id)) {
+      return { ok: false as const };
+    }
+
+    return {
+      ok: true as const,
+      data: {
+        customerId: String(profile.id),
+        fullName: String(profile.full_name ?? ""),
+        phone: String(profile.phone ?? ""),
+        cafeId: cafe.id,
+      },
+    };
+  } catch (error) {
+    logAuthError("[confirmCustomerAccountReadyAction]", error);
+    return { ok: false as const };
+  }
+}
+
 export async function loginCustomerAction(
   cafeSlug: string,
   email: string,

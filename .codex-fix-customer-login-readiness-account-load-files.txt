@@ -1,0 +1,6 @@
+app/actions/auth.ts
+app/actions/customer-account.ts
+app/c/[slug]/account/page.tsx
+components/cafe/customer-phone-auth-form.tsx
+tests/customer-login-readiness-account-load.test.mjs
+.codex-fix-customer-login-readiness-account-load-files.txt
