@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       phoneNormalized,
       code: parsed.data.sms.otp,
     });
-    return new Response(null, { status: 200 });
+    return Response.json({}, { status: 200 });
   } catch (error) {
     console.error("[sendSmsHook]", {
       name: error instanceof Error ? error.name : "UnknownError",
