@@ -107,6 +107,7 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
   phone: string;
   purpose: CustomerPhoneOtpPurpose;
   authUserId: string;
+  fullName?: string;
 }) {
   const cafe = await getPublicCafeBySlugAdmin(input.slug);
   const phoneNormalized = normalizeSaudiPhone(input.phone);
@@ -126,6 +127,9 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
       p_phone_normalized: phoneNormalized,
       p_purpose: input.purpose,
       p_auth_user_id: input.authUserId,
+      ...(input.purpose === "customer_signup"
+        ? { p_full_name: input.fullName }
+        : {}),
     },
   );
   if (error) throw error;

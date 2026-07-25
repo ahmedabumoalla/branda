@@ -49,6 +49,7 @@ export function CustomerPhoneAuthForm({
     mode === "signup" ? ("customer_signup" as const) : ("customer_login" as const);
   const storageKey = `branda:customer-phone-auth:${slug}:${purpose}`;
 
+  const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [maskedPhone, setMaskedPhone] = useState("");
@@ -67,6 +68,10 @@ export function CustomerPhoneAuthForm({
         maskedPhone?: string;
         resendAt?: number;
       };
+      if (mode === "signup") {
+        window.sessionStorage.removeItem(storageKey);
+        return;
+      }
       if (!parsed.phone || !parsed.maskedPhone) return;
       setPhone(parsed.phone);
       setMaskedPhone(parsed.maskedPhone);
@@ -77,7 +82,7 @@ export function CustomerPhoneAuthForm({
     } catch {
       window.sessionStorage.removeItem(storageKey);
     }
-  }, [storageKey]);
+  }, [mode, storageKey]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -100,6 +105,14 @@ export function CustomerPhoneAuthForm({
 
   async function sendOtp(kind: "send" | "resend") {
     if (pending || (kind === "resend" && resendSeconds > 0)) return;
+    if (mode === "signup") {
+      const normalizedName = fullName.trim();
+      if (normalizedName.length < 2 || normalizedName.length > 120) {
+        alert("أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا.");
+        return;
+      }
+      if (normalizedName !== fullName) setFullName(normalizedName);
+    }
     if (!phone.trim()) {
       alert("أدخل رقم الجوال.");
       return;
@@ -148,6 +161,7 @@ export function CustomerPhoneAuthForm({
         phone.trim(),
         code,
         purpose,
+        mode === "signup" ? fullName.trim() : undefined,
       );
       if (!result.ok || !result.session) {
         alert(result.message);
@@ -194,6 +208,19 @@ export function CustomerPhoneAuthForm({
               : "تحقق وسجّل الدخول"
       }
     >
+      {mode === "signup" ? (
+        <ThemedInput
+          experience={experience}
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          placeholder="الاسم"
+          autoComplete="name"
+          minLength={2}
+          maxLength={120}
+          required
+          disabled={stage === "code"}
+        />
+      ) : null}
       <ThemedInput
         experience={experience}
         value={phone}

@@ -1,0 +1,7 @@
+app/actions/auth.ts
+components/cafe/customer-phone-auth-form.tsx
+lib/auth/customer-phone-auth.ts
+supabase/migrations/076_customer_signup_name.sql
+supabase/tests/011_supabase_phone_auth_flow_test.sql
+supabase/tests/012_customer_signup_name_test.sql
+.codex-customer-signup-name-files.txt

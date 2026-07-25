@@ -666,6 +666,7 @@ export async function completeCustomerPhoneOtpAction(
   phone: string,
   code: string,
   purpose: CustomerPhoneOtpPurpose,
+  fullName?: string,
 ) {
   try {
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
@@ -673,6 +674,16 @@ export async function completeCustomerPhoneOtpAction(
     }
     if (!isPhoneOtpRequiredForBrand(cafeSlug)) {
       return { ok: false as const, message: "التحقق غير متاح لهذه العلامة." };
+    }
+    const parsedName =
+      purpose === "customer_signup"
+        ? z.string().trim().min(2).max(120).safeParse(fullName)
+        : null;
+    if (purpose === "customer_signup" && !parsedName?.success) {
+      return {
+        ok: false as const,
+        message: "أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا.",
+      };
     }
     const phoneNormalized = normalizeSaudiPhone(phone);
     if (
@@ -703,6 +714,9 @@ export async function completeCustomerPhoneOtpAction(
       phone,
       purpose,
       authUserId: verified.user.id,
+      ...(purpose === "customer_signup"
+        ? { fullName: parsedName?.data }
+        : {}),
     });
     if (!finalized.ok) {
       await supabase.auth.signOut({ scope: "local" });

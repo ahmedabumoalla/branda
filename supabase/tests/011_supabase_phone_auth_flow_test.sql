@@ -68,7 +68,8 @@ SELECT is(
       (SELECT cafe_a FROM supabase_phone_auth_context),
       '966559900001',
       'customer_signup',
-      (SELECT auth_user_id FROM supabase_phone_auth_context)
+      (SELECT auth_user_id FROM supabase_phone_auth_context),
+      'عميل الاختبار'
     )
   ),
   'authenticated',
@@ -93,7 +94,8 @@ SELECT is(
       (SELECT cafe_a FROM supabase_phone_auth_context),
       '966559900001',
       'customer_signup',
-      (SELECT auth_user_id FROM supabase_phone_auth_context)
+      (SELECT auth_user_id FROM supabase_phone_auth_context),
+      'اسم لن يستبدل الاسم الحالي'
     )
   ),
   'authenticated',
@@ -132,7 +134,8 @@ SELECT is(
       (SELECT cafe_b FROM supabase_phone_auth_context),
       '966559900001',
       'customer_signup',
-      (SELECT auth_user_id FROM supabase_phone_auth_context)
+      (SELECT auth_user_id FROM supabase_phone_auth_context),
+      'عميل العلامة الثانية'
     )
   ),
   'authenticated',
