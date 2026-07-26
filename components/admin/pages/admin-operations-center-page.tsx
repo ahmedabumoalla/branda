@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CalendarCheck,
   Download,
   Eye,
   Gift,
@@ -44,7 +43,6 @@ const metricIcons: Record<OperationsMetricKey, typeof Eye> = {
   loyaltyScans: ScanLine,
   rewardRedemptions: Gift,
   orders: ShoppingBag,
-  reservations: CalendarCheck,
 };
 
 function formatDateTime(value: string) {
@@ -288,27 +286,7 @@ function DetailRows({
     );
   }
 
-  if (!brand.details.reservations.length) return <EmptyState />;
-  return (
-    <TableFrame>
-      <Head labels={["رقم الحجز", "العميل", "الحالة", "من اتخذ الإجراء", "التفاصيل", "الموعد", "الضيوف", "سبب الرفض", "الوقت"]} />
-      <tbody className="divide-y divide-white/10">
-        {brand.details.reservations.map((row) => (
-          <tr key={row.id}>
-            <Cell>{row.id.slice(0, 8).toUpperCase()}</Cell>
-            <Cell>{row.customerName}{row.phone ? ` - ${row.phone}` : ""}</Cell>
-            <Cell><StatusBadge tone={statusTone(row.status)}>{row.status}</StatusBadge></Cell>
-            <Cell>{row.actorType} - {row.actorName}{row.actorEmail ? ` - ${row.actorEmail}` : ""}</Cell>
-            <Cell>{[row.eventType, row.branchName, row.details].filter(Boolean).join("، ") || "لا توجد تفاصيل إضافية"}</Cell>
-            <Cell>{[row.date, row.time].filter(Boolean).join(" ") || "غير مسجل"}</Cell>
-            <Cell>{row.guests}</Cell>
-            <Cell>{row.rejectionReason || "لا يوجد"}</Cell>
-            <Cell>{formatDateTime(row.createdAt)}</Cell>
-          </tr>
-        ))}
-      </tbody>
-    </TableFrame>
-  );
+  return <EmptyState />;
 }
 
 function BrandModal({
@@ -539,12 +517,11 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
       <div className="hidden max-w-full overflow-hidden rounded-[16px] border border-white/10 md:block">
         <div className="max-w-full overflow-x-auto overscroll-x-contain">
           <table className="w-full min-w-[980px] table-auto text-right text-sm">
-            <Head labels={["العلامة", "الرابط", "الحالة", "الزيارات", "طلبات", "حجوزات", "الكاشير", "الولاء", "تقرير"]} />
+            <Head labels={["العلامة", "الرابط", "الحالة", "الزيارات", "طلبات", "الكاشير", "الولاء", "تقرير"]} />
             <tbody className="divide-y divide-white/10 bg-[#0f0c0a]/70">
               {filteredBrands.map((brand) => {
                 const visits = brand.metrics.find((item) => item.key === "visits")?.value ?? 0;
                 const orders = brand.metrics.find((item) => item.key === "orders");
-                const reservations = brand.metrics.find((item) => item.key === "reservations");
                 const cashierLogins = brand.metrics.find((item) => item.key === "cashierLogins")?.value ?? 0;
                 const loyaltyScans = brand.metrics.find((item) => item.key === "loyaltyScans")?.value ?? 0;
                 return (
@@ -565,7 +542,6 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
                     <Cell><StatusBadge tone={brand.status === "active" ? "success" : "warning"}>{brand.status || "غير محدد"}</StatusBadge></Cell>
                     <Cell>{visits}</Cell>
                     <Cell>{orders?.value ?? 0} / مرفوض {orders?.rejected ?? 0}</Cell>
-                    <Cell>مقبول {reservations?.accepted ?? 0} / مرفوض {reservations?.rejected ?? 0}</Cell>
                     <Cell>{cashierLogins}</Cell>
                     <Cell>{loyaltyScans}</Cell>
                     <Cell>
@@ -593,7 +569,6 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
         {filteredBrands.map((brand) => {
           const visits = brand.metrics.find((item) => item.key === "visits")?.value ?? 0;
           const orders = brand.metrics.find((item) => item.key === "orders");
-          const reservations = brand.metrics.find((item) => item.key === "reservations");
           return (
             <div
               key={brand.id}
@@ -615,8 +590,6 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-black text-[#CBB29C]">
                 <span className="rounded-xl bg-white/5 p-3">الزيارات: {visits}</span>
                 <span className="rounded-xl bg-white/5 p-3">الطلبات: {orders?.value ?? 0}</span>
-                <span className="rounded-xl bg-white/5 p-3">حجوزات مقبولة: {reservations?.accepted ?? 0}</span>
-                <span className="rounded-xl bg-white/5 p-3">حجوزات مرفوضة: {reservations?.rejected ?? 0}</span>
               </div>
               <button
                 type="button"

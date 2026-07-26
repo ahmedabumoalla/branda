@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   Bell,
-  CalendarDays,
   ClipboardList,
   Gift,
   MessageCircle,
@@ -23,9 +22,8 @@ export default async function CustomerNotificationsPage({ params }: Params) {
 
   const items = [
     { title: "حالة الطلبات", desc: "تظهر هنا تحديثات قبول الطلب أو جاهزيته", icon: ClipboardList },
-    { title: "حالة الحجوزات", desc: "تظهر هنا موافقة العلامة أو طلب التعديل", icon: CalendarDays },
     { title: "بطاقة الولاء", desc: "تظهر هنا الأختام والمكافآت الجديدة", icon: Gift },
-    { title: "ردود العلامة", desc: "تظهر هنا ردود التقييمات والأسئلة والتوثيقات", icon: MessageCircle },
+    { title: "تحديثات العلامة", desc: "تظهر هنا تحديثات التجربة والمكافآت", icon: MessageCircle },
   ];
 
   const approvedRewards = rewards.filter((reward) => reward.status === "approved" || reward.status === "redeemed");

@@ -1035,11 +1035,6 @@ export function AdminCafesPage({
                 value={modalCafe.totalOrders}
               />
               <StatBox
-                icon={CalendarDays}
-                label="الحجوزات"
-                value={modalCafe.reservationsCount ?? 0}
-              />
-              <StatBox
                 icon={CircleDollarSign}
                 label="إيراد الطلبات"
                 value={formatSar(modalCafe.totalRevenue)}

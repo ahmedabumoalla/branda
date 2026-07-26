@@ -4,7 +4,7 @@ import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
 export type PublicFeatureKey =
   | PlatformFeatureId
   | "menu_ordering"
-  | "comments_reviews"
+
   | "loyalty_card"
   | "loyalty_points";
 
@@ -13,7 +13,7 @@ const PUBLIC_FEATURE_MAP: Partial<Record<PublicFeatureKey, PlatformFeatureId[]>>
   pages: ["pages"],
   menu: ["menu"],
   orders: ["orders"],
-  reservations: ["reservations"],
+
   offers: ["offers"],
   loyalty: ["loyalty"],
   cashier: ["cashier"],
@@ -23,13 +23,13 @@ const PUBLIC_FEATURE_MAP: Partial<Record<PublicFeatureKey, PlatformFeatureId[]>>
   theme: ["theme"],
   domains: ["domains"],
   branches: ["branches"],
-  reviews: ["reviews"],
-  marketing: ["marketing"],
+
+
   experience_reviews: ["experience_reviews"],
-  branda_finance: ["branda_finance"],
+
   subscription: ["subscription"],
   menu_ordering: ["orders"],
-  comments_reviews: ["reviews"],
+
   loyalty_card: ["loyalty"],
   loyalty_points: ["loyalty"],
 };
@@ -44,11 +44,9 @@ export function publicFeatureAllows(
 
 export function publicFeatureTitle(feature: PublicFeatureKey) {
   if (feature === "menu_ordering") return "طلبات المنيو";
-  if (feature === "comments_reviews") return "التقييمات والتعليقات";
   if (feature === "loyalty_card") return "بطاقة الولاء";
   if (feature === "loyalty_points") return "نقاط الولاء";
   if (feature === "experience_reviews") return "توثيق التجارب";
-  if (feature === "reservations") return "الحجوزات";
   if (feature === "menu") return "المنيو";
   if (feature === "loyalty") return "الولاء والمكافآت";
   return "هذه الميزة";

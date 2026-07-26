@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState, type ElementType } from "react";
 import {
   ArrowLeft,
-  CalendarDays,
   Flame,
   Gift,
   MapPin,
@@ -34,7 +33,6 @@ export function buildCafeNavItems(slug: string, previewThemeId?: string | null):
     { href: getCafePath(slug, "products/offers", previewThemeId), icon: Gift, label: "العروض" },
     { href: getCafePath(slug, "products/latest", previewThemeId), icon: Sparkles, label: "أحدث" },
     { href: getCafePath(slug, "products/popular", previewThemeId), icon: Flame, label: "الأكثر طلبًا" },
-    { href: getCafePath(slug, "reserve", previewThemeId), icon: CalendarDays, label: "حجز" },
     { href: getCafePath(slug, "products/branches", previewThemeId), icon: MapPin, label: "الفروع" },
   ];
 }

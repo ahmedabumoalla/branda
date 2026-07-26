@@ -2,7 +2,6 @@
 
 import {
   Building2,
-  CalendarDays,
   Eye,
   Gift,
   Plus,
@@ -45,14 +44,12 @@ const typeLabels: Record<PlatformHomePromotionType | "all", string> = {
   brand: "علامات تثق بنا",
   product: "منتجات",
   offer: "عروض",
-  reservation: "حجوزات",
 };
 
 const typeIcons = {
   brand: Store,
   product: ShoppingBag,
   offer: Gift,
-  reservation: CalendarDays,
 } as const;
 
 function itemKey(item: Pick<PlatformHomePromotionItem, "id" | "itemType" | "cafeId" | "itemId">) {
@@ -335,7 +332,7 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
             })}
             {!promotions.length ? (
               <p className="rounded-2xl border border-white/10 p-6 text-center font-bold text-[#7A6255]">
-                أضف علامات أو منتجات أو عروض أو حجوزات لعرضها في الصفحة الرئيسية.
+                أضف علامات أو منتجات أو عروض لعرضها في الصفحة الرئيسية.
               </p>
             ) : null}
           </div>

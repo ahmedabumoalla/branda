@@ -293,9 +293,7 @@ body {
 .barndaksa-product-motion img,
 .barndaksa-product-motion video,
 .barndaksa-offer-motion img,
-.barndaksa-offer-motion video,
-.barndaksa-reservation-motion img,
-.barndaksa-reservation-motion video {
+.barndaksa-offer-motion video {
   transform: translate3d(0, 0, 0) scale(1);
   transition: transform 760ms cubic-bezier(0.16, 1, 0.3, 1), filter 760ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -329,12 +327,6 @@ body {
 
 .barndaksa-offer-motion::before {
   mix-blend-mode: screen;
-}
-
-.barndaksa-reservation-motion[data-selected="true"],
-.barndaksa-reservation-motion[aria-pressed="true"] {
-  transform: translate3d(0, -6px, 0) scale(1.018);
-  box-shadow: 0 32px 90px rgba(217, 163, 63, 0.25), 0 18px 48px rgba(49, 25, 18, 0.14);
 }
 
 .barndaksa-premium-hero {
@@ -393,8 +385,6 @@ body {
   .barndaksa-product-media-fade,
   .barndaksa-offer-motion img,
   .barndaksa-offer-motion video,
-  .barndaksa-reservation-motion img,
-  .barndaksa-reservation-motion video,
   .barndaksa-cta-motion::after {
     animation: none !important;
     transition: none !important;

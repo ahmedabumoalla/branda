@@ -1,9 +1,7 @@
 "use server";
 
 import {
-  getCustomerOrdersForProfile,
-  getCustomerReservationsForProfile,
-} from "@/lib/data/customers";
+  getCustomerOrdersForProfile,} from "@/lib/data/customers";
 import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getCustomerExperienceRewardSubmissions } from "@/lib/data/experience-rewards";
 import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
@@ -16,7 +14,6 @@ import type { LoyaltySettings } from "@/lib/mock/loyalty";
 
 type OptionalSection =
   | "orders"
-  | "reservations"
   | "loyalty"
   | "loyalty_points"
   | "experience_rewards"
@@ -226,21 +223,6 @@ export async function fetchCustomerOrdersSectionAction(cafeSlug: string) {
   }
 }
 
-export async function fetchCustomerReservationsSectionAction(cafeSlug: string) {
-  const context = await sectionContext(cafeSlug);
-  if (!context.ok) return { success: false as const, code: context.code, data: [] };
-  try {
-    const data = await withSectionTimeout(
-      "reservations",
-      context.slug,
-      getCustomerReservationsForProfile(context.slug, context.customer.id, 5),
-    );
-    return { success: true as const, code: null, data };
-  } catch {
-    return { success: false as const, code: "optional_section_failed" as const, data: [] };
-  }
-}
-
 export async function fetchCustomerLoyaltySectionAction(cafeSlug: string) {
   const context = await sectionContext(cafeSlug);
   if (!context.ok) {
@@ -361,9 +343,6 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
     cafeSlug: slug,
     features: [] as string[],
     orders: [] as Awaited<ReturnType<typeof getCustomerOrdersForProfile>>,
-    reservations: [] as Awaited<
-      ReturnType<typeof getCustomerReservationsForProfile>
-    >,
     loyalty: null as Awaited<
       ReturnType<typeof getCustomerLoyaltyCardViewForProfile>
     > | null,
@@ -385,11 +364,10 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
       data: empty,
     };
   }
-  const [features, orders, reservations, loyalty, experienceRewards, customerRewards] =
+  const [features, orders, loyalty, experienceRewards, customerRewards] =
     await Promise.all([
       fetchCustomerAccountFeaturesAction(slug),
       fetchCustomerOrdersSectionAction(slug),
-      fetchCustomerReservationsSectionAction(slug),
       fetchCustomerLoyaltySectionAction(slug),
       fetchCustomerExperienceRewardsSectionAction(slug),
       fetchCustomerRewardsSectionAction(slug),
@@ -405,7 +383,6 @@ export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
       customer: core.data.customer,
       features: features.data,
       orders: orders.data,
-      reservations: reservations.data,
       loyalty: loyalty.data.loyalty,
       loyaltyPoints: loyalty.data.loyaltyPoints,
       experienceRewards: experienceRewards.data,

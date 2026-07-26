@@ -3,7 +3,6 @@ export type BarndaksaQrKind =
   | "customer-reward"
   | "experience-reward"
   | "invoice"
-  | "reservation"
   | "event-ticket";
 
 const QR_PREFIX = "BARNDAKSA_QR";

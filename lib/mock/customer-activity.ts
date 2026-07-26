@@ -42,7 +42,7 @@ export type CustomerTransaction = {
   id: string;
   cafeSlug: string;
   customerId: string;
-  type: "طلب" | "حجز" | "نقاط" | "فاتورة";
+  type: "طلب" | "نقاط" | "فاتورة";
   title: string;
   description: string;
   points?: number;

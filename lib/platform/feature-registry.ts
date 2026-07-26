@@ -24,7 +24,7 @@ export type PlatformFeatureDefinition = {
     | "pages"
     | "menu"
     | "orders"
-    | "reservations"
+
     | "offers"
     | "loyalty"
     | "cashier"
@@ -34,14 +34,11 @@ export type PlatformFeatureDefinition = {
     | "theme"
     | "domains"
     | "branches"
-    | "reviews"
-    | "marketing"
+
     | "experience_reviews"
-    | "branda_finance"
     | "subscription"
     | "growth_os"
     | "customer_segments"
-    | "whatsapp_campaigns"
     | "advanced_coupons"
     | "gift_cards_wallet"
     | "coffee_subscriptions"
@@ -140,22 +137,6 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     dependencies: ["menu"],
   },
   {
-    id: "reservations",
-    titleAr: "الحجوزات",
-    titleEn: "Reservations",
-    descriptionAr: "إدارة حجوزات العملاء ومواعيد الحضور.",
-    category: "operations",
-    route: "/dashboard/reservations",
-    sidebarVisible: true,
-    packageAssignable: true,
-    defaultEnabled: false,
-    requiredPlanLevel: "basic",
-    iconKey: "CalendarDays",
-    riskLevel: "business",
-    status: "active",
-    sortOrder: 50,
-  },
-  {
     id: "offers",
     titleAr: "العروض",
     titleEn: "Offers",
@@ -240,7 +221,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     id: "reports",
     titleAr: "التقارير",
     titleEn: "Reports",
-    descriptionAr: "تقارير مختصرة عن النشاط والطلبات والحجوزات.",
+    descriptionAr: "تقارير مختصرة عن النشاط والطلبات والولاء.",
     category: "operations",
     route: "/dashboard/reports",
     sidebarVisible: true,
@@ -251,38 +232,6 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     riskLevel: "business",
     status: "active",
     sortOrder: 110,
-  },
-  {
-    id: "reviews",
-    titleAr: "الأسئلة والتقييمات",
-    titleEn: "Questions and Reviews",
-    descriptionAr: "متابعة تقييمات العملاء وأسئلتهم العامة.",
-    category: "experience",
-    route: "/dashboard/reviews",
-    sidebarVisible: true,
-    packageAssignable: true,
-    defaultEnabled: false,
-    requiredPlanLevel: "basic",
-    iconKey: "MessageSquareText",
-    riskLevel: "business",
-    status: "active",
-    sortOrder: 120,
-  },
-  {
-    id: "marketing",
-    titleAr: "الأدوات التسويقية",
-    titleEn: "Marketing Tools",
-    descriptionAr: "أدوات تساعد العلامة في الترويج والتفاعل مع العملاء.",
-    category: "growth",
-    route: "/dashboard/marketing",
-    sidebarVisible: true,
-    packageAssignable: true,
-    defaultEnabled: false,
-    requiredPlanLevel: "pro",
-    iconKey: "Megaphone",
-    riskLevel: "business",
-    status: "preview",
-    sortOrder: 130,
   },
   {
     id: "experience_reviews",
@@ -299,22 +248,6 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     riskLevel: "business",
     status: "active",
     sortOrder: 140,
-  },
-  {
-    id: "branda_finance",
-    titleAr: "برندة المالية",
-    titleEn: "Branda Finance",
-    descriptionAr: "مدخل مالي تمهيدي للعلامة داخل لوحة التحكم.",
-    category: "finance",
-    route: "/dashboard/branda-finance",
-    sidebarVisible: true,
-    packageAssignable: true,
-    defaultEnabled: false,
-    requiredPlanLevel: "pro",
-    iconKey: "Landmark",
-    riskLevel: "financial",
-    status: "preview",
-    sortOrder: 150,
   },
   {
     id: "settings",
@@ -415,25 +348,6 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
     riskLevel: "business",
     status: "preview",
     sortOrder: 220,
-  },
-  {
-    id: "whatsapp_campaigns",
-    titleAr: "حملات واتساب",
-    titleEn: "WhatsApp Campaigns",
-    descriptionAr: "حملات تسويقية واسترجاع العملاء عبر واتساب.",
-    category: "growth",
-    route: "",
-    dashboardPath: "/dashboard/whatsapp-campaigns",
-    sidebarGroup: "ميزات مفعلة",
-    showInSidebarWhenEnabled: true,
-    sidebarVisible: false,
-    packageAssignable: true,
-    defaultEnabled: false,
-    requiredPlanLevel: "enterprise",
-    iconKey: "MessagesSquare",
-    riskLevel: "integration",
-    status: "preview",
-    sortOrder: 230,
   },
   {
     id: "advanced_coupons",
@@ -615,21 +529,18 @@ export const platformFeatureIds = platformFeatureRegistry.map((feature) => featu
 
 export const platformPlanFeatureDefaults = {
   free: ["pages", "menu"],
-  launch: ["pages", "menu", "orders", "branches", "reviews", "theme"],
-  starter: ["pages", "menu", "orders", "branches", "reviews", "theme"],
-  basic: ["pages", "menu", "orders", "reservations", "offers", "cashier", "branches", "reviews", "theme"],
+  launch: ["pages", "menu", "orders", "branches", "theme"],
+  starter: ["pages", "menu", "orders", "branches", "theme"],
+  basic: ["pages", "menu", "orders", "offers", "cashier", "branches", "theme"],
   growth: [
     "pages",
     "menu",
     "orders",
-    "reservations",
     "offers",
     "loyalty",
     "cashier",
     "customers",
     "branches",
-    "reviews",
-    "marketing",
     "experience_reviews",
     "theme",
     "advanced_coupons",
@@ -642,17 +553,13 @@ export const platformPlanFeatureDefaults = {
     "pages",
     "menu",
     "orders",
-    "reservations",
     "offers",
     "loyalty",
     "cashier",
     "customers",
     "reports",
     "branches",
-    "reviews",
-    "marketing",
     "experience_reviews",
-    "branda_finance",
     "theme",
     "domains",
     "growth_os",
@@ -665,17 +572,13 @@ export const platformPlanFeatureDefaults = {
     "pages",
     "menu",
     "orders",
-    "reservations",
     "offers",
     "loyalty",
     "cashier",
     "customers",
     "reports",
     "branches",
-    "reviews",
-    "marketing",
     "experience_reviews",
-    "branda_finance",
     "theme",
     "domains",
     "growth_os",
@@ -686,7 +589,6 @@ export const platformPlanFeatureDefaults = {
   ],
   experimental: [
     "growth_os",
-    "whatsapp_campaigns",
     "marketplace_boost",
     "pos_integrations",
     "company_accounts",

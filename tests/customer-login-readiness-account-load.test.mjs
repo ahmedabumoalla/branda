@@ -28,7 +28,7 @@ test("account loading uses cache, a minimal core, and independent lazy sections"
   assert.match(action, /fetchCustomerAccountCoreAction/);
   assert.doesNotMatch(action, /fetchCustomerAccountOptionalAction/);
   assert.match(action, /fetchCustomerOrdersSectionAction/);
-  assert.match(action, /fetchCustomerReservationsSectionAction/);
+  assert.doesNotMatch(action, /fetchCustomerReservationsSectionAction/);
   assert.match(action, /fetchCustomerLoyaltySectionAction/);
   assert.match(action, /optional_section_failed/);
   assert.match(page, /peekCachedCustomerSession\(slug\)/);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarDays, Coffee, Gift, MapPin, Search, WalletCards } from "lucide-react";
+import { ArrowLeft, Coffee, Gift, MapPin, Search, WalletCards } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { BrandPwaInstallSection } from "@/components/cafe/brand-pwa-install-section";
 import { PublicExperienceSupportSection } from "@/components/cafe/public-experience-support-section";
@@ -184,7 +184,7 @@ function CafePageInner({ slug }: { slug: string }) {
             <p className="text-sm font-black text-[#D9A33F]">مرحبًا بك في</p>
             <h1 className="mt-1 text-3xl font-black text-[#311912]">{settings.cafeName}</h1>
             <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-              {settings.description || "منيو رقمي وطلبات وحجوزات وبطاقة ولاء في تجربة واحدة"}
+              {settings.description || "منيو رقمي وطلبات وبطاقة ولاء في تجربة واحدة"}
             </p>
           </div>
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-[#6B3A25] text-white">
@@ -192,14 +192,10 @@ function CafePageInner({ slug }: { slug: string }) {
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3">
           <Link href={getCafePath(slug, "products/popular", previewThemeId)} className="barndaksa-cta-motion flex items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-4 py-3 text-sm font-black text-white">
             <Search className="h-4 w-4" />
             تصفح المنيو
-          </Link>
-          <Link href={getCafePath(slug, "reserve", previewThemeId)} className="barndaksa-cta-motion flex items-center justify-center gap-2 rounded-2xl border border-[#6B3A25] px-4 py-3 text-sm font-black text-[#6B3A25]">
-            <CalendarDays className="h-4 w-4" />
-            احجز
           </Link>
         </div>
 

@@ -100,11 +100,7 @@ export function PublicGamesPage({ slug, battleArenaEntryHref, tableWarsEntryHref
         {...defaultCustomerDockItems({
           slug,
           previewThemeId,
-          active: "games",
-          hasProducts: true,
-          hasOrders: false,
-          hasGames: hasPlayableGames,
-          hasRewards: true,
+          active: "menu",
           businessCategory: settings.businessCategory,
         })}
       />

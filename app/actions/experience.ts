@@ -9,8 +9,6 @@ import {
   upsertExperienceCampaign,
 } from "@/lib/data/experience";
 import { getOwnerMenu } from "@/lib/data/menu";
-import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
-import { generateMarketingCard } from "@/lib/ai/marketing-card-generator";
 import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
 
 export async function fetchOwnerExperienceAction() {
@@ -37,7 +35,6 @@ export async function saveExperienceCampaignAction(campaign: ExperienceCampaign)
     excludedContentRules: campaign.excludedContentRules ?? [],
     rewardType: campaign.rewardType ?? "product",
     rewardProductId: campaign.rewardProductId ?? null,
-    rewardReservationServiceId: campaign.rewardReservationServiceId ?? null,
     rewardDiscountPercent: campaign.rewardDiscountPercent ?? null,
     cardStoragePath: campaign.cardStoragePath ?? null,
     cardGenerationStatus: campaign.cardGenerationStatus ?? "idle",
@@ -45,47 +42,6 @@ export async function saveExperienceCampaignAction(campaign: ExperienceCampaign)
     cardGeneratedAt: campaign.cardGeneratedAt ?? null,
     status: campaign.status,
   });
-}
-
-export async function generateExperienceCampaignCardAction(campaignId: string) {
-  const [experience, menu, services] = await Promise.all([
-    getOwnerExperienceData(),
-    getOwnerMenu(),
-    getOwnerReservationServices(),
-  ]);
-  const campaign = experience.campaigns.find((item) => item.id === campaignId);
-  if (!campaign) throw new Error("الحملة غير موجودة");
-
-  await saveExperienceCampaignAction({
-    ...campaign,
-    cardGenerationStatus: "generating",
-    cardGenerationError: undefined,
-  });
-
-  const products = campaign.rewardProductId
-    ? menu.products.filter((product) => product.id === campaign.rewardProductId)
-    : [];
-  const reservationService =
-    services.find((service) => service.id === campaign.rewardReservationServiceId) ?? null;
-  const result = await generateMarketingCard({
-    entityId: campaign.id,
-    kind: "experience_campaign",
-    title: campaign.title,
-    description: campaign.description,
-    brand: { cafeName: menu.cafe.name ?? "Barndaksa" },
-    products,
-    reservationService,
-  });
-
-  const saved = await saveExperienceCampaignAction({
-    ...campaign,
-    cardStoragePath: result.ok ? result.storagePath : campaign.cardStoragePath,
-    cardGenerationStatus: result.status,
-    cardGenerationError: result.ok ? undefined : result.error,
-    cardGeneratedAt: result.ok ? new Date().toISOString() : campaign.cardGeneratedAt,
-  });
-
-  return saved;
 }
 
 export async function deleteExperienceCampaignAction(campaignId: string) {

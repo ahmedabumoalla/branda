@@ -28,7 +28,6 @@ import {
   saveCustomIdentityTheme,
   type CustomIdentityTheme,
 } from "@/lib/mock/custom-identity-theme";
-import { MARKETING_KEY, type MarketingCampaign } from "@/lib/mock/marketing";
 import { MENU_CATEGORIES_KEY, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
@@ -261,47 +260,6 @@ export async function migrateAllLegacyImageDataUrls(): Promise<MigrationReport> 
     report.failedImages += 1;
   }
 
-  // Marketing (future image fields)
-  try {
-    const marketingRaw = localStorage.getItem(MARKETING_KEY);
-    if (marketingRaw?.includes("data:image")) {
-      const campaigns = JSON.parse(marketingRaw) as (MarketingCampaign & {
-        imageDataUrl?: string;
-        imageAssetId?: string;
-      })[];
-      let changed = false;
-      const next = await Promise.all(
-        campaigns.map(async (campaign) => {
-          const dataUrl = (campaign as { imageDataUrl?: string }).imageDataUrl;
-          if (!dataUrl?.startsWith("data:image")) return campaign;
-          const assetId = await migrateDataUrlField(
-            dataUrl,
-            "marketing-image",
-            "marketing-image",
-            campaign.id
-          );
-          changed = true;
-          const copy = { ...campaign } as MarketingCampaign & {
-            imageDataUrl?: string;
-            imageAssetId?: string;
-          };
-          delete copy.imageDataUrl;
-          if (assetId) {
-            copy.imageAssetId = assetId;
-            report.migratedImages += 1;
-          } else report.failedImages += 1;
-          return copy;
-        })
-      );
-      if (changed) {
-        localStorage.setItem(MARKETING_KEY, JSON.stringify(next));
-        report.repairedKeys.push(MARKETING_KEY);
-      }
-    }
-  } catch {
-    report.failedImages += 1;
-  }
-
   // Customer sessions (qatrah mock + any slug key pattern)
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
@@ -400,7 +358,7 @@ export async function repairLocalImageStorage(
 export function settingsContainsLegacyBase64(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const keys = [CAFE_SETTINGS_KEY, MENU_KEY, OFFERS_KEY, MENU_CATEGORIES_KEY, MARKETING_KEY];
+    const keys = [CAFE_SETTINGS_KEY, MENU_KEY, OFFERS_KEY, MENU_CATEGORIES_KEY];
     return keys.some((key) => {
       const saved = localStorage.getItem(key);
       return Boolean(saved && saved.includes("data:image"));

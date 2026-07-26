@@ -26,7 +26,7 @@ export type CustomerSegmentsRecentItem = {
   customerName: string;
   phone: string | null;
   lastActivity: string;
-  lastActivityType: "طلب" | "حجز" | "ولاء" | "مكافأة";
+  lastActivityType: "طلب" | "ولاء" | "مكافأة";
   activityCount: number | null;
   nearestSegment: string;
 };
@@ -205,7 +205,6 @@ export async function getOwnerCustomerSegmentsDashboard(
   const [
     profiles,
     orders,
-    reservations,
     loyaltyCards,
     loyaltyEvents,
     rewardRedemptions,
@@ -243,25 +242,6 @@ export async function getOwnerCustomerSegmentsDashboard(
         phone: nullableText(row.customer_phone),
         createdAt: text(row.created_at),
         type: "طلب",
-      }),
-    ),
-    safePagedRows(
-      "reservations",
-      (from, to) =>
-        supabase
-          .from("reservations")
-          .select("id,customer_id,customer_name,phone,created_at")
-          .eq("cafe_id", cafe.id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .range(from, to),
-      (row): ActivitySource => ({
-        id: `reservation-${text(row.id)}`,
-        customerId: nullableText(row.customer_id),
-        customerName: text(row.customer_name, "عميل بدون اسم"),
-        phone: nullableText(row.phone),
-        createdAt: text(row.created_at),
-        type: "حجز",
       }),
     ),
     safePagedRows(
@@ -328,7 +308,7 @@ export async function getOwnerCustomerSegmentsDashboard(
 
   const missingSources = Array.from(
     new Set(
-      [profiles, orders, reservations, loyaltyCards, loyaltyEvents, rewardRedemptions]
+      [profiles, orders, loyaltyCards, loyaltyEvents, rewardRedemptions]
         .filter((source) => source.missing)
         .map((source) => source.sourceName),
     ),
@@ -337,7 +317,6 @@ export async function getOwnerCustomerSegmentsDashboard(
   const profileById = new Map(profiles.rows.map((profile) => [profile.id, profile]));
   const allActivities = [
     ...orders.rows,
-    ...reservations.rows,
     ...loyaltyCards.rows,
     ...loyaltyEvents.rows,
     ...rewardRedemptions.rows,
@@ -374,7 +353,6 @@ export async function getOwnerCustomerSegmentsDashboard(
 
   const activitySourcesAvailable =
     !orders.missing &&
-    !reservations.missing &&
     !loyaltyCards.missing &&
     !loyaltyEvents.missing;
   const loyaltySourcesAvailable = !loyaltyCards.missing || !loyaltyEvents.missing;
@@ -423,7 +401,7 @@ export async function getOwnerCustomerSegmentsDashboard(
         key: "active",
         title: "عملاء نشطون",
         count: segmentCount(activitySourcesAvailable, activeCustomers),
-        description: `العملاء الذين لديهم طلب أو ولاء أو حجز خلال آخر ${periodDays} يومًا.`,
+        description: `العملاء الذين لديهم طلب أو نشاط ولاء خلال آخر ${periodDays} يومًا.`,
         importance: "هذه الشريحة تعكس العملاء الذين يتفاعلون مع علامتك الآن.",
         suggestedAction: "يمكن لاحقًا تقديم عرض متابعة أو مكافأة بسيطة للحفاظ على النشاط.",
       },
@@ -455,7 +433,7 @@ export async function getOwnerCustomerSegmentsDashboard(
         key: "highEngagement",
         title: "عملاء عالي التفاعل",
         count: segmentCount(activitySourcesAvailable, highEngagementCustomers),
-        description: "العملاء الذين لديهم أكثر من عملية مرتبطة بالطلبات أو الولاء أو الحجوزات.",
+        description: "العملاء الذين لديهم أكثر من عملية مرتبطة بالطلبات أو الولاء.",
         importance: "هذه الشريحة مناسبة لقياس العملاء الأكثر ارتباطًا بالعلامة.",
         suggestedAction: "يمكن لاحقًا بناء عرض خاص أو تجربة VIP لهذه الشريحة.",
       },

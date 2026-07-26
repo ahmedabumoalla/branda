@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Coffee, Gift, ShoppingBag, Sparkles, Star } from "lucide-react";
+import { BadgeCheck, Clock, Coffee, Gift, ShoppingBag, Sparkles } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { formatSar } from "@/lib/format";
@@ -65,7 +65,7 @@ export function ThemedProductCard({ product, experience, href, showPoints = true
         </span>
         {showPoints ? (
         <span className="absolute bottom-2.5 left-2.5 inline-flex max-w-[70%] items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] shadow-sm backdrop-blur">
-          <Star className="h-3.5 w-3.5 text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]" />
+          <BadgeCheck className="h-3.5 w-3.5 text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]" />
           <span className="truncate">يكسب {earnedPoints} نقطة</span>
         </span>
         ) : null}
@@ -110,7 +110,7 @@ export function ThemedProductCard({ product, experience, href, showPoints = true
 
         {showPoints ? (
         <p className={`mt-3 inline-flex w-fit items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-black ${theme.badge}`}>
-          <Star className="h-3.5 w-3.5" />
+          <BadgeCheck className="h-3.5 w-3.5" />
           يكسب {earnedPoints} نقطة ولاء
         </p>
         ) : null}

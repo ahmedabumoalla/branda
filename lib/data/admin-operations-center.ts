@@ -20,8 +20,7 @@ export type OperationsMetricKey =
   | "cashierLogins"
   | "loyaltyScans"
   | "rewardRedemptions"
-  | "orders"
-  | "reservations";
+  | "orders";
 
 export type OperationsSourceStatus = "available" | "empty" | "missing";
 
@@ -103,24 +102,6 @@ export type OperationsOrderDetail = {
   products: string[];
 };
 
-export type OperationsReservationDetail = {
-  id: string;
-  customerName: string;
-  phone: string;
-  status: string;
-  eventType: string;
-  guests: number;
-  date: string;
-  time: string;
-  branchName: string;
-  details: string;
-  rejectionReason: string;
-  createdAt: string;
-  actorType: string;
-  actorName: string;
-  actorEmail: string;
-};
-
 export type OperationsBrandDetails = {
   visits: OperationsVisitDetail[];
   appInstallClicks: OperationsAppInstallClickDetail[];
@@ -129,7 +110,6 @@ export type OperationsBrandDetails = {
   loyaltyScans: OperationsLoyaltyScanDetail[];
   rewardRedemptions: OperationsRewardRedemptionDetail[];
   orders: OperationsOrderDetail[];
-  reservations: OperationsReservationDetail[];
 };
 
 export type AdminOperationsCenterBrand = {
@@ -277,16 +257,6 @@ function orderStatusLabel(status: string) {
   return labels[status] ?? status;
 }
 
-function reservationStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    pending: "بانتظار الرد",
-    accepted: "مقبول",
-    rejected: "مرفوض",
-    modification_requested: "طلب تعديل",
-  };
-  return labels[status] ?? status;
-}
-
 function operationActor(row: DbRow | undefined) {
   if (!row) return null;
   const actorType = text(row.actor_type);
@@ -353,7 +323,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
     loyaltyScanResult,
     rewardRedemptionResult,
     ordersResult,
-    reservationsResult,
     auditResult,
   ] = await Promise.all([
     safeRows(
@@ -490,37 +459,10 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
     safeRows(
       applyCreatedAtFilters(
         supabase
-          .from("reservations")
-          .select("id,cafe_id,customer_name,phone,status,event_type,guests,reservation_date,reservation_time,branch_name,space_type,event_title,rejection_reason,cafe_message,created_at")
-          .in("cafe_id", cafeIds)
-          .is("deleted_at", null),
-        activeFilters
-      )
-        .order("created_at", { ascending: false })
-        .limit(1000),
-      (row): Omit<OperationsReservationDetail, "actorType" | "actorName" | "actorEmail"> & { cafeId: string } => ({
-        id: text(row.id),
-        cafeId: text(row.cafe_id),
-        customerName: text(row.customer_name, "عميل"),
-        phone: text(row.phone),
-        status: reservationStatusLabel(text(row.status)),
-        eventType: text(row.event_type, "حجز"),
-        guests: numberValue(row.guests),
-        date: text(row.reservation_date),
-        time: text(row.reservation_time),
-        branchName: text(row.branch_name),
-        details: [row.event_title, row.space_type, row.cafe_message].map((item) => text(item)).filter(Boolean).join(" - "),
-        rejectionReason: text(row.rejection_reason),
-        createdAt: text(row.created_at),
-      }),
-    ),
-    safeRows(
-      applyCreatedAtFilters(
-        supabase
           .from("audit_logs")
           .select("id,cafe_id,actor_id,action,entity_table,entity_id,new_data,created_at")
           .in("cafe_id", cafeIds)
-          .in("entity_table", ["orders", "reservations"]),
+          .eq("entity_table", "orders"),
         activeFilters
       )
         .order("created_at", { ascending: false })
@@ -589,9 +531,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
         ordersReceivedCount,
         ordersAcceptedCount,
         ordersRejectedCount,
-        reservationsTotalCount,
-        reservationsAcceptedCount,
-        reservationsRejectedCount,
       ] = await Promise.all([
         safeCount(supabase, "cafe_visit_events", cafeId, activeFilters),
         safeCount(supabase, "cafe_operation_events", cafeId, activeFilters, (query) => query.eq("event_type", operationEventTypes.appInstallClicked)),
@@ -602,9 +541,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
         safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.is("deleted_at", null)),
         safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.eq("status", "accepted").is("deleted_at", null)),
         safeCount(supabase, "orders", cafeId, activeFilters, (query) => query.eq("status", "rejected").is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.eq("status", "accepted").is("deleted_at", null)),
-        safeCount(supabase, "reservations", cafeId, activeFilters, (query) => query.eq("status", "rejected").is("deleted_at", null)),
       ]);
 
       const brandOrders = ordersResult.rows
@@ -617,18 +553,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
             actorName: actor.actorName,
             actorEmail: actor.actorEmail,
             products: productsByOrder.get(row.id) ?? [],
-          };
-        });
-
-      const brandReservations = reservationsResult.rows
-        .filter((row) => row.cafeId === cafeId)
-        .map((row): OperationsReservationDetail => {
-          const actor = operationActor(operationByEntity.get(row.id)) ?? auditActor(auditByEntity.get(row.id), actorProfiles);
-          return {
-            ...row,
-            actorType: actor.actorType,
-            actorName: actor.actorName,
-            actorEmail: actor.actorEmail,
           };
         });
 
@@ -695,15 +619,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
             accepted: ordersAcceptedCount ?? 0,
             rejected: ordersRejectedCount ?? 0,
           },
-          {
-            key: "reservations",
-            title: "الحجوزات",
-            value: reservationsTotalCount ?? 0,
-            source: "قراءة من سجل الحجوزات",
-            status: sourceStatus(reservationsTotalCount),
-            accepted: reservationsAcceptedCount ?? 0,
-            rejected: reservationsRejectedCount ?? 0,
-          },
         ],
         details: {
           visits: visitsResult.rows.filter((row) => row.cafeId === cafeId),
@@ -722,7 +637,6 @@ export async function getAdminOperationsCenter(filters?: AdminOperationsCenterFi
           loyaltyScans: loyaltyScanResult.rows.filter((row) => row.cafeId === cafeId),
           rewardRedemptions: rewardRedemptionResult.rows.filter((row) => row.cafeId === cafeId),
           orders: brandOrders,
-          reservations: brandReservations,
         },
       };
     }),

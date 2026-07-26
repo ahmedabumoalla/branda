@@ -4,11 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createNotification } from "@/lib/data/notifications";
-import {
-  escapeEmailHtml,
-  isBarndaksaEmailConfigured,
-  sendBarndaksaEmail,
-} from "@/lib/email/resend";
 import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
@@ -28,10 +23,8 @@ export type CashierConsole = {
     employeeNumber?: string | null;
   };
   orders: Array<Record<string, unknown>>;
-  reservations: Array<Record<string, unknown>>;
   logs: Array<Record<string, unknown>>;
   operationOrders?: Array<Record<string, unknown>>;
-  operationReservations?: Array<Record<string, unknown>>;
   operationTickets?: Array<Record<string, unknown>>;
   operationRewards?: Array<Record<string, unknown>>;
 };
@@ -148,18 +141,11 @@ function firstNestedRecord(value: unknown) {
 
 async function getCashierOperationData(cafeId: string) {
   const admin = createAdminClient();
-  const [{ data: orders }, { data: reservations }, { data: tickets }, { data: rewards }] =
+  const [{ data: orders }, { data: tickets }, { data: rewards }] =
     await Promise.all([
       admin
         .from("orders")
         .select("*")
-        .eq("cafe_id", cafeId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      admin
-        .from("reservations")
-        .select("*, customer_profiles(email)")
         .eq("cafe_id", cafeId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
@@ -179,14 +165,6 @@ async function getCashierOperationData(cafeId: string) {
     ]);
 
   const operationOrders = await attachOrderItems((orders ?? []) as Array<Record<string, unknown>>, cafeId);
-  const operationReservations = ((reservations ?? []) as Array<Record<string, unknown>>).map((reservation) => {
-    const profile = firstNestedRecord(reservation.customer_profiles);
-    return {
-      ...reservation,
-      customerEmail: profile?.email ? String(profile.email) : "",
-      customer_email: profile?.email ? String(profile.email) : "",
-    };
-  });
   const operationTickets = ((tickets ?? []) as Array<Record<string, unknown>>).map((ticket) => {
     const profile = firstNestedRecord(ticket.customer_profiles);
     const product = firstNestedRecord(ticket.menu_products);
@@ -218,7 +196,6 @@ async function getCashierOperationData(cafeId: string) {
 
   return {
     operationOrders,
-    operationReservations,
     operationTickets,
     operationRewards,
   };
@@ -290,9 +267,6 @@ function normalizeConsolePayload(data: unknown): CashierConsole | null {
     },
     cashier: payload.cashier,
     orders: Array.isArray(payload.orders) ? payload.orders : [],
-    reservations: Array.isArray(payload.reservations)
-      ? payload.reservations
-      : [],
     logs: Array.isArray(payload.logs)
       ? payload.logs.filter((log) => !["login", "logout", "cashier_login", "cashier_logout", "session_start", "session_end"].includes(String((log as Record<string, unknown>).actionType ?? (log as Record<string, unknown>).action_type ?? "")))
       : [],
@@ -402,13 +376,6 @@ function shortCashierOrderCode(orderId: string) {
   return orderId ? orderId.slice(0, 8).toUpperCase() : "-";
 }
 
-function cashierReservationDateTime(row: Record<string, unknown>) {
-  return [row.reservation_date, row.reservation_time]
-    .map((value) => String(value ?? "").trim())
-    .filter(Boolean)
-    .join(" ") || "-";
-}
-
 async function cashierOrderDisplayName(
   admin: ReturnType<typeof createAdminClient>,
   orderId: string,
@@ -483,7 +450,7 @@ async function writeCashierActivity(
   admin: ReturnType<typeof createAdminClient>,
   input: {
     session: CashierSessionContext;
-    actionType: "order_received" | "reservation_received" | "loyalty_stamp";
+    actionType: "order_received" | "loyalty_stamp";
     targetType: string;
     targetId: string;
     invoiceBarcode?: string;
@@ -570,18 +537,6 @@ export async function cashierAcceptOrder(orderId: string) {
   const { error } = await supabase.rpc("cashier_accept_order", {
     p_session_token: token,
     p_order_id: orderId,
-  });
-  if (error) throw error;
-}
-
-export async function cashierAcceptReservation(reservationId: string) {
-  return cashierUpdateReservationStatus(reservationId, "accepted");
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("cashier_accept_reservation", {
-    p_session_token: token,
-    p_reservation_id: reservationId,
   });
   if (error) throw error;
 }
@@ -741,166 +696,6 @@ export async function cashierUpdateOrderStatus(
   return { ok: true as const, order: updatedOrder };
 }
 
-export async function cashierUpdateReservationStatus(
-  reservationId: string,
-  status: "accepted" | "rejected" | "modification_requested",
-  message?: string,
-) {
-  const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
-  const cleanMessage = message?.trim() ?? "";
-
-  if (!reservationId) throw new Error("Reservation id is required");
-  if (status !== "accepted" && !cleanMessage) {
-    throw new Error(status === "rejected" ? "Rejection reason is required" : "Alternative time is required");
-  }
-  if (cleanMessage.length > 500) throw new Error("Message is too long");
-
-  const { data: reservation, error: lookupError } = await admin
-    .from("reservations")
-    .select("*")
-    .eq("id", reservationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (lookupError) throw lookupError;
-  if (!reservation || String(reservation.cafe_id) !== session.cafeId) {
-    throw new Error("Reservation does not belong to this cashier cafe");
-  }
-  if (String(reservation.status) !== "pending") {
-    throw new Error("Reservation status no longer allows this action");
-  }
-
-  const { data: updatedReservation, error: updateError } = await admin
-    .from("reservations")
-    .update({
-      status,
-      cafe_message: status === "rejected" ? null : cleanMessage || null,
-      rejection_reason: status === "rejected" ? cleanMessage || "تم رفض الحجز" : null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", reservationId)
-    .eq("cafe_id", session.cafeId)
-    .eq("status", "pending")
-    .is("deleted_at", null)
-    .select("*")
-    .maybeSingle();
-
-  if (updateError) throw updateError;
-  if (!updatedReservation) throw new Error("Reservation was updated before this action completed");
-
-  await writeCashierActivity(admin, {
-    session,
-    actionType: "reservation_received",
-    targetType: "reservation",
-    targetId: reservationId,
-    details: {
-      action: status,
-      statusBefore: String(reservation.status),
-      statusAfter: status,
-      message: cleanMessage || null,
-      customerName: String(reservation.customer_name ?? ""),
-      eventType: String(reservation.event_type ?? ""),
-      reservationDate: String(reservation.reservation_date ?? ""),
-      reservationTime: String(reservation.reservation_time ?? ""),
-    },
-  }).catch(() => undefined);
-
-  await writeCashierAudit(admin, {
-    session,
-    action: "cashier_update_reservation_status",
-    entityTable: "reservations",
-    entityId: reservationId,
-    oldData: reservation as Record<string, unknown>,
-    newData: { status, message: cleanMessage || null },
-  }).catch(() => undefined);
-
-  await recordOperationEvent({
-    cafeId: session.cafeId,
-    eventType:
-      status === "accepted"
-        ? operationEventTypes.reservationAccepted
-        : status === "rejected"
-          ? operationEventTypes.reservationRejected
-          : operationEventTypes.reservationModificationRequested,
-    actorType: "cashier",
-    actorId: session.cashierId,
-    actorName: session.cashierName,
-    actorEmail: session.cashierEmail,
-    entityType: "reservation",
-    entityId: reservationId,
-    metadata: {
-      status,
-      message: cleanMessage || null,
-      customerName: String(reservation.customer_name ?? ""),
-      eventType: String(reservation.event_type ?? ""),
-      reservationDate: String(reservation.reservation_date ?? ""),
-      reservationTime: String(reservation.reservation_time ?? ""),
-    },
-  });
-
-  if (reservation.customer_id && session.cafeSlug) {
-    await createNotification({
-      cafeSlug: session.cafeSlug,
-      audience: "customer",
-      customerId: String(reservation.customer_id),
-      title:
-        status === "accepted"
-          ? "تم قبول حجزك"
-          : status === "rejected"
-            ? "تم رفض حجزك"
-            : "اقتراح وقت بديل لحجزك",
-      body: cleanMessage || `تم تحديث حالة حجزك في ${session.cafeName}.`,
-      type: status === "accepted" ? "reservation_accepted" : "reservation_rejected",
-      meta: {
-        reservationId,
-        status,
-        message: cleanMessage,
-        actorSource: "cashier",
-        cashierName: session.cashierName,
-      },
-    }).catch(() => undefined);
-  }
-
-  const customerPhone = String(
-    reservation.customer_phone ?? reservation.phone ?? "",
-  ).trim();
-  if (customerPhone) {
-    const reservationCode = String(
-      reservation.reservation_code ?? reservationId.slice(0, 8).toUpperCase(),
-    );
-    const body =
-      status === "accepted"
-        ? `تم تأكيد حجزك لدى ${session.cafeName}\nالموعد: ${cashierReservationDateTime(
-            reservation as Record<string, unknown>,
-          )}\nرقم الحجز: ${reservationCode}`
-        : status === "rejected"
-          ? `تم رفض حجزك لدى ${session.cafeName}${
-              cleanMessage ? `\nالسبب إن وجد: ${cleanMessage}` : ""
-            }`
-          : `لدى ${session.cafeName} اقتراح وقت بديل لحجزك\nالوقت المقترح: ${
-              cleanMessage || "-"
-            }\nرقم الحجز: ${reservationCode}`;
-
-    await sendWhatsAppMessage({
-      to: customerPhone,
-      body,
-      eventType:
-        status === "accepted"
-          ? "reservation_accepted"
-          : status === "rejected"
-            ? "reservation_rejected"
-            : "reservation_alternative_time",
-      cafeId: session.cafeId,
-      recipientName: reservation.customer_name
-        ? String(reservation.customer_name)
-        : undefined,
-    }).catch(() => undefined);
-  }
-
-  return { ok: true as const, reservation: updatedReservation };
-}
-
 export async function cashierConfirmEventTicket(codeInput: string) {
   const admin = createAdminClient();
   const session = await requireCashierSessionContext(admin);
@@ -983,7 +778,7 @@ export async function cashierConfirmEventTicket(codeInput: string) {
 
   await writeCashierActivity(admin, {
     session,
-    actionType: "reservation_received",
+    actionType: "order_received",
     targetType: "event_ticket",
     targetId: ticketId,
     invoiceBarcode: code,
@@ -1039,66 +834,6 @@ export async function cashierConfirmEventTicket(codeInput: string) {
     gateName,
     usedAt,
   };
-}
-
-export async function cashierConfirmReservationCode(code: string) {
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("confirm_reservation_code", {
-    p_session_token: token,
-    p_code: code,
-  });
-  if (error) throw error;
-  const result = data as Record<string, unknown>;
-  const reservationId = result.reservationId
-    ? String(result.reservationId)
-    : "";
-  if (reservationId) {
-    const admin = createAdminClient();
-    const { data: reservation } = await admin
-      .from("reservations")
-      .select(
-        "id,customer_id,cafe_id,event_type,reservation_date,reservation_time,cafes(name,slug),customer_profiles(email)",
-      )
-      .eq("id", reservationId)
-      .maybeSingle();
-    const cafeRaw = Array.isArray(reservation?.cafes)
-      ? reservation?.cafes[0]
-      : reservation?.cafes;
-    const cafe =
-      cafeRaw && typeof cafeRaw === "object"
-        ? (cafeRaw as Record<string, unknown>)
-        : null;
-    const customerRaw = Array.isArray(reservation?.customer_profiles)
-      ? reservation?.customer_profiles[0]
-      : reservation?.customer_profiles;
-    const customer =
-      customerRaw && typeof customerRaw === "object"
-        ? (customerRaw as Record<string, unknown>)
-        : null;
-    if (reservation?.customer_id && cafe?.slug) {
-      await createNotification({
-        cafeSlug: String(cafe.slug),
-        audience: "customer",
-        customerId: String(reservation.customer_id),
-        title: "تم تأكيد حضور الحجز",
-        body: `تم تأكيد حضور حجزك في ${String(cafe.name ?? "العلامة")}`,
-        type: "reservation_accepted",
-        meta: { reservationId: String(reservationId) },
-      }).catch(() => undefined);
-    }
-    const customerEmail = customer?.email ? String(customer.email) : undefined;
-    if (customerEmail && isBarndaksaEmailConfigured()) {
-      await sendBarndaksaEmail({
-        to: customerEmail,
-        subject: "تم تأكيد حضور حجزك",
-        text: `تم تأكيد حضور حجزك في ${String(cafe?.name ?? "برندة")}.`,
-        html: `<div dir="rtl"><h2>تم تأكيد حضور الحجز</h2><p>العلامة: ${escapeEmailHtml(String(cafe?.name ?? "برندة"))}</p><p>نوع الحجز: ${escapeEmailHtml(String(reservation?.event_type ?? "حجز"))}</p><p>التاريخ: ${escapeEmailHtml(String(reservation?.reservation_date ?? ""))} ${escapeEmailHtml(String(reservation?.reservation_time ?? ""))}</p></div>`,
-      }).catch(() => undefined);
-    }
-  }
-  return result;
 }
 
 function makeLoyaltyScanReference(cardCode: string) {

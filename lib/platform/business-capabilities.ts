@@ -3,7 +3,6 @@ import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 export type BusinessCapability =
   | "menu"
   | "orders"
-  | "reservations"
   | "loyalty"
   | "rewards"
   | "tickets"
@@ -16,14 +15,13 @@ export type BusinessCapability =
 const DEFAULT_CAPABILITIES: BusinessCapability[] = [];
 
 export const BUSINESS_CAPABILITIES: Partial<Record<BusinessCategoryId, BusinessCapability[]>> = {
-  cafes_coffee: ["menu", "orders", "reservations", "loyalty", "rewards", "cashier"],
-  restaurants: ["menu", "orders", "reservations", "loyalty", "rewards", "cashier"],
+  cafes_coffee: ["menu", "orders", "loyalty", "rewards", "cashier"],
+  restaurants: ["menu", "orders", "loyalty", "rewards", "cashier"],
   events_conferences: [
     "tickets",
     "ticket_orders",
     "checkin",
     "cashier",
-    "reservations",
     "loyalty",
     "experience_rewards",
     "reports",

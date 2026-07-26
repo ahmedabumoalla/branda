@@ -8,7 +8,6 @@ import { getPublicLoyaltyProgramBySlug, getCurrentCustomerLoyaltyCardView } from
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
 import { getPublicPagesBySlug } from "@/lib/data/pages";
-import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -81,12 +80,11 @@ export async function GET(_request: Request, { params }: Params) {
       return featureCodesAllow(features, feature);
     };
 
-    const [menu, offers, branches, pages, reservationServices, loyaltyProgram, loyaltyRules, customer] = await Promise.all([
+    const [menu, offers, branches, pages, loyaltyProgram, loyaltyRules, customer] = await Promise.all([
       canUseFeature("menu") ? getPublicMenuBySlug(slug) : Promise.resolve(emptyMenu),
       canUseFeature("offers") ? getPublicOffersBySlug(slug) : Promise.resolve([]),
       canUseFeature("branches") ? getPublicBranchesBySlug(slug) : Promise.resolve([]),
       canUseFeature("pages") ? getPublicPagesBySlug(slug) : Promise.resolve([]),
-      canUseFeature("reservations") ? getPublicReservationServicesBySlug(slug) : Promise.resolve([]),
       canUseFeature("loyalty") ? getPublicLoyaltyProgramBySlug(slug).catch(() => null) : Promise.resolve(null),
       canUseFeature("loyalty") ? getPublicLoyaltyBySlug(slug).catch(() => null) : Promise.resolve(null),
       safeCustomer(slug),
@@ -113,7 +111,6 @@ export async function GET(_request: Request, { params }: Params) {
         offers,
         branches,
         pages,
-        reservationServices,
         loyaltyProgram,
         loyaltyPointsEnabled: Boolean(loyaltyRules?.settings.enabled),
         customer,

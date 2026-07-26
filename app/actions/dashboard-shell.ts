@@ -19,7 +19,7 @@ function mapNotification(slug: string, row: Record<string, unknown>): AppNotific
     customerId: row.customer_id ? String(row.customer_id) : undefined,
     title: String(row.title ?? ""),
     body: String(row.body ?? ""),
-    type: String(row.type ?? "new_review") as AppNotification["type"],
+    type: String(row.type ?? "experience_submission") as AppNotification["type"],
     read: Boolean(row.read),
     createdAt: String(row.created_at ?? new Date().toISOString()),
     meta:
@@ -67,7 +67,6 @@ async function getFastDashboardCounts(
     if (!error && data && typeof data === "object") {
       const row = data as Record<string, unknown>;
       return {
-        pendingReservations: Number(row.pendingReservations ?? row.pending_reservations ?? 0),
         pendingOrders: Number(row.pendingOrders ?? row.pending_orders ?? 0),
         pendingExperienceReviews: Number(row.pendingExperienceReviews ?? row.pending_experience_reviews ?? 0),
       };
@@ -76,10 +75,7 @@ async function getFastDashboardCounts(
     // The migration is optional. Fall back to safe count queries until it is applied.
   }
 
-  const [pendingReservations, pendingOrders, pendingExperienceReviews] = await Promise.all([
-    countRows(supabase, "reservations", cafeId, (query) =>
-      query.eq("status", "pending").is("deleted_at", null),
-    ),
+  const [pendingOrders, pendingExperienceReviews] = await Promise.all([
     countRows(supabase, "orders", cafeId, (query) =>
       query.eq("status", "pending_cafe").is("deleted_at", null),
     ),
@@ -88,7 +84,7 @@ async function getFastDashboardCounts(
     ),
   ]);
 
-  return { pendingReservations, pendingOrders, pendingExperienceReviews };
+  return { pendingOrders, pendingExperienceReviews };
 }
 
 function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
@@ -114,7 +110,6 @@ export async function fetchOwnerDashboardShellAction() {
       featureOverrides: [],
       settings: fallbackSettings({ slug: "", name: "" }),
       notifications: [],
-      pendingReservations: 0,
       pendingOrders: 0,
       pendingExperienceReviews: 0,
     };
@@ -175,7 +170,6 @@ export async function fetchOwnerDashboardShellAction() {
     notifications: ((notificationsResult.data ?? []) as Record<string, unknown>[]).map((row) =>
       mapNotification(cafe.slug, row),
     ),
-    pendingReservations: fastCounts.pendingReservations,
     pendingOrders: fastCounts.pendingOrders,
     pendingExperienceReviews: fastCounts.pendingExperienceReviews,
   };

@@ -34,10 +34,9 @@ import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CustomerLoyaltyCardView, LoyaltyCardProgram } from "@/lib/data/loyalty-cards";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
-import type { ReservationService } from "@/lib/data/platform-upgrade";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 
-type FastTab = "home" | "menu" | "offers" | "reservations" | "loyalty" | "branches";
+type FastTab = "home" | "menu" | "offers" | "loyalty" | "branches";
 
 type CustomerFastPayload = {
   slug: string;
@@ -49,7 +48,6 @@ type CustomerFastPayload = {
   categories: MenuCategoryRecord[];
   offers: CafeOffer[];
   branches: CafeBranch[];
-  reservationServices: ReservationService[];
   loyaltyProgram: LoyaltyCardProgram | null;
   loyaltyPointsEnabled?: boolean;
   customer: BarndaksaCustomerSession | null;
@@ -112,7 +110,6 @@ async function loadPublicCafeFallbackPayload(slug: string): Promise<CustomerFast
     categories: [],
     offers: [],
     branches: [],
-    reservationServices: [],
     loyaltyProgram: null,
     loyaltyPointsEnabled: false,
     customer: null,
@@ -130,16 +127,6 @@ function isOfferVisible(offer: CafeOffer) {
 
 function compactNumber(value: number) {
   return new Intl.NumberFormat("ar-SA").format(value);
-}
-
-function reservationDurationLabel(service: ReservationService) {
-  if (!service.durationValue || !service.durationUnit) return null;
-  const unitLabels: Record<string, string> = {
-    minute: "دقيقة",
-    hour: "ساعة",
-    day: "يوم",
-  };
-  return `${service.durationValue} ${unitLabels[service.durationUnit] ?? service.durationUnit}`;
 }
 
 function TabButton({
@@ -435,14 +422,12 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
   const copy = getBusinessCopy(payload?.settings?.businessCategory);
   const isEvents = copy.kind === "events";
   const menuLabel = isEvents ? "التذاكر" : "المنتجات";
-  const reservationLabel = isEvents ? "تذاكري" : "الحجوزات";
   const itemCountLabel = isEvents ? "تذكرة" : "منتج";
   const HeroIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const features = payload?.features ?? [];
   const allow = (feature: string) => featureCodesAllow(features, feature);
   const products = useMemo(() => allow("menu") ? payload?.products?.filter((product) => product.available !== false) ?? [] : [], [features, payload?.products]);
   const offers = useMemo(() => allow("offers") ? payload?.offers?.filter(isOfferVisible) ?? [] : [], [features, payload?.offers]);
-  const reservationServices = useMemo(() => allow("reservations") ? payload?.reservationServices?.filter((service) => service.active !== false) ?? [] : [], [features, payload?.reservationServices]);
   const branches = allow("branches") ? payload?.branches ?? [] : [];
   const categories = allow("menu") ? payload?.categories?.filter((category) => category.visible !== false) ?? [] : [];
   const filteredProducts = selectedCategory === "all" ? products : products.filter((product) => product.categoryId === selectedCategory || product.category === selectedCategory);
@@ -567,16 +552,6 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
                 العروض والخصومات
               </button>
             ) : null}
-            {allow("reservations") ? (
-              <button
-                type="button"
-                onClick={() => setActiveTab("reservations")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/12 px-4 py-3 text-sm font-black text-white backdrop-blur transition active:scale-95"
-              >
-                <CalendarDays className="h-4 w-4" />
-                {reservationLabel}
-              </button>
-            ) : null}
           </div>
 
           <div className="mt-4 grid grid-cols-4 gap-2 text-center">
@@ -590,12 +565,6 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
               <button type="button" onClick={() => setActiveTab("offers")} className="rounded-2xl bg-white/12 p-3 transition active:scale-95">
                 <p className="text-lg font-black">{compactNumber(offers.length)}</p>
                 <p className="text-[10px] font-bold text-white/70">عرض</p>
-              </button>
-            ) : null}
-            {allow("reservations") ? (
-              <button type="button" onClick={() => setActiveTab("reservations")} className="rounded-2xl bg-white/12 p-3 transition active:scale-95">
-                <p className="text-lg font-black">{compactNumber(reservationServices.length)}</p>
-                <p className="text-[10px] font-bold text-white/70">حجز</p>
               </button>
             ) : null}
             {allow("branches") ? (
@@ -625,13 +594,6 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
                   <WalletCards className="h-7 w-7 text-[var(--fast-button)]" />
                   <h3 className="mt-3 font-black">بطاقتي</h3>
                   <p className="mt-1 text-xs font-bold leading-5 text-[var(--fast-muted)]">QR الولاء والمكافآت</p>
-                </button>
-              ) : null}
-              {allow("reservations") ? (
-                <button onClick={() => setActiveTab("reservations")} type="button" className="barndaksa-premium-card rounded-[28px] border border-[var(--fast-border)] bg-white/90 p-4 text-right shadow-[0_14px_35px_rgba(49,25,18,0.07)] transition active:scale-[0.985]">
-                  <CalendarDays className="h-7 w-7 text-[var(--fast-button)]" />
-                  <h3 className="mt-3 font-black">{reservationLabel}</h3>
-                  <p className="mt-1 text-xs font-bold leading-5 text-[var(--fast-muted)]">{isEvents ? "تذاكر الدخول والحضور" : "الخدمات المتاحة للحجز"}</p>
                 </button>
               ) : null}
               {allow("menu") ? (
@@ -730,53 +692,6 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
           </section>
         ) : null}
 
-        {activeTab === "reservations" && allow("reservations") ? (
-          <section className="space-y-3">
-            <div className="barndaksa-premium-card rounded-[32px] border border-[var(--fast-border)] bg-white/90 p-5 shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black text-[var(--fast-accent)]">{reservationLabel}</p>
-                  <h2 className="text-xl font-black text-[var(--fast-text)]">{isEvents ? "استعرض تذاكرك ومواعيد الدخول" : "اختر خدمة الحجز المناسبة"}</h2>
-                  <p className="mt-1 text-sm font-bold leading-7 text-[var(--fast-muted)]">{isEvents ? "تظهر تذاكر الدخول الخاصة بك من الحساب، وتبقى تفاصيل الحضور مفصولة لكل علامة." : "تصفح الخدمات بسرعة، ثم أكمل تفاصيل الحجز من صفحة الحجز الكاملة."}</p>
-                </div>
-                <Link href={`/c/${encodeURIComponent(slug)}/reserve`} className="shrink-0 rounded-2xl bg-[var(--fast-button)] px-4 py-3 text-xs font-black text-white shadow-sm transition active:scale-95">
-                  {isEvents ? "تذاكري" : "حجز جديد"}
-                </Link>
-              </div>
-            </div>
-
-            {reservationServices.length ? reservationServices.map((service) => (
-              <Link key={service.id} href={`/c/${encodeURIComponent(slug)}/reserve`} className="barndaksa-premium-card block rounded-[30px] border border-[var(--fast-border)] bg-white/90 p-5 shadow-[0_16px_45px_rgba(49,25,18,0.08)] transition active:scale-[0.985]">
-                <div className="flex items-start gap-3">
-                  <span className="rounded-2xl bg-[var(--fast-soft)] p-3 text-[var(--fast-button)]">
-                    <CalendarDays className="h-6 w-6" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-black text-[var(--fast-text)]">{service.name}</h3>
-                      <span className="shrink-0 rounded-full bg-[var(--fast-accent)] px-3 py-1 text-xs font-black text-[#311912]">
-                        {service.isFree ? "مجاني" : service.price === null ? "حسب الخدمة" : formatSar(service.price)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm font-bold leading-7 text-[var(--fast-muted)]">{service.description || "خدمة حجز متاحة لدى العلامة"}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {service.maxGuests ? <span className="rounded-full bg-[var(--fast-soft)] px-3 py-1 text-xs font-black text-[var(--fast-button)]">حتى {service.maxGuests} أشخاص</span> : null}
-                      {reservationDurationLabel(service) ? <span className="rounded-full bg-[var(--fast-soft)] px-3 py-1 text-xs font-black text-[var(--fast-button)]">{reservationDurationLabel(service)}</span> : null}
-                      {service.amenities.slice(0, 2).map((amenity) => (
-                        <span key={amenity} className="rounded-full bg-[var(--fast-soft)] px-3 py-1 text-xs font-black text-[var(--fast-muted)]">{amenity}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            )) : (
-              <div className="rounded-[26px] border border-dashed border-[var(--fast-border)] bg-white/70 p-6 text-center text-sm font-black text-[var(--fast-muted)]">
-                {isEvents ? "لا توجد تذاكر ظاهرة حاليًا" : "لا توجد خدمات حجز ظاهرة حاليًا"}
-              </div>
-            )}
-          </section>
-        ) : null}
-
         {activeTab === "loyalty" && allow("loyalty") ? <LoyaltyPanel slug={slug} payload={payload} /> : null}
 
         {activeTab === "branches" && allow("branches") ? (
@@ -805,11 +720,10 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-50">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--fast-border)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
-          <TabButton tab="home" active={activeTab} icon={<Home className="h-6 w-6" />} label="الرئيسية" onClick={setActiveTab} />
-          {allow("menu") ? <TabButton tab="menu" active={activeTab} icon={<MenuIcon className="h-6 w-6" />} label={menuLabel} onClick={setActiveTab} /> : null}
-          {allow("reservations") ? <TabButton tab="reservations" active={activeTab} icon={<CalendarDays className="h-6 w-6" />} label={reservationLabel} onClick={setActiveTab} /> : null}
-          {allow("loyalty") ? <TabButton tab="loyalty" active={activeTab} icon={<WalletCards className="h-6 w-6" />} label="المكافآت" onClick={setActiveTab} /> : null}
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-t-[26px] border-t border-[var(--fast-border)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
+          <TabButton tab="menu" active={activeTab} icon={<MenuIcon className="h-6 w-6" />} label="المنتجات" onClick={setActiveTab} />
+          <TabButton tab="offers" active={activeTab} icon={<BadgePercent className="h-6 w-6" />} label="العروض" onClick={setActiveTab} />
+          <TabButton tab="loyalty" active={activeTab} icon={<WalletCards className="h-6 w-6" />} label="المكافآت" onClick={setActiveTab} />
           <Link
             href={payload.customer ? `/c/${encodeURIComponent(slug)}/account` : getCustomerLoginHref(slug, `/c/${slug}/account`)}
             className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black text-[#4E4B56] transition active:scale-95"

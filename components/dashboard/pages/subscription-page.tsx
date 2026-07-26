@@ -195,7 +195,6 @@ export function SubscriptionPageClient({
     return [
       { label: "الطلبات الشهرية", value: formatLimit(plan.maxOrdersMonthly, "طلب") },
       { label: "المنتجات المعروضة", value: formatLimit(plan.maxProductsMonthly, "منتج") },
-      { label: "الحجوزات الشهرية", value: formatLimit(plan.maxReservationsMonthly, "حجز") },
       { label: "الفروع", value: formatLimit(plan.maxBranches, "فرع") },
       { label: "مدة التجربة", value: plan.trialDays && plan.trialDays > 0 ? `${plan.trialDays} يوم` : "بدون تجربة" },
       { label: "نقاط الولاء المتقدمة", value: planHasFeature(plan, "loyalty") ? "متاحة في الباقة" : "تحتاج ترقية" },

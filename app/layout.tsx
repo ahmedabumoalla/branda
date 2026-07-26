@@ -24,7 +24,7 @@ const PWA_INSTALL_CAPTURE_SCRIPT = `
 
 export const metadata: Metadata = {
   title: "Barndaksa | برندة",
-  description: "منصة إدارة العلامات التجارية والولاء والطلبات والحجوزات.",
+  description: "منصة إدارة العلامات التجارية والولاء والطلبات.",
   applicationName: "برندة",
   icons: {
     icon: [

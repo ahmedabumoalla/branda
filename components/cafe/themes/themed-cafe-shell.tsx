@@ -16,11 +16,10 @@ import { ThemedPreviewBanner } from "./themed-preview-banner";
 import { ThemedCafeHeader } from "./themed-cafe-header";
 import { ThemedCafeFooter } from "./themed-cafe-footer";
 import {
-  CustomerQuickDock,
-  buildCustomerQuickDockItems,
-} from "./customer-experience-primitives";
-import { getCustomerLoginHref } from "@/lib/cafe/theme-links";
-import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
+  CustomerBottomDock,
+  defaultCustomerDockItems,
+  type CustomerDockKey,
+} from "./customer-mobile-experience";
 
 type Props = {
   slug: string;
@@ -89,17 +88,17 @@ function ThemedCafeShellInner({
     backgroundUrl &&
     (identityConfig.backgroundScope === "all-customer-pages" ||
       identityConfig.backgroundScope === "home-only");
-  const hasFeature = (feature: Parameters<typeof publicFeatureAllows>[1]) =>
-    publicFeatureAllows(features, feature);
-  const activeDockItem = pathname.includes("/products") || pathname.includes("/product/")
-    ? "products"
-    : pathname.includes("/reserve")
-      ? "reserve"
-      : pathname.includes("/account")
+  const activeDockItem: CustomerDockKey = pathname.includes("/products/offers")
+    ? "offers"
+    : pathname.includes("/products") || pathname.includes("/product/")
+      ? "menu"
+      : pathname.includes("/rewards")
+        ? "rewards"
+        : pathname.includes("/account")
         ? "account"
         : pathname.includes("/login") || pathname.includes("/register")
           ? "account"
-          : "home";
+          : "menu";
 
   return (
     <main
@@ -150,20 +149,13 @@ function ThemedCafeShellInner({
           </div>
         ) : null}
         {!hideQuickDock ? (
-          <CustomerQuickDock
-            items={buildCustomerQuickDockItems({
+          <CustomerBottomDock
+            {...defaultCustomerDockItems({
               slug,
-              homeHref: ctx.path(""),
-              productsHref: ctx.path("products/popular"),
-              reserveHref: ctx.path("reserve"),
-              loyaltyHref: ctx.path("rewards"),
-              accountHref: ctx.path("account"),
-              loginHref: getCustomerLoginHref(slug, `/c/${slug}/account`, previewThemeId),
               isCustomer: customerChecked ? Boolean(customer) : true,
-              hasProducts: hasFeature("menu"),
-              hasReservations: hasFeature("reservations"),
-              hasLoyalty: hasFeature("loyalty"),
               active: activeDockItem,
+              previewThemeId,
+              businessCategory: settings.businessCategory,
             })}
           />
         ) : null}

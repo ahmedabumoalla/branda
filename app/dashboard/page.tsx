@@ -9,7 +9,6 @@ import { getCafeCustomers } from "@/lib/data/customers";
 import { getOwnerExperienceData } from "@/lib/data/experience";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { getOwnerOrders } from "@/lib/data/orders";
-import { getOwnerReservations } from "@/lib/data/reservations";
 import { getOwnerCafeSettings } from "@/lib/data/settings";
 
 export default async function DashboardPage() {
@@ -18,7 +17,6 @@ export default async function DashboardPage() {
       <DashboardHomeClient
         customers={[]}
         orders={[]}
-        reservations={[]}
         productCount={0}
         experienceSubmissionCount={0}
         cafeSlug=""
@@ -33,11 +31,10 @@ export default async function DashboardPage() {
   try {
     const cafe = await requireOwnerCafeContext();
 
-    const [settings, orders, reservations, customerRows, menu, experienceData] =
+    const [settings, orders, customerRows, menu, experienceData] =
       await Promise.all([
         getOwnerCafeSettings(),
         getOwnerOrders(),
-        getOwnerReservations(),
         getCafeCustomers(),
         getOwnerMenu(),
         getOwnerExperienceData(),
@@ -54,7 +51,6 @@ export default async function DashboardPage() {
           createdAt: String(customer.created_at ?? "").slice(0, 10),
         }))}
         orders={orders}
-        reservations={reservations}
         productCount={menu.products.length}
         experienceSubmissionCount={experienceData.submissions.length}
         cafeSlug={cafe.slug}
@@ -70,7 +66,6 @@ export default async function DashboardPage() {
       <DashboardHomeClient
         customers={[]}
         orders={[]}
-        reservations={[]}
         productCount={0}
         experienceSubmissionCount={0}
         cafeSlug=""

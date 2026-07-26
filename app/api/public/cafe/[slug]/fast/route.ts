@@ -5,7 +5,6 @@ import { getPublicCafeFeatureCodesBySlug, filterPublicCafePayloadByFeatures } fr
 import { getPublicMenuBySlug } from "@/lib/data/menu";
 import { getPublicOffersBySlug } from "@/lib/data/offers";
 import { getPublicExperienceCampaigns } from "@/lib/data/experience";
-import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -81,15 +80,6 @@ async function safeBranches(slug: string) {
   }
 }
 
-async function safeReservationServices(slug: string) {
-  try {
-    return await getPublicReservationServicesBySlug(slug);
-  } catch (error) {
-    console.warn("[public/cafe/fast/reservations-fallback]", error);
-    return [];
-  }
-}
-
 async function safeExperienceCampaigns(slug: string) {
   try {
     return await getPublicExperienceCampaigns(slug);
@@ -114,11 +104,10 @@ async function loadPublicCafeFastLayer(slug: string) {
 
   if (!settings) return null;
 
-  const [menu, offers, branches, reservationServices, experienceCampaigns] = await Promise.all([
+  const [menu, offers, branches, experienceCampaigns] = await Promise.all([
     canUseFeature(features, "menu") ? safeMenu(slug) : Promise.resolve(emptyMenu),
     canUseFeature(features, "offers") ? safeOffers(slug) : Promise.resolve([]),
     canUseFeature(features, "branches") ? safeBranches(slug) : Promise.resolve([]),
-    canUseFeature(features, "reservations") ? safeReservationServices(slug) : Promise.resolve([]),
     canUseFeature(features, "experience_reviews") ? safeExperienceCampaigns(slug) : Promise.resolve([]),
   ]);
 
@@ -129,7 +118,6 @@ async function loadPublicCafeFastLayer(slug: string) {
     loyaltySettings: emptyLoyaltySettings,
     loyaltyRewards: [],
     pages: [],
-    reservationServices,
     experienceCampaigns,
   };
 

@@ -162,12 +162,6 @@ export function BrandIdentityCustomTheme(props: CafeThemePageProps) {
                 >
                   تصفح المنيو
                 </Link>
-                <Link
-                  href={getCafePath(slug, "reserve", previewThemeId)}
-                  className={`rounded-2xl px-6 py-3 font-black ${theme.buttonOutline}`}
-                >
-                  احجز طاولة
-                </Link>
               </div>
             </section>
           </IdentityBackground>

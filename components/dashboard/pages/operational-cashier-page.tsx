@@ -83,7 +83,7 @@ export function OperationalCashierPageClient({
         openConsole: "فتح لوحة الكاشير",
         scanLoyalty: "احتساب عملية شراء",
         scanReward: "صرف مكافأة",
-        scanTicket: "مسح QR الحجز",
+        scanTicket: "مسح رمز التذكرة",
         staffLabel: "الكاشيرات",
         passwordLabel: "كلمة مرور الكاشير الدائمة",
         namePlaceholder: "اسم الكاشير إلزامي",

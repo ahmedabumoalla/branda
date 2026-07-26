@@ -6,44 +6,15 @@ import { OffersPageClient } from "@/components/dashboard/pages/offers-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { getOwnerOffers } from "@/lib/data/offers";
-import { getOwnerExperienceData } from "@/lib/data/experience";
-import { getOwnerReservationServices } from "@/lib/data/platform-upgrade";
 
 export default async function OffersPage() {
   if (!isSupabaseConfigured()) {
-    return (
-      <OffersPageClient
-        initialOffers={[]}
-        initialProducts={[]}
-        businessCategory="cafes_coffee"
-        configError="قم بإعداد Supabase في .env.local"
-      />
-    );
+    return <OffersPageClient initialOffers={[]} initialProducts={[]} configError="قم بإعداد Supabase في ملف البيئة" />;
   }
   try {
-    const [offers, menu, services, experience] = await Promise.all([
-      getOwnerOffers(),
-      getOwnerMenu(),
-      getOwnerReservationServices(),
-      getOwnerExperienceData(),
-    ]);
-    return (
-      <OffersPageClient
-        initialOffers={offers}
-        initialProducts={menu.products}
-        initialReservationServices={services}
-        initialExperienceCampaigns={experience.campaigns}
-        businessCategory={menu.cafe.businessCategory}
-      />
-    );
+    const [offers, menu] = await Promise.all([getOwnerOffers(), getOwnerMenu()]);
+    return <OffersPageClient initialOffers={offers} initialProducts={menu.products} businessCategory={menu.cafe.businessCategory} />;
   } catch {
-    return (
-      <OffersPageClient
-        initialOffers={[]}
-        initialProducts={[]}
-        businessCategory="cafes_coffee"
-        configError="تعذر تحميل العروض"
-      />
-    );
+    return <OffersPageClient initialOffers={[]} initialProducts={[]} configError="تعذر تحميل العروض" />;
   }
 }

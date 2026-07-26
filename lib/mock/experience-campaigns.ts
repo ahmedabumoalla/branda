@@ -2,7 +2,7 @@ export type ExperiencePlatform = "tiktok" | "instagram" | "snapchat" | "youtube_
 
 export type ExperienceCampaignStatus = "draft" | "active" | "ended";
 
-export type ExperienceRewardType = "free_order" | "product" | "reservation" | "discount";
+export type ExperienceRewardType = "free_order" | "product" | "discount";
 
 export type ExperienceCardGenerationStatus = "idle" | "generating" | "ready" | "failed";
 
@@ -33,7 +33,6 @@ export type ExperienceCampaign = {
   excludedContentRules?: string[];
   rewardType?: ExperienceRewardType;
   rewardProductId?: string;
-  rewardReservationServiceId?: string;
   rewardDiscountPercent?: number;
   cardStoragePath?: string;
   cardGenerationStatus?: ExperienceCardGenerationStatus;

@@ -28,7 +28,6 @@ export type PlatformPlan = {
   categoryId?: string;
   maxOrdersMonthly?: number | null;
   maxProductsMonthly?: number | null;
-  maxReservationsMonthly?: number | null;
   maxBranches?: number | null;
   trialDays?: number | null;
   freeAfterTrial?: boolean;
@@ -67,8 +66,6 @@ export type PlatformCafe = {
   productsCount?: number;
   offersCount?: number;
   branchesCount?: number;
-  reservationsCount?: number;
-  reviewsCount?: number;
   experienceSubmissionsCount?: number;
   experienceRewardsCount?: number;
   loyaltyCardsCount?: number;
@@ -106,7 +103,6 @@ export type PlatformOperation = {
   customerName?: string;
   type:
     | "طلب"
-    | "حجز"
     | "دفع"
     | "تقييم"
     | "تسجيل علامة"

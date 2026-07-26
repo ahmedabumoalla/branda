@@ -16,7 +16,6 @@ import type {
   CustomerProfile,
 } from "@/lib/mock/customer-activity";
 
-import type { CafeReservation } from "@/lib/mock/reservations";
 import {
   escapeEmailHtml,
   isBarndaksaEmailConfigured,
@@ -872,143 +871,33 @@ export async function getCustomerOrdersForProfile(
   );
 }
 
-export async function getCustomerReservationsForProfile(
-  cafeSlug: string,
-  customerId: string,
-  limit = 5,
-): Promise<CafeReservation[]> {
-  const cafe = await getCafeBySlug(cafeSlug);
-
-  if (!cafe) return [];
-
-  const supabase = createAdminClient();
-
-  const { data } = await supabase
-
-    .from("reservations")
-
-    .select("*")
-
-    .eq("cafe_id", cafe.id)
-
-    .eq("customer_id", customerId)
-
-    .is("deleted_at", null)
-
-    .order("reservation_date", { ascending: false })
-
-    .limit(limit);
-
-  if (!data?.length) return [];
-
-  const { mapDbReservationToCafeReservation } =
-    await import("@/lib/data/mappers");
-
-  return ((data ?? []) as Array<Record<string, unknown>>).map(mapDbReservationToCafeReservation);
-}
-
 export async function getOwnerCustomersDashboard(): Promise<{
   customers: CustomerProfile[];
-
   orders: CustomerOrder[];
-
-  reservations: CafeReservation[];
 }> {
   const cafe = await requireOwnerCafeContext();
-
   const supabase = await createClient();
-
-  const [{ data: profiles }, { data: orders }, { data: reservations }] =
-    await Promise.all([
-      supabase
-
-        .from("customer_profiles")
-
-        .select("*")
-
-        .eq("cafe_id", cafe.id)
-
-        .order("created_at", { ascending: false }),
-
-      supabase
-
-        .from("orders")
-
-        .select("*, order_items(*)")
-
-        .eq("cafe_id", cafe.id)
-
-        .is("deleted_at", null)
-
-        .order("created_at", { ascending: false }),
-
-      supabase
-
-        .from("reservations")
-
-        .select("*")
-
-        .eq("cafe_id", cafe.id)
-
-        .is("deleted_at", null)
-
-        .order("reservation_date", { ascending: false }),
-    ]);
-
-  const { mapDbOrderToCafeOrder, mapDbReservationToCafeReservation } =
-    await import("@/lib/data/mappers");
-
+  const [{ data: profiles }, { data: orders }] = await Promise.all([
+    supabase.from("customer_profiles").select("*").eq("cafe_id", cafe.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("*, order_items(*)").eq("cafe_id", cafe.id).is("deleted_at", null).order("created_at", { ascending: false }),
+  ]);
+  const { mapDbOrderToCafeOrder } = await import("@/lib/data/mappers");
   const customers: CustomerProfile[] = (profiles ?? []).map((row) => ({
     id: row.id as string,
-
     cafeSlug: cafe.slug,
-
     fullName: row.full_name as string,
-
     phone: row.phone as string,
-
     email: (row.email as string) ?? undefined,
-
-    createdAt: (row.created_at as string).slice(0, 10),
+    createdAt: String(row.created_at ?? "").slice(0, 10),
   }));
-
   const mappedOrders: CustomerOrder[] = (orders ?? []).map((order) => {
-    const items = (order.order_items as Record<string, unknown>[]) ?? [];
-
-    const cafeOrder = mapDbOrderToCafeOrder(cafe.slug, order, items);
-
+    const cafeOrder = mapDbOrderToCafeOrder(cafe.slug, order, (order.order_items as Record<string, unknown>[]) ?? []);
     return {
-      id: cafeOrder.id,
-
-      cafeSlug: cafe.slug,
-
-      customerId: cafeOrder.customerId,
-
-      customerName: cafeOrder.customerName,
-
-      status: cafeOrder.status as CustomerOrder["status"],
-
-      items: cafeOrder.items.map((item) => item.name),
-
-      total: cafeOrder.total,
-
-      createdAt: cafeOrder.createdAt,
-
-      branchName: cafeOrder.branchName,
-
-      pickupAt: cafeOrder.pickupAt,
-
-      notes: cafeOrder.notes,
-
+      id: cafeOrder.id, cafeSlug: cafe.slug, customerId: cafeOrder.customerId, customerName: cafeOrder.customerName,
+      status: cafeOrder.status as CustomerOrder["status"], items: cafeOrder.items.map((item) => item.name), total: cafeOrder.total,
+      createdAt: cafeOrder.createdAt, branchName: cafeOrder.branchName, pickupAt: cafeOrder.pickupAt, notes: cafeOrder.notes,
       rejectionReason: cafeOrder.rejectionReason,
     };
   });
-
-  return {
-    customers,
-
-    orders: mappedOrders,
-
-    reservations: (reservations ?? []).map(mapDbReservationToCafeReservation),
-  };
+  return { customers, orders: mappedOrders };
 }

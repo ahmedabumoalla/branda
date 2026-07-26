@@ -3,7 +3,6 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
-import type { CafeReservation, ReservationStatus } from "@/lib/mock/reservations";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
 
@@ -168,34 +167,12 @@ const ORDER_STATUS_FROM_UI: Record<OrderStatus, string> = {
   "ملغي من العميل": "cancelled_by_customer",
 };
 
-const RESERVATION_STATUS_TO_UI: Record<string, ReservationStatus> = {
-  pending: "بانتظار الرد",
-  accepted: "مقبول",
-  rejected: "مرفوض",
-  modification_requested: "طلب تعديل",
-};
-
-const RESERVATION_STATUS_FROM_UI: Record<ReservationStatus, string> = {
-  "بانتظار الرد": "pending",
-  مقبول: "accepted",
-  مرفوض: "rejected",
-  "طلب تعديل": "modification_requested",
-};
-
 export function mapOrderStatusFromDb(status: string): OrderStatus {
   return ORDER_STATUS_TO_UI[status] ?? "بانتظار موافقة الكوفي";
 }
 
 export function mapOrderStatusToDb(status: OrderStatus): string {
-  return ORDER_STATUS_FROM_UI[status];
-}
-
-export function mapReservationStatusFromDb(status: string): ReservationStatus {
-  return RESERVATION_STATUS_TO_UI[status] ?? "بانتظار الرد";
-}
-
-export function mapReservationStatusToDb(status: ReservationStatus): string {
-  return RESERVATION_STATUS_FROM_UI[status];
+  return ORDER_STATUS_FROM_UI[status] ?? "pending_cafe";
 }
 
 export function mapDbSettingsToCafeSettings(
@@ -303,7 +280,6 @@ export function mapDbOfferToCafeOffer(row: Record<string, unknown>): CafeOffer {
     endDate: row.end_date as string | undefined,
     linkedProductId: row.linked_product_id as string | undefined,
     targetType: (row.target_type as CafeOffer["targetType"]) ?? "products",
-    reservationServiceId: row.reservation_service_id as string | undefined,
     offerRules: rules,
     bannerImageUrl: row.banner_url as string | undefined,
     bannerAssetId: row.banner_storage_path as string | undefined,
@@ -381,36 +357,5 @@ export function mapDbOrderToCafeOrder(
     loyaltyPointsEarned: order.loyalty_points_earned as number,
     createdAt: order.created_at as string,
     notes: order.notes as string | undefined,
-  };
-}
-
-export function mapDbReservationToCafeReservation(row: Record<string, unknown>): CafeReservation {
-  return {
-    id: row.id as string,
-    customerId: row.customer_id as string | undefined,
-    customerName: row.customer_name as string,
-    phone: row.phone as string,
-    type: row.event_type as CafeReservation["type"],
-    serviceId: row.reservation_service_id as string | undefined,
-    serviceName: row.reservation_service_name as string | undefined,
-    reservationPrice: row.reservation_price === null || row.reservation_price === undefined ? undefined : Number(row.reservation_price),
-    guests: row.guests as number,
-    date: row.reservation_date as string,
-    time: row.reservation_time as string,
-    durationMinutes: row.duration_minutes as number | undefined,
-    branchName: row.branch_name as string | undefined,
-    spaceType: row.space_type as string | undefined,
-    eventTitle: row.event_title as string | undefined,
-    needsDecoration: row.needs_decoration as boolean | undefined,
-    needsCatering: row.needs_catering as boolean | undefined,
-    budgetEstimate: row.budget_estimate as number | undefined,
-    notes: row.notes as string | undefined,
-    status: mapReservationStatusFromDb(row.status as string),
-    reservationCode: row.reservation_code as string | undefined,
-    reservationCodeUsedAt: row.reservation_code_used_at as string | undefined,
-    cashierConfirmedAt: row.cashier_confirmed_at as string | undefined,
-    rejectionReason: row.rejection_reason as string | undefined,
-    cafeMessage: row.cafe_message as string | undefined,
-    createdAt: row.created_at as string,
   };
 }

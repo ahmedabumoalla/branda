@@ -13,22 +13,9 @@ import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 
-type TabKey = "orders" | "reservations" | "transactions" | "invoices";
+type TabKey = "orders" | "transactions" | "invoices";
 type AccountView = "main" | "security" | "profile" | "orders" | "notifications";
 
-type Reservation = {
-  id: string;
-  type: string;
-  date: string;
-  time: string;
-  guests: number;
-  status: string;
-  reservationCode?: string;
-  reservationCodeUsedAt?: string;
-  cashierConfirmedAt?: string;
-  notes?: string;
-  createdAt: string;
-};
 
 type Activity = {
   id: string;
@@ -53,7 +40,6 @@ export type ThemedAccountPanelProps = {
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   myOrders: CustomerOrder[];
-  myReservations: Reservation[];
   myTransactions: CustomerTransaction[];
   myInvoices: CustomerInvoice[];
   loyaltyBalance: number;
@@ -172,7 +158,7 @@ function MenuRow({
   href?: string;
   onClick?: () => void;
   danger?: boolean;
-  section?: "orders" | "reservations" | "loyalty" | "experience_rewards";
+  section?: "orders" | "loyalty" | "experience_rewards";
 }) {
   const content = (
     <>
@@ -240,11 +226,6 @@ function summarizeLatestOrder(orders: CustomerOrder[], isEvents = false) {
     : `${orders.length} طلب - آخر طلب ${formatSar(latest.total)}`;
 }
 
-function summarizeLatestReservation(reservations: Reservation[]) {
-  const latest = reservations[0];
-  if (!latest) return "لا توجد حجوزات مسجلة حتى الآن";
-  return `${reservations.length} حجز - آخر حجز ${latest.date}`;
-}
 
 function summarizeRewards(loyaltyBalance: number, transactions: CustomerTransaction[], pointsEnabled = true) {
   if (!pointsEnabled) return "سجل المكافآت والولاء";
@@ -256,13 +237,11 @@ function summarizeRewards(loyaltyBalance: number, transactions: CustomerTransact
 
 function makeNotifications({
   orders,
-  reservations,
   loyaltyView,
   experienceRewards,
   businessCategory,
 }: {
   orders: CustomerOrder[];
-  reservations: Reservation[];
   loyaltyView?: CustomerLoyaltyCardView | null;
   experienceRewards: CustomerExperienceReward[];
   businessCategory?: string;
@@ -278,13 +257,6 @@ function makeNotifications({
     });
   });
 
-  reservations.filter((reservation) => isAcceptedStatus(reservation.status)).forEach((reservation) => {
-    notifications.push({
-      id: `reservation-${reservation.id}`,
-      title: "تمت الموافقة على حجز",
-      body: `${reservation.type || "حجز"} - ${reservation.date || "-"} ${reservation.time || ""}`.trim(),
-    });
-  });
 
   experienceRewards
     .filter((reward) => reward.status === "approved" && reward.rewardCode)
@@ -363,7 +335,6 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
   const isEvents = copy.kind === "events";
 
   const rewardsHref = `/c/${encodeURIComponent(props.slug)}/rewards`;
-  const reserveHref = `/c/${encodeURIComponent(props.slug)}/reserve`;
   const phoneText = customer.phone?.trim() ? customer.phone : "لم يتم إضافة رقم الجوال";
 
   const notifications = useMemo(
@@ -371,12 +342,11 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
       props.notifications ??
       makeNotifications({
         orders: props.myOrders,
-        reservations: props.myReservations,
         loyaltyView: props.loyaltyView,
         experienceRewards: props.experienceRewards ?? [],
         businessCategory: props.businessCategory ?? undefined,
       }),
-    [props.businessCategory, props.experienceRewards, props.loyaltyView, props.myOrders, props.myReservations, props.notifications],
+    [props.businessCategory, props.experienceRewards, props.loyaltyView, props.myOrders, props.notifications],
   );
   const unreadNotificationCount = props.unreadNotificationCount ?? notifications.length;
 
@@ -396,15 +366,8 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
         onClick: () => setView("orders"),
         section: "orders" as const,
       },
-      {
-        icon: CalendarDays,
-        title: isEvents ? "تذاكري" : "الحجوزات",
-        subtitle: isEvents ? "تذاكر الدخول الخاصة بك" : summarizeLatestReservation(props.myReservations),
-        ...(isEvents ? { onClick: () => setView("orders") } : { href: reserveHref }),
-        section: "reservations" as const,
-      },
     ],
-    [isEvents, props.loyaltyBalance, props.myOrders, props.myReservations, props.myTransactions, props.pointsEnabled, reserveHref, rewardsHref],
+    [isEvents, props.loyaltyBalance, props.myOrders, props.myTransactions, props.pointsEnabled, rewardsHref],
   );
 
   function openProfile() {

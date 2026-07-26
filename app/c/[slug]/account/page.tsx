@@ -8,9 +8,7 @@ import {
   fetchCustomerAccountFeaturesAction,
   fetchCustomerExperienceRewardsSectionAction,
   fetchCustomerLoyaltySectionAction,
-  fetchCustomerOrdersSectionAction,
-  fetchCustomerReservationsSectionAction,
-} from "@/app/actions/customer-account";
+  fetchCustomerOrdersSectionAction,} from "@/app/actions/customer-account";
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import {
   CustomerBottomDock,
@@ -59,24 +57,8 @@ import {
 } from "lucide-react";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 
-type Reservation = {
-  id: string;
-  customerName: string;
-  phone: string;
-  customerId?: string;
-  type: string;
-  guests: number;
-  date: string;
-  time: string;
-  status: string;
-  reservationCode?: string;
-  reservationCodeUsedAt?: string;
-  cashierConfirmedAt?: string;
-  notes?: string;
-  createdAt: string;
-};
 
-type TabKey = "orders" | "reservations" | "transactions" | "invoices";
+type TabKey = "orders" | "transactions" | "invoices";
 
 type AccountNotification = {
   id: string;
@@ -233,13 +215,11 @@ function isAcceptedAccountStatus(status?: string) {
 
 function buildAccountNotifications({
   orders,
-  reservations,
   loyaltyView,
   experienceRewards,
   businessCategory,
 }: {
   orders: CustomerOrder[];
-  reservations: Reservation[];
   loyaltyView: CustomerLoyaltyCardView | null;
   experienceRewards: CustomerExperienceReward[];
   businessCategory?: string;
@@ -259,17 +239,6 @@ function buildAccountNotifications({
     });
   });
 
-  reservations.filter((reservation) => isAcceptedAccountStatus(reservation.status)).forEach((reservation) => {
-    const statusMarker =
-      (reservation as Reservation & { statusUpdatedAt?: string; updatedAt?: string }).statusUpdatedAt ??
-      (reservation as Reservation & { updatedAt?: string }).updatedAt ??
-      reservation.status;
-    notifications.push({
-      id: `reservation:${reservation.id}:${statusMarker}`,
-      title: "تمت الموافقة على حجز",
-      body: `${reservation.type || "حجز"} - ${reservation.date || "-"} ${reservation.time || ""}`.trim(),
-    });
-  });
 
   experienceRewards
     .filter((reward) => reward.status === "approved" && reward.rewardCode)
@@ -920,7 +889,6 @@ function AccountPageInner() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
   const [transactions, setTransactions] = useState<CustomerTransaction[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
   const [accountFeatures, setAccountFeatures] = useState<string[]>([]);
 
@@ -1068,14 +1036,6 @@ function AccountPageInner() {
             notes: o.notes,
           })),
         );
-      } else if (section === "reservations") {
-        const result = await fetchCustomerReservationsSectionAction(slug);
-        if (cancelled) return;
-        if (!result.success) {
-          setOptionalFailedSections((items) => [...new Set([...items, section])]);
-          return;
-        }
-        setReservations(result.data as Reservation[]);
       } else if (section === "loyalty") {
         setLoyaltyLoading(true);
         const result = await fetchCustomerLoyaltySectionAction(slug);
@@ -1133,15 +1093,6 @@ function AccountPageInner() {
     [transactions, customer],
   );
 
-  const myReservations = useMemo(
-    () =>
-      reservations.filter(
-        (reservation) =>
-          reservation.customerId === customer?.id ||
-          reservation.phone === customer?.phone,
-      ),
-    [reservations, customer],
-  );
 
   const loyaltyBalance = useMemo(
     () => (loyaltyPoints.enabled ? loyaltyPoints.balance : 0),
@@ -1154,83 +1105,28 @@ function AccountPageInner() {
   );
 
   const latestActivity = useMemo(() => {
-    const isEvents = getBusinessCopy(settings.businessCategory).kind === "events";
     const orderActivities = myOrders.map((order) => ({
       id: order.id,
-      title: `${isEvents ? "تذكرة" : "طلب"}: ${order.items.join("، ")}`,
-      desc: `${order.status} • ${formatSar(order.total)}`,
+      title: `طلب: ${order.items.join("، ")}`,
+      desc: `${order.status} ? ${formatSar(order.total)}`,
       date: order.createdAt,
-      type: isEvents ? "تذكرة" : "طلب",
+      type: "طلب",
     }));
-
-    const reservationActivities = myReservations.map((reservation) => ({
-      id: reservation.id,
-      title: `حجز ${reservation.type}`,
-      desc: `${reservation.status} • ${reservation.date} • ${reservation.time}`,
-      date: reservation.createdAt,
-      type: "حجز",
-    }));
-
     const transactionActivities = myTransactions.map((transaction) => ({
-      id: transaction.id,
-      title: transaction.title,
-      desc: transaction.description,
-      date: transaction.createdAt,
-      type: transaction.type,
+      id: transaction.id, title: transaction.title, desc: transaction.description, date: transaction.createdAt, type: transaction.type,
     }));
-
-    return [
-      ...orderActivities,
-      ...reservationActivities,
-      ...transactionActivities,
-    ]
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 4);
-  }, [myOrders, myReservations, myTransactions]);
+    return [...orderActivities, ...transactionActivities].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
+  }, [myOrders, myTransactions]);
 
   const loyaltyEnabled = publicFeatureAllows(accountFeatures, "loyalty_card");
   const experienceRewardsEnabled = publicFeatureAllows(accountFeatures, "experience_reviews");
-  const productsEnabled = publicFeatureAllows(accountFeatures, "menu");
-  const reservationsEnabled = publicFeatureAllows(accountFeatures, "reservations");
-  const gamesEnabled = publicFeatureAllows(accountFeatures, "in_store_table_wars");
-  const notificationStorageKey = customer
-    ? `barndaksa_read_notifications_${slug}_${customer.id}`
-    : "";
-  const accountNotifications = useMemo(
-    () =>
-      buildAccountNotifications({
-        orders: myOrders,
-        reservations: myReservations,
-        loyaltyView,
-        experienceRewards,
-        businessCategory: settings.businessCategory,
-      }),
-    [experienceRewards, loyaltyView, myOrders, myReservations, settings.businessCategory],
-  );
-  const unreadNotificationCount = useMemo(
-    () => accountNotifications.filter((item) => !readNotificationIds.has(item.id)).length,
-    [accountNotifications, readNotificationIds],
-  );
+  const notificationStorageKey = customer ? `barndaksa_read_notifications_${slug}_${customer.id}` : "";
+  const accountNotifications = useMemo(() => buildAccountNotifications({ orders: myOrders, loyaltyView, experienceRewards, businessCategory: settings.businessCategory }), [experienceRewards, loyaltyView, myOrders, settings.businessCategory]);
+  const unreadNotificationCount = useMemo(() => accountNotifications.filter((item) => !readNotificationIds.has(item.id)).length, [accountNotifications, readNotificationIds]);
   const dockProps = useMemo(() => {
-    const dock = defaultCustomerDockItems({
-      slug,
-      previewThemeId,
-      active: "account",
-      hasProducts: productsEnabled,
-      hasOrders: reservationsEnabled,
-      hasGames: gamesEnabled,
-      hasRewards: loyaltyEnabled,
-      isCustomer: true,
-      businessCategory: settings.businessCategory,
-    });
-
-    return {
-      ...dock,
-      items: dock.items.map((item) =>
-        item.key === "account" ? { ...item, badge: unreadNotificationCount } : item,
-      ),
-    };
-  }, [gamesEnabled, loyaltyEnabled, previewThemeId, productsEnabled, reservationsEnabled, settings.businessCategory, slug, unreadNotificationCount]);
+    const dock = defaultCustomerDockItems({ slug, previewThemeId, active: "account", isCustomer: true, accountBadge: unreadNotificationCount, businessCategory: settings.businessCategory });
+    return { ...dock, items: dock.items.map((item) => item.key === "account" ? { ...item, badge: unreadNotificationCount } : item) };
+  }, [previewThemeId, settings.businessCategory, slug, unreadNotificationCount]);
 
   useEffect(() => {
     if (!notificationStorageKey) {
@@ -1564,7 +1460,6 @@ function AccountPageInner() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         myOrders={myOrders}
-        myReservations={myReservations}
         myTransactions={myTransactions}
         myInvoices={myInvoices}
         loyaltyBalance={loyaltyBalance}

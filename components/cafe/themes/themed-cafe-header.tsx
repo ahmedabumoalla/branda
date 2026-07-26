@@ -70,11 +70,6 @@ export function ThemedCafeHeader({
               المنيو
             </Link>
           ) : null}
-          {has("reservations") ? (
-            <Link href={getCafePath(slug, "reserve", previewThemeId)} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
-              الحجز
-            </Link>
-          ) : null}
           {has("loyalty") ? (
             <Link href={account} className="rounded-2xl px-4 py-2 text-sm font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] transition hover:bg-[var(--ci-surface-bg,#fff)]">
               الولاء

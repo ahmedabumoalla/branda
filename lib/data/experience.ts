@@ -32,7 +32,6 @@ function mapDbCampaign(slug: string, row: Record<string, unknown>): ExperienceCa
         : [],
     rewardType: (row.reward_type as ExperienceCampaign["rewardType"]) ?? "product",
     rewardProductId: row.reward_product_id as string | undefined,
-    rewardReservationServiceId: row.reward_reservation_service_id as string | undefined,
     rewardDiscountPercent:
       row.reward_discount_percent === null || row.reward_discount_percent === undefined
         ? undefined
@@ -133,9 +132,8 @@ const campaignSchema = z.object({
   requiresManualApproval: z.boolean(),
   requirements: z.record(z.string(), z.unknown()).optional(),
   excludedContentRules: z.array(z.string()).optional(),
-  rewardType: z.enum(["free_order", "product", "reservation", "discount"]).optional(),
+  rewardType: z.enum(["free_order", "product", "discount"]).optional(),
   rewardProductId: z.string().uuid().optional().nullable(),
-  rewardReservationServiceId: z.string().uuid().optional().nullable(),
   rewardDiscountPercent: z.number().optional().nullable(),
   cardStoragePath: z.string().optional().nullable(),
   cardGenerationStatus: z.enum(["idle", "generating", "ready", "failed"]).optional(),
@@ -168,7 +166,6 @@ export async function upsertExperienceCampaign(input: z.infer<typeof campaignSch
     excluded_content_rules: { items: parsed.excludedContentRules ?? [] },
     reward_type: parsed.rewardType ?? "product",
     reward_product_id: parsed.rewardProductId ?? null,
-    reward_reservation_service_id: parsed.rewardReservationServiceId ?? null,
     reward_discount_percent: parsed.rewardDiscountPercent ?? null,
     card_storage_path: parsed.cardStoragePath ?? null,
     card_generation_status: parsed.cardGenerationStatus ?? "idle",

@@ -203,7 +203,6 @@ const planSchema = z.object({
   categoryId: z.string().trim().max(80).optional(),
   maxOrdersMonthly: z.number().int().nonnegative().nullable().optional(),
   maxProductsMonthly: z.number().int().nonnegative().nullable().optional(),
-  maxReservationsMonthly: z.number().int().nonnegative().nullable().optional(),
   maxBranches: z.number().int().nonnegative().nullable().optional(),
   trialDays: z.number().int().nonnegative().max(365).nullable().optional(),
   freeAfterTrial: z.boolean().optional(),
@@ -235,7 +234,6 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
     categoryId: normalizePlanCategoryId(row.category_id),
     maxOrdersMonthly: row.max_orders_monthly == null ? null : Number(row.max_orders_monthly),
     maxProductsMonthly: row.max_products_monthly == null ? null : Number(row.max_products_monthly),
-    maxReservationsMonthly: row.max_reservations_monthly == null ? null : Number(row.max_reservations_monthly),
     maxBranches: row.max_branches == null ? null : Number(row.max_branches),
     trialDays: row.trial_days == null ? null : Number(row.trial_days),
     freeAfterTrial: Boolean(row.free_after_trial),
@@ -340,7 +338,6 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
       p_category_id: plan.categoryId ?? null,
       p_max_orders_monthly: plan.maxOrdersMonthly ?? null,
       p_max_products_monthly: plan.maxProductsMonthly ?? null,
-      p_max_reservations_monthly: plan.maxReservationsMonthly ?? null,
       p_max_branches: plan.maxBranches ?? null,
       p_trial_days: plan.trialDays ?? null,
       p_free_after_trial: plan.freeAfterTrial ?? false,
@@ -371,7 +368,6 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
           category_id: plan.categoryId ?? null,
           max_orders_monthly: plan.maxOrdersMonthly ?? null,
           max_products_monthly: plan.maxProductsMonthly ?? null,
-          max_reservations_monthly: plan.maxReservationsMonthly ?? null,
           max_branches: plan.maxBranches ?? null,
           trial_days: plan.trialDays ?? null,
           free_after_trial: plan.freeAfterTrial ?? false,
@@ -511,8 +507,6 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         branchesCount,
         customersCount,
         ordersCount,
-        reservationsCount,
-        reviewsCount,
         experienceSubmissionsCount,
         experienceRewardsCount,
         loyaltyCardsCount,
@@ -524,8 +518,6 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         safeCount(supabase, "branches", cafeId, (q) => q.is("deleted_at", null)),
         safeCount(supabase, "customer_profiles", cafeId),
         safeCount(supabase, "orders", cafeId),
-        safeCount(supabase, "reservations", cafeId),
-        safeCount(supabase, "reviews", cafeId),
         safeCount(supabase, "experience_reward_submissions", cafeId),
         safeCount(supabase, "experience_reward_submissions", cafeId, (q) =>
           q.in("status", ["approved", "redeemed"])
@@ -568,8 +560,6 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         productsCount,
         offersCount,
         branchesCount,
-        reservationsCount,
-        reviewsCount,
         experienceSubmissionsCount,
         experienceRewardsCount,
         loyaltyCardsCount,
@@ -622,18 +612,15 @@ export async function getAdminCustomers(): Promise<PlatformCustomer[]> {
 export async function getAdminOperations(): Promise<PlatformOperation[]> {
   await requirePlatformAdmin();
   const supabase = await createClient();
-  const [{ data: orders }, { data: reservations }] = await Promise.all([
-    supabase.from("orders").select("id, total, status, customer_name, created_at, cafes(name, id)").order("created_at", { ascending: false }).limit(50),
-    supabase.from("reservations").select("id, event_type, status, customer_name, created_at, cafes(name, id)").order("created_at", { ascending: false }).limit(50),
-  ]);
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, total, status, customer_name, created_at, cafes(name, id)")
+    .order("created_at", { ascending: false })
+    .limit(50);
   const operations: PlatformOperation[] = [];
   for (const row of orders ?? []) {
     const cafe = row.cafes as unknown as { name: string; id: string };
     operations.push({ id: String(row.id), cafeId: cafe.id, cafeName: cafe.name, customerName: String(row.customer_name), type: "طلب", title: `طلب ${row.id}`, amount: Number(row.total), status: String(row.status), createdAt: String(row.created_at).slice(0, 10) });
-  }
-  for (const row of reservations ?? []) {
-    const cafe = row.cafes as unknown as { name: string; id: string };
-    operations.push({ id: String(row.id), cafeId: cafe.id, cafeName: cafe.name, customerName: String(row.customer_name), type: "حجز", title: `حجز ${row.event_type}`, status: String(row.status), createdAt: String(row.created_at).slice(0, 10) });
   }
   return operations.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

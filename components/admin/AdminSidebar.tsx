@@ -30,11 +30,8 @@ const links = [
   ["الرئيسية", "/admin", Home],
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
-  ["المالية", "/admin/finance", CircleDollarSign],
-  ["الإيرادات", "/admin/revenue", CircleDollarSign],
   ["العمليات", "/admin/operations", ClipboardList],
   ["مركز العمليات", "/admin/operations-center", ClipboardCheck],
-  ["مراقبة الحجوزات", "/admin/reservations", CalendarDays],
   ["الباقات", "/admin/plans", Layers3],
   ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
   ["المحتوى ورسائل التواصل", "/admin/content", Megaphone],
@@ -149,18 +146,6 @@ export function AdminSidebar({
       </nav>
 
       <div className={`space-y-2 border-t border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-4"}`}>
-        <Link
-          href="/admin/revenue"
-          onClick={onNavigate}
-          title={collapsed ? "تقارير الإيرادات" : undefined}
-          aria-label={collapsed ? "تقارير الإيرادات" : undefined}
-          className={`flex h-10 items-center rounded-xl border border-white/10 bg-white/5 text-xs font-black text-[#CBB29C] transition hover:border-[#F6C35B]/30 ${
-            collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
-          }`}
-        >
-          <BarChart3 className="h-4 w-4 text-[#F6C35B]" />
-          {!collapsed ? <span>تقارير الإيرادات</span> : null}
-        </Link>
         <button
           type="button"
           onClick={handleLogout}

@@ -8,7 +8,6 @@ export type GrowthMetricKey =
   | "totalOrders"
   | "acceptedOrders"
   | "rejectedOrders"
-  | "reservations"
   | "loyaltyOperations"
   | "rewardRedemptions"
   | "visits"
@@ -22,7 +21,7 @@ export type GrowthMetric = {
 };
 
 export type GrowthComparison = {
-  key: "orders" | "reservations" | "visits";
+  key: "orders" | "visits";
   label: string;
   current: number;
   previous: number;
@@ -64,7 +63,6 @@ export type GrowthDashboardData =
       recommendations: GrowthRecommendation[];
       recent: {
         orders: GrowthRecentItem[];
-        reservations: GrowthRecentItem[];
         loyalty: GrowthRecentItem[];
         rewards: GrowthRecentItem[];
       };
@@ -258,15 +256,12 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
     acceptedOrders,
     rejectedOrders,
     previousOrders,
-    reservations,
-    previousReservations,
     loyaltyOperations,
     rewardRedemptions,
     visits,
     previousVisits,
     cashierActivity,
     recentOrders,
-    recentReservations,
     recentLoyalty,
     recentRewards,
   ] = await Promise.all([
@@ -306,26 +301,6 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
       "orders",
       supabase
         .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("cafe_id", cafe.id)
-        .is("deleted_at", null)
-        .gte("created_at", previousStart)
-        .lt("created_at", previousEnd),
-    ),
-    safeCount(
-      "reservations",
-      supabase
-        .from("reservations")
-        .select("id", { count: "exact", head: true })
-        .eq("cafe_id", cafe.id)
-        .is("deleted_at", null)
-        .gte("created_at", currentStart)
-        .lt("created_at", currentEnd),
-    ),
-    safeCount(
-      "reservations",
-      supabase
-        .from("reservations")
         .select("id", { count: "exact", head: true })
         .eq("cafe_id", cafe.id)
         .is("deleted_at", null)
@@ -397,25 +372,6 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
       }),
     ),
     safeRows(
-      "reservations",
-      supabase
-        .from("reservations")
-        .select("id,status,event_type,customer_name,reservation_date,reservation_time,created_at")
-        .eq("cafe_id", cafe.id)
-        .is("deleted_at", null)
-        .gte("created_at", currentStart)
-        .lt("created_at", currentEnd)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      (row): GrowthRecentItem => ({
-        id: text(row.id),
-        title: text(row.customer_name, "حجز بدون اسم"),
-        subtitle: text(row.event_type, "حجز"),
-        meta: [text(row.reservation_date), text(row.reservation_time)].filter(Boolean).join(" ") || text(row.status, "-"),
-        createdAt: formatDate(text(row.created_at)),
-      }),
-    ),
-    safeRows(
       "loyalty_card_events",
       supabase
         .from("loyalty_card_events")
@@ -469,15 +425,12 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
         acceptedOrders,
         rejectedOrders,
         previousOrders,
-        reservations,
-        previousReservations,
         loyaltyOperations,
         rewardRedemptions,
         visits,
         previousVisits,
         cashierActivity,
         recentOrders,
-        recentReservations,
         recentLoyalty,
         recentRewards,
       ]
@@ -517,12 +470,6 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
         hint: "طلبات تم رفضها",
       },
       {
-        key: "reservations",
-        label: "الحجوزات",
-        value: reservations.value,
-        hint: "ضمن الفترة المحددة",
-      },
-      {
         key: "loyaltyOperations",
         label: "عمليات الولاء",
         value: loyaltyOperations.value,
@@ -556,13 +503,6 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
         message: comparisonMessage(totalOrders.value, previousOrders.value),
       },
       {
-        key: "reservations",
-        label: "الحجوزات مقارنة بالفترة السابقة",
-        current: reservations.value,
-        previous: previousReservations.value,
-        message: comparisonMessage(reservations.value, previousReservations.value),
-      },
-      {
         key: "visits",
         label: "الزيارات مقارنة بالفترة السابقة",
         current: visits.value,
@@ -579,7 +519,6 @@ export async function getOwnerGrowthDashboard(period: GrowthPeriod): Promise<Gro
     }),
     recent: {
       orders: recentOrders.rows,
-      reservations: recentReservations.rows,
       loyalty: recentLoyalty.rows,
       rewards: recentRewards.rows,
     },

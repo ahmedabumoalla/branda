@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   Activity,
-  CalendarDays,
   Gift,
   LockKeyhole,
   Receipt,
@@ -26,7 +25,6 @@ const metricIcons: Record<GrowthMetricKey, typeof Receipt> = {
   totalOrders: Receipt,
   acceptedOrders: Receipt,
   rejectedOrders: Receipt,
-  reservations: CalendarDays,
   loyaltyOperations: Gift,
   rewardRedemptions: Gift,
   visits: Activity,
@@ -225,7 +223,6 @@ export function GrowthPage({ data, period, configError }: Props) {
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <RecentList title="أحدث الطلبات" items={data.recent.orders} />
-        <RecentList title="أحدث الحجوزات" items={data.recent.reservations} />
         <RecentList title="أحدث عمليات الولاء" items={data.recent.loyalty} />
         <RecentList title="أحدث المكافآت المصروفة" items={data.recent.rewards} />
       </div>

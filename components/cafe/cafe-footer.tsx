@@ -25,9 +25,6 @@ export function CafeFooter({ slug, cafeName, themeId = "soft-cream-3d" }: Props)
           <Link href={`/c/${slug}/products/popular`} className={`transition hover:opacity-80 ${theme.link}`}>
             المنيو
           </Link>
-          <Link href={`/c/${slug}/reserve`} className={`transition hover:opacity-80 ${theme.link}`}>
-            الحجز
-          </Link>
           <Link href={`/c/${slug}/products/branches`} className={`transition hover:opacity-80 ${theme.link}`}>
             الفروع
           </Link>

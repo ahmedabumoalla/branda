@@ -144,7 +144,6 @@ function getAuditActionLabel(action: string) {
     admin_update_domain_orders: "تعديل طلب نطاق",
     admin_delete_domain_orders: "حذف طلب نطاق",
     respond_to_pickup_order: "تحديث حالة طلب",
-    respond_to_reservation: "تحديث حالة حجز",
     create_domain_order: "إنشاء طلب نطاق",
     cancel_domain_order: "إلغاء طلب نطاق",
     approve_experience_submission: "اعتماد مشاركة تجربة",
@@ -164,11 +163,9 @@ function getAuditEntityLabel(entityTable: string | null) {
     menu_products: "المنتجات",
     menu_categories: "التصنيفات",
     domain_orders: "النطاقات",
-    reservations: "الحجوزات",
     orders: "الطلبات",
     experience_submissions: "مشاركات التجربة",
     loyalty_accounts: "الولاء",
-    marketing_campaigns: "الحملات",
     experience_campaigns: "حملات التجربة",
   };
 

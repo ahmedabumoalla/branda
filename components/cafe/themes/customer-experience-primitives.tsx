@@ -12,125 +12,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
-  UserRound,
-  WalletCards,
 } from "lucide-react";
-
-export type QuickDockItem = {
-  href: string;
-  label: string;
-  icon: ElementType;
-  active?: boolean;
-  enabled?: boolean;
-};
-
-export function CustomerQuickDock({
-  items,
-  className = "",
-}: {
-  items: QuickDockItem[];
-  className?: string;
-}) {
-  const visibleItems = items.filter((item) => item.enabled !== false);
-
-  if (!visibleItems.length) return null;
-
-  return (
-    <nav
-      aria-label="تنقل سريع"
-      className={`fixed inset-x-0 bottom-0 z-50 md:hidden ${className}`}
-    >
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
-        {visibleItems.slice(0, 5).map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={`${item.label}-${item.href}`}
-              href={item.href}
-              aria-current={item.active ? "page" : undefined}
-              className={`flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black transition active:scale-95 ${
-                item.active
-                  ? "bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]"
-                  : "text-[#4E4B56]"
-              }`}
-            >
-              <Icon className="h-6 w-6" />
-              <span className="max-w-full truncate">{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
-
-export function buildCustomerQuickDockItems({
-  slug,
-  accountHref,
-  loginHref,
-  homeHref,
-  productsHref,
-  reserveHref,
-  loyaltyHref,
-  isCustomer,
-  hasProducts = true,
-  hasReservations = true,
-  hasLoyalty = true,
-  active,
-}: {
-  slug: string;
-  accountHref?: string;
-  loginHref?: string;
-  homeHref?: string;
-  productsHref?: string;
-  reserveHref?: string;
-  loyaltyHref?: string;
-  isCustomer?: boolean;
-  hasProducts?: boolean;
-  hasReservations?: boolean;
-  hasLoyalty?: boolean;
-  active?: "home" | "products" | "reserve" | "loyalty" | "account";
-}): QuickDockItem[] {
-  const encodedSlug = encodeURIComponent(slug);
-  const resolvedAccountHref =
-    accountHref ?? `/c/${encodedSlug}/${isCustomer ? "account" : "login"}`;
-
-  return [
-    {
-      href: homeHref ?? `/c/${encodedSlug}`,
-      label: "الرئيسية",
-      icon: Home,
-      active: active === "home",
-    },
-    {
-      href: productsHref ?? `/c/${encodedSlug}/products/popular`,
-      label: "المنتجات",
-      icon: ShoppingBag,
-      active: active === "products",
-      enabled: hasProducts,
-    },
-    {
-      href: reserveHref ?? `/c/${encodedSlug}/reserve`,
-      label: "الحجوزات",
-      icon: CalendarDays,
-      active: active === "reserve",
-      enabled: hasReservations,
-    },
-    {
-      href: loyaltyHref ?? resolvedAccountHref,
-      label: "المكافآت",
-      icon: WalletCards,
-      active: active === "loyalty",
-      enabled: hasLoyalty,
-    },
-    {
-      href: isCustomer ? resolvedAccountHref : loginHref ?? `/c/${encodedSlug}/login`,
-      label: "الحساب",
-      icon: UserRound,
-      active: active === "account",
-    },
-  ];
-}
 
 export function PremiumSectionHeader({
   eyebrow,
@@ -245,7 +127,7 @@ export function SocialProofPanel({
       icon: ShieldCheck,
       title: branchCount ? `${branchCount} فرع` : "تجربة موثقة",
       desc: branchCount
-        ? "الفروع وروابط الخريطة والحجوزات ضمن مسار واحد."
+        ? "الفروع وروابط الخريطة ضمن مسار واحد."
         : "مساحة جاهزة لعرض آراء العملاء وتوثيق التجارب.",
     },
   ];

@@ -5,7 +5,6 @@ import { getPublicOffersBySlug } from "@/lib/data/offers";
 import { getPublicExperienceCampaigns } from "@/lib/data/experience";
 import { getPublicBranchesBySlug } from "@/lib/data/branches";
 import { getPublicCafeSettings } from "@/lib/data/settings";
-import { getPublicReservationServicesBySlug } from "@/lib/data/platform-upgrade";
 import { publicCacheHeader, PUBLIC_MENU_CACHE_SECONDS } from "@/lib/performance/server-cache";
 import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
@@ -48,15 +47,6 @@ async function safeBranches(slug: string) {
   }
 }
 
-async function safeReservationServices(slug: string) {
-  try {
-    return await getPublicReservationServicesBySlug(slug);
-  } catch (error) {
-    console.warn("[public/menu/reservations-fallback]", error);
-    return [];
-  }
-}
-
 async function safeExperienceCampaigns(slug: string) {
   try {
     return await getPublicExperienceCampaigns(slug);
@@ -70,11 +60,10 @@ async function loadPublicMenu(slug: string) {
   const settings = await getPublicCafeSettings(slug);
   if (!settings) return null;
 
-  const [menu, offers, branches, reservationServices, experienceCampaigns] = await Promise.all([
+  const [menu, offers, branches, experienceCampaigns] = await Promise.all([
     safeMenu(slug),
     safeOffers(slug),
     safeBranches(slug),
-    safeReservationServices(slug),
     safeExperienceCampaigns(slug),
   ]);
 
@@ -85,7 +74,6 @@ async function loadPublicMenu(slug: string) {
     loyaltySettings: emptyLoyaltySettings,
     loyaltyRewards: [],
     pages: [],
-    reservationServices,
     experienceCampaigns,
   };
 }

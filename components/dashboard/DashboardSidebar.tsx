@@ -55,16 +55,11 @@ const featureIcons: Partial<Record<PlatformFeature, ElementType>> = {
   menu: Package,
   offers: Gift,
   pages: FileText,
-  reservations: CalendarDays,
   customers: Users,
   loyalty: Star,
   branches: MapPin,
   reports: BarChart3,
-  reviews: MessageSquareText,
-  marketing: Megaphone,
-  experience_reviews: BadgeCheck,
   cashier: DoorOpen,
-  branda_finance: Landmark,
   orders: ShoppingBag,
   settings: Settings,
   theme: Palette,
@@ -72,7 +67,6 @@ const featureIcons: Partial<Record<PlatformFeature, ElementType>> = {
   subscription: CreditCard,
   growth_os: Sparkles,
   customer_segments: Users,
-  whatsapp_campaigns: MessageSquareText,
   advanced_coupons: Gift,
   gift_cards_wallet: CreditCard,
   coffee_subscriptions: Coffee,
@@ -115,7 +109,6 @@ export function DashboardSidebar({
   const [planName, setPlanName] = useState("Starter");
   const [cafeSettings, setCafeSettings] = useState<CafeSettings>(initialCafeSettings);
   const [shareMessage, setShareMessage] = useState("");
-  const [pendingReservations, setPendingReservations] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [pendingExperienceReviews, setPendingExperienceReviews] = useState(0);
   const [initialNotifications, setInitialNotifications] = useState<AppNotification[]>([]);
@@ -144,7 +137,6 @@ export function DashboardSidebar({
 
         const plan = snapshot.plans.find((item) => item.id === snapshot.planId);
         setPlanName(plan?.name ?? snapshot.planId);
-        setPendingReservations(snapshot.pendingReservations);
         setPendingOrders(snapshot.pendingOrders);
         setPendingExperienceReviews(snapshot.pendingExperienceReviews);
       } catch (error) {
@@ -185,7 +177,6 @@ export function DashboardSidebar({
   }
 
   function getLinkCounter(href: string) {
-    if (href === "/dashboard/reservations") return pendingReservations;
     if (href === "/dashboard/orders") return pendingOrders;
     if (href === "/dashboard/experience-reviews") return pendingExperienceReviews;
     return 0;
@@ -208,12 +199,10 @@ export function DashboardSidebar({
   const linkTitle = (item: (typeof visibleLinks)[number]) => {
     if (item.href === "/dashboard/menu" && copy.kind === "events") return "التذاكر والباقات";
     if (item.href === "/dashboard/orders" && copy.kind === "events") return "طلبات التذاكر";
-    if (item.href === "/dashboard/reservations" && copy.kind === "events") return "حجوزات الحضور";
     if (item.href === "/dashboard/loyalty" && copy.kind === "events") return "ولاء الحضور";
     if (item.href === "/dashboard/experience-reviews" && copy.kind === "events") return "مكافآت التوثيق";
     if (item.href === "/dashboard/cashier" && copy.kind === "events") return "بوابة الدخول";
     if (item.href === "/dashboard/cashier") return "الكاشير";
-    if (item.href === "/dashboard/branda-finance") return "برندة المالية";
     if (item.href === "/dashboard/reports" && copy.kind === "events") return "تقارير الفعالية";
     if (item.href === "/dashboard/orders") return `طلبات ${copy.casualNoun}`;
     if (item.href === "/dashboard/settings") return `إعدادات ${copy.casualNoun}`;

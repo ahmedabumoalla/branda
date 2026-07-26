@@ -56,7 +56,6 @@ const operationsMetricLabels: Record<OperationsMetricKey, string> = {
   loyaltyScans: "عمليات الولاء",
   rewardRedemptions: "المكافآت",
   orders: "الطلبات",
-  reservations: "الحجوزات",
 };
 
 function escapeHtml(value: string | number | null | undefined) {
@@ -124,9 +123,6 @@ function brandSummaryTable(brands: AdminOperationsCenterBrand[]) {
         <th>الطلبات</th>
         <th>الطلبات المقبولة</th>
         <th>الطلبات المرفوضة</th>
-        <th>الحجوزات</th>
-        <th>الحجوزات المقبولة</th>
-        <th>الحجوزات المرفوضة</th>
       </tr>
     </thead>
     <tbody>
@@ -145,9 +141,6 @@ function brandSummaryTable(brands: AdminOperationsCenterBrand[]) {
             <td>${metricValue(brand, "orders")}</td>
             <td>${metricAccepted(brand, "orders")}</td>
             <td>${metricRejected(brand, "orders")}</td>
-            <td>${metricValue(brand, "reservations")}</td>
-            <td>${metricAccepted(brand, "reservations")}</td>
-            <td>${metricRejected(brand, "reservations")}</td>
           </tr>`
         )
         .join("")}
@@ -212,14 +205,6 @@ function brandDetailsSections(brand: AdminOperationsCenterBrand) {
       { title: "الحالة", value: (row) => row.status },
       { title: "الإجمالي", value: (row) => row.total },
       { title: "الإجراء", value: (row) => `${row.actorType} - ${row.actorName}` },
-      { title: "التاريخ", value: (row) => row.createdAt },
-    ]),
-    simpleTable("الحجوزات", brand.details.reservations, [
-      { title: "رقم الحجز", value: (row) => row.id.slice(0, 8).toUpperCase() },
-      { title: "العميل", value: (row) => row.customerName },
-      { title: "الحالة", value: (row) => row.status },
-      { title: "الموعد", value: (row) => [row.date, row.time].filter(Boolean).join(" ") },
-      { title: "الضيوف", value: (row) => row.guests },
       { title: "التاريخ", value: (row) => row.createdAt },
     ]),
   ].join("");

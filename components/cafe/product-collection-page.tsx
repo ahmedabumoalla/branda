@@ -143,7 +143,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
     if (!filterOpen || process.env.NODE_ENV !== "development") return;
     console.info("[products-filter] modal open", {
       hasCategories: categories.length > 0,
-      hasProducts: availableProducts.length > 0,
     });
   }, [availableProducts.length, categories.length, filterOpen]);
 
@@ -210,7 +209,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const menuEnabled = publicFeatureAllows(features, "menu");
   const offersEnabled = publicFeatureAllows(features, "offers");
   const branchesEnabled = publicFeatureAllows(features, "branches");
-  const reservationsEnabled = publicFeatureAllows(features, "reservations");
   const rewardsEnabled = publicFeatureAllows(features, "loyalty");
   const gamesEnabled = publicFeatureAllows(features, "in_store_table_wars");
 
@@ -318,11 +316,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           {...defaultCustomerDockItems({
             slug,
             previewThemeId,
-            active: "orders",
-            hasProducts: true,
-            hasOrders: reservationsEnabled,
-            hasGames: gamesEnabled,
-            hasRewards: rewardsEnabled,
+            active: "menu",
             businessCategory: settings.businessCategory,
           })}
         />
@@ -650,10 +644,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
           slug,
           previewThemeId,
           active: "menu",
-          hasProducts: true,
-          hasOrders: reservationsEnabled,
-          hasGames: gamesEnabled,
-          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />
@@ -814,10 +804,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
           slug,
           previewThemeId,
           active: "menu",
-          hasProducts: true,
-          hasOrders: reservationsEnabled,
-          hasGames: gamesEnabled,
-          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />

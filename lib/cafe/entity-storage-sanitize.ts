@@ -1,7 +1,6 @@
 import type { MenuProduct } from "@/lib/mock/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
-import type { MarketingCampaign } from "@/lib/mock/marketing";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { BarndaksaCustomerSession } from "@/lib/customer/session";
 import { isLegacyDataImageUrl } from "@/lib/cafe/image-asset-pipeline";
@@ -50,10 +49,6 @@ export function sanitizeCafeOffer(offer: CafeOffer): CafeOffer {
 
 export function sanitizeCafeOffers(offers: CafeOffer[]): CafeOffer[] {
   return offers.map(sanitizeCafeOffer);
-}
-
-export function sanitizeMarketingCampaign(campaign: MarketingCampaign): MarketingCampaign {
-  return { ...campaign };
 }
 
 export function sanitizeCustomerSession(session: BarndaksaCustomerSession): BarndaksaCustomerSession {

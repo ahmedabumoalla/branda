@@ -10,7 +10,6 @@ import {
 
   getCustomerOrdersForProfile,
 
-  getCustomerReservationsForProfile,
 
   requireCustomerProfileForSession,
 
@@ -24,7 +23,6 @@ import {
 
 } from "@/lib/data/notifications";
 
-import { createReview, getPublicReviewsByProduct } from "@/lib/data/reviews";
 
 import { getPublicExperienceCampaigns } from "@/lib/data/experience";
 
@@ -55,21 +53,6 @@ export async function fetchCustomerOrdersAction(cafeSlug: string) {
 
 
 
-export async function fetchCustomerReservationsAction(cafeSlug: string) {
-
-  let profile: Awaited<ReturnType<typeof requireCustomerProfileForSession>>["profile"];
-  try {
-    ({ profile } = await requireCustomerProfileForSession(cafeSlug));
-  } catch {
-    return [];
-  }
-
-  return getCustomerReservationsForProfile(cafeSlug, profile.id as string);
-
-}
-
-
-
 export async function fetchCustomerNotificationsAction(
 
   cafeSlug: string
@@ -95,36 +78,6 @@ export async function markCustomerNotificationReadAction(
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
 
   await markCustomerNotificationRead(cafeSlug, notificationId);
-
-}
-
-
-
-export async function fetchProductReviewsAction(cafeSlug: string, productId: string) {
-
-  return getPublicReviewsByProduct(cafeSlug, productId);
-
-}
-
-
-
-export async function submitProductReviewAction(input: {
-
-  cafeSlug: string;
-
-  productId: string;
-
-  customerId: string;
-
-  customerName: string;
-
-  rating: number;
-
-  comment: string;
-
-}) {
-
-  return createReview(input);
 
 }
 

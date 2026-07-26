@@ -74,7 +74,7 @@ export type PublicBrandItem = {
   href?: string;
 };
 
-export type PlatformHomePromotionType = "brand" | "product" | "offer" | "reservation";
+export type PlatformHomePromotionType = "brand" | "product" | "offer";
 
 export type PlatformHomePromotionItem = {
   id?: string;
@@ -162,7 +162,7 @@ const contactSettingsSchema = z.object({
   x: z.string().trim().max(200),
 });
 
-const platformHomePromotionTypeSchema = z.enum(["brand", "product", "offer", "reservation"]);
+const platformHomePromotionTypeSchema = z.enum(["brand", "product", "offer"]);
 
 const platformHomePromotionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -184,7 +184,7 @@ export const defaultPlatformHomeSettings: PlatformHomeSettings = {
   heroBadge: "شريكك التقني في تطوير علامتك التجارية",
   heroTitle: "منيو تفاعلي - بطاقات ولاء - تسويق في مكان واحد",
   heroDescription:
-    "بارنداكسا تساعد العلامة التجارية في إدارة المنيو التفاعلي - نظام الحجوزات والطلبات - نظام العروض والخصومات - متابعة العملاء - بطاقات الولاء - وتقديم تقارير فورية وشاملة من لوحة تحكم واحدة",
+    "بارنداكسا تساعد العلامة التجارية في إدارة المنيو التفاعلي والطلبات والعروض والخصومات ومتابعة العملاء وبطاقات الولاء من لوحة تحكم واحدة",
   heroSideText:
     "ابن حضور علامتك الرقمية وقدم تجربة أسهل لعملائك من أول زيارة حتى تكرار الشراء",
   featuresTitle: "كل ما تحتاجه لإدارة علامتك التجارية",
@@ -307,7 +307,6 @@ function publicCafeHref(slug: unknown) {
 function promotionCtaPath(itemType: PlatformHomePromotionType, cafeSlug: string, itemId?: string | null) {
   if (itemType === "product" && itemId) return `/c/${cafeSlug}/product/${itemId}`;
   if (itemType === "offer") return `/c/${cafeSlug}/products/offers`;
-  if (itemType === "reservation") return `/c/${cafeSlug}?tab=reservations`;
   return `/c/${cafeSlug}`;
 }
 
@@ -568,7 +567,7 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
   const cafeLookup = await getCafeLookup(cafes);
   const cafeIds = cafes.map((row) => String(row.id));
 
-  const [productsResult, offersResult, reservationsResult, promotionsResult] = await Promise.all([
+  const [productsResult, offersResult, promotionsResult] = await Promise.all([
     cafeIds.length
       ? admin
           .from("menu_products")
@@ -582,7 +581,7 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
     cafeIds.length
       ? admin
           .from("offers")
-          .select("id, cafe_id, title, description, banner_url, banner_storage_path, discount_percent, status, visible_in_cafe, linked_product_id, reservation_service_id")
+          .select("id, cafe_id, title, description, banner_url, banner_storage_path, discount_percent, status, visible_in_cafe, linked_product_id")
           .in("cafe_id", cafeIds)
           .eq("visible_in_cafe", true)
           .in("status", ["active", "scheduled", "published"])
@@ -591,21 +590,11 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
           .order("created_at", { ascending: false })
           .limit(160)
       : Promise.resolve({ data: [], error: null }),
-    cafeIds.length
-      ? admin
-          .from("reservation_services")
-          .select("id, cafe_id, name, description, price, is_free, image_storage_path, active, sort_order")
-          .in("cafe_id", cafeIds)
-          .eq("active", true)
-          .order("sort_order", { ascending: true })
-          .limit(160)
-      : Promise.resolve({ data: [], error: null }),
     safeSelectPromotionsForAdmin(),
   ]);
 
   if (productsResult.error) throw productsResult.error;
   if (offersResult.error) throw offersResult.error;
-  if (reservationsResult.error) throw reservationsResult.error;
 
   const availableItems: AdminClientBrandAvailableItem[] = Array.from(cafeLookup.values());
 
@@ -644,26 +633,6 @@ export async function getAdminClientBrandsData(): Promise<AdminClientBrandsData>
       locationLabel: "",
       imageUrl: offerImage,
       href: promotionCtaPath("offer", cafe.href.replace("/c/", ""), String(row.id)),
-      brandName: cafe.brandName,
-      brandLogoUrl: cafe.brandLogoUrl,
-    });
-  }
-
-  for (const row of (reservationsResult.data ?? []) as DbRow[]) {
-    const cafe = getCafeMeta(cafeLookup, row.cafe_id);
-    if (!cafe) continue;
-    const reservationImage = await signPublishedAsset("menu-products", row.image_storage_path ? String(row.image_storage_path) : null);
-    availableItems.push({
-      key: `reservation:${String(row.id)}`,
-      itemType: "reservation",
-      cafeId: String(row.cafe_id),
-      itemId: String(row.id),
-      title: String(row.name ?? ""),
-      subtitle: String(row.description ?? ""),
-      badge: Boolean(row.is_free) ? "حجز مجاني" : row.price == null ? "خدمة حجز" : `${Number(row.price)} SAR`,
-      locationLabel: "",
-      imageUrl: reservationImage,
-      href: promotionCtaPath("reservation", cafe.href.replace("/c/", ""), String(row.id)),
       brandName: cafe.brandName,
       brandLogoUrl: cafe.brandLogoUrl,
     });

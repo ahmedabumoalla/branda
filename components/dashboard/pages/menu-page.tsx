@@ -238,7 +238,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             <StatPill label={copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات"} value={products.length} />
           </BentoCard>
           <BentoCard variant="white">
-            <StatPill label={copy.kind === "events" ? "متاح للحجز" : "متاح للبيع"} value={availableCount} />
+            <StatPill label={copy.kind === "events" ? "تذاكر متاحة" : "متاح للبيع"} value={availableCount} />
           </BentoCard>
           <BentoCard variant="white">
             <StatPill label="التصنيفات" value={categories.length} />

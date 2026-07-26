@@ -93,7 +93,7 @@ export function PagesManagerPageClient({ initialPages, configError }: Props) {
     <div dir="rtl">
       <DashboardPageShell
         title="الصفحات التعريفية"
-        subtitle="أنشئ صفحات تظهر للعميل مثل: من نحن، سياسة الحجز، الأسئلة الشائعة."
+        subtitle="أنشئ صفحات تظهر للعميل مثل: من نحن، وسياسة الاستخدام، والأسئلة الشائعة."
         action={
           <PrimaryButton onClick={newPage} className="inline-flex items-center gap-2">
             <Plus className="h-5 w-5" />

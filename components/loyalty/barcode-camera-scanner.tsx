@@ -49,8 +49,7 @@ function normalizeDetectedValue(rawValue: string, expectedKind?: BarndaksaQrKind
   }
 
   if (
-    (expectedKind === "reservation" ||
-      expectedKind === "customer-reward" ||
+    (expectedKind === "customer-reward" ||
       expectedKind === "experience-reward") &&
     !raw.startsWith("BARNDAKSA_QR:")
   ) {
@@ -72,9 +71,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
   const codeLabel =
     expectedKind === "loyalty-card"
       ? "كود البطاقة"
-      : expectedKind === "reservation"
-        ? "كود الحجز"
-        : expectedKind === "customer-reward" || expectedKind === "experience-reward"
+      : expectedKind === "customer-reward" || expectedKind === "experience-reward"
           ? "كود المكافأة"
           : "الكود";
 

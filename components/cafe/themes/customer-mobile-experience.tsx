@@ -34,7 +34,7 @@ import {
 } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 
-export type CustomerDockKey = "home" | "orders" | "menu" | "games" | "rewards" | "account";
+export type CustomerDockKey = "menu" | "offers" | "rewards" | "account";
 
 function textElement(
   id: LoyaltyTextElementId,
@@ -342,15 +342,12 @@ export function CustomerBottomDock({
   }>;
   active: CustomerDockKey;
 }) {
-  const visible = items.filter((item) => item.enabled !== false).slice(0, 5);
+  const visible = items.slice(0, 4);
   if (!visible.length) return null;
 
   return (
     <nav aria-label={"\u062a\u0646\u0642\u0644 \u0627\u0644\u0639\u0645\u064a\u0644"} className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-      <div
-        className="grid w-full gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl"
-        style={{ gridTemplateColumns: `repeat(${visible.length}, minmax(0, 1fr))` }}
-      >
+      <div className="grid w-full grid-cols-4 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
         {visible.map((item) => {
           const Icon = item.icon;
           const selected = item.key === active;
@@ -384,10 +381,6 @@ export function defaultCustomerDockItems({
   slug,
   active,
   previewThemeId,
-  hasProducts = true,
-  hasOrders = true,
-  hasGames = false,
-  hasRewards = true,
   isCustomer = false,
   accountBadge = 0,
   businessCategory,
@@ -395,26 +388,19 @@ export function defaultCustomerDockItems({
   slug: string;
   active: CustomerDockKey;
   previewThemeId?: string | null;
-  hasProducts?: boolean;
-  hasOrders?: boolean;
-  hasGames?: boolean;
-  hasRewards?: boolean;
   isCustomer?: boolean;
   accountBadge?: number;
   businessCategory?: string | null;
 }) {
   const preview = previewThemeId ? `?previewTheme=${encodeURIComponent(previewThemeId)}` : "";
   const base = `/c/${encodeURIComponent(slug)}`;
-  const copy = getBusinessCopy(businessCategory);
-  const isEvents = copy.kind === "events";
   return {
     active,
     items: [
-      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: isEvents ? "\u0627\u0644\u062a\u0630\u0627\u0643\u0631" : "\u0627\u0644\u0645\u0646\u062a\u062c\u0627\u062a", icon: MenuIcon, enabled: hasProducts },
-      { key: "home" as const, href: `${base}/offers${preview}`, label: "\u0627\u0644\u0639\u0631\u0648\u0636", icon: Home },
-      { key: "games" as const, href: `${base}/games${preview}`, label: "\u0627\u0644\u0623\u0644\u0639\u0627\u0628", icon: Swords, enabled: hasGames },
-      { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a", icon: Sparkles, enabled: hasRewards },
-      { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "\u0627\u0644\u062d\u0633\u0627\u0628", icon: UserRound },
+      { key: "menu" as const, href: `${base}/products/popular${preview}`, label: "المنتجات", icon: MenuIcon },
+      { key: "offers" as const, href: `${base}/products/offers${preview}`, label: "العروض", icon: Home },
+      { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "المكافآت", icon: Sparkles },
+      { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "الحساب", icon: UserRound },
     ],
   };
 }

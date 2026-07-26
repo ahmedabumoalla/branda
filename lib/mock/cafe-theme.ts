@@ -10,7 +10,6 @@ export type CafeThemeId =
   | "soft-cream-3d"
   | "magazine-editorial"
   | "fast-order-kiosk"
-  | "reservation-lounge"
   | "brand-identity-custom";
 
 export type ThemeClasses = {

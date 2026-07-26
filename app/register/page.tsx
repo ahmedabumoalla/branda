@@ -81,7 +81,7 @@ export default function RegisterPage() {
         <div className="max-w-xl text-center">
           <p className="text-xs font-black tracking-[0.24em] text-[#9B6A34]">برندة</p>
           <h1 className="mt-4 text-4xl font-black leading-tight" style={{ color: C.coffeeBrown }}>أهلاً بك في نافذة جديدة لنمو علامتك</h1>
-          <p className="mt-4 text-sm font-bold leading-7" style={{ color: C.mutedText }}>أنشئ فرعك الإلكتروني وابدأ إدارة المنتجات والحجوزات والولاء والتسويق من مكان واحد</p>
+          <p className="mt-4 text-sm font-bold leading-7" style={{ color: C.mutedText }}>أنشئ فرعك الإلكتروني وابدأ إدارة المنتجات والطلبات والولاء من مكان واحد</p>
         </div>
       </section>
 

@@ -8,13 +8,11 @@ import { createCafeOrderAction } from "@/app/actions/orders";
 import { formatSar } from "@/lib/format";
 import { promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import type { CafeBranch } from "@/lib/mock/branches";
-import { ProductReviews } from "@/components/cafe/product-reviews";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
 import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
 import { PublicFeatureUnavailable } from "@/components/cafe/public-feature-guard";
 import { ThemedProductDetailLayout } from "@/components/cafe/themes/themed-product-detail";
-import { InternalAdPanel } from "@/components/cafe/themes/customer-experience-primitives";
 import {
   CustomerBottomDock,
   defaultCustomerDockItems,
@@ -66,8 +64,6 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const activeBranches = branches.filter((b) => b.active);
   const menuEnabled = publicFeatureAllows(features, "menu");
   const orderingEnabled = publicFeatureAllows(features, "menu_ordering");
-  const reviewsEnabled = publicFeatureAllows(features, "comments_reviews");
-  const reservationsEnabled = publicFeatureAllows(features, "reservations");
   const rewardsEnabled = publicFeatureAllows(features, "loyalty");
   const gamesEnabled = publicFeatureAllows(features, "in_store_table_wars");
 
@@ -397,17 +393,6 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           experience={experience}
           imageSlot={imageSlot}
           infoSlot={infoSlot}
-          reviewsSlot={reviewsEnabled ? (
-            <div className="rounded-[28px] bg-white/60 p-1 shadow-[0_14px_45px_rgba(23,20,18,0.06)] ring-1 ring-[var(--ci-border,#E7D7C6)]/70">
-              <ProductReviews
-                slug={slug}
-                productId={product.id}
-                productName={product.name}
-                experience={experience}
-                previewThemeId={previewThemeId}
-              />
-            </div>
-          ) : null}
         />
       </div>
       <CustomerBottomDock
@@ -415,10 +400,6 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           slug,
           previewThemeId,
           active: "menu",
-          hasProducts: true,
-          hasOrders: reservationsEnabled,
-          hasGames: gamesEnabled,
-          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />
@@ -439,35 +420,12 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         experience={experience}
         imageSlot={imageSlot}
         infoSlot={infoSlot}
-        reviewsSlot={
-          <div className="space-y-6">
-            <ProductReviews
-              slug={slug}
-              productId={product!.id}
-              productName={product!.name}
-              experience={experience}
-              previewThemeId={previewThemeId}
-            />
-            <InternalAdPanel
-              compact
-              title={product!.promo ? promoBadgeText(product!.promo!) : isEvents ? "استكشف تذاكر مشابهة" : "استكشف منتجات مشابهة"}
-              eyebrow={isEvents ? "إعلان داخل تفاصيل التذكرة" : "إعلان داخل تفاصيل المنتج"}
-              description={isEvents ? "مساحة ذكية تقود العميل إلى قائمة التذاكر أو العروض بعد قراءة التفاصيل والمراجعات." : "مساحة ذكية تقود العميل إلى قائمة المنتجات أو العروض بعد قراءة تفاصيل المنتج والمراجعات."}
-              href={getCafePath(slug, product!.promo ? "products/offers" : "products/popular", previewThemeId)}
-              cta={product!.promo ? "كل العروض" : isEvents ? "كل التذاكر" : "كل المنتجات"}
-            />
-          </div>
-        }
       />
       <CustomerBottomDock
         {...defaultCustomerDockItems({
           slug,
           previewThemeId,
           active: "menu",
-          hasProducts: true,
-          hasOrders: true,
-          hasGames: gamesEnabled,
-          hasRewards: rewardsEnabled,
           businessCategory: settings.businessCategory,
         })}
       />

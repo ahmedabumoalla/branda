@@ -5,14 +5,13 @@ export type OfferType =
   | "كود مسوق"
   | "إطلاق منتج"
   | "عرض موسمي"
-  | "عرض مخصص"
-  | "عرض حجز";
+  | "عرض مخصص";
 
 export type OfferStatus = "نشط" | "مجدول" | "متوقف";
 
 export type OfferPlacement = "قائمة العروض" | "بانر الكوفي" | "كلاهما";
 
-export type OfferTargetType = "products" | "reservation" | "experience_campaign";
+export type OfferTargetType = "products" | "experience_campaign";
 
 export type OfferCardGenerationStatus = "idle" | "generating" | "ready" | "failed";
 
@@ -27,8 +26,6 @@ export type OfferRules = {
   seasonalMode?: "package" | "discount" | "experience";
   packageDescription?: string;
   appliesToAllProducts?: boolean;
-  reservationBenefitType?: "free_products" | "product_discount" | "reservation_discount" | "extra_benefits";
-  reservationBenefitText?: string;
 };
 
 export type CafeOffer = {
@@ -54,7 +51,6 @@ export type CafeOffer = {
 
   linkedProductId?: string;
   targetType?: OfferTargetType;
-  reservationServiceId?: string;
   offerRules?: OfferRules;
   bannerImageUrl?: string;
   /** IndexedDB reference for uploaded banner — mock only */

@@ -8,7 +8,6 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
-import type { ReservationService } from "@/lib/data/platform-upgrade";
 import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
 import { cachedRequest, readSessionCache, writeSessionCache } from "@/lib/performance/browser-cache";
 import {
@@ -27,7 +26,6 @@ type PublicMenuPayload = {
   loyaltySettings: LoyaltySettings;
   loyaltyRewards: LoyaltyReward[];
   pages: CafeInfoPage[];
-  reservationServices: ReservationService[];
   experienceCampaigns: ExperienceCampaign[];
 };
 
@@ -39,7 +37,6 @@ const emptyPayload: PublicMenuPayload = {
   loyaltySettings: { pointsPerSar: 0, welcomePoints: 0, enabled: false, earnRules: [], redemptionRules: [] },
   loyaltyRewards: [],
   pages: [],
-  reservationServices: [],
   experienceCampaigns: [],
 };
 
@@ -56,7 +53,6 @@ function normalizePayload(json: Partial<PublicMenuPayload> | PublicCafeFastMenuP
     loyaltySettings: json?.loyaltySettings ?? emptyPayload.loyaltySettings,
     loyaltyRewards: Array.isArray(json?.loyaltyRewards) ? json.loyaltyRewards : [],
     pages: Array.isArray(json?.pages) ? json.pages : [],
-    reservationServices: Array.isArray(json?.reservationServices) ? json.reservationServices : [],
     experienceCampaigns: Array.isArray(json?.experienceCampaigns) ? json.experienceCampaigns : [],
   };
 }

@@ -12,7 +12,6 @@ import {
   MapPin,
   Megaphone,
   ShoppingBag,
-  Star,
   UserRound,
   WalletCards,
 } from "lucide-react";
@@ -281,9 +280,6 @@ function ActiveOfferSlider({
 }
 
 function offerCardHref(slug: string, offer: CafeOffer, previewThemeId?: string | null) {
-  if (offer.targetType === "reservation" || offer.type === "عرض حجز") {
-    return getCafePath(slug, "reserve", previewThemeId);
-  }
   if (offer.linkedProductId) {
     return getCafePath(slug, `product/${offer.linkedProductId}`, previewThemeId);
   }
@@ -291,14 +287,12 @@ function offerCardHref(slug: string, offer: CafeOffer, previewThemeId?: string |
 }
 
 function offerDestinationLabel(offer: CafeOffer) {
-  if (offer.targetType === "reservation" || offer.type === "عرض حجز") return "الحجوزات";
   if (offer.targetType === "experience_campaign") return "توثيق التجربة";
   return "المنتجات";
 }
 
 function campaignRewardLabel(campaign: ExperienceCampaign) {
   if (campaign.rewardType === "free_order") return "طلب مجاني";
-  if (campaign.rewardType === "reservation") return "حجز مجاني";
   if (campaign.rewardType === "discount") {
     return campaign.rewardDiscountPercent ? `خصم ${campaign.rewardDiscountPercent}%` : "خصم";
   }
@@ -874,12 +868,8 @@ function CafePageInner({ slug }: { slug: string }) {
           slug,
           previewThemeId,
           isCustomer: Boolean(customer),
-          hasProducts: hasFeature("menu"),
-          hasOrders: hasFeature("reservations") || hasFeature("menu"),
-          hasGames: hasFeature("in_store_table_wars"),
-          hasRewards: hasFeature("loyalty"),
           businessCategory: settings.businessCategory,
-          active: "home",
+          active: "menu",
         })}
       />
       </div>

@@ -11,9 +11,6 @@ export const operationEventTypes = {
   orderRejected: "order_rejected",
   orderCompleted: "order_completed",
   orderNotCompleted: "order_not_completed",
-  reservationAccepted: "reservation_accepted",
-  reservationRejected: "reservation_rejected",
-  reservationModificationRequested: "reservation_modification_requested",
 } as const;
 
 export type OperationEventType = (typeof operationEventTypes)[keyof typeof operationEventTypes];

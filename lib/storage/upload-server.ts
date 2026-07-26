@@ -242,27 +242,3 @@ export async function uploadProductVideo(file: File, entityId: string) {
   if (error) throw error;
   return { storagePath, byteSize: file.size, mimeType };
 }
-
-export async function uploadReservationServiceVideo(file: File, entityId: string) {
-  const cafe = await requireOwnerCafeContext();
-
-  if (file.size <= 0) throw new Error("Missing file");
-  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
-
-  const mimeType = videoMimeFromFile(file);
-  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
-    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM أو MOV");
-  }
-
-  const ext = videoExtensionFromMime(mimeType);
-  const fileName = `${crypto.randomUUID()}.${ext}`;
-  const storagePath = `${cafe.id}/${normalizeEntityPath(entityId)}/${fileName}`;
-  const arrayBuffer = await file.arrayBuffer();
-  const supabaseAdmin = createStorageAdminClient();
-  const { error } = await supabaseAdmin.storage.from("marketing-assets").upload(storagePath, arrayBuffer, {
-    contentType: mimeType,
-    upsert: false,
-  });
-  if (error) throw error;
-  return { storagePath, byteSize: file.size };
-}

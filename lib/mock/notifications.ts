@@ -10,14 +10,10 @@ export type AppNotification = {
   type:
     | "order_accepted"
     | "order_rejected"
-    | "reservation_accepted"
-    | "reservation_rejected"
     | "loyalty_points"
     | "experience_approved"
     | "experience_reward"
     | "new_pickup_order"
-    | "new_reservation"
-    | "new_review"
     | "experience_submission";
   read: boolean;
   createdAt: string;

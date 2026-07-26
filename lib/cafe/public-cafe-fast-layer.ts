@@ -8,7 +8,6 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
-import type { ReservationService } from "@/lib/data/platform-upgrade";
 import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
 
 export type PublicCafeFastMenuPayload = {
@@ -19,7 +18,6 @@ export type PublicCafeFastMenuPayload = {
   loyaltySettings: LoyaltySettings;
   loyaltyRewards: LoyaltyReward[];
   pages: CafeInfoPage[];
-  reservationServices: ReservationService[];
   experienceCampaigns: ExperienceCampaign[];
 };
 
@@ -58,7 +56,6 @@ const emptyMenu: PublicCafeFastMenuPayload = {
   loyaltySettings: emptyLoyaltySettings,
   loyaltyRewards: [],
   pages: [],
-  reservationServices: [],
   experienceCampaigns: [],
 };
 
@@ -87,7 +84,6 @@ function normalizeMenu(value: Partial<PublicCafeFastMenuPayload> | null | undefi
     loyaltySettings: value?.loyaltySettings ?? emptyLoyaltySettings,
     loyaltyRewards: Array.isArray(value?.loyaltyRewards) ? value.loyaltyRewards : [],
     pages: Array.isArray(value?.pages) ? value.pages : [],
-    reservationServices: Array.isArray(value?.reservationServices) ? value.reservationServices : [],
     experienceCampaigns: Array.isArray(value?.experienceCampaigns) ? value.experienceCampaigns : [],
   };
 }

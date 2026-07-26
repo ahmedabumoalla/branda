@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   BarChart3,
-  CalendarDays,
   ExternalLink,
   Gift,
   LayoutGrid,
@@ -157,11 +156,6 @@ const FEATURES = [
     icon: LayoutGrid,
     title: "منيو تفاعلي",
     desc: "منيو رقمي يعرض منتجات علامتك ويحدثه فريقك بسهولة",
-  },
-  {
-    icon: CalendarDays,
-    title: "حجوزات سهلة",
-    desc: "نظم الحجوزات والمناسبات وطلبات العملاء من مكان واحد",
   },
   {
     icon: Gift,
@@ -332,21 +326,18 @@ function ContactModal({
 function promotionLabel(type: PublicPlatformHomeData["promotions"][number]["itemType"]) {
   if (type === "product") return "منتج مختار";
   if (type === "offer") return "عرض خاص";
-  if (type === "reservation") return "حجز وخدمة";
   return "فرع إلكتروني";
 }
 
 function promotionCta(type: PublicPlatformHomeData["promotions"][number]["itemType"]) {
   if (type === "product") return "شاهد المنتج";
   if (type === "offer") return "استفد من العرض";
-  if (type === "reservation") return "احجز الآن";
   return "زيارة الفرع الإلكتروني";
 }
 
 function PromotionIcon({ type }: { type: PublicPlatformHomeData["promotions"][number]["itemType"] }) {
   if (type === "product") return <ShoppingBag className="h-4 w-4" />;
   if (type === "offer") return <Gift className="h-4 w-4" />;
-  if (type === "reservation") return <CalendarDays className="h-4 w-4" />;
   return <Store className="h-4 w-4" />;
 }
 
@@ -533,7 +524,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
               </h2>
             </div>
             <p className="max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
-              منتجات وعروض وخدمات حجز يختارها فريق المنصة من العلامات النشطة لتصل للزائر مباشرة إلى الفرع المناسب.
+              منتجات وعروض يختارها فريق المنصة من العلامات النشطة لتصل للزائر مباشرة إلى الفرع المناسب.
             </p>
           </div>
 
