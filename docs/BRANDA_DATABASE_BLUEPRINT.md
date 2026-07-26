@@ -123,7 +123,6 @@
   - **Columns:** `id`, `cafe_id`, `plan_id`, `amount`, `currency`, `provider`, `provider_ref`, `status`, `paid_at`, `created_at`.
   - **Access:** owner read own; write backend/webhook.
 
-- `cafe_pages`
   - **Purpose:** الصفحات التعريفية المخصصة.
   - **Columns:** `id`, `cafe_id`, `slug`, `title`, `content`, `published`, `created_at`, `updated_at`.
   - **Unique:** `(cafe_id, slug)`.
@@ -414,7 +413,6 @@ allow update by service_role_webhook only;
 - `branda_qatrah_branches` -> `branches`
 - `branda_qatrah_loyalty_settings` -> `loyalty_settings`
 - `branda_qatrah_loyalty_rewards` -> `loyalty_rewards`
-- `branda_qatrah_pages` -> `cafe_pages`
 - `branda_qatrah_marketing` -> `marketing_campaigns`
 - `branda_qatrah_active_plan` -> `cafe_subscriptions`
 - `branda_qatrah_subscription_history` -> `subscription_payments`

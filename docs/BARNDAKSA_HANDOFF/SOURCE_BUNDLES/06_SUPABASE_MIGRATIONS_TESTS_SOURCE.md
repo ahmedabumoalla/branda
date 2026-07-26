@@ -615,7 +615,6 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- ─── Cafe info pages ────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS cafe_pages (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cafe_id       UUID NOT NULL REFERENCES cafes(id) ON DELETE CASCADE,
   slug          TEXT NOT NULL,
@@ -757,7 +756,6 @@ ALTER TABLE experience_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cafe_pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cafe_themes ENABLE ROW LEVEL SECURITY;

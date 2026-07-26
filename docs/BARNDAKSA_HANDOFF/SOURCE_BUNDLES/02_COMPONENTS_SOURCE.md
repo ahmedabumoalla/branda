@@ -6230,7 +6230,6 @@ const links: {
   { title: "الفروع", href: "/dashboard/branches", icon: MapPin, feature: "branches" },
   { title: "التقارير", href: "/dashboard/reports", icon: BarChart3, feature: "reports" },
   { title: "الأسئلة والتقييمات", href: "/dashboard/reviews", icon: MessageSquareText, feature: "reviews" },
-  { title: "الصفحات التعريفية", href: "/dashboard/pages", icon: Newspaper, feature: "pages" },
   { title: "الأدوات التسويقية", href: "/dashboard/marketing", icon: Megaphone, feature: "marketing" },
   { title: "طلبات الكوفي", href: "/dashboard/orders", icon: ShoppingBag, feature: "orders", badge: "جديد" },
   { title: "إعدادات الكوفي", href: "/dashboard/settings", icon: Settings, feature: "settings" },
@@ -8497,7 +8496,6 @@ export function OfferCard({
 }
 ```
 
-# File: components/dashboard/pages/branches-page.tsx
 
 ```tsx
 "use client";
@@ -8812,7 +8810,6 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
 
 ```
 
-# File: components/dashboard/pages/customers-page.tsx
 
 ```tsx
 "use client";
@@ -9023,7 +9020,6 @@ export function CustomersPageClient({
 
 ```
 
-# File: components/dashboard/pages/loyalty-page.tsx
 
 ```tsx
 "use client";
@@ -9484,7 +9480,6 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
 
 ```
 
-# File: components/dashboard/pages/marketing-page.tsx
 
 ```tsx
 "use client";
@@ -10162,7 +10157,6 @@ function Info({ label, value }: { label: string; value: string }) {
 
 ```
 
-# File: components/dashboard/pages/menu-page.tsx
 
 ```tsx
 "use client";
@@ -10413,7 +10407,6 @@ export function MenuPageClient({ initialProducts, initialCategories, configError
 
 ```
 
-# File: components/dashboard/pages/offers-page.tsx
 
 ```tsx
 "use client";
@@ -11054,7 +11047,6 @@ function Info({ label, value }: { label: string; value: string }) {
 
 ```
 
-# File: components/dashboard/pages/orders-page.tsx
 
 ```tsx
 "use client";
@@ -11377,7 +11369,6 @@ export function OrdersPageClient({ initialOrders, configError }: Props) {
 
 ```
 
-# File: components/dashboard/pages/pages-manager-page.tsx
 
 ```tsx
 "use client";
@@ -11620,7 +11611,6 @@ function Field({
 
 ```
 
-# File: components/dashboard/pages/reports-page.tsx
 
 ```tsx
 "use client";
@@ -11741,7 +11731,6 @@ export function ReportsPageClient({
 
 ```
 
-# File: components/dashboard/pages/reservations-page.tsx
 
 ```tsx
 "use client";
@@ -12057,7 +12046,6 @@ function Info({
 
 ```
 
-# File: components/dashboard/pages/reviews-page.tsx
 
 ```tsx
 "use client";
@@ -12222,7 +12210,6 @@ export function ReviewsPageClient({ initialReviews, configError }: Props) {
 
 ```
 
-# File: components/dashboard/pages/settings-page.tsx
 
 ```tsx
 "use client";
@@ -12967,7 +12954,6 @@ function Field({
 
 ```
 
-# File: components/dashboard/pages/subscription-page.tsx
 
 ```tsx
 "use client";
@@ -13358,7 +13344,6 @@ export function SubscriptionPageClient({
 
 ```
 
-# File: components/dashboard/pages/theme-page.tsx
 
 ```tsx
 "use client";

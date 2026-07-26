@@ -10,7 +10,6 @@ export type PublicFeatureKey =
 
 const PUBLIC_FEATURE_MAP: Partial<Record<PublicFeatureKey, PlatformFeatureId[]>> = {
   home: ["home"],
-  pages: ["pages"],
   menu: ["menu"],
   orders: ["orders"],
 

@@ -148,6 +148,5 @@ export function filterPublicCafePayloadByFeatures<T extends Record<string, unkno
     next.loyaltySettings = { pointsPerSar: 0, welcomePoints: 0, enabled: false, earnRules: [], redemptionRules: [] };
     next.loyaltyRewards = [];
   }
-  if (!featureCodesAllow(features, "pages")) next.pages = [];
   return next as T;
 }

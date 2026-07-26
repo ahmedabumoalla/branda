@@ -56,7 +56,6 @@ app/dashboard/menu/page.tsx
 app/dashboard/offers/page.tsx
 app/dashboard/orders/page.tsx
 app/dashboard/page.tsx
-app/dashboard/pages/page.tsx
 app/dashboard/reports/page.tsx
 app/dashboard/reservations/page.tsx
 app/dashboard/reviews/page.tsx
@@ -121,20 +120,6 @@ components/dashboard/menu/product-card.tsx
 components/dashboard/menu/product-modal.tsx
 components/dashboard/notifications-panel.tsx
 components/dashboard/offers/offer-card.tsx
-components/dashboard/pages/branches-page.tsx
-components/dashboard/pages/customers-page.tsx
-components/dashboard/pages/loyalty-page.tsx
-components/dashboard/pages/marketing-page.tsx
-components/dashboard/pages/menu-page.tsx
-components/dashboard/pages/offers-page.tsx
-components/dashboard/pages/orders-page.tsx
-components/dashboard/pages/pages-manager-page.tsx
-components/dashboard/pages/reports-page.tsx
-components/dashboard/pages/reservations-page.tsx
-components/dashboard/pages/reviews-page.tsx
-components/dashboard/pages/settings-page.tsx
-components/dashboard/pages/subscription-page.tsx
-components/dashboard/pages/theme-page.tsx
 components/dashboard/theme/custom-identity-builder.tsx
 components/dashboard/ui/modal.tsx
 components/ui/app-toast.tsx
@@ -177,7 +162,6 @@ lib/data/menu.ts
 lib/data/notifications.ts
 lib/data/offers.ts
 lib/data/orders.ts
-lib/data/pages.ts
 lib/data/platform-settings.ts
 lib/data/reservations.ts
 lib/data/reviews.ts
@@ -186,7 +170,6 @@ lib/data/subscription.ts
 lib/data/theme.ts
 lib/format.ts
 lib/mock/branches.ts
-lib/mock/cafe-pages.ts
 lib/mock/cafe-settings.ts
 lib/mock/cafe-theme.ts
 lib/mock/custom-identity-theme.ts

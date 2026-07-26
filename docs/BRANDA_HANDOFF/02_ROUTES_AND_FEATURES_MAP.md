@@ -15,17 +15,11 @@
 | `/admin/revenue` | Revenue | `app/admin/revenue/page.tsx` | admin | platform_admin | |
 | `/dashboard` | Owner dashboard home | `app/dashboard/page.tsx` | cafes context | owner/staff | |
 | `/dashboard/menu` | Menu CRUD | `components/dashboard/menu/*`, `app/actions/menu.ts` | `menu_*` tables | menu permission | |
-| `/dashboard/offers` | Offers | `components/dashboard/pages/offers-page.tsx` | `offers` | offers permission | |
-| `/dashboard/orders` | Orders | `components/dashboard/pages/orders-page.tsx`, `lib/data/orders.ts` | RPC orders | orders permission | |
 | `/dashboard/reservations` | Reservations | `app/actions/reservations.ts` | RPC | reservations | |
 | `/dashboard/customers` | CRM | `lib/data/customers.ts` | `customer_profiles` | customers | |
 | `/dashboard/loyalty` | Loyalty | `app/actions/loyalty.ts` | RPC | loyalty | |
-| `/dashboard/marketing` | Marketing + experience | `components/dashboard/pages/marketing-page.tsx` | campaigns, RPC | marketing | |
 | `/dashboard/reviews` | Reviews | `app/actions/reviews.ts` | `reviews` | owner/staff read | |
-| `/dashboard/settings` | Cafe settings | `components/dashboard/pages/settings-page.tsx` | `cafe_settings` | settings | |
-| `/dashboard/theme` | Theme | `components/dashboard/pages/theme-page.tsx` | themes, storage | settings | |
 | `/dashboard/branches` | Branches | `app/actions/branches.ts` | `branches` | branches | |
-| `/dashboard/pages` | Info pages | `lib/data/pages.ts` | `cafe_pages` | owner | |
 | `/dashboard/subscription` | Subscription | `app/actions/subscription.ts` | `subscriptions` | owner only read | |
 | `/dashboard/reports` | Reports | `app/dashboard/reports/page.tsx` | aggregated | owner/staff | |
 | `/c/[slug]` | Public cafe | `app/c/[slug]/page.tsx`, `components/cafe/*` | public API + RLS | public | |

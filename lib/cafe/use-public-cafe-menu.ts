@@ -7,7 +7,6 @@ import type { MenuProduct } from "@/lib/mock/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
-import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
 import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
 import { cachedRequest, readMemoryCache } from "@/lib/performance/browser-cache";
 
@@ -18,7 +17,6 @@ export type PublicMenuPayload = {
   branches: CafeBranch[];
   loyaltySettings: LoyaltySettings;
   loyaltyRewards: LoyaltyReward[];
-  pages: CafeInfoPage[];
   experienceCampaigns: ExperienceCampaign[];
   nextCursor?: number | null;
 };
@@ -33,7 +31,6 @@ const emptyPayload: PublicMenuPayload = {
   branches: [],
   loyaltySettings: { pointsPerSar: 0, welcomePoints: 0, enabled: false, earnRules: [], redemptionRules: [] },
   loyaltyRewards: [],
-  pages: [],
   experienceCampaigns: [],
   nextCursor: null,
 };
@@ -48,7 +45,6 @@ function normalizePayload(json: Partial<PublicMenuPayload> | null | undefined): 
     branches: Array.isArray(json?.branches) ? json.branches : [],
     loyaltySettings: json?.loyaltySettings ?? emptyPayload.loyaltySettings,
     loyaltyRewards: Array.isArray(json?.loyaltyRewards) ? json.loyaltyRewards : [],
-    pages: Array.isArray(json?.pages) ? json.pages : [],
     experienceCampaigns: Array.isArray(json?.experienceCampaigns) ? json.experienceCampaigns : [],
     nextCursor: typeof json?.nextCursor === "number" ? json.nextCursor : null,
   };

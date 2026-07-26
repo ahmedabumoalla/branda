@@ -33,7 +33,6 @@ Staff permissions (text keys): `settings`, `menu`, `offers`, `orders`, `reservat
 
 ## Core Tables (summary)
 
-`profiles`, `cafes`, `cafe_members`, `cafe_member_permissions`, `cafe_settings`, `branches`, `menu_categories`, `menu_products`, `offers`, `orders`, `order_items`, `reservations`, `reservation_responses`, `customer_profiles`, `loyalty_accounts`, `loyalty_rules`, `loyalty_rewards`, `loyalty_transactions`, `marketing_campaigns`, `experience_campaigns`, `experience_submissions`, `notifications`, `reviews`, `subscriptions`, `audit_logs`, `domain_orders`, `platform_plans`, `platform_settings`, `cafe_pages`, `cafe_themes`, `cafe_custom_identity`.
 
 Full DDL: see `001` + `003` + bundle `06_SUPABASE_MIGRATIONS_TESTS_SOURCE.md`.
 

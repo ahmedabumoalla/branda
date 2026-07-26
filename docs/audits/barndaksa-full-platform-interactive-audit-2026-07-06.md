@@ -100,7 +100,6 @@ unable to verify the first certificate
 | ID | الرابط أو النطاق | الدور | النتيجة | النوع | الخطورة | Console errors | Network errors | حفظ بعد refresh | السبب المحتمل | ملفات أو دوال محتملة | توصية الإصلاح |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | CR-001 | `/c/qatrah/products/popular` | عميل | أسقط خادم التطوير | Performance | Critical | نفاد ذاكرة وWorkerError | تعذر الاتصال بعد الانهيار | غير مختبر | تجميع webpack يستهلك ذاكرة عالية لمسارات الفرع | `app/c/[slug]/products/[view]/page.tsx`, `components/cafe/product-collection-page.tsx`, `next.config.ts` | تحليل imports وتقسيم المكونات الثقيلة وتجربة إعدادات Next 16 الرسمية للذاكرة |
-| CR-002 | `/dashboard/menu` | مالك | أسقط خادم التطوير | Performance | Critical | نفاد ذاكرة أثناء cache pack | تعذر الاتصال بعد الانهيار | غير مختبر | صفحة المنيو ومودال الاستيراد ومنطق الصور كبير في dev bundle | `app/dashboard/menu/page.tsx`, `components/dashboard/pages/menu-page.tsx`, `components/dashboard/menu/product-modal.tsx`, `components/dashboard/menu/menu-import-modal.tsx` | فصل المودالات بالتحميل الكسول وتقليل bundle صفحة المنيو |
 | CR-003 | واجهات الفرع العامة | عميل | فشل 500 | Integration | Critical | `UNABLE_TO_VERIFY_LEAF_SIGNATURE` | 500 في fast وmenu | غير مختبر | Node لا يثق بشهادة Supabase المستخدمة محليا | `app/api/public/cafe/[slug]/fast/route.ts`, `app/api/public/cafe/[slug]/menu/route.ts`, `lib/supabase/*` | إصلاح trust store أو تشغيل Node بإعداد شهادة صحيح محليا ثم إعادة الاختبار |
 | CR-004 | `npm run security:source` | أمان | فشل بوابة الأمان | Security | Critical | لا ينطبق | لا ينطبق | لا ينطبق | كتابات مباشرة على جداول حساسة وfragment SQL ممنوع | `lib/data/reservations.ts`, `lib/data/customers.ts`, `app/actions/customer-media.ts`, migration المذكور | نقل الكتابات إلى RPC آمنة وإزالة fragment المرفوض |
 | CR-005 | نصوص عربية في الواجهة | كل الأدوار | يوجد mojibake ظاهر في ملفات تشغيلية | Text | Critical | لا ينطبق | لا ينطبق | لا ينطبق | ملفات متعددة تحتوي نصا عربيا تالفا رغم نجاح check:text | `app/login/page.tsx`, `components/dashboard/DashboardSidebar.tsx`, `components/admin/AdminSidebar.tsx`, `app/actions/auth.ts` | توسيع فحص النصوص ليكشف الأنماط الموجودة فعليا ثم إصلاح النصوص يدويا بعد مراجعة diff |
@@ -208,7 +207,6 @@ events_conferences
 
 ```txt
 /dashboard
-/dashboard/pages
 /dashboard/menu
 /dashboard/orders
 /dashboard/reservations

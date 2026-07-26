@@ -30,10 +30,8 @@
 |--------|-------------|-------------------|-------------------------|------------------------------|-----------------|
 | إعدادات المقهى | `lib/mock/cafe-settings.ts` | localStorage + mock | `barndaksa_qatrah_settings` | `cafe_settings` + `cafe-logos` | API CRUD عبر `lib/data/settings.ts` |
 | إعدادات | `lib/cafe/cafe-settings-storage.ts` | localStorage | `barndaksa_qatrah_settings` | `cafe_settings` | إزالة؛ استخدام Server Actions |
-| إعدادات | `components/dashboard/pages/settings-page.tsx` | LS + IndexedDB | settings + domain keys | `cafe_settings`, `cafe_domains` | رفع شعار → Storage؛ حفظ عبر API |
 | الشعار | `lib/cafe/local-asset-store.ts` | IndexedDB | `barndaksa-qatrah-cafe-logo` | `cafe-logos/{cafe_id}/` | pipeline → Supabase Storage |
 | فروع | `lib/mock/branches.ts` | localStorage | `barndaksa_qatrah_branches` | `branches` | CRUD بـ `cafe_id` |
-| صفحات معلومات | `lib/mock/cafe-pages.ts` | localStorage | `barndaksa_qatrah_pages` | `cafe_pages` | CRUD + نشر عام |
 | دومينات | `lib/platform/domain-purchase.ts` | localStorage | `barndaksa_qatrah_domain_*` | `domain_orders`, `cafe_domains` | server-only بعد webhook |
 | دومينات | `app/api/domains/**/route.ts` | Vercel API | env | `domain_orders` | persist + auth cafe owner |
 

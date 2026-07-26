@@ -123,7 +123,6 @@
   - **Columns:** `id`, `cafe_id`, `plan_id`, `amount`, `currency`, `provider`, `provider_ref`, `status`, `paid_at`, `created_at`.
   - **Access:** owner read own; write backend/webhook.
 
-- `cafe_pages`
   - **Purpose:** الصفحات التعريفية المخصصة.
   - **Columns:** `id`, `cafe_id`, `slug`, `title`, `content`, `published`, `created_at`, `updated_at`.
   - **Unique:** `(cafe_id, slug)`.
@@ -414,7 +413,6 @@ allow update by service_role_webhook only;
 - `barndaksa_qatrah_branches` -> `branches`
 - `barndaksa_qatrah_loyalty_settings` -> `loyalty_settings`
 - `barndaksa_qatrah_loyalty_rewards` -> `loyalty_rewards`
-- `barndaksa_qatrah_pages` -> `cafe_pages`
 - `barndaksa_qatrah_marketing` -> `marketing_campaigns`
 - `barndaksa_qatrah_active_plan` -> `cafe_subscriptions`
 - `barndaksa_qatrah_subscription_history` -> `subscription_payments`

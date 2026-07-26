@@ -2833,7 +2833,6 @@ export default function ReservePage() {
 # File: app/dashboard/branches/page.tsx
 
 ```tsx
-import { BranchesPageClient } from "@/components/dashboard/pages/branches-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerBranches } from "@/lib/data/branches";
 
@@ -2855,7 +2854,6 @@ export default async function BranchesPage() {
 # File: app/dashboard/customers/page.tsx
 
 ```tsx
-import { CustomersPageClient } from "@/components/dashboard/pages/customers-page";
 
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
@@ -2952,7 +2950,6 @@ export default function DashboardLayout({
 # File: app/dashboard/loyalty/page.tsx
 
 ```tsx
-import { LoyaltyPageClient } from "@/components/dashboard/pages/loyalty-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerLoyalty } from "@/lib/data/loyalty";
 
@@ -2997,7 +2994,6 @@ export default async function LoyaltyPage() {
 # File: app/dashboard/marketing/page.tsx
 
 ```tsx
-import { MarketingPageClient } from "@/components/dashboard/pages/marketing-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerExperienceData } from "@/lib/data/experience";
 import { getOwnerMarketingCampaigns } from "@/lib/data/marketing";
@@ -3043,7 +3039,6 @@ export default async function DashboardMarketingPage() {
 # File: app/dashboard/menu/page.tsx
 
 ```tsx
-import { MenuPageClient } from "@/components/dashboard/pages/menu-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerMenu } from "@/lib/data/menu";
 
@@ -3076,7 +3071,6 @@ export default async function DashboardMenuPage() {
 # File: app/dashboard/offers/page.tsx
 
 ```tsx
-import { OffersPageClient } from "@/components/dashboard/pages/offers-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { getOwnerOffers } from "@/lib/data/offers";
@@ -3104,7 +3098,6 @@ export default async function OffersPage() {
 # File: app/dashboard/orders/page.tsx
 
 ```tsx
-import { OrdersPageClient } from "@/components/dashboard/pages/orders-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerOrders } from "@/lib/data/orders";
 
@@ -3189,10 +3182,8 @@ export default async function DashboardPage() {
 
 ```
 
-# File: app/dashboard/pages/page.tsx
 
 ```tsx
-import { PagesManagerPageClient } from "@/components/dashboard/pages/pages-manager-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerPages } from "@/lib/data/pages";
 
@@ -3212,7 +3203,6 @@ export default async function PagesManagerPage() {
 # File: app/dashboard/reports/page.tsx
 
 ```tsx
-import { ReportsPageClient } from "@/components/dashboard/pages/reports-page";
 
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
@@ -3314,7 +3304,6 @@ export default async function ReportsPage() {
 # File: app/dashboard/reservations/page.tsx
 
 ```tsx
-import { ReservationsPageClient } from "@/components/dashboard/pages/reservations-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerReservations } from "@/lib/data/reservations";
 
@@ -3343,7 +3332,6 @@ export default async function ReservationsPage() {
 # File: app/dashboard/reviews/page.tsx
 
 ```tsx
-import { ReviewsPageClient } from "@/components/dashboard/pages/reviews-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerReviews } from "@/lib/data/reviews";
 
@@ -3363,7 +3351,6 @@ export default async function ReviewsPage() {
 # File: app/dashboard/settings/page.tsx
 
 ```tsx
-import { SettingsPageClient } from "@/components/dashboard/pages/settings-page";
 
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
@@ -3453,7 +3440,6 @@ export default async function SettingsPage() {
 # File: app/dashboard/subscription/page.tsx
 
 ```tsx
-import { SubscriptionPageClient } from "@/components/dashboard/pages/subscription-page";
 
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
@@ -3559,7 +3545,6 @@ export default async function SubscriptionPage() {
 # File: app/dashboard/theme/page.tsx
 
 ```tsx
-import { ThemePageClient } from "@/components/dashboard/pages/theme-page";
 
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 

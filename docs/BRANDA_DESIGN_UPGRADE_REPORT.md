@@ -31,7 +31,6 @@
 | `app/admin/**` | صفحات ولوحة أدمن |
 | `app/login/page.tsx` | دخول المنصة |
 | `app/dashboard/subscription/page.tsx` | مسار الاشتراك |
-| `components/dashboard/pages/subscription-page.tsx` | واجهة الاشتراك |
 | `components/admin/**` | صفحات ومكوّنات الأدمن |
 | `public/brand/branda-logo-dark.png` | شعار للخلفيات الداكنة |
 | `public/brand/branda-logo-brown.png` | شعار للخلفيات الفاتحة |
@@ -52,7 +51,6 @@
 - `app/dashboard/layout.tsx` — هامش جانبي 280px
 - `app/dashboard/page.tsx` — Bento dashboard رئيسي
 - `components/dashboard/DashboardSidebar.tsx` — إعادة تصميم كاملة + شعار + باقة + فلترة `cafeHasFeature`
-- `components/dashboard/pages/*` — كل صفحات اللوحة (menu, offers, reservations, customers, loyalty, branches, reports, reviews, orders, pages, marketing, settings, theme, subscription)
 - `lib/mock/cafe-theme.ts` — ثيمات جديدة + `normalizeThemeId` للتوافق مع القيم القديمة
 
 ### لوحة الأدمن
@@ -423,7 +421,6 @@ npm run build
 
 ### ملفات معدّلة
 
-`components/cafe/cafe-page-client.tsx`, `cafe-layout.tsx`, `cafe-footer.tsx`, `components/dashboard/pages/theme-page.tsx`, `settings-page.tsx`, `DashboardSidebar.tsx`, `marketing-page.tsx`, `admin-cafes-page.tsx`, `app/dashboard/page.tsx`, `components/ui/design-system.tsx` (`LinkButton` + `target`), `lib/mock/cafe-settings.ts`.
 
 ### ملاحظات Supabase (للمطور)
 
@@ -499,7 +496,6 @@ npm run build
 | `branda_qatrah_loyalty_rewards` | `LoyaltyReward[]` | array | `loyalty-page.tsx` | cafe home renderer | كوفي | `loyalty_rewards` |
 | `branda_qatrah_reviews` | `CafeReview[]` | array | `reviews-page.tsx`, `product-reviews.tsx` | product detail | كوفي+عميل | `reviews`, `review_replies` |
 | `branda_qatrah_marketing` | حملات | array | `marketing-page.tsx` | marketing | كوفي | `marketing_campaigns` |
-| `branda_qatrah_pages` | صفحات تعريفية | array | `pages-manager-page.tsx` | (مستقبلي public) | كوفي | `cafe_pages` |
 | `branda_qatrah_active_plan` | plan id | string | `subscription.ts` بعد الدفع | `permissions.ts`, sidebar | كوفي | `cafe_subscriptions.plan_id` |
 | `branda_qatrah_subscription_history` | سجل اشتراكات | array | `subscription.ts` | subscription page | كوفي | `subscription_payments` |
 | `branda_qatrah_pending_subscription` | فاتورة معلقة | object | `subscription.ts` | subscription page | كوفي | `subscription_payments` (status=pending) |
@@ -542,7 +538,6 @@ npm run build
 - **reviews** — `cafe_id`, `product_id`, `customer_id`, `rating`, `comment`, `status`
 - **review_replies** — `review_id`, `body`, `replied_by`
 - **marketing_campaigns** — `cafe_id`, `code`, `status`, metrics
-- **cafe_pages** — `cafe_id`, `slug`, `content`, `published`
 - **platform_operations** — `cafe_id`, `type`, `payload`, `created_at`
 - **audit_logs** — `actor_id`, `action`, `entity`, `entity_id`, `meta`
 - **storage_objects** — `bucket`, `path`, `owner_cafe_id`, `visibility`
@@ -567,7 +562,6 @@ npm run build
 | **cafe_owner** | صفوف `cafe_id = membership.cafe_id` فقط | منيو، عروض، فروع، إعدادات، ثيم، حجوزات، طلبات كوفيه |
 | **cafe_staff** | حسب `permissions` في `cafe_members` | محدود (مثلاً حجوزات فقط) |
 | **customer** | بياناته في `customer_profiles`, طلباته، حجوزاته، فواتيره | تقييم، حجز، طلب — لا يرى غيره |
-| **public (anon)** | `cafes` نشط + `menu_products.available` + `offers` ظاهرة + `cafe_pages` منشورة | لا شيء |
 
 قواعد حرجة:
 
@@ -668,8 +662,6 @@ npm run build
 | `app/globals.css` | `html, body { overflow-x: hidden; max-width: 100% }` |
 | `app/login/page.tsx`, `app/register/page.tsx` | padding متدرج؛ إخفاء لوحة التعريف على الجوال في login؛ عناوين أصغر |
 | `app/dashboard/page.tsx` | أرقام إيرادات `text-3xl sm:text-4xl lg:text-5xl` |
-| `components/dashboard/pages/theme-page.tsx` | معاينة الثيم: `scale-[0.52]→0.85` + `max-h-[min(70vh,640px)]` قابلة للتمرير |
-| `components/dashboard/pages/*` | شبكات `md:grid-cols-3/4` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3/4` (marketing, offers, reservations, loyalty, settings, subscription) |
 | `components/dashboard/offers/offer-card.tsx` | نفس نمط الشبكة |
 | `components/admin/pages/admin-cafes-page.tsx` | فلاتر `min-w-0`؛ بطاقات قائمة `flex-col` على الجوال؛ panel التفاصيل أسفل القائمة تحت `xl` (جانبي sticky من `xl`) |
 | `components/admin/pages/admin-customers-page.tsx`, `admin-operations-page.tsx` | فلاتر بدون `min-w-[240px]` ثابت |
@@ -767,7 +759,6 @@ NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
 
 ### الملفات المعدّلة
 
-- `components/dashboard/pages/settings-page.tsx`
 - `lib/platform/cafe-domain.ts`
 - `lib/mock/cafe-settings.ts`
 - `lib/platform/admin-data.ts`
@@ -942,7 +933,6 @@ NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
 | `branda_qatrah_branches` | dashboard/cafe reserve | branches page | branches array | cafe/public | `branches` | owner write; public read active |
 | `branda_qatrah_loyalty_settings` | loyalty pages | loyalty page | object | cafe | `loyalty_settings` | cafe scope |
 | `branda_qatrah_loyalty_rewards` | loyalty pages/public | loyalty page | array | cafe/public | `loyalty_rewards` | cafe scope/public active subset |
-| `branda_qatrah_pages` | pages manager | pages manager | pages array | cafe/public | `cafe_pages` | public read published only |
 | `branda_qatrah_marketing` | marketing page | marketing page | campaigns array | cafe | `marketing_campaigns`, `campaign_codes` | cafe scope |
 | `branda_qatrah_active_plan` | permissions/subscription/admin | subscription/permissions/admin | string plan id | cafe/platform | `cafe_subscriptions` | webhook/admin authoritative |
 | `branda_qatrah_subscription_history` | subscription page | subscription module | array | cafe | `subscription_payments` | owner read; backend write |
@@ -963,7 +953,6 @@ NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
 - `app/api/domains/*`: routes server-side موجودة للدومينات فقط؛ تحتاج auth, ownership checks, rate limit, idempotency.
 
 #### Components layer
-- `components/dashboard/pages/*`: إدارة المنتجات/العروض/الحجوزات/العملاء/التقارير/الإعدادات/الثيم/الاشتراك — معظمها CRUD على localStorage.
 - `components/admin/pages/*`: إدارة المنصة (cafes/customers/plans/options/operations/revenue) تعتمد على localStorage ويمكن تزويرها.
 - `components/cafe/*` + `components/cafe/themes/*`: storefront rendering؛ البيانات تأتي من localStorage ويجب تحويلها إلى APIs عامة ومحمية.
 - `components/ui/*`: UI primitives (لا تخزين مباشر غالبًا)؛ آمنة نسبيًا.
@@ -1001,7 +990,6 @@ NEXT_PUBLIC_BRANDA_PUBLIC_DOMAIN=branda.local
   - cafes active
   - menu_products available
   - offers visible
-  - cafe_pages published
   - branches active
 - public لا يرى العملاء/الطلبات/الفواتير/الدفعات/المستندات الحكومية/الإعدادات الداخلية.
 
@@ -1142,7 +1130,6 @@ where customer_id in (select id from cafe_customers where user_id = auth.uid());
 
 - **المفتاح:** `branda_qatrah_menu_categories` (`MENU_CATEGORIES_KEY`).
 - **النوع:** `MenuCategoryRecord` — اسم، وصف، صورة، أيقونة، `sortOrder`, `visible`, `featured`.
-- **الإدارة:** `components/dashboard/pages/menu-page.tsx` + `product-modal.tsx`.
 - **العرض:** صفحة الكوفي العامة، ثيم الهوية المخصصة، مجموعات المنتجات.
 
 ### و) طلبات الاستلام (Pickup Orders)
@@ -1150,7 +1137,6 @@ where customer_id in (select id from cafe_customers where user_id = auth.uid());
 - **المفتاح:** `branda_qatrah_orders` (محدّث — نوع `استلام` فقط).
 - **الحقول الجديدة:** `pickupAt`, `status` (بانتظار/مقبول/مرفوض/ملغي), `paymentStatus` («الدفع عند الاستلام»), `rejectionReason`, `cafeResponseAt`.
 - **من العميل:** `product-detail-client.tsx` — اختيار وقت الاستلام، بدون دفع إلكتروني.
-- **من الكوفي:** `components/dashboard/pages/orders-page.tsx` — قبول/رفض/إلغاء.
 - **التدفق:** `lib/platform/order-flow.ts` + إشعار `new_pickup_order`.
 
 ### ز) الحجوزات (Reservations)
@@ -1170,7 +1156,6 @@ where customer_id in (select id from cafe_customers where user_id = auth.uid());
 - **المفاتيح:**
   - `branda_qatrah_experience_campaigns` — تعريف الحملة (منصات TikTok/Instagram/Snapchat/YouTube Shorts/X، نقاط، شروط).
   - `branda_qatrah_experience_submissions` — فيديوهات العملاء + حالة (`pending|approved|rejected`) + نقاط مُقترحة/ممنوحة.
-- **الإدارة:** `components/dashboard/pages/marketing-page.tsx`.
 - **الإشعارات:** `experience_submission`, `experience_approved`.
 
 ### ي) الإشعارات (Notifications)
@@ -1189,7 +1174,6 @@ where customer_id in (select id from cafe_customers where user_id = auth.uid());
 | تمييز بسيط | الباقة الحالية: gradient gold + ring + badge «الباقة الحالية» |
 | — | checkmarks لكل ميزة (✓ أو —) |
 
-**الملف:** `components/dashboard/pages/subscription-page.tsx`.
 
 ### ل) ملفات v2 الجديدة/المحدّثة (مختصر)
 
@@ -1299,7 +1283,6 @@ where customer_id in (select id from cafe_customers where user_id = auth.uid());
 | `components/dashboard/theme/custom-identity-builder.tsx` | رفع → Blob preview → IndexedDB عند الحفظ |
 | `components/cafe/themes/brand-identity-custom-theme.tsx` | عرض من asset IDs |
 | `components/cafe/themes/themed-cafe-shell.tsx` | خلفية/شعار الهوية على كل صفحات العميل |
-| `components/dashboard/pages/settings-page.tsx` | لوجو الكوفي → IndexedDB |
 | `components/ui/branda-logo.tsx` | إصلاح تحذير Next.js Image (aspect ratio) |
 
 ### د) Migration & Cleanup

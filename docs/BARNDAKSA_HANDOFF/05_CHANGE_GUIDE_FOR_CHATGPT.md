@@ -27,7 +27,6 @@ UI (components/, app/)
 
 | Change | Typical files |
 | ------ | ------------- |
-| Dashboard page UI | `components/dashboard/pages/*`, `app/dashboard/*/page.tsx` |
 | Customer cafe page | `components/cafe/*`, `app/c/[slug]/**` |
 | Admin | `components/admin/*`, `app/admin/**`, `lib/data/admin.ts` |
 | New API route | `app/api/**` + `lib/data/*` |

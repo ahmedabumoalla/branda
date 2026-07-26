@@ -2573,7 +2573,6 @@ export async function createPickupOrder(input: z.infer<typeof createOrderSchema>
 
 ```
 
-# File: lib/data/pages.ts
 
 ```typescript
 import { z } from "zod";
@@ -2597,7 +2596,6 @@ export async function getOwnerPages(): Promise<CafeInfoPage[]> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("cafe_pages")
     .select("*")
     .eq("cafe_id", cafe.id)
     .order("sort_order");
@@ -2612,7 +2610,6 @@ export async function getPublicPagesBySlug(slug: string): Promise<CafeInfoPage[]
 
   const supabase = await createClient();
   const { data } = await supabase
-    .from("cafe_pages")
     .select("*")
     .eq("cafe_id", cafe.id)
     .eq("published", true)
@@ -2648,7 +2645,6 @@ export async function upsertPage(input: z.infer<typeof pageSchema>) {
 
   if (parsed.id) {
     const { data, error } = await supabase
-      .from("cafe_pages")
       .update(payload)
       .eq("id", parsed.id)
       .eq("cafe_id", cafe.id)
@@ -2658,7 +2654,6 @@ export async function upsertPage(input: z.infer<typeof pageSchema>) {
     return mapDbPage(data);
   }
 
-  const { data, error } = await supabase.from("cafe_pages").insert(payload).select("*").single();
   if (error) throw error;
   return mapDbPage(data);
 }
@@ -2666,7 +2661,6 @@ export async function upsertPage(input: z.infer<typeof pageSchema>) {
 export async function deletePage(pageId: string) {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const { error } = await supabase.from("cafe_pages").delete().eq("id", pageId).eq("cafe_id", cafe.id);
   if (error) throw error;
 }
 
