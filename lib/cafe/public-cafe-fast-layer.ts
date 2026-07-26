@@ -2,25 +2,6 @@
 
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
-import type { CafeBranch } from "@/lib/mock/branches";
-import type { MenuProduct } from "@/lib/mock/menu";
-import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
-import type { CafeOffer } from "@/lib/mock/offers";
-import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
-import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
-import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
-
-export type PublicCafeFastMenuPayload = {
-  products: MenuProduct[];
-  categories: MenuCategoryRecord[];
-  offers: CafeOffer[];
-  branches: CafeBranch[];
-  loyaltySettings: LoyaltySettings;
-  loyaltyRewards: LoyaltyReward[];
-  pages: CafeInfoPage[];
-  experienceCampaigns: ExperienceCampaign[];
-};
-
 export type PublicCafeFastPayload = {
   cafe: {
     settings: CafeSettings;
@@ -28,7 +9,6 @@ export type PublicCafeFastPayload = {
     customIdentity: CustomIdentityTheme | null;
     features: string[];
   };
-  menu: PublicCafeFastMenuPayload;
   fetchedAt: number;
   staleAt: number;
   expiresAt: number;
@@ -39,25 +19,6 @@ const FRESH_TTL_MS = 90_000;
 const STALE_TTL_MS = 12 * 60 * 60_000;
 const memoryCache = new Map<string, PublicCafeFastPayload>();
 const pendingRequests = new Map<string, Promise<PublicCafeFastPayload>>();
-
-const emptyLoyaltySettings: LoyaltySettings = {
-  pointsPerSar: 0,
-  welcomePoints: 0,
-  enabled: false,
-  earnRules: [],
-  redemptionRules: [],
-};
-
-const emptyMenu: PublicCafeFastMenuPayload = {
-  products: [],
-  categories: [],
-  offers: [],
-  branches: [],
-  loyaltySettings: emptyLoyaltySettings,
-  loyaltyRewards: [],
-  pages: [],
-  experienceCampaigns: [],
-};
 
 function normalizedSlug(slug: string) {
   return slug.trim().toLowerCase();
@@ -73,19 +34,6 @@ function eventName(slug: string) {
 
 function arrayOfString(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
-}
-
-function normalizeMenu(value: Partial<PublicCafeFastMenuPayload> | null | undefined): PublicCafeFastMenuPayload {
-  return {
-    products: Array.isArray(value?.products) ? value.products : [],
-    categories: Array.isArray(value?.categories) ? value.categories : [],
-    offers: Array.isArray(value?.offers) ? value.offers : [],
-    branches: Array.isArray(value?.branches) ? value.branches : [],
-    loyaltySettings: value?.loyaltySettings ?? emptyLoyaltySettings,
-    loyaltyRewards: Array.isArray(value?.loyaltyRewards) ? value.loyaltyRewards : [],
-    pages: Array.isArray(value?.pages) ? value.pages : [],
-    experienceCampaigns: Array.isArray(value?.experienceCampaigns) ? value.experienceCampaigns : [],
-  };
 }
 
 function normalizePayload(raw: Partial<PublicCafeFastPayload>): PublicCafeFastPayload | null {
@@ -104,7 +52,6 @@ function normalizePayload(raw: Partial<PublicCafeFastPayload>): PublicCafeFastPa
       customIdentity: raw.cafe?.customIdentity ?? null,
       features: arrayOfString(raw.cafe?.features),
     },
-    menu: normalizeMenu(raw.menu),
     fetchedAt,
     staleAt,
     expiresAt,

@@ -9,16 +9,9 @@ import type { CafeOffer } from "@/lib/mock/offers";
 import type { LoyaltyReward, LoyaltySettings } from "@/lib/mock/loyalty";
 import type { CafeInfoPage } from "@/lib/mock/cafe-pages";
 import type { ExperienceCampaign } from "@/lib/mock/experience-campaigns";
-import { cachedRequest, readSessionCache, writeSessionCache } from "@/lib/performance/browser-cache";
-import {
-  readPublicCafeFastCache,
-  refreshPublicCafeFastLayer,
-  subscribePublicCafeFastLayer,
-  type PublicCafeFastMenuPayload,
-  type PublicCafeFastPayload,
-} from "@/lib/cafe/public-cafe-fast-layer";
+import { cachedRequest, readMemoryCache } from "@/lib/performance/browser-cache";
 
-type PublicMenuPayload = {
+export type PublicMenuPayload = {
   products: MenuProduct[];
   categories: MenuCategoryRecord[];
   offers: CafeOffer[];
@@ -27,7 +20,11 @@ type PublicMenuPayload = {
   loyaltyRewards: LoyaltyReward[];
   pages: CafeInfoPage[];
   experienceCampaigns: ExperienceCampaign[];
+  nextCursor?: number | null;
 };
+
+type Resource = "products" | "offers" | "branches" | "product";
+type Options = { resource?: Resource; productId?: string; limit?: number };
 
 const emptyPayload: PublicMenuPayload = {
   products: [],
@@ -38,13 +35,12 @@ const emptyPayload: PublicMenuPayload = {
   loyaltyRewards: [],
   pages: [],
   experienceCampaigns: [],
+  nextCursor: null,
 };
 
 const TTL_MS = 5 * 60_000;
-const menuCache = new Map<string, { value: PublicMenuPayload; cachedAt: number }>();
-const menuRequests = new Map<string, Promise<PublicMenuPayload>>();
 
-function normalizePayload(json: Partial<PublicMenuPayload> | PublicCafeFastMenuPayload | null | undefined): PublicMenuPayload {
+function normalizePayload(json: Partial<PublicMenuPayload> | null | undefined): PublicMenuPayload {
   return {
     products: Array.isArray(json?.products) ? json.products : [],
     categories: Array.isArray(json?.categories) ? json.categories : [],
@@ -54,116 +50,78 @@ function normalizePayload(json: Partial<PublicMenuPayload> | PublicCafeFastMenuP
     loyaltyRewards: Array.isArray(json?.loyaltyRewards) ? json.loyaltyRewards : [],
     pages: Array.isArray(json?.pages) ? json.pages : [],
     experienceCampaigns: Array.isArray(json?.experienceCampaigns) ? json.experienceCampaigns : [],
+    nextCursor: typeof json?.nextCursor === "number" ? json.nextCursor : null,
   };
 }
 
-function cacheMenu(slug: string, payload: PublicMenuPayload) {
-  menuCache.set(slug, { value: payload, cachedAt: Date.now() });
-  writeSessionCache(`barndaksa_public_menu_${slug}`, payload);
-  return payload;
+function resourceUrl(slug: string, options: Options) {
+  const base = `/api/public/cafe/${encodeURIComponent(slug)}`;
+  if (options.resource === "offers") return `${base}/offers?limit=${options.limit ?? 12}`;
+  if (options.resource === "branches") return `${base}/branches`;
+  if (options.resource === "product" && options.productId) {
+    return `${base}/products/${encodeURIComponent(options.productId)}`;
+  }
+  return `${base}/menu?limit=${options.limit ?? 16}`;
 }
 
-function menuFromFastPayload(slug: string, payload: PublicCafeFastPayload) {
-  return cacheMenu(slug, normalizePayload(payload.menu));
+function resourceKey(slug: string, options: Options) {
+  return `public-cafe-resource:${slug.trim().toLowerCase()}:${options.resource ?? "products"}:${options.productId ?? ""}:${options.limit ?? ""}`;
 }
 
-async function loadLegacyPublicMenu(slug: string) {
-  return cachedRequest(`public-menu-legacy:${slug}`, TTL_MS, async () => {
-    const res = await fetch(`/api/public/cafe/${encodeURIComponent(slug)}/menu`, { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status === 404 ? "العلامة غير موجودة" : "تعذر تحميل المنيو");
-    return cacheMenu(slug, normalizePayload(await res.json()));
-  });
+async function loadResource(slug: string, options: Options) {
+  const response = await fetch(resourceUrl(slug, options), { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? "الفرع أو المورد غير موجود" : "تعذر تحميل بيانات الصفحة");
+  }
+  return normalizePayload(await response.json());
 }
 
-async function loadPublicMenu(slug: string) {
-  const cached = menuCache.get(slug);
-  if (cached && Date.now() - cached.cachedAt < TTL_MS) return cached.value;
-
-  const fastCached = readPublicCafeFastCache(slug);
-  if (fastCached) return menuFromFastPayload(slug, fastCached);
-
-  const pending = menuRequests.get(slug);
-  if (pending) return pending;
-
-  const request = refreshPublicCafeFastLayer(slug)
-    .then((payload) => menuFromFastPayload(slug, payload))
-    .catch(() => loadLegacyPublicMenu(slug))
-    .finally(() => menuRequests.delete(slug));
-
-  menuRequests.set(slug, request);
-  return request;
+export function prefetchPublicCafeResource(slug: string, options: Options = {}) {
+  if (!isSupabaseConfigured()) return Promise.resolve(emptyPayload);
+  return cachedRequest(resourceKey(slug, options), TTL_MS, () => loadResource(slug, options));
 }
 
-export function usePublicCafeMenu(slug: string) {
-  const initialFast = readPublicCafeFastCache(slug);
-  const initialSession = initialFast
-    ? normalizePayload(initialFast.menu)
-    : readSessionCache<PublicMenuPayload>(`barndaksa_public_menu_${slug}`, TTL_MS);
-
-  const hadInitialData = Boolean(initialSession);
-  const [data, setData] = useState<PublicMenuPayload>(() => initialSession ?? emptyPayload);
-  const [loading, setLoading] = useState(!initialSession);
+export function usePublicCafeMenu(slug: string, options: Options = {}) {
+  const key = resourceKey(slug, options);
+  const initial = readMemoryCache<PublicMenuPayload>(key);
+  const [data, setData] = useState<PublicMenuPayload>(initial ?? emptyPayload);
+  const [loading, setLoading] = useState(!initial);
   const [error, setError] = useState<string | null>(null);
+  const resource = options.resource ?? "products";
+  const productId = options.productId ?? "";
+  const limit = options.limit ?? (resource === "products" ? 16 : 12);
 
   useEffect(() => {
     let cancelled = false;
-
-    const apply = (payload: PublicMenuPayload) => {
-      if (cancelled) return;
-      setData(payload);
-      setError(null);
+    const resolvedOptions: Options = { resource, productId: productId || undefined, limit };
+    const cached = readMemoryCache<PublicMenuPayload>(resourceKey(slug, resolvedOptions));
+    if (cached) {
+      setData(cached);
       setLoading(false);
-    };
-
-    const unsubscribe = subscribePublicCafeFastLayer(slug, (payload) => {
-      apply(menuFromFastPayload(slug, payload));
-    });
-
-    const cached = menuCache.get(slug);
-    if (cached && Date.now() - cached.cachedAt < TTL_MS) {
-      apply(cached.value);
-      void refreshPublicCafeFastLayer(slug).catch(() => undefined);
-    } else {
-      const fastCached = readPublicCafeFastCache(slug);
-      const sessionCached = readSessionCache<PublicMenuPayload>(`barndaksa_public_menu_${slug}`, TTL_MS);
-      if (fastCached) {
-        apply(menuFromFastPayload(slug, fastCached));
-        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
-      } else if (sessionCached) {
-        apply(sessionCached);
-        void refreshPublicCafeFastLayer(slug).catch(() => undefined);
-      } else {
-        setLoading(true);
-      }
+      setError(null);
+      return () => {
+        cancelled = true;
+      };
     }
 
-    async function load() {
-      if (!isSupabaseConfigured()) {
-        if (!cancelled) {
-          setError("Supabase غير مهيأ");
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const payload = await loadPublicMenu(slug);
-        apply(payload);
-      } catch (err) {
-        if (!cancelled && !hadInitialData) {
-          setError(err instanceof Error ? err.message : "تعذر الاتصال بالخادم");
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
+    setLoading(true);
+    void prefetchPublicCafeResource(slug, resolvedOptions)
+      .then((payload) => {
+        if (cancelled) return;
+        setData(payload);
+        setError(null);
+        setLoading(false);
+      })
+      .catch((reason) => {
+        if (cancelled) return;
+        setError(reason instanceof Error ? reason.message : "تعذر الاتصال بالخادم");
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;
-      unsubscribe();
     };
-  }, [slug]);
+  }, [slug, resource, productId, limit]);
 
   return { ...data, loading, error };
 }

@@ -7,6 +7,7 @@ import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity } from "@/lib/data/theme";
 import { cachedServerValue } from "@/lib/performance/server-memory-cache";
+import { CafeThemePageProvider } from "@/lib/cafe/use-cafe-theme-page";
 
 type Props = {
   children: ReactNode;
@@ -66,10 +67,10 @@ export default async function CafeSlugLayout({ children, params }: Props) {
   const { slug } = await params;
 
   return (
-    <>
+    <CafeThemePageProvider slug={slug}>
       <CafeFaviconController slug={slug} />
       <PublicCafeVisitTracker slug={slug} />
       {children}
-    </>
+    </CafeThemePageProvider>
   );
 }

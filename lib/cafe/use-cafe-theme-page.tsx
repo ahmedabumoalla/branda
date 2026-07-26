@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { appendPreviewToNextPath, getCafePath } from "@/lib/cafe/theme-links";
 import { getThemeExperience } from "@/lib/cafe/theme-experience";
 import { DEFAULT_CAFE_THEME_ID } from "@/lib/mock/cafe-theme";
@@ -89,7 +89,7 @@ async function loadCafeThemePageData(slug: string): Promise<CafeThemePageData> {
   return request;
 }
 
-export function useCafeThemePage(slug: string) {
+function useCafeThemePageState(slug: string) {
   const [customIdentity, setCustomIdentity] = useState<CustomIdentityTheme | null>(null);
   const [features, setFeatures] = useState<string[]>([]);
   const [settings, setSettings] = useState<CafeSettings>(() => fallbackSettings(slug));
@@ -187,4 +187,24 @@ export function useCafeThemePage(slug: string) {
     hydrated,
     loadError,
   };
+}
+
+type CafeThemePageContextValue = ReturnType<typeof useCafeThemePageState>;
+const CafeThemePageContext = createContext<CafeThemePageContextValue | null>(null);
+
+export function CafeThemePageProvider({
+  slug,
+  children,
+}: {
+  slug: string;
+  children: ReactNode;
+}) {
+  const value = useCafeThemePageState(slug);
+  return <CafeThemePageContext.Provider value={value}>{children}</CafeThemePageContext.Provider>;
+}
+
+export function useCafeThemePage(slug: string) {
+  const shared = useContext(CafeThemePageContext);
+  if (shared?.slug === slug) return shared;
+  return useCafeThemePageState(slug);
 }

@@ -42,7 +42,11 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
   const isEvents = copy.kind === "events";
   const ProductFallbackIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
   const logoUrl = useResolvedCafeLogoUrl(settings);
-  const { products, branches, loading, error } = usePublicCafeMenu(slug);
+  const { products, branches, loading, error } = usePublicCafeMenu(slug, {
+    resource: "product",
+    productId: id,
+    limit: 1,
+  });
   const [quantity, setQuantity] = useState(1);
   const [branchName, setBranchName] = useState("");
   const [pickupAt, setPickupAt] = useState("");

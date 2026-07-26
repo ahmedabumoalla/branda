@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import {
   ArrowLeft,
@@ -33,6 +34,7 @@ import {
   type MenuProduct,
 } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { prefetchPublicCafeResource } from "@/lib/cafe/use-public-cafe-menu";
 
 export type CustomerDockKey = "menu" | "offers" | "rewards" | "account";
 
@@ -342,6 +344,7 @@ export function CustomerBottomDock({
   }>;
   active: CustomerDockKey;
 }) {
+  const router = useRouter();
   const visible = items.slice(0, 4);
   if (!visible.length) return null;
 
@@ -355,6 +358,22 @@ export function CustomerBottomDock({
             <Link
               key={item.key}
               href={item.href}
+              prefetch={false}
+              onPointerEnter={() => {
+                router.prefetch(item.href);
+                if (item.key === "menu") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "products", limit: 16 });
+                if (item.key === "offers") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "offers", limit: 12 });
+              }}
+              onFocus={() => {
+                router.prefetch(item.href);
+                if (item.key === "menu") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "products", limit: 16 });
+                if (item.key === "offers") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "offers", limit: 12 });
+              }}
+              onTouchStart={() => {
+                router.prefetch(item.href);
+                if (item.key === "menu") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "products", limit: 16 });
+                if (item.key === "offers") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "offers", limit: 12 });
+              }}
               aria-current={selected ? "page" : undefined}
               className={`relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black transition active:scale-95 ${
                 selected

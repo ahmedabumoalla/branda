@@ -100,7 +100,9 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const noMatchesTitle = isEvents ? "لا توجد تذاكر مطابقة" : "لا توجد منتجات مطابقة";
   const logoUrl = useResolvedCafeLogoUrl(settings);
   const { products, offers, branches, categories: menuCategories, loading, error } =
-    usePublicCafeMenu(slug);
+    usePublicCafeMenu(slug, {
+      resource: view === "offers" ? "offers" : view === "branches" ? "branches" : "products",
+    });
   const [filterOpen, setFilterOpen] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 

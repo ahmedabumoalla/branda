@@ -1,100 +1,31 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getPublicMenuBySlug } from "@/lib/data/menu";
-import { getPublicOffersBySlug } from "@/lib/data/offers";
-import { getPublicExperienceCampaigns } from "@/lib/data/experience";
-import { getPublicBranchesBySlug } from "@/lib/data/branches";
-import { getPublicCafeSettings } from "@/lib/data/settings";
+import { getPublicMenuPageBySlug } from "@/lib/data/menu";
 import { publicCacheHeader, PUBLIC_MENU_CACHE_SECONDS } from "@/lib/performance/server-cache";
 import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
 type Params = { params: Promise<{ slug: string }> };
 
-const emptyLoyaltySettings = {
-  pointsPerSar: 0,
-  welcomePoints: 0,
-  enabled: false,
-  earnRules: [],
-  redemptionRules: [],
-};
-
-const emptyMenu = { products: [], categories: [] };
-
-async function safeMenu(slug: string) {
-  try {
-    return await getPublicMenuBySlug(slug);
-  } catch (error) {
-    console.warn("[public/menu/menu-fallback]", error);
-    return emptyMenu;
-  }
-}
-
-async function safeOffers(slug: string) {
-  try {
-    return await getPublicOffersBySlug(slug);
-  } catch (error) {
-    console.warn("[public/menu/offers-fallback]", error);
-    return [];
-  }
-}
-
-async function safeBranches(slug: string) {
-  try {
-    return await getPublicBranchesBySlug(slug);
-  } catch (error) {
-    console.warn("[public/menu/branches-fallback]", error);
-    return [];
-  }
-}
-
-async function safeExperienceCampaigns(slug: string) {
-  try {
-    return await getPublicExperienceCampaigns(slug);
-  } catch (error) {
-    console.warn("[public/menu/experience-campaigns-fallback]", error);
-    return [];
-  }
-}
-
-async function loadPublicMenu(slug: string) {
-  const settings = await getPublicCafeSettings(slug);
-  if (!settings) return null;
-
-  const [menu, offers, branches, experienceCampaigns] = await Promise.all([
-    safeMenu(slug),
-    safeOffers(slug),
-    safeBranches(slug),
-    safeExperienceCampaigns(slug),
-  ]);
-
-  return {
-    ...menu,
-    offers,
-    branches,
-    loyaltySettings: emptyLoyaltySettings,
-    loyaltyRewards: [],
-    pages: [],
-    experienceCampaigns,
-  };
-}
-
-export async function GET(_request: Request, { params }: Params) {
+export async function GET(request: Request, { params }: Params) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
   }
 
   const { slug } = await params;
   const normalizedSlug = slug.trim().toLowerCase();
+  const url = new URL(request.url);
+  const cursor = Math.max(Number(url.searchParams.get("cursor") ?? 0) || 0, 0);
+  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 16) || 16, 1), 20);
 
   try {
     let payload = await cachedServerValue(
-      `public-menu:${normalizedSlug}`,
+      `public-products:${normalizedSlug}:${cursor}:${limit}`,
       PUBLIC_MENU_CACHE_SECONDS * 1000,
-      () => loadPublicMenu(normalizedSlug),
+      () => getPublicMenuPageBySlug(normalizedSlug, { cursor, limit }),
     );
 
     if (!payload) {
-      payload = await loadPublicMenu(normalizedSlug);
+      payload = await getPublicMenuPageBySlug(normalizedSlug, { cursor, limit });
     }
 
     if (!payload) {

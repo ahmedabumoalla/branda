@@ -1,4 +1,4 @@
-import { CafePageClient } from "@/components/cafe/cafe-page-client";
+import { redirect } from "next/navigation";
 
 type Params = {
   params: Promise<{ slug: string }>;
@@ -6,5 +6,5 @@ type Params = {
 
 export default async function CafeOffersPage({ params }: Params) {
   const { slug } = await params;
-  return <CafePageClient slug={slug} />;
+  redirect(`/c/${encodeURIComponent(slug)}/products/offers`);
 }

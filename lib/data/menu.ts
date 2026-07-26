@@ -17,6 +17,8 @@ function invalidatePublicMenuSurfaces(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
 
   clearServerMemoryCache(`public-menu:${normalizedSlug}`);
+  clearServerMemoryCache(`public-products:${normalizedSlug}`);
+  clearServerMemoryCache(`public-product:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/products/latest`);
@@ -523,6 +525,85 @@ export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) 
   const record = mapDbCategoryToRecord(cafe.slug, data as DbMenuCategory);
   invalidatePublicMenuSurfaces(cafe.slug);
   return record;
+}
+
+export async function getPublicMenuPageBySlug(
+  slug: string,
+  options: { cursor?: number; limit?: number } = {},
+) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return null;
+  const supabase = createAdminClient();
+  const cursor = Math.max(options.cursor ?? 0, 0);
+  const limit = Math.min(Math.max(options.limit ?? 16, 1), 20);
+
+  const [{ data: categories, error: categoryError }, { data: products, error: productError }] =
+    await Promise.all([
+      supabase
+        .from("menu_categories")
+        .select("*")
+        .eq("cafe_id", cafe.id)
+        .eq("visible", true)
+        .is("deleted_at", null)
+        .order("sort_order"),
+      supabase
+        .from("menu_products")
+        .select("*")
+        .eq("cafe_id", cafe.id)
+        .eq("available", true)
+        .is("deleted_at", null)
+        .order("sort_order")
+        .range(cursor, cursor + limit),
+    ]);
+
+  if (categoryError) throw categoryError;
+  if (productError) throw productError;
+  const categoryRows = (categories ?? []) as DbMenuCategory[];
+  const categoryMap = new Map(categoryRows.map((category) => [category.id, category.name]));
+  const hasMore = (products?.length ?? 0) > limit;
+  const pageRows = ((products ?? []) as DbMenuProduct[]).slice(0, limit);
+  const mappedProducts = pageRows.map((product) =>
+    mapDbProductToMenuProduct(
+      product,
+      product.category_id ? categoryMap.get(product.category_id) : undefined,
+    ),
+  );
+
+  return {
+    categories: categoryRows.map((category) => mapDbCategoryToRecord(slug, category)),
+    products: await attachEventTicketSettings(supabase, cafe.id, mappedProducts),
+    nextCursor: hasMore ? cursor + limit : null,
+  };
+}
+
+export async function getPublicProductBySlug(slug: string, productId: string) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return null;
+  const supabase = createAdminClient();
+  const { data: product, error } = await supabase
+    .from("menu_products")
+    .select("*")
+    .eq("id", productId)
+    .eq("cafe_id", cafe.id)
+    .eq("available", true)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw error;
+  if (!product) return null;
+
+  let categoryName: string | undefined;
+  if (product.category_id) {
+    const { data: category } = await supabase
+      .from("menu_categories")
+      .select("name")
+      .eq("id", product.category_id)
+      .eq("cafe_id", cafe.id)
+      .maybeSingle();
+    categoryName = category?.name;
+  }
+  const mapped = mapDbProductToMenuProduct(product as DbMenuProduct, categoryName);
+  const [withSettings] = await attachEventTicketSettings(supabase, cafe.id, [mapped]);
+  return withSettings;
 }
 
 export type DeleteMenuCategoryResult =

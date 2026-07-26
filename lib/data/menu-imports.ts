@@ -424,6 +424,8 @@ async function ensureCategory(categoryMap: Map<string, string>, cafeId: string, 
 function invalidateMenu(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
   clearServerMemoryCache(`public-menu:${normalizedSlug}`);
+  clearServerMemoryCache(`public-products:${normalizedSlug}`);
+  clearServerMemoryCache(`public-product:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
   revalidatePath(`/dashboard/menu`);
   revalidatePath(`/c/${normalizedSlug}`);

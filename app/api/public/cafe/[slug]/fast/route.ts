@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getPublicBranchesBySlug } from "@/lib/data/branches";
-import { getPublicCafeFeatureCodesBySlug, filterPublicCafePayloadByFeatures } from "@/lib/data/feature-entitlements";
-import { getPublicMenuBySlug } from "@/lib/data/menu";
-import { getPublicOffersBySlug } from "@/lib/data/offers";
-import { getPublicExperienceCampaigns } from "@/lib/data/experience";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCustomIdentity, getPublicThemeId } from "@/lib/data/theme";
-import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { publicCacheHeader } from "@/lib/performance/server-cache";
 import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 
@@ -15,16 +10,6 @@ const FAST_LAYER_TTL_SECONDS = 120;
 const FAST_LAYER_STALE_SECONDS = 60 * 10;
 
 type Params = { params: Promise<{ slug: string }> };
-
-const emptyLoyaltySettings = {
-  pointsPerSar: 0,
-  welcomePoints: 0,
-  enabled: false,
-  earnRules: [],
-  redemptionRules: [],
-};
-
-const emptyMenu = { products: [], categories: [] };
 
 async function safeFeatures(slug: string) {
   try {
@@ -53,47 +38,6 @@ async function safeCustomIdentity(slug: string) {
   }
 }
 
-async function safeMenu(slug: string) {
-  try {
-    return await getPublicMenuBySlug(slug);
-  } catch (error) {
-    console.warn("[public/cafe/fast/menu-fallback]", error);
-    return emptyMenu;
-  }
-}
-
-async function safeOffers(slug: string) {
-  try {
-    return await getPublicOffersBySlug(slug);
-  } catch (error) {
-    console.warn("[public/cafe/fast/offers-fallback]", error);
-    return [];
-  }
-}
-
-async function safeBranches(slug: string) {
-  try {
-    return await getPublicBranchesBySlug(slug);
-  } catch (error) {
-    console.warn("[public/cafe/fast/branches-fallback]", error);
-    return [];
-  }
-}
-
-async function safeExperienceCampaigns(slug: string) {
-  try {
-    return await getPublicExperienceCampaigns(slug);
-  } catch (error) {
-    console.warn("[public/cafe/fast/experience-campaigns-fallback]", error);
-    return [];
-  }
-}
-
-function canUseFeature(features: string[], feature: string) {
-  // Fail open if entitlement loading fails, to avoid hiding the public branch by mistake.
-  return !features.length || featureCodesAllow(features, feature);
-}
-
 async function loadPublicCafeFastLayer(slug: string) {
   const [settings, themeId, customIdentity, features] = await Promise.all([
     getPublicCafeSettings(slug),
@@ -104,36 +48,9 @@ async function loadPublicCafeFastLayer(slug: string) {
 
   if (!settings) return null;
 
-  const [menu, offers, branches, experienceCampaigns] = await Promise.all([
-    canUseFeature(features, "menu") ? safeMenu(slug) : Promise.resolve(emptyMenu),
-    canUseFeature(features, "offers") ? safeOffers(slug) : Promise.resolve([]),
-    canUseFeature(features, "branches") ? safeBranches(slug) : Promise.resolve([]),
-    canUseFeature(features, "experience_reviews") ? safeExperienceCampaigns(slug) : Promise.resolve([]),
-  ]);
-
-  const rawMenuPayload = {
-    ...menu,
-    offers,
-    branches,
-    loyaltySettings: emptyLoyaltySettings,
-    loyaltyRewards: [],
-    pages: [],
-    experienceCampaigns,
-  };
-
-  let menuPayload = rawMenuPayload;
-  if (features.length) {
-    try {
-      menuPayload = filterPublicCafePayloadByFeatures(rawMenuPayload, features);
-    } catch (error) {
-      console.warn("[public/cafe/fast/filter-fallback]", error);
-    }
-  }
-
   const now = Date.now();
   return {
     cafe: { settings, themeId, customIdentity, features },
-    menu: menuPayload,
     fetchedAt: now,
     staleAt: now + FAST_LAYER_TTL_SECONDS * 1000,
     expiresAt: now + FAST_LAYER_STALE_SECONDS * 1000,
@@ -170,7 +87,7 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.json(payload, {
       headers: {
         "Cache-Control": publicCacheHeader(FAST_LAYER_TTL_SECONDS),
-        "x-barndaksa-fast-layer": "public-cafe-v1",
+        "x-barndaksa-fast-layer": "public-cafe-bootstrap-v2",
       },
     });
   } catch (error) {

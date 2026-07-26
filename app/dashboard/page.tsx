@@ -2,27 +2,29 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
+import { Suspense } from "react";
 import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
+import {
+  DashboardRecentOrdersSection,
+  DashboardSectionSkeleton,
+  DashboardSummarySection,
+  DashboardTrendSection,
+} from "@/components/dashboard/dashboard-home-sections";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { getCafeCustomers } from "@/lib/data/customers";
-import { getOwnerExperienceData } from "@/lib/data/experience";
-import { getOwnerMenu } from "@/lib/data/menu";
-import { getOwnerOrders } from "@/lib/data/orders";
 import { getOwnerCafeSettings } from "@/lib/data/settings";
 
 export default async function DashboardPage() {
   if (!isSupabaseConfigured()) {
     return (
       <DashboardHomeClient
-        customers={[]}
-        orders={[]}
-        productCount={0}
-        experienceSubmissionCount={0}
         cafeSlug=""
         cafeName="العلامة"
         businessCategory="cafes_coffee"
         ownerName=""
+        summary={<DashboardSectionSkeleton />}
+        recentOrders={<DashboardSectionSkeleton rows={3} />}
+        trend={<DashboardSectionSkeleton rows={2} />}
         configError="قم بإعداد Supabase في env local"
       />
     );
@@ -31,32 +33,29 @@ export default async function DashboardPage() {
   try {
     const cafe = await requireOwnerCafeContext();
 
-    const [settings, orders, customerRows, menu, experienceData] =
-      await Promise.all([
-        getOwnerCafeSettings(),
-        getOwnerOrders(),
-        getCafeCustomers(),
-        getOwnerMenu(),
-        getOwnerExperienceData(),
-      ]);
+    const settings = await getOwnerCafeSettings();
 
     return (
       <DashboardHomeClient
-        customers={customerRows.map((customer) => ({
-          id: String(customer.id),
-          cafeSlug: cafe.slug,
-          fullName: String(customer.full_name ?? ""),
-          phone: String(customer.phone ?? ""),
-          email: customer.email ? String(customer.email) : undefined,
-          createdAt: String(customer.created_at ?? "").slice(0, 10),
-        }))}
-        orders={orders}
-        productCount={menu.products.length}
-        experienceSubmissionCount={experienceData.submissions.length}
         cafeSlug={cafe.slug}
         cafeName={settings.cafeName || cafe.name}
         businessCategory={cafe.businessCategory}
         ownerName={settings.ownerName || ""}
+        summary={
+          <Suspense fallback={<DashboardSectionSkeleton />}>
+            <DashboardSummarySection />
+          </Suspense>
+        }
+        recentOrders={
+          <Suspense fallback={<DashboardSectionSkeleton rows={3} />}>
+            <DashboardRecentOrdersSection />
+          </Suspense>
+        }
+        trend={
+          <Suspense fallback={<DashboardSectionSkeleton rows={2} />}>
+            <DashboardTrendSection />
+          </Suspense>
+        }
       />
     );
   } catch (error) {
@@ -64,14 +63,13 @@ export default async function DashboardPage() {
 
     return (
       <DashboardHomeClient
-        customers={[]}
-        orders={[]}
-        productCount={0}
-        experienceSubmissionCount={0}
         cafeSlug=""
         cafeName="العلامة"
         businessCategory="cafes_coffee"
         ownerName=""
+        summary={<DashboardSectionSkeleton />}
+        recentOrders={<DashboardSectionSkeleton rows={3} />}
+        trend={<DashboardSectionSkeleton rows={2} />}
         configError="تعذر تحميل بيانات لوحة التحكم"
       />
     );
