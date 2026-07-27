@@ -1,0 +1,3 @@
+components/cafe/product-detail-client.tsx
+scripts/check-premium-product-detail-safe.mjs
+.codex-premium-product-detail-safe-files.txt
