@@ -1,0 +1,5 @@
+app/actions/cashier.ts
+components/cashier/cashier-console-client.tsx
+lib/data/cashier.ts
+scripts/check-cashier-operations.mjs
+.codex-fix-cashier-orders-22p02-files.txt

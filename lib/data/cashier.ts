@@ -24,7 +24,25 @@ export type CashierConsole = {
   };
   orders: Array<Record<string, unknown>>;
   operationOrders?: Array<Record<string, unknown>>;
+  ordersError: string | null;
 };
+
+export type CashierOrdersResult =
+  | { authenticated: false; orders: []; dataError: null }
+  | {
+      authenticated: true;
+      orders: Array<Record<string, unknown>>;
+      dataError: string | null;
+    };
+
+const cashierOrderStatuses = [
+  "pending_cafe",
+  "accepted",
+  "completed",
+  "not_completed",
+  "rejected",
+  "cancelled_by_customer",
+] as const;
 
 function orderIdOf(order: Record<string, unknown>) {
   const raw = order.id ?? order.order_id ?? order.orderId;
@@ -453,6 +471,44 @@ async function writeCashierActivity(
   });
 }
 
+async function loadCashierOrders(
+  admin: ReturnType<typeof createAdminClient>,
+  session: CashierSessionContext,
+): Promise<{ orders: Array<Record<string, unknown>>; dataError: string | null }> {
+  const { data: orderRows, error: ordersError } = await admin
+    .from("orders")
+    .select(
+      "id,cafe_id,customer_id,customer_name,customer_phone,branch_name,fulfillment_type,status,payment_status,pickup_at,rejection_reason,responded_at,subtotal,discount_amount,tax_amount,total,notes,created_at,updated_at,not_completed_reason",
+    )
+    .eq("cafe_id", session.cafeId)
+    .is("deleted_at", null)
+    .in("status", [...cashierOrderStatuses])
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  if (ordersError) {
+    console.warn("[cashier-console]", {
+      stage: "load_orders",
+      cashierId: session.cashierId,
+      cafeId: session.cafeId,
+      code: ordersError.code,
+      message: ordersError.message,
+      details: ordersError.details,
+      hint: ordersError.hint,
+    });
+    return {
+      orders: [],
+      dataError: "تعذر تحميل الطلبات. الجلسة ما زالت فعالة ويمكنك إعادة المحاولة",
+    };
+  }
+
+  const orders = await attachOrderItems(
+    (orderRows ?? []) as Array<Record<string, unknown>>,
+    session.cafeId,
+  );
+  return { orders, dataError: null };
+}
+
 export async function getCashierConsole(): Promise<CashierConsole | null> {
   const admin = createAdminClient();
   const verifiedSession = await requireCashierSessionContext(admin).catch((error) => {
@@ -464,28 +520,7 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
   });
   if (!verifiedSession) return null;
 
-  const { data: orderRows, error: ordersError } = await admin
-    .from("orders")
-    .select("*")
-    .eq("cafe_id", verifiedSession.cafeId)
-    .is("deleted_at", null)
-    .in("status", ["pending", "pending_cafe", "accepted", "approved", "completed", "not_completed", "rejected"])
-    .order("created_at", { ascending: false })
-    .limit(40);
-  if (ordersError) {
-    console.warn("[cashier-console]", {
-      stage: "load_orders",
-      cashierId: verifiedSession.cashierId,
-      cafeId: verifiedSession.cafeId,
-      reason: ordersError.code,
-    });
-    return null;
-  }
-
-  const orders = await attachOrderItems(
-    (orderRows ?? []) as Array<Record<string, unknown>>,
-    verifiedSession.cafeId,
-  );
+  const { orders, dataError } = await loadCashierOrders(admin, verifiedSession);
   await recordCashierConsoleEntry({
     cafeId: verifiedSession.cafeId,
     cafeSlug: verifiedSession.cafeSlug,
@@ -508,7 +543,16 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
     },
     orders,
     operationOrders: orders,
+    ordersError: dataError,
   };
+}
+
+export async function getCashierOrders(): Promise<CashierOrdersResult> {
+  const admin = createAdminClient();
+  const session = await requireCashierSessionContext(admin).catch(() => null);
+  if (!session) return { authenticated: false, orders: [], dataError: null };
+  const result = await loadCashierOrders(admin, session);
+  return { authenticated: true, ...result };
 }
 
 export async function hasValidCashierSession() {

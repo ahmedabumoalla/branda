@@ -6,7 +6,7 @@ import {
   cashierAcceptOrder,
   cashierScanLoyalty,
   cashierUpdateOrderStatus,
-  getCashierConsole,
+  getCashierOrders,
   loginCashierWithPassword,
   logoutCashier,
 } from "@/lib/data/cashier";
@@ -29,8 +29,8 @@ export async function logoutCashierAction() {
   redirect("/cashier/login");
 }
 
-export async function fetchCashierConsoleAction() {
-  return getCashierConsole();
+export async function fetchCashierOrdersAction() {
+  return getCashierOrders();
 }
 
 export async function acceptCashierOrderAction(orderId: string) {

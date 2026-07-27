@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import {
   cashierRedeemExperienceRewardAction,
   cashierScanLoyaltyAction,
-  fetchCashierConsoleAction,
+  fetchCashierOrdersAction,
   logoutCashierAction,
   updateCashierOrderStatusAction,
 } from "@/app/actions/cashier";
@@ -92,6 +92,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
   const [operationPending, setOperationPending] = useState("");
   const [orderErrors, setOrderErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const [ordersLoadError, setOrdersLoadError] = useState(initialData.ordersError);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -126,15 +127,16 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
     setRefreshing(true);
     setMessage("");
     try {
-      const data = await fetchCashierConsoleAction();
-      if (!data) {
+      const result = await fetchCashierOrdersAction();
+      if (!result.authenticated) {
         window.location.assign("/cashier/session/clear?reason=invalid");
         return;
       }
-      setOrders(data.operationOrders ?? data.orders);
+      setOrders(result.orders);
+      setOrdersLoadError(result.dataError);
       setLastUpdated(new Date());
     } catch {
-      setMessage("تعذر تحديث الطلبات الآن");
+      setOrdersLoadError("تعذر تحميل الطلبات. الجلسة ما زالت فعالة ويمكنك إعادة المحاولة");
     } finally {
       setRefreshing(false);
     }
@@ -253,6 +255,20 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
 
         {activeTab === "orders" ? (
           <section>
+            {ordersLoadError ? (
+              <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+                <p className="font-black">{ordersLoadError}</p>
+                <button
+                  type="button"
+                  disabled={refreshing}
+                  onClick={() => void refreshOrders()}
+                  className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-amber-900 px-4 text-sm font-black text-white disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                  إعادة تحميل الطلبات
+                </button>
+              </div>
+            ) : null}
             <div className="grid grid-cols-3 gap-2">
               {[["جديدة", metrics.new], ["قيد التنفيذ", metrics.accepted], ["مكتملة اليوم", metrics.completed]].map(([label, value]) => (
                 <div key={String(label)} className="rounded-2xl bg-white p-3 text-center shadow-sm sm:p-4">
@@ -326,7 +342,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
                 );
               })}
             </div>
-            {!visibleOrders.length ? (
+            {!visibleOrders.length && !ordersLoadError ? (
               <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
                 <p className="font-black">لا توجد طلبات في هذا القسم</p>
                 <button type="button" disabled={refreshing} onClick={() => void refreshOrders()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#6B3A25] px-4 text-sm font-black text-white"><RefreshCw className="h-4 w-4" /> تحديث</button>

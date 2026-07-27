@@ -15,6 +15,8 @@ const [
   clearRoute,
   customerRewards,
   experienceRewards,
+  productionSchema,
+  orderStatusUpgrade,
 ] = await Promise.all([
   read("app/cashier/login/page.tsx"),
   read("components/cashier/cashier-login-form.tsx"),
@@ -27,6 +29,8 @@ const [
   read("app/cashier/session/clear/route.ts"),
   read("lib/data/customer-rewards.ts"),
   read("lib/data/experience-rewards.ts"),
+  read("supabase/migrations/001_barndaksa_production_schema.sql"),
+  read("supabase/migrations/067_add_order_not_completed_status.sql"),
 ]);
 
 assert.match(cashierActions, /loginCashierWithPassword[\s\S]+redirect\("\/cashier"\)/);
@@ -59,6 +63,31 @@ assert.match(cashierData, /\.eq\("cashier_id", cashierId\)/);
 assert.match(cashierData, /\.eq\("cafe_id", cafeId\)/);
 assert.match(cashierData, /cashier\.active !== true/);
 assert.doesNotMatch(cashierData, /rpc\("get_cashier_console"/);
+assert.match(productionSchema, /CREATE TYPE order_status AS ENUM \(\s*'pending_cafe', 'accepted', 'rejected', 'cancelled_by_customer'/);
+assert.match(productionSchema, /status\s+order_status NOT NULL DEFAULT 'pending_cafe'/);
+assert.match(productionSchema, /cafe_id\s+UUID NOT NULL/);
+assert.match(productionSchema, /deleted_at\s+TIMESTAMPTZ/);
+assert.match(orderStatusUpgrade, /add value if not exists 'completed'/);
+assert.match(orderStatusUpgrade, /add value if not exists 'not_completed'/);
+assert.match(cashierData, /const cashierOrderStatuses = \[\s*"pending_cafe",\s*"accepted",\s*"completed",\s*"not_completed",\s*"rejected",\s*"cancelled_by_customer"/);
+assert.doesNotMatch(
+  cashierData.match(/const cashierOrderStatuses = \[[\s\S]*?\] as const/)?.[0] ?? "",
+  /"pending"|"approved"/,
+);
+assert.match(cashierData, /\.limit\(40\)/);
+assert.match(cashierData, /code: ordersError\.code/);
+assert.match(cashierData, /message: ordersError\.message/);
+assert.match(cashierData, /details: ordersError\.details/);
+assert.match(cashierData, /hint: ordersError\.hint/);
+assert.match(cashierData, /ordersError: dataError/);
+assert.match(cashierActions, /fetchCashierOrdersAction[\s\S]+getCashierOrders/);
+assert.match(portalUi, /ordersLoadError/);
+assert.match(portalUi, /إعادة تحميل الطلبات/);
+assert.doesNotMatch(portalUi, /fetchCashierConsoleAction/);
+assert.match(cashierData, /const canHandlePending = \["pending", "pending_cafe"\]/);
+assert.match(cashierData, /const canCloseAccepted = \["accepted", "approved"\]/);
+assert.match(cashierData, /\.eq\("cafe_id", session\.cafeId\)/);
+assert.match(cashierData, /\.eq\("status", currentStatus\)/);
 
 const cashierRuntime = [cashierLoginPage, cashierPage, cashierActions, portalUi, cashierData].join("\n");
 assert.doesNotMatch(
