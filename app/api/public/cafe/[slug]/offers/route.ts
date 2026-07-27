@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: Params) {
   }
   const { slug } = await params;
   const normalizedSlug = slug.trim().toLowerCase();
-  const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit") ?? 12) || 12, 1), 20);
+  const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit") ?? 24) || 24, 1), 100);
   const offers = await cachedServerValue(
     `public-offers:${normalizedSlug}:${limit}`,
     PUBLIC_MENU_CACHE_SECONDS * 1000,

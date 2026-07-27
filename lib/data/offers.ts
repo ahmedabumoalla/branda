@@ -1,9 +1,18 @@
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { mapDbOfferToCafeOffer } from "@/lib/data/mappers";
 import type { CafeOffer } from "@/lib/mock/offers";
+import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
+
+function invalidatePublicOffers(slug: string) {
+  const normalizedSlug = slug.trim().toLowerCase();
+  clearServerMemoryCache(`public-offers:${normalizedSlug}`);
+  revalidatePath(`/c/${normalizedSlug}/products/offers`);
+  revalidatePath(`/c/${normalizedSlug}/offers`);
+}
 
 function normalizeOfferStatusToDb(status: string) {
   const value = status.trim().toLowerCase();
@@ -100,7 +109,41 @@ export async function getPublicOffersBySlug(slug: string): Promise<CafeOffer[]> 
     .eq("is_archived", false)
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as Record<string, unknown>[]).map(mapOffer);
+  const now = Date.now();
+  const visibleOffers = ((data ?? []) as Record<string, unknown>[])
+    .map(mapOffer)
+    .filter((offer) => {
+      const startsAt = offer.startDate ? new Date(offer.startDate).getTime() : null;
+      const endsAt = offer.endDate ? new Date(offer.endDate).getTime() : null;
+      return (
+        (!startsAt || Number.isNaN(startsAt) || startsAt <= now) &&
+        (!endsAt || Number.isNaN(endsAt) || endsAt >= now)
+      );
+    });
+  const preferredPaths = visibleOffers
+    .map((offer) => offer.cardStoragePath || offer.bannerAssetId)
+    .filter((path): path is string => Boolean(path));
+  const signedByPath = new Map<string, string>();
+  if (preferredPaths.length) {
+    const { data: signed } = await supabase.storage
+      .from("offer-banners")
+      .createSignedUrls(preferredPaths, 60 * 60);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) signedByPath.set(item.path, item.signedUrl);
+    }
+  }
+  return visibleOffers.map((offer) => {
+    const preferredPath = offer.cardStoragePath || offer.bannerAssetId;
+    const signedUrl = preferredPath ? signedByPath.get(preferredPath) : undefined;
+    return signedUrl
+      ? {
+          ...offer,
+          bannerImageUrl: signedUrl,
+          bannerAssetId: undefined,
+          cardStoragePath: undefined,
+        }
+      : offer;
+  });
 }
 
 export async function getOwnerOffers(): Promise<CafeOffer[]> {
@@ -216,6 +259,7 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
   }
 
   await syncLinkedProductPromo(supabase, cafe.id, payload);
+  invalidatePublicOffers(cafe.slug);
 
   return mapOffer(saved);
 }
@@ -229,4 +273,5 @@ export async function softDeleteOffer(offerId: string) {
     .eq("id", offerId)
     .eq("cafe_id", cafe.id);
   if (error) throw error;
+  invalidatePublicOffers(cafe.slug);
 }

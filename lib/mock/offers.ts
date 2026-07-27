@@ -7,7 +7,7 @@ export type OfferType =
   | "عرض موسمي"
   | "عرض مخصص";
 
-export type OfferStatus = "نشط" | "مجدول" | "متوقف";
+export type OfferStatus = "نشط" | "مجدول" | "متوقف" | "منتهي" | "مسودة";
 
 export type OfferPlacement = "قائمة العروض" | "بانر الكوفي" | "كلاهما";
 

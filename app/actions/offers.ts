@@ -3,6 +3,7 @@
 import { getOwnerOffers, softDeleteOffer, upsertOffer } from "@/lib/data/offers";
 import { getOwnerMenu } from "@/lib/data/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
+import { uploadOptimizedImage } from "@/lib/storage/upload-server";
 
 export async function fetchOwnerOffersAction() {
   return getOwnerOffers();
@@ -41,4 +42,13 @@ export async function saveOfferAction(offer: CafeOffer) {
 
 export async function deleteOfferAction(offerId: string) {
   await softDeleteOffer(offerId);
+}
+
+export async function uploadOfferBannerAction(offerId: string, formData: FormData) {
+  if (!/^[0-9a-f-]{36}$/i.test(offerId)) {
+    throw new Error("احفظ العرض قبل رفع الصورة");
+  }
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("اختر صورة صالحة");
+  return uploadOptimizedImage("offer-banners", file, "offer-banner", offerId);
 }

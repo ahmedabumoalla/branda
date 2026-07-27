@@ -1,0 +1,14 @@
+.env.example
+app/actions/offers.ts
+app/api/dashboard/offers/[offerId]/generate-card/route.ts
+app/api/public/cafe/[slug]/offers/route.ts
+app/c/[slug]/products/[view]/page.tsx
+components/cafe/public-offers-page.tsx
+components/dashboard/pages/offers-page.tsx
+components/offers/offer-card.tsx
+lib/data/offers.ts
+lib/mock/offers.ts
+lib/offers/offer-ai-generation.ts
+scripts/check-professional-offers-ai-studio.mjs
+tests/offers-ai-studio.test.mjs
+.codex-professional-offers-ai-studio-files.txt
