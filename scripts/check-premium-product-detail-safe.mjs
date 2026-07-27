@@ -67,12 +67,8 @@ if (!showcase.includes("availabilityLabel?: string;")) {
 if (!detail.includes("availabilityLabel={availabilityLabel}")) {
   throw new Error("Product detail must pass availabilityLabel to ProductCinematicShowcase");
 }
-if (
-  !showcase.includes("{availabilityLabel ? (") ||
-  !showcase.includes("{availabilityLabel}") ||
-  !showcase.includes(") : null}")
-) {
-  throw new Error("ProductCinematicShowcase must render availabilityLabel conditionally");
+if (!detail.includes('data-product-field="availability"')) {
+  throw new Error("Product detail must render availabilityLabel with the primary information");
 }
 if (!productPage.includes('import { getPublicProductBySlug } from "@/lib/data/menu";')) {
   throw new Error("Product page must import getPublicProductBySlug");

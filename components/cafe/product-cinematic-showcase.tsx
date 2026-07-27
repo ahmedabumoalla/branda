@@ -24,9 +24,6 @@ type NavigatorWithConnection = Navigator & {
 export function ProductCinematicShowcase({
   children,
   productName,
-  categoryLabel,
-  promoLabel,
-  availabilityLabel,
   className = "",
   hasVideo = false,
 }: Props) {
@@ -98,22 +95,6 @@ export function ProductCinematicShowcase({
       <div className="cinematic-vignette pointer-events-none absolute inset-0" />
       <div className="cinematic-glow pointer-events-none absolute left-1/2 top-[46%] h-[62%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
       <div className="cinematic-shadow pointer-events-none absolute bottom-[8%] left-1/2 h-[9%] w-[52%] -translate-x-1/2 rounded-[50%]" />
-
-      <div className="cinematic-badges pointer-events-none absolute inset-x-4 top-4 z-20 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-white/30 bg-[var(--ci-surface,var(--barndaksa-cream-base))]/90 px-3 py-1 text-xs font-black text-[var(--ci-text,var(--barndaksa-espresso-dark))] shadow-sm backdrop-blur-sm">
-          {categoryLabel}
-        </span>
-        {promoLabel ? (
-          <span className="rounded-full bg-[var(--ci-accent,var(--barndaksa-coffee-brown))] px-3 py-1 text-xs font-black text-[var(--ci-accent-contrast,var(--barndaksa-cream-base))] shadow-sm">
-            {promoLabel}
-          </span>
-        ) : null}
-        {availabilityLabel ? (
-          <span className="mr-auto rounded-full border border-black/5 bg-[var(--ci-surface,var(--barndaksa-cream-base))]/90 px-3 py-1 text-xs font-black text-[var(--ci-text,var(--barndaksa-espresso-dark))]">
-            {availabilityLabel}
-          </span>
-        ) : null}
-      </div>
 
       <div className="cinematic-media relative z-10 flex h-full w-full items-center justify-center">
         {children}

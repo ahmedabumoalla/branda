@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Clock,
   Coffee,
-  MapPin,
   Sparkles,
   Ticket,
   Utensils,
@@ -60,15 +59,6 @@ function EventDetails({
     ["نهاية الفعالية", formatDate(settings.eventEndAt)],
     ["صالحة من", formatDate(settings.ticketValidFrom)],
     ["صالحة حتى", formatDate(settings.ticketValidUntil)],
-    ["السعة", settings.capacity ? `${settings.capacity.toLocaleString("ar-SA")} شخص` : null],
-    [
-      "سياسة الدخول",
-      settings.checkinPolicy === "single_use"
-        ? "دخول لمرة واحدة"
-        : settings.checkinPolicy === "multi_use"
-          ? "دخول متعدد"
-          : null,
-    ],
     [
       "الحد لكل عميل",
       settings.maxPerCustomer
@@ -145,6 +135,12 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
   const categoryLabel = resolveProductCategoryLabel(product);
   const availabilityLabel = product.available ? "متاح حاليًا" : "غير متاح حاليًا";
   const eventSettings = product.eventTicketSettings ?? null;
+  const checkinPolicyLabel =
+    eventSettings?.checkinPolicy === "single_use"
+      ? "دخول لمرة واحدة"
+      : eventSettings?.checkinPolicy === "multi_use"
+        ? "دخول متعدد"
+        : null;
   const highlights = [
     product.preparationTimeMinutes
       ? {
@@ -160,11 +156,6 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
           value: `${product.calories.toLocaleString("ar-SA")} سعرة`,
         }
       : null,
-    {
-      icon: product.available ? Coffee : Clock,
-      label: "التوفر",
-      value: availabilityLabel,
-    },
     isEvents && eventSettings?.capacity
       ? {
           icon: Ticket,
@@ -172,21 +163,44 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
           value: `${eventSettings.capacity.toLocaleString("ar-SA")} شخص`,
         }
       : null,
+    isEvents && checkinPolicyLabel
+      ? {
+          icon: Ticket,
+          label: "سياسة الدخول",
+          value: checkinPolicyLabel,
+        }
+      : null,
   ].filter((highlight): highlight is NonNullable<typeof highlight> => Boolean(highlight)).slice(0, 4);
+  const hasEventDetails = Boolean(
+    eventSettings &&
+      [
+        eventSettings.ticketType,
+        eventSettings.venueName,
+        eventSettings.gateName,
+        eventSettings.eventStartAt,
+        eventSettings.eventEndAt,
+        eventSettings.ticketValidFrom,
+        eventSettings.ticketValidUntil,
+        eventSettings.maxPerCustomer,
+      ].some(Boolean),
+  );
+  const hasPromoPeriod = Boolean(product.promo?.startDate || product.promo?.endDate);
+  const hasProductDetails = Boolean(
+    product.ingredients.length || hasEventDetails || hasPromoPeriod,
+  );
 
   const imageSlot = (
-    <div className="premium-product-enter premium-product-enter-media">
+    <div className="premium-product-enter premium-product-enter-media min-w-0">
       <ProductCinematicShowcase
         productName={product.name}
         categoryLabel={categoryLabel}
-        promoLabel={product.promo ? promoBadgeText(product.promo) : undefined}
         availabilityLabel={availabilityLabel}
         hasVideo={Boolean(product.videoAssetId)}
       >
         <ProductMediaDisplay
           product={product}
           alt={product.name}
-          className="relative z-10 max-h-full w-full object-contain p-5 sm:p-8"
+          className="relative z-10 max-h-full w-full object-contain p-3 sm:p-5"
           fallback={<ProductFallbackIcon className="relative z-10 h-16 w-16 opacity-40" />}
         />
       </ProductCinematicShowcase>
@@ -194,71 +208,67 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
   );
 
   const infoSlot = (
-    <div className="min-w-0">
-      <p className={`premium-product-enter premium-product-enter-category text-sm font-black ${theme.accent}`}>
+    <div className="min-w-0 lg:py-2">
+      <p data-product-field="category" className={`premium-product-enter premium-product-enter-category text-xs font-black sm:text-sm ${theme.accent}`}>
         {categoryLabel}
       </p>
       <h1
-        className={`premium-product-enter premium-product-enter-name mt-2 break-words text-3xl font-black leading-[1.18] sm:text-4xl lg:text-5xl ${experience.headingTracking}`}
+        className={`premium-product-enter premium-product-enter-name mt-2 break-words text-3xl font-black leading-[1.15] sm:text-4xl lg:text-[2.75rem] ${experience.headingTracking}`}
       >
         {product.name}
       </h1>
+      <span
+        data-product-field="availability"
+        className={`premium-product-enter mt-3 inline-flex rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}
+      >
+        {availabilityLabel}
+      </span>
       {product.description ? (
         <p
-          className={`premium-product-enter premium-product-enter-description mt-5 max-w-[62ch] break-words text-base font-bold leading-8 ${theme.muted}`}
+          data-product-field="description"
+          className={`premium-product-enter premium-product-enter-description mt-4 max-w-[60ch] break-words text-sm font-bold leading-7 sm:text-base ${theme.muted}`}
         >
           {product.description}
         </p>
       ) : null}
 
-      <div className="premium-product-enter premium-product-enter-price mt-6 flex flex-wrap items-end gap-x-3 gap-y-1">
+      <div data-product-field="price" className="premium-product-enter premium-product-enter-price mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="text-3xl font-black sm:text-4xl">{formatSar(finalPrice)}</span>
         {hasDiscount ? (
-          <span className={`pb-1 text-base font-black line-through ${theme.muted}`}>
+          <span className={`text-sm font-black line-through sm:text-base ${theme.muted}`}>
             {formatSar(product.price)}
+          </span>
+        ) : null}
+        {product.promo ? (
+          <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
+            {promoBadgeText(product.promo)}
           </span>
         ) : null}
       </div>
 
-      {product.promo ? (
-        <div
-          className={`premium-product-enter premium-product-enter-offer mt-4 border-r-4 border-[var(--ci-accent,var(--barndaksa-coffee-brown))] py-1 pr-4 ${theme.accent}`}
-        >
-          <p className="text-xs font-black">العرض الحالي</p>
-          <p className="mt-1 text-lg font-black">{promoBadgeText(product.promo)}</p>
-        </div>
-      ) : null}
-
-      <div className="premium-product-enter premium-product-enter-highlights mt-7 flex flex-wrap gap-x-6 gap-y-3 border-y border-black/5 py-4">
-        {highlights.map((highlight) => (
-          <div
-            key={highlight.label}
-            className="group flex min-w-[132px] items-center gap-3 rounded-xl px-2 py-1 transition hover:-translate-y-0.5 hover:bg-black/[0.025]"
-          >
-            <highlight.icon className={`h-5 w-5 shrink-0 ${theme.accent}`} />
-            <div>
-              <p className={`text-[11px] font-black ${theme.muted}`}>{highlight.label}</p>
-              <p className="mt-0.5 text-sm font-black">{highlight.value}</p>
+      {highlights.length ? (
+        <dl className="premium-product-enter premium-product-enter-highlights mt-6 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 border-t border-black/5 pt-5 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+          {highlights.map((highlight) => (
+            <div key={highlight.label} className="min-w-0">
+              <dt className={`flex items-center gap-1.5 text-[11px] font-black ${theme.muted}`}>
+                <highlight.icon className={`h-4 w-4 shrink-0 ${theme.accent}`} />
+                <span className="truncate">{highlight.label}</span>
+              </dt>
+              <dd className="mt-1 break-words text-sm font-black leading-5">{highlight.value}</dd>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
   );
 
   return (
     <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
-      <div className="min-w-0 space-y-6 pb-8">
-        <header className="flex min-w-0 items-center justify-between gap-3 border-b border-black/5 pb-4">
-          <div className="min-w-0">
-            <p className={`truncate text-xs font-black ${theme.muted}`}>
-              {settings.cafeName || slug}
-            </p>
-            <p className="truncate text-sm font-black">{categoryLabel}</p>
-          </div>
+      <div className="min-w-0 pb-8">
+        <header className="mb-4 flex min-w-0 items-center sm:mb-6">
           <Link
             href={productsHref}
-            className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-black/5 px-4 text-sm font-black transition hover:-translate-y-0.5 active:translate-y-0 ${theme.card}`}
+            className={`inline-flex min-h-10 items-center gap-2 rounded-xl border border-black/5 px-3 text-sm font-black transition hover:-translate-y-0.5 active:translate-y-0 ${theme.card}`}
           >
             <ArrowRight className={`h-4 w-4 ${theme.accent}`} />
             <span>رجوع إلى المنتجات</span>
@@ -272,25 +282,13 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
             infoSlot={infoSlot}
           />
 
-          <section
-            className="premium-product-reveal mx-auto mt-10 max-w-4xl border-t border-black/5 pt-8 sm:mt-14 sm:pt-10"
-          >
-            <p className={`text-sm font-black ${theme.accent}`}>تفاصيل المنتج</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">
-              كل ما تحتاج معرفته
-            </h2>
-
-            {product.description ? (
-              <div className="mt-7">
-                <h3 className="text-sm font-black">الوصف</h3>
-                <p className={`mt-2 max-w-[68ch] break-words text-sm font-bold leading-8 ${theme.muted}`}>
-                  {product.description}
-                </p>
-              </div>
-            ) : null}
-
+          {hasProductDetails ? (
+            <section
+              className={`premium-product-reveal mx-auto mt-7 max-w-5xl rounded-2xl border border-black/5 p-5 shadow-[0_14px_40px_rgba(49,25,18,0.06)] sm:mt-9 sm:p-7 ${theme.card}`}
+            >
+              <h2 className="text-xl font-black sm:text-2xl">تفاصيل المنتج</h2>
             {product.ingredients.length ? (
-              <div className="mt-8">
+              <div className="mt-5">
                 <h3 className="text-sm font-black">
                   {isEvents ? "محتويات الباقة" : "المكونات"}
                 </h3>
@@ -298,7 +296,7 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
                   {product.ingredients.map((ingredient) => (
                     <span
                       key={ingredient}
-                      className={`max-w-full break-words rounded-full px-3 py-2 text-sm font-black ${theme.badge}`}
+                      className={`max-w-full break-words rounded-full px-3 py-1.5 text-xs font-black sm:text-sm ${theme.badge}`}
                     >
                       {ingredient}
                     </span>
@@ -307,71 +305,30 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
               </div>
             ) : null}
 
-            <dl className="mt-8 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-              {[
-                ["التصنيف", categoryLabel],
-                ["التوفر", availabilityLabel],
-                product.preparationTimeMinutes
-                  ? ["وقت التجهيز", `${product.preparationTimeMinutes} دقيقة`]
-                  : null,
-                product.calories
-                  ? ["السعرات", `${product.calories.toLocaleString("ar-SA")} سعرة`]
-                  : null,
-              ]
-                .filter((entry): entry is string[] => Boolean(entry))
-                .map(([label, value]) => (
-                  <div key={label} className="border-b border-black/5 pb-3">
-                    <dt className={`text-xs font-black ${theme.muted}`}>{label}</dt>
-                    <dd className="mt-1 break-words text-sm font-black">{value}</dd>
-                  </div>
-                ))}
-            </dl>
-
-            {eventSettings ? (
-              <div className="mt-10">
+            {hasEventDetails && eventSettings ? (
+              <div className="mt-7">
                 <h3 className="mb-5 text-lg font-black">تفاصيل الفعالية والتذكرة</h3>
                 <EventDetails settings={eventSettings} mutedClass={theme.muted} />
               </div>
             ) : null}
-          </section>
 
-          {product.promo ? (
-            <section
-              className={`premium-product-reveal mx-auto mt-8 max-w-4xl rounded-[24px] border border-black/5 p-5 sm:p-7 ${theme.card}`}
-            >
-              <p className={`text-xs font-black ${theme.muted}`}>العرض الحالي</p>
-              <h2 className={`mt-2 break-words text-2xl font-black ${theme.accent}`}>
-                {promoBadgeText(product.promo)}
-              </h2>
-              <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            {hasPromoPeriod && product.promo ? (
+              <dl className="mt-7 border-t border-black/5 pt-5">
                 <div>
                   <dt className={`text-xs font-black ${theme.muted}`}>فترة العرض</dt>
                   <dd className="mt-1 break-words text-sm font-black">
                     {formatDate(product.promo.startDate)} — {formatDate(product.promo.endDate)}
                   </dd>
                 </div>
-                <div>
-                  <dt className={`text-xs font-black ${theme.muted}`}>السعر</dt>
-                  <dd className="mt-1 flex flex-wrap items-center gap-2 text-sm font-black">
-                    <span>{formatSar(finalPrice)}</span>
-                    {hasDiscount ? (
-                      <span className={`line-through ${theme.muted}`}>{formatSar(product.price)}</span>
-                    ) : null}
-                  </dd>
-                </div>
               </dl>
+            ) : null}
             </section>
           ) : null}
 
-          <section className="premium-product-reveal mx-auto mt-10 max-w-4xl text-center">
-            <MapPin className={`mx-auto h-6 w-6 ${theme.accent}`} />
-            <h2 className="mt-3 text-2xl font-black">اكتشف المزيد من العلامة</h2>
-            <p className={`mx-auto mt-2 max-w-lg text-sm font-bold leading-7 ${theme.muted}`}>
-              تصفح بقية المنتجات والعروض المتاحة واختر ما يناسبك.
-            </p>
+          <section className="premium-product-reveal mx-auto mt-7 max-w-5xl text-center sm:mt-9">
             <Link
               href={productsHref}
-              className={`mt-5 inline-flex min-h-12 items-center justify-center gap-2 px-6 font-black transition hover:-translate-y-0.5 active:translate-y-0 ${theme.button}`}
+              className={`inline-flex min-h-12 items-center justify-center gap-2 px-6 font-black transition hover:-translate-y-0.5 active:translate-y-0 ${theme.button}`}
             >
               استكشف بقية المنتجات
               <ArrowRight className="h-4 w-4" />

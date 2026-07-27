@@ -1,0 +1,6 @@
+components/cafe/product-detail-client.tsx
+components/cafe/product-cinematic-showcase.tsx
+components/cafe/themes/themed-product-detail.tsx
+scripts/check-premium-product-detail-clean-layout.mjs
+scripts/check-premium-product-detail-safe.mjs
+.codex-clean-reorganize-product-detail-files.txt
