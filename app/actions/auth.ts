@@ -234,6 +234,12 @@ export async function loginOwnerAction(
   }
 }
 
+export async function loginUnifiedAction(email: string, password: string) {
+  const result = await loginOwnerAction(email, password);
+  if (!result.ok || !result.redirectTo) return result;
+  redirect(result.redirectTo);
+}
+
 const availableOwnerCategorySchema = z.enum(["cafes_coffee", "restaurants", "events_conferences"]);
 
 const cafeOwnerRegistrationSchema = z.object({

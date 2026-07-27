@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { CashierConsoleClient } from "@/components/cashier/cashier-console-client";
-import { getCashierConsole } from "@/lib/data/cashier";
+import { getCashierConsole, getCashierToken } from "@/lib/data/cashier";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,6 +10,9 @@ export default async function CashierPage() {
   const data = await getCashierConsole();
 
   if (!data) {
+    if (await getCashierToken()) {
+      redirect("/cashier/session/clear?reason=invalid");
+    }
     redirect("/cashier/login");
   }
 

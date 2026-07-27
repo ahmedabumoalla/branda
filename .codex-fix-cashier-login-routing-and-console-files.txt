@@ -1,0 +1,11 @@
+app/actions/auth.ts
+app/actions/cashier.ts
+app/cashier/login/page.tsx
+app/cashier/page.tsx
+app/cashier/session/clear/route.ts
+app/login/page.tsx
+components/cashier/cashier-console-client.tsx
+components/cashier/cashier-login-form.tsx
+lib/data/cashier.ts
+scripts/check-cashier-operations.mjs
+.codex-fix-cashier-login-routing-and-console-files.txt

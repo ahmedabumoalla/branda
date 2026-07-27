@@ -23,22 +23,12 @@ export type CashierConsole = {
     employeeNumber?: string | null;
   };
   orders: Array<Record<string, unknown>>;
-  logs: Array<Record<string, unknown>>;
   operationOrders?: Array<Record<string, unknown>>;
-  operationTickets?: Array<Record<string, unknown>>;
-  operationRewards?: Array<Record<string, unknown>>;
 };
 
 function orderIdOf(order: Record<string, unknown>) {
   const raw = order.id ?? order.order_id ?? order.orderId;
   return raw ? String(raw) : "";
-}
-
-async function enrichCashierOrdersWithItems(
-  consoleData: CashierConsole,
-): Promise<CashierConsole> {
-  const ordersWithItems = await attachOrderItems(consoleData.orders, consoleData.cafe.id);
-  return { ...consoleData, orders: ordersWithItems };
 }
 
 async function attachOrderItems(
@@ -133,74 +123,6 @@ async function attachOrderItems(
   });
 }
 
-function firstNestedRecord(value: unknown) {
-  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
-  if (value && typeof value === "object") return value as Record<string, unknown>;
-  return undefined;
-}
-
-async function getCashierOperationData(cafeId: string) {
-  const admin = createAdminClient();
-  const [{ data: orders }, { data: tickets }, { data: rewards }] =
-    await Promise.all([
-      admin
-        .from("orders")
-        .select("*")
-        .eq("cafe_id", cafeId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      admin
-        .from("event_tickets")
-        .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
-        .eq("cafe_id", cafeId)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      admin
-        .from("experience_reward_submissions")
-        .select("*, experience_reward_items(*), customer_profiles!experience_rewards_customer_same_cafe(full_name,phone,email)")
-        .eq("cafe_id", cafeId)
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
-
-  const operationOrders = await attachOrderItems((orders ?? []) as Array<Record<string, unknown>>, cafeId);
-  const operationTickets = ((tickets ?? []) as Array<Record<string, unknown>>).map((ticket) => {
-    const profile = firstNestedRecord(ticket.customer_profiles);
-    const product = firstNestedRecord(ticket.menu_products);
-    return {
-      ...ticket,
-      customerName: profile?.full_name ? String(profile.full_name) : "",
-      customer_name: profile?.full_name ? String(profile.full_name) : "",
-      customerPhone: profile?.phone ? String(profile.phone) : "",
-      customer_phone: profile?.phone ? String(profile.phone) : "",
-      customerEmail: profile?.email ? String(profile.email) : "",
-      customer_email: profile?.email ? String(profile.email) : "",
-      ticketName: product?.name ? String(product.name) : "",
-      ticket_name: product?.name ? String(product.name) : "",
-    };
-  });
-  const operationRewards = ((rewards ?? []) as Array<Record<string, unknown>>).map((reward) => {
-    const profile = firstNestedRecord(reward.customer_profiles);
-    return {
-      ...reward,
-      customerName: profile?.full_name ? String(profile.full_name) : "",
-      customer_name: profile?.full_name ? String(profile.full_name) : "",
-      customerPhone: profile?.phone ? String(profile.phone) : "",
-      customer_phone: profile?.phone ? String(profile.phone) : "",
-      customerEmail: profile?.email ? String(profile.email) : "",
-      customer_email: profile?.email ? String(profile.email) : "",
-      items: reward.experience_reward_items,
-    };
-  });
-
-  return {
-    operationOrders,
-    operationTickets,
-    operationRewards,
-  };
-}
-
 async function recordCashierConsoleEntry(input: {
   cafeId: string;
   cafeSlug: string;
@@ -253,26 +175,6 @@ async function recordCashierConsoleEntry(input: {
   });
 }
 
-function normalizeConsolePayload(data: unknown): CashierConsole | null {
-  if (!data || typeof data !== "object") return null;
-  const payload = data as CashierConsole;
-  if (!payload.cafe?.id || !payload.cashier?.id) return null;
-  return {
-    cafe: {
-      ...payload.cafe,
-      businessCategory:
-        payload.cafe.businessCategory ??
-        (payload.cafe as Record<string, unknown>).business_category?.toString() ??
-        "cafes_coffee",
-    },
-    cashier: payload.cashier,
-    orders: Array.isArray(payload.orders) ? payload.orders : [],
-    logs: Array.isArray(payload.logs)
-      ? payload.logs.filter((log) => !["login", "logout", "cashier_login", "cashier_logout", "session_start", "session_end"].includes(String((log as Record<string, unknown>).actionType ?? (log as Record<string, unknown>).action_type ?? "")))
-      : [],
-  };
-}
-
 export async function loginCashierWithPassword(
   email: string,
   password: string,
@@ -282,9 +184,52 @@ export async function loginCashierWithPassword(
     p_email: email.trim().toLowerCase(),
     p_password: password,
   });
-  if (error || !Array.isArray(data) || !data[0]?.token) return null;
+  if (error || !Array.isArray(data) || !data[0]?.token) {
+    console.warn("[cashier-login]", {
+      stage: "login_rpc",
+      reason: error?.code ?? "invalid_credentials",
+    });
+    return null;
+  }
 
   const token = String(data[0].token);
+  const admin = createAdminClient();
+  const cashierId = String(data[0].cashier_id);
+  const cafeId = String(data[0].cafe_id);
+  const { data: createdSession, error: sessionError } = await admin
+    .from("cafe_cashier_sessions")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at")
+    .eq("token", token)
+    .eq("cafe_id", cafeId)
+    .eq("cashier_id", cashierId)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  const { data: activeCashier, error: cashierError } = await admin
+    .from("cafe_cashiers")
+    .select("id,active")
+    .eq("id", cashierId)
+    .eq("cafe_id", cafeId)
+    .maybeSingle();
+
+  if (
+    sessionError ||
+    cashierError ||
+    !createdSession ||
+    createdSession.revoked_at ||
+    !activeCashier?.active
+  ) {
+    console.warn("[cashier-login]", {
+      stage: "verify_created_session",
+      cashierId,
+      cafeId,
+      reason:
+        sessionError?.code ??
+        cashierError?.code ??
+        (!activeCashier?.active ? "inactive_cashier" : "invalid_session"),
+    });
+    return null;
+  }
+
   const store = await cookies();
   store.set(cashierSessionCookie, token, {
     httpOnly: true,
@@ -293,10 +238,6 @@ export async function loginCashierWithPassword(
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });
-
-  const admin = createAdminClient();
-  const cashierId = String(data[0].cashier_id);
-  const cafeId = String(data[0].cafe_id);
   const loginWindowStart = new Date(Date.now() - 10_000).toISOString();
   const { count: recentLoginCount } = await admin
     .from("cafe_cashier_activity_logs")
@@ -389,25 +330,62 @@ async function cashierOrderDisplayName(
   return items.length > 1 ? `${firstName} + ${items.length - 1}` : firstName;
 }
 
-async function requireCashierSessionContext(
+export async function requireCashierSessionContext(
   admin = createAdminClient(),
 ): Promise<CashierSessionContext> {
   const token = await getCashierToken();
-  if (!token) throw new Error("Cashier session expired");
+  if (!token) {
+    console.warn("[cashier-session]", { stage: "read_cookie", hasCookie: false });
+    throw new Error("Cashier session expired");
+  }
 
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,employee_number,active),cafes(name,slug,business_category)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
-  if (error) throw error;
-  if (!session || session.revoked_at) throw new Error("Cashier session expired");
+  if (error || !session || session.revoked_at) {
+    console.warn("[cashier-session]", {
+      stage: "verify_session",
+      hasCookie: true,
+      reason: error?.code ?? (session?.revoked_at ? "revoked" : "expired_or_missing"),
+    });
+    throw new Error("Cashier session expired");
+  }
 
-  const cashier = firstRecord(session.cafe_cashiers);
-  const cafe = firstRecord(session.cafes);
+  const [{ data: cashier, error: cashierError }, { data: cafe, error: cafeError }] =
+    await Promise.all([
+      admin
+        .from("cafe_cashiers")
+        .select("id,full_name,email,employee_number,active")
+        .eq("id", String(session.cashier_id))
+        .eq("cafe_id", String(session.cafe_id))
+        .maybeSingle(),
+      admin
+        .from("cafes")
+        .select("id,name,slug,business_category")
+        .eq("id", String(session.cafe_id))
+        .maybeSingle(),
+    ]);
+
+  if (cashierError || cafeError || !cafe) {
+    console.warn("[cashier-session]", {
+      stage: "load_context",
+      cashierId: String(session.cashier_id),
+      cafeId: String(session.cafe_id),
+      reason: cashierError?.code ?? cafeError?.code ?? "missing_cafe",
+    });
+    throw new Error("Cashier session context is invalid");
+  }
   if (!cashier || cashier.active !== true) {
+    console.warn("[cashier-session]", {
+      stage: "verify_cashier",
+      cashierId: String(session.cashier_id),
+      cafeId: String(session.cafe_id),
+      reason: "inactive_cashier",
+    });
     throw new Error("Cashier account is inactive");
   }
 
@@ -415,11 +393,11 @@ async function requireCashierSessionContext(
     token,
     cafeId: String(session.cafe_id),
     cashierId: String(session.cashier_id),
-    cashierName: String(cashier?.full_name ?? "Cashier"),
-    cashierEmail: String(cashier?.email ?? ""),
-    cafeName: String(cafe?.name ?? "Barndaksa"),
-    cafeSlug: String(cafe?.slug ?? ""),
-    businessCategory: String(cafe?.business_category ?? "cafes_coffee"),
+    cashierName: String(cashier.full_name ?? "Cashier"),
+    cashierEmail: String(cashier.email ?? ""),
+    cafeName: String(cafe.name ?? "Barndaksa"),
+    cafeSlug: String(cafe.slug ?? ""),
+    businessCategory: String(cafe.business_category ?? "cafes_coffee"),
   };
 }
 
@@ -476,52 +454,66 @@ async function writeCashierActivity(
 }
 
 export async function getCashierConsole(): Promise<CashierConsole | null> {
-  const token = await getCashierToken();
-  if (!token) return null;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_cashier_console", {
-    p_session_token: token,
-  });
-  if (error || !data) return null;
-  const normalized = normalizeConsolePayload(data);
-  if (!normalized?.cafe.id) return normalized;
-  const verifiedSession = await requireCashierSessionContext().catch(() => null);
-  if (!verifiedSession || verifiedSession.cafeId !== normalized.cafe.id) return null;
-  await recordCashierConsoleEntry({
-    cafeId: normalized.cafe.id,
-    cafeSlug: normalized.cafe.slug,
-    cashierId: normalized.cashier.id,
-    cashierName: normalized.cashier.fullName,
-    cashierEmail: normalized.cashier.email,
-  }).catch((error) => console.warn("[getCashierConsole:entry]", error));
   const admin = createAdminClient();
-  const [{ data: cafe }, { data: loyaltyProgram }] = await Promise.all([
-    admin
-      .from("cafes")
-      .select("business_category")
-      .eq("id", normalized.cafe.id)
-      .maybeSingle(),
-    admin
-      .from("cafe_loyalty_programs")
-      .select("enabled")
-      .eq("cafe_id", normalized.cafe.id)
-      .maybeSingle(),
-  ]);
-  const cafeWithCategory = {
-    ...normalized.cafe,
-    businessCategory: cafe?.business_category ?? normalized.cafe.businessCategory ?? "cafes_coffee",
-    loyaltyCardEnabled: loyaltyProgram ? Boolean(loyaltyProgram.enabled) : true,
-  };
-  const enriched = await enrichCashierOrdersWithItems({
-    ...normalized,
-    cafe: cafeWithCategory,
+  const verifiedSession = await requireCashierSessionContext(admin).catch((error) => {
+    console.warn("[cashier-console]", {
+      stage: "session_context",
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
   });
-  const operationData = await getCashierOperationData(cafeWithCategory.id);
+  if (!verifiedSession) return null;
+
+  const { data: orderRows, error: ordersError } = await admin
+    .from("orders")
+    .select("*")
+    .eq("cafe_id", verifiedSession.cafeId)
+    .is("deleted_at", null)
+    .in("status", ["pending", "pending_cafe", "accepted", "approved", "completed", "not_completed", "rejected"])
+    .order("created_at", { ascending: false })
+    .limit(40);
+  if (ordersError) {
+    console.warn("[cashier-console]", {
+      stage: "load_orders",
+      cashierId: verifiedSession.cashierId,
+      cafeId: verifiedSession.cafeId,
+      reason: ordersError.code,
+    });
+    return null;
+  }
+
+  const orders = await attachOrderItems(
+    (orderRows ?? []) as Array<Record<string, unknown>>,
+    verifiedSession.cafeId,
+  );
+  await recordCashierConsoleEntry({
+    cafeId: verifiedSession.cafeId,
+    cafeSlug: verifiedSession.cafeSlug,
+    cashierId: verifiedSession.cashierId,
+    cashierName: verifiedSession.cashierName,
+    cashierEmail: verifiedSession.cashierEmail,
+  }).catch((error) => console.warn("[getCashierConsole:entry]", error));
+
   return {
-    ...enriched,
-    ...operationData,
-    cafe: cafeWithCategory,
+    cafe: {
+      id: verifiedSession.cafeId,
+      name: verifiedSession.cafeName,
+      slug: verifiedSession.cafeSlug,
+      businessCategory: verifiedSession.businessCategory,
+    },
+    cashier: {
+      id: verifiedSession.cashierId,
+      fullName: verifiedSession.cashierName,
+      email: verifiedSession.cashierEmail,
+    },
+    orders,
+    operationOrders: orders,
   };
+}
+
+export async function hasValidCashierSession() {
+  if (!(await getCashierToken())) return false;
+  return Boolean(await requireCashierSessionContext().catch(() => null));
 }
 
 export async function logoutCashier() {
@@ -536,14 +528,6 @@ export async function logoutCashier() {
 
 export async function cashierAcceptOrder(orderId: string) {
   return cashierUpdateOrderStatus(orderId, "accepted");
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("cashier_accept_order", {
-    p_session_token: token,
-    p_order_id: orderId,
-  });
-  if (error) throw error;
 }
 
 export async function cashierUpdateOrderStatus(
@@ -699,146 +683,6 @@ export async function cashierUpdateOrderStatus(
   }
 
   return { ok: true as const, order: updatedOrder };
-}
-
-export async function cashierConfirmEventTicket(codeInput: string) {
-  const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
-  const code =
-    parseBarndaksaQrPayload(codeInput, "event-ticket") ??
-    codeInput.trim().toUpperCase();
-
-  if (!code) throw new Error("Ticket code is required");
-
-  const { data: ticket, error: lookupError } = await admin
-    .from("event_tickets")
-    .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
-    .eq("cafe_id", session.cafeId)
-    .eq("ticket_code", code)
-    .maybeSingle();
-
-  if (lookupError) throw lookupError;
-  if (!ticket) throw new Error("Ticket does not belong to this cashier cafe");
-
-  const ticketStatus = String(ticket.status ?? "");
-  if (ticketStatus === "used" || ticket.used_at) throw new Error("Ticket already used");
-  if (ticketStatus === "cancelled") throw new Error("Ticket is cancelled");
-  if (ticketStatus === "expired") throw new Error("Ticket is expired");
-  if (ticketStatus !== "valid") throw new Error("Ticket is not valid");
-
-  const now = new Date();
-  if (ticket.valid_from && new Date(String(ticket.valid_from)) > now) {
-    throw new Error("Ticket is not valid yet");
-  }
-  if (ticket.valid_until && new Date(String(ticket.valid_until)) < now) {
-    await admin
-      .from("event_tickets")
-      .update({ status: "expired", updated_at: now.toISOString() })
-      .eq("id", String(ticket.id))
-      .eq("cafe_id", session.cafeId)
-      .eq("status", "valid");
-    throw new Error("Ticket is expired");
-  }
-
-  const currentScanCount = Number(ticket.scan_count ?? 0);
-  const maxScanCount = Math.max(1, Number(ticket.max_scan_count ?? 1));
-  if (currentScanCount >= maxScanCount) throw new Error("Ticket already used");
-
-  const nextScanCount = currentScanCount + 1;
-  const shouldCloseTicket = nextScanCount >= maxScanCount;
-  const { data: ticketSettings } = ticket.product_id
-    ? await admin
-        .from("event_ticket_settings")
-        .select("gate_name")
-        .eq("product_id", String(ticket.product_id))
-        .eq("cafe_id", session.cafeId)
-        .maybeSingle()
-    : { data: null };
-  const gateName = String(ticketSettings?.gate_name ?? "بوابة الدخول");
-  const usedAt = now.toISOString();
-
-  const { data: updatedTicket, error: updateError } = await admin
-    .from("event_tickets")
-    .update({
-      status: shouldCloseTicket ? "used" : "valid",
-      scan_count: nextScanCount,
-      used_at: shouldCloseTicket ? usedAt : ticket.used_at ?? null,
-      used_by_cashier_id: session.cashierId,
-      used_gate_name: gateName,
-      updated_at: usedAt,
-    })
-    .eq("id", String(ticket.id))
-    .eq("cafe_id", session.cafeId)
-    .eq("status", "valid")
-    .eq("scan_count", currentScanCount)
-    .select("*, customer_profiles(full_name,phone,email), menu_products(name)")
-    .maybeSingle();
-
-  if (updateError) throw updateError;
-  if (!updatedTicket) throw new Error("Ticket was updated from another device");
-
-  const customer = firstRecord(updatedTicket.customer_profiles);
-  const product = firstRecord(updatedTicket.menu_products);
-  const ticketId = String(updatedTicket.id);
-
-  await writeCashierActivity(admin, {
-    session,
-    actionType: "order_received",
-    targetType: "event_ticket",
-    targetId: ticketId,
-    invoiceBarcode: code,
-    details: {
-      action: "ticket_checkin",
-      ticketCode: code,
-      statusAfter: String(updatedTicket.status ?? ""),
-      scanCount: nextScanCount,
-      maxScanCount,
-      customerName: String(customer?.full_name ?? ""),
-      ticketName: String(product?.name ?? ""),
-      gateName,
-    },
-  }).catch(() => undefined);
-
-  await writeCashierAudit(admin, {
-    session,
-    action: "cashier_confirm_event_ticket",
-    entityTable: "event_tickets",
-    entityId: ticketId,
-    oldData: ticket as Record<string, unknown>,
-    newData: {
-      status: String(updatedTicket.status ?? ""),
-      scanCount: nextScanCount,
-      gateName,
-    },
-  }).catch(() => undefined);
-
-  const customerPhone = customer?.phone ? String(customer.phone) : "";
-  const ticketName = String(product?.name ?? "تذكرة");
-  const ticketCode = String(updatedTicket.ticket_code ?? code);
-  if (customerPhone) {
-    await sendWhatsAppMessage({
-      to: customerPhone,
-      body: `تم تأكيد تذكرتك لدى ${session.cafeName}\nالتذكرة: ${ticketName}\nرقم التذكرة: ${ticketCode}`,
-      eventType: "event_ticket_confirmed",
-      cafeId: session.cafeId,
-      recipientName: customer?.full_name ? String(customer.full_name) : undefined,
-    }).catch(() => undefined);
-  }
-
-  return {
-    ok: true as const,
-    ticketId,
-    ticketCode,
-    customerName: String(customer?.full_name ?? "عميل"),
-    customerPhone: String(customer?.phone ?? ""),
-    customerEmail: String(customer?.email ?? ""),
-    ticketName: String(product?.name ?? "تذكرة"),
-    status: shouldCloseTicket ? "used" : "valid",
-    scanCount: nextScanCount,
-    maxScanCount,
-    gateName,
-    usedAt,
-  };
 }
 
 function makeLoyaltyScanReference(cardCode: string) {

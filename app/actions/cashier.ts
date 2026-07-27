@@ -4,7 +4,6 @@
 import { redirect } from "next/navigation";
 import {
   cashierAcceptOrder,
-  cashierConfirmEventTicket,
   cashierScanLoyalty,
   cashierUpdateOrderStatus,
   getCashierConsole,
@@ -19,8 +18,10 @@ import {
 
 export async function loginCashierAction(email: string, password: string) {
   const result = await loginCashierWithPassword(email, password);
-  if (!result) return { ok: false as const, message: "بيانات الكاشير غير صحيحة", redirectTo: null };
-  return { ok: true as const, message: "تم تسجيل الدخول", redirectTo: "/cashier" };
+  if (!result) {
+    return { ok: false as const, message: "بيانات الكاشير غير صحيحة أو الحساب معطل" };
+  }
+  redirect("/cashier");
 }
 
 export async function logoutCashierAction() {
@@ -42,10 +43,6 @@ export async function updateCashierOrderStatusAction(
   rejectionReason?: string,
 ) {
   return cashierUpdateOrderStatus(orderId, status, rejectionReason);
-}
-
-export async function confirmCashierTicketAction(code: string) {
-  return cashierConfirmEventTicket(code);
 }
 
 export async function cashierScanLoyaltyAction(input: {
