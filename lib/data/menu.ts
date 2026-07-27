@@ -537,7 +537,10 @@ export async function getPublicMenuPageBySlug(
   const cursor = Math.max(options.cursor ?? 0, 0);
   const limit = Math.min(Math.max(options.limit ?? 16, 1), 20);
 
-  const [{ data: categories, error: categoryError }, { data: products, error: productError }] =
+  const [
+    { data: categories, error: categoryError },
+    { data: products, error: productError, count: totalCount },
+  ] =
     await Promise.all([
       supabase
         .from("menu_categories")
@@ -548,7 +551,7 @@ export async function getPublicMenuPageBySlug(
         .order("sort_order"),
       supabase
         .from("menu_products")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("cafe_id", cafe.id)
         .eq("available", true)
         .is("deleted_at", null)
@@ -573,6 +576,7 @@ export async function getPublicMenuPageBySlug(
     categories: categoryRows.map((category) => mapDbCategoryToRecord(slug, category)),
     products: await attachEventTicketSettings(supabase, cafe.id, mappedProducts),
     nextCursor: hasMore ? cursor + limit : null,
+    totalCount: totalCount ?? pageRows.length,
   };
 }
 

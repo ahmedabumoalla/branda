@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: Params) {
 
   try {
     let payload = await cachedServerValue(
-      `public-products:${normalizedSlug}:${cursor}:${limit}`,
+      `public-products:${normalizedSlug}:${cursor}:${limit}:all`,
       PUBLIC_MENU_CACHE_SECONDS * 1000,
       () => getPublicMenuPageBySlug(normalizedSlug, { cursor, limit }),
     );

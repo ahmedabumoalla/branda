@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, X } from "lucide-react";
@@ -99,12 +99,27 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const offersSortLabel = isEvents ? "التذاكر ذات العروض" : "المنتجات ذات العروض";
   const noMatchesTitle = isEvents ? "لا توجد تذاكر مطابقة" : "لا توجد منتجات مطابقة";
   const logoUrl = useResolvedCafeLogoUrl(settings);
-  const { products, offers, branches, categories: menuCategories, loading, error } =
+  const menuResource =
+    view === "offers" ? "offers" : view === "branches" ? "branches" : "products";
+  const {
+    products,
+    offers,
+    branches,
+    categories: menuCategories,
+    loading,
+    loadingMore,
+    loadMore,
+    hasMore,
+    totalCount,
+    error,
+  } =
     usePublicCafeMenu(slug, {
-      resource: view === "offers" ? "offers" : view === "branches" ? "branches" : "products",
+      resource: menuResource,
+      limit: menuResource === "products" ? 16 : undefined,
     });
   const [filterOpen, setFilterOpen] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
+  const paginationSentinelRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState<FilterBarState>(() =>
     defaultProductFilters({
@@ -133,6 +148,51 @@ export function ProductCollectionPage({ slug, view }: Props) {
       document.body.style.overflow = previousOverflow;
     };
   }, [filterOpen]);
+
+  const filtersNeedCompleteCatalog =
+    filters.query.trim().length > 0 ||
+    filters.category !== "الكل" ||
+    filters.priceRange !== "all" ||
+    filters.onlyOffers ||
+    filters.sort === "offers";
+
+  useEffect(() => {
+    if (
+      menuResource !== "products" ||
+      !filtersNeedCompleteCatalog ||
+      !hasMore ||
+      loadingMore
+    ) {
+      return;
+    }
+    void loadMore();
+  }, [
+    menuResource,
+    filtersNeedCompleteCatalog,
+    hasMore,
+    loadingMore,
+    loadMore,
+  ]);
+
+  useEffect(() => {
+    const sentinel = paginationSentinelRef.current;
+    if (
+      !sentinel ||
+      menuResource !== "products" ||
+      !hasMore ||
+      !("IntersectionObserver" in window)
+    ) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && !loadingMore) void loadMore();
+      },
+      { rootMargin: "500px 0px", threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [menuResource, hasMore, loadingMore, loadMore]);
 
   const availableProducts = products.filter((product) => product.available);
 
@@ -401,6 +461,19 @@ export function ProductCollectionPage({ slug, view }: Props) {
         ) : null}
 
         <section>
+          {menuResource === "products" ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className={`text-sm font-black ${theme.muted}`}>
+                تم عرض {availableProducts.length.toLocaleString("ar-SA")} من{" "}
+                {(totalCount ?? availableProducts.length).toLocaleString("ar-SA")} {itemLabel}
+              </p>
+              {filtersNeedCompleteCatalog && hasMore ? (
+                <p className={`text-xs font-black ${theme.accent}`}>
+                  جاري استكمال المنتجات لضمان شمول البحث والتصنيف
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <div className={`${gridClass} barndaksa-stagger-grid`}>
             {orderedProducts.map((item) => (
               <ProductPosterCard
@@ -424,6 +497,33 @@ export function ProductCollectionPage({ slug, view }: Props) {
               >
                 مسح الفلاتر
               </button>
+            </div>
+          ) : null}
+
+          {menuResource === "products" ? (
+            <div
+              ref={paginationSentinelRef}
+              className="mt-6 flex min-h-16 flex-col items-center justify-center gap-3"
+            >
+              {hasMore ? (
+                <>
+                  <p className={`text-xs font-black ${theme.muted}`}>
+                    {loadingMore ? "جاري تحميل المزيد من المنتجات..." : "توجد منتجات أخرى"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadMore()}
+                    disabled={loadingMore}
+                    className={`min-h-11 rounded-2xl px-6 text-sm font-black disabled:opacity-60 ${theme.buttonOutline}`}
+                  >
+                    {loadingMore ? "جاري التحميل..." : "عرض المزيد"}
+                  </button>
+                </>
+              ) : availableProducts.length ? (
+                <p className={`text-xs font-black ${theme.muted}`}>
+                  تم عرض جميع المنتجات المتاحة
+                </p>
+              ) : null}
             </div>
           ) : null}
         </section>

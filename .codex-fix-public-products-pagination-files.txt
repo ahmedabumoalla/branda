@@ -1,0 +1,6 @@
+components/cafe/product-collection-page.tsx
+lib/cafe/use-public-cafe-menu.ts
+app/api/public/cafe/[slug]/menu/route.ts
+lib/data/menu.ts
+tests/public-products-pagination.test.mjs
+.codex-fix-public-products-pagination-files.txt
