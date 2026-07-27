@@ -96,6 +96,15 @@ export type LoyaltyCardsDashboard = {
   activities: CashierActivity[];
 };
 
+export type CashierOperationsDashboard = {
+  cafeId: string;
+  cafeSlug: string;
+  cafeName: string;
+  businessCategory: string;
+  cashiers: Array<Omit<LoyaltyCashier, "temporaryPassword">>;
+  activities: CashierActivity[];
+};
+
 const defaultProgram: LoyaltyCardProgram = {
   enabled: true,
   cardTitle: "بطاقة الولاء",
@@ -255,6 +264,60 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
       return {
         id: String(row.id),
         cashierName: cashier?.full_name ? String(cashier.full_name) : "كاشير",
+        actionType: String(row.action_type),
+        targetType: String(row.target_type ?? ""),
+        targetId: String(row.target_id ?? ""),
+        invoiceBarcode: String(row.invoice_barcode ?? ""),
+        details: (row.details as Record<string, unknown>) ?? {},
+        createdAt: String(row.created_at),
+      };
+    }),
+  };
+}
+
+export async function getOwnerCashierOperations(): Promise<CashierOperationsDashboard> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const [{ data: cashierRows, error: cashiersError }, { data: activityRows, error: activitiesError }] =
+    await Promise.all([
+      supabase
+        .from("cafe_cashiers")
+        .select("id,full_name,email,employee_number,active,last_login_at,last_logout_at,created_at")
+        .eq("cafe_id", cafe.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("cafe_cashier_activity_logs")
+        .select("id,cashier_id,action_type,target_type,target_id,invoice_barcode,details,created_at,cafe_cashiers(full_name)")
+        .eq("cafe_id", cafe.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
+
+  if (cashiersError) throw cashiersError;
+  if (activitiesError) throw activitiesError;
+
+  return {
+    cafeId: cafe.id,
+    cafeSlug: cafe.slug,
+    cafeName: cafe.name,
+    businessCategory: cafe.businessCategory,
+    cashiers: (cashierRows ?? []).map((row) => ({
+      id: String(row.id),
+      fullName: String(row.full_name),
+      email: String(row.email),
+      employeeNumber: String(row.employee_number ?? ""),
+      active: Boolean(row.active),
+      lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
+      lastLogoutAt: row.last_logout_at ? String(row.last_logout_at) : null,
+      createdAt: String(row.created_at),
+    })),
+    activities: (activityRows ?? []).map((row) => {
+      const cashier = Array.isArray(row.cafe_cashiers)
+        ? row.cafe_cashiers[0]
+        : row.cafe_cashiers;
+      return {
+        id: String(row.id),
+        cashierName: cashier?.full_name ? String(cashier.full_name) : "موظف الكاشير",
         actionType: String(row.action_type),
         targetType: String(row.target_type ?? ""),
         targetId: String(row.target_id ?? ""),

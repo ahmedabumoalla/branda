@@ -2,488 +2,316 @@
 
 import Link from "next/link";
 import {
-  BadgeCheck,
-  ClipboardCheck,
+  Activity,
+  CheckCircle2,
+  ClipboardCopy,
   DoorOpen,
-  Gift,
-  KeyRound,
-  LockKeyhole,
+  HelpCircle,
   Plus,
-  QrCode,
-  ScanLine,
-  UserRound,
+  ShieldCheck,
+  UserRoundPlus,
+  UsersRound,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   createLoyaltyCashierAction,
-  recordLoyaltyCardOperationAction,
   setLoyaltyCashierStatusAction,
 } from "@/app/actions/loyalty-cards";
-import { ownerOperationalRedeemExperienceRewardAction } from "@/app/actions/experience-rewards";
-import { BarcodeCameraScanner } from "@/components/loyalty/barcode-camera-scanner";
-import {
-  BentoCard,
-  BentoGrid,
-  DashboardPageShell,
-  NeumoInput,
-  PrimaryButton,
-  SoftCard,
-  StatPill,
-} from "@/components/ui/design-system";
-import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
-import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
-import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { DashboardPageShell, SoftCard } from "@/components/ui/design-system";
+import type { CashierOperationsDashboard } from "@/lib/data/loyalty-cards";
 
 type Props = {
-  initialDashboard: LoyaltyCardsDashboard;
+  initialDashboard: CashierOperationsDashboard;
   configError?: string;
 };
+
+const loginPath = "/cashier/login";
+
+function formatDate(value: string | null) {
+  if (!value) return "لم يسجل الدخول بعد";
+  return new Intl.DateTimeFormat("ar-SA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function activityText(action: string) {
+  const labels: Record<string, string> = {
+    login: "سجّل الدخول إلى نقطة التشغيل",
+    logout: "سجّل الخروج من نقطة التشغيل",
+    order_received: "حدّث حالة طلب",
+    order_accept: "قبل طلبًا",
+    cashier_accept_order: "قبل طلبًا",
+    loyalty_stamp: "أضاف زيارة ولاء",
+    loyalty_card_scan: "مسح بطاقة ولاء",
+    loyalty_redeem: "صرف مكافأة ولاء",
+    loyalty_reward_redeem: "صرف مكافأة ولاء",
+    experience_reward_redeem: "صرف مكافأة",
+  };
+  return labels[action] ?? "نفّذ عملية تشغيلية";
+}
 
 export function OperationalCashierPageClient({
   initialDashboard,
   configError,
 }: Props) {
-  const copy = getBusinessCopy(initialDashboard.businessCategory);
-  const isEvents = copy.kind === "events";
   const [dashboard, setDashboard] = useState(initialDashboard);
-  const [cashierName, setCashierName] = useState("");
-  const [cashierEmail, setCashierEmail] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [employeeNumber, setEmployeeNumber] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [cardCode, setCardCode] = useState("");
-  const [rewardCode, setRewardCode] = useState("");
-  const [processing, setProcessing] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  const labels = isEvents
-    ? {
-        title: "بوابة الدخول",
-        subtitle: "إدارة موظفي البوابة وتأكيد دخول التذاكر ومسح QR الحضور",
-        addTitle: "إضافة موظف بوابة",
-        addButton: "إضافة موظف بوابة",
-        openConsole: "فتح بوابة الدخول",
-        scanLoyalty: "تسجيل حضور ولاء",
-        scanReward: "صرف مكافأة حضور",
-        scanTicket: "مسح تذكرة",
-        staffLabel: "موظفو البوابة",
-        passwordLabel: "كلمة مرور موظف البوابة الدائمة",
-        namePlaceholder: "اسم موظف البوابة إلزامي",
-        emailPlaceholder: "بريد موظف البوابة إلزامي",
-        disabled: "تعطيل",
-        enabled: "تفعيل",
-      }
-    : {
-        title: "الكاشير",
-        subtitle:
-          copy.kind === "restaurant"
-            ? "إدارة الكاشير وتأكيد الطلبات والمكافآت"
-            : "إدارة الكاشير وتأكيد الطلبات والمكافآت",
-        addTitle: "إضافة كاشير",
-        addButton: "إضافة كاشير",
-        openConsole: "فتح لوحة الكاشير",
-        scanLoyalty: "احتساب عملية شراء",
-        scanReward: "صرف مكافأة",
-        scanTicket: "مسح رمز التذكرة",
-        staffLabel: "الكاشيرات",
-        passwordLabel: "كلمة مرور الكاشير الدائمة",
-        namePlaceholder: "اسم الكاشير إلزامي",
-        emailPlaceholder: "بريد الكاشير إلزامي",
-        disabled: "تعطيل",
-        enabled: "تفعيل",
-      };
-
-  const activeStaffCount = useMemo(
+  const activeCount = useMemo(
     () => dashboard.cashiers.filter((cashier) => cashier.active).length,
     [dashboard.cashiers],
   );
+  const ready = activeCount > 0;
 
-  const recentActivityCount = dashboard.activities.length;
+  async function copyLoginLink() {
+    await navigator.clipboard.writeText(`${window.location.origin}${loginPath}`);
+    setMessage("تم نسخ رابط الدخول");
+  }
 
-  async function addCashier() {
-    if (!cashierName.trim() || !cashierEmail.trim()) {
-      setMessage(
-        isEvents
-          ? "اسم موظف البوابة والبريد إلزامية"
-          : "اسم الكاشير والبريد إلزامية",
-      );
+  async function createCashier() {
+    if (fullName.trim().length < 2) {
+      setMessage("أدخل اسمًا واضحًا للموظف");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setMessage("أدخل بريدًا إلكترونيًا صحيحًا");
       return;
     }
 
-    setProcessing(true);
+    setPendingId("create");
     setMessage("");
     try {
       const password = await createLoyaltyCashierAction({
-        fullName: cashierName,
-        email: cashierEmail,
-        employeeNumber: employeeNumber || undefined,
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        employeeNumber: employeeNumber.trim() || undefined,
       });
-      setNewPassword(password);
-      setMessage(isEvents ? "تم إنشاء حساب موظف البوابة" : "تم إنشاء حساب الكاشير");
-      setCashierName("");
-      setCashierEmail("");
+      setDashboard((current) => ({
+        ...current,
+        cashiers: [
+          {
+            id: `new-${Date.now()}`,
+            fullName: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            employeeNumber: employeeNumber.trim(),
+            active: true,
+            lastLoginAt: null,
+            lastLogoutAt: null,
+            createdAt: new Date().toISOString(),
+          },
+          ...current.cashiers,
+        ],
+      }));
+      setTemporaryPassword(password);
+      setFullName("");
+      setEmail("");
       setEmployeeNumber("");
+      setIsAdding(false);
+      setMessage("تم إنشاء حساب الموظف");
     } catch {
-      setMessage(
-        isEvents ? "تعذر إنشاء حساب موظف البوابة" : "تعذر إنشاء حساب الكاشير",
-      );
+      setMessage("تعذر إنشاء الحساب. تحقق من البيانات وحاول مجددًا");
     } finally {
-      setProcessing(false);
-    }
-  }
-
-  async function runLoyaltyScan(detectedCardCode?: string) {
-    const rawCardCode = detectedCardCode ?? cardCode;
-    if (!rawCardCode.trim()) {
-      setMessage("أدخل QR بطاقة العميل");
-      return;
-    }
-
-    setProcessing(true);
-    setMessage("");
-    try {
-      const result = await recordLoyaltyCardOperationAction({
-        cardCode:
-          parseBarndaksaQrPayload(rawCardCode, "loyalty-card") ??
-          rawCardCode.trim().toUpperCase(),
-        operation: "stamp",
-      });
-      setMessage(
-        isEvents
-          ? `تم تسجيل حضور للعميل ${String(result.customerName)} وإضافة زيارة في بطاقة الولاء`
-          : `تم احتساب عملية شراء للعميل ${String(result.customerName)} وإضافة ختم في بطاقة الولاء`,
-      );
-      setCardCode("");
-    } catch {
-      setMessage(
-        isEvents
-          ? "تعذر تسجيل الحضور من بطاقة الولاء"
-          : "تعذر احتساب عملية الشراء من بطاقة الولاء",
-      );
-    } finally {
-      setProcessing(false);
-    }
-  }
-
-  async function runRewardScan(detectedRewardCode?: string) {
-    const rawRewardCode = detectedRewardCode ?? rewardCode;
-    if (!rawRewardCode.trim()) {
-      setMessage(isEvents ? "أدخل QR مكافأة الحضور" : "أدخل QR المكافأة");
-      return;
-    }
-
-    setProcessing(true);
-    setMessage("");
-    try {
-      const result = await ownerOperationalRedeemExperienceRewardAction(rawRewardCode);
-      setMessage(
-        isEvents
-          ? `تم صرف مكافأة الحضور للعميل ${result.customerName}`
-          : `تم صرف المكافأة للعميل ${result.customerName}`,
-      );
-      setRewardCode("");
-    } catch {
-      setMessage(
-        isEvents
-          ? "QR مكافأة الحضور غير صالح أو مستخدم مسبقًا"
-          : "QR المكافأة غير صالح أو مستخدم مسبقًا",
-      );
-    } finally {
-      setProcessing(false);
+      setPendingId(null);
     }
   }
 
   async function toggleCashier(cashierId: string, active: boolean) {
-    await setLoyaltyCashierStatusAction(cashierId, active);
-    setDashboard((current) => ({
-      ...current,
-      cashiers: current.cashiers.map((cashier) =>
-        cashier.id === cashierId ? { ...cashier, active } : cashier,
-      ),
-    }));
+    setPendingId(cashierId);
+    setMessage("");
+    try {
+      await setLoyaltyCashierStatusAction(cashierId, active);
+      setDashboard((current) => ({
+        ...current,
+        cashiers: current.cashiers.map((cashier) =>
+          cashier.id === cashierId ? { ...cashier, active } : cashier,
+        ),
+      }));
+    } catch {
+      setMessage("تعذر تحديث حالة الموظف");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return (
     <DashboardPageShell
-      title={labels.title}
-      subtitle={labels.subtitle}
+      title="نقطة التشغيل"
+      subtitle="إدارة فريق الكاشير ومتابعة جاهزية التشغيل من مكان واحد."
       action={
         <Link
-          href="/cashier/login"
+          href={loginPath}
           target="_blank"
-          className="inline-flex items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white"
+          className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white"
         >
           <DoorOpen className="h-4 w-4" />
-          {labels.openConsole}
+          فتح نقطة التشغيل
         </Link>
       }
     >
       {configError ? (
-        <SoftCard className="mb-6 p-4 font-black text-amber-700">
-          {configError}
-        </SoftCard>
+        <SoftCard className="mb-5 p-4 font-bold text-amber-700">{configError}</SoftCard>
       ) : null}
       {message ? (
-        <SoftCard className="mb-6 p-4 font-black text-[#6B3A25]">
+        <p className="mb-5 rounded-2xl bg-white p-4 text-sm font-black text-[#6B3A25] shadow-sm">
           {message}
-        </SoftCard>
+        </p>
       ) : null}
-      {newPassword ? (
-        <SoftCard className="mb-6 p-4 font-black text-emerald-700">
-          {labels.passwordLabel} {newPassword}
-        </SoftCard>
-      ) : null}
-
-      <BentoGrid className="mb-6">
-        <BentoCard variant="white">
-          <UserRound className="mb-4 h-7 w-7 text-[#6B3A25]" />
-          <StatPill
-            label={labels.staffLabel}
-            value={dashboard.cashiers.length}
-            hint="حسابات تشغيل محدودة الصلاحية"
-          />
-        </BentoCard>
-        <BentoCard variant="white">
-          <BadgeCheck className="mb-4 h-7 w-7 text-[#6B3A25]" />
-          <StatPill label="النشطون" value={activeStaffCount} hint="جاهزون للدخول" />
-        </BentoCard>
-        <BentoCard variant="white">
-          <ClipboardCheck className="mb-4 h-7 w-7 text-[#6B3A25]" />
-          <StatPill
-            label={isEvents ? "حركة البوابة" : "حركة الكاشير"}
-            value={recentActivityCount}
-            hint="آخر العمليات"
-          />
-        </BentoCard>
-        <BentoCard variant="white">
-          <LockKeyhole className="mb-4 h-7 w-7 text-[#6B3A25]" />
-          <StatPill
-            label="الصلاحيات"
-            value="تشغيل"
-            hint={isEvents ? "دخول ومسح QR" : "طلبات ومكافآت"}
-          />
-        </BentoCard>
-      </BentoGrid>
-
-      <BentoGrid className="mb-6">
-        <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]">
-            <KeyRound className="h-6 w-6 text-[#6B3A25]" />
-            {labels.addTitle}
-          </h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            <NeumoInput
-              placeholder={labels.namePlaceholder}
-              value={cashierName}
-              onChange={(event) => setCashierName(event.target.value)}
-            />
-            <NeumoInput
-              type="email"
-              placeholder={labels.emailPlaceholder}
-              value={cashierEmail}
-              onChange={(event) => setCashierEmail(event.target.value)}
-            />
-            <NeumoInput
-              placeholder="الرقم الوظيفي اختياري"
-              value={employeeNumber}
-              onChange={(event) => setEmployeeNumber(event.target.value)}
-            />
-          </div>
-          <PrimaryButton className="mt-5" onClick={addCashier} disabled={processing}>
-            <Plus className="h-4 w-4" />
-            {labels.addButton}
-          </PrimaryButton>
-          <p className="mt-3 text-xs font-bold leading-6 text-[#806A5E]">
-            صلاحيات هذا الحساب تشغيلية فقط: فتح اللوحة، مسح QR، وتأكيد العمليات
-            المتاحة للعلامة حسب نوع النشاط.
-          </p>
-        </BentoCard>
-
-        <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]">
-            <QrCode className="h-6 w-6 text-[#6B3A25]" />
-            رابط الدخول
-          </h2>
-          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            استخدم هذا الرابط على جهاز نقطة التشغيل، ثم ادخل ببريد الموظف وكلمة
-            المرور الصادرة له.
-          </p>
-          <Link
-            href="/cashier/login"
-            target="_blank"
-            className="mt-5 inline-flex rounded-2xl bg-[#F8F4EF] px-5 py-4 font-black text-[#6B3A25]"
-          >
-            {labels.openConsole}
-          </Link>
-        </BentoCard>
-      </BentoGrid>
-
-      <BentoGrid className="mb-6">
-        <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]">
-            <ScanLine className="h-6 w-6 text-[#6B3A25]" />
-            قراءة QR بطاقة الولاء
-          </h2>
-          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            {isEvents
-              ? "اقرأ QR بطاقة العميل لتسجيل حضور ولاء وإضافة زيارة مباشرة."
-              : "اقرأ QR بطاقة العميل لتأكيد عملية شراء وإضافة ختم مباشرة."}
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
-            <NeumoInput
-              placeholder="QR بطاقة العميل أو الكود"
-              value={cardCode}
-              onChange={(event) => setCardCode(event.target.value.toUpperCase())}
-            />
-            <PrimaryButton onClick={() => runLoyaltyScan()} disabled={processing}>
-              <BadgeCheck className="h-4 w-4" />
-              {labels.scanLoyalty}
-            </PrimaryButton>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <BarcodeCameraScanner
-              label="قراءة QR بطاقة العميل"
-              expectedKind="loyalty-card"
-              onDetected={(value) => {
-                setCardCode(value.toUpperCase());
-                void runLoyaltyScan(value);
-              }}
-            />
-          </div>
-        </BentoCard>
-
-        <BentoCard variant="white" span="2">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]">
-            <Gift className="h-6 w-6 text-[#6B3A25]" />
-            {isEvents ? "QR مكافآت الحضور" : "QR المكافآت"}
-          </h2>
-          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            اقرأ QR المكافأة بعد اعتمادها، وبعد الصرف يتوقف الكود ولا يمكن
-            استخدامه مرة ثانية.
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
-            <NeumoInput
-              placeholder={isEvents ? "QR مكافأة الحضور أو الكود" : "QR المكافأة أو الكود"}
-              value={rewardCode}
-              onChange={(event) => setRewardCode(event.target.value)}
-            />
-            <PrimaryButton onClick={() => runRewardScan()} disabled={processing}>
-              <BadgeCheck className="h-4 w-4" />
-              {labels.scanReward}
-            </PrimaryButton>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <BarcodeCameraScanner
-              label={isEvents ? "قراءة QR مكافأة الحضور" : "قراءة QR المكافأة"}
-              expectedKind="experience-reward"
-              onDetected={(value) => {
-                setRewardCode(value);
-                void runRewardScan(value);
-              }}
-            />
-          </div>
-        </BentoCard>
-      </BentoGrid>
-
-      {isEvents ? (
-        <SoftCard className="mb-6 p-5">
-          <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]">
-            <DoorOpen className="h-6 w-6 text-[#6B3A25]" />
-            مسح تذكرة
-          </h2>
-          <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            مسح QR التذاكر وتأكيد الدخول يتم من واجهة بوابة الدخول المخصصة
-            للموظفين حتى تسجل العملية باسم موظف البوابة.
-          </p>
-          <Link
-            href="/cashier/login"
-            target="_blank"
-            className="mt-4 inline-flex rounded-2xl bg-[#6B3A25] px-5 py-3 font-black text-white"
-          >
-            {labels.scanTicket}
-          </Link>
-        </SoftCard>
-      ) : null}
-
-      <BentoGrid>
-        <BentoCard variant="white" span="2">
-          <h2 className="text-xl font-black text-[#311912]">
-            قائمة {labels.staffLabel}
-          </h2>
-          <div className="mt-5 space-y-3">
-            {dashboard.cashiers.map((cashier) => (
-              <SoftCard key={cashier.id} className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-[#311912]">{cashier.fullName}</p>
-                    <p className="text-xs font-bold text-[#806A5E]">{cashier.email}</p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${
-                      cashier.active
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-[#F2E7D9] text-[#806A5E]"
-                    }`}
-                  >
-                    {cashier.active ? "نشط" : "معطل"}
-                  </span>
-                  <div className="rounded-xl bg-[#F8F4EF] px-3 py-2 font-mono text-sm font-black text-[#6B3A25]">
-                    {cashier.temporaryPassword}
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#6B3A25]"
-                    onClick={() => void toggleCashier(cashier.id, !cashier.active)}
-                  >
-                    {cashier.active ? labels.disabled : labels.enabled}
-                  </button>
-                </div>
-                <p className="mt-2 text-xs font-bold text-[#806A5E]">
-                  رقم وظيفي {cashier.employeeNumber || "-"} آخر دخول{" "}
-                  {cashier.lastLoginAt || "-"}
-                </p>
-              </SoftCard>
-            ))}
-            {!dashboard.cashiers.length ? (
-              <p className="rounded-2xl border border-dashed border-[#E7D7C6] p-6 text-center font-bold text-[#806A5E]">
-                لا توجد حسابات تشغيل بعد.
+      {temporaryPassword ? (
+        <div className="mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-black">كلمة المرور المؤقتة — تظهر مرة واحدة</p>
+              <p className="mt-2 font-mono text-xl font-black">{temporaryPassword}</p>
+              <p className="mt-2 text-xs font-bold text-emerald-800">
+                انسخها الآن وشاركها مع الموظف عبر قناة آمنة.
               </p>
-            ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => setTemporaryPassword("")}
+              className="rounded-xl p-2 hover:bg-emerald-100"
+              aria-label="إخفاء كلمة المرور"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-        </BentoCard>
+        </div>
+      ) : null}
 
-        <BentoCard variant="white" span="2">
-          <h2 className="text-xl font-black text-[#311912]">
-            {isEvents ? "حركة بوابة الدخول" : "حركة الكاشير"}
-          </h2>
-          <div className="mt-5 space-y-3">
-            {dashboard.activities.map((activity) => (
-              <SoftCard key={activity.id} className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-black text-[#311912]">{activity.cashierName}</p>
-                  <span className="rounded-full bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#6B3A25]">
-                    {activity.actionType}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs font-bold text-[#806A5E]">
-                  {activity.createdAt}
-                </p>
-                <p className="mt-1 text-sm font-bold text-[#806A5E]">
-                  الهدف {activity.targetType || "-"} مرجع العملية{" "}
-                  {activity.invoiceBarcode || "-"}
-                </p>
-                <pre className="mt-3 max-h-28 overflow-auto rounded-xl bg-[#17100d] p-3 text-left text-xs text-[#FCF8F3]">
-                  {JSON.stringify(activity.details, null, 2)}
-                </pre>
-              </SoftCard>
-            ))}
-            {!dashboard.activities.length ? (
-              <p className="rounded-2xl border border-dashed border-[#E7D7C6] p-6 text-center font-bold text-[#806A5E]">
-                لا توجد عمليات تشغيل حديثة.
-              </p>
-            ) : null}
+      <section className="mb-6 overflow-hidden rounded-[2rem] bg-[#311912] p-5 text-white sm:p-7">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${ready ? "bg-emerald-400/20 text-emerald-200" : "bg-amber-300/20 text-amber-100"}`}>
+              {ready ? "جاهز للتشغيل" : "يحتاج إضافة موظف نشط"}
+            </span>
+            <h2 className="mt-4 text-2xl font-black sm:text-3xl">شغّل الطلبات والولاء والمكافآت بثقة</h2>
+            <p className="mt-2 text-sm font-bold leading-7 text-white/70">
+              لديك {activeCount} موظف نشط. العمليات الفعلية تتم من بوابة الكاشير المنفصلة.
+            </p>
           </div>
-        </BentoCard>
-      </BentoGrid>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href={loginPath} target="_blank" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 font-black text-[#311912]">
+              <DoorOpen className="h-5 w-5" /> فتح البوابة
+            </Link>
+            <button type="button" onClick={() => setIsAdding(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 px-5 font-black">
+              <UserRoundPlus className="h-5 w-5" /> إضافة موظف
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-6 grid gap-3 md:grid-cols-3" aria-label="خطوات التشغيل">
+        {[
+          ["١", "أضف الموظف", "أنشئ حساب تشغيل محدود الصلاحية."],
+          ["٢", "شارك بيانات الدخول", "أرسل الرابط وكلمة المرور المؤقتة بأمان."],
+          ["٣", "ابدأ التشغيل", "يفتح الموظف البوابة وينفذ العمليات باسمه."],
+        ].map(([number, title, body]) => (
+          <SoftCard key={number} className="p-5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F2E7D9] font-black text-[#6B3A25]">{number}</span>
+            <h3 className="mt-4 font-black text-[#311912]">{title}</h3>
+            <p className="mt-1 text-sm font-bold leading-6 text-[#806A5E]">{body}</p>
+          </SoftCard>
+        ))}
+      </section>
+
+      <section className="mb-6 rounded-[2rem] bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><UsersRound className="h-5 w-5" /> فريق الكاشير</h2>
+            <p className="mt-1 text-sm font-bold text-[#806A5E]">{dashboard.cashiers.length} حساب تشغيل</p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void copyLoginLink()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#F8F4EF] px-3 text-xs font-black text-[#6B3A25]">
+              <ClipboardCopy className="h-4 w-4" /> نسخ رابط الدخول
+            </button>
+            <button type="button" onClick={() => setIsAdding(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#6B3A25] px-3 text-xs font-black text-white">
+              <Plus className="h-4 w-4" /> إضافة
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[760px] text-right text-sm">
+            <thead className="text-xs font-black text-[#806A5E]">
+              <tr className="border-b border-[#EFE6DD]">
+                <th className="p-3">الموظف</th><th className="p-3">البريد</th><th className="p-3">الرقم الوظيفي</th><th className="p-3">الحالة</th><th className="p-3">آخر دخول</th><th className="p-3">الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboard.cashiers.map((cashier) => (
+                <tr key={cashier.id} className="border-b border-[#F5EFE9] font-bold">
+                  <td className="p-3 font-black">{cashier.fullName}</td>
+                  <td className="p-3 break-all text-[#806A5E]">{cashier.email}</td>
+                  <td className="p-3">{cashier.employeeNumber || "—"}</td>
+                  <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs ${cashier.active ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-600"}`}>{cashier.active ? "نشط" : "معطل"}</span></td>
+                  <td className="p-3 text-xs text-[#806A5E]">{formatDate(cashier.lastLoginAt)}</td>
+                  <td className="p-3">
+                    <button type="button" disabled={pendingId === cashier.id} onClick={() => void toggleCashier(cashier.id, !cashier.active)} className="rounded-xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#6B3A25] disabled:opacity-50">
+                      {pendingId === cashier.id ? "جارٍ الحفظ..." : cashier.active ? "تعطيل" : "تفعيل"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-3 md:hidden">
+          {dashboard.cashiers.map((cashier) => (
+            <article key={cashier.id} className="rounded-2xl bg-[#F8F4EF] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0"><h3 className="font-black">{cashier.fullName}</h3><p className="mt-1 break-all text-xs font-bold text-[#806A5E]">{cashier.email}</p></div>
+                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${cashier.active ? "bg-emerald-50 text-emerald-700" : "bg-stone-200 text-stone-600"}`}>{cashier.active ? "نشط" : "معطل"}</span>
+              </div>
+              <p className="mt-3 text-xs font-bold text-[#806A5E]">الرقم الوظيفي: {cashier.employeeNumber || "—"}</p>
+              <p className="mt-1 text-xs font-bold text-[#806A5E]">آخر دخول: {formatDate(cashier.lastLoginAt)}</p>
+              <button type="button" disabled={pendingId === cashier.id} onClick={() => void toggleCashier(cashier.id, !cashier.active)} className="mt-3 min-h-10 w-full rounded-xl bg-white text-xs font-black text-[#6B3A25] disabled:opacity-50">{cashier.active ? "تعطيل الحساب" : "تفعيل الحساب"}</button>
+            </article>
+          ))}
+        </div>
+        {!dashboard.cashiers.length ? <p className="rounded-2xl bg-[#F8F4EF] p-6 text-center font-bold text-[#806A5E]">لم تتم إضافة موظفين بعد.</p> : null}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <section className="rounded-[2rem] bg-white p-5 shadow-sm">
+          <h2 className="flex items-center gap-2 text-lg font-black"><Activity className="h-5 w-5" /> أحدث النشاطات</h2>
+          <div className="mt-4 space-y-3">
+            {dashboard.activities.slice(0, 5).map((item) => (
+              <div key={item.id} className="flex items-start gap-3 rounded-2xl bg-[#F8F4EF] p-4">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                <div><p className="text-sm font-black">{item.cashierName} — {activityText(item.actionType)}</p><p className="mt-1 text-xs font-bold text-[#806A5E]">{formatDate(item.createdAt)}</p></div>
+              </div>
+            ))}
+            {!dashboard.activities.length ? <p className="text-sm font-bold text-[#806A5E]">لا توجد عمليات حديثة.</p> : null}
+          </div>
+        </section>
+        <SoftCard className="p-5">
+          <h2 className="flex items-center gap-2 text-lg font-black"><HelpCircle className="h-5 w-5" /> مساعدة سريعة</h2>
+          <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">استخدم هذه الصفحة لإدارة الفريق فقط. الطلبات ومسح بطاقات الولاء وصرف المكافآت متاحة داخل بوابة الكاشير، وتُسجّل باسم الموظف الذي دخل إليها.</p>
+          <div className="mt-4 flex items-center gap-2 text-xs font-black text-emerald-700"><ShieldCheck className="h-4 w-4" /> صلاحيات تشغيل معزولة لكل علامة</div>
+        </SoftCard>
+      </div>
+
+      {isAdding ? (
+        <div className="fixed inset-0 z-50 grid place-items-end bg-black/40 p-0 sm:place-items-center sm:p-4" role="dialog" aria-modal="true" aria-label="إضافة موظف كاشير">
+          <div className="w-full rounded-t-[2rem] bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-7">
+            <div className="flex items-center justify-between"><h2 className="text-xl font-black">إضافة موظف كاشير</h2><button type="button" onClick={() => setIsAdding(false)} className="rounded-xl p-2" aria-label="إغلاق"><X className="h-5 w-5" /></button></div>
+            <div className="mt-5 space-y-4">
+              <label className="block text-sm font-black">الاسم<input value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25]" autoComplete="name" /></label>
+              <label className="block text-sm font-black">البريد الإلكتروني<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25]" autoComplete="email" /></label>
+              <label className="block text-sm font-black">الرقم الوظيفي <span className="text-[#806A5E]">(اختياري)</span><input value={employeeNumber} onChange={(event) => setEmployeeNumber(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25]" /></label>
+            </div>
+            <button type="button" disabled={pendingId === "create"} onClick={() => void createCashier()} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] font-black text-white disabled:opacity-60">{pendingId === "create" ? "جارٍ الإنشاء..." : "إنشاء الحساب"}</button>
+          </div>
+        </div>
+      ) : null}
     </DashboardPageShell>
   );
 }

@@ -25,7 +25,7 @@ export async function loginCashierAction(email: string, password: string) {
 
 export async function logoutCashierAction() {
   await logoutCashier();
-  redirect("/login");
+  redirect("/cashier/login");
 }
 
 export async function fetchCashierConsoleAction() {

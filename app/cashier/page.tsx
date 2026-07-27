@@ -10,7 +10,7 @@ export default async function CashierPage() {
   const data = await getCashierConsole();
 
   if (!data) {
-    redirect("/login");
+    redirect("/cashier/login");
   }
 
   return <CashierConsoleClient initialData={data} />;

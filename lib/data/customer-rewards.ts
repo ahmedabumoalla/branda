@@ -156,7 +156,7 @@ async function getValidCashierSession() {
   const admin = createAdminClient();
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -165,6 +165,10 @@ async function getValidCashierSession() {
   if (!session || session.revoked_at) {
     throw new Error("جلسة الكاشير منتهية");
   }
+  const cashier = firstRecord(session.cafe_cashiers);
+  if (!cashier || cashier.active !== true) {
+    throw new Error("حساب الكاشير معطل");
+  }
 
   return {
     admin,
@@ -172,8 +176,8 @@ async function getValidCashierSession() {
     token,
     cafeId: String(session.cafe_id),
     cashierId: String(session.cashier_id),
-    cashierName: String(firstRecord(session.cafe_cashiers)?.full_name ?? ""),
-    cashierEmail: String(firstRecord(session.cafe_cashiers)?.email ?? ""),
+    cashierName: String(cashier.full_name ?? ""),
+    cashierEmail: String(cashier.email ?? ""),
   };
 }
 

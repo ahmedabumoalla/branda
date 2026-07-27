@@ -397,7 +397,7 @@ async function requireCashierSessionContext(
 
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,employee_number),cafes(name,slug,business_category)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,employee_number,active),cafes(name,slug,business_category)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -407,6 +407,9 @@ async function requireCashierSessionContext(
 
   const cashier = firstRecord(session.cafe_cashiers);
   const cafe = firstRecord(session.cafes);
+  if (!cashier || cashier.active !== true) {
+    throw new Error("Cashier account is inactive");
+  }
 
   return {
     token,
@@ -482,6 +485,8 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
   if (error || !data) return null;
   const normalized = normalizeConsolePayload(data);
   if (!normalized?.cafe.id) return normalized;
+  const verifiedSession = await requireCashierSessionContext().catch(() => null);
+  if (!verifiedSession || verifiedSession.cafeId !== normalized.cafe.id) return null;
   await recordCashierConsoleEntry({
     cafeId: normalized.cafe.id,
     cafeSlug: normalized.cafe.slug,
@@ -868,7 +873,7 @@ export async function cashierScanLoyalty(input: {
   const admin = createAdminClient();
   const { data: session, error: sessionError } = await admin
     .from("cafe_cashier_sessions")
-    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
+    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -876,6 +881,7 @@ export async function cashierScanLoyalty(input: {
   if (sessionError) throw sessionError;
   if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
   const cashier = firstRecord(session.cafe_cashiers);
+  if (!cashier || cashier.active !== true) throw new Error("حساب الكاشير معطل");
 
   const currentCafeId = String(session.cafe_id);
   if (input.cafeId && input.cafeId !== currentCafeId) {

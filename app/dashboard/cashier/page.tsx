@@ -7,36 +7,17 @@ import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blo
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import {
-  getOwnerLoyaltyCardsDashboard,
-  type LoyaltyCardsDashboard,
+  getOwnerCashierOperations,
+  type CashierOperationsDashboard,
 } from "@/lib/data/loyalty-cards";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
-const emptyDashboard: LoyaltyCardsDashboard = {
+const emptyDashboard: CashierOperationsDashboard = {
   cafeId: "",
   cafeSlug: "",
   cafeName: "",
   businessCategory: "cafes_coffee",
-  program: {
-    enabled: true,
-    cardTitle: "بطاقة الولاء",
-    cardSubtitle: "اجمع الأختام واحصل على مكافأتك",
-    purchasesRequired: 7,
-    rewardProductId: null,
-    rewardProductName: "",
-    rewardName: "منتج مجاني",
-    stampLabel: "ختم",
-    terms: "تطبق الشروط والأحكام الخاصة بالعلامة التجارية",
-    cardBackground: "#4A281D",
-    cardForeground: "#FCF8F3",
-    cardAccent: "#D9A33F",
-    cardDesign: null,
-    appleWalletEnabled: false,
-    googleWalletEnabled: false,
-  },
-  cards: [],
   cashiers: [],
-  events: [],
   activities: [],
 };
 
@@ -56,7 +37,7 @@ export default async function DashboardCashierPage() {
       return <DashboardFeatureBlockedState title="الكاشير" />;
     }
 
-    const dashboard = await getOwnerLoyaltyCardsDashboard();
+    const dashboard = await getOwnerCashierOperations();
     return <OperationalCashierPageClient initialDashboard={dashboard} />;
   } catch (error) {
     console.error("[DashboardCashierPage]", error);

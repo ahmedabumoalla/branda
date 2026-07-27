@@ -1,0 +1,11 @@
+app/actions/cashier.ts
+app/cashier/page.tsx
+app/dashboard/cashier/page.tsx
+components/cashier/cashier-console-client.tsx
+components/dashboard/pages/operational-cashier-page.tsx
+lib/data/cashier.ts
+lib/data/customer-rewards.ts
+lib/data/experience-rewards.ts
+lib/data/loyalty-cards.ts
+scripts/check-cashier-operations.mjs
+.codex-redesign-cashier-operations-files.txt

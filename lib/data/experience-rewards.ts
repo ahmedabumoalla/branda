@@ -680,7 +680,7 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
 
   const { data: session, error: sessionError } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -688,6 +688,7 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
   if (sessionError) throw sessionError;
   if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
   const cashier = firstRecord(session.cafe_cashiers);
+  if (!cashier || cashier.active !== true) throw new Error("حساب الكاشير معطل");
 
   const { data: submission, error: submissionError } = await admin
     .from("experience_reward_submissions")
