@@ -61,6 +61,19 @@ if (/motion\/react|LazyMotion|MotionConfig|useReducedMotion|CustomerBottomDock/.
 if (/fetch\(|usePublicCafeMenu|branches|getCustomerSession/.test(detail)) {
   throw new Error("Product detail must not fetch catalog, branches, or customer session");
 }
+if (!showcase.includes("availabilityLabel?: string;")) {
+  throw new Error("ProductCinematicShowcase availabilityLabel must remain optional");
+}
+if (!detail.includes("availabilityLabel={availabilityLabel}")) {
+  throw new Error("Product detail must pass availabilityLabel to ProductCinematicShowcase");
+}
+if (
+  !showcase.includes("{availabilityLabel ? (") ||
+  !showcase.includes("{availabilityLabel}") ||
+  !showcase.includes(") : null}")
+) {
+  throw new Error("ProductCinematicShowcase must render availabilityLabel conditionally");
+}
 if (!productPage.includes('import { getPublicProductBySlug } from "@/lib/data/menu";')) {
   throw new Error("Product page must import getPublicProductBySlug");
 }

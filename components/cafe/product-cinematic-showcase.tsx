@@ -12,6 +12,7 @@ type Props = {
   productName: string;
   categoryLabel: string;
   promoLabel?: string;
+  availabilityLabel?: string;
   className?: string;
   hasVideo?: boolean;
 };
@@ -25,6 +26,7 @@ export function ProductCinematicShowcase({
   productName,
   categoryLabel,
   promoLabel,
+  availabilityLabel,
   className = "",
   hasVideo = false,
 }: Props) {
@@ -92,8 +94,9 @@ export function ProductCinematicShowcase({
       onPointerCancel={resetTilt}
       aria-label={`عرض ${productName}`}
     >
+      <div className="cinematic-ambient pointer-events-none absolute inset-0" />
       <div className="cinematic-vignette pointer-events-none absolute inset-0" />
-      <div className="cinematic-glow pointer-events-none absolute left-1/2 top-[46%] h-[58%] w-[66%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+      <div className="cinematic-glow pointer-events-none absolute left-1/2 top-[46%] h-[62%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
       <div className="cinematic-shadow pointer-events-none absolute bottom-[8%] left-1/2 h-[9%] w-[52%] -translate-x-1/2 rounded-[50%]" />
 
       <div className="cinematic-badges pointer-events-none absolute inset-x-4 top-4 z-20 flex flex-wrap items-center gap-2">
@@ -105,11 +108,17 @@ export function ProductCinematicShowcase({
             {promoLabel}
           </span>
         ) : null}
+        {availabilityLabel ? (
+          <span className="mr-auto rounded-full border border-black/5 bg-[var(--ci-surface,var(--barndaksa-cream-base))]/90 px-3 py-1 text-xs font-black text-[var(--ci-text,var(--barndaksa-espresso-dark))]">
+            {availabilityLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="cinematic-media relative z-10 flex h-full w-full items-center justify-center">
         {children}
       </div>
+      <div className="cinematic-foreground pointer-events-none absolute inset-x-[8%] bottom-0 z-10 h-[18%]" />
       {!hasVideo ? <div className="cinematic-sheen pointer-events-none absolute inset-y-[8%] z-10 w-[18%] -skew-x-12" /> : null}
 
       <style jsx global>{`
@@ -118,12 +127,17 @@ export function ProductCinematicShowcase({
           --cinematic-y: 0;
           perspective: 1100px;
           transform-style: preserve-3d;
-          animation: cinematic-stage-in 420ms ease-out both;
+          background: var(--ci-page-bg, var(--barndaksa-cream-base));
+        }
+        .cinematic-ambient {
+          background:
+            linear-gradient(145deg, var(--ci-surface, #f7f0e8), var(--ci-page-bg, #efe2d3)),
+            radial-gradient(circle at 18% 16%, var(--ci-accent, #6b3a25), transparent 42%);
+          opacity: 0.72;
         }
         .cinematic-vignette {
           background:
             radial-gradient(circle at 50% 44%, transparent 42%, color-mix(in srgb, var(--ci-text, #311912) 8%, transparent) 100%);
-          animation: cinematic-layer-in 420ms 0ms ease-out both;
         }
         .cinematic-glow {
           background: radial-gradient(circle, color-mix(in srgb, var(--ci-accent, #6b3a25) 20%, transparent), transparent 70%);
@@ -132,7 +146,6 @@ export function ProductCinematicShowcase({
             translate3d(calc(-50% + var(--cinematic-x) * -4px), calc(-50% + var(--cinematic-y) * -3px), -18px)
             scale(1.01);
           transition: transform 260ms ease-out;
-          animation: cinematic-layer-in 440ms 80ms ease-out both;
         }
         .cinematic-shadow {
           background: color-mix(in srgb, var(--ci-text, #311912) 24%, transparent);
@@ -141,29 +154,18 @@ export function ProductCinematicShowcase({
             translate3d(calc(-50% + var(--cinematic-x) * 2px), calc(var(--cinematic-y) * 1px), -24px)
             scaleX(calc(1 - var(--cinematic-y) * 0.025));
           transition: transform 260ms ease-out;
-          animation: cinematic-layer-in 440ms 80ms ease-out both;
         }
         .cinematic-media {
           transform:
-            translate3d(calc(var(--cinematic-x) * 8px), calc(var(--cinematic-y) * 6px), 20px)
-            rotateX(calc(var(--cinematic-y) * -3deg))
-            rotateY(calc(var(--cinematic-x) * 4deg))
+            translate3d(calc(var(--cinematic-x) * 6px), calc(var(--cinematic-y) * 5px), 20px)
+            rotateX(calc(var(--cinematic-y) * -2.5deg))
+            rotateY(calc(var(--cinematic-x) * 3.5deg))
             scale(1.01);
           transform-style: preserve-3d;
           transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
-          animation: cinematic-product-in 480ms 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
-        .cinematic-badges {
-          animation: cinematic-info-in 240ms 260ms ease-out both;
-        }
-        .cinematic-info-heading {
-          animation: cinematic-info-in 130ms 340ms ease-out both;
-        }
-        .cinematic-info-price {
-          animation: cinematic-info-in 130ms 430ms ease-out both;
-        }
-        .cinematic-info-ordering {
-          animation: cinematic-info-in 130ms 520ms ease-out both;
+        .cinematic-foreground {
+          background: linear-gradient(to top, color-mix(in srgb, var(--ci-text, #311912) 9%, transparent), transparent);
         }
         .cinematic-sheen {
           left: -28%;
@@ -178,22 +180,6 @@ export function ProductCinematicShowcase({
         }
         .product-cinematic-showcase[data-motion="reduced"] .cinematic-sheen {
           display: none;
-        }
-        @keyframes cinematic-stage-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes cinematic-layer-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes cinematic-product-in {
-          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); filter: blur(2px); }
-          to { opacity: 1; filter: blur(0); }
-        }
-        @keyframes cinematic-info-in {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes cinematic-sheen-pass {
           from { opacity: 0; transform: translateX(0) skewX(-12deg); }
