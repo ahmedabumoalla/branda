@@ -54,7 +54,7 @@ export function MenuProductCard({
   const hasDiscountedPrice = promoOn && finalPrice < product.price;
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-white bg-white/80 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white shadow-[6px_8px_20px_rgba(49,25,18,0.06)] transition hover:-translate-y-0.5 hover:shadow-xl">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
         <ProductMediaDisplay
           product={product}
@@ -91,19 +91,19 @@ export function MenuProductCard({
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-5">
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-black text-[#8B5E3C]">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-black text-[#8B5E3C]">
               {categoryLabel ?? product.category}
             </p>
 
-            <h3 className="mt-1 text-lg font-black text-[#3A2117]">
+            <h3 className="mt-1 break-words text-lg font-black leading-7 text-[#3A2117]">
               {product.name}
             </h3>
           </div>
 
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F8F4EF]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F8F4EF]">
             <MoreHorizontal className="h-5 w-5 text-[#7A6255]" />
           </span>
         </div>
@@ -123,12 +123,12 @@ export function MenuProductCard({
           ))}
         </div>
 
-        <div className="mt-auto grid grid-cols-3 gap-3 border-t border-[#EFE8DF] pt-4 text-center">
-          <div>
+        <div className="mt-auto grid min-w-0 grid-cols-3 gap-2 border-t border-[#EFE8DF] pt-4 text-center">
+          <div className="min-w-0">
             <p className="text-[10px] font-black text-[#7A6255]">
               {isEvents ? "رسوم الدخول" : "السعر"}
             </p>
-            <p className="font-black text-[#3A2117]">
+            <p className="break-words text-sm font-black text-[#3A2117]">
               {hasDiscountedPrice ? formatSar(finalPrice) : formatSar(product.price)}
             </p>
             {hasDiscountedPrice ? (
@@ -138,13 +138,13 @@ export function MenuProductCard({
             ) : null}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="flex items-center justify-center gap-1 text-[10px] font-black text-[#7A6255]">
               <Flame className="h-3 w-3 text-[#8B5E3C]" />
               {isEvents ? "السعة" : "سعرات"}
             </p>
 
-            <p className="font-black text-[#3A2117]">
+            <p className="break-words text-sm font-black text-[#3A2117]">
               {isEvents
                 ? product.eventTicketSettings?.capacity == null
                   ? "غير محدد"
@@ -155,11 +155,11 @@ export function MenuProductCard({
             </p>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="text-[10px] font-black text-[#7A6255]">
               {isEvents ? "الدخول" : "الاستلام"}
             </p>
-            <p className="font-black text-[#8B5E3C]">
+            <p className="break-words text-sm font-black text-[#8B5E3C]">
               {isEvents
                 ? product.eventTicketSettings?.checkinPolicy === "multi_use"
                   ? "متعدد"
@@ -181,11 +181,11 @@ export function MenuProductCard({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-2 border-t border-[#EFE8DF] pt-4">
+        <div className="grid grid-cols-2 gap-2 border-t border-[#EFE8DF] pt-4 sm:grid-cols-[1fr_1fr_auto]">
           <button
             type="button"
             onClick={onEdit}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-[#E5D8CD] bg-white py-2.5 text-xs font-black"
+            className="flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#E5D8CD] bg-white px-2 py-2.5 text-xs font-black"
           >
             <Pencil className="h-4 w-4" />
             تعديل
@@ -194,7 +194,7 @@ export function MenuProductCard({
           <button
             type="button"
             onClick={onToggleAvailability}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-[#3A2117]/10 py-2.5 text-xs font-black text-[#3A2117]"
+            className="flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-[#3A2117]/10 px-2 py-2.5 text-xs font-black text-[#3A2117]"
           >
             <Power className="h-4 w-4" />
             {product.available ? "إيقاف" : "تفعيل"}
@@ -203,7 +203,7 @@ export function MenuProductCard({
           <button
             type="button"
             onClick={onDelete}
-            className="flex items-center justify-center gap-1.5 rounded-2xl bg-red-50 px-4 py-2.5 text-xs font-black text-red-700"
+            className="col-span-2 flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-red-50 px-3 py-2.5 text-xs font-black text-red-700 sm:col-span-1"
           >
             <Trash2 className="h-4 w-4" />
             حذف

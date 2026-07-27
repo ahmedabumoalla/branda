@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Upload } from "lucide-react";
+import { ChevronDown, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,12 +14,9 @@ import { CategoryManager } from "@/components/dashboard/menu/category-manager";
 import { MenuProductCard } from "@/components/dashboard/menu/product-card";
 import {
   BentoCard,
-  BentoGrid,
   DashboardPageShell,
-  FilterBar,
   NeumoInput,
   PrimaryButton,
-  StatPill,
 } from "@/components/ui/design-system";
 import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
@@ -77,6 +74,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const [productModalRequested, setProductModalRequested] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importModalRequested, setImportModalRequested] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
@@ -233,46 +231,51 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
         }
       >
-        <BentoGrid className="mb-6">
-          <BentoCard variant="white">
-            <StatPill label={copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات"} value={products.length} />
-          </BentoCard>
-          <BentoCard variant="white">
-            <StatPill label={copy.kind === "events" ? "تذاكر متاحة" : "متاح للبيع"} value={availableCount} />
-          </BentoCard>
-          <BentoCard variant="white">
-            <StatPill label="التصنيفات" value={categories.length} />
-          </BentoCard>
-          <BentoCard variant="white">
-            <StatPill label="نتائج البحث" value={filtered.length} hint="حسب الفلتر الحالي" />
-          </BentoCard>
-        </BentoGrid>
+        <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="ملخص المنيو">
+          {[
+            [copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
+            [copy.kind === "events" ? "تذاكر متاحة" : "متاح للبيع", availableCount],
+            ["التصنيفات", categories.length],
+            ["نتائج البحث", filtered.length],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="min-w-0 rounded-2xl border border-[#E7D7C6] bg-white px-4 py-3 shadow-[4px_6px_16px_rgba(49,25,18,0.04)]">
+              <p className="truncate text-[11px] font-black text-[#806A5E] sm:text-xs">{label}</p>
+              <p className="mt-1 text-xl font-black text-[#3A2117]">{value}</p>
+            </div>
+          ))}
+        </section>
 
-        <BentoGrid className="mb-6">
-          <CategoryManager
-            categories={categories}
-            products={products}
-            onChange={handleCategoriesChange}
-            onDelete={handleCategoryDelete}
-            businessCategory={businessCategory}
-          />
-        </BentoGrid>
-
-        <FilterBar>
-          <div className="relative flex-1">
-            <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7A6255]" />
-            <NeumoInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`ابحث باسم ${copy.itemSingular} أو ${copy.itemPlural} أو تصنيف`}
-              className="pr-12"
-            />
+        <section className="sticky top-2 z-20 mb-5 rounded-2xl border border-[#E7D7C6] bg-white/95 p-3 shadow-[8px_10px_24px_rgba(49,25,18,0.08)] backdrop-blur">
+          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+            <div className="relative min-w-0">
+              <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7A6255]" />
+              <NeumoInput
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`ابحث باسم ${copy.itemSingular} أو ${copy.itemPlural} أو تصنيف`}
+                className="min-w-0 pr-12"
+              />
+            </div>
+            <p className="whitespace-nowrap text-xs font-black text-[#806A5E]">
+              {filtered.length} نتيجة
+            </p>
+            <button
+              type="button"
+              onClick={() => setCategoriesOpen((current) => !current)}
+              aria-expanded={categoriesOpen}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F8F4EF] px-4 text-sm font-black text-[#3A2117] transition hover:bg-[#EFE8DF]"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              إدارة التصنيفات
+              <ChevronDown className={`h-4 w-4 transition ${categoriesOpen ? "rotate-180" : ""}`} />
+            </button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
             <button
+              type="button"
               onClick={() => setCategoryFilter("الكل")}
-              className={`rounded-2xl px-5 py-3 text-sm font-black ${
+              className={`min-h-9 shrink-0 rounded-full px-4 text-xs font-black ${
                 categoryFilter === "الكل"
                   ? "bg-[#3A2117] text-[#F8F4EF]"
                   : "bg-[#F8F4EF] text-[#3A2117]"
@@ -282,29 +285,53 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             </button>
             {sortedCategories.map((c) => (
               <button
+                type="button"
                 key={c.id}
                 onClick={() => setCategoryFilter(c.id)}
-                className={`rounded-2xl px-5 py-3 text-sm font-black ${
+                className={`min-h-9 max-w-[14rem] shrink-0 truncate rounded-full px-4 text-xs font-black ${
                   categoryFilter === c.id
                     ? "bg-[#3A2117] text-[#F8F4EF]"
                     : "bg-[#F8F4EF] text-[#3A2117]"
                 }`}
+                title={c.name}
               >
                 {c.name}
               </button>
             ))}
           </div>
-        </FilterBar>
+        </section>
 
-        <BentoGrid>
-          <BentoCard variant="white" span="4">
-            {filtered.length === 0 ? (
-              <p className="py-12 text-center font-bold text-[#806A5E]">
-                {copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+        {categoriesOpen ? (
+          <div className="mb-6">
+            <CategoryManager
+              categories={categories}
+              products={products}
+              onChange={handleCategoriesChange}
+              onDelete={handleCategoryDelete}
+              businessCategory={businessCategory}
+            />
+          </div>
+        ) : null}
+
+        <section className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-[#3A2117]">المنتجات</h2>
+              <p className="mt-1 text-xs font-bold text-[#806A5E]">
+                {filtered.length} نتيجة
+                {categoryFilter === "الكل"
+                  ? " · كل التصنيفات"
+                  : ` · ${sortedCategories.find((category) => category.id === categoryFilter)?.name ?? categoryFilter}`}
               </p>
-            ) : (
-              <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filtered.map((product) => (
+            </div>
+          </div>
+          {filtered.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#D8C7B7] bg-white/60 px-4 py-12 text-center font-bold text-[#806A5E]">
+              {copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+            </div>
+          ) : (
+            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((product) => (
                   <MenuProductCard
                     key={product.id}
                     product={product}
@@ -334,11 +361,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                     }}
                     businessCategory={businessCategory}
                   />
-                ))}
-              </section>
-            )}
-          </BentoCard>
-        </BentoGrid>
+              ))}
+            </div>
+          )}
+        </section>
 
         {productModalRequested ? (
           <MenuProductFormModal

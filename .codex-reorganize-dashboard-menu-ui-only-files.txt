@@ -1,0 +1,5 @@
+components/dashboard/menu/category-manager.tsx
+components/dashboard/menu/product-card.tsx
+components/dashboard/pages/menu-page.tsx
+scripts/check-dashboard-menu-ui-only.mjs
+.codex-reorganize-dashboard-menu-ui-only-files.txt

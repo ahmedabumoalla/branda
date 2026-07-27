@@ -20,7 +20,7 @@ import {
   type OptimizedImageResult,
 } from "@/lib/cafe/image-asset-pipeline";
 import { saveOptimizedImageAsset, revokeObjectUrl } from "@/lib/cafe/local-asset-store";
-import { BentoCard, PrimaryButton, SoftCard } from "@/components/ui/design-system";
+import { PrimaryButton, SoftCard } from "@/components/ui/design-system";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
@@ -199,24 +199,24 @@ export function CategoryManager({
   }
 
   return (
-    <BentoCard variant="white" span="4">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <section className="min-w-0 rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-[6px_8px_20px_rgba(49,25,18,0.05)] sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-[#3A2117]">
+          <h2 className="text-xl font-black text-[#3A2117]">
             {isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
           </h2>
           <p className="mt-1 text-sm font-bold text-[#7A6255]">
             رتّب التصنيفات وتحكم في ظهورها للعميل.
           </p>
         </div>
-        <PrimaryButton onClick={openAdd} className="inline-flex items-center gap-2">
-          <Plus className="h-5 w-5" />
+        <PrimaryButton onClick={openAdd} className="inline-flex min-h-10 items-center gap-2 px-4 py-2">
+          <Plus className="h-4 w-4" />
           تصنيف جديد
         </PrimaryButton>
       </div>
 
       {formOpen ? (
-        <SoftCard className="mb-5 p-5">
+        <SoftCard className="mb-4 p-4">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-black text-[#3A2117]">
               {form.id ? "تعديل التصنيف" : "إضافة تصنيف"}
@@ -342,13 +342,13 @@ export function CategoryManager({
         </SoftCard>
       ) : null}
 
-      <div className="grid gap-3">
+      <div className="grid min-w-0 gap-2">
         {sorted.map((category, index) => (
-          <SoftCard key={category.id} className="p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
+          <SoftCard key={category.id} className="min-w-0 p-3">
+            <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-black text-[#3A2117]">{category.name}</h3>
+                  <h3 className="min-w-0 break-words text-sm font-black text-[#3A2117] sm:text-base">{category.name}</h3>
                   {category.featured ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
                       <Star className="h-3.5 w-3.5" />
@@ -362,19 +362,19 @@ export function CategoryManager({
                   ) : null}
                 </div>
                 {category.description ? (
-                  <p className="mt-1 text-sm font-bold text-[#7A6255]">{category.description}</p>
+                  <p className="mt-1 line-clamp-2 break-words text-xs font-bold text-[#7A6255]">{category.description}</p>
                 ) : null}
                 <p className="mt-1 text-xs font-bold text-[#7A6255]">
                   {linkedCount(category.id)} {isEvents ? "تذكرة أو باقة مرتبطة" : "منتج مرتبط"}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="grid shrink-0 grid-cols-6 gap-1.5">
                 <button
                   type="button"
                   onClick={() => moveCategory(category.id, "up")}
                   disabled={index === 0}
-                  className="rounded-2xl bg-[#F8F4EF] p-3 disabled:opacity-40"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8F4EF] disabled:opacity-40"
                   title="تحريك لأعلى"
                 >
                   <ArrowUp className="h-4 w-4" />
@@ -383,7 +383,7 @@ export function CategoryManager({
                   type="button"
                   onClick={() => moveCategory(category.id, "down")}
                   disabled={index === sorted.length - 1}
-                  className="rounded-2xl bg-[#F8F4EF] p-3 disabled:opacity-40"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8F4EF] disabled:opacity-40"
                   title="تحريك لأسفل"
                 >
                   <ArrowDown className="h-4 w-4" />
@@ -391,7 +391,7 @@ export function CategoryManager({
                 <button
                   type="button"
                   onClick={() => toggleField(category.id, "visible")}
-                  className="rounded-2xl bg-[#F8F4EF] p-3"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8F4EF]"
                   title={category.visible ? "إخفاء" : "إظهار"}
                 >
                   {category.visible ? (
@@ -403,7 +403,7 @@ export function CategoryManager({
                 <button
                   type="button"
                   onClick={() => toggleField(category.id, "featured")}
-                  className={`rounded-2xl p-3 ${
+                  className={`grid h-9 w-9 place-items-center rounded-xl ${
                     category.featured ? "bg-amber-50 text-amber-700" : "bg-[#F8F4EF]"
                   }`}
                   title="تبديل مميز"
@@ -413,7 +413,7 @@ export function CategoryManager({
                 <button
                   type="button"
                   onClick={() => openEdit(category)}
-                  className="rounded-2xl bg-[#F8F4EF] p-3"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-[#F8F4EF]"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -421,7 +421,7 @@ export function CategoryManager({
                   type="button"
                   onClick={() => void removeCategory(category.id)}
                   disabled={deletingCategoryId === category.id}
-                  className="rounded-2xl bg-red-50 p-3 text-red-700"
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-red-50 text-red-700"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -430,6 +430,6 @@ export function CategoryManager({
           </SoftCard>
         ))}
       </div>
-    </BentoCard>
+    </section>
   );
 }
