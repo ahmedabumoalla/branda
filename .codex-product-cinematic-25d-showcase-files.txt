@@ -1,0 +1,5 @@
+components/cafe/product-cinematic-showcase.tsx
+components/cafe/product-detail-client.tsx
+components/cafe/themes/themed-product-detail.tsx
+scripts/check-product-cinematic-showcase.mjs
+.codex-product-cinematic-25d-showcase-files.txt

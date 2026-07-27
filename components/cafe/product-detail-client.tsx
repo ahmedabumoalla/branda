@@ -22,6 +22,7 @@ import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { appendPreviewToNextPath, getCafePath, getCustomerLoginHref } from "@/lib/cafe/theme-links";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
+import { ProductCinematicShowcase } from "@/components/cafe/product-cinematic-showcase";
 import { resolveProductCategoryLabel } from "@/lib/cafe/menu-category-utils";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { publicFeatureAllows } from "@/lib/platform/public-feature-access";
@@ -189,17 +190,12 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
 
 
   const imageSlot = (
-    <div className="relative flex h-[min(460px,54vh)] items-center justify-center overflow-hidden rounded-[24px] bg-[var(--ci-page-bg,var(--barndaksa-cream-base))]">
-      <div className="absolute inset-x-4 top-4 z-20 flex flex-wrap items-center gap-2">
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.badge}`}>
-          {categoryLabel}
-        </span>
-        {product.promo ? (
-          <span className={`rounded-full px-3 py-1 text-xs font-black ${theme.button}`}>
-            {promoBadgeText(product.promo)}
-          </span>
-        ) : null}
-      </div>
+    <ProductCinematicShowcase
+      productName={product.name}
+      categoryLabel={categoryLabel}
+      promoLabel={product.promo ? promoBadgeText(product.promo) : undefined}
+      hasVideo={Boolean(product.videoAssetId)}
+    >
       <ProductMediaDisplay
         product={product}
         alt={product.name}
@@ -207,12 +203,12 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         fallback={<ProductFallbackIcon className="relative z-10 h-16 w-16 opacity-40" />}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/20 to-transparent" />
-    </div>
+    </ProductCinematicShowcase>
   );
 
   const infoSlot = (
-    <>
-      <div className="mb-5 grid gap-3 rounded-[24px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="flex min-w-0 flex-col">
+      <div className="cinematic-info-price order-6 mt-5 grid gap-3 rounded-[24px] border border-black/5 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
         <div>
           <p className={`text-xs font-black ${theme.muted}`}>{isEvents ? "ملخص شراء التذكرة" : "ملخص الطلب"}</p>
           <p className="mt-1 text-2xl font-black">{formatSar(total)}</p>
@@ -221,16 +217,16 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           {pickupAvailable ? (isEvents ? "شراء التذكرة متاح" : "استلام متاح") : (isEvents ? "غير متاحة للشراء" : "غير متاح للاستلام")}
         </span>
       </div>
-      <p className={`text-sm font-black ${theme.accent}`}>{categoryLabel}</p>
+      <p className={`cinematic-info-heading order-1 text-sm font-black ${theme.accent}`}>{categoryLabel}</p>
       <h1
-        className={`mt-2 font-black leading-tight ${experience.detail === "kiosk" ? "text-3xl" : "text-2xl sm:text-3xl"} ${experience.headingTracking}`}
+        className={`cinematic-info-heading order-2 mt-2 break-words font-black leading-tight ${experience.detail === "kiosk" ? "text-3xl" : "text-2xl sm:text-3xl"} ${experience.headingTracking}`}
       >
         {product.name}
       </h1>
-      <p className={`mt-3 text-sm font-bold leading-7 ${theme.muted}`}>{product.description}</p>
+      <p className={`cinematic-info-heading order-3 mt-3 break-words text-sm font-bold leading-7 ${theme.muted}`}>{product.description}</p>
 
       {metaBadges.length ? (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="cinematic-info-heading order-4 mt-5 flex flex-wrap gap-2">
           {metaBadges.map((badge) => (
             <span
               key={badge.text}
@@ -244,7 +240,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       ) : null}
 
       {product.promo ? (
-        <div className={`mt-5 rounded-2xl p-4 ${theme.card}`}>
+        <div className={`cinematic-info-heading order-5 mt-5 rounded-2xl p-4 ${theme.card}`}>
           <p className={`text-sm font-bold ${theme.muted}`}>عرض مرتبط</p>
           <h3 className={`mt-1 text-xl font-black ${theme.accent}`}>
             {promoBadgeText(product.promo)}
@@ -253,7 +249,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       ) : null}
 
       {orderingEnabled ? (
-      <div className="mt-6 flex items-center gap-4">
+      <div className="cinematic-info-ordering order-7 mt-6 flex flex-wrap items-center gap-4">
         <span className="text-sm font-black">الكمية</span>
         <div className={`flex items-center gap-2 rounded-2xl border p-1 ${theme.card}`}>
           <button
@@ -275,7 +271,7 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
       </div>
       ) : null}
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="cinematic-info-price order-6 mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           [isEvents ? "رسوم الدخول شاملة الضريبة" : "السعر شامل الضريبة", formatSar(unitPrice)],
           ["الإجمالي", formatSar(total)],
@@ -283,12 +279,17 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           <div key={label} className={`rounded-2xl p-3 text-center ${theme.card}`}>
             <p className={`text-xs font-black ${theme.muted}`}>{label}</p>
             <p className="mt-1 font-black">{val}</p>
+            {label !== "الإجمالي" && product.promo && unitPrice < product.price ? (
+              <p className={`mt-1 text-xs font-bold line-through ${theme.muted}`}>
+                {formatSar(product.price)}
+              </p>
+            ) : null}
           </div>
         ))}
       </div>
 
       {orderingEnabled && pickupAvailable ? (
-        <div className={`mt-6 space-y-4 rounded-2xl p-4 ${theme.card}`}>
+        <div className={`cinematic-info-ordering order-8 mt-6 space-y-4 rounded-2xl p-4 ${theme.card}`}>
           <p className="text-sm font-black">{isEvents ? "تفاصيل الدخول" : "تفاصيل الاستلام"}</p>
 
           {activeBranches.length > 1 ? (
@@ -334,12 +335,12 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
           </div>
         </div>
       ) : (
-        <div className={`mt-6 rounded-2xl p-4 text-sm font-bold ${theme.card} ${theme.muted}`}>
+        <div className={`cinematic-info-ordering order-8 mt-6 rounded-2xl p-4 text-sm font-bold ${theme.card} ${theme.muted}`}>
           {isEvents ? "هذه التذكرة غير متاحة للشراء حاليًا." : "هذا المنتج غير متاح للاستلام حاليًا."}
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="cinematic-info-ordering order-9 mt-6">
         <h2 className="mb-2 text-lg font-black">{isEvents ? "تشمل التذكرة" : "المكونات"}</h2>
         <div className="flex flex-wrap gap-2">
           {product.ingredients.map((ing) => (
@@ -355,15 +356,19 @@ export function ProductDetailClient({ slug, id }: { slug: string; id: string }) 
         type="button"
         onClick={() => void addToOrder()}
         disabled={adding || !pickupAvailable}
-        className={`mt-8 flex w-full items-center justify-center gap-2 font-black disabled:opacity-60 ${
+        className={`cinematic-info-ordering order-10 mt-8 flex min-h-16 w-full items-center justify-center gap-2 px-4 text-center font-black disabled:opacity-60 ${
           experience.detail === "kiosk" ? "h-16 text-lg rounded-lg" : "h-16 rounded-2xl text-lg"
         } ${theme.button}`}
       >
         <ShoppingBag className="h-6 w-6" />
-        {adding ? "جاري الإرسال..." : isEvents ? "شراء تذكرة" : "اطلب للاستلام — الدفع عند الاستلام"}
+        {adding
+          ? "جاري الإرسال..."
+          : isEvents
+            ? `شراء تذكرة — ${formatSar(total)}`
+            : `اطلب للاستلام — ${formatSar(total)}`}
       </button>
       ) : null}
-    </>
+    </div>
   );
 
   return (
