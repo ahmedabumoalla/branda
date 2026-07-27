@@ -43,6 +43,21 @@ test("public resources are page-scoped, paginated and tenant-scoped", async () =
   assert.match(menuData, /\.range\(cursor, cursor \+ limit\)/);
 });
 
+test("public catalog is one tenant-scoped lightweight summary response", async () => {
+  const catalog = await source("app/api/public/cafe/[slug]/catalog/route.ts");
+  const data = await source("lib/data/menu.ts");
+  const hook = await source("lib/cafe/use-public-product-catalog.ts");
+
+  assert.match(catalog, /public-product-catalog-summary:\$\{normalizedSlug\}/);
+  assert.doesNotMatch(catalog, /cursor|nextCursor/);
+  assert.match(data, /getPublicProductCatalogSummaryBySlug/);
+  assert.match(
+    data,
+    /id,category_id,legacy_category,name,image_url,image_storage_path,price,available,promo/,
+  );
+  assert.doesNotMatch(hook, /IntersectionObserver|loadMore|nextCursor/);
+});
+
 test("browser resources use memory cache and in-flight request deduplication", async () => {
   const hook = await source("lib/cafe/use-public-cafe-menu.ts");
   const cache = await source("lib/performance/browser-cache.ts");

@@ -1,0 +1,13 @@
+components/cafe/product-collection-page.tsx
+components/cafe/themes/customer-mobile-experience.tsx
+components/cafe/themes/customer-experience-primitives.tsx
+lib/cafe/menu-category-utils.ts
+lib/cafe/public-product-summary.ts
+lib/cafe/use-public-cafe-menu.ts
+lib/cafe/use-public-product-catalog.ts
+app/api/public/cafe/[slug]/catalog/route.ts
+lib/data/menu.ts
+tests/public-products-pagination.test.mjs
+tests/public-product-catalog-summary.test.mjs
+tests/dashboard-public-app-performance.test.mjs
+.codex-load-full-lightweight-product-catalog-files.txt

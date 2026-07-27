@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, ExternalLink, MapPin, Phone, SlidersHorizontal, Sparkles, X } from "lucide-react";
@@ -26,6 +26,7 @@ import {
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { getCafePath } from "@/lib/cafe/theme-links";
 import { usePublicCafeMenu } from "@/lib/cafe/use-public-cafe-menu";
+import { usePublicProductCatalog } from "@/lib/cafe/use-public-product-catalog";
 import { buildGoogleMapsUrl } from "@/lib/mock/branches";
 import {
   getCustomerCategoryFilterOptions,
@@ -66,7 +67,7 @@ const viewInfo: Record<string, { title: string; desc: string }> = {
   },
 };
 
-function getScore(product: MenuProduct, index: number) {
+function getScore(product: Pick<MenuProduct, "price">, index: number) {
   return Number(product.price || 0) + (100 - index);
 }
 
@@ -99,27 +100,29 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const offersSortLabel = isEvents ? "التذاكر ذات العروض" : "المنتجات ذات العروض";
   const noMatchesTitle = isEvents ? "لا توجد تذاكر مطابقة" : "لا توجد منتجات مطابقة";
   const logoUrl = useResolvedCafeLogoUrl(settings);
-  const menuResource =
-    view === "offers" ? "offers" : view === "branches" ? "branches" : "products";
+  const catalogEnabled = view !== "branches";
   const {
     products,
+    categories: menuCategories,
+    totalCount,
+    loading: catalogLoading,
+    error: catalogError,
+  } = usePublicProductCatalog(slug, { enabled: catalogEnabled });
+  const auxiliaryResource = view === "branches" ? "branches" : "offers";
+  const {
     offers,
     branches,
-    categories: menuCategories,
-    loading,
-    loadingMore,
-    loadMore,
-    hasMore,
-    totalCount,
-    error,
-  } =
-    usePublicCafeMenu(slug, {
-      resource: menuResource,
-      limit: menuResource === "products" ? 16 : undefined,
-    });
+    loading: auxiliaryLoading,
+    error: auxiliaryError,
+  } = usePublicCafeMenu(slug, {
+    resource: auxiliaryResource,
+    limit: auxiliaryResource === "offers" ? 12 : undefined,
+    enabled: view === "offers" || view === "branches",
+  });
+  const loading = catalogLoading || auxiliaryLoading;
+  const error = catalogError || auxiliaryError;
   const [filterOpen, setFilterOpen] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
-  const paginationSentinelRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState<FilterBarState>(() =>
     defaultProductFilters({
@@ -148,51 +151,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
       document.body.style.overflow = previousOverflow;
     };
   }, [filterOpen]);
-
-  const filtersNeedCompleteCatalog =
-    filters.query.trim().length > 0 ||
-    filters.category !== "الكل" ||
-    filters.priceRange !== "all" ||
-    filters.onlyOffers ||
-    filters.sort === "offers";
-
-  useEffect(() => {
-    if (
-      menuResource !== "products" ||
-      !filtersNeedCompleteCatalog ||
-      !hasMore ||
-      loadingMore
-    ) {
-      return;
-    }
-    void loadMore();
-  }, [
-    menuResource,
-    filtersNeedCompleteCatalog,
-    hasMore,
-    loadingMore,
-    loadMore,
-  ]);
-
-  useEffect(() => {
-    const sentinel = paginationSentinelRef.current;
-    if (
-      !sentinel ||
-      menuResource !== "products" ||
-      !hasMore ||
-      !("IntersectionObserver" in window)
-    ) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting && !loadingMore) void loadMore();
-      },
-      { rootMargin: "500px 0px", threshold: 0 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [menuResource, hasMore, loadingMore, loadMore]);
 
   const availableProducts = products.filter((product) => product.available);
 
@@ -238,7 +196,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
       const categoryLabel = resolveProductCategoryLabel(product);
       const matchesQuery =
         product.name.includes(filters.query) ||
-        product.description.includes(filters.query) ||
         categoryLabel.includes(filters.query);
       const matchesCategory = productMatchesCategory(
         product,
@@ -461,20 +418,11 @@ export function ProductCollectionPage({ slug, view }: Props) {
         ) : null}
 
         <section>
-          {menuResource === "products" ? (
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <p className={`text-sm font-black ${theme.muted}`}>
-                تم عرض {availableProducts.length.toLocaleString("ar-SA")} من{" "}
-                {(totalCount ?? availableProducts.length).toLocaleString("ar-SA")} {itemLabel}
-              </p>
-              {filtersNeedCompleteCatalog && hasMore ? (
-                <p className={`text-xs font-black ${theme.accent}`}>
-                  جاري استكمال المنتجات لضمان شمول البحث والتصنيف
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          <div className={`${gridClass} barndaksa-stagger-grid`}>
+          <p className={`mb-4 text-sm font-black ${theme.muted}`}>
+            {orderedProducts.length.toLocaleString("ar-SA")} من{" "}
+            {totalCount.toLocaleString("ar-SA")} {itemLabel}
+          </p>
+          <div className={gridClass}>
             {orderedProducts.map((item) => (
               <ProductPosterCard
                 key={item.id}
@@ -500,32 +448,6 @@ export function ProductCollectionPage({ slug, view }: Props) {
             </div>
           ) : null}
 
-          {menuResource === "products" ? (
-            <div
-              ref={paginationSentinelRef}
-              className="mt-6 flex min-h-16 flex-col items-center justify-center gap-3"
-            >
-              {hasMore ? (
-                <>
-                  <p className={`text-xs font-black ${theme.muted}`}>
-                    {loadingMore ? "جاري تحميل المزيد من المنتجات..." : "توجد منتجات أخرى"}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void loadMore()}
-                    disabled={loadingMore}
-                    className={`min-h-11 rounded-2xl px-6 text-sm font-black disabled:opacity-60 ${theme.buttonOutline}`}
-                  >
-                    {loadingMore ? "جاري التحميل..." : "عرض المزيد"}
-                  </button>
-                </>
-              ) : availableProducts.length ? (
-                <p className={`text-xs font-black ${theme.muted}`}>
-                  تم عرض جميع المنتجات المتاحة
-                </p>
-              ) : null}
-            </div>
-          ) : null}
         </section>
 
         {filterOpen && portalReady
@@ -843,7 +765,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             }
           />
 
-          <div className={`${gridClass} barndaksa-stagger-grid`}>
+          <div className={gridClass}>
             {orderedProducts.map((item, index) => (
               <Fragment key={item.id}>
                 <ProductPosterCard
@@ -854,6 +776,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                   <div className="md:col-span-2 xl:col-span-3">
                     <InternalAdPanel
                       compact
+                      prefetch={false}
                       title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "استكشف عروض العلامة"}
                       eyebrow="إعلان داخل القائمة"
                       description={activeOffers[0]?.description || "مساحة مدمجة بين المنتجات تقود العميل إلى العروض أو المنتج المرتبط بدون تغيير مسار القائمة."}
@@ -885,6 +808,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
         {orderedProducts.length > 0 && orderedProducts.length <= 2 ? (
           <InternalAdPanel
             compact
+            prefetch={false}
             title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "مساحة عروض العلامة"}
             eyebrow="إعلان داخل القائمة"
             description={activeOffers[0]?.description || "مساحة مدمجة تظهر حتى عندما تكون نتائج الفلترة قليلة."}

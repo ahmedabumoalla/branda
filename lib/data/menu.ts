@@ -12,6 +12,11 @@ import {
 } from "@/lib/data/mappers";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { EventTicketSettings, MenuProduct } from "@/lib/mock/menu";
+import type {
+  PublicCategorySummary,
+  PublicProductSummary,
+  PublicPromoSummary,
+} from "@/lib/cafe/public-product-summary";
 
 function invalidatePublicMenuSurfaces(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
@@ -19,6 +24,7 @@ function invalidatePublicMenuSurfaces(slug: string) {
   clearServerMemoryCache(`public-menu:${normalizedSlug}`);
   clearServerMemoryCache(`public-products:${normalizedSlug}`);
   clearServerMemoryCache(`public-product:${normalizedSlug}`);
+  clearServerMemoryCache(`public-product-catalog-summary:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/products/latest`);
@@ -85,6 +91,113 @@ async function attachEventTicketSettings(
     ...product,
     eventTicketSettings: settingsByProductId.get(product.id) ?? product.eventTicketSettings ?? null,
   }));
+}
+
+type DbPublicProductSummary = {
+  id: string;
+  category_id: string | null;
+  legacy_category: string | null;
+  name: string;
+  image_url: string | null;
+  image_storage_path: string | null;
+  price: number;
+  available: boolean;
+  promo: unknown;
+};
+
+function publicPromoSummary(value: unknown): PublicPromoSummary | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const promo = value as Record<string, unknown>;
+  if (
+    typeof promo.kind !== "string" ||
+    typeof promo.startDate !== "string" ||
+    typeof promo.endDate !== "string"
+  ) {
+    return null;
+  }
+  return {
+    kind: promo.kind as PublicPromoSummary["kind"],
+    discountMode:
+      promo.discountMode === "percent" || promo.discountMode === "fixed_price"
+        ? promo.discountMode
+        : undefined,
+    discountPercent:
+      typeof promo.discountPercent === "number"
+        ? promo.discountPercent
+        : undefined,
+    discountedPrice:
+      typeof promo.discountedPrice === "number"
+        ? promo.discountedPrice
+        : undefined,
+    customText:
+      typeof promo.customText === "string" ? promo.customText : undefined,
+    startDate: promo.startDate,
+    endDate: promo.endDate,
+  };
+}
+
+export async function getPublicProductCatalogSummaryBySlug(slug: string) {
+  const cafe = await getPublicCafeBySlugAdmin(slug);
+  if (!cafe) return null;
+  const supabase = createAdminClient();
+  const [{ data: categories, error: categoryError }, { data: products, error: productError }] =
+    await Promise.all([
+      supabase
+        .from("menu_categories")
+        .select("id,name,sort_order,visible")
+        .eq("cafe_id", cafe.id)
+        .eq("visible", true)
+        .is("deleted_at", null)
+        .order("sort_order"),
+      supabase
+        .from("menu_products")
+        .select(
+          "id,category_id,legacy_category,name,image_url,image_storage_path,price,available,promo",
+        )
+        .eq("cafe_id", cafe.id)
+        .eq("available", true)
+        .is("deleted_at", null)
+        .order("sort_order"),
+    ]);
+
+  if (categoryError) throw categoryError;
+  if (productError) throw productError;
+
+  const categorySummaries = (categories ?? []).map(
+    (category): PublicCategorySummary => ({
+      id: String(category.id),
+      name: String(category.name),
+      sortOrder: Number(category.sort_order ?? 0),
+      visible: true,
+    }),
+  );
+  const categoryNames = new Map(
+    categorySummaries.map((category) => [category.id, category.name]),
+  );
+  const productSummaries = ((products ?? []) as DbPublicProductSummary[]).map(
+    (product): PublicProductSummary => ({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      available: product.available,
+      categoryId: product.category_id ?? undefined,
+      category:
+        (product.category_id
+          ? categoryNames.get(product.category_id)
+          : undefined) ??
+        product.legacy_category ??
+        "غير مصنف",
+      imageAssetId: product.image_storage_path ?? undefined,
+      imageDataUrl: product.image_url,
+      promo: publicPromoSummary(product.promo),
+    }),
+  );
+
+  return {
+    products: productSummaries,
+    categories: categorySummaries,
+    totalCount: productSummaries.length,
+  };
 }
 
 export async function getPublicMenuBySlug(slug: string) {

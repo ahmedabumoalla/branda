@@ -55,6 +55,7 @@ export function InternalAdPanel({
   icon: Icon = Megaphone,
   metric,
   compact = false,
+  prefetch = true,
 }: {
   title: string;
   eyebrow?: string;
@@ -64,6 +65,7 @@ export function InternalAdPanel({
   icon?: ElementType;
   metric?: string | number;
   compact?: boolean;
+  prefetch?: boolean;
 }) {
   return (
     <section
@@ -90,6 +92,7 @@ export function InternalAdPanel({
           ) : null}
           <Link
             href={href}
+            prefetch={prefetch}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--ci-accent-bg,var(--barndaksa-gold-accent))] px-5 py-3 text-sm font-black text-[var(--ci-accent-fg,var(--barndaksa-espresso-dark))] shadow-sm transition active:scale-95"
           >
             {cta}

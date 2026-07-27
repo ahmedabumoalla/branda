@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
+import { LocalAssetImage } from "@/components/ui/local-asset-image";
 import { SharedLoyaltyCard } from "@/components/loyalty/shared-loyalty-card";
 import { BrandaLogo } from "@/components/ui/branda-logo";
 import { formatSar } from "@/lib/format";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { prefetchPublicCafeResource } from "@/lib/cafe/use-public-cafe-menu";
+import type { PublicProductSummary } from "@/lib/cafe/public-product-summary";
 
 export type CustomerDockKey = "menu" | "offers" | "rewards" | "account";
 
@@ -287,30 +289,51 @@ export function ProductPosterCard({
   href,
   compact = false,
 }: {
-  product: MenuProduct;
+  product: MenuProduct | PublicProductSummary;
   href: string;
   compact?: boolean;
 }) {
   const promoOn = product.promo ? isPromoActive(product.promo) : false;
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscount = promoOn && finalPrice < product.price;
+  const isSummary = !("description" in product);
 
   return (
     <Link
       href={href}
+      prefetch={false}
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: compact ? "154px 230px" : "180px 260px",
+      }}
       className={`group block overflow-hidden rounded-[8px] bg-white text-[var(--ci-page-fg,#171412)] shadow-[0_10px_28px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/70 transition active:scale-[0.985] ${compact ? "min-w-[154px]" : ""}`}
     >
       <div className={compact ? "relative aspect-square overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]" : "relative aspect-[1/1.08] overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]"}>
-        <ProductMediaDisplay
-          product={product}
-          alt={product.name}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-          fallback={
-            <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#F5F2ED)]">
-              <Coffee className="h-10 w-10 text-[var(--ci-primary-bg,#2F7A52)]" />
-            </div>
-          }
-        />
+        {isSummary ? (
+          <LocalAssetImage
+            assetId={product.imageAssetId}
+            fallbackSrc={product.imageDataUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            publicBucket="menu-products"
+            fallback={
+              <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#F5F2ED)]">
+                <Coffee className="h-10 w-10 text-[var(--ci-primary-bg,#2F7A52)]" />
+              </div>
+            }
+          />
+        ) : (
+          <ProductMediaDisplay
+            product={product}
+            alt={product.name}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            fallback={
+              <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#F5F2ED)]">
+                <Coffee className="h-10 w-10 text-[var(--ci-primary-bg,#2F7A52)]" />
+              </div>
+            }
+          />
+        )}
         {product.promo ? (
           <span className="absolute right-2 top-2 rounded-full bg-[var(--ci-button-bg,#2F7A52)] px-2.5 py-1 text-[10px] font-black text-white shadow">
             {promoOn ? promoBadgeText(product.promo) : "\u0639\u0631\u0636"}

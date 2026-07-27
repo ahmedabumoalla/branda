@@ -1,17 +1,24 @@
 import type { MenuProduct } from "@/lib/mock/menu";
 import {
   defaultMenuCategories,
-  getCategoryNameById,
-  loadMenuCategories,
   type MenuCategoryRecord,
 } from "@/lib/mock/menu-categories";
+
+type CategoryProduct = Pick<
+  MenuProduct,
+  "categoryId" | "category" | "available" | "price"
+>;
+type CategoryRecord = Pick<
+  MenuCategoryRecord,
+  "id" | "name" | "sortOrder" | "visible"
+>;
 
 export const UNCATEGORIZED_LABEL = "غير مصنف";
 
 /** Resolve category id from categoryId or legacy category name. */
 export function resolveProductCategoryId(
-  product: MenuProduct,
-  categories: MenuCategoryRecord[]
+  product: CategoryProduct,
+  categories: CategoryRecord[]
 ): string | null {
   if (product.categoryId) {
     const byId = categories.find((c) => c.id === product.categoryId);
@@ -30,8 +37,8 @@ export function resolveProductCategoryId(
 }
 
 export function resolveProductCategoryLabel(
-  product: MenuProduct,
-  categories?: MenuCategoryRecord[]
+  product: CategoryProduct,
+  categories?: CategoryRecord[]
 ): string {
   const list =
     categories ??
@@ -39,14 +46,18 @@ export function resolveProductCategoryLabel(
 
   const categoryId = resolveProductCategoryId(product, list);
   if (categoryId) {
-    return getCategoryNameById(list, categoryId, product.category);
+    return (
+      list.find((category) => category.id === categoryId)?.name ??
+      product.category ??
+      UNCATEGORIZED_LABEL
+    );
   }
 
   return product.category?.trim() || UNCATEGORIZED_LABEL;
 }
 
 /** All visible categories for customer strips — sorted by sortOrder. */
-export function getVisibleCategoryNames(categories: MenuCategoryRecord[]): string[] {
+export function getVisibleCategoryNames(categories: CategoryRecord[]): string[] {
   return [...categories]
     .filter((c) => c.visible)
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -55,8 +66,8 @@ export function getVisibleCategoryNames(categories: MenuCategoryRecord[]): strin
 
 /** Filter dropdown options: all visible categories + uncategorized if needed. */
 export function getCustomerCategoryFilterOptions(
-  products: MenuProduct[],
-  categories: MenuCategoryRecord[]
+  products: CategoryProduct[],
+  categories: CategoryRecord[]
 ): string[] {
   const visible = getVisibleCategoryNames(categories);
   const available = products.filter((p) => p.available);
@@ -72,9 +83,9 @@ export function getCustomerCategoryFilterOptions(
 }
 
 export function productMatchesCategory(
-  product: MenuProduct,
+  product: CategoryProduct,
   categoryFilter: string,
-  categories: MenuCategoryRecord[]
+  categories: CategoryRecord[]
 ): boolean {
   if (categoryFilter === "الكل") return true;
 
@@ -95,8 +106,8 @@ export function productMatchesCategory(
 
 /** @deprecated use getCustomerCategoryFilterOptions */
 export function getFilterableCategoryNames(
-  products: MenuProduct[],
-  categories: MenuCategoryRecord[]
+  products: CategoryProduct[],
+  categories: CategoryRecord[]
 ): string[] {
   return getCustomerCategoryFilterOptions(products, categories);
 }
@@ -104,7 +115,7 @@ export function getFilterableCategoryNames(
 export type PriceRangeFilter = "all" | "under-20" | "20-40" | "over-40";
 
 export function productMatchesPriceRange(
-  product: MenuProduct,
+  product: CategoryProduct,
   priceRange: PriceRangeFilter
 ): boolean {
   if (priceRange === "all") return true;
