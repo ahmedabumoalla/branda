@@ -61,8 +61,17 @@ if (/motion\/react|LazyMotion|MotionConfig|useReducedMotion|CustomerBottomDock/.
 if (/fetch\(|usePublicCafeMenu|branches|getCustomerSession/.test(detail)) {
   throw new Error("Product detail must not fetch catalog, branches, or customer session");
 }
-if (!productPage.includes("getPublicProductBySlug") || productPage.includes("fetch(")) {
-  throw new Error("Product page must resolve only the selected product without a duplicate fetch");
+if (!productPage.includes('import { getPublicProductBySlug } from "@/lib/data/menu";')) {
+  throw new Error("Product page must import getPublicProductBySlug");
+}
+if (!productPage.includes("await getPublicProductBySlug(slug, id)")) {
+  throw new Error("Product page must resolve the selected product using slug and id");
+}
+if (!productPage.includes("initialProduct={initialProduct}")) {
+  throw new Error("Product page must pass initialProduct to ProductDetailClient");
+}
+if (productPage.includes("fetch(") || detail.includes("fetch(")) {
+  throw new Error("Product detail must not introduce a duplicate client fetch");
 }
 if (!productRoute.includes("getPublicProductBySlug")) {
   throw new Error("The isolated full product endpoint contract is missing");

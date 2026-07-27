@@ -1,0 +1,3 @@
+app/c/[slug]/product/[id]/page.tsx
+scripts/check-premium-product-detail-safe.mjs
+.codex-fix-product-detail-initial-product-files.txt
