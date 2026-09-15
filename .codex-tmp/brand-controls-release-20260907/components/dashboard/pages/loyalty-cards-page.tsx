@@ -1,0 +1,204 @@
+"use client";
+
+import {
+  CreditCard,
+  Gift,
+  Save,
+  ShoppingBag,
+  WalletCards,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  saveLoyaltyCardProgramAction,
+} from "@/app/actions/loyalty-cards";
+import { SecureQrCode } from "@/components/loyalty/secure-qr-code";
+import {
+  BentoCard,
+  BentoGrid,
+  DashboardPageShell,
+  NeumoInput,
+  NeumoSelect,
+  NeumoTextarea,
+  PrimaryButton,
+  SoftCard,
+  StatPill,
+} from "@/components/ui/design-system";
+import type { MenuProduct } from "@/lib/mock/menu";
+import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
+import { getBusinessCopy } from "@/lib/platform/business-copy";
+
+type Props = {
+  initialDashboard: LoyaltyCardsDashboard;
+  products: MenuProduct[];
+  configError?: string;
+};
+
+export function LoyaltyCardsPageClient({ initialDashboard, products, configError }: Props) {
+  const copy = getBusinessCopy(initialDashboard.businessCategory);
+  const [dashboard, setDashboard] = useState(initialDashboard);
+  const [enabled, setEnabled] = useState(initialDashboard.program.enabled);
+  const [cardTitle, setCardTitle] = useState(initialDashboard.program.cardTitle);
+  const [cardSubtitle, setCardSubtitle] = useState(initialDashboard.program.cardSubtitle);
+  const [purchasesRequired, setPurchasesRequired] = useState(String(initialDashboard.program.purchasesRequired));
+  const [rewardProductId, setRewardProductId] = useState(initialDashboard.program.rewardProductId ?? "");
+  const [rewardName, setRewardName] = useState(initialDashboard.program.rewardName);
+  const [stampLabel, setStampLabel] = useState(initialDashboard.program.stampLabel);
+  const [terms, setTerms] = useState(initialDashboard.program.terms);
+  const [cardBackground, setCardBackground] = useState(initialDashboard.program.cardBackground);
+  const [cardForeground, setCardForeground] = useState(initialDashboard.program.cardForeground);
+  const [cardAccent, setCardAccent] = useState(initialDashboard.program.cardAccent);
+
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const activeRewards = useMemo(
+    () => dashboard.cards.reduce((sum, card) => sum + card.availableRewards, 0),
+    [dashboard.cards]
+  );
+
+  const availableRewardProducts = useMemo(
+    () => products.filter((product) => product.available),
+    [products]
+  );
+
+  const totalPurchases = useMemo(
+    () => dashboard.cards.reduce((sum, card) => sum + card.totalPurchases, 0),
+    [dashboard.cards]
+  );
+
+  async function saveProgram() {
+    setSaving(true);
+    setMessage("");
+    try {
+      await saveLoyaltyCardProgramAction({
+        enabled,
+        cardTitle,
+        cardSubtitle,
+        purchasesRequired: Number(purchasesRequired),
+        rewardProductId: rewardProductId || null,
+        rewardName,
+        stampLabel,
+        terms,
+        cardBackground,
+        cardForeground,
+        cardAccent,
+      });
+
+      const rewardProduct = availableRewardProducts.find((product) => product.id === rewardProductId);
+      setDashboard((current) => ({
+        ...current,
+        program: {
+          ...current.program,
+          enabled,
+          cardTitle,
+          cardSubtitle,
+          purchasesRequired: Number(purchasesRequired),
+          rewardProductId: rewardProductId || null,
+          rewardProductName: rewardProduct?.name ?? "",
+          rewardName,
+          stampLabel,
+          terms,
+          cardBackground,
+          cardForeground,
+          cardAccent,
+        },
+      }));
+      setMessage("تم حفظ إعدادات بطاقة الولاء");
+    } catch {
+      setMessage("تعذر حفظ إعدادات بطاقة الولاء");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <DashboardPageShell
+      title="بطاقات الولاء"
+      subtitle="إعداد بطاقة العلامة ومتابعة نقاط العملاء ومكافآتهم"
+    >
+      {configError ? <SoftCard className="mb-6 p-4 font-black text-amber-700">{configError}</SoftCard> : null}
+      {message ? <SoftCard className="mb-6 p-4 font-black text-[#6B3A25]">{message}</SoftCard> : null}
+
+      <BentoGrid className="mb-6">
+        <BentoCard variant="white"><CreditCard className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="بطاقات العملاء" value={dashboard.cards.length} hint="داخل هذه العلامة" /></BentoCard>
+        <BentoCard variant="white"><ShoppingBag className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="عمليات الشراء" value={totalPurchases} hint="مؤكدة بالـ QR" /></BentoCard>
+        <BentoCard variant="white"><Gift className="mb-4 h-7 w-7 text-[#6B3A25]" /><StatPill label="مكافآت متاحة" value={activeRewards} hint="جاهزة للصرف" /></BentoCard>
+      </BentoGrid>
+
+      <BentoGrid className="mb-6">
+        <BentoCard variant="white" span="2">
+          <h2 className="text-xl font-black text-[#311912]">إعداد بطاقة الولاء</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">الحالة</span><NeumoSelect value={enabled ? "on" : "off"} onChange={(e) => setEnabled(e.target.value === "on")}><option value="on">مفعل</option><option value="off">موقوف</option></NeumoSelect></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عدد العمليات للمكافأة</span><NeumoInput type="number" value={purchasesRequired} onChange={(e) => setPurchasesRequired(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">عنوان البطاقة</span><NeumoInput value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">وصف البطاقة</span><NeumoInput value={cardSubtitle} onChange={(e) => setCardSubtitle(e.target.value)} /></label>
+            <label className="space-y-2">
+              <span className="text-sm font-black text-[#6B3A25]">
+                {copy.kind === "events" ? "التذكرة أو الترقية المجانية" : copy.kind === "restaurant" ? "الوجبة أو المنتج المجاني" : "المنتج المجاني"}
+              </span>
+              <NeumoSelect value={rewardProductId} onChange={(e) => setRewardProductId(e.target.value)}>
+                <option value="">بدون ربط منتج</option>
+                {availableRewardProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+              </NeumoSelect>
+              {availableRewardProducts.length ? (
+                <span className="block text-xs font-bold text-[#806A5E]">تظهر هنا منتجات المنيو المتاحة داخل هذه العلامة فقط.</span>
+              ) : (
+                <span className="block text-xs font-bold text-amber-700">لا توجد منتجات متاحة في منيو هذه العلامة لاختيارها كمكافأة.</span>
+              )}
+            </label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">اسم المكافأة</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون البطاقة</span><NeumoInput value={cardBackground} onChange={(e) => setCardBackground(e.target.value)} /></label>
+            <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">لون التمييز</span><NeumoInput value={cardAccent} onChange={(e) => setCardAccent(e.target.value)} /></label>
+            <label className="space-y-2 sm:col-span-2"><span className="text-sm font-black text-[#6B3A25]">الشروط</span><NeumoTextarea value={terms} onChange={(e) => setTerms(e.target.value)} /></label>
+          </div>
+          <PrimaryButton className="mt-5" onClick={saveProgram} disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ" : "حفظ إعدادات البطاقة"}</PrimaryButton>
+        </BentoCard>
+
+        <BentoCard variant="gold" span="2">
+          <div className="rounded-[30px] p-6" style={{ background: cardBackground, color: cardForeground }}>
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-sm font-black opacity-80">{dashboard.cafeName}</p><h3 className="mt-2 text-3xl font-black">{cardTitle}</h3><p className="mt-2 text-sm font-bold opacity-80">{cardSubtitle}</p></div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: cardAccent, color: cardBackground }}><WalletCards className="h-8 w-8" /></div>
+            </div>
+            <div className="mt-8 rounded-2xl bg-white p-4 text-center text-[#17100d]">
+              <p className="font-mono text-xl font-black tracking-[0.3em]">BARNDAKSA-CARD</p>
+              <SecureQrCode kind="loyalty-card" value="BARNDAKSA-CARD" title="نموذج QR بطاقة الولاء" size={170} className="mt-3" />
+            </div>
+          </div>
+        </BentoCard>
+      </BentoGrid>
+
+      <BentoGrid>
+        <BentoCard variant="white" span="2">
+          <h2 className="text-xl font-black text-[#311912]">بطاقات العملاء</h2>
+          <div className="mt-5 space-y-3">
+            {dashboard.cards.map((card) => (
+              <SoftCard key={card.id} className="p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><p className="font-black text-[#311912]">{card.customerName}</p><p className="font-mono text-xs font-black text-[#6B3A25]">{card.cardCode}</p></div>
+                  <div className="text-left text-sm font-black text-[#6B3A25]">{card.stampsInCycle} / {dashboard.program.purchasesRequired}</div>
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-[116px_minmax(0,1fr)] sm:items-center">
+                  <div className="flex h-[116px] w-[116px] items-center justify-center rounded-2xl bg-white p-2 ring-1 ring-[#E7D7C6]">
+                    <SecureQrCode
+                      kind="loyalty-card"
+                      value={card.cardCode}
+                      title={`QR بطاقة الولاء ${card.cardCode}`}
+                      size={96}
+                    />
+                  </div>
+                  <p className="text-xs font-bold leading-6 text-[#806A5E]">
+                    QR البطاقة خاص بهذه العلامة ويظهر للعميل عند كل عملية ولاء.
+                  </p>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E7D7C6]"><div className="h-full rounded-full bg-[#D9A33F]" style={{ width: `${Math.min(100, (card.stampsInCycle / dashboard.program.purchasesRequired) * 100)}%` }} /></div>
+                <p className="mt-2 text-xs font-bold text-[#806A5E]">مكافآت {card.availableRewards} عمليات {card.totalPurchases}</p>
+              </SoftCard>
+            ))}
+          </div>
+        </BentoCard>
+      </BentoGrid>
+    </DashboardPageShell>
+  );
+}

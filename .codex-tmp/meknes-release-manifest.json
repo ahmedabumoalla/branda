@@ -1,0 +1,3498 @@
+[
+  {
+    "rel": "app/actions/admin.ts",
+    "uid": "93626e342581a512fb0c392a25bb31709fb5297c"
+  },
+  {
+    "rel": "app/actions/auth.ts",
+    "uid": "138e9f7ea9e59244ba0d3c45b45dd50acd9c162c"
+  },
+  {
+    "rel": "app/actions/branches.ts",
+    "uid": "ed3fb62213602e34140d8a7ade60055f07980d29"
+  },
+  {
+    "rel": "app/actions/brand-games.ts",
+    "uid": "297a7164fc6064317f330b496e497da0d3de7c93"
+  },
+  {
+    "rel": "app/actions/cashier.ts",
+    "uid": "e30020db0df125a5ab5c41168959493b52f86f12"
+  },
+  {
+    "rel": "app/actions/customer-account.ts",
+    "uid": "6f7591546b8a0d9e0706c57be74c0eeed9252c8f"
+  },
+  {
+    "rel": "app/actions/customer-media.ts",
+    "uid": "6b7186025cebba8a02fdbd5ebb6c689c0519c392"
+  },
+  {
+    "rel": "app/actions/customer.ts",
+    "uid": "d4915967d73e85455d3bf98ff46d0abe3c5bdf62"
+  },
+  {
+    "rel": "app/actions/customers.ts",
+    "uid": "e64fe01e48f49f8d14e9a54b6d8c94129dae5542"
+  },
+  {
+    "rel": "app/actions/dashboard-shell.ts",
+    "uid": "b6fbdc3e4827e5e4486c44ab4572a4e21af9bcbf"
+  },
+  {
+    "rel": "app/actions/experience-rewards.ts",
+    "uid": "dd8df963d254d842ca6b6bd46e4ff99b336acbe2"
+  },
+  {
+    "rel": "app/actions/experience.ts",
+    "uid": "22874cb64d26b503e62ccf753ad4e6802f0128e2"
+  },
+  {
+    "rel": "app/actions/final-product-release.ts",
+    "uid": "48c0fb5b22449f20553447f5c9a4d7240f525520"
+  },
+  {
+    "rel": "app/actions/jobs.ts",
+    "uid": "e520090cd82efabd53d3ae3b24e008424435b971"
+  },
+  {
+    "rel": "app/actions/loyalty-cards.ts",
+    "uid": "47356c7295b4c2e29db6bb95ecf01f23b9eba182"
+  },
+  {
+    "rel": "app/actions/loyalty.ts",
+    "uid": "51563fd8c6c9814c522fc44c0d5d4e0b6f308ebe"
+  },
+  {
+    "rel": "app/actions/maintenance.ts",
+    "uid": "1b40ed863bffcb3c27e5b5dbce71657d72f3d36c"
+  },
+  {
+    "rel": "app/actions/maps.ts",
+    "uid": "388e19b4105d94e694734c53b97df6bec4f6c294"
+  },
+  {
+    "rel": "app/actions/menu-import.ts",
+    "uid": "b8d5ac8908c7e71105907bc3e09cee236ebdbb35"
+  },
+  {
+    "rel": "app/actions/menu.ts",
+    "uid": "70e9be514f79415234b22c66de15407904d3da35"
+  },
+  {
+    "rel": "app/actions/notifications.ts",
+    "uid": "0de86ee205b4de4671d0f867efa3a58a68587177"
+  },
+  {
+    "rel": "app/actions/offers.ts",
+    "uid": "b9ca1c81f8e5abe1da1abfdcb910b9ecb985047f"
+  },
+  {
+    "rel": "app/actions/operation-events.ts",
+    "uid": "1dec9667635b12e20d81599f59f5951f0edbb35b"
+  },
+  {
+    "rel": "app/actions/orders.ts",
+    "uid": "c4bf2ce995cdc5b387f7cbd1eac397f5c9406228"
+  },
+  {
+    "rel": "app/actions/platform-content.ts",
+    "uid": "0f1d29c98502d4a4dbbacb2ed41a8b29209babfc"
+  },
+  {
+    "rel": "app/actions/platform-upgrade.ts",
+    "uid": "e5730d030725c1192d7e5691a1650d5d34ab4e43"
+  },
+  {
+    "rel": "app/actions/representatives.ts",
+    "uid": "647e4ee0eea442a7ba63686cee7295769330c7b3"
+  },
+  {
+    "rel": "app/actions/settings.ts",
+    "uid": "bea48381f4b59541e6153e6c8a4b1732b9dac224"
+  },
+  {
+    "rel": "app/actions/standalone-menu.ts",
+    "uid": "79ab44d73623a8c7beeca1ef3c6b4e9e1331aada"
+  },
+  {
+    "rel": "app/actions/subscription.ts",
+    "uid": "7771c27069adba41d280ab9a184b83fb40919d68"
+  },
+  {
+    "rel": "app/actions/table-wars.ts",
+    "uid": "703ce231b480b6cf3e776ecd8e49e04ed33248f9"
+  },
+  {
+    "rel": "app/actions/theme.ts",
+    "uid": "175d31fd6243d3a1f6c1bc25645cc442de091d6e"
+  },
+  {
+    "rel": "app/actions/upload.ts",
+    "uid": "4c38437c774802ee181919fcc255138571fb5a2a"
+  },
+  {
+    "rel": "app/admin/cafes/page.tsx",
+    "uid": "f61146a88f7bdf2219047cb46ab953e03286aa5a"
+  },
+  {
+    "rel": "app/admin/client-brands/page.tsx",
+    "uid": "a1a76c694415d9fb1931c2d63325516af79e16bb"
+  },
+  {
+    "rel": "app/admin/content/page.tsx",
+    "uid": "757b822cb509a2f1b19e08a6ac73e38f2a59c144"
+  },
+  {
+    "rel": "app/admin/customers/page.tsx",
+    "uid": "c67935deacdafcacd7df0106b34b805b1a2beb69"
+  },
+  {
+    "rel": "app/admin/jobs/page.tsx",
+    "uid": "e1fe3db23abb1464698053d00e367a5dcf70b49b"
+  },
+  {
+    "rel": "app/admin/layout.tsx",
+    "uid": "b565e4dec1ed3d8c9800a2f81874a802d47a417a"
+  },
+  {
+    "rel": "app/admin/maintenance/page.tsx",
+    "uid": "36d964934a1d75f73258e638fa52ee789e18c69a"
+  },
+  {
+    "rel": "app/admin/operations-center/page.tsx",
+    "uid": "e6efa07d837ac1e82873aae4d6252d4aa3651c3a"
+  },
+  {
+    "rel": "app/admin/operations/page.tsx",
+    "uid": "b4a394a4034656e3fc8e00470dcba5d1c183f52b"
+  },
+  {
+    "rel": "app/admin/options/page.tsx",
+    "uid": "7c9379bcc240c1f5ad62e3ac75fe6aa840d78dad"
+  },
+  {
+    "rel": "app/admin/page.tsx",
+    "uid": "2df1bf9f6723b0261228fd3c1871bfb602a706a3"
+  },
+  {
+    "rel": "app/admin/plans/page.tsx",
+    "uid": "fc20b86f093209cd627311aa9a63d54d27df3482"
+  },
+  {
+    "rel": "app/admin/platform-coupons/page.tsx",
+    "uid": "2e7ee54f4e02a1debdb2e571fa4768486374ac59"
+  },
+  {
+    "rel": "app/admin/representatives/page.tsx",
+    "uid": "5773eca04781b313db6fe21b9d8472b22ae8c7b8"
+  },
+  {
+    "rel": "app/admin/support/page.tsx",
+    "uid": "d96bee7d7b85907e30a0360ad26401ecee090cd2"
+  },
+  {
+    "rel": "app/api/admin/email-test/route.ts",
+    "uid": "b5396149e3c4e75de3f8ad02270b3699bf8d0464"
+  },
+  {
+    "rel": "app/api/admin/whatsapp/meta-test/route.ts",
+    "uid": "ba753e6c680726503224346b0e05fd45e42c4a4b"
+  },
+  {
+    "rel": "app/api/auth/hooks/send-sms/route.ts",
+    "uid": "53a1b5f89e6b00c25723e7b02e706d534d001f53"
+  },
+  {
+    "rel": "app/api/cashier/translate/route.ts",
+    "uid": "8014ac871d0fa2485b50f8c6a28921fc915a1e2e"
+  },
+  {
+    "rel": "app/api/customer-fast/[slug]/route.ts",
+    "uid": "21226de5a62e565de4d3447d6026d65c66b0bc3b"
+  },
+  {
+    "rel": "app/api/dashboard/offers/[offerId]/generate-card/route.ts",
+    "uid": "90ff02808a19c738295ed80cee9e516d4800c224"
+  },
+  {
+    "rel": "app/api/domains/availability/route.ts",
+    "uid": "253794758d940b95ab14aaff64f471bfc5956dce"
+  },
+  {
+    "rel": "app/api/domains/buy/route.ts",
+    "uid": "3a70e56e2dd9953a304226c93da62c1d1b85dd32"
+  },
+  {
+    "rel": "app/api/domains/connect/route.ts",
+    "uid": "f8710179778619f5e2a113b19ce8360da011954a"
+  },
+  {
+    "rel": "app/api/domains/price/route.ts",
+    "uid": "eb532371026e9ff3bc427095f3ab69d622661067"
+  },
+  {
+    "rel": "app/api/domains/search/route.ts",
+    "uid": "e150bc24072ce2f233fb9d9c90b0638b52526afa"
+  },
+  {
+    "rel": "app/api/domains/status/route.ts",
+    "uid": "fcf5930e6e300761bb6376e24d80c7ef6a97fdaf"
+  },
+  {
+    "rel": "app/api/menu/[slug]/feedback/route.ts",
+    "uid": "32d9dd2aa1053b8a42b771b1cbf029da91c846ce"
+  },
+  {
+    "rel": "app/api/payments/paymob/webhook/route.ts",
+    "uid": "878a48ee2b1a52b3673f7d0a967427183812cf91"
+  },
+  {
+    "rel": "app/api/payments/paypal/webhook/route.ts",
+    "uid": "5f1192d97c22ba457a1d1b9fce953967fcc7e7c8"
+  },
+  {
+    "rel": "app/api/payments/subscription/capture-order/route.ts",
+    "uid": "72acee66d666dc45928101a9e28835f64f1442e2"
+  },
+  {
+    "rel": "app/api/payments/subscription/create-order/route.ts",
+    "uid": "c46caa89e7e4eb7e225ddc218d640afdd859cf27"
+  },
+  {
+    "rel": "app/api/payments/subscription/paymob/create-intention/route.ts",
+    "uid": "a90dde7907d5e63ff28adef1f5ddbb1aefb4fa6c"
+  },
+  {
+    "rel": "app/api/payments/subscription/paymob/create-intention/route.ts.bak-2026-06-16T22-00-15-650Z",
+    "uid": "cfc40395f8f9284e78b9d8f20b16681d08f4bf1b"
+  },
+  {
+    "rel": "app/api/payments/subscription/paymob/create-intention/route.ts.bak-20260616230426",
+    "uid": "d177fbc83baf633c326d29be91a36ff2c3eea860"
+  },
+  {
+    "rel": "app/api/payments/subscription/return/route.ts",
+    "uid": "3cadffae8752f709b9a8e5950d686f586f6fafc4"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/branches/route.ts",
+    "uid": "a77fea3fd7532cc79d2a787527ba4922c71681f9"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/catalog/route.ts",
+    "uid": "7925bcb0644786ce1a39e3ca5f4ab80f4f506cdc"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/fast/route.ts",
+    "uid": "abbb633bfe512ccd80e2ad3c6932818d37301b0f"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/favicon/route.ts",
+    "uid": "6bd1883ed4570702fdc68e84d9761e85db9bcc9b"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/menu/route.ts",
+    "uid": "3b9bc900c1a281b5012cd19db1b8f32597e41c6b"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/offers/route.ts",
+    "uid": "ad66b1af0180c329ecb9096d58489eacb3de0dce"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/products/[id]/route.ts",
+    "uid": "fbfdc65b3b60e2e6443c297bc24f60cd849e13fc"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/route.ts",
+    "uid": "04738bd787570dfdf764ae2e4b1f2bb125f9d6ba"
+  },
+  {
+    "rel": "app/api/public/cafe/[slug]/table-wars/leave/route.ts",
+    "uid": "579ce43a658850d05ce642e1d50ae2922ea060a7"
+  },
+  {
+    "rel": "app/api/public/platform-media/[id]/route.ts",
+    "uid": "d074380079d93bfef8a0f1ef4ecc382fb2ecc2ba"
+  },
+  {
+    "rel": "app/api/public/storage/route.ts",
+    "uid": "745e010215d5f27c5d58fcc3a64fdcc0679cb933"
+  },
+  {
+    "rel": "app/api/pwa/[slug]/manifest.json/route.ts",
+    "uid": "735170acfd4abe6a68576a81767eee236ba84ba0"
+  },
+  {
+    "rel": "app/api/pwa/[slug]/manifest/route.ts",
+    "uid": "43a2f81b9ede40f87956d9e995999744371c7984"
+  },
+  {
+    "rel": "app/api/pwa/[slug]/sw/route.ts",
+    "uid": "d48215875db4bfb36ae8e4f266ee7d4133e0cb27"
+  },
+  {
+    "rel": "app/api/storage/signed/route.ts",
+    "uid": "28efd9f6350ea55e10bfaeb9f3f8a2c7caad5599"
+  },
+  {
+    "rel": "app/api/wallet/apple/[cardCode]/route.ts",
+    "uid": "a3b276b14f3c14c2cc1a4dc546e463dc36a6cb75"
+  },
+  {
+    "rel": "app/api/wallet/google/[cardCode]/route.ts",
+    "uid": "7cc03ae5c7dae6ed682bda0eb48bd5c7b1eda429"
+  },
+  {
+    "rel": "app/app/[slug]/page.tsx",
+    "uid": "b929c8d9c566313f5ae4bb1b09da1f58dba2c0e5"
+  },
+  {
+    "rel": "app/apple-icon.png",
+    "uid": "e46954c5badefaabe0f89e66c497335b372eff81"
+  },
+  {
+    "rel": "app/auth/callback/route.ts",
+    "uid": "33162f3c76822c894f7ce8601d8eb8b99808e622"
+  },
+  {
+    "rel": "app/auth/update-password/page.tsx",
+    "uid": "f29607547121cea382a71df2e7b2c1f0d68fbca9"
+  },
+  {
+    "rel": "app/c/[slug]/account/page.tsx",
+    "uid": "714e50fd26b266eb3123491f2b5f6390eb95dcc2"
+  },
+  {
+    "rel": "app/c/[slug]/games/page.tsx",
+    "uid": "1c74004cf348eddb9e7846446a00c5994d736e82"
+  },
+  {
+    "rel": "app/c/[slug]/layout.tsx",
+    "uid": "3eabe8c944e7fb7c8815e246d1f24775ba38c40c"
+  },
+  {
+    "rel": "app/c/[slug]/login/page.tsx",
+    "uid": "7360c0472a62e6ac08b71a9a49412032730b8602"
+  },
+  {
+    "rel": "app/c/[slug]/notifications/page.tsx",
+    "uid": "e8978f6ca5fe51f2b7f72fa6be3f1064dad31065"
+  },
+  {
+    "rel": "app/c/[slug]/offers/page.tsx",
+    "uid": "b6071651e529ccd322d3209f2ae228b9bcb9f25f"
+  },
+  {
+    "rel": "app/c/[slug]/page.tsx",
+    "uid": "0db964cb9db09c1afcc04255776a048ad0ea5bab"
+  },
+  {
+    "rel": "app/c/[slug]/play/battle-arena/page.tsx",
+    "uid": "98ec5755957844c5e90574036f05e79ab5bc73e5"
+  },
+  {
+    "rel": "app/c/[slug]/play/table-wars/page.tsx",
+    "uid": "c5aca1dfcf8304efd9a81b06df822cf78ee9c306"
+  },
+  {
+    "rel": "app/c/[slug]/product/[id]/page.tsx",
+    "uid": "1d52e181a36116de89e862d545967c73d12705f7"
+  },
+  {
+    "rel": "app/c/[slug]/products/[view]/page.tsx",
+    "uid": "e1561b66d99906279a4cf985b7198dd650613209"
+  },
+  {
+    "rel": "app/c/[slug]/register/page.tsx",
+    "uid": "af4aab63050cbf4df3e9b2cc8897fac343c14de1"
+  },
+  {
+    "rel": "app/c/[slug]/reset-password/page.tsx",
+    "uid": "1b7e5de62cd63f64dd8e627e33eb473812487d02"
+  },
+  {
+    "rel": "app/c/[slug]/rewards/page.tsx",
+    "uid": "d6baf301535a2c378183bd702d710293a613dc7a"
+  },
+  {
+    "rel": "app/careers/page.tsx",
+    "uid": "0feed0618092256a630ccec00fa9354e425fc51e"
+  },
+  {
+    "rel": "app/cashier/login/page.tsx",
+    "uid": "d6acfd5014640a369bd62c31afe707fe39f3ff5d"
+  },
+  {
+    "rel": "app/cashier/page.tsx",
+    "uid": "e427010377bc87a5b25ff683220195341110255b"
+  },
+  {
+    "rel": "app/cashier/session/clear/route.ts",
+    "uid": "126b6a1b89c627c1eda6ef94fd0f1c3319e4a1fb"
+  },
+  {
+    "rel": "app/dashboard/ai-menu-engineer/page.tsx",
+    "uid": "01cca832a6759599b9470f0d43705c5cf57e8ae5"
+  },
+  {
+    "rel": "app/dashboard/branches/page.tsx",
+    "uid": "bdd10a979e675fd18739a211c322b21bf183e69b"
+  },
+  {
+    "rel": "app/dashboard/cashier/loading.tsx",
+    "uid": "3aeca3eaa3f441e581905deb0b74e30c7b5534b2"
+  },
+  {
+    "rel": "app/dashboard/cashier/page.tsx",
+    "uid": "c836a30fbcb2abd235a217e126b15feacab99c72"
+  },
+  {
+    "rel": "app/dashboard/customer-segments/page.tsx",
+    "uid": "be39312e97a675fbfb62ffe106a8b23c373991c3"
+  },
+  {
+    "rel": "app/dashboard/customers/loading.tsx",
+    "uid": "3b797bf0dcb99cedb9815ffeb673bab19c824ae2"
+  },
+  {
+    "rel": "app/dashboard/customers/page.tsx",
+    "uid": "540d37e7ba18387bc769576e0cc16eee3e3b7b33"
+  },
+  {
+    "rel": "app/dashboard/experience-reviews/page.tsx",
+    "uid": "2b4277e2a29e29657460063ebe80235dc47e482f"
+  },
+  {
+    "rel": "app/dashboard/growth/page.tsx",
+    "uid": "cc2c9eb67543001a566485002c937a667710a9c5"
+  },
+  {
+    "rel": "app/dashboard/layout.tsx",
+    "uid": "4cb942fc3f84c7052af8aa83e02b66e9fa86cf2f"
+  },
+  {
+    "rel": "app/dashboard/loading.tsx",
+    "uid": "5d0bb5934fec4aa87d07070164f092b2c77a65f5"
+  },
+  {
+    "rel": "app/dashboard/loyalty/card-designer/page.tsx",
+    "uid": "4c642330adffa198017f5413e197ab2f623a117b"
+  },
+  {
+    "rel": "app/dashboard/loyalty/page.tsx",
+    "uid": "8d77f9dbafe3aabebf1afd2f7da11ab8d345fb22"
+  },
+  {
+    "rel": "app/dashboard/menu/loading.tsx",
+    "uid": "a51c1dcc7a94a94b82ef536a952fea8b39eee557"
+  },
+  {
+    "rel": "app/dashboard/menu/page.tsx",
+    "uid": "e982be835af65e0546782163d12a0dd32d9ffa10"
+  },
+  {
+    "rel": "app/dashboard/offers/page.tsx",
+    "uid": "dc75b6e73a4cede2be80e9959aae6eaab25d42e1"
+  },
+  {
+    "rel": "app/dashboard/orders/loading.tsx",
+    "uid": "ad24166398e730cb11d1ce1deb4799e85a68a639"
+  },
+  {
+    "rel": "app/dashboard/orders/page.tsx",
+    "uid": "040251fbd0825f7866831342facbbe642be3f71c"
+  },
+  {
+    "rel": "app/dashboard/page.tsx",
+    "uid": "696e3321cb841c6eae3b88ccf85b12f94d6e3a3d"
+  },
+  {
+    "rel": "app/dashboard/reports/loading.tsx",
+    "uid": "06425e890b358752b4923d361d87fe7580879b96"
+  },
+  {
+    "rel": "app/dashboard/reports/page.tsx",
+    "uid": "21257e80b3dcc68d7d0e0c0c07052e272b4edb89"
+  },
+  {
+    "rel": "app/dashboard/settings/page.tsx",
+    "uid": "643085740b8eb259645ebdd69caf9e5528232579"
+  },
+  {
+    "rel": "app/dashboard/settings/page.tsx.bak",
+    "uid": "0ba41420c799222c5b263a4d1e291ffd6437311d"
+  },
+  {
+    "rel": "app/dashboard/subscription/page.tsx",
+    "uid": "e778fca9fb470303bf467ad787dd23fb277c397a"
+  },
+  {
+    "rel": "app/dashboard/table-wars/page.tsx",
+    "uid": "4200c2bcaf71025b4bc35f22ace44fd4aa8bf501"
+  },
+  {
+    "rel": "app/dashboard/theme/page.tsx",
+    "uid": "a36b72ac5fd14335a7209e47944360b8a8740806"
+  },
+  {
+    "rel": "app/dashboard/theme/page.tsx.bak",
+    "uid": "17ad433bacd160b13e6cd9d07c4d2e5d05549845"
+  },
+  {
+    "rel": "app/favicon.ico",
+    "uid": "3b65bc32e134d4f22db719bb5c1f39ec66c2da89"
+  },
+  {
+    "rel": "app/globals.css",
+    "uid": "c4538c954f834e8b0a1100c861ebea809eb38222"
+  },
+  {
+    "rel": "app/icon.png",
+    "uid": "50833ec5362eca7225fb6d7ef41342d48288f62a"
+  },
+  {
+    "rel": "app/layout.tsx",
+    "uid": "715505ea477ab271f90de79fdd2fa420be73dbd8"
+  },
+  {
+    "rel": "app/login/page.tsx",
+    "uid": "a7306ba120d7a9d0f063f637ed246bdaae7acea7"
+  },
+  {
+    "rel": "app/login/page.tsx.bak.20260614_213146",
+    "uid": "d479e5515356c7e7d45ac115d6c926301c4ac089"
+  },
+  {
+    "rel": "app/loyalty-card/[cardCode]/page.tsx",
+    "uid": "2fab29034f6e4cbf99142dd09e274a424080df14"
+  },
+  {
+    "rel": "app/menu/[slug]/error.tsx",
+    "uid": "dad46ea45fee80a59aa605743163726604580d7f"
+  },
+  {
+    "rel": "app/menu/[slug]/loading.tsx",
+    "uid": "a2c35207e219d6e3ab42a4a3ef63d34dcc4689af"
+  },
+  {
+    "rel": "app/menu/[slug]/not-found.tsx",
+    "uid": "c420bfc9508ef1e47c81023b35d566ea710b7996"
+  },
+  {
+    "rel": "app/menu/[slug]/page.tsx",
+    "uid": "42579758b7bf65083331d74550681000d1486100"
+  },
+  {
+    "rel": "app/page.tsx",
+    "uid": "a500bfdbc7c43b54888c7dc2447663a73e317326"
+  },
+  {
+    "rel": "app/register/page.tsx",
+    "uid": "2b18bfeaf6de71ad6b0879e82b8781cddd487eef"
+  },
+  {
+    "rel": "app/representative/page.tsx",
+    "uid": "2fac1bd9cb89c71d9885a518e855806f04da3637"
+  },
+  {
+    "rel": "public/apple-touch-icon.png",
+    "uid": "e46954c5badefaabe0f89e66c497335b372eff81"
+  },
+  {
+    "rel": "public/favicon.ico",
+    "uid": "3b65bc32e134d4f22db719bb5c1f39ec66c2da89"
+  },
+  {
+    "rel": "public/brand/barndaksa-app-icon-512.png",
+    "uid": "50833ec5362eca7225fb6d7ef41342d48288f62a"
+  },
+  {
+    "rel": "public/brand/barndaksa-app-icon-192.png",
+    "uid": "9e660f0c11e7ac577e96d8317cf97ca6980945ea"
+  },
+  {
+    "rel": "public/brand/barndaksa-logo-brown-bg.png",
+    "uid": "c672b41c281e6f1f6c68b8020e915361f9858914"
+  },
+  {
+    "rel": "public/brand/branda-logo-brown-bg.png",
+    "uid": "c672b41c281e6f1f6c68b8020e915361f9858914"
+  },
+  {
+    "rel": "public/brand/barndaksa-logo-brown.png",
+    "uid": "0f3300e1711d1decefcd7f39add7c6a2f8957a4c"
+  },
+  {
+    "rel": "public/brand/branda-logo-brown.png",
+    "uid": "0f3300e1711d1decefcd7f39add7c6a2f8957a4c"
+  },
+  {
+    "rel": "public/brand/barndaksa-logo-dark.png",
+    "uid": "e172aa74cf5fc41c4cca80a556f67471af5c0904"
+  },
+  {
+    "rel": "public/brand/branda-logo-dark.png",
+    "uid": "e172aa74cf5fc41c4cca80a556f67471af5c0904"
+  },
+  {
+    "rel": "public/brand/barndaksa-maskable-icon-512.png",
+    "uid": "f4b1e24b43d4993e0411ddbe7a32a4bfe73279e8"
+  },
+  {
+    "rel": "public/brand/references/barndaksa-home-reference.jpg",
+    "uid": "d0aae8c6b7ada267254547e359b8880782ef1e79"
+  },
+  {
+    "rel": "public/brand/references/branda-home-reference.jpg",
+    "uid": "d0aae8c6b7ada267254547e359b8880782ef1e79"
+  },
+  {
+    "rel": "public/assets/arena/branda-main-castle-neutral-chromakey.png",
+    "uid": "8f724f036be5627cbba18a89fd35a89ee17fe106"
+  },
+  {
+    "rel": "public/assets/arena/branda-main-castle-neutral.png",
+    "uid": "2d38d66cdd1dbfd81ea59c9199ac3646717f2d59"
+  },
+  {
+    "rel": "public/assets/arena/branda-side-tower-neutral-chromakey.png",
+    "uid": "2051058d84fc15e1134d8d98592b0b0ea353b133"
+  },
+  {
+    "rel": "public/assets/arena/branda-side-tower-neutral-v2-chromakey.png",
+    "uid": "9614f8ad16093c49e1bad8c39319293b2ee10ab4"
+  },
+  {
+    "rel": "public/assets/arena/branda-side-tower-neutral-v2.png",
+    "uid": "84fed2153f7f9edeb1cfc624ab9ca4a155077a01"
+  },
+  {
+    "rel": "public/assets/arena/branda-side-tower-neutral.png",
+    "uid": "e7c020cee04994493e7541cce77b79e5701e302b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-000-1.png",
+    "uid": "699fb840a5bf99dadc0118e1c0abd5a23a22f0b4"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-000-2.png",
+    "uid": "3edcf1b8d6774a23cc989a102c31a9cd989a92d2"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-000-3.png",
+    "uid": "a445e129c4edad49be67ddd5e0f5b91e17e9ca06"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-022_5-1.png",
+    "uid": "a81b6a511a58e013d33e4e1447f3fe8f9867bbe1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-022_5-2.png",
+    "uid": "c6dc359442384ad05a5d596132262f050f6556c7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-022_5-3.png",
+    "uid": "a20021cebc7f6ee120c4c142b0f02053f18adde0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-045-1.png",
+    "uid": "d6ebfaceabb885c70aea89d4dcd89a544d713672"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-045-2.png",
+    "uid": "7552bfa23d9056eaa5493f1fd6ef0ecc6d182fd1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-045-3.png",
+    "uid": "63a168ff9000f3d5957cde9610f7190d88159fe9"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-067_5-1.png",
+    "uid": "cbc2be63956c67c5e01ca8bf84a2c1f93d1dffd7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-067_5-2.png",
+    "uid": "cb07a834f3460c343efc4de7ed00ba865aa05208"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-067_5-3.png",
+    "uid": "804507e10ce216f8cf5be9de98cf114471b277d1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-090-1.png",
+    "uid": "c7886d95a19e0739be2af594b5b5efd2c971f833"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-090-2.png",
+    "uid": "0630368525b435a31da35b2b08377921b18dfe1b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-090-3.png",
+    "uid": "524bfee6e4f08fd003e07f0e5a9c633835196959"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-112_5-1.png",
+    "uid": "ec995c0c3eb67b2119b28e2cfd432c13a350ac16"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-112_5-2.png",
+    "uid": "e01dfb0ed4d62b3bb21bf7986db117ebd9d6930f"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-112_5-3.png",
+    "uid": "fa7e04af25e0c5f537cf48698265620e3c09ca44"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-135-1.png",
+    "uid": "d247103dc34a393cd6ef458f6b2b6bd4e7608388"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-135-2.png",
+    "uid": "985ac0129389653429edd7f67c4f827babb63ca3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-135-3.png",
+    "uid": "a682514b1082d5a032344609abf2910d8ad1de1f"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-157_5-1.png",
+    "uid": "4bcf476de2aa447c81c9aa3d88f2955232be79fd"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-157_5-2.png",
+    "uid": "7e748af25232ea37f68bbe444d2d99231ca2237a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-157_5-3.png",
+    "uid": "7330f34784c39a2a79f805fe24e0abcbe6938721"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-180-1.png",
+    "uid": "0731b55671f8391814b396511f88464b4e7bb95a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-180-2.png",
+    "uid": "8245b1bf973d2ab8c1a829c5f91f036ea5968052"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-180-3.png",
+    "uid": "61a4214af4a34e4b242609d65488dab850eb3e90"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-202_5-1.png",
+    "uid": "3b3ea89ce59797adc9f4443e1ecda115e5ede3e0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-202_5-2.png",
+    "uid": "9ee2dbc78e1732281e95e9c88efee4d90e0d8a45"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-202_5-3.png",
+    "uid": "c25968d7578f4c6fbcc59a5a271bf15066992c4e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-225-1.png",
+    "uid": "a0a62294e365d74597be9b05152d8325c3e54333"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-225-2.png",
+    "uid": "12ed08f5fd0fbdb27c2ddf29b6d08fddd5c05229"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-225-3.png",
+    "uid": "6544335a19691001f98cf8bf9659bffff6e12112"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-247_5-1.png",
+    "uid": "d6dc6da3820f487952b8ac4efdb9358ddaced850"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-247_5-2.png",
+    "uid": "6435dcafb0ff08b220045a54bcc45b29508fcdd2"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-247_5-3.png",
+    "uid": "75f61457c4b1dfb0d4397163eeb1f7b4c2d1e464"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-270-1.png",
+    "uid": "69f765ef80b08706e5c917f5912b8fb3808d9eca"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-270-2.png",
+    "uid": "22061e1e506cd7b88a130dab0687f4c01457f579"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-270-3.png",
+    "uid": "b34172a78781d212ee660ba96c8c973179177a3c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-292_5-1.png",
+    "uid": "cea03458ed70568ea4e2123aed2d0d8304dcda55"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-292_5-2.png",
+    "uid": "af5111cc516d431886e98a01bf013812c738cfab"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-292_5-3.png",
+    "uid": "c5556793c20071d0f38cc42d12132a7486f77694"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-315-1.png",
+    "uid": "d30b5474f0857a2cfb5125b1d58f3bbf573f04bf"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-315-2.png",
+    "uid": "5babd7d1b87b52af7959b54ea77b5c669f2f9535"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/attack/waiter-attack-315-3.png",
+    "uid": "d5ba3a4c873cb6a07674981f91f0447e100df3aa"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-000-1.png",
+    "uid": "2509aa361f1741eade4522b137761f716ef34387"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-000-2.png",
+    "uid": "15a19277421a3eaa312b989c19e5a5adf2a6187d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-000-3.png",
+    "uid": "3325984dce91ffaebc69068751f36282790fa0b1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-000-4.png",
+    "uid": "850364366d48025b04b105c053e66f5f01421af9"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-022_5-1.png",
+    "uid": "5406299f0da7cfbb1128b165c49dc4a42c486c60"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-022_5-2.png",
+    "uid": "efc1f891e188af4e4a09795e7ffe8fd8746ec5d1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-022_5-3.png",
+    "uid": "1914dec88675e773ee4fac443bf8ad1df0c3ea36"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-022_5-4.png",
+    "uid": "9fc3cdb7b4039937f1f36fc2ef69dad86b90f51d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-045-1.png",
+    "uid": "08951d99d4a55ebf5a3686a1ca3da25c0246de58"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-045-2.png",
+    "uid": "c28e0f4e5ba0f87ffdd08331c664b21c3f287d85"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-045-3.png",
+    "uid": "05227859b65f92933df6a54223651dfc50942a96"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-045-4.png",
+    "uid": "ccbc0dfa7a85d5cbbf23e0952c608bca1033b53e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-067_5-1.png",
+    "uid": "3fef2c2ff6ec7741ee13bbf54f3c7156812fb7f8"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-067_5-2.png",
+    "uid": "cf26b8a22bc625bc812789e0e5800039371c556d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-067_5-3.png",
+    "uid": "12fac4d555f8d57dd6dc9442abd1521fd3504fac"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-067_5-4.png",
+    "uid": "bcbd13ac7dc8c082d3d4f9efd8acea8d901fa1f0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-090-1.png",
+    "uid": "eb118042d24fefdbc3b344fb24e6bc7a18ef3912"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-090-2.png",
+    "uid": "f4b8bbf4e257f901cc2f680cb27ff263e6fee988"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-090-3.png",
+    "uid": "5313c967335de2819e1031bfa9e2024cea4df454"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-090-4.png",
+    "uid": "fc70dbc6d47b4855d906fab25cf99053ba664e19"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-112_5-1.png",
+    "uid": "d34dc78814a94768dd7ab8f243e12b7454bcd253"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-112_5-2.png",
+    "uid": "281dbab803486eb16d6adeecfcce9e151e136731"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-112_5-3.png",
+    "uid": "e58c86803c2c17fd9275a1263f99db09dce9f65b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-112_5-4.png",
+    "uid": "aaf57f63d437593d7ba7ef096337e0dfadb2d405"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-135-1.png",
+    "uid": "23f89ec453fe5ae8c6b52dd0d0987de05b9edeee"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-135-2.png",
+    "uid": "ea01c6f81ec3387a32c063fee0b08370dc424075"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-135-3.png",
+    "uid": "e3f094d59f4552054a1c307379299d6f38e205db"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-135-4.png",
+    "uid": "8d33fdc946499893b0e33e193fd0a0683df7edd0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-157_5-1.png",
+    "uid": "1534aea08bb7c4ef3aaa431425cda8aff741f320"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-157_5-2.png",
+    "uid": "06f9456a0fbbfdd2f7b6c906bcff7b33b7112f99"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-157_5-3.png",
+    "uid": "80540687407edc0d48c851813911c2fa2a33ac0a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-157_5-4.png",
+    "uid": "0c4b9fb5a09920910b15ee89d9a9cb4caa8c85e8"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-180-1.png",
+    "uid": "115784bf90692da26580cd8b0f1f8087b9a064b5"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-180-2.png",
+    "uid": "67401dde3973e572b46862e1ab362c2f4c2a0623"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-180-3.png",
+    "uid": "7f93232cf8df1967785ac3ceed387279d4917b8b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-180-4.png",
+    "uid": "f34ee89e516b969dde7a38ec70742317043a7153"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-202_5-1.png",
+    "uid": "5e92bc5e4e0ac1604d4ab1e6195a70622d7d710e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-202_5-2.png",
+    "uid": "741278b11cd3a28f0ae270dd1cbd6c16a5559052"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-202_5-3.png",
+    "uid": "3ccb9f091d3fd9a737c117c60830496d3311190e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-202_5-4.png",
+    "uid": "642a2790075baf6dcee27baffdb36ac4f911a66b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-225-1.png",
+    "uid": "bcd41739c2215947c9038cd2374a83d569294728"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-225-2.png",
+    "uid": "d7f94052149f604a169bccc61b4c640542f4449c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-225-3.png",
+    "uid": "9a5baea85dc549808505de8d93b521a67b1f521e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-225-4.png",
+    "uid": "611834ae0a942ee3e80d2503310f042512f50104"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-247_5-1.png",
+    "uid": "9c4ed6203c1e7fc650ffb32039f01cdfc2a8a14a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-247_5-2.png",
+    "uid": "21a1655bcab5ad292cc7c8583353ad17b1529666"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-247_5-3.png",
+    "uid": "04744971d1232d6c44952cae8d65bcbf4fa871b3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-247_5-4.png",
+    "uid": "0b9c8b543293d75cfdf303fc70ce8c3116c5ff66"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-270-1.png",
+    "uid": "0ed3ca50adda6d7ae0dab55eec8879793d53d78d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-270-2.png",
+    "uid": "a193887d0ddf42d0c264f4ecdaf636d9136a61d6"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-270-3.png",
+    "uid": "03b9cf946c6209d78c689f9f2a9f44b0d8201747"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-270-4.png",
+    "uid": "5bb6a2f7c830e31dca61cea04e53c28696e97f59"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-292_5-1.png",
+    "uid": "081f1c2565dde7dafe8bd622aa6467d300e86c25"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-292_5-2.png",
+    "uid": "04ac9beb9250732da253e5e2714b8111f23e8213"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-292_5-3.png",
+    "uid": "44021d99b1ba73009ff9ae1459f8c4305c79b690"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-292_5-4.png",
+    "uid": "f4c0fad31a868de2e711c9a2cdf56324040501ce"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-315-1.png",
+    "uid": "8b8c72cc286ca9046659d6bb97f662b1f5d720aa"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-315-2.png",
+    "uid": "6194d6bea249f2e70299d92d35c87a8f16ac94eb"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-315-3.png",
+    "uid": "817824122f6eed049eb210d7f88bc5f030a7f415"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/die/waiter-die-315-4.png",
+    "uid": "9b3f29b6f49e4646f97c2d9433983fda8eddf0bc"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-000-1.png",
+    "uid": "744b6d6528baed393b4ac479d07dd5ed1a2d96ac"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-000-2.png",
+    "uid": "0306f83bd18fe3ec664ba1ef6091bb8e681eb5ff"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-022_5-1.png",
+    "uid": "217af465d19b819deaab40514ee32cebb2edc4a6"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-022_5-2.png",
+    "uid": "d3f6125aba739cc4173d497dc8334ef6ed436a19"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-045-1.png",
+    "uid": "92217bf95ad349b9637b6b57f41dde37ca961e48"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-045-2.png",
+    "uid": "1910a2784e3dbb548c955fa1d19241071583f1ec"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-067_5-1.png",
+    "uid": "7cb3d9acb45095df2e87925d06b1fed5add15ded"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-067_5-2.png",
+    "uid": "9c9d22454712b8d82da0444a36dbba4022c3207d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-090-1.png",
+    "uid": "9bdbf75d986a13a294c14dca8a22aef8cfc59a6a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-090-2.png",
+    "uid": "e35d150974dc240c594f3807c8bb92178cb7c4fd"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-112_5-1.png",
+    "uid": "7778ab086221c964ed233d9355263394a39af0ba"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-112_5-2.png",
+    "uid": "9f0e8a92160b8ca5ccdd372eb660adc8213aee4e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-135-1.png",
+    "uid": "731bfa4b096f4592b00d9948e85925b55aac3e71"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-135-2.png",
+    "uid": "e4d3a9367238f13e3f9ef03ae628244d0c9dc659"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-157_5-1.png",
+    "uid": "64f8cbe27dad06644f542b7ef87da747fade6f9e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-157_5-2.png",
+    "uid": "84d62dfea9a540a092c101b97cff3ace7a322648"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-180-1.png",
+    "uid": "3411f363f069fd809ffb9e0dd3afbbee69b4df61"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-180-2.png",
+    "uid": "0510ff2f7a77aa123066f56726405f6a5b9da0f7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-202_5-1.png",
+    "uid": "c317f4ac61251e25f8dea5e8e297cef8342284d4"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-202_5-2.png",
+    "uid": "6908b312e6ea2a195ac8c6c622b0de7ce377d20e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-225-1.png",
+    "uid": "aeb998598160b8f0aeffa688a1dca8d314add3c8"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-225-2.png",
+    "uid": "ae248c59c6f47ce017677ea227903c11c397ce41"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-247_5-1.png",
+    "uid": "8c823afcc5398b0e9ec6640257df2658929f8ab2"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-247_5-2.png",
+    "uid": "c7efb64933586e1da44b63cbbd549f20f2883b51"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-270-1.png",
+    "uid": "46dc005510d4fd83fe5aaa99a2c22451e72cf9d5"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-270-2.png",
+    "uid": "610eb7f87d8e02b19310ae296dc33b7ec1b1d117"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-292_5-1.png",
+    "uid": "bb09a1da002f789c3e5e123574139ee1f893ff44"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-292_5-2.png",
+    "uid": "09bb6d2b15e2818671eddd0ce6567d5ff439d1de"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-315-1.png",
+    "uid": "eb7408f9949bfa5a4eb937ce34c5671f6572b7f0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/hit/waiter-hit-315-2.png",
+    "uid": "39a72c75b8cf411731aa4987c2fc7c6529c76bc9"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-000-1.png",
+    "uid": "8b649155d7b7c7922b7a7e2465f2db73a2da9c8b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-022_5-1.png",
+    "uid": "0fa62df6964efe306dd00b81b9e0350ccccb5671"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-045-1.png",
+    "uid": "a2c3276f9c711d9084c892ae514ffdf614db456c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-067_5-1.png",
+    "uid": "fc5a52bd2c7804e246fc827bb9466c56f0b0b11c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-090-1.png",
+    "uid": "7bf754dcf1352e7c71d26b3323c45d544050418d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-112_5-1.png",
+    "uid": "3ae121972d99003476a851d497c35b52744a8374"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-135-1.png",
+    "uid": "c74762ea421376c8cdef7148dcde757f84e7c44a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-157_5-1.png",
+    "uid": "bee88d99bd17a17a87a48af0adf9d4963b595a88"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-180-1.png",
+    "uid": "648fc4c4a4f71d8e54ba8d8ec190217e14371b55"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-202_5-1.png",
+    "uid": "3d96d072edb1be99b43e0803d20e5c7abbba63e0"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-225-1.png",
+    "uid": "9d484010a90ba2165329c7323d99504d02f51322"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-247_5-1.png",
+    "uid": "a2db18d66b112f3bc5bd41a994e21f4955a1c9de"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-270-1.png",
+    "uid": "fec93b7ba2e8d7f75266c7cc7d02d6355b5c5105"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-292_5-1.png",
+    "uid": "0862773b4b3707a5c717e5be15d3b944f7368673"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/idle/waiter-idle-315-1.png",
+    "uid": "9f07753ce78d0660558761daacdafccabf6ce6e2"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-000-1.png",
+    "uid": "9efda7a234ec12a2af9d33e36158f14e80c830ef"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-000-2.png",
+    "uid": "51ba3280ed07c41ec181ab0e930cdb4754beb833"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-000-3.png",
+    "uid": "60927ad9ff9a9a4a6e73ccbe6c1c0f93cf91149e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-000-4.png",
+    "uid": "2e3ae7776a4fbad0d4db2297ff68941826e57be3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-022_5-1.png",
+    "uid": "006a6a9990329bed91c08f23bbeae018b65e53f4"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-022_5-2.png",
+    "uid": "7a2c1a15b0a357a5c71468900044abdcd64f1a51"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-022_5-3.png",
+    "uid": "b092a8eb705a70e303d57e9ccc4f45ba65626719"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-022_5-4.png",
+    "uid": "5e3feebc8e6eb0d71ddad22b8a7cf0c97fdc21ac"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-045-1.png",
+    "uid": "22d1392185e6f8f697674d8e74e235b828da9874"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-045-2.png",
+    "uid": "d0328c9174a990f63a2e5242c8d81bde9cd34ff7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-045-3.png",
+    "uid": "fa1c15b829eee2e55751ff8e249e662d34b87d66"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-045-4.png",
+    "uid": "fc31037306762dab8ed716b48e1a7ace9eed031b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-067_5-1.png",
+    "uid": "f2d72535e6309a4fcba68aa1ac697fb0fa00543b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-067_5-2.png",
+    "uid": "727a298a52e9ca6d7877416c4b2c00e94c730f8c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-067_5-3.png",
+    "uid": "0f749c00d7a170e1cb0909be27746fa20a2e496c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-067_5-4.png",
+    "uid": "e3bad5e367fef6efebdd99000cf73cbf7065de38"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-090-1.png",
+    "uid": "d0e727623125c7a87eadf0e73720ae2e99e08819"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-090-2.png",
+    "uid": "c7925fc04945cadcade81a423a0a8a83be3896d1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-090-3.png",
+    "uid": "50ee9b33dcabc2577188cc4b9cf00941d5832ec3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-090-4.png",
+    "uid": "a1944a59f9bbd920c82d26d1adeebd431874054b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-112_5-1.png",
+    "uid": "9342c3f4e73b8587810e075570edcc0f1efa6ebd"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-112_5-2.png",
+    "uid": "8c7dd515219ed33b0b098743feef357238a507e4"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-112_5-3.png",
+    "uid": "b68dd17b0450828b42e32212401b12d16c36ff7a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-112_5-4.png",
+    "uid": "46c28b2697e2929926bbcc68b0cb940b42c4e0ea"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-135-1.png",
+    "uid": "2fa906be928e8e8b696deb16d4573201b6c292cf"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-135-2.png",
+    "uid": "082074c5b8e9f9eeecd2c920933be096980273d8"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-135-3.png",
+    "uid": "db45b4cba24efd4e51eeb5dbb33ce79d1aef7f5c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-135-4.png",
+    "uid": "107a7362e80af3315fa927249ac1dcc6c5711e51"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-157_5-1.png",
+    "uid": "d2009389f871ac549051c239601092c56f48b9ab"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-157_5-2.png",
+    "uid": "f52ba60b72392b35d505c345bfbbb1c33681eae4"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-157_5-3.png",
+    "uid": "835f00a55e9f59fae89e0547f1df206e15dab207"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-157_5-4.png",
+    "uid": "0a77c3209a454ac21d507070677f13ab5caaa396"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-180-1.png",
+    "uid": "3663291c66b98da5e6c1425f74c421d5d295f61d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-180-2.png",
+    "uid": "df3b1cd7504bfe30f293444c51b48915bb401c20"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-180-3.png",
+    "uid": "81658d17b7fd292f7f0eede25f192b1538c98ae6"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-180-4.png",
+    "uid": "631bbcf267fa0c9fb2fd3a6bd561415db45c9779"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-202_5-1.png",
+    "uid": "515db893c052784dba2ab5055099e5081d321818"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-202_5-2.png",
+    "uid": "e42e1d3624a55d4a40f4fd76fdbcbc6bb3d8e78c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-202_5-3.png",
+    "uid": "cc906c0bff01380eda39bc8bd7fd3dd31bc316e5"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-202_5-4.png",
+    "uid": "2f8a008e9aa587321f923e0eae343e00ae0e6f22"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-225-1.png",
+    "uid": "99b3b527b834174ddfa8c12dce42f2147bb00194"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-225-2.png",
+    "uid": "fa6e8db80d9a3434ffbf830ff97c3d0c4624e88f"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-225-3.png",
+    "uid": "db292285156b26f71b4a93611d9576d1c016d9a5"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-225-4.png",
+    "uid": "47df681d95fc236c42a5823a1b918cfcb0fb5f1c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-247_5-1.png",
+    "uid": "0e62a1b3aaebcd85143c03f41d983162087a1d3e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-247_5-2.png",
+    "uid": "6a5d06096cf6b02c8ec044574ac3a506aabba10c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-247_5-3.png",
+    "uid": "944d597e9361545c3c2d71438c1efc055c626881"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-247_5-4.png",
+    "uid": "d884ae65db0af5f35d2a8d383a8d32e1d927d0b9"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-270-1.png",
+    "uid": "eee5d0a8e577634360150a4213bd72652ee217d6"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-270-2.png",
+    "uid": "f24e0ff22dceb47e2661f864019d707344b580e2"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-270-3.png",
+    "uid": "cf10d762b5d2d1d6c91b2ec411d3615a23197d31"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-270-4.png",
+    "uid": "81813c04d4c508cdb52be625a05d8817d1811603"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-292_5-1.png",
+    "uid": "0028d36c66247b04147c9b97f1d2342bd994b8fc"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-292_5-2.png",
+    "uid": "4de58a9023de0ad546db80206d4e14a3abb29712"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-292_5-3.png",
+    "uid": "7853704025fb92c31cda54838876fc9c5c439773"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-292_5-4.png",
+    "uid": "79a93a745f3757455cf8b40c15059b79ca843dc7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-315-1.png",
+    "uid": "ee56a0c8614c42031f59add0141c9d144109e5f8"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-315-2.png",
+    "uid": "9aa0e12d3619f5a6b446deba605536c1caa61bb1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-315-3.png",
+    "uid": "fa8999fdb542626c621b44f9cd41a9a1819a681c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/360/walk/waiter-walk-315-4.png",
+    "uid": "bbff43a085fbf4fdab6c9aad477272713704ba85"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack.png",
+    "uid": "0731b55671f8391814b396511f88464b4e7bb95a"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/die.png",
+    "uid": "115784bf90692da26580cd8b0f1f8087b9a064b5"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/hit.png",
+    "uid": "3411f363f069fd809ffb9e0dd3afbbee69b4df61"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/idle.png",
+    "uid": "648fc4c4a4f71d8e54ba8d8ec190217e14371b55"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk.png",
+    "uid": "3663291c66b98da5e6c1425f74c421d5d295f61d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-1.png",
+    "uid": "e4032c3289ccbb0a180f02769ced7b77f477d614"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-2.png",
+    "uid": "61ce7e9dd3afd3a89447cd2f73bd0da217925cfc"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-3.png",
+    "uid": "e061c5c5d32a3d6e20927aa226924c02711050cc"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-down.png",
+    "uid": "e90f04a50cbb6e3697022cf49a883e44143e1512"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-side.png",
+    "uid": "c5739da7d4961258264c3f5304a75a2b26b21318"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/attack-up.png",
+    "uid": "45f14634b46697e897d7b7dde39b8460f0e03e4e"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/die-1.png",
+    "uid": "b24cb89f02ecc64a69446025176cfa189ccb9e1d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/die-2.png",
+    "uid": "c337c7a55f533be78963faa58c6c7187ebf323ea"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/hit-1.png",
+    "uid": "bc6d6f87792f837a0a033249dd448d2d9bb0ad8f"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/idle-down.png",
+    "uid": "34f363aadbedddec63c39731ec9147d56168f78b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/idle-side.png",
+    "uid": "3ff6bfb9f866f9d179740a143d503cc13661f78b"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/idle-up.png",
+    "uid": "cb1d3e7f29220eeeab41b65396bff164ed18da63"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/waiter-360-source.png",
+    "uid": "9b05163f4e8865005a5489f53170d03f79d3822d"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/waiter-sprite-sheet.png",
+    "uid": "5bcb2ed4f1f6d23d474bc29745a3552acfdd779c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-1.png",
+    "uid": "9aa7119573daeb963022916e48454daa4c8d41e9"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-2.png",
+    "uid": "f27ac0c5eb8ff2133321b7d5af3bc15f97449edd"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-3.png",
+    "uid": "a4c60795900faee7a27600d340d8832df64c764c"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-4.png",
+    "uid": "acab56193a886a9327d56e0a8a3c4f354b5fc977"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-down-1.png",
+    "uid": "300075d6d965d00e275d0602ad5d09d36bca00a3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-down-2.png",
+    "uid": "be19d6e55c1d26f21b5606bf991c5cb34dd01440"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-down-3.png",
+    "uid": "04045b531b6c566448c90ff6060fef103b3893dc"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-down-4.png",
+    "uid": "8728581520b09369a9b787c8f0dbcea6fd1e7348"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-side-1.png",
+    "uid": "b3eae2645377822ea18bba179fb5b47d76d17466"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-side-2.png",
+    "uid": "d1e97cd406324a012660af2ef95fc26dc20c76c1"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-side-3.png",
+    "uid": "16ca457bdb1d334ea871daf73201e77e52b598fe"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-side-4.png",
+    "uid": "46b6dfb972223891725b7ccffab65ae79513f779"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-up-1.png",
+    "uid": "026e43b5593e512859cd402ed8bf1624bd348dc7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-up-2.png",
+    "uid": "871f2c9a58a1f75381a6eb23418890175c359ee7"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-up-3.png",
+    "uid": "34688567515bc10c792ce1e131fa07c9931fa3a3"
+  },
+  {
+    "rel": "public/assets/arena/units/waiter/walk-up-4.png",
+    "uid": "894f12a9bfdd11a293df625e1da897010f0c7c90"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_000.png",
+    "uid": "337eb2dc4e4f0f1bd10d53df6fdaa8b403e2ec63"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_001.png",
+    "uid": "9c4ccea23798edca4569fc72a40f05819491d4c3"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_002.png",
+    "uid": "c5f46fb4ca274a193a1220be07b95e150951e5d6"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_003.png",
+    "uid": "ea72e56a7ff2d3ca174040fd8df977fa63e24bf9"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_004.png",
+    "uid": "14c8305f2a89dec3356da9dbcdd67b061db2550e"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_005.png",
+    "uid": "a28c19e23edbbe00ec41184121696b5340a92760"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_006.png",
+    "uid": "3310a6f1f7acaaf0d78f2a3a007d36835d949c4f"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_007.png",
+    "uid": "2418369d3f0dd5010c62857e13678957b1cf4379"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_008.png",
+    "uid": "27f8a6db4a7b913bf5b2a3285baf3b84b3cb1c2f"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/attack/attack_009.png",
+    "uid": "8e41fa9ccad677b8c79edd35f7589f2a2d11fad0"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_000.png",
+    "uid": "94f45429c5dd07334761a763819d7590a49b64df"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_001.png",
+    "uid": "40123503a292b1707bf305db4df142ed53febcf8"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_002.png",
+    "uid": "3961206cfa2334300fb9a1818b9f96a10383d06b"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_003.png",
+    "uid": "32f7618d2b24f1ae252a4cfb2247e7c2a897678c"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_004.png",
+    "uid": "d4252c48bb4d5065c032280160f1a1c6c8d2f375"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_005.png",
+    "uid": "18060e298d8dda743a7b9a4b6cf52f8d20479b66"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_006.png",
+    "uid": "747e03bcb02f5d4151bb2a8f146d1e229cd3b407"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_007.png",
+    "uid": "ac7d956bf56ef341169d1860c3a60ba17bd7ae8e"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_008.png",
+    "uid": "aface7adeb401e0d10a6bd8f349ce76251c9529f"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_009.png",
+    "uid": "58c211770e89f481e076c2d858129710a5f0ae5c"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_010.png",
+    "uid": "df9b85c9070015b213e5b9ffc54429a7b6e467cc"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/die/die_011.png",
+    "uid": "dd3c801d005ced6a12836f70b521b4803685cf22"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_000.png",
+    "uid": "854af45eeccdbfb34b9e805f7d1ac7b5e3b563e0"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_001.png",
+    "uid": "6bde2163c3cdfb524c94e0436b958b6423c605ba"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_002.png",
+    "uid": "bc4a1c6542d15d1929347a6e213de7e271ac735d"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_003.png",
+    "uid": "5e703643f0d9148696aaabc5a56135a31440fdde"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_004.png",
+    "uid": "8db45501c37fabd01f342efb61f38dbc5cae4bd0"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/hit/hit_005.png",
+    "uid": "4c34c73d39882f5a560662ae0e45b9a88c02dc1d"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_000.png",
+    "uid": "9ddb1ed30c07131923d35d32fad27706b7a8ba2f"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_001.png",
+    "uid": "d45bebf4f0bd7cd858645ec6f0899db6c01bac70"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_002.png",
+    "uid": "b7eda68332cdcef0d1b59306ded19866cff53d4b"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_003.png",
+    "uid": "15fb0611c86ab52bd8e8f4be9ffde549dea91772"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_004.png",
+    "uid": "5f7766c0f90536685c52b59016c8af2cd436abc3"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_005.png",
+    "uid": "434911241f24382e38b101b54e7cc2012cfa25eb"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_006.png",
+    "uid": "d4e035f48976c36fcf3e74123d953c0722c14c81"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/idle/idle_007.png",
+    "uid": "42ce1b967a4a05bc7b1d336c378cf96eccead7e7"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_000.png",
+    "uid": "e6af707d70625f3e5455f300035158c9db6d8d08"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_001.png",
+    "uid": "2d59e81e4cec223615ff0d7aaa7051aa57f8f692"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_002.png",
+    "uid": "0ac6207bc36e039b2153dd4df9c9c16667d4bfc4"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_003.png",
+    "uid": "41d55a75042d610ce0f49838aa7977c585e2bd42"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_004.png",
+    "uid": "b68308ed29f6776fababd1b760ee95c8e828060b"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_005.png",
+    "uid": "dab4854cbc4f6f0ad7cdc2e8946b339a53fdf720"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_006.png",
+    "uid": "2576e4312e1c77b9efd473a2a510455b9f5d3acd"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/run_to_stop/run_to_stop_007.png",
+    "uid": "0137766904c795e4863ccb1f60d647032d2630cc"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_000.png",
+    "uid": "b3e8347b1fad8e5555b00afce6e8a214501288fa"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_001.png",
+    "uid": "1c373a65e39c6d7ccb22243c738529a38305e2c0"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_002.png",
+    "uid": "6896326a2f972fc122cc84e6b1ce540234c181c4"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_003.png",
+    "uid": "db39621a4f6b87da20a6c605143a5e184445d7cd"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_004.png",
+    "uid": "0f667311caec643d7a1d6ed537a4616cbffc3a6e"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_005.png",
+    "uid": "c938a37a951bc4ef816ee6dd6559e4d6446958cf"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_006.png",
+    "uid": "028d1875ef29d15d5aa388474a405c7dfb4d8b2b"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_007.png",
+    "uid": "c88b6b13a4b1e097095e77c968ae522355f83872"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_008.png",
+    "uid": "c0b805dfcead72479fa03bf561a33830e40d572f"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_009.png",
+    "uid": "a46afd687809d59c5b913a9cc3fa3eebb1dfb138"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_010.png",
+    "uid": "46615e5f45a896a8beb9b424fa6c6810f24dfdab"
+  },
+  {
+    "rel": "public/assets/battle-arena/waiter/frames/walk/walk_011.png",
+    "uid": "966f89cd2d5fef4f71d88fdee66fdda67a20abe7"
+  },
+  {
+    "rel": "public/battle-arena/arena-bg.png",
+    "uid": "0225774532cd101fc0daa1a69fd3f469f22d886e"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/README.md",
+    "uid": "9d4a8a155477fb5c0628fad1d8a3e05e1b9e171e"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/arena-desert-crystal.png",
+    "uid": "5ff66e364b79c5ddd5dddf1d29ff6759d2b45682"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/emberhorn-card-v2.png",
+    "uid": "dd1bf784a0bb2d882360d061142dcda59951f530"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/emberhorn.png",
+    "uid": "36a21b565dc3e3a6634a92a63dfec2447435003b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/lumen-card-v2.png",
+    "uid": "b0b685f6e451cb53c7cf1c4dff748bafcf1fb04e"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/lumen.png",
+    "uid": "3337f3b6045c4f7f06c5b9fa7847c7d2d05ab8cf"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/mossbit-card-v2.png",
+    "uid": "8255c955f6541520a5bfd7d9180f02cff040f228"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/mossbit.png",
+    "uid": "fae95a110ff508f861518f08d3d79e920312059f"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/shardback-card-v2.png",
+    "uid": "ba0fee8620256198e0e4797d0a05f353c1e93b99"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/battle-model-cards/shardback.png",
+    "uid": "e3b959ed54cfef3d341fa2cfe3cc8ff7063fc05f"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/cinder-imp.png",
+    "uid": "eb88aff4db9d3f2a5d69d9da20ec9b20833927b7"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/dune-colossus.png",
+    "uid": "2e489dd0d6562f9746f6683cc650899ece4d9d0b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/emberhorn.png",
+    "uid": "9fbefd4c0adfb43b736390b23ec4ec734c21831b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/lumen-wisp.png",
+    "uid": "dc3bbf4b7b66cc8baedcce0574c4c354e6362e09"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/mossbit.png",
+    "uid": "cc22a4c0e7df5fe644a6834e34bbac915ec57baf"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/prismwing.png",
+    "uid": "8a6119c6dc94f8fc92251e1a7ca3345b9b205694"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/shardback.png",
+    "uid": "a87e62c4bb26c3a6f1c359893d18127be01d455b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/stormfin.png",
+    "uid": "24a04a3c7bcf761636d807ca5ee43c24edeb550e"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/unit-sprites/emberhorn-cutout.png",
+    "uid": "d942e9239d1e9431c638bc5f7d6f28526203ac10"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/unit-sprites/lumen-cutout.png",
+    "uid": "9db6ae580e27f081783364450eb0d36c3da17cf6"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/unit-sprites/mossbit-cutout.png",
+    "uid": "4a97d53f5c031ca8cd2da639740064ed8133ce72"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/assets/generated/unit-sprites/shardback-cutout.png",
+    "uid": "c72c25fac96d7c650b8088f34c87ac4c747493db"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/battle3d.html",
+    "uid": "21db0048244b02b5fddf6e38f0966d59d67832f1"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/data/tilemap.csv",
+    "uid": "0f5fdc9ac621a5987bdf466bd9535a563f710f47"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/index.html",
+    "uid": "16eabd04386c0ed54b0ea730b78b2983f06455cd"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/package-lock.json",
+    "uid": "24079eb14a7e67bf8826d8763b3f31917cbee943"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/package.json",
+    "uid": "780e583104742ed991dcf8007bbc8ecd7a6af11b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/preview.png",
+    "uid": "efd0612fe2463409c4ca8b9e371e6bee5c2e0ab8"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/server.js",
+    "uid": "7c7f3cc2c11a9a2e532d0571f2780309822aea77"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/src/data.js",
+    "uid": "9e28cfa17aa092d83b073e33d5c83a58d8ef24a9"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/src/game.js",
+    "uid": "c287080cd4a4b5e507ac620354b999ce204137d3"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/src/three-d/main.js",
+    "uid": "2af4a4668feb6da5844de4103934372ac9085eb5"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/styles-3d.css",
+    "uid": "bdbd944d16e33c8e5806cb64dac3e3facaadf0f3"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/styles.css",
+    "uid": "f5bc5a26b9cafcbb9c98e29d745eaf4602055c0f"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/test/engine3d.test.cjs",
+    "uid": "c88e791513e09000eb16dd7f2a1b5340423c9630"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/test/interface.test.cjs",
+    "uid": "a8ef79a5996383bb4aae384209d94abc3348874f"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/test/invariants.test.cjs",
+    "uid": "12b0c280ab338dbdc41451a1301f8f5e2f477da6"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/vendor/babylon.js",
+    "uid": "97d5309bc305a08b7fc833f04880096ea5707a4b"
+  },
+  {
+    "rel": "public/battle-arena/game-play-live-v1/vendor/babylonjs.loaders.min.js",
+    "uid": "d5e74e04b1e0c9c353ed7e614b7bf9f681c5b392"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/arena-desert-crystal.png",
+    "uid": "5ff66e364b79c5ddd5dddf1d29ff6759d2b45682"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/battle-model-cards/emberhorn-card-v2.png",
+    "uid": "dd1bf784a0bb2d882360d061142dcda59951f530"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/battle-model-cards/lumen-card-v2.png",
+    "uid": "b0b685f6e451cb53c7cf1c4dff748bafcf1fb04e"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/battle-model-cards/mossbit-card-v2.png",
+    "uid": "8255c955f6541520a5bfd7d9180f02cff040f228"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/battle-model-cards/shardback-card-v2.png",
+    "uid": "ba0fee8620256198e0e4797d0a05f353c1e93b99"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/cinder-imp.png",
+    "uid": "eb88aff4db9d3f2a5d69d9da20ec9b20833927b7"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/dune-colossus.png",
+    "uid": "2e489dd0d6562f9746f6683cc650899ece4d9d0b"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/prismwing.png",
+    "uid": "8a6119c6dc94f8fc92251e1a7ca3345b9b205694"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/assets/generated/stormfin.png",
+    "uid": "24a04a3c7bcf761636d807ca5ee43c24edeb550e"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/data/tilemap.csv",
+    "uid": "0f5fdc9ac621a5987bdf466bd9535a563f710f47"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/styles.css",
+    "uid": "f5bc5a26b9cafcbb9c98e29d745eaf4602055c0f"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/data.js",
+    "uid": "1fe41bfa99f950e74dc8e5e587ea2217c766fae1"
+  },
+  {
+    "rel": "public/battle-arena/mythic-rift/game.js",
+    "uid": "f0fecaf91af858910b9d8d3a6a6ff11ae4eaea76"
+  },
+  {
+    "rel": "public/battle-arena/structures/main-castle-blue.png",
+    "uid": "005300791013217082692221774e0b901ad2a394"
+  },
+  {
+    "rel": "public/battle-arena/structures/main-castle-red.png",
+    "uid": "a5e2f809a8f77537cf2a1c66879de0ca201e5e60"
+  },
+  {
+    "rel": "public/battle-arena/structures/side-tower-blue.png",
+    "uid": "d0d122778051bcd1122ecf1d7af36ceeeea1af82"
+  },
+  {
+    "rel": "public/battle-arena/structures/side-tower-red.png",
+    "uid": "3589db3ffe35d360973a40cb1696210163fb7cea"
+  },
+  {
+    "rel": "public/file.svg",
+    "uid": "fb380eeffe87d50b597383664c02982964d0d28c"
+  },
+  {
+    "rel": "public/fonts/OFL-bistro-sans.txt",
+    "uid": "cc979ca316ff64751f2d5d49a0bea964b6f5d902"
+  },
+  {
+    "rel": "public/fonts/OFL.txt",
+    "uid": "9bf5fef1b8b8497a46d336ac4b9ab52a06a243dc"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-medium-ar.woff2",
+    "uid": "31cb9792b1f981498da21d6c3de567142c6b2a1e"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-medium-latin.woff2",
+    "uid": "c55b4b1b5b5d57d2c291c6e23cb2370da51422dc"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-regular-ar.woff2",
+    "uid": "a9cefdcae54676211fe42927574e4c013a1af538"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-regular-latin.woff2",
+    "uid": "653bfd524aa4674232e85a15acd2e914a9f330bd"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-semibold-ar.woff2",
+    "uid": "9e5c019d8d6e9acb93f69e74d9ff5ab0fb49944f"
+  },
+  {
+    "rel": "public/fonts/bistro-sans-semibold-latin.woff2",
+    "uid": "ee160f53bfe8585270adcde9c6864054675f4856"
+  },
+  {
+    "rel": "public/fonts/tajawal-bold.ttf",
+    "uid": "68e7239ced97eba7b1859f1c78ad434f30d93b7b"
+  },
+  {
+    "rel": "public/fonts/tajawal-regular.ttf",
+    "uid": "2ed0e4b8a6f3f00be2fc70dcad927acea278201e"
+  },
+  {
+    "rel": "public/globe.svg",
+    "uid": "2eba23b01a46733bb8423e6d38ebf5f7e95abec5"
+  },
+  {
+    "rel": "public/menu-art/double-b-hero.webp",
+    "uid": "e6b415b57b6e99b734afca747da2441e3e8f084e"
+  },
+  {
+    "rel": "public/menu-art/double-b-leaves.webp",
+    "uid": "25fe7a164cd31734b68edf7895cbbbdeb971b453"
+  },
+  {
+    "rel": "public/menu-logos/kath-transparent-v1.png",
+    "uid": "4ca17019e4fe4a9ddce2820711e5bd326fa07d79"
+  },
+  {
+    "rel": "public/menu-logos/kath-transparent-v1.webp",
+    "uid": "aad6a5aa91c7f4620a9e5d100563b4975a63b115"
+  },
+  {
+    "rel": "public/menu-qr/double-b-bistro.png",
+    "uid": "7a540ac6445f9203762ff5cb4301f03b0f5fae65"
+  },
+  {
+    "rel": "public/menu-qr/double-b-bistro.svg",
+    "uid": "b872d9caf28a0e5d825081aa2008f57fac678474"
+  },
+  {
+    "rel": "public/next.svg",
+    "uid": "3f3e95622612b989c5bd6a03299a308c6f3c7e6b"
+  },
+  {
+    "rel": "public/t6v9la8iardlaw0k9y28uc7o33qx4b.html",
+    "uid": "4400879b5fab0cd5f3d43f788f324b96e19a9337"
+  },
+  {
+    "rel": "public/vercel.svg",
+    "uid": "cebb8852d58c8886be3e9051a26957f42bb82f1a"
+  },
+  {
+    "rel": "public/window.svg",
+    "uid": "54c48e0daa6caa317fe1b4c419007fd93e948db9"
+  },
+  {
+    "rel": "components/admin/AdminSidebar.tsx",
+    "uid": "077496e8c85f724d342d6f3d7db1e8e9b4262d3c"
+  },
+  {
+    "rel": "components/admin/admin-app-layout.tsx",
+    "uid": "9d5743880aabe9d2133510b6cb96be12fb565bdb"
+  },
+  {
+    "rel": "components/admin/pages/admin-cafes-page.tsx",
+    "uid": "bd6638866a7a91723c4e76b2b82e606d66eee72f"
+  },
+  {
+    "rel": "components/admin/pages/admin-client-brands-page.tsx",
+    "uid": "605d549c7b48d2f06929263a67c1e47e924bdfd5"
+  },
+  {
+    "rel": "components/admin/pages/admin-content-page.tsx",
+    "uid": "25496b26f1b9dfc10ccc8af79c96407eb6b2dc76"
+  },
+  {
+    "rel": "components/admin/pages/admin-customers-page.tsx",
+    "uid": "a0ebf13e04054f6bbaf676299eee7c81a863e6e0"
+  },
+  {
+    "rel": "components/admin/pages/admin-home-page.tsx",
+    "uid": "47e43ff7642371fc42f0e804ac33e21e87711ad1"
+  },
+  {
+    "rel": "components/admin/pages/admin-jobs-page.tsx",
+    "uid": "a114d5e68368576f46eb10da203e974f0e2bae31"
+  },
+  {
+    "rel": "components/admin/pages/admin-maintenance-page.tsx",
+    "uid": "f84f1e85fc20a69a221c9c78063dbf68a3dcf04d"
+  },
+  {
+    "rel": "components/admin/pages/admin-operations-center-page.tsx",
+    "uid": "8da7352642c2903d3f33642adc2ac3e85e2e1542"
+  },
+  {
+    "rel": "components/admin/pages/admin-operations-page.tsx",
+    "uid": "8d25a8325db56023c6fd202efe81980a9f996c38"
+  },
+  {
+    "rel": "components/admin/pages/admin-options-page.tsx",
+    "uid": "0edf2f97c84cd71c0e977522b5afce59a909ac68"
+  },
+  {
+    "rel": "components/admin/pages/admin-plans-page.tsx",
+    "uid": "34ab10f56a2c40d026f230137b9e85827e021289"
+  },
+  {
+    "rel": "components/admin/pages/admin-platform-coupons-page.tsx",
+    "uid": "ac7f332b9daf801539d9b73e7fd07ea35d265b5a"
+  },
+  {
+    "rel": "components/admin/pages/admin-representatives-page.tsx",
+    "uid": "1f3c4d02a5ca7de18dc882f0c054447bae4d7148"
+  },
+  {
+    "rel": "components/admin/standalone-menu-control.tsx",
+    "uid": "65db715290841f432c4192294466b008c1651688"
+  },
+  {
+    "rel": "components/cafe/battle-arena-game.tsx",
+    "uid": "3096b0fada672bcbfd23acc6bc42ab8d268999c2"
+  },
+  {
+    "rel": "components/cafe/brand-pwa-install-section.tsx",
+    "uid": "94d20cb2c7cbd291156f8afd94659ee18d717344"
+  },
+  {
+    "rel": "components/cafe/cafe-favicon-controller.tsx",
+    "uid": "a54efbe24b81a56c94a5357532c6b59262474238"
+  },
+  {
+    "rel": "components/cafe/cafe-footer.tsx",
+    "uid": "48203e68c6932b79b3fdec7dc3a6ffdafc90b135"
+  },
+  {
+    "rel": "components/cafe/cafe-header.tsx",
+    "uid": "50b162dc57e445a054ff565624b06b2e5570b6e0"
+  },
+  {
+    "rel": "components/cafe/cafe-layout.tsx",
+    "uid": "3e076f23bb88b80942d28a02d2d8fc41cfcbbf41"
+  },
+  {
+    "rel": "components/cafe/cafe-logo.tsx",
+    "uid": "00aff404a0bafcc2d2230569c24395b94c2fd90b"
+  },
+  {
+    "rel": "components/cafe/cafe-page-client.tsx",
+    "uid": "68c3b0cd4cff4ddf5c13bc7f7b6e62173011d297"
+  },
+  {
+    "rel": "components/cafe/customer-notifications.tsx",
+    "uid": "440e84dd0b4037915b6bb604ba11b45be690378c"
+  },
+  {
+    "rel": "components/cafe/customer-phone-auth-form.tsx",
+    "uid": "e06e963ec3a8b347cc6cd5fea969bd6666e95b53"
+  },
+  {
+    "rel": "components/cafe/offer-banner-image.tsx",
+    "uid": "5741fd2dd46e411dedee0c00daf0e29ce45e40f6"
+  },
+  {
+    "rel": "components/cafe/product-cinematic-showcase.tsx",
+    "uid": "56bac5dcc8fe3e18d43f1de1f2f52d6cdf4cf04e"
+  },
+  {
+    "rel": "components/cafe/product-collection-page.tsx",
+    "uid": "1375b3a96f49b9760bd76f58a9844578408cce83"
+  },
+  {
+    "rel": "components/cafe/product-detail-client.tsx",
+    "uid": "9102ae36f7558a681d402633a8f3905a8824def7"
+  },
+  {
+    "rel": "components/cafe/product-image.tsx",
+    "uid": "8ed4cd57538976223775d6ce2a185cf22974acbf"
+  },
+  {
+    "rel": "components/cafe/product-media.tsx",
+    "uid": "5bc22293f90d03accd2d524bcb0f174086e4c0c2"
+  },
+  {
+    "rel": "components/cafe/public-browser-nav.tsx",
+    "uid": "21d0d72fd0d9f20f2355d30599b2bd0be725a715"
+  },
+  {
+    "rel": "components/cafe/public-cafe-visit-tracker.tsx",
+    "uid": "991d94f79db5ea8257a9c5a621f9af6865314f80"
+  },
+  {
+    "rel": "components/cafe/public-experience-support-section.tsx",
+    "uid": "9000d7811ea0c661ce248b55def9c2ef5b0abfa0"
+  },
+  {
+    "rel": "components/cafe/public-feature-guard.tsx",
+    "uid": "a09c8743378ab0fadc2cd5e4579e179b898bc63e"
+  },
+  {
+    "rel": "components/cafe/public-games-page.tsx",
+    "uid": "23351eb955f5a4977cd41415bfe7d4f3de950c1c"
+  },
+  {
+    "rel": "components/cafe/public-loyalty-card-section.tsx",
+    "uid": "00692529581ce93fa8379ef65a3436edffaaa2ff"
+  },
+  {
+    "rel": "components/cafe/public-offers-page.tsx",
+    "uid": "e6a1a86cddef3750ef7a50b43bd9ecb1d271b157"
+  },
+  {
+    "rel": "components/cafe/table-wars-canvas-game.tsx",
+    "uid": "9a2564f31db38f4cfe234b2b41d0edc03d5d1037"
+  },
+  {
+    "rel": "components/cafe/table-wars-conquer-game.tsx",
+    "uid": "8af7080faeb5193e39978a4008bd411423fd3acf"
+  },
+  {
+    "rel": "components/cafe/table-wars-legends.tsx",
+    "uid": "90c5848080d810301e3951f341aa25026aac540b"
+  },
+  {
+    "rel": "components/cafe/table-wars-multiplayer-game.tsx",
+    "uid": "24c792d4c03d8b3975f3b8ad2d299a22bb672791"
+  },
+  {
+    "rel": "components/cafe/table-wars-team-picker.tsx",
+    "uid": "8d5292d6d1b2ca7b3a0b92f6a335899149a699d7"
+  },
+  {
+    "rel": "components/cafe/themes/brand-identity-custom-theme.tsx",
+    "uid": "6e8de3d1eb95fe06e3ba921c7a021416ae04698f"
+  },
+  {
+    "rel": "components/cafe/themes/brand-pwa-install-section.tsx",
+    "uid": "f184f68ef5574570b0b57370f1474fa281036b48"
+  },
+  {
+    "rel": "components/cafe/themes/cafe-page-client.tsx",
+    "uid": "5200fd1f79124db508354f71ccdffb59104e5af9"
+  },
+  {
+    "rel": "components/cafe/themes/cafe-theme-renderer.tsx",
+    "uid": "c516e04384cc53f238b93130aebc7e8398ea282e"
+  },
+  {
+    "rel": "components/cafe/themes/customer-experience-primitives.tsx",
+    "uid": "87d93e0a25558d90d8cf29144285262fc7c593ff"
+  },
+  {
+    "rel": "components/cafe/themes/customer-mobile-experience.tsx",
+    "uid": "377eab261c351e6b9def59ff3c1709e9fdcfa408"
+  },
+  {
+    "rel": "components/cafe/themes/public-experience-support-section.tsx",
+    "uid": "834828630c60cdc5199e6b2ea4ec100dc4b92b1e"
+  },
+  {
+    "rel": "components/cafe/themes/public-loyalty-card-section.tsx",
+    "uid": "8d9c000eca36639a3745bde96ba64fdcbce2197d"
+  },
+  {
+    "rel": "components/cafe/themes/theme-shared.tsx",
+    "uid": "baaed5ebc1d1f1ce687fd86ce40089a215474346"
+  },
+  {
+    "rel": "components/cafe/themes/themed-account-panel.tsx",
+    "uid": "d5d43ca0c4f41a379f841566a34416ecb5ed9fb8"
+  },
+  {
+    "rel": "components/cafe/themes/themed-auth-panel.tsx",
+    "uid": "f04d3f3a63ea71f6b60f28979288a94afc938a79"
+  },
+  {
+    "rel": "components/cafe/themes/themed-auth-panel.tsx.bak-before-remove-customer-login-logo",
+    "uid": "04492d579091d383bf8b5436694faf459e345666"
+  },
+  {
+    "rel": "components/cafe/themes/themed-auth-panel.tsx.bak.20260615_120915",
+    "uid": "9cde9e9f3ec8beac0715cbd75d8e688bd5114d97"
+  },
+  {
+    "rel": "components/cafe/themes/themed-cafe-footer.tsx",
+    "uid": "79a89d81645a84cf0879ce80ea423458b96c3807"
+  },
+  {
+    "rel": "components/cafe/themes/themed-cafe-header.tsx",
+    "uid": "7617a68ab96b19e53cb7f3d569453eeb335e282d"
+  },
+  {
+    "rel": "components/cafe/themes/themed-cafe-shell.tsx",
+    "uid": "371475bbb319bc3d9a6611914fdf471cde4f810d"
+  },
+  {
+    "rel": "components/cafe/themes/themed-filter-bar.tsx",
+    "uid": "386bf6ab67f9152708a9619540761d774b547d24"
+  },
+  {
+    "rel": "components/cafe/themes/themed-preview-banner.tsx",
+    "uid": "350ae0c18e7fd0c26f1cef1d863b9f26fae533b3"
+  },
+  {
+    "rel": "components/cafe/themes/themed-product-card.tsx",
+    "uid": "2492cb9382553b8002b7ae0b89faa8a707858eda"
+  },
+  {
+    "rel": "components/cafe/themes/themed-product-detail.tsx",
+    "uid": "b6f6c8f567a494eff601e04f7727801cd481fe71"
+  },
+  {
+    "rel": "components/cashier/cashier-console-client.tsx",
+    "uid": "d830e720e320b0569cfdc917652639d06d3bb297"
+  },
+  {
+    "rel": "components/cashier/cashier-login-form.tsx",
+    "uid": "84f402adb93fbfac3a552d6b3020549b9c645e89"
+  },
+  {
+    "rel": "components/customer-app/customer-fast-app-client.tsx",
+    "uid": "fa239fa5122d62f55729f6bcdf4bc95f6fbdcbc8"
+  },
+  {
+    "rel": "components/dashboard/DashboardSidebar.tsx",
+    "uid": "992b79f95f41b79095611fe75695a14371135d72"
+  },
+  {
+    "rel": "components/dashboard/dashboard-app-layout.tsx",
+    "uid": "cab3b37518a7d70a9ea6c02ffd697ae2d4d3e86a"
+  },
+  {
+    "rel": "components/dashboard/dashboard-home-client.tsx",
+    "uid": "4daab9c76e151613df0701b3ea4232fe707d6751"
+  },
+  {
+    "rel": "components/dashboard/dashboard-home-sections.tsx",
+    "uid": "6daafe68aceafade3ae5655e4d588b7b7448e4c0"
+  },
+  {
+    "rel": "components/dashboard/feature-blocked-state.tsx",
+    "uid": "350543af9056929337485911949545db36b7861e"
+  },
+  {
+    "rel": "components/dashboard/feature-gate.tsx",
+    "uid": "ae3a625a98d3ec471f7862355a1ade4174dac5af"
+  },
+  {
+    "rel": "components/dashboard/menu/category-manager.tsx",
+    "uid": "a0e13d433779b7144af9d0f0bbb3cec57e6c3f0a"
+  },
+  {
+    "rel": "components/dashboard/menu/category-manager.tsx.bak",
+    "uid": "7840914c11e208004fa324256c2c06eeed3fd87f"
+  },
+  {
+    "rel": "components/dashboard/menu/menu-import-modal.tsx",
+    "uid": "1eadda32c2c5874a2cb4bd6cfb1213098c475be6"
+  },
+  {
+    "rel": "components/dashboard/menu/product-card.tsx",
+    "uid": "4272a587d4dbf83b9b99ce283d894914936d7369"
+  },
+  {
+    "rel": "components/dashboard/menu/product-modal.tsx",
+    "uid": "15d768d7d4b1a3002984166ef2a784fadb2e5d02"
+  },
+  {
+    "rel": "components/dashboard/menu/product-modal.tsx.bak",
+    "uid": "fb4fd26bb0137a6771a40d262d6ebddaf4653d5b"
+  },
+  {
+    "rel": "components/dashboard/notifications-panel.tsx",
+    "uid": "3d5d1acab96187345622651cbd011847622462aa"
+  },
+  {
+    "rel": "components/dashboard/offers/offer-card.tsx",
+    "uid": "0c121e75f4a1e9d9408b478dd1225815183b75b0"
+  },
+  {
+    "rel": "components/dashboard/pages/ai-menu-engineer-page.tsx",
+    "uid": "eb839f783ab774978633ace581d7d9c6fa312d2f"
+  },
+  {
+    "rel": "components/dashboard/pages/branches-page.tsx",
+    "uid": "d3358da547ee1547897b47ff844337af73c1aa2d"
+  },
+  {
+    "rel": "components/dashboard/pages/customer-segments-page.tsx",
+    "uid": "4511c5f0159d9bb8f76e87e53e9bb94aa1d041aa"
+  },
+  {
+    "rel": "components/dashboard/pages/customers-page.tsx",
+    "uid": "661c140784d5bf71b420b0f5ec60151b6ac7c994"
+  },
+  {
+    "rel": "components/dashboard/pages/experience-reward-reviews-page.tsx",
+    "uid": "a69f31a00a95f2561257a2747938b0179a67ad5d"
+  },
+  {
+    "rel": "components/dashboard/pages/feature-v1-page.tsx",
+    "uid": "df9f2d51e24979f8e3105453f16df1d291819bf5"
+  },
+  {
+    "rel": "components/dashboard/pages/growth-page.tsx",
+    "uid": "5026f4fc22c1ab753d799a1dc37be0abcb8cb5a6"
+  },
+  {
+    "rel": "components/dashboard/pages/loyalty-card-designer-page.tsx",
+    "uid": "679b1faf5f4494959cd7c7d93138efee95801d91"
+  },
+  {
+    "rel": "components/dashboard/pages/loyalty-cards-page.tsx",
+    "uid": "b229cee52e166dc0baebfba7d74c57d1ac501bca"
+  },
+  {
+    "rel": "components/dashboard/pages/loyalty-dashboard-page.tsx",
+    "uid": "17a5bf056f3e2c9147da105bef55ab43dbd00d57"
+  },
+  {
+    "rel": "components/dashboard/pages/loyalty-page.tsx",
+    "uid": "0310d08cc7ed2e0e38c9361bc927f4cd62826850"
+  },
+  {
+    "rel": "components/dashboard/pages/menu-page.tsx",
+    "uid": "721ef829a0699ce8b7a86b38d2e650ef6ea9b6b1"
+  },
+  {
+    "rel": "components/dashboard/pages/offers-page.tsx",
+    "uid": "7020203d3c267f7938e29be805079537b34fad2b"
+  },
+  {
+    "rel": "components/dashboard/pages/operational-cashier-page.tsx",
+    "uid": "42e6b4bb1235927ead02187a2369a0bfbae72c93"
+  },
+  {
+    "rel": "components/dashboard/pages/orders-page.tsx",
+    "uid": "46a2b7e685849fdd82449ccf3f630a678139cfd3"
+  },
+  {
+    "rel": "components/dashboard/pages/reports-page.tsx",
+    "uid": "2972d7d39f93d7ee1e72ed791cace807bf0a3625"
+  },
+  {
+    "rel": "components/dashboard/pages/settings-page.tsx",
+    "uid": "3db82fbaab56b4b501a0c9b5ee5a8d19f0686b28"
+  },
+  {
+    "rel": "components/dashboard/pages/subscription-page.tsx",
+    "uid": "7c9226e3dfa3fb7783fb39f99cc07b181f6b53eb"
+  },
+  {
+    "rel": "components/dashboard/pages/subscription-page.tsx.bak-20260616230426",
+    "uid": "0d851f6c93e3632f99f7537849765d3389da2d11"
+  },
+  {
+    "rel": "components/dashboard/pages/subscription-page.tsx.bak.no-pending-1781649821253",
+    "uid": "d1ef1c2904f47ac58cbfa931e5e16fab859d20eb"
+  },
+  {
+    "rel": "components/dashboard/pages/table-wars-page.tsx",
+    "uid": "e1d0c6f6e46771d81c084706616cab16b2b60314"
+  },
+  {
+    "rel": "components/dashboard/pages/theme-page.tsx",
+    "uid": "c56cdccf2c96f51a0484146333937d3c54fcdb98"
+  },
+  {
+    "rel": "components/dashboard/payments/barndaksa-card-payment-button.tsx",
+    "uid": "41e7b0e54897510fc0d20ba9c622302ed1036a84"
+  },
+  {
+    "rel": "components/dashboard/payments/branda-card-payment-button.tsx",
+    "uid": "d7881379d5970f31ce3e49b2d13f2a453c5f52fe"
+  },
+  {
+    "rel": "components/dashboard/theme/custom-identity-builder.tsx",
+    "uid": "42238116646d5e967482d85073bf3c08ec00ffcf"
+  },
+  {
+    "rel": "components/dashboard/ui/modal.tsx",
+    "uid": "5abac64195248234f41954e05be196952a4a52e2"
+  },
+  {
+    "rel": "components/payments/barndaksa-card-payment-button.tsx.bak-20260616230426",
+    "uid": "41e7b0e54897510fc0d20ba9c622302ed1036a84"
+  },
+  {
+    "rel": "components/payments/barndaksa-card-payment-button.tsx",
+    "uid": "23a4a26462a4c0529cf2b113fc3be730f78a569d"
+  },
+  {
+    "rel": "components/payments/branda-card-payment-button.tsx",
+    "uid": "1aa2016ad5947abc5c030e866309881cf2512827"
+  },
+  {
+    "rel": "components/loyalty/barcode-camera-scanner.tsx",
+    "uid": "a046872d9c87cff84bd4f008228b9fc0caf4d398"
+  },
+  {
+    "rel": "components/loyalty/barcode-camera-scanner.tsx.bak-timeout-type-1781629084132",
+    "uid": "0f77a50971ea44c8016abd27d967da0ecdd0569f"
+  },
+  {
+    "rel": "components/loyalty/barcode-camera-scanner.tsx.bak.20260615092921",
+    "uid": "431aebc708dd17bff07cfaf36d22f75f667610ad"
+  },
+  {
+    "rel": "components/loyalty/barcode-camera-scanner.tsx.bak_20260616_201110",
+    "uid": "2e1958e0ac7cbd8fc62bdd89337e490944566416"
+  },
+  {
+    "rel": "components/loyalty/customer-loyalty-card.tsx",
+    "uid": "e2b5ff69c8f259852ef0e37d6447b603cea84fab"
+  },
+  {
+    "rel": "components/loyalty/customer-points-summary.tsx",
+    "uid": "1a7f9e3587d8b2029f86605ee6ca4c31427fedda"
+  },
+  {
+    "rel": "components/loyalty/loyalty-card-builder.tsx",
+    "uid": "8c0ba70b270fad2814967d3b9263fae7d2f0aa2e"
+  },
+  {
+    "rel": "components/loyalty/loyalty-card-preview.tsx",
+    "uid": "76efe587a523ad98fb6d36b04afe2c0127160f66"
+  },
+  {
+    "rel": "components/loyalty/loyalty-icon-picker.tsx",
+    "uid": "2b10b677a7acc6f2df6ff0352b4846ddc628c522"
+  },
+  {
+    "rel": "components/loyalty/loyalty-logo-uploader.tsx",
+    "uid": "40617ab224fc00cbcf3c825a5a01b809a35242b9"
+  },
+  {
+    "rel": "components/loyalty/loyalty-points-settings.tsx",
+    "uid": "49ef19bac3d8f7c4151b78d94e8f4390654f0327"
+  },
+  {
+    "rel": "components/loyalty/loyalty-points-summary.tsx",
+    "uid": "57e093bfdeec0fa8e9f931df6c324cb28fd66099"
+  },
+  {
+    "rel": "components/loyalty/loyalty-section-tabs.tsx",
+    "uid": "b48aab835af93f2937fb17f259e57a67dbd11c75"
+  },
+  {
+    "rel": "components/loyalty/public-loyalty-card-view.tsx",
+    "uid": "c3de3ebf2ab39c53a2698a25854c0ef942aa738d"
+  },
+  {
+    "rel": "components/loyalty/secure-qr-code.tsx",
+    "uid": "5f9141c0cc2410a0974a5323a6ab4849467a7463"
+  },
+  {
+    "rel": "components/loyalty/secure-qr-code.tsx.bak.20260615092921",
+    "uid": "a52bd5f52f27adc17a5148ee1fe9c03a9e3b84ec"
+  },
+  {
+    "rel": "components/loyalty/shared-loyalty-card.tsx",
+    "uid": "253e15760a43f6968639c867b4d11375d1a3a3e2"
+  },
+  {
+    "rel": "components/loyalty/use-loyalty-demo-state.ts",
+    "uid": "b6bd6753d8cef45a1eb9ba4c5d0dbda01ac875a8"
+  },
+  {
+    "rel": "components/maps/google-map-picker.tsx",
+    "uid": "82155a9ef9ea371f528ee5e57a5b6337a26700fe"
+  },
+  {
+    "rel": "components/marketing/platform-home-page.tsx",
+    "uid": "122d619d7a7ad4faf0af1c36574073b83c7a99bb"
+  },
+  {
+    "rel": "components/menu/bistro-menu.module.css",
+    "uid": "370443f94a06eb49c76fd961cd9cb2baeed3d24a"
+  },
+  {
+    "rel": "components/menu/bistro-menu.tsx",
+    "uid": "d3e34ba9e78dd3fc712813b2cc598cc949f13b7d"
+  },
+  {
+    "rel": "components/menu/menu-motion.tsx",
+    "uid": "4bfa2a51ce7209cfd52d79a530f2b9b0832bc6ca"
+  },
+  {
+    "rel": "components/menu/menu-services.tsx",
+    "uid": "636016536deeb23dfe915a922560f72f88cab578"
+  },
+  {
+    "rel": "components/offers/offer-card.tsx",
+    "uid": "83501f9d80cc6fca5838b7faaff2b700905a681c"
+  },
+  {
+    "rel": "components/performance/route-prefetcher.tsx",
+    "uid": "467d1c91e555a993e6fa2da76b3d9507a8a545db"
+  },
+  {
+    "rel": "components/representative/representative-dashboard-client.tsx",
+    "uid": "15d9a036940d2b6032a46b1ba810c033b2661936"
+  },
+  {
+    "rel": "components/ui/app-toast.tsx",
+    "uid": "15a9ef683eb0ef6c334c9c214e837a219841fc18"
+  },
+  {
+    "rel": "components/ui/barndaksa-logo.tsx",
+    "uid": "a25ef3d3d7419953060ea5d5bff3c3cf0a37ded8"
+  },
+  {
+    "rel": "components/ui/branda-logo.tsx",
+    "uid": "ad00c73d4fcdb6b85977f630f0c255636732af1f"
+  },
+  {
+    "rel": "components/ui/design-system.tsx",
+    "uid": "e997e7744b4aa53d6858d5ce14d231c268390854"
+  },
+  {
+    "rel": "components/ui/local-asset-image.tsx",
+    "uid": "9d9681b7083cf6d19494913ea8b971b6258a9a63"
+  },
+  {
+    "rel": "components/ui/responsive-app-shell.tsx",
+    "uid": "d900a6f62738ae1ca377cb6e76f6db0fd304bc3d"
+  },
+  {
+    "rel": "eslint.config.mjs",
+    "uid": "7b3b62d43ebb71550e9aad41f196d9c16bcbf52c"
+  },
+  {
+    "rel": "lib/auth/customer-phone-auth.ts",
+    "uid": "a6391bae14c6270f254b25f1d0d43745f0aa2e1b"
+  },
+  {
+    "rel": "lib/auth/phone-otp.ts",
+    "uid": "c03125ae8085775e7512d5f78a698c34b38dfcde"
+  },
+  {
+    "rel": "lib/auth/phone-utils.ts",
+    "uid": "714fceecfd796f5966abd964198d2d6b7f93bed8"
+  },
+  {
+    "rel": "lib/auth/supabase-hook-signature.ts",
+    "uid": "bbb599dc938af09d4e0b47399cd7ac69bdb91d09"
+  },
+  {
+    "rel": "lib/barndaksa/env.ts",
+    "uid": "4fe104d42f3be1159276ba179f1454f761bb8ceb"
+  },
+  {
+    "rel": "lib/branda/env.ts",
+    "uid": "5a195e36d8e69212c25654b20f1f45b816bce9e0"
+  },
+  {
+    "rel": "lib/cafe/cafe-display-logo.ts",
+    "uid": "66852a2206c9750284ccd714a622e5c73ea95c06"
+  },
+  {
+    "rel": "lib/cafe/cafe-settings-storage.ts",
+    "uid": "33839b23bc38f1873ef939d4501a9a4b4c0ed810"
+  },
+  {
+    "rel": "lib/cafe/cafe-theme-types.ts",
+    "uid": "a074cba585178c70ee847d6deeb3197d0ec93bf4"
+  },
+  {
+    "rel": "lib/cafe/color-contrast.ts",
+    "uid": "25da565f42b25b625a85fcab71c06f4d11c15d35"
+  },
+  {
+    "rel": "lib/cafe/color-extract.ts",
+    "uid": "138442b5b84ce9cdc98a33aa5c29c938e864717f"
+  },
+  {
+    "rel": "lib/cafe/custom-identity-featured.ts",
+    "uid": "dd3d8bea85a4de085b680b3f896919f19c19e0b2"
+  },
+  {
+    "rel": "lib/cafe/entity-storage-sanitize.ts",
+    "uid": "825472f334fd1d1c452db0e33c653981836f7136"
+  },
+  {
+    "rel": "lib/cafe/image-asset-pipeline.ts",
+    "uid": "480817634fde6081ff0e4308937c8e0e83cb1207"
+  },
+  {
+    "rel": "lib/cafe/local-asset-store.ts",
+    "uid": "05f138b374d70f5c5eb37909cdf433ac2d8477ac"
+  },
+  {
+    "rel": "lib/cafe/local-storage-repair.ts",
+    "uid": "fa971c69c22f13857561a40b2249230d7bebfb6a"
+  },
+  {
+    "rel": "lib/cafe/menu-category-utils.ts",
+    "uid": "5b8e37058b147c4616e5a39c941450c19e4f0a80"
+  },
+  {
+    "rel": "lib/cafe/menu-storage.ts",
+    "uid": "43feab8a528432bfb6299251662505fa30d3c04d"
+  },
+  {
+    "rel": "lib/cafe/product-pricing.ts",
+    "uid": "068296470cc69132ed875490e24e340cedfe5470"
+  },
+  {
+    "rel": "lib/cafe/public-cafe-fast-layer.ts",
+    "uid": "957a5d7ce51dc9b6d6d209858b06f47ec6bf4fac"
+  },
+  {
+    "rel": "lib/cafe/public-product-summary.ts",
+    "uid": "79fe1304d476c920b301ca782345565972554628"
+  },
+  {
+    "rel": "lib/cafe/theme-experience.ts",
+    "uid": "87acbfc42f15fadd33ac6b64e5d983713f81fe00"
+  },
+  {
+    "rel": "lib/cafe/theme-links.ts",
+    "uid": "175d407210514c43fb97774b1e9d04f200ea99b0"
+  },
+  {
+    "rel": "lib/cafe/theme-storage-sync.ts",
+    "uid": "3aed45804921ec62df83c8ec4501db7f70f20554"
+  },
+  {
+    "rel": "lib/cafe/use-cafe-theme-page.tsx",
+    "uid": "a1dea6513e02e234e1f26f67a14c92932daf4218"
+  },
+  {
+    "rel": "lib/cafe/use-custom-identity-visuals.ts",
+    "uid": "a2dc634814405b780069b73066e6bdc62d9cc267"
+  },
+  {
+    "rel": "lib/cafe/use-local-asset-url.ts",
+    "uid": "36947803e541ae56a2d631dd6a790d23d7f7579a"
+  },
+  {
+    "rel": "lib/cafe/use-public-cafe-menu.ts",
+    "uid": "c8be93da719fa9b21ac8df2de922bddb3bb3fd25"
+  },
+  {
+    "rel": "lib/cafe/use-public-product-catalog.ts",
+    "uid": "e0fcb5308689d5f57fd59ff2b1c3a197d6bf574f"
+  },
+  {
+    "rel": "lib/cafe/use-resolved-cafe-logo.ts",
+    "uid": "a918c3635e042c11eea15697e835c775ec00d45e"
+  },
+  {
+    "rel": "lib/cafe/use-resolved-cafe-theme.ts",
+    "uid": "ad81c02871db67cdd89fab65408e9bccf77aa4da"
+  },
+  {
+    "rel": "lib/customer/session.ts",
+    "uid": "141c99c267455696d3fdb80b833d78428cd45032"
+  },
+  {
+    "rel": "lib/data/admin-dashboard.ts",
+    "uid": "0ef6edfb6fe0b870dd9ce9493bbcbef02313ebba"
+  },
+  {
+    "rel": "lib/data/admin-operations-center.ts",
+    "uid": "0d7a80993fb2ee8be0eccab531fab43ea951fe45"
+  },
+  {
+    "rel": "lib/data/admin-support.ts",
+    "uid": "a4ad9ba59ca21c4b9b54a093ab0d1a57bf7cb8cd"
+  },
+  {
+    "rel": "lib/data/admin.ts",
+    "uid": "64e0d7b8da3c4592e392b53b27cb3976aed90e17"
+  },
+  {
+    "rel": "lib/data/ai-menu-engineer.ts",
+    "uid": "9cebef3c3411add496f28c42b6cfc09531179281"
+  },
+  {
+    "rel": "lib/data/branches.ts",
+    "uid": "8f84c338bd78a9a98fbc9714d587888aaad9f67f"
+  },
+  {
+    "rel": "lib/data/brand-games.ts",
+    "uid": "c19a7dc73d04c23cdd25e6862ce236f646edb035"
+  },
+  {
+    "rel": "lib/data/cafes.ts",
+    "uid": "0fe9259c42565731881ed938ff1fd9972ecb7d3d"
+  },
+  {
+    "rel": "lib/data/cashier.ts",
+    "uid": "90deb8dd1ebe48e28710c8c7edd9560fb3120ddb"
+  },
+  {
+    "rel": "lib/data/customer-rewards.ts",
+    "uid": "e7670ec9ccab903380f48645e8d5bec4dc1e4d79"
+  },
+  {
+    "rel": "lib/data/customer-segments.ts",
+    "uid": "a7e1f6854dd9192005a8e6711c5e815f7959e1ea"
+  },
+  {
+    "rel": "lib/data/customers.ts",
+    "uid": "360547f184298cd19313970437e39fee6f825f45"
+  },
+  {
+    "rel": "lib/data/dashboard-home.ts",
+    "uid": "6dd76dae14c7c4cc9e2874dd1c0259760f5a5488"
+  },
+  {
+    "rel": "lib/data/domain-orders.ts",
+    "uid": "3ebdb5b4935ecdab8e19f936a7700a789bb1e637"
+  },
+  {
+    "rel": "lib/data/experience-rewards.ts",
+    "uid": "24b0a5585514c59ffdf75d61c184c3349f612468"
+  },
+  {
+    "rel": "lib/data/experience.ts",
+    "uid": "c638230727f8334fa216e389517f757c67591cd3"
+  },
+  {
+    "rel": "lib/data/feature-entitlements.ts",
+    "uid": "57838ad00aa7581c087d149bd3c6102bc7232d67"
+  },
+  {
+    "rel": "lib/data/feature-v1-readiness.ts",
+    "uid": "24945c788e94779994153b6709dfd0b5b2763ebc"
+  },
+  {
+    "rel": "lib/data/growth.ts",
+    "uid": "b6c7494d6ad2ca91ab00e83143487729800051cc"
+  },
+  {
+    "rel": "lib/data/jobs.ts",
+    "uid": "8cb20335dceabbde2694b82d26f192bce3e8828d"
+  },
+  {
+    "rel": "lib/data/loyalty-cards.ts",
+    "uid": "56215d41b2c450ac2db0a21b5d469d0e9145c351"
+  },
+  {
+    "rel": "lib/data/loyalty.ts",
+    "uid": "9272406cfdca5160ff96c86a47a808c644c5e7ab"
+  },
+  {
+    "rel": "lib/data/mappers.ts",
+    "uid": "1d5757692b3cb4679d972f3f8420c3efef9c7c05"
+  },
+  {
+    "rel": "lib/data/menu-feedback.ts",
+    "uid": "721945002b06cb3df86c87f072c28005a2e29536"
+  },
+  {
+    "rel": "lib/data/menu-imports.ts",
+    "uid": "a4240c4c804ea657c5c8cb7e1cb1879d0eeea3bf"
+  },
+  {
+    "rel": "lib/data/menu.ts",
+    "uid": "b36c35e3c0c16d61ae5d9c17a38d7a648222dd52"
+  },
+  {
+    "rel": "lib/data/notifications.ts",
+    "uid": "109d657b08b63840f27a50f56ee51ba798cd1476"
+  },
+  {
+    "rel": "lib/data/offers.ts",
+    "uid": "43692989552b0646e939fac3500e78180bcd1fba"
+  },
+  {
+    "rel": "lib/data/operation-events.ts",
+    "uid": "e7a41407f8cbaa3dfa8b9e247fef0094dac65c37"
+  },
+  {
+    "rel": "lib/data/orders.ts",
+    "uid": "48d25e2c13a299ee21114af8dc1245af5e964814"
+  },
+  {
+    "rel": "lib/data/platform-content.ts",
+    "uid": "d41c93210743640ac74bdee9965edf9c0327db78"
+  },
+  {
+    "rel": "lib/data/platform-coupons.ts",
+    "uid": "65a9d55fa40793d6495397f8d741ca1871be04d1"
+  },
+  {
+    "rel": "lib/data/platform-settings.ts",
+    "uid": "6684796634e9d0c06c2daf12816979dbf9ff9468"
+  },
+  {
+    "rel": "lib/data/platform-upgrade.ts",
+    "uid": "8fba27f3eb2ffe0dd72cadc87cbed2eed934de86"
+  },
+  {
+    "rel": "lib/data/representatives.ts",
+    "uid": "bc2512982a91d84d34f7b19ab8eb7419a10ee3e6"
+  },
+  {
+    "rel": "lib/data/settings.ts",
+    "uid": "66d5e8c013b2cecc4601b61101cd027db3982fc3"
+  },
+  {
+    "rel": "lib/data/standalone-menu.ts",
+    "uid": "1f1566db1c618772b459f8066a3b541c33db8006"
+  },
+  {
+    "rel": "lib/data/subscription.ts",
+    "uid": "2f6bb11cf9657e54d18e45f1845d181a9f804762"
+  },
+  {
+    "rel": "lib/data/subscription.ts.bak-20260616230426",
+    "uid": "2b2a7c03e01817c1a25dec5cd8a0d6cdd3502b3a"
+  },
+  {
+    "rel": "lib/data/subscription.ts.bak-paid-enum-2026-06-16T22-28-11-975Z",
+    "uid": "d737233f4949fd076564cb5acf0369f61519bd3b"
+  },
+  {
+    "rel": "lib/data/subscription.ts.bak.no-pending-1781649821250",
+    "uid": "d737233f4949fd076564cb5acf0369f61519bd3b"
+  },
+  {
+    "rel": "lib/data/subscription.ts.bak-status-enum-2026-06-16T22-11-48-192Z",
+    "uid": "c98b7ab04c368d88d71ca9fa710aa2fb226e0548"
+  },
+  {
+    "rel": "lib/data/table-wars.ts",
+    "uid": "dcd9c261d9b16b7f9f13589bf7c8a5bc2273dddf"
+  },
+  {
+    "rel": "lib/data/theme.ts",
+    "uid": "564a65ff725acca471032ac16b2df6c2fd7659e0"
+  },
+  {
+    "rel": "lib/email/resend.ts",
+    "uid": "e51c345ad4eb4b48facf9f2e04aeeb460686982c"
+  },
+  {
+    "rel": "lib/email/subscription-invoice.ts",
+    "uid": "f5e580dafc4e237f06c4dea4e42a42fc3d86c92a"
+  },
+  {
+    "rel": "lib/export/admin-report-export.ts",
+    "uid": "766032da7b84933b3c7d397f744690069f531257"
+  },
+  {
+    "rel": "lib/finance/barndaksa-finance.ts",
+    "uid": "1f7317338f8c543692cfede83801218ff5757cec"
+  },
+  {
+    "rel": "lib/format.ts",
+    "uid": "a0153005046249b0fc5a88f318c3174b7b6ee3f4"
+  },
+  {
+    "rel": "lib/loyalty/demo-data.ts",
+    "uid": "7a71e44213f8d820a914dadc249a5bbad795c482"
+  },
+  {
+    "rel": "lib/loyalty/production-state.ts",
+    "uid": "d192c71abb7f8adb747ece3b14c377440bc65f0c"
+  },
+  {
+    "rel": "lib/loyalty/secure-qr-payload.ts",
+    "uid": "4dde6b3d83920692cce477801a7076f958a74a0b"
+  },
+  {
+    "rel": "lib/loyalty/types.ts",
+    "uid": "ea06b73c53a301605b5250a57dfcf3a03c7cbccc"
+  },
+  {
+    "rel": "lib/maps/google-maps-url.ts",
+    "uid": "b51e466c0cce6ab91f91256d021b04025d7a5bca"
+  },
+  {
+    "rel": "lib/menu-import/pdf-extractor.ts",
+    "uid": "32f8c711d4cc812787536d17519621e6858b3625"
+  },
+  {
+    "rel": "lib/menu-import/text-extractor.ts",
+    "uid": "26bf044950bdca2b2425b81db4d6387bcc491044"
+  },
+  {
+    "rel": "lib/menu-import/types.ts",
+    "uid": "212e911ce311c5e9bfd41da80c155d72f9019ee5"
+  },
+  {
+    "rel": "lib/menu-import/url-extractor.ts",
+    "uid": "cefb591c0697600de2d4e90e3a21a07a1f441409"
+  },
+  {
+    "rel": "lib/menu/contacts.ts",
+    "uid": "4b503b0126b00d7979872a57d00849b8396d789b"
+  },
+  {
+    "rel": "lib/menu/logo-variants.ts",
+    "uid": "4e759065513f642ae56efa93be13959dfda735d8"
+  },
+  {
+    "rel": "lib/menu/motion-foundations.ts",
+    "uid": "fd7ea21bf5980bb03555ce9691a8706231e33fca"
+  },
+  {
+    "rel": "lib/menu/standalone-menu.ts",
+    "uid": "08b77c2d017b4ec3f96fa61f87f46d750a0bc69d"
+  },
+  {
+    "rel": "lib/mock/branches.ts",
+    "uid": "de17ab3fa92d04c82047039c6652a63e24aac23f"
+  },
+  {
+    "rel": "lib/mock/cafe-settings.ts",
+    "uid": "7ccab673e4df580a97fa2ef481c070d8f9caf3d8"
+  },
+  {
+    "rel": "lib/mock/cafe-theme.ts",
+    "uid": "07d051d50ff28b47341eee2757a9e0713abffd9f"
+  },
+  {
+    "rel": "lib/mock/custom-identity-theme.ts",
+    "uid": "9ab7c126d96baa5f02a46e6cd468987a82f495d8"
+  },
+  {
+    "rel": "lib/mock/customer-activity.ts",
+    "uid": "77a7d449cf1f3772f284690479a9ff9aa6fcd7ac"
+  },
+  {
+    "rel": "lib/mock/experience-campaigns.ts",
+    "uid": "8cbd88f66a72825c9db4314b10bb378355aaf186"
+  },
+  {
+    "rel": "lib/mock/loyalty.ts",
+    "uid": "4ed661b61c2c266d93930bc2898967bd19c3b649"
+  },
+  {
+    "rel": "lib/mock/menu-categories.ts",
+    "uid": "894c3209ebe9780b429ad4cf30acf5a8ee4cc823"
+  },
+  {
+    "rel": "lib/mock/menu.ts",
+    "uid": "41670557d0eb28661fe7fcc9140244cda3ace420"
+  },
+  {
+    "rel": "lib/mock/notifications.ts",
+    "uid": "ba0d806354e3b6c5ce96137435c91efb5863e595"
+  },
+  {
+    "rel": "lib/mock/offers.ts",
+    "uid": "5900a0a3126e565b359bc163e0d7344875d7903a"
+  },
+  {
+    "rel": "lib/mock/orders.ts",
+    "uid": "6a7e29d1c3361e4900c4dcce0d83d9cf27911f01"
+  },
+  {
+    "rel": "lib/notifications/whatsapp.ts",
+    "uid": "2e768af3d62c8b4bb19e4aa4c2568297958d4849"
+  },
+  {
+    "rel": "lib/offers/offer-ai-generation.ts",
+    "uid": "0cbdf4cb10ebfb52bab4931ad69ee32c41910390"
+  },
+  {
+    "rel": "lib/payments/paymob.ts",
+    "uid": "be0306a29a1655d77e751b96ae80f13e10b0433c"
+  },
+  {
+    "rel": "lib/payments/paymob.ts.bak-20260616230426",
+    "uid": "7a3253c3f7d8a1b7d99560a72a02b963c004c7de"
+  },
+  {
+    "rel": "lib/payments/paypal.ts",
+    "uid": "8f8b4bcb044d55af4703b372ed346d2d177b3475"
+  },
+  {
+    "rel": "lib/payments/subscription-activation.ts",
+    "uid": "84881f8f5aaaa73c849dcf45ee34e22f63474b6e"
+  },
+  {
+    "rel": "lib/performance/browser-cache.ts",
+    "uid": "64c4ea0ad7de8f8b24264bfa5b3ec1bc46631869"
+  },
+  {
+    "rel": "lib/performance/dashboard-shell-client.ts",
+    "uid": "f236b39d7fd50a8d575a0229f1500fce8d335186"
+  },
+  {
+    "rel": "lib/performance/server-cache.ts",
+    "uid": "994fb2dab44bb68d12a4c585ff2ea80231c4889d"
+  },
+  {
+    "rel": "lib/performance/server-memory-cache.ts",
+    "uid": "17b4c52b1ff6788810f48e5905462e4f4e707d5e"
+  },
+  {
+    "rel": "lib/platform/admin-data.ts",
+    "uid": "a6493dfa9b1985a41503b173c3e47f4d65d75e36"
+  },
+  {
+    "rel": "lib/platform/auth.ts",
+    "uid": "7d110d869ed1872ddf3ea1c7f29869a668756a96"
+  },
+  {
+    "rel": "lib/platform/business-capabilities.ts",
+    "uid": "7650d2ea2b9e711ce7fdd5676608bf69904bc74c"
+  },
+  {
+    "rel": "lib/platform/business-categories.ts",
+    "uid": "8eedd1337cdb83e8fdf61a675b672523efc40676"
+  },
+  {
+    "rel": "lib/platform/business-copy.ts",
+    "uid": "1794ff4576ed0ee3b9f4230a9d88ca387e2ea138"
+  },
+  {
+    "rel": "lib/platform/cafe-domain.ts",
+    "uid": "37500add78c1b4fcc995a4cec99ebb19a21bfc8a"
+  },
+  {
+    "rel": "lib/platform/domain-purchase-server.ts",
+    "uid": "a3ff91fdca9ae0c84ba61e7f64f9dfd838f43c2c"
+  },
+  {
+    "rel": "lib/platform/domain-purchase.ts",
+    "uid": "e37ae6bb87483c624d4b6eeb95819b699002e7fd"
+  },
+  {
+    "rel": "lib/platform/experience-flow.ts",
+    "uid": "34109f37a7615beb6ee3f88f05e10d40821df8f6"
+  },
+  {
+    "rel": "lib/platform/feature-access.ts",
+    "uid": "140415345b3d3ab329b62c7830f181ac821bf4b3"
+  },
+  {
+    "rel": "lib/platform/feature-gates.ts",
+    "uid": "381dae186417827e69db9cb4dcf1a81e851104da"
+  },
+  {
+    "rel": "lib/platform/feature-registry.ts",
+    "uid": "e66f301ade12bcba0e82dc26f6ef7f3a77707776"
+  },
+  {
+    "rel": "lib/platform/maintenance.ts",
+    "uid": "932ee075fdc7d330f88925fa52824832ac351cf9"
+  },
+  {
+    "rel": "lib/platform/notification-flow.ts",
+    "uid": "aa03eb83fc79c685deea9f123a7dc8854356ec5d"
+  },
+  {
+    "rel": "lib/platform/order-flow.ts",
+    "uid": "d227be87fce245f4d4401eec663e0590d3f34656"
+  },
+  {
+    "rel": "lib/platform/permissions.ts",
+    "uid": "9fb7ee1c2c389ab34f2313539186aec44427e58e"
+  },
+  {
+    "rel": "lib/platform/public-feature-access.ts",
+    "uid": "ce1a01fff4c88c1eeb69bc7b2163b6724c89adff"
+  },
+  {
+    "rel": "lib/platform/subscription-durations.ts",
+    "uid": "2a2928dfac9fc194e275a0992ff1e5faffe15db9"
+  },
+  {
+    "rel": "lib/platform/subscription.ts",
+    "uid": "2993c2ef5a55b9b334f9b22b00f78cac1895626c"
+  },
+  {
+    "rel": "lib/print/thermal.ts",
+    "uid": "27cfa33877ebacd38e023df97b80d49e092ece6e"
+  },
+  {
+    "rel": "lib/storage/customer-media-server.ts",
+    "uid": "b8573e8ef4ccc81f40d8be567973c7078796f903"
+  },
+  {
+    "rel": "lib/storage/experience-media-server.ts",
+    "uid": "e15255cca16f8811819ece37c971d956241827ca"
+  },
+  {
+    "rel": "lib/storage/platform-content-upload.ts",
+    "uid": "f78eb80cddf46e14dc6abf482515524245365ab8"
+  },
+  {
+    "rel": "lib/storage/private-storage-access.ts",
+    "uid": "1c1fcccc26509d83589a0d966770ea8356946fc4"
+  },
+  {
+    "rel": "lib/storage/public-storage-access.ts",
+    "uid": "93dfde9b8e848d854e898a50ad29620e2e64aa9e"
+  },
+  {
+    "rel": "lib/storage/resolve-storage-url.ts",
+    "uid": "7a04f9658feb9dd629d3b20b910c237b53763671"
+  },
+  {
+    "rel": "lib/storage/subscription-receipt-server.ts",
+    "uid": "214cd58b5b41a162b102306055dc7b58373ec27c"
+  },
+  {
+    "rel": "lib/storage/upload-server.ts",
+    "uid": "807c54e37ad63f93b88768fcc8aac5cab0ec3cd1"
+  },
+  {
+    "rel": "lib/supabase/admin.ts",
+    "uid": "bde25fe846d191b5e23777d4dbfdea6b51fb6863"
+  },
+  {
+    "rel": "lib/supabase/client.ts",
+    "uid": "57f4f3466c4a5eb2bb28b034d9ef72ad7edcf81f"
+  },
+  {
+    "rel": "lib/supabase/middleware.ts",
+    "uid": "f7e2c8cf0e8ac5424bb22b6e085b5ccbc669e3e7"
+  },
+  {
+    "rel": "lib/supabase/server.ts",
+    "uid": "b42ee41523dbaf84b5607ce7308693a07aa1d705"
+  },
+  {
+    "rel": "lib/table-wars/realtime-lite.ts",
+    "uid": "8c07a10108b380dba21dfc751b73f75d7763cfa2"
+  },
+  {
+    "rel": "lib/table-wars/v2-data.ts",
+    "uid": "416068e52ae4db5277ca665ac3bbcf152a00bb25"
+  },
+  {
+    "rel": "lib/table-wars/v2-engine.ts",
+    "uid": "c6c35c4744ae5ba2ff50a1aed7c2acc81e98d8f8"
+  },
+  {
+    "rel": "lib/table-wars/v2-map.ts",
+    "uid": "d88ce20a486c8a811ea89361e8ebb0ce6fba4c74"
+  },
+  {
+    "rel": "lib/table-wars/v2-types.ts",
+    "uid": "d84c317b8509c0ec1d93b10ccbcba66417ef51db"
+  },
+  {
+    "rel": "lib/ui/brand-colors.ts",
+    "uid": "f265de3bcd07091a80596d8b9dcedcbf62afa29b"
+  },
+  {
+    "rel": "lib/ui/brand.ts",
+    "uid": "17ec2ff5587d69c5888606d09f902aa90015ed07"
+  },
+  {
+    "rel": "lib/whatsapp/green-api.ts",
+    "uid": "afaed697a94a6db5d6e41dd090cc3ea3ab2cba53"
+  },
+  {
+    "rel": "lib/whatsapp/meta-cloud.ts",
+    "uid": "e4a0893f3981d3c6ebcd548d393af86d458399ab"
+  },
+  {
+    "rel": "next.config.ts",
+    "uid": "a61c890c671f457d62faa054bc731dc8e04e15ab"
+  },
+  {
+    "rel": "package-lock.json",
+    "uid": "144c3ce81b4c175408d19507f18436bbe9fbaed3"
+  },
+  {
+    "rel": "package.json",
+    "uid": "a2fc443fc3b30e152bad5c4f294a38c595716156"
+  },
+  {
+    "rel": "postcss.config.mjs",
+    "uid": "ccb8b6288e0fe829534eb4c452a48bc27bbcdf01"
+  },
+  {
+    "rel": "proxy.ts",
+    "uid": "58a4d7bfa6b02a9458789fb2471e6cd2cfe896eb"
+  },
+  {
+    "rel": "scripts/apply-barndaksa-cleanup.ps1",
+    "uid": "0d83fafa800702578eeb8752a160676df0c9dc89"
+  },
+  {
+    "rel": "scripts/barndaksa-security-audit.mjs",
+    "uid": "defba2137dbaeca593f9ad70485f768918f93fab"
+  },
+  {
+    "rel": "scripts/barndaksa-source-verify.mjs",
+    "uid": "d75eb3784ac68de6efdd5c05990df02605eafc22"
+  },
+  {
+    "rel": "scripts/check-cashier-operations.mjs",
+    "uid": "c192361f3ec15d9144aa29b2467ad68802835a1b"
+  },
+  {
+    "rel": "scripts/check-dashboard-menu-ui-only.mjs",
+    "uid": "90a886193e101b91013cce6974274d30bdd70eea"
+  },
+  {
+    "rel": "scripts/check-menu-feedback.cjs",
+    "uid": "bc7883e987dddc5ce7368ec70f84c305aae38327"
+  },
+  {
+    "rel": "scripts/check-premium-product-detail-clean-layout.mjs",
+    "uid": "89cc9e10731200e31100d79ea05f06263b896161"
+  },
+  {
+    "rel": "scripts/check-premium-product-detail-safe.mjs",
+    "uid": "6e9fd63cf66da04036610409e50f83bfd22bbb4f"
+  },
+  {
+    "rel": "scripts/check-product-cinematic-showcase.mjs",
+    "uid": "3153609afca05ab664f30885bd3a206f9a9c6af8"
+  },
+  {
+    "rel": "scripts/check-professional-offers-ai-studio.mjs",
+    "uid": "1d16295ab73c493c26f6b2f17179c32e917b66ce"
+  },
+  {
+    "rel": "scripts/check-standalone-menu.cjs",
+    "uid": "c62930f391dd6cdf842536d839a19de37ff56d32"
+  },
+  {
+    "rel": "scripts/check-text-integrity.mjs",
+    "uid": "595836c21fea42c91609db3c6f4cfe17dd7a31e8"
+  },
+  {
+    "rel": "scripts/fix-migration-encoding.mjs",
+    "uid": "354d2f0b87d64d61aed52c753ab8a960a8aea122"
+  },
+  {
+    "rel": "scripts/fix-missing-public-cafe-imports.cjs",
+    "uid": "1c57460fe98e47c92fb925340bab941de96d6842"
+  },
+  {
+    "rel": "scripts/generate-handoff.mjs",
+    "uid": "5f6017a0a828be983eb54436ddf7f92a9a04bb40"
+  },
+  {
+    "rel": "scripts/merge-staging-install.mjs",
+    "uid": "edbf0fdf74c82d64b8a1232f866cefbf23c37774"
+  },
+  {
+    "rel": "scripts/remove-invalid-serveractions.cjs",
+    "uid": "72e94be44f6d0db3f718e1438d442584f9ab2124"
+  },
+  {
+    "rel": "scripts/security-source-gate.mjs",
+    "uid": "29d747f400c9cee929e26cbcb08a4a017735135a"
+  },
+  {
+    "rel": "tsconfig.json",
+    "uid": "9d709ebfacf4df8bf53fad02181158d5480743e0"
+  },
+  {
+    "rel": "types/qrcode-generator.d.ts",
+    "uid": "48c163fe61526e2cd9ce5994773e73aaf63fd8af"
+  }
+]

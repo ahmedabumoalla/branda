@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { loginUnifiedAction, requestPasswordResetAction } from "@/app/actions/auth";
+import { loginOwnerAction, requestPasswordResetAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { NeumoInput, PrimaryButton, SoftCard } from "@/components/ui/design-system";
 import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
@@ -23,14 +25,22 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setLoginMessage("");
+    let result;
     try {
-      const result = await loginUnifiedAction(email, password);
-      if (!result.ok) setLoginMessage(result.message);
+      result = await loginOwnerAction(email, password);
     } catch {
       setLoginMessage("تعذر تسجيل الدخول. حاول مجددًا");
-    } finally {
       setLoading(false);
+      return;
     }
+
+    if (!result.ok || !result.redirectTo) {
+      setLoginMessage(result.message);
+      setLoading(false);
+      return;
+    }
+
+    router.replace(result.redirectTo);
   }
 
   async function submitReset(event: FormEvent) {

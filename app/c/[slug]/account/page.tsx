@@ -12,6 +12,7 @@ import {
 import { ThemedAccountPanel } from "@/components/cafe/themes/themed-account-panel";
 import {
   CustomerBottomDock,
+  CustomerPageHeader,
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
 import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
@@ -53,9 +54,11 @@ import {
   Link as LinkIcon,
   QrCode,
   Send,
+  UserRound,
   X,
 } from "lucide-react";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 
 
 type TabKey = "orders" | "transactions" | "invoices";
@@ -858,12 +861,89 @@ function CustomerPasswordField({
   );
 }
 
+function AccountAccessState({
+  slug,
+  previewThemeId,
+  cafeName,
+  logoUrl,
+  message,
+  loginHref,
+  loading = false,
+  onRetry,
+  businessCategory,
+}: {
+  slug: string;
+  previewThemeId?: string | null;
+  cafeName: string;
+  logoUrl?: string | null;
+  message: string;
+  loginHref: string;
+  loading?: boolean;
+  onRetry?: () => void;
+  businessCategory?: string | null;
+}) {
+  return (
+    <>
+      <div className="mx-auto w-full max-w-xl px-4 pb-8 pt-1 sm:px-6 sm:pt-3">
+        <CustomerPageHeader
+          cafeName={cafeName || slug}
+          logoUrl={logoUrl}
+          title="الحساب"
+          subtitle="بياناتك، طلباتك، وإعدادات الأمان"
+        />
+        <section className="mt-5 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-[0_10px_30px_rgba(23,20,18,0.07)]">
+          {loading ? (
+            <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-[var(--ci-border,#E7D7C6)] border-t-[var(--ci-button-bg,#6B3A25)]" />
+          ) : (
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--ci-button-bg,#6B3A25)]/10 text-[var(--ci-button-bg,#6B3A25)]">
+              <UserRound className="h-6 w-6" />
+            </span>
+          )}
+          <h2 className="mt-4 text-lg font-black text-[var(--ci-page-fg,#311912)]">
+            {loading ? "جاري تجهيز حسابك..." : "سجّل الدخول للوصول إلى حسابك"}
+          </h2>
+          <p className="mt-2 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">{message}</p>
+          {!loading ? (
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <a
+                href={loginHref}
+                className="inline-flex min-h-11 items-center rounded-[14px] bg-[var(--ci-button-bg,#6B3A25)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg,#fff)]"
+              >
+                تسجيل الدخول
+              </a>
+              {onRetry ? (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="inline-flex min-h-11 items-center rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] px-5 py-3 text-sm font-black text-[var(--ci-button-bg,#6B3A25)]"
+                >
+                  إعادة المحاولة
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      </div>
+      <CustomerBottomDock
+        {...defaultCustomerDockItems({
+          slug,
+          previewThemeId,
+          active: "account",
+          isCustomer: false,
+          businessCategory,
+        })}
+      />
+    </>
+  );
+}
+
 function AccountPageInner() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { experience, settings, path, previewThemeId } =
     useCafePageContext(slug);
+  const logoUrl = useResolvedCafeLogoUrl(settings);
   const fileRef = useRef<HTMLInputElement>(null);
   const accountLoginWithNextHref = getCustomerLoginHref(
     slug,
@@ -1363,67 +1443,50 @@ function AccountPageInner() {
 
   if (accountLoading && !customer) {
     return (
-      <div className="rounded-3xl p-8 text-center">
-        <p className="font-black text-[var(--ci-page-fg,#311912)]">
-          جاري تحميل بيانات الحساب...
-        </p>
-      </div>
+      <AccountAccessState
+        slug={slug}
+        previewThemeId={previewThemeId}
+        cafeName={settings.cafeName}
+        logoUrl={logoUrl}
+        message="نحمّل بياناتك ونشاطك الأخير."
+        loginHref={accountLoginWithNextHref}
+        loading
+        businessCategory={settings.businessCategory}
+      />
     );
   }
 
   if (accountError && !customer) {
     return (
-      <div className="rounded-3xl p-8 text-center">
-        <p className="font-black text-[var(--ci-page-fg,#311912)]">
-          {accountError}
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setReloadToken((value) => value + 1);
-            }}
-            className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
-          >
-            إعادة المحاولة
-          </button>
-          <a
-            href={accountLoginWithNextHref}
-            className="rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
-          >
-            تسجيل الدخول
-          </a>
-        </div>
-      </div>
+      <AccountAccessState
+        slug={slug}
+        previewThemeId={previewThemeId}
+        cafeName={settings.cafeName}
+        logoUrl={logoUrl}
+        message={accountError}
+        loginHref={accountLoginWithNextHref}
+        onRetry={() => setReloadToken((value) => value + 1)}
+        businessCategory={settings.businessCategory}
+      />
     );
   }
 
   if (!customer) {
     return (
-      <div className="rounded-3xl p-8 text-center">
-        <p className="font-black text-[var(--ci-page-fg,#311912)]">
-          {redirectingToLogin
+      <AccountAccessState
+        slug={slug}
+        previewThemeId={previewThemeId}
+        cafeName={settings.cafeName}
+        logoUrl={logoUrl}
+        message={
+          redirectingToLogin
             ? "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة."
-            : "لم يتم العثور على جلسة عميل نشطة."}
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setReloadToken((value) => value + 1);
-            }}
-            className="rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-button-fg,#fff)]"
-          >
-            إعادة المحاولة
-          </button>
-          <a
-            href={accountLoginWithNextHref}
-            className="rounded-2xl border border-[var(--ci-primary-bg,var(--barndaksa-brand-brown))] px-5 py-3 font-black text-[var(--ci-primary-bg,var(--barndaksa-brand-brown))]"
-          >
-            تسجيل الدخول
-          </a>
-        </div>
-      </div>
+            : "لم يتم العثور على جلسة عميل نشطة."
+        }
+        loginHref={accountLoginWithNextHref}
+        onRetry={() => setReloadToken((value) => value + 1)}
+        businessCategory={settings.businessCategory}
+      />
     );
   }
 
@@ -1455,6 +1518,7 @@ function AccountPageInner() {
         slug={slug}
         experience={experience}
         cafeName={settings.cafeName}
+        logoUrl={logoUrl}
         homeHref={path()}
         customer={customer}
         activeTab={activeTab}

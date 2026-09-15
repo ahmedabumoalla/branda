@@ -1,6 +1,14 @@
 import { DashboardAppLayout } from "@/components/dashboard/dashboard-app-layout";
 import { recordCurrentBrandDashboardEntry } from "@/lib/data/operation-events";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
+import { IBM_Plex_Sans_Arabic } from "next/font/google";
+
+const dashboardFont = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  fallback: ["Tahoma", "Arial", "sans-serif"],
+});
 
 export default async function DashboardLayout({
   children,
@@ -13,7 +21,7 @@ export default async function DashboardLayout({
   ]);
 
   return (
-    <main dir="rtl" className="min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]">
+    <main dir="rtl" className={`${dashboardFont.className} min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]`}>
       <DashboardAppLayout
         maintenanceSession={
           maintenanceSession

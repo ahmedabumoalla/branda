@@ -1,0 +1,335 @@
+"use client";
+
+import { CircleDot, ExternalLink, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { deleteBranchAction, saveBranchAction } from "@/app/actions/branches";
+import {
+  BentoCard,
+  BentoGrid,
+  DashboardPageShell,
+  NeumoInput,
+  PrimaryButton,
+  SoftCard,
+  StatPill,
+} from "@/components/ui/design-system";
+import { GoogleMapPicker } from "@/components/maps/google-map-picker";
+import { buildMapboxMapUrl, DEFAULT_BRANCH_GEOFENCE_RADIUS_M, type CafeBranch } from "@/lib/mock/branches";
+
+type Props = {
+  initialBranches: CafeBranch[];
+  configError?: string;
+};
+
+type LocationValue = { lat: number; lng: number };
+
+export function BranchesPageClient({ initialBranches, configError }: Props) {
+  const [branches, setBranches] = useState<CafeBranch[]>(initialBranches);
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [phone, setPhone] = useState("");
+  const [workingHours, setWorkingHours] = useState("");
+  const [location, setLocation] = useState<LocationValue | null>(null);
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleMapChange = useCallback((value: LocationValue) => setLocation(value), []);
+
+  function resetForm() {
+    setName("");
+    setAddress("");
+    setCity("");
+    setPhone("");
+    setWorkingHours("");
+    setLocation(null);
+    setEditingBranchId(null);
+  }
+
+  function editBranch(branch: CafeBranch) {
+    setName(branch.name);
+    setAddress(branch.address);
+    setCity(branch.city);
+    setPhone(branch.phone ?? "");
+    setWorkingHours(branch.workingHours ?? "");
+    setLocation(
+      branch.lat != null && branch.lng != null
+        ? { lat: branch.lat, lng: branch.lng }
+        : null
+    );
+    setEditingBranchId(branch.id);
+    setMessage("يمكنك تعديل بيانات الفرع ثم حفظها.");
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setMessage("المتصفح لا يدعم تحديد الموقع");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: Number(position.coords.latitude.toFixed(6)),
+          lng: Number(position.coords.longitude.toFixed(6)),
+        });
+        setMessage("تم تحديد الموقع الحالي");
+      },
+      () => setMessage("تعذر قراءة الموقع الحالي")
+    );
+  }
+
+  async function saveBranch() {
+    if (!name.trim() || !address.trim() || !city.trim() || !location) {
+      setMessage("اكتب بيانات الفرع وحدد موقعه على الخريطة");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const saved = await saveBranchAction({
+        name: name.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        phone: phone.trim() || undefined,
+        workingHours: workingHours.trim() || "غير محدد",
+        lat: location.lat,
+        lng: location.lng,
+        mapUrl: buildMapboxMapUrl(location.lat, location.lng),
+        geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
+        welcomeMessage: `أهلًا بك في ${name.trim()}، سعداء بزيارتك`,
+        active: editingBranchId
+          ? branches.find((branch) => branch.id === editingBranchId)?.active ?? true
+          : true,
+        id: editingBranchId ?? crypto.randomUUID(),
+      });
+
+      setBranches((current) => {
+        if (editingBranchId) {
+          return current.map((item) => (item.id === saved.id ? saved : item));
+        }
+        return [saved, ...current];
+      });
+      resetForm();
+      setMessage("تم حفظ الفرع");
+    } catch {
+      setMessage("تعذر حفظ الفرع");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleVisibility(branch: CafeBranch) {
+    try {
+      const saved = await saveBranchAction({ ...branch, active: !branch.active });
+      setBranches((current) => current.map((item) => (item.id === branch.id ? saved : item)));
+    } catch {
+      setMessage("تعذر تحديث حالة الفرع");
+    }
+  }
+
+  async function removeBranch(branchId: string) {
+    try {
+      await deleteBranchAction(branchId);
+      setBranches((current) => current.filter((item) => item.id !== branchId));
+    } catch {
+      setMessage("تعذر حذف الفرع");
+    }
+  }
+
+  const activeCount = branches.filter((branch) => branch.active).length;
+
+  return (
+    <div dir="rtl">
+      <DashboardPageShell
+        title="الفروع والمواقع"
+        subtitle="حدد مواقع الفروع على الخريطة لتظهر للعملاء في تطبيق برندة والفرع الالكتروني"
+      >
+        {configError ? (
+          <SoftCard className="mb-6 border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+            {configError}
+          </SoftCard>
+        ) : null}
+
+        {message ? (
+          <SoftCard className="mb-6 border border-[#D9A33F]/25 bg-[#FFF8EF] p-4 text-sm font-black text-[#6B3A25]">
+            {message}
+          </SoftCard>
+        ) : null}
+
+        <BentoGrid className="mb-6">
+          <BentoCard variant="white">
+            <StatPill label="إجمالي الفروع" value={branches.length} />
+          </BentoCard>
+          <BentoCard variant="white">
+            <StatPill label="فروع نشطة" value={activeCount} />
+          </BentoCard>
+          <BentoCard variant="white" span="2">
+            <StatPill
+              label="مدن مغطاة"
+              value={new Set(branches.map((branch) => branch.city)).size}
+              hint="مواقع متاحة للعملاء"
+            />
+          </BentoCard>
+        </BentoGrid>
+
+        <BentoGrid>
+          <BentoCard variant="white" span="2">
+            <div className="grid gap-5">
+              {branches.map((branch) => (
+                <SoftCard key={branch.id}>
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3A2117] text-[#F8F4EF]">
+                        <MapPin className="h-7 w-7" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black text-[#3A2117]">{branch.name}</h2>
+                        <p className="mt-2 font-bold text-[#7A6255]">{branch.address}</p>
+                        <p className="mt-1 text-sm font-bold text-[#7A6255]">
+                          {branch.city} {branch.workingHours ? ` ${branch.workingHours}` : ""}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-2xl bg-[#F8F4EF] px-3 py-1 text-xs font-black text-[#3A2117]">
+                            <CircleDot className="h-3.5 w-3.5" />
+                            نطاق ترحيب {branch.geofenceRadiusM ?? DEFAULT_BRANCH_GEOFENCE_RADIUS_M} متر
+                          </span>
+                          {branch.welcomeMessage ? (
+                            <span className="rounded-2xl bg-[#FFF8EF] px-3 py-1 text-xs font-black text-[#6B3A25]">
+                              {branch.welcomeMessage}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={branch.mapUrl || buildMapboxMapUrl(branch.lat, branch.lng)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#3A2117] px-5 py-3 font-black text-[#F8F4EF]"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        فتح الخريطة
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => editBranch(branch)}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#FFF8EF] px-5 py-3 font-black text-[#6B3A25]"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        تعديل
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleVisibility(branch)}
+                        className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+                      >
+                        {branch.active ? "إخفاء" : "إظهار"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void removeBranch(branch.id)}
+                        className="rounded-2xl bg-red-50 px-5 py-3 font-black text-red-700"
+                      >
+                        <Trash2 className="inline h-4 w-4" /> حذف
+                      </button>
+                    </div>
+                  </div>
+                </SoftCard>
+              ))}
+
+              {!branches.length ? (
+                <p className="py-8 text-center font-bold text-[#7A6255]">لا توجد فروع بعد</p>
+              ) : null}
+            </div>
+          </BentoCard>
+
+          <BentoCard variant="white" span="2">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
+              <Plus className="h-5 w-5" />
+              {editingBranchId ? "تعديل فرع" : "إضافة فرع"}
+            </h2>
+
+            <div className="space-y-3">
+              <NeumoInput value={name} onChange={(event) => setName(event.target.value)} placeholder="اسم الفرع" />
+              <NeumoInput value={address} onChange={(event) => setAddress(event.target.value)} placeholder="العنوان" />
+              <NeumoInput value={city} onChange={(event) => setCity(event.target.value)} placeholder="المدينة" />
+              <NeumoInput value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="رقم الفرع اختياري" />
+              <NeumoInput value={workingHours} onChange={(event) => setWorkingHours(event.target.value)} placeholder="أوقات العمل اختياري" />
+
+              <SoftCard className="p-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-black text-[#3A2117]">موقع الفرع على Mapbox</p>
+                    <p className="mt-1 text-xs font-bold text-[#7A6255]">
+                      حرّك الخريطة أو اسحب الدبوس، وسيتم حفظ الموقع مع نطاق ترحيب 50 متر حول الفرع
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={useCurrentLocation}
+                    className="rounded-2xl bg-[#3A2117] px-4 py-3 text-sm font-black text-white"
+                  >
+                    تحديد موقعي الحالي
+                  </button>
+                </div>
+
+                <GoogleMapPicker
+                  value={location}
+                  onChange={handleMapChange}
+                  heightClassName="h-[420px]"
+                />
+
+                {location ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]">
+                      خط العرض {location.lat}
+                    </div>
+                    <div className="rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117]">
+                      خط الطول {location.lng}
+                    </div>
+                    <a
+                      href={buildMapboxMapUrl(location.lat, location.lng)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl bg-[#FFF8EF] px-4 py-3 text-center text-sm font-black text-[#6B3A25]"
+                    >
+                      فتح في Mapbox
+                    </a>
+                  </div>
+                ) : null}
+
+                <div className="mt-4 rounded-2xl border border-[#E5D8CD] bg-white p-4 text-sm font-bold leading-7 text-[#7A6255]">
+                  سيتم حفظ دائرة ترحيب حول الفرع بنطاق 50 متر، وعند دخول العميل هذا النطاق تظهر له رسالة ترحيبية تلقائيًا في صفحة العلامة.
+                </div>
+              </SoftCard>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <PrimaryButton type="button" onClick={() => void saveBranch()} disabled={saving} className="w-full">
+                  {saving
+                    ? "جاري الحفظ"
+                    : editingBranchId
+                      ? "حفظ تعديل الفرع والموقع"
+                      : "حفظ الفرع والموقع"}
+                </PrimaryButton>
+                {editingBranchId ? (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="rounded-2xl bg-[#F8F4EF] px-5 py-3 font-black text-[#3A2117]"
+                  >
+                    إلغاء
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </BentoCard>
+        </BentoGrid>
+      </DashboardPageShell>
+    </div>
+  );
+}

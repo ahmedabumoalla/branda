@@ -22,6 +22,7 @@ export default async function DashboardPage() {
         cafeName="العلامة"
         businessCategory="cafes_coffee"
         ownerName=""
+        logoUrl={undefined}
         summary={<DashboardSectionSkeleton />}
         recentOrders={<DashboardSectionSkeleton rows={3} />}
         trend={<DashboardSectionSkeleton rows={2} />}
@@ -41,6 +42,7 @@ export default async function DashboardPage() {
         cafeName={settings.cafeName || cafe.name}
         businessCategory={cafe.businessCategory}
         ownerName={settings.ownerName || ""}
+        logoUrl={settings.logoDataUrl}
         summary={
           <Suspense fallback={<DashboardSectionSkeleton />}>
             <DashboardSummarySection />
@@ -67,6 +69,7 @@ export default async function DashboardPage() {
         cafeName="العلامة"
         businessCategory="cafes_coffee"
         ownerName=""
+        logoUrl={undefined}
         summary={<DashboardSectionSkeleton />}
         recentOrders={<DashboardSectionSkeleton rows={3} />}
         trend={<DashboardSectionSkeleton rows={2} />}

@@ -9,6 +9,24 @@ import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
+type MenuLoadResult =
+  | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>> }
+  | { status: "blocked" }
+  | { status: "error" };
+
+async function loadDashboardMenu(): Promise<MenuLoadResult> {
+  try {
+    const features = await getOwnerFeatureCodes();
+    if (!featureCodesAllow(features, "menu")) {
+      return { status: "blocked" };
+    }
+
+    return { status: "ready", menu: await getOwnerMenu() };
+  } catch {
+    return { status: "error" };
+  }
+}
+
 export default async function DashboardMenuPage() {
   if (!isSupabaseConfigured()) {
     return (
@@ -20,21 +38,13 @@ export default async function DashboardMenuPage() {
     );
   }
 
-  try {
-    const features = await getOwnerFeatureCodes();
-    if (!featureCodesAllow(features, "menu")) {
-      return <DashboardFeatureBlockedState title="المنيو والمنتجات" />;
-    }
+  const result = await loadDashboardMenu();
 
-    const menu = await getOwnerMenu();
-    return (
-      <MenuPageClient
-        initialProducts={menu.products}
-        initialCategories={menu.categories}
-        businessCategory={menu.cafe.businessCategory}
-      />
-    );
-  } catch {
+  if (result.status === "blocked") {
+    return <DashboardFeatureBlockedState title="المنيو والمنتجات" />;
+  }
+
+  if (result.status === "error") {
     return (
       <MenuPageClient
         initialProducts={[]}
@@ -43,4 +53,19 @@ export default async function DashboardMenuPage() {
       />
     );
   }
+
+  const menuDataKey = [
+    ...result.menu.products.map((product) => product.id).sort(),
+    "categories",
+    ...result.menu.categories.map((category) => category.id).sort(),
+  ].join(":");
+
+  return (
+    <MenuPageClient
+      key={menuDataKey}
+      initialProducts={result.menu.products}
+      initialCategories={result.menu.categories}
+      businessCategory={result.menu.cafe.businessCategory}
+    />
+  );
 }

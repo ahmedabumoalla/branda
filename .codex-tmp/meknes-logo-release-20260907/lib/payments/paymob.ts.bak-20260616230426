@@ -1,0 +1,301 @@
+import crypto from "node:crypto";
+
+export type PaymobIntentionInput = {
+  subscriptionId: string;
+  cafeId: string;
+  cafeName: string;
+  planName: string;
+  amountSar: number;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  returnUrl: string;
+  notificationUrl: string;
+};
+
+export type PaymobIntentionResult = {
+  intentionId: string;
+  clientSecret: string;
+  checkoutUrl: string;
+  raw: Record<string, unknown>;
+};
+
+const PAYMOB_DEFAULT_BASE_BY_REGION: Record<string, string> = {
+  eg: "https://accept.paymob.com",
+  egypt: "https://accept.paymob.com",
+  ksa: "https://ksa.paymob.com",
+  sa: "https://ksa.paymob.com",
+  saudi: "https://ksa.paymob.com",
+  uae: "https://uae.paymob.com",
+  ae: "https://uae.paymob.com",
+  oman: "https://oman.paymob.com",
+  om: "https://oman.paymob.com",
+};
+
+function trimSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function getPaymobRegion() {
+  return (process.env.PAYMOB_REGION || "ksa").trim().toLowerCase();
+}
+
+export function getPaymobApiBaseUrl() {
+  const explicit = process.env.PAYMOB_API_BASE_URL?.trim();
+  if (explicit) return trimSlash(explicit);
+  return trimSlash(PAYMOB_DEFAULT_BASE_BY_REGION[getPaymobRegion()] ?? PAYMOB_DEFAULT_BASE_BY_REGION.ksa);
+}
+
+export function getPaymobCheckoutBaseUrl() {
+  const explicit = process.env.PAYMOB_CHECKOUT_BASE_URL?.trim();
+  if (explicit) return trimSlash(explicit);
+  return `${getPaymobApiBaseUrl()}/unifiedcheckout`;
+}
+
+export function isPaymobConfigured() {
+  return Boolean(
+    process.env.PAYMOB_SECRET_KEY?.trim() &&
+      process.env.PAYMOB_PUBLIC_KEY?.trim() &&
+      getPaymobPaymentMethodIds().length > 0
+  );
+}
+
+function requirePaymobSecretKey() {
+  const key = process.env.PAYMOB_SECRET_KEY?.trim();
+  if (!key) throw new Error("PAYMOB_SECRET_KEY is missing");
+  return key;
+}
+
+function requirePaymobPublicKey() {
+  const key = process.env.PAYMOB_PUBLIC_KEY?.trim();
+  if (!key) throw new Error("PAYMOB_PUBLIC_KEY is missing");
+  return key;
+}
+
+export function getPaymobCurrency() {
+  return (process.env.PAYMOB_CURRENCY?.trim().toUpperCase() || "SAR");
+}
+
+export function getPaymobPaymentMethodIds() {
+  const combined = [
+    process.env.PAYMOB_PAYMENT_METHOD_IDS,
+    process.env.PAYMOB_CARD_INTEGRATION_ID,
+    process.env.PAYMOB_APPLE_PAY_INTEGRATION_ID,
+    process.env.PAYMOB_MADA_INTEGRATION_ID,
+    process.env.PAYMOB_STCPAY_INTEGRATION_ID,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  return combined
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+}
+
+function moneyToMinorUnits(value: number) {
+  return Math.max(0, Math.round(Number(value || 0) * 100));
+}
+
+function fallbackBillingValue(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized || fallback;
+}
+
+export function buildPaymobMerchantOrderId(subscriptionId: string) {
+  return `barndaksa-sub-${subscriptionId}`;
+}
+
+export function extractSubscriptionIdFromPaymobPayload(payload: unknown): string | null {
+  const obj = (payload && typeof payload === "object" ? payload : {}) as Record<string, any>;
+  const nested = obj.obj && typeof obj.obj === "object" ? obj.obj : obj;
+  const candidates = [
+    obj.subscription_id,
+    obj.subscriptionId,
+    obj.merchant_order_id,
+    obj.merchantOrderId,
+    obj.special_reference,
+    obj.specialReference,
+    obj.order_id,
+    nested.subscription_id,
+    nested.subscriptionId,
+    nested.merchant_order_id,
+    nested.merchantOrderId,
+    nested.special_reference,
+    nested.specialReference,
+    nested.order?.merchant_order_id,
+    nested.order?.merchantOrderId,
+    nested.order?.special_reference,
+    nested.order?.specialReference,
+    nested.order?.id,
+    nested.extras?.subscription_id,
+    nested.extras?.subscriptionId,
+    nested.data?.subscription_id,
+    nested.data?.subscriptionId,
+  ];
+
+  for (const candidate of candidates) {
+    const value = typeof candidate === "string" || typeof candidate === "number" ? String(candidate) : "";
+    if (!value) continue;
+    const directUuid = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+    if (directUuid) return directUuid;
+    const prefixed = value.match(/barndaksa-sub-([0-9a-f-]{36})/i)?.[1];
+    if (prefixed) return prefixed;
+  }
+
+  return null;
+}
+
+export function isPaymobTransactionSuccess(payload: unknown) {
+  const obj = (payload && typeof payload === "object" ? payload : {}) as Record<string, any>;
+  const nested = obj.obj && typeof obj.obj === "object" ? obj.obj : obj;
+  const success = nested.success ?? obj.success ?? nested.is_success ?? nested.status;
+  if (success === true) return true;
+  if (typeof success === "string") return ["true", "success", "succeeded", "paid", "completed", "approved"].includes(success.toLowerCase());
+  return false;
+}
+
+export function getPaymobTransactionId(payload: unknown) {
+  const obj = (payload && typeof payload === "object" ? payload : {}) as Record<string, any>;
+  const nested = obj.obj && typeof obj.obj === "object" ? obj.obj : obj;
+  return String(nested.id ?? obj.id ?? nested.transaction_id ?? nested.transactionId ?? "");
+}
+
+export function getPaymobOrderId(payload: unknown) {
+  const obj = (payload && typeof payload === "object" ? payload : {}) as Record<string, any>;
+  const nested = obj.obj && typeof obj.obj === "object" ? obj.obj : obj;
+  return String(nested.order?.id ?? nested.order_id ?? obj.order_id ?? "");
+}
+
+export async function createPaymobPaymentIntention(input: PaymobIntentionInput): Promise<PaymobIntentionResult> {
+  const secretKey = requirePaymobSecretKey();
+  const publicKey = requirePaymobPublicKey();
+  const amount = moneyToMinorUnits(input.amountSar);
+  const paymentMethods = getPaymobPaymentMethodIds();
+
+  if (amount <= 0) throw new Error("Paymob amount must be greater than zero");
+  if (!paymentMethods.length) throw new Error("Paymob payment method ids are missing");
+
+  const firstName = fallbackBillingValue(input.cafeName, "Barndaksa").slice(0, 60);
+  const email = fallbackBillingValue(input.customerEmail, "billing@barndaksa.com").slice(0, 120);
+  const phone = fallbackBillingValue(input.customerPhone, "+966500000000").slice(0, 30);
+  const merchantOrderId = buildPaymobMerchantOrderId(input.subscriptionId);
+
+  const body = {
+    amount,
+    currency: getPaymobCurrency(),
+    payment_methods: paymentMethods,
+    special_reference: merchantOrderId,
+    merchant_order_id: merchantOrderId,
+    notification_url: input.notificationUrl,
+    redirection_url: input.returnUrl,
+    customer: {
+      first_name: firstName,
+      last_name: "Brand",
+      email,
+      phone_number: phone,
+    },
+    billing_data: {
+      apartment: "NA",
+      first_name: firstName,
+      last_name: "Brand",
+      street: "NA",
+      building: "NA",
+      phone_number: phone,
+      city: "Riyadh",
+      country: "SA",
+      email,
+      floor: "NA",
+      state: "Riyadh",
+    },
+    items: [
+      {
+        name: `Barndaksa ${input.planName}`.slice(0, 120),
+        amount,
+        description: `اشتراك ${input.planName}`.slice(0, 120),
+        quantity: 1,
+      },
+    ],
+    extras: {
+      source: "barndaksa_subscription",
+      subscription_id: input.subscriptionId,
+      cafe_id: input.cafeId,
+    },
+  };
+
+  const response = await fetch(`${getPaymobApiBaseUrl()}/v1/intention/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${secretKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as Record<string, any>;
+
+  if (!response.ok || !payload.client_secret) {
+    throw new Error(`Paymob intention failed: ${response.status} ${JSON.stringify(payload)}`);
+  }
+
+  const clientSecret = String(payload.client_secret);
+  const checkoutUrl = `${getPaymobCheckoutBaseUrl()}/?publicKey=${encodeURIComponent(publicKey)}&clientSecret=${encodeURIComponent(clientSecret)}`;
+
+  return {
+    intentionId: String(payload.id ?? payload.intention_id ?? payload.payment_intention_id ?? merchantOrderId),
+    clientSecret,
+    checkoutUrl,
+    raw: payload,
+  };
+}
+
+function canonicalizeForWeakHmac(payload: unknown) {
+  const obj = (payload && typeof payload === "object" ? payload : {}) as Record<string, any>;
+  const nested = obj.obj && typeof obj.obj === "object" ? obj.obj : obj;
+  const keys = [
+    "amount_cents",
+    "created_at",
+    "currency",
+    "error_occured",
+    "has_parent_transaction",
+    "id",
+    "integration_id",
+    "is_3d_secure",
+    "is_auth",
+    "is_capture",
+    "is_refunded",
+    "is_standalone_payment",
+    "is_voided",
+    "order.id",
+    "owner",
+    "pending",
+    "source_data.pan",
+    "source_data.sub_type",
+    "source_data.type",
+    "success",
+  ];
+
+  const read = (key: string) => key.split(".").reduce<any>((acc, part) => (acc == null ? undefined : acc[part]), nested);
+  return keys.map((key) => {
+    const value = read(key);
+    if (value === undefined || value === null) return "";
+    return String(value);
+  }).join("");
+}
+
+export function verifyPaymobWebhookHmac(payload: unknown, providedHmac?: string | null) {
+  const secret = process.env.PAYMOB_HMAC_SECRET?.trim();
+  if (!secret) return { configured: false, verified: false };
+  if (!providedHmac) return { configured: true, verified: false };
+
+  const expected = crypto.createHmac("sha512", secret).update(canonicalizeForWeakHmac(payload)).digest("hex");
+  return {
+    configured: true,
+    verified: expected.toLowerCase() === providedHmac.toLowerCase(),
+  };
+}
+
+export function isPaymobHmacRequired() {
+  return process.env.PAYMOB_REQUIRE_HMAC === "true";
+}

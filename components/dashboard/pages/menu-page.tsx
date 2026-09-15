@@ -22,6 +22,7 @@ import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-ca
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
 import { type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 function ModalLoadingPlaceholder() {
   return (
@@ -189,21 +190,23 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
 
   if (configError) {
     return (
-      <DashboardPageShell title={menuTitle} subtitle={configError}>
-        <BentoCard variant="white" span="4">
-          <p className="font-bold text-[#806A5E]">{configError}</p>
-        </BentoCard>
-      </DashboardPageShell>
+      <div dir="rtl" className={styles.page}>
+        <DashboardPageShell title={menuTitle} subtitle={configError}>
+          <BentoCard variant="white" span="4">
+            <p className="font-medium text-[#806A5E]">{configError}</p>
+          </BentoCard>
+        </DashboardPageShell>
+      </div>
     );
   }
 
   return (
-    <div dir="rtl">
+    <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
         subtitle={copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
         action={
-          <div className="flex flex-wrap gap-2">
+          <div className={styles.headerActions}>
             <button
               type="button"
               onClick={() => {
@@ -211,7 +214,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                 setImportOpen(true);
               }}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-[#3A2117] shadow"
+              className={styles.secondaryAction}
             >
               <Upload className="h-5 w-5" />
               {importLabel}
@@ -223,7 +226,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               setOpen(true);
             }}
             disabled={saving}
-            className="inline-flex items-center gap-2"
+            className={styles.primaryAction}
           >
             <Plus className="h-5 w-5" />
             {addLabel}
@@ -231,39 +234,40 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
         }
       >
-        <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="ملخص المنيو">
+        <section className={styles.summaryGrid} aria-label="ملخص المنيو">
           {[
             [copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
             [copy.kind === "events" ? "تذاكر متاحة" : "متاح للبيع", availableCount],
             ["التصنيفات", categories.length],
             ["نتائج البحث", filtered.length],
-          ].map(([label, value]) => (
-            <div key={String(label)} className="min-w-0 rounded-2xl border border-[#E7D7C6] bg-white px-4 py-3 shadow-[4px_6px_16px_rgba(49,25,18,0.04)]">
-              <p className="truncate text-[11px] font-black text-[#806A5E] sm:text-xs">{label}</p>
-              <p className="mt-1 text-xl font-black text-[#3A2117]">{value}</p>
+          ].map(([label, value], index) => (
+            <div key={String(label)} className={styles.metricCard}>
+              <span className={styles.metricIndex}>{String(index + 1).padStart(2, "0")}</span>
+              <p className={styles.metricLabel}>{label}</p>
+              <p className={styles.metricValue}>{value}</p>
             </div>
           ))}
         </section>
 
-        <section className="sticky top-2 z-20 mb-5 rounded-2xl border border-[#E7D7C6] bg-white/95 p-3 shadow-[8px_10px_24px_rgba(49,25,18,0.08)] backdrop-blur">
-          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
-            <div className="relative min-w-0">
-              <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#7A6255]" />
+        <section className={styles.toolbar}>
+          <div className={styles.toolbarRow}>
+            <div className={styles.searchWrap}>
+              <Search className={styles.searchIcon} />
               <NeumoInput
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={`ابحث باسم ${copy.itemSingular} أو ${copy.itemPlural} أو تصنيف`}
-                className="min-w-0 pr-12"
+                className={styles.searchInput}
               />
             </div>
-            <p className="whitespace-nowrap text-xs font-black text-[#806A5E]">
+            <p className={styles.resultCounter}>
               {filtered.length} نتيجة
             </p>
             <button
               type="button"
               onClick={() => setCategoriesOpen((current) => !current)}
               aria-expanded={categoriesOpen}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F8F4EF] px-4 text-sm font-black text-[#3A2117] transition hover:bg-[#EFE8DF]"
+              className={styles.categoryButton}
             >
               <SlidersHorizontal className="h-4 w-4" />
               إدارة التصنيفات
@@ -271,14 +275,14 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             </button>
           </div>
 
-          <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+          <div className={styles.categoryRail}>
             <button
               type="button"
               onClick={() => setCategoryFilter("الكل")}
-              className={`min-h-9 shrink-0 rounded-full px-4 text-xs font-black ${
+              className={`${styles.filterChip} ${
                 categoryFilter === "الكل"
-                  ? "bg-[#3A2117] text-[#F8F4EF]"
-                  : "bg-[#F8F4EF] text-[#3A2117]"
+                  ? styles.filterChipActive
+                  : ""
               }`}
             >
               الكل
@@ -288,10 +292,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                 type="button"
                 key={c.id}
                 onClick={() => setCategoryFilter(c.id)}
-                className={`min-h-9 max-w-[14rem] shrink-0 truncate rounded-full px-4 text-xs font-black ${
+                className={`${styles.filterChip} max-w-[14rem] truncate ${
                   categoryFilter === c.id
-                    ? "bg-[#3A2117] text-[#F8F4EF]"
-                    : "bg-[#F8F4EF] text-[#3A2117]"
+                    ? styles.filterChipActive
+                    : ""
                 }`}
                 title={c.name}
               >
@@ -314,10 +318,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         ) : null}
 
         <section className="min-w-0">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div className={styles.catalogHeader}>
             <div>
-              <h2 className="text-xl font-black text-[#3A2117]">المنتجات</h2>
-              <p className="mt-1 text-xs font-bold text-[#806A5E]">
+              <h2 className={styles.catalogTitle}>المنتجات</h2>
+              <p className={styles.catalogMeta}>
                 {filtered.length} نتيجة
                 {categoryFilter === "الكل"
                   ? " · كل التصنيفات"
@@ -326,15 +330,16 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             </div>
           </div>
           {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#D8C7B7] bg-white/60 px-4 py-12 text-center font-bold text-[#806A5E]">
+            <div className={styles.emptyState}>
               {copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
-            <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((product) => (
+            <div className={styles.productGrid}>
+              {filtered.map((product, index) => (
                   <MenuProductCard
                     key={product.id}
                     product={product}
+                    index={index}
                     categoryLabel={getCategoryNameById(
                       categories,
                       product.categoryId,

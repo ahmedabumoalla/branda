@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+Age: 0
+Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate
+Content-Type: text/html; charset=utf-8
+Date: Mon, 07 Sep 2026 12:39:51 GMT
+Server: Vercel
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+X-Matched-Path: /menu/[slug]
+X-Nextjs-Rewritten-Path: /menu/shahi-w-hail
+X-Powered-By: Next.js
+X-Robots-Tag: noindex
+X-Vercel-Cache: MISS
+X-Vercel-Id: bom1::iad1::vv92x-1788784791014-75dc04d8e1c0
+Transfer-Encoding: chunked
+

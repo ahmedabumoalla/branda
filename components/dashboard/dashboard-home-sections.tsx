@@ -1,10 +1,19 @@
 import Link from "next/link";
-import { AlertTriangle, Boxes, Clock3, ShoppingBag, Users } from "lucide-react";
+import type { CSSProperties } from "react";
+import {
+  AlertTriangle,
+  ArrowUpLeft,
+  Boxes,
+  Clock3,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 import {
   getDashboardOrderTrend,
   getDashboardRecentOrders,
   getDashboardSummary,
 } from "@/lib/data/dashboard-home";
+import styles from "./dashboard-home.module.css";
 
 const statusLabels: Record<string, string> = {
   pending_cafe: "طلب جديد",
@@ -17,119 +26,202 @@ const statusLabels: Record<string, string> = {
   not_completed: "غير مكتمل",
 };
 
+const statusTones: Record<string, string> = {
+  pending_cafe: styles.statusNew,
+  accepted: styles.statusAccepted,
+  preparing: styles.statusPreparing,
+  ready: styles.statusReady,
+  completed: styles.statusCompleted,
+  rejected: styles.statusDanger,
+  cancelled: styles.statusMuted,
+  not_completed: styles.statusDanger,
+};
+
 export function DashboardSectionSkeleton({ rows = 1 }: { rows?: number }) {
   return (
-    <div className="animate-pulse rounded-[28px] border border-[#E7D7C6] bg-white p-5">
+    <div className={styles.skeleton} aria-label="جاري تحميل البيانات" aria-busy="true">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="mb-3 h-16 rounded-2xl bg-[#F3ECE5] last:mb-0" />
+        <div key={index} className={styles.skeletonRow} />
       ))}
     </div>
   );
 }
 
 export async function DashboardSummarySection() {
+  let summary: Awaited<ReturnType<typeof getDashboardSummary>>;
   try {
-    const summary = await getDashboardSummary();
-    const cards = [
-      { label: "طلبات اليوم", value: summary.todayOrders, icon: ShoppingBag },
-      { label: "تحتاج إجراء", value: summary.actionOrders, icon: Clock3 },
-      { label: "إجمالي العملاء", value: summary.customers, icon: Users },
-      { label: "المنتجات النشطة", value: summary.activeProducts, icon: Boxes },
-    ];
-
-    return (
-      <section aria-label="مؤشرات الأداء" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(({ label, value, icon: Icon }) => (
-          <article
-            key={label}
-            className="group rounded-[26px] border border-[#E7D7C6] bg-white p-5 shadow-[0_14px_45px_rgba(49,25,18,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_55px_rgba(49,25,18,0.10)]"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-bold text-[#806A5E]">{label}</p>
-                <p className="mt-3 text-4xl font-black tracking-tight text-[#311912]">{value}</p>
-              </div>
-              <span className="rounded-2xl bg-[#F8EFD8] p-3 text-[#6B3A25]">
-                <Icon className="h-5 w-5" />
-              </span>
-            </div>
-          </article>
-        ))}
-        {summary.unavailableProducts > 0 ? (
-          <div className="sm:col-span-2 xl:col-span-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-            <AlertTriangle className="h-5 w-5" />
-            يوجد {summary.unavailableProducts} منتج غير متاح ويحتاج إلى مراجعة.
-          </div>
-        ) : null}
-      </section>
-    );
+    summary = await getDashboardSummary();
   } catch {
-    return <p className="rounded-2xl bg-red-50 p-4 font-bold text-red-700">تعذر تحميل المؤشرات الآن.</p>;
+    return <p className={styles.errorState}>تعذر تحميل المؤشرات الآن.</p>;
   }
+
+  const cards = [
+    { label: "طلبات اليوم", value: summary.todayOrders, icon: ShoppingBag, tone: "gold" },
+    { label: "تحتاج إجراء", value: summary.actionOrders, icon: Clock3, tone: "coral" },
+    { label: "إجمالي العملاء", value: summary.customers, icon: Users, tone: "blue" },
+    { label: "المنتجات النشطة", value: summary.activeProducts, icon: Boxes, tone: "green" },
+  ];
+
+  return (
+    <section aria-label="مؤشرات الأداء" className={styles.metricsGrid}>
+      {cards.map(({ label, value, icon: Icon, tone }, index) => (
+        <article
+          key={label}
+          className={styles.metricCard}
+          data-tone={tone}
+          style={{ "--metric-delay": `${index * 85}ms` } as CSSProperties}
+        >
+          <div className={styles.metricTopline}>
+            <span className={styles.metricIndex}>{String(index + 1).padStart(2, "0")}</span>
+            <span className={styles.metricIcon}>
+              <Icon aria-hidden="true" />
+            </span>
+          </div>
+          <p>{label}</p>
+          <strong>{new Intl.NumberFormat("ar-SA").format(value)}</strong>
+          <span className={styles.metricRail} aria-hidden="true">
+            <i />
+          </span>
+        </article>
+      ))}
+      {summary.unavailableProducts > 0 ? (
+        <div className={styles.warningBanner}>
+          <AlertTriangle aria-hidden="true" />
+          يوجد {summary.unavailableProducts} منتج غير متاح ويحتاج إلى مراجعة.
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 export async function DashboardRecentOrdersSection() {
+  let orders: Awaited<ReturnType<typeof getDashboardRecentOrders>>;
   try {
-    const orders = await getDashboardRecentOrders(5);
-    return (
-      <section className="rounded-[28px] border border-[#E7D7C6] bg-white p-5 shadow-[0_14px_45px_rgba(49,25,18,0.06)] sm:p-6">
-        <div className="flex items-center justify-between gap-4">
+    orders = await getDashboardRecentOrders(5);
+  } catch {
+    return <p className={styles.errorState}>تعذر تحميل آخر الطلبات.</p>;
+  }
+
+  return (
+    <section className={styles.panel} aria-labelledby="recent-orders-title">
+        <div className={styles.panelHeader}>
           <div>
-            <p className="text-xs font-black text-[#A66A42]">التشغيل الآن</p>
-            <h2 className="mt-1 text-xl font-black text-[#311912]">آخر الطلبات</h2>
+            <span className={styles.sectionKicker}>غرفة التشغيل</span>
+            <h2 id="recent-orders-title">آخر الطلبات</h2>
           </div>
-          <Link href="/dashboard/orders" className="rounded-xl bg-[#311912] px-4 py-2 text-sm font-black text-white">
+          <Link href="/dashboard/orders" className={styles.panelLink}>
             كل الطلبات
+            <ArrowUpLeft aria-hidden="true" />
           </Link>
         </div>
+
         {orders.length ? (
-          <div className="mt-5 divide-y divide-[#EFE4DA]">
-            {orders.map((order) => (
-              <div key={order.id} className="grid gap-2 py-4 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center">
-                <div>
-                  <p className="font-black text-[#311912]">#{order.id.slice(0, 8).toUpperCase()}</p>
-                  <p className="text-xs font-bold text-[#806A5E]">{order.customerName}</p>
+          <div className={styles.ordersTable}>
+            <div className={styles.ordersHeader} aria-hidden="true">
+              <span>الطلب والعميل</span>
+              <span>الحالة</span>
+              <span>القيمة</span>
+              <span>الوقت</span>
+            </div>
+            {orders.map((order, index) => (
+              <div
+                key={order.id}
+                className={styles.orderRow}
+                style={{ "--row-delay": `${index * 70}ms` } as CSSProperties}
+              >
+                <div className={styles.orderIdentity}>
+                  <span className={styles.orderDot} aria-hidden="true" />
+                  <div>
+                    <strong>#{order.id.slice(0, 8).toUpperCase()}</strong>
+                    <small>{order.customerName}</small>
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-[#6B3A25]">{statusLabels[order.status] ?? order.status}</p>
-                <p className="text-sm font-black">{order.total.toFixed(2)} ر.س</p>
-                <time className="text-xs font-bold text-[#806A5E]">
-                  {new Intl.DateTimeFormat("ar-SA", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh" }).format(new Date(order.createdAt))}
+                <span className={`${styles.status} ${statusTones[order.status] ?? styles.statusMuted}`}>
+                  {statusLabels[order.status] ?? order.status}
+                </span>
+                <strong className={styles.orderTotal}>{order.total.toFixed(2)} <small>ر.س</small></strong>
+                <time className={styles.orderTime}>
+                  {new Intl.DateTimeFormat("ar-SA", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Asia/Riyadh",
+                  }).format(new Date(order.createdAt))}
                 </time>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-5 rounded-2xl bg-[#FCF8F3] p-8 text-center font-bold text-[#806A5E]">لا توجد طلبات بعد.</p>
+          <div className={styles.emptyState}>
+            <ShoppingBag aria-hidden="true" />
+            <strong>الهدوء يسبق أول طلب</strong>
+            <span>ستظهر الطلبات الجديدة هنا لحظة وصولها.</span>
+          </div>
         )}
-      </section>
-    );
-  } catch {
-    return <p className="rounded-2xl bg-red-50 p-4 font-bold text-red-700">تعذر تحميل آخر الطلبات.</p>;
-  }
+    </section>
+  );
 }
 
 export async function DashboardTrendSection() {
+  let values: Awaited<ReturnType<typeof getDashboardOrderTrend>>;
   try {
-    const values = await getDashboardOrderTrend();
-    const max = Math.max(...values, 1);
-    return (
-      <section className="rounded-[28px] border border-[#E7D7C6] bg-white p-5 shadow-[0_14px_45px_rgba(49,25,18,0.06)] sm:p-6">
-        <p className="text-xs font-black text-[#A66A42]">آخر 7 أيام</p>
-        <h2 className="mt-1 text-xl font-black">اتجاه الطلبات</h2>
-        <div className="mt-6 flex h-36 items-end gap-2" aria-label={`الطلبات اليومية: ${values.join(", ")}`}>
-          {values.map((value, index) => (
-            <div key={index} className="flex flex-1 flex-col items-center justify-end gap-2">
-              <span className="text-xs font-black">{value}</span>
-              <span
-                className="w-full rounded-t-xl bg-gradient-to-t from-[#6B3A25] to-[#D5A557]"
-                style={{ height: `${Math.max((value / max) * 100, 6)}%` }}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
+    values = await getDashboardOrderTrend();
   } catch {
-    return <p className="rounded-2xl bg-red-50 p-4 font-bold text-red-700">تعذر تحميل الاتجاه.</p>;
+    return <p className={styles.errorState}>تعذر تحميل اتجاه الطلبات.</p>;
   }
+
+  const max = Math.max(...values, 1);
+  const numberFormatter = new Intl.NumberFormat("ar-SA");
+  const dayLabels = values.map((_, index) => {
+    const daysAgo = values.length - 1 - index;
+    if (daysAgo === 0) return "اليوم";
+    if (daysAgo === 1) return "أمس";
+    return `-${numberFormatter.format(daysAgo)}`;
+  });
+
+  return (
+    <section className={`${styles.panel} ${styles.trendPanel}`} aria-labelledby="order-trend-title">
+        <div className={styles.panelHeader}>
+          <div>
+            <span className={styles.sectionKicker}>آخر ٧ أيام</span>
+            <h2 id="order-trend-title">نبض الطلبات</h2>
+          </div>
+          <span className={styles.liveChip}>
+            <i aria-hidden="true" />
+            مباشر
+          </span>
+        </div>
+
+        <div className={styles.chartFrame} aria-label={`الطلبات اليومية: ${values.join(", ")}`}>
+          <div className={styles.chartGrid} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className={styles.chartBars}>
+            {values.map((value, index) => (
+              <div key={index} className={styles.chartColumn}>
+                <span className={styles.chartValue}>{value}</span>
+                <span className={styles.barTrack}>
+                  <i
+                    className={styles.barFill}
+                    style={
+                      {
+                        "--bar-height": `${Math.max((value / max) * 100, 5)}%`,
+                        "--bar-delay": `${220 + index * 75}ms`,
+                      } as CSSProperties
+                    }
+                  />
+                </span>
+                <small>{dayLabels[index]}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.chartFooter}>
+          <span>الطلب الأعلى</span>
+          <strong>{Math.max(...values, 0)} طلب</strong>
+        </div>
+    </section>
+  );
 }

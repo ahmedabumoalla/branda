@@ -52,7 +52,7 @@ export function ResponsiveAppShell({
   const headerClass =
     variant === "admin"
       ? "border-white/10 bg-[#0f0c0a] text-[#F8E8D2]"
-      : "border-white/10 bg-[#120B0A] text-[#F8E8D2]";
+      : "border-[#E5B85C]/20 bg-[#0B0B0A]/95 text-[#F8E8D2] shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl";
 
   return (
     <>
@@ -62,7 +62,7 @@ export function ResponsiveAppShell({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
+          className="flex h-11 w-11 items-center justify-center border border-[#E5B85C]/25 bg-[#E5B85C]/10 text-[#FFD77E]"
           aria-label="فتح القائمة"
         >
           <Menu className="h-5 w-5" />
@@ -91,7 +91,7 @@ export function ResponsiveAppShell({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="absolute left-3 top-3 z-[70] flex h-9 w-9 items-center justify-center rounded-lg bg-black/40 text-white lg:hidden"
+          className="absolute left-3 top-3 z-[70] flex h-11 w-11 items-center justify-center border border-white/10 bg-black/55 text-white lg:hidden"
           aria-label="إغلاق"
         >
           <X className="h-5 w-5" />
@@ -103,7 +103,7 @@ export function ResponsiveAppShell({
         style={sidebarStyle}
         className="min-h-[100dvh] w-full max-w-full min-w-0 overflow-x-hidden pt-14 transition-[margin] duration-300 lg:mr-[var(--app-sidebar-width)] lg:w-[calc(100%_-_var(--app-sidebar-width))] lg:pt-0"
       >
-        <div className="mx-auto w-full max-w-[1480px] min-w-0 overflow-x-hidden">{children}</div>
+        <div className={`mx-auto w-full min-w-0 overflow-x-hidden ${variant === "dashboard" ? "max-w-[1680px]" : "max-w-[1480px]"}`}>{children}</div>
       </section>
     </>
   );

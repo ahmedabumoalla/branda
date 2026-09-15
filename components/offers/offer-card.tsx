@@ -30,7 +30,7 @@ export function OfferCard({ offer, href, featured = false, className = "" }: Pro
   );
   const content = (
     <article
-      className={`group relative isolate aspect-[3/2] min-w-0 overflow-hidden rounded-[24px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-primary-bg,#6B3A25)] shadow-[0_18px_48px_rgba(49,25,18,0.14)] ${className}`}
+      className={`group relative isolate aspect-[4/3] min-w-0 overflow-hidden rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-primary-bg,#6B3A25)] shadow-[0_12px_34px_rgba(49,25,18,0.12)] ${className}`}
     >
       {imageUrl ? (
         <img
@@ -44,13 +44,13 @@ export function OfferCard({ offer, href, featured = false, className = "" }: Pro
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,var(--ci-accent,#D9A33F),transparent_36%),linear-gradient(145deg,var(--ci-primary-bg,#6B3A25),var(--ci-text,#311912))]" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-      <div className="relative flex h-full min-w-0 flex-col justify-end p-5 text-white sm:p-6">
+      <div className="relative flex h-full min-w-0 flex-col justify-end p-4 text-white sm:p-5">
         <div className="mb-auto flex flex-wrap items-start justify-between gap-2">
-          <span className="rounded-full bg-white/16 px-3 py-1 text-xs font-black backdrop-blur">
+          <span className="rounded-lg bg-white/16 px-3 py-1 text-xs font-black backdrop-blur">
             {offer.type}
           </span>
           {offer.discountPercent ? (
-            <span className="rounded-full bg-[var(--ci-accent,#D9A33F)] px-3 py-1 text-sm font-black text-[var(--ci-text,#311912)]">
+            <span className="rounded-lg bg-[var(--ci-accent,#D9A33F)] px-3 py-1 text-sm font-black text-[var(--ci-text,#311912)]">
               خصم {offer.discountPercent}%
             </span>
           ) : null}
@@ -66,7 +66,7 @@ export function OfferCard({ offer, href, featured = false, className = "" }: Pro
             <CalendarDays className="h-4 w-4" />
             {formatDate(offer.endDate) ? `حتى ${formatDate(offer.endDate)}` : "لفترة محدودة"}
           </span>
-          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[var(--ci-text,#311912)]">
+          <span className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-[var(--ci-text,#311912)]">
             {offer.ctaText || (offer.promoProductPrice != null ? formatSar(offer.promoProductPrice) : "تفاصيل العرض")}
             {href ? <ArrowLeft className="h-4 w-4" /> : null}
           </span>

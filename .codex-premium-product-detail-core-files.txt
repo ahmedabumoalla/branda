@@ -1,0 +1,9 @@
+app/c/[slug]/product/[id]/page.tsx
+components/cafe/product-detail-client.tsx
+components/cafe/product-motion-features.ts
+components/cafe/product-cinematic-showcase.tsx
+components/cafe/themes/themed-product-detail.tsx
+package.json
+package-lock.json
+scripts/check-premium-product-detail.mjs
+.codex-premium-product-detail-core-files.txt

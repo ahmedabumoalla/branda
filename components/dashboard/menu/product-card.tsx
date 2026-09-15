@@ -9,6 +9,7 @@ import {
   Power,
   Trash2,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import {
@@ -19,6 +20,7 @@ import {
   type MenuProduct,
 } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 const variantGradient: Record<MenuImageVariant, string> = {
   latte: "from-[#3b2416] via-[#5c3d2e] to-[#c78a45]",
@@ -30,6 +32,7 @@ const variantGradient: Record<MenuImageVariant, string> = {
 
 type Props = {
   product: MenuProduct;
+  index?: number;
   categoryLabel?: string;
   freeProductLabel?: string;
   onEdit: () => void;
@@ -40,6 +43,7 @@ type Props = {
 
 export function MenuProductCard({
   product,
+  index = 0,
   categoryLabel,
   freeProductLabel,
   onEdit,
@@ -54,25 +58,28 @@ export function MenuProductCard({
   const hasDiscountedPrice = promoOn && finalPrice < product.price;
 
   return (
-    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E7D7C6] bg-white shadow-[6px_8px_20px_rgba(49,25,18,0.06)] transition hover:-translate-y-0.5 hover:shadow-xl">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
+    <article
+      className={styles.productCard}
+      style={{ "--card-order": index % 8 } as CSSProperties}
+    >
+      <div className={styles.media}>
         <ProductMediaDisplay
           product={product}
           alt=""
-          className="h-full w-full object-contain bg-[#F8F4EF]"
+          className={styles.mediaAsset}
           fallback={
             <div
               className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[product.imageVariant]}`}
             >
-              <Coffee className="h-14 w-14 text-white/85" />
+              <Coffee className={styles.fallbackIcon} />
             </div>
           }
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#3A2117]/55 via-transparent to-transparent" />
+        <div className={styles.mediaOverlay} />
 
         {product.promo ? (
-          <span className="absolute right-3 top-3 flex max-w-[85%] items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-[#3A2117] shadow">
+          <span className={styles.badge}>
             <Gift className="h-3.5 w-3.5 text-[#8B5E3C]" />
             <span className="truncate">
               {promoOn ? promoBadgeText(product.promo) : "عرض غير نشط"}
@@ -81,54 +88,54 @@ export function MenuProductCard({
         ) : null}
 
         <span
-          className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-black shadow ${
+          className={`${styles.availability} ${
             product.available
-              ? "bg-[#2E7D5B] text-white"
-              : "bg-white text-[#3A2117]"
+              ? styles.availabilityOn
+              : ""
           }`}
         >
           {product.available ? "متاح" : "غير متاح"}
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-2">
+      <div className={styles.productBody}>
+        <div className={styles.cardHeading}>
           <div className="min-w-0">
-            <p className="truncate text-xs font-black text-[#8B5E3C]">
+            <p className={styles.categoryLabel}>
               {categoryLabel ?? product.category}
             </p>
 
-            <h3 className="mt-1 break-words text-lg font-black leading-7 text-[#3A2117]">
+            <h3 className={styles.productName}>
               {product.name}
             </h3>
           </div>
 
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F8F4EF]">
-            <MoreHorizontal className="h-5 w-5 text-[#7A6255]" />
+          <span className={styles.moreIcon}>
+            <MoreHorizontal className="h-5 w-5" />
           </span>
         </div>
 
-        <p className="line-clamp-2 text-sm font-bold leading-relaxed text-[#7A6255]">
+        <p className={styles.description}>
           {product.description}
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className={styles.ingredientList}>
           {product.ingredients.slice(0, 4).map((ing) => (
             <span
               key={ing}
-              className="rounded-full bg-[#EFE8DF] px-3 py-1 text-[11px] font-black text-[#3A2117]"
+              className={styles.ingredient}
             >
               {ing}
             </span>
           ))}
         </div>
 
-        <div className="mt-auto grid min-w-0 grid-cols-3 gap-2 border-t border-[#EFE8DF] pt-4 text-center">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-[#7A6255]">
+        <div className={styles.stats}>
+          <div className={styles.stat}>
+            <p className={styles.statLabel}>
               {isEvents ? "رسوم الدخول" : "السعر"}
             </p>
-            <p className="break-words text-sm font-black text-[#3A2117]">
+            <p className={styles.statValue}>
               {hasDiscountedPrice ? formatSar(finalPrice) : formatSar(product.price)}
             </p>
             {hasDiscountedPrice ? (
@@ -138,13 +145,13 @@ export function MenuProductCard({
             ) : null}
           </div>
 
-          <div className="min-w-0">
-            <p className="flex items-center justify-center gap-1 text-[10px] font-black text-[#7A6255]">
+          <div className={styles.stat}>
+            <p className={styles.statLabel}>
               <Flame className="h-3 w-3 text-[#8B5E3C]" />
               {isEvents ? "السعة" : "سعرات"}
             </p>
 
-            <p className="break-words text-sm font-black text-[#3A2117]">
+            <p className={styles.statValue}>
               {isEvents
                 ? product.eventTicketSettings?.capacity == null
                   ? "غير محدد"
@@ -155,11 +162,11 @@ export function MenuProductCard({
             </p>
           </div>
 
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-[#7A6255]">
+          <div className={styles.stat}>
+            <p className={styles.statLabel}>
               {isEvents ? "الدخول" : "الاستلام"}
             </p>
-            <p className="break-words text-sm font-black text-[#8B5E3C]">
+            <p className={`${styles.statValue} ${styles.statAccent}`}>
               {isEvents
                 ? product.eventTicketSettings?.checkinPolicy === "multi_use"
                   ? "متعدد"
@@ -170,22 +177,22 @@ export function MenuProductCard({
         </div>
 
         {product.promo ? (
-          <p className="rounded-2xl bg-[#FFF3C4] px-3 py-2 text-xs font-bold text-[#7A5725]">
+          <p className={styles.notice}>
             فترة العرض {product.promo.startDate} إلى {product.promo.endDate}
           </p>
         ) : null}
 
         {product.promo?.kind === "منتج مجاني مع الطلب" && freeProductLabel ? (
-          <p className="rounded-2xl bg-[#2E7D5B]/10 px-3 py-2 text-xs font-bold text-[#2E7D5B]">
+          <p className={styles.freeNotice}>
             يشمل: <span className="font-black">{freeProductLabel}</span>
           </p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2 border-t border-[#EFE8DF] pt-4 sm:grid-cols-[1fr_1fr_auto]">
+        <div className={styles.cardActions}>
           <button
             type="button"
             onClick={onEdit}
-            className="flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#E5D8CD] bg-white px-2 py-2.5 text-xs font-black"
+            className={`${styles.cardButton} ${styles.editButton}`}
           >
             <Pencil className="h-4 w-4" />
             تعديل
@@ -194,7 +201,7 @@ export function MenuProductCard({
           <button
             type="button"
             onClick={onToggleAvailability}
-            className="flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-[#3A2117]/10 px-2 py-2.5 text-xs font-black text-[#3A2117]"
+            className={`${styles.cardButton} ${styles.toggleButton}`}
           >
             <Power className="h-4 w-4" />
             {product.available ? "إيقاف" : "تفعيل"}
@@ -203,7 +210,7 @@ export function MenuProductCard({
           <button
             type="button"
             onClick={onDelete}
-            className="col-span-2 flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-red-50 px-3 py-2.5 text-xs font-black text-red-700 sm:col-span-1"
+            className={`${styles.cardButton} ${styles.deleteButton}`}
           >
             <Trash2 className="h-4 w-4" />
             حذف

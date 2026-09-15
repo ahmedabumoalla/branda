@@ -20,6 +20,7 @@ import {
 } from "@/components/cafe/themes/themed-product-card";
 import {
   CustomerBottomDock,
+  CustomerPageHeader,
   ProductPosterCard,
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
@@ -363,39 +364,31 @@ export function ProductCollectionPage({ slug, view }: Props) {
 
   return (
     <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
-      <div className="barndaksa-cinematic-stage space-y-5">
-        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="products" />
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <CafeLogo
-              name={settings.cafeName || slug}
-              logoUrl={logoUrl}
-              size="sm"
-              className="rounded-[18px]"
-            />
-            <div className="min-w-0">
-              <p className={`text-xs font-black ${theme.muted}`}>{settings.cafeName || slug}</p>
-              <h1 className={`truncate text-3xl font-black leading-tight sm:text-4xl ${experience.headingTracking}`}>
-                {currentViewInfo?.title || itemPluralLabel}
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+      <div className="barndaksa-cinematic-stage space-y-4 pb-4">
+        <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active={view === "offers" ? "offers" : "products"} />
+        <CustomerPageHeader
+          cafeName={settings.cafeName || slug}
+          logoUrl={logoUrl}
+          title={currentViewInfo?.title || itemPluralLabel}
+          subtitle={currentViewInfo?.desc}
+          action={
+            <>
             <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} variant="icon" />
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
               aria-label="فتح الفلاتر"
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-black/5 shadow-sm transition active:scale-95 ${theme.card}`}
+              className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] text-[var(--ci-button-bg,#6B3A25)] shadow-sm transition active:scale-95"
             >
-              <SlidersHorizontal className={`h-5 w-5 ${theme.accent}`} />
+              <SlidersHorizontal className="h-5 w-5" />
             </button>
-          </div>
-        </header>
+            </>
+          }
+        />
 
         {categories.length > 1 ? (
-          <div className="-mx-4 overflow-x-auto px-4 pb-1">
-            <div className="flex w-max gap-2 rounded-[24px] border border-white/70 bg-white/45 p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl backdrop-saturate-150">
+          <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max gap-2">
               {categories.map((name) => {
                 const selected = filters.category === name;
                 return (
@@ -403,10 +396,10 @@ export function ProductCollectionPage({ slug, view }: Props) {
                     key={name}
                     type="button"
                     onClick={() => setFilters((prev) => ({ ...prev, category: name }))}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 active:scale-95 ${
+                    className={`min-h-10 shrink-0 rounded-xl border px-4 py-2 text-xs font-black transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ci-button-bg,#6B3A25)] active:scale-95 ${
                       selected
-                        ? "border-white/90 bg-white/95 text-slate-950 shadow-[0_4px_14px_rgba(15,23,42,0.18)] ring-1 ring-black/10"
-                        : "border-white/70 bg-white/65 text-slate-900 shadow-[0_2px_8px_rgba(15,23,42,0.1)] hover:border-white/90 hover:bg-white/85 hover:text-slate-950 hover:shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
+                        ? "border-[var(--ci-button-bg,#6B3A25)] bg-[var(--ci-button-bg,#6B3A25)] text-[var(--ci-button-fg,#fff)] shadow-sm"
+                        : "border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] text-[var(--ci-page-fg,#311912)]"
                     }`}
                   >
                     {name}
@@ -418,10 +411,24 @@ export function ProductCollectionPage({ slug, view }: Props) {
         ) : null}
 
         <section>
-          <p className={`mb-4 text-sm font-black ${theme.muted}`}>
-            {orderedProducts.length.toLocaleString("ar-SA")} من{" "}
-            {totalCount.toLocaleString("ar-SA")} {itemLabel}
-          </p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold text-[var(--ci-muted-fg,#806A5E)]">
+                {view === "offers" ? "منتجات مشمولة" : "النتائج"}
+              </p>
+              <p className="text-sm font-black text-[var(--ci-page-fg,#311912)]">
+                {orderedProducts.length.toLocaleString("ar-SA")} من {totalCount.toLocaleString("ar-SA")} {itemLabel}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] px-3 text-xs font-black text-[var(--ci-button-bg,#6B3A25)]"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              ترتيب وفلترة
+            </button>
+          </div>
           <div className={gridClass}>
             {orderedProducts.map((item) => (
               <ProductPosterCard
@@ -667,7 +674,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
         {...defaultCustomerDockItems({
           slug,
           previewThemeId,
-          active: "menu",
+          active: view === "offers" ? "offers" : "menu",
           businessCategory: settings.businessCategory,
         })}
       />

@@ -1,6 +1,6 @@
-const pulse = "animate-pulse bg-[#E7D7C6]";
+const pulse = "animate-pulse bg-[#E9DED2]";
 const card =
-  "min-w-0 rounded-[16px] border border-[#E7D7C6] bg-[#FCF8F3] p-4";
+  "min-w-0 rounded-[17px_4px_17px_4px] border border-[#E4D7CA] bg-[#FFFDF9] p-4 shadow-[0_12px_28px_rgba(58,33,23,0.04)]";
 
 export default function MenuLoading() {
   return (
@@ -8,9 +8,9 @@ export default function MenuLoading() {
       aria-label="Loading menu"
       aria-live="polite"
       role="status"
-      className="mx-auto min-h-screen w-full max-w-[1320px] min-w-0 overflow-hidden px-3 py-4 sm:px-4 sm:py-5 lg:px-5"
+      className="mx-auto min-h-screen w-full max-w-[1440px] min-w-0 overflow-hidden px-3 py-4 sm:px-4 sm:py-5 lg:px-5"
     >
-      <header className="mb-5 flex min-h-[88px] flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <header className="mb-5 flex min-h-[168px] flex-col gap-3 rounded-[24px_5px_24px_5px] border border-[#E4D7CA] bg-[#FFFDF9] p-7 shadow-[0_22px_54px_rgba(58,33,23,0.07)] lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className={`h-4 w-24 rounded-full ${pulse}`} />
           <div className={`mt-3 h-8 w-48 max-w-full rounded-xl ${pulse}`} />
@@ -18,7 +18,7 @@ export default function MenuLoading() {
         </div>
         <div className="flex gap-2">
           <div className={`h-12 w-28 rounded-2xl ${pulse}`} />
-          <div className="h-12 w-28 animate-pulse rounded-2xl bg-[#6B3A25]/30" />
+          <div className="h-12 w-28 animate-pulse rounded-[13px_3px_13px_3px] bg-[#6B3A25]/30" />
         </div>
       </header>
 

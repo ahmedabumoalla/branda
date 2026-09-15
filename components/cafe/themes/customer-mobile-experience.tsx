@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import {
   ArrowLeft,
+  BadgePercent,
   CalendarDays,
   ChevronLeft,
   Coffee,
@@ -39,6 +40,14 @@ import { prefetchPublicCafeResource } from "@/lib/cafe/use-public-cafe-menu";
 import type { PublicProductSummary } from "@/lib/cafe/public-product-summary";
 
 export type CustomerDockKey = "menu" | "offers" | "rewards" | "account";
+
+const customerUi = {
+  surface:
+    "border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] shadow-[0_10px_30px_rgba(23,20,18,0.07)]",
+  muted: "text-[var(--ci-muted-fg,#806A5E)]",
+  foreground: "text-[var(--ci-page-fg,#171412)]",
+  accent: "text-[var(--ci-button-bg,#6B3A25)]",
+};
 
 function textElement(
   id: LoyaltyTextElementId,
@@ -161,6 +170,47 @@ export function MobileBrandMasthead({
       ) : null}
       <BrandaMadeByMark className="mt-3" />
     </section>
+  );
+}
+
+export function CustomerPageHeader({
+  cafeName,
+  logoUrl,
+  title,
+  subtitle,
+  action,
+}: {
+  cafeName: string;
+  logoUrl?: string | null;
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="flex min-w-0 items-center justify-between gap-3 border-b border-[var(--ci-border,#E7D7C6)]/70 pb-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <CafeLogo
+          name={cafeName}
+          logoUrl={logoUrl}
+          size="sm"
+          className="!rounded-[16px] !shadow-[0_8px_22px_rgba(23,20,18,0.08)]"
+        />
+        <div className="min-w-0">
+          <p className={`truncate text-[11px] font-bold ${customerUi.muted}`}>
+            {cafeName}
+          </p>
+          <h1 className={`truncate text-[1.7rem] font-black leading-tight tracking-[-0.025em] ${customerUi.foreground}`}>
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className={`mt-0.5 line-clamp-1 text-[11px] font-bold sm:text-xs ${customerUi.muted}`}>
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
+    </header>
   );
 }
 
@@ -297,6 +347,7 @@ export function ProductPosterCard({
   const finalPrice = productFinalPrice(product.price, product.promo);
   const hasDiscount = promoOn && finalPrice < product.price;
   const isSummary = !("description" in product);
+  const category = "category" in product ? product.category : undefined;
 
   return (
     <Link
@@ -304,11 +355,11 @@ export function ProductPosterCard({
       prefetch={false}
       style={{
         contentVisibility: "auto",
-        containIntrinsicSize: compact ? "154px 230px" : "180px 260px",
+        containIntrinsicSize: compact ? "154px 218px" : "180px 252px",
       }}
-      className={`group block overflow-hidden rounded-[8px] bg-white text-[var(--ci-page-fg,#171412)] shadow-[0_10px_28px_rgba(23,20,18,0.08)] ring-1 ring-[var(--ci-border,#E7D7C6)]/70 transition active:scale-[0.985] ${compact ? "min-w-[154px]" : ""}`}
+      className={`group block overflow-hidden rounded-[18px] text-[var(--ci-page-fg,#171412)] transition duration-200 active:scale-[0.985] ${customerUi.surface} ${compact ? "min-w-[154px]" : ""}`}
     >
-      <div className={compact ? "relative aspect-square overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]" : "relative aspect-[1/1.08] overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]"}>
+      <div className={compact ? "relative aspect-square overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]" : "relative aspect-square overflow-hidden bg-[var(--ci-page-bg,#F5F2ED)]"}>
         {isSummary ? (
           <LocalAssetImage
             assetId={product.imageAssetId}
@@ -317,8 +368,11 @@ export function ProductPosterCard({
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             publicBucket="menu-products"
             fallback={
-              <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#F5F2ED)]">
-                <Coffee className="h-10 w-10 text-[var(--ci-primary-bg,#2F7A52)]" />
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[var(--ci-button-bg,#6B3A25)]/[0.06]">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-sm">
+                  <Coffee className="h-6 w-6 text-[var(--ci-button-bg,#6B3A25)]" />
+                </span>
+                <span className="text-[10px] font-bold text-[var(--ci-muted-fg,#806A5E)]">صورة المنتج</span>
               </div>
             }
           />
@@ -328,25 +382,31 @@ export function ProductPosterCard({
             alt={product.name}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             fallback={
-              <div className="flex h-full w-full items-center justify-center bg-[var(--ci-page-bg,#F5F2ED)]">
-                <Coffee className="h-10 w-10 text-[var(--ci-primary-bg,#2F7A52)]" />
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[var(--ci-button-bg,#6B3A25)]/[0.06]">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-sm">
+                  <Coffee className="h-6 w-6 text-[var(--ci-button-bg,#6B3A25)]" />
+                </span>
+                <span className="text-[10px] font-bold text-[var(--ci-muted-fg,#806A5E)]">صورة المنتج</span>
               </div>
             }
           />
         )}
         {product.promo ? (
-          <span className="absolute right-2 top-2 rounded-full bg-[var(--ci-button-bg,#2F7A52)] px-2.5 py-1 text-[10px] font-black text-white shadow">
+          <span className="absolute right-2 top-2 rounded-lg bg-[var(--ci-button-bg,#2F7A52)] px-2.5 py-1 text-[10px] font-black text-[var(--ci-button-fg,#fff)] shadow-sm">
             {promoOn ? promoBadgeText(product.promo) : "\u0639\u0631\u0636"}
           </span>
         ) : null}
       </div>
-      <div className={compact ? "p-3" : "px-3 pb-3 pt-2.5"}>
-        <h3 className={`${compact ? "text-sm" : "text-[0.92rem]"} line-clamp-2 font-extrabold leading-snug tracking-normal`}>
+      <div className={compact ? "p-3" : "px-3.5 pb-3.5 pt-3"}>
+        {category ? (
+          <p className={`mb-1 truncate text-[10px] font-bold ${customerUi.muted}`}>{category}</p>
+        ) : null}
+        <h3 className={`${compact ? "text-sm" : "text-[0.92rem]"} line-clamp-2 min-h-[2.6rem] font-black leading-[1.3rem] tracking-normal`}>
           {product.name}
         </h3>
-        <div className="mt-1 flex items-end gap-2 text-[var(--ci-muted-fg,#8C8A84)]">
-          <span className={`${compact ? "text-sm" : "text-sm"} font-extrabold`}>{formatSar(finalPrice)}</span>
-          {hasDiscount ? <span className="text-xs font-black line-through opacity-60">{formatSar(product.price)}</span> : null}
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-sm font-black text-[var(--ci-button-bg,#6B3A25)]">{formatSar(finalPrice)}</span>
+          {hasDiscount ? <span className="text-[11px] font-bold text-[var(--ci-muted-fg,#8C8A84)] line-through">{formatSar(product.price)}</span> : null}
         </div>
       </div>
     </Link>
@@ -372,8 +432,8 @@ export function CustomerBottomDock({
   if (!visible.length) return null;
 
   return (
-    <nav aria-label={"\u062a\u0646\u0642\u0644 \u0627\u0644\u0639\u0645\u064a\u0644"} className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-      <div className="grid w-full grid-cols-4 gap-1 rounded-t-[26px] border-t border-[var(--ci-border,#E7D7C6)] bg-white/94 px-3 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-18px_50px_rgba(23,20,18,0.12)] backdrop-blur-xl">
+    <nav aria-label={"\u062a\u0646\u0642\u0644 \u0627\u0644\u0639\u0645\u064a\u0644"} className="fixed inset-x-0 bottom-0 z-50 px-2 md:hidden">
+      <div className="mx-auto grid w-full max-w-lg grid-cols-4 gap-1 rounded-t-[22px] border border-b-0 border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)]/96 px-2 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_36px_rgba(23,20,18,0.10)] backdrop-blur-xl">
         {visible.map((item) => {
           const Icon = item.icon;
           const selected = item.key === active;
@@ -398,13 +458,13 @@ export function CustomerBottomDock({
                 if (item.key === "offers") void prefetchPublicCafeResource(new URL(item.href, window.location.origin).pathname.split("/")[2] ?? "", { resource: "offers", limit: 12 });
               }}
               aria-current={selected ? "page" : undefined}
-              className={`relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 text-[11px] font-black transition active:scale-95 ${
+              className={`relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-[14px] px-1.5 text-[10px] font-bold transition active:scale-95 ${
                 selected
-                  ? "bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]"
-                  : "text-[#4E4B56]"
+                  ? "bg-[var(--ci-button-bg,#2F7A52)]/[0.09] font-black text-[var(--ci-button-bg,#2F7A52)]"
+                  : "text-[var(--ci-muted-fg,#5F5A56)]"
               }`}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-[21px] w-[21px]" strokeWidth={selected ? 2.4 : 2} />
               {item.badge ? (
                 <span className="absolute left-4 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white">
                   {item.badge}
@@ -440,7 +500,7 @@ export function defaultCustomerDockItems({
     active,
     items: [
       { key: "menu" as const, href: `${base}/products/popular${preview}`, label: "المنتجات", icon: MenuIcon },
-      { key: "offers" as const, href: `${base}/products/offers${preview}`, label: "العروض", icon: Home },
+      { key: "offers" as const, href: `${base}/products/offers${preview}`, label: "العروض", icon: BadgePercent },
       { key: "rewards" as const, href: `${base}/rewards${preview}`, label: "المكافآت", icon: Sparkles },
       { key: "account" as const, href: `${base}/${isCustomer ? "account" : "login"}${preview}`, label: "الحساب", icon: UserRound },
     ],

@@ -4,20 +4,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ElementType } from "react";
 import {
-  BadgeCheck,
   BarChart3,
-  CalendarDays,
   ChevronsLeft,
   ChevronsRight,
   CreditCard,
   DoorOpen,
   Gift,
   Home,
-  Landmark,
   LockKeyhole,
   LogOut,
   MapPin,
-  MessageSquareText,
   Package,
   Palette,
   Settings,
@@ -201,10 +197,10 @@ export function DashboardSidebar({
   return (
     <aside
       dir="rtl"
-      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#2A1A18]/80 text-[#F8EFE7] shadow-[-14px_0_42px_rgba(0,0,0,0.48)] transition-colors"
+      className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5B85C]/15 text-[#F8EFE7] shadow-[-18px_0_60px_rgba(0,0,0,0.56)] transition-colors"
       style={{
         background:
-          "radial-gradient(circle at 100% 0%, rgba(92, 55, 37, 0.58), transparent 34%), linear-gradient(180deg, #140C0A 0%, #0A0808 52%, #120B13 100%)",
+          "radial-gradient(circle at 100% 0%, rgba(229, 184, 92, 0.12), transparent 26%), linear-gradient(180deg, #11100E 0%, #090908 54%, #0D0C0A 100%)",
       }}
     >
       <div className={`border-b border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
@@ -222,7 +218,7 @@ export function DashboardSidebar({
           <button
             type="button"
             onClick={handleToggleCollapsed}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#8F80FF]/35 bg-[#5E55E7]/18 text-[#CBC4FF] shadow-[0_0_18px_rgba(102,92,255,0.18)] transition hover:border-[#A89EFF]/65 hover:bg-[#665CFF]/30 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center border border-[#E5B85C]/25 bg-[#E5B85C]/10 text-[#FFD77E] shadow-[0_0_22px_rgba(229,184,92,0.10)] transition hover:border-[#FFD77E]/55 hover:bg-[#E5B85C]/20 hover:text-white"
             aria-label={toggleLabel}
             title={toggleLabel}
           >
@@ -231,14 +227,14 @@ export function DashboardSidebar({
         </div>
 
         {!collapsed ? (
-          <p className="mt-1 text-right text-[10px] font-bold text-[#A99A90]">لوحة تحكم برندة</p>
+          <p className="mt-1 text-right text-[11px] font-normal text-[#A99A90]">لوحة تحكم برندة</p>
         ) : null}
       </div>
 
       {!collapsed ? (
-        <div className="mx-2.5 mt-3 rounded-[18px] border border-white/10 bg-[#211613]/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_16px_36px_rgba(0,0,0,0.24)]">
+        <div className="mx-3 mt-3 border border-white/[0.08] border-r-[#E5B85C]/35 bg-white/[0.025] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_42px_rgba(0,0,0,0.22)]">
           <div className="flex items-center gap-2.5">
-            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#FCF8F3] shadow-md ring-1 ring-white/20">
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden bg-[#FCF8F3] shadow-md ring-1 ring-[#E5B85C]/25">
               <CafeLogo
                 name={cafeName}
                 logoUrl={cafeLogoUrl}
@@ -248,11 +244,11 @@ export function DashboardSidebar({
             </div>
 
             <div className="min-w-0 flex-1 text-right">
-              <p className="truncate text-[10px] font-bold text-[#A99A90]">بطاقة العلامة التجارية</p>
-              <h2 className="mt-0.5 truncate text-[13px] font-black text-white">{cafeName}</h2>
+              <p className="truncate text-[10px] font-normal text-[#A99A90]">بطاقة العلامة التجارية</p>
+              <h2 className="mt-0.5 truncate text-[14px] font-semibold text-white">{cafeName}</h2>
 
               {cafeSettings.ownerName ? (
-                <p className="mt-0.5 truncate text-[10px] font-bold text-[#8F8176]">
+                <p className="mt-0.5 truncate text-[10px] font-normal text-[#8F8176]">
                   {cafeSettings.ownerName}
                 </p>
               ) : null}
@@ -260,7 +256,7 @@ export function DashboardSidebar({
               <Link
                 href="/dashboard/subscription"
                 onClick={onNavigate}
-                className="mt-1 inline-flex max-w-full items-center truncate rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-black text-[#F0C568] transition hover:bg-[#D9A33F]/25"
+                className="mt-1 inline-flex max-w-full items-center truncate rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-semibold text-[#F0C568] transition hover:bg-[#D9A33F]/25"
               >
                 {planName}
               </Link>
@@ -287,23 +283,23 @@ export function DashboardSidebar({
               <Link
                 href={getCafePublicUrl(cafeSlug)}
                 target="_blank"
-                className="flex h-8 min-w-0 items-center justify-center truncate rounded-lg border border-[#E8B855]/35 bg-[#E8B855]/18 px-2 text-[10px] font-black text-[#F6D37C] shadow-[0_0_18px_rgba(232,184,85,0.10)] transition hover:bg-[#E8B855]/26"
+                className="flex h-8 min-w-0 items-center justify-center truncate rounded-lg border border-[#E8B855]/35 bg-[#E8B855]/18 px-2 text-[10px] font-semibold text-[#F6D37C] shadow-[0_0_18px_rgba(232,184,85,0.10)] transition hover:bg-[#E8B855]/26"
               >
                 زيارة الفرع الإلكتروني
               </Link>
             ) : (
-              <span className="flex h-8 min-w-0 items-center justify-center truncate rounded-lg border border-white/10 bg-white/[0.045] px-2 text-[10px] font-black text-[#B8A99C]">
+              <span className="flex h-8 min-w-0 items-center justify-center truncate rounded-lg border border-white/10 bg-white/[0.045] px-2 text-[10px] font-medium text-[#B8A99C]">
                 جاري التحميل
               </span>
             )}
           </div>
 
           {shareMessage ? (
-            <p className="mt-2 text-center text-[11px] font-black text-[#F0C568]">{shareMessage}</p>
+            <p className="mt-2 text-center text-[11px] font-medium text-[#F0C568]">{shareMessage}</p>
           ) : null}
 
           {cafeSlug ? (
-            <p className="mt-2 truncate text-center text-[10px] font-bold text-[#8E8077]">
+            <p className="mt-2 truncate text-center text-[10px] font-normal text-[#8E8077]">
               {getCafeDisplayDomain(cafeSlug, cafeSettings)}
             </p>
           ) : null}
@@ -322,16 +318,16 @@ export function DashboardSidebar({
           const showFeatureGroupLabel = Boolean(item.group) && !collapsed && visibleLinks[index - 1]?.group !== item.group;
           const title = linkTitle(item);
           const counter = getLinkCounter(item.href);
-          const itemClassName = `group relative flex h-8 w-full items-center overflow-hidden rounded-lg text-[12px] font-extrabold transition ${
+          const itemClassName = `group relative flex min-h-10 w-full items-center overflow-hidden rounded-lg text-[13px] leading-5 transition ${
             collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
           } ${
             !hasRoute
-              ? "cursor-not-allowed border border-[#F0C568]/15 bg-[#F0C568]/[0.06] text-[#CFC2B7] opacity-90 hover:bg-[#F0C568]/[0.06]"
+              ? "cursor-not-allowed border border-[#F0C568]/15 bg-[#F0C568]/[0.06] font-medium text-[#CFC2B7] opacity-90 hover:bg-[#F0C568]/[0.06]"
               : active && !locked
-              ? "bg-gradient-to-l from-[#4D409A]/65 via-[#2A2448]/90 to-[#1A1117]/80 text-white ring-1 ring-[#897DFF]/50 shadow-[0_0_24px_rgba(111,99,255,0.18)] before:absolute before:right-0 before:top-1.5 before:h-5 before:w-1 before:rounded-l-full before:bg-[#B4A9FF]"
+              ? "border border-[#E5B85C]/28 bg-[#E5B85C]/10 font-semibold text-white shadow-[0_0_30px_rgba(229,184,92,0.10)] before:absolute before:right-0 before:top-1.5 before:h-7 before:w-0.5 before:bg-[#FFD77E] before:shadow-[0_0_12px_rgba(255,215,126,0.8)]"
               : locked
-                ? "border border-white/[0.08] bg-white/[0.035] text-[#8F8176] hover:bg-white/[0.065]"
-                : "text-[#CFC2B7] hover:bg-white/[0.065] hover:text-white"
+                ? "border border-white/[0.08] bg-white/[0.035] font-normal text-[#8F8176] hover:bg-white/[0.065]"
+                : "font-medium text-[#D8CEC5] hover:bg-white/[0.065] hover:text-white"
           }`;
           const itemContent = (
             <>
@@ -339,7 +335,7 @@ export function DashboardSidebar({
                 <Icon
                   className={`h-4 w-4 shrink-0 ${
                     active && !locked
-                      ? "text-[#C4BEFF]"
+                      ? "text-[#FFD77E]"
                       : "text-[#B8A99C] group-hover:text-white"
                   }`}
                 />
@@ -361,7 +357,7 @@ export function DashboardSidebar({
                 ) : !hasRoute ? (
                   <span className="absolute left-1 top-1 h-2 w-2 rounded-full bg-[#F0C568]" />
                 ) : counter > 0 ? (
-                  <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1 text-[9px] font-black leading-3 text-white">
+                  <span className="absolute left-1 top-1 rounded-full bg-red-500 px-1 text-[9px] font-semibold leading-3 text-white">
                     {counter > 99 ? "99+" : counter}
                   </span>
                 ) : null
@@ -370,11 +366,11 @@ export function DashboardSidebar({
                   {locked ? (
                     <LockKeyhole className="h-3.5 w-3.5 text-[#F0C568]" />
                   ) : !hasRoute ? (
-                    <span className="rounded-full bg-[#F0C568]/15 px-2 py-0.5 text-[10px] font-black text-[#F0C568]">
+                    <span className="rounded-full bg-[#F0C568]/15 px-2 py-0.5 text-[10px] font-medium text-[#F0C568]">
                       قريبًا
                     </span>
                   ) : counter > 0 ? (
-                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
                       {counter > 99 ? "99+" : counter}
                     </span>
                   ) : null}
@@ -386,12 +382,12 @@ export function DashboardSidebar({
           return (
             <div key={`${item.feature}-${item.href || "disabled"}`}>
               {showOperationsLabel && !collapsed ? (
-                <p className="px-3 pb-1.5 pt-3 text-[10px] font-black uppercase text-[#8F8176]">
+                <p className="px-3 pb-1.5 pt-3 text-[10px] font-medium text-[#8F8176]">
                   أدوات التشغيل
                 </p>
               ) : null}
               {showFeatureGroupLabel ? (
-                <p className="px-3 pb-1.5 pt-3 text-[10px] font-black uppercase text-[#8F8176]">
+                <p className="px-3 pb-1.5 pt-3 text-[10px] font-medium text-[#8F8176]">
                   {item.group}
                 </p>
               ) : null}
@@ -425,7 +421,7 @@ export function DashboardSidebar({
         <button
           type="button"
           onClick={handleLogout}
-          className={`flex h-8 w-full items-center rounded-lg border border-white/10 bg-white/[0.045] text-[12px] font-black text-[#F7EFE6] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200 ${
+          className={`flex min-h-10 w-full items-center rounded-lg border border-white/10 bg-white/[0.045] text-[13px] font-semibold text-[#F7EFE6] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200 ${
             collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"
           }`}
           aria-label={collapsed ? "تسجيل الخروج" : undefined}

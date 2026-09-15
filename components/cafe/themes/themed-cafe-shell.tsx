@@ -104,7 +104,10 @@ function ThemedCafeShellInner({
     <main
       dir="rtl"
       className="brand-identity-custom-theme barndaksa-cinematic-page relative min-h-screen bg-[var(--ci-page-bg,#FCF8F3)] pb-24 text-[var(--ci-page-fg,#311912)] md:pb-0"
-      style={identityStyle}
+      style={{
+        ...identityStyle,
+        ...(slug === "kat-coffe" ? { "--product-image-background": "#fff" } : {}),
+      } as CSSProperties}
     >
       {showPageBackground ? (
         <>

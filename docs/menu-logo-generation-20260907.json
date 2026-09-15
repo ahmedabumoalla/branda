@@ -1,0 +1,70 @@
+{
+  "mode": "built-in imagegen",
+  "records": [
+    {
+      "slug": "basilico",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-a8a63dc9-61f0-4ca5-8712-df03bbaeb4d1.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target, an existing official brand logo. Remove ONLY the surrounding solid/background rectangle and the same backdrop inside letter counters to genuine transparent alpha. Preserve every original Arabic and Latin letter, dot, symbol, line, color, spacing and proportions exactly. Do not redesign, retype, recolor, add shadows or invent anything. Keep white lettering opaque. For an emblem with an intentional white circular badge preserve that badge and remove only surrounding blue backdrop. Trim excessive empty margins leaving 5 percent transparent padding. Output one clean high-resolution transparent PNG logo, no checkerboard painted into pixels. Brand asset: basilico"
+    },
+    {
+      "slug": "shahi-w-hail",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-3e7dd712-83a9-4596-a855-e21f793210fe.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target, an existing official brand logo. Remove ONLY the surrounding solid/background rectangle and the same backdrop inside letter counters to genuine transparent alpha. Preserve every original Arabic and Latin letter, dot, symbol, line, color, spacing and proportions exactly. Do not redesign, retype, recolor, add shadows or invent anything. Keep white lettering opaque. For an emblem with an intentional white circular badge preserve that badge and remove only surrounding blue backdrop. Trim excessive empty margins leaving 5 percent transparent padding. Output one clean high-resolution transparent PNG logo, no checkerboard painted into pixels. Brand asset: shahi-w-hail"
+    },
+    {
+      "slug": "kat-coffe",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-14debfd9-62df-4889-b1f1-c5972bb8112c.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target, an existing official brand logo. Remove ONLY the surrounding solid/background rectangle and the same backdrop inside letter counters to genuine transparent alpha. Preserve every original Arabic and Latin letter, dot, symbol, line, color, spacing and proportions exactly. Do not redesign, retype, recolor, add shadows or invent anything. Keep white lettering opaque. For an emblem with an intentional white circular badge preserve that badge and remove only surrounding blue backdrop. Trim excessive empty margins leaving 5 percent transparent padding. Output one clean high-resolution transparent PNG logo, no checkerboard painted into pixels. Brand asset: kat-coffe"
+    },
+    {
+      "slug": "meknes-loung",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-65962950-e366-4f22-93c4-3d3eb8223889.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target, an existing official brand logo. Remove ONLY the surrounding solid/background rectangle and the same backdrop inside letter counters to genuine transparent alpha. Preserve every original Arabic and Latin letter, dot, symbol, line, color, spacing and proportions exactly. Do not redesign, retype, recolor, add shadows or invent anything. Keep white lettering opaque. For an emblem with an intentional white circular badge preserve that badge and remove only surrounding blue backdrop. Trim excessive empty margins leaving 5 percent transparent padding. Output one clean high-resolution transparent PNG logo, no checkerboard painted into pixels. Brand asset: meknes-loung"
+    },
+    {
+      "slug": "shawaya-sara",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-1b1038e2-97f7-4485-aeb1-eb8f385713d6.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target: original brand logo. Remove ONLY the surrounding background to genuine transparent alpha including backdrop inside letter holes. Preserve exactly every letter, dot, shape, color, metallic effect, proportions and layout. Do not redesign or retype. Do not add words or shadows. Keep all existing foreground details opaque. For the Double B logo preserve the supplied edges without inventing new letter shapes. Crop excessive blank margins leaving 5 percent transparent padding. Output one transparent PNG with no painted checkerboard. Brand: shawaya-sara"
+    },
+    {
+      "slug": "rashfa-w-jamra",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-1adbe951-3f4e-4662-9be7-6be4331a299c.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target: original brand logo. Remove ONLY the surrounding background to genuine transparent alpha including backdrop inside letter holes. Preserve exactly every letter, dot, shape, color, metallic effect, proportions and layout. Do not redesign or retype. Do not add words or shadows. Keep all existing foreground details opaque. For the Double B logo preserve the supplied edges without inventing new letter shapes. Crop excessive blank margins leaving 5 percent transparent padding. Output one transparent PNG with no painted checkerboard. Brand: rashfa-w-jamra"
+    },
+    {
+      "slug": "sahar2-loung",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-baabdbbd-ad42-420c-9fb9-73758072515b.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target: original brand logo. Remove ONLY the surrounding background to genuine transparent alpha including backdrop inside letter holes. Preserve exactly every letter, dot, shape, color, metallic effect, proportions and layout. Do not redesign or retype. Do not add words or shadows. Keep all existing foreground details opaque. For the Double B logo preserve the supplied edges without inventing new letter shapes. Crop excessive blank margins leaving 5 percent transparent padding. Output one transparent PNG with no painted checkerboard. Brand: sahar2-loung"
+    },
+    {
+      "slug": "h9t",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-a78d3a5a-1936-4155-a02f-1c3c121893eb.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target: original brand logo. Remove ONLY the surrounding background to genuine transparent alpha including backdrop inside letter holes. Preserve exactly every letter, dot, shape, color, metallic effect, proportions and layout. Do not redesign or retype. Do not add words or shadows. Keep all existing foreground details opaque. For the Double B logo preserve the supplied edges without inventing new letter shapes. Crop excessive blank margins leaving 5 percent transparent padding. Output one transparent PNG with no painted checkerboard. Brand: h9t"
+    },
+    {
+      "slug": "double-b-bistro",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-62c84b54-15c6-4d45-9146-a50e0968dfe7.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target: original brand logo. Remove ONLY the surrounding background to genuine transparent alpha including backdrop inside letter holes. Preserve exactly every letter, dot, shape, color, metallic effect, proportions and layout. Do not redesign or retype. Do not add words or shadows. Keep all existing foreground details opaque. For the Double B logo preserve the supplied edges without inventing new letter shapes. Crop excessive blank margins leaving 5 percent transparent padding. Output one transparent PNG with no painted checkerboard. Brand: double-b-bistro"
+    },
+    {
+      "slug": "bab-al-saqifah",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-4f2c1808-3389-4b1c-ae93-1bf656eda236.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target. Remove the surrounding flat background or wall and the same background inside letter counters. Preserve every letter, symbol, color and proportions exactly. Output a clean cutout on genuine transparent alpha PNG, no solid background or painted checkerboard. Do not redesign or retype. Keep foreground opaque with clean edges. Crop excessive empty margins leaving 5 percent padding. Brand: bab-al-saqifah"
+    },
+    {
+      "slug": "loung-zie-alhwa",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-63406600-e7d7-4880-8c78-96d2f1f0b0f0.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target. Remove the surrounding flat background or wall and the same background inside letter counters. Preserve every letter, symbol, color and proportions exactly. Output a clean cutout on genuine transparent alpha PNG, no solid background or painted checkerboard. Do not redesign or retype. Keep foreground opaque with clean edges. Crop excessive empty margins leaving 5 percent padding. Brand: loung-zie-alhwa"
+    },
+    {
+      "slug": "test-zone",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-d3bd1f08-c6cf-400f-bd6e-9187f76c9868.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target. Preserve the entire circular portrait emblem including its internal cream artwork and lettering; remove only the outside white square. Output a clean cutout on genuine transparent alpha PNG, no solid background or painted checkerboard. Do not redesign or retype. Keep foreground opaque with clean edges. Crop excessive empty margins leaving 5 percent padding. Brand: test-zone"
+    },
+    {
+      "slug": "wans-alkif",
+      "source": "C:\\Users\\pc\\.codex\\generated_images\\01a07338-cfdb-7c73-b12e-f15f0980ed31\\exec-68f21fba-0e47-4515-80fe-3b6133944c11.png",
+      "prompt": "Use case: background-extraction. Image 1 is the edit target. Extract ONLY the upper sign's yellow Arabic lettering ونس الكيف and red/yellow hookah icon. Remove the entire green sign panel, building, cables, night background and lower duplicate sign. Preserve the exact top sign lettering shapes and colors. Output a clean cutout on genuine transparent alpha PNG, no solid background or painted checkerboard. Do not redesign or retype. Keep foreground opaque with clean edges. Crop excessive empty margins leaving 5 percent padding. Brand: wans-alkif"
+    }
+  ]
+}

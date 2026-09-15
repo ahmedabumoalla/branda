@@ -12,6 +12,7 @@ import type { ThemeExperience } from "@/lib/cafe/theme-experience";
 import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerExperienceReward } from "@/lib/data/experience-rewards";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { CustomerPageHeader } from "@/components/cafe/themes/customer-mobile-experience";
 
 type TabKey = "orders" | "transactions" | "invoices";
 type AccountView = "main" | "security" | "profile" | "orders" | "notifications";
@@ -35,6 +36,7 @@ export type ThemedAccountPanelProps = {
   slug: string;
   experience: ThemeExperience;
   cafeName: string;
+  logoUrl?: string | null;
   homeHref: string;
   customer: BarndaksaCustomerSession;
   activeTab: TabKey;
@@ -97,7 +99,7 @@ function CustomerAvatar({
   const icon = size === "large" ? "h-12 w-12" : "h-10 w-10";
 
   return (
-    <div className={`relative mx-auto flex ${box} items-center justify-center overflow-hidden rounded-full border-[6px] border-white bg-[#f2ede7] text-[#6b5144] shadow-[0_14px_34px_rgba(55,39,30,0.12)] ring-1 ring-[#eadfd6]`}>
+    <div className={`relative mx-auto flex ${box} items-center justify-center overflow-hidden rounded-full border-4 border-[var(--ci-surface-bg,#fff)] bg-[var(--ci-button-bg,#6B3A25)]/[0.08] text-[var(--ci-button-bg,#6B3A25)] shadow-[0_10px_28px_rgba(23,20,18,0.10)] ring-1 ring-[var(--ci-border,#E7D7C6)]`}>
       <LocalAssetImage
         assetId={assetId ?? customer.avatarAssetId}
         fallbackSrc={customer.avatarUrl}
@@ -128,8 +130,8 @@ function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[22px] border border-[#eee5dc] bg-white p-4 shadow-[0_14px_42px_rgba(53,37,27,0.07)] ${className}`}>
-      {title ? <h2 className="mb-2 px-1 text-[15px] font-black text-[#2b211b]">{title}</h2> : null}
+    <section className={`rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-4 shadow-[0_10px_30px_rgba(23,20,18,0.07)] ${className}`}>
+      {title ? <h2 className="mb-2 px-1 text-sm font-black text-[var(--ci-page-fg,#2b211b)]">{title}</h2> : null}
       {children}
     </section>
   );
@@ -137,7 +139,7 @@ function Card({
 
 function IconCircle({ icon: Icon, danger }: { icon: ElementType; danger?: boolean }) {
   return (
-    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${danger ? "bg-red-50 text-red-600" : "bg-[#f5efe8] text-[#6f513d]"}`}>
+    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${danger ? "bg-red-50 text-red-600" : "bg-[var(--ci-button-bg,#6B3A25)]/[0.09] text-[var(--ci-button-bg,#6B3A25)]"}`}>
       <Icon className="h-5 w-5" />
     </span>
   );
@@ -164,17 +166,17 @@ function MenuRow({
     <>
       <IconCircle icon={icon} danger={danger} />
       <span className="min-w-0 flex-1 text-right">
-        <span className={`block text-sm font-black ${danger ? "text-red-600" : "text-[#2d231d]"}`}>
+        <span className={`block text-sm font-black ${danger ? "text-red-600" : "text-[var(--ci-page-fg,#2d231d)]"}`}>
           {title}
         </span>
-        {subtitle ? <span className="mt-1 block truncate text-xs font-bold text-[#8f8177]">{subtitle}</span> : null}
+        {subtitle ? <span className="mt-1 block line-clamp-2 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#8f8177)]">{subtitle}</span> : null}
       </span>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faf6f1] text-[#9b8f86]">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--ci-page-bg,#faf6f1)] text-[var(--ci-muted-fg,#9b8f86)]">
         <ChevronLeft className="h-4 w-4" />
       </span>
     </>
   );
-  const className = "flex w-full items-center gap-3 px-1 py-4 text-right transition active:scale-[0.99]";
+  const className = "flex min-h-[68px] w-full items-center gap-3 px-1 py-3 text-right transition active:scale-[0.99]";
 
   if (href) return <Link href={href} className={className} data-account-section={section}>{content}</Link>;
   return <button type="button" onClick={onClick} className={className} data-account-section={section}>{content}</button>;
@@ -195,13 +197,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-black text-[#7d6f66]">{label}</span>
+      <span className="text-xs font-black text-[var(--ci-muted-fg,#7d6f66)]">{label}</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        className="mt-2 h-12 w-full rounded-2xl border border-[#eadfd6] bg-[#fffdfb] px-4 text-sm font-bold text-[#2d231d] outline-none transition focus:border-[#9b7a61]"
+        className="mt-2 h-12 w-full rounded-[14px] border border-[var(--ci-input-border,#eadfd6)] bg-[var(--ci-input-bg,#fffdfb)] px-4 text-sm font-bold text-[var(--ci-input-fg,#2d231d)] outline-none transition focus:border-[var(--ci-button-bg,#6B3A25)] focus:ring-2 focus:ring-[var(--ci-button-bg,#6B3A25)]/10"
       />
     </label>
   );
@@ -285,10 +287,10 @@ function OrdersView({ orders, isEvents = false }: { orders: CustomerOrder[]; isE
     return (
       <Card className="mt-5 text-center">
         <PackageCheck className="mx-auto h-9 w-9 text-[#8d7666]" />
-        <h2 className="mt-3 text-base font-black text-[#2d231d]">
+        <h2 className="mt-3 text-base font-black text-[var(--ci-page-fg,#2d231d)]">
           {isEvents ? "لا توجد تذاكر حتى الآن" : "لا توجد طلبات حتى الآن"}
         </h2>
-        <p className="mt-2 text-xs font-bold leading-6 text-[#7d6f66]">
+        <p className="mt-2 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#7d6f66)]">
           {isEvents
             ? "عند شراء التذاكر أو الباقات ستظهر هنا كتذاكرك الخاصة بالفعالية."
             : "عندما تؤكد العلامة طلبات الاستلام ستظهر هنا من بيانات الحساب الحالية."}
@@ -300,25 +302,25 @@ function OrdersView({ orders, isEvents = false }: { orders: CustomerOrder[]; isE
   return (
     <div className="mt-5 grid gap-3">
       {orders.map((order) => (
-        <article key={order.id} className="rounded-[18px] border border-[#eee5dc] bg-white p-3 shadow-[0_10px_30px_rgba(53,37,27,0.06)]">
+        <article key={order.id} className="rounded-[18px] border border-[var(--ci-border,#eee5dc)] bg-[var(--ci-surface-bg,#fff)] p-3 shadow-[0_10px_30px_rgba(23,20,18,0.06)]">
           <div className="flex gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f5efe8] text-[#6f513d]">
               <PackageCheck className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
-              <h3 className="line-clamp-1 text-sm font-black text-[#2d231d]">
+              <h3 className="line-clamp-1 text-sm font-black text-[var(--ci-page-fg,#2d231d)]">
                 {order.items[0] || (isEvents ? "تذكرة فعالية" : "طلب منتجات")}
               </h3>
-              <p className="mt-1 text-xs font-bold leading-5 text-[#7d6f66]">
+              <p className="mt-1 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#7d6f66)]">
                 {order.items.join("، ") || "لا توجد تفاصيل عناصر في السناب شوت الحالي"}
               </p>
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-black text-[#6f6259]">
-                <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{order.status}</span>
-                <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{formatSar(order.total)}</span>
-                {order.branchName ? <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{order.branchName}</span> : null}
-                {order.pickupAt ? <span className="rounded-full bg-[#faf6f1] px-2.5 py-1">{order.pickupAt}</span> : null}
+                <span className="rounded-lg bg-[var(--ci-page-bg,#faf6f1)] px-2.5 py-1">{order.status}</span>
+                <span className="rounded-lg bg-[var(--ci-page-bg,#faf6f1)] px-2.5 py-1">{formatSar(order.total)}</span>
+                {order.branchName ? <span className="rounded-lg bg-[var(--ci-page-bg,#faf6f1)] px-2.5 py-1">{order.branchName}</span> : null}
+                {order.pickupAt ? <span className="rounded-lg bg-[var(--ci-page-bg,#faf6f1)] px-2.5 py-1">{order.pickupAt}</span> : null}
               </div>
-              {order.notes ? <p className="mt-2 text-xs font-bold text-[#7d6f66]">{isEvents ? "تفاصيل التذكرة" : "تفاصيل الطلب"}: {order.notes}</p> : null}
+              {order.notes ? <p className="mt-2 text-xs font-bold text-[var(--ci-muted-fg,#7d6f66)]">{isEvents ? "تفاصيل التذكرة" : "تفاصيل الطلب"}: {order.notes}</p> : null}
               {order.rejectionReason ? <p className="mt-2 text-xs font-bold text-red-600">رد العلامة: {order.rejectionReason}</p> : null}
             </div>
           </div>
@@ -387,18 +389,18 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
   if (view === "security") {
     return (
-      <main className="min-h-screen bg-[#f7f1eb] px-4 pb-28 pt-5 text-[#2d231d]">
-        <div className="mx-auto max-w-md">
-          <button type="button" onClick={goBack} className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#5d483b] shadow-[0_10px_28px_rgba(53,37,27,0.08)]">
+      <main className="min-h-screen px-4 pb-28 pt-3 text-[var(--ci-page-fg,#2d231d)]">
+        <div className="mx-auto max-w-xl">
+          <button type="button" onClick={goBack} className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] px-4 text-sm font-black text-[var(--ci-button-bg,#5d483b)] shadow-sm">
             <ChevronRight className="h-4 w-4" />
             رجوع للحساب
           </button>
           <div className="text-center">
             <CustomerAvatar customer={customer} size="medium" />
-            <p className="mt-3 break-words text-sm font-black text-[#2d231d]">{customer.email || "لا يوجد بريد مسجل"}</p>
+            <p className="mt-3 break-words text-sm font-black text-[var(--ci-page-fg,#2d231d)]">{customer.email || "لا يوجد بريد مسجل"}</p>
           </div>
           <Card className="mt-6">
-            {props.passwordSlot ?? <p className="py-4 text-center text-sm font-bold text-[#7d6f66]">تغيير كلمة المرور غير متاح حاليًا.</p>}
+            {props.passwordSlot ?? <p className="py-4 text-center text-sm font-bold text-[var(--ci-muted-fg,#7d6f66)]">تغيير كلمة المرور غير متاح حاليًا.</p>}
           </Card>
         </div>
       </main>
@@ -407,9 +409,9 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
   if (view === "profile") {
     return (
-      <main className="min-h-screen bg-[#f7f1eb] px-4 pb-28 pt-5 text-[#2d231d]">
-        <div className="mx-auto max-w-md">
-          <button type="button" onClick={goBack} className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#5d483b] shadow-[0_10px_28px_rgba(53,37,27,0.08)]">
+      <main className="min-h-screen px-4 pb-28 pt-3 text-[var(--ci-page-fg,#2d231d)]">
+        <div className="mx-auto max-w-xl">
+          <button type="button" onClick={goBack} className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] px-4 text-sm font-black text-[var(--ci-button-bg,#5d483b)] shadow-sm">
             <ChevronRight className="h-4 w-4" />
             رجوع
           </button>
@@ -428,7 +430,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
                   type="button"
                   onClick={() => props.avatarFileRef?.current?.click()}
                   disabled={props.avatarBusy}
-                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#4b3428] px-5 text-xs font-black text-white shadow-[0_12px_26px_rgba(75,52,40,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[var(--ci-button-bg,#4b3428)] px-5 text-xs font-black text-[var(--ci-button-fg,#fff)] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <ImagePlus className="h-4 w-4" />
                   {props.avatarBusy ? "جاري رفع الصورة" : "تغيير الصورة"}
@@ -441,10 +443,10 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               </div>
               <Field label="الاسم" value={props.editName} onChange={props.onEditName} autoComplete="name" />
               <Field label="رقم الجوال" value={props.editPhone} onChange={props.onEditPhone} inputMode="tel" autoComplete="tel" />
-              <p className="rounded-2xl bg-[#faf6f1] px-4 py-3 text-xs font-bold leading-6 text-[#7d6f66]">
+              <p className="rounded-[14px] bg-[var(--ci-page-bg,#faf6f1)] px-4 py-3 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#7d6f66)]">
                 البريد يعرض من الحساب الحالي ولا يتم تعديله من هذه الصفحة.
               </p>
-              <button type="button" onClick={props.onSaveSettings} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#4b3428] px-5 text-sm font-black text-white shadow-[0_14px_30px_rgba(75,52,40,0.22)]">
+              <button type="button" onClick={props.onSaveSettings} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-[var(--ci-button-bg,#4b3428)] px-5 text-sm font-black text-[var(--ci-button-fg,#fff)] shadow-sm">
                 <Save className="h-4 w-4" />
                 حفظ
               </button>
@@ -457,9 +459,9 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
 
   if (view === "orders" || view === "notifications") {
     return (
-      <main className="min-h-screen bg-[#f7f1eb] px-4 pb-28 pt-5 text-[#2d231d]">
-        <div className="mx-auto max-w-md">
-          <button type="button" onClick={goBack} className="mb-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-[#5d483b] shadow-[0_10px_28px_rgba(53,37,27,0.08)]">
+      <main className="min-h-screen px-4 pb-28 pt-3 text-[var(--ci-page-fg,#2d231d)]">
+        <div className="mx-auto max-w-xl">
+          <button type="button" onClick={goBack} className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] px-4 text-sm font-black text-[var(--ci-button-bg,#5d483b)] shadow-sm">
             <ChevronRight className="h-4 w-4" />
             رجوع للحساب
           </button>
@@ -473,14 +475,14 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <h1 className="text-lg font-black">التنبيهات</h1>
               <div className="mt-5 grid gap-3">
                 {notifications.length ? notifications.map((item) => (
-                  <article key={item.id} className="rounded-[18px] border border-[#eee5dc] bg-white p-4 shadow-[0_10px_30px_rgba(53,37,27,0.06)]">
-                    <p className="text-sm font-black text-[#2d231d]">{item.title}</p>
-                    <p className="mt-1 text-xs font-bold leading-5 text-[#7d6f66]">{item.body}</p>
+                  <article key={item.id} className="rounded-[18px] border border-[var(--ci-border,#eee5dc)] bg-[var(--ci-surface-bg,#fff)] p-4 shadow-[0_10px_30px_rgba(23,20,18,0.06)]">
+                    <p className="text-sm font-black text-[var(--ci-page-fg,#2d231d)]">{item.title}</p>
+                    <p className="mt-1 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#7d6f66)]">{item.body}</p>
                   </article>
                 )) : (
                   <Card className="text-center">
                     <Bell className="mx-auto h-8 w-8 text-[#8d7666]" />
-                    <p className="mt-3 text-sm font-black text-[#2d231d]">لا توجد تنبيهات جديدة من البيانات الحالية</p>
+                    <p className="mt-3 text-sm font-black text-[var(--ci-page-fg,#2d231d)]">لا توجد تنبيهات جديدة حاليًا</p>
                   </Card>
                 )}
               </div>
@@ -492,44 +494,71 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f1eb] px-4 pb-28 pt-5 text-[#2d231d]">
-      <div className="mx-auto max-w-md">
-        <div className="flex justify-end">
-          <button type="button" onClick={openNotifications} className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#5d483b] shadow-[0_10px_28px_rgba(53,37,27,0.08)]" aria-label="التنبيهات">
-            <Bell className="h-5 w-5" />
-            {unreadNotificationCount ? (
-              <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
-                {unreadNotificationCount}
-              </span>
-            ) : null}
-          </button>
-        </div>
+    <main className="min-h-screen px-4 pb-28 pt-1 text-[var(--ci-page-fg,#2d231d)] sm:px-6 sm:pt-3">
+      <div className="mx-auto max-w-xl">
+        <CustomerPageHeader
+          cafeName={props.cafeName}
+          logoUrl={props.logoUrl}
+          title="الحساب"
+          subtitle="بياناتك، طلباتك، وإعدادات الأمان"
+          action={
+            <button
+              type="button"
+              onClick={openNotifications}
+              className="relative flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] text-[var(--ci-button-bg,#6B3A25)] shadow-sm"
+              aria-label="التنبيهات"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadNotificationCount ? (
+                <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
+                  {unreadNotificationCount}
+                </span>
+              ) : null}
+            </button>
+          }
+        />
 
-        <section className="mt-2 text-center">
-          <CustomerAvatar customer={customer} />
-          <p className="mt-4 break-words text-sm font-black text-[#2d231d]">{customer.email || "لا يوجد بريد مسجل"}</p>
-          {customer.phone ? <p className="mt-1 text-sm font-bold text-[#9a8d84]">{phoneText}</p> : null}
+        <section className="mt-5 flex items-center gap-4 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-4 shadow-[0_10px_30px_rgba(23,20,18,0.07)]">
+          <div className="shrink-0 [&>div]:!mx-0">
+            <CustomerAvatar customer={customer} size="medium" />
+          </div>
+          <div className="min-w-0 flex-1 text-right">
+            <p className="text-[11px] font-bold text-[var(--ci-muted-fg,#806A5E)]">مرحبًا بك</p>
+            <h2 className="mt-0.5 truncate text-xl font-black text-[var(--ci-page-fg,#2d231d)]">
+              {customer.fullName || "عميل العلامة"}
+            </h2>
+            <p className="mt-1 truncate text-xs font-bold text-[var(--ci-muted-fg,#9a8d84)]">
+              {customer.email || phoneText}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openProfile}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ci-button-bg,#6B3A25)]/[0.09] px-3 text-xs font-black text-[var(--ci-button-bg,#6B3A25)]"
+          >
+            تعديل
+          </button>
         </section>
 
-        <div className="mt-6 space-y-5">
-          <Card title="معلومات عامة">
-            <div className="divide-y divide-[#f0e7df]">
+        <div className="mt-5 space-y-4">
+          <Card title="نشاطك">
+            <div className="divide-y divide-[var(--ci-border,#E7D7C6)]/70">
               {generalRows.map((row) => (
                 <MenuRow key={row.title} icon={row.icon} title={row.title} subtitle={row.subtitle} href={row.href} onClick={row.onClick} section={row.section} />
               ))}
             </div>
           </Card>
 
-          <Card title="إدارة حسابك الشخصي">
-            <div className="divide-y divide-[#f0e7df]">
+          <Card title="إعدادات الحساب">
+            <div className="divide-y divide-[var(--ci-border,#E7D7C6)]/70">
               <MenuRow icon={ShieldCheck} title="الأمان" subtitle="تغيير كلمة المرور" onClick={() => setView("security")} />
               <MenuRow icon={Pencil} title="تعديل معلوماتك الشخصية" subtitle="الاسم ورقم الجوال" onClick={openProfile} />
               <MenuRow icon={LogOut} title="تسجيل الخروج" subtitle="إنهاء جلسة العميل الحالية" danger onClick={props.onLogout} />
             </div>
           </Card>
 
-          <a href="https://barndaksa.com" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 text-center text-[11px] font-black text-[#7d6f66]">
-            <span>صمم بواسطة برندة</span>
+          <a href="https://barndaksa.com" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center gap-1 pt-2 text-center text-[10px] font-bold text-[var(--ci-muted-fg,#7d6f66)]">
+            <span>هذه التجربة مقدمة بواسطة برندة</span>
             <BrandaLogo width={54} height={22} className="max-h-[18px]" />
             <span dir="ltr">https://barndaksa.com</span>
           </a>

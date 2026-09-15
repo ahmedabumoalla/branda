@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Mythic Rift — 3D Battle Lab</title>
+  <link rel="stylesheet" href="styles-3d.css">
+</head>
+<body>
+  <main class="battle-app">
+    <section class="stage">
+      <canvas id="renderCanvas" touch-action="none" aria-label="ساحة قتال ثلاثية الأبعاد"></canvas>
+      <header class="hud">
+        <div class="opponent"><span>◆</span><div><b>VoidWarden</b><small>⚜ 2883</small></div></div>
+        <div class="timer"><small>الوقت المتبقي</small><b id="timer">2:00</b></div>
+        <div class="score"><b id="enemyScore">0</b><span>♛</span><b id="playerScore">0</b></div>
+      </header>
+      <a class="back" href="index.html" aria-label="الرجوع">‹</a>
+      <div id="message" class="message"></div>
+    </section>
+    <footer class="controls">
+      <div class="next"><span>التالي</span><img src="assets/generated/battle-model-cards/lumen-card-v2.png" alt=""></div>
+      <div id="hand" class="hand">
+        <button class="card selected" data-unit="emberhorn"><i>3</i><img src="assets/generated/battle-model-cards/emberhorn-card-v2.png" alt="قرن الجمر"><b>قرن الجمر</b></button>
+        <button class="card" data-unit="mossbit"><i>3</i><img src="assets/generated/battle-model-cards/mossbit-card-v2.png" alt="مهندس الطحلب"><b>مهندس الطحلب</b></button>
+        <button class="card" data-unit="shardback"><i>6</i><img src="assets/generated/battle-model-cards/shardback-card-v2.png" alt="ظهر الشظايا"><b>ظهر الشظايا</b></button>
+        <button class="card" data-unit="lumen"><i>2</i><img src="assets/generated/battle-model-cards/lumen-card-v2.png" alt="طيف الفانوس"><b>طيف الفانوس</b></button>
+      </div>
+      <div class="elixir"><b id="elixirValue">6</b><span>طاقة</span></div>
+      <div class="elixir-bar"><i id="elixirFill"></i></div>
+    </footer>
+  </main>
+  <script src="vendor/babylon.js"></script>
+  <script src="vendor/babylonjs.loaders.min.js"></script>
+  <script type="module" src="src/three-d/main.js"></script>
+</body>
+</html>

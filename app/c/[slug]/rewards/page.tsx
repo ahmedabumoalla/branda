@@ -34,9 +34,9 @@ import {
   submitCustomerExperienceRewardProofAction,
 } from "@/app/actions/experience-rewards";
 import { CafeLayout, useCafePageContext } from "@/components/cafe/cafe-layout";
-import { CafeLogo } from "@/components/cafe/cafe-logo";
 import {
   CustomerBottomDock,
+  CustomerPageHeader,
   defaultCustomerDockItems,
 } from "@/components/cafe/themes/customer-mobile-experience";
 import { PublicBrowserNav } from "@/components/cafe/public-browser-nav";
@@ -187,33 +187,27 @@ function BrandHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <CafeLogo name={cafeName} logoUrl={logoUrl} size="sm" />
-        <div className="min-w-0">
-          <p className="truncate text-[11px] font-black text-[var(--ci-muted-fg,#806A5E)]">
-            {cafeName}
-          </p>
-          <h1 className="truncate text-2xl font-black leading-tight text-[var(--ci-page-fg,#311912)]">
-            {title}
-          </h1>
-        </div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
+    <CustomerPageHeader
+      cafeName={cafeName}
+      logoUrl={logoUrl}
+      title={title}
+      subtitle={title === "المكافآت" ? "رصيدك، بطاقاتك، ومكافآتك الجاهزة" : "كل تفاصيل المكافآت في مكان واحد"}
+      action={
+        <>
         {action}
         {onBack ? (
           <button
             type="button"
             onClick={onBack}
             aria-label="رجوع إلى صفحة المكافآت"
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--ci-border,#E7D7C6)] bg-white text-[var(--ci-page-fg,#311912)] shadow-sm transition active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] text-[var(--ci-page-fg,#311912)] shadow-sm transition active:scale-95"
           >
             <ArrowRight className="h-5 w-5" />
           </button>
         ) : null}
-      </div>
-    </header>
+        </>
+      }
+    />
   );
 }
 
@@ -233,7 +227,7 @@ function SearchBox({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-12 w-full rounded-[20px] border border-[var(--ci-border,#E7D7C6)] bg-white pr-11 pl-4 text-sm font-bold text-[var(--ci-page-fg,#311912)] outline-none shadow-sm placeholder:text-[var(--ci-muted-fg,#806A5E)]/70 focus:border-[var(--ci-button-bg,#2F7A52)]"
+        className="h-12 w-full rounded-[14px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] pr-11 pl-4 text-sm font-bold text-[var(--ci-page-fg,#311912)] outline-none shadow-sm placeholder:text-[var(--ci-muted-fg,#806A5E)]/70 focus:border-[var(--ci-button-bg,#2F7A52)] focus:ring-2 focus:ring-[var(--ci-button-bg,#2F7A52)]/10"
       />
     </label>
   );
@@ -254,17 +248,17 @@ function HomeActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-[22px] border border-[var(--ci-border,#E7D7C6)] bg-white p-4 text-center shadow-[0_14px_36px_rgba(23,20,18,0.07)] transition active:scale-[0.98]"
+      className="relative flex min-h-[104px] flex-col items-start justify-between gap-3 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-4 text-right shadow-[0_10px_30px_rgba(23,20,18,0.07)] transition active:scale-[0.98]"
     >
       {activeCount ? (
-        <span className="absolute left-3 top-3 min-w-6 rounded-full bg-[var(--ci-button-bg,#2F7A52)] px-2 py-1 text-[10px] font-black text-[var(--ci-button-fg,#fff)]">
+        <span className="absolute left-3 top-3 min-w-6 rounded-lg bg-[var(--ci-button-bg,#2F7A52)] px-2 py-1 text-center text-[10px] font-black text-[var(--ci-button-fg,#fff)]">
           {activeCount}
         </span>
       ) : null}
-      <span className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]">
-        <Icon className="h-6 w-6" />
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]">
+        <Icon className="h-5 w-5" />
       </span>
-      <span className="text-sm font-black text-[var(--ci-page-fg,#311912)]">
+        <span className="text-sm font-black leading-5 text-[var(--ci-page-fg,#311912)]">
         {title}
       </span>
     </button>
@@ -320,7 +314,7 @@ function SegmentTabs({
 
 function EmptyState({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="rounded-[24px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-white/80 p-7 text-center shadow-sm">
+    <div className="rounded-[18px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)]/85 p-7 text-center shadow-sm">
       <Gift className="mx-auto h-9 w-9 text-[var(--ci-button-bg,#2F7A52)]" />
       <h3 className="mt-3 text-lg font-black text-[var(--ci-page-fg,#311912)]">
         {title}
@@ -1008,32 +1002,44 @@ function RewardsPageInner() {
 
   if (!hydrated || pageLoading) {
     content = (
-      <div className="rounded-[24px] bg-white p-8 text-center shadow-sm">
-        <p className="font-black text-[var(--ci-page-fg,#311912)]">
-          جاري تحميل المكافآت...
-        </p>
-      </div>
+      <>
+        <BrandHeader cafeName={cafeName || slug} logoUrl={logoUrl} title="المكافآت" />
+        <div className="rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-sm">
+          <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-[var(--ci-border,#E7D7C6)] border-t-[var(--ci-button-bg,#2F7A52)]" />
+          <p className="mt-4 text-sm font-black text-[var(--ci-page-fg,#311912)]">
+            جاري تجهيز مكافآتك...
+          </p>
+        </div>
+      </>
     );
   } else if (!rewardsPageEnabled) {
     content = (
       <>
+        <BrandHeader cafeName={cafeName || slug} logoUrl={logoUrl} title="المكافآت" />
         <PublicBrowserNav slug={slug} previewThemeId={previewThemeId} features={features} active="rewards" />
         <PublicFeatureUnavailable slug={slug} feature="loyalty" previewThemeId={previewThemeId} title="المكافآت" />
       </>
     );
   } else if (loadError) {
     content = (
-      <div className="rounded-[24px] bg-white p-8 text-center shadow-sm">
-        <p className="font-black leading-7 text-[var(--ci-page-fg,#311912)]">
-          {loadError}
-        </p>
-        <a
-          href={loginHref}
-          className="mt-4 inline-flex rounded-[18px] bg-[var(--ci-button-bg,#2F7A52)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg,#fff)]"
-        >
-          تسجيل الدخول
-        </a>
-      </div>
+      <>
+        <BrandHeader cafeName={cafeName || slug} logoUrl={logoUrl} title="المكافآت" />
+        <div className="rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-sm">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--ci-button-bg,#2F7A52)]/10 text-[var(--ci-button-bg,#2F7A52)]">
+            <Gift className="h-6 w-6" />
+          </span>
+          <h2 className="mt-4 text-lg font-black text-[var(--ci-page-fg,#311912)]">سجّل الدخول لمتابعة مكافآتك</h2>
+          <p className="mt-2 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
+            {loadError}
+          </p>
+          <a
+            href={loginHref}
+            className="mt-5 inline-flex min-h-11 items-center rounded-[14px] bg-[var(--ci-button-bg,#2F7A52)] px-5 py-3 text-sm font-black text-[var(--ci-button-fg,#fff)]"
+          >
+            تسجيل الدخول
+          </a>
+        </div>
+      </>
     );
   } else if (viewMode === "loyalty") {
     const currentCount = currentLoyaltyRewards.length;
@@ -1202,7 +1208,14 @@ function RewardsPageInner() {
             />
           </div>
         ) : null}
-        <div className="grid grid-cols-2 gap-3">
+          <section aria-labelledby="reward-types-title">
+            <div className="mb-3">
+              <p className="text-[11px] font-bold text-[var(--ci-muted-fg,#806A5E)]">خدمات المكافآت</p>
+              <h2 id="reward-types-title" className="text-lg font-black text-[var(--ci-page-fg,#311912)]">
+                ماذا تريد أن تعرض؟
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
           {mainActions.length ? (
             mainActions.map((item) => (
               <HomeActionButton
@@ -1224,7 +1237,8 @@ function RewardsPageInner() {
               />
             </div>
           )}
-        </div>
+            </div>
+          </section>
         {hasReadyLoyaltyReward || readyExperienceRewards.length ? null : (
           <EmptyState
             title="لا توجد مكافآت حالية لهذه العلامة"
@@ -1237,7 +1251,7 @@ function RewardsPageInner() {
 
   return (
     <>
-      <section className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-md flex-col gap-4 pb-7 pt-3">
+      <section className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-xl flex-col gap-4 pb-7 pt-1 sm:pt-3">
         {content}
       </section>
       <CustomerBottomDock

@@ -23,6 +23,7 @@ import {
   revokeObjectUrl,
 } from "@/lib/cafe/local-asset-store";
 import { Modal } from "@/components/dashboard/ui/modal";
+import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 import { formatSar } from "@/lib/format";
 import {
   isPromoActive,
@@ -722,6 +723,7 @@ export function MenuProductFormModal({
   return (
     <Modal
       open={open}
+      panelClassName={styles.editorPanel}
       title={mode === "add" ? `إضافة ${productNoun}` : `تعديل ${productNoun}`}
       onClose={onClose}
       footer={
@@ -747,7 +749,7 @@ export function MenuProductFormModal({
       <form
         id="menu-product-form"
         onSubmit={handleSubmit}
-        className="grid gap-8 lg:grid-cols-2"
+        className={`${styles.productEditor} grid gap-8 lg:grid-cols-2`}
       >
         <div className="space-y-5">
           <label className="block">
