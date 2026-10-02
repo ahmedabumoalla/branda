@@ -1062,38 +1062,74 @@ async function analyzePhpCatalogMenu(sourceUrl: string): Promise<MenuImportAnaly
   );
 }
 
+function extractStructuredCardBlocks(html: string) {
+  const blocks: string[] = [];
+  const tags = /<\/?div\b[^>]*>/gi;
+  let depth = 0;
+  let start = 0;
+  for (const match of html.matchAll(tags)) {
+    const tag = match[0];
+    const closing = /^<\//.test(tag);
+    if (!depth) {
+      if (closing || !extractClassName(tag).split(/\s+/).some((name) => name === "product-card" || name === "menu-item")) continue;
+      start = (match.index ?? 0) + tag.length;
+      depth = 1;
+    } else if (closing) {
+      depth -= 1;
+      if (!depth) blocks.push(html.slice(start, match.index));
+    } else {
+      depth += 1;
+    }
+  }
+  return blocks;
+}
+
+function extractStructuredField(block: string, classNames: string[] | RegExp) {
+  const pattern = /<([a-z][\w-]*)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi;
+  // Match opening tags separately so an outer wrapper cannot hide its children.
+  for (const match of block.matchAll(/<[a-z][\w-]*\b[^>]*>/gi)) {
+    if (!extractClassName(match[0]).split(/\s+/).some((name) =>
+      Array.isArray(classNames) ? classNames.includes(name) : classNames.test(name)
+    )) continue;
+    pattern.lastIndex = match.index ?? 0;
+    const field = pattern.exec(block);
+    if (field?.index === match.index) return stripTags(field[3]);
+  }
+  return "";
+}
+
 function extractStructuredHtmlItems(html: string, baseUrl: string) {
   const items: ExtractedMenuItem[] = [];
+  const sanitizedHtml = html.replace(/<!--[\s\S]*?-->|<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
   const headingPattern = /<h[1-3]\b[^>]*class=["'][^"']*(?:menu-title|category|section-title)[^"']*["'][^>]*>([\s\S]*?)<\/h[1-3]>/gi;
-  const headings = Array.from(html.matchAll(headingPattern));
+  const headings = Array.from(sanitizedHtml.matchAll(headingPattern));
 
-  for (let index = 0; index < headings.length; index += 1) {
+  for (let index = -1; index < headings.length; index += 1) {
     const heading = headings[index];
-    const categoryName = stripTags(heading[1] ?? "") || "غير مصنف";
-    const start = (heading.index ?? 0) + heading[0].length;
-    const end = headings[index + 1]?.index ?? html.length;
-    const segment = html.slice(start, end);
-    const itemPattern = /<div\b[^>]*class=["'][^"']*menu-item[^"']*["'][^>]*>([\s\S]*?)(?=<div\b[^>]*class=["'][^"']*menu-item|$)/gi;
+    const categoryName = stripTags(heading?.[1] ?? "") || "غير مصنف";
+    const start = heading ? (heading.index ?? 0) + heading[0].length : 0;
+    const end = headings[index + 1]?.index ?? sanitizedHtml.length;
+    const segment = sanitizedHtml.slice(start, end);
 
-    for (const itemMatch of segment.matchAll(itemPattern)) {
-      const block = itemMatch[1] ?? "";
-      const name = stripTags(block.match(/<h[1-4]\b[^>]*>([\s\S]*?)<\/h[1-4]>/i)?.[1] ?? "");
-      const priceText =
-        stripTags(block.match(/<[^>]*class=["'][^"']*price[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1] ?? "") ||
-        stripTags(block);
+    for (const block of extractStructuredCardBlocks(segment)) {
+      const name = extractStructuredField(block, ["product-name", "item-name"]) ||
+        stripTags(block.match(/<h[1-4]\b[^>]*>([\s\S]*?)<\/h[1-4]>/i)?.[1] ?? "");
+      const priceText = extractStructuredField(block, /(?:^|[-_])price(?:$|[-_])/i);
       const price = parsePrice(priceText);
+      const calories = parsePrice(extractStructuredField(block, ["product-calories", "item-calories", "calories"]));
       const imgTag = block.match(/<img\b[^>]*>/i)?.[0] ?? "";
-      const imageUrl = extractAttribute(imgTag, "src") || extractAttribute(imgTag, "data-src") || extractAttribute(imgTag, "data-lazy-src");
+      const imageUrl = decodeHtmlEntities(extractAttribute(imgTag, "src") || extractAttribute(imgTag, "data-src") || extractAttribute(imgTag, "data-lazy-src"));
 
-      if (!name || price == null) continue;
+      if (!name) continue;
       items.push({
         categoryName,
         productName: name,
-        description: null,
+        description: extractStructuredField(block, ["product-description", "item-description", "description", "desc"]) || null,
         price,
+        calories,
         imageUrl: imageUrl ? absolutizeUrl(imageUrl, baseUrl) : null,
         metadata: { sourceUrl: baseUrl, extraction: "structured-html" },
-        status: imageUrl ? "ready" : "needs_review",
+        status: imageUrl && price != null ? "ready" : "needs_review",
       });
     }
   }
@@ -1119,10 +1155,6 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
   const structuredHtmlItems = fetched.contentType.includes("text/html")
     ? extractStructuredHtmlItems(fetched.text, fetched.finalUrl)
     : [];
-  const htmlTextItems = parseMenuItemsFromText(
-    fetched.contentType.includes("application/json") ? fetched.text : htmlToText(fetched.text),
-    fetched.finalUrl
-  );
   const nextDataItems: ExtractedMenuItem[] = [];
   const nextData = extractNextData(fetched.text);
   if (nextData) collectObjectsWithPrices(nextData, fetched.finalUrl, nextDataItems);
@@ -1130,7 +1162,13 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
   const images = extractImages(fetched.text, fetched.finalUrl);
   let categoryLinks: Array<{ url: string; label: string }> = [];
   let categoryPages: Array<{ page: Awaited<ReturnType<typeof fetchPublicMenuUrl>>; label: string }> = [];
-  let items = attachImages([...structuredHtmlItems, ...jsonLdItems, ...nextDataItems, ...htmlTextItems], images);
+  const structuredItems = [...structuredHtmlItems, ...jsonLdItems, ...nextDataItems];
+  const htmlTextItems = structuredItems.length ? [] : parseMenuItemsFromText(
+    fetched.contentType.includes("application/json") ? fetched.text : htmlToText(fetched.text),
+    fetched.finalUrl
+  );
+  // Card images stay local to the card; fuzzy global alt matching can join different products.
+  let items = [...structuredHtmlItems, ...attachImages([...jsonLdItems, ...nextDataItems, ...htmlTextItems], images)];
 
   if (!items.length && fetched.contentType.includes("text/html")) {
     const baseUrl = new URL(fetched.finalUrl);
