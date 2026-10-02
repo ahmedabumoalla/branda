@@ -336,6 +336,43 @@
 .heroExplore:hover { background: var(--forest); }
 .heroAside { position: absolute; right: 5%; top: 38%; font-size: 8px; line-height: 2.3; letter-spacing: 4px; color: var(--hero-cream); margin: 0; }
 .heroAside::before { content: ""; display: block; width: 40px; height: 1px; background: var(--hero-gold); margin-bottom: 10px; }
+
+/* Rast's red wordmark gets a quiet, full-width masthead above the coffee image. */
+.rastMenu .referenceHeader {
+  max-width: none;
+  padding: 12px max(5%, calc((100% - 1240px) / 2));
+  background: var(--hero-cream);
+  border-bottom: 1px solid var(--line);
+}
+.rastMenu .referenceHeader .brandWordmark {
+  width: clamp(200px, 26vw, 340px);
+  min-height: 100px;
+  color: var(--forest);
+}
+.rastMenu .brandLogo { height: 112px; }
+.rastMenu .heroIcon {
+  color: var(--forest);
+  background: transparent;
+  border-color: var(--line);
+}
+.rastMenu .heroIcon:hover { background: var(--panel); }
+.rastMenu .referenceHeader a:focus-visible,
+.rastMenu .referenceHeader button:focus-visible { outline-color: var(--forest); }
+.rastMenu .heroCopy { padding-top: 32px; }
+.rastMenu .brandSignature .footerLogo { height: 100px; margin-bottom: 12px; }
+
+@media (max-width: 640px) {
+  .rastMenu .referenceHeader { padding: 8px 4%; }
+  .rastMenu .referenceHeader .brandWordmark {
+    width: clamp(100px, 31vw, 180px);
+    min-height: 72px;
+  }
+  .rastMenu .brandLogo { height: 64px; }
+  .rastMenu .heroActions { gap: 0; }
+  .rastMenu .heroIcon { width: 44px; height: 44px; }
+  .rastMenu .heroCopy { padding-top: 24px; }
+  .rastMenu .brandSignature .footerLogo { width: 220px; max-width: 80%; height: 84px; }
+}
 .referenceMenu .catalog { position: relative; max-width: 1440px; padding: 20px 5% 64px; }
 .referenceMenu .catalog::before, .referenceMenu .catalog::after { content: ""; position: absolute; z-index: -1; pointer-events: none; top: -56px; bottom: 0; width: 65px; background-image: url("/menu-art/double-b-leaves.webp"), url("/menu-art/double-b-leaves.webp"); background-position: left top, left 760px; background-size: 130px auto; background-repeat: no-repeat; }
 .referenceMenu .catalog::before { left: -24px; }

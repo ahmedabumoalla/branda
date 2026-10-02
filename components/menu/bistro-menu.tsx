@@ -166,7 +166,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
     shareTimer.current = setTimeout(() => setShareMessage(""), 4000);
   }
 
-  return <main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu}`} dir="rtl"
+  return <main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${menu.slug === "rast" ? s.rastMenu : ""}`} dir="rtl"
     style={menu.slug === "kat-coffe" ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
     <a href="#menu-catalog" className={s.skipLink}>انتقل إلى الأصناف</a>
     <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
