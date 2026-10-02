@@ -2,10 +2,16 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Activate Rast WhatsApp conversation link
+## Latest task: Activate Rast branch map link
+
+- Updated: 2026-10-02. Connected the existing location icon and label to the exact Google Maps short URL supplied by the user. Native accessible anchor, safe new-tab attributes, existing focus ring, unchanged dimensions and inherited colors; subtle title hover color. Only Rast component/styles changed; other social previews and WhatsApp preserved.
+- RUN/PASS Node 24.21.0 TypeScript, scoped ESLint, text integrity (~4s), diff review/check. HTTP redirect inspection (~3s) confirmed Google Maps query for Rast Coffee in Abha. Initial overly narrow check rejected the valid maps.google.com root-path redirect; inspected three redirect hops to www.google.com/maps and confirmed destination. No browser or navigation-app launch. No backend, dependency or permission changes. Publication pending.
+
+## Previous task: Activate Rast WhatsApp conversation link
 
 - Updated: 2026-10-02. Connected the user-supplied Saudi mobile number to the WhatsApp icon using the international wa.me format. Icon and label form one accessible link with a 52px minimum width, existing focus ring and safe new-tab attributes. Other accounts/location remain static previews as requested; design dimensions preserved. No backend or dependency changes.
-- RUN/PASS: Node 24.21.0 TypeScript, scoped ESLint and text integrity (~4s); source/diff review and diff check. Focused SSR/CSS check (~0.3s) confirms exactly one link, exact destination normalization, four social items and valid CSS. No browser or actual WhatsApp app launch/message sent. Publication pending.
+- RUN/PASS: Node 24.21.0 TypeScript, scoped ESLint and text integrity (~4s); source/diff review and diff check. Focused SSR/CSS check (~0.3s) confirms exactly one link, exact destination normalization, four social items and valid CSS. No browser or actual WhatsApp app launch/message sent.
+- Published GitHub main a04de6d; Vercel FEdZcd9w11HwWDuQCPMkJL2n5wsc build succeeded. RUN/PASS production HTTP check (~8s): 200, exact WhatsApp destination and one active contact link in the new section. Evidence-only documentation update follows completed checks.
 
 ## Previous task: Rast social and location design preview
 

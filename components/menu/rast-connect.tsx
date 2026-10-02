@@ -52,10 +52,10 @@ export function RastConnect() {
           </li>;
         })}
       </ul>
-      <div className={s.location}>
+      <a className={s.location} href="https://maps.app.goo.gl/pr6HtT5qx37rW5ZQ8?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="موقع فرع راست على خرائط قوقل">
         <span className={s.pin}><MapPin aria-hidden="true" /></span>
         <span><span className={s.locationTitle}>نلقاك في راست</span><span className={s.locationCaption}>موقع الفرع</span></span>
-      </div>
+      </a>
     </div>
   </section>;
 }

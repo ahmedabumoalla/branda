@@ -12,7 +12,8 @@
 .icon svg { width: 21px; height: 21px; stroke-width: 1.5; }
 .label { font-size: 11px; line-height: 1.5; white-space: nowrap; }
 .whatsapp .icon { background: var(--rast-wine); border-color: var(--rast-wine); color: var(--rast-cream); }
-.location { justify-self: end; display: flex; align-items: center; gap: 13px; padding: 10px 16px; border-inline-start: 1px solid var(--rast-border); }
+.location { justify-self: end; display: flex; align-items: center; gap: 13px; padding: 10px 16px; border-inline-start: 1px solid var(--rast-border); color: inherit; text-decoration: none; }
+.location:hover .locationTitle { color: var(--rast-red); }
 .pin { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; border: 1px solid var(--rast-border); border-radius: 50%; outline: 1px solid var(--rast-border); outline-offset: 4px; color: var(--rast-red); }
 .pin svg { width: 20px; height: 20px; stroke-width: 1.5; }
 .locationTitle, .locationCaption { display: block; }
