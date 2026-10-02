@@ -2,12 +2,18 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Rast social and location design preview
+## Latest task: Activate Rast WhatsApp conversation link
+
+- Updated: 2026-10-02. Connected the user-supplied Saudi mobile number to the WhatsApp icon using the international wa.me format. Icon and label form one accessible link with a 52px minimum width, existing focus ring and safe new-tab attributes. Other accounts/location remain static previews as requested; design dimensions preserved. No backend or dependency changes.
+- RUN/PASS: Node 24.21.0 TypeScript, scoped ESLint and text integrity (~4s); source/diff review and diff check. Focused SSR/CSS check (~0.3s) confirms exactly one link, exact destination normalization, four social items and valid CSS. No browser or actual WhatsApp app launch/message sent. Publication pending.
+
+## Previous task: Rast social and location design preview
 
 - Updated: 2026-10-02. User requested Snapchat, TikTok, Instagram, WhatsApp and branch-location integration only for Rast, then explicitly deferred all destinations and requested icons only for design preview. Added RastConnect directly below the hero: cream/burgundy contact strip, four labelled brand icons, highlighted WhatsApp medallion and location marker. Desktop uses three columns; mobile places social icons on a separate balanced row. Existing hero/catalog/footer preserved.
 - Scope: components/menu/rast-connect.tsx, rast-connect.module.css and conditional import/mount in bistro-menu.tsx. No placeholder hrefs, interactive roles, fake actions, network requests or keyboard stops. No backend, permissions, dependency or data changes. Real account links, WhatsApp conversation number and map destination intentionally deferred by user.
 - Applied existing frontend-design/UI-UX guidance, focused accessible-name search, ECC React patterns and installed Next client-boundary guide. Source review covers narrow-screen wrapping, labelled static SVGs, existing palette contrast, no motion and Rast-only scope. No browser used under project policy.
-- RUN/PASS Node 24.21.0: TypeScript, scoped ESLint, text integrity (~4s), diff review/check; focused ReactDOM SSR/CSS parse (~0.3s) verifies four labelled social items, five decorative SVGs, zero fake interactive elements and conditional Rast mount. Initial checks exposed unavailable Instagram export in installed Lucide; replaced with local SVG and both checks reran successfully. Publication pending.
+- RUN/PASS Node 24.21.0: TypeScript, scoped ESLint, text integrity (~4s), diff review/check; focused ReactDOM SSR/CSS parse (~0.3s) verifies four labelled social items, five decorative SVGs, zero fake interactive elements and conditional Rast mount. Initial checks exposed unavailable Instagram export in installed Lucide; replaced with local SVG and both checks reran successfully.
+- Published GitHub main cb8c341; Vercel HF1RNDBRx58xQRB3wkUtx81NU6wL build succeeded. RUN/PASS live HTTP/SSR/CSS check (~9s): Rast and Basilico HTTP 200; Rast has four social icons plus location, no fake links, published responsive CSS; Basilico has no new contact section. No browser rendering inspection claimed. Evidence-only documentation update after completed checks.
 
 ## Previous task: Subtle Rast section heading weight
 

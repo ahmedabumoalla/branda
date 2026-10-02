@@ -28,14 +28,13 @@ function WhatsappMark() {
   </svg>;
 }
 
-// Presentation preview requested by the owner; add real destinations when supplied.
-// Static elements intentionally have no fake href, click handler or keyboard stop.
+// Only owner-supplied destinations are active; remaining accounts stay as previews.
 export function RastConnect() {
   const accounts = [
     { name: "سناب شات", Icon: SnapchatMark },
     { name: "تيك توك", Icon: TiktokMark },
     { name: "إنستقرام", Icon: InstagramMark },
-    { name: "واتساب", Icon: WhatsappMark, featured: true },
+    { name: "واتساب", Icon: WhatsappMark, featured: true, href: "https://wa.me/966532751005" },
   ];
 
   return <section className={s.connect} aria-label="راست على منصات التواصل وموقع الفرع">
@@ -45,10 +44,13 @@ export function RastConnect() {
         <h2>لحظتنا تكمل <span>معك</span></h2>
       </div>
       <ul className={s.accounts} aria-label="منصات التواصل">
-        {accounts.map(({ name, Icon, featured }) => <li key={name} className={featured ? s.whatsapp : undefined}>
-          <span className={s.icon}><Icon aria-hidden="true" /></span>
-          <span className={s.label}>{name}</span>
-        </li>)}
+        {accounts.map(({ name, Icon, featured, href }) => {
+          const content = <><span className={s.icon}><Icon aria-hidden="true" /></span><span className={s.label}>{name}</span></>;
+          return <li key={name} className={featured ? s.whatsapp : undefined}>
+            {href ? <a className={s.account} href={href} target="_blank" rel="noopener noreferrer" aria-label="محادثة راست على واتساب">{content}</a>
+              : <span className={s.account}>{content}</span>}
+          </li>;
+        })}
       </ul>
       <div className={s.location}>
         <span className={s.pin}><MapPin aria-hidden="true" /></span>
