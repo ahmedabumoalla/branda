@@ -2,10 +2,18 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Rast copy punctuation
+## Latest task: Rast full-bleed coffee opening
+
+- Updated: 2026-10-02. User requested the coffee cup as the entire opening's background instead of a framed image, prioritizing wordmark clarity. Moved the existing single decorative image to an absolute, pointer-inert backdrop within the isolated Rast hero. Removed figure/card/caption markup and styles; original red wordmark remains on a continuous pale readability wash. Cream hero copy sits over dark scrims; mobile reserves an unobstructed image interval before the copy. Scrim stops track wordmark height; keyboard focus on the dark copy area uses cream. Catalog and other brands unchanged.
+- Changed only components/menu/bistro-menu.tsx and bistro-menu.module.css; reused existing image and prior punctuation cleanup. No data, dependencies or security boundary changes. Reused loaded frontend-design/UI-UX/ECC guidance and existing Next docs.
+- RUN/PASS Node 24.21.0: TypeScript, scoped ESLint, text integrity (~4s), final diff review/check. Focused CSS/source checks passed: valid CSS, one decorative backdrop, old card removed; representative conservative composited contrast red logo 5.75 and cream copy 5.58. Source review covered stacking, image fallback, mobile crop, text/overlay alignment, focus, pointer events and unchanged reduced-motion handling. No browser per policy; no actual rendered visual claim. TS/text evidence reused after CSS-only focus adjustment.
+- GitHub/Vercel publication and final live verification pending.
+
+## Previous task: Rast copy punctuation
 
 - Updated: 2026-10-02. Removed decorative/trailing periods and unnecessary commas from Rast header, hero, image caption, ribbon, catalog introduction and footer in components/menu/bistro-menu.tsx. Kept useful commas within the longer description and the actual question mark. Copy-only; no CSS, behavior, assets, catalog data or backend changes.
 - RUN/PASS: Node 24.21.0 TypeScript and text integrity (~3s), git diff --check and targeted diff review. Reused unchanged design/accessibility/security evidence from prior task. No browser or extra local build; GitHub/Vercel publication continues under the user's earlier authorization.
+- Published: GitHub main 31e1c09; Vercel dpl_F4qwaHJLrUTZ2tB2wEoPEkYxMCDd build succeeded. RUN/PASS production GET /menu/rast (~6s): HTTP 200, all nine checked updated phrases present and obsolete punctuation absent. Evidence-only record update follows completed checks.
 
 ## Previous task: Complete Rast menu identity
 

@@ -121,6 +121,10 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
 
 function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
   return <section className={s.rastHero} aria-label="مرحبًا في راست">
+    {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
+    <div className={s.rastHeroBackdrop} aria-hidden="true">
+      <FoodImage src="/menu-art/rast-coffee-editorial-v1.webp" alt="" priority />
+    </div>
     <header className={s.rastHeader}>
       <div className={s.heroActions}>
         <MenuServices menu={menu} compact />
@@ -141,11 +145,6 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
         <a href="#menu-catalog" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
         <p className={s.rastHeroFootnote}><span aria-hidden="true" />لكل وقت اختيار يليق به</p>
       </div>
-      <figure className={s.rastHeroPhoto}>
-        {/* Generated brand atmosphere only; catalog cards always use the actual product media. */}
-        <FoodImage src="/menu-art/rast-coffee-editorial-v1.webp" alt="" priority />
-        <figcaption><span>لحظتك على مهل</span><span dir="ltr">THE RAST MOMENT</span></figcaption>
-      </figure>
     </div>
     <div className={s.rastRibbon} aria-hidden="true"><span>راست على ذوقك</span><span>قهوة ومزاج</span><span dir="ltr">SLOW DOWN SIP ENJOY</span></div>
   </section>;
