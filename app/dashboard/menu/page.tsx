@@ -66,6 +66,7 @@ export default async function DashboardMenuPage() {
       initialProducts={result.menu.products}
       initialCategories={result.menu.categories}
       businessCategory={result.menu.cafe.businessCategory}
+      cafeSlug={result.menu.cafe.slug}
     />
   );
 }

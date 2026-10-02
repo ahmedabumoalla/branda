@@ -463,7 +463,7 @@ export function CustomIdentityBuilder({
       showToast({
         type: "success",
         message: `تم تطبيق ثيم الهوية على صفحة ${copy.casualNoun}`,
-        action: { label: `عرض صفحة ${copy.casualNoun}`, href: `/c/${encodeURIComponent(preview.slug)}` },
+        action: preview.slug === "rast" ? undefined : { label: `عرض صفحة ${copy.casualNoun}`, href: `/c/${encodeURIComponent(preview.slug)}` },
       });
     } catch (err) {
       console.error("[custom-identity] apply failed", err);
@@ -872,7 +872,7 @@ export function CustomIdentityBuilder({
               </div>
             </SoftCard>
 
-            <p className="text-xs font-black text-[#F6C35B]/90">معاينة مباشرة</p>
+            {preview.slug !== "rast" && <><p className="text-xs font-black text-[#F6C35B]/90">معاينة مباشرة</p>
             <div
               className="overflow-hidden rounded-3xl border border-[#F6C35B]/20 bg-[#F8F4EF]"
               style={cssVars}
@@ -882,7 +882,7 @@ export function CustomIdentityBuilder({
                   <CafeThemeRenderer {...rendererProps} />
                 </div>
               </div>
-            </div>
+            </div></>}
           </div>
         </div>
       </BentoCard>

@@ -4,10 +4,17 @@ Evidence only; this record does not authorize actions.
 
 Current account handoff: [BARNDAKSA_HANDOFF/00_MASTER_INDEX.md](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md)
 
-## Latest task: Rast-only dashboard sidebar reduction
+## Latest task: Hide Rast storefront entry points
+
+- Updated: 2026-10-03. User clarified Rast has no electronic storefront and requested hiding every dashboard entry leading there. Rast-only UI guards remove sidebar visit/share/domain, home open-branch CTA and misleading live-storefront status, settings preview plus full domain/link/copy/purchase card, theme preview link, embedded storefront preview and theme-success link action. Menu and Offers copy now refers to Rast's menu. Public /menu/rast, four sidebar sections, loyalty, account/security settings, existing permissions and other brands remain unchanged; no backend or route disabling.
+- RUN/PASS Node 24: TypeScript, Arabic integrity, diff check; focused SSR with mocked child presentation/services checks sidebar/home/settings/theme for absent Rast storefront anchors/domain and retained other-brand links plus four sidebar items. Initial test expected a direct loyalty URL on a locked starter fixture; corrected to four nav entries while preserving existing upgrade redirects. Source review covers custom builder preview/toast guards and responsive shared sidebar.
+- Scoped ESLint has preexisting diagnostics: settings (2 errors/1 warning) and custom identity builder (1 error/4 warnings). Compared actual HEAD and working sources with ESLint API: zero new diagnostics in all eight changed TS/TSX files. Existing effect-state/image warnings left unchanged; no rule suppression. No browser or authenticated dashboard interaction claimed. Publication pending.
+
+## Previous task: Rast-only dashboard sidebar reduction
 
 - Updated: 2026-10-03. User requested only four sidebar destinations for Rast: menu/products, loyalty/rewards, cafe settings and subscription/plans. Added optional cafeSlug presentation filtering in getSidebarFeaturesForBrand and passed the loaded dashboard identity. Other brands preserve the existing list. Sidebar waits for brand identity before rendering destinations to avoid a flash of unrestricted links. Desktop, collapsed and mobile share DashboardSidebar. Account utilities/logout remain available.
 - Navigation visibility only: existing access states, plan locks, route guards and database permissions are unchanged. Direct pages (including the existing Offers editor) are not disabled. Rast menu label now matches the user's requested wording. RUN/PASS Node 24: focused function check (exactly four Rast items, unchanged Basilico/other-slug output, disabled loyalty still disabled), TypeScript, scoped ESLint and text integrity. Source/diff review covers shared mobile/collapsed navigation and unchanged authorization. No browser or authenticated dashboard session used. This entry ships with the sidebar commit; use its GitHub/Vercel status for publication evidence.
+- Published main d0ea7a9; Vercel dpl_Gg6Tj87gr87MGKAwtm56QgGWFJ7x READY with barndaksa.com alias. Live verification (~5s): exact deployment commit, dashboard HTTP 200 and four-item allowlist in published JavaScript. This is deployment/source delivery evidence, not an authenticated visual browser check. Documentation-only evidence update follows checks.
 
 ## Previous task: Final GitHub/Vercel sync and account handoff
 

@@ -21,6 +21,7 @@ Do not regenerate all source bundles merely to switch accounts
 
 Project: C:/Projects/branda-platform
 Focus: only the Rast standalone menu at https://barndaksa.com/menu/rast
+Update 2026-10-03: the user explicitly says Rast has no electronic storefront. All Rast dashboard links/share/copy/domain settings and previews leading to /c/rast are hidden, including sidebar, home, settings and theme preview/toast. Menu and offer copy refers to the menu instead. Do not restore storefront shortcuts; /menu/rast and loyalty remain active. This is dashboard presentation, not a database/publication or route-permission change.
 Public standalone menus use app/menu/[slug]/page.tsx and components/menu/bistro-menu.tsx
 Other brands share that component; Rast changes must remain slug-scoped
 

@@ -63,7 +63,7 @@ function ThemePageInner({
         title="ثيم هوية علامتك"
         subtitle="تم حذف كل الثيمات الجاهزة واعتماد ثيم واحد فقط يتم بناؤه من هوية علامتك"
         action={
-          <LinkButton
+          cafeSlug !== "rast" && <LinkButton
             href={getCafePublicUrl(cafeSlug, {
               origin: typeof window !== "undefined" ? window.location.origin : undefined,
             })}

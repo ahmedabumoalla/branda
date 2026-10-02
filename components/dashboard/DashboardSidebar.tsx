@@ -101,6 +101,7 @@ export function DashboardSidebar({
   const copy = getBusinessCopy(cafeSettings.businessCategory);
   const cafeName = cafeSettings.cafeName || copy.casualNoun;
   const cafeSlug = cafeSettings.cafeSlug;
+  const showStorefront = Boolean(cafeSlug) && cafeSlug !== "rast";
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
 
@@ -135,7 +136,7 @@ export function DashboardSidebar({
   }, []);
 
   async function handleShare() {
-    if (!cafeSlug) return;
+    if (!showStorefront) return;
     const url = getCafePublicUrl(cafeSlug);
     try {
       if (navigator.share) {
@@ -265,13 +266,13 @@ export function DashboardSidebar({
             </div>
           </div>
 
-          <div className="mt-2.5 grid grid-cols-[auto_auto_1fr] gap-1.5">
+          <div className={showStorefront ? "mt-2.5 grid grid-cols-[auto_auto_1fr] gap-1.5" : "mt-2.5 flex gap-1.5"}>
             <NotificationsPanel
               initialNotifications={initialNotifications}
               className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]"
             />
 
-            <button
+            {showStorefront && <button
               type="button"
               onClick={() => void handleShare()}
               disabled={!cafeSlug}
@@ -279,9 +280,9 @@ export function DashboardSidebar({
               aria-label="مشاركة رابط الفرع الإلكتروني"
             >
               <Share2 className="h-4 w-4" />
-            </button>
+            </button>}
 
-            {cafeSlug ? (
+            {showStorefront ? (
               <Link
                 href={getCafePublicUrl(cafeSlug)}
                 target="_blank"
@@ -289,18 +290,18 @@ export function DashboardSidebar({
               >
                 زيارة الفرع الإلكتروني
               </Link>
-            ) : (
+            ) : !cafeSlug ? (
               <span className="flex h-8 min-w-0 items-center justify-center truncate rounded-lg border border-white/10 bg-white/[0.045] px-2 text-[10px] font-medium text-[#B8A99C]">
                 جاري التحميل
               </span>
-            )}
+            ) : null}
           </div>
 
           {shareMessage ? (
             <p className="mt-2 text-center text-[11px] font-medium text-[#F0C568]">{shareMessage}</p>
           ) : null}
 
-          {cafeSlug ? (
+          {showStorefront ? (
             <p className="mt-2 truncate text-center text-[10px] font-normal text-[#8E8077]">
               {getCafeDisplayDomain(cafeSlug, cafeSettings)}
             </p>

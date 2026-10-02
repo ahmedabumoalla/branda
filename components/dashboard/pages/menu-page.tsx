@@ -62,10 +62,11 @@ type Props = {
   initialProducts: MenuProduct[];
   initialCategories: MenuCategoryRecord[];
   businessCategory?: string;
+  cafeSlug?: string;
   configError?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, businessCategory, configError }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, configError }: Props) {
   const copy = getBusinessCopy(businessCategory);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
@@ -204,7 +205,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
-        subtitle={copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
+        subtitle={cafeSlug === "rast" ? "إدارة الأصناف والتصنيفات والأسعار في منيو راست" : copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
         action={
           <div className={styles.headerActions}>
             <button

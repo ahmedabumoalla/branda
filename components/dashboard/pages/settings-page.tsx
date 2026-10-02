@@ -56,6 +56,7 @@ type Props = {
 
 export function SettingsPageClient({ initialSettings, configError }: Props) {
   const copy = getBusinessCopy(initialSettings.businessCategory);
+  const showStorefront = initialSettings.cafeSlug !== "rast";
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<CafeSettings>(initialSettings);
   const [saving, setSaving] = useState(false);
@@ -413,13 +414,13 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         subtitle="الشعار، بيانات الحساب، والوثائق الحكومية الاختيارية."
         action={
           <div className="flex flex-wrap gap-3">
-            <LinkButton
+            {showStorefront && <LinkButton
               href={publicUrl}
               variant="outline"
               target="_blank"
             >
               معاينة {copy.casualNoun}
-            </LinkButton>
+            </LinkButton>}
             <PrimaryButton
               onClick={save}
               disabled={saving || logoUploading}
@@ -617,7 +618,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
             </form>
           </BentoCard>
 
-          <BentoCard variant="white" span="4">
+          {showStorefront && <BentoCard variant="white" span="4">
             <h2 className="flex items-center gap-2 text-2xl font-black text-[#3A2117]">
               <Globe className="h-6 w-6" />
               رابط {copy.casualNoun}
@@ -834,7 +835,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 ) : null}
               </div>
             </div>
-          </BentoCard>
+          </BentoCard>}
 
           <BentoCard variant="white" span="4">
             <h2 className="flex items-center gap-2 text-2xl font-black text-[#3A2117]">

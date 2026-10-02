@@ -86,6 +86,7 @@ export function DashboardHomeClient({
   }).format(new Date());
   const businessLabel = businessCategory.includes("events") ? "مركز عمليات الفعالية" : "مركز عمليات العلامة";
   const branchHref = cafeSlug ? `/c/${encodeURIComponent(cafeSlug)}/products/popular` : "/dashboard/settings";
+  const isRast = cafeSlug === "rast";
 
   const reveal = reduceMotion
     ? {}
@@ -112,7 +113,7 @@ export function DashboardHomeClient({
 
             <div className={styles.liveStatus}>
               <span className={styles.livePulse} aria-hidden="true" />
-              {cafeSlug ? "الفرع الإلكتروني متصل ويعمل" : "أكمل إعداد الفرع الإلكتروني"}
+              {isRast ? "إدارة المنيو والولاء" : cafeSlug ? "الفرع الإلكتروني متصل ويعمل" : "أكمل إعداد الفرع الإلكتروني"}
             </div>
 
             <h1 className={styles.title}>{cafeName}</h1>
@@ -130,7 +131,7 @@ export function DashboardHomeClient({
                   <ArrowUpLeft />
                 </span>
               </Link>
-              <Link
+              {!isRast && <Link
                 href={branchHref}
                 target={cafeSlug ? "_blank" : undefined}
                 rel={cafeSlug ? "noreferrer" : undefined}
@@ -138,7 +139,7 @@ export function DashboardHomeClient({
               >
                 <ExternalLink aria-hidden="true" />
                 {cafeSlug ? "فتح الفرع" : "إعداد الفرع"}
-              </Link>
+              </Link>}
             </div>
           </div>
 
