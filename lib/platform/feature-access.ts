@@ -143,6 +143,7 @@ export function getSidebarFeaturesForBrand(context: {
   planId?: string | null;
   plans?: readonly Pick<PlatformPlan, "id" | "features">[];
   overrides?: readonly BrandFeatureOverride[];
+  cafeSlug?: string | null;
 }) {
   const planFeatures = getPlanIncludedFeatures(context.planId, context.plans);
   const accessRows = getEffectiveBrandFeatureAccess(planFeatures, context.overrides);
@@ -154,6 +155,8 @@ export function getSidebarFeaturesForBrand(context: {
       access: accessMap.get(feature.id),
     }))
     .filter(({ feature, access }) => {
+      // Presentation only: retain each item's access state and existing route guards.
+      if (context.cafeSlug === "rast") return ["menu", "loyalty", "settings", "subscription"].includes(feature.id);
       if (access?.override === "disabled") return false;
       if (feature.defaultEnabled) return true;
       if (feature.id === "cashier") return true;

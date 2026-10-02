@@ -171,7 +171,8 @@ export function DashboardSidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  const visibleLinks = getSidebarFeaturesForBrand({ planId: activePlanId, plans, overrides: featureOverrides }).map(({ feature, access }) => ({
+  // Wait for the brand identity so Rast never flashes the unrestricted navigation.
+  const visibleLinks = (cafeSlug ? getSidebarFeaturesForBrand({ planId: activePlanId, plans, overrides: featureOverrides, cafeSlug }) : []).map(({ feature, access }) => ({
     title: feature.sidebarLabel ?? feature.titleAr,
     href: feature.dashboardPath ?? (feature.sidebarVisible ? feature.route : ""),
     icon: featureIcons[feature.id] ?? Star,
@@ -181,6 +182,7 @@ export function DashboardSidebar({
   }));
 
   const linkTitle = (item: (typeof visibleLinks)[number]) => {
+    if (cafeSlug === "rast" && item.feature === "menu") return "المنيو والمنتجات";
     if (item.href === "/dashboard/menu" && copy.kind === "events") return "التذاكر والباقات";
     if (item.href === "/dashboard/orders" && copy.kind === "events") return "طلبات التذاكر";
     if (item.href === "/dashboard/loyalty" && copy.kind === "events") return "ولاء الحضور";

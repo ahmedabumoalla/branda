@@ -4,7 +4,12 @@ Evidence only; this record does not authorize actions.
 
 Current account handoff: [BARNDAKSA_HANDOFF/00_MASTER_INDEX.md](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md)
 
-## Latest task: Final GitHub/Vercel sync and account handoff
+## Latest task: Rast-only dashboard sidebar reduction
+
+- Updated: 2026-10-03. User requested only four sidebar destinations for Rast: menu/products, loyalty/rewards, cafe settings and subscription/plans. Added optional cafeSlug presentation filtering in getSidebarFeaturesForBrand and passed the loaded dashboard identity. Other brands preserve the existing list. Sidebar waits for brand identity before rendering destinations to avoid a flash of unrestricted links. Desktop, collapsed and mobile share DashboardSidebar. Account utilities/logout remain available.
+- Navigation visibility only: existing access states, plan locks, route guards and database permissions are unchanged. Direct pages (including the existing Offers editor) are not disabled. Rast menu label now matches the user's requested wording. RUN/PASS Node 24: focused function check (exactly four Rast items, unchanged Basilico/other-slug output, disabled loyalty still disabled), TypeScript, scoped ESLint and text integrity. Source/diff review covers shared mobile/collapsed navigation and unchanged authorization. No browser or authenticated dashboard session used. This entry ships with the sidebar commit; use its GitHub/Vercel status for publication evidence.
+
+## Previous task: Final GitHub/Vercel sync and account handoff
 
 - Updated: 2026-10-02. User explicitly requested latest GitHub/Vercel and a complete handoff for switching Codex accounts. Replaced obsolete master status with the current Rast workflow, source map, original user preferences, contact destinations, dashboard offer instructions, publication/security boundaries, runtime/deployment details, verification limitations and pending social handles. BRANDA_HANDOFF master now redirects to the canonical BARNDAKSA_HANDOFF master. Historical source bundles intentionally not regenerated; actual source remains authoritative.
 - Included previously local Souda importer fix and its regression script after review: both exact hashes match the successful 58-product/58-image live verification already recorded below. RUN/PASS on Node 24.21.0 (~3s): offline importer regression, scoped importer ESLint and TypeScript. No reimport or backend mutation. Other Rast functional checks reused after matching unchanged application inputs; Arabic integrity and diff checks rerun for handoff edits.

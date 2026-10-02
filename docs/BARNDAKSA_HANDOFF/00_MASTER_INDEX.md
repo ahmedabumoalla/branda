@@ -1,6 +1,6 @@
 ﻿# Barndaksa - Current Codex Handoff
 
-Updated 2026-10-02, Asia/Riyadh
+Updated 2026-10-03, Asia/Riyadh
 Canonical handoff for a new Codex account; read this before older source bundles
 This file records evidence and decisions, not independent authorization
 
@@ -58,6 +58,8 @@ components/menu/rast-connect.tsx
 components/menu/rast-connect.module.css
 
 ## Featured section behavior and owner controls
+
+Update 2026-10-03: per the user's latest request, Rast's dashboard sidebar shows only menu/products, loyalty/rewards, settings and subscription/plans. The Offers sidebar item is hidden, but the existing /dashboard/offers editor still exists and its permissions are unchanged. This is navigation visibility only; do not restore hidden sidebar entries without a new request. Implementation: components/dashboard/DashboardSidebar.tsx and lib/platform/feature-access.ts. Other brands retain their navigation.
 
 Current customer title: تستاهل التجربة
 Stable DOM ID remains rast-spotlight-title; do not rename it just to match copy
