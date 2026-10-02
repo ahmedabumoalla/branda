@@ -9,6 +9,7 @@ import { matchesMenuSearch, menuDisplayText, type StandaloneMenu, type Standalon
 import s from "./bistro-menu.module.css";
 import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
+import { RastConnect } from "./rast-connect";
 
 function FoodImage({ src, alt, className = "", priority = false }: { src?: string; alt: string; className?: string; priority?: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -217,6 +218,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
       </div>
       <p className={s.heroAside} dir="ltr">SIMPLE<br />INGREDIENTS<br />EXTRAORDINARY<br />FLAVORS</p>
     </section>}
+    {isRast && <RastConnect />}
     <div className={s.catalog} id="menu-catalog">
       {isRast && <div className={s.rastCatalogHeading}>
         <div><p className={s.rastEyebrow}>قائمة راست</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>

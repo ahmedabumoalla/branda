@@ -2,10 +2,18 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Subtle Rast section heading weight
+## Latest task: Rast social and location design preview
+
+- Updated: 2026-10-02. User requested Snapchat, TikTok, Instagram, WhatsApp and branch-location integration only for Rast, then explicitly deferred all destinations and requested icons only for design preview. Added RastConnect directly below the hero: cream/burgundy contact strip, four labelled brand icons, highlighted WhatsApp medallion and location marker. Desktop uses three columns; mobile places social icons on a separate balanced row. Existing hero/catalog/footer preserved.
+- Scope: components/menu/rast-connect.tsx, rast-connect.module.css and conditional import/mount in bistro-menu.tsx. No placeholder hrefs, interactive roles, fake actions, network requests or keyboard stops. No backend, permissions, dependency or data changes. Real account links, WhatsApp conversation number and map destination intentionally deferred by user.
+- Applied existing frontend-design/UI-UX guidance, focused accessible-name search, ECC React patterns and installed Next client-boundary guide. Source review covers narrow-screen wrapping, labelled static SVGs, existing palette contrast, no motion and Rast-only scope. No browser used under project policy.
+- RUN/PASS Node 24.21.0: TypeScript, scoped ESLint, text integrity (~4s), diff review/check; focused ReactDOM SSR/CSS parse (~0.3s) verifies four labelled social items, five decorative SVGs, zero fake interactive elements and conditional Rast mount. Initial checks exposed unavailable Instagram export in installed Lucide; replaced with local SVG and both checks reran successfully. Publication pending.
+
+## Previous task: Subtle Rast section heading weight
 
 - Updated: 2026-10-02. User requested a very slight increase in section-title prominence. Added a 0.2px currentColor text stroke only to Rast category headings; reset product-count text to zero. Existing static semibold font maps weights 600–900 to the same asset, so a nominal weight increase would not visibly change it. Font size, line box, spacing, responsive wrapping and other brands stay unchanged.
-- RUN/PASS Node 24.21.0: TypeScript and text integrity (~2s), scoped diff review and git diff --check. Source-based responsive/accessibility review: inherited text color retained, no layout metrics or interactions changed. No browser, extra tests, backend or security-boundary changes. GitHub/Vercel publication pending under existing authorization.
+- RUN/PASS Node 24.21.0: TypeScript and text integrity (~2s), scoped diff review and git diff --check. Source-based responsive/accessibility review: inherited text color retained, no layout metrics or interactions changed. No browser, extra tests, backend or security-boundary changes.
+- Published GitHub main 502b3f0; Vercel 7tnP2AvEwBGhJ7FGCht8NMKKywir succeeded. RUN/PASS live HTTP/CSS check (~25s): menu HTTP 200, scoped 0.2px heading stroke and zero-stroke count reset present in production CSS. Evidence-only record update after completed checks.
 
 ## Previous task: Rast full-bleed coffee opening
 
