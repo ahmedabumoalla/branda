@@ -129,6 +129,8 @@ Never print or copy secrets into handoff files or client code
 
 ## GitHub, Vercel and runtime
 
+Rast sidebar brand-card badge now reads "اشتراك شهري 249 ريال" per the user's 2026-10-03 screenshot request. This is a Rast-only display override, not a change to billing records, charged amounts, plan entitlements or subscription status. Other brands still use their actual plan label.
+
 Repository: https://github.com/ahmedabumoalla/branda
 Branch: main
 Production Vercel project: branda-2

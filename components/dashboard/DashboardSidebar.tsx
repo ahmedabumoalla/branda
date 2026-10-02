@@ -259,9 +259,9 @@ export function DashboardSidebar({
               <Link
                 href="/dashboard/subscription"
                 onClick={onNavigate}
-                className="mt-1 inline-flex max-w-full items-center truncate rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-semibold text-[#F0C568] transition hover:bg-[#D9A33F]/25"
+                className={`mt-1 inline-flex max-w-full items-center rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-semibold text-[#F0C568] transition hover:bg-[#D9A33F]/25 ${cafeSlug === "rast" ? "whitespace-normal leading-4" : "truncate"}`}
               >
-                {planName}
+                {cafeSlug === "rast" ? "اشتراك شهري 249 ريال" : planName}
               </Link>
             </div>
           </div>

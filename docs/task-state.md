@@ -4,11 +4,17 @@ Evidence only; this record does not authorize actions.
 
 Current account handoff: [BARNDAKSA_HANDOFF/00_MASTER_INDEX.md](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md)
 
-## Latest task: Hide Rast storefront entry points
+## Latest task: Rast sidebar subscription label
+
+- Updated: 2026-10-03. User requested replacing the trial-plan badge shown in the screenshot with "اشتراك شهري 249 ريال". Changed only the Rast brand-card display label and allowed its text to wrap instead of truncating; other brands still show their actual plan name. This is presentation copy, not a subscription/billing mutation or permission upgrade.
+- RUN/PASS Node 24 TypeScript, sidebar ESLint, Arabic integrity and diff check (~4s). Source review confirms Rast-only condition, readable wrapping and unchanged subscription link. No browser or extra tests needed for this copy change. Publication pending.
+
+## Previous task: Hide Rast storefront entry points
 
 - Updated: 2026-10-03. User clarified Rast has no electronic storefront and requested hiding every dashboard entry leading there. Rast-only UI guards remove sidebar visit/share/domain, home open-branch CTA and misleading live-storefront status, settings preview plus full domain/link/copy/purchase card, theme preview link, embedded storefront preview and theme-success link action. Menu and Offers copy now refers to Rast's menu. Public /menu/rast, four sidebar sections, loyalty, account/security settings, existing permissions and other brands remain unchanged; no backend or route disabling.
 - RUN/PASS Node 24: TypeScript, Arabic integrity, diff check; focused SSR with mocked child presentation/services checks sidebar/home/settings/theme for absent Rast storefront anchors/domain and retained other-brand links plus four sidebar items. Initial test expected a direct loyalty URL on a locked starter fixture; corrected to four nav entries while preserving existing upgrade redirects. Source review covers custom builder preview/toast guards and responsive shared sidebar.
-- Scoped ESLint has preexisting diagnostics: settings (2 errors/1 warning) and custom identity builder (1 error/4 warnings). Compared actual HEAD and working sources with ESLint API: zero new diagnostics in all eight changed TS/TSX files. Existing effect-state/image warnings left unchanged; no rule suppression. No browser or authenticated dashboard interaction claimed. Publication pending.
+- Scoped ESLint has preexisting diagnostics: settings (2 errors/1 warning) and custom identity builder (1 error/4 warnings). Compared actual HEAD and working sources with ESLint API: zero new diagnostics in all eight changed TS/TSX files. Existing effect-state/image warnings left unchanged; no rule suppression. No browser or authenticated dashboard interaction claimed.
+- Published main 50fd41f; Vercel dpl_46cK9ZfZsqGkUUh1amCjhHrkCNTD READY with exact commit and barndaksa.com alias. Live checks (~8s): /menu/rast and /dashboard return 200. Actual owner UI visibility verified by focused SSR/source, not an authenticated browser. Documentation-only evidence update follows checks.
 
 ## Previous task: Rast-only dashboard sidebar reduction
 
