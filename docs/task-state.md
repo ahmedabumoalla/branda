@@ -2,7 +2,16 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Rast wordmark and menu masthead
+## Latest task: Complete Rast menu identity
+
+- Updated: 2026-10-02. User requested a complete new professional Rast identity with a strong visual opening. Continued authorized GitHub/Vercel publication. Direction: large original red wordmark, cream/oxblood editorial layout, cinematic coffee photograph, dedicated Arabic copy, compact category navigation, restrained product cards and closing signature. All changes scoped to Rast; catalog/search/filter/share/services/product detail behavior retained.
+- Changed components/menu/bistro-menu.tsx and bistro-menu.module.css; added public/menu-art/rast-coffee-editorial-v1.webp (138820 bytes, 1536x1024). Built-in image prompt: premium editorial espresso still life, ivory porcelain cup/linen on a burgundy tabletop, warm side light and natural shadows, no people/text/logos; decorative brand atmosphere only. Converted PNG to WebP for delivery; catalog retains real product photos. Existing shared Storage wordmark unchanged.
+- Skills reused: frontend-design, ui-ux-pro-max, imagegen, ECC engineering/deployment, token-efficiency. UI skill's broad result was off-topic (glass), discarded; focused editorial/whitespace result used with existing Arabic fonts. No added dependencies, schema, permissions, browser sessions or unrelated code changes.
+- RUN/PASS on Node 24.21.0: npx-equivalent direct TypeScript, scoped ESLint and text-integrity commands (~6s); git diff --check. One-shot ReactDOM server rendering of actual components verified Rast-only hero/footer, one H1, actual product media, unavailable/empty states, logo fallback and accessible search; Basilico keeps existing hero/products. Initial shell stdin corrupted assertion literals only (no file corruption); rerun with UTF-8 stdin passed those assertions.
+- Contrast check initially found muted/blush 4.48:1; darkened only Rast muted token to #6e5b56. Final CSS parse/class-reference/contrast/header-space check passed (<1s): red/cream 7.82, wine/cream 14.43, muted/cream 5.73, muted/blush 5.03. Source review covers 320/375/390/640px header fit, 2/3-column catalog breakpoints, RTL, 44px controls, focus and reduced motion. Reused unchanged TS/ESLint/SSR evidence after CSS-only token correction. No browser rendering check per project policy.
+- GitHub push, Vercel production build and live identity/media/catalog checks pending below.
+
+## Previous task: Rast wordmark and menu masthead
 
 - Updated: 2026-10-02. User clarified that only the red RAST letters should remain, removing the entire black disc and white ring, and requested elegant menu placement. Earlier GitHub/Vercel publication request remains authorized.
 - Built-in image edit selected public/menu-logos/rast-wordmark-transparent-v2.png: 2030x775, 410423 bytes, real alpha, SHA256 c2b325714980120af99e606370017b5f72719b3edd39f292e07c123fdf307a98. Prompt: retain only original burgundy RAST letters; remove black disc and white circle; transparent background/counters; horizontal wordmark; no redesign/shadows. Raw alpha/color inspection found zero opaque black or white pixels. Original v1 kept locally and in Storage for rollback.
@@ -11,6 +20,7 @@ Evidence only; this record does not authorize actions.
 - RUN/PASS 2026-10-02: npx tsc --noEmit, npx eslint components/menu/bistro-menu.tsx, npm run check:text, git diff --check (~9s combined). Runtime/dependencies unchanged. Browser not used per project policy. Prior unrelated extractor changes remain outside this task's commit.
 - GitHub UI commit 5609e94 pushed to main. Initial Vercel deployment dpl_DtXd3eEoEPAM87YCuw9BUGhxScKd failed before compilation: Node.js 20.x is discontinued. Vercel CLI refreshed its expired cached access token automatically; no account/project link changes. Production GitHub integration targets branda-2; local .vercel/project.json points to older branda, so deployment uses GitHub integration.
 - Release prerequisite fix: package.json and root package-lock.json engines now specify 24.x (no dependency version changes), as required by the deployment error and Vercel's 2026-10-01 retirement notice. RUN/PASS on temporary npm-provided Node 24.21.0: TypeScript, scripts/check-standalone-menu.cjs (publication, tenant/media isolation, pagination, fields/search) and text integrity (~45s including npm command startup). Reused source lint/UI review; changes since that check are runtime metadata only. Retrying production build through GitHub; live HTTP/CSS verification pending.
+- Completed: runtime commit 16870d8 deployed READY as dpl_hgwGoir4UbwPbNYoqzG6CBQRZVMn on Node 24.x with barndaksa.com alias. Corrected streaming-HTML verification passed (~8s): new masthead CSS/class, 2 new wordmark images with byte equality, 58 product cards. Initial assertion inspected only the loading fallback's first main element; corrected to inspect the completed streamed main. Evidence: Temp/branda-rast-wordmark-production.html. New full identity task supersedes this masthead design.
 
 ## Previous task: Rast transparent logo
 

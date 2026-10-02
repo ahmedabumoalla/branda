@@ -337,42 +337,6 @@
 .heroAside { position: absolute; right: 5%; top: 38%; font-size: 8px; line-height: 2.3; letter-spacing: 4px; color: var(--hero-cream); margin: 0; }
 .heroAside::before { content: ""; display: block; width: 40px; height: 1px; background: var(--hero-gold); margin-bottom: 10px; }
 
-/* Rast's red wordmark gets a quiet, full-width masthead above the coffee image. */
-.rastMenu .referenceHeader {
-  max-width: none;
-  padding: 12px max(5%, calc((100% - 1240px) / 2));
-  background: var(--hero-cream);
-  border-bottom: 1px solid var(--line);
-}
-.rastMenu .referenceHeader .brandWordmark {
-  width: clamp(200px, 26vw, 340px);
-  min-height: 100px;
-  color: var(--forest);
-}
-.rastMenu .brandLogo { height: 112px; }
-.rastMenu .heroIcon {
-  color: var(--forest);
-  background: transparent;
-  border-color: var(--line);
-}
-.rastMenu .heroIcon:hover { background: var(--panel); }
-.rastMenu .referenceHeader a:focus-visible,
-.rastMenu .referenceHeader button:focus-visible { outline-color: var(--forest); }
-.rastMenu .heroCopy { padding-top: 32px; }
-.rastMenu .brandSignature .footerLogo { height: 100px; margin-bottom: 12px; }
-
-@media (max-width: 640px) {
-  .rastMenu .referenceHeader { padding: 8px 4%; }
-  .rastMenu .referenceHeader .brandWordmark {
-    width: clamp(100px, 31vw, 180px);
-    min-height: 72px;
-  }
-  .rastMenu .brandLogo { height: 64px; }
-  .rastMenu .heroActions { gap: 0; }
-  .rastMenu .heroIcon { width: 44px; height: 44px; }
-  .rastMenu .heroCopy { padding-top: 24px; }
-  .rastMenu .brandSignature .footerLogo { width: 220px; max-width: 80%; height: 84px; }
-}
 .referenceMenu .catalog { position: relative; max-width: 1440px; padding: 20px 5% 64px; }
 .referenceMenu .catalog::before, .referenceMenu .catalog::after { content: ""; position: absolute; z-index: -1; pointer-events: none; top: -56px; bottom: 0; width: 65px; background-image: url("/menu-art/double-b-leaves.webp"), url("/menu-art/double-b-leaves.webp"); background-position: left top, left 760px; background-size: 130px auto; background-repeat: no-repeat; }
 .referenceMenu .catalog::before { left: -24px; }
@@ -486,4 +450,183 @@
   .referenceMenu .listView .product:has(> .productImage) { grid-template-columns: 100px minmax(0, 1fr); }
   .referenceMenu .listView .productImage { border-radius: 0 14px 14px 0; }
   .referenceMenu .listView .productBody { padding: 10px; }
+}
+
+/* RAST: an editorial coffee identity. All shared catalog/dialog behavior is retained. */
+.rastMenu {
+  --rast-red: #970e29;
+  --rast-wine: #3b1420;
+  --rast-cream: #f8f2e8;
+  --rast-blush: #efe2dc;
+  --rast-muted: #6e5b56;
+  --rast-border: #dfcec5;
+  --rast-gutter: clamp(20px, 5vw, 80px);
+  --ink: var(--rast-cream); --paper: var(--rast-wine); --panel: var(--rast-blush);
+  --gold: var(--rast-red); --forest: var(--rast-red); --muted: var(--rast-muted);
+  --line: var(--rast-border); --hero-cream: var(--rast-cream); --hero-gold: var(--rast-cream);
+  --card-paper: #fffaf4; --accent-light: var(--rast-cream); --footer-stone: var(--rast-blush);
+  background: var(--rast-cream); color: var(--rast-wine);
+}
+.rastHero { overflow: hidden; }
+.rastHeader {
+  max-width: 1440px; margin: auto; padding: 18px var(--rast-gutter);
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+  direction: ltr; border-bottom: 1px solid var(--line);
+}
+.rastHeader > button { justify-self: end; }
+.rastHeaderNote { margin: 0; color: var(--rast-red); font-size: 13px; direction: rtl; text-align: center; }
+.rastMenu .heroActions { gap: 8px; }
+.rastMenu .heroIcon {
+  width: 46px; height: 46px; background: transparent; color: var(--rast-wine);
+  border-color: var(--line); transition: background .2s, color .2s;
+}
+.rastMenu .heroIcon svg { width: 21px; height: 21px; }
+.rastMenu .heroIcon:hover { background: var(--rast-red); color: var(--rast-cream); }
+.rastMasthead { max-width: 1280px; padding: 0 var(--rast-gutter); margin: 0 auto; }
+.rastWordmark { display: block; width: min(86%, 900px); height: clamp(140px, 24vw, 282px); object-fit: contain; margin: 0 auto; }
+.rastMastheadCaption {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding-bottom: 20px; font-size: 12px; color: var(--rast-muted);
+}
+.rastMastheadCaption > [dir="ltr"] { font-size: 10px; letter-spacing: 2px; }
+.rastHeroGrid {
+  max-width: 1440px; margin: 0 auto; padding: 0 var(--rast-gutter) 64px;
+  display: grid; grid-template-columns: .8fr 1.2fr; align-items: center; gap: clamp(36px, 6vw, 96px);
+}
+.rastHeroCopy { padding-block: 16px; min-width: 0; }
+.rastEyebrow { margin: 0 0 16px; color: var(--rast-red); font-size: 13px; font-weight: 500; }
+.rastHeroCopy h1 { margin: 0; font-size: clamp(46px, 5.3vw, 76px); font-weight: 600; line-height: 1.27; letter-spacing: -1px; }
+.rastHeroCopy h1 > span { color: var(--rast-red); }
+.rastHeroDescription { font-size: 18px; line-height: 1.95; color: var(--rast-muted); max-width: 330px; margin: 22px 0 26px; }
+.rastExplore {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 38px;
+  min-height: 56px; padding: 14px 24px; border-radius: 8px; text-decoration: none;
+  color: var(--rast-cream); background: var(--rast-red); font-size: 16px; font-weight: 500;
+  transition: background .2s;
+}
+.rastExplore:hover { background: var(--rast-wine); }
+.rastExplore svg { width: 22px; height: 22px; }
+.rastHeroFootnote { display: flex; align-items: center; gap: 10px; margin: 26px 0 0; color: var(--rast-muted); font-size: 12px; }
+.rastHeroFootnote > span { width: 22px; height: 1px; background: var(--rast-red); }
+.rastHeroPhoto { position: relative; min-width: 0; margin: 0; aspect-ratio: 1.38; background: var(--rast-wine); overflow: hidden; border-radius: 8px 8px 80px 8px; }
+.rastHeroPhoto > img, .rastHeroPhoto > .imageFallback { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rastHeroPhoto figcaption {
+  position: absolute; inset: auto 0 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 14px 24px; color: var(--rast-cream); background: var(--rast-wine); font-size: 12px;
+}
+.rastHeroPhoto figcaption > [dir="ltr"] { font-size: 9px; letter-spacing: 2px; }
+.rastRibbon {
+  display: flex; justify-content: space-around; align-items: center; gap: 24px; min-height: 66px;
+  padding: 18px var(--rast-gutter); background: var(--rast-red); color: var(--rast-cream); font-size: 16px;
+}
+.rastRibbon > [dir="ltr"] { font-size: 10px; letter-spacing: 2px; }
+.rastMenu .catalog { max-width: 1440px; padding: 72px var(--rast-gutter) 88px; scroll-margin-top: 24px; }
+.rastMenu .catalog::before, .rastMenu .catalog::after { display: none; }
+.rastCatalogHeading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 36px; }
+.rastCatalogHeading h2 { margin: 0; font-size: clamp(32px, 4vw, 48px); line-height: 1.35; font-weight: 600; }
+.rastCatalogHeading h2 span { color: var(--rast-red); }
+.rastCatalogHeading > p { font-size: 14px; color: var(--rast-muted); line-height: 1.9; margin: 0; }
+.rastMenu .categories { direction: rtl; gap: 8px; padding: 6px 2px 12px; }
+.rastMenu .categories button {
+  flex: 0 0 auto; flex-direction: row; min-height: 52px; border-radius: 8px;
+  padding: 12px 20px; font-size: 14px; white-space: nowrap;
+  background: transparent; border: 1px solid var(--line); box-shadow: none;
+}
+.rastMenu .categories button > svg { display: none; }
+.rastMenu .categories button[aria-pressed="true"] { border-color: var(--rast-red); box-shadow: none; }
+.rastMenu .categoryLabel { display: flex; align-items: center; gap: 12px; }
+.rastMenu .categories small { display: inline; margin: 0; font-size: 11px; }
+.rastMenu .activeCategory { background: var(--rast-red); border: 0; }
+.rastMenu .tools { gap: 12px; margin-top: 8px; }
+.rastMenu .search { border-radius: 8px; background: transparent; box-shadow: none; }
+.rastMenu .search input { height: 54px; font-size: 16px; }
+.rastMenu .search > svg { width: 20px; height: 20px; color: var(--rast-red); }
+.rastMenu .filterToggle { min-height: 54px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: transparent; box-shadow: none; }
+.rastMenu .filterPanel { border-radius: 8px; }
+.rastMenu .categorySection { margin-top: 44px; }
+.rastMenu .sectionHeading { margin: 0 0 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.rastMenu .sectionHeading h2 { font-size: 25px; flex-wrap: wrap; row-gap: 4px; }
+.rastMenu .sectionHeading h2 small { font-size: 13px; }
+.rastMenu .productGrid:not(.listView) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 24px; }
+.rastMenu .product { background: var(--card-paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
+.rastMenu .productImage { aspect-ratio: 1.25; border-radius: 11px 11px 0 0; }
+.rastMenu .imageArrow { display: grid; width: 36px; height: 36px; color: var(--rast-red); background: var(--rast-cream); }
+.rastMenu .productBody { padding: 18px 20px 20px; }
+.rastMenu .productName h3 { font-size: 20px; line-height: 1.6; }
+.rastMenu .productDescription { font-size: 14px; line-height: 1.8; min-height: 48px; margin-block: 8px 16px; }
+.rastMenu .productMeta { justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; margin-top: 14px; }
+.rastMenu .productMeta .price { border: 0; padding: 0; color: var(--rast-red); }
+.rastMenu .price b { font-size: 24px; font-weight: 600; }
+.rastMenu .price > span { font-size: 12px; }
+.rastMenu .listView .imageArrow { display: none; }
+.rastMenu .listView .productImage { aspect-ratio: auto; border-radius: 0 11px 11px 0; }
+.rastMenu .listView .productBody { padding: 14px; }
+.rastMenu .dialog { border-radius: 16px; border-color: var(--line); }
+.rastMenu .detailMedia { background: var(--rast-blush); }
+.rastMenu .footer { --gold: var(--rast-red); background: var(--rast-blush); padding: 72px var(--rast-gutter) max(24px, env(safe-area-inset-bottom)); }
+.rastClosing { max-width: 1060px; margin: 0 auto; }
+.rastClosing h2 { margin: 0; font-size: clamp(34px, 5.2vw, 66px); line-height: 1.4; font-weight: 600; }
+.rastClosing h2 > span { color: var(--rast-red); }
+.rastClosingLink { display: inline-flex; align-items: center; gap: 18px; min-height: 48px; margin-top: 24px; color: var(--rast-red); text-decoration: underline; text-underline-offset: 7px; }
+.rastClosingLink svg { width: 20px; height: 20px; }
+.rastClosingLogo { display: block; width: min(75%, 600px); height: clamp(150px, 20vw, 230px); object-fit: contain; margin: 16px auto 0; }
+.rastMenu .footer > div { max-width: 1280px; margin: auto; }
+@media (max-width: 1000px) {
+  .rastHeroGrid { grid-template-columns: .9fr 1.1fr; gap: 32px; padding-bottom: 48px; }
+  .rastHeroCopy h1 { font-size: 48px; }
+  .rastHeroPhoto { aspect-ratio: .92; border-bottom-left-radius: 48px; }
+  .rastHeroDescription { font-size: 16px; }
+  .rastMenu .productGrid:not(.listView) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .rastHeader { padding: 12px var(--rast-gutter); gap: 8px; grid-template-columns: 90px minmax(0, 1fr) 44px; }
+  .rastHeaderNote { font-size: 10px; }
+  .rastMenu .heroActions { gap: 2px; }
+  .rastMenu .heroIcon { width: 44px; height: 44px; }
+  .rastWordmark { width: 100%; height: clamp(104px, 31vw, 170px); }
+  .rastMastheadCaption { font-size: 10px; padding-bottom: 24px; gap: 8px; }
+  .rastMastheadCaption > [dir="ltr"] { font-size: 7px; letter-spacing: 1px; }
+  .rastHeroGrid { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-bottom: 32px; }
+  .rastHeroCopy { padding: 0; }
+  .rastEyebrow { font-size: 12px; margin-bottom: 12px; }
+  .rastHeroCopy h1 { font-size: clamp(44px, 11vw, 60px); }
+  .rastHeroDescription { max-width: 100%; font-size: 15px; margin: 16px 0 20px; }
+  .rastExplore { min-height: 50px; font-size: 14px; padding: 12px 20px; }
+  .rastHeroFootnote { margin-top: 18px; font-size: 11px; }
+  .rastHeroPhoto { aspect-ratio: 1.25; border-bottom-left-radius: 40px; }
+  .rastHeroPhoto figcaption { padding: 12px 16px; font-size: 10px; }
+  .rastHeroPhoto figcaption > [dir="ltr"] { font-size: 7px; letter-spacing: 1px; }
+  .rastRibbon { justify-content: space-between; min-height: 54px; gap: 12px; padding-block: 16px; font-size: 12px; }
+  .rastRibbon > span:nth-child(2) { display: none; }
+  .rastRibbon > [dir="ltr"] { font-size: 7px; letter-spacing: 1px; }
+  .rastMenu .catalog { padding-top: 40px; padding-bottom: 48px; }
+  .rastCatalogHeading { align-items: start; gap: 12px; margin-bottom: 24px; }
+  .rastCatalogHeading h2 { font-size: 30px; }
+  .rastCatalogHeading > p { display: none; }
+  .rastMenu .categories button { padding: 12px 16px; min-height: 48px; font-size: 12px; }
+  .rastMenu .categoryLabel { gap: 8px; }
+  .rastMenu .tools { gap: 8px; }
+  .rastMenu .search { padding-inline: 12px; }
+  .rastMenu .search input { height: 50px; font-size: 16px; }
+  .rastMenu .filterToggle { min-height: 50px; padding: 10px 12px; gap: 6px; font-size: 12px; }
+  .rastMenu .filterToggle svg { width: 18px; height: 18px; }
+  .rastMenu .categorySection { margin-top: 32px; }
+  .rastMenu .sectionHeading { margin-bottom: 16px; padding-bottom: 12px; }
+  .rastMenu .sectionHeading h2 { font-size: 19px; gap: 8px; }
+  .rastMenu .productGrid:not(.listView) { gap: 18px 12px; }
+  .rastMenu .productImage { aspect-ratio: 1.08; }
+  .rastMenu .imageArrow { width: 28px; height: 28px; bottom: 8px; left: 8px; }
+  .rastMenu .imageArrow svg { width: 15px; height: 15px; }
+  .rastMenu .productBody { padding: 12px 10px 14px; }
+  .rastMenu .productName h3 { font-size: 15px; line-height: 1.65; }
+  .rastMenu .productDescription { font-size: 12px; line-height: 1.7; min-height: 40px; margin-block: 6px 10px; }
+  .rastMenu .productMeta { margin-top: 10px; font-size: 10px; }
+  .rastMenu .price b { font-size: 20px; }
+  .rastMenu .price > span { font-size: 10px; }
+  .rastMenu .listView .productImage { aspect-ratio: auto; }
+  .rastMenu .footer { padding-top: 44px; }
+  .rastClosingLogo { width: 90%; height: 160px; margin-top: 8px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rastHeroCopy { animation: rise .65s var(--ease) both; }
 }
