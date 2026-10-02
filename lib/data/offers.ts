@@ -12,6 +12,7 @@ function invalidatePublicOffers(slug: string) {
   clearServerMemoryCache(`public-offers:${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/products/offers`);
   revalidatePath(`/c/${normalizedSlug}/offers`);
+  revalidatePath(`/menu/${normalizedSlug}`);
 }
 
 function normalizeOfferStatusToDb(status: string) {

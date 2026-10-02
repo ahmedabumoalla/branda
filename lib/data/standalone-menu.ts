@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { menuContacts } from "@/lib/menu/contacts";
+import { getStandaloneHighlights } from "@/lib/data/standalone-highlights";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
@@ -93,6 +94,11 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
     logoUrl = data?.signedUrl || logoUrl;
   }
   logoUrl = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url) || logoUrl;
-  return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products,
+  const highlights = cafe.slug === "rast" ? await getStandaloneHighlights(cafe.id, products).catch(() => {
+    // An optional promotional surface must not take down the published catalog.
+    console.error("Standalone highlights unavailable");
+    return { asOf: Date.now(), items: [] };
+  }) : undefined;
+  return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights,
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

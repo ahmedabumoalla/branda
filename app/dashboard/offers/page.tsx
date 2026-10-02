@@ -11,10 +11,10 @@ export default async function OffersPage() {
   if (!isSupabaseConfigured()) {
     return <OffersPageClient initialOffers={[]} initialProducts={[]} configError="قم بإعداد Supabase في ملف البيئة" />;
   }
-  try {
-    const [offers, menu] = await Promise.all([getOwnerOffers(), getOwnerMenu()]);
-    return <OffersPageClient initialOffers={offers} initialProducts={menu.products} businessCategory={menu.cafe.businessCategory} />;
-  } catch {
+  const result = await Promise.all([getOwnerOffers(), getOwnerMenu()]).catch(() => null);
+  if (!result) {
     return <OffersPageClient initialOffers={[]} initialProducts={[]} configError="تعذر تحميل العروض" />;
   }
+  const [offers, menu] = result;
+  return <OffersPageClient initialOffers={offers} initialProducts={menu.products} businessCategory={menu.cafe.businessCategory} rastSpotlight={menu.cafe.slug === "rast"} />;
 }

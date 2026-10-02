@@ -10,6 +10,59 @@ import s from "./bistro-menu.module.css";
 import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
+import spotlight from "./rast-spotlight.module.css";
+
+function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {
+  const [selectedId, setSelectedId] = useState("");
+  const [now, setNow] = useState(menu.highlights?.asOf ?? 0);
+  const hasExpiry = menu.highlights?.items.some((item) => item.expiresAt != null);
+  useEffect(() => {
+    if (!hasExpiry) return;
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, [hasExpiry]);
+  const offers = (menu.highlights?.items ?? []).filter((item) => item.expiresAt == null || item.expiresAt >= now);
+  const fallback = menu.products.find((product) => product.available && product.images.length) ?? menu.products.find((product) => product.available);
+  const items = offers.length ? offers : fallback ? [{
+    id: `discover-${fallback.id}`, title: fallback.name, description: fallback.description,
+    imageUrl: fallback.images[0]?.url ?? null, productId: fallback.id, discountPercent: null, code: null, expiresAt: null,
+  }] : [];
+  const active = items.find((item) => item.id === selectedId) ?? items[0];
+  if (!active) return null;
+  const product = menu.products.find((item) => item.id === active.productId && item.available);
+  const discountPrice = product && active.discountPercent != null ? Math.round(product.price * (1 - active.discountPercent / 100) * 100) / 100 : null;
+  const displayPrice = discountPrice ?? (product ? productFinalPrice(product.price, product.promo) : null);
+
+  return <section className={spotlight.section} aria-labelledby="rast-spotlight-title">
+    <div className={spotlight.heading}>
+      <div><p className={s.rastEyebrow}>مساحة لمزاج مختلف</p><h2 id="rast-spotlight-title">تحت <span>الضوء</span></h2></div>
+      <span className={spotlight.edition} dir="ltr">THE RAST SPOTLIGHT</span>
+    </div>
+    <article className={spotlight.feature} aria-label={menuDisplayText(active.title)}>
+      <div className={spotlight.copy} aria-live="polite">
+        <span className={spotlight.badge}>{offers.length ? active.discountPercent ? `خصم ${active.discountPercent}%` : "اختيار راست" : "اكتشف من قائمتنا"}</span>
+        <h3 dir="auto">{menuDisplayText(active.title)}</h3>
+        <p className={spotlight.description} dir="auto">{menuDisplayText(active.description || "خذ لك لحظة واكتشف تفاصيلها على ذوقك")}</p>
+        {active.code && <p className={spotlight.code}>كود العرض <b dir="ltr">{active.code}</b></p>}
+        <div className={spotlight.bottom}>
+          {product && displayPrice != null && <div className={spotlight.price}>{displayPrice !== product.price && <del>{product.price.toLocaleString("en-US")}</del>}<b dir="ltr">{displayPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span></div>}
+          {product ? <button type="button" className={spotlight.action} onClick={() => onSelect(product)}>اكتشف الصنف<ArrowUpLeft aria-hidden="true" /></button>
+            : <a className={spotlight.action} href="#rast-menu-items">تصفح القائمة<ArrowUpLeft aria-hidden="true" /></a>}
+        </div>
+      </div>
+      <div className={spotlight.media}>
+        {active.imageUrl ? <FoodImage key={active.imageUrl} src={active.imageUrl} alt={menuDisplayText(active.title)} />
+          : <span className={spotlight.typographicArt} aria-hidden="true">RAST<span>على ذوقك</span></span>}
+        <span className={spotlight.photoCaption} aria-hidden="true" dir="ltr">A MOMENT WORTH CHOOSING</span>
+      </div>
+    </article>
+    {items.length > 1 && <nav className={spotlight.choices} aria-label="مختارات وعروض راست">
+      {items.map((item, index) => <button type="button" key={item.id} aria-pressed={item.id === active.id} onClick={() => setSelectedId(item.id)}>
+        <span className={spotlight.choiceNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span dir="auto">{menuDisplayText(item.title)}</span>
+      </button>)}
+    </nav>}
+  </section>;
+}
 
 function FoodImage({ src, alt, className = "", priority = false }: { src?: string; alt: string; className?: string; priority?: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -143,7 +196,7 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
         <p className={s.rastEyebrow}>أهلًا بك في راست</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
         <p className={s.rastHeroDescription}>قهوة تحبّها، حلا يكمّلها، ولحظة تستاهل تعيشها على مهلك</p>
-        <a href="#menu-catalog" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
+        <a href="#rast-menu-items" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
         <p className={s.rastHeroFootnote}><span aria-hidden="true" />لكل وقت اختيار يليق به</p>
       </div>
     </div>
@@ -174,12 +227,12 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
   const visible = menu.products.filter((product) => (category === "all" || (product.categoryId || "uncategorized") === category) && (!availableOnly || product.available) && matchesMenuSearch(product, query));
   if (priceOrder !== "original") visible.sort((a, b) => (productFinalPrice(a.price, a.promo) - productFinalPrice(b.price, b.promo)) * (priceOrder === "asc" ? 1 : -1));
   const sections = categories.map((item) => ({ ...item, products: visible.filter((product) => (product.categoryId || "uncategorized") === item.id) })).filter((item) => item.products.length);
-  const browseProducts = sections.flatMap((section) => section.products);
+  const browseProducts = selected && !visible.some((product) => product.id === selected.id) ? menu.products : sections.flatMap((section) => section.products);
 
   function selectCategory(id: string) {
     setCategory(id);
     // Switching categories from deep in the catalog must reveal the new results
-    document.getElementById("menu-catalog")?.scrollIntoView({ block: "start", behavior: "instant" });
+    document.getElementById(isRast ? "rast-menu-items" : "menu-catalog")?.scrollIntoView({ block: "start", behavior: "instant" });
   }
 
   function browseDish(direction: number) {
@@ -201,8 +254,8 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
 
   return <main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isRast ? s.rastMenu : ""}`} dir="rtl"
     style={menu.slug === "kat-coffe" ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
-    <a href="#menu-catalog" className={s.skipLink}>انتقل إلى الأصناف</a>
-    {isRast ? <RastHero menu={menu} onShare={share} onSearch={() => { document.getElementById("menu-catalog")?.scrollIntoView({ block: "start" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
+    <a href={isRast ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
+    {isRast ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
       {/* Decorative artwork from the supplied design reference, not a catalogue product photo */}
       {heroImage && <FoodImage src={heroImage} alt="" className={s.heroBackdrop} priority />}
       <header className={s.referenceHeader}>
@@ -220,7 +273,8 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
     </section>}
     {isRast && <RastConnect />}
     <div className={s.catalog} id="menu-catalog">
-      {isRast && <div className={s.rastCatalogHeading}>
+      {isRast && <RastSpotlight menu={menu} onSelect={setSelected} />}
+      {isRast && <div className={s.rastCatalogHeading} id="rast-menu-items">
         <div><p className={s.rastEyebrow}>قائمة راست</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
         <p>من أول قهوة لآخر لقمة<br />اختَر لحظتك المفضّلة</p>
       </div>}

@@ -22,11 +22,23 @@ export type StandaloneMenu = {
   description: string | null;
   categories: { id: string; name: string; description: string | null }[];
   products: StandaloneMenuProduct[];
+  highlights?: { asOf: number; items: StandaloneHighlight[] };
   contacts: {
     feedbackEnabled: boolean;
     instagramUrl: string | null;
     location: { label: string; googleUrl: string; appleUrl: string } | null;
   };
+};
+
+export type StandaloneHighlight = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  productId: string | null;
+  discountPercent: number | null;
+  code: string | null;
+  expiresAt: number | null;
 };
 
 export function normalizeMenuSearch(value: string) {
