@@ -2,10 +2,20 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Refine Rast feature heading copy
+Current account handoff: [BARNDAKSA_HANDOFF/00_MASTER_INDEX.md](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md)
+
+## Latest task: Final GitHub/Vercel sync and account handoff
+
+- Updated: 2026-10-02. User explicitly requested latest GitHub/Vercel and a complete handoff for switching Codex accounts. Replaced obsolete master status with the current Rast workflow, source map, original user preferences, contact destinations, dashboard offer instructions, publication/security boundaries, runtime/deployment details, verification limitations and pending social handles. BRANDA_HANDOFF master now redirects to the canonical BARNDAKSA_HANDOFF master. Historical source bundles intentionally not regenerated; actual source remains authoritative.
+- Included previously local Souda importer fix and its regression script after review: both exact hashes match the successful 58-product/58-image live verification already recorded below. RUN/PASS on Node 24.21.0 (~3s): offline importer regression, scoped importer ESLint and TypeScript. No reimport or backend mutation. Other Rast functional checks reused after matching unchanged application inputs; Arabic integrity and diff checks rerun for handoff edits.
+- Application publication: GitHub main d9bd6ac; Vercel 4KJNfyZ2dQckv7bMHvyZn9NTjyYM succeeded. Current Rast design/copy through e7ee060 included. Documentation-only sync follows this application release; check GitHub status of the commit containing this entry for its deployment result.
+- Remaining local file: public/menu-logos/rast-transparent-v1.png is superseded, unused artwork intentionally preserved untracked and not deployed. No active application change is left local. Pending user inputs: Snapchat/TikTok/Instagram handles. Current offers section uses its documented honest catalog fallback until the owner publishes campaigns.
+
+## Previous task: Refine Rast feature heading copy
 
 - Updated: 2026-10-02. Replaced the section's literal spotlight wording with the marketing invitation "تستاهل التجربة", updated the English caption to WORTH A TASTE and aligned the Rast dashboard guidance heading. Copy-only; anchors, layout, offer behavior and permissions unchanged.
-- RUN/PASS Node 24.21.0 TypeScript and text integrity (~2s), diff check/source review. Reused prior unchanged functional/security/SSR evidence; no browser or additional test suite needed. Publication pending.
+- RUN/PASS Node 24.21.0 TypeScript and text integrity (~2s), diff check/source review. Reused prior unchanged functional/security/SSR evidence; no browser or additional test suite needed.
+- Published GitHub main e7ee060; Vercel CS77czAbQtbHLuLXyvgh7ju1dvh5 build succeeded. RUN/PASS live HTTP check (~6s): 200, new Arabic/English headings present and obsolete heading absent. Documentation-only evidence update follows checks.
 
 ## Previous task: Rast spotlight offers and brand selections
 
