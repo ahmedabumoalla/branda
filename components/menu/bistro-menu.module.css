@@ -555,8 +555,8 @@
 .rastMenu .filterPanel { border-radius: 8px; }
 .rastMenu .categorySection { margin-top: 44px; }
 .rastMenu .sectionHeading { margin: 0 0 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-.rastMenu .sectionHeading h2 { font-size: 25px; flex-wrap: wrap; row-gap: 4px; }
-.rastMenu .sectionHeading h2 small { font-size: 13px; }
+.rastMenu .sectionHeading h2 { font-size: 25px; flex-wrap: wrap; row-gap: 4px; -webkit-text-stroke: 0.2px currentColor; }
+.rastMenu .sectionHeading h2 small { font-size: 13px; -webkit-text-stroke: 0; }
 .rastMenu .productGrid:not(.listView) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 24px; }
 .rastMenu .product { background: var(--card-paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
 .rastMenu .productImage { aspect-ratio: 1.25; border-radius: 11px 11px 0 0; }

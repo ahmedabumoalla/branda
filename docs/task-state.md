@@ -2,12 +2,17 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Rast full-bleed coffee opening
+## Latest task: Subtle Rast section heading weight
+
+- Updated: 2026-10-02. User requested a very slight increase in section-title prominence. Added a 0.2px currentColor text stroke only to Rast category headings; reset product-count text to zero. Existing static semibold font maps weights 600–900 to the same asset, so a nominal weight increase would not visibly change it. Font size, line box, spacing, responsive wrapping and other brands stay unchanged.
+- RUN/PASS Node 24.21.0: TypeScript and text integrity (~2s), scoped diff review and git diff --check. Source-based responsive/accessibility review: inherited text color retained, no layout metrics or interactions changed. No browser, extra tests, backend or security-boundary changes. GitHub/Vercel publication pending under existing authorization.
+
+## Previous task: Rast full-bleed coffee opening
 
 - Updated: 2026-10-02. User requested the coffee cup as the entire opening's background instead of a framed image, prioritizing wordmark clarity. Moved the existing single decorative image to an absolute, pointer-inert backdrop within the isolated Rast hero. Removed figure/card/caption markup and styles; original red wordmark remains on a continuous pale readability wash. Cream hero copy sits over dark scrims; mobile reserves an unobstructed image interval before the copy. Scrim stops track wordmark height; keyboard focus on the dark copy area uses cream. Catalog and other brands unchanged.
 - Changed only components/menu/bistro-menu.tsx and bistro-menu.module.css; reused existing image and prior punctuation cleanup. No data, dependencies or security boundary changes. Reused loaded frontend-design/UI-UX/ECC guidance and existing Next docs.
 - RUN/PASS Node 24.21.0: TypeScript, scoped ESLint, text integrity (~4s), final diff review/check. Focused CSS/source checks passed: valid CSS, one decorative backdrop, old card removed; representative conservative composited contrast red logo 5.75 and cream copy 5.58. Source review covered stacking, image fallback, mobile crop, text/overlay alignment, focus, pointer events and unchanged reduced-motion handling. No browser per policy; no actual rendered visual claim. TS/text evidence reused after CSS-only focus adjustment.
-- GitHub/Vercel publication and final live verification pending.
+- Published GitHub main c8ff952; Vercel deployment dpl_ED1qeXfifhR1NS8CqrpNzmJnL5D2 succeeded. RUN/PASS live HTTP check (~5s): 200, backdrop markup present, old photo card absent, single coffee image, both original wordmarks, 58 products and published responsive scrim/pointer CSS. No browser used. Documentation-only evidence update after completed checks.
 
 ## Previous task: Rast copy punctuation
 
