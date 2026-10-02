@@ -2,14 +2,20 @@
 
 Evidence only; this record does not authorize actions.
 
-## Latest task: Complete Rast menu identity
+## Latest task: Rast copy punctuation
+
+- Updated: 2026-10-02. Removed decorative/trailing periods and unnecessary commas from Rast header, hero, image caption, ribbon, catalog introduction and footer in components/menu/bistro-menu.tsx. Kept useful commas within the longer description and the actual question mark. Copy-only; no CSS, behavior, assets, catalog data or backend changes.
+- RUN/PASS: Node 24.21.0 TypeScript and text integrity (~3s), git diff --check and targeted diff review. Reused unchanged design/accessibility/security evidence from prior task. No browser or extra local build; GitHub/Vercel publication continues under the user's earlier authorization.
+
+## Previous task: Complete Rast menu identity
 
 - Updated: 2026-10-02. User requested a complete new professional Rast identity with a strong visual opening. Continued authorized GitHub/Vercel publication. Direction: large original red wordmark, cream/oxblood editorial layout, cinematic coffee photograph, dedicated Arabic copy, compact category navigation, restrained product cards and closing signature. All changes scoped to Rast; catalog/search/filter/share/services/product detail behavior retained.
 - Changed components/menu/bistro-menu.tsx and bistro-menu.module.css; added public/menu-art/rast-coffee-editorial-v1.webp (138820 bytes, 1536x1024). Built-in image prompt: premium editorial espresso still life, ivory porcelain cup/linen on a burgundy tabletop, warm side light and natural shadows, no people/text/logos; decorative brand atmosphere only. Converted PNG to WebP for delivery; catalog retains real product photos. Existing shared Storage wordmark unchanged.
 - Skills reused: frontend-design, ui-ux-pro-max, imagegen, ECC engineering/deployment, token-efficiency. UI skill's broad result was off-topic (glass), discarded; focused editorial/whitespace result used with existing Arabic fonts. No added dependencies, schema, permissions, browser sessions or unrelated code changes.
 - RUN/PASS on Node 24.21.0: npx-equivalent direct TypeScript, scoped ESLint and text-integrity commands (~6s); git diff --check. One-shot ReactDOM server rendering of actual components verified Rast-only hero/footer, one H1, actual product media, unavailable/empty states, logo fallback and accessible search; Basilico keeps existing hero/products. Initial shell stdin corrupted assertion literals only (no file corruption); rerun with UTF-8 stdin passed those assertions.
 - Contrast check initially found muted/blush 4.48:1; darkened only Rast muted token to #6e5b56. Final CSS parse/class-reference/contrast/header-space check passed (<1s): red/cream 7.82, wine/cream 14.43, muted/cream 5.73, muted/blush 5.03. Source review covers 320/375/390/640px header fit, 2/3-column catalog breakpoints, RTL, 44px controls, focus and reduced motion. Reused unchanged TS/ESLint/SSR evidence after CSS-only token correction. No browser rendering check per project policy.
-- GitHub push, Vercel production build and live identity/media/catalog checks pending below.
+- Completed 2026-10-02 21:34 +03:00: GitHub main 2c5a0b8 pushed; Vercel dpl_kQ6FqQj87KzUUzfya5Uv9nDjAiFG reached READY on Node 24.x with barndaksa.com aliases; GitHub Vercel check success. Production HTTP checks passed: Rast hero/catalog/footer, one H1, all 58 unique product cards, 2 transparent logos, 1 editorial hero, byte-for-byte matching downloaded assets, published palette/responsive/reduced-motion CSS. Root page and Basilico returned 200; Basilico main has no Rast class. Final response snapshot: user's Temp/branda-rast-identity-production.html (signed URLs; not committed).
+- A broader smoke script's final dashboard-redirect assertion was incorrect: anonymous /dashboard intentionally renders a generic shell with HTTP 200 and later redirects through dashboard-shell-client.ts after the unauthenticated server action. Source and HTTP inspection confirmed that existing behavior; no auth code changed and no browser/authenticated-session validation claimed. Earlier menu/media/CSS assertions passed before that final assertion; final focused production check passed. No further build needed for this evidence-only record update.
 
 ## Previous task: Rast wordmark and menu masthead
 
