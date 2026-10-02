@@ -35,8 +35,8 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
 
   return <section className={spotlight.section} aria-labelledby="rast-spotlight-title">
     <div className={spotlight.heading}>
-      <div><p className={s.rastEyebrow}>مساحة لمزاج مختلف</p><h2 id="rast-spotlight-title">تحت <span>الضوء</span></h2></div>
-      <span className={spotlight.edition} dir="ltr">THE RAST SPOTLIGHT</span>
+      <div><p className={s.rastEyebrow}>مساحة لمزاج مختلف</p><h2 id="rast-spotlight-title">تستاهل <span>التجربة</span></h2></div>
+      <span className={spotlight.edition} dir="ltr">WORTH A TASTE</span>
     </div>
     <article className={spotlight.feature} aria-label={menuDisplayText(active.title)}>
       <div className={spotlight.copy} aria-live="polite">

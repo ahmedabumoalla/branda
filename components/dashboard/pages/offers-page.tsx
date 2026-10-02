@@ -259,7 +259,7 @@ export function OffersPageClient({
       }
     >
       {rastSpotlight && <aside className="mb-5 rounded-xl border border-[#dfcec5] bg-[#f8f2e8] p-5 text-[#3b1725]">
-        <h2 className="font-bold">تحت الضوء في منيو راست</h2>
+        <h2 className="font-bold">تستاهل التجربة في منيو راست</h2>
         <p className="mt-2 text-sm leading-7">لإبراز عرض أو صنف اليوم اختر «بانر الكوفي» أو «كلاهما» وفعّل ظهوره مع حالة «نشط» أو «مجدول» ضمن مدته</p>
         <p className="mt-1 text-sm leading-7">للمختارات دون خصم استخدم «عرض مخصص» واربط الصنف وأضف عنوانك وصورتك دون نسبة خصم</p>
         <a href="/menu/rast#rast-spotlight-title" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center font-bold text-[#a30b2d] underline underline-offset-4">شاهد المساحة في المنيو</a>
