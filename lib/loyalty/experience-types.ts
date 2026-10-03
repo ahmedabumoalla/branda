@@ -7,6 +7,8 @@ export type LoyaltyExperienceSettings = {
   longitude: number | null;
 };
 
+export type LoyaltyExperienceInput = LoyaltyExperienceSettings & { mapsUrl?: string };
+
 export const defaultLoyaltyExperience: LoyaltyExperienceSettings = {
   rewardKind: "custom",
   rewardDiscountPercent: null,

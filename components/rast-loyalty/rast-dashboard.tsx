@@ -35,8 +35,9 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
   const [body, setBody] = useState("");
   const [notificationError, setNotificationError] = useState("");
   const [notificationResult, setNotificationResult] = useState("");
-  const [latitude, setLatitude] = useState(initialExperience.latitude?.toString() ?? "");
-  const [longitude, setLongitude] = useState(initialExperience.longitude?.toString() ?? "");
+  const [mapsUrl, setMapsUrl] = useState(() => initialExperience.latitude != null && initialExperience.longitude != null
+    ? `https://www.google.com/maps/search/?api=1&query=${initialExperience.latitude},${initialExperience.longitude}`
+    : "");
   const signupQr = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
   const announcementDialog = useRef<HTMLDialogElement>(null);
@@ -48,10 +49,10 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
     event.preventDefault();
     if (saveLock.current) return;
     setError(""); setMessage("");
-    if (Boolean(latitude.trim()) !== Boolean(longitude.trim())) { setError("أدخل خط العرض وخط الطول معًا، أو اتركهما فارغين."); requestAnimationFrame(() => errorRef.current?.focus()); return; }
     saveLock.current = true; setSaving(true);
     try {
-      await saveRastLoyaltySettingsAction({ program: { ...program, cardBackground: "#3b1420", cardForeground: "#f8f2e8", cardAccent: "#970e29" }, experience: { ...experience, latitude: latitude.trim() ? Number(latitude) : null, longitude: longitude.trim() ? Number(longitude) : null } });
+      const result = await saveRastLoyaltySettingsAction({ program: { ...program, cardBackground: "#3b1420", cardForeground: "#f8f2e8", cardAccent: "#970e29" }, experience: { ...experience, mapsUrl: mapsUrl.trim() } });
+      if (!result.ok) { setError(result.message); requestAnimationFrame(() => errorRef.current?.focus()); return; }
       setMessage("تم حفظ برنامج أهل راست وإعدادات المكافآت.");
       router.refresh();
     } catch { setError("تعذر حفظ الإعدادات. تحقق من البيانات وحاول مرة أخرى."); requestAnimationFrame(() => errorRef.current?.focus()); }
@@ -104,9 +105,8 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
             </div>
             <div className={s.settingsSection}><div className={s.settingsHeading}><div><MapPin aria-hidden="true" /><h2>إذا صار قريب، ذكّره براست</h2></div></div><p className={s.sectionDescription}>تذكير بالقرب من الفرع يظهر في المحافظ التي تدعم الموقع، بحسب إعدادات جهاز العميل.</p><div className={s.settingsGrid}>
               <label className={`${s.field} ${s.fullWidth}`}><span>رسالة الترحيب بالقرب من الفرع</span><textarea minLength={2} maxLength={240} required rows={2} value={experience.nearbyMessage} onChange={(event) => setExperience((value) => ({ ...value, nearbyMessage: event.target.value }))} /></label>
-              <label className={s.field}><span>خط العرض</span><input type="number" inputMode="decimal" min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="24.7136" dir="ltr" /></label>
-              <label className={s.field}><span>خط الطول</span><input type="number" inputMode="decimal" min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="46.6753" dir="ltr" /></label>
-            </div><p className={s.hint}>اترك الإحداثيات فارغة إذا لم ترغب في تذكير القرب من الفرع.</p></div>
+              <label className={`${s.field} ${s.fullWidth}`}><span>رابط قوقل ماب للفرع</span><input type="url" name="mapsUrl" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={2048} value={mapsUrl} onChange={(event) => setMapsUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." dir="ltr" aria-describedby="rast-maps-url-hint" /></label>
+            </div><p id="rast-maps-url-hint" className={s.hint}>الصق رابط الفرع من قوقل ماب؛ ندعم رابط المشاركة المختصر. اترك الحقل فارغًا واحفظ لإلغاء تذكير القرب من الفرع.</p></div>
             {error ? <p ref={errorRef} tabIndex={-1} role="alert" className={s.error}>{error}</p> : null}
             {message ? <p role="status" className={s.success}>{message}</p> : null}
             <div className={s.saveBar}><span>التغييرات تطبّق بعد الحفظ.</span><button type="submit" className={s.primary}>{saving ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <Save aria-hidden="true" />}{saving ? "جاري الحفظ..." : "حفظ إعدادات الولاء"}</button></div>

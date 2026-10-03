@@ -12,7 +12,8 @@ import { getCashierToken } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createBarndaksaQrPayload, parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
-import { defaultLoyaltyExperience, type LoyaltyExperienceSettings } from "@/lib/loyalty/experience-types";
+import { defaultLoyaltyExperience, type LoyaltyExperienceInput } from "@/lib/loyalty/experience-types";
+import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 import type { WalletMember } from "@/lib/wallet/types";
 
 export async function getLoyaltyExperience(cafeId: string) {
@@ -87,11 +88,17 @@ const experienceSchema = z.object({
 }).refine((value) => (value.latitude === null) === (value.longitude === null), "أدخل إحداثيات الفرع كاملة.")
   .refine((value) => value.rewardKind !== "discount" || value.rewardDiscountPercent !== null, "حدد نسبة الخصم.");
 
-export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceSettings) {
-  const parsed = experienceSchema.parse(input);
+async function parseExperienceInput(input: LoyaltyExperienceInput) {
+  const mapsUrl = z.string().trim().max(2048).optional().parse(input.mapsUrl);
+  const location = mapsUrl === undefined ? {} : await resolveBranchGoogleMapsUrl(mapsUrl);
+  return experienceSchema.parse({ ...input, ...location });
+}
+
+export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) {
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
   if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لراست.");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
+  const parsed = await parseExperienceInput(input);
   const { error } = await (await createClient()).from("cafe_loyalty_experience").upsert({
     cafe_id: cafe.id, reward_validity_days: parsed.rewardValidityDays, nearby_message: parsed.nearbyMessage,
     reward_kind: parsed.rewardKind, reward_discount_percent: parsed.rewardKind === "discount" ? parsed.rewardDiscountPercent : null,
@@ -109,12 +116,12 @@ const programSchema = z.object({
   appleWalletEnabled: z.boolean().default(false), googleWalletEnabled: z.boolean().default(false),
 });
 
-export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceSettings }) {
+export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceInput }) {
   const program = programSchema.parse(input.program);
-  const experience = experienceSchema.parse(input.experience);
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
   if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لراست.");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
+  const experience = await parseExperienceInput(input.experience);
   if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة.");
   const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: program, p_experience: experience });
   if (error) throw new Error("تعذر حفظ برنامج الولاء. إعداداتك لم تتغير.");

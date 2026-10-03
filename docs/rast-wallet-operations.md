@@ -48,6 +48,7 @@ The targeted security update pins Next.js and its ESLint configuration to 16.3.8
 
 - The Apple pass uses the store-card template. Rast's original logo is on the right of the strip artwork; Wallet controls native header/logo placement. Fields include the stamp balance and available rewards. Updates use a pass certificate and an empty APNs payload; notification copy comes from changed pass fields.
 - Google receives a protected, versioned image URL for actual stamp artwork and separate live balance fields. Customer phone/email/name are not included in the provider payload. The image endpoint requires a dedicated HMAC and returns only image bytes.
+- The Rast dashboard accepts a Google Maps place/pin URL, including supported short share links, and resolves coordinates after owner authorization. Existing saved coordinates display as a canonical Maps link. Clearing the link clears proximity coordinates; invalid or unresolved links leave all saved settings unchanged. Only HTTPS Google Maps hosts and validated redirects are allowed, with bounded response size and an eight-second total timeout. Viewport centers and directions are not inferred as the branch location.
 - Branch coordinates produce proximity relevance; a website does not track customers in the background. Google controls nearby notification wording, distance, and dwell time. It requires notifications plus precise, always-on Wallet location access. Apple similarly controls when relevance appears.
 - Google limits message/update notifications to three per pass per 24 hours. When an update-notification request is throttled, the adapter retries the balance update without a notification. Merchant-message delivery is provider-controlled and may be delayed or rejected.
 - Merchant announcements are persisted with a per-cafe transaction lock, deduplicated for ten minutes, and limited to three new announcements per day. Provider successes are retained across retries; Google message retries inspect existing message IDs because the provider permits duplicate IDs. Worker leases recover after interruption, so delivery remains at least once, not guaranteed exactly once. Monitor failed jobs and provider quotas.
@@ -61,6 +62,7 @@ Official references:
 - [Google issuer onboarding](https://developers.google.com/wallet/retail/loyalty-cards/getting-started/issuer-onboarding)
 - [Google service credentials](https://developers.google.com/wallet/retail/loyalty-cards/getting-started/auth/rest)
 - [Google notification and nearby rules](https://developers.google.com/wallet/retail/loyalty-cards/use-cases/trigger-push-notifications)
+- [Google Maps place and pin URLs](https://developers.google.com/maps/documentation/urls/get-started)
 - [Vercel cron frequency limits](https://vercel.com/docs/cron-jobs/usage-and-pricing)
 - [Vercel cron authentication and duplicate delivery](https://vercel.com/docs/cron-jobs/manage-cron-jobs)
 - [Next.js 16.3.8 security release](https://github.com/vercel/next.js/releases/tag/v16.3.8)

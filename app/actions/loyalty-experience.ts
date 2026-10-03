@@ -13,6 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { syncWalletCardByCode, notifyBrandWalletMembers } from "@/lib/wallet";
 import type { LoyaltyExperienceSettings } from "@/lib/loyalty/experience-types";
+import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 
 async function requireEnrollment(slug: string) {
   if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لراست.");
@@ -47,9 +48,14 @@ export async function saveBrandLoyaltyProgramAction(input: Parameters<typeof sav
 }
 
 export async function saveRastLoyaltySettingsAction(input: Parameters<typeof saveRastLoyaltySettings>[0]) {
-  await saveRastLoyaltySettings(input);
-  revalidatePath("/loyalty/rast");
-  revalidatePath("/dashboard/loyalty");
+  try {
+    await saveRastLoyaltySettings(input);
+    revalidatePath("/loyalty/rast");
+    revalidatePath("/dashboard/loyalty");
+    return { ok: true as const };
+  } catch (error) {
+    return { ok: false as const, message: error instanceof GoogleMapsLocationError ? error.message : "تعذر حفظ إعدادات الولاء. تحقق من البيانات وحاول مرة أخرى." };
+  }
 }
 
 export async function lookupRastCashierCardAction(value: string) {
