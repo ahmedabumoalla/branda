@@ -694,7 +694,7 @@ export async function completeCustomerPhoneOtpAction(
     const phoneNormalized = normalizeSaudiPhone(phone);
     if (
       !phoneNormalized ||
-      !isAllowedCustomerOtpPhone(phoneNormalized) ||
+      !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug) ||
       !/^\d{6}$/.test(code)
     ) {
       return { ok: false as const, message: "رمز التحقق غير صحيح." };
@@ -739,6 +739,7 @@ export async function completeCustomerPhoneOtpAction(
         purpose === "customer_signup"
           ? "تم إنشاء الحساب وتسجيل الدخول."
           : "تم تسجيل الدخول.",
+      returningCustomer: finalized.returningCustomer,
       session: finalized.session,
     };
   } catch (error) {

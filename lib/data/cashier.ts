@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
+import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
@@ -761,7 +763,7 @@ export async function cashierScanLoyalty(input: {
   const admin = createAdminClient();
   const { data: session, error: sessionError } = await admin
     .from("cafe_cashier_sessions")
-    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
+    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active),cafes(slug)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -774,6 +776,17 @@ export async function cashierScanLoyalty(input: {
   const currentCafeId = String(session.cafe_id);
   if (input.cafeId && input.cafeId !== currentCafeId) {
     throw new Error("جلسة الكاشير لا تطابق العلامة التجارية");
+  }
+
+  const cafe = firstRecord(session.cafes);
+  if (cafe?.slug === "rast") {
+    await assertRastLoyaltyEntitlement(currentCafeId);
+    if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها.");
+    const { data, error } = await admin.rpc("scan_loyalty_stamp", {
+      p_session_token: token, p_card_code: normalizedCardCode, p_request_id: randomUUID(),
+    });
+    if (error) throw new Error("تعذر تسجيل الختم. تحقق من البطاقة وجلسة الموظف.");
+    return data as Record<string, unknown>;
   }
 
   const { data: scannedCard, error: cardLookupError } = await admin

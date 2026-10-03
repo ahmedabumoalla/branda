@@ -120,6 +120,10 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
   }
 
   const admin = createAdminClient();
+  const { data: existingProfile, error: existingError } = await admin
+    .from("customer_profiles").select("id").eq("cafe_id", cafe.id)
+    .eq("phone_normalized", phoneNormalized).limit(1).maybeSingle();
+  if (existingError) throw existingError;
   const { data, error } = await admin.rpc(
     "link_customer_after_supabase_phone_otp",
     {
@@ -162,6 +166,7 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
 
   return {
     ok: true as const,
+    returningCustomer: Boolean(existingProfile),
     session: mapCustomerProfileToSession(input.slug, profile as CustomerProfileRow),
   };
 }

@@ -17,6 +17,7 @@ import {
 } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
+import { getAuthorizedWalletMember } from "@/lib/data/loyalty-experience";
 
 async function publicLoyaltyEnabled(cafeSlug: string) {
   try {
@@ -106,6 +107,7 @@ export async function fetchCustomerLoyaltyCardAction(slug: string) {
 export async function fetchLoyaltyCardViewByCodeAction(cardCode: string) {
   const view = await getLoyaltyCardViewByCode(cardCode);
   if (!view) return null;
+  if (view.cafeSlug === "rast" && !(await getAuthorizedWalletMember(cardCode))) return null;
   if (view.cafeSlug && !(await publicLoyaltyEnabled(view.cafeSlug))) return null;
   return view;
 }

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { verifySupabaseHookSignature } from "@/lib/auth/supabase-hook-signature";
-import { sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
+import { greenApiProviderInstanceKey, sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
 
 export const runtime = "nodejs";
 
@@ -14,18 +16,6 @@ const sendSmsHookSchema = z.object({
     otp: z.string().regex(/^\d{6}$/),
   }),
 });
-
-function enabled(value: string | undefined) {
-  return value?.trim().toLowerCase() === "true";
-}
-
-function allowedTestPhone(phoneNormalized: string) {
-  if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
-  return (process.env.PHONE_OTP_ALLOWED_PHONES ?? "")
-    .split(",")
-    .map((phone) => normalizeSaudiPhone(phone.trim()))
-    .some((phone) => phone === phoneNormalized);
-}
 
 function errorResponse(status: number) {
   return Response.json(
@@ -68,11 +58,19 @@ export async function POST(request: Request) {
   if (!parsed.success) return errorResponse(400);
 
   const phoneNormalized = normalizeSaudiPhone(parsed.data.user.phone);
-  if (!phoneNormalized || !allowedTestPhone(phoneNormalized)) {
+  if (!phoneNormalized) {
     return errorResponse(403);
   }
 
   try {
+    // A valid Supabase signature alone must not bypass the application send limits.
+    // Consume one recent, server-authorized request before contacting WhatsApp.
+    const { data: cafeSlug, error } = await createAdminClient().rpc("claim_customer_phone_otp_dispatch", {
+      p_phone_normalized: phoneNormalized,
+      p_provider_instance: greenApiProviderInstanceKey(),
+    });
+    if (error || typeof cafeSlug !== "string" || !isPhoneOtpRequiredForBrand(cafeSlug)
+      || !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug)) return errorResponse(403);
     await sendGreenApiSupabaseOtp({
       phoneNormalized,
       code: parsed.data.sms.otp,

@@ -16,12 +16,16 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@zxing/browser": "0.2.1",
+    "jsqr": "1.4.0",
     "lucide-react": "latest",
     "motion": "12.42.2",
-    "next": "latest",
+    "next": "16.3.8",
+    "passkit-generator": "3.6.1",
     "qrcode-generator": "^1.4.4",
     "react": "latest",
     "react-dom": "latest",
+    "sharp": "0.35.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -30,9 +34,14 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
-    "eslint-config-next": "latest",
+    "eslint-config-next": "16.3.8",
     "tailwindcss": "latest",
     "typescript": "latest"
+  },
+  "overrides": {
+    "passkit-generator": {
+      "joi": "17.13.7"
+    }
   },
   "engines": {
     "node": "24.x"

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getVerifiedRastCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
@@ -455,6 +456,10 @@ export async function recordOwnerLoyaltyOperation(input: {
     parseBarndaksaQrPayload(parsed.cardCode, "loyalty-card") ??
     parsed.cardCode.trim().toUpperCase();
 
+  if (cafe.slug === "rast") {
+    throw new Error("استخدم شاشة الموظف لتسجيل أختام راست وصرف المكافآت.");
+  }
+
   const normalizedInvoiceBarcode = parsed.invoiceBarcode?.trim()
     ? parseBarndaksaQrPayload(parsed.invoiceBarcode, "invoice") ?? parsed.invoiceBarcode.trim()
     : makeLoyaltyScanReference(normalizedCardCode);
@@ -511,6 +516,14 @@ export async function issueCurrentCustomerLoyaltyCard(slug: string) {
   const program = await getPublicLoyaltyProgramBySlug(slug);
   if (!program?.enabled) {
     throw new Error("بطاقة الولاء غير مفعلة لهذه العلامة التجارية");
+  }
+
+  if (slug === "rast") {
+    const profile = await getVerifiedRastCustomerProfile();
+    if (!profile) throw new Error("تحقق من رقم جوالك أولًا.");
+    const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+    if (error) throw new Error("تعذر إصدار بطاقة الولاء.");
+    return String(data);
   }
 
   const supabase = await createClient();
@@ -587,6 +600,14 @@ export async function getCustomerLoyaltyCardViewForProfile(
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
 
+  if (slug === "rast") {
+    const profile = await getVerifiedRastCustomerProfile();
+    if (!profile || profile.id !== customerProfileId) return null;
+    const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+    if (error) throw new Error("تعذر إصدار بطاقة الولاء. تحقق من تفعيل البرنامج.");
+    return getLoyaltyCardViewByCode(String(data));
+  }
+
   const supabase = createAdminClient();
   const { data: profileRow, error: profileError } = await supabase
     .from("customer_profiles")
@@ -598,7 +619,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
   if (profileError) throw profileError;
   if (!profileRow) return null;
 
-  let { data: cardRow, error } = await supabase
+  const { data: existingCard, error } = await supabase
     .from("loyalty_cards")
     .select("*")
     .eq("cafe_id", cafe.id)
@@ -609,6 +630,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
     .maybeSingle();
 
   if (error) throw error;
+  let cardRow = existingCard;
 
   const { data: programRow } = await supabase
     .from("cafe_loyalty_programs")

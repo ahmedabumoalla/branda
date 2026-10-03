@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PublicLoyaltyCardView } from "@/components/loyalty/public-loyalty-card-view";
 import { getLoyaltyCardViewByCode } from "@/lib/data/loyalty-cards";
 import { getPublicLoyaltyBySlug } from "@/lib/data/loyalty";
@@ -17,6 +17,8 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
   const view = await getLoyaltyCardViewByCode(cardCode);
 
   if (!view) notFound();
+  // Static Rast card codes identify cards; they never authorize a public customer-data read.
+  if (view.cafeSlug === "rast") redirect("/loyalty/rast");
 
   const { card, program, cafeSlug, cafeName, businessCategory } = view;
   const copy = getBusinessCopy(businessCategory);

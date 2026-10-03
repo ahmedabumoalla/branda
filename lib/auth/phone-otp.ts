@@ -69,13 +69,15 @@ function maskedPhone(phone: string) {
 export function isPhoneOtpRequiredForBrand(slug: string) {
   if (!enabled(process.env.PHONE_OTP_ENABLED)) return false;
   if (process.env.WHATSAPP_PROVIDER?.trim().toLowerCase() !== "green_api") return false;
+  if (slug.trim().toLowerCase() === "rast") return true;
   if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
   return csvSet(process.env.PHONE_OTP_ALLOWED_BRAND_SLUGS).has(
     slug.trim().toLowerCase(),
   );
 }
 
-export function isAllowedCustomerOtpPhone(phoneNormalized: string) {
+export function isAllowedCustomerOtpPhone(phoneNormalized: string, cafeSlug?: string) {
+  if (cafeSlug?.trim().toLowerCase() === "rast") return true;
   if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
   return [...csvSet(process.env.PHONE_OTP_ALLOWED_PHONES)].some(
     (phone) => normalizeSaudiPhone(phone) === phoneNormalized,
@@ -112,7 +114,7 @@ export async function requestCustomerPhoneOtp(
       message: "أدخل رقم جوال سعودي صحيحًا.",
     };
   }
-  if (!isAllowedCustomerOtpPhone(phoneNormalized)) {
+  if (!isAllowedCustomerOtpPhone(phoneNormalized, slug)) {
     return {
       required: true,
       ok: false,

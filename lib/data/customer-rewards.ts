@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
+import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCashierToken } from "@/lib/data/cashier";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
@@ -103,12 +105,14 @@ function daysUntil(value?: string | null) {
 
 function previewFromReward(
   reward: CustomerRewardInstance,
-  options?: { loyaltyCardEnabled?: boolean },
+  options?: { loyaltyCardEnabled?: boolean; exactExpiry?: boolean },
 ): CashierRewardPreview {
   const remainingDays = daysUntil(reward.expiresAt);
   const isExpired =
     reward.status === "expired" ||
-    (remainingDays !== null && remainingDays < 0);
+    (options?.exactExpiry
+      ? reward.expiresAt !== null && Date.parse(reward.expiresAt) <= Date.now()
+      : remainingDays !== null && remainingDays < 0);
   const invalidReason =
     reward.sourceType === "loyalty" && options?.loyaltyCardEnabled === false
       ? "بطاقة الولاء موقوفة لهذه العلامة"
@@ -156,7 +160,7 @@ async function getValidCashierSession() {
   const admin = createAdminClient();
   const { data: session, error } = await admin
     .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
+    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active),cafes(slug)")
     .eq("token", token)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -178,6 +182,7 @@ async function getValidCashierSession() {
     cashierId: String(session.cashier_id),
     cashierName: String(cashier.full_name ?? ""),
     cashierEmail: String(cashier.email ?? ""),
+    cafeSlug: String(firstRecord(session.cafes)?.slug ?? ""),
   };
 }
 
@@ -294,6 +299,10 @@ async function findCashierReward(rawRewardCode: string) {
     throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
   }
 
+  if (context.cafeSlug === "rast" && reward.sourceType === "loyalty") {
+    await assertRastLoyaltyEntitlement(context.cafeId);
+  }
+
   const loyaltyCardEnabled =
     reward.sourceType === "loyalty"
       ? await isLoyaltyCardProgramEnabled(context.admin, context.cafeId)
@@ -305,16 +314,31 @@ async function findCashierReward(rawRewardCode: string) {
 export async function lookupCashierCustomerReward(
   rawRewardCode: string,
 ): Promise<CashierRewardPreview> {
-  const { reward, loyaltyCardEnabled } = await findCashierReward(rawRewardCode);
-  return previewFromReward(reward, { loyaltyCardEnabled });
+  const { reward, loyaltyCardEnabled, cafeSlug } = await findCashierReward(rawRewardCode);
+  return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
 }
 
 export async function redeemCashierCustomerReward(rawRewardCode: string) {
-  const { admin, reward, code, cafeId, cashierId, cashierName, cashierEmail, loyaltyCardEnabled } =
+  const { admin, reward, code, cafeId, cashierId, cashierName, cashierEmail, loyaltyCardEnabled, cafeSlug, token } =
     await findCashierReward(rawRewardCode);
-  const preview = previewFromReward(reward, { loyaltyCardEnabled });
+  const preview = previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
   if (!preview.canRedeem) {
     throw new Error(preview.invalidReason ?? "هذه المكافأة غير قابلة للصرف");
+  }
+
+  if (cafeSlug === "rast" && reward.sourceType === "loyalty") {
+    const { data, error } = await admin.rpc("redeem_loyalty_reward", {
+      p_session_token: token, p_reward_code: code, p_request_id: randomUUID(),
+    });
+    if (error) throw new Error("تعذر صرف المكافأة. ربما صُرفت أو انتهت صلاحيتها.");
+    const result = data as Record<string, unknown>;
+    return {
+      ok: true, rewardInstanceId: reward.id, customerName: reward.customerName,
+      rewardName: reward.rewardTitle, rewardType: "مكافأة ولاء", rewardCode: code,
+      issuedAt: reward.issuedAt, expiresAt: reward.expiresAt ?? "", remainingText: preview.remainingText,
+      status: "تم الصرف", sourceType: reward.sourceType, cardCode: result.cardCode,
+      items: [{ id: reward.id, productId: reward.rewardDefinitionId ?? "", productName: reward.rewardTitle, quantity: 1 }],
+    };
   }
 
   const redeemedAt = new Date().toISOString();
