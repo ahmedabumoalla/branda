@@ -1,0 +1,82 @@
+.section {
+  padding: 32px var(--rast-gutter) 0;
+  color: var(--rast-cream);
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: 28px 36px;
+  border: 1px solid var(--rast-wine);
+  border-radius: 14px;
+  background: var(--rast-wine);
+  color: inherit;
+  text-decoration: none;
+}
+
+.entry::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgb(248 242 232 / 18%);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.entry:focus-visible {
+  outline: 3px solid var(--rast-red);
+  outline-offset: 5px;
+}
+
+.cardIllustration { position: relative; display: block; width: 142px; height: 96px; }
+.cardBack, .cardFront { position: absolute; inset: 0; border-radius: 9px; }
+.cardBack { background: var(--rast-red); border: 1px solid rgb(248 242 232 / 35%); transform: rotate(7deg); }
+.cardFront { padding: 12px 14px; background: var(--rast-cream); color: var(--rast-wine); transform: rotate(-5deg); }
+.cardTop { display: flex; align-items: center; justify-content: space-between; font-size: 8px; letter-spacing: 2px; }
+.cardTop svg { width: 16px; height: 16px; stroke-width: 1.4; }
+.cardBrand { display: block; margin-top: 1px; font-size: 25px; line-height: 1.4; color: var(--rast-red); }
+.cardCaption { display: block; font-size: 8px; }
+.copy { display: block; min-width: 0; }
+.eyebrow { display: block; margin-bottom: 6px; font-size: 11px; color: var(--rast-blush); }
+.title { display: block; font-size: clamp(21px, 2.2vw, 29px); font-weight: 500; line-height: 1.6; }
+.description { display: block; margin-top: 5px; font-size: 13px; line-height: 1.9; color: var(--rast-blush); }
+.action { display: flex; align-items: center; justify-content: center; gap: 20px; min-height: 50px; padding: 12px 20px; border: 1px solid var(--rast-cream); border-radius: 7px; background: var(--rast-cream); color: var(--rast-wine); font-size: 13px; white-space: nowrap; }
+.action svg { width: 20px; height: 20px; stroke-width: 1.5; }
+
+@media (hover: hover) {
+  .entry:hover .action { background: var(--rast-blush); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cardFront, .action svg { transition: transform 180ms ease; }
+  .entry:hover .cardFront { transform: rotate(-2deg) translateY(-2px); }
+  .entry:hover .action svg { transform: translate(-2px, -2px); }
+}
+
+@media (max-width: 1000px) {
+  .entry { grid-template-columns: 120px minmax(0, 1fr); gap: 20px 26px; padding: 26px; }
+  .cardIllustration { width: 118px; height: 88px; grid-row: span 2; }
+  .cardFront { padding: 10px 12px; }
+  .action { justify-self: start; grid-column: 2; }
+}
+
+@media (max-width: 540px) {
+  .section { padding-top: 24px; }
+  .entry { grid-template-columns: minmax(0, 1fr) 84px; gap: 18px 12px; padding: 25px 22px; }
+  .copy { grid-column: 1; grid-row: 1; }
+  .eyebrow { font-size: 10px; }
+  .title { font-size: 21px; line-height: 1.7; }
+  .description { font-size: 11px; }
+  .cardIllustration { grid-column: 2; grid-row: 1; width: 80px; height: 104px; }
+  .cardFront { padding: 10px 8px; }
+  .cardTop { font-size: 6px; letter-spacing: 1px; }
+  .cardTop svg { width: 13px; height: 13px; }
+  .cardBrand { margin-top: 14px; font-size: 23px; }
+  .cardCaption { font-size: 7px; }
+  .action { grid-column: 1 / -1; justify-self: stretch; justify-content: space-between; min-height: 48px; padding: 11px 15px; font-size: 12px; }
+}

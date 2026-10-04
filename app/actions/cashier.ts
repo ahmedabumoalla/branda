@@ -9,12 +9,22 @@ import {
   getCashierOrders,
   loginCashierWithPassword,
   logoutCashier,
+  startOwnerCashierSession,
 } from "@/lib/data/cashier";
 import { redeemCashierExperienceReward } from "@/lib/data/experience-rewards";
 import {
   lookupCashierCustomerReward,
   redeemCashierCustomerReward,
 } from "@/lib/data/customer-rewards";
+
+export async function startOwnerCashierAction() {
+  try {
+    await startOwnerCashierSession();
+  } catch {
+    return { ok: false as const, message: "تعذر فتح نقطة التشغيل بجلسة المالك. تحقق من صلاحياتك وحاول مجددًا." };
+  }
+  redirect("/cashier");
+}
 
 export async function loginCashierAction(email: string, password: string) {
   const result = await loginCashierWithPassword(email, password);

@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCustomerProfileForSession } from "@/lib/data/customers";
 import { createNotification } from "@/lib/data/notifications";
-import { getCashierToken } from "@/lib/data/cashier";
+import { requireCashierSessionContext } from "@/lib/data/cashier";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import {
   escapeEmailHtml,
@@ -65,12 +65,6 @@ function makeRewardCode() {
     value += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return value;
-}
-
-function firstRecord(value: unknown) {
-  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
-  if (value && typeof value === "object") return value as Record<string, unknown>;
-  return undefined;
 }
 
 function normalizeRewardItems(rows: unknown): ExperienceRewardItem[] {
@@ -668,9 +662,6 @@ export async function redeemOwnerExperienceReward(rewardCode: string) {
 }
 
 export async function redeemCashierExperienceReward(rewardCode: string) {
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-
   const code =
     parseBarndaksaQrPayload(rewardCode, "experience-reward") ??
     rewardCode.trim().toUpperCase();
@@ -678,17 +669,9 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
 
   const admin = createAdminClient();
 
-  const { data: session, error: sessionError } = await admin
-    .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active)")
-    .eq("token", token)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-
-  if (sessionError) throw sessionError;
-  if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
-  const cashier = firstRecord(session.cafe_cashiers);
-  if (!cashier || cashier.active !== true) throw new Error("حساب الكاشير معطل");
+  const context = await requireCashierSessionContext(admin);
+  const session = { cafe_id: context.cafeId, cashier_id: context.cashierId };
+  const cashier = { full_name: context.cashierName, email: context.cashierEmail };
 
   const { data: submission, error: submissionError } = await admin
     .from("experience_reward_submissions")

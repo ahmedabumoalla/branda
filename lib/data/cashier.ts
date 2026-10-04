@@ -7,6 +7,9 @@ import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createNotification } from "@/lib/data/notifications";
 import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
+import { requireOwnerCafeContext } from "@/lib/data/cafes";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
@@ -316,6 +319,25 @@ export async function getCashierToken() {
   return store.get(cashierSessionCookie)?.value ?? null;
 }
 
+export async function startOwnerCashierSession() {
+  const cafe = await requireOwnerCafeContext();
+  if (cafe.role !== "owner" || !featureCodesAllow(await getOwnerFeatureCodes(), "cashier")) {
+    throw new Error("OWNER_CASHIER_FORBIDDEN");
+  }
+  const supabase = await createClient();
+  // The RPC derives the owner identity from auth.uid(), never from client input.
+  const { data, error } = await supabase.rpc("start_owner_cashier_session", { p_cafe_id: cafe.id });
+  const session = Array.isArray(data) ? data[0] : null;
+  if (error || !session?.token || session.cafe_id !== cafe.id) throw new Error("OWNER_CASHIER_SESSION_FAILED");
+  const maxAge = Math.min(8 * 60 * 60, Math.floor((Date.parse(session.expires_at) - Date.now()) / 1000));
+  if (!Number.isFinite(maxAge) || maxAge <= 0) throw new Error("OWNER_CASHIER_SESSION_EXPIRED");
+  const store = await cookies();
+  store.set(cashierSessionCookie, session.token, {
+    httpOnly: true, secure: process.env.NODE_ENV === "production",
+    sameSite: "lax", path: "/", maxAge,
+  });
+}
+
 type CashierSessionContext = {
   token: string;
   cafeId: string;
@@ -326,12 +348,6 @@ type CashierSessionContext = {
   cafeSlug: string;
   businessCategory: string;
 };
-
-function firstRecord(value: unknown) {
-  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
-  if (value && typeof value === "object") return value as Record<string, unknown>;
-  return undefined;
-}
 
 function shortCashierOrderCode(orderId: string) {
   return orderId ? orderId.slice(0, 8).toUpperCase() : "-";
@@ -379,13 +395,13 @@ export async function requireCashierSessionContext(
     await Promise.all([
       admin
         .from("cafe_cashiers")
-        .select("id,full_name,email,employee_number,active")
+        .select("id,full_name,email,employee_number,active,owner_user_id")
         .eq("id", String(session.cashier_id))
         .eq("cafe_id", String(session.cafe_id))
         .maybeSingle(),
       admin
         .from("cafes")
-        .select("id,name,slug,business_category")
+        .select("id,name,slug,business_category,owner_user_id,status,deleted_at")
         .eq("id", String(session.cafe_id))
         .maybeSingle(),
     ]);
@@ -407,6 +423,18 @@ export async function requireCashierSessionContext(
       reason: "inactive_cashier",
     });
     throw new Error("Cashier account is inactive");
+  }
+
+  if (cashier.owner_user_id) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || user.id !== cashier.owner_user_id || cafe.owner_user_id !== user.id
+      || cafe.deleted_at || !["active", "published"].includes(cafe.status)) {
+      throw new Error("Owner cashier session expired");
+    }
+    const { data: profile, error: profileError } = await admin.from("profiles")
+      .select("status").eq("id", user.id).maybeSingle();
+    if (profileError || profile?.status !== "active") throw new Error("Owner cashier account is inactive");
   }
 
   return {
@@ -749,9 +777,6 @@ export async function cashierScanLoyalty(input: {
   invoiceAmount?: number;
   operation?: "stamp" | "redeem";
 }) {
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-
   const normalizedCardCode =
     parseBarndaksaQrPayload(input.cardCode, "loyalty-card") ??
     input.cardCode.trim().toUpperCase();
@@ -761,25 +786,14 @@ export async function cashierScanLoyalty(input: {
     : makeLoyaltyScanReference(normalizedCardCode);
 
   const admin = createAdminClient();
-  const { data: session, error: sessionError } = await admin
-    .from("cafe_cashier_sessions")
-    .select("cafe_id,cashier_id,revoked_at,expires_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active),cafes(slug)")
-    .eq("token", token)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-
-  if (sessionError) throw sessionError;
-  if (!session || session.revoked_at) throw new Error("جلسة الكاشير منتهية");
-  const cashier = firstRecord(session.cafe_cashiers);
-  if (!cashier || cashier.active !== true) throw new Error("حساب الكاشير معطل");
-
-  const currentCafeId = String(session.cafe_id);
+  const session = await requireCashierSessionContext(admin);
+  const token = session.token;
+  const currentCafeId = session.cafeId;
   if (input.cafeId && input.cafeId !== currentCafeId) {
     throw new Error("جلسة الكاشير لا تطابق العلامة التجارية");
   }
 
-  const cafe = firstRecord(session.cafes);
-  if (cafe?.slug === "rast") {
+  if (session.cafeSlug === "rast") {
     await assertRastLoyaltyEntitlement(currentCafeId);
     if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها.");
     const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
@@ -820,9 +834,9 @@ export async function cashierScanLoyalty(input: {
     cafeId: currentCafeId,
     eventType: operationEventTypes.loyaltyScan,
     actorType: "cashier",
-    actorId: String((session as Record<string, unknown>).cashier_id ?? ""),
-    actorName: String(cashier?.full_name ?? ""),
-    actorEmail: String(cashier?.email ?? ""),
+    actorId: session.cashierId,
+    actorName: session.cashierName,
+    actorEmail: session.cashierEmail,
     entityType: "loyalty_card",
     entityId: scannedCard?.id ? String(scannedCard.id) : null,
     metadata: {

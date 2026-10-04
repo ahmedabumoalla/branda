@@ -17,6 +17,7 @@ import { cafeHasFeature } from "@/lib/platform/permissions";
 
 type GuardState = {
   loading: boolean;
+  cafeSlug: string;
   activePlanId: string;
   plans: PlatformPlan[];
   featureOverrides: BrandFeatureOverride[];
@@ -30,20 +31,21 @@ type MaintenanceBannerSession = {
 
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "barndaksa-dashboard-sidebar-collapsed";
 
-function UpgradeRequired({ featureTitle }: { featureTitle: string }) {
+function UpgradeRequired({ featureTitle, cafeSlug }: { featureTitle: string; cafeSlug: string }) {
+  const hideBilling = cafeSlug === "rast" || !cafeSlug;
   return (
     <div dir="rtl" className="mx-auto flex min-h-[60vh] max-w-2xl items-center justify-center px-4 py-12">
       <div className="rounded-[32px] border border-[#E7D7C6] bg-[#FCF8F3] p-8 text-center shadow-[0_20px_60px_rgba(49,25,18,0.12)]">
-        <p className="text-sm font-black text-[#806A5E]">ميزة غير مفعلة في باقتك الحالية</p>
+        <p className="text-sm font-black text-[#806A5E]">{hideBilling ? "الخدمة غير مفعلة لهذه العلامة" : "ميزة غير مفعلة في باقتك الحالية"}</p>
         <h1 className="mt-3 text-3xl font-black text-[#311912]">{featureTitle}</h1>
         <p className="mt-4 font-bold leading-8 text-[#806A5E]">
-          هذه الخدمة لا تظهر للعلامة التجارية ولا للفرع الإلكتروني إلا بعد الاشتراك في باقة تشملها.
+          {hideBilling ? "يمكنك العودة إلى المنيو لمتابعة إدارة العلامة." : "هذه الخدمة لا تظهر للعلامة التجارية ولا للفرع الإلكتروني إلا بعد الاشتراك في باقة تشملها."}
         </p>
         <Link
-          href="/dashboard/subscription"
+          href={hideBilling ? "/dashboard/menu" : "/dashboard/subscription"}
           className="mt-6 inline-flex rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-white"
         >
-          ترقية الباقة
+          {hideBilling ? "العودة إلى المنيو" : "ترقية الباقة"}
         </Link>
       </div>
     </div>
@@ -58,7 +60,7 @@ export function DashboardAppLayout({
   maintenanceSession?: MaintenanceBannerSession | null;
 }) {
   const pathname = usePathname();
-  const [guard, setGuard] = useState<GuardState>({ loading: true, activePlanId: "", plans: [], featureOverrides: [] });
+  const [guard, setGuard] = useState<GuardState>({ loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
 
@@ -68,11 +70,12 @@ export function DashboardAppLayout({
       .then((snapshot) => {
         if (cancelled) return;
         if ((snapshot as { unauthenticated?: boolean }).unauthenticated) {
-          setGuard({ loading: false, activePlanId: "", plans: [], featureOverrides: [] });
+          setGuard({ loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
           return;
         }
         setGuard({
           loading: false,
+          cafeSlug: snapshot.settings.cafeSlug,
           activePlanId: snapshot.planId,
           plans: snapshot.plans,
           featureOverrides: snapshot.featureOverrides ?? [],
@@ -147,7 +150,7 @@ export function DashboardAppLayout({
         />
       )}
     >
-      {allowed ? children : <UpgradeRequired featureTitle={currentFeature?.title ?? ""} />}
+      {allowed ? children : <UpgradeRequired featureTitle={currentFeature?.title ?? ""} cafeSlug={guard.cafeSlug} />}
       {maintenanceSession ? (
         <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-[#3A2117] shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

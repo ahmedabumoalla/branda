@@ -71,6 +71,8 @@ export async function saveLoyaltyCardProgramAction(input: {
 export async function createLoyaltyCashierAction(input: {
   fullName: string;
   email: string;
+  phone: string;
+  password: string;
   employeeNumber?: string;
 }) {
   await assertOwnerCashierEnabled();

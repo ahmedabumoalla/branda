@@ -156,7 +156,7 @@ export function getSidebarFeaturesForBrand(context: {
     }))
     .filter(({ feature, access }) => {
       // Presentation only: retain each item's access state and existing route guards.
-      if (context.cafeSlug === "rast") return ["menu", "loyalty", "settings", "subscription"].includes(feature.id);
+      if (context.cafeSlug === "rast") return ["menu", "loyalty", "settings"].includes(feature.id);
       if (access?.override === "disabled") return false;
       if (feature.defaultEnabled) return true;
       if (feature.id === "cashier") return true;

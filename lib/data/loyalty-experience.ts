@@ -8,7 +8,7 @@ import { getPublicCafeFeatureCodesBySlug, getOwnerFeatureCodes } from "@/lib/dat
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getPublicLoyaltyProgramBySlug, getLoyaltyCardViewByCode, getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
-import { getCashierToken } from "@/lib/data/cashier";
+import { requireCashierSessionContext } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createBarndaksaQrPayload, parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
@@ -134,17 +134,11 @@ export async function lookupRastCashierCard(rawCode: string) {
   const input = z.string().trim().min(4).max(500).parse(rawCode);
   const code = parseBarndaksaQrPayload(input, "loyalty-card") ?? input.toUpperCase();
   if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("رمز البطاقة غير صالح.");
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الموظف منتهية.");
   const admin = createAdminClient();
-  const { data: session, error } = await admin.from("cafe_cashier_sessions")
-    .select("cafe_id,cafe_cashiers!cashier_sessions_cashier_same_cafe(active),cafes(slug)")
-    .eq("token", token).is("revoked_at", null).gt("expires_at", new Date().toISOString()).maybeSingle();
-  if (error || !session) throw new Error("جلسة الموظف منتهية.");
-  const cashier = Array.isArray(session.cafe_cashiers) ? session.cafe_cashiers[0] : session.cafe_cashiers;
-  const cafe = Array.isArray(session.cafes) ? session.cafes[0] : session.cafes;
-  if (!cashier?.active || cafe?.slug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة.");
-  await assertRastLoyaltyEntitlement(String(session.cafe_id));
+  const session = await requireCashierSessionContext(admin);
+  const token = session.token;
+  if (session.cafeSlug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة.");
+  await assertRastLoyaltyEntitlement(session.cafeId);
   // The database checks the card and customer, and commits the read audit together.
   const { data, error: previewError } = await admin.rpc("preview_loyalty_card", {
     p_session_token: token, p_card_code: code,

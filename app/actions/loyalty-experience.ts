@@ -5,7 +5,7 @@ import { completeCustomerPhoneOtpAction, requestCustomerPhoneOtpAction } from "@
 import { getLoyaltyBrand, saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard } from "@/lib/data/loyalty-experience";
 import { isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
 import { revalidatePath } from "next/cache";
-import { getCashierToken } from "@/lib/data/cashier";
+import { requireCashierSessionContext } from "@/lib/data/cashier";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes, getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -64,8 +64,9 @@ export async function lookupRastCashierCardAction(value: string) {
 
 export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem" }) {
   const parsed = z.object({ value: z.string().trim().min(4).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
-  const token = await getCashierToken();
-  if (!token) throw new Error("انتهت جلسة الموظف. سجّل الدخول من جديد.");
+  const session = await requireCashierSessionContext();
+  const token = session.token;
+  if (session.cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة.");
   if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug("rast"), "loyalty")) {
     throw new Error("برنامج الولاء غير متاح حاليًا.");
   }

@@ -33,6 +33,7 @@ const [
   read("supabase/migrations/067_add_order_not_completed_status.sql"),
 ]);
 
+if (!process.argv.includes("--session-only")) {
 assert.match(cashierActions, /loginCashierWithPassword[\s\S]+redirect\("\/cashier"\)/);
 assert.doesNotMatch(cashierActions, /message: "تم تسجيل الدخول"/);
 assert.match(authActions, /loginUnifiedAction[\s\S]+redirect\(result\.redirectTo\)/);
@@ -110,13 +111,21 @@ assert.match(portalUi, /dynamic\(/);
 assert.doesNotMatch(portalUi, /JSON\.stringify/);
 assert.match(portalUi, /overflow-x-hidden/);
 assert.match(portalUi, /min-w-0|break-words/);
+}
 
 for (const source of [cashierData, customerRewards, experienceRewards]) {
-  assert.match(source, /active/);
+  assert.match(source, /requireCashierSessionContext\(/);
   assert.match(source, /session\.cafe_id|cafeId/);
 }
+// All privileged reward paths share the cashier guard, including owner Auth checks.
+assert.match(cashierData, /cashier\.active !== true/);
+assert.match(cashierData, /session\.revoked_at/);
+assert.match(cashierData, /cashier\.owner_user_id[\s\S]+auth\.getUser\(\)/);
+assert.match(cashierData, /user\.id !== cashier\.owner_user_id/);
+assert.match(cashierData, /cafe\.owner_user_id !== user\.id/);
+assert.match(cashierData, /profile\?\.status !== "active"/);
 assert.match(cashierData, /\.eq\("cafe_id", session\.cafeId\)/);
 assert.match(customerRewards, /reward\.cafeId !== context\.cafeId/);
 assert.match(experienceRewards, /rewardCafeId !== currentCafeId/);
 
-console.log("Cashier login routing and operations checks passed.");
+console.log(process.argv.includes("--session-only") ? "Cashier shared session and reward tenant checks passed (session-only scope)." : "Cashier login routing and operations checks passed.");

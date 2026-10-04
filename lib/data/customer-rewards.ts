@@ -2,7 +2,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCashierToken } from "@/lib/data/cashier";
+import { requireCashierSessionContext } from "@/lib/data/cashier";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import {
@@ -50,12 +50,6 @@ function rewardCodeFromInput(rawValue: string) {
     parseBarndaksaQrPayload(raw, "experience-reward") ??
     raw;
   return parsed.trim().toUpperCase();
-}
-
-function firstRecord(value: unknown) {
-  if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
-  if (value && typeof value === "object") return value as Record<string, unknown>;
-  return undefined;
 }
 
 function mapReward(row: Record<string, unknown>): CustomerRewardInstance {
@@ -154,36 +148,9 @@ async function isLoyaltyCardProgramEnabled(
 }
 
 async function getValidCashierSession() {
-  const token = await getCashierToken();
-  if (!token) throw new Error("جلسة الكاشير منتهية");
-
   const admin = createAdminClient();
-  const { data: session, error } = await admin
-    .from("cafe_cashier_sessions")
-    .select("id,cafe_id,cashier_id,expires_at,revoked_at,cafe_cashiers!cashier_sessions_cashier_same_cafe(full_name,email,active),cafes(slug)")
-    .eq("token", token)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!session || session.revoked_at) {
-    throw new Error("جلسة الكاشير منتهية");
-  }
-  const cashier = firstRecord(session.cafe_cashiers);
-  if (!cashier || cashier.active !== true) {
-    throw new Error("حساب الكاشير معطل");
-  }
-
-  return {
-    admin,
-    session,
-    token,
-    cafeId: String(session.cafe_id),
-    cashierId: String(session.cashier_id),
-    cashierName: String(cashier.full_name ?? ""),
-    cashierEmail: String(cashier.email ?? ""),
-    cafeSlug: String(firstRecord(session.cafes)?.slug ?? ""),
-  };
+  const session = await requireCashierSessionContext(admin);
+  return { admin, ...session };
 }
 
 export async function getCustomerRewardInstances(

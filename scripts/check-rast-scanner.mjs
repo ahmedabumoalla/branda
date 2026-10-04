@@ -171,7 +171,7 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
 // The database/provider adapters stay isolated; no scans or customer writes occur.
 {
   const cafeId = "10000000-0000-4000-8000-000000000001";
-  let cafeSlug = "rast", sourceType = "loyalty", allowed = false, entitlementError = false, auditDenied = false;
+  let cafeSlug = "rast", sourceType = "loyalty", allowed = false, entitlementError = false, auditDenied = false, linkedOwner = false;
   const featureReads = [], databaseWrites = [], rpcCalls = [], dataReads = [];
   const db = {
     auth: { getUser: async () => ({ data: { user: null } }) },
@@ -185,7 +185,9 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
     from(table) {
       dataReads.push(table);
       const result = () => ({ error: null, count: 1, data:
-        table === "cafe_cashier_sessions" ? { cafe_id: cafeId, cashier_id: "cashier", revoked_at: null, cafe_cashiers: { active: true, full_name: "Test cashier", email: "test@example.test" }, cafes: { slug: cafeSlug } }
+        table === "cafe_cashier_sessions" ? { cafe_id: cafeId, cashier_id: "cashier", revoked_at: null }
+          : table === "cafe_cashiers" ? { id: "cashier", active: true, full_name: "Test cashier", email: "test@example.test", owner_user_id: linkedOwner ? "owner-id" : null }
+          : table === "cafes" ? { id: cafeId, slug: cafeSlug, status: "active", deleted_at: null, owner_user_id: "owner-id" }
           : table === "customer_reward_instances" ? { id: "reward", cafe_id: cafeId, source_type: sourceType, status: "available", loyalty_card_id: "card", reward_title: "Reward", reward_code: "REWARD123", customer_profiles: { full_name: "Customer" }, issued_at: "2030-01-01", expires_at: null }
             : table === "loyalty_cards" ? { id: "card", cafe_id: cafeId, customer_name: "Customer", stamps_in_cycle: 2, available_rewards: 1 }
               : table === "cafe_loyalty_programs" ? { enabled: true, purchases_required: 7, reward_name: "Reward" } : { id: "row" },
@@ -206,13 +208,13 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
     "@/lib/supabase/server": { createClient: async () => db },
     "@/lib/data/cafes": { requireOwnerCafeContext: async () => ({ id: cafeId, slug: cafeSlug }) },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async (id) => { featureReads.push(id); if (entitlementError) throw new Error("entitlement lookup unavailable"); return allowed ? ["loyalty"] : []; } },
-    "@/lib/data/cashier": { getCashierToken: async () => "session-token" },
     "@/lib/data/loyalty-cards": {}, "@/lib/data/customer-rewards": {},
     "@/lib/data/settings": {}, "@/lib/auth/rast-loyalty-session": {},
     "@/lib/data/operation-events": { operationEventTypes: {}, recordOperationEvent: async () => {} },
     "@/lib/data/notifications": {}, "@/lib/notifications/whatsapp": {},
   };
   const cashierData = load("lib/data/cashier.ts", stubs);
+  stubs["@/lib/data/cashier"] = cashierData;
   const rewardsData = load("lib/data/customer-rewards.ts", stubs);
   const experienceData = load("lib/data/loyalty-experience.ts", stubs);
   const ownerData = load("lib/data/loyalty-cards.ts", stubs);
@@ -253,5 +255,10 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
   await ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" });
   assert.equal(featureReads.length, previousReads, "Other brands do not acquire a new Rast restriction");
   assert.equal(rpcCalls.filter((name) => name === "record_loyalty_card_operation").length, 2);
+  linkedOwner = true;
+  const beforeLogoutChecks = { rpc: rpcCalls.length, writes: databaseWrites.length };
+  for (const operation of operations) await assert.rejects(operation, /Owner cashier session expired/);
+  assert.equal(rpcCalls.length, beforeLogoutChecks.rpc, "All four entry points reject logged out owner before privileged RPC");
+  assert.equal(databaseWrites.length, beforeLogoutChecks.writes, "Logged out linked owner never falls back to customer writes");
   console.log("PASS: shared Rast entitlement guards four cashier/preview entry points, owner scans always reject, enabled cashier paths succeed, other brands and experience rewards unchanged.");
 }

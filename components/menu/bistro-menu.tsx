@@ -10,6 +10,7 @@ import s from "./bistro-menu.module.css";
 import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
+import { RastLoyaltyEntry } from "./rast-loyalty-entry";
 import spotlight from "./rast-spotlight.module.css";
 
 function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {
@@ -272,6 +273,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
       <p className={s.heroAside} dir="ltr">SIMPLE<br />INGREDIENTS<br />EXTRAORDINARY<br />FLAVORS</p>
     </section>}
     {isRast && <RastConnect />}
+    {isRast && <RastLoyaltyEntry />}
     <div className={s.catalog} id="menu-catalog">
       {isRast && <RastSpotlight menu={menu} onSelect={setSelected} />}
       {isRast && <div className={s.rastCatalogHeading} id="rast-menu-items">

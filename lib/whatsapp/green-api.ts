@@ -10,6 +10,45 @@ export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }
 
+/** Credentials are sent once after account creation; never log or persist this payload. */
+export async function sendGreenApiCashierWelcome(input: {
+  phone: string;
+  fullName: string;
+  brandName: string;
+  email: string;
+  password: string;
+}) {
+  if (!/^\+9665\d{8}$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(greenApiTimeoutMs()),
+    body: JSON.stringify({
+      chatId: `${input.phone.slice(1)}@c.us`,
+      linkPreview: false,
+      message: [
+        `مرحبًا ${input.fullName}`,
+        `تم إنشاء حسابك في نقطة تشغيل ${input.brandName}`,
+        "",
+        "رابط الدخول:",
+        "https://barndaksa.com/cashier/login",
+        `البريد الإلكتروني: ${input.email}`,
+        `كلمة المرور: ${input.password}`,
+        "",
+        "هذه بيانات دخولك الخاصة. لا تشاركها مع أي شخص.",
+      ].join("\n"),
+    }),
+  });
+  if (!response.ok) throw new Error("CASHIER_WELCOME_REJECTED");
+  const payload = await response.json() as GreenApiSendResponse;
+  if (typeof payload.idMessage !== "string" || !payload.idMessage) {
+    throw new Error("CASHIER_WELCOME_INVALID_RESPONSE");
+  }
+  return { providerMessageId: payload.idMessage };
+}
+
 /** idMessage acknowledges provider queueing only, not WhatsApp delivery */
 export async function sendGreenApiMenuFeedback(input: { recipient: string; brandName: string; rating: number; notes: string }) {
   if (!/^9665\d{8}$/.test(input.recipient)) throw new Error("INVALID_FEEDBACK_RECIPIENT");

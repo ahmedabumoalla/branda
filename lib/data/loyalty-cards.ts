@@ -6,6 +6,8 @@ import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
+import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
 
 export type LoyaltyCardProgram = {
   enabled: boolean;
@@ -46,6 +48,8 @@ export type LoyaltyCashier = {
   email: string;
   employeeNumber: string;
   temporaryPassword: string;
+  phone?: string;
+  ownerUserId?: string | null;
   active: boolean;
   lastLoginAt: string | null;
   lastLogoutAt: string | null;
@@ -98,6 +102,7 @@ export type LoyaltyCardsDashboard = {
 };
 
 export type CashierOperationsDashboard = {
+  canOpenAsOwner?: boolean;
   cafeId: string;
   cafeSlug: string;
   cafeName: string;
@@ -183,12 +188,6 @@ function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
     issuedAt: String(row.issued_at ?? ""),
     updatedAt: String(row.updated_at ?? ""),
   };
-}
-
-function makePermanentPassword() {
-  const letters = Math.random().toString(36).slice(2, 5).toUpperCase();
-  const number = Math.floor(100 + Math.random() * 899);
-  return `K${number}${letters}`;
 }
 
 export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashboard> {
@@ -283,7 +282,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
     await Promise.all([
       supabase
         .from("cafe_cashiers")
-        .select("id,full_name,email,employee_number,active,last_login_at,last_logout_at,created_at")
+        .select("id,full_name,email,phone,owner_user_id,employee_number,active,last_login_at,last_logout_at,created_at")
         .eq("cafe_id", cafe.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -298,6 +297,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
   if (activitiesError) throw activitiesError;
 
   return {
+    canOpenAsOwner: cafe.role === "owner",
     cafeId: cafe.id,
     cafeSlug: cafe.slug,
     cafeName: cafe.name,
@@ -306,6 +306,8 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
       id: String(row.id),
       fullName: String(row.full_name),
       email: String(row.email),
+      phone: String(row.phone ?? ""),
+      ownerUserId: row.owner_user_id ? String(row.owner_user_id) : null,
       employeeNumber: String(row.employee_number ?? ""),
       active: Boolean(row.active),
       lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
@@ -392,28 +394,52 @@ export async function saveOwnerLoyaltyProgram(input: z.infer<typeof programSchem
 export async function createOwnerCashier(input: {
   fullName: string;
   email: string;
+  phone: string;
+  password: string;
   employeeNumber?: string;
 }) {
   const parsed = z.object({
-    fullName: z.string().min(2).max(80),
-    email: z.string().email(),
-    employeeNumber: z.string().max(40).optional(),
+    fullName: z.string().trim().min(2).max(80).regex(/^[^\r\n\x00-\x1f]+$/),
+    email: z.string().trim().toLowerCase().email().max(254),
+    phone: z.string().max(30).transform(normalizeSaudiPhone).refine(Boolean),
+    password: z.string().min(8).max(40).refine((value) => Buffer.byteLength(value, "utf8") <= 72)
+      .refine((value) => !/[\x00-\x1f\x7f]/.test(value) && value.trim().length >= 8),
+    employeeNumber: z.string().trim().max(40).optional(),
   }).parse(input);
 
   const cafe = await requireOwnerCafeContext();
-  const permanentPassword = makePermanentPassword();
   const supabase = await createClient();
-
-  const { error } = await supabase.rpc("create_cafe_cashier", {
+  const phone = `+${parsed.phone}`;
+  const { data: cashierId, error } = await supabase.rpc("create_cafe_cashier_with_contact", {
     p_cafe_id: cafe.id,
     p_full_name: parsed.fullName,
     p_email: parsed.email,
-    p_temp_password: permanentPassword,
+    p_password: parsed.password,
+    p_phone: phone,
     p_employee_number: parsed.employeeNumber || null,
   });
 
-  if (error) throw error;
-  return permanentPassword;
+  // Do not return raw SQL/provider errors: they may include submitted credentials.
+  if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف. تحقق من البيانات وأن البريد غير مستخدم.");
+  let whatsappStatus: "queued" | "failed" | "unavailable" = "unavailable";
+  if (isGreenApiConfigured()) {
+    try {
+      await sendGreenApiCashierWelcome({
+        phone, fullName: parsed.fullName, brandName: cafe.name,
+        email: parsed.email, password: parsed.password,
+      });
+      whatsappStatus = "queued";
+    } catch {
+      whatsappStatus = "failed";
+    }
+  }
+  // Account creation remains successful even if the provider fails afterwards.
+  const cashier: Omit<LoyaltyCashier, "temporaryPassword"> = {
+    id: cashierId, fullName: parsed.fullName, email: parsed.email, phone,
+    employeeNumber: parsed.employeeNumber ?? "", active: true, ownerUserId: null,
+    lastLoginAt: null, lastLogoutAt: null, createdAt: new Date().toISOString(),
+  };
+  return { cashier, whatsappStatus };
 }
 
 export async function setOwnerCashierStatus(cashierId: string, active: boolean) {

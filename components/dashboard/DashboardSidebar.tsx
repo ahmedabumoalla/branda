@@ -256,13 +256,13 @@ export function DashboardSidebar({
                 </p>
               ) : null}
 
-              <Link
+              {cafeSlug && cafeSlug !== "rast" ? <Link
                 href="/dashboard/subscription"
                 onClick={onNavigate}
-                className={`mt-1 inline-flex max-w-full items-center rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-semibold text-[#F0C568] transition hover:bg-[#D9A33F]/25 ${cafeSlug === "rast" ? "whitespace-normal leading-4" : "truncate"}`}
+                className="mt-1 inline-flex max-w-full truncate items-center rounded-md bg-[#D9A33F]/16 px-2 py-0.5 text-[10px] font-semibold text-[#F0C568] transition hover:bg-[#D9A33F]/25"
               >
-                {cafeSlug === "rast" ? "اشتراك شهري 249 ريال" : planName}
-              </Link>
+                {planName}
+              </Link> : null}
             </div>
           </div>
 
@@ -316,7 +316,7 @@ export function DashboardSidebar({
           const hasRoute = Boolean(item.href);
           const active = hasRoute && isActive(item.href);
           const locked = hasRoute && !hasFeatureAccess;
-          const href = locked ? "/dashboard/subscription" : item.href;
+          const href = locked && cafeSlug !== "rast" ? "/dashboard/subscription" : item.href;
           const showOperationsLabel = item.feature === "cashier";
           const showFeatureGroupLabel = Boolean(item.group) && !collapsed && visibleLinks[index - 1]?.group !== item.group;
           const title = linkTitle(item);
@@ -346,7 +346,7 @@ export function DashboardSidebar({
                   <span className="min-w-0 truncate">
                     {title}
                     {locked ? (
-                      <span className="me-1.5 text-[10px] text-[#F0C568]">ترقية</span>
+                      <span className="me-1.5 text-[10px] text-[#F0C568]">{cafeSlug === "rast" ? "غير مفعلة" : "ترقية"}</span>
                     ) : null}
                   </span>
                 ) : null}
