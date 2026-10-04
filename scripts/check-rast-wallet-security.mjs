@@ -96,19 +96,73 @@ try {
   const pass = JSON.parse(bundle["pass.json"].toString());
   assert.equal(pass.storeCard.headerFields[0].value, "3 / 7");
   assert.equal(pass.storeCard.auxiliaryFields[0].value, 1);
+  assert.equal(pass.storeCard.secondaryFields[0].value, 4);
+  assert.equal(pass.storeCard.backFields.find(field => field.key === "reward").value, member.program.rewardName);
+  assert.equal(pass.logoText, undefined, "Do not repeat the wordmark in a text field");
+  assert.equal(pass.backgroundColor, "rgb(248, 242, 232)");
+  assert.equal(pass.foregroundColor, "rgb(59, 20, 32)");
   assert.equal(pass.locations[0].latitude, 0);
   assert.equal(pass.authenticationToken, token);
   assert(pass.webServiceURL.startsWith("https://wallet.example.test/api/wallet/apple"));
   assert(pass.barcodes[0].message.startsWith("BARNDAKSA_QR:v1:"));
   assert(!JSON.stringify(pass).includes("PRIVATE_"));
   assert(!JSON.stringify(pass).includes("Private Name"));
-  const artwork = await dependency("sharp")(bundle["strip@2x.png"]).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  let leftInk = 0, rightInk = 0;
-  for (let y = 0; y < 80; y++) for (let x = 0; x < artwork.info.width; x++) {
-    const pixel = (y * artwork.info.width + x) * artwork.info.channels;
-    if (artwork.data[pixel] < 180) { if (x < artwork.info.width / 2) leftInk++; else rightInk++; }
+  const sharp = dependency("sharp");
+  for (const scale of [1, 2, 3]) {
+    const suffix = scale === 1 ? "" : `@${scale}x`;
+    const strip = await sharp(bundle[`strip${suffix}.png`]).metadata();
+    assert.deepEqual([strip.width, strip.height], [375 * scale, 144 * scale]);
+    const icon = await sharp(bundle[`icon${suffix}.png`]).metadata();
+    assert.deepEqual([icon.width, icon.height], [29 * scale, 29 * scale]);
+    const logo = await sharp(bundle[`logo${suffix}.png`]).metadata();
+    assert(logo.width <= 160 * scale && logo.height <= 50 * scale);
   }
-  assert(rightInk > 200 && rightInk > leftInk * 3, "Rast wordmark appears on the right of the shared Wallet artwork");
+  const art = load("lib/wallet/art.ts");
+  const artUrl = new URL(art.walletArtUrl(member));
+  assert(artUrl.searchParams.get("v").startsWith(`${art.WALLET_ART_VERSION}:`), "Artwork has a revision independent of the card balance");
+  assert(art.verifyWalletArtToken(member.card.id, artUrl.pathname.split("/").at(-1)), "A design revision preserves existing signed artwork tokens");
+  assert.equal(pass.userInfo.artworkVersion, art.WALLET_ART_VERSION);
+  const cases = [[1, 0], [7, 0], [7, 2], [7, 7], [14, 4], [30, 15], [100, 70]];
+  for (const [required, stamps] of cases) {
+    const example = { ...member, program: { ...member.program, purchasesRequired: required }, card: { ...member.card, stampsInCycle: stamps } };
+    const svg = art.walletStampSvg(example);
+    assert(!svg.includes("<text") && !svg.includes("<image"), "Native fields provide text and the only brand logo is in the header");
+    const raster = await sharp(await art.walletStampArtwork(example)).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    assert.equal(raster.info.width, 750);
+    assert.equal(raster.info.height, 288);
+    for (const [x, y] of [[0, 0], [749, 287], [0, 144], [749, 144]]) {
+      const pixel = (y * raster.info.width + x) * raster.info.channels;
+      assert.deepEqual([...raster.data.subarray(pixel, pixel + 3)], [248, 242, 232], "Artwork keeps its safety gutter on all supported target sizes");
+    }
+    if (required <= 30) {
+      const frames = [...svg.matchAll(/<rect x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)" rx="[^"]+" fill="([^"]+)"/g)];
+      assert.equal(frames.length, required);
+      assert.equal(frames.filter(frame => frame[5] === "#3b1420").length, stamps, "Every applied stamp has a filled icon tile");
+      for (const frame of frames) {
+        const [, x, y, width, height] = frame.map(Number);
+        assert(x >= 20 && y >= 10 && x + width <= 355 && y + height <= 134);
+      }
+      if (required === 7 && stamps === 2) {
+        const first = frames[0];
+        const second = frames[1];
+        assert(Number(first[1]) > Number(second[1]), "Stamp progress reads right to left");
+        const last = frames.at(-1);
+        const point = frame => (Math.round(Number(frame[2]) * 2 + 10) * raster.info.width + Math.round(Number(frame[1]) * 2 + 16)) * raster.info.channels;
+        assert(raster.data[point(first)] < raster.data[point(last)], "Rendered filled and pending stamps remain distinguishable in grayscale");
+      }
+    } else {
+      assert(svg.includes("stroke-dasharray="), "Large targets have a proportional ring, never a false truncated stamp target");
+    }
+    if (process.env.WALLET_ART_PREVIEW_DIR) {
+      fs.mkdirSync(process.env.WALLET_ART_PREVIEW_DIR, { recursive: true });
+      fs.writeFileSync(path.join(process.env.WALLET_ART_PREVIEW_DIR, `stamps-${stamps}-of-${required}.png`), await art.walletStampArtwork(example, 3));
+    }
+  }
+  const luminance = hex => {
+    const channels = hex.match(/[0-9a-f]{2}/g).map(channel => parseInt(channel, 16) / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
+    return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
+  };
+  assert((luminance("f8f2e8") + .05) / (luminance("3b1420") + .05) > 7, "Native text and stamp icons meet enhanced contrast");
   const manifest = JSON.parse(bundle["manifest.json"].toString());
   for (const [name, digest] of Object.entries(manifest)) assert.equal(createHash("sha1").update(bundle[name]).digest("hex"), digest);
   const signature = forge.asn1.fromDer(bundle.signature.toString("binary"));

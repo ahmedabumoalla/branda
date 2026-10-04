@@ -17,6 +17,6 @@ export type WalletMember = {
 };
 
 export type WalletDeliveryResult = {
-  apple: { status: "accepted" | "skipped" | "failed"; count: number; pending?: boolean; retryAfterSeconds?: number };
+  apple: { status: "accepted" | "skipped" | "failed"; count: number; pending?: boolean; awaitingDevice?: boolean; retryAfterSeconds?: number };
   google: { status: "accepted" | "skipped" | "failed"; count: number; pending?: boolean; retryAfterSeconds?: number };
 };

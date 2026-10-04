@@ -4,6 +4,7 @@ import { getWalletReadiness } from "./config";
 import { issueApplePass as generateApplePass, pushAppleDevice } from "./apple";
 import { issueGoogleSaveUrl as generateGoogleSaveUrl, updateGooglePass, notifyGoogleBrand } from "./google";
 import type { WalletMember, WalletDeliveryResult } from "./types";
+import { appleUpdateTag } from "./update-tags";
 
 export { getWalletReadiness } from "./config";
 export { walletBrandLogo } from "./apple";
@@ -12,6 +13,8 @@ export type { WalletMember, WalletDeliveryResult } from "./types";
 async function trackIssuedPass(member: WalletMember, provider: "apple" | "google") {
   const { error } = await createAdminClient().from("wallet_passes").upsert({ card_id: member.card.id, cafe_id: member.card.cafeId, provider }, { onConflict: "card_id,provider", ignoreDuplicates: true });
   if (error) throw new Error("wallet_tracking_unavailable");
+  const { error: downloadError } = await createAdminClient().rpc("record_wallet_download", { p_card_id: member.card.id, p_provider: provider });
+  if (downloadError) throw new Error("wallet_tracking_unavailable");
 }
 
 export async function issueApplePass(member: WalletMember) {
@@ -63,25 +66,43 @@ async function pushRegistrations(cafeId: string, cardId?: string) {
     }));
     for (const item of batch) { if (item.status === "fulfilled") { if (item.value) count++; } else failed = true; }
   }
-  return { status: failed ? "failed" as const : count ? "accepted" as const : "skipped" as const, count };
+  return { status: failed ? "failed" as const : count ? "accepted" as const : "skipped" as const, count, registeredCount: tokens.length };
 }
 
 async function syncMember(member: WalletMember, previous?: WalletDeliveryResult): Promise<WalletDeliveryResult> {
   const result = skipped();
   const readiness = getWalletReadiness();
-  const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId);
+  const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider,updated_at,apple_last_served_update").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId);
   if (error) throw new Error("wallet_tracking_unavailable");
   const hasGoogle = passes?.some(pass => pass.provider === "google") && member.program.googleWalletEnabled;
   const hasApple = passes?.some(pass => pass.provider === "apple") && member.program.appleWalletEnabled;
   if (hasGoogle && !readiness.google) result.google.pending = true;
   if (hasApple && !readiness.apple) result.apple.pending = true;
-  if (previous?.google.status === "accepted") result.google = previous.google;
-  else if (readiness.google && hasGoogle) {
-    try { await updateGooglePass(member, true); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
+  // New scans can coalesce into an existing pending sync job. Provider success
+  // from an older attempt is not evidence that Google has the current balance.
+  if (readiness.google && hasGoogle) {
+    try { await updateGooglePass(member, previous?.google?.status !== "accepted"); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
   }
-  if (previous?.apple.status === "accepted") result.apple = previous.apple;
-  else if (readiness.apple && hasApple) {
-    try { result.apple = await pushRegistrations(member.card.cafeId, member.card.id); } catch { result.apple.status = "failed"; }
+  const applePass = passes?.find(pass => pass.provider === "apple");
+  if (readiness.apple && hasApple) {
+    try {
+      const pushed = await pushRegistrations(member.card.cafeId, member.card.id);
+      result.apple = { status: pushed.status, count: pushed.count };
+      if (pushed.status === "accepted") {
+        let confirmedRequest = false;
+        // Never let a previous device's request suppress the first actual push.
+        // Registration changes invalidate the served watermark in the database;
+        // reread after pushing to also catch replacements during this attempt.
+        if (previous?.apple?.awaitingDevice && pushed.registeredCount === 1) {
+          const { data: current, error: currentError } = await createAdminClient().from("wallet_passes").select("updated_at,apple_last_served_update")
+            .eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId).eq("provider", "apple").maybeSingle();
+          if (currentError) throw new Error("wallet_tracking_unavailable");
+          confirmedRequest = Boolean(current?.apple_last_served_update && applePass?.updated_at === current.updated_at
+            && BigInt(appleUpdateTag(current.apple_last_served_update)) >= BigInt(appleUpdateTag(current.updated_at)));
+        }
+        if (!confirmedRequest) result.apple = { ...result.apple, pending: true, awaitingDevice: true };
+      }
+    } catch { result.apple.status = "failed"; }
   }
   return result;
 }
@@ -89,10 +110,11 @@ async function syncMember(member: WalletMember, previous?: WalletDeliveryResult)
 async function finishJob(id: string, result: WalletDeliveryResult, attempts = 1) {
   const statuses = [result.apple.status, result.google.status];
   const incomplete = statuses.includes("failed") || result.apple.pending || result.google.pending;
-  const status = incomplete ? attempts >= 5 && statuses.includes("failed") ? "failed" : "pending" : "sent";
+  const exhausted = attempts >= 5 && (statuses.includes("failed") || result.apple.awaitingDevice);
+  const status = incomplete ? exhausted ? "failed" : "pending" : "sent";
   const delay = Math.max(result.apple.retryAfterSeconds ?? 0, result.google.retryAfterSeconds ?? 0, Math.min(60 * 2 ** Math.min(attempts, 6), 3600));
   const db = createAdminClient();
-  const update = { status, delivery_state: result, attempts, claimed_at: null, last_error: statuses.includes("failed") ? "provider_request_failed" : null, updated_at: new Date().toISOString(), available_at: new Date(Date.now() + delay * 1000).toISOString() };
+  const update = { status, delivery_state: result, attempts, claimed_at: null, last_error: statuses.includes("failed") ? "provider_request_failed" : exhausted ? "apple_update_not_confirmed" : null, updated_at: new Date().toISOString(), available_at: new Date(Date.now() + delay * 1000).toISOString() };
   const { error } = await db.from("wallet_notification_jobs").update(update).eq("id", id);
   if (error?.code === "23505" && status === "pending") {
     // A new scan can queue the same card while this worker holds the older job.
@@ -115,7 +137,7 @@ export async function syncWalletCardByCode(code: string) {
   // The atomic database update already enqueued the durable sync; settle only jobs older than this completed snapshot.
   const statuses = [result.apple.status, result.google.status];
   if (!statuses.includes("failed") && !result.apple.pending && !result.google.pending && statuses.includes("accepted")) {
-    const { error } = await createAdminClient().from("wallet_notification_jobs").update({ status: "sent", updated_at: new Date().toISOString() }).eq("kind", "sync").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId).eq("status", "pending").lte("created_at", member.card.updatedAt);
+    const { error } = await createAdminClient().from("wallet_notification_jobs").update({ status: "sent", delivery_state: result, updated_at: new Date().toISOString() }).eq("kind", "sync").eq("card_id", member.card.id).eq("cafe_id", member.card.cafeId).eq("status", "pending").lte("created_at", member.card.updatedAt);
     if (error) throw new Error("wallet_job_unavailable");
   }
   return result;
@@ -133,13 +155,13 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   const appleCount = program.apple_wallet_enabled ? passes?.filter(pass => pass.provider === "apple").length ?? 0 : 0;
   if (googleCount && !readiness.google) result.google.pending = true;
   if (appleCount && !readiness.apple) result.apple.pending = true;
-  if (previous?.google.status === "accepted") result.google = previous.google;
+  if (previous?.google?.status === "accepted") result.google = previous.google;
   else if (readiness.google && googleCount) {
     try { await notifyGoogleBrand(cafeId, title, body, messageId); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
   }
-  if (previous?.apple.status === "accepted") result.apple = previous.apple;
+  if (previous?.apple?.status === "accepted") result.apple = previous.apple;
   else if (readiness.apple && appleCount) {
-    try { result.apple = await pushRegistrations(cafeId); } catch { result.apple.status = "failed"; }
+    try { const pushed = await pushRegistrations(cafeId); result.apple = { status: pushed.status, count: pushed.count }; } catch { result.apple.status = "failed"; }
   }
   return result;
 }

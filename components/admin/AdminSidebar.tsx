@@ -29,6 +29,7 @@ const links = [
   ["الرئيسية", "/admin", Home],
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
+  ["عملاء العلامات التجارية", "/admin/brand-customers", Users],
   ["العمليات", "/admin/operations", ClipboardList],
   ["الباقات", "/admin/plans", Layers3],
   ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
