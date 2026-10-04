@@ -782,10 +782,10 @@ export async function cashierScanLoyalty(input: {
   if (cafe?.slug === "rast") {
     await assertRastLoyaltyEntitlement(currentCafeId);
     if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها.");
-    const { data, error } = await admin.rpc("scan_loyalty_stamp", {
-      p_session_token: token, p_card_code: normalizedCardCode, p_request_id: randomUUID(),
+    const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
+      p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
     });
-    if (error) throw new Error("تعذر تسجيل الختم. تحقق من البطاقة وجلسة الموظف.");
+    if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم. تحقق من البطاقة وجلسة الموظف.");
     return data as Record<string, unknown>;
   }
 

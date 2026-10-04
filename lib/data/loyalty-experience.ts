@@ -145,15 +145,13 @@ export async function lookupRastCashierCard(rawCode: string) {
   const cafe = Array.isArray(session.cafes) ? session.cafes[0] : session.cafes;
   if (!cashier?.active || cafe?.slug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة.");
   await assertRastLoyaltyEntitlement(String(session.cafe_id));
-  const [cardResult, programResult] = await Promise.all([
-    admin.from("loyalty_cards").select("id,customer_name,stamps_in_cycle").eq("cafe_id", session.cafe_id).eq("card_code", code).eq("status", "active").maybeSingle(),
-    admin.from("cafe_loyalty_programs").select("enabled,purchases_required,reward_name").eq("cafe_id", session.cafe_id).maybeSingle(),
-  ]);
-  const card = cardResult.data; const program = programResult.data;
-  if (cardResult.error || programResult.error || !card || !program?.enabled) throw new Error("البطاقة غير متاحة أو البرنامج موقوف.");
-  const { count, error: rewardsError } = await admin.from("customer_reward_instances").select("id", { count: "exact", head: true })
-    .eq("cafe_id", session.cafe_id).eq("loyalty_card_id", card.id).eq("status", "available")
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-  if (rewardsError) throw new Error("تعذر قراءة مكافآت البطاقة.");
-  return { customerName: String(card.customer_name), stampsInCycle: Number(card.stamps_in_cycle), purchasesRequired: Number(program.purchases_required), availableRewards: count ?? 0, rewardName: String(program.reward_name) };
+  // The database checks the card and customer, and commits the read audit together.
+  const { data, error: previewError } = await admin.rpc("preview_loyalty_card", {
+    p_session_token: token, p_card_code: code,
+  });
+  if (previewError || data?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف.");
+  return z.object({
+    customerName: z.string(), stampsInCycle: z.number().int().nonnegative(),
+    purchasesRequired: z.number().int().positive(), availableRewards: z.number().int().nonnegative(), rewardName: z.string(),
+  }).parse(data);
 }

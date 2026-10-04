@@ -314,7 +314,13 @@ async function findCashierReward(rawRewardCode: string) {
 export async function lookupCashierCustomerReward(
   rawRewardCode: string,
 ): Promise<CashierRewardPreview> {
-  const { reward, loyaltyCardEnabled, cafeSlug } = await findCashierReward(rawRewardCode);
+  const { reward, loyaltyCardEnabled, cafeSlug, admin, token, code } = await findCashierReward(rawRewardCode);
+  if (cafeSlug === "rast" && reward.sourceType === "loyalty") {
+    const { data, error } = await admin.rpc("preview_loyalty_reward", {
+      p_session_token: token, p_reward_code: code,
+    });
+    if (error || data?.ok !== true) throw new Error("تعذر قراءة المكافأة. تحقق من صلاحية البطاقة وجلسة الموظف.");
+  }
   return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
 }
 
@@ -327,10 +333,10 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
   }
 
   if (cafeSlug === "rast" && reward.sourceType === "loyalty") {
-    const { data, error } = await admin.rpc("redeem_loyalty_reward", {
-      p_session_token: token, p_reward_code: code, p_request_id: randomUUID(),
+    const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
+      p_session_token: token, p_code: code, p_request_id: randomUUID(), p_operation: "redeem",
     });
-    if (error) throw new Error("تعذر صرف المكافأة. ربما صُرفت أو انتهت صلاحيتها.");
+    if (error || data?.ok !== true) throw new Error("تعذر صرف المكافأة. ربما صُرفت أو انتهت صلاحيتها.");
     const result = data as Record<string, unknown>;
     return {
       ok: true, rewardInstanceId: reward.id, customerName: reward.customerName,

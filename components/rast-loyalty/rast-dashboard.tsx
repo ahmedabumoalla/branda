@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpLeft, Bell, Check, Copy, Download, Gift, LoaderCircle, MapPin, Save, ScanLine } from "lucide-react";
+import { ArrowUpLeft, Bell, Check, Copy, Download, Gift, History, LoaderCircle, MapPin, Save, ScanLine } from "lucide-react";
 import { saveRastLoyaltySettingsAction, sendLoyaltyWalletAnnouncementAction } from "@/app/actions/loyalty-experience";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
 import type { LoyaltyExperienceSettings, LoyaltyIdentity } from "@/lib/loyalty/experience-types";
@@ -20,10 +20,12 @@ type Props = {
   signupUrl: string;
   walletAvailability: RastWalletAvailability;
   products?: Array<{ id: string; name: string }>;
+  activityLog?: ReactNode;
 };
 
-export function RastLoyaltyDashboard({ initialDashboard, initialExperience, identity, signupUrl, walletAvailability, products = [] }: Props) {
+export function RastLoyaltyDashboard({ initialDashboard, initialExperience, identity, signupUrl, walletAvailability, products = [], activityLog }: Props) {
   const router = useRouter();
+  const [section, setSection] = useState<"settings" | "activity">("settings");
   const [program, setProgram] = useState(initialDashboard.program);
   const [savedActivation, setSavedActivation] = useState({ enabled: initialDashboard.program.enabled, apple: initialDashboard.program.appleWalletEnabled, google: initialDashboard.program.googleWalletEnabled });
   const [experience, setExperience] = useState(initialExperience);
@@ -95,6 +97,12 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
 
   return <div className={s.dashboard} dir="rtl">
     <header className={s.dashboardHeader}><div><span className={s.eyebrow}>أهل راست</span><h1>الولاء، بطابع راست.</h1><p>بطاقة يعرفها عميلك. ومكافأة ترجّعه لك.</p></div><Link className={s.secondary} href="/dashboard/cashier"><ScanLine aria-hidden="true" />إدارة الكاشير</Link></header>
+    {activityLog && <nav className={s.dashboardSections} aria-label="أقسام الولاء والمكافآت">
+      <button type="button" aria-pressed={section === "settings"} aria-controls="rast-program-panel" onClick={() => setSection("settings")}><Gift aria-hidden="true" />البرنامج والمكافآت</button>
+      <button type="button" aria-pressed={section === "activity"} aria-controls="rast-activity-panel" onClick={() => setSection("activity")}><History aria-hidden="true" />سجل العمليات والموظفين</button>
+    </nav>}
+    {activityLog && <div id="rast-activity-panel" hidden={section !== "activity"}>{activityLog}</div>}
+    <div id="rast-program-panel" hidden={section !== "settings"}>
     <div className={s.dashboardLayout}>
       <div className={s.dashboardMain}>
         <section className={s.signupPanel} aria-labelledby="signup-panel-title"><div className={s.signupDetails}><RastBrand identity={identity} /><h2 id="signup-panel-title">رحلة الولاء تبدأ بمسحة</h2><p>{savedActivation.enabled ? "اعرض هذا الرمز عند الكاشير. يسجّل العميل اسمه ورقم جواله، ويتحقق عبر واتساب، وتكون بطاقته جاهزة." : "رابطك ورمزك جاهزان. فعّل برنامج الولاء واحفظ الإعدادات قبل مشاركة الرمز مع العملاء."}</p><a href={signupUrl} className={s.signupUrl} dir="ltr" target="_blank" rel="noreferrer">{signupUrl}<ArrowUpLeft aria-hidden="true" /></a><div className={s.signupActions}><button type="button" onClick={() => void copySignup()} className={s.secondary}>{copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? "تم نسخ الرابط" : "نسخ الرابط"}</button><button type="button" onClick={downloadQr} className={s.secondary}><Download aria-hidden="true" />تحميل الرمز</button></div></div><div ref={signupQr} className={s.signupQr}><RastQrCode value={signupUrl} label="امسح الرمز للانضمام إلى أهل راست" /><span>{savedActivation.enabled ? "امسحها، وصِر من أهل راست" : "جاهز للمشاركة بعد التفعيل"}</span></div></section>
@@ -135,5 +143,6 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
       <aside className={s.dashboardPreview}><div className={s.previewTitle}><h2>بطاقة أهل راست</h2><span>معاينة مباشرة</span></div><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} preview /><p className={s.hint}>الشعار والألوان من هوية راست. الأختام المكتملة تضيء في بطاقة العميل.</p><div className={s.walletReadiness}><h3>حالة المحافظ المحفوظة</h3><p><span dir="ltr">Apple Wallet</span><strong>{!walletAvailability.apple ? "بانتظار اكتمال الربط" : savedActivation.enabled && savedActivation.apple ? "مفعّلة للعملاء" : "جاهزة للتفعيل"}</strong></p><p><span dir="ltr">Google Wallet</span><strong>{!walletAvailability.google ? "بانتظار اكتمال الربط" : savedActivation.enabled && savedActivation.google ? "مفعّلة للعملاء" : "جاهزة للتفعيل"}</strong></p></div></aside>
     </div>
     <dialog ref={announcementDialog} className={s.announcementDialog} onCancel={(event) => { if (sending) event.preventDefault(); }} aria-labelledby="announcement-review-title"><h2 id="announcement-review-title">مراجعة الإشعار</h2><p>سيُرسل إلى محافظ عملاء راست المؤهلة لاستقبال التحديثات.</p><div className={s.messagePreview}><strong>{title}</strong><p>{body}</p></div><div className={s.dialogActions}><button type="button" className={s.primary} onClick={() => void sendAnnouncement()} disabled={sending}>{sending ? "جاري الإرسال…" : "إرسال الإشعار"}</button><button type="button" className={s.secondary} onClick={() => announcementDialog.current?.close()} disabled={sending}>رجوع للتعديل</button></div></dialog>
+    </div>
   </div>;
 }

@@ -171,11 +171,17 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
 // The database/provider adapters stay isolated; no scans or customer writes occur.
 {
   const cafeId = "10000000-0000-4000-8000-000000000001";
-  let cafeSlug = "rast", sourceType = "loyalty", allowed = false, entitlementError = false;
+  let cafeSlug = "rast", sourceType = "loyalty", allowed = false, entitlementError = false, auditDenied = false;
   const featureReads = [], databaseWrites = [], rpcCalls = [], dataReads = [];
   const db = {
     auth: { getUser: async () => ({ data: { user: null } }) },
-    rpc: async (name) => { rpcCalls.push(name); return { data: { status: "stamped", cardCode: "CARD123" }, error: null }; },
+    rpc: async (name) => {
+      rpcCalls.push(name);
+      if (auditDenied) return { data: { ok: false, errorCode: "card_unavailable" }, error: null };
+      return { data: name === "preview_loyalty_card"
+        ? { ok: true, customerName: "Customer", stampsInCycle: 2, purchasesRequired: 7, availableRewards: 1, rewardName: "Reward" }
+        : { ok: true, status: "stamped", cardCode: "CARD123" }, error: null };
+    },
     from(table) {
       dataReads.push(table);
       const result = () => ({ error: null, count: 1, data:
@@ -225,7 +231,11 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
   allowed = true;
   for (const operation of operations) await operation();
   await assert.rejects(() => ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" }), /شاشة الموظف/);
-  assert.deepEqual(rpcCalls, ["scan_loyalty_stamp", "redeem_loyalty_reward"]);
+  assert.deepEqual(rpcCalls, ["execute_loyalty_audited_operation", "preview_loyalty_reward", "execute_loyalty_audited_operation", "preview_loyalty_card"]);
+  auditDenied = true;
+  for (const operation of operations) await assert.rejects(operation);
+  assert.equal(databaseWrites.length, 0, "Denied audit responses never trigger fallback legacy writes");
+  auditDenied = false;
   entitlementError = true;
   const rpcCount = rpcCalls.length;
   for (const operation of operations) await assert.rejects(operation, /entitlement lookup unavailable/);

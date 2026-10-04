@@ -71,11 +71,12 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   }
   const value = parseBarndaksaQrPayload(parsed.value, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? parsed.value.toUpperCase();
   if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new Error("الرمز غير صالح لنوع العملية المحدد.");
-  const { data, error } = await createAdminClient().rpc(parsed.kind === "stamp" ? "scan_loyalty_stamp" : "redeem_loyalty_reward", {
-    p_session_token: token, [parsed.kind === "stamp" ? "p_card_code" : "p_reward_code"]: value, p_request_id: parsed.requestId,
+  const { data, error } = await createAdminClient().rpc("execute_loyalty_audited_operation", {
+    p_session_token: token, p_code: value, p_request_id: parsed.requestId, p_operation: parsed.kind,
   });
   if (error) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة وجلسة الموظف.");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
+  if (result?.ok !== true) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف.");
   if (result?.cardCode && ["stamped", "reward_issued", "redeemed"].includes(String(result.status))) {
     // A provider outage must not turn an already-committed stamp into a failed scan.
     try { await syncWalletCardByCode(String(result.cardCode)); } catch { console.warn("[loyalty-wallet-sync] deferred"); }
