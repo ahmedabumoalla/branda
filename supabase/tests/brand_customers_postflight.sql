@@ -8,8 +8,22 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.wallet_apple_registrations'::regclass
     AND tgname='wallet_customer_registration_history' AND tgenabled='O' AND (tgtype::integer & 4)=4 AND (tgtype::integer & 8)=8 AND (tgtype::integer & 16)=16)
     THEN RAISE EXCEPTION 'Atomic registration reconciliation trigger missing'; END IF;
-  IF has_schema_privilege('authenticated','loyalty_audit_private','USAGE') OR has_schema_privilege('anon','loyalty_audit_private','USAGE')
-    THEN RAISE EXCEPTION 'Private schema exposed'; END IF;
+  -- Authenticated USAGE is required by the existing audit SELECT policy's
+  -- can_read helper. Object grants, not schema USAGE, protect private data.
+  IF has_schema_privilege('anon','loyalty_audit_private','USAGE,CREATE')
+    OR has_schema_privilege('authenticated','loyalty_audit_private','CREATE')
+    THEN RAISE EXCEPTION 'Private schema access expanded'; END IF;
+  IF NOT has_schema_privilege('authenticated','loyalty_audit_private','USAGE')
+    OR NOT has_function_privilege('authenticated','loyalty_audit_private.can_read(uuid)','EXECUTE')
+    THEN RAISE EXCEPTION 'Existing audit authorization unavailable'; END IF;
+  IF EXISTS(SELECT 1 FROM (VALUES ('anon'),('authenticated'),('service_role')) roles(name)
+    CROSS JOIN (VALUES ('settings'),('brand_customer_rows'),('wallet_customer_events')) objects(name)
+    WHERE has_table_privilege(roles.name,'loyalty_audit_private.'||objects.name,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+    THEN RAISE EXCEPTION 'Private object access exposed'; END IF;
+  IF has_function_privilege('anon','loyalty_audit_private.capture_wallet_registration()','EXECUTE')
+    OR has_function_privilege('authenticated','loyalty_audit_private.capture_wallet_registration()','EXECUTE')
+    OR has_function_privilege('service_role','loyalty_audit_private.capture_wallet_registration()','EXECUTE')
+    THEN RAISE EXCEPTION 'Private registration function exposed'; END IF;
   IF has_table_privilege('authenticated','loyalty_audit_private.wallet_customer_events','SELECT,INSERT,UPDATE,DELETE')
     OR has_table_privilege('service_role','loyalty_audit_private.wallet_customer_events','INSERT,UPDATE,DELETE')
     THEN RAISE EXCEPTION 'Direct history access exposed'; END IF;

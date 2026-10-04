@@ -24,7 +24,11 @@ try {
     CREATE TABLE auth.users(id uuid PRIMARY KEY);
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     CREATE TABLE public.profiles(id uuid PRIMARY KEY,role text,status text);
-    CREATE TABLE public.cafes(id uuid PRIMARY KEY,name text,slug text,deleted_at timestamptz);
+    CREATE TABLE public.cafes(id uuid PRIMARY KEY,name text,slug text,deleted_at timestamptz,owner_user_id uuid);
+    CREATE TABLE public.cafe_members(cafe_id uuid,user_id uuid,role text);
+    CREATE FUNCTION public.is_platform_admin() RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+      SELECT EXISTS(SELECT 1 FROM public.profiles WHERE id=auth.uid() AND role='platform_admin' AND status='active')
+    $$;
     CREATE TABLE public.customer_profiles(id uuid PRIMARY KEY,cafe_id uuid REFERENCES public.cafes(id),user_id uuid,
       full_name text,phone text,email text,phone_normalized text,phone_auth_conflict boolean DEFAULT false,
       status text DEFAULT 'active',blocked_at timestamptz,created_at timestamptz DEFAULT now());
@@ -41,7 +45,7 @@ try {
   const wallet = await readFile("supabase/migrations/20261002234900_loyalty_experience_atomic_scanner.sql", "utf8");
   await db.exec(wallet.slice(wallet.indexOf("CREATE TABLE public.wallet_apple_registrations"), wallet.indexOf("CREATE FUNCTION public.claim_wallet_notification_jobs")));
   const audit = await readFile("supabase/migrations/20261004112815_loyalty_activity_audit.sql", "utf8");
-  await db.exec(audit.slice(audit.indexOf("CREATE SCHEMA IF NOT EXISTS loyalty_audit_private"), audit.indexOf("CREATE FUNCTION loyalty_audit_private.can_read")));
+  await db.exec(audit.slice(audit.indexOf("CREATE SCHEMA IF NOT EXISTS loyalty_audit_private"), audit.indexOf("CREATE FUNCTION loyalty_audit_private.reject_mutation")));
   await query("INSERT INTO public.profiles(id,role,status) VALUES($1,'platform_admin','active'),($2,'platform_admin','suspended'),($3,'owner','active'),($4,'manager','active'),($5,'customer','active')", [1, 2, 3, 4, 5].map(id));
   await query("INSERT INTO public.cafes(id,name,slug) VALUES($1,'Alpha','alpha'),($2,'Beta','beta'),($3,'Empty','empty')", [id(10), id(11), id(12)]);
   await query(`INSERT INTO public.customer_profiles(id,cafe_id,full_name,phone,email,phone_normalized,user_id) VALUES
@@ -70,6 +74,8 @@ try {
   const detail = (number = 20, page = 1, size = 25) => value("SELECT public.get_admin_brand_customer_detail($1,$2,$3)", [id(number), page, size]);
   for (const user of [0, 2, 3, 4, 5]) { await asUser(user); await rejects(() => listing()); await rejects(() => detail()); }
   await asUser(1);
+  check(await value("SELECT has_schema_privilege('authenticated','loyalty_audit_private','USAGE')"), "existing audit policy keeps required schema usage");
+  check(await value("SELECT count(*)::int FROM public.loyalty_activity_events") === 4, "existing audit SELECT policy still works with real helper grants");
   const page = await listing();
   check(page.total === 5 && page.summary.memberships === 5, "include enrolled profiles without cards");
   check(page.summary.uniqueCustomers === 4 && page.summary.sharedCustomers === 1, "normalized phone groups across brands, conflicts stay separate");
