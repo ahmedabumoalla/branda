@@ -37,7 +37,7 @@ export default async function LoyaltyCardsPage() {
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={dashboard} identity={brand.identity}
       initialExperience={experience.settings} walletAvailability={getWalletReadiness()} products={menu.products.map(({ id, name }) => ({ id, name }))}
       activityLog={<LoyaltyActivityLog initialResult={activityResult} initialFilters={activityFilters} />}
-      signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/rast`} /></>;
+      signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/rast?source=qr`} /></>;
   }
 
   return (

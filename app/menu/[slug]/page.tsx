@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { getStandaloneMenu } from "@/lib/data/standalone-menu";
 import { BistroMenu } from "@/components/menu/bistro-menu";
+import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -25,5 +26,5 @@ export default async function StandaloneMenuPage({ params }: Props) {
   const { slug } = await params;
   const menu = await getStandaloneMenu(slug);
   if (!menu) notFound();
-  return <BistroMenu menu={slug === "basilico" ? { ...menu, logoUrl: "/menu-logos/basilico-transparent-v1.png" } : menu} />;
+  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><BistroMenu menu={slug === "basilico" ? { ...menu, logoUrl: "/menu-logos/basilico-transparent-v1.png" } : menu} /></>;
 }

@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { ArrowUpLeft, WalletCards } from "lucide-react";
 import s from "./rast-loyalty-entry.module.css";
 
 export function RastLoyaltyEntry() {
   return <section className={s.section} aria-label="بطاقة ولاء راست">
-    <Link href="/loyalty/rast" className={s.entry} aria-label="حمّل بطاقة ولاء راست">
+    <Link href="/loyalty/rast?source=menu" prefetch={false} className={s.entry} aria-label="حمّل بطاقة ولاء راست"
+      onClick={() => trackBrandEngagement("rast", "menu_loyalty_click")}
+      onAuxClick={event => { if (event.button === 1) trackBrandEngagement("rast", "menu_loyalty_click"); }}>
       <span className={s.cardIllustration} aria-hidden="true">
         <span className={s.cardBack} />
         <span className={s.cardFront}>

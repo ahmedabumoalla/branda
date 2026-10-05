@@ -9,6 +9,7 @@ import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-doma
 import { formatSar } from "@/lib/format";
 import { StandaloneMenuControl } from "./standalone-menu-control";
 import { BrandOperationsPanel } from "./brand-operations-panel";
+import { BrandAnalyticsPanel } from "./brand-analytics-panel";
 import { ClipboardCheck } from "lucide-react";
 import s from "./brand-details.module.css";
 
@@ -157,7 +158,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         {section === "services" && services}
         {section === "menu" && <StandaloneMenuControl key={cafe.id} cafeId={cafe.id} slug={cafe.slug} />}
         {section === "operations" && <BrandOperationsPanel key={cafe.id} brandId={cafe.id} />}
-        {section === "analytics" && <><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}
+        {section === "analytics" && <><BrandAnalyticsPanel key={cafe.id} brandId={cafe.id} /><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}
         {section === "support" && <>
           <SectionHeading icon={Headphones}>الدعم والصيانة</SectionHeading><DataList items={[["تذاكر الدعم", cafe.supportTicketsCount ?? 0], ["رقم حساب الصيانة", cafe.maintenanceAccountNumber]]} />
           <SectionHeading icon={ShieldCheck}>مستندات النشاط</SectionHeading><DataList items={[["الرقم الضريبي", cafe.taxNumber], ["السجل التجاري", cafe.commercialRegister], ["شهادة معروف", cafe.maroofCertificate]]} />
