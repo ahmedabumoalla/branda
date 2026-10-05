@@ -237,6 +237,17 @@ for (const [name, mutate] of [
   await assert.rejects(() => ctx.scanLoyaltyExperienceAction({ value: "CARD123", requestId, kind: "stamp" }));
   assert.equal(ctx.state.calls.length, 0); assert.equal(ctx.state.wallet.length, 0);
 });
+await test("redemption mutation rejects membership QR instead of choosing another reward", async () => {
+  const ctx = scannerFixture();
+  await assert.rejects(() => ctx.scanLoyaltyExperienceAction({ value: createBarndaksaQrPayload("loyalty-card", "CARD123"), requestId, kind: "redeem" }));
+  assert.equal(ctx.state.calls.length, 0); assert.equal(ctx.state.wallet.length, 0);
+});
+for (const errorCode of ["reward_unavailable", "card_unavailable", "session_invalid", "request_conflict", "program_disabled", "invalid_code", "operation_failed"]) await test(`audited ${errorCode} returns only a definite failure without wallet sync`, async () => {
+  const ctx = scannerFixture();
+  ctx.state.operation = { ok: false, errorCode, status: "redeemed", cardCode: "CARD123", privateError: "internal" };
+  const result = await ctx.scanLoyaltyExperienceAction({ value: "REWARD123", requestId, kind: "redeem" });
+  assert.deepEqual(result, { ok: false, status: errorCode }); assert.equal(ctx.state.wallet.length, 0);
+});
 for (const [name, mutate] of [
   ["logged out owner", (s) => { s.authUser = null; }],
   ["different authenticated user", (s) => { s.authUser = { id: "someone-else" }; }],

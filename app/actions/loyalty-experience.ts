@@ -14,6 +14,7 @@ import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { syncWalletCardByCode, notifyBrandWalletMembers } from "@/lib/wallet";
 import type { LoyaltyExperienceSettings } from "@/lib/loyalty/experience-types";
 import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
+import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 
 async function requireEnrollment(slug: string) {
   if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لراست.");
@@ -62,6 +63,10 @@ export async function lookupRastCashierCardAction(value: string) {
   return lookupRastCashierCard(value);
 }
 
+export async function lookupRastCashierRewardAction(value: string) {
+  return lookupRastCashierReward(z.string().trim().min(4).max(500).parse(value));
+}
+
 export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem" }) {
   const parsed = z.object({ value: z.string().trim().min(4).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
   const session = await requireCashierSessionContext();
@@ -77,6 +82,10 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   });
   if (error) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة وجلسة الموظف.");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
+  // An audited rejection means its transaction did not commit. Transport errors remain uncertain.
+  if (result?.ok === false && ["invalid_code", "session_invalid", "request_conflict", "program_disabled", "card_unavailable", "reward_unavailable", "operation_failed"].includes(String(result.errorCode))) {
+    return { ok: false, status: String(result.errorCode) };
+  }
   if (result?.ok !== true) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف.");
   if (result?.cardCode && ["stamped", "reward_issued", "redeemed"].includes(String(result.status))) {
     // A provider outage must not turn an already-committed stamp into a failed scan.

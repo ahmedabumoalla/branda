@@ -36,7 +36,7 @@ if (!process.argv.includes("--entitlements-only")) {
 const { createRastScanSession } = load("components/rast-loyalty/scan-session.ts");
 const { createBarndaksaQrPayload } = load("lib/loyalty/secure-qr-payload.ts");
 const card = { customerName: "Test customer", stampsInCycle: 2, purchasesRequired: 7, availableRewards: 1, rewardName: "Test reward" };
-const reward = { sourceType: "loyalty", canRedeem: true, expiresAt: "2030-01-02T00:00:00Z", invalidReason: null, rewardTitle: "Earned reward", customerName: "Test customer", metadata: { termsSnapshot: { rewardKind: "discount", discountPercent: 25, terms: "Original terms" } } };
+const reward = { sourceType: "loyalty", rewardCode: "REWARD123", canRedeem: true, expiresAt: "2030-01-02T00:00:00Z", invalidReason: null, rewardTitle: "Earned reward", customerName: "Test customer", metadata: { termsSnapshot: { rewardKind: "discount", discountPercent: 25, terms: "Original terms" } } };
 const writes = [], reads = [];
 let currentTime = Date.parse("2030-01-01T00:00:00Z"), id = 0, returnedReward = reward;
 let mutation = async () => ({ status: "stamped" });
@@ -100,6 +100,50 @@ await assert.rejects(session.confirm("redeem", "REWARD123"));
 await assert.rejects(session.inspect("stamp", createBarndaksaQrPayload("customer-reward", "REWARD123")));
 assert.equal(writes.length, beforeReward, "Invalid preview or QR kind cannot reach a mutation");
 
+// Wallet membership QR resolves to one immutable reward target, including uncertain retries.
+{
+  const commits = []; let lookups = 0, fail = true, expired = false;
+  const redemption = createRastScanSession({
+    lookupCard: async () => card,
+    lookupReward: async (code) => { assert.equal(code, "CARD123"); lookups++; return { ...reward, rewardCode: lookups === 1 ? "REWARD123" : "REWARD456" }; },
+    commit: async (input) => { commits.push(input); if (fail) throw new Error("Lost response after commit"); return { status: "redeemed", replayed: true }; },
+    createRequestId: () => `redeem-${commits.length}`, now: () => Date.parse(expired ? "2031-01-01" : "2030-01-01"),
+  });
+  await redemption.inspect("redeem", cardQr);
+  assert.equal(commits.length, 0, "Reading a membership cannot spend a reward");
+  await assert.rejects(() => redemption.confirm("redeem", "OTHER123"));
+  await assert.rejects(() => redemption.confirm("redeem", cardQr));
+  assert.equal(commits[0].value, "REWARD123", "Commit pins the displayed reward, not the membership");
+  redemption.invalidate(); expired = true;
+  const retry = await redemption.inspect("redeem", " card123 ");
+  assert.equal(retry.retryPending, true); assert.equal(lookups, 1, "Rescanning cannot select the next reward after an interrupted response");
+  fail = false;
+  await redemption.confirm("redeem", cardQr);
+  assert.deepEqual(commits[1], commits[0], "Retry after expiry reuses the same target and id; database resolves prior commit");
+  await assert.rejects(() => redemption.confirm("redeem", cardQr));
+  expired = false;
+  assert.equal((await redemption.inspect("redeem", cardQr)).reward.rewardCode, "REWARD456", "A new inspection after success can show another earned reward");
+  for (const wrongKind of ["invoice", "experience-reward", "event-ticket"]) {
+    await assert.rejects(() => redemption.inspect("redeem", createBarndaksaQrPayload(wrongKind, "CARD123")));
+  }
+}
+
+{
+  let lookups = 0;
+  const denied = createRastScanSession({
+    lookupCard: async () => card,
+    lookupReward: async () => { lookups++; return reward; },
+    commit: async () => ({ ok: false, status: "reward_unavailable" }),
+    createRequestId: () => "denied-request", now: () => Date.parse("2030-01-01"),
+  });
+  await denied.inspect("redeem", cardQr);
+  await denied.confirm("redeem", cardQr);
+  assert.equal(denied.preview, null, "A definite database denial invalidates the old preview");
+  await assert.rejects(() => denied.confirm("redeem", cardQr));
+  await denied.inspect("redeem", cardQr);
+  assert.equal(lookups, 2, "A new explicit scan can refresh rewards after a known rejection");
+}
+
 const { startRastCameraSession } = load("components/rast-loyalty/camera-session.ts");
 function cameraFixture() {
   const video = { srcObject: null }, detections = [], events = { tracksStopped: 0, controlsStopped: 0, acquire: 0, decode: 0, errors: 0 };
@@ -152,7 +196,7 @@ function cameraFixture() {
 }
 
 const { RastCashier, RastCashierRewardDetails } = load("components/rast-loyalty/rast-cashier.tsx", {
-  "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async () => card, scanLoyaltyExperienceAction: async () => ({}) },
+  "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async () => card, lookupRastCashierRewardAction: async () => reward, scanLoyaltyExperienceAction: async () => ({}) },
   "@/app/actions/cashier": { cashierLookupRewardAction: async () => reward, logoutCashierAction: async () => {} },
 });
 const html = renderToStaticMarkup(React.createElement(RastCashier, { initialData: { cashier: { fullName: "Test operator" } } }));
