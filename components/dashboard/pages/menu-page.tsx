@@ -205,7 +205,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
-        subtitle={cafeSlug === "rast" ? "إدارة الأصناف والتصنيفات والأسعار في منيو راست" : copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
+        subtitle={cafeSlug === "rast" ? "إدارة الأصناف والتصنيفات والأسعار في منيو مقهى الكواكب" : copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
         action={
           <div className={styles.headerActions}>
             <button

@@ -250,7 +250,7 @@ export function OffersPageClient({
   return (
     <DashboardPageShell
       title="العروض"
-      subtitle={rastSpotlight ? "إنشاء وإدارة العروض والمختارات في منيو راست" : "إنشاء وإدارة العروض الظاهرة في الفرع الإلكتروني"}
+      subtitle={rastSpotlight ? "إنشاء وإدارة العروض والمختارات في منيو مقهى الكواكب" : "إنشاء وإدارة العروض الظاهرة في الفرع الإلكتروني"}
       action={
         <button type="button" onClick={beginCreate} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#3A2117] px-4 text-sm font-black text-white">
           <Plus className="h-4 w-4" />
@@ -259,7 +259,7 @@ export function OffersPageClient({
       }
     >
       {rastSpotlight && <aside className="mb-5 rounded-xl border border-[#dfcec5] bg-[#f8f2e8] p-5 text-[#3b1725]">
-        <h2 className="font-bold">تستاهل التجربة في منيو راست</h2>
+        <h2 className="font-bold">تستاهل التجربة في منيو مقهى الكواكب</h2>
         <p className="mt-2 text-sm leading-7">لإبراز عرض أو صنف اليوم اختر «بانر الكوفي» أو «كلاهما» وفعّل ظهوره مع حالة «نشط» أو «مجدول» ضمن مدته</p>
         <p className="mt-1 text-sm leading-7">للمختارات دون خصم استخدم «عرض مخصص» واربط الصنف وأضف عنوانك وصورتك دون نسبة خصم</p>
         <a href="/menu/rast#rast-spotlight-title" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center font-bold text-[#a30b2d] underline underline-offset-4">شاهد المساحة في المنيو</a>
@@ -434,7 +434,7 @@ export function OffersPageClient({
                 </label>
                 <label className="flex items-center gap-2 text-sm font-black text-[#3A2117] sm:col-span-2">
                   <input type="checkbox" checked={draft.visibleInCafe} onChange={(event) => update("visibleInCafe", event.target.checked)} className="h-4 w-4" />
-                  {rastSpotlight ? "ظاهر في منيو راست" : "ظاهر في الفرع الإلكتروني"}
+                  {rastSpotlight ? "ظاهر في منيو مقهى الكواكب" : "ظاهر في الفرع الإلكتروني"}
                 </label>
               </div>
             </fieldset>
@@ -477,7 +477,7 @@ export function OffersPageClient({
           <div role="dialog" aria-modal="true" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <Trash2 className="h-7 w-7 text-rose-700" />
             <h2 className="mt-3 text-xl font-black text-[#3A2117]">تأكيد حذف العرض</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">{rastSpotlight ? "سيُخفى العرض من منيو راست ولن يتم الحذف دون هذا التأكيد" : "سيُخفى العرض من الفرع الإلكتروني، ولن يتم الحذف دون هذا التأكيد."}</p>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">{rastSpotlight ? "سيُخفى العرض من منيو مقهى الكواكب ولن يتم الحذف دون هذا التأكيد" : "سيُخفى العرض من الفرع الإلكتروني، ولن يتم الحذف دون هذا التأكيد."}</p>
             <div className="mt-5 flex gap-2">
               <button type="button" onClick={() => void confirmDelete()} className="min-h-11 rounded-xl bg-rose-700 px-4 text-sm font-black text-white">حذف العرض</button>
               <button type="button" onClick={() => setDeleteTarget(null)} className="min-h-11 rounded-xl border border-[#E7D7C6] px-4 text-sm font-black">إلغاء</button>

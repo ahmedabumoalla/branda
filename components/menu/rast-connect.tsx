@@ -37,24 +37,24 @@ export function RastConnect() {
     { name: "واتساب", Icon: WhatsappMark, featured: true, href: "https://wa.me/966532751005" },
   ];
 
-  return <section className={s.connect} aria-label="راست على منصات التواصل وموقع الفرع">
+  return <section className={s.connect} aria-label="مقهى الكواكب على منصات التواصل وموقع الفرع">
     <div className={s.inner}>
       <div className={s.intro}>
-        <span className={s.overline} dir="ltr">THE RAST CONNECTION</span>
+        <span className={s.overline} dir="ltr">KEEP IN TOUCH</span>
         <h2>لحظتنا تكمل <span>معك</span></h2>
       </div>
       <ul className={s.accounts} aria-label="منصات التواصل">
         {accounts.map(({ name, Icon, featured, href }) => {
           const content = <><span className={s.icon}><Icon aria-hidden="true" /></span><span className={s.label}>{name}</span></>;
           return <li key={name} className={featured ? s.whatsapp : undefined}>
-            {href ? <a className={s.account} href={href} target="_blank" rel="noopener noreferrer" aria-label="محادثة راست على واتساب">{content}</a>
+            {href ? <a className={s.account} href={href} target="_blank" rel="noopener noreferrer" aria-label="محادثة مقهى الكواكب على واتساب">{content}</a>
               : <span className={s.account}>{content}</span>}
           </li>;
         })}
       </ul>
-      <a className={s.location} href="https://maps.app.goo.gl/pr6HtT5qx37rW5ZQ8?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="موقع فرع راست على خرائط قوقل">
+      <a className={s.location} href="https://maps.app.goo.gl/pr6HtT5qx37rW5ZQ8?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="موقع فرع مقهى الكواكب على خرائط قوقل">
         <span className={s.pin}><MapPin aria-hidden="true" /></span>
-        <span><span className={s.locationTitle}>نلقاك في راست</span><span className={s.locationCaption}>موقع الفرع</span></span>
+        <span><span className={s.locationTitle}>نلقاك في مقهى الكواكب</span><span className={s.locationCaption}>موقع الفرع</span></span>
       </a>
     </div>
   </section>;

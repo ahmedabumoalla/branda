@@ -31,8 +31,10 @@ export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl
   return {
     id: googleClassId(issuerId, member.card.cafeId),
     issuerName: member.cafeName,
+    localizedIssuerName: { defaultValue: { language: "ar", value: member.cafeName } },
     programName: member.program.cardTitle,
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
+    localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
+    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${encodeURIComponent(member.cafeName)}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
     reviewStatus: "UNDER_REVIEW",
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,

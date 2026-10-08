@@ -76,6 +76,10 @@ const member = {
 const fetchBefore = globalThis.fetch;
 try {
   const payload = load("lib/wallet/payload.ts");
+  const brandClass = payload.buildGoogleClass(member, env.GOOGLE_WALLET_ISSUER_ID, env.WALLET_PUBLIC_BASE_URL);
+  assert.equal(brandClass.localizedIssuerName.defaultValue.value, member.cafeName);
+  assert.equal(brandClass.localizedProgramName.defaultValue.value, member.program.cardTitle);
+  assert.equal(new URL(brandClass.programLogo.sourceUri.uri).searchParams.get("v"), member.cafeName);
   const rastId = "3c697864-d371-4190-87ab-48f183cdf2d5";
   const stableObjectId = payload.googleObjectId(env.GOOGLE_WALLET_ISSUER_ID, { ...member, card: { ...member.card, cafeId: rastId } });
   process.env.GOOGLE_WALLET_RAST_CLASS_ID = `${env.GOOGLE_WALLET_ISSUER_ID}.${env.GOOGLE_WALLET_ISSUER_ID}.rast_prepared`;

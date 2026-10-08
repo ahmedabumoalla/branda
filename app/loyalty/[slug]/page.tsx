@@ -8,7 +8,7 @@ import { PublicPageAnalytics } from "@/components/analytics/public-page-analytic
 import { loyaltyVisitKind } from "@/lib/analytics/brand-analytics";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "أهل راست | بطاقة الولاء", robots: { index: false, follow: false } };
+export const metadata = { title: "أهل مقهى الكواكب | بطاقة الولاء", robots: { index: false, follow: false } };
 
 export default async function LoyaltyJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ source?: string | string[] }> }) {
   const { slug } = await params;

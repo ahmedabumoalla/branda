@@ -41,7 +41,7 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
     </div>
     <article className={spotlight.feature} aria-label={menuDisplayText(active.title)}>
       <div className={spotlight.copy} aria-live="polite">
-        <span className={spotlight.badge}>{offers.length ? active.discountPercent ? `خصم ${active.discountPercent}%` : "اختيار راست" : "اكتشف من قائمتنا"}</span>
+        <span className={spotlight.badge}>{offers.length ? active.discountPercent ? `خصم ${active.discountPercent}%` : "اختيار مقهى الكواكب" : "اكتشف من قائمتنا"}</span>
         <h3 dir="auto">{menuDisplayText(active.title)}</h3>
         <p className={spotlight.description} dir="auto">{menuDisplayText(active.description || "خذ لك لحظة واكتشف تفاصيلها على ذوقك")}</p>
         {active.code && <p className={spotlight.code}>كود العرض <b dir="ltr">{active.code}</b></p>}
@@ -53,11 +53,11 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
       </div>
       <div className={spotlight.media}>
         {active.imageUrl ? <FoodImage key={active.imageUrl} src={active.imageUrl} alt={menuDisplayText(active.title)} />
-          : <span className={spotlight.typographicArt} aria-hidden="true">RAST<span>على ذوقك</span></span>}
+          : <span className={spotlight.typographicArt} aria-hidden="true">KAWAKIB<span>على ذوقك</span></span>}
         <span className={spotlight.photoCaption} aria-hidden="true" dir="ltr">A MOMENT WORTH CHOOSING</span>
       </div>
     </article>
-    {items.length > 1 && <nav className={spotlight.choices} aria-label="مختارات وعروض راست">
+    {items.length > 1 && <nav className={spotlight.choices} aria-label="مختارات وعروض مقهى الكواكب">
       {items.map((item, index) => <button type="button" key={item.id} aria-pressed={item.id === active.id} onClick={() => setSelectedId(item.id)}>
         <span className={spotlight.choiceNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span dir="auto">{menuDisplayText(item.title)}</span>
       </button>)}
@@ -175,7 +175,7 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
 }
 
 function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
-  return <section className={s.rastHero} aria-label="مرحبًا في راست">
+  return <section className={s.rastHero} aria-label="مرحبًا في مقهى الكواكب">
     {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
     <div className={s.rastHeroBackdrop} aria-hidden="true">
       <FoodImage src="/menu-art/rast-coffee-editorial-v1.webp" alt="" priority />
@@ -189,19 +189,19 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
       <button type="button" className={s.heroIcon} onClick={onShare} aria-label="مشاركة رابط المنيو"><Share2 aria-hidden="true" /></button>
     </header>
     <div className={s.rastMasthead}>
-      <FoodImage src={menu.logoUrl || "/menu-logos/rast-wordmark-transparent-v2.png"} alt={menu.name} className={s.rastWordmark} priority />
+      <FoodImage src={menu.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={menu.name} className={s.rastWordmark} priority />
       <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">COFFEE &amp; GOOD MOMENTS</span></div>
     </div>
     <div className={s.rastHeroGrid}>
       <div className={s.rastHeroCopy}>
-        <p className={s.rastEyebrow}>أهلًا بك في راست</p>
+        <p className={s.rastEyebrow}>أهلًا بك في مقهى الكواكب</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
         <p className={s.rastHeroDescription}>قهوة تحبّها، حلا يكمّلها، ولحظة تستاهل تعيشها على مهلك</p>
         <a href="#rast-menu-items" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
         <p className={s.rastHeroFootnote}><span aria-hidden="true" />لكل وقت اختيار يليق به</p>
       </div>
     </div>
-    <div className={s.rastRibbon} aria-hidden="true"><span>راست على ذوقك</span><span>قهوة ومزاج</span><span dir="ltr">SLOW DOWN SIP ENJOY</span></div>
+    <div className={s.rastRibbon} aria-hidden="true"><span>مقهى الكواكب على ذوقك</span><span>قهوة ومزاج</span><span dir="ltr">SLOW DOWN SIP ENJOY</span></div>
   </section>;
 }
 
@@ -277,7 +277,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
     <div className={s.catalog} id="menu-catalog">
       {isRast && <RastSpotlight menu={menu} onSelect={setSelected} />}
       {isRast && <div className={s.rastCatalogHeading} id="rast-menu-items">
-        <div><p className={s.rastEyebrow}>قائمة راست</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
+        <div><p className={s.rastEyebrow}>قائمة مقهى الكواكب</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
         <p>من أول قهوة لآخر لقمة<br />اختَر لحظتك المفضّلة</p>
       </div>}
       <div className={s.toolbar}>
@@ -331,7 +331,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
       {isRast ? <section className={s.rastClosing} aria-label={menu.name}>
         <p className={s.rastEyebrow}>كل مرة لحظة حلوة</p><h2>نفس المكان<br /><span>مزاج يتجدّد</span></h2>
         <a href="#menu-catalog" className={s.rastClosingLink}>نرجع لشي تشتهيه<ArrowUpLeft aria-hidden="true" /></a>
-        <FoodImage src={menu.logoUrl || "/menu-logos/rast-wordmark-transparent-v2.png"} alt={menu.name} className={s.rastClosingLogo} />
+        <FoodImage src={menu.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={menu.name} className={s.rastClosingLogo} />
       </section> : <section className={s.brandSignature} aria-label={menu.name}>{menu.logoUrl ? <FoodImage src={menu.logoUrl} alt={menu.name} className={s.footerLogo} /> : <span className={s.footerName}>{displayName}</span>}<p>لحظتك أحلى مع {displayName}</p><a href="#menu-catalog" className={s.signatureReturn}>نرجع لشي تشتهيه <span aria-hidden="true">↑</span></a></section>}
       <div><span>المنيو الرقمي</span><span>بواسطة <b>برندة</b></span></div>
     </footer>
