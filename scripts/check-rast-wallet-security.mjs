@@ -208,6 +208,28 @@ try {
   };
   await google.updateGooglePass(member);
   assert.equal(classPatch.reviewStatus, "UNDER_REVIEW", "Existing console draft is submitted instead of remaining unusable");
+  for (const reviewStatus of ["approved", "APPROVED", "underReview"]) {
+    let objectWritten = false;
+    globalThis.fetch = async (url, options = {}) => {
+      const isClass = String(url).includes("loyaltyClass/");
+      if (isClass && options.method === "GET") return Response.json({ reviewStatus, messages: [{ id: "keep-existing-message" }] });
+      if (isClass && options.method === "PATCH") {
+        const patch = JSON.parse(options.body);
+        // Google rejects PATCH when the merged class retains its read-only APPROVED state.
+        if (patch.reviewStatus !== "UNDER_REVIEW") return Response.json({ error: { message: 'Invalid review status "APPROVED". Use "UNDER_REVIEW" instead.' } }, { status: 400 });
+        assert.equal(patch.messages, undefined, "Updating branding must preserve existing messages");
+        return Response.json({ reviewStatus: "approved" });
+      }
+      if (String(url).includes("loyaltyObject/") && options.method === "PATCH") {
+        objectWritten = true;
+        assert.equal(JSON.parse(options.body).reviewStatus, undefined, "Review status belongs only to classes");
+      }
+      return Response.json({});
+    };
+    const result = await google.issueGoogleSaveUrl(member);
+    assert(result.startsWith("https://pay.google.com/gp/v/save/"));
+    assert(objectWritten, "An approved class must not block object issuance");
+  }
   let dbCalled = false;
   const service = load("lib/wallet/webservice.ts", {
     "@/lib/supabase/admin": { createAdminClient() { dbCalled = true; throw new Error("Unauthorized database access"); } },

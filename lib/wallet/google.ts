@@ -32,15 +32,14 @@ async function request(path: string, method: string, body?: unknown) {
 async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: string } & Record<string, unknown>) {
   const path = `${resource}/${encodeURIComponent(body.id)}`;
   const existing = await request(path, "GET");
-  const existingReviewStatus = existing.ok && resource === "loyaltyClass" ? String((await existing.json()).reviewStatus ?? "").toUpperCase() : "";
   if (existing.status === 404) {
     const inserted = await request(resource, "POST", body);
     if (inserted.ok) return;
     if (inserted.status !== 409) throw new Error(`google_wallet_insert_${inserted.status}`);
   } else if (!existing.ok) throw new Error(`google_wallet_read_${existing.status}`);
-  // A console-prepared draft must be submitted; preserve already reviewed classes and their messages.
+  // Google requires UNDER_REVIEW on every class write, including approved classes.
+  // Omitting it preserves APPROVED in the merged resource and makes PATCH fail.
   const updated = { ...body };
-  if (existingReviewStatus !== "DRAFT") delete updated.reviewStatus;
   let response = await request(path, "PATCH", updated);
   // Quotas restrict notifications, not the customer's right to see their latest balance.
   if (response.status === 429 && updated.notifyPreference) {
