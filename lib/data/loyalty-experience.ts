@@ -96,7 +96,7 @@ async function parseExperienceInput(input: LoyaltyExperienceInput) {
 
 export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) {
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لراست.");
+  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب.");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
   const parsed = await parseExperienceInput(input);
   const { error } = await (await createClient()).from("cafe_loyalty_experience").upsert({
@@ -119,7 +119,7 @@ const programSchema = z.object({
 export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceInput }) {
   const program = programSchema.parse(input.program);
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لراست.");
+  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب.");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
   const experience = await parseExperienceInput(input.experience);
   if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة.");

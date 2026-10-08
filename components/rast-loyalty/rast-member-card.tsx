@@ -46,7 +46,7 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
     <RastHeader identity={identity} />
     <div className={s.memberLayout}>
       <div className={s.memberIntro}>
-        <span className={s.eyebrow}>أنت من أهل راست</span>
+        <span className={s.eyebrow}>أنت من أهل مقهى الكواكب</span>
         <h1>يا هلا برجعتك،<br /><span>{member.card.customerName}.</span></h1>
         <p className={s.intro}>{member.rewards.length ? "لك مكافأة بانتظارك. خلّ زيارتك الجاية أحلى." : remaining === 1 ? "باقي ختم واحد، ومكافأتك تنتظرك." : `باقي ${remaining} أختام على مكافأتك. نشوفك على خير.`}</p>
         <div className={s.walletSection}>
@@ -70,6 +70,6 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
         </section>
       </div>
     </div>
-    <footer className={s.publicFooter}><span>أهل راست</span><span>كل زيارة، لها مكان.</span></footer>
+    <footer className={s.publicFooter}><span>أهل مقهى الكواكب</span><span>كل زيارة، لها مكان.</span></footer>
   </main>;
 }

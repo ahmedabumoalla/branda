@@ -16,7 +16,10 @@
 .publicHeader { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 20px; border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 18px; }
 .logo { width: 104px; height: 58px; object-fit: contain; }
-.brand > span { font-size: 11px; border-inline-start: 1px solid var(--border); padding-inline-start: 18px; white-space: nowrap; }
+.brand > span { font-size: 11px; border-inline-start: 1px solid var(--border); padding-inline-start: 18px; overflow-wrap: anywhere; }
+.publicHeader, .cardTop { flex-wrap: wrap; }
+.brand { min-width: 0; }
+.logo { flex-shrink: 0; }
 .brandLight { color: var(--cream); }
 .brandLight .logo { filter: brightness(0) invert(1); opacity: .96; }
 .brandLight > span { border-color: #f8f2e838; }

@@ -483,7 +483,7 @@ export async function recordOwnerLoyaltyOperation(input: {
     parsed.cardCode.trim().toUpperCase();
 
   if (cafe.slug === "rast") {
-    throw new Error("استخدم شاشة الموظف لتسجيل أختام راست وصرف المكافآت.");
+    throw new Error("استخدم شاشة الموظف لتسجيل أختام مقهى الكواكب وصرف المكافآت.");
   }
 
   const normalizedInvoiceBarcode = parsed.invoiceBarcode?.trim()

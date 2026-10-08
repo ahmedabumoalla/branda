@@ -17,7 +17,7 @@ import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 
 async function requireEnrollment(slug: string) {
-  if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لراست.");
+  if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب.");
   if (!isPhoneOtpRequiredForBrand(slug)) throw new Error("التحقق بالواتساب غير متاح حاليًا.");
   const brand = await getLoyaltyBrand(z.string().regex(/^[a-z0-9-]{1,80}$/).parse(slug));
   if (!brand || !brand.program.enabled) throw new Error("برنامج الولاء غير متاح حاليًا.");
@@ -97,7 +97,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
 export async function sendLoyaltyWalletAnnouncementAction(title: string, body: string) {
   const message = z.object({ title: z.string().trim().min(2).max(80), body: z.string().trim().min(2).max(240) }).parse({ title, body });
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه الخدمة مخصصة لراست.");
+  if (cafe.slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب.");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
   const result = await notifyBrandWalletMembers(cafe.id, cafe.slug, message.title, message.body);
   const statuses = [result.apple.status, result.google.status];
