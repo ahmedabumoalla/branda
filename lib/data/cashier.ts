@@ -11,6 +11,7 @@ import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
+import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
@@ -322,7 +323,8 @@ export async function getCashierToken() {
 
 export async function startOwnerCashierSession() {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.role !== "owner" || !featureCodesAllow(await getOwnerFeatureCodes(), "cashier")) {
+  const maintenance = cafe.role === "platform_admin" ? await getCurrentMaintenanceSession() : null;
+  if ((cafe.role !== "owner" && maintenance?.cafeId !== cafe.id) || !featureCodesAllow(await getOwnerFeatureCodes(), "cashier")) {
     throw new Error("OWNER_CASHIER_FORBIDDEN");
   }
   const supabase = await createClient();
@@ -330,7 +332,7 @@ export async function startOwnerCashierSession() {
   const { data, error } = await supabase.rpc("start_owner_cashier_session", { p_cafe_id: cafe.id });
   const session = Array.isArray(data) ? data[0] : null;
   if (error || !session?.token || session.cafe_id !== cafe.id) throw new Error("OWNER_CASHIER_SESSION_FAILED");
-  const maxAge = Math.min(8 * 60 * 60, Math.floor((Date.parse(session.expires_at) - Date.now()) / 1000));
+  const maxAge = Math.min(8 * 60 * 60, Math.floor((Math.min(Date.parse(session.expires_at), maintenance?.expiresAt ?? Infinity) - Date.now()) / 1000));
   if (!Number.isFinite(maxAge) || maxAge <= 0) throw new Error("OWNER_CASHIER_SESSION_EXPIRED");
   const store = await cookies();
   store.set(cashierSessionCookie, session.token, {
@@ -429,13 +431,19 @@ export async function requireCashierSessionContext(
   if (cashier.owner_user_id) {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.id !== cashier.owner_user_id || cafe.owner_user_id !== user.id
+    if (authError || !user || user.id !== cashier.owner_user_id
       || cafe.deleted_at || !["active", "published"].includes(cafe.status)) {
       throw new Error("Owner cashier session expired");
     }
     const { data: profile, error: profileError } = await admin.from("profiles")
-      .select("status").eq("id", user.id).maybeSingle();
+      .select("status,role").eq("id", user.id).maybeSingle();
     if (profileError || profile?.status !== "active") throw new Error("Owner cashier account is inactive");
+    if (cafe.owner_user_id !== user.id) {
+      const maintenance = profile.role === "platform_admin" ? await getCurrentMaintenanceSession() : null;
+      if (maintenance?.adminUserId !== user.id || maintenance.cafeId !== cafe.id) {
+        throw new Error("Maintenance cashier session expired");
+      }
+    }
   }
 
   return {

@@ -299,7 +299,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
   if (activitiesError) throw activitiesError;
 
   return {
-    canOpenAsOwner: cafe.role === "owner",
+    canOpenAsOwner: cafe.role === "owner" || cafe.role === "platform_admin",
     cafeId: cafe.id,
     cafeSlug: cafe.slug,
     cafeName: cafe.name,

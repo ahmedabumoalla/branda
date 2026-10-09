@@ -14,9 +14,11 @@ try {
     CREATE TABLE brand_feature_overrides(cafe_id uuid,feature_id text,enabled boolean);
     INSERT INTO cafes(slug,name,status,is_public) VALUES('double-b-bistro','Double B','active',true),('basilico','Basilico','active',true);
     INSERT INTO cafes(slug,name,status,is_public) SELECT 'brand-'||n,'Brand '||n,CASE WHEN n<=5 THEN 'suspended' ELSE 'active' END,false FROM generate_series(1,21)n;
+    UPDATE cafes SET id='3c697864-d371-4190-87ab-48f183cdf2d5',slug='rast' WHERE slug='brand-1';
     INSERT INTO subscriptions(cafe_id,plan_id,status,started_at,expires_at,created_at) SELECT id,'old','trialing',CASE slug WHEN 'double-b-bistro' THEN timestamptz '2026-08-30 10:05:42.174535+00' WHEN 'basilico' THEN timestamptz '2026-08-24 09:38:03.147905+00' ELSE timestamptz '2026-06-01+00' END,'2026-09-30+00','2026-08-01+00' FROM cafes;
     INSERT INTO brand_feature_overrides SELECT id,'menu',false FROM cafes;
     INSERT INTO brand_feature_overrides SELECT id,'loyalty',true FROM cafes;
+    UPDATE subscriptions SET started_at='2026-10-02 17:21:31.97918+00',activation_source='signup_default_plan' WHERE cafe_id='3c697864-d371-4190-87ab-48f183cdf2d5';
   `);
   const sql = await fs.readFile("supabase/operations/20261009_activate_standalone_menu_terms.sql", "utf8");
   await db.exec(sql);
@@ -32,6 +34,17 @@ try {
   assert.equal((await db.query("SELECT count(*)::int AS n FROM platform_access_private.menu_term_grants_20261009")).rows[0].n,23);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM brand_feature_overrides WHERE feature_id='menu'")).rows[0].n,0);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM brand_feature_overrides WHERE feature_id='loyalty'")).rows[0].n,23);
+  const beforeOthers = (await db.query("SELECT * FROM subscriptions WHERE cafe_id<>'3c697864-d371-4190-87ab-48f183cdf2d5' ORDER BY id")).rows;
+  await db.exec(await fs.readFile("supabase/operations/20261009_kawakib_monthly_services.sql", "utf8"));
+  const kawakib = (await db.query("SELECT s.*,p.features FROM subscriptions s JOIN platform_plans p ON p.id=s.plan_id WHERE cafe_id='3c697864-d371-4190-87ab-48f183cdf2d5' AND status='active'")).rows;
+  assert.equal(kawakib.length,1);
+  assert.deepEqual(kawakib[0].features,["menu","loyalty","offers"]);
+  assert.equal(new Date(kawakib[0].started_at).toISOString(),'2026-10-02T17:21:31.979Z');
+  assert.equal(new Date(kawakib[0].expires_at).toISOString(),'2026-11-02T17:21:31.979Z');
+  assert.equal(Number(kawakib[0].amount_sar),0);
+  assert.deepEqual((await db.query("SELECT * FROM subscriptions WHERE cafe_id<>'3c697864-d371-4190-87ab-48f183cdf2d5' ORDER BY id")).rows,beforeOthers);
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM platform_access_private.kawakib_monthly_grant_20261009")).rows[0].n,1);
   await assert.rejects(db.exec(sql));
+  console.log("PASS Kawakib: original October 2 anchor, November 2 expiry, three exact services, private snapshot, zero charge, other 22 brands unchanged.");
   console.log("PASS PostgreSQL menu grants: 23 exact menu-only terms, annual anchors, Saudi month-end, activation, zero charge, preserved history/private snapshots and replay refusal.");
 } finally { await db.close(); }

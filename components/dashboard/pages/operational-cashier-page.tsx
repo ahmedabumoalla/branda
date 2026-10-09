@@ -201,7 +201,7 @@ export function OperationalCashierPageClient({
           <form action={openOwnerPortal}>
             <button type="submit" disabled={ownerPending} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
               <DoorOpen aria-hidden="true" className="h-4 w-4" />
-              {ownerPending ? "جارٍ فتح نقطة التشغيل..." : "فتح نقطة التشغيل باسمي"}
+              {ownerPending ? "جارٍ فتح نقطة التشغيل..." : "فتح نقطة التشغيل مباشرة"}
             </button>
           </form>
         ) : <Link
