@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, ArrowLeft, Check, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Check, ShieldCheck, Store, MapPin, UserRound, Sparkles, LoaderCircle, TicketPercent } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { registerCafeOwnerAction, requestOwnerRegistrationOtpAction, verifyOwnerRegistrationOtpAction, resolveOwnerRegistrationMapAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
@@ -72,30 +72,49 @@ export default function RegisterPage() {
     <main dir="rtl" className={styles.page}>
       <aside className={styles.story}>
         <BarndaksaLogo variant="dark" width={168} height={72} />
-        <div className={styles.storyBody}><span className={styles.kicker}>خطوة جديدة لعلامتك</span><h1>منيوك جاهز<br />ليحكي قصتك.</h1><p>أنشئ حساب علامتك، وأضف منتجاتك، وشارك منيوك مع عملائك من مكان واحد.</p><div className={styles.trial}><strong>٧</strong><div><b>أيام تجربة مجانية</b><span>المنيو والمنتجات وإعدادات العلامة</span></div></div><p className={styles.note}>بدون بطاقة دفع. يمكنك اختيار الباقة المناسبة لاحقًا من لوحة التحكم.</p></div>
-        <span className={styles.signature}>علامتك، بطابعها الخاص.</span>
+        <div className={styles.storyBody}>
+          <span className={styles.kicker}>لأن التفاصيل تصنع علامتك</span>
+          <h1>منيو يحمل اسمك.<br /><em>وتجربة تشبهك.</em></h1>
+          <p>اجمع منتجاتك وصورها وأسعارها في منيو مستقل، وشارك رابطًا واحدًا مع كل عملائك.</p>
+          <div className={styles.menuPreview} aria-label="معاينة توضيحية لمنيو علامتك">
+            <div className={styles.previewTop}><Store size={22} aria-hidden="true" /><span>مساحة علامتك</span><span className={styles.previewTag}>منيو مستقل</span></div>
+            <div className={styles.previewTitle}>كل التفاصيل، بطابعك.</div>
+            <div className={styles.previewLines} aria-hidden="true"><i /><i /><i /></div>
+            <div className={styles.previewBottom}><span>اسمك · منتجاتك · هويتك</span><ArrowLeft size={18} aria-hidden="true" /></div>
+          </div>
+          <ul className={styles.benefits}><li><Check size={17} aria-hidden="true" /> أضف منتجاتك وصورها وأسعارها</li><li><Check size={17} aria-hidden="true" /> شارك رابط المنيو المستقل</li><li><Check size={17} aria-hidden="true" /> حدّث التفاصيل من لوحة واحدة</li></ul>
+        </div>
+        <div className={styles.storyFoot}><span className={styles.signature}>من أول منتج، إلى تجربة كاملة.</span><span>صُنعت لعلامتك</span></div>
       </aside>
       <section className={styles.content}><div className={styles.formWrap}>
-        <div className={styles.topline}><Link href="/">برندة</Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول</Link></span></div>
-        <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={14} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
-        <header className={styles.heading}><span className={styles.kicker}>إنشاء حساب علامة تجارية</span><h2>{step === 0 ? "لنبدأ بعلامتك" : step === 1 ? "تحقق من رقمك" : "الخطوة الأخيرة"}</h2><p>{step === 0 ? "بيانات بسيطة، ومساحة كاملة لعلامتك." : step === 1 ? `أدخل الرمز المرسل إلى واتساب ${draft.phone}.` : "اختر كلمة مرور آمنة، وسندخلك مباشرة إلى لوحة التحكم."}</p></header>
+        <div className={styles.topline}><Link href="/" aria-label="برندة، الرئيسية"><BarndaksaLogo variant="brown" width={100} height={42} /></Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول <ArrowLeft size={15} aria-hidden="true" /></Link></span></div>
+        <div className={styles.formCard}>
+        <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
+        <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك." : step === 1 ? "رسالة واحدة، ونكمل." : "باقي خطوة، وتبدأ."}</h2><p>{step === 0 ? "عرّفنا بعلامتك، وجهّز أول منيو لك من مكان واحد." : step === 1 ? `أرسلنا رمز التحقق إلى واتساب ${draft.phone}. أدخله لإكمال التسجيل.` : "احمِ حسابك بكلمة مرور، ثم انتقل إلى لوحة تحكم علامتك."}</p></header>
+        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>٧ أيام لتجربة منيو علامتك</b><span>تبدأ بعد إنشاء الحساب · بدون بطاقة دفع</span></div><span className={styles.free}>مجانية</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
           {step === 0 ? <>
+            <div className={styles.fieldGroup}><h3><Store size={18} aria-hidden="true" /> هوية العلامة</h3>
             <div className={styles.columns}>
-              <Field label="اسم العلامة بالعربية"><input value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
-              <Field label="اسم العلامة بالإنجليزية"><input value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
+              <Field label="اسم العلامة بالعربية"><input placeholder="كما سيظهر لعملائك" value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
+              <Field label="اسم العلامة بالإنجليزية"><input placeholder="Your brand name" value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
             </div>
-            <Field label="اسم المسؤول"><input value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
+            </div>
+            <div className={styles.fieldGroup}><h3><UserRound size={18} aria-hidden="true" /> بيانات المسؤول</h3>
+            <Field label="اسم المسؤول"><input placeholder="الاسم الكامل" value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
             <div className={styles.columns}>
-              <Field label="البريد الإلكتروني"><input type="email" value={draft.email} onChange={event => update("email", event.target.value)} required maxLength={254} autoComplete="email" dir="ltr" /></Field>
-              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={24} autoComplete="tel" dir="ltr" /></Field>
+              <Field label="البريد الإلكتروني"><input type="email" placeholder="name@example.com" value={draft.email} onChange={event => update("email", event.target.value)} required maxLength={254} autoComplete="email" dir="ltr" /></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" placeholder="05xxxxxxxx" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={24} autoComplete="tel" dir="ltr" /></Field>
             </div>
-            <Field label="رابط موقع العلامة على خرائط Google"><input type="url" value={draft.mapsUrl} onChange={event => update("mapsUrl", event.target.value)} onBlur={previewMap} required maxLength={1000} dir="ltr" /><small>افتح موقعك في خرائط Google، ثم اختر مشاركة ونسخ الرابط.</small></Field>
+            <p className={styles.hint}><ShieldCheck size={15} aria-hidden="true" /> سنرسل رمز التحقق إلى رقم واتساب هذا.</p></div>
+            <div className={styles.fieldGroup}><h3><MapPin size={18} aria-hidden="true" /> موقع الفرع الأساسي</h3>
+            <Field label="رابط الموقع على خرائط Google"><input type="url" placeholder="https://maps.app.goo.gl/…" value={draft.mapsUrl} onChange={event => update("mapsUrl", event.target.value)} onBlur={previewMap} required maxLength={1000} dir="ltr" /><small>من خرائط Google: افتح موقع فرعك ← مشاركة ← نسخ الرابط.</small></Field>
             {mapLoading ? <p role="status" className={styles.note}>جارٍ تحديد الموقع على خرائط Google…</p> : null}
             {map?.url === draft.mapsUrl ? <iframe title="موقع العلامة على خرائط Google" loading="lazy" referrerPolicy="no-referrer" className={styles.map} src={`https://maps.google.com/maps?q=${map.latitude},${map.longitude}&z=16&output=embed`} /> : null}
             {draft.mapsUrl.startsWith("https://") && isAllowedGoogleMapsUrl(draft.mapsUrl) ? <a href={draft.mapsUrl} target="_blank" rel="noopener noreferrer" className={styles.mapLink}>فتح الموقع على خرائط Google</a> : null}
-            <Field label="كوبون الخصم (اختياري)"><input value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field>
+            </div>
+            <details className={styles.coupon}><summary><TicketPercent size={18} aria-hidden="true" /> لديك كوبون خصم؟ <span>اختياري</span></summary><Field label="كوبون الخصم"><input placeholder="أدخل رمز الكوبون" value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field></details>
           </> : step === 1 ? <>
             <Field label="رمز التحقق"><input className={styles.otp} value={code} onChange={event => setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} required pattern="[0-9]{6}" maxLength={6} inputMode="numeric" autoComplete="one-time-code" dir="ltr" /></Field>
             <p className={styles.note}>الرمز صالح لخمس دقائق. لا تشاركه مع أي شخص.</p>
@@ -105,11 +124,13 @@ export default function RegisterPage() {
             <PasswordField label="تأكيد كلمة المرور" value={confirmPassword} setValue={setConfirmPassword} visible={confirmVisible} toggle={() => setConfirmVisible(value => !value)} />
             <p className={styles.note}>٨ أحرف على الأقل. يمكنك لصق كلمة المرور أو استخدام مدير كلمات المرور.</p>
           </>}
-          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "إرسال رمز التحقق عبر واتساب" : step === 1 ? "تحقق ومتابعة" : "إنشاء الحساب وبدء التجربة"}<ArrowLeft size={18} aria-hidden="true" /></button>
+          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "متابعة والتحقق عبر واتساب" : step === 1 ? "تأكيد الرمز والمتابعة" : "إنشاء الحساب وبدء التجربة"}{pending ? <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
           {step === 1 ? <div className={styles.secondary}><button type="button" onClick={resend}>إعادة إرسال الرمز</button><button type="button" onClick={() => { setStep(0); setMessage(""); }}>تعديل البيانات</button></div> : null}
           {step === 2 ? <div className={styles.secondary}><button type="button" onClick={() => { setStep(0); setCode(""); setPassword(""); setConfirmPassword(""); setMessage(""); }}>بدء تحقق جديد أو تعديل البيانات</button></div> : null}
         </fieldset></form>
-        <p className={styles.footer}>تجربة مجانية لمدة ٧ أيام، تشمل المنيو وإعدادات العلامة.</p>
+        <p className={styles.footer}>تشمل التجربة المنيو والمنتجات وإعدادات العلامة.<br />الولاء والعروض متاحة عند الاشتراك في باقة تدعمها.</p>
+        </div>
+        <p className={styles.bottomNote}>علامتك تستحق تجربة تليق بها.</p>
       </div></section>
     </main>
   );
