@@ -53,6 +53,14 @@
 }
 .root input::placeholder { color: var(--muted); opacity: .9; }
 .root select { cursor: pointer; }
+/* Override the admin layout's forced field palette only inside this report. */
+.page .root input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .page .root select {
+  background-color: #111511 !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+.page .root input::placeholder { color: var(--muted) !important; }
+.page .root select option { background: #111511; color: var(--ink); }
 .root button, .primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 15px;
@@ -100,6 +108,11 @@
 .sort select { min-height: 40px; padding: 7px 12px; font-size: 13px; background: transparent; }
 .hint { display: flex; align-items: center; gap: 8px; margin: 0; }
 .tableWrap { overflow: auto; max-width: 100%; border-block: 1px solid var(--line); }
+/* Preserve a visible horizontal affordance despite the global scrollbar reset. */
+.tableWrap { scrollbar-width: thin !important; scrollbar-color: #65715f var(--surface); }
+.tableWrap::-webkit-scrollbar { display: block !important; width: 8px !important; height: 8px !important; }
+.tableWrap::-webkit-scrollbar-thumb { background: #65715f; border-radius: 8px; }
+.tableWrap::-webkit-scrollbar-track { background: var(--surface); }
 .tableWrap table { width: 100%; min-width: 1370px; border-collapse: separate; border-spacing: 0; font-size: 14px; text-align: right; }
 .tableWrap :is(th,td) { padding: 18px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .tableWrap thead th { background: var(--surface-raised); font-weight: 700; font-size: 14px; white-space: nowrap; }
