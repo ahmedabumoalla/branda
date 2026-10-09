@@ -159,25 +159,17 @@ export function AdminCafesPage({
       return;
     }
 
-    const nextPlanName = resolvePlanName(plans, planId);
-    const today = new Date().toISOString().slice(0, 10);
-
     setUpdatingPlanCafeId(id);
     startPlanUpdateTransition(() => {
       void (async () => {
         try {
-          await updateCafePlanAction(id, planId);
+          const subscription = await updateCafePlanAction(id, planId);
           setCafes((prev) =>
             prev.map((cafe) =>
               cafe.id === id
                 ? {
                     ...cafe,
-                    planId,
-                    planName: nextPlanName,
-                    hasActivePlan: true,
-                    planStartedAt: today,
-                    planExpiresAt: undefined,
-                    planRemainingDays: null,
+                    ...subscription,
                   }
                 : cafe,
             ),
@@ -186,12 +178,7 @@ export function AdminCafesPage({
             current?.id === id
               ? {
                   ...current,
-                  planId,
-                  planName: nextPlanName,
-                  hasActivePlan: true,
-                  planStartedAt: today,
-                  planExpiresAt: undefined,
-                  planRemainingDays: null,
+                  ...subscription,
                 }
               : current,
           );
@@ -365,7 +352,7 @@ export function AdminCafesPage({
                     "التوثيقات",
                     "المكافآت",
                     "الدعم",
-                    "الحالة",
+                    "حالة العلامة",
                     "تفاصيل",
                   ].map((head) => (
                     <th key={head} className="px-3 py-3 font-semibold">
@@ -406,7 +393,9 @@ export function AdminCafesPage({
                       {cafe.maintenanceAccountNumber}
                     </td>
                     <td className="px-3 py-4 text-[#CBB29C]">
-                      {cafe.planName || resolvePlanName(plans, cafe.planId)}
+                      <p>{cafe.planName || resolvePlanName(plans, cafe.planId)}</p>
+                      <div className="mt-2"><StatusBadge tone={cafe.hasActivePlan ? "success" : "danger"}>{cafe.planId ? `الاشتراك ${cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}` : "بدون اشتراك"}</StatusBadge></div>
+                      <p className="mt-1.5 whitespace-nowrap text-xs text-[#B7AEA2]">{cafe.planExpiresAt && Number.isFinite(Date.parse(cafe.planExpiresAt)) ? `تاريخ الانتهاء: ${new Date(cafe.planExpiresAt).toLocaleDateString("ar-SA", { calendar: "gregory", timeZone: "Asia/Riyadh" })}` : cafe.planId ? "بدون تاريخ انتهاء محدد" : "لم يتم تفعيل باقة"}</p>
                     </td>
                     <td className="px-3 py-4">{cafe.productsCount ?? 0}</td>
                     <td className="px-3 py-4">{cafe.offersCount ?? 0}</td>

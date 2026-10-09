@@ -59,6 +59,7 @@ export type PlatformCafe = {
   planStartedAt?: string;
   planRemainingDays?: number | null;
   hasActivePlan?: boolean;
+  subscriptionStatus?: string;
   status: "نشط" | "موقوف";
   totalRevenue: number;
   totalOrders: number;

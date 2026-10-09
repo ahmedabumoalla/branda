@@ -17,6 +17,7 @@ import {
 } from "@/lib/platform/feature-registry";
 import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
 import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
+import { adminSubscriptionSummary } from "@/lib/platform/admin-subscription-status";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
@@ -24,13 +25,6 @@ import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 
 function normalizeCafeStatus(status: unknown): PlatformCafe["status"] {
   return String(status) === "active" ? "نشط" : "موقوف";
-}
-
-function daysUntil(value: unknown): number | null {
-  if (!value) return null;
-  const target = new Date(String(value)).getTime();
-  if (!Number.isFinite(target)) return null;
-  return Math.max(0, Math.ceil((target - Date.now()) / 86400000));
 }
 
 function categoryLabel(category: unknown) {
@@ -468,7 +462,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
     .select(`
       *,
       cafe_settings(*),
-      subscriptions(*),
+      subscriptions(*, platform_plans(active)),
       cafe_members(user_id, role, profiles(email, full_name))
     `)
     .is("deleted_at", null)
@@ -490,9 +484,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         ? (row.subscriptions as Record<string, unknown>[])
         : [];
 
-      const activeSub =
-        subscriptions.find((item) => ["active", "trialing"].includes(String(item.status))) ??
-        subscriptions[0];
+      const subscription = adminSubscriptionSummary(subscriptions);
 
       const ownerMember = Array.isArray(row.cafe_members)
         ? (row.cafe_members as Record<string, unknown>[]).find(
@@ -547,12 +539,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         taxNumber: settings?.tax_number ? String(settings.tax_number) : undefined,
         commercialRegister: settings?.commercial_register ? String(settings.commercial_register) : undefined,
         maroofCertificate: settings?.maroof_certificate ? String(settings.maroof_certificate) : undefined,
-        planId: activeSub ? String(activeSub.plan_id ?? "") : "",
-        planName: activeSub ? String(activeSub.plan_name_snapshot ?? activeSub.plan_id ?? "") : "",
-        planStartedAt: activeSub?.started_at ? String(activeSub.started_at).slice(0, 10) : undefined,
-        planExpiresAt: activeSub?.expires_at ? String(activeSub.expires_at).slice(0, 10) : undefined,
-        planRemainingDays: daysUntil(activeSub?.expires_at),
-        hasActivePlan: Boolean(activeSub && ["active", "trialing"].includes(String(activeSub.status))),
+        ...subscription,
         status: normalizeCafeStatus(row.status),
         totalRevenue,
         totalOrders: ordersCount,
@@ -674,4 +661,14 @@ export async function updateCafeStatus(cafeId: string, active: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("cafes").update({ status: active ? "active" : "suspended" }).eq("id", cafeId);
   if (error) throw error;
+}
+
+export async function getAdminCafeSubscriptionSummary(cafeId: string) {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscriptions")
+    .select("plan_id,plan_name_snapshot,status,started_at,expires_at,created_at,platform_plans(active)")
+    .eq("cafe_id", cafeId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return adminSubscriptionSummary((data ?? []) as Record<string, unknown>[]);
 }

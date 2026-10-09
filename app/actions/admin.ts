@@ -5,6 +5,7 @@ import {
   approveSubscriptionRequest,
   type CafeFeatureOverrideInput,
   getAdminCafes,
+  getAdminCafeSubscriptionSummary,
   getAdminCustomers,
   getAdminOperations,
   getAdminPlatformPlans,
@@ -65,6 +66,7 @@ export async function rejectSubscriptionRequestAction(requestId: string, respons
 
 export async function updateCafePlanAction(cafeId: string, planId: string) {
   await updateCafePlan(cafeId, planId);
+  return getAdminCafeSubscriptionSummary(cafeId);
 }
 
 export async function updateCafeStatusAction(cafeId: string, active: boolean) {
