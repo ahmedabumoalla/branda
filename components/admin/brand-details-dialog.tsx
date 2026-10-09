@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { enterMaintenanceModeAction } from "@/app/actions/maintenance";
+import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import { ArrowLeft, BarChart3, Building2, Check, ChevronLeft, CircleDollarSign, Copy, CreditCard, Gift, Headphones, Layers3, MessageSquareText, Package, Phone, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, TicketCheck, UserRound, Users, Utensils, X } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import type { EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
@@ -9,7 +12,7 @@ import { formatSar } from "@/lib/format";
 import { StandaloneMenuControl } from "./standalone-menu-control";
 import { BrandOperationsPanel } from "./brand-operations-panel";
 import { BrandAnalyticsPanel } from "./brand-analytics-panel";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Wrench } from "lucide-react";
 import s from "./brand-details.module.css";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations";
@@ -78,12 +81,35 @@ type Props = {
 };
 
 export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close }: Props) {
+  const router = useRouter();
+  const [maintenancePending, setMaintenancePending] = useState(false);
+  const [maintenanceError, setMaintenanceError] = useState("");
+  const maintenanceInFlight = useRef(false);
   const [statusPending, setStatusPending] = useState(false);
   const [section, setSection] = useState<Section | null>(null);
   const [nextPlan, setNextPlan] = useState(cafe.planId || "");
   const [copyMessage, setCopyMessage] = useState("");
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
+  async function enterMaintenance() {
+    if (maintenanceInFlight.current || !cafe.maintenanceAccountNumber) return;
+    maintenanceInFlight.current = true;
+    setMaintenancePending(true);
+    setMaintenanceError("");
+    try {
+      const result = await enterMaintenanceModeAction(cafe.maintenanceAccountNumber);
+      if (result.ok && result.redirectTo) {
+        clearDashboardShellSnapshot();
+        router.push(result.redirectTo);
+        return;
+      }
+      setMaintenanceError(result.message);
+    } catch {
+      setMaintenanceError("تعذر الدخول إلى وضع الصيانة حاول مجددًا");
+    }
+    maintenanceInFlight.current = false;
+    setMaintenancePending(false);
+  }
   async function copyAccount() {
     try {
       await navigator.clipboard.writeText(cafe.maintenanceAccountNumber || "");
@@ -127,8 +153,14 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           <span className={s.tileIcon}><Icon aria-hidden="true" /></span><span className={s.tileText}><strong>{title}</strong><small>{description}</small></span><ChevronLeft className={s.chevron} aria-hidden="true" />
         </button>)}</div>
         <footer className={s.overviewFooter}><span>حساب الصيانة <b dir="ltr">{cafe.maintenanceAccountNumber || "غير مضاف"}</b></span>
-          <button type="button" className={s.textButton} disabled={!cafe.maintenanceAccountNumber} onClick={copyAccount}><Copy aria-hidden="true" />نسخ الرقم</button>
+          <div className={s.maintenanceActions}>
+            <button type="button" className={s.textButton} disabled={!cafe.maintenanceAccountNumber} onClick={copyAccount}><Copy aria-hidden="true" />نسخ الرقم</button>
+            <button type="button" className={`${s.primaryButton} ${s.maintenanceButton}`} disabled={maintenancePending || !cafe.maintenanceAccountNumber} aria-busy={maintenancePending} onClick={enterMaintenance}>
+              <Wrench aria-hidden="true" />{maintenancePending ? "جارٍ الدخول إلى وضع الصيانة" : "دخول وضع الصيانة"}
+            </button>
+          </div>
         </footer>
+        {maintenanceError && <p className={s.maintenanceError} role="alert">{maintenanceError}</p>}
         <p className={s.liveMessage} role="status">{copyMessage}</p>
       </div>
     </BrandDialog>
