@@ -19,6 +19,8 @@ type SidebarProps = {
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   onNavigate?: () => void;
+  onEndMaintenance?: () => void;
+  isEndingMaintenance?: boolean;
 };
 type NavigationState = {
   planId: string;
@@ -38,7 +40,7 @@ const navigationLabels: Record<string, string> = {
   menu: "المنيو والمنتجات", loyalty: "الولاء والمكافآت", settings: "إعدادات كوفي",
 };
 
-export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavigate }: SidebarProps = {}) {
+export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const [navigation, setNavigation] = useState<NavigationState>(initialNavigation);
@@ -63,10 +65,17 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
   // Wait for account context; never flash guessed package permissions.
   const links = settings.cafeSlug ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides }) : [];
 
-  function handleLogout() {
-    logoutBarndaksaAuth();
+  async function handleLogout() {
+    if (onEndMaintenance) {
+      onNavigate?.();
+      onEndMaintenance();
+      return;
+    }
+    await logoutBarndaksaAuth();
     router.push("/login");
   }
+
+  const exitLabel = onEndMaintenance ? (isEndingMaintenance ? "جاري إنهاء الصيانة" : "إنهاء وضع الصيانة") : "تسجيل الخروج";
 
   return <aside dir="rtl" className="sidebar-scroll flex h-full w-full flex-col overflow-y-auto border-l border-[#E5B85C]/15 text-[#F8EFE7] shadow-[-18px_0_60px_rgba(0,0,0,0.56)] transition-colors"
     style={{ background: "radial-gradient(circle at 100% 0%, rgba(229, 184, 92, 0.12), transparent 26%), linear-gradient(180deg, #11100E 0%, #090908 54%, #0D0C0A 100%)" }}>
@@ -122,9 +131,10 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
     </nav>
 
     <div className={`border-t border-white/10 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
-      <button type="button" onClick={handleLogout} aria-label="تسجيل الخروج" title={collapsed ? "تسجيل الخروج" : undefined}
+      {onEndMaintenance && !collapsed && <p className="mb-2 px-3 text-xs font-semibold text-[#FFD77E]">أنت في وضع الصيانة</p>}
+      <button type="button" onClick={handleLogout} disabled={isEndingMaintenance} aria-label={exitLabel} title={collapsed ? exitLabel : undefined}
         className={`flex min-h-10 w-full items-center rounded-lg border border-white/10 bg-white/[0.045] text-[13px] font-semibold text-[#F7EFE6] transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-200 ${collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"}`}>
-        {!collapsed && <span>تسجيل الخروج</span>}<LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {!collapsed && <span>{exitLabel}</span>}<LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
       </button>
     </div>
   </aside>;

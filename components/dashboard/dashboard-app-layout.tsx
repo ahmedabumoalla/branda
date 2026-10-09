@@ -63,6 +63,7 @@ export function DashboardAppLayout({
   const [guard, setGuard] = useState<GuardState>({ loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
+  const [maintenanceError, setMaintenanceError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -119,12 +120,16 @@ export function DashboardAppLayout({
     });
 
   function endMaintenanceMode() {
-    startEndingMaintenance(() => {
-      void (async () => {
+    if (isEndingMaintenance) return;
+    setMaintenanceError("");
+    startEndingMaintenance(async () => {
+      try {
         await exitMaintenanceModeAction();
         clearDashboardShellSnapshot();
-        window.location.href = "/admin/maintenance";
-      })();
+        window.location.assign("/admin/maintenance");
+      } catch {
+        setMaintenanceError("تعذر إنهاء وضع الصيانة. حاول مرة أخرى.");
+      }
     });
   }
 
@@ -140,27 +145,28 @@ export function DashboardAppLayout({
   return (
     <ResponsiveAppShell
       variant="dashboard"
-      mobileTitle="لوحة التحكم"
+      mobileTitle={maintenanceSession ? "لوحة التحكم — وضع الصيانة" : "لوحة التحكم"}
       desktopSidebarWidth={sidebarCollapsed ? "72px" : "252px"}
       sidebar={(close) => (
         <DashboardSidebar
           collapsed={sidebarCollapsed}
           onCollapsedChange={handleSidebarCollapsedChange}
           onNavigate={close}
+          onEndMaintenance={maintenanceSession ? endMaintenanceMode : undefined}
+          isEndingMaintenance={isEndingMaintenance}
         />
       )}
     >
-      {allowed ? children : <UpgradeRequired featureTitle={currentFeature?.title ?? ""} cafeSlug={guard.cafeSlug} />}
       {maintenanceSession ? (
-        <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-[#3A2117] shadow-sm">
+        <section aria-label="وضع الصيانة" className="m-3 rounded-2xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-[#3A2117] shadow-sm sm:m-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-black text-amber-800">دخول صيانة</p>
+              <p className="text-sm font-black text-amber-800">أنت في وضع الصيانة</p>
               <h2 className="mt-1 text-xl font-black">
                 أنت تدير لوحة {maintenanceSession.cafeName} مؤقتًا كمدير منصة
               </h2>
               <p className="mt-1 text-xs font-bold text-[#806A5E]">
-                رقم الصيانة: {maintenanceSession.maintenanceAccountNumber} - تنتهي الجلسة تلقائيًا عند {new Date(maintenanceSession.expiresAt).toLocaleTimeString("ar-SA")}
+                رقم الصيانة: {maintenanceSession.maintenanceAccountNumber} — تنتهي الجلسة عند {new Date(maintenanceSession.expiresAt).toLocaleTimeString("ar-SA", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit" })} بتوقيت السعودية
               </p>
             </div>
             <button
@@ -169,11 +175,13 @@ export function DashboardAppLayout({
               disabled={isEndingMaintenance}
               className="rounded-2xl bg-[#3A2117] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
             >
-              {isEndingMaintenance ? "جاري الإنهاء" : "إنهاء دخول الصيانة"}
+              {isEndingMaintenance ? "جاري إنهاء الصيانة" : "إنهاء وضع الصيانة والعودة للأدمن"}
             </button>
           </div>
-        </div>
+          {maintenanceError && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{maintenanceError}</p>}
+        </section>
       ) : null}
+      {allowed ? children : <UpgradeRequired featureTitle={currentFeature?.title ?? ""} cafeSlug={guard.cafeSlug} />}
     </ResponsiveAppShell>
   );
 }

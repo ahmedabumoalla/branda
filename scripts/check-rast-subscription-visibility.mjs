@@ -108,7 +108,7 @@ function hooks(state) {
   let cursor = 0;
   return { ...React, useState: () => [state[cursor++], () => {}], useEffect: () => {}, useMemo: (compute) => compute(), useTransition: () => [false, () => {}] };
 }
-function sidebarHtml(slug, collapsed = false) {
+function sidebarElement(slug, props = {}, extraStubs = {}) {
   const plans = [{ id: "all-plan", features: ["all"], name: "PRIVATE_PLAN_NAME" }];
   const stubs = {
     react: hooks([{ planId: "all-plan", plans, featureOverrides: [{ featureId: "loyalty", enabled: false }], settings: { cafeSlug: slug, cafeName: "Brand", businessCategory: "cafes_coffee" }, notifications: [] }]),
@@ -120,9 +120,13 @@ function sidebarHtml(slug, collapsed = false) {
     "@/lib/cafe/use-resolved-cafe-logo": { useResolvedCafeLogoUrl: () => null },
     "@/lib/platform/auth": {},
     "@/lib/performance/dashboard-shell-client": {},
+    ...extraStubs,
   };
   const { DashboardSidebar } = load("components/dashboard/DashboardSidebar.tsx", stubs);
-  return renderToStaticMarkup(React.createElement(DashboardSidebar, { collapsed }));
+  return DashboardSidebar(props);
+}
+function sidebarHtml(slug, collapsed = false) {
+  return renderToStaticMarkup(sidebarElement(slug, { collapsed }));
 }
 for (const slug of ["rast", "other", "shahi-w-hail"]) for (const collapsed of [false, true]) await test(`${slug} sidebar SSR contains exactly the requested navigation (${collapsed ? "collapsed" : "expanded"})`, () => {
   const html = sidebarHtml(slug, collapsed);
@@ -140,7 +144,7 @@ await test("unresolved sidebar identity does not flash a plan badge", () => {
   assert(!html.includes("/dashboard/subscription") && !html.includes("PRIVATE_PLAN_NAME"));
 });
 
-function layoutHtml(slug, allow = false) {
+function layoutElement(slug, allow = false, props = {}, extraStubs = {}) {
   const guard = { loading: false, cafeSlug: slug, activePlanId: "all-plan", plans: [{ id: "all-plan", features: ["all"] }], featureOverrides: [{ featureId: "loyalty", enabled: allow }] };
   const stubs = {
     react: hooks([guard, false]),
@@ -150,9 +154,13 @@ function layoutHtml(slug, allow = false) {
     "@/components/dashboard/DashboardSidebar": { DashboardSidebar: () => null },
     "@/components/ui/responsive-app-shell": { ResponsiveAppShell: ({ children }) => React.createElement("main", null, children) },
     "@/lib/performance/dashboard-shell-client": {},
+    ...extraStubs,
   };
   const { DashboardAppLayout } = load("components/dashboard/dashboard-app-layout.tsx", stubs);
-  return renderToStaticMarkup(React.createElement(DashboardAppLayout, null, "PROTECTED_FEATURE_CONTENT"));
+  return DashboardAppLayout({ children: "PROTECTED_FEATURE_CONTENT", ...props });
+}
+function layoutHtml(slug, allow = false) {
+  return renderToStaticMarkup(layoutElement(slug, allow));
 }
 for (const slug of ["rast", ""]) await test(`disabled feature has neutral copy without billing for identity '${slug}'`, () => {
   const html = layoutHtml(slug);
@@ -169,4 +177,81 @@ await test("Rast authorized feature still renders its protected content", () => 
   const html = layoutHtml("rast", true);
   assert(html.includes("PROTECTED_FEATURE_CONTENT") && !html.includes("/dashboard/subscription"));
 });
-console.log(`PASS shared brand navigation and subscription visibility: ${checks} checks; actual server routing, package permissions and React SSR, no browser.`);
+const maintenanceSession = { cafeName: "علامة الصيانة", maintenanceAccountNumber: "BR-TEST", expiresAt: Date.UTC(2026, 9, 9, 17) };
+function findElement(element, predicate) {
+  if (!element || typeof element !== "object") return null;
+  if (predicate(element)) return element;
+  for (const child of React.Children.toArray(element.props?.children)) {
+    const found = findElement(child, predicate);
+    if (found) return found;
+  }
+  return null;
+}
+await test("Maintenance notice precedes content and sidebar exits maintenance, including collapsed mode", async () => {
+  const element = layoutElement("other", true, { maintenanceSession });
+  const html = renderToStaticMarkup(element);
+  assert(html.indexOf("أنت في وضع الصيانة") < html.indexOf("PROTECTED_FEATURE_CONTENT"));
+  assert(html.includes("إنهاء وضع الصيانة والعودة للأدمن"));
+  assert.equal(element.props.mobileTitle, "لوحة التحكم — وضع الصيانة");
+  assert.equal(typeof element.props.sidebar(() => {}).props.onEndMaintenance, "function");
+  for (const collapsed of [false, true]) {
+    const calls = [];
+    const sidebar = sidebarElement("other", { collapsed, onEndMaintenance: () => calls.push("exit-maintenance") }, {
+      "@/lib/platform/auth": { logoutBarndaksaAuth: () => calls.push("sign-out") },
+    });
+    const exit = findElement(sidebar, item => item.type === "button" && item.props["aria-label"] === "إنهاء وضع الصيانة");
+    assert(exit);
+    assert(!renderToStaticMarkup(sidebar).includes("تسجيل الخروج"));
+    await exit.props.onClick();
+    assert.deepEqual(calls, ["exit-maintenance"]);
+  }
+});
+await test("Normal owner retains normal sign-out and no maintenance notice", async () => {
+  assert(!renderToStaticMarkup(layoutElement("other", true)).includes("أنت في وضع الصيانة"));
+  const calls = [];
+  let finishLogout;
+  const sidebar = sidebarElement("other", {}, {
+    "@/lib/platform/auth": { logoutBarndaksaAuth: () => new Promise(resolve => { finishLogout = resolve; }) },
+    "next/navigation": { usePathname: () => "/dashboard", useRouter: () => ({ push: target => calls.push(target) }) },
+  });
+  const pending = findElement(sidebar, item => item.props["aria-label"] === "تسجيل الخروج").props.onClick();
+  assert.deepEqual(calls, [], "never navigate before sign-out completes");
+  finishLogout();
+  await pending;
+  assert.deepEqual(calls, ["/login"]);
+});
+for (const failure of [false, true]) await test(`Maintenance completion ${failure ? "failure stays recoverable" : "clears cache before admin navigation"}`, async () => {
+  const calls = [];
+  const state = [];
+  let transition;
+  let finish;
+  const baseHooks = hooks([{ loading: true }, false, ""]);
+  const element = layoutElement("other", true, { maintenanceSession }, {
+    react: { ...baseHooks, useState: initial => { const pair = baseHooks.useState(initial); return [pair[0], value => state.push(value)]; }, useTransition: () => [false, action => { transition = action(); }] },
+    "@/app/actions/maintenance": { exitMaintenanceModeAction: () => new Promise((resolve, reject) => { calls.push("exit"); finish = () => failure ? reject(new Error("network")) : resolve({ ok: true }); }) },
+    "@/lib/performance/dashboard-shell-client": { clearDashboardShellSnapshot: () => calls.push("clear-cache") },
+  });
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: { assign: target => calls.push(target) } };
+  try {
+    element.props.sidebar(() => {}).props.onEndMaintenance();
+    assert.deepEqual(calls, ["exit"]);
+    finish();
+    await transition;
+    assert.deepEqual(calls, failure ? ["exit"] : ["exit", "clear-cache", "/admin/maintenance"]);
+    if (failure) assert.equal(state.at(-1), "تعذر إنهاء وضع الصيانة. حاول مرة أخرى.");
+  } finally { globalThis.window = previousWindow; }
+});
+await test("Pending maintenance exit disables both controls and error is announced", () => {
+  const element = layoutElement("other", true, { maintenanceSession }, {
+    react: { ...hooks([{ loading: true }, false, "تعذر إنهاء وضع الصيانة"]), useTransition: () => [true, () => { throw new Error("duplicate exit"); }] },
+  });
+  const button = findElement(element, item => item.type === "button");
+  assert.equal(button.props.disabled, true);
+  assert(findElement(element, item => item.props?.role === "alert"));
+  const sidebarProps = element.props.sidebar(() => {}).props;
+  sidebarProps.onEndMaintenance();
+  const sidebar = sidebarElement("other", sidebarProps);
+  assert.equal(findElement(sidebar, item => item.props["aria-label"] === "جاري إنهاء الصيانة").props.disabled, true);
+});
+console.log(`PASS shared navigation, maintenance exit and subscription visibility: ${checks} checks; actual server routing, UI handlers and React SSR, no browser.`);
