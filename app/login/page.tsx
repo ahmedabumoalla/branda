@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, X } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { ArrowLeft, ArrowUpLeft, Eye, EyeOff, Fingerprint, Gift, LayoutGrid, LoaderCircle, LockKeyhole, Mail, ShieldCheck, Store, X } from "lucide-react";
+import { useRef, useState, type FormEvent } from "react";
 import { loginOwnerAction, requestPasswordResetAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
-import { NeumoInput, PrimaryButton, SoftCard } from "@/components/ui/design-system";
-import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
+import styles from "./login.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
+  const resetDialog = useRef<HTMLDialogElement>(null);
+  const resetTrigger = useRef<HTMLButtonElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetMessage, setResetMessage] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
@@ -23,98 +23,135 @@ export default function LoginPage() {
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setLoading(true);
     setLoginMessage("");
-    let result;
     try {
-      result = await loginOwnerAction(email, password);
+      const result = await loginOwnerAction(email, password);
+      if (!result.ok || !result.redirectTo) {
+        setLoginMessage(result.message);
+        setLoading(false);
+        return;
+      }
+      router.replace(result.redirectTo);
     } catch {
       setLoginMessage("تعذر تسجيل الدخول حاول مجددًا");
       setLoading(false);
-      return;
     }
-
-    if (!result.ok || !result.redirectTo) {
-      setLoginMessage(result.message);
-      setLoading(false);
-      return;
-    }
-
-    router.replace(result.redirectTo);
   }
 
-  async function submitReset(event: FormEvent) {
+  function openReset() {
+    setResetEmail(email.includes("@") ? email : "");
+    setResetMessage("");
+    resetDialog.current?.showModal();
+  }
+
+  async function submitReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (resetLoading) return;
     setResetLoading(true);
     setResetMessage("");
-    const result = await requestPasswordResetAction(resetEmail);
-    setResetLoading(false);
-    setResetMessage(result.message);
+    try {
+      const result = await requestPasswordResetAction(resetEmail);
+      setResetMessage(result.message);
+    } catch {
+      setResetMessage("تعذر إرسال رابط الاستعادة حاول مجددًا");
+    } finally {
+      setResetLoading(false);
+    }
   }
 
   return (
-    <main dir="rtl" className="min-h-screen" style={{ background: C.creamBase, color: C.espressoDark }}>
-      <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-2">
-        <div className="relative hidden overflow-hidden rounded-[40px] border p-10 shadow-2xl lg:block" style={{ borderColor: C.borderSand, background: `linear-gradient(to bottom right, ${C.coffeeBrown}, ${C.espressoDark})`, color: C.creamBase }}>
-          <BarndaksaLogo variant="dark" width={200} height={80} priority className="relative" />
-          <h1 className="relative mt-8 text-4xl font-black leading-tight">دخول لوحة التحكم</h1>
-          <p className="relative mt-5 max-w-md text-lg font-bold leading-9" style={{ color: C.warmSand }}>سجل دخولك لإدارة حسابك في برندة</p>
-          <Link href="/" className="relative mt-8 inline-block font-black underline" style={{ color: C.softGold }}>العودة للصفحة الرئيسية</Link>
-        </div>
-        <SoftCard className="w-full p-5 sm:p-8">
-          <form onSubmit={handleLogin}>
-          <BarndaksaLogo variant="brown" width={160} height={64} className="mb-6" />
-          <h2 className="text-3xl font-black" style={{ color: C.coffeeBrown }}>تسجيل الدخول</h2>
-          <p className="mt-2 text-sm font-bold" style={{ color: C.mutedText }}>أدخل بيانات حسابك للمتابعة</p>
-          <label className="mt-6 block">
-            <span className="text-xs font-black" style={{ color: C.mutedText }}>البريد الإلكتروني أو رقم الجوال</span>
-            <div className="relative mt-2">
-              <Mail className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6B3A25]" />
-              <NeumoInput type="text" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="pr-12" />
+    <main dir="rtl" className={styles.page}>
+      <aside className={styles.story} aria-labelledby="login-story-title">
+        <Link href="/" aria-label="برندة الرئيسية" className={styles.storyLogo}>
+          <BarndaksaLogo variant="dark" width={144} height={60} priority />
+        </Link>
+        <div className={styles.storyContent}>
+          <span className={styles.eyebrow}>مساحتك في برندة</span>
+          <h2 id="login-story-title">علامتك في الواجهة<br /><em>وأنت خلف كل تفصيلة</em></h2>
+          <p className={styles.storyDescription}>من أول منتج إلى عميل يعود إليك<br />كل ما تحتاجه لإدارة علامتك في مكان واحد</p>
+          <div className={styles.brandScene} aria-hidden="true">
+            <div className={styles.backSheet} />
+            <div className={styles.brandBoard}>
+              <div className={styles.boardHeading}>
+                <span className={styles.boardIcon}><Store size={22} /></span>
+                <div><span className={styles.boardCaption}>مساحة علامتك</span><strong>تفاصيل تصنع الفرق</strong></div>
+                <ArrowUpLeft size={20} className={styles.boardArrow} />
+              </div>
+              <div className={styles.boardRow}><LayoutGrid size={20} /><span>منيو يعكس هويتك<small>منتجاتك كما تحب أن يراها عملاؤك</small></span><span className={styles.rowMark} /></div>
+              <div className={styles.boardRow}><Gift size={20} /><span>علاقة تكبر مع كل زيارة<small>عروض وولاء وتجارب تستحق العودة</small></span><span className={styles.rowMark} /></div>
+              <div className={styles.boardFooter}><Fingerprint size={18} /><span>هويتك حاضرة في كل تفصيلة</span></div>
             </div>
-          </label>
-          <label className="mt-4 block">
-            <span className="text-xs font-black" style={{ color: C.mutedText }}>كلمة المرور</span>
-            <div className="relative mt-2">
-              <Lock className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6B3A25]" />
-              <NeumoInput required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} type={visible ? "text" : "password"} placeholder="••••••••" className="pr-12 pl-12" />
-              <button type="button" onClick={() => setVisible(!visible)} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]">
-                {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </div>
+        </div>
+        <div className={styles.storyFooter}><span>صُنعت لعلامتك</span><span lang="en" dir="ltr">YOUR BRAND COMES FIRST</span></div>
+      </aside>
+
+      <section className={styles.content} aria-labelledby="login-title">
+        <header className={styles.topbar}>
+          <Link href="/" aria-label="برندة الرئيسية" className={styles.mobileLogo}><BarndaksaLogo variant="brown" width={100} height={42} priority /></Link>
+          <span className={styles.desktopLabel}>لوحة تحكم برندة</span>
+          <Link href="/" className={styles.homeLink}>الصفحة الرئيسية <ArrowUpLeft size={17} aria-hidden="true" /></Link>
+        </header>
+        <div className={styles.formArea}>
+          <div className={styles.welcomeIcon}><LockKeyhole size={24} strokeWidth={1.6} aria-hidden="true" /></div>
+          <header className={styles.formHeading}>
+            <span className={styles.kicker}>أهلًا بعودتك</span>
+            <h1 id="login-title">تسجيل الدخول</h1>
+            <p>علامتك تنتظرك أكمل من حيث بدأت</p>
+          </header>
+          <form onSubmit={handleLogin} aria-busy={loading}>
+            <fieldset disabled={loading} className={styles.fields}>
+              <div className={styles.field}>
+                <label htmlFor="login-identity">البريد الإلكتروني أو رقم الجوال</label>
+                <div className={styles.inputWrap}>
+                  <Mail size={20} strokeWidth={1.6} aria-hidden="true" />
+                  <input id="login-identity" name="username" type="text" dir="ltr" required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="name@example.com / 05xxxxxxxx" value={email} onChange={event => setEmail(event.target.value)} aria-describedby={loginMessage ? "login-message" : undefined} />
+                </div>
+              </div>
+              <div className={styles.field}>
+                <div className={styles.labelRow}>
+                  <label htmlFor="login-password">كلمة المرور</label>
+                  <button ref={resetTrigger} type="button" onClick={openReset} className={styles.textButton} aria-haspopup="dialog">نسيت كلمة المرور؟</button>
+                </div>
+                <div className={`${styles.inputWrap} ${styles.passwordWrap}`}>
+                  <LockKeyhole size={20} strokeWidth={1.6} aria-hidden="true" />
+                  <input id="login-password" name="password" dir="ltr" required autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} type={visible ? "text" : "password"} placeholder="أدخل كلمة المرور" aria-describedby={loginMessage ? "login-message" : undefined} />
+                  <button type="button" onClick={() => setVisible(current => !current)} className={styles.reveal} aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} aria-pressed={visible} aria-controls="login-password">
+                    {visible ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+              {loginMessage ? <p id="login-message" role="alert" className={styles.error}>{loginMessage}</p> : null}
+              <button type="submit" className={styles.submit} disabled={loading}>
+                <span>{loading ? "جارٍ تسجيل الدخول" : "الدخول إلى حسابك"}</span>
+                {loading ? <LoaderCircle size={20} className={styles.spinner} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}
               </button>
-            </div>
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              setResetEmail(email);
-              setResetMessage("");
-              setResetOpen(true);
-            }}
-            className="mt-4 text-sm font-black text-[#6B3A25]"
-          >
-            نسيت كلمة المرور؟
-          </button>
-          <PrimaryButton type="submit" disabled={loading} className="mt-6 h-14 w-full">
-            {loading ? "جاري الدخول" : "دخول"}
-          </PrimaryButton>
-          {loginMessage ? <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-black text-red-700">{loginMessage}</p> : null}
+            </fieldset>
+            <span className={styles.loadingStatus} role="status">{loading ? "جارٍ تسجيل الدخول" : ""}</span>
           </form>
-        </SoftCard>
-      </section>
-      {resetOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <form onSubmit={submitReset} className="w-full max-w-md rounded-[28px] bg-[#FCF8F3] p-6">
-            <button type="button" onClick={() => setResetOpen(false)}><X className="h-5 w-5" /></button>
-            <h2 className="mt-4 text-xl font-black">استعادة كلمة المرور</h2>
-            <p className="mt-2 text-sm font-bold text-[#806A5E]">أدخل بريدك لإرسال رابط استعادة كلمة المرور</p>
-            <NeumoInput type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="البريد الإلكتروني" className="mt-5" />
-            {resetMessage ? <p className="mt-3 font-bold text-[#6B3A25]">{resetMessage}</p> : null}
-            <PrimaryButton disabled={resetLoading} className="mt-5 w-full">
-              {resetLoading ? "جار إرسال الرابط" : "إرسال الرابط"}
-            </PrimaryButton>
-          </form>
+          <div className={styles.signup}><span>جديد على برندة؟</span><Link href="/register">أنشئ حساب علامتك <ArrowLeft size={16} aria-hidden="true" /></Link></div>
         </div>
-      ) : null}
+        <footer className={styles.contentFooter}><ShieldCheck size={17} aria-hidden="true" /><span>مساحتك لإدارة علامتك بثقة</span></footer>
+      </section>
+
+      <dialog ref={resetDialog} className={styles.resetDialog} aria-labelledby="reset-title" aria-describedby="reset-description" onClose={() => resetTrigger.current?.focus()}>
+        <button type="button" className={styles.closeDialog} onClick={() => resetDialog.current?.close()} aria-label="إغلاق استعادة كلمة المرور"><X size={20} aria-hidden="true" /></button>
+        <div className={styles.welcomeIcon}><Mail size={24} aria-hidden="true" /></div>
+        <h2 id="reset-title">استعادة كلمة المرور</h2>
+        <p id="reset-description">أدخل البريد المرتبط بحسابك وسنرسل لك رابط الاستعادة</p>
+        <form onSubmit={submitReset} aria-busy={resetLoading}>
+          <fieldset disabled={resetLoading} className={styles.fields}>
+            <div className={styles.field}>
+              <label htmlFor="reset-email">البريد الإلكتروني</label>
+              <div className={styles.inputWrap}><Mail size={20} aria-hidden="true" /><input id="reset-email" name="email" type="email" dir="ltr" required autoComplete="email" autoCapitalize="none" spellCheck={false} value={resetEmail} onChange={event => setResetEmail(event.target.value)} placeholder="name@example.com" /></div>
+            </div>
+            <button type="submit" className={styles.submit} disabled={resetLoading}><span>{resetLoading ? "جارٍ إرسال الرابط" : "إرسال رابط الاستعادة"}</span>{resetLoading ? <LoaderCircle size={20} className={styles.spinner} aria-hidden="true" /> : <ArrowLeft size={20} aria-hidden="true" />}</button>
+          </fieldset>
+          <p className={styles.resetMessage} role="status">{resetLoading ? "جارٍ إرسال رابط الاستعادة" : resetMessage}</p>
+        </form>
+      </dialog>
     </main>
   );
 }
