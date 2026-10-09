@@ -29,12 +29,12 @@ export function walletArtUrl(member: WalletMember) {
 const coffeeIcon = '<path d="M6 8h11v7a4 4 0 0 1-4 4h-3a4 4 0 0 1-4-4V8Zm11 1h1.5a3 3 0 0 1 0 6H17M4 22h16M9 3v2m5-2v2"/>';
 const giftIcon = '<path d="M5 11h14v10H5V11ZM3 7h18v4H3V7Zm9 0v14m0-14C6 7 5 5 6.5 3.5S12 3 12 7Zm0 0c6 0 7-2 5.5-3.5S12 3 12 7Z"/>';
 
-export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2) {
+export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
   const colors = walletColors(member);
   const required = Math.max(1, Math.min(100, Math.trunc(member.program.purchasesRequired) || 1));
   const earned = Math.max(0, Math.min(required, Math.trunc(member.card.stampsInCycle) || 0));
-  const paper = colors.foreground;
-  const ink = colors.background;
+  const paper = dark ? colors.background : colors.foreground;
+  const ink = dark ? colors.foreground : colors.background;
   const icon = (content: string, x: number, y: number, size: number, color: string) => `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${content}</g>`;
   let stamps: string;
 
@@ -66,6 +66,6 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2) {
   return `<svg width="${375 * scale}" height="${144 * scale}" viewBox="0 0 375 144" xmlns="http://www.w3.org/2000/svg"><rect width="375" height="144" fill="${paper}"/>${stamps}</svg>`;
 }
 
-export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2) {
-  return sharp(Buffer.from(walletStampSvg(member, scale))).png().toBuffer();
+export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
+  return sharp(Buffer.from(walletStampSvg(member, scale, dark))).png().toBuffer();
 }

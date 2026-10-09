@@ -84,10 +84,13 @@ export async function issueApplePass(member: WalletMember) {
   const assets: Record<string, Buffer> = {};
   await Promise.all(([1, 2, 3] as const).map(async scale => {
     const suffix = scale === 1 ? "" : `@${scale}x`;
+    const logoMask = await image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).ensureAlpha().png().toBuffer({ resolveWithObject: true });
     const [icon, logo, strip] = await Promise.all([
       image.clone().trim().resize(29 * scale, 29 * scale, { fit: "contain", background: colors.foreground }).flatten({ background: colors.foreground }).png().toBuffer(),
-      image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).png().toBuffer(),
-      walletStampArtwork(member, scale),
+      // Preserve the mark's alpha silhouette with light ink on the dark pass.
+      sharp({ create: { width: logoMask.info.width, height: logoMask.info.height, channels: 4, background: colors.foreground } })
+        .composite([{ input: logoMask.data, blend: "dest-in" }]).png().toBuffer(),
+      walletStampArtwork(member, scale, true),
     ]);
     assets[`icon${suffix}.png`] = icon;
     assets[`logo${suffix}.png`] = logo;
@@ -96,8 +99,8 @@ export async function issueApplePass(member: WalletMember) {
   const pass = new PKPass(assets, { wwdr: config.wwdr, signerCert: config.signerCert, signerKey: config.signerKey, signerKeyPassphrase: config.signerKeyPassphrase }, {
     formatVersion: 1, passTypeIdentifier: config.passTypeIdentifier, teamIdentifier: config.teamIdentifier,
     serialNumber: member.card.cardCode, organizationName: member.cafeName, description: `${member.cafeName} - ${member.program.cardTitle}`,
-    backgroundColor: rgb(colors.foreground), foregroundColor: rgb(colors.background), labelColor: rgb(colors.background), sharingProhibited: true, suppressStripShine: true,
-    userInfo: { artworkVersion: WALLET_ART_VERSION },
+    backgroundColor: rgb(colors.background), foregroundColor: rgb(colors.foreground), labelColor: rgb(colors.foreground), sharingProhibited: true, suppressStripShine: true,
+    userInfo: { artworkVersion: `${WALLET_ART_VERSION}:apple-burgundy-v1` },
     webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode),
   });
   const style = new PassType("storeCard");

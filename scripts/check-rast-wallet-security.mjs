@@ -103,8 +103,9 @@ try {
   assert.equal(pass.storeCard.secondaryFields[0].value, 4);
   assert.equal(pass.storeCard.backFields.find(field => field.key === "reward").value, member.program.rewardName);
   assert.equal(pass.logoText, undefined, "Do not repeat the wordmark in a text field");
-  assert.equal(pass.backgroundColor, "rgb(248, 242, 232)");
-  assert.equal(pass.foregroundColor, "rgb(59, 20, 32)");
+  assert.equal(pass.backgroundColor, "rgb(59, 20, 32)");
+  assert.equal(pass.foregroundColor, "rgb(248, 242, 232)");
+  assert.equal(pass.labelColor, pass.foregroundColor);
   assert.equal(pass.locations[0].latitude, 0);
   assert.equal(pass.authenticationToken, token);
   assert(pass.webServiceURL.startsWith("https://wallet.example.test/api/wallet/apple"));
@@ -116,16 +117,27 @@ try {
     const suffix = scale === 1 ? "" : `@${scale}x`;
     const strip = await sharp(bundle[`strip${suffix}.png`]).metadata();
     assert.deepEqual([strip.width, strip.height], [375 * scale, 144 * scale]);
+    const stripPixels = await sharp(bundle[`strip${suffix}.png`]).removeAlpha().raw().toBuffer();
+    assert.deepEqual([...stripPixels.subarray(0, 3)], [59, 20, 32], "Apple strip matches the burgundy pass background");
     const icon = await sharp(bundle[`icon${suffix}.png`]).metadata();
     assert.deepEqual([icon.width, icon.height], [29 * scale, 29 * scale]);
     const logo = await sharp(bundle[`logo${suffix}.png`]).metadata();
     assert(logo.width <= 160 * scale && logo.height <= 50 * scale);
+    const logoPixels = await sharp(bundle[`logo${suffix}.png`]).ensureAlpha().raw().toBuffer();
+    let visibleLogoPixels = 0;
+    for (let pixel = 0; pixel < logoPixels.length; pixel += 4) {
+      if (logoPixels[pixel + 3] === 255) {
+        assert.deepEqual([...logoPixels.subarray(pixel, pixel + 3)], [248, 242, 232]);
+        visibleLogoPixels++;
+      }
+    }
+    assert(visibleLogoPixels > 0, "The logo remains visible on the dark pass");
   }
   const art = load("lib/wallet/art.ts");
   const artUrl = new URL(art.walletArtUrl(member));
   assert(artUrl.searchParams.get("v").startsWith(`${art.WALLET_ART_VERSION}:`), "Artwork has a revision independent of the card balance");
   assert(art.verifyWalletArtToken(member.card.id, artUrl.pathname.split("/").at(-1)), "A design revision preserves existing signed artwork tokens");
-  assert.equal(pass.userInfo.artworkVersion, art.WALLET_ART_VERSION);
+  assert.equal(pass.userInfo.artworkVersion, `${art.WALLET_ART_VERSION}:apple-burgundy-v1`);
   const cases = [[1, 0], [7, 0], [7, 2], [7, 7], [14, 4], [30, 15], [100, 70]];
   for (const [required, stamps] of cases) {
     const example = { ...member, program: { ...member.program, purchasesRequired: required }, card: { ...member.card, stampsInCycle: stamps } };
