@@ -145,23 +145,16 @@ export function getSidebarFeaturesForBrand(context: {
   overrides?: readonly BrandFeatureOverride[];
   cafeSlug?: string | null;
 }) {
-  const planFeatures = getPlanIncludedFeatures(context.planId, context.plans);
+  // Navigation reflects the actual assigned package, including an empty feature
+  // list. Registry defaults must not make an unassigned service look enabled.
+  const planFeatures = context.plans?.find((plan) => plan.id === context.planId)?.features ?? [];
   const accessRows = getEffectiveBrandFeatureAccess(planFeatures, context.overrides);
   const accessMap = new Map(accessRows.map((row) => [row.feature.id, row]));
 
   return getAllPlatformFeatures()
+    .filter((feature) => ["menu", "loyalty", "settings"].includes(feature.id))
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
-    }))
-    .filter(({ feature, access }) => {
-      // Presentation only: retain each item's access state and existing route guards.
-      if (context.cafeSlug === "rast") return ["menu", "loyalty", "settings"].includes(feature.id);
-      if (access?.override === "disabled") return false;
-      if (feature.defaultEnabled) return true;
-      if (feature.id === "cashier") return true;
-      if (feature.sidebarVisible) return Boolean(access?.effectiveEnabled);
-      if (feature.showInSidebarWhenEnabled) return Boolean(access?.effectiveEnabled);
-      return false;
-    });
+    }));
 }
