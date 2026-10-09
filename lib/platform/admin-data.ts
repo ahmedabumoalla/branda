@@ -15,6 +15,7 @@ export type PlatformPlan = {
   name: string;
   priceMonthly: number;
   offerEnabled: boolean;
+  annualDiscountPercent?: number;
   offerPrice?: number;
   offerLabel?: string | null;
   offerEndsAt?: string | null;

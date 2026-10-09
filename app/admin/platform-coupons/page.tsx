@@ -14,7 +14,7 @@ export default async function AdminPlatformCouponsRoutePage() {
 
   try {
     const [coupons, plans] = await Promise.all([getPlatformDiscountCoupons(), getAdminPlatformPlans()]);
-    return <AdminPlatformCouponsPage coupons={coupons} plans={plans} />;
+    return <AdminPlatformCouponsPage coupons={coupons} plans={plans} referenceTime={Date.now()} />;
   } catch (error) {
     console.error("[AdminPlatformCouponsRoutePage]", error);
     return <AdminPlatformCouponsPage coupons={[]} plans={[]} configError="تعذر تحميل كوبونات خصم المنصة" />;

@@ -128,12 +128,18 @@ export async function savePlatformDiscountCouponAction(
   input: Omit<import("@/lib/data/platform-coupons").PlatformDiscountCoupon, "createdAt" | "redeemedCount">
 ) {
   const { savePlatformDiscountCoupon, getPlatformDiscountCoupons } = await import("@/lib/data/platform-coupons");
-  await savePlatformDiscountCoupon(input);
-  return getPlatformDiscountCoupons();
+  return actionResult(async () => {
+    await savePlatformDiscountCoupon(input);
+    revalidatePath("/admin/platform-coupons");
+    return getPlatformDiscountCoupons();
+  }, "تعذر حفظ الكوبون حاول مجددًا");
 }
 
 export async function deletePlatformDiscountCouponAction(couponId: string) {
   const { deletePlatformDiscountCoupon, getPlatformDiscountCoupons } = await import("@/lib/data/platform-coupons");
-  await deletePlatformDiscountCoupon(couponId);
-  return getPlatformDiscountCoupons();
+  return actionResult(async () => {
+    await deletePlatformDiscountCoupon(couponId);
+    revalidatePath("/admin/platform-coupons");
+    return getPlatformDiscountCoupons();
+  }, "تعذر حذف الكوبون حاول مجددًا");
 }

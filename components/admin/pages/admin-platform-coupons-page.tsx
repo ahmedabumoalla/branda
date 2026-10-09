@@ -1,131 +1,94 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Filter, Percent, Plus, Save, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { ArrowDownToLine, Check, Copy, Percent, Plus, Search, Ticket, Trash2 } from "lucide-react";
 import { deletePlatformDiscountCouponAction, savePlatformDiscountCouponAction } from "@/app/actions/admin";
 import type { PlatformDiscountCoupon } from "@/lib/data/platform-coupons";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
-import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
-import { AdminInput, AdminPageShell, BentoCard, BentoGrid, GoldButton, StatusBadge } from "@/components/ui/design-system";
+import type { ActionResult } from "@/lib/platform/action-result";
+import { AdminPageShell } from "@/components/ui/design-system";
 import { exportRowsToExcel, exportRowsToPdf } from "@/lib/export/admin-report-export";
+import { couponSaudiDate, couponStatus, couponStatusLabels } from "@/lib/platform/coupon-status";
+import { DEFAULT_SUBSCRIPTION_DURATIONS, formatSubscriptionDuration } from "@/lib/platform/subscription-durations";
+import styles from "./admin-platform-coupons-page.module.css";
 
-type Props = { coupons: PlatformDiscountCoupon[]; plans: PlatformPlan[]; configError?: string };
-
-function emptyCoupon(): Omit<PlatformDiscountCoupon, "createdAt" | "redeemedCount"> {
-  return {
-    id: crypto.randomUUID(),
-    code: "",
-    title: "كوبون منصة جديد",
-    discountPercent: 10,
-    eligiblePlanIds: [],
-    active: true,
-  };
+type Draft = Omit<PlatformDiscountCoupon, "createdAt" | "redeemedCount">;
+type Props = { coupons: PlatformDiscountCoupon[]; plans: PlatformPlan[]; configError?: string; referenceTime?: number };
+const number = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+function emptyCoupon(): Draft {
+  return { id: crypto.randomUUID(), code: "", title: "", discountPercent: 10, eligiblePlanIds: [], eligibleDurationMonths: [1, 3, 6, 12], active: true };
 }
 
-export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, configError }: Props) {
+export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, configError, referenceTime = 0 }: Props) {
   const [coupons, setCoupons] = useState(initialCoupons);
-  const [editing, setEditing] = useState<Omit<PlatformDiscountCoupon, "createdAt" | "redeemedCount">>(emptyCoupon());
+  const [editing, setEditing] = useState<Draft>(emptyCoupon);
   const [query, setQuery] = useState("");
-  const [onlyActive, setOnlyActive] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const filteredCoupons = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return coupons.filter((coupon) => {
-      const matchesTerm = !term || coupon.code.toLowerCase().includes(term) || coupon.title.toLowerCase().includes(term);
-      const matchesStatus = !onlyActive || coupon.active;
-      return matchesTerm && matchesStatus;
-    });
-  }, [coupons, onlyActive, query]);
-
-  function togglePlan(planId: string) {
-    setEditing((current) => ({
-      ...current,
-      eligiblePlanIds: current.eligiblePlanIds.includes(planId)
-        ? current.eligiblePlanIds.filter((id) => id !== planId)
-        : [...current.eligiblePlanIds, planId],
-    }));
+  const [filter, setFilter] = useState("all");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const [now, setNow] = useState(referenceTime);
+  const lock = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { const tick = () => setNow(Date.now()); tick(); const timer = setInterval(tick, 30000); return () => clearInterval(timer); }, []);
+  const paidPlans = plans.filter(plan => plan.active && plan.priceMonthly > 0);
+  const isEditing = coupons.some(coupon => coupon.id === editing.id);
+  const filtered = useMemo(() => coupons.filter(coupon => (!query.trim() || `${coupon.code} ${coupon.title}`.toLowerCase().includes(query.trim().toLowerCase())) && (filter === "all" || couponStatus(coupon, now) === filter)), [coupons, query, filter, now]);
+  const includedMonths = editing.eligibleDurationMonths ?? [1, 3, 6, 12];
+  function update(next: Partial<Draft>) { setEditing(current => ({ ...current, ...next })); }
+  function begin(coupon?: PlatformDiscountCoupon) {
+    setEditing(coupon ? { ...coupon, validFrom: couponSaudiDate(coupon.validFrom), validUntil: couponSaudiDate(coupon.validUntil) } : emptyCoupon());
+    setNotice(null);
+    formRef.current?.scrollIntoView({ block: "start" });
+    formRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
   }
-
-  async function saveCoupon() {
-    setSaving(true);
-    try {
-      const saved = await savePlatformDiscountCouponAction({ ...editing, code: editing.code.trim().toUpperCase() });
-      setCoupons(saved);
-      setEditing(emptyCoupon());
-      alert("تم حفظ كوبون خصم المنصة");
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "تعذر حفظ الكوبون");
-    } finally {
-      setSaving(false);
-    }
+  async function mutate(action: () => Promise<ActionResult<PlatformDiscountCoupon[]>>, success: string, reset = false) {
+    if (lock.current || configError) return;
+    lock.current = true; setBusy(true); setNotice(null);
+    try { const result = await action(); if (!result.ok) { setNotice({ text: result.message, error: true }); return; } setCoupons(result.data); if (reset) setEditing(emptyCoupon()); setNotice({ text: success }); }
+    catch (error) { setNotice({ text: error instanceof Error ? error.message : "تعذر إكمال العملية حاول مجددًا", error: true }); }
+    finally { lock.current = false; setBusy(false); requestAnimationFrame(() => noticeRef.current?.focus()); }
   }
-
-  async function removeCoupon(couponId: string) {
-    if (!confirm("حذف كوبون الخصم؟")) return;
-    setCoupons(await deletePlatformDiscountCouponAction(couponId));
+  function save(event: FormEvent) {
+    event.preventDefault();
+    if (!includedMonths.length) { setNotice({ text: "اختر مدة اشتراك واحدة على الأقل", error: true }); return; }
+    void mutate(() => savePlatformDiscountCouponAction(editing), "تم حفظ الكوبون وأصبح جاهزًا حسب الصلاحية المحددة", true);
   }
+  async function copy(code: string) {
+    try { await navigator.clipboard.writeText(code); setNotice({ text: "تم نسخ كود الكوبون" }); }
+    catch { setNotice({ text: "تعذر النسخ التلقائي يمكنك تحديد الكود ونسخه", error: true }); }
+  }
+  const rows = filtered.map(coupon => ({ code: coupon.code, title: coupon.title, discount: `${coupon.discountPercent}%`, durations: (coupon.eligibleDurationMonths ?? [1, 3, 6, 12]).map(formatSubscriptionDuration).join(" / "), usage: coupon.redeemedCount, status: couponStatusLabels[couponStatus(coupon, now)], expiry: couponSaudiDate(coupon.validUntil) || "غير محدد" }));
+  const columns = [{ key: "code", title: "الكود" }, { key: "title", title: "الحملة" }, { key: "discount", title: "الخصم" }, { key: "durations", title: "مدد الاشتراك" }, { key: "usage", title: "الاستخدام" }, { key: "status", title: "الحالة" }, { key: "expiry", title: "الانتهاء" }];
 
-  return (
-    <AdminPageShell
-      title="كوبونات خصم المنصة"
-      subtitle="كوبونات مستقلة عن كوبونات المناديب تستخدم عند الاشتراك أو التجديد أو ترقية الباقة داخل الدفع"
-      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
-    >
-      {configError ? <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">{configError}</div> : null}
-
-      <BentoGrid className="mb-6">
-        <BentoCard variant="gold"><p className="text-sm font-black text-[#241610]">إجمالي الكوبونات</p><p className="mt-2 text-4xl font-black text-[#241610]">{coupons.length}</p></BentoCard>
-        <BentoCard variant="cyber"><p className="text-sm font-black text-[#CBB29C]">الكوبونات النشطة</p><p className="mt-2 text-4xl font-black text-[#F6C35B]">{coupons.filter((coupon) => coupon.active).length}</p></BentoCard>
-        <BentoCard variant="dark"><p className="text-sm font-black text-[#CBB29C]">إجمالي الاستخدام</p><p className="mt-2 text-4xl font-black text-[#F6C35B]">{coupons.reduce((sum, coupon) => sum + coupon.redeemedCount, 0)}</p></BentoCard>
-      </BentoGrid>
-
-      <BentoGrid className="mb-6 xl:grid-cols-3">
-        <BentoCard variant="dark" span="2">
-          <div className="mb-5 flex items-center gap-3"><Percent className="h-7 w-7 text-[#F6C35B]" /><h2 className="text-2xl font-black text-[#F8F4EF]">إنشاء وتعديل كوبون</h2></div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <AdminInput value={editing.title} placeholder="اسم الكوبون" onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
-            <AdminInput value={editing.code} placeholder="الكود مثل BARNDAKSA20" onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })} />
-            <AdminInput type="number" min="0" max="100" value={editing.discountPercent} onChange={(e) => setEditing({ ...editing, discountPercent: Number(e.target.value) || 0 })} placeholder="نسبة الخصم" />
-            <AdminInput type="number" min="1" value={editing.maxRedemptions ?? ""} onChange={(e) => setEditing({ ...editing, maxRedemptions: e.target.value ? Number(e.target.value) : undefined })} placeholder="حد الاستخدام اختياري" />
-            <AdminInput type="date" value={editing.validFrom?.slice(0, 10) ?? ""} onChange={(e) => setEditing({ ...editing, validFrom: e.target.value || undefined })} />
-            <AdminInput type="date" value={editing.validUntil?.slice(0, 10) ?? ""} onChange={(e) => setEditing({ ...editing, validUntil: e.target.value || undefined })} />
-          </div>
-          <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="mb-3 text-sm font-black text-[#CBB29C]">الباقات التي يشملها الكوبون وتركها فارغة يعني جميع الباقات</p>
-            <div className="flex flex-wrap gap-2">
-              {plans.map((plan) => {
-                const selected = editing.eligiblePlanIds.includes(plan.id);
-                return <button key={plan.id} type="button" onClick={() => togglePlan(plan.id)} className={`rounded-xl border px-3 py-2 text-xs font-black ${selected ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-white/10 bg-black/20 text-[#CBB29C]"}`}>{plan.name}</button>;
-              })}
-            </div>
-          </div>
-          <label className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 p-4 font-black text-[#F8F4EF]"><input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> الكوبون نشط</label>
-          <GoldButton type="button" disabled={saving} onClick={saveCoupon} className="mt-5 inline-flex items-center gap-2"><Save className="h-5 w-5" />{saving ? "جاري الحفظ" : "حفظ الكوبون"}</GoldButton>
-        </BentoCard>
-
-        <BentoCard variant="cyber">
-          <div className="mb-4 flex items-center gap-2"><Filter className="h-5 w-5 text-[#F6C35B]" /><h3 className="font-black">فلترة وتصدير</h3></div>
-          <AdminInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="بحث بالكود أو الاسم" />
-          <label className="mt-3 flex items-center gap-3 rounded-2xl bg-black/20 p-4 font-black text-[#F8F4EF]"><input type="checkbox" checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} /> النشطة فقط</label>
-          <div className="mt-4 grid gap-2">
-            <button className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black" onClick={() => exportRowsToExcel("platform-discount-coupons", filteredCoupons as unknown as Record<string, unknown>[], [{ key: "code", title: "الكود" }, { key: "title", title: "الاسم" }, { key: "discountPercent", title: "نسبة الخصم" }, { key: "redeemedCount", title: "الاستخدام" }])}>تصدير Excel</button>
-            <button className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-black" onClick={() => exportRowsToPdf("كوبونات خصم المنصة", filteredCoupons as unknown as Record<string, unknown>[], [{ key: "code", title: "الكود" }, { key: "title", title: "الاسم" }, { key: "discountPercent", title: "نسبة الخصم" }, { key: "redeemedCount", title: "الاستخدام" }])}>تصدير PDF</button>
-          </div>
-        </BentoCard>
-      </BentoGrid>
-
-      <BentoCard variant="dark">
-        <div className="mb-5 flex items-center gap-3"><Plus className="h-7 w-7 text-[#F6C35B]" /><h2 className="text-2xl font-black text-[#F8F4EF]">سجل كوبونات المنصة</h2></div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-right text-sm">
-            <thead className="text-[#F6C35B]"><tr className="border-b border-white/10"><th className="py-3">الكود</th><th>الاسم</th><th>الخصم</th><th>الباقات</th><th>الاستخدام</th><th>الصلاحية</th><th>الحالة</th><th>إجراء</th></tr></thead>
-            <tbody>
-              {filteredCoupons.map((coupon) => <tr key={coupon.id} className="border-b border-white/5 text-[#F8F4EF]"><td className="py-3 font-black text-[#F6C35B]">{coupon.code}</td><td>{coupon.title}</td><td>{coupon.discountPercent}%</td><td>{coupon.eligiblePlanIds.length ? coupon.eligiblePlanIds.join("، ") : "كل الباقات"}</td><td>{coupon.redeemedCount}</td><td>{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString("ar-SA") : "مفتوح"}</td><td><StatusBadge tone={coupon.active ? "success" : "danger"}>{coupon.active ? "نشط" : "متوقف"}</StatusBadge></td><td className="flex gap-2 py-2"><button className="rounded-xl bg-white/10 px-3 py-2 font-black" onClick={() => setEditing(coupon)}>تعديل</button><button className="rounded-xl bg-red-500/10 px-3 py-2 font-black text-red-300" onClick={() => removeCoupon(coupon.id)}><Trash2 className="h-4 w-4" /></button></td></tr>)}
-            </tbody>
-          </table>
-        </div>
-      </BentoCard>
-    </AdminPageShell>
-  );
+  return <div className={styles.page} dir="rtl"><AdminPageShell title="كوبونات خصم المنصة" subtitle="عرض مناسب في الوقت المناسب حوّل اهتمام العملاء إلى اشتراكات">
+    {configError ? <p className={styles.error} role="alert">{configError}</p> : <section className={styles.metrics} aria-label="ملخص الكوبونات">
+      <div><Ticket aria-hidden="true" /><span>إجمالي الكوبونات</span><strong>{number.format(coupons.length)}</strong></div>
+      <div><Check aria-hidden="true" /><span>متاحة للاستخدام</span><strong>{number.format(coupons.filter(coupon => couponStatus(coupon, now) === "active").length)}</strong></div>
+      <div><Percent aria-hidden="true" /><span>اشتراكات استخدمت الكوبون</span><strong>{number.format(coupons.reduce((sum, coupon) => sum + coupon.redeemedCount, 0))}</strong></div>
+    </section>}
+    {notice ? <p ref={noticeRef} tabIndex={-1} className={notice.error ? styles.error : styles.success} role={notice.error ? "alert" : "status"}>{notice.text}</p> : null}
+    <div className={styles.workspace}>
+      <form ref={formRef} onSubmit={save} className={styles.editor}>
+        <header className={styles.sectionHeader}><div><span className={styles.eyebrow}>إعداد الحملة</span><h2>{isEditing ? "تعديل الكوبون" : "إنشاء كوبون تسويقي"}</h2></div>{isEditing ? <button type="button" className={styles.secondary} disabled={busy} onClick={() => begin()}><Plus size={17} />كوبون جديد</button> : <Ticket size={28} aria-hidden="true" />}</header>
+        <fieldset disabled={busy || Boolean(configError)} className={styles.fields}>
+          <label>اسم الحملة<input required maxLength={120} minLength={2} value={editing.title} onChange={event => update({ title: event.target.value })} placeholder="مثال حملة افتتاح علامتك" /></label>
+          <label>كود الكوبون<input required dir="ltr" minLength={3} maxLength={40} pattern="[A-Za-z0-9-]+" value={editing.code} onChange={event => update({ code: event.target.value.toUpperCase() })} placeholder="BRANDA20" /><small>حروف إنجليزية وأرقام دون مسافات</small></label>
+          <label>نسبة الخصم %<input required type="number" min="0.01" max="100" step="0.01" value={editing.discountPercent} onChange={event => update({ discountPercent: Number(event.target.value) })} /></label>
+          <label>حد الاستخدام<input type="number" min="1" step="1" value={editing.maxRedemptions ?? ""} onChange={event => update({ maxRedemptions: event.target.value ? Number(event.target.value) : undefined })} placeholder="غير محدود" /><small>يحسب عند اعتماد الاشتراك</small></label>
+          <label>بداية الصلاحية<input type="date" value={editing.validFrom ?? ""} onChange={event => update({ validFrom: event.target.value || undefined })} /><small>اتركها فارغة ليبدأ فور التفعيل</small></label>
+          <label>نهاية الصلاحية<input required type="date" min={editing.validFrom} value={editing.validUntil ?? ""} onChange={event => update({ validUntil: event.target.value || undefined })} /><small>يشمل نهاية اليوم بتوقيت السعودية</small></label>
+          <fieldset className={styles.selection}><legend>مدد الاشتراك المشمولة</legend><p>حدد مدة واحدة أو أكثر لهذا العرض</p><div>{DEFAULT_SUBSCRIPTION_DURATIONS.map(option => <label key={option.months} className={styles.chip}><input type="checkbox" checked={includedMonths.includes(option.months)} onChange={event => update({ eligibleDurationMonths: event.target.checked ? [...includedMonths, option.months] : includedMonths.filter(month => month !== option.months) })} />{option.label}</label>)}</div></fieldset>
+          <fieldset className={styles.selection}><legend>الباقات المشمولة</legend><label className={styles.allPlans}><input type="checkbox" checked={!editing.eligiblePlanIds.length} onChange={event => update({ eligiblePlanIds: event.target.checked ? [] : paidPlans.map(plan => plan.id) })} />جميع الباقات المدفوعة الحالية والجديدة</label><div>{paidPlans.map(plan => <button type="button" key={plan.id} aria-pressed={editing.eligiblePlanIds.includes(plan.id)} onClick={() => update({ eligiblePlanIds: editing.eligiblePlanIds.includes(plan.id) ? editing.eligiblePlanIds.filter(id => id !== plan.id) : [...editing.eligiblePlanIds, plan.id] })}>{plan.name}</button>)}</div><p>{editing.eligiblePlanIds.length ? "الكوبون متاح للباقات المحددة فقط" : "لا يوجد تقييد على الباقة"}</p></fieldset>
+          <label className={styles.activeToggle}><input type="checkbox" checked={editing.active} onChange={event => update({ active: event.target.checked })} />تفعيل الكوبون حسب فترة الصلاحية</label>
+          <footer className={styles.formFooter}><span>متاح لأول اشتراك والترقية والاشتراك بعد الانتهاء</span><button className={styles.primary} type="submit">{busy ? "جارٍ الحفظ" : "حفظ الكوبون"}</button></footer>
+        </fieldset>
+      </form>
+      <aside className={styles.preview} aria-label="معاينة الكوبون"><span className={styles.eyebrow}>معاينة العرض</span><div className={styles.ticket}><div className={styles.ticketTop}><Ticket size={24} aria-hidden="true" /><span>عرض من برندة</span></div><h3>{editing.title || "حملتك القادمة تبدأ هنا"}</h3><strong className={styles.discount}>{number.format(editing.discountPercent)}<small>%</small></strong><p>خصم على اشتراك علامتك</p><div className={styles.ticketCode} dir="ltr">{editing.code || "YOUR-CODE"}</div><div className={styles.ticketFooter}><span>{includedMonths.map(formatSubscriptionDuration).join(" / ") || "حدد مدة الاشتراك"}</span><span>{editing.validUntil ? `صالح حتى ${editing.validUntil}` : "حدد تاريخ نهاية العرض"}</span></div></div><p className={styles.previewNote}>عند شمول الاشتراك السنوي يطبق الكوبون على المبلغ بعد خصم السنة</p><div className={styles.previewGuide}><h3>جاهز لحملتك التسويقية</h3><p>احفظ الكوبون ثم انسخ الكود وشاركه في إعلانك ليستخدمه العميل عند اختيار باقته</p></div></aside>
+    </div>
+    <section className={styles.registry} aria-labelledby="coupon-registry"><header className={styles.sectionHeader}><div><span className={styles.eyebrow}>متابعة الحملات</span><h2 id="coupon-registry">سجل الكوبونات <small>{number.format(filtered.length)}</small></h2></div><div className={styles.exports}><button type="button" className={styles.secondary} disabled={!rows.length} onClick={() => exportRowsToExcel("platform-coupons", rows, columns)}><ArrowDownToLine size={16} />Excel</button><button type="button" className={styles.secondary} disabled={!rows.length} onClick={() => exportRowsToPdf("كوبونات المنصة", rows, columns)}>PDF</button></div></header>
+      <div className={styles.filters}><label><Search size={18} aria-hidden="true" /><input aria-label="البحث بالكود أو اسم الحملة" placeholder="ابحث بالكود أو اسم الحملة" value={query} onChange={event => setQuery(event.target.value)} /></label><select aria-label="حالة الكوبون" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">جميع الحالات</option>{Object.entries(couponStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+      {configError ? <p className={styles.empty}>تعذر عرض السجل حدّث الصفحة للمحاولة مجددًا</p> : !filtered.length ? <div className={styles.empty}><Ticket size={32} aria-hidden="true" /><h3>{coupons.length ? "لا توجد نتائج مطابقة" : "أطلق أول عرض لعملائك"}</h3><p>{coupons.length ? "جرّب تغيير البحث أو الحالة" : "سيظهر الكوبون هنا بعد الحفظ مع صلاحيته وعدد استخداماته"}</p></div> : <div className={styles.couponList}>{filtered.map(coupon => <article className={styles.couponRow} key={coupon.id}><div className={styles.rowIdentity}><span className={styles.status} data-status={couponStatus(coupon, now)}>{couponStatusLabels[couponStatus(coupon, now)]}</span><h3>{coupon.title}</h3><button type="button" className={styles.copy} onClick={() => copy(coupon.code)} aria-label={`نسخ ${coupon.code}`}><b dir="ltr">{coupon.code}</b><Copy size={14} /></button></div><div className={styles.rowDetails}><div><span>الخصم</span><strong>{number.format(coupon.discountPercent)}%</strong></div><div><span>الاشتراكات المشمولة</span><strong>{(coupon.eligibleDurationMonths ?? [1, 3, 6, 12]).map(formatSubscriptionDuration).join(" / ")}</strong><small>{coupon.eligiblePlanIds.length ? coupon.eligiblePlanIds.map(id => plans.find(plan => plan.id === id)?.name ?? "باقة مؤرشفة").join(" / ") : "جميع الباقات"}</small></div><div><span>الاستخدام</span><strong>{number.format(coupon.redeemedCount)}{coupon.maxRedemptions ? ` / ${number.format(coupon.maxRedemptions)}` : ""}</strong></div><div><span>ينتهي في</span><strong dir="ltr">{couponSaudiDate(coupon.validUntil) || "غير محدد"}</strong></div></div><div className={styles.rowActions}><button className={styles.secondary} type="button" disabled={busy} onClick={() => begin(coupon)}>تعديل</button><button type="button" className={styles.delete} disabled={busy} aria-label={`حذف كوبون ${coupon.code}`} onClick={() => { if (confirm("حذف الكوبون؟ الكوبونات المرتبطة بطلبات محفوظة يمكن إيقافها من التعديل")) void mutate(() => deletePlatformDiscountCouponAction(coupon.id), "تم حذف الكوبون", editing.id === coupon.id); }}><Trash2 size={17} /></button></div></article>)}</div>}
+    </section>
+  </AdminPageShell></div>;
 }

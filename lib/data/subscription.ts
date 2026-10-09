@@ -64,7 +64,7 @@ export async function getOwnerPendingSubscription(): Promise<PendingSubscription
   return null;
 }
 
-async function previewCouponForPlan(planId: string, planAmount: number, couponCode?: string | null): Promise<SubscriptionCouponPreview> {
+async function previewCouponForPlan(planId: string, planAmount: number, couponCode?: string | null, durationMonths = 1): Promise<SubscriptionCouponPreview> {
   const code = normalizeCoupon(couponCode);
   if (!code) {
     return { ok: true, message: "بدون كوبون", totalAmount: planAmount };
@@ -74,7 +74,7 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
 
   const { data: platformCoupon, error: platformCouponError } = await admin
     .from("platform_discount_coupons")
-    .select("id, code, title, discount_percent, eligible_plan_ids, active, valid_from, valid_until, max_redemptions, redeemed_count")
+    .select("id, code, title, discount_percent, eligible_plan_ids, eligible_duration_months, active, valid_from, valid_until, max_redemptions, redeemed_count")
     .eq("code", code)
     .eq("active", true)
     .maybeSingle();
@@ -82,6 +82,7 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
   if (platformCouponError && platformCouponError.code !== "42P01") throw platformCouponError;
 
   if (platformCoupon) {
+    if (Array.isArray(platformCoupon.eligible_duration_months) && !platformCoupon.eligible_duration_months.includes(durationMonths)) return { ok: false, message: "الكوبون لا يشمل مدة الاشتراك المختارة" };
     const now = Date.now();
     const validFrom = platformCoupon.valid_from ? new Date(String(platformCoupon.valid_from)).getTime() : null;
     const validUntil = platformCoupon.valid_until ? new Date(String(platformCoupon.valid_until)).getTime() : null;
@@ -162,7 +163,7 @@ export async function validateOwnerPlanCoupon(planId: string, couponCode?: strin
   const plan = plans.find((item) => item.id === planId && item.active);
   if (!plan) throw new Error("الباقة غير موجودة");
   const amount = calculateSubscriptionAmount(plan, sanitizeDurationMonths(durationMonths));
-  return previewCouponForPlan(plan.id, amount, couponCode);
+  return previewCouponForPlan(plan.id, amount, couponCode, durationMonths);
 }
 
 export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null, durationMonths = 1): Promise<string> {
@@ -173,7 +174,7 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
 
   const selectedDurationMonths = sanitizeDurationMonths(durationMonths);
   const baseAmount = calculateSubscriptionAmount(plan, selectedDurationMonths);
-  const coupon = await previewCouponForPlan(plan.id, baseAmount, couponCode);
+  const coupon = await previewCouponForPlan(plan.id, baseAmount, couponCode, selectedDurationMonths);
   if (!coupon.ok) throw new Error(coupon.message);
 
   const supabase = createAdminClient();
@@ -284,11 +285,13 @@ export async function getOwnerSubscriptionRequests() {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const { data, error } = await supabase.from("subscription_payment_requests")
-    .select("id,plan_id,plan_name,amount_sar,duration_count,status,receipt_channel,receipt_storage_path,created_at,admin_response")
+    .select("id,plan_id,plan_name,amount_sar,duration_count,status,receipt_channel,receipt_storage_path,created_at,admin_response,coupon_code_snapshot,annual_discount_amount_sar,coupon_discount_amount_sar,base_amount_sar")
     .eq("cafe_id", cafe.id).order("created_at", { ascending: false }).limit(30);
   if (error) throw error;
   return (data ?? []).map((row): BankSubscriptionRequest => ({
     id: String(row.id), planId: String(row.plan_id), planName: String(row.plan_name), amount: Number(row.amount_sar),
+    couponCode: row.coupon_code_snapshot ? String(row.coupon_code_snapshot) : undefined,
+    annualDiscountAmount: Number(row.annual_discount_amount_sar ?? 0), couponDiscountAmount: Number(row.coupon_discount_amount_sar ?? 0), baseAmount: Number(row.base_amount_sar),
     durationMonths: Number(row.duration_count), status: String(row.status), receiptChannel: row.receipt_channel === "whatsapp" ? "whatsapp" : "upload",
     receiptStoragePath: row.receipt_storage_path ? String(row.receipt_storage_path) : undefined,
     createdAt: String(row.created_at), adminResponse: row.admin_response ? String(row.admin_response) : undefined,
@@ -314,14 +317,36 @@ export async function getBankTransferDetails(): Promise<BankTransferDetails | nu
   return { beneficiary: details.beneficiary, bankName: details.bankName, iban: details.iban, accountNumber: details.accountNumber ?? "" };
 }
 
-export async function createOwnerBankRequest(planId: string, durationMonths: number): Promise<BankSubscriptionRequest[]> {
+const bankQuoteErrors: Record<string, string> = {
+  "Coupon invalid": "الكوبون غير صالح أو غير مفعل",
+  "Coupon scheduled": "لم تبدأ صلاحية الكوبون بعد",
+  "Coupon expired": "انتهت صلاحية الكوبون",
+  "Coupon plan unavailable": "الكوبون لا يشمل الباقة المختارة",
+  "Coupon duration unavailable": "الكوبون لا يشمل مدة الاشتراك المختارة",
+  "Coupon exhausted": "اكتمل حد استخدام الكوبون أو حجز في طلبات قيد المراجعة",
+  "Plan unavailable": "الباقة غير متاحة اختر باقة أخرى",
+  "Invalid duration": "اختر مدة اشتراك صحيحة",
+};
+export type BankSubscriptionQuote = { baseAmount: number; annualDiscountAmount: number; couponDiscountAmount: number; totalAmount: number; couponCode: string | null };
+export async function previewOwnerBankSubscription(planId: string, durationMonths: number, couponCode?: string): Promise<BankSubscriptionQuote> {
+  const cafe = await requireOwnerCafeContext();
+  if (cafe.role !== "owner") throw new Error("معاينة طلب الاشتراك متاحة من حساب المالك");
+  sanitizeDurationMonths(durationMonths);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("quote_bank_subscription", { p_plan_id: planId, p_duration_months: durationMonths, p_coupon_code: normalizeCoupon(couponCode) });
+  if (error) throw new Error(bankQuoteErrors[error.message] ?? "تعذر التحقق من الكوبون حاول مجددًا");
+  return data as BankSubscriptionQuote;
+}
+
+export async function createOwnerBankRequest(planId: string, durationMonths: number, couponCode?: string): Promise<BankSubscriptionRequest[]> {
   const cafe = await requireOwnerCafeContext();
   if (cafe.role !== "owner") throw new Error("طلب الاشتراك متاح من حساب المالك أنهِ وضع الصيانة وسجّل بحساب المالك لإنشاء الطلب");
-  if (!planId || ![1, 2, 12, 24].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
+  if (!planId || ![1, 3, 6, 12].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths });
+  const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths, p_coupon_code: normalizeCoupon(couponCode) });
   if (error) {
     const reasons: Record<string, string> = {
+      ...bankQuoteErrors,
       "An open request already exists": "لديك طلب اشتراك مفتوح بالفعل حدّث الصفحة لمتابعة الطلب وإرسال الإيصال",
       "Plan unavailable": "هذه الباقة غير متاحة للاشتراك حاليًا اختر باقة أخرى أو حدّث الصفحة",
       "Duration unavailable": "المدة المختارة غير متاحة لهذه الباقة اختر مدة أخرى",

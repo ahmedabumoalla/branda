@@ -189,6 +189,7 @@ const planSchema = z.object({
   name: z.string().trim().min(1).max(80),
   priceMonthly: z.number().nonnegative().max(1000000),
   offerEnabled: z.boolean(),
+  annualDiscountPercent: z.number().min(0).max(100).optional(),
   offerPrice: z.number().nonnegative().max(1000000).optional(),
   durationUnit: z.enum(["day", "month", "year"]),
   durationCount: z.number().int().positive().max(120),
@@ -217,10 +218,11 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
     name: String(row.name),
     priceMonthly: Number(row.price_sar ?? 0),
     offerEnabled: Boolean(row.offer_enabled),
+    annualDiscountPercent: Number(row.annual_discount_percent ?? 0),
     offerPrice: row.offer_price_sar == null ? undefined : Number(row.offer_price_sar),
     offerLabel: row.offer_label ? String(row.offer_label) : null,
     offerEndsAt: row.offer_ends_at ? String(row.offer_ends_at).slice(0, 10) : null,
-    durationOptions: Array.isArray(row.duration_options) ? (row.duration_options as number[]).map(Number).filter((item) => [1, 2, 12, 24].includes(item)) : [1, 2, 12, 24],
+    durationOptions: Array.isArray(row.duration_options) ? (row.duration_options as number[]).map(Number).filter((item) => [1, 3, 6, 12].includes(item)) : [1, 3, 6, 12],
     durationUnit: String(row.duration_unit ?? "month") as PlanDurationUnit,
     durationCount: Number(row.duration_count ?? 1),
     description: String(row.description ?? ""),
@@ -326,6 +328,11 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
 
   const parsed = z.array(planSchema).min(1).max(30).parse(plans).map(plan => ({
     ...plan,
+    offerEnabled: false,
+    freeAfterTrial: false,
+    durationUnit: plan.priceMonthly > 0 ? "month" as const : plan.durationUnit,
+    durationCount: plan.priceMonthly > 0 ? 1 : plan.durationCount,
+    durationOptions: [1, 3, 6, 12],
     features: getBrandNavigationFeatures().filter(feature => plan.features.includes("all") || plan.features.includes(feature.id)).map(feature => feature.id),
   }));
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);
@@ -366,11 +373,12 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     });
 
     const admin = createAdminClient();
-    const normalizedDurationOptions = Array.from(new Set((plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24]).map(Number))).filter((item) => [1, 2, 12, 24].includes(item));
+    const normalizedDurationOptions = Array.from(new Set((plan.durationOptions?.length ? plan.durationOptions : [1, 3, 6, 12]).map(Number))).filter((item) => [1, 3, 6, 12].includes(item));
     const extraPayload = {
+      annual_discount_percent: plan.annualDiscountPercent ?? 0,
       offer_label: plan.offerLabel || null,
       offer_ends_at: plan.offerEndsAt || null,
-      duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 2, 12, 24],
+      duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 3, 6, 12],
     };
 
     if (error) {
@@ -436,6 +444,7 @@ function mapRequest(row: Record<string, unknown>): SubscriptionPaymentRequest {
     planId: String(row.plan_id),
     planName: String(row.plan_name),
     baseAmount: Number(row.base_amount_sar),
+    couponCode: row.coupon_code_snapshot ? String(row.coupon_code_snapshot) : undefined,
     amount: Number(row.amount_sar),
     durationUnit: String(row.duration_unit) as PlanDurationUnit,
     durationCount: Number(row.duration_count),

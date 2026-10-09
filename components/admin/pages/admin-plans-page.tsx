@@ -15,7 +15,7 @@ const durationLabels: Record<PlanDurationUnit, string> = { day: "يوم", month:
 const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
   awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "مرفوض", cancelled: "ملغي",
 };
-const monthOptions = [1, 2, 12, 24];
+const monthOptions = [1, 3, 6, 12];
 const numberFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 
 function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
@@ -189,7 +189,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               {visiblePlans.map((item) => <button key={item.id} type="button" className={styles.planChoice} aria-pressed={plan?.id === item.id} onClick={() => setSelectedId(item.id)}>
                 <span className={styles.choiceTop}><span className={item.active ? styles.enabled : styles.disabled}>{item.active ? "مفعلة" : "متوقفة"}</span>{item.isDefault ? <span className={styles.defaultBadge}>الأساسية</span> : null}</span>
                 <strong>{item.name || "باقة دون اسم"}</strong>
-                <span className={styles.price}>{numberFormat.format(item.offerEnabled && item.offerPrice !== undefined ? item.offerPrice : item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
+                <span className={styles.price}>{numberFormat.format(item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
                 <span className={styles.choiceBottom}>{numberFormat.format(features.filter((feature) => isIncluded(item, feature.id)).length)} خدمات مفعلة<ChevronLeft size={17} aria-hidden="true" /></span>
               </button>)}
               {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات أضف أول باقة لتحديد خدماتها</p> : null}
@@ -223,20 +223,11 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               <section className={styles.section} aria-labelledby="plan-price-title">
                 <h3 id="plan-price-title">السعر ومدة الاشتراك</h3>
                 <div className={styles.fields}>
-                  <label>السعر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
-                  <div className={styles.durationFields}><label>المدة<input type="number" min={1} max={120} required value={plan.durationCount} onChange={(event) => updatePlan(plan.id, { durationCount: Number(event.target.value) })} /></label><label>الوحدة<select value={plan.durationUnit} onChange={(event) => updatePlan(plan.id, { durationUnit: event.target.value as PlanDurationUnit })}>{Object.entries(durationLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+                  <label>سعر الشهر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
+                  <label>الخصم السنوي %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك السنة فقط</small></label>
                 </div>
-                <fieldset className={styles.durationOptions}><legend>مدد الاشتراك المتاحة للعميل</legend>{monthOptions.map((months) => <label key={months}><input type="checkbox" checked={(plan.durationOptions?.length ? plan.durationOptions : monthOptions).includes(months)} onChange={(event) => {
-                  const current = plan.durationOptions?.length ? plan.durationOptions : monthOptions;
-                  const next = event.target.checked ? [...current, months] : current.filter((item) => item !== months);
-                  updatePlan(plan.id, { durationOptions: next.length ? [...new Set(next)].sort((a, b) => a - b) : [1] });
-                }} />{months === 1 ? "شهر" : months === 2 ? "شهران" : months === 12 ? "سنة" : "سنتان"}</label>)}</fieldset>
-                <label className={styles.toggle}><input type="checkbox" checked={plan.offerEnabled} onChange={(event) => updatePlan(plan.id, { offerEnabled: event.target.checked })} />تفعيل سعر عرض</label>
-                {plan.offerEnabled ? <div className={styles.offerFields}>
-                  <label>سعر العرض شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.offerPrice ?? ""} onChange={(event) => updatePlan(plan.id, { offerPrice: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
-                  <label>اسم العرض<input value={plan.offerLabel ?? ""} onChange={(event) => updatePlan(plan.id, { offerLabel: event.target.value || null })} placeholder="مثال: عرض الانطلاق" /></label>
-                  <label>انتهاء العرض<input type="date" value={plan.offerEndsAt ?? ""} onChange={(event) => updatePlan(plan.id, { offerEndsAt: event.target.value || null })} /></label>
-                </div> : null}
+                <p className={styles.policy}>السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو 3 أشهر أو 6 أشهر أو سنة</p>
+                {plan.priceMonthly > 0 ? <p className={styles.policy}>سعر السنة بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 12 * (1 - (plan.annualDiscountPercent ?? 0) / 100) * 100) / 100)} ر.س</p> : <p className={styles.policy}>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</p>}
               </section>
 
               <section className={styles.section} aria-labelledby="plan-limits-title">
@@ -245,7 +236,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                   <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود</small></label>
                   <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
                 </div>
-                <label className={styles.toggle}><input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />باقة مجانية بديلة بعد انتهاء التجربة</label>
+                <p className={styles.policy}>عند انتهاء الاشتراك تتوقف الخدمات حتى تفعيل اشتراك جديد دون الانتقال إلى باقة بديلة</p>
                 <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} disabled={saving || Boolean(configError)} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />{deletingId === plan.id ? "جارٍ حذف الباقة" : "حذف الباقة"}</button> : null}</div>
               </section>
             </fieldset> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة ثم اختر خدماتها وسعرها</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
@@ -260,7 +251,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
           <div className={styles.sectionHeading}><div><h2 id="payments-title"><Receipt size={22} aria-hidden="true" />طلبات الدفع</h2><p>راجع طلبات الاشتراك واعتمد الدفع لتفعيل الباقة</p></div><span className={styles.count}>{numberFormat.format(pendingCount)} للمراجعة</span></div>
           {requests.map((request) => <article key={request.id} className={styles.request}>
             <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><p>{request.receiptChannel === "whatsapp" ? "الإيصال مرسل عبر واتساب؛ تحقق من استلامه والتحويل قبل الاعتماد" : "تحقق من الإيصال والتحويل قبل اعتماد الطلب"}</p>{request.receiptUrl ? <a href={request.receiptUrl} target="_blank" rel="noreferrer" className={styles.secondary}>عرض إيصال التحويل</a> : null}<time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
-            <div className={styles.requestAmount}><strong>{numberFormat.format(request.amount)} <small>ر.س</small></strong><span className={request.status === "approved" ? styles.enabled : request.status === "rejected" ? styles.rejected : styles.defaultBadge}>{requestStatusLabels[request.status]}</span></div>
+            <div className={styles.requestAmount}>{request.couponCode ? <span>كوبون <b dir="ltr">{request.couponCode}</b></span> : null}{request.baseAmount > request.amount ? <span>إجمالي الخصم {numberFormat.format(request.baseAmount - request.amount)} ر.س</span> : null}<strong>{numberFormat.format(request.amount)} <small>ر.س</small></strong><span className={request.status === "approved" ? styles.enabled : request.status === "rejected" ? styles.rejected : styles.defaultBadge}>{requestStatusLabels[request.status]}</span></div>
             {request.status === "pending_review" ? <div className={styles.requestActions}><button type="button" className={styles.primary} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, true)}>{reviewingId === request.id ? "جارٍ تحديث الطلب…" : "اعتماد وتفعيل الباقة"}</button><button type="button" className={styles.dangerButton} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, false)}>رفض الطلب</button></div> : null}
           </article>)}
           {!requests.length ? <p className={styles.empty}>لا توجد طلبات دفع حاليًا ستظهر الطلبات الجديدة هنا للمراجعة</p> : null}

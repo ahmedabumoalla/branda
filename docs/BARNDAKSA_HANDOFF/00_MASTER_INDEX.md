@@ -20,6 +20,8 @@ The earlier React441 package request/save issue was fixed by accepting IDs conta
 
 ## Product decisions already implemented
 
+- Subscription update in progress: plan price is the monthly base; purchase durations are 1, 3, 6 and 12 months. Only the annual duration gets the plan-level discount set by administration. A platform coupon applies after the annual discount and can be restricted to any selected durations, including monthly-only or annual-only. Coupon expiry includes the end of the chosen Saudi day. Bank requests reserve limited coupon slots and retain price snapshots; redemption is counted on approval. Trial/paid expiry blocks dashboard services without any replacement plan and leaves subscriptions reachable. See task-state for applied database migration and publication status.
+
 - Platform copy uses no trailing periods or commas in headings, descriptions, hints or messages; remove unnecessary decorative separators while preserving meaningful lists, questions, numbers and URLs. This rule is recorded in AGENTS.md for future edits.
 - Every brand uses one shared service catalog for sidebar and package features: menu/products, offers, loyalty/rewards, settings. Subscriptions remain accessible. Admin navigation is separate.
 - Services require a current active package; no package/expiry closes public menu and other brand services. Positive overrides cannot add services missing from a package. Electronic storefronts are archived and disabled before reads/writes. Do not restore `/c` routes or branch/order fetching.

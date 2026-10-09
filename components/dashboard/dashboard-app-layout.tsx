@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { exitMaintenanceModeAction } from "@/app/actions/maintenance";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
+import { SubscriptionExpiredState } from "@/components/dashboard/subscription-expired-state";
 import { ResponsiveAppShell } from "@/components/ui/responsive-app-shell";
 import {
   clearDashboardShellSnapshot,
@@ -17,6 +18,8 @@ import { cafeHasFeature } from "@/lib/platform/permissions";
 
 type GuardState = {
   loading: boolean;
+  error?: boolean;
+  expiresAt?: string | null;
   cafeSlug: string;
   activePlanId: string;
   plans: PlatformPlan[];
@@ -43,20 +46,25 @@ export function DashboardAppLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
   const [maintenanceError, setMaintenanceError] = useState("");
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    let generation = 0;
+    function load() {
+    const current = ++generation;
     void getCachedDashboardShellSnapshot()
       .then((snapshot) => {
-        if (cancelled) return;
+        if (cancelled || current !== generation) return;
         if ((snapshot as { unauthenticated?: boolean }).unauthenticated) {
           setGuard({ loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
           return;
         }
         setGuard({
           loading: false,
+          expiresAt: snapshot.subscription?.expiresAt,
           cafeSlug: snapshot.settings.cafeSlug,
-          activePlanId: snapshot.planId,
+          activePlanId: snapshot.subscription?.expiresAt && Date.parse(snapshot.subscription.expiresAt) <= Date.now() ? "" : snapshot.planId,
           plans: snapshot.plans,
           featureOverrides: snapshot.featureOverrides ?? [],
         });
@@ -65,13 +73,29 @@ export function DashboardAppLayout({
         if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) {
           console.error("[DashboardAppLayout:feature-guard]", error);
         }
-        if (!cancelled) setGuard((current) => ({ ...current, loading: false }));
+        if (!cancelled && current === generation) setGuard((state) => ({ ...state, loading: false, error: true }));
       });
-
+    }
+    load();
+    const refresh = () => { clearDashboardShellSnapshot(); load(); };
+    window.addEventListener("focus", refresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", refresh);
     };
-  }, []);
+  }, [pathname, retry]);
+
+  useEffect(() => {
+    if (!guard.activePlanId || !guard.expiresAt) return;
+    const remaining = Date.parse(guard.expiresAt) - Date.now();
+    if (!Number.isFinite(remaining)) return;
+    const timer = window.setTimeout(() => {
+      if (remaining > 2147483647) { setRetry(value => value + 1); return; }
+      clearDashboardShellSnapshot();
+      setGuard(state => ({ ...state, activePlanId: "" }));
+    }, Math.max(0, Math.min(remaining, 2147483647)));
+    return () => window.clearTimeout(timer);
+  }, [guard.activePlanId, guard.expiresAt, retry]);
 
   useEffect(() => {
     try {
@@ -161,7 +185,11 @@ export function DashboardAppLayout({
           {maintenanceError && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{maintenanceError}</p>}
         </section>
       ) : null}
-      {allowed ? children : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
+      {pathname === "/dashboard/subscription" || pathname.startsWith("/dashboard/subscription/") ? children
+        : guard.loading ? <p role="status" className="p-10 text-center">جارٍ التحقق من الاشتراك</p>
+        : guard.error ? <div role="alert" className="p-10 text-center"><p>تعذر التحقق من الاشتراك حاول مجددًا</p><button type="button" className="mt-4 rounded-xl bg-[#38251b] px-5 py-3 text-white" onClick={() => { clearDashboardShellSnapshot(); setGuard(state => ({ ...state, loading: true, error: false })); setRetry(value => value + 1); }}>إعادة المحاولة</button></div>
+        : !guard.activePlanId ? <SubscriptionExpiredState />
+        : allowed ? children : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
     </ResponsiveAppShell>
   );
 }

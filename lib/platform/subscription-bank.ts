@@ -4,6 +4,7 @@ export type BankSubscriptionRequest = {
   id: string; planId: string; planName: string; amount: number; durationMonths: number;
   status: string; receiptChannel: "upload" | "whatsapp"; receiptStoragePath?: string;
   createdAt: string; adminResponse?: string;
+  couponCode?: string; annualDiscountAmount?: number; couponDiscountAmount?: number; baseAmount?: number;
 };
 
 export function subscriptionWhatsappUrl(customerName: string, planName: string, requestId?: string) {

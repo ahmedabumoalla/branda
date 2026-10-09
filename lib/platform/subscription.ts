@@ -5,6 +5,7 @@ export type SubscriptionPaymentRequest = {
   planId: string;
   planName: string;
   baseAmount: number;
+  couponCode?: string;
   amount: number;
   durationUnit: "day" | "month" | "year";
   durationCount: number;
