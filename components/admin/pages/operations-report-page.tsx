@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, BadgeCheck, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Users, Info } from "lucide-react";
 import { loadOperationsReportAction } from "@/app/actions/operations-report";
 import { AdminPageShell } from "@/components/ui/design-system";
 import { defaultReportFilters, filterReportBrands, reportMetricLabels, reportMetrics, reportPeriodSchema, saudiDate, totalReportMetrics, type OperationsReport, type ReportFilters, type ReportMetric, type ReportPeriod } from "@/lib/analytics/operations-report";
@@ -13,6 +14,14 @@ const featureTone = (id: string) => id === "loyalty" ? styles.purple : id === "s
 const subscriptionName: Record<string, string> = { active: "نشط", trial: "تجريبي", trialing: "تجريبي", expired: "منتهي", cancelled: "ملغي", canceled: "ملغي", suspended: "موقوف", none: "بدون اشتراك" };
 const statusName: Record<string, string> = { active: "نشطة", suspended: "موقوفة", inactive: "غير نشطة", draft: "مسودة", pending: "قيد الانتظار", archived: "مؤرشفة" };
 const pageSize = 25;
+function LastVisit({ value }: { value: string | null }) {
+  if (!value) return <span className={styles.noVisit}><span aria-hidden="true">—</span><small>لا توجد زيارة مسجلة</small></span>;
+  const date = new Date(value);
+  return <time dateTime={value} className={styles.visitTime}>
+    {new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" }).format(date)}
+    <small>{new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Riyadh" }).format(date)}</small>
+  </time>;
+}
 export function OperationsReportPage({ initialReport }: { initialReport: OperationsReport | null }) {
   const [report, setReport] = useState(initialReport);
   const [period, setPeriod] = useState<ReportPeriod>({ from: "", to: "" });
@@ -55,24 +64,30 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
     catch { setError("تعذر إنشاء ملف التقرير. حاول التصدير مرة أخرى."); }
     finally { setExporting(false); }
   }
-  return <AdminPageShell title="عمليات العلامات" subtitle="الزيارات، الحسابات، الولاء والاشتراكات في تقرير واحد. اختر الفترة ثم قارن العلامات أو صدّر نتائج استعلامك."
-    action={<button className={styles.primary} disabled={!report || busy || exporting || dirtyPeriod || !brands.length} onClick={() => void exportPdf()}>{exporting ? "جارٍ تجهيز التقرير…" : `تصدير تقرير PDF · ${number(brands.length)} علامة`}</button>}>
+  return <div className={styles.page}><AdminPageShell title="عمليات العلامات" subtitle="صورة كاملة لأداء علاماتك. قارن الوصول والولاء، وحدّد البيانات التي تهمك."
+    action={<button className={styles.primary} disabled={!report || busy || exporting || dirtyPeriod || !brands.length} onClick={() => void exportPdf()}><ArrowDownToLine size={19} aria-hidden="true" />{exporting ? "جارٍ تجهيز التقرير…" : "تصدير تقرير PDF"}<span className={styles.exportCount}>{number(brands.length)} علامة</span></button>}>
     <div className={styles.root}>
+      {report && <div className={styles.summary} aria-live="polite">{[
+        { label: "العلامات المطابقة", value: brands.length, hint: `من أصل ${number(report.brands.length)} علامة`, icon: Building2, tone: styles.gold },
+        { label: "اشتراكات سارية", value: brands.filter(brand => brand.subscribed).length, hint: "حالة الاشتراكات الحالية", icon: BadgeCheck, tone: styles.green },
+        { label: "زوار الفرع عبر العلامات", value: totals.storefrontVisitors, hint: `${number(totals.storefrontVisits)} زيارة خلال الفترة`, icon: Users, tone: styles.blue },
+        { label: "بطاقات الولاء الصادرة", value: totals.loyaltyCards, hint: `${number(totals.loyaltyCustomers)} عميل خلال الفترة`, icon: CreditCard, tone: styles.purple },
+      ].map(({ label, value, hint, icon: Icon, tone }) => <div key={label}><div className={styles.statTop}><span>{label}</span><span className={`${styles.statIcon} ${tone}`}><Icon size={20} aria-hidden="true" /></span></div><strong>{number(value)}</strong><span className={styles.statHint}>{hint}</span></div>)}</div>}
       <section className={styles.panel} aria-label="فلاتر التقرير">
-        <div className={styles.heading}><h2>نطاق التقرير</h2><span>التوقيت المحلي للسعودية · يشمل يوم النهاية</span></div>
+        <div className={styles.heading}><h2><SlidersHorizontal size={19} aria-hidden="true" />خصّص تقريرك</h2><span>التوقيت المحلي للسعودية · يشمل يوم النهاية</span></div>
         <form className={styles.period} onSubmit={event => { event.preventDefault(); void load(); }}>
           <label>من تاريخ<input type="date" value={period.from} onChange={event => setPeriod({ ...period, from: event.target.value })} /></label>
           <label>إلى تاريخ<input type="date" value={period.to} onChange={event => setPeriod({ ...period, to: event.target.value })} /></label>
-          <button className={styles.primary} disabled={busy} type="submit">{busy ? "جارٍ التحميل…" : "تطبيق الفترة / تحديث"}</button>
+          <button className={styles.primary} disabled={busy} type="submit"><RotateCcw size={16} aria-hidden="true" />{busy ? "جارٍ التحميل…" : "تطبيق الفترة / تحديث"}</button>
           <div className={styles.presets}>{[[1, "اليوم"], [7, "٧ أيام"], [30, "٣٠ يومًا"], [null, "كل الفترات"]].map(([days, label]) => <button type="button" key={String(label)} disabled={busy} onClick={() => preset(days as number | null)}>{label}</button>)}</div>
         </form>
         <div className={styles.filters}>
-          <label>بحث في العلامات والباقات<input type="search" placeholder="اسم العلامة أو الرابط أو الباقة" value={filters.query} onChange={event => updateFilters({ query: event.target.value })} /></label>
+          <label>بحث في العلامات والباقات<span className={styles.searchField}><Search size={18} aria-hidden="true" /><input type="search" placeholder="اسم العلامة أو الرابط أو الباقة" value={filters.query} onChange={event => updateFilters({ query: event.target.value })} /></span></label>
           <label>العلامة<select value={filters.brandId} onChange={event => updateFilters({ brandId: event.target.value })}><option value="">كل العلامات</option>{report?.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
           <label>الاشتراك الحالي<select value={filters.subscription} onChange={event => updateFilters({ subscription: event.target.value as ReportFilters["subscription"] })}><option value="all">الكل</option><option value="subscribed">المشتركة حاليًا</option><option value="unsubscribed">بدون اشتراك ساري</option></select></label>
           <label>الميزة المفعّلة<select value={filters.feature} onChange={event => updateFilters({ feature: event.target.value })}><option value="">كل المميزات</option>{features.map(feature => <option key={feature} value={feature}>{featureName(feature)}</option>)}</select></label>
         </div>
-        <details className={styles.query}><summary>استعلام رقمي متقدم {filters.conditions.length ? `· ${number(filters.conditions.length)} شروط` : ""}</summary>
+        <details className={styles.query}><summary><ListFilter size={17} aria-hidden="true" />استعلام رقمي متقدم {filters.conditions.length ? `· ${number(filters.conditions.length)} شروط` : ""}<ChevronDown size={16} aria-hidden="true" /></summary>
           <p>تظهر العلامات التي تحقق جميع الشروط. مثال: زوار الفرع أكثر من ١٠٠ وبطاقات الولاء أقل من ٢٠.</p>
           {filters.conditions.map((condition, index) => <div className={styles.condition} key={index}>
             <select aria-label={`مؤشر الشرط ${index + 1}`} value={condition.metric} onChange={event => updateFilters({ conditions: filters.conditions.map((item, i) => i === index ? { ...item, metric: event.target.value as ReportMetric } : item) })}>{reportMetrics.map(metric => <option value={metric} key={metric}>{reportMetricLabels[metric]}</option>)}</select>
@@ -86,24 +101,23 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
       {error && <div className={styles.error} role="alert">{error}</div>}
       {dirtyPeriod && <p className={styles.notice}>الفترة المعدّلة لم تُطبّق بعد. الأرقام المعروضة تخص آخر فترة محمّلة؛ طبّق الفترة قبل التصدير.</p>}
       {report && <>
-        <div className={styles.summary} aria-live="polite">{[["العلامات المطابقة", brands.length], ["علامات باشتراك ساري", brands.filter(brand => brand.subscribed).length], ["زوار الفرع عبر العلامات", totals.storefrontVisitors], ["بطاقات الولاء الصادرة", totals.loyaltyCards]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{number(value as number)}</strong></div>)}</div>
-        <section className={styles.panel} aria-label="بيانات العلامات" aria-busy={busy}>
-          <div className={styles.heading}><div><h2>{number(brands.length)} من {number(report.brands.length)} علامة</h2><p>الفترة المحمّلة: {report.from || "بداية السجل"} — {report.to || "حتى الآن"} · آخر تحديث: {saudiDate(report.generatedAt)}</p></div>
-            <button onClick={() => updateFilters({ ...defaultReportFilters })}>مسح فلاتر العلامات</button></div>
-          <div className={styles.sort}><label>ترتيب حسب<select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastStorefrontVisit">آخر زيارة للفرع</option><option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label><label>الاتجاه<select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></div>
-          <p className={styles.hint}>مرّر الجدول أفقيًا لعرض جميع المؤشرات. افتح تفاصيل العلامة لعرض المميزات والأرقام كاملة.</p>
+        <section className={`${styles.panel} ${styles.results}`} aria-label="بيانات العلامات" aria-busy={busy}>
+          <div className={styles.heading}><div><h2>مقارنة العلامات <span className={styles.resultCount}>{number(brands.length)} / {number(report.brands.length)}</span></h2><p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}<span className={styles.updated}>آخر تحديث: {saudiDate(report.generatedAt)}</span></p></div>
+            <button className={styles.reset} onClick={() => updateFilters({ ...defaultReportFilters })}><RotateCcw size={15} aria-hidden="true" />مسح فلاتر العلامات</button></div>
+          <div className={styles.tableToolbar}><div className={styles.sort}><ArrowUpDown size={17} aria-hidden="true" /><label><span className={styles.srOnly}>ترتيب حسب</span><select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastStorefrontVisit">آخر زيارة للفرع</option><option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label><label><span className={styles.srOnly}>الاتجاه</span><select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></div>
+          <p className={styles.hint}><ArrowLeftRight size={16} aria-hidden="true" />مرّر للمقارنة · اضغط على العلامة لعرض التفاصيل</p></div>
           <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول مقارنة العلامات، قابل للتمرير أفقيًا"><table>
             <caption className={styles.srOnly}>مؤشرات العلامات خلال الفترة المحمّلة، وآخر الزيارات عبر كامل السجل</caption>
-            <thead><tr><th scope="col">العلامة / الاشتراك</th><th scope="col">زوار الفرع<small>والزيارات</small></th><th scope="col">حسابات الفرع<small>وإجمالي الحسابات الجديدة</small></th><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">آيفون<small>وأندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">آخر زيارة للفرع</th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
-            <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <Fragment key={brand.id}><tr>
-              <th scope="row"><button className={styles.brandButton} aria-expanded={expanded === brand.id} aria-controls={`brand-${brand.id}`} onClick={() => setExpanded(expanded === brand.id ? null : brand.id)}>{brand.name}<span>{expanded === brand.id ? "إغلاق التفاصيل −" : "عرض التفاصيل +"}</span></button><span className={`${styles.chip} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span><small>{brand.planName || "بدون باقة"} · {number(brand.features.length)} ميزة</small><div className={styles.chips}>{brand.features.filter(feature => ["loyalty", "standalone_menu", "orders", "menu"].includes(feature)).map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div></th>
+            <thead><tr className={styles.columnGroups}><th scope="col" rowSpan={2}>العلامة التجارية<small>الاشتراك والمميزات</small></th><th scope="colgroup" colSpan={3}>الوصول الرقمي</th><th scope="colgroup" colSpan={3}>الولاء والتفاعل</th><th scope="colgroup" colSpan={2}>آخر نشاط مسجّل</th></tr><tr><th scope="col">زوار الفرع<small>والزيارات</small></th><th scope="col">حسابات الفرع<small>وإجمالي الحسابات الجديدة</small></th><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">المحافظ<small>آيفون / أندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">آخر زيارة للفرع</th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
+            <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <Fragment key={brand.id}><tr className={expanded === brand.id ? styles.selectedRow : undefined}>
+              <th scope="row"><button className={styles.brandButton} aria-expanded={expanded === brand.id} aria-controls={`brand-${brand.id}`} onClick={() => setExpanded(expanded === brand.id ? null : brand.id)}><span className={`${styles.avatar} ${brand.subscribed ? styles.green : styles.gold}`} aria-hidden="true">{brand.name.trim().slice(0, 1)}</span><span className={styles.brandName}>{brand.name}<span className={styles.brandSlug} dir="ltr">{brand.slug}</span></span><ChevronDown size={16} className={styles.expandIcon} aria-hidden="true" /><span className={styles.srOnly}>{expanded === brand.id ? "إغلاق التفاصيل" : "عرض التفاصيل"}</span></button><div className={styles.brandMeta}><span className={`${styles.status} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span><span className={styles.planName}>{brand.planName || "بدون باقة"}</span></div><div className={styles.chips}>{brand.features.filter(feature => ["loyalty", "standalone_menu", "orders", "menu"].includes(feature)).map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div></th>
               <td><strong>{number(brand.metrics.storefrontVisitors)}</strong><small>{number(brand.metrics.storefrontVisits)} زيارة</small></td>
               <td><strong>{number(brand.metrics.storefrontAccounts)}</strong><small>{number(brand.metrics.accounts)} إجمالي جديد</small><small>{number(brand.metrics.unattributedAccounts)} مصدر غير محدد</small></td>
               <td><strong>{number(brand.metrics.menuVisitors)}</strong><small>{number(brand.metrics.menuVisits)} زيارة</small></td>
               <td><strong>{number(brand.metrics.loyaltyCards)}</strong><small>{number(brand.metrics.loyaltyCustomers)} عميل</small></td>
-              <td><strong>{number(brand.metrics.appleCards)} آيفون</strong><small>{number(brand.metrics.googleCards)} أندرويد</small></td>
-              <td><strong>{number(brand.metrics.stampOperations)} ختم</strong><small>{number(brand.metrics.rewardOperations)} مكافأة</small></td>
-              <td className={styles.date}>{saudiDate(brand.lastStorefrontVisit)}</td><td className={styles.date}>{saudiDate(brand.lastMenuVisit)}</td>
+              <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.appleCards)}</strong><small>آيفون</small></span><span><strong>{number(brand.metrics.googleCards)}</strong><small>أندرويد</small></span></div></td>
+              <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.stampOperations)}</strong><small>ختم</small></span><span><strong>{number(brand.metrics.rewardOperations)}</strong><small>مكافأة</small></span></div></td>
+              <td className={styles.date}><LastVisit value={brand.lastStorefrontVisit} /></td><td className={styles.date}><LastVisit value={brand.lastMenuVisit} /></td>
             </tr><tr id={`brand-${brand.id}`} hidden={expanded !== brand.id}><td colSpan={9}><div className={styles.detail}>
               <p>حالة العلامة: {statusName[brand.status] || brand.status} · حالة الاشتراك المسجلة: {subscriptionName[brand.subscriptionStatus] || brand.subscriptionStatus} · انتهاء الاشتراك: {brand.expiresAt ? saudiDate(brand.expiresAt) : "غير محدد"}</p>
               <h3>المميزات المفعّلة حاليًا · {number(brand.features.length)}</h3><div className={styles.chips}>{brand.features.map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div>
@@ -113,9 +127,9 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
             {brands.length > 0 && <tfoot><tr><th scope="row">إجمالي النتائج</th><td>{number(totals.storefrontVisitors)}<small>{number(totals.storefrontVisits)} زيارة</small></td><td>{number(totals.storefrontAccounts)}<small>{number(totals.accounts)} إجمالي جديد</small></td><td>{number(totals.menuVisitors)}<small>{number(totals.menuVisits)} زيارة</small></td><td>{number(totals.loyaltyCards)}<small>{number(totals.loyaltyCustomers)} عميل</small></td><td>{number(totals.appleCards)} آيفون<small>{number(totals.googleCards)} أندرويد</small></td><td>{number(totals.stampOperations)} ختم<small>{number(totals.rewardOperations)} مكافأة</small></td><td colSpan={2}>جميع العلامات المطابقة</td></tr></tfoot>}
           </table></div>
           {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر. غيّر الشروط أو امسح فلاتر العلامات.</p>}
-          <nav className={styles.pagination} aria-label="صفحات العلامات"><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>السابق</button><span>صفحة {number(currentPage + 1)} من {number(pages)} · التصدير يشمل كل النتائج</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي</button></nav>
+          <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
-        <section className={styles.panel} aria-label="تعريف المؤشرات وتغطية البيانات"><h2>كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
+        <section className={`${styles.panel} ${styles.explainer}`} aria-label="تعريف المؤشرات وتغطية البيانات"><h2><Info size={19} aria-hidden="true" />كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
           <li>زوار الفرع جلسات تصفح مميزة، وزوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين. إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة.</li>
           <li>الحسابات والبطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة. عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة.</li>
           <li>آيفون: بطاقات طُلب تنزيلها. أندرويد: بطاقات أُنشئ لها رابط حفظ. قد تستخدم البطاقة النظامين؛ هذه الأرقام لا تؤكد تثبيتها على الجهاز.</li>
@@ -124,5 +138,5 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
         </ul></section>
       </>}
     </div>
-  </AdminPageShell>;
+  </AdminPageShell></div>;
 }
