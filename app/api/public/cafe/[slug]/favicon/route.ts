@@ -1,3 +1,4 @@
+import { isStorefrontEnabled, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import {
   getPreferredCafeDisplayLogoUrl,
   isDefaultBarndaksaCafeLogo,
@@ -118,6 +119,7 @@ async function loadCafeIconMeta(slug: string): Promise<IconMeta> {
 }
 
 export async function GET(request: Request, { params }: Props) {
+  if (!isStorefrontEnabled()) return storefrontUnavailableResponse();
   const { slug } = await params;
   const normalizedSlug = slug.trim().toLowerCase();
   const requestUrl = new URL(request.url);

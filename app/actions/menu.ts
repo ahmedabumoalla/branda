@@ -10,12 +10,15 @@ import {
 } from "@/lib/data/menu";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
+import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 
 export async function fetchOwnerMenuAction() {
+  await assertOwnerServiceEnabled("menu");
   return getOwnerMenu();
 }
 
 export async function saveMenuProductAction(product: MenuProduct) {
+  await assertOwnerServiceEnabled("menu");
   const eventTicketSettings = product.eventTicketSettings
     ? {
         ...product.eventTicketSettings,
@@ -52,14 +55,17 @@ export async function saveMenuProductAction(product: MenuProduct) {
 }
 
 export async function deleteMenuProductAction(productId: string) {
+  await assertOwnerServiceEnabled("menu");
   await softDeleteMenuProduct(productId);
 }
 
 export async function saveMenuCategoriesAction(categories: MenuCategoryRecord[]) {
+  await assertOwnerServiceEnabled("menu");
   return saveAllMenuCategories(categories);
 }
 
 export async function deleteMenuCategoryAction(categoryId: string) {
+  await assertOwnerServiceEnabled("menu");
   try {
     return await softDeleteMenuCategory(categoryId);
   } catch (error) {
@@ -77,6 +83,7 @@ export async function deleteMenuCategoryAction(categoryId: string) {
 }
 
 export async function saveMenuCategoryAction(category: MenuCategoryRecord) {
+  await assertOwnerServiceEnabled("menu");
   return upsertMenuCategory({
     id: /^[0-9a-f-]{36}$/i.test(category.id) ? category.id : undefined,
     name: category.name,

@@ -1,3 +1,5 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import Link from "next/link";
 import {
   Bell,
@@ -17,6 +19,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ slug: string }> };
 
 export default async function CustomerNotificationsPage({ params }: Params) {
+  requireStorefrontEnabled();
   const { slug } = await params;
   const rewards = await getCustomerExperienceRewardNotifications(slug);
 

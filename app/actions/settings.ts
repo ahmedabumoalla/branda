@@ -2,12 +2,15 @@
 
 import { getOwnerCafeSettings, updateCafeSettings } from "@/lib/data/settings";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
+import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 
 export async function fetchOwnerSettingsAction() {
+  await assertOwnerServiceEnabled("settings");
   return getOwnerCafeSettings();
 }
 
 export async function saveSettingsAction(settings: CafeSettings) {
+  await assertOwnerServiceEnabled("settings");
   await updateCafeSettings({
     ownerName: settings.ownerName,
     ownerEmail: settings.ownerEmail,

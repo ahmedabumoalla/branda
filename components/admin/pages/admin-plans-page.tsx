@@ -1,640 +1,237 @@
 "use client";
 
-import { Check, Clock3, Layers3, Plus, Receipt, Save, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import {
-  approveSubscriptionRequestAction,
-  rejectSubscriptionRequestAction,
-  savePlatformPlansAction,
-} from "@/app/actions/admin";
-import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
-import {
-  AdminInput,
-  AdminPageShell,
-  AdminSelect,
-  AdminStatPill,
-  AdminTextarea,
-  BentoCard,
-  BentoGrid,
-  GoldButton,
-  StatusBadge,
-} from "@/components/ui/design-system";
+import { Check, ChevronLeft, Layers3, Plus, Receipt, Save, Trash2 } from "lucide-react";
+import { useRef, useState, type FormEvent } from "react";
+import { approveSubscriptionRequestAction, rejectSubscriptionRequestAction, savePlatformPlansAction } from "@/app/actions/admin";
+import { AdminPageShell } from "@/components/ui/design-system";
 import { BUSINESS_CATEGORIES, type BusinessCategoryId } from "@/lib/platform/business-categories";
-import {
-  packageAssignablePlatformFeatures,
-  type PlatformFeature,
-  type PlatformPlan,
-  type PlanDurationUnit,
-} from "@/lib/platform/admin-data";
+import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
+import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
+import styles from "./admin-plans-page.module.css";
 
-type Props = {
-  initialPlans: PlatformPlan[];
-  initialRequests: SubscriptionPaymentRequest[];
-  configError?: string;
-};
-
-const durationLabels: Record<PlanDurationUnit, string> = {
-  day: "يوم",
-  month: "شهر",
-  year: "سنة",
-};
-
+type Props = { initialPlans: PlatformPlan[]; initialRequests: SubscriptionPaymentRequest[]; configError?: string };
+const durationLabels: Record<PlanDurationUnit, string> = { day: "يوم", month: "شهر", year: "سنة" };
 const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
-  awaiting_receipt: "بانتظار الإيصال",
-  pending_review: "بانتظار المراجعة",
-  approved: "مقبول",
-  rejected: "مرفوض",
-  cancelled: "ملغي",
+  awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "مرفوض", cancelled: "ملغي",
 };
-
-const PLAN_CATEGORY_IDS: BusinessCategoryId[] = ["cafes_coffee", "restaurants", "events_conferences"];
-const PLAN_CATEGORIES = BUSINESS_CATEGORIES.filter((category) =>
-  PLAN_CATEGORY_IDS.includes(category.id)
-);
+const categories = BUSINESS_CATEGORIES.filter((category) => ["cafes_coffee", "restaurants", "events_conferences"].includes(category.id));
+const monthOptions = [1, 2, 12, 24];
+const numberFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 
 function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
   return {
-    id: `plan-${crypto.randomUUID().slice(0, 8)}`,
-    name: "باقة جديدة",
-    priceMonthly: 0,
-    offerEnabled: false,
-    durationUnit: "month",
-    durationCount: 1,
-    description: "",
-    active: true,
-    isDefault: false,
-    features: ["home", "menu", "cashier", "settings", "subscription"],
-    categoryId,
-    maxOrdersMonthly: 30,
-    maxProductsMonthly: 20,
-    maxBranches: 1,
-    trialDays: 15,
-    freeAfterTrial: false,
-    offerLabel: "عرض خاص",
-    offerEndsAt: null,
-    durationOptions: [1, 2, 12, 24],
+    id: `plan-${crypto.randomUUID().slice(0, 8)}`, name: "باقة جديدة", priceMonthly: 0,
+    offerEnabled: false, durationUnit: "month", durationCount: 1, description: "", active: true,
+    isDefault: false, features: [], categoryId, maxOrdersMonthly: null, maxProductsMonthly: 20,
+    maxBranches: null, trialDays: 0, freeAfterTrial: false, offerLabel: null, offerEndsAt: null,
+    durationOptions: [...monthOptions],
   };
 }
 
-function featureTitle(feature: PlatformFeature, categoryId?: string) {
-  if (feature === "loyalty") {
-    return "الولاء والمكافآت + نقاط الولاء المتقدمة";
-  }
-  if (feature === "cashier") {
-    return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
-  }
-  return packageAssignablePlatformFeatures.find((item) => item.id === feature)?.title ?? feature;
-}
-
-const featureCategoryLabels: Record<string, string> = {
-  core: "أساسية",
-  commerce: "تجارية",
-  operations: "تشغيلية",
-  growth: "نمو وتسويق",
-  experience: "تجربة العملاء",
-  settings: "إعدادات",
-  finance: "مالية",
-};
-
-const featureStatusLabels: Record<string, string> = {
-  active: "نشطة",
-  preview: "معاينة",
-  coming_soon: "قريبًا",
-  hidden: "مخفية",
-};
-
-export function AdminPlansPage({
-  initialPlans,
-  initialRequests,
-  configError,
-}: Props) {
+export function AdminPlansPage({ initialPlans, initialRequests, configError }: Props) {
   const [plans, setPlans] = useState(initialPlans);
   const [requests, setRequests] = useState(initialRequests);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<BusinessCategoryId>("cafes_coffee");
+  const [categoryId, setCategoryId] = useState<BusinessCategoryId>("cafes_coffee");
+  const [selectedId, setSelectedId] = useState(initialPlans.find((plan) => (plan.categoryId ?? "cafes_coffee") === "cafes_coffee")?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-
-  const activeCount = useMemo(() => plans.filter((plan) => plan.active).length, [plans]);
-  const visiblePlans = useMemo(
-    () => plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === selectedCategoryId),
-    [plans, selectedCategoryId]
-  );
-  const pendingCount = useMemo(
-    () => requests.filter((request) => request.status === "pending_review").length,
-    [requests]
-  );
+  const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  const reviewLock = useRef(false);
+  const saveLock = useRef(false);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const features = getBrandNavigationFeatures();
+  const visiblePlans = plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === categoryId);
+  const plan = visiblePlans.find((item) => item.id === selectedId) ?? visiblePlans[0];
+  const pendingCount = requests.filter((request) => request.status === "pending_review").length;
+  const isIncluded = (item: PlatformPlan, feature: PlatformFeature) => item.features.includes("all") || item.features.includes(feature);
 
   function updatePlan(planId: string, patch: Partial<PlatformPlan>) {
-    setPlans((current) =>
-      current.map((plan) => (plan.id === planId ? { ...plan, ...patch } : plan))
-    );
+    setPlans((current) => current.map((item) => item.id === planId ? { ...item, ...patch } : item));
     setDirty(true);
+    setNotice(null);
   }
 
   function selectDefault(planId: string) {
-    const target = plans.find((plan) => plan.id === planId);
-    const targetCategoryId = target?.categoryId ?? "cafes_coffee";
-    setPlans((current) =>
-      current.map((plan) => ({
-        ...plan,
-        active: plan.id === planId ? true : plan.active,
-        isDefault: (plan.categoryId ?? "cafes_coffee") === targetCategoryId
-          ? plan.id === planId
-          : plan.isDefault,
-      }))
-    );
+    const target = plans.find((item) => item.id === planId);
+    setPlans((current) => current.map((item) => ({ ...item,
+      active: item.id === planId ? true : item.active,
+      isDefault: (item.categoryId ?? "cafes_coffee") === (target?.categoryId ?? "cafes_coffee") ? item.id === planId : item.isDefault,
+    })));
     setDirty(true);
+    setNotice(null);
   }
 
   function toggleFeature(planId: string, feature: PlatformFeature) {
-    const plan = plans.find((item) => item.id === planId);
-    if (!plan) return;
-    const features = plan.features.includes(feature)
-      ? plan.features.filter((item) => item !== feature)
-      : [...plan.features, feature];
-    updatePlan(planId, { features });
+    const target = plans.find((item) => item.id === planId);
+    if (!target) return;
+    const explicit: PlatformFeature[] = target.features.includes("all") ? features.map((item) => item.id) : target.features;
+    updatePlan(planId, { features: explicit.includes(feature) ? explicit.filter((item) => item !== feature) : [...explicit, feature] });
   }
 
   function addPlan() {
-    setPlans((current) => [createPlan(selectedCategoryId), ...current]);
+    const next = createPlan(categoryId);
+    setPlans((current) => [...current, next]);
+    setSelectedId(next.id);
     setDirty(true);
+    setNotice(null);
   }
 
   function removePlan(planId: string) {
-    const plan = plans.find((item) => item.id === planId);
-    if (!plan || plan.isDefault) {
-      alert("لا يمكن حذف الباقة الأساسية");
-      return;
-    }
+    const target = plans.find((item) => item.id === planId);
+    if (!target || target.isDefault) return;
+    if (!window.confirm(`حذف «${target.name}» من الباقات؟ سيطبق الحذف عند حفظ التعديلات.`)) return;
     setPlans((current) => current.filter((item) => item.id !== planId));
     setDirty(true);
+    setNotice(null);
   }
 
-  async function savePlans() {
+  async function savePlans(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (saveLock.current) return;
+    saveLock.current = true;
     setSaving(true);
+    setNotice(null);
     try {
-      const savedPlans = await savePlatformPlansAction(plans);
-      setPlans(savedPlans);
+      setPlans(await savePlatformPlansAction(plans));
       setDirty(false);
-      alert("تم حفظ الباقات وتحديد الباقة الأساسية");
+      setNotice({ text: "تم حفظ الباقات والخدمات المتاحة لكل باقة", error: false });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "تعذر حفظ الباقات");
+      setNotice({ text: error instanceof Error ? error.message : "تعذر حفظ الباقات. بقيت تعديلاتك هنا؛ حاول مجددًا.", error: true });
+      requestAnimationFrame(() => noticeRef.current?.focus());
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   }
 
-  async function approveRequest(requestId: string) {
+  async function reviewRequest(requestId: string, approve: boolean) {
+    if (reviewLock.current) return;
+    const reason = approve ? "" : window.prompt("اكتب سبب رفض الطلب", "تعذر اعتماد الدفع")?.trim();
+    if (!approve && !reason) return;
+    reviewLock.current = true;
+    setReviewingId(requestId);
     try {
-      setRequests(await approveSubscriptionRequestAction(requestId));
-      alert("تم اعتماد الطلب وتفعيل الباقة");
-    } catch {
-      alert("تعذر اعتماد الطلب");
-    }
-  }
-
-  async function rejectRequest(requestId: string) {
-    const response = window.prompt("اكتب سبب الرفض", "تعذر اعتماد الدفع") ?? "";
-    if (!response.trim()) return;
-    try {
-      setRequests(await rejectSubscriptionRequestAction(requestId, response));
-      alert("تم رفض الطلب");
-    } catch {
-      alert("تعذر رفض الطلب");
+      setRequests(approve ? await approveSubscriptionRequestAction(requestId) : await rejectSubscriptionRequestAction(requestId, reason!));
+      setNotice({ text: approve ? "تم اعتماد الطلب وتفعيل الباقة" : "تم رفض الطلب", error: false });
+    } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : "تعذر تحديث الطلب. حاول مجددًا.", error: true });
+      requestAnimationFrame(() => noticeRef.current?.focus());
+    } finally {
+      reviewLock.current = false;
+      setReviewingId(null);
     }
   }
 
   return (
-    <AdminPageShell
-      title="الباقات والاشتراكات"
-      subtitle="إدارة الباقة الأساسية والأسعار الشاملة للضريبة والعروض وطلبات الدفع اليدوي."
-      action={<BarndaksaLogo variant="dark" width={140} height={56} />}
-    >
-      {configError ? (
-        <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">
-          {configError}
+    <div className={styles.page} dir="rtl">
+      <AdminPageShell title="الباقات والاشتراكات" subtitle="صمّم الباقة، وحدّد الخدمات التي تظهر للعلامة وتعمل لديها.">
+        <div className={styles.summary} aria-label="ملخص الباقات">
+          <div><span>الباقات</span><strong>{numberFormat.format(plans.length)}</strong></div>
+          <div><span>باقات مفعلة</span><strong>{numberFormat.format(plans.filter((item) => item.active).length)}</strong></div>
+          <div><span>خدمات القائمة</span><strong>{numberFormat.format(features.length)}</strong></div>
+          <a href="#payment-requests"><span>طلبات للمراجعة</span><strong>{numberFormat.format(pendingCount)}<ChevronLeft size={19} aria-hidden="true" /></strong></a>
         </div>
-      ) : null}
 
-      <BentoGrid className="mb-6">
-        <BentoCard variant="cyber">
-          <AdminStatPill label="إجمالي الباقات" value={plans.length} />
-        </BentoCard>
-        <BentoCard variant="cyber">
-          <AdminStatPill label="الباقات المفعلة" value={activeCount} />
-        </BentoCard>
-        <BentoCard variant="gold">
-          <AdminStatPill label="طلبات بانتظار المراجعة" value={pendingCount} />
-        </BentoCard>
-        <BentoCard variant="dark">
-          <AdminStatPill
-            label="الباقة الأساسية"
-            value={plans.find((plan) => plan.isDefault)?.name ?? "غير محددة"}
-          />
-        </BentoCard>
-      </BentoGrid>
+        {configError ? <div className={styles.error} role="alert">{configError}</div> : null}
+        {notice ? <div ref={noticeRef} tabIndex={-1} className={notice.error ? styles.error : styles.success} role={notice.error ? "alert" : "status"}>{notice.text}</div> : null}
 
-      <div className="mb-6 flex flex-wrap justify-end gap-3">
-        <div className="flex flex-1 flex-wrap gap-2">
-          {PLAN_CATEGORIES.map((category) => {
-            const selected = selectedCategoryId === category.id;
-            const count = plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === category.id).length;
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
-                  selected
-                    ? "border-[#F6C35B] bg-[#F6C35B] text-[#22130D]"
-                    : "border-white/10 bg-white/5 text-[#F8F4EF]"
-                }`}
-              >
-                {category.id === "cafes_coffee"
-                  ? "باقات المقاهي والكوفيهات"
-                  : category.id === "restaurants"
-                    ? "باقات المطاعم"
-                    : "باقات الفعاليات والمؤتمرات"}
-                <span className="ms-2 rounded-full bg-black/15 px-2 py-0.5 text-xs">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={addPlan}
-          className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-4 font-black text-[#F8F4EF]"
-        >
-          <Plus className="h-5 w-5" />
-          إضافة باقة
-        </button>
-        <GoldButton
-          type="button"
-          onClick={savePlans}
-          disabled={saving || !dirty}
-          className="inline-flex items-center gap-2"
-        >
-          <Save className="h-5 w-5" />
-          {saving ? "جاري الحفظ..." : "حفظ جميع التعديلات"}
-        </GoldButton>
-      </div>
-
-      <BentoGrid className="mb-7 xl:grid-cols-3">
-        {visiblePlans.map((plan) => (
-          <BentoCard key={plan.id} variant={plan.isDefault ? "gold" : "cyber"}>
-            <div className="mb-5 flex items-center justify-between gap-2">
-              <Layers3 className="h-7 w-7 text-[#F6C35B]" />
-              <div className="flex flex-wrap gap-2">
-                {plan.isDefault ? <StatusBadge tone="gold">الأساسية</StatusBadge> : null}
-                <StatusBadge tone={plan.active ? "success" : "danger"}>
-                  {plan.active ? "مفعلة" : "متوقفة"}
-                </StatusBadge>
-              </div>
+        <form onSubmit={savePlans} className={styles.form}>
+          <div className={styles.toolbar}>
+            <div className={styles.categories} aria-label="تصنيف الباقات">
+              {categories.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => { setCategoryId(category.id); setSelectedId(""); }}>
+                {category.label}<span>{numberFormat.format(plans.filter((item) => (item.categoryId ?? "cafes_coffee") === category.id).length)}</span>
+              </button>)}
             </div>
-
-            <div className="space-y-4">
-              <AdminInput
-                value={plan.name}
-                placeholder="اسم الباقة"
-                onChange={(event) => updatePlan(plan.id, { name: event.target.value })}
-              />
-              <AdminTextarea
-                value={plan.description}
-                placeholder="وصف الباقة"
-                className="h-20"
-                onChange={(event) =>
-                  updatePlan(plan.id, { description: event.target.value })
-                }
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <label>
-                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">
-                    السعر شامل الضريبة
-                  </span>
-                  <AdminInput
-                    type="number"
-                    min="0"
-                    value={plan.priceMonthly}
-                    onChange={(event) =>
-                      updatePlan(plan.id, { priceMonthly: Number(event.target.value) || 0 })
-                    }
-                  />
-                </label>
-                <label>
-                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">
-                    سعر العرض شامل الضريبة
-                  </span>
-                  <AdminInput
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="أدخل سعر العرض شامل الضريبة"
-                    value={plan.offerPrice ?? ""}
-                    className="text-[#FCF8F3] placeholder:text-[#CBB29C]"
-                    onChange={(event) => {
-                      const value = event.target.value;
-
-                      if (value === "") {
-                        updatePlan(plan.id, { offerPrice: undefined });
-                        return;
-                      }
-
-                      updatePlan(plan.id, {
-                        offerEnabled: true,
-                        offerPrice: Number(value),
-                      });
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label>
-                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">اسم العرض</span>
-                  <AdminInput value={plan.offerLabel ?? ""} placeholder="مثال: خصم الإطلاق" onChange={(event) => updatePlan(plan.id, { offerLabel: event.target.value || null })} />
-                </label>
-                <label>
-                  <span className="mb-2 block text-xs font-black text-[#CBB29C]">تاريخ انتهاء العرض</span>
-                  <AdminInput type="date" value={plan.offerEndsAt ?? ""} onChange={(event) => updatePlan(plan.id, { offerEndsAt: event.target.value || null })} />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <AdminInput
-                  type="number"
-                  min="1"
-                  value={plan.durationCount}
-                  onChange={(event) =>
-                    updatePlan(plan.id, {
-                      durationCount: Math.max(1, Number(event.target.value) || 1),
-                    })
-                  }
-                />
-                <AdminSelect
-                  value={plan.durationUnit}
-                  onChange={(event) =>
-                    updatePlan(plan.id, {
-                      durationUnit: event.target.value as PlanDurationUnit,
-                    })
-                  }
-                >
-                  <option value="day">يوم</option>
-                  <option value="month">شهر</option>
-                  <option value="year">سنة</option>
-                </AdminSelect>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-3 text-sm font-black text-[#CBB29C]">مدد الاشتراك المتاحة للعميل</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {[1, 2, 12, 24].map((months) => {
-                    const checked = (plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24]).includes(months);
-                    return (
-                      <label key={months} className="flex items-center gap-2 rounded-xl bg-black/20 p-3 text-xs font-black text-[#F8F4EF]">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => {
-                            const current = plan.durationOptions?.length ? plan.durationOptions : [1, 2, 12, 24];
-                            const next = event.target.checked ? [...current, months] : current.filter((item) => item !== months);
-                            updatePlan(plan.id, { durationOptions: next.length ? Array.from(new Set(next)).sort((a, b) => a - b) : [1] });
-                          }}
-                        />
-                        {months === 1 ? "شهر" : months === 2 ? "شهرين" : months === 12 ? "سنة" : "سنتين"}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-3 text-sm font-black text-[#CBB29C]">تصنيف الباقة وحدود الاستخدام الشهرية</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <AdminSelect
-                    value={plan.categoryId ?? "cafes_coffee"}
-                    onChange={(event) => updatePlan(plan.id, { categoryId: event.target.value })}
-                  >
-                    {PLAN_CATEGORIES.map((category) => (
-                      <option key={category.id} value={category.id}>{category.label}</option>
-                    ))}
-                  </AdminSelect>
-                  <AdminInput type="number" min="0" placeholder="عدد الطلبات شهريًا" value={plan.maxOrdersMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxOrdersMonthly: event.target.value ? Number(event.target.value) : null })} />
-                  <AdminInput type="number" min="0" placeholder="عدد المنتجات شهريًا" value={plan.maxProductsMonthly ?? ""} onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value ? Number(event.target.value) : null })} />
-                  <AdminInput type="number" min="0" placeholder="عدد الفروع" value={plan.maxBranches ?? ""} onChange={(event) => updatePlan(plan.id, { maxBranches: event.target.value ? Number(event.target.value) : null })} />
-                  <AdminInput type="number" min="0" placeholder="أيام التجربة" value={plan.trialDays ?? ""} onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value ? Number(event.target.value) : null })} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-                  <button type="button" onClick={() => updatePlan(plan.id, { maxOrdersMonthly: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">الطلبات Unlimited</button>
-                  <button type="button" onClick={() => updatePlan(plan.id, { maxProductsMonthly: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">المنتجات Unlimited</button>
-                  <button type="button" onClick={() => updatePlan(plan.id, { maxBranches: null })} className="rounded-xl bg-white/10 px-3 py-2 text-[#F8F4EF]">الفروع Unlimited</button>
-                </div>
-                <label className="mt-3 flex items-center gap-3 rounded-xl bg-black/20 p-3 text-xs font-black text-[#F8F4EF]">
-                  <input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />
-                  هذه هي الباقة المجانية التي يرجع لها الحساب بعد انتهاء التجربة
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => updatePlan(plan.id, { active: !plan.active })}
-                  className="rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-black text-[#F8F4EF]"
-                >
-                  {plan.active ? "إيقاف الباقة" : "تفعيل الباقة"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePlan(plan.id, {
-                      offerEnabled: !plan.offerEnabled,
-                      offerPrice: plan.offerEnabled ? undefined : plan.offerPrice,
-                    })
-                  }
-                  className="rounded-xl border border-[#D9A33F]/30 bg-[#D9A33F]/10 px-3 py-2 text-xs font-black text-[#F6C35B]"
-                >
-                  {plan.offerEnabled ? "إلغاء العرض" : "تفعيل عرض"}
-                </button>
-                {!plan.isDefault ? (
-                  <button
-                    type="button"
-                    onClick={() => selectDefault(plan.id)}
-                    className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-300"
-                  >
-                    جعلها الأساسية
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-2">
-              {packageAssignablePlatformFeatures.map((feature) => {
-                const enabled = plan.features.includes(feature.id);
-                return (
-                  <button
-                    type="button"
-                    key={feature.id}
-                    onClick={() => toggleFeature(plan.id, feature.id)}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-black ${
-                      enabled
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                        : "border-white/10 bg-white/5 text-[#CBB29C]"
-                    }`}
-                  >
-                    <span className="min-w-0 text-right">
-                      <span className="block">{featureTitle(feature.id, plan.categoryId ?? selectedCategoryId)}</span>
-                      <span className="mt-1 block text-[10px] font-bold opacity-70">
-                        {featureCategoryLabels[feature.category] ?? feature.category} · {feature.route || "بدون صفحة حاليًا"} · {featureStatusLabels[feature.status] ?? feature.status} · قابلة للإسناد
-                      </span>
-                    </span>
-                    {enabled ? <Check className="h-4 w-4 shrink-0" /> : <span className="shrink-0">-</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {!plan.isDefault ? (
-              <button
-                type="button"
-                onClick={() => removePlan(plan.id)}
-                className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-300"
-              >
-                <Trash2 className="h-4 w-4" />
-                حذف من القائمة
-              </button>
-            ) : null}
-
-            <p className="mt-4 text-xs font-bold text-[#CBB29C]">
-              المدة: {plan.durationCount} {durationLabels[plan.durationUnit]}
-            </p>
-          </BentoCard>
-        ))}
-      </BentoGrid>
-
-      <BentoCard variant="dark" span="4" className="mb-7">
-        <div className="mb-5 rounded-2xl border border-[#F6C35B]/20 bg-[#F6C35B]/10 p-4">
-          <h2 className="text-lg font-black text-[#F6C35B]">نقاط الولاء المتقدمة</h2>
-          <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-            تظهر كجزء من ميزة الولاء في عرض الباقات: قواعد كسب واستبدال، نقاط لكل منتج، وسياسات انتهاء وصافي خصم. هذا عرض واجهة فقط ولا يغير منطق الفوترة.
-          </p>
-        </div>
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-black text-[#F8F4EF]">مصفوفة خدمات الباقات</h2>
-            <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-              نفس الميزات القابلة للإسناد في سجل المنصة، مع حالة تضمينها في كل باقة ضمن التصنيف المحدد.
-            </p>
+            <button type="button" className={styles.secondary} onClick={addPlan} disabled={saving}><Plus size={18} aria-hidden="true" />إضافة باقة</button>
           </div>
-          <StatusBadge tone="gold">{packageAssignablePlatformFeatures.length} خدمة</StatusBadge>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full text-right text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-[#CBB29C]">
-                <th className="px-3 py-3 font-black">الخدمة</th>
-                <th className="px-3 py-3 font-black">التصنيف</th>
-                <th className="px-3 py-3 font-black">المسار</th>
-                <th className="px-3 py-3 font-black">الحالة</th>
-                <th className="px-3 py-3 font-black">قابلة للإسناد</th>
-                {visiblePlans.map((plan) => (
-                  <th key={plan.id} className="px-3 py-3 font-black">{plan.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {packageAssignablePlatformFeatures.map((feature) => (
-                <tr key={feature.id} className="border-b border-white/5 text-[#F8F4EF]">
-                  <td className="px-3 py-3 font-black">{featureTitle(feature.id, selectedCategoryId)}</td>
-                  <td className="px-3 py-3 text-[#CBB29C]">{featureCategoryLabels[feature.category] ?? feature.category}</td>
-                  <td className="px-3 py-3 font-mono text-xs text-[#CBB29C]">{feature.route || "بدون صفحة حاليًا"}</td>
-                  <td className="px-3 py-3">{featureStatusLabels[feature.status] ?? feature.status}</td>
-                  <td className="px-3 py-3">نعم</td>
-                  {visiblePlans.map((plan) => {
-                    const included = plan.features.includes("all") || plan.features.includes(feature.id);
-                    return (
-                      <td key={plan.id} className="px-3 py-3">
-                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${included ? "bg-emerald-500/10 text-emerald-300" : "bg-white/5 text-[#CBB29C]"}`}>
-                          {included ? "مشمولة" : "غير مشمولة"}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </BentoCard>
 
-      <BentoCard variant="dark" span="4">
-        <div className="mb-5 flex items-center gap-3">
-          <Receipt className="h-7 w-7 text-[#F6C35B]" />
-          <div>
-            <h2 className="text-xl font-black text-[#F8F4EF]">طلبات الدفع اليدوي</h2>
-            <p className="text-sm font-bold text-[#CBB29C]">
-              اعتماد الحوالات البنكية وطلبات تحصيل الكاش.
-            </p>
-          </div>
-        </div>
+          <fieldset className={styles.workspace} disabled={saving}>
+            <legend className={styles.srOnly}>تحرير الباقات</legend>
+            <aside className={styles.planList} aria-label="اختيار الباقة">
+              <div className={styles.listHeading}><span>اختر باقة لتحريرها</span><Layers3 size={18} aria-hidden="true" /></div>
+              {visiblePlans.map((item) => <button key={item.id} type="button" className={styles.planChoice} aria-pressed={plan?.id === item.id} onClick={() => setSelectedId(item.id)}>
+                <span className={styles.choiceTop}><span className={item.active ? styles.enabled : styles.disabled}>{item.active ? "مفعلة" : "متوقفة"}</span>{item.isDefault ? <span className={styles.defaultBadge}>الأساسية</span> : null}</span>
+                <strong>{item.name || "باقة دون اسم"}</strong>
+                <span className={styles.price}>{numberFormat.format(item.offerEnabled && item.offerPrice !== undefined ? item.offerPrice : item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
+                <span className={styles.choiceBottom}>{numberFormat.format(features.filter((feature) => isIncluded(item, feature.id)).length)} خدمات مفعلة<ChevronLeft size={17} aria-hidden="true" /></span>
+              </button>)}
+              {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات لهذا التصنيف. أضف أول باقة لتحديد خدماتها.</p> : null}
+            </aside>
 
-        <div className="space-y-3">
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-black text-[#F8F4EF]">
-                    {request.cafeName} — {request.planName}
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-[#CBB29C]">
-                    {request.paymentMethod === "card_paypal"
-                      ? "دفع بالبطاقة"
-                      : request.paymentMethod === "bank_transfer"
-                        ? "حوالة بنكية"
-                        : "حوالة بنكية"}
-                    {request.branchName ? ` • ${request.branchName}` : ""}
-                    {" • "}
-                    {request.amount} ر.س
-                  </p>
-                  <p className="mt-1 flex items-center gap-2 text-xs font-bold text-[#CBB29C]">
-                    <Clock3 className="h-4 w-4" />
-                    {new Date(request.createdAt).toLocaleString("ar-SA")}
-                  </p>
+            {plan ? <section className={styles.editor} aria-label={`تحرير ${plan.name}`}>
+              <header className={styles.editorHeader}>
+                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>التغييرات لا تطبق إلا بعد الحفظ.</p></div>
+                <label className={styles.toggle}><input type="checkbox" checked={plan.active} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
+              </header>
+
+              <section className={styles.section} aria-labelledby="plan-services-title">
+                <div className={styles.sectionHeading}><div><h3 id="plan-services-title">الخدمات المتاحة للعلامة</h3><p>نفس خيارات القائمة الجانبية. فعّل فقط ما تتضمنه الباقة.</p></div><span className={styles.count}>{features.filter((feature) => isIncluded(plan, feature.id)).length} / {features.length}</span></div>
+                <div className={styles.featureGrid}>{features.map((feature) => {
+                  const enabled = isIncluded(plan, feature.id);
+                  return <button type="button" key={feature.id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleFeature(plan.id, feature.id)}>
+                    <span><strong>{feature.sidebarLabel ?? feature.titleAr}</strong><small>{enabled ? "تظهر في حساب العلامة" : "غير متاحة ضمن هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
+                  </button>;
+                })}</div>
+                <p className={styles.policy}>الخدمات غير المفعلة لا تظهر للعميل. عند عدم وجود اشتراك مفعّل، تتوقف خدمات العلامة بما فيها المنيو المستقل.</p>
+              </section>
+
+              <section className={styles.section} aria-labelledby="plan-details-title">
+                <h3 id="plan-details-title">تفاصيل الباقة</h3>
+                <div className={styles.fields}>
+                  <label>اسم الباقة<input required maxLength={120} value={plan.name} onChange={(event) => updatePlan(plan.id, { name: event.target.value })} /></label>
+                  <label>تصنيف النشاط<select value={plan.categoryId ?? "cafes_coffee"} onChange={(event) => { updatePlan(plan.id, { categoryId: event.target.value }); setCategoryId(event.target.value as BusinessCategoryId); setSelectedId(plan.id); }}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+                  <label className={styles.fullWidth}>وصف الباقة<textarea rows={3} value={plan.description} onChange={(event) => updatePlan(plan.id, { description: event.target.value })} placeholder="وصف مختصر لما تقدمه هذه الباقة" /></label>
                 </div>
-                <StatusBadge
-                  tone={request.status === "approved" ? "success" : request.status === "rejected" ? "danger" : "gold"}
-                >
-                  {requestStatusLabels[request.status]}
-                </StatusBadge>
-              </div>
+              </section>
 
-              {request.status === "pending_review" ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <GoldButton type="button" onClick={() => approveRequest(request.id)}>
-                    اعتماد وتفعيل الباقة
-                  </GoldButton>
-                  <button
-                    type="button"
-                    onClick={() => rejectRequest(request.id)}
-                    className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-black text-red-300"
-                  >
-                    رفض الطلب
-                  </button>
+              <section className={styles.section} aria-labelledby="plan-price-title">
+                <h3 id="plan-price-title">السعر ومدة الاشتراك</h3>
+                <div className={styles.fields}>
+                  <label>السعر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
+                  <div className={styles.durationFields}><label>المدة<input type="number" min={1} max={120} required value={plan.durationCount} onChange={(event) => updatePlan(plan.id, { durationCount: Number(event.target.value) })} /></label><label>الوحدة<select value={plan.durationUnit} onChange={(event) => updatePlan(plan.id, { durationUnit: event.target.value as PlanDurationUnit })}>{Object.entries(durationLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
                 </div>
-              ) : null}
-            </div>
-          ))}
+                <fieldset className={styles.durationOptions}><legend>مدد الاشتراك المتاحة للعميل</legend>{monthOptions.map((months) => <label key={months}><input type="checkbox" checked={(plan.durationOptions?.length ? plan.durationOptions : monthOptions).includes(months)} onChange={(event) => {
+                  const current = plan.durationOptions?.length ? plan.durationOptions : monthOptions;
+                  const next = event.target.checked ? [...current, months] : current.filter((item) => item !== months);
+                  updatePlan(plan.id, { durationOptions: next.length ? [...new Set(next)].sort((a, b) => a - b) : [1] });
+                }} />{months === 1 ? "شهر" : months === 2 ? "شهران" : months === 12 ? "سنة" : "سنتان"}</label>)}</fieldset>
+                <label className={styles.toggle}><input type="checkbox" checked={plan.offerEnabled} onChange={(event) => updatePlan(plan.id, { offerEnabled: event.target.checked })} />تفعيل سعر عرض</label>
+                {plan.offerEnabled ? <div className={styles.offerFields}>
+                  <label>سعر العرض شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.offerPrice ?? ""} onChange={(event) => updatePlan(plan.id, { offerPrice: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
+                  <label>اسم العرض<input value={plan.offerLabel ?? ""} onChange={(event) => updatePlan(plan.id, { offerLabel: event.target.value || null })} placeholder="مثال: عرض الانطلاق" /></label>
+                  <label>انتهاء العرض<input type="date" value={plan.offerEndsAt ?? ""} onChange={(event) => updatePlan(plan.id, { offerEndsAt: event.target.value || null })} /></label>
+                </div> : null}
+              </section>
 
-          {!requests.length ? (
-            <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center font-bold text-[#CBB29C]">
-              لا توجد طلبات اشتراك بعد.
-            </p>
-          ) : null}
-        </div>
-      </BentoCard>
-    </AdminPageShell>
+              <section className={styles.section} aria-labelledby="plan-limits-title">
+                <h3 id="plan-limits-title">حدود المنتجات والتجربة</h3>
+                <div className={styles.fields}>
+                  <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود.</small></label>
+                  <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
+                </div>
+                <label className={styles.toggle}><input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />باقة مجانية بديلة بعد انتهاء التجربة</label>
+                <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية لهذا التصنيف</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />حذف الباقة</button> : null}</div>
+              </section>
+            </section> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة، ثم اختر خدماتها وسعرها.</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
+          </fieldset>
+
+          <div className={styles.saveBar}><span role="status">{saving ? "جارٍ حفظ الباقات..." : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving ? "جارٍ الحفظ..." : "حفظ جميع التعديلات"}</button></div>
+        </form>
+
+        {visiblePlans.length ? <section className={styles.comparison} aria-labelledby="plan-comparison-title"><div className={styles.sectionHeading}><div><h2 id="plan-comparison-title">الخدمات في نظرة واحدة</h2><p>مقارنة الباقات ضمن التصنيف المحدد.</p></div></div><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="جدول مقارنة خدمات الباقات"><table><thead><tr><th scope="col">الخدمة</th>{visiblePlans.map((item) => <th scope="col" key={item.id}>{item.name}</th>)}</tr></thead><tbody>{features.map((feature) => <tr key={feature.id}><th scope="row">{feature.sidebarLabel ?? feature.titleAr}</th>{visiblePlans.map((item) => <td key={item.id}><span className={isIncluded(item, feature.id) ? styles.enabled : styles.disabled}>{isIncluded(item, feature.id) ? "مشمولة" : "غير مشمولة"}</span></td>)}</tr>)}</tbody></table></div></section> : null}
+
+        <section id="payment-requests" className={styles.payments} aria-labelledby="payments-title">
+          <div className={styles.sectionHeading}><div><h2 id="payments-title"><Receipt size={22} aria-hidden="true" />طلبات الدفع</h2><p>راجع طلبات الاشتراك واعتمد الدفع لتفعيل الباقة.</p></div><span className={styles.count}>{numberFormat.format(pendingCount)} للمراجعة</span></div>
+          {requests.map((request) => <article key={request.id} className={styles.request}>
+            <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
+            <div className={styles.requestAmount}><strong>{numberFormat.format(request.amount)} <small>ر.س</small></strong><span className={request.status === "approved" ? styles.enabled : request.status === "rejected" ? styles.rejected : styles.defaultBadge}>{requestStatusLabels[request.status]}</span></div>
+            {request.status === "pending_review" ? <div className={styles.requestActions}><button type="button" className={styles.primary} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, true)}>{reviewingId === request.id ? "جارٍ تحديث الطلب…" : "اعتماد وتفعيل الباقة"}</button><button type="button" className={styles.dangerButton} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, false)}>رفض الطلب</button></div> : null}
+          </article>)}
+          {!requests.length ? <p className={styles.empty}>لا توجد طلبات دفع حاليًا. ستظهر الطلبات الجديدة هنا للمراجعة.</p> : null}
+        </section>
+      </AdminPageShell>
+    </div>
   );
 }

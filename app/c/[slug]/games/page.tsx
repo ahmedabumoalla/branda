@@ -1,3 +1,5 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { Suspense } from "react";
 import { PublicGamesPage } from "@/components/cafe/public-games-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
@@ -20,6 +22,7 @@ function GamesUnavailableState() {
 }
 
 export default async function CafeGamesPage({ params }: Props) {
+  requireStorefrontEnabled();
   const { slug } = await params;
   if (!isSupabaseConfigured()) return <GamesUnavailableState />;
 

@@ -36,29 +36,20 @@ const access = load("lib/platform/feature-access.ts");
 const registry = load("lib/platform/feature-registry.ts");
 const permissions = load("lib/platform/permissions.ts");
 const planCases = [...Object.keys(registry.platformPlanFeatureDefaults), "missing-plan", "all-plan"];
-for (const planId of planCases) await test(`Every brand has the same three entries for ${planId} without granting permissions`, () => {
-  const plans = planId === "all-plan" ? [{ id: planId, features: ["all"] }] : [];
-  const overrides = [{ featureId: "loyalty", enabled: false }];
-  const context = { planId, plans, overrides };
-  const rows = access.getSidebarFeaturesForBrand({ ...context, cafeSlug: "rast" });
-  const featureIds = rows.map((row) => row.feature.id);
-  assert.deepEqual(featureIds, ["menu", "loyalty", "settings"]);
-  const loyalty = rows.find((row) => row.feature.id === "loyalty");
-  assert.equal(loyalty.access.effectiveEnabled, false);
-  assert.equal(loyalty.access.result, "disabled_by_admin");
-  assert.equal(permissions.cafeHasFeature("loyalty", context), false, "hiding billing does not bypass feature permission");
-  assert.deepEqual(access.getSidebarFeaturesForBrand({ ...context, cafeSlug: "other" }).map(row => row.feature.id), featureIds);
+for (const planId of planCases) await test(`Navigation fails closed for missing package ${planId}`, () => {
+  const rows = access.getSidebarFeaturesForBrand({ planId, plans: [], overrides: [{ featureId: "loyalty", enabled: true }] });
+  assert.deepEqual(rows, []);
+  assert.equal(permissions.cafeHasFeature("loyalty", { planId, plans: [] }), false);
 });
-for (const features of [[], ["menu"], ["loyalty"], ["menu", "loyalty"], ["all"]]) await test(`Actual package controls navigation access: ${features.join(",") || "empty"}`, () => {
+for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"]]) await test(`Only actual enabled package services are visible: ${features.join(",") || "empty"}`, () => {
   const rows = access.getSidebarFeaturesForBrand({ planId: "starter", plans: [{ id: "starter", features }] });
-  assert.deepEqual(rows.map(row => row.feature.id), ["menu", "loyalty", "settings"]);
-  for (const id of ["menu", "loyalty"]) assert.equal(rows.find(row => row.feature.id === id).access.effectiveEnabled, features.includes(id) || features.includes("all"));
+  const expected = access.getBrandNavigationFeatures().filter(f => features.includes("all") || features.includes(f.id)).map(f => f.id);
+  assert.deepEqual(rows.map(row => row.feature.id), expected);
+  assert(rows.every(row => row.access.effectiveEnabled));
 });
-await test("Missing package fails closed while explicit admin enable is respected", () => {
-  const rows = access.getSidebarFeaturesForBrand({ planId: "pro", plans: [], overrides: [{ featureId: "loyalty", enabled: true }] });
-  assert.equal(rows.find(row => row.feature.id === "menu").access.effectiveEnabled, false);
-  assert.equal(rows.find(row => row.feature.id === "loyalty").access.effectiveEnabled, true);
-  assert(rows.some(row => row.feature.id === "settings"));
+await test("Admin override cannot open missing package services but may suspend them", () => {
+  const rows = access.getSidebarFeaturesForBrand({ planId: "pro", plans: [{id: "pro", features: ["menu"]}], overrides: [{ featureId: "loyalty", enabled: true }, {featureId: "menu", enabled: false}] });
+  assert.deepEqual(rows, []);
 });
 
 function serverPage({ slug = "rast", configured = true, missing = false, contextError = false } = {}) {
@@ -133,11 +124,11 @@ for (const slug of ["rast", "other", "shahi-w-hail"]) for (const collapsed of [f
   assert(!html.includes("/dashboard/subscription"));
   assert(!html.includes("PRIVATE_PLAN_NAME") && !html.includes("249"));
   assert(!html.includes("ترقية"));
-  assert(html.includes('href="/dashboard/loyalty"'), "locked feature keeps its own guarded route");
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/loyalty", "/dashboard/settings"]);
-  for (const label of ["المنيو والمنتجات", "الولاء والمكافآت", "إعدادات كوفي", "تسجيل الخروج"]) assert(html.includes(label));
+  assert(!html.includes('href="/dashboard/loyalty"'), "disabled service is hidden");
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings"]);
+  for (const label of ["المنيو والمنتجات", "العروض", "إعدادات كوفي", "تسجيل الخروج"]) assert(html.includes(label));
   assert(html.includes('aria-current="page"'));
-  assert(html.includes("غير مفعلة في الباقة"));
+  assert(!html.includes("غير مفعلة في الباقة"));
 });
 await test("unresolved sidebar identity does not flash a plan badge", () => {
   const html = sidebarHtml("");

@@ -1,3 +1,4 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
@@ -40,6 +41,7 @@ function GameUnavailablePage({ slug, previewThemeId }: { slug: string; previewTh
 }
 
 export default async function PublicBattleArenaPage({ params, searchParams }: Props) {
+  requireStorefrontEnabled();
   const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const previewThemeId = firstQueryValue(resolvedSearchParams.previewTheme);
 

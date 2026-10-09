@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
 import { uploadGeneratedImageBytes } from "@/lib/storage/upload-server";
 import {
@@ -21,6 +23,9 @@ function safeGenerationError(error: unknown) {
 
 export async function POST(_request: Request, { params }: Params) {
   const cafe = await requireOwnerCafeContext();
+  if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "offers")) {
+    return NextResponse.json({ error: "العروض غير مفعلة في اشتراك العلامة الحالي" }, { status: 403 });
+  }
   const { offerId } = await params;
   const admin = createAdminClient();
   const { data: offer } = await admin

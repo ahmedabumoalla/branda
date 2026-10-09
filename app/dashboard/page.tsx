@@ -1,80 +1,20 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
 
-import { Suspense } from "react";
-import { DashboardHomeClient } from "@/components/dashboard/dashboard-home-client";
-import {
-  DashboardRecentOrdersSection,
-  DashboardSectionSkeleton,
-  DashboardSummarySection,
-  DashboardTrendSection,
-} from "@/components/dashboard/dashboard-home-sections";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { getOwnerCafeSettings } from "@/lib/data/settings";
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <DashboardHomeClient
-        cafeSlug=""
-        cafeName="العلامة"
-        businessCategory="cafes_coffee"
-        ownerName=""
-        logoUrl={undefined}
-        summary={<DashboardSectionSkeleton />}
-        recentOrders={<DashboardSectionSkeleton rows={3} />}
-        trend={<DashboardSectionSkeleton rows={2} />}
-        configError="قم بإعداد Supabase في env local"
-      />
-    );
-  }
+  const features = await getOwnerFeatureCodes();
+  const firstService = getBrandNavigationFeatures().find((feature) => features.includes(feature.id));
+  if (firstService) redirect(firstService.route);
 
-  try {
-    const cafe = await requireOwnerCafeContext();
-
-    const settings = await getOwnerCafeSettings();
-
-    return (
-      <DashboardHomeClient
-        cafeSlug={cafe.slug}
-        cafeName={settings.cafeName || cafe.name}
-        businessCategory={cafe.businessCategory}
-        ownerName={settings.ownerName || ""}
-        logoUrl={settings.logoDataUrl}
-        summary={
-          <Suspense fallback={<DashboardSectionSkeleton />}>
-            <DashboardSummarySection />
-          </Suspense>
-        }
-        recentOrders={
-          <Suspense fallback={<DashboardSectionSkeleton rows={3} />}>
-            <DashboardRecentOrdersSection />
-          </Suspense>
-        }
-        trend={
-          <Suspense fallback={<DashboardSectionSkeleton rows={2} />}>
-            <DashboardTrendSection />
-          </Suspense>
-        }
-      />
-    );
-  } catch (error) {
-    console.error("[DashboardPage]", error);
-
-    return (
-      <DashboardHomeClient
-        cafeSlug=""
-        cafeName="العلامة"
-        businessCategory="cafes_coffee"
-        ownerName=""
-        logoUrl={undefined}
-        summary={<DashboardSectionSkeleton />}
-        recentOrders={<DashboardSectionSkeleton rows={3} />}
-        trend={<DashboardSectionSkeleton rows={2} />}
-        configError="تعذر تحميل بيانات لوحة التحكم"
-      />
-    );
-  }
+  return (
+    <section dir="rtl" className="mx-auto max-w-2xl rounded-2xl border border-amber-200/30 bg-white/5 p-8 text-right">
+      <h1 className="text-2xl font-bold">خدمات العلامة غير مفعلة</h1>
+      <p className="mt-3 leading-8">لا توجد خدمات مفعلة ضمن اشتراك العلامة الحالي. فعّل باقة للبدء باستخدام المنيو والعروض والولاء.</p>
+      <Link href="/dashboard/subscription" className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-amber-400 px-5 font-bold text-stone-950">إدارة الاشتراك</Link>
+    </section>
+  );
 }

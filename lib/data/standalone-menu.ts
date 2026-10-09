@@ -7,8 +7,10 @@ import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mappers";
-import { isOwnedMenuAsset, isStandaloneProductVisible, STANDALONE_MENU_FEATURE, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
+import { isOwnedMenuAsset, isStandaloneProductVisible, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
 const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
 const PAGE_SIZE = 500;
@@ -21,19 +23,16 @@ function safeMediaUrl(value: string | null | undefined): string | null {
   } catch { return null; }
 }
 
-/** Deliberately independent of cafe status, subscription, is_public and storefront entitlements. */
+/** Standalone catalog is a package service; no catalog/media work before authorization. */
 export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneMenu | null> => {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) return null;
   const admin = createAdminClient();
   const { data: cafe, error: cafeError } = await admin.from("cafes")
-    .select("id,slug,name").eq("slug", slug).is("deleted_at", null).maybeSingle();
+    .select("id,slug,name,status").eq("slug", slug).is("deleted_at", null).maybeSingle();
   if (cafeError) throw cafeError;
-  if (!cafe) return null;
-
-  const { data: publication, error: publicationError } = await admin.from("brand_feature_overrides")
-    .select("enabled").eq("cafe_id", cafe.id).eq("feature_id", STANDALONE_MENU_FEATURE).maybeSingle();
-  if (publicationError) throw publicationError;
-  if (publication?.enabled !== true) return null;
+  if (!cafe || !["active", "published"].includes(String(cafe.status))) return null;
+  const features = await getCafeFeatureCodes(String(cafe.id));
+  if (!featureCodesAllow(features, "menu")) return null;
 
   const [categoryResult, settingsResult] = await Promise.all([
     admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
@@ -94,11 +93,11 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
     logoUrl = data?.signedUrl || logoUrl;
   }
   logoUrl = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url) || logoUrl;
-  const highlights = cafe.slug === "rast" ? await getStandaloneHighlights(cafe.id, products).catch(() => {
+  const highlights = cafe.slug === "rast" && featureCodesAllow(features, "offers") ? await getStandaloneHighlights(cafe.id, products).catch(() => {
     // An optional promotional surface must not take down the published catalog.
     console.error("Standalone highlights unavailable");
     return { asOf: Date.now(), items: [] };
   }) : undefined;
-  return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights,
+  return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

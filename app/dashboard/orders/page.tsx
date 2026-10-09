@@ -3,6 +3,8 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { OrdersPageClient } from "@/components/dashboard/pages/orders-page";
+import { redirect } from "next/navigation";
+import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerCafeContext } from "@/lib/data/cafes";
@@ -11,6 +13,7 @@ import { getOwnerOrders } from "@/lib/data/orders";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export default async function OrdersPage() {
+  if (!isStorefrontEnabled()) redirect("/dashboard");
   if (!isSupabaseConfigured()) {
     return <OrdersPageClient initialOrders={[]} configError="قم بإعداد Supabase في .env.local" />;
   }

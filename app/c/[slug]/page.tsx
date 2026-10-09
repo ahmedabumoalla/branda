@@ -1,3 +1,5 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { redirect } from "next/navigation";
 
 type Params = {
@@ -23,6 +25,7 @@ function queryString(searchParams: Record<string, string | string[] | undefined>
 }
 
 export default async function CafePublicPage({ params, searchParams }: Params) {
+  requireStorefrontEnabled();
   const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
 
   redirect(`/c/${encodeURIComponent(slug)}/products/popular${queryString(resolvedSearchParams)}`);

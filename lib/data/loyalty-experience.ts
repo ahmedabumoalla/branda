@@ -34,10 +34,12 @@ export async function getLoyaltyExperience(cafeId: string) {
 
 export async function getLoyaltyBrand(slug: string) {
   if (slug !== "rast") return null;
-  const [cafe, features, program, settings] = await Promise.all([
-    getCafeBySlug(slug), getPublicCafeFeatureCodesBySlug(slug), getPublicLoyaltyProgramBySlug(slug), getPublicCafeSettings(slug),
+  const features = await getPublicCafeFeatureCodesBySlug(slug);
+  if (!featureCodesAllow(features, "loyalty")) return null;
+  const [cafe, program, settings] = await Promise.all([
+    getCafeBySlug(slug), getPublicLoyaltyProgramBySlug(slug), getPublicCafeSettings(slug),
   ]);
-  if (!cafe || !program || !featureCodesAllow(features, "loyalty")) return null;
+  if (!cafe || !program) return null;
   return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl: settings?.logoDataUrl ?? null }, program };
 }
 

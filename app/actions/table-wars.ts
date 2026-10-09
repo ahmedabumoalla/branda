@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { revalidatePath } from "next/cache";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -61,11 +63,13 @@ function revalidateTableWarsAvailabilityPaths(slug: string) {
 }
 
 export async function enableOwnerTableWarsDemoAction() {
+  requireStorefrontEnabled();
   const slug = await enableOwnerTableWarsDemoTable();
   revalidateTableWarsAvailabilityPaths(slug);
 }
 
 export async function disableOwnerTableWarsAction() {
+  requireStorefrontEnabled();
   const slug = await disableOwnerTableWarsTables();
   revalidateTableWarsAvailabilityPaths(slug);
 }
@@ -75,6 +79,7 @@ export async function joinTableWarsV2Team(
   team: TableWarsTeam,
   nickname: string,
 ): Promise<TableWarsV2JoinActionResult> {
+  requireStorefrontEnabled();
   const normalizedNickname = typeof nickname === "string" ? nickname.trim().replace(/\s+/g, " ") : "";
   if (normalizedNickname.length < 2 || normalizedNickname.length > 20) {
     return { ok: false, message: "الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا." };
@@ -120,6 +125,7 @@ export async function joinTableWarsV2Team(
 }
 
 export async function getTableWarsV2SnapshotAction(slug: string): Promise<TableWarsV2SnapshotActionResult> {
+  requireStorefrontEnabled();
   try {
     const snapshot = await getTableWarsV2SnapshotForCustomer(slug);
     return { ok: true, snapshot };
@@ -134,6 +140,7 @@ export async function startTableWarsV2LobbyRoundAction(
   roundId: string,
   playerId?: string | null,
 ): Promise<TableWarsV2StartActionResult> {
+  requireStorefrontEnabled();
   const normalizedSlug = slug.trim().toLowerCase();
   const normalizedRoundId = typeof roundId === "string" ? roundId.trim() : "";
   const normalizedPlayerId = typeof playerId === "string" ? playerId.trim() : "";
@@ -229,6 +236,7 @@ export async function startTableWarsV2LobbyRoundAction(
 }
 
 export async function leaveTableWarsV2RoundAction(slug: string, roundId: string) {
+  requireStorefrontEnabled();
   return leaveTableWarsV2RoundForCustomer(slug, roundId);
 }
 
@@ -238,12 +246,14 @@ export async function sendTableWarsV2UnitsAction(input: {
   soldiers?: number;
   percentage?: number;
 }) {
+  requireStorefrontEnabled();
   const result = await sendTableWarsV2UnitsForCustomer(input);
   revalidateTableWarsPaths(result.snapshot.cafeSlug);
   return result;
 }
 
 export async function tickTableWarsV2Action() {
+  requireStorefrontEnabled();
   const snapshot = await tickTableWarsV2ForActiveSession();
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;
@@ -254,12 +264,14 @@ export async function finishTableWarsV2RealtimeLiteRoundAction(
   winningTeam: TableWarsTeam,
   roundId?: string | null,
 ) {
+  requireStorefrontEnabled();
   const snapshot = await finishTableWarsV2RealtimeLiteRoundForCustomer(slug, winningTeam, roundId);
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;
 }
 
 export async function startNewTableWarsLiteRoundAction(slug: string) {
+  requireStorefrontEnabled();
   const snapshot = await startNewTableWarsLiteRoundForCustomer(slug);
   revalidateTableWarsPaths(snapshot.cafeSlug);
   return snapshot;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Package, Settings, Star } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Package, Settings, Star } from "lucide-react";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
@@ -36,9 +36,7 @@ const initialNavigation: NavigationState = {
     ownerName: "", ownerEmail: "", ownerPhone: "", description: "", domainStatus: "غير مربوط",
   },
 };
-const navigationLabels: Record<string, string> = {
-  menu: "المنيو والمنتجات", loyalty: "الولاء والمكافآت", settings: "إعدادات كوفي",
-};
+
 
 export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
@@ -61,7 +59,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
     return () => { cancelled = true; };
   }, []);
 
-  // The same three entries serve desktop, collapsed and mobile navigation.
+  // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
   const links = settings.cafeSlug ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides }) : [];
 
@@ -108,9 +106,9 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
 
     <nav aria-label="قائمة العلامة" className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
       {links.map(({ feature, access }) => {
-        const Icon = feature.id === "menu" ? Package : feature.id === "loyalty" ? Star : Settings;
-        const title = navigationLabels[feature.id];
-        const locked = feature.id !== "settings" && !access?.effectiveEnabled;
+        const Icon = feature.id === "menu" ? Package : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : Settings;
+        const title = feature.sidebarLabel ?? feature.titleAr;
+        const locked = !access?.effectiveEnabled;
         const href = feature.route;
         const active = !locked && (pathname === href || pathname.startsWith(`${href}/`));
         const label = locked ? `${title} — غير مفعلة في الباقة` : title;

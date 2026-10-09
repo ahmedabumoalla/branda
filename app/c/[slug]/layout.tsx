@@ -1,3 +1,5 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { CafeFaviconController } from "@/components/cafe/cafe-favicon-controller";
@@ -31,6 +33,7 @@ async function loadCafeMeta(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  requireStorefrontEnabled();
   const { slug } = await params;
   const normalizedSlug = slug.trim().toLowerCase();
   const { cafe, settings, identity } = await cachedServerValue(
@@ -64,6 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CafeSlugLayout({ children, params }: Props) {
+  requireStorefrontEnabled();
   const { slug } = await params;
 
   return (

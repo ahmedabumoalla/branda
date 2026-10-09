@@ -15,6 +15,8 @@ import {
   platformFeatureIds,
   type PlatformFeatureId,
 } from "@/lib/platform/feature-registry";
+import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
+import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
@@ -287,25 +289,16 @@ export async function getAdminPlatformPlans(): Promise<PlatformPlan[]> {
 export async function getOwnerActivePlanId(): Promise<string> {
   const { requireOwnerCafeContext } = await import("@/lib/data/cafes");
   const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("plan_id")
-    .eq("cafe_id", cafe.id)
-    .in("status", ["active", "trialing"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return String(data?.plan_id ?? "");
+  return (await getCafeServiceAccess(cafe.id)).planId;
 }
 
 export async function savePlatformPlans(plans: PlatformPlan[]) {
   await requirePlatformAdmin();
 
-  const parsed = z.array(planSchema).min(1).max(30).parse(plans);
+  const parsed = z.array(planSchema).min(1).max(30).parse(plans).map(plan => ({
+    ...plan,
+    features: getBrandNavigationFeatures().filter(feature => plan.features.includes("all") || plan.features.includes(feature.id)).map(feature => feature.id),
+  }));
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);
   if (defaults.length < 1) {
     throw new Error("حدد باقة أساسية مفعلة واحدة على الأقل");

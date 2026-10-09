@@ -42,6 +42,7 @@ function fixture({ published = true, phone = "0531293437", failProvider = false,
     }; return builder;
   } };
   const service = load("lib/data/menu-feedback.ts", {
+    "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => published ? ["menu"] : [] },
     "@/lib/supabase/admin": { createAdminClient: () => client },
     "@/lib/whatsapp/green-api": {
       isGreenApiConfigured: () => true,

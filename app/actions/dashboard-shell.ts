@@ -1,7 +1,9 @@
 "use server";
 
+import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
+import type { PlatformFeature } from "@/lib/platform/admin-data";
 import { getOwnerCafeContext } from "@/lib/data/cafes";
-import { getCafeFeatureOverrides, getPlatformPlans } from "@/lib/data/admin";
+import { getPlatformPlans } from "@/lib/data/admin";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
@@ -27,64 +29,6 @@ function mapNotification(slug: string, row: Record<string, unknown>): AppNotific
         ? (row.meta as Record<string, string>)
         : undefined,
   };
-}
-
-async function countRows(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  table: string,
-  cafeId: string,
-  build?: (query: any) => any,
-) {
-  try {
-    let query = supabase
-      .from(table)
-      .select("id", { count: "exact", head: true })
-      .eq("cafe_id", cafeId);
-
-    if (build) query = build(query);
-
-    const { count, error } = await query;
-    if (error) {
-      console.warn(`[dashboard-shell/count:${table}]`, error.message);
-      return 0;
-    }
-    return count ?? 0;
-  } catch (error) {
-    console.warn(`[dashboard-shell/count:${table}]`, error);
-    return 0;
-  }
-}
-
-async function getFastDashboardCounts(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  cafeId: string,
-) {
-  try {
-    const { data, error } = await supabase.rpc("get_owner_dashboard_shell_fast", {
-      p_cafe_id: cafeId,
-    });
-
-    if (!error && data && typeof data === "object") {
-      const row = data as Record<string, unknown>;
-      return {
-        pendingOrders: Number(row.pendingOrders ?? row.pending_orders ?? 0),
-        pendingExperienceReviews: Number(row.pendingExperienceReviews ?? row.pending_experience_reviews ?? 0),
-      };
-    }
-  } catch {
-    // The migration is optional. Fall back to safe count queries until it is applied.
-  }
-
-  const [pendingOrders, pendingExperienceReviews] = await Promise.all([
-    countRows(supabase, "orders", cafeId, (query) =>
-      query.eq("status", "pending_cafe").is("deleted_at", null),
-    ),
-    countRows(supabase, "experience_reward_submissions", cafeId, (query) =>
-      query.eq("status", "pending"),
-    ),
-  ]);
-
-  return { pendingOrders, pendingExperienceReviews };
 }
 
 function fallbackSettings(cafe: { slug: string; name: string; businessCategory?: string }): CafeSettings {
@@ -117,17 +61,9 @@ export async function fetchOwnerDashboardShellAction() {
 
   const supabase = await createClient();
 
-  const [plans, featureOverrides, subscriptionResult, settingsResult, notificationsResult, fastCounts] = await Promise.all([
+  const [plans, serviceAccess, settingsResult, notificationsResult] = await Promise.all([
     getPlatformPlans(),
-    getCafeFeatureOverrides(cafe.id).catch(() => []),
-    supabase
-      .from("subscriptions")
-      .select("plan_id")
-      .eq("cafe_id", cafe.id)
-      .in("status", ["active", "trialing"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    getCafeServiceAccess(cafe.id),
     supabase
       .from("cafe_settings")
       .select("*")
@@ -140,10 +76,8 @@ export async function fetchOwnerDashboardShellAction() {
       .eq("audience", "cafe")
       .order("created_at", { ascending: false })
       .limit(20),
-    getFastDashboardCounts(supabase, cafe.id),
   ]);
 
-  if (subscriptionResult.error) throw subscriptionResult.error;
   if (settingsResult.error) throw settingsResult.error;
   if (notificationsResult.error) throw notificationsResult.error;
 
@@ -163,14 +97,14 @@ export async function fetchOwnerDashboardShellAction() {
   }
 
   return {
-    planId: String(subscriptionResult.data?.plan_id ?? ""),
-    plans,
-    featureOverrides,
+    planId: serviceAccess.planId,
+    plans: plans.map(plan => plan.id === serviceAccess.planId ? { ...plan, features: serviceAccess.features as PlatformFeature[] } : plan),
+    featureOverrides: [],
     settings,
     notifications: ((notificationsResult.data ?? []) as Record<string, unknown>[]).map((row) =>
       mapNotification(cafe.slug, row),
     ),
-    pendingOrders: fastCounts.pendingOrders,
-    pendingExperienceReviews: fastCounts.pendingExperienceReviews,
+    pendingOrders: 0,
+    pendingExperienceReviews: 0,
   };
 }

@@ -273,7 +273,7 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
       <p className={s.heroAside} dir="ltr">SIMPLE<br />INGREDIENTS<br />EXTRAORDINARY<br />FLAVORS</p>
     </section>}
     {isRast && <RastConnect />}
-    {isRast && <RastLoyaltyEntry />}
+    {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry />}
     <div className={s.catalog} id="menu-catalog">
       {isRast && <RastSpotlight menu={menu} onSelect={setSelected} />}
       {isRast && <div className={s.rastCatalogHeading} id="rast-menu-items">

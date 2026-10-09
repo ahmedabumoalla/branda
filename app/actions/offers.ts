@@ -4,12 +4,15 @@ import { getOwnerOffers, softDeleteOffer, upsertOffer } from "@/lib/data/offers"
 import { getOwnerMenu } from "@/lib/data/menu";
 import type { CafeOffer } from "@/lib/mock/offers";
 import { uploadOptimizedImage } from "@/lib/storage/upload-server";
+import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 
 export async function fetchOwnerOffersAction() {
+  await assertOwnerServiceEnabled("offers");
   return getOwnerOffers();
 }
 
 export async function saveOfferAction(offer: CafeOffer) {
+  await assertOwnerServiceEnabled("offers");
   return upsertOffer({
     id: /^[0-9a-f-]{36}$/i.test(offer.id) ? offer.id : undefined,
     title: offer.title,
@@ -41,10 +44,12 @@ export async function saveOfferAction(offer: CafeOffer) {
 }
 
 export async function deleteOfferAction(offerId: string) {
+  await assertOwnerServiceEnabled("offers");
   await softDeleteOffer(offerId);
 }
 
 export async function uploadOfferBannerAction(offerId: string, formData: FormData) {
+  await assertOwnerServiceEnabled("offers");
   if (!/^[0-9a-f-]{36}$/i.test(offerId)) {
     throw new Error("احفظ العرض قبل رفع الصورة");
   }

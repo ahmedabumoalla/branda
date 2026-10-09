@@ -1,6 +1,8 @@
+import { isStorefrontEnabled, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { leaveTableWarsV2RoundForCustomer } from "@/lib/table-wars/v2-data";
 
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
+  if (!isStorefrontEnabled()) return storefrontUnavailableResponse();
   try {
     const { slug } = await context.params;
     const body = (await request.json().catch(() => null)) as { roundId?: unknown } | null;

@@ -3,12 +3,15 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { ReportsPageClient } from "@/components/dashboard/pages/reports-page";
+import { redirect } from "next/navigation";
+import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerCustomersDashboard } from "@/lib/data/customers";
 import { getOwnerOrders } from "@/lib/data/orders";
 import { getOwnerVisitAnalytics } from "@/lib/data/platform-upgrade";
 
 export default async function ReportsPage() {
+  if (!isStorefrontEnabled()) redirect("/dashboard");
   if (!isSupabaseConfigured()) {
     return <ReportsPageClient initialOrders={[]} initialCustomers={[]} configError="قم بإعداد Supabase في ملف البيئة" />;
   }

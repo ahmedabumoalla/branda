@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowUpLeft, BarChart3, Building2, Check, ChevronLeft, CircleDollarSign, Copy, CreditCard, ExternalLink, Gift, Globe, Headphones, Layers3, MessageSquareText, Package, Phone, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, TicketCheck, UserRound, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, Check, ChevronLeft, CircleDollarSign, Copy, CreditCard, Gift, Headphones, Layers3, MessageSquareText, Package, Phone, Search, ShieldCheck, ShoppingBag, SlidersHorizontal, TicketCheck, UserRound, Users, Utensils, X } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import type { EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
 import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
-import { getCafeDisplayDomain, getCafePublicUrl } from "@/lib/platform/cafe-domain";
 import { formatSar } from "@/lib/format";
 import { StandaloneMenuControl } from "./standalone-menu-control";
 import { BrandOperationsPanel } from "./brand-operations-panel";
@@ -15,10 +14,10 @@ import s from "./brand-details.module.css";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations";
 const sections = [
-  { id: "account", title: "بيانات العلامة", description: "المالك، التواصل وروابط العلامة", icon: Building2 },
+  { id: "account", title: "بيانات العلامة", description: "بيانات المالك والتواصل", icon: Building2 },
   { id: "plan", title: "الباقة والاشتراك", description: "الباقة الحالية، المدة والتجديدات", icon: CreditCard },
   { id: "services", title: "الخدمات والصلاحيات", description: "الخدمات المتاحة واستثناءات العلامة", icon: SlidersHorizontal },
-  { id: "menu", title: "المنيو المستقل", description: "النشر والرابط المباشر للمنيو", icon: Utensils },
+  { id: "menu", title: "المنيو المستقل", description: "إتاحة المنيو حسب الباقة والاشتراك", icon: Utensils },
   { id: "operations", title: "مركز العمليات", description: "الزيارات، الدخول، الطلبات وتقارير العلامة", icon: ClipboardCheck },
   { id: "analytics", title: "الأداء والإحصاءات", description: "المنتجات، الطلبات وتفاعل العملاء", icon: BarChart3 },
   { id: "support", title: "الدعم والمستندات", description: "الصيانة، الدعم وبيانات النشاط", icon: Headphones },
@@ -94,8 +93,6 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
     copyTimer.current = setTimeout(() => setCopyMessage(""), 3500);
   }
   const planName = cafe.planName || plans.find(plan => plan.id === cafe.planId)?.name || "بدون باقة";
-  const domainSettings = { customDomain: cafe.customDomain, domainStatus: cafe.customDomainStatus || "غير مربوط", purchasedDomain: cafe.purchasedDomain, purchasedDomainStatus: cafe.purchasedDomainStatus || "غير مربوط" };
-  const publicUrl = getCafePublicUrl(cafe.slug, { settings: domainSettings });
   const selectedSection = sections.find(item => item.id === section);
   const stats = [
     { label: "المنتجات", value: cafe.productsCount ?? 0, icon: Package },
@@ -118,7 +115,6 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
             <h2 dir="auto">{cafe.name}</h2>
             <div className={s.identityMeta}><span className={cafe.status === "نشط" ? s.active : s.inactive}><i />{cafe.status}</span><span>{planName}</span></div>
           </div>
-          <a href={publicUrl} target="_blank" rel="noreferrer" className={s.visitLink}>زيارة العلامة <ArrowUpLeft aria-hidden="true" /></a>
         </div>
         <div className={s.summary}>
           <div><Package aria-hidden="true" /><span><strong>{cafe.productsCount ?? 0}</strong><small>منتج في المنيو</small></span></div>
@@ -143,9 +139,6 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           <SectionHeading icon={UserRound}>بيانات الحساب والمالك</SectionHeading>
           <DataList items={[["اسم العلامة", cafe.name], ["الرابط المختصر", cafe.slug], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["الوصول لكلمة المرور", cafe.passwordAccessNote], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
           <button type="button" className={s.primaryButton} disabled={statusPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
-          <SectionHeading icon={Globe}>الروابط والنطاقات</SectionHeading>
-          <a className={s.linkCard} href={publicUrl} target="_blank" rel="noreferrer"><Globe aria-hidden="true" /><span><strong>الفرع الإلكتروني</strong><small dir="ltr">{publicUrl}</small></span><ExternalLink aria-hidden="true" /></a>
-          <DataList items={[["الدومين المعروض", getCafeDisplayDomain(cafe.slug, domainSettings)], ["الدومين المخصص", cafe.customDomain], ["حالته", cafe.customDomainStatus], ["الدومين المشترى", cafe.purchasedDomain], ["حالة الربط", cafe.purchasedDomainStatus]]} />
         </>}
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقة الحالية<strong>{planName}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.hasActivePlan ? "اشتراك فعّال" : "غير فعّال"}</span></div>
@@ -156,7 +149,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           </div>
         </>}
         {section === "services" && services}
-        {section === "menu" && <StandaloneMenuControl key={cafe.id} cafeId={cafe.id} slug={cafe.slug} />}
+        {section === "menu" && <StandaloneMenuControl />}
         {section === "operations" && <BrandOperationsPanel key={cafe.id} brandId={cafe.id} />}
         {section === "analytics" && <><BrandAnalyticsPanel key={cafe.id} brandId={cafe.id} /><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}
         {section === "support" && <>

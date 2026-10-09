@@ -1,3 +1,5 @@
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { ProductDetailClient } from "@/components/cafe/product-detail-client";
 import { getPublicProductBySlug } from "@/lib/data/menu";
 
@@ -9,6 +11,7 @@ type Props = {
 };
 
 export default async function ProductDetailPage({ params }: Props) {
+  requireStorefrontEnabled();
   const { slug, id } = await params;
   const initialProduct = await getPublicProductBySlug(slug, id);
 

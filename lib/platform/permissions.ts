@@ -25,28 +25,25 @@ export function cafeHasFeature(
   feature: PlatformFeature,
   options?: { planId?: string; plans?: PlatformPlan[]; overrides?: BrandFeatureOverride[] }
 ) {
-  if (feature === "all" || feature === "home" || feature === "subscription" || feature === "settings") {
-    return true;
-  }
+  if (feature === "subscription") return true;
 
-  const plans = options?.plans ?? mockPlatformPlans;
-  const activePlanId = options?.planId ?? "pro";
+  const plans = options?.plans ?? [];
+  const activePlanId = options?.planId ?? "";
+  if (!plans.some(plan => plan.id === activePlanId && plan.active !== false)) return false;
   const planFeatures = getPlanIncludedFeatures(activePlanId, plans);
-  const access = getEffectiveBrandFeatureAccess(planFeatures, options?.overrides).find((item) => item.feature.id === feature);
+  const access = getEffectiveBrandFeatureAccess(planFeatures, options?.overrides).find((item) => item.feature.id === (feature === "cashier" ? "loyalty" : feature));
   return Boolean(access?.effectiveEnabled);
 }
 
 export function getEnabledCafeFeatures(options?: { planId?: string; plans?: PlatformPlan[]; overrides?: BrandFeatureOverride[] }) {
-  const plans = options?.plans ?? mockPlatformPlans;
-  const activePlanId = options?.planId ?? "pro";
+  const plans = options?.plans ?? [];
+  const activePlanId = options?.planId ?? "";
+  if (!plans.some(plan => plan.id === activePlanId && plan.active !== false)) return [];
   return Array.from(
     new Set<PlatformFeature>([
-      "home",
       ...getEffectiveBrandFeatureAccess(getPlanIncludedFeatures(activePlanId, plans), options?.overrides)
         .filter((row) => row.effectiveEnabled)
         .map((row) => row.feature.id),
-      "settings",
-      "subscription",
     ])
   );
 }

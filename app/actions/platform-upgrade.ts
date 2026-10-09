@@ -1,5 +1,6 @@
-
 "use server";
+
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import {
   getOwnerVisitAnalytics,
@@ -12,6 +13,7 @@ export async function setCustomerStatusAction(customerId: string, status: "activ
 }
 
 export async function fetchVisitAnalyticsAction() {
+  requireStorefrontEnabled();
   return getOwnerVisitAnalytics();
 }
 
@@ -22,5 +24,6 @@ export async function trackCafeVisitAction(input: {
   referrer?: string;
   durationSeconds?: number;
 }) {
+  requireStorefrontEnabled();
   await trackCafeVisit(input);
 }

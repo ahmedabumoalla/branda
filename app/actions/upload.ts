@@ -2,6 +2,7 @@
 
 import { uploadOptimizedImage, uploadProductVideo, type StorageBucket } from "@/lib/storage/upload-server";
 import type { ImageAssetPurpose } from "@/lib/cafe/image-asset-pipeline";
+import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 
 const PURPOSE_MAP: Record<string, ImageAssetPurpose> = {
   logo: "cafe-logo",
@@ -19,6 +20,10 @@ export async function uploadImageAction(
   purpose: "logo" | "background" | "product" | "category" | "offer-banner" | "marketing" | "avatar",
   pathPrefix: string
 ) {
+  const feature = bucket === "menu-products" || bucket === "menu-categories" ? "menu"
+    : bucket === "offer-banners" ? "offers" : bucket === "cafe-logos" ? "settings" : null;
+  if (!feature) throw new Error("هذه الخدمة غير متاحة حاليًا");
+  await assertOwnerServiceEnabled(feature);
   const file = formData.get("file");
   if (!(file instanceof File)) {
     throw new Error("Missing file");
@@ -28,6 +33,7 @@ export async function uploadImageAction(
 
 
 export async function uploadProductVideoAction(formData: FormData, pathPrefix: string) {
+  await assertOwnerServiceEnabled("menu");
   const file = formData.get("file");
   if (!(file instanceof File)) {
     throw new Error("Missing file");

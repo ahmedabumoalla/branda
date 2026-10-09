@@ -1,3 +1,4 @@
+import { isStorefrontEnabled, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getPublicProductBySlug } from "@/lib/data/menu";
@@ -7,6 +8,7 @@ import { cachedServerValue } from "@/lib/performance/server-memory-cache";
 type Params = { params: Promise<{ slug: string; id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
+  if (!isStorefrontEnabled()) return storefrontUnavailableResponse();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
   }

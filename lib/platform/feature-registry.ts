@@ -50,6 +50,7 @@ export type PlatformFeatureDefinition = {
   sidebarGroup?: string;
   showInSidebarWhenEnabled?: boolean;
   sidebarVisible: boolean;
+  brandNavigation?: boolean;
   packageAssignable: boolean;
   defaultEnabled: boolean;
   requiredPlanLevel?: PlatformFeaturePlanLevel;
@@ -81,6 +82,8 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "menu",
+    brandNavigation: true,
+    sidebarLabel: "المنيو والمنتجات",
     titleAr: "المنيو / المنتجات",
     titleEn: "Menu and Products",
     descriptionAr: "إدارة المنتجات والتصنيفات والأسعار المعروضة للعملاء.",
@@ -114,6 +117,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "offers",
+    brandNavigation: true,
     titleAr: "العروض",
     titleEn: "Offers",
     descriptionAr: "إدارة العروض الترويجية الظاهرة للعملاء.",
@@ -131,6 +135,7 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "loyalty",
+    brandNavigation: true,
     titleAr: "الولاء والمكافآت",
     titleEn: "Loyalty and Rewards",
     descriptionAr: "بطاقات الولاء والمكافآت المرتبطة بتجربة العملاء.",
@@ -227,14 +232,16 @@ export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
   },
   {
     id: "settings",
+    brandNavigation: true,
+    sidebarLabel: "إعدادات كوفي",
     titleAr: "الإعدادات",
     titleEn: "Settings",
     descriptionAr: "إعدادات العلامة الأساسية وبيانات التواصل.",
     category: "settings",
     route: "/dashboard/settings",
     sidebarVisible: true,
-    packageAssignable: false,
-    defaultEnabled: true,
+    packageAssignable: true,
+    defaultEnabled: false,
     iconKey: "Settings",
     riskLevel: "business",
     status: "active",

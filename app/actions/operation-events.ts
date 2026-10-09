@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { headers } from "next/headers";
 import { recordPublicAppInstallClick } from "@/lib/data/operation-events";
 
@@ -8,6 +10,7 @@ export async function recordPwaInstallClickAction(input: {
   path?: string;
   hasPrompt?: boolean;
 }) {
+  requireStorefrontEnabled();
   const headerStore = await headers();
   await recordPublicAppInstallClick({
     cafeSlug: input.cafeSlug,

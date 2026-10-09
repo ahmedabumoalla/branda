@@ -16,6 +16,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
 };
 
 export type StandaloneMenu = {
+  loyaltyEnabled?: boolean;
   name: string;
   slug: string;
   logoUrl: string | null;

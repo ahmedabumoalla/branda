@@ -1,0 +1,122 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const engine = process.env.PGLITE_MODULE ?? path.join(tmpdir(), "branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js");
+const { PGlite } = await import(pathToFileURL(engine).href);
+const db = new PGlite();
+const id = n => `00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+const query = (sql, params=[]) => db.query(sql,params);
+const value = async (sql, params=[]) => Object.values((await query(sql,params)).rows[0])[0];
+let checks=0;
+const check = (condition,message) => { assert.ok(condition,message); checks++; };
+const denied = async fn => { await assert.rejects(fn, error=>error.code==="42501"); checks++; };
+try {
+  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+    CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE SCHEMA brand_analytics_private;
+    CREATE FUNCTION public.is_platform_admin() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT current_setting('test.admin',true)='yes' $$;
+    CREATE TABLE public.cafes(id uuid PRIMARY KEY,slug text,status text DEFAULT 'active',is_public boolean DEFAULT true,deleted_at timestamptz);
+    CREATE TABLE public.platform_plans(id text PRIMARY KEY,features jsonb,active boolean DEFAULT true);
+    CREATE TABLE public.subscriptions(cafe_id uuid,plan_id text,status text,started_at timestamptz DEFAULT now()-interval '1 day',expires_at timestamptz,created_at timestamptz DEFAULT now());
+    CREATE TABLE public.brand_feature_overrides(cafe_id uuid,feature_id text,enabled boolean);
+    CREATE TABLE public.cafe_settings(id uuid,cafe_id uuid,description text,logo_url text,logo_storage_path text,instagram text,whatsapp text,theme_id text);
+    CREATE TABLE public.cafe_loyalty_programs(id uuid,cafe_id uuid,enabled boolean DEFAULT true);
+    CREATE TABLE storage.objects(id uuid,bucket_id text,name text);
+    CREATE TABLE brand_analytics_private.events(id uuid PRIMARY KEY,cafe_id uuid,visitor_key text,kind text,occurred_at timestamptz DEFAULT clock_timestamp());
+    CREATE FUNCTION public.create_pickup_order() RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT true $$;
+    GRANT EXECUTE ON FUNCTION public.create_pickup_order() TO anon,authenticated;
+    CREATE FUNCTION public.get_owner_loyalty_activity(p_cafe_id uuid,p_from timestamptz,p_to timestamptz,p_cashier_id uuid,p_kind text,p_outcome text,p_search text,p_page integer,p_page_size integer)
+      RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN RETURN '{"events":[]}'::jsonb; END $$;
+    SELECT set_config('test.admin','no',false);
+  `);
+  const archivedFunctions=["get_public_brands_and_branches","get_my_reward_wallet","record_reward_purchase","redeem_reward","redeem_experience_reward","get_owner_dashboard_shell_fast"];
+  for (const name of archivedFunctions) await db.exec(`CREATE FUNCTION public.${name}() RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT true $$; GRANT EXECUTE ON FUNCTION public.${name}() TO anon,authenticated;`);
+  await db.exec("CREATE TABLE public.customer_reward_instances(id uuid,cafe_id uuid,source_type text DEFAULT 'loyalty'); CREATE TABLE public.customer_reward_redemptions(id uuid,cafe_id uuid,reward_instance_id uuid);");
+  const tables = ["menu_products","menu_categories","offers","cafe_loyalty_experience","loyalty_cards","loyalty_card_events","cafe_cashiers","orders","order_items","branches","reservations","reservation_services","cafe_visit_events","cafe_visits","cafe_custom_identity","customer_profiles","loyalty_accounts","loyalty_transactions","loyalty_rules","loyalty_rewards","reward_programs","reward_cards","reward_purchase_events","reward_redemptions","experience_reward_submissions","experience_reward_items"];
+  for (const table of tables) await db.exec(`CREATE TABLE public.${table}(id uuid,cafe_id uuid);`);
+  for (const table of [...tables,"cafe_settings","cafe_loyalty_programs","customer_reward_instances","customer_reward_redemptions"]) {
+    await db.exec(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY; CREATE POLICY existing_access ON public.${table} FOR ALL USING(true) WITH CHECK(true); GRANT ALL ON public.${table} TO anon,authenticated,service_role;`);
+    await query(`INSERT INTO public.${table}(id,cafe_id) VALUES($1,$1),($2,$2)`,[id(1),id(2)]);
+  }
+  await db.exec("ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY; CREATE POLICY existing_assets ON storage.objects FOR ALL USING(true) WITH CHECK(true); GRANT ALL ON storage.objects TO anon,authenticated,service_role; GRANT USAGE ON SCHEMA public,storage,auth TO anon,authenticated,service_role;");
+  await query("INSERT INTO public.cafes(id,slug) VALUES($1,'rast'),($2,'unsubscribed')",[id(1),id(2)]);
+  await query("INSERT INTO public.platform_plans VALUES('selected','[\"menu\"]',true)");
+  await query("INSERT INTO public.subscriptions(cafe_id,plan_id,status) VALUES($1,'selected','active')",[id(1)]);
+  await query("INSERT INTO storage.objects VALUES($1,'menu-products',$2),($3,'menu-products',$4)",[id(1),`${id(1)}/p.webp`,id(2),`${id(2)}/p.webp`]);
+  await db.exec(await readFile("supabase/migrations/20261009193000_package_service_boundaries.sql","utf8"));
+  const enabled = feature => value("SELECT platform_access_private.service_enabled($1,$2)",[id(1),feature]);
+  check(await enabled("menu"),"menu package grants menu");
+  await db.exec("UPDATE public.subscriptions SET started_at=NULL");
+  check(await enabled("menu"),"nullable legacy start matches application behavior");
+  await db.exec("UPDATE public.subscriptions SET started_at=now()-interval '1 day'");
+  check(!(await enabled("loyalty")),"menu does not grant loyalty");
+  await query("INSERT INTO public.brand_feature_overrides VALUES($1,'loyalty',true)",[id(1)]);
+  check(!(await enabled("loyalty")),"positive override cannot bypass package");
+  await query("INSERT INTO public.brand_feature_overrides VALUES($1,'menu',false)",[id(1)]);
+  check(!(await enabled("menu")),"negative override disables package service");
+  await db.exec("DELETE FROM public.brand_feature_overrides");
+  for (const assignment of ["expires_at=now()-interval '1 second'","started_at=now()+interval '1 day'","status='cancelled'"]) {
+    await db.exec(`UPDATE public.subscriptions SET ${assignment}`);
+    check(!(await enabled("menu")),"inactive period/status fails closed");
+    await db.exec("UPDATE public.subscriptions SET expires_at=NULL,started_at=now()-interval '1 day',status='active'");
+  }
+  await db.exec("UPDATE public.platform_plans SET active=false");
+  check(!(await enabled("menu")),"disabled plan fails closed");
+  await db.exec("UPDATE public.platform_plans SET active=true,features='[]'");
+  check(!(await enabled("menu")),"empty plan does not infer defaults");
+  await db.exec("UPDATE public.platform_plans SET features='[\"all\"]'");
+  for (const feature of ["menu","offers","loyalty","settings"]) check(await enabled(feature),"all expands current services");
+  check(!(await enabled("branches")),"all cannot revive archived service");
+  await query("INSERT INTO public.subscriptions(cafe_id,plan_id,status,expires_at,created_at) VALUES($1,'selected','active',now()-interval '1 second',now()+interval '1 second')",[id(1)]);
+  check(!(await enabled("menu")),"newest expired assignment never falls back to older subscription");
+  await db.exec("DELETE FROM public.subscriptions WHERE expires_at IS NOT NULL; UPDATE public.platform_plans SET features='[\"menu\"]'");
+  for (const role of ["anon","authenticated"]) {
+    await db.exec(`SET ROLE ${role}`);
+    check(await value("SELECT count(*) FROM public.menu_products")===1,"public catalog respects package despite permissive original policy");
+    check(await value("SELECT count(*) FROM public.offers")===0,"unassigned service remains hidden");
+    check(await value("SELECT count(*) FROM public.orders")===0,"storefront history hidden from nonadmin");
+    check(await value("SELECT count(*) FROM storage.objects")===1,"storage enforces package independently");
+    await denied(()=>query("INSERT INTO public.offers VALUES($1,$1)",[id(1)]));
+    await denied(()=>query("SELECT public.create_pickup_order()"));
+    for (const name of archivedFunctions) await denied(()=>query(`SELECT public.${name}()`));
+    await denied(()=>query("SELECT public.get_owner_loyalty_activity($1,NULL,NULL,NULL,NULL,NULL,'',1,25)",[id(1)]));
+    check(await value("SELECT count(*) FROM public.customer_profiles")===0,"menu-only brand exposes no loyalty customers");
+    await denied(()=>query("UPDATE public.menu_products SET cafe_id=$1",[id(2)]));
+    await db.exec("RESET ROLE");
+  }
+  await db.exec("SET ROLE service_role");
+  await denied(()=>query("INSERT INTO public.loyalty_cards VALUES($1,$1)",[id(1)]));
+  await denied(()=>query("INSERT INTO public.customer_reward_redemptions(id,cafe_id,reward_instance_id) VALUES($1,$1,$1)",[id(1)]));
+  await denied(()=>query("UPDATE public.loyalty_accounts SET id=$1 WHERE cafe_id=$1",[id(2)]));
+  // Bootstrap insertion remains possible; no default service or data is enabled.
+  await query("INSERT INTO public.cafe_settings(id,cafe_id) VALUES($1,$1)",[id(3)]);checks++;
+  await denied(()=>query("UPDATE public.cafe_settings SET description='changed' WHERE cafe_id=$1",[id(3)]));
+  check(await value("SELECT public.record_brand_engagement('rast','menu_view',$1,$2)",[id(20),"a".repeat(64)]),"menu package records visit without old publication flag");
+  check(!(await value("SELECT public.record_brand_engagement('unsubscribed','menu_view',$1,$2)",[id(21),"b".repeat(64)])),"unsubscribed brand creates no visit");
+  check(!(await value("SELECT public.record_brand_engagement('rast','menu_loyalty_click',$1,$2)",[id(22),"c".repeat(64)])),"unassigned loyalty click is not recorded");
+  await db.exec("RESET ROLE; SELECT set_config('test.admin','yes',false); SET ROLE authenticated");
+  check(await value("SELECT count(*) FROM public.orders")===2,"admin keeps historical report access");
+  await query("INSERT INTO public.offers VALUES($1,$1)",[id(2)]);checks++;
+  await db.exec("RESET ROLE; SELECT set_config('test.admin','no',false)");
+  check(await value("SELECT public.get_cafe_public_settings($1)",[id(2)])===null,"public settings RPC closes without subscription");
+  check(await value("SELECT count(*) FROM public.menu_products")===2,"no source data deleted");
+  await db.exec("UPDATE public.platform_plans SET features='[\"loyalty\"]'; SET ROLE service_role");
+  await query("INSERT INTO public.customer_reward_instances(id,cafe_id,source_type) VALUES($1,$2,'loyalty')",[id(70),id(1)]);
+  await query("INSERT INTO public.customer_reward_redemptions(id,cafe_id,reward_instance_id) VALUES($1,$2,$3)",[id(71),id(1),id(70)]);checks++;
+  check(Array.isArray((await value("SELECT public.get_owner_loyalty_activity($1,NULL,NULL,NULL,NULL,NULL,'',1,25)",[id(1)])).events),"enabled loyalty retains original audit function response");
+  await denied(()=>query("INSERT INTO public.customer_reward_instances(id,cafe_id,source_type) VALUES($1,$2,'experience')",[id(72),id(1)]));
+  await db.exec("RESET ROLE; UPDATE public.platform_plans SET features='[\"menu\"]'");
+  const postflight = await db.exec(await readFile("supabase/tests/package_boundaries_postflight.sql","utf8"));
+  check(Object.values(postflight[0].rows[0]).every(result=>result===true),"read-only deployed postflight assertions pass");
+  await db.exec(`CREATE FUNCTION public.test_direct_issue(p_cafe_id uuid) RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path='' AS $$ INSERT INTO public.loyalty_cards(id,cafe_id) VALUES(p_cafe_id,p_cafe_id) $$; SET ROLE authenticated`);
+  await denied(()=>query("SELECT public.test_direct_issue($1)",[id(2)]));
+  await db.exec("RESET ROLE");
+  await db.exec(await readFile("supabase/tests/restore_archived_storefront.sql","utf8"));
+  await db.exec("SET ROLE authenticated");
+  check(await value("SELECT public.create_pickup_order()"),"recorded RPC grants are actually reversible");
+  check(await value("SELECT count(*) FROM public.orders")===2,"archive policy restoration preserves records");
+  check(await value("SELECT count(*) FROM public.offers")===0,"restoring archive does not disable service package rules");
+  console.log(`PASS package database boundaries: ${checks} real PostgreSQL checks`);
+} finally { await db.close(); }

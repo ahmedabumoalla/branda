@@ -7,6 +7,9 @@ import { SettingsPageClient } from "@/components/dashboard/pages/settings-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 
 import { getOwnerCafeSettings } from "@/lib/data/settings";
+import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 
 
 
@@ -47,13 +50,12 @@ export default async function SettingsPage() {
 
 
 
-  try {
-
-    const settings = await getOwnerCafeSettings();
-
-    return <SettingsPageClient initialSettings={settings} />;
-
-  } catch {
+  const features = await getOwnerFeatureCodes().catch(() => []);
+  if (!featureCodesAllow(features, "settings")) {
+    return <DashboardFeatureBlockedState title="إعدادات كوفي" />;
+  }
+  const settings = await getOwnerCafeSettings().catch(() => null);
+  if (settings) return <SettingsPageClient initialSettings={settings} />;
 
     return (
 
@@ -83,7 +85,5 @@ export default async function SettingsPage() {
       />
 
     );
-
-  }
 
 }

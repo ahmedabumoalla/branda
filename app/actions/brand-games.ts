@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { revalidatePath } from "next/cache";
 import { setOwnerBattleArenaEnabled } from "@/lib/data/brand-games";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
@@ -16,11 +18,13 @@ function revalidateBattleArenaPaths(slug: string) {
 }
 
 export async function enableOwnerBattleArenaAction() {
+  requireStorefrontEnabled();
   const slug = await setOwnerBattleArenaEnabled(true);
   revalidateBattleArenaPaths(slug);
 }
 
 export async function disableOwnerBattleArenaAction() {
+  requireStorefrontEnabled();
   const slug = await setOwnerBattleArenaEnabled(false);
   revalidateBattleArenaPaths(slug);
 }

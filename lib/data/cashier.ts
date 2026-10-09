@@ -10,6 +10,7 @@ import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
@@ -505,6 +506,7 @@ async function loadCashierOrders(
   admin: ReturnType<typeof createAdminClient>,
   session: CashierSessionContext,
 ): Promise<{ orders: Array<Record<string, unknown>>; dataError: string | null }> {
+  if (!isStorefrontEnabled()) return { orders: [], dataError: null };
   const { data: orderRows, error: ordersError } = await admin
     .from("orders")
     .select(

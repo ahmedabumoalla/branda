@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import {
   getCustomerOrdersForProfile,} from "@/lib/data/customers";
 import { getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
@@ -147,6 +149,7 @@ async function usedLoyaltyPoints(cafeId: string, customerId: string) {
 }
 
 export async function fetchCustomerAccountCoreAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const slug = cafeSlug.trim().toLowerCase();
   try {
     const [cafe, customer] = await Promise.all([
@@ -190,6 +193,7 @@ export async function fetchCustomerAccountCoreAction(cafeSlug: string) {
 }
 
 export async function fetchCustomerAccountFeaturesAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const slug = cafeSlug.trim().toLowerCase();
   try {
     return {
@@ -209,6 +213,7 @@ export async function fetchCustomerAccountFeaturesAction(cafeSlug: string) {
 }
 
 export async function fetchCustomerOrdersSectionAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const context = await sectionContext(cafeSlug);
   if (!context.ok) return { success: false as const, code: context.code, data: [] };
   try {
@@ -224,6 +229,7 @@ export async function fetchCustomerOrdersSectionAction(cafeSlug: string) {
 }
 
 export async function fetchCustomerLoyaltySectionAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const context = await sectionContext(cafeSlug);
   if (!context.ok) {
     return {
@@ -293,6 +299,7 @@ export async function fetchCustomerLoyaltySectionAction(cafeSlug: string) {
 export async function fetchCustomerExperienceRewardsSectionAction(
   cafeSlug: string,
 ) {
+  requireStorefrontEnabled();
   const context = await sectionContext(cafeSlug);
   if (!context.ok) return { success: false as const, code: context.code, data: [] };
   try {
@@ -316,6 +323,7 @@ export async function fetchCustomerExperienceRewardsSectionAction(
 }
 
 export async function fetchCustomerRewardsSectionAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const context = await sectionContext(cafeSlug);
   if (!context.ok) return { success: false as const, code: context.code, data: [] };
   try {
@@ -336,6 +344,7 @@ export async function fetchCustomerRewardsSectionAction(cafeSlug: string) {
 
 // Compatibility loader for pages that explicitly need the complete snapshot.
 export async function fetchCustomerAccountSnapshotAction(cafeSlug: string) {
+  requireStorefrontEnabled();
   const slug = cafeSlug.trim().toLowerCase();
   const core = await fetchCustomerAccountCoreAction(slug);
   const empty = {

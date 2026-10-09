@@ -1,3 +1,4 @@
+import { isStorefrontEnabled, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { NextResponse } from "next/server";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
@@ -72,6 +73,7 @@ async function loadManifest(slug: string) {
 }
 
 export async function GET(_request: Request, { params }: Props) {
+  if (!isStorefrontEnabled()) return storefrontUnavailableResponse();
   const { slug } = await params;
   const normalizedSlug = slug.trim().toLowerCase();
   const manifest = await loadManifest(normalizedSlug);

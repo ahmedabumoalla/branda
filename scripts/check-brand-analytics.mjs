@@ -44,7 +44,9 @@ for (const [source,kind] of [["qr","loyalty_qr_visit"],["menu","loyalty_menu_vis
 }
 const calls=[];
 let rpcError=null;
+let publicFeatures=["menu", "loyalty"];
 const { POST } = load("app/api/analytics/events/route.ts",{
+  "@/lib/data/feature-entitlements":{getPublicCafeFeatureCodesBySlug:async()=>publicFeatures},
   "@/lib/barndaksa/env":{getSupabaseServiceRoleKey:()=>"test-server-secret"},
   "@/lib/supabase/admin":{createAdminClient:()=>({rpc:async(name,args)=>{calls.push({name,args});return{error:rpcError};}})},
 });
@@ -62,6 +64,12 @@ for (const body of ["invalid",JSON.stringify({...payload,kind:"redeem"}),JSON.st
 }
 check((await POST(request(" ".repeat(2048),{"content-length":"1"}))).status===400,"actual streamed body bounded despite false content length");
 check(calls.length===0,"invalid events never reach privileged database client");
+for (const [features, kind] of [[[], "menu_view"], [["loyalty"], "menu_view"], [["menu"], "menu_loyalty_click"], [["menu"], "loyalty_direct_visit"]]) {
+  publicFeatures=features;
+  check((await POST(request(JSON.stringify({...payload,kind})))).status===204,"unavailable service telemetry ignored");
+  check(calls.length===0,"unavailable service never records an event");
+}
+publicFeatures=["menu", "loyalty"];
 const accepted=await POST(request());
 check(accepted.status===204 && (await accepted.text())==="" && accepted.headers.get("cache-control")==="no-store","accepted telemetry has no sensitive response");
 check(calls[0].name==="record_brand_engagement" && /^[a-f0-9]{64}$/.test(calls[0].args.p_visitor_key),"server-only recorder receives hash");

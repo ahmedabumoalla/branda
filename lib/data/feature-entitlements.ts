@@ -1,4 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cache } from "react";
+import { isCurrentSubscription } from "@/lib/platform/active-subscription";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import {
@@ -23,12 +25,12 @@ function normalizeFeatures(raw: unknown): string[] {
   return [];
 }
 
-export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {
+export const getCafeServiceAccess = cache(async (cafeId: string) => {
   const admin = createAdminClient();
   const [subscriptionResult, overridesResult] = await Promise.all([
     admin
       .from("subscriptions")
-      .select("plan_id, platform_plans(features)")
+      .select("plan_id, status, started_at, expires_at, platform_plans(features, active)")
       .eq("cafe_id", cafeId)
       .in("status", ["active", "trialing"])
       .order("created_at", { ascending: false })
@@ -44,14 +46,19 @@ export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {
   if (error) throw error;
   if (overridesResult.error) throw overridesResult.error;
 
-  const plan = data?.platform_plans as { features?: unknown } | null | undefined;
+  const plan = data?.platform_plans as { features?: unknown; active?: boolean } | null | undefined;
+  if (!isCurrentSubscription(data ? { ...data, platform_plans: plan } : null)) return { planId: "", features: [] as string[] };
   const features = normalizeFeatures(plan?.features);
   const overrides = ((overridesResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
     featureId: String(row.feature_id) as PlatformFeatureId,
     enabled: Boolean(row.enabled),
   })) satisfies BrandFeatureOverride[];
   const effectiveFeatures = getEffectiveBrandFeatureCodes(features, overrides);
-  return Array.from(new Set(["home", ...effectiveFeatures, "subscription", "settings"]));
+  return { planId: String(data?.plan_id ?? ""), features: effectiveFeatures as string[] };
+});
+
+export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {
+  return (await getCafeServiceAccess(cafeId)).features;
 }
 
 export async function hasBrandFeature(brandId: string, featureKey: string): Promise<boolean> {

@@ -1,13 +1,17 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { getOwnerBranches, softDeleteBranch, upsertBranch } from "@/lib/data/branches";
 import type { CafeBranch } from "@/lib/mock/branches";
 
 export async function fetchOwnerBranchesAction() {
+  requireStorefrontEnabled();
   return getOwnerBranches();
 }
 
 export async function saveBranchAction(branch: CafeBranch) {
+  requireStorefrontEnabled();
   return upsertBranch({
     id: /^[0-9a-f-]{36}$/i.test(branch.id) ? branch.id : undefined,
     name: branch.name,
@@ -24,5 +28,6 @@ export async function saveBranchAction(branch: CafeBranch) {
 }
 
 export async function deleteBranchAction(branchId: string) {
+  requireStorefrontEnabled();
   await softDeleteBranch(branchId);
 }

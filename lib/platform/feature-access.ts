@@ -1,5 +1,4 @@
 import {
-  getPlatformFeatureDefinition,
   platformPlanFeatureDefaults,
   platformFeatureRegistry,
   type PlatformFeatureCode,
@@ -43,7 +42,12 @@ export function getAllPlatformFeatures() {
 }
 
 export function getPackageAssignableFeatures() {
-  return getAllPlatformFeatures().filter((feature) => feature.packageAssignable);
+  return getBrandNavigationFeatures().filter((feature) => feature.packageAssignable);
+}
+
+/** Single catalog for package editing and every brand navigation surface. */
+export function getBrandNavigationFeatures() {
+  return getAllPlatformFeatures().filter((feature) => feature.brandNavigation);
 }
 
 export function getDashboardSidebarFeatures() {
@@ -55,29 +59,13 @@ export function getPlanIncludedFeatures(
   plans: readonly (Pick<PlatformPlan, "id" | "features"> & Partial<Pick<PlatformPlan, "name">>)[] = []
 ) {
   const plan = plans.find((item) => item.id === planId);
-  const planFeatures = normalizeFeatureCodes(
-    plan?.features?.length
-      ? plan.features
-      : [
-          ...getRegistryDefaultFeaturesForPlan(plan?.id ?? planId),
-          ...getRegistryDefaultFeaturesForPlan(plan?.name),
-        ]
-  );
+  const planFeatures = normalizeFeatureCodes(plan?.features);
 
   if (planFeatures.includes("all")) {
     return getPackageAssignableFeatures().map((feature) => feature.id);
   }
 
-  const enabledByDefault = getAllPlatformFeatures()
-    .filter((feature) => feature.defaultEnabled)
-    .map((feature) => feature.id);
-
-  return Array.from(
-    new Set(
-      [...enabledByDefault, ...planFeatures]
-        .filter((featureId): featureId is PlatformFeatureId => Boolean(getPlatformFeatureDefinition(featureId)))
-    )
-  );
+  return getBrandNavigationFeatures().filter(feature => planFeatures.includes(feature.id)).map(feature => feature.id);
 }
 
 export function getBrandFeatureOverrides(
@@ -107,7 +95,6 @@ export function getEffectiveBrandFeatureAccess(
   return getPackageAssignableFeatures().map((feature) => {
     const planIncluded =
       planHasAll ||
-      feature.defaultEnabled ||
       normalizedPlanFeatures.includes(feature.id);
     const overrideValue = overrideMap.get(feature.id);
     const override =
@@ -116,14 +103,12 @@ export function getEffectiveBrandFeatureAccess(
     const comingSoon = feature.status === "coming_soon";
     const effectiveEnabled =
       !hidden &&
-      (overrideValue === true || (overrideValue !== false && !comingSoon && planIncluded));
+      planIncluded && overrideValue !== false && !comingSoon;
     const result = hidden
       ? "coming_soon"
       : overrideValue === false
         ? "disabled_by_admin"
-        : overrideValue === true
-          ? "active"
-          : comingSoon
+        : comingSoon
             ? "coming_soon"
             : effectiveEnabled
               ? "active"
@@ -147,14 +132,15 @@ export function getSidebarFeaturesForBrand(context: {
 }) {
   // Navigation reflects the actual assigned package, including an empty feature
   // list. Registry defaults must not make an unassigned service look enabled.
-  const planFeatures = context.plans?.find((plan) => plan.id === context.planId)?.features ?? [];
+  const plan = context.plans?.find((plan) => plan.id === context.planId);
+  if (!plan) return [];
+  const planFeatures = plan.features;
   const accessRows = getEffectiveBrandFeatureAccess(planFeatures, context.overrides);
   const accessMap = new Map(accessRows.map((row) => [row.feature.id, row]));
 
-  return getAllPlatformFeatures()
-    .filter((feature) => ["menu", "loyalty", "settings"].includes(feature.id))
+  return getBrandNavigationFeatures()
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
-    }));
+    })).filter(row => row.access?.effectiveEnabled);
 }

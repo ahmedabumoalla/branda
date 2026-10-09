@@ -4,7 +4,8 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured, sendGreenApiMenuFeedback } from "@/lib/whatsapp/green-api";
-import { STANDALONE_MENU_FEATURE } from "@/lib/menu/standalone-menu";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export const feedbackSchema = z.object({
   requestId: z.uuid(), rating: z.number().int().min(1).max(5),
@@ -33,9 +34,7 @@ export async function submitMenuFeedback(slug: string, input: Feedback, clientAd
   const { data: cafe, error } = await admin.from("cafes").select("id,name").eq("slug", slug).is("deleted_at", null).maybeSingle();
   if (error) throw error;
   if (!cafe) throw new FeedbackError(404, "المنيو غير متاح");
-  const publication = await admin.from("brand_feature_overrides").select("enabled").eq("cafe_id", cafe.id).eq("feature_id", STANDALONE_MENU_FEATURE).maybeSingle();
-  if (publication.error) throw publication.error;
-  if (publication.data?.enabled !== true) throw new FeedbackError(404, "المنيو غير متاح");
+  if (!featureCodesAllow(await getCafeFeatureCodes(String(cafe.id)), "menu")) throw new FeedbackError(404, "المنيو غير متاح");
   const settings = await admin.from("cafe_settings").select("whatsapp").eq("cafe_id", cafe.id).maybeSingle();
   if (settings.error) throw settings.error;
   const recipient = normalizeSaudiPhone(settings.data?.whatsapp ?? "");

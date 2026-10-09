@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 import { engagementInputSchema } from "@/lib/analytics/brand-analytics";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export const runtime = "nodejs";
 const maxBodyBytes = 1024;
@@ -35,6 +37,12 @@ export async function POST(request: Request) {
   const input = await boundedJson(request).then(body => engagementInputSchema.safeParse(body)).catch(() => null);
   if (!input?.success) return new Response(null, { status: 400 });
   try {
+    const features = await getPublicCafeFeatureCodesBySlug(input.data.slug);
+    const needsMenu = input.data.kind.startsWith("menu_");
+    const needsLoyalty = input.data.kind !== "menu_view";
+    if ((needsMenu && !featureCodesAllow(features, "menu")) || (needsLoyalty && !featureCodesAllow(features, "loyalty"))) {
+      return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+    }
     // Store a domain-separated hash, never a raw identifier, IP, URL or referrer.
     const visitorKey = createHmac("sha256", getSupabaseServiceRoleKey()).update(`brand-engagement:${input.data.visitorId}`).digest("hex");
     const { error } = await createAdminClient().rpc("record_brand_engagement", {

@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { getOwnerOrders, updateOrderStatus, createPickupOrder } from "@/lib/data/orders";
 import type { OrderStatus } from "@/lib/mock/orders";
 import {
@@ -60,6 +62,7 @@ function safeActionErrorMessage(error: unknown) {
 }
 
 export async function fetchOwnerOrdersAction() {
+  requireStorefrontEnabled();
   return getOwnerOrders();
 }
 
@@ -68,12 +71,14 @@ export async function updateOrderStatusAction(
   status: OrderStatus,
   rejectionReason?: string
 ) {
+  requireStorefrontEnabled();
   await updateOrderStatus(orderId, status, rejectionReason);
 }
 
 export async function createCafeOrderAction(
   input: CreateOrderInput,
 ): Promise<CafeOrderActionResult> {
+  requireStorefrontEnabled();
   logCreateCafeOrderAction("action:start", input);
 
   try {
@@ -99,6 +104,7 @@ export async function createCafeOrderAction(
 }
 
 export async function acceptPickupOrderAction(orderId: string, cafeSlug?: string) {
+  requireStorefrontEnabled();
   return acceptPickupOrder(orderId, cafeSlug);
 }
 
@@ -107,11 +113,13 @@ export async function rejectPickupOrderAction(
   reason: string,
   cafeSlug?: string
 ) {
+  requireStorefrontEnabled();
   return rejectPickupOrder(orderId, reason, cafeSlug);
 }
 
 export async function createPickupOrderAction(
   input: Parameters<typeof createPickupOrder>[0]
 ) {
+  requireStorefrontEnabled();
   return createPickupOrder(input);
 }

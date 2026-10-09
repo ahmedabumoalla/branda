@@ -1,5 +1,6 @@
-
 "use server";
+
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import { redirect } from "next/navigation";
 import {
@@ -40,10 +41,12 @@ export async function logoutCashierAction() {
 }
 
 export async function fetchCashierOrdersAction() {
+  requireStorefrontEnabled();
   return getCashierOrders();
 }
 
 export async function acceptCashierOrderAction(orderId: string) {
+  requireStorefrontEnabled();
   await cashierAcceptOrder(orderId);
 }
 
@@ -52,6 +55,7 @@ export async function updateCashierOrderStatusAction(
   status: "accepted" | "rejected" | "completed" | "not_completed",
   rejectionReason?: string,
 ) {
+  requireStorefrontEnabled();
   return cashierUpdateOrderStatus(orderId, status, rejectionReason);
 }
 

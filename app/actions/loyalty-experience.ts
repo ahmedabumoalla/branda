@@ -26,7 +26,7 @@ async function requireEnrollment(slug: string) {
 export async function requestLoyaltyOtpAction(slug: string, phone: string) {
   try {
     await requireEnrollment(slug);
-    return await requestCustomerPhoneOtpAction(slug, phone, "customer_signup");
+    return await requestCustomerPhoneOtpAction(slug, phone, "customer_signup", "loyalty");
   } catch { return { required: true as const, ok: false as const, message: "تعذر إرسال الرمز، حاول لاحقًا." }; }
 }
 

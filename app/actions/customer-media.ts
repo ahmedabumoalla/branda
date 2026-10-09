@@ -1,5 +1,7 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { mapCustomerProfileToSession } from "@/lib/data/customers";
 import { getCustomerSessionAction } from "@/app/actions/auth";
@@ -52,6 +54,7 @@ export async function uploadCustomerAvatarAction(
   cafeSlug: string,
   formData: FormData,
 ): Promise<UploadCustomerAvatarResult> {
+  requireStorefrontEnabled();
   try {
     const file = formData.get("file");
     if (!(file instanceof File)) {
@@ -143,6 +146,7 @@ export async function updateCustomerProfileAction(
   cafeSlug: string,
   input: { fullName: string; email?: string; phone?: string },
 ) {
+  requireStorefrontEnabled();
   const session = await getCustomerSessionAction(cafeSlug);
   if (!session) throw new Error("Unauthorized");
 
@@ -190,6 +194,7 @@ export async function uploadExperienceMediaAction(
   submissionId: string,
   formData: FormData,
 ) {
+  requireStorefrontEnabled();
   const file = formData.get("file");
   if (!(file instanceof File)) {
     throw new Error("Missing file");

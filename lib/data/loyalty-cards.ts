@@ -8,6 +8,8 @@ import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-
 import type { LoyaltyCardDesign } from "@/lib/loyalty/types";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export type LoyaltyCardProgram = {
   enabled: boolean;
@@ -570,6 +572,7 @@ export async function getCardByCode(cardCode: string) {
     .maybeSingle();
 
   if (error) throw error;
+  if (cardRow && !featureCodesAllow(await getCafeFeatureCodes(String(cardRow.cafe_id)), "loyalty")) return null;
   return cardRow ? mapCard(cardRow) : null;
 }
 
@@ -585,6 +588,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
 
   if (error) throw error;
   if (!cardRow) return null;
+  if (!featureCodesAllow(await getCafeFeatureCodes(String(cardRow.cafe_id)), "loyalty")) return null;
 
   const cafe = Array.isArray(cardRow.cafes) ? cardRow.cafes[0] : cardRow.cafes;
   const cafeSlug = cafe?.slug ? String(cafe.slug) : "";
@@ -625,6 +629,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
 ): Promise<CustomerLoyaltyCardView | null> {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
+  if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "loyalty")) return null;
 
   if (slug === "rast") {
     const profile = await getVerifiedRastCustomerProfile();
@@ -696,6 +701,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
 export async function getPublicLoyaltyProgramBySlug(slug: string) {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
+  if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "loyalty")) return null;
 
   const supabase = createAdminClient();
   const { data } = await supabase

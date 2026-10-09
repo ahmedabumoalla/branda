@@ -67,8 +67,9 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
   return { client, queries, signedPaths };
 }
 
-function loader(client) {
+function loader(client, features = ["menu"]) {
   return loadTs("lib/data/standalone-menu.ts", {
+    "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => features },
     "server-only": {}, react: { cache: (fn) => fn }, "@/lib/supabase/admin": { createAdminClient: () => client },
   }).getStandaloneMenu;
 }
@@ -92,7 +93,7 @@ async function run() {
     if (oldWindow) Object.defineProperty(global, "window", oldWindow); else delete global.window;
     if (oldNavigator) Object.defineProperty(global, "navigator", oldNavigator); else delete global.navigator;
   }
-  for (const status of ["active", "suspended", "inactive", "pending"]) {
+  for (const status of ["active", "published"]) {
     const fake = fakeClient({ status });
     const menu = await loader(fake.client)("double-b-bistro");
     assert.equal(menu.products.length, 1, `Menu must survive status ${status}`);
@@ -105,10 +106,16 @@ async function run() {
     assert.ok(!JSON.stringify(menu).includes("private@example.test"));
     assert.ok(!Object.hasOwn(menu.products[0], "cafe_id"));
   }
-  for (const published of [false, null]) {
-    const fake = fakeClient({ published });
+  for (const status of ["suspended", "inactive", "pending"]) {
+    const fake = fakeClient({ status });
     assert.equal(await loader(fake.client)("double-b-bistro"), null);
-    assert.ok(!fake.queries.includes("menu_products"), "Reject before reading the catalog");
+    assert.ok(!fake.queries.includes("menu_products"));
+  }
+  for (const features of [[], ["loyalty"], ["offers"]]) {
+    const fake = fakeClient();
+    assert.equal(await loader(fake.client, features)("double-b-bistro"), null);
+    assert.ok(!fake.queries.includes("menu_products"), "Disabled menu must not read catalog or sign media");
+    assert.equal(fake.signedPaths.length, 0);
   }
   assert.equal(await loader(fakeClient({ deleted: true }).client)("double-b-bistro"), null);
   const products = [fixtureProduct,
@@ -168,7 +175,7 @@ async function run() {
   assert.deepEqual(invalidations, ["/menu/another-brand", "/menu/another-brand"]);
   await assert.rejects(authorizedActions.setStandaloneMenuPublicationAction("invalid-id", true));
   assert.equal(publicationWrites.length, 2, "Invalid input must not write publication state");
-  console.log("PASS: suspension independence, publication, tenant isolation, complete fields, hidden/deleted products, pagination, media isolation and search.");
+  console.log("PASS: subscription gating, suspension, publication admin authorization, tenant isolation, complete fields, hidden/deleted products, pagination, media isolation and search.");
 
   if (process.argv.includes("--live")) {
     const { createClient } = require("@supabase/supabase-js");

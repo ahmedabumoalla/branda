@@ -1,4 +1,6 @@
+import { isStorefrontEnabled, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 export async function GET() {
+  if (!isStorefrontEnabled()) return storefrontUnavailableResponse();
   const body = `
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

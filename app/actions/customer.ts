@@ -1,6 +1,6 @@
 "use server";
 
-
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,6 +39,7 @@ import type { AppNotification } from "@/lib/mock/notifications";
 
 
 export async function fetchCustomerOrdersAction(cafeSlug: string) {
+  requireStorefrontEnabled();
 
   let profile: Awaited<ReturnType<typeof requireCustomerProfileForSession>>["profile"];
   try {
@@ -58,6 +59,7 @@ export async function fetchCustomerNotificationsAction(
   cafeSlug: string
 
 ): Promise<AppNotification[]> {
+  requireStorefrontEnabled();
 
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
 
@@ -74,6 +76,7 @@ export async function markCustomerNotificationReadAction(
   notificationId: string
 
 ) {
+  requireStorefrontEnabled();
 
   const { profile } = await requireCustomerProfileForSession(cafeSlug);
 
@@ -84,6 +87,7 @@ export async function markCustomerNotificationReadAction(
 
 
 export async function fetchPublicExperienceCampaignsAction(cafeSlug: string) {
+  requireStorefrontEnabled();
 
   return getPublicExperienceCampaigns(cafeSlug);
 
@@ -96,6 +100,7 @@ export async function submitExperienceCampaignAction(
   input: Parameters<typeof submitExperienceCampaign>[0]
 
 ) {
+  requireStorefrontEnabled();
 
   return submitExperienceCampaign(input);
 
@@ -137,6 +142,7 @@ function cafePageUrl(slug: string) {
 }
 
 export async function sendBranchProximityEmailAction(input: BranchProximityEmailInput) {
+  requireStorefrontEnabled();
   const cafeSlug = input.cafeSlug.trim().toLowerCase();
   const branchId = input.branchId.trim();
   const customerLat = normalizeCoordinate(input.customerLat);

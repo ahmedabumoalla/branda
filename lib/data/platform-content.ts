@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
+import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 type DbRow = Record<string, unknown>;
 
@@ -358,6 +359,7 @@ async function mapPromotionRow(row: DbRow): Promise<PlatformHomePromotionItem | 
 }
 
 async function getPublicHomePromotions(): Promise<PlatformHomePromotionItem[]> {
+  if (!isStorefrontEnabled()) return [];
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("platform_home_promotions")
@@ -424,14 +426,14 @@ export async function getPublicPlatformHomeData(): Promise<PublicPlatformHomeDat
       .in("placement", ["hero", "intro_video", "loyalty_cards"])
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: false }),
-    admin
+    isStorefrontEnabled() ? admin
       .from("cafes")
       .select("id, name, slug, cafe_settings(logo_storage_path)")
       .eq("status", "active")
       .eq("is_public", true)
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(20) : Promise.resolve({ data: [] }),
     admin.from("platform_public_events").select("event_type"),
   ]);
 

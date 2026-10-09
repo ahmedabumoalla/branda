@@ -111,6 +111,7 @@ export function DashboardAppLayout({
   }, [pathname]);
 
   const allowed =
+    pathname === "/dashboard" ||
     !currentFeature ||
     guard.loading ||
     cafeHasFeature(currentFeature.id, {

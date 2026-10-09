@@ -1,5 +1,9 @@
 "use server";
 
+import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
+import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
+
 import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 import { cookies } from "next/headers";
@@ -36,6 +40,16 @@ import { recordNewCustomerRegistration, type RegistrationSource } from "@/lib/an
 
 const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
 const CUSTOMER_SESSION_DAYS = 30;
+
+async function requireCustomerAuthService(cafeSlug: string, source: RegistrationSource) {
+  if (source !== "loyalty") {
+    requireStorefrontEnabled();
+    return;
+  }
+  // Source is caller-controlled; a loyalty label is not authorization.
+  const features = await getPublicCafeFeatureCodesBySlug(cafeSlug);
+  if (!featureCodesAllow(features, "loyalty")) throw new Error("خدمة الولاء غير مفعلة لهذه العلامة.");
+}
 
 type BasicActionResult = {
   ok: boolean;
@@ -616,6 +630,7 @@ export async function registerCustomerAction(
   fullName: string,
   phone: string
 ): Promise<CustomerAuthActionResult> {
+  requireStorefrontEnabled();
   try {
     if (isPhoneOtpRequiredForBrand(cafeSlug)) {
       return {
@@ -649,7 +664,9 @@ export async function requestCustomerPhoneOtpAction(
   cafeSlug: string,
   phone: string,
   purpose: CustomerPhoneOtpPurpose,
+  registrationSource: RegistrationSource = "storefront",
 ) {
+  await requireCustomerAuthService(cafeSlug, registrationSource);
   try {
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
       return {
@@ -677,6 +694,7 @@ export async function completeCustomerPhoneOtpAction(
   fullName?: string,
   registrationSource: RegistrationSource = "storefront",
 ) {
+  await requireCustomerAuthService(cafeSlug, registrationSource);
   try {
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
       return { ok: false as const, message: "تعذر التحقق من الرمز." };
@@ -760,6 +778,7 @@ export async function loginCustomerAction(
   email: string,
   password: string
 ): Promise<CustomerAuthActionResult> {
+  requireStorefrontEnabled();
   try {
     const session = await loginCustomerByEmail({ cafeSlug, email, password });
     await createCustomerSessionCookie(cafeSlug, session.id);
@@ -829,6 +848,7 @@ export async function changeCustomerPasswordAction(input: {
   newPassword: string;
   confirmPassword: string;
 }): Promise<CustomerPasswordResetActionResult> {
+  requireStorefrontEnabled();
   try {
     const session = await getCustomerSessionAction(input.cafeSlug);
     if (!session) {
@@ -859,6 +879,7 @@ export async function requestCustomerPasswordResetAction(
   cafeSlug: string,
   email: string,
 ): Promise<CustomerPasswordResetActionResult> {
+  requireStorefrontEnabled();
   const parsedEmail = z.string().trim().email().safeParse(email);
   if (!parsedEmail.success) {
     return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
@@ -907,6 +928,7 @@ export async function resetCustomerPasswordAction(input: {
   newPassword: string;
   confirmPassword: string;
 }): Promise<CustomerPasswordResetActionResult> {
+  requireStorefrontEnabled();
   try {
     await resetCustomerPasswordWithToken(input);
     return {
