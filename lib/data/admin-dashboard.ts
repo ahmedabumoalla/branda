@@ -122,6 +122,8 @@ function buildMonthlyRevenue(
 
 function getAuditActionLabel(action: string) {
   const actions: Record<string, string> = {
+    maintenance_mode_started: "الدخول إلى وضع الصيانة",
+    maintenance_mode_ended: "الخروج من وضع الصيانة",
     admin_insert_cafes: "إضافة علامة جديدة",
     admin_update_cafes: "تعديل بيانات علامة",
     admin_delete_cafes: "حذف علامة",
