@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   approveSubscriptionRequest,
+  deletePlatformPlan,
   type CafeFeatureOverrideInput,
   getAdminCafes,
   getAdminCafeSubscriptionSummary,
@@ -51,6 +52,15 @@ export async function savePlatformPlansAction(plans: PlatformPlan[]) {
     await savePlatformPlans(plans);
     return getAdminPlatformPlans();
   }, "تعذر حفظ الباقات بقيت تعديلاتك محفوظة في الصفحة؛ حاول مجددًا");
+}
+
+export async function deletePlatformPlanAction(planId: string) {
+  return actionResult(async () => {
+    const deletedId = await deletePlatformPlan(planId);
+    revalidatePath("/admin/plans");
+    revalidatePath("/dashboard/subscription");
+    return deletedId;
+  }, "تعذر حذف الباقة حاول مجددًا");
 }
 
 export async function fetchAdminSubscriptionRequestsAction() {

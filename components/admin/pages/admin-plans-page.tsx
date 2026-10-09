@@ -2,7 +2,7 @@
 
 import { Check, ChevronLeft, Layers3, Plus, Receipt, Save, Trash2 } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
-import { approveSubscriptionRequestAction, rejectSubscriptionRequestAction, savePlatformPlansAction } from "@/app/actions/admin";
+import { approveSubscriptionRequestAction, deletePlatformPlanAction, rejectSubscriptionRequestAction, savePlatformPlansAction } from "@/app/actions/admin";
 import { AdminPageShell } from "@/components/ui/design-system";
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
@@ -36,6 +36,8 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const persistedIds = useRef(new Set(initialPlans.map((item) => item.id)));
   const reviewLock = useRef(false);
   const saveLock = useRef(false);
   const noticeRef = useRef<HTMLDivElement>(null);
@@ -76,13 +78,40 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
     setNotice(null);
   }
 
-  function removePlan(planId: string) {
+  async function removePlan(planId: string) {
+    if (saveLock.current || configError) return;
     const target = plans.find((item) => item.id === planId);
-    if (!target || target.isDefault) return;
-    if (!window.confirm(`حذف «${target.name}» من الباقات؟ سيطبق الحذف عند حفظ التعديلات`)) return;
-    setPlans((current) => current.filter((item) => item.id !== planId));
-    setDirty(true);
+    if (!target || target.isDefault || target.id === "owner_trial_7d") return;
+    const persisted = persistedIds.current.has(planId);
+    if (!window.confirm(persisted
+      ? `حذف «${target.name}» نهائيًا؟ سيُحفظ الحذف مباشرة`
+      : `إزالة «${target.name}» من الباقات غير المحفوظة؟`)) return;
+
+    saveLock.current = true;
+    setSaving(true);
+    setDeletingId(planId);
     setNotice(null);
+    try {
+      if (persisted) {
+        const result = await deletePlatformPlanAction(planId);
+        if (!result.ok) {
+          setNotice({ text: result.message, error: true });
+          requestAnimationFrame(() => noticeRef.current?.focus());
+          return;
+        }
+        persistedIds.current.delete(planId);
+      }
+      setPlans((current) => current.filter((item) => item.id !== planId));
+      setSelectedId((current) => current === planId ? plans.find((item) => item.id !== planId)?.id ?? "" : current);
+      setNotice({ text: persisted ? "تم حذف الباقة وحفظ الحذف" : "تمت إزالة الباقة غير المحفوظة", error: false });
+    } catch {
+      setNotice({ text: "تعذر تأكيد حذف الباقة تحقق من الاتصال ثم حاول مجددًا", error: true });
+      requestAnimationFrame(() => noticeRef.current?.focus());
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
+      setDeletingId(null);
+    }
   }
 
   async function savePlans(event: FormEvent<HTMLFormElement>) {
@@ -99,6 +128,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
         return;
       }
       setPlans(result.data);
+      persistedIds.current = new Set(result.data.map((item) => item.id));
       setDirty(false);
       setNotice({ text: "تم حفظ الباقات والخدمات المتاحة لكل باقة", error: false });
     } catch {
@@ -216,12 +246,12 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                   <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
                 </div>
                 <label className={styles.toggle}><input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />باقة مجانية بديلة بعد انتهاء التجربة</label>
-                <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />حذف الباقة</button> : null}</div>
+                <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} disabled={saving || Boolean(configError)} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />{deletingId === plan.id ? "جارٍ حذف الباقة" : "حذف الباقة"}</button> : null}</div>
               </section>
             </fieldset> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة ثم اختر خدماتها وسعرها</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
           </fieldset>
 
-          <div className={styles.saveBar}><span role="status">{saving ? "جارٍ حفظ الباقات" : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving ? "جارٍ الحفظ" : "حفظ جميع التعديلات"}</button></div>
+          <div className={styles.saveBar}><span role="status">{deletingId ? "جارٍ حذف الباقة" : saving ? "جارٍ حفظ الباقات" : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving && !deletingId ? "جارٍ الحفظ" : "حفظ جميع التعديلات"}</button></div>
         </form>
 
         {visiblePlans.length ? <section className={styles.comparison} aria-labelledby="plan-comparison-title"><div className={styles.sectionHeading}><div><h2 id="plan-comparison-title">الخدمات في نظرة واحدة</h2></div></div><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="جدول مقارنة خدمات الباقات"><table><thead><tr><th scope="col">الخدمة</th>{visiblePlans.map((item) => <th scope="col" key={item.id}>{item.name}</th>)}</tr></thead><tbody>{features.map((feature) => <tr key={feature.id}><th scope="row">{feature.sidebarLabel ?? feature.titleAr}</th>{visiblePlans.map((item) => <td key={item.id}><span className={isIncluded(item, feature.id) ? styles.enabled : styles.disabled}>{isIncluded(item, feature.id) ? "مشمولة" : "غير مشمولة"}</span></td>)}</tr>)}</tbody></table></div></section> : null}

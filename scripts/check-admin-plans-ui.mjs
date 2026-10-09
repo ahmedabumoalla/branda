@@ -41,6 +41,7 @@ function harness(initialPlans, initialRequests = [], overrides = {}) {
     return [values[slot], (next) => { values[slot] = typeof next === "function" ? next(values[slot]) : next; }];
   }, useRef(initial) { const slot = index++; if (!(slot in values)) values[slot] = { current: initial }; return values[slot]; } };
   const actions = {
+    deletePlatformPlanAction: async (id) => { calls.push(["delete", id]); return { ok: true, data: id }; },
     savePlatformPlansAction: async (plans) => { calls.push(["save", plans]); return { ok: true, data: plans }; },
     approveSubscriptionRequestAction: async (id) => { calls.push(["approve", id]); return { ok: true, data: [{ ...request, status: "approved" }] }; },
     rejectSubscriptionRequestAction: async (id, reason) => { calls.push(["reject", id, reason]); return { ok: true, data: [{ ...request, status: "rejected" }] }; },
@@ -143,6 +144,68 @@ const rejected = harness(initial, [], { savePlatformPlansAction: async () => ({ 
 await nodes(rejected.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
 assert.ok(renderToStaticMarkup(rejected.render()).includes("راجع بيانات الباقة"));
 
+const deleting = harness(initial);
+featureButton(deleting.render(), "offers").props.onClick();
+nodes(deleting.render()).find(node => node.props?.className === "planChoice" && text(node).includes("Plan two")).props.onClick();
+await button(deleting.render(), "حذف الباقة").props.onClick();
+assert.deepEqual(deleting.calls, [["delete", "two"]], "delete persists immediately without saving other drafts");
+assert.deepEqual(deleting.values[0].map(plan => plan.id), ["one", "other"]);
+assert.ok(deleting.values[0][0].features.includes("offers"), "other plan draft survives deletion");
+assert.ok(renderToStaticMarkup(deleting.render()).includes("لديك تعديلات لم تحفظ بعد"));
+await nodes(deleting.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+assert.ok(deleting.calls[1][1].every(plan => plan.id !== "two"), "later save cannot restore the deleted plan");
+
+const newDraft = harness(initial);
+button(newDraft.render(), "إضافة باقة").props.onClick();
+await button(newDraft.render(), "حذف الباقة").props.onClick();
+assert.equal(newDraft.calls.length, 0, "discarding an unsaved plan does not delete a database row");
+assert.deepEqual(newDraft.values[0], initial);
+button(newDraft.render(), "إضافة باقة").props.onClick();
+const savedNewId = newDraft.values[0].at(-1).id;
+await nodes(newDraft.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+await button(newDraft.render(), "حذف الباقة").props.onClick();
+assert.deepEqual(newDraft.calls.at(-1), ["delete", savedNewId], "a newly saved plan uses persistent deletion");
+
+const cancelledDelete = harness(initial);
+window.confirm = () => false;
+await button(cancelledDelete.render(), "حذف الباقة").props.onClick();
+assert.equal(cancelledDelete.calls.length, 0);
+assert.deepEqual(cancelledDelete.values[0], initial);
+window.confirm = () => true;
+
+let finishDelete;
+let deleteCalls = 0;
+const pendingDelete = harness(initial, [], { deletePlatformPlanAction: () => { deleteCalls++; return new Promise(resolve => { finishDelete = resolve; }); } });
+const deleteClick = button(pendingDelete.render(), "حذف الباقة").props.onClick;
+const deletion = deleteClick();
+assert.deepEqual(pendingDelete.values[0], initial, "row remains visible until persistence succeeds");
+assert.equal(nodes(pendingDelete.render()).find(node => node.props?.className === "workspace").props.disabled, true);
+assert.equal(button(pendingDelete.render(), "جارٍ حذف الباقة").props.disabled, true);
+await deleteClick();
+await nodes(pendingDelete.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+assert.equal(deleteCalls, 1, "duplicate deletes are blocked");
+assert.equal(pendingDelete.calls.length, 0, "save cannot overlap deletion");
+finishDelete({ ok: true, data: "one" });
+await deletion;
+assert.ok(!pendingDelete.values[0].some(plan => plan.id === "one"));
+assert.ok(renderToStaticMarkup(pendingDelete.render()).includes("تم حذف الباقة وحفظ الحذف"));
+assert.ok(renderToStaticMarkup(pendingDelete.render()).includes("لا توجد تعديلات غير محفوظة"));
+
+for (const failure of [async () => ({ ok: false, message: "الباقة مرتبطة باشتراكات" }), async () => { throw new Error("Private failure"); }]) {
+  const failedDelete = harness(initial, [], { deletePlatformPlanAction: failure });
+  featureButton(failedDelete.render(), "offers").props.onClick();
+  const before = structuredClone(failedDelete.values[0]);
+  await button(failedDelete.render(), "حذف الباقة").props.onClick();
+  assert.deepEqual(failedDelete.values[0], before, "failed deletion preserves the plan and all drafts");
+  assert.equal(button(failedDelete.render(), "حذف الباقة").props.disabled, false, "failed deletion can be retried");
+  const failureHtml = renderToStaticMarkup(failedDelete.render());
+  assert.ok(failureHtml.includes('role="alert"') && !failureHtml.includes("Private failure"));
+}
+const defaultDelete = harness([{ ...initial[0], isDefault: true }]);
+assert.equal(button(defaultDelete.render(), "حذف الباقة"), undefined);
+await button(trialEditor.render(), "حذف الباقة").props.onClick();
+assert.equal(trialEditor.calls.length, 0, "trial remains protected even if its handler is invoked");
+
 const css = fs.readFileSync("components/admin/pages/admin-plans-page.module.css", "utf8");
 const source = fs.readFileSync("components/admin/pages/admin-plans-page.tsx", "utf8");
 for (const [, className] of source.matchAll(/styles\.([a-zA-Z]+)/g)) assert.ok(css.includes(`.${className}`), `defined CSS class ${className}`);
@@ -152,4 +215,4 @@ for (const [foreground, background] of [["f2f3ec", "181c1b"], ["b3bdb7", "202624
   const a = luminance(foreground), b = luminance(background);
   assert.ok((Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5, `text contrast ${foreground}/${background}`);
 }
-console.log("PASS admin plans: actual component SSR and handlers, shared feature catalog, wildcard toggles, save success/failure/pending, payment review and responsive style coverage.");
+console.log("PASS admin plans: SSR, save/payment handlers, immediate persistent deletion, draft preservation, cancel/pending/duplicate/failure/retry, trial/default protection and responsive styles.");

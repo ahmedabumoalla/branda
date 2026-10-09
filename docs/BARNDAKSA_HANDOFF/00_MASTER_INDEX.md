@@ -6,7 +6,9 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
-Last issue: React441 appeared when requesting a package or saving packages, not the cashier. Fixed validation of package IDs containing underscores and returned structured action errors instead of throwing them through React. Published successfully; the user has not yet reported their retry result. If it recurs, inspect the actual action/data error for that operation; do not guess or revert completed changes.
+Latest issue: deleting a package only changed the UI draft, and bulk saving never deleted omitted database rows. A dedicated administrator action now persists deletion immediately after confirmation and keeps the row visible on failure. Default/trial plans and subscription/payment references are protected. Unsaved plans are removed locally and unrelated drafts are preserved. See task-state for release verification and the pending user retry.
+
+The earlier React441 package request/save issue was fixed by accepting IDs containing underscores and returning structured action errors. Do not revert this completed fix.
 
 ## Work the way the user expects
 
@@ -40,7 +42,7 @@ The original bulk operation covered 23 brands; Kawakib's later instruction super
 
 ## Only real outstanding items
 
-- Await the user's retry of the package save/request fix. Build and scoped checks passed, but no live financial request or authenticated end-to-end retry was made by the agent.
+- Await the user's retry of package deletion and the earlier save/request fix. Isolated checks and release build passed; the agent has not deleted a real package or submitted a financial request for testing.
 - Bank details for “العنوان الحصري” are still missing: do not invent an IBAN. Current UI offers the configured WhatsApp route to request details.
 - New phone-only accounts do not yet have phone-based password recovery. Email login is an alias, not a verified Auth email.
 - Historical Google Wallet issuance was fixed; actual phone installation/display was not confirmed. Do not reset issuer approval or credentials. Read `../rast-wallet-operations.md` only if wallet work is requested.

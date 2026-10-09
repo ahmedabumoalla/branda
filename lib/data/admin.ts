@@ -286,6 +286,41 @@ export async function getOwnerActivePlanId(): Promise<string> {
   return (await getCafeServiceAccess(cafe.id)).planId;
 }
 
+export async function deletePlatformPlan(planId: string): Promise<string> {
+  await requirePlatformAdmin();
+  const id = planSchema.shape.id.parse(planId);
+  if (id === "owner_trial_7d") {
+    throw new Error("لا يمكن حذف باقة التجربة المخصصة للحسابات الجديدة");
+  }
+
+  const plans = await getAdminPlatformPlans();
+  const target = plans.find((plan) => plan.id === id);
+  // A retry after a lost response is safe when the row is already absent.
+  if (!target) return id;
+  if (target.isDefault) {
+    throw new Error("لا يمكن حذف الباقة الأساسية عيّن باقة بديلة واحفظ التعديلات أولًا");
+  }
+
+  // Use the administrator's session so RLS and the audit trigger still apply.
+  // Existing foreign keys also protect subscriptions, payments and defaults
+  // if another request creates a reference after the check above.
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("platform_plans")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error?.code === "23503") {
+    throw new Error("لا يمكن حذف الباقة لأنها مرتبطة باشتراكات أو طلبات دفع أو إعدادات أساسية");
+  }
+  if (error) throw error;
+  if (data?.length !== 1 || data[0].id !== id) {
+    throw new Error("لم يتم تأكيد حذف الباقة حدّث الصفحة ثم حاول مجددًا");
+  }
+  return id;
+}
+
 export async function savePlatformPlans(plans: PlatformPlan[]) {
   await requirePlatformAdmin();
 
