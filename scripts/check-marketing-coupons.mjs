@@ -52,8 +52,13 @@ assert.ok(html.includes('مدد الاشتراك المشمولة') && html.incl
 assert.ok(!html.includes('alert('));
 button(tree,'تعديل').props.onClick();
 tree=render();
-const endInput=nodes(tree).find(node=>node.type==='input' && node.props.type==='date' && node.props.required);
+const endField=nodes(tree).find(node=>node.props?.id==='coupon-valid-until');
+const dateInputs=nodes(endField.type(endField.props)).filter(node=>node.type==='input');
+const endInput=dateInputs.find(node=>node.props.type==='text');
 assert.equal(endInput.props.value,'2026-10-10','end-of-day edit preserves Saudi date');
+assert.equal(endInput.props.dir,'ltr');
+assert.equal(endInput.props.placeholder,'YYYY-MM-DD');
+assert.equal(dateInputs.find(node=>node.props.type==='date').props.value,endInput.props.value,'calendar and fixed-format field share the same date');
 const durationLabels=nodes(tree).filter(node=>node.type==='label' && ['شهر واحد','ثلاثة أشهر','ستة أشهر','سنة'].includes(text(node)));
 assert.equal(durationLabels.length,4);
 for(const label of durationLabels) assert.equal(nodes(label).find(node=>node.type==='input').props.checked,text(label)==='شهر واحد');

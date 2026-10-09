@@ -6,7 +6,7 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
-Latest issue: deleting a package only changed the UI draft, and bulk saving never deleted omitted database rows. A dedicated administrator action now persists deletion immediately after confirmation and keeps the row visible on failure. Default/trial plans and subscription/payment references are protected. Unsaved plans are removed locally and unrelated drafts are preserved. See task-state for release verification and the pending user retry.
+Latest release: annual plan pricing, duration-scoped marketing coupons, redesigned coupon administration and the subscription-expiry dashboard gate are published at `a29720e57bd4ed21f6c7d1f5842274996314af82`. Database migration and exact Production deployment were verified. See task-state for evidence. The earlier persistent package-deletion fix remains intact.
 
 The earlier React441 package request/save issue was fixed by accepting IDs containing underscores and returning structured action errors. Do not revert this completed fix.
 
@@ -20,7 +20,7 @@ The earlier React441 package request/save issue was fixed by accepting IDs conta
 
 ## Product decisions already implemented
 
-- Subscription update in progress: plan price is the monthly base; purchase durations are 1, 3, 6 and 12 months. Only the annual duration gets the plan-level discount set by administration. A platform coupon applies after the annual discount and can be restricted to any selected durations, including monthly-only or annual-only. Coupon expiry includes the end of the chosen Saudi day. Bank requests reserve limited coupon slots and retain price snapshots; redemption is counted on approval. Trial/paid expiry blocks dashboard services without any replacement plan and leaves subscriptions reachable. See task-state for applied database migration and publication status.
+- Subscription pricing: plan price is the monthly base; purchase durations are 1, 3, 6 and 12 months. Only the annual duration gets the plan-level discount set by administration. A platform coupon applies after the annual discount and can be restricted to any selected durations, including monthly-only or annual-only. Coupon expiry includes the end of the chosen Saudi day. Bank requests reserve limited coupon slots and retain price snapshots; redemption is counted on approval. Trial/paid expiry blocks dashboard services without any replacement plan and leaves subscriptions reachable. Annual discounts default to zero until explicitly configured by administration.
 
 - Platform copy uses no trailing periods or commas in headings, descriptions, hints or messages; remove unnecessary decorative separators while preserving meaningful lists, questions, numbers and URLs. This rule is recorded in AGENTS.md for future edits.
 - Every brand uses one shared service catalog for sidebar and package features: menu/products, offers, loyalty/rewards, settings. Subscriptions remain accessible. Admin navigation is separate.

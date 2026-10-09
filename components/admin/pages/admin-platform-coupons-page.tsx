@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { ArrowDownToLine, Check, Copy, Percent, Plus, Search, Ticket, Trash2 } from "lucide-react";
+import { ArrowDownToLine, CalendarDays, Check, Copy, Percent, Plus, Search, Ticket, Trash2 } from "lucide-react";
 import { deletePlatformDiscountCouponAction, savePlatformDiscountCouponAction } from "@/app/actions/admin";
 import type { PlatformDiscountCoupon } from "@/lib/data/platform-coupons";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
@@ -17,6 +17,23 @@ type Props = { coupons: PlatformDiscountCoupon[]; plans: PlatformPlan[]; configE
 const number = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 function emptyCoupon(): Draft {
   return { id: crypto.randomUUID(), code: "", title: "", discountPercent: 10, eligiblePlanIds: [], eligibleDurationMonths: [1, 3, 6, 12], active: true };
+}
+
+function CouponDateField({ id, label, value, min, required, hint, onChange }: {
+  id: string; label: string; value?: string; min?: string; required?: boolean; hint: string; onChange: (value: string | undefined) => void;
+}) {
+  return <div className={styles.dateControl}>
+    <label htmlFor={id}>{label}</label>
+    <div className={styles.dateField}>
+      <input id={id} type="text" dir="ltr" required={required} value={value ?? ""} placeholder="YYYY-MM-DD" maxLength={10}
+        pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" title="السنة ثم الشهر ثم اليوم" aria-describedby={`${id}-hint`}
+        onChange={event => onChange(event.target.value || undefined)} />
+      <CalendarDays size={18} aria-hidden="true" />
+      <input className={styles.datePicker} type="date" aria-label={`اختيار ${label} من التقويم`} value={/^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? value : ""}
+        min={min} onChange={event => onChange(event.target.value || undefined)} onClick={event => { try { event.currentTarget.showPicker?.(); } catch { /* Native picker remains available */ } }} />
+    </div>
+    <small id={`${id}-hint`}>السنة ثم الشهر ثم اليوم<br />{hint}</small>
+  </div>;
 }
 
 export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, configError, referenceTime = 0 }: Props) {
@@ -76,8 +93,8 @@ export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, confi
           <label>كود الكوبون<input required dir="ltr" minLength={3} maxLength={40} pattern="[A-Za-z0-9-]+" value={editing.code} onChange={event => update({ code: event.target.value.toUpperCase() })} placeholder="BRANDA20" /><small>حروف إنجليزية وأرقام دون مسافات</small></label>
           <label>نسبة الخصم %<input required type="number" min="0.01" max="100" step="0.01" value={editing.discountPercent} onChange={event => update({ discountPercent: Number(event.target.value) })} /></label>
           <label>حد الاستخدام<input type="number" min="1" step="1" value={editing.maxRedemptions ?? ""} onChange={event => update({ maxRedemptions: event.target.value ? Number(event.target.value) : undefined })} placeholder="غير محدود" /><small>يحسب عند اعتماد الاشتراك</small></label>
-          <label>بداية الصلاحية<input type="date" value={editing.validFrom ?? ""} onChange={event => update({ validFrom: event.target.value || undefined })} /><small>اتركها فارغة ليبدأ فور التفعيل</small></label>
-          <label>نهاية الصلاحية<input required type="date" min={editing.validFrom} value={editing.validUntil ?? ""} onChange={event => update({ validUntil: event.target.value || undefined })} /><small>يشمل نهاية اليوم بتوقيت السعودية</small></label>
+          <CouponDateField id="coupon-valid-from" label="بداية الصلاحية" value={editing.validFrom} onChange={value => update({ validFrom: value })} hint="اتركها فارغة ليبدأ فور التفعيل" />
+          <CouponDateField id="coupon-valid-until" label="نهاية الصلاحية" required min={editing.validFrom} value={editing.validUntil} onChange={value => update({ validUntil: value })} hint="يشمل نهاية اليوم بتوقيت السعودية" />
           <fieldset className={styles.selection}><legend>مدد الاشتراك المشمولة</legend><p>حدد مدة واحدة أو أكثر لهذا العرض</p><div>{DEFAULT_SUBSCRIPTION_DURATIONS.map(option => <label key={option.months} className={styles.chip}><input type="checkbox" checked={includedMonths.includes(option.months)} onChange={event => update({ eligibleDurationMonths: event.target.checked ? [...includedMonths, option.months] : includedMonths.filter(month => month !== option.months) })} />{option.label}</label>)}</div></fieldset>
           <fieldset className={styles.selection}><legend>الباقات المشمولة</legend><label className={styles.allPlans}><input type="checkbox" checked={!editing.eligiblePlanIds.length} onChange={event => update({ eligiblePlanIds: event.target.checked ? [] : paidPlans.map(plan => plan.id) })} />جميع الباقات المدفوعة الحالية والجديدة</label><div>{paidPlans.map(plan => <button type="button" key={plan.id} aria-pressed={editing.eligiblePlanIds.includes(plan.id)} onClick={() => update({ eligiblePlanIds: editing.eligiblePlanIds.includes(plan.id) ? editing.eligiblePlanIds.filter(id => id !== plan.id) : [...editing.eligiblePlanIds, plan.id] })}>{plan.name}</button>)}</div><p>{editing.eligiblePlanIds.length ? "الكوبون متاح للباقات المحددة فقط" : "لا يوجد تقييد على الباقة"}</p></fieldset>
           <label className={styles.activeToggle}><input type="checkbox" checked={editing.active} onChange={event => update({ active: event.target.checked })} />تفعيل الكوبون حسب فترة الصلاحية</label>
