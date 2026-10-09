@@ -17,6 +17,8 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@zxing/browser": "0.2.1",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.8",
     "jsqr": "1.4.0",
     "lucide-react": "latest",
     "motion": "12.42.2",

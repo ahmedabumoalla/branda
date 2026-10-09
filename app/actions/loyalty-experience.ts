@@ -33,7 +33,7 @@ export async function requestLoyaltyOtpAction(slug: string, phone: string) {
 export async function completeLoyaltyOtpAction(slug: string, phone: string, code: string, name: string) {
   try {
     await requireEnrollment(slug);
-    const result = await completeCustomerPhoneOtpAction(slug, phone, code, "customer_signup", name);
+    const result = await completeCustomerPhoneOtpAction(slug, phone, code, "customer_signup", name, "loyalty");
     if (!result.ok) return { ok: false as const, message: result.message };
     return { ok: true as const, returningCustomer: result.returningCustomer };
   } catch { return { ok: false as const, message: "تعذر إكمال التسجيل، حاول لاحقًا." }; }

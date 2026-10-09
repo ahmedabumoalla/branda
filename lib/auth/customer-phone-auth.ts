@@ -1,4 +1,5 @@
 import "server-only";
+import type { RegistrationSource } from "@/lib/analytics/registration-attribution";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
@@ -108,6 +109,7 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
   purpose: CustomerPhoneOtpPurpose;
   authUserId: string;
   fullName?: string;
+  registrationSource?: RegistrationSource;
 }) {
   const cafe = await getPublicCafeBySlugAdmin(input.slug);
   const phoneNormalized = normalizeSaudiPhone(input.phone);
@@ -125,12 +127,13 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
     .eq("phone_normalized", phoneNormalized).limit(1).maybeSingle();
   if (existingError) throw existingError;
   const { data, error } = await admin.rpc(
-    "link_customer_after_supabase_phone_otp",
+    "link_customer_phone_otp_attributed",
     {
       p_cafe_id: cafe.id,
       p_phone_normalized: phoneNormalized,
       p_purpose: input.purpose,
       p_auth_user_id: input.authUserId,
+      p_registration_source: input.registrationSource ?? "storefront",
       ...(input.purpose === "customer_signup"
         ? { p_full_name: input.fullName }
         : {}),

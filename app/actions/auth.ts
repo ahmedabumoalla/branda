@@ -32,6 +32,7 @@ import {
   type CustomerPhoneOtpPurpose,
 } from "@/lib/auth/phone-otp";
 import { linkCustomerAfterSupabasePhoneOtp } from "@/lib/auth/customer-phone-auth";
+import { recordNewCustomerRegistration, type RegistrationSource } from "@/lib/analytics/registration-attribution";
 
 const PASSWORD_RECOVERY_COOKIE = "barndaksa_password_recovery";
 const CUSTOMER_SESSION_DAYS = 30;
@@ -624,6 +625,7 @@ export async function registerCustomerAction(
     }
 
     const session = await registerCustomer({ cafeSlug, email, password, fullName, phone });
+    await recordNewCustomerRegistration(session.id, "storefront");
     await createCustomerSessionCookie(cafeSlug, session.id);
     return { ok: true, message: "تم إنشاء الحساب بنجاح", session };
   } catch (error) {
@@ -673,6 +675,7 @@ export async function completeCustomerPhoneOtpAction(
   code: string,
   purpose: CustomerPhoneOtpPurpose,
   fullName?: string,
+  registrationSource: RegistrationSource = "storefront",
 ) {
   try {
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
@@ -720,6 +723,7 @@ export async function completeCustomerPhoneOtpAction(
       phone,
       purpose,
       authUserId: verified.user.id,
+      registrationSource,
       ...(purpose === "customer_signup"
         ? { fullName: parsedName?.data }
         : {}),

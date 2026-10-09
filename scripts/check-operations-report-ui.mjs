@@ -1,0 +1,50 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import ts from "typescript";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+const require = createRequire(import.meta.url);
+const cache = new Map();
+function load(file) {
+  if (cache.has(file)) return cache.get(file);
+  const loadedModule = { exports: {} }; cache.set(file, loadedModule.exports);
+  const localRequire = id => {
+    if (id.endsWith(".css")) return new Proxy({}, { get: (_, key) => key });
+    if (id === "@/app/actions/operations-report") return { loadOperationsReportAction: async () => ({ ok: false, message: "Unavailable" }) };
+    if (id.startsWith("@/")) { const base = path.resolve(id.slice(2)); return load(fs.existsSync(`${base}.tsx`) ? `${base}.tsx` : `${base}.ts`); }
+    return require(id);
+  };
+  const output = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
+  new Function("require", "module", "exports", output)(localRequire, loadedModule, loadedModule.exports);
+  cache.set(file, loadedModule.exports); return loadedModule.exports;
+}
+const api = load(path.resolve("lib/analytics/operations-report.ts"));
+const { OperationsReportPage } = load(path.resolve("components/admin/pages/operations-report-page.tsx"));
+const { defaultReportFilters: defaults, filterReportBrands: filter, reportMetrics, reportPeriodSchema } = api;
+const brands = Array.from({ length: 31 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: index === 0 ? "مَقْهَى ألوان" : `Brand ${String(index).padStart(2, "0")}`, slug: `brand-${index}`, status: "active", subscriptionStatus: index % 2 ? "expired" : "active", planName: "Pro", subscribed: index % 2 === 0, expiresAt: null, features: index % 2 ? ["menu"] : ["loyalty", "menu"], lastStorefrontVisit: null, lastMenuVisit: null, periodLastStorefrontVisit: null, periodLastMenuVisit: null, metrics: Object.fromEntries(reportMetrics.map(metric => [metric, index])) }));
+assert.equal(filter(brands, { ...defaults, query: "مقهي الوان" })[0].id, brands[0].id);
+assert.equal(filter(brands, { ...defaults, query: "brand Pro", subscription: "subscribed", feature: "loyalty", conditions: [{ metric: "storefrontVisitors", operator: "gte", value: 10 }, { metric: "loyaltyCards", operator: "lte", value: 16 }] }).length, 4);
+assert.deepEqual(filter(brands, { ...defaults, brandId: brands[3].id }).map(brand => brand.id), [brands[3].id]);
+assert.equal(filter(brands, { ...defaults, sort: "appleCards", direction: "desc" })[0].metrics.appleCards, 30);
+assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "rewardOperations", operator: "eq", value: 21 }] })[0].id, brands[21].id);
+assert.equal(filter(brands, { ...defaults, query: "<script>" }).length, 0);
+assert.equal(api.totalReportMetrics(brands).loyaltyCards, 465);
+assert.equal(reportPeriodSchema.safeParse({ from: "2026-02-30", to: "" }).success, false);
+assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-10", to: "2026-10-09" }).success, false);
+assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-09", to: "2026-10-09" }).success, true);
+assert.equal(reportPeriodSchema.safeParse({ from: "", to: "", injected: true }).success, false);
+const date = "2026-10-09T12:00:00Z";
+const report = { generatedAt: date, from: null, to: null, menuTrackingSince: date, walletTrackingSince: date, registrationTrackingSince: date, brands };
+const html = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: report }));
+assert.equal((html.match(/scope="row"/g) || []).length, 26, "25 brands plus total, independent of export scope");
+assert.ok(html.includes("٣١ علامة"), "export includes all matching brands");
+for (const label of ["مصدر غير محدد", "أندرويد", "بدون اشتراك ساري", "تصدير تقرير PDF", "قراءات ناجحة", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
+assert.ok(html.includes('tabindex="0"') && html.includes('aria-expanded="false"'));
+const missing = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: null }));
+assert.ok(missing.includes('role="alert"'));
+assert.ok(!missing.includes("إجمالي النتائج"), "unavailable data is not rendered as zero totals");
+const empty = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: { ...report, brands: [] } }));
+assert.ok(empty.includes("لا توجد علامات تطابق"));
+console.log("Operations report filters, validation, aggregation and actual React SSR checks passed.");
