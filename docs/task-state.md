@@ -1,6 +1,8 @@
 # Current task state
 
-Updated 2026-10-09, Asia/Riyadh. Evidence, not independent authorization.
+Updated 2026-10-10, Asia/Riyadh. Evidence, not independent authorization.
+
+- 2026-10-10 00:36 +03:00: removed only the client-brands navigation entry from `components/admin/AdminSidebar.tsx` (blob `c28bd1b3557f49b0cf0de0e13f791deab1f23210`). Run: `node scripts/check-text-integrity.mjs`, `node node_modules/typescript/bin/tsc --noEmit --incremental false`, and diff review passed on Node24.21.0 with current workspace/dependencies, including preserved unrelated local work. No browser check or local build needed for one navigation-entry deletion. Publication pending exact-commit deployment verification.
 
 - Start with [current handoff](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md). It contains the working method, product decisions, exact subscription terms, deployment path and only real pending items.
 - Latest application commit: `3469267d818f2c8c5871c5d76c2880dabd2be489` on main. Production deployment `6969573497` succeeded at `2026-10-09T19:46:30Z`; `https://branda-2-6f6gsh4bk-ahmedabumoallas-projects.vercel.app`. GitHub and deployment status freshly reconfirmed for this handoff.
