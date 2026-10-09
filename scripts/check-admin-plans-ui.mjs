@@ -41,9 +41,9 @@ function harness(initialPlans, initialRequests = [], overrides = {}) {
     return [values[slot], (next) => { values[slot] = typeof next === "function" ? next(values[slot]) : next; }];
   }, useRef(initial) { const slot = index++; if (!(slot in values)) values[slot] = { current: initial }; return values[slot]; } };
   const actions = {
-    savePlatformPlansAction: async (plans) => { calls.push(["save", plans]); return plans; },
-    approveSubscriptionRequestAction: async (id) => { calls.push(["approve", id]); return [{ ...request, status: "approved" }]; },
-    rejectSubscriptionRequestAction: async (id, reason) => { calls.push(["reject", id, reason]); return [{ ...request, status: "rejected" }]; },
+    savePlatformPlansAction: async (plans) => { calls.push(["save", plans]); return { ok: true, data: plans }; },
+    approveSubscriptionRequestAction: async (id) => { calls.push(["approve", id]); return { ok: true, data: [{ ...request, status: "approved" }] }; },
+    rejectSubscriptionRequestAction: async (id, reason) => { calls.push(["reject", id, reason]); return { ok: true, data: [{ ...request, status: "rejected" }] }; },
     ...overrides,
   };
   const { AdminPlansPage } = load(path.resolve("components/admin/pages/admin-plans-page.tsx"), { react: hooks, "@/app/actions/admin": actions });
@@ -131,14 +131,17 @@ const pending = harness(initial, [], { savePlatformPlansAction: () => new Promis
 const submit = nodes(pending.render()).find(node => node.type === "form").props.onSubmit;
 const saving = submit({ preventDefault() {} });
 assert.equal(nodes(pending.render()).find(node => node.props?.className === "workspace").props.disabled, true);
-resolveSave(initial);
+resolveSave({ ok: true, data: initial });
 await saving;
 const failing = harness(initial, [], { savePlatformPlansAction: async () => { throw new Error("Save failed"); } });
 featureButton(failing.render(), "offers").props.onClick();
 await nodes(failing.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
 html = renderToStaticMarkup(failing.render());
-assert.ok(html.includes('role="alert"') && html.includes("Save failed"));
+assert.ok(html.includes('role="alert"') && html.includes("تعذر الاتصال لحفظ الباقات") && !html.includes("Save failed"));
 assert.ok(failing.values[0][0].features.includes("offers"), "failed save preserves edits");
+const rejected = harness(initial, [], { savePlatformPlansAction: async () => ({ ok: false, message: "راجع بيانات الباقة" }) });
+await nodes(rejected.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+assert.ok(renderToStaticMarkup(rejected.render()).includes("راجع بيانات الباقة"));
 
 const css = fs.readFileSync("components/admin/pages/admin-plans-page.module.css", "utf8");
 const source = fs.readFileSync("components/admin/pages/admin-plans-page.tsx", "utf8");

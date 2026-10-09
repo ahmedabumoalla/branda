@@ -92,11 +92,17 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
     setSaving(true);
     setNotice(null);
     try {
-      setPlans(await savePlatformPlansAction(plans));
+      const result = await savePlatformPlansAction(plans);
+      if (!result.ok) {
+        setNotice({ text: result.message, error: true });
+        requestAnimationFrame(() => noticeRef.current?.focus());
+        return;
+      }
+      setPlans(result.data);
       setDirty(false);
       setNotice({ text: "تم حفظ الباقات والخدمات المتاحة لكل باقة", error: false });
-    } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : "تعذر حفظ الباقات. بقيت تعديلاتك هنا؛ حاول مجددًا.", error: true });
+    } catch {
+      setNotice({ text: "تعذر الاتصال لحفظ الباقات. بقيت تعديلاتك هنا؛ حاول مجددًا.", error: true });
       requestAnimationFrame(() => noticeRef.current?.focus());
     } finally {
       saveLock.current = false;
@@ -111,10 +117,16 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
     reviewLock.current = true;
     setReviewingId(requestId);
     try {
-      setRequests(approve ? await approveSubscriptionRequestAction(requestId) : await rejectSubscriptionRequestAction(requestId, reason!));
+      const result = approve ? await approveSubscriptionRequestAction(requestId) : await rejectSubscriptionRequestAction(requestId, reason!);
+      if (!result.ok) {
+        setNotice({ text: result.message, error: true });
+        requestAnimationFrame(() => noticeRef.current?.focus());
+        return;
+      }
+      setRequests(result.data);
       setNotice({ text: approve ? "تم اعتماد الطلب وتفعيل الباقة" : "تم رفض الطلب", error: false });
-    } catch (error) {
-      setNotice({ text: error instanceof Error ? error.message : "تعذر تحديث الطلب. حاول مجددًا.", error: true });
+    } catch {
+      setNotice({ text: "تعذر الاتصال لتحديث الطلب. حاول مجددًا.", error: true });
       requestAnimationFrame(() => noticeRef.current?.focus());
     } finally {
       reviewLock.current = false;

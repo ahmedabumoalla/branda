@@ -316,11 +316,22 @@ export async function getBankTransferDetails(): Promise<BankTransferDetails | nu
 
 export async function createOwnerBankRequest(planId: string, durationMonths: number): Promise<BankSubscriptionRequest[]> {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.role !== "owner") throw new Error("إنشاء طلب الاشتراك متاح لمالك الحساب فقط");
+  if (cafe.role !== "owner") throw new Error("طلب الاشتراك متاح من حساب المالك. أنهِ وضع الصيانة وسجّل بحساب المالك لإنشاء الطلب.");
   if (!planId || ![1, 2, 12, 24].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths });
-  if (error) throw new Error("تعذر إنشاء الطلب. تأكد من عدم وجود طلب قيد المراجعة ثم حاول مجددًا.");
+  if (error) {
+    const reasons: Record<string, string> = {
+      "An open request already exists": "لديك طلب اشتراك مفتوح بالفعل. حدّث الصفحة لمتابعة الطلب وإرسال الإيصال.",
+      "Plan unavailable": "هذه الباقة غير متاحة للاشتراك حاليًا. اختر باقة أخرى أو حدّث الصفحة.",
+      "Duration unavailable": "المدة المختارة غير متاحة لهذه الباقة. اختر مدة أخرى.",
+      "Invalid duration": "اختر مدة اشتراك صحيحة ثم تابع.",
+      "Unauthorized": "انتهت جلسة الدخول. سجّل الدخول إلى حساب المالك ثم حاول مجددًا.",
+      "Forbidden": "تعذر التحقق من ملكية الحساب. سجّل الدخول إلى حساب المالك ثم حاول مجددًا.",
+    };
+    console.error("[createOwnerBankRequest]", { code: error.code, message: error.message });
+    throw new Error(reasons[error.message] ?? "تعذر إنشاء طلب الاشتراك الآن. حاول مجددًا أو تواصل مع الدعم.");
+  }
   return getOwnerSubscriptionRequests();
 }
 

@@ -45,10 +45,10 @@ function harness(props = {}, actions = {}) {
     react: hooks, "next/navigation": { useRouter: () => ({ refresh: () => calls.push(["refresh"]) }) },
     "@/lib/performance/dashboard-shell-client": { clearDashboardShellSnapshot: () => calls.push(["clear-cache"]) },
     "@/app/actions/subscription": {
-      createBankSubscriptionRequestAction: async (...args) => { calls.push(["create", ...args]); return [request]; },
-      uploadSubscriptionReceiptAction: async (id, form) => { calls.push(["upload", id, form.get("receipt")]); return [{ ...request, status: "pending_review" }]; },
-      submitSubscriptionWhatsappAction: async id => { calls.push(["whatsapp", id]); return [{ ...request, status: "pending_review", receiptChannel: "whatsapp" }]; },
-      refreshSubscriptionRequestsAction: async () => [{ ...request, status: "approved" }], ...actions,
+      createBankSubscriptionRequestAction: async (...args) => { calls.push(["create", ...args]); return { ok: true, data: [request] }; },
+      uploadSubscriptionReceiptAction: async (id, form) => { calls.push(["upload", id, form.get("receipt")]); return { ok: true, data: [{ ...request, status: "pending_review" }] }; },
+      submitSubscriptionWhatsappAction: async id => { calls.push(["whatsapp", id]); return { ok: true, data: [{ ...request, status: "pending_review", receiptChannel: "whatsapp" }] }; },
+      refreshSubscriptionRequestsAction: async () => ({ ok: true, data: [{ ...request, status: "approved" }] }), ...actions,
     },
   });
   return { calls, values, render() { index = 0; return SubscriptionPageClient({ ...base, ...props }); } };
@@ -102,7 +102,11 @@ assert.ok(renderToStaticMarkup(upload.render()).includes("طلبك لدى فري
 const failure = harness({}, { createBankSubscriptionRequestAction: async () => { throw new Error("Request unavailable"); } });
 await button(failure.render(), "متابعة وإرسال إيصال التحويل").props.onClick();
 assert.ok(renderToStaticMarkup(failure.render()).includes('role="alert"'));
-assert.ok(renderToStaticMarkup(failure.render()).includes("Request unavailable"));
+assert.ok(renderToStaticMarkup(failure.render()).includes("تعذر الاتصال لإكمال الطلب"));
+assert.ok(!renderToStaticMarkup(failure.render()).includes("Request unavailable"));
+const rejected = harness({}, { createBankSubscriptionRequestAction: async () => ({ ok: false, message: "لديك طلب مفتوح" }) });
+await button(rejected.render(), "متابعة وإرسال إيصال التحويل").props.onClick();
+assert.ok(renderToStaticMarkup(rejected.render()).includes("لديك طلب مفتوح"));
 assert.ok(renderToStaticMarkup(harness({ initialActivePlanId: "", currentSubscription: null }).render()).includes("لا توجد باقة مفعلة"));
 const bank = harness({ bankDetails: { beneficiary: "Configured recipient", bankName: "Configured bank", iban: "TEST-ONLY", accountNumber: "ACCOUNT-TEST" } });
 html = renderToStaticMarkup(bank.render());

@@ -185,7 +185,7 @@ export async function saveCafeFeatureOverrides(
 
 
 const planSchema = z.object({
-  id: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/),
+  id: z.string().min(1).max(60).regex(/^[a-z0-9_-]+$/),
   name: z.string().trim().min(1).max(80),
   priceMonthly: z.number().nonnegative().max(1000000),
   offerEnabled: z.boolean(),

@@ -11,6 +11,7 @@ import { calculateSubscriptionAmount, formatSubscriptionDuration, getPlanDuratio
 import { subscriptionWhatsappUrl, type BankSubscriptionRequest, type BankTransferDetails, type CurrentSubscription } from "@/lib/platform/subscription-bank";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
 import { createBankSubscriptionRequestAction, refreshSubscriptionRequestsAction, submitSubscriptionWhatsappAction, uploadSubscriptionReceiptAction } from "@/app/actions/subscription";
+import type { ActionResult } from "@/lib/platform/action-result";
 import styles from "./subscription-page.module.css";
 
 type Props = {
@@ -54,13 +55,15 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
     checkoutRef.current?.focus({ preventScroll: true });
     checkoutRef.current?.scrollIntoView({ block: "start" });
   }
-  async function run(action: () => Promise<BankSubscriptionRequest[]>, success: string) {
+  async function run(action: () => Promise<ActionResult<BankSubscriptionRequest[]>>, success: string) {
     if (pendingLock.current) return;
     pendingLock.current = true;
     setBusy(true);
     setMessage(null);
     try {
-      const nextRequests = await action();
+      const result = await action();
+      if (!result.ok) { setMessage({ text: result.message, error: true }); return; }
+      const nextRequests = result.data;
       setRequests(nextRequests);
       setMessage({ text: success, error: false });
       if (openRequest && nextRequests.some(request => request.id === openRequest.id && request.status === "approved")) {
@@ -68,7 +71,7 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
         router.refresh();
       }
     }
-    catch (error) { setMessage({ text: error instanceof Error ? error.message : "تعذر إكمال الطلب. حاول مجددًا.", error: true }); }
+    catch { setMessage({ text: "تعذر الاتصال لإكمال الطلب. حاول مجددًا.", error: true }); }
     finally { pendingLock.current = false; setBusy(false); }
   }
   async function uploadReceipt() {

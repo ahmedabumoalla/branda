@@ -20,6 +20,7 @@ import {
 } from "@/lib/data/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
+import { actionResult } from "@/lib/platform/action-result";
 
 export async function fetchPlatformPlansAction() {
   return getPlatformPlans();
@@ -46,8 +47,10 @@ export async function fetchAdminOperationsAction() {
 }
 
 export async function savePlatformPlansAction(plans: PlatformPlan[]) {
-  await savePlatformPlans(plans);
-  return getAdminPlatformPlans();
+  return actionResult(async () => {
+    await savePlatformPlans(plans);
+    return getAdminPlatformPlans();
+  }, "تعذر حفظ الباقات. بقيت تعديلاتك محفوظة في الصفحة؛ حاول مجددًا.");
 }
 
 export async function fetchAdminSubscriptionRequestsAction() {
@@ -55,13 +58,17 @@ export async function fetchAdminSubscriptionRequestsAction() {
 }
 
 export async function approveSubscriptionRequestAction(requestId: string) {
-  await approveSubscriptionRequest(requestId);
-  return getAdminSubscriptionRequests();
+  return actionResult(async () => {
+    await approveSubscriptionRequest(requestId);
+    return getAdminSubscriptionRequests();
+  }, "تعذر اعتماد الطلب. حدّث حالته وتأكد من الإيصال ثم حاول مجددًا.");
 }
 
 export async function rejectSubscriptionRequestAction(requestId: string, response: string) {
-  await rejectSubscriptionRequest(requestId, response);
-  return getAdminSubscriptionRequests();
+  return actionResult(async () => {
+    await rejectSubscriptionRequest(requestId, response);
+    return getAdminSubscriptionRequests();
+  }, "تعذر تحديث الطلب. حاول مجددًا.");
 }
 
 export async function updateCafePlanAction(cafeId: string, planId: string) {

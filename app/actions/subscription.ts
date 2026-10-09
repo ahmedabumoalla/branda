@@ -1,4 +1,5 @@
 "use server";
+import { actionResult } from "@/lib/platform/action-result";
 
 import {
   completeOwnerPlanPayment,
@@ -37,17 +38,17 @@ export async function failPlanPaymentAction() {
 }
 
 export async function createBankSubscriptionRequestAction(planId: string, durationMonths: number) {
-  return createOwnerBankRequest(planId, durationMonths);
+  return actionResult(() => createOwnerBankRequest(planId, durationMonths), "تعذر إنشاء طلب الاشتراك. حاول مجددًا.");
 }
 
 export async function uploadSubscriptionReceiptAction(requestId: string, formData: FormData) {
-  return submitOwnerBankReceipt(requestId, formData);
+  return actionResult(() => submitOwnerBankReceipt(requestId, formData), "تعذر إرسال الإيصال. حاول مجددًا.");
 }
 
 export async function submitSubscriptionWhatsappAction(requestId: string) {
-  return submitOwnerBankReceipt(requestId);
+  return actionResult(() => submitOwnerBankReceipt(requestId), "تعذر إرسال الطلب للمراجعة. حاول مجددًا.");
 }
 
 export async function refreshSubscriptionRequestsAction() {
-  return getOwnerSubscriptionRequests();
+  return actionResult(() => getOwnerSubscriptionRequests(), "تعذر تحديث حالة الطلب. حاول مجددًا.");
 }
