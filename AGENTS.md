@@ -4,6 +4,16 @@
 This version has breaking changes - APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Continuity and execution
+
+- Start with `docs/task-state.md`, then `docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md`. Read historical records only for a relevant unresolved detail.
+- The user prefers fast implementation, premium Arabic design, short updates and concrete results. Complete authorized work and deployment without repeated confirmation or broad exploratory checklists.
+- Check the actual source and `git status`; preserve unrelated local changes. Never publish unfinished local work just because it exists.
+- Run only checks relevant to the changed behavior plus the mandatory checks below. Reuse valid unchanged evidence; documentation-only updates do not require rebuilding the application.
+- Do not inspect the browser unless directly requested or a critical necessity cannot be resolved from source, tests or APIs; explain that necessity first.
+- Deploy through the correct GitHub branch/project and verify the exact production commit. A successful push alone is not a successful deployment.
+- Keep the current handoff short: published state, established product rules, actual pending work and next action. Never include secrets. Account changes do not authorize resetting data or rebuilding completed features.
+
 ## Text Integrity Rules
 
 - Before any modification, read this file.
