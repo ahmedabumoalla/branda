@@ -129,6 +129,7 @@ export function getSidebarFeaturesForBrand(context: {
   plans?: readonly Pick<PlatformPlan, "id" | "features">[];
   overrides?: readonly BrandFeatureOverride[];
   cafeSlug?: string | null;
+  isTrial?: boolean;
 }) {
   // Navigation reflects the actual assigned package, including an empty feature
   // list. Registry defaults must not make an unassigned service look enabled.
@@ -142,5 +143,5 @@ export function getSidebarFeaturesForBrand(context: {
     .map((feature) => ({
       feature,
       access: accessMap.get(feature.id),
-    })).filter(row => row.access?.effectiveEnabled);
+    })).filter(row => row.access?.effectiveEnabled || (context.isTrial && (row.feature.id === "loyalty" || row.feature.id === "offers")));
 }

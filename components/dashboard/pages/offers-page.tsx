@@ -79,7 +79,6 @@ function generationLabel(status?: CafeOffer["cardGenerationStatus"]) {
 export function OffersPageClient({
   initialOffers,
   initialProducts,
-  businessCategory,
   configError,
   rastSpotlight = false,
 }: Props) {
@@ -465,7 +464,7 @@ export function OffersPageClient({
                 <p className="text-xs font-black text-[#8B5E3C]">المعاينة الحية</p>
                 <h2 className="mt-1 text-lg font-black text-[#3A2117]">كما ستظهر للعميل</h2>
               </div>
-              <span className="text-xs font-bold text-[#806A5E]">{businessCategory || "هوية العلامة"}</span>
+              <span className="text-xs font-bold text-[#806A5E]">هوية العلامة</span>
             </div>
             <OfferCard offer={draft} />
           </div>

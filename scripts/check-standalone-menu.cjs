@@ -75,6 +75,9 @@ function loader(client, features = ["menu"]) {
 }
 
 async function run() {
+  const empty = await loader(fakeClient({ products: [] }).client)("double-b-bistro");
+  assert.deepEqual(empty.products, [], "New brands must never receive sample products");
+  assert.equal(empty.logoUrl, "/brand/barndaksa-logo-brown.png", "Empty brand uses transparent platform mark");
   assert.equal(helpers.menuDisplayText("مـقـلـقـل لحم"), "مقلقل لحم");
   assert.equal(helpers.menuDisplayText("18.75"), "18.75");
   const motionGate = loadTs("lib/menu/motion-foundations.ts").shouldAnimateMenu;

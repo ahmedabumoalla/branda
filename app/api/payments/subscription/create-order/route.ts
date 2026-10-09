@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { areOnlinePaymentsEnabled } from "@/lib/payments/payment-availability";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { createClient } from "@/lib/supabase/server";
 import { createPaypalSubscriptionOrder, isPaypalConfigured } from "@/lib/payments/paypal";
@@ -10,6 +11,7 @@ function message(error: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!areOnlinePaymentsEnabled()) return NextResponse.json({ ok: false, message: "الدفع متاح حاليًا بالتحويل البنكي من صفحة الباقات والاشتراكات" }, { status: 503 });
   try {
     const cafe = await requireOwnerCafeContext();
 

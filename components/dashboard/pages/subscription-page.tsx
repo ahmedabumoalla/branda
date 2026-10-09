@@ -1,721 +1,112 @@
 "use client";
 
-import { Check, Crown, Layers3, Receipt, X } from "lucide-react";
-import { useMemo, useState } from "react";
-import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
-import { BarndaksaCardPaymentButton } from "@/components/payments/barndaksa-card-payment-button";
-import {
-  BentoCard,
-  BentoGrid,
-  DashboardPageShell,
-  PrimaryButton,
-  SoftCard,
-  StatPill,
-  StatusBadge,
-} from "@/components/ui/design-system";
-import {
-  packageAssignablePlatformFeatures,
-  type PlatformPlan,
-} from "@/lib/platform/admin-data";
-import type { EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
-import {
-  fetchOwnerPendingSubscriptionAction,
-  fetchOwnerSubscriptionHistoryAction,
-  startPlanCheckoutAction,
-  validatePlanCouponAction,
-} from "@/app/actions/subscription";
-import type {
-  PendingSubscription,
-  SubscriptionRecord,
-} from "@/lib/platform/subscription";
-import {
-  calculateSubscriptionAmount,
-  formatSubscriptionDuration,
-  getPlanDurationOptions,
-  isPlanOfferActive,
-  getPlanMonthlyAmount,
-} from "@/lib/platform/subscription-durations";
-
-type Step = "select" | "invoice" | "done";
+import { Check, Clock3, CreditCard, Download, ExternalLink, Layers3, MessageCircle, ShieldCheck, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
+import { DashboardPageShell } from "@/components/ui/design-system";
+import type { PlatformPlan } from "@/lib/platform/admin-data";
+import { getBrandNavigationFeatures, type EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
+import { calculateSubscriptionAmount, formatSubscriptionDuration, getPlanDurationOptions, getPlanMonthlyAmount } from "@/lib/platform/subscription-durations";
+import { subscriptionWhatsappUrl, type BankSubscriptionRequest, type BankTransferDetails, type CurrentSubscription } from "@/lib/platform/subscription-bank";
+import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
+import { createBankSubscriptionRequestAction, refreshSubscriptionRequestsAction, submitSubscriptionWhatsappAction, uploadSubscriptionReceiptAction } from "@/app/actions/subscription";
+import styles from "./subscription-page.module.css";
 
 type Props = {
-  initialPlans: PlatformPlan[];
-  initialActivePlanId: string;
-  initialHistory: SubscriptionRecord[];
-  initialPending: PendingSubscription | null;
-  initialFeatureAccess: EffectiveBrandFeatureAccess[];
-  configError?: string;
+  initialPlans: PlatformPlan[]; initialActivePlanId: string; initialHistory: SubscriptionRecord[];
+  initialPending: PendingSubscription | null; initialFeatureAccess: EffectiveBrandFeatureAccess[];
+  currentSubscription: CurrentSubscription | null; bankDetails: BankTransferDetails | null;
+  initialRequests: BankSubscriptionRequest[]; customerName: string; referenceTime: number; configError?: string;
 };
+const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
+const date = (value?: string | null) => value ? new Date(value).toLocaleDateString("ar-SA", { calendar: "gregory", timeZone: "Asia/Riyadh" }) : "غير محدد";
+const statuses: Record<string, string> = { awaiting_receipt: "بانتظار الإيصال", pending_review: "قيد مراجعة التحويل", approved: "تم الاعتماد", rejected: "مرفوض", cancelled: "ملغي" };
 
-function featureTitle(featureId: string, categoryId?: string) {
-  if (featureId === "loyalty") {
-    return "الولاء والمكافآت + نقاط الولاء المتقدمة";
+export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanId, initialHistory, initialFeatureAccess, currentSubscription, bankDetails, initialRequests, customerName, referenceTime, configError }: Props) {
+  const router = useRouter();
+  const purchasablePlans = plans.filter(plan => plan.priceMonthly > 0 && plan.id !== "owner_trial_7d");
+  const [selectedId, setSelectedId] = useState(purchasablePlans.find(plan => plan.id === initialActivePlanId)?.id || purchasablePlans[0]?.id || "");
+  const [months, setMonths] = useState(getPlanDurationOptions(plans.find(plan => plan.id === selectedId))[0]?.months ?? 1);
+  const [requests, setRequests] = useState(initialRequests);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [whatsappSent, setWhatsappSent] = useState(false);
+  const pendingLock = useRef(false);
+  const checkoutRef = useRef<HTMLElement>(null);
+  const activePlan = plans.find(plan => plan.id === initialActivePlanId);
+  const selected = plans.find(plan => plan.id === selectedId);
+  const openRequest = requests.find(request => ["awaiting_receipt", "pending_review"].includes(request.status));
+  const requestPlan = plans.find(plan => plan.id === openRequest?.planId);
+  const catalog = getBrandNavigationFeatures();
+  const activeFeatures = initialFeatureAccess.filter(row => row.effectiveEnabled && catalog.some(feature => feature.id === row.feature.id));
+  const expires = currentSubscription?.expiresAt ? new Date(currentSubscription.expiresAt).getTime() : null;
+  const daysRemaining = expires === null ? null : Math.max(0, Math.ceil((expires - referenceTime) / 86400000));
+  const active = Boolean(activePlan && currentSubscription && (expires === null || expires > referenceTime));
+  const includesLoyalty = (plan?: PlatformPlan) => Boolean(plan?.features.includes("all") || plan?.features.includes("loyalty"));
+  const amount = selected ? calculateSubscriptionAmount(selected, months) : 0;
+
+  function selectPlan(plan: PlatformPlan) {
+    setSelectedId(plan.id);
+    setMonths(getPlanDurationOptions(plan)[0]?.months ?? 1);
+    setMessage(null);
+    checkoutRef.current?.focus({ preventScroll: true });
+    checkoutRef.current?.scrollIntoView({ block: "start" });
   }
-  if (featureId === "cashier") {
-    return categoryId === "events_conferences" ? "بوابة الدخول" : "الكاشير";
-  }
-  return packageAssignablePlatformFeatures.find((feature) => feature.id === featureId)?.title ?? featureId;
-}
-
-function planHasFeature(plan: PlatformPlan | null | undefined, featureId: string) {
-  if (!plan) return false;
-  return plan.features.includes("all") || plan.features.map(String).includes(featureId);
-}
-
-export function SubscriptionPageClient({
-  initialPlans,
-  initialActivePlanId,
-  initialHistory,
-  initialPending,
-  initialFeatureAccess,
-  configError,
-}: Props) {
-  const [plans, setPlans] = useState<PlatformPlan[]>(initialPlans);
-  const [activePlanId, setActivePlanId] = useState(initialActivePlanId);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
-    initialPending?.paymentStatus === "pending" ? initialPending.planId : null
-  );
-  const [step, setStep] = useState<Step>(
-    initialPending?.paymentStatus === "pending" ? "invoice" : "select"
-  );
-  const [paying] = useState(false);
-  const [history, setHistory] = useState<SubscriptionRecord[]>(initialHistory);
-  const [pending, setPending] = useState<PendingSubscription | null>(initialPending);
-  const [paymentMessage, setPaymentMessage] = useState("");
-  const [couponCode, setCouponCode] = useState("");
-  const [couponMessage, setCouponMessage] = useState("");
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponApplied, setCouponApplied] = useState<string | undefined>();
-  const [selectedHistoryRecordId, setSelectedHistoryRecordId] = useState<string | null>(null);
-  const [selectedDurationMonths, setSelectedDurationMonths] = useState(1);
-
-  const activePlan = plans.find((plan) => plan.id === activePlanId);
-  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
-  const selectedHistoryRecord = history.find((record) => record.id === selectedHistoryRecordId) ?? null;
-  const selectedHistoryPlan = selectedHistoryRecord ? plans.find((plan) => plan.id === selectedHistoryRecord.planId) : null;
-  const enabledFeatureRows = initialFeatureAccess.filter((row) => row.effectiveEnabled);
-  const comingFeatureRows = initialFeatureAccess.filter((row) => row.result === "coming_soon");
-  const lockedFeatureRows = initialFeatureAccess.filter((row) => !row.effectiveEnabled && row.result !== "coming_soon");
-
-  const selectedPlanAmount = useMemo(() => {
-    if (!selectedPlan) return 0;
-    return calculateSubscriptionAmount(selectedPlan, selectedDurationMonths);
-  }, [selectedDurationMonths, selectedPlan]);
-
-  const selectedPlanMonthlyAmount = useMemo(() => {
-    if (!selectedPlan) return 0;
-    return getPlanMonthlyAmount(selectedPlan);
-  }, [selectedPlan]);
-
-  const total = useMemo(() => {
-    if (!selectedPlan) return 0;
-    return Math.max(0, Math.round((selectedPlanAmount - couponDiscount) * 100) / 100);
-  }, [couponDiscount, selectedPlan, selectedPlanAmount]);
-
-  async function applyCoupon() {
-    if (!selectedPlan || !couponCode.trim()) {
-      setCouponApplied(undefined);
-      setCouponDiscount(0);
-      setCouponMessage("اكتب كوبون الخصم أولًا");
-      return;
-    }
-
+  async function run(action: () => Promise<BankSubscriptionRequest[]>, success: string) {
+    if (pendingLock.current) return;
+    pendingLock.current = true;
+    setBusy(true);
+    setMessage(null);
     try {
-      const preview = await validatePlanCouponAction(selectedPlan.id, couponCode, selectedDurationMonths);
-      setCouponMessage(preview.message);
-      if (!preview.ok) {
-        setCouponApplied(undefined);
-        setCouponDiscount(0);
-        return;
+      const nextRequests = await action();
+      setRequests(nextRequests);
+      setMessage({ text: success, error: false });
+      if (openRequest && nextRequests.some(request => request.id === openRequest.id && request.status === "approved")) {
+        clearDashboardShellSnapshot();
+        router.refresh();
       }
-      setCouponApplied(preview.code);
-      setCouponDiscount(preview.discountAmount ?? 0);
-      if (pending?.id) {
-        const subscriptionId = await startPlanCheckoutAction(selectedPlan.id, preview.code, selectedDurationMonths);
-        setPending({
-          id: subscriptionId,
-          planId: selectedPlan.id,
-          planName: selectedPlan.name,
-          amount: preview.totalAmount ?? Math.max(0, selectedPlanAmount - (preview.discountAmount ?? 0)),
-          paymentStatus: "pending",
-          createdAt: new Date().toISOString(),
-        });
-      }
-    } catch {
-      setCouponMessage("تعذر التحقق من الكوبون");
-      setCouponApplied(undefined);
-      setCouponDiscount(0);
     }
+    catch (error) { setMessage({ text: error instanceof Error ? error.message : "تعذر إكمال الطلب. حاول مجددًا.", error: true }); }
+    finally { pendingLock.current = false; setBusy(false); }
+  }
+  async function uploadReceipt() {
+    if (!openRequest || !receipt) return;
+    if (receipt.size > 5 * 1024 * 1024) { setMessage({ text: "حجم الإيصال يتجاوز 5 ميجابايت", error: true }); return; }
+    const payload = new FormData(); payload.set("receipt", receipt);
+    await run(() => uploadSubscriptionReceiptAction(openRequest.id, payload), "وصل إيصالك للمراجعة. لا يلزم إرسال طلب آخر.");
   }
 
-  async function choosePlan(planId: string) {
-    if (planId === activePlanId) return;
-    const plan = plans.find((p) => p.id === planId);
-    if (!plan) return;
-    try {
-      const subscriptionId = await startPlanCheckoutAction(plan.id, couponApplied ?? couponCode, selectedDurationMonths);
-      const nextPending: PendingSubscription = {
-        id: subscriptionId,
-        planId: plan.id,
-        planName: plan.name,
-        amount: Math.max(0, Math.round((calculateSubscriptionAmount(plan, selectedDurationMonths) - couponDiscount) * 100) / 100),
-        paymentStatus: "pending",
-        createdAt: new Date().toISOString(),
-      };
-      setPending(nextPending);
-      setSelectedPlanId(planId);
-      setStep("invoice");
-    } catch {
-      alert("تعذر بدء عملية الاشتراك");
-    }
-  }
+  return <div className={styles.page} dir="rtl"><DashboardPageShell title="الباقات والاشتراكات" subtitle="كل ما تحتاجه لعلامتك، في باقة تختارها بنفسك.">
+    {configError ? <p role="alert" className={styles.error}>{configError}</p> : null}
+    <section className={styles.current} aria-labelledby="current-plan-title">
+      <div className={styles.currentIdentity}><span className={styles.eyebrow}>اشتراكك الحالي</span><h2 id="current-plan-title">{active ? activePlan?.name : "لا توجد باقة مفعلة"}</h2><p>{active ? currentSubscription?.status === "trialing" ? "أنت الآن في الفترة التجريبية" : "خدمات علامتك متاحة حسب باقتك" : "اختر باقة لتفعيل خدمات علامتك والمنيو المستقل."}</p><a href="#available-plans" className={styles.lightButton}>{active ? "استعراض الباقات والترقية" : "اختر باقتك"}<Layers3 size={17} aria-hidden="true" /></a></div>
+      <div className={styles.currentDetails}><div><span>المدة المتبقية</span><strong>{active ? daysRemaining === null ? "غير محددة" : `${money.format(daysRemaining)} يوم` : "—"}</strong></div><div><span>تاريخ انتهاء الاشتراك</span><strong>{active ? date(currentSubscription?.expiresAt) : "—"}</strong></div><div className={styles.currentServices}><span>الخدمات المفعلة</span><div>{active && activeFeatures.length ? activeFeatures.map(row => <span key={row.feature.id}><Check size={13} aria-hidden="true" />{row.feature.sidebarLabel ?? row.feature.titleAr}</span>) : <span>لا توجد خدمات مفعلة</span>}</div></div></div>
+    </section>
 
-  async function refreshAfterPayment() {
-    if (!selectedPlan) return;
-    setActivePlanId(selectedPlan.id);
-    setPending(null);
-    setStep("done");
-    setHistory(await fetchOwnerSubscriptionHistoryAction());
-    window.setTimeout(() => window.location.reload(), 800);
-  }
+    <section id="available-plans" className={styles.plansSection} aria-labelledby="available-plans-title"><div className={styles.sectionHeading}><div><span className={styles.eyebrow}>اختر ما يناسب علامتك</span><h2 id="available-plans-title">باقات واضحة. خدمات تختارها.</h2><p>جميع الأسعار شاملة ضريبة القيمة المضافة.</p></div><span className={styles.bankBadge}><ShieldCheck size={17} aria-hidden="true" />تحويل بنكي ومراجعة يدوية</span></div>
+      <div className={styles.plans}>{purchasablePlans.map(plan => <article key={plan.id} className={`${styles.plan} ${selectedId === plan.id ? styles.selectedPlan : ""}`}>
+        <div className={styles.planTop}><Layers3 size={22} aria-hidden="true" />{initialActivePlanId === plan.id && active ? <span>باقتك الحالية</span> : selectedId === plan.id ? <span>الباقة المختارة</span> : null}</div><h3>{plan.name}</h3><p>{plan.description || "خدمات واضحة لإدارة علامتك"}</p><div className={styles.price}>{money.format(getPlanMonthlyAmount(plan))}<span>ر.س / شهر</span></div>
+        <ul>{catalog.map(feature => { const included = plan.features.includes("all") || plan.features.includes(feature.id); return <li key={feature.id} className={included ? styles.included : styles.excluded}><span aria-hidden="true">{included ? "✓" : "—"}</span>{feature.sidebarLabel ?? feature.titleAr}<span className={styles.srOnly}>{included ? "مشمولة" : "غير مشمولة"}</span></li>; })}</ul>
+        <button className={selectedId === plan.id ? styles.primary : styles.secondary} type="button" onClick={() => selectPlan(plan)} disabled={busy || Boolean(configError)}>{initialActivePlanId === plan.id && active ? "تجديد الباقة" : "اختيار الباقة"}</button>
+      </article>)}</div>{!purchasablePlans.length && !configError ? <p className={styles.empty}>لا توجد باقات متاحة حاليًا. تواصل معنا لمساعدتك.</p> : null}
+    </section>
 
-  const statusLabel: Record<string, string> = {
-    pending: "لم يكتمل الدفع",
-    paid: "مدفوع",
-    failed: "فشل",
-  };
-
-  function formatLimit(value?: number | null, unit = "") {
-    if (value == null || value <= 0) return "غير محدود";
-    return `${value.toLocaleString("ar-SA")} ${unit}`.trim();
-  }
-
-  function getPlanLimits(plan?: PlatformPlan | null) {
-    if (!plan) return [];
-    return [
-      { label: "الطلبات الشهرية", value: formatLimit(plan.maxOrdersMonthly, "طلب") },
-      { label: "المنتجات المعروضة", value: formatLimit(plan.maxProductsMonthly, "منتج") },
-      { label: "الفروع", value: formatLimit(plan.maxBranches, "فرع") },
-      { label: "مدة التجربة", value: plan.trialDays && plan.trialDays > 0 ? `${plan.trialDays} يوم` : "بدون تجربة" },
-      { label: "نقاط الولاء المتقدمة", value: planHasFeature(plan, "loyalty") ? "متاحة في الباقة" : "تحتاج ترقية" },
-    ];
-  }
-
-  function getOperationalFeatureState(plan?: PlatformPlan | null) {
-    const label = featureTitle("cashier", plan?.categoryId);
-    return {
-      label,
-      enabled: planHasFeature(plan, "cashier"),
-    };
-  }
-
-  function brandFeatureBadge(row: EffectiveBrandFeatureAccess) {
-    if (row.effectiveEnabled && row.override === "enabled" && !row.planIncluded) return "متاحة كتجربة";
-    if (row.effectiveEnabled && row.planIncluded) return "ضمن باقتك";
-    if (row.effectiveEnabled) return "مفعلة";
-    if (row.result === "coming_soon") return "قريبًا";
-    return "تواصل مع الأدمن";
-  }
-
-  function brandFeatureTone(row: EffectiveBrandFeatureAccess) {
-    if (row.effectiveEnabled) return "bg-emerald-50 text-emerald-700";
-    if (row.result === "coming_soon") return "bg-[#F2E7D9] text-[#6B3A25]";
-    return "bg-white text-[#806A5E]";
-  }
-
-  function renderBrandFeatureGroup(title: string, rows: EffectiveBrandFeatureAccess[], empty: string) {
-    return (
-      <div className="rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-black text-[#311912]">{title}</h3>
-          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-[#806A5E]">{rows.length}</span>
-        </div>
-        <div className="space-y-2">
-          {rows.length ? rows.slice(0, 8).map((row) => (
-            <div key={row.feature.id} className="rounded-xl bg-white p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-[#311912]">{featureTitle(row.feature.id, activePlan?.categoryId)}</p>
-                  <p className="mt-1 text-xs font-bold leading-5 text-[#806A5E]">{row.feature.descriptionAr}</p>
-                </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${brandFeatureTone(row)}`}>
-                  {brandFeatureBadge(row)}
-                </span>
-              </div>
-            </div>
-          )) : (
-            <p className="py-5 text-center text-sm font-bold text-[#806A5E]">{empty}</p>
-          )}
-        </div>
+    <section ref={checkoutRef} tabIndex={-1} className={styles.checkout} aria-labelledby="checkout-title">
+      <div className={styles.checkoutMain}><span className={styles.eyebrow}>خطوة واحدة قبل التفعيل</span><h2 id="checkout-title">{openRequest ? "إكمال طلب الاشتراك" : "طلب الاشتراك بالتحويل البنكي"}</h2>
+        <p className={styles.hint}>يتم التفعيل بعد مراجعة التحويل واعتماده من الإدارة خلال 24 ساعة.{includesLoyalty(openRequest ? requestPlan : selected) ? " تجهيز خدمة الولاء خلال 72 ساعة من اعتماد التحويل." : ""}</p>
+        {message ? <p role={message.error ? "alert" : "status"} className={message.error ? styles.error : styles.success}>{message.text}</p> : null}
+        {openRequest ? <><div className={styles.requestSummary}><strong>{openRequest.planName}</strong><span>{formatSubscriptionDuration(openRequest.durationMonths)} · {money.format(openRequest.amount)} ر.س</span><span className={styles.requestStatus}>{statuses[openRequest.status]}</span></div><p className={styles.requestId}>رقم الطلب <b dir="ltr">{openRequest.id}</b></p>
+          {openRequest.status === "awaiting_receipt" ? <div className={styles.receiptOptions}>
+            <div><h3><Upload size={18} aria-hidden="true" />ارفع إيصال التحويل</h3><p>صورة واضحة أو ملف PDF، حتى 5 ميجابايت.</p><label className={styles.fileInput}>اختيار الإيصال<input type="file" accept="image/jpeg,image/png,application/pdf" disabled={busy} onChange={event => setReceipt(event.target.files?.[0] ?? null)} /></label>{receipt ? <p className={styles.fileName}>{receipt.name}</p> : null}<button type="button" className={styles.primary} disabled={!receipt || busy} onClick={uploadReceipt}>{busy ? "جارٍ الإرسال" : "إرسال الإيصال للمراجعة"}</button></div>
+            <div><h3><MessageCircle size={18} aria-hidden="true" />أو أرسله عبر واتساب</h3><p>أرسل الإيصال مع اسمك واسم الباقة ورقم الطلب.</p><a href={subscriptionWhatsappUrl(customerName, openRequest.planName, openRequest.id)} target="_blank" rel="noreferrer" className={styles.secondary}>فتح واتساب<ExternalLink size={15} aria-hidden="true" /></a><label className={styles.confirmation}><input type="checkbox" checked={whatsappSent} disabled={busy} onChange={event => setWhatsappSent(event.target.checked)} />أرسلت إيصال التحويل عبر واتساب</label><button className={styles.secondary} type="button" disabled={!whatsappSent || busy} onClick={() => run(() => submitSubscriptionWhatsappAction(openRequest.id), "تم إرسال طلبك للمراجعة. ستتحقق الإدارة من إيصال واتساب قبل التفعيل.")}>إشعار الإدارة للمراجعة</button></div>
+          </div> : <div className={styles.reviewNotice}><Clock3 size={26} aria-hidden="true" /><div><h3>طلبك لدى فريق المراجعة</h3><p>إرسال الإيصال لا يفعّل الباقة تلقائيًا. ستظهر الباقة بعد اعتماد التحويل.</p><button type="button" className={styles.secondary} disabled={busy} onClick={() => run(() => refreshSubscriptionRequestsAction(), "تم تحديث حالة الطلب. إذا اعتمدت الباقة، حدّث الصفحة لعرض خدماتها.")}>تحديث حالة الطلب</button></div></div>}
+        </> : selected ? <div className={styles.orderForm}><label>الباقة المختارة<select value={selectedId} disabled={busy} onChange={event => { const next = plans.find(plan => plan.id === event.target.value); if (next) selectPlan(next); }}>{purchasablePlans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select></label><label>مدة الاشتراك<select value={months} disabled={busy} onChange={event => setMonths(Number(event.target.value))}>{getPlanDurationOptions(selected).map(option => <option value={option.months} key={option.months}>{option.label}</option>)}</select></label><div className={styles.total}><span>الإجمالي شامل الضريبة</span><strong>{money.format(amount)} <small>ر.س</small></strong></div><button className={styles.primary} type="button" disabled={busy || Boolean(configError)} onClick={() => run(() => createBankSubscriptionRequestAction(selected.id, months), "تم إنشاء الطلب. أرسل إيصال التحويل للمراجعة.")}>{busy ? "جارٍ إنشاء الطلب" : "متابعة وإرسال إيصال التحويل"}</button></div> : null}
       </div>
-    );
-  }
+      <aside className={styles.bankDetails}><CreditCard size={25} aria-hidden="true" /><h3>بيانات التحويل البنكي</h3>{bankDetails ? <dl><div><dt>اسم المستفيد</dt><dd>{bankDetails.beneficiary}</dd></div><div><dt>البنك</dt><dd>{bankDetails.bankName}</dd></div><div><dt>الآيبان</dt><dd dir="ltr">{bankDetails.iban}</dd></div>{bankDetails.accountNumber ? <div><dt>رقم الحساب</dt><dd dir="ltr">{bankDetails.accountNumber}</dd></div> : null}</dl> : <p>اطلب بيانات حساب «العنوان الحصري» من فريقنا عبر واتساب قبل التحويل.</p>}<a href={subscriptionWhatsappUrl(customerName, openRequest?.planName ?? selected?.name ?? "الباقة المناسبة")} target="_blank" rel="noreferrer" className={styles.secondary}><MessageCircle size={17} aria-hidden="true" />التواصل عبر واتساب</a><span dir="ltr" className={styles.phone}>0508424401</span><p className={styles.bankNote}>احتفظ بإيصال التحويل. اعتماد الإدارة هو ما يفعّل الاشتراك.</p></aside>
+    </section>
 
-  async function refreshRecordAfterPayment(record: SubscriptionRecord) {
-    setActivePlanId(record.planId);
-    setPending(null);
-    setSelectedHistoryRecordId(null);
-    setStep("done");
-    setHistory(await fetchOwnerSubscriptionHistoryAction());
-    window.setTimeout(() => window.location.reload(), 800);
-  }
-
-  return (
-    <div dir="rtl">
-      <DashboardPageShell
-        title="الاشتراك والباقات"
-        subtitle="اختر الباقة، راجع الفاتورة، ثم ادفع لتفعيل المميزات. الباقة الحالية لا تتغير قبل تأكيد الدفع."
-        action={<BarndaksaLogo variant="brown" width={140} height={56} />}
-      >
-        {configError ? (
-          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center font-black text-amber-800">
-            {configError}
-          </div>
-        ) : null}
-        {activePlan ? (
-          <BentoGrid className="mb-8">
-            <BentoCard variant="gold" span="2" className="md:row-span-2">
-              <div className="flex h-full flex-col justify-between">
-                <div className="flex gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10">
-                    <Crown className="h-8 w-8 text-[#F0C568]" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-[#F2E7D9]">الباقة الحالية (مفعّلة)</p>
-                    <h2 className="mt-1 text-4xl font-black">{activePlan.name}</h2>
-                    <p className="mt-2 max-w-xl text-sm font-bold text-[#F2E7D9]">
-                      {activePlan.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-8 rounded-3xl bg-white/10 px-6 py-5 text-center">
-                  <p className="text-sm text-[#F2E7D9]">السعر شامل الضريبة</p>
-                  <p className="mt-1 text-4xl font-black">{activePlan.priceMonthly} ر.س</p>
-                </div>
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {getPlanLimits(activePlan).map((limit) => (
-                    <div key={limit.label} className="rounded-2xl bg-white/10 px-4 py-3">
-                      <p className="text-xs font-black text-[#F2E7D9]">{limit.label}</p>
-                      <p className="mt-1 text-sm font-black text-[#F0C568]">{limit.value}</p>
-                    </div>
-                  ))}
-                  {(() => {
-                    const operational = getOperationalFeatureState(activePlan);
-                    return (
-                      <div className="rounded-2xl bg-white/10 px-4 py-3">
-                        <p className="text-xs font-black text-[#F2E7D9]">{operational.label}</p>
-                        <p className="mt-1 text-sm font-black text-[#F0C568]">
-                          {operational.enabled ? "مشمول في الباقة" : "مقفل - يحتاج ترقية"}
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </BentoCard>
-
-            <BentoCard variant="white" span="2">
-              <StatPill
-                label="خطوة الاشتراك"
-                value={
-                  step === "select"
-                    ? "1 — اختيار الباقة"
-                    : step === "invoice"
-                      ? "2 — ملخص الفاتورة"
-                      : "3 — مكتمل"
-                }
-                hint={
-                  undefined
-                }
-              />
-            </BentoCard>
-            <BentoCard variant="white" span="4">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-black text-[#311912]">ميزات علامتك الحالية</h2>
-                  <p className="mt-1 text-sm font-bold text-[#806A5E]">
-                    هذه الحالة تجمع ميزات الباقة مع أي تفعيل أو تعطيل من الأدمن.
-                  </p>
-                </div>
-                <StatusBadge tone="gold">{enabledFeatureRows.length} مفعلة</StatusBadge>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {renderBrandFeatureGroup("المفعلة حاليًا", enabledFeatureRows, "لا توجد ميزات مفعلة بعد.")}
-                {renderBrandFeatureGroup("غير المفعلة", lockedFeatureRows, "لا توجد ميزات مقفلة.")}
-                {renderBrandFeatureGroup("القادمة", comingFeatureRows, "لا توجد ميزات قادمة.")}
-              </div>
-            </BentoCard>
-          </BentoGrid>
-        ) : null}
-
-        {step === "select" ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {plans
-              .filter((plan) => plan.active)
-              .map((plan) => {
-                const isCurrent = plan.id === activePlanId;
-                const offerActive = isPlanOfferActive(plan);
-                const monthlyAmount = getPlanMonthlyAmount(plan);
-                const durationOptions = getPlanDurationOptions(plan);
-
-                return (
-                  <article
-                    key={plan.id}
-                    className={`flex min-w-0 flex-col rounded-[24px] border p-4 sm:rounded-[32px] sm:p-6 ${
-                      isCurrent
-                        ? "border-[#D9A33F]/40 bg-gradient-to-br from-[#4A281D] via-[#6B3A25] to-[#311912] text-[#FCF8F3] shadow-[0_0_40px_rgba(217,163,63,0.15),inset_0_1px_0_rgba(255,255,255,0.08)] ring-2 ring-[#D9A33F]/50"
-                        : "border-[#E7D7C6] bg-[#FCF8F3] text-[#311912] shadow-[8px_8px_24px_rgba(49,25,18,0.06)]"
-                    }`}
-                  >
-                    {isCurrent ? (
-                      <span className="mb-3 inline-flex w-fit rounded-xl bg-[#D9A33F]/25 px-3 py-1 text-xs font-black text-[#F0C568]">
-                        الباقة الحالية
-                      </span>
-                    ) : null}
-
-                    <div
-                      className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
-                        isCurrent ? "bg-white/10 text-[#F0C568]" : "bg-[#4A281D] text-[#FCF8F3]"
-                      }`}
-                    >
-                      <Layers3 className="h-6 w-6" />
-                    </div>
-
-                    <h2 className="text-2xl font-black">{plan.name}</h2>
-                    <p className={`mt-2 text-sm font-bold ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>
-                      {plan.description}
-                    </p>
-                    <div className="mt-4">
-                      <p className={`text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>السعر الأساسي شامل الضريبة</p>
-                      <p className={`${offerActive ? "text-sm line-through opacity-70" : "text-3xl"} font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}>
-                        {plan.priceMonthly} ر.س / شهر
-                      </p>
-                      {offerActive ? (
-                        <div className="mt-2 rounded-2xl bg-[#D9A33F]/15 px-3 py-2">
-                          <p className={`text-3xl font-black ${isCurrent ? "text-[#F0C568]" : "text-[#6B3A25]"}`}>{monthlyAmount} ر.س / شهر</p>
-                          <p className={`text-xs font-black ${isCurrent ? "text-[#F2E7D9]" : "text-[#806A5E]"}`}>
-                            {plan.offerLabel || "عرض على الباقة"}{plan.offerEndsAt ? ` ينتهي في ${plan.offerEndsAt}` : " لفترة محدودة"}
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 gap-2">
-                      {getPlanLimits(plan).map((limit) => (
-                        <div
-                          key={limit.label}
-                          className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-black ${
-                            isCurrent ? "bg-white/10 text-[#FCF8F3]" : "bg-white text-[#6B3A25]"
-                          }`}
-                        >
-                          <span>{limit.label}</span>
-                          <span>{limit.value}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <ul className="mt-4 flex-1 space-y-1.5">
-                      {packageAssignablePlatformFeatures.map((feature) => {
-                        const on = planHasFeature(plan, feature.id);
-                        return (
-                          <li
-                            key={feature.id}
-                            className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-black ${
-                              on
-                                ? isCurrent
-                                  ? "bg-white/10 text-[#FCF8F3]"
-                                  : "bg-emerald-50 text-emerald-700"
-                                : isCurrent
-                                  ? "bg-white/5 text-[#806A5E]"
-                                  : "bg-[#F2E7D9] text-[#806A5E]"
-                            }`}
-                          >
-                            <span>{featureTitle(feature.id, plan.categoryId)}</span>
-                            {on ? (
-                              <Check className={`h-4 w-4 shrink-0 ${isCurrent ? "text-[#F0C568]" : "text-emerald-600"}`} />
-                            ) : (
-                              <span className="shrink-0 opacity-40">—</span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    {!isCurrent ? (
-                      <div className="mt-5 rounded-2xl bg-white/70 p-3">
-                        <label className="mb-2 block text-xs font-black text-[#806A5E]">مدة الاشتراك</label>
-                        <select
-                          value={selectedPlanId === plan.id ? selectedDurationMonths : 1}
-                          onChange={(event) => {
-                            setSelectedPlanId(plan.id);
-                            setSelectedDurationMonths(Number(event.target.value));
-                            setCouponApplied(undefined);
-                            setCouponDiscount(0);
-                            setCouponMessage("");
-                          }}
-                          className="h-12 w-full rounded-xl border border-[#E7D7C6] bg-white px-3 font-black text-[#311912]"
-                        >
-                          {durationOptions.map((option) => (
-                            <option key={option.months} value={option.months}>
-                              {option.label}{option.badge ? ` — ${option.badge}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="mt-2 text-sm font-black text-[#6B3A25]">
-                          الإجمالي: {calculateSubscriptionAmount(plan, selectedPlanId === plan.id ? selectedDurationMonths : 1)} ر.س قبل الكوبون
-                        </p>
-                      </div>
-                    ) : null}
-
-                    <PrimaryButton
-                      onClick={() => {
-                        if (selectedPlanId !== plan.id) {
-                          setSelectedPlanId(plan.id);
-                          setSelectedDurationMonths(1);
-                        }
-                        choosePlan(plan.id);
-                      }}
-                      disabled={isCurrent}
-                      className="mt-5 w-full"
-                    >
-                      {isCurrent ? "مفعّلة حاليًا" : "اختيار الباقة"}
-                    </PrimaryButton>
-                  </article>
-                );
-              })}
-          </div>
-        ) : null}
-
-        {step === "invoice" && selectedPlan ? (
-          <BentoGrid>
-            <BentoCard variant="white" span="2">
-              <div className="flex items-center gap-3">
-                <Receipt className="h-8 w-8 text-[#6B3A25]" />
-                <div>
-                  <h2 className="text-2xl font-black text-[#311912]">ملخص الفاتورة</h2>
-                  <p className="text-sm font-bold text-[#806A5E]">
-                    الباقة المختارة: {selectedPlan.name} — مدة الاشتراك {formatSubscriptionDuration(selectedDurationMonths)}
-                  </p>
-                </div>
-              </div>
-
-              <SoftCard className="mt-6 space-y-4">
-                <div className="flex justify-between font-bold">
-                  <span>سعر الباقة شامل الضريبة ({formatSubscriptionDuration(selectedDurationMonths)})</span>
-                  <span>{selectedPlanAmount} ر.س</span>
-                </div>
-                <div className="rounded-2xl border border-[#E7D7C6] bg-white p-3">
-                  <label className="mb-2 block text-xs font-black text-[#806A5E]">كوبون خصم اختياري</label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
-                      value={couponCode}
-                      onChange={(event) => {
-                        setCouponCode(event.target.value.toUpperCase());
-                        setCouponApplied(undefined);
-                        setCouponDiscount(0);
-                        setCouponMessage("");
-                      }}
-                      placeholder="اكتب كوبون الخصم"
-                      className="min-h-12 flex-1 rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 font-black text-[#311912] outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={applyCoupon}
-                      className="rounded-xl bg-[#3A2117] px-5 py-3 font-black text-white"
-                    >
-                      تطبيق
-                    </button>
-                  </div>
-                  {couponMessage ? <p className="mt-2 text-xs font-black text-[#6B3A25]">{couponMessage}</p> : null}
-                </div>
-                {couponDiscount > 0 ? (
-                  <div className="flex justify-between font-bold text-emerald-700">
-                    <span>خصم الكوبون</span>
-                    <span>- {couponDiscount} ر.س</span>
-                  </div>
-                ) : null}
-                <div className="flex justify-between border-t border-[#E7D7C6] pt-4 text-xl font-black text-[#311912]">
-                  <span>الإجمالي شامل الضريبة</span>
-                  <span>{total} ر.س</span>
-                </div>
-              </SoftCard>
-
-              <p className="mt-4 text-sm font-bold text-[#806A5E]">
-                لن يتم تغيير الباقة الحالية ({activePlan?.name}) إلا بعد إتمام الدفع بنجاح.
-              </p>
-
-              {paymentMessage ? (
-                <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-center text-sm font-black text-emerald-700">
-                  {paymentMessage}
-                </div>
-              ) : null}
-
-              <div className="mt-6 space-y-4">
-                <BarndaksaCardPaymentButton
-                  subscriptionId={pending?.id}
-                  disabled={!pending?.id || paying}
-                  onMessage={setPaymentMessage}
-                  onPaid={refreshAfterPayment}
-                />
-                <button
-                  type="button"
-                  onClick={() => setStep("select")}
-                  className="w-full rounded-2xl border border-[#E7D7C6] px-6 py-4 font-black text-[#806A5E]"
-                >
-                  تغيير الباقة
-                </button>
-              </div>
-            </BentoCard>
-
-            <BentoCard variant="white" span="2">
-              <h3 className="text-lg font-black text-[#311912]">حدود ومميزات الباقة</h3>
-              <div className="mt-4 grid gap-2">
-                {getPlanLimits(selectedPlan).map((limit) => (
-                  <div key={limit.label} className="flex justify-between rounded-xl bg-[#FCF8F3] px-4 py-3 text-sm font-black text-[#6B3A25]">
-                    <span>{limit.label}</span>
-                    <span>{limit.value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 grid gap-2">
-                {packageAssignablePlatformFeatures.map((feature) => {
-                  const on = planHasFeature(selectedPlan, feature.id);
-                  return (
-                    <div
-                      key={feature.id}
-                      className={`flex justify-between rounded-xl px-4 py-3 text-sm font-black ${
-                        on ? "bg-emerald-50 text-emerald-700" : "bg-[#F2E7D9] text-[#806A5E]"
-                      }`}
-                    >
-                      <span>{featureTitle(feature.id, selectedPlan.categoryId)}</span>
-                      {on ? <Check className="h-5 w-5" /> : <span>—</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </BentoCard>
-          </BentoGrid>
-        ) : null}
-
-        <section className="mt-10">
-          <h2 className="mb-5 text-2xl font-black text-[#311912]">سجل الاشتراكات</h2>
-          <BentoGrid className="xl:grid-cols-1">
-            {history.length ? (
-              history.map((record) => (
-                <div
-                  key={record.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedHistoryRecordId(record.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setSelectedHistoryRecordId(record.id);
-                  }}
-                  className="md:col-span-4 cursor-pointer rounded-[24px] border border-[#E7D7C6] bg-[#FCF8F3] p-4 text-right text-[#311912] shadow-[8px_8px_24px_rgba(49,25,18,0.06),-6px_-6px_20px_rgba(255,255,255,0.9)] transition hover:border-[#D9A33F] hover:shadow-[0_18px_45px_rgba(49,25,18,0.10)] sm:rounded-[32px] sm:p-6"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-black">{record.planName}</h3>
-                      <p className="mt-1 text-sm font-bold text-[#806A5E]">
-                        {record.amount} ر.س • {record.createdAt.slice(0, 10)}
-                        {record.paidAt ? ` • دُفع: ${record.paidAt.slice(0, 10)}` : ""}
-                        {record.paymentMethodLabel ? ` • ${record.paymentMethodLabel}` : ""}
-                      </p>
-                      <p className="mt-2 text-xs font-black text-[#6B3A25]">اضغط لعرض تفاصيل السجل والفاتورة</p>
-                    </div>
-                    <StatusBadge
-                      tone={
-                        record.paymentStatus === "paid"
-                          ? "success"
-                          : record.paymentStatus === "failed"
-                            ? "danger"
-                            : "gold"
-                      }
-                    >
-                      {statusLabel[record.paymentStatus]}
-                    </StatusBadge>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <BentoCard variant="white" span="4">
-                <p className="font-bold text-[#806A5E]">لا يوجد سجل اشتراكات بعد.</p>
-              </BentoCard>
-            )}
-          </BentoGrid>
-        </section>
-        {selectedHistoryRecord ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-            <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-[#E7D7C6] bg-[#FCF8F3] p-5 shadow-[0_30px_80px_rgba(49,25,18,0.30)] sm:p-7">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black text-[#806A5E]">تفاصيل سجل الاشتراك</p>
-                  <h3 className="mt-1 text-2xl font-black text-[#311912]">{selectedHistoryRecord.planName}</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedHistoryRecordId(null)}
-                  className="rounded-2xl bg-white p-3 text-[#6B3A25]"
-                  aria-label="إغلاق"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">نوع السجل</p>
-                  <p className="mt-1 font-black text-[#311912]">اشتراك / تجديد باقة</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">حالة الدفع</p>
-                  <p className="mt-1 font-black text-[#311912]">{statusLabel[selectedHistoryRecord.paymentStatus]}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">المبلغ شامل الضريبة</p>
-                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.amount} ر.س</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">تاريخ إنشاء السجل</p>
-                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.createdAt.slice(0, 10)}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">تاريخ الدفع</p>
-                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.paidAt ? selectedHistoryRecord.paidAt.slice(0, 10) : "لم يدفع بعد"}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-xs font-black text-[#806A5E]">طريقة الدفع</p>
-                  <p className="mt-1 font-black text-[#311912]">{selectedHistoryRecord.paymentMethodLabel ?? "لم تحدد"}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-3xl border border-[#E7D7C6] bg-white p-4">
-                <h4 className="font-black text-[#311912]">حدود الباقة</h4>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {getPlanLimits(selectedHistoryPlan).map((limit) => (
-                    <div key={limit.label} className="flex justify-between rounded-xl bg-[#FCF8F3] px-3 py-2 text-sm font-black text-[#6B3A25]">
-                      <span>{limit.label}</span>
-                      <span>{limit.value}</span>
-                    </div>
-                  ))}
-                </div>
-                {!selectedHistoryPlan ? (
-                  <p className="mt-3 text-sm font-bold text-[#806A5E]">تفاصيل هذه الباقة غير متاحة لأنها غير موجودة ضمن الباقات الحالية.</p>
-                ) : null}
-              </div>
-
-              {selectedHistoryRecord.paymentStatus === "pending" ? (
-                <div className="mt-5">
-                  <BarndaksaCardPaymentButton
-                    subscriptionId={selectedHistoryRecord.id}
-                    onMessage={setPaymentMessage}
-                    onPaid={() => refreshRecordAfterPayment(selectedHistoryRecord)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </DashboardPageShell>
-    </div>
-  );
+    <section className={styles.history} aria-labelledby="history-title"><h2 id="history-title"><Download size={20} aria-hidden="true" />سجل الاشتراكات والطلبات</h2>{requests.length || initialHistory.length ? <div className={styles.tableScroll} tabIndex={0} role="region" aria-label="سجل الاشتراكات"><table><thead><tr><th scope="col">الباقة</th><th scope="col">التاريخ</th><th scope="col">المبلغ</th><th scope="col">الحالة</th></tr></thead><tbody>{requests.map(request => <tr key={request.id}><th scope="row">{request.planName}{request.adminResponse ? <small>{request.adminResponse}</small> : null}</th><td>{date(request.createdAt)}</td><td>{money.format(request.amount)} ر.س</td><td>{statuses[request.status] ?? "قيد المعالجة"}</td></tr>)}{initialHistory.map(record => <tr key={record.id}><th scope="row">{record.planName}</th><td>{date(record.createdAt)}</td><td>{money.format(record.amount)} ر.س</td><td>{record.paymentStatus === "paid" ? "اشتراك مسجل" : "منتهٍ أو ملغي"}</td></tr>)}</tbody></table></div> : <p className={styles.empty}>سيظهر سجل اشتراكاتك وطلباتك هنا.</p>}</section>
+  </DashboardPageShell></div>;
 }

@@ -414,6 +414,7 @@ function mapRequest(row: Record<string, unknown>): SubscriptionPaymentRequest {
     branchId: row.branch_id ? String(row.branch_id) : undefined,
     branchName: branch?.name,
     receiptStoragePath: row.receipt_storage_path ? String(row.receipt_storage_path) : undefined,
+    receiptChannel: row.receipt_channel === "whatsapp" ? "whatsapp" : "upload",
     status: row.status as SubscriptionPaymentRequest["status"],
     createdAt: String(row.created_at),
     adminResponse: row.admin_response ? String(row.admin_response) : undefined,
@@ -425,12 +426,18 @@ export async function getAdminSubscriptionRequests(): Promise<SubscriptionPaymen
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("subscription_payment_requests")
-    .select("*, cafes(name), branches(name)")
+    .select("*, cafes(name)")
     .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) throw error;
-  return (data ?? []).map(mapRequest);
+  const requests = (data ?? []).map(mapRequest);
+  const paths = requests.flatMap(request => request.receiptStoragePath?.startsWith(`${request.cafeId}/${request.id}/`) && !request.receiptStoragePath.includes("..") ? [request.receiptStoragePath] : []);
+  if (!paths.length) return requests;
+  const signed = await supabase.storage.from("subscription-receipts").createSignedUrls(paths, 300);
+  if (signed.error) return requests;
+  const urls = new Map((signed.data ?? []).filter(row => !row.error).map(row => [row.path, row.signedUrl]));
+  return requests.map(request => ({ ...request, receiptUrl: urls.get(request.receiptStoragePath ?? "") ?? undefined }));
 }
 
 export async function approveSubscriptionRequest(requestId: string) {

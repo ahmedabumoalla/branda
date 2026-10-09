@@ -30,7 +30,7 @@ export const getCafeServiceAccess = cache(async (cafeId: string) => {
   const [subscriptionResult, overridesResult] = await Promise.all([
     admin
       .from("subscriptions")
-      .select("plan_id, status, started_at, expires_at, platform_plans(features, active)")
+      .select("plan_id, status, started_at, expires_at, platform_plans(name, features, active)")
       .eq("cafe_id", cafeId)
       .in("status", ["active", "trialing"])
       .order("created_at", { ascending: false })
@@ -46,15 +46,21 @@ export const getCafeServiceAccess = cache(async (cafeId: string) => {
   if (error) throw error;
   if (overridesResult.error) throw overridesResult.error;
 
-  const plan = data?.platform_plans as { features?: unknown; active?: boolean } | null | undefined;
-  if (!isCurrentSubscription(data ? { ...data, platform_plans: plan } : null)) return { planId: "", features: [] as string[] };
+  const plan = data?.platform_plans as { name?: string; features?: unknown; active?: boolean } | null | undefined;
+  const subscription = data ? {
+    status: String(data.status),
+    startedAt: data.started_at ? String(data.started_at) : null,
+    expiresAt: data.expires_at ? String(data.expires_at) : null,
+    planName: plan?.name ?? "",
+  } : null;
+  if (!isCurrentSubscription(data ? { ...data, platform_plans: plan } : null)) return { planId: "", features: [] as string[], subscription };
   const features = normalizeFeatures(plan?.features);
   const overrides = ((overridesResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
     featureId: String(row.feature_id) as PlatformFeatureId,
     enabled: Boolean(row.enabled),
   })) satisfies BrandFeatureOverride[];
   const effectiveFeatures = getEffectiveBrandFeatureCodes(features, overrides);
-  return { planId: String(data?.plan_id ?? ""), features: effectiveFeatures as string[] };
+  return { planId: String(data?.plan_id ?? ""), features: effectiveFeatures as string[], subscription };
 });
 
 export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {

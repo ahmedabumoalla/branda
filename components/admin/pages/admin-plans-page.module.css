@@ -66,7 +66,7 @@
 .disabled { color: var(--muted); background: var(--field); }
 .defaultBadge { color: var(--gold); background: #373225; }
 .rejected { color: var(--red); background: #432925; }
-.editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; overflow: hidden; }
+.editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; overflow: hidden; margin: 0; padding: 0; }
 .editorHeader { padding: 26px 28px; background: var(--raised); display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
 .editorHeader h2 { overflow-wrap: anywhere; }
 .eyebrow { display: block; color: var(--gold); font-size: 12px; margin-bottom: 5px; }

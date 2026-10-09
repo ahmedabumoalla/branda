@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { exitMaintenanceModeAction } from "@/app/actions/maintenance";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
 import { ResponsiveAppShell } from "@/components/ui/responsive-app-shell";
 import {
   clearDashboardShellSnapshot,
@@ -30,27 +30,6 @@ type MaintenanceBannerSession = {
 };
 
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "barndaksa-dashboard-sidebar-collapsed";
-
-function UpgradeRequired({ featureTitle, cafeSlug }: { featureTitle: string; cafeSlug: string }) {
-  const hideBilling = cafeSlug === "rast" || !cafeSlug;
-  return (
-    <div dir="rtl" className="mx-auto flex min-h-[60vh] max-w-2xl items-center justify-center px-4 py-12">
-      <div className="rounded-[32px] border border-[#E7D7C6] bg-[#FCF8F3] p-8 text-center shadow-[0_20px_60px_rgba(49,25,18,0.12)]">
-        <p className="text-sm font-black text-[#806A5E]">{hideBilling ? "الخدمة غير مفعلة لهذه العلامة" : "ميزة غير مفعلة في باقتك الحالية"}</p>
-        <h1 className="mt-3 text-3xl font-black text-[#311912]">{featureTitle}</h1>
-        <p className="mt-4 font-bold leading-8 text-[#806A5E]">
-          {hideBilling ? "يمكنك العودة إلى المنيو لمتابعة إدارة العلامة." : "هذه الخدمة لا تظهر للعلامة التجارية ولا للفرع الإلكتروني إلا بعد الاشتراك في باقة تشملها."}
-        </p>
-        <Link
-          href={hideBilling ? "/dashboard/menu" : "/dashboard/subscription"}
-          className="mt-6 inline-flex rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-white"
-        >
-          {hideBilling ? "العودة إلى المنيو" : "ترقية الباقة"}
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 export function DashboardAppLayout({
   children,
@@ -182,7 +161,7 @@ export function DashboardAppLayout({
           {maintenanceError && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{maintenanceError}</p>}
         </section>
       ) : null}
-      {allowed ? children : <UpgradeRequired featureTitle={currentFeature?.title ?? ""} cafeSlug={guard.cafeSlug} />}
+      {allowed ? children : <DashboardFeatureBlockedState title={currentFeature?.title ?? ""} />}
     </ResponsiveAppShell>
   );
 }

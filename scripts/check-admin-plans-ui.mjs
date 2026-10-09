@@ -97,6 +97,10 @@ html = renderToStaticMarkup(empty.render());
 assert.ok(html.includes("ابدأ بباقة تناسب عملاءك") && html.includes("لا توجد طلبات دفع"));
 button(empty.render(), "إضافة باقة").props.onClick();
 assert.deepEqual(empty.values[0][0].features, [], "new plans do not silently grant services");
+const trialEditor = harness([{ ...fixture("owner_trial_7d", ["menu", "settings"]), priceMonthly: 0, durationCount: 7, durationUnit: "day" }]);
+const trialTree = trialEditor.render();
+assert.equal(nodes(trialTree).find(node => node.props?.className === "editor").props.disabled, true, "dedicated trial cannot be edited through package controls");
+assert.ok(renderToStaticMarkup(trialTree).includes("7 أيام"));
 
 const selection = harness(initial);
 tree = selection.render();
@@ -109,11 +113,8 @@ assert.equal(selection.values[0][1].isDefault, true);
 assert.equal(selection.values[0][0].isDefault, false);
 assert.equal(selection.values[0][2].isDefault, initial[2].isDefault, "other category default is preserved");
 tree = selection.render();
-const categoryButtons = nodes(tree).find(node => node.props?.className === "categories").props.children;
-categoryButtons[1].props.onClick();
-tree = selection.render();
-assert.equal(nodes(tree).filter(node => node.props?.className === "planChoice").length, 1);
-assert.ok(text(nodes(tree).find(node => node.props?.className === "editor")).includes("Plan other"));
+assert.equal(nodes(tree).filter(node => node.props?.className === "planChoice").length, 3, "all activity categories share one plan catalog");
+assert.equal(nodes(tree).filter(node => node.props?.className === "categories").length, 0, "no activity tabs");
 
 globalThis.window = { prompt: () => "Payment mismatch", confirm: () => true };
 globalThis.requestAnimationFrame = (callback) => callback();

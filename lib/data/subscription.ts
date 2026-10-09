@@ -5,7 +5,10 @@ import { getPlatformPlans } from "@/lib/data/admin";
 import { roundMoney } from "@/lib/finance/barndaksa-finance";
 import { calculateSubscriptionAmount, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
-import type { PlatformPlan } from "@/lib/platform/admin-data";
+import type { BankSubscriptionRequest, BankTransferDetails, CurrentSubscription } from "@/lib/platform/subscription-bank";
+
+/** Snapshot time accompanies server subscription data for stable hydration. */
+export function getSubscriptionReferenceTime() { return Date.now(); }
 
 function mapDbStatusToPaymentStatus(status: string): SubscriptionRecord["paymentStatus"] {
   if (status === "active" || status === "trialing") return "paid";
@@ -31,14 +34,6 @@ function mapDbRowToRecord(row: Record<string, unknown>): SubscriptionRecord {
 function normalizeCoupon(code?: string | null) {
   const value = code?.trim().toUpperCase() ?? "";
   return value || null;
-}
-
-function normalizeCategoryId(value?: string | null) {
-  return value || "cafes_coffee";
-}
-
-function planMatchesCategory(plan: PlatformPlan, categoryId?: string | null) {
-  return normalizeCategoryId(plan.categoryId) === normalizeCategoryId(categoryId);
 }
 
 export type SubscriptionCouponPreview = {
@@ -162,9 +157,9 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
 }
 
 export async function validateOwnerPlanCoupon(planId: string, couponCode?: string | null, durationMonths = 1) {
-  const cafe = await requireOwnerCafeContext();
+  await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
-  const plan = plans.find((item) => item.id === planId && planMatchesCategory(item, cafe.businessCategory));
+  const plan = plans.find((item) => item.id === planId && item.active);
   if (!plan) throw new Error("الباقة غير موجودة");
   const amount = calculateSubscriptionAmount(plan, sanitizeDurationMonths(durationMonths));
   return previewCouponForPlan(plan.id, amount, couponCode);
@@ -173,7 +168,7 @@ export async function validateOwnerPlanCoupon(planId: string, couponCode?: strin
 export async function startOwnerPlanCheckout(planId: string, couponCode?: string | null, durationMonths = 1): Promise<string> {
   const cafe = await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
-  const plan = plans.find((item) => item.id === planId && planMatchesCategory(item, cafe.businessCategory));
+  const plan = plans.find((item) => item.id === planId && item.active);
   if (!plan) throw new Error("الباقة غير موجودة");
 
   const selectedDurationMonths = sanitizeDurationMonths(durationMonths);
@@ -252,57 +247,15 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
   return data.id as string;
 }
 
+// An owner may check payment status, but cannot activate a subscription.
 export async function completeOwnerPlanPayment(subscriptionId?: string): Promise<boolean> {
   const cafe = await requireOwnerCafeContext();
-  const supabase = createAdminClient();
-
-  let targetId = subscriptionId;
-  if (!targetId) {
-    const { data: pending } = await supabase
-      .from("subscriptions")
-      .select("id")
-      .eq("cafe_id", cafe.id)
-      .eq("status", "past_due")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (!pending) return false;
-    targetId = pending.id as string;
-  }
-
-  const paidAt = new Date().toISOString();
-
-  await supabase
-    .from("subscriptions")
-    .update({ status: "cancelled", cancelled_at: paidAt })
-    .eq("cafe_id", cafe.id)
-    .in("status", ["active", "trialing"]);
-
-  const { error } = await supabase
-    .from("subscriptions")
-    .update({ status: "active", started_at: paidAt, paid_at: paidAt })
-    .eq("id", targetId)
-    .eq("cafe_id", cafe.id);
-
+  if (!subscriptionId) return false;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscriptions").select("id")
+    .eq("cafe_id", cafe.id).eq("id", subscriptionId).eq("status", "active").maybeSingle();
   if (error) throw error;
-  await supabase.rpc("record_subscription_finance_distribution", { p_subscription_id: targetId });
-
-  const { data: paidSubscription } = await supabase
-    .from("subscriptions")
-    .select("id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,platform_coupon_id,created_at,cafes(name,owner_email,tax_number,commercial_register)")
-    .eq("id", targetId)
-    .maybeSingle();
-
-  if (paidSubscription?.platform_coupon_id) {
-    await supabase.rpc("increment_platform_coupon_redemption", { p_coupon_id: paidSubscription.platform_coupon_id });
-  }
-
-  if (paidSubscription) {
-    const { sendSubscriptionInvoiceEmail } = await import("@/lib/email/subscription-invoice");
-    await sendSubscriptionInvoiceEmail(paidSubscription as Record<string, unknown>).catch((mailError) => console.error("[completeOwnerPlanPayment:invoice]", mailError));
-  }
-
-  return true;
+  return Boolean(data);
 }
 
 export async function failOwnerPlanPayment(): Promise<void> {
@@ -318,9 +271,9 @@ export async function failOwnerPlanPayment(): Promise<void> {
 }
 
 export async function getAvailablePlans() {
-  const cafe = await requireOwnerCafeContext();
+  await requireOwnerCafeContext();
   const plans = await getPlatformPlans();
-  return plans.filter((plan) => planMatchesCategory(plan, cafe.businessCategory));
+  return plans.filter((plan) => plan.active);
 }
 
 export async function getOwnerActiveSubscription() {
@@ -328,5 +281,75 @@ export async function getOwnerActiveSubscription() {
 }
 
 export async function getOwnerSubscriptionRequests() {
-  return [];
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscription_payment_requests")
+    .select("id,plan_id,plan_name,amount_sar,duration_count,status,receipt_channel,receipt_storage_path,created_at,admin_response")
+    .eq("cafe_id", cafe.id).order("created_at", { ascending: false }).limit(30);
+  if (error) throw error;
+  return (data ?? []).map((row): BankSubscriptionRequest => ({
+    id: String(row.id), planId: String(row.plan_id), planName: String(row.plan_name), amount: Number(row.amount_sar),
+    durationMonths: Number(row.duration_count), status: String(row.status), receiptChannel: row.receipt_channel === "whatsapp" ? "whatsapp" : "upload",
+    receiptStoragePath: row.receipt_storage_path ? String(row.receipt_storage_path) : undefined,
+    createdAt: String(row.created_at), adminResponse: row.admin_response ? String(row.admin_response) : undefined,
+  }));
+}
+
+export async function getCurrentOwnerSubscription(): Promise<CurrentSubscription | null> {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscriptions").select("id,plan_id,status,started_at,expires_at")
+    .eq("cafe_id", cafe.id).in("status", ["active", "trialing"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data ? { id: String(data.id), planId: String(data.plan_id), status: String(data.status), startedAt: data.started_at ? String(data.started_at) : null, expiresAt: data.expires_at ? String(data.expires_at) : null } : null;
+}
+
+export async function getBankTransferDetails(): Promise<BankTransferDetails | null> {
+  await requireOwnerCafeContext();
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("platform_settings").select("subscription_bank_details").eq("id", "default").single();
+  if (error) throw error;
+  const details = data?.subscription_bank_details as Partial<BankTransferDetails> | null;
+  if (!details?.beneficiary || !details.bankName || !details.iban) return null;
+  return { beneficiary: details.beneficiary, bankName: details.bankName, iban: details.iban, accountNumber: details.accountNumber ?? "" };
+}
+
+export async function createOwnerBankRequest(planId: string, durationMonths: number): Promise<BankSubscriptionRequest[]> {
+  const cafe = await requireOwnerCafeContext();
+  if (cafe.role !== "owner") throw new Error("إنشاء طلب الاشتراك متاح لمالك الحساب فقط");
+  if (!planId || ![1, 2, 12, 24].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths });
+  if (error) throw new Error("تعذر إنشاء الطلب. تأكد من عدم وجود طلب قيد المراجعة ثم حاول مجددًا.");
+  return getOwnerSubscriptionRequests();
+}
+
+export async function submitOwnerBankReceipt(requestId: string, formData?: FormData) {
+  const cafe = await requireOwnerCafeContext();
+  if (cafe.role !== "owner" || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error("طلب غير صالح");
+  const supabase = await createClient();
+  const { data: request, error: lookupError } = await supabase.from("subscription_payment_requests").select("id,status")
+    .eq("id", requestId).eq("cafe_id", cafe.id).eq("status", "awaiting_receipt").maybeSingle();
+  if (lookupError || !request) throw new Error("الطلب غير متاح لإرسال الإيصال");
+  if (!formData) {
+    const { error } = await supabase.rpc("submit_subscription_whatsapp_receipt", { p_request_id: requestId });
+    if (error) throw new Error("تعذر إرسال الطلب للمراجعة");
+  } else {
+    const file = formData.get("receipt");
+    if (!(file instanceof File) || file.size === 0 || file.size > 5 * 1024 * 1024) throw new Error("اختر إيصالًا بحد أقصى 5 ميجابايت");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const kind = bytes.subarray(0, 5).toString("ascii") === "%PDF-" ? "pdf"
+      : bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? "jpg"
+      : bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? "png" : null;
+    if (!kind) throw new Error("صيغة الإيصال غير مدعومة. استخدم PDF أو JPG أو PNG");
+    const storagePath = `${cafe.id}/${requestId}/${crypto.randomUUID()}.${kind}`;
+    const { error: uploadError } = await supabase.storage.from("subscription-receipts").upload(storagePath, bytes, { contentType: kind === "pdf" ? "application/pdf" : kind === "jpg" ? "image/jpeg" : "image/png", upsert: false });
+    if (uploadError) throw new Error("تعذر رفع الإيصال. حاول مجددًا");
+    const { error } = await supabase.rpc("attach_subscription_payment_receipt", { p_request_id: requestId, p_storage_path: storagePath });
+    if (error) {
+      await supabase.storage.from("subscription-receipts").remove([storagePath]);
+      throw new Error("تعذر إرفاق الإيصال بالطلب. حاول مجددًا");
+    }
+  }
+  return getOwnerSubscriptionRequests();
 }

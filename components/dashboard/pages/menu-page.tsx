@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -205,9 +205,13 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
-        subtitle={cafeSlug === "rast" ? "إدارة الأصناف والتصنيفات والأسعار في منيو مقهى الكواكب" : copy.kind === "events" ? "أي تذكرة أو باقة تضيفها هنا تظهر في صفحة الفعالية للعميل" : "أي منتج تضيفه هنا يظهر في الفرع الإلكتروني للعميل"}
+        subtitle="إدارة الأصناف والتصنيفات والأسعار التي تظهر في المنيو المستقل لعلامتك"
         action={
           <div className={styles.headerActions}>
+            {cafeSlug && <a href={`/menu/${encodeURIComponent(cafeSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
+              <ExternalLink className="h-5 w-5" aria-hidden="true" />
+              فتح المنيو المستقل
+            </a>}
             <button
               type="button"
               onClick={() => {

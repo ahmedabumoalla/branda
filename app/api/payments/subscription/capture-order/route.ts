@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { areOnlinePaymentsEnabled } from "@/lib/payments/payment-availability";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { capturePaypalOrder } from "@/lib/payments/paypal";
 import { activatePaidSubscription } from "@/lib/payments/subscription-activation";
@@ -10,6 +11,7 @@ function message(error: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!areOnlinePaymentsEnabled()) return NextResponse.json({ ok: false, message: "بوابات الدفع الإلكتروني غير مفعلة حاليًا" }, { status: 503 });
   try {
     const cafe = await requireOwnerCafeContext();
     const body = (await request.json().catch(() => ({}))) as {

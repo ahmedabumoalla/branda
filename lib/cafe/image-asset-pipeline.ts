@@ -1,3 +1,5 @@
+import { clearUniformLogoBackground } from "@/lib/cafe/logo-transparency";
+
 export type ImageAssetPurpose =
   | "custom-theme-logo"
   | "custom-theme-background"
@@ -182,7 +184,8 @@ async function loadImageSource(file: File): Promise<{
 
 async function encodeOptimized(
   file: File,
-  config: PurposeConfig
+  config: PurposeConfig,
+  isLogo: boolean
 ): Promise<{ blob: Blob; mimeType: string; width: number; height: number }> {
   const source = await loadImageSource(file);
   const { width, height } = scaleDimensions(
@@ -205,7 +208,12 @@ async function encodeOptimized(
   source.draw(ctx, width, height);
   source.cleanup();
 
-  const mimeCandidates = ["image/webp", "image/jpeg"] as const;
+  if (isLogo) {
+    const image = ctx.getImageData(0, 0, width, height);
+    if (clearUniformLogoBackground(image.data, width, height)) ctx.putImageData(image, 0, 0);
+  }
+  // Logos must never fall back to JPEG, which discards their transparency.
+  const mimeCandidates = isLogo ? ["image/webp", "image/png"] : ["image/webp", "image/jpeg"];
   let bestBlob: Blob | null = null;
   let bestMime = "image/jpeg";
 
@@ -215,7 +223,7 @@ async function encodeOptimized(
 
     while (quality >= config.qualityMin) {
       const blob = await canvasToBlob(canvas, mime, quality);
-      if (!blob) break;
+      if (!blob || blob.type !== mime) break;
       candidate = blob;
       if (blob.size <= config.targetBytes) {
         bestBlob = blob;
@@ -262,8 +270,8 @@ export async function optimizeImageForStorage(
   }
 
   const config = PURPOSE_CONFIG[purpose];
-  const encoded = await encodeOptimized(file, config);
-  const ext = encoded.mimeType === "image/webp" ? "webp" : "jpg";
+  const encoded = await encodeOptimized(file, config, purpose === "cafe-logo" || purpose === "custom-theme-logo");
+  const ext = encoded.mimeType === "image/webp" ? "webp" : encoded.mimeType === "image/png" ? "png" : "jpg";
   const baseName = file.name.replace(/\.[^.]+$/, "") || purpose;
 
   return {

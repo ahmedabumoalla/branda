@@ -67,10 +67,10 @@ export default function LoginPage() {
           <h2 className="text-3xl font-black" style={{ color: C.coffeeBrown }}>تسجيل الدخول</h2>
           <p className="mt-2 text-sm font-bold" style={{ color: C.mutedText }}>أدخل بيانات حسابك للمتابعة</p>
           <label className="mt-6 block">
-            <span className="text-xs font-black" style={{ color: C.mutedText }}>البريد الإلكتروني</span>
+            <span className="text-xs font-black" style={{ color: C.mutedText }}>البريد الإلكتروني أو رقم الجوال</span>
             <div className="relative mt-2">
               <Mail className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6B3A25]" />
-              <NeumoInput type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className="pr-12" />
+              <NeumoInput type="text" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="pr-12" />
             </div>
           </label>
           <label className="mt-4 block">

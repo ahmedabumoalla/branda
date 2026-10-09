@@ -17,11 +17,11 @@ export function DashboardFeatureBlockedState({
           <LockKeyhole className="h-7 w-7" />
         </span>
         <p className="mt-4 text-sm font-black text-[#806A5E]">
-          الميزة غير مفعلة في باقتك الحالية
+          يجب الاشتراك في الباقة للتفعيل
         </p>
         <h1 className="mt-3 text-3xl font-black text-[#311912]">{title}</h1>
         <p className="mt-4 font-bold leading-8 text-[#806A5E]">
-          تم إخفاء هذه الميزة من التنقل، وهذا المسار المباشر يعرض حالة آمنة بدل تشغيل أدوات غير متاحة ضمن الباقة.
+          اختر باقة تشمل هذه الخدمة لتبدأ استخدامها في حساب علامتك.
         </p>
         <Link href={backHref} className="mt-6 inline-flex rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-white">
           العودة للباقات

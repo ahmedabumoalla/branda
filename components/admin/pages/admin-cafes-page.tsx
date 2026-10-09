@@ -4,21 +4,10 @@ import { BrandDetailsDialog, BrandDialog, BrandFeatureControls } from "@/compone
 import styles from "@/components/admin/brand-details.module.css";
 
 import {
-  Armchair,
   Building2,
-  CalendarDays,
-  Coffee,
-  Dumbbell,
   Settings2,
   SlidersHorizontal,
-  HeartPulse,
-  Scissors,
   Search,
-  Shirt,
-  ShoppingBag,
-  Sparkles,
-  Store,
-  Utensils,
 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import {
@@ -37,7 +26,6 @@ import {
   BentoGrid,
   StatusBadge,
 } from "@/components/ui/design-system";
-import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 import type {
   PlatformCafe,
   PlatformCustomer,
@@ -54,19 +42,6 @@ import {
 import type { PlatformFeatureId } from "@/lib/platform/feature-registry";
 import { formatSar } from "@/lib/format";
 
-const iconMap = {
-  Coffee,
-  Utensils,
-  Sparkles,
-  Scissors,
-  HeartPulse,
-  Dumbbell,
-  ShoppingBag,
-  Shirt,
-  Armchair,
-  CalendarDays,
-} as const;
-
 type Props = {
   initialCafes: PlatformCafe[];
   initialPlans: PlatformPlan[];
@@ -74,15 +49,6 @@ type Props = {
   initialOperations: PlatformOperation[];
   configError?: string;
 };
-
-function countByCategory(cafes: PlatformCafe[]) {
-  return BUSINESS_CATEGORIES.map((category) => ({
-    ...category,
-    count: cafes.filter(
-      (cafe) => (cafe.businessCategory ?? "cafes_coffee") === category.id,
-    ).length,
-  }));
-}
 
 function resolvePlanName(plans: PlatformPlan[], planId?: string | null) {
   if (!planId) return "بدون باقة";
@@ -130,7 +96,6 @@ export function AdminCafesPage({
   const [statusFilter, setStatusFilter] = useState<"all" | "نشط" | "موقوف">(
     "all",
   );
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [modalCafe, setModalCafe] = useState<PlatformCafe | null>(null);
   const [updatingPlanCafeId, setUpdatingPlanCafeId] = useState<string | null>(null);
   const [featureOverrideDrafts, setFeatureOverrideDrafts] = useState<Record<string, FeatureOverrideDraft>>({});
@@ -151,13 +116,10 @@ export function AdminCafesPage({
         String(cafe.maintenanceAccountNumber ?? "").includes(q);
       const matchesStatus =
         statusFilter === "all" || cafe.status === statusFilter;
-      const matchesCategory =
-        categoryFilter === "all" || cafe.businessCategory === categoryFilter;
-      return matchesQuery && matchesStatus && matchesCategory;
+      return matchesQuery && matchesStatus;
     });
-  }, [cafes, query, statusFilter, categoryFilter]);
+  }, [cafes, query, statusFilter]);
 
-  const categoryStats = countByCategory(cafes);
 
   const cafeCustomers = useMemo(
     () => (modalCafe ? customers.filter((c) => c.cafeId === modalCafe.id) : []),
@@ -330,53 +292,7 @@ export function AdminCafesPage({
       </div>
       {filtersOpen && <BrandDialog title="البحث وتصفية العلامات" close={() => setFiltersOpen(false)}>
       <div className={styles.panelBody}>
-      <section className="mb-6 rounded-[28px] border border-white/10 bg-white/[0.03] p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-[#F6C35B]">
-              تصنيفات العلامات التجارية
-            </p>
-            <h2 className="text-xl font-semibold text-[#F8F4EF]">
-              حسب تصنيفات التسجيل
-            </h2>
-          </div>
-          <span className="rounded-2xl bg-[#F6C35B]/15 px-4 py-2 text-sm font-semibold text-[#F6C35B]">
-            {cafes.length} علامة
-          </span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {categoryStats.map((category) => {
-            const Icon =
-              iconMap[category.icon as keyof typeof iconMap] ?? Store;
-            const active = categoryFilter === category.id;
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setCategoryFilter(active ? "all" : category.id)}
-                className={`rounded-2xl border p-4 text-right transition ${
-                  active
-                    ? "border-[#F6C35B]/60 bg-[#F6C35B]/15"
-                    : "border-white/10 bg-[#0f0c0a]/50 hover:border-[#F6C35B]/30"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <Icon className="h-6 w-6 text-[#F6C35B]" />
-                  <span className="rounded-xl bg-white/10 px-3 py-1 text-xs font-semibold text-[#F8F4EF]">
-                    {category.count}
-                  </span>
-                </div>
-                <p className="mt-3 font-semibold text-[#F8F4EF]">
-                  {category.label}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[#B7AEA2]">
-                  {category.available ? "متاح حاليًا" : "قريبًا"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+
 
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1 sm:min-w-[240px]">
@@ -401,19 +317,7 @@ export function AdminCafesPage({
           <option value="نشط">نشط فقط</option>
           <option value="موقوف">موقوف فقط</option>
         </AdminSelect>
-        <AdminSelect
-          aria-label="تصنيف العلامة"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="max-w-xs"
-        >
-          <option value="all">كل التصنيفات</option>
-          {BUSINESS_CATEGORIES.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
-            </option>
-          ))}
-        </AdminSelect>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AdminStatPill label="العلامات" value={cafes.length} />
           <AdminStatPill
@@ -431,7 +335,7 @@ export function AdminCafesPage({
         </div>
       </AdminFilterBar>
       <div className={styles.filterActions}>
-        <button type="button" className={styles.textButton} onClick={() => { setQuery(""); setStatusFilter("all"); setCategoryFilter("all"); }}>مسح التصفية</button>
+        <button type="button" className={styles.textButton} onClick={() => { setQuery(""); setStatusFilter("all"); }}>مسح التصفية</button>
         <button type="button" className={styles.primaryButton} onClick={() => setFiltersOpen(false)}>عرض النتائج ({filtered.length})</button>
       </div>
       </div>
@@ -454,7 +358,6 @@ export function AdminCafesPage({
                 <tr className="border-b border-white/10 text-[#CBB29C]">
                   {[
                     "العلامة",
-                    "التصنيف",
                     "رقم الصيانة",
                     "الباقة",
                     "المنتجات",
@@ -498,9 +401,7 @@ export function AdminCafesPage({
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-4 text-[#CBB29C]">
-                      {cafe.businessCategoryLabel}
-                    </td>
+
                     <td className="px-3 py-4 font-mono text-xs">
                       {cafe.maintenanceAccountNumber}
                     </td>

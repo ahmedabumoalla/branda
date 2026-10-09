@@ -1,5 +1,7 @@
 "use server";
 
+import { completeOwnerOnboarding, requestOwnerOnboarding, verifyOwnerOnboarding, resolveOwnerMapPreview, type OwnerOnboardingInput } from "@/lib/auth/owner-onboarding";
+
 import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
@@ -150,10 +152,30 @@ export async function loginOwnerAction(
   try {
     const supabase = await createClient();
     const normalizedEmail = email.trim().toLowerCase();
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+    const phoneLogin = normalizedEmail.includes("@") ? null : normalizeSaudiPhone(normalizedEmail);
+    let { data: authData, error: authError } = await supabase.auth.signInWithPassword(
+      phoneLogin ? { phone: `+${phoneLogin}`, password } : { email: normalizedEmail, password },
+    );
+
+    // The contact email is only a login alias for new phone-primary owners.
+    // It is never an Auth recovery address or a claim of verified email ownership.
+    if (!phoneLogin && ["email_not_confirmed", "invalid_credentials"].includes(authError?.code ?? "")) {
+      const admin = createAdminClient();
+      const owner = await admin.from("profiles").select("id,phone").eq("email", normalizedEmail).eq("role", "cafe_owner").eq("status", "active").maybeSingle();
+      if (owner.data?.id) {
+        const account = await admin.auth.admin.getUserById(String(owner.data.id));
+        const user = account.data.user;
+        if (user?.app_metadata?.owner_onboarding_id && user.phone_confirmed_at && user.phone && !user.email && normalizeSaudiPhone(user.phone) === normalizeSaudiPhone(String(owner.data.phone ?? ""))) {
+          const result = await supabase.auth.signInWithPassword({ phone: user.phone, password });
+          if (result.data.user?.id === owner.data.id) {
+            authData = result.data;
+            authError = result.error;
+          } else if (result.data.session) {
+            await supabase.auth.signOut();
+          }
+        }
+      }
+    }
 
     if (authError || !authData.user) {
       const { loginRepresentativeWithPassword } = await import("@/lib/data/representatives");
@@ -255,129 +277,20 @@ export async function loginUnifiedAction(email: string, password: string) {
   redirect(result.redirectTo);
 }
 
-const availableOwnerCategorySchema = z.enum(["cafes_coffee", "restaurants", "events_conferences"]);
+export async function requestOwnerRegistrationOtpAction(input: OwnerOnboardingInput) {
+  return requestOwnerOnboarding(input);
+}
 
-const cafeOwnerRegistrationSchema = z.object({
-  ownerName: z.string().trim().min(2).max(120),
-  brandName: z.string().trim().min(2).max(120),
-  brandCategory: availableOwnerCategorySchema,
-  slug: z.string().trim().toLowerCase().min(3).max(60).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  email: z.string().trim().email(),
-  phone: z.string().trim().min(8).max(20),
-  password: z.string().min(8).max(72),
-  primaryBranchName: z.string().trim().min(2).max(100),
-  primaryBranchAddress: z.string().trim().min(3).max(250),
-  primaryBranchCity: z.string().trim().min(2).max(100),
-  primaryBranchLat: z.number().min(-90).max(90),
-  primaryBranchLng: z.number().min(-180).max(180),
-  primaryBranchRadiusMeters: z.number().int().min(10).max(500).default(50),
-  couponCode: z.string().trim().max(30).optional(),
-});
+export async function resolveOwnerRegistrationMapAction(input: string) {
+  return resolveOwnerMapPreview(input);
+}
 
-export async function registerCafeOwnerAction(input: {
-  ownerName: string;
-  brandName: string;
-  brandCategory: z.infer<typeof availableOwnerCategorySchema>;
-  slug: string;
-  email: string;
-  phone: string;
-  password: string;
-  primaryBranchName: string;
-  primaryBranchAddress: string;
-  primaryBranchCity: string;
-  primaryBranchLat: number;
-  primaryBranchLng: number;
-  primaryBranchRadiusMeters?: number;
-  couponCode?: string;
-}): Promise<BasicActionResult> {
-  try {
-    const normalizedSlug =
-  String(input.slug ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]+/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "") ||
-  `brand-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+export async function verifyOwnerRegistrationOtpAction(code: string) {
+  return verifyOwnerOnboarding(code);
+}
 
-const normalizedInput = {
-  ...input,
-  slug: normalizedSlug,
-};
-
-const parsed = cafeOwnerRegistrationSchema.parse(normalizedInput);
-    const supabase = await createClient();
-    const couponCode = parsed.couponCode?.trim().toUpperCase() || null;
-
-    if (couponCode) {
-      const { data: couponValid, error: couponError } = await supabase.rpc(
-        "validate_representative_coupon",
-        { p_code: couponCode }
-      );
-      if (couponError || !couponValid) {
-        return { ok: false as const, message: "كوبون الخصم غير صالح", redirectTo: null };
-      }
-    }
-
-    const { data, error } = await supabase.auth.signUp({
-      email: parsed.email.toLowerCase(),
-      password: parsed.password,
-      options: {
-        data: {
-          account_type: "cafe_owner",
-          full_name: parsed.ownerName,
-          cafe_name: parsed.brandName,
-          brand_category: parsed.brandCategory,
-          cafe_slug: parsed.slug,
-          phone: parsed.phone.replace(/\D/g, ""),
-          primary_branch_name: parsed.primaryBranchName,
-          primary_branch_address: parsed.primaryBranchAddress,
-          primary_branch_city: parsed.primaryBranchCity,
-          primary_branch_lat: parsed.primaryBranchLat.toString(),
-          primary_branch_lng: parsed.primaryBranchLng.toString(),
-          primary_branch_radius_meters: String(parsed.primaryBranchRadiusMeters ?? 50),
-          coupon_code: couponCode,
-        },
-      },
-    });
-
-    if (error || !data.user) {
-      return {
-        ok: false as const,
-        message: error?.message.includes("already")
-          ? "البريد مسجل مسبقا"
-          : "تعذر إنشاء حساب العلامة التجارية",
-        redirectTo: null,
-      };
-    }
-
-    if (isBarndaksaEmailConfigured()) {
-      await sendBarndaksaEmail({
-        to: parsed.email.toLowerCase(),
-        subject: "مرحبًا بك في برندة",
-        html: `
-          <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
-            <h2>مرحبًا ${escapeEmailHtml(parsed.ownerName)}</h2>
-            <p>تم إنشاء حساب العلامة التجارية <strong>${escapeEmailHtml(parsed.brandName)}</strong> في منصة برندة.</p>
-            <p>رابط الدخول: <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login">تسجيل الدخول</a></p>
-          </div>
-        `,
-        text: `مرحبًا ${parsed.ownerName}، تم إنشاء حساب ${parsed.brandName} في برندة.`,
-      }).catch((mailError) => console.error("[registerCafeOwnerAction:email]", mailError));
-    }
-
-    return {
-      ok: true as const,
-      message: data.session
-        ? "تم إنشاء حساب العلامة التجارية وتفعيل الباقة الأساسية"
-        : "تم إنشاء الحساب تحقق من بريدك ثم سجل الدخول",
-      redirectTo: data.session ? getDashboardPathForCategory(parsed.brandCategory) : "/login",
-    };
-  } catch (error) {
-    console.error("[registerCafeOwnerAction]", error);
-    return { ok: false as const, message: "تحقق من بيانات التسجيل والرابط المختصر", redirectTo: null };
-  }
+export async function registerCafeOwnerAction(input: { password: string; confirmPassword: string }) {
+  return completeOwnerOnboarding(input);
 }
 
 export async function requestPasswordResetAction(
@@ -543,7 +456,7 @@ export async function changeOwnerPasswordAction(input: {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user || !user.email) {
+  if (userError || !user || (!user.email && !user.phone)) {
     if (userError) logAuthError("[changeOwnerPasswordAction:getUser]", userError);
     return {
       ok: false as const,
@@ -583,10 +496,11 @@ export async function changeOwnerPasswordAction(input: {
     }
   );
 
-  const { data: verified, error: verifyError } = await verifyClient.auth.signInWithPassword({
-    email: user.email,
-    password: currentPassword,
-  });
+  const { data: verified, error: verifyError } = await verifyClient.auth.signInWithPassword(
+    user.email
+      ? { email: user.email, password: currentPassword }
+      : { phone: user.phone!, password: currentPassword },
+  );
 
   await verifyClient.auth.signOut();
 

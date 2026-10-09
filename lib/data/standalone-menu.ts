@@ -4,6 +4,7 @@ import { cache } from "react";
 import { menuContacts } from "@/lib/menu/contacts";
 import { getStandaloneHighlights } from "@/lib/data/standalone-highlights";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
+import { publishedMenuLogo } from "@/lib/cafe/published-logo";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -89,10 +90,9 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
   const settings = settingsResult.data;
   let logoUrl = safeMediaUrl(settings?.logo_url);
   if (settings?.logo_storage_path && isOwnedMenuAsset(settings.logo_storage_path, cafe.id)) {
-    const { data } = await admin.storage.from("cafe-logos").createSignedUrl(settings.logo_storage_path, 3600);
-    logoUrl = data?.signedUrl || logoUrl;
+    logoUrl = await publishedMenuLogo(admin, String(cafe.id), settings.logo_storage_path) || logoUrl;
   }
-  logoUrl = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url) || logoUrl;
+  logoUrl = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url) || logoUrl || "/brand/barndaksa-logo-brown.png";
   const highlights = cafe.slug === "rast" && featureCodesAllow(features, "offers") ? await getStandaloneHighlights(cafe.id, products).catch(() => {
     // An optional promotional surface must not take down the published catalog.
     console.error("Standalone highlights unavailable");

@@ -51,6 +51,13 @@ await test("Admin override cannot open missing package services but may suspend 
   const rows = access.getSidebarFeaturesForBrand({ planId: "pro", plans: [{id: "pro", features: ["menu"]}], overrides: [{ featureId: "loyalty", enabled: true }, {featureId: "menu", enabled: false}] });
   assert.deepEqual(rows, []);
 });
+await test("Trial previews offers and loyalty without granting access", () => {
+  const rows = access.getSidebarFeaturesForBrand({ planId: "trial", plans: [{ id: "trial", features: ["menu", "settings"] }], isTrial: true });
+  assert.deepEqual(rows.map(row => row.feature.id), ["menu", "offers", "loyalty", "settings"]);
+  assert.deepEqual(rows.filter(row => row.access.effectiveEnabled).map(row => row.feature.id), ["menu", "settings"]);
+  assert.equal(permissions.cafeHasFeature("loyalty", { planId: "trial", plans: [{ id: "trial", features: ["menu", "settings"] }] }), false);
+  assert.deepEqual(access.getSidebarFeaturesForBrand({ planId: "", plans: [], isTrial: true }), []);
+});
 
 function serverPage({ slug = "rast", configured = true, missing = false, contextError = false } = {}) {
   const calls = [];
@@ -68,14 +75,16 @@ function serverPage({ slug = "rast", configured = true, missing = false, context
     "@/lib/data/admin": { getCafeFeatureOverrides: reads("overrides", []), getOwnerActivePlanId: reads("active-plan", "all-plan") },
     "@/lib/data/subscription": {
       getAvailablePlans: reads("plans", plans), getOwnerPendingSubscription: reads("pending", pending), getOwnerSubscriptionHistory: reads("history", history),
+      getCurrentOwnerSubscription: reads("current-subscription", null), getBankTransferDetails: reads("bank-details", null), getOwnerSubscriptionRequests: reads("requests", []),
+      getSubscriptionReferenceTime: () => Date.UTC(2026, 9, 9),
     },
   };
   return { Page: load("app/dashboard/subscription/page.tsx", stubs).default, calls, plans, pending, history, SubscriptionPageClient };
 }
-await test("direct Rast subscription URL redirects before any subscription read and escapes error catch", async () => {
+await test("Rast subscription URL is available like every other brand", async () => {
   const ctx = serverPage();
-  await assert.rejects(() => ctx.Page(), (error) => error.message === "NEXT_REDIRECT" && error.target === "/dashboard/menu");
-  assert.deepEqual(ctx.calls, ["context"]);
+  const element = await ctx.Page();
+  assert.equal(element.type, ctx.SubscriptionPageClient);
 });
 await test("other brand subscription page preserves data and client", async () => {
   const ctx = serverPage({ slug: "other" });
@@ -85,7 +94,7 @@ await test("other brand subscription page preserves data and client", async () =
   assert.deepEqual(element.props.initialHistory, ctx.history);
   assert.deepEqual(element.props.initialPending, ctx.pending);
   assert.equal(element.props.initialActivePlanId, "all-plan");
-  assert.deepEqual(ctx.calls.sort(), ["context", "plans", "history", "pending", "active-plan", "overrides"].sort());
+  assert.deepEqual(ctx.calls.sort(), ["context", "plans", "history", "pending", "active-plan", "overrides", "current-subscription", "bank-details", "requests"].sort());
 });
 for (const options of [{ configured: false }, { missing: true }, { contextError: true }]) await test(`missing brand stays neutral: ${JSON.stringify(options)}`, async () => {
   const ctx = serverPage(options);
@@ -121,11 +130,11 @@ function sidebarHtml(slug, collapsed = false) {
 }
 for (const slug of ["rast", "other", "shahi-w-hail"]) for (const collapsed of [false, true]) await test(`${slug} sidebar SSR contains exactly the requested navigation (${collapsed ? "collapsed" : "expanded"})`, () => {
   const html = sidebarHtml(slug, collapsed);
-  assert(!html.includes("/dashboard/subscription"));
+  assert(html.includes("/dashboard/subscription"));
   assert(!html.includes("PRIVATE_PLAN_NAME") && !html.includes("249"));
   assert(!html.includes("ترقية"));
   assert(!html.includes('href="/dashboard/loyalty"'), "disabled service is hidden");
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings"]);
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings", "/dashboard/subscription"]);
   for (const label of ["المنيو والمنتجات", "العروض", "إعدادات كوفي", "تسجيل الخروج"]) assert(html.includes(label));
   assert(html.includes('aria-current="page"'));
   assert(!html.includes("غير مفعلة في الباقة"));
@@ -153,16 +162,16 @@ function layoutElement(slug, allow = false, props = {}, extraStubs = {}) {
 function layoutHtml(slug, allow = false) {
   return renderToStaticMarkup(layoutElement(slug, allow));
 }
-for (const slug of ["rast", ""]) await test(`disabled feature has neutral copy without billing for identity '${slug}'`, () => {
+for (const slug of ["rast", ""]) await test(`disabled feature requires subscription for identity '${slug}'`, () => {
   const html = layoutHtml(slug);
   assert(!html.includes("PROTECTED_FEATURE_CONTENT"));
-  assert(!html.includes("/dashboard/subscription") && !html.includes("باقة") && !html.includes("ترقية") && !html.includes("اشتراك"));
-  assert(html.includes('href="/dashboard/menu"'));
+  assert(html.includes("يجب الاشتراك في الباقة للتفعيل"));
+  assert(html.includes('href="/dashboard/subscription"'));
 });
 await test("other brand keeps upgrade prompt when feature is disabled", () => {
   const html = layoutHtml("other");
   assert(!html.includes("PROTECTED_FEATURE_CONTENT"));
-  assert(html.includes('href="/dashboard/subscription"') && html.includes("ترقية الباقة"));
+  assert(html.includes('href="/dashboard/subscription"') && html.includes("يجب الاشتراك في الباقة للتفعيل"));
 });
 await test("Rast authorized feature still renders its protected content", () => {
   const html = layoutHtml("rast", true);

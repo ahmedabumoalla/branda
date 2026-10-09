@@ -26,5 +26,5 @@ export default async function StandaloneMenuPage({ params }: Props) {
   const { slug } = await params;
   const menu = await getStandaloneMenu(slug);
   if (!menu) notFound();
-  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><BistroMenu menu={slug === "basilico" ? { ...menu, logoUrl: "/menu-logos/basilico-transparent-v1.png" } : menu} /></>;
+  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><BistroMenu menu={menu} /></>;
 }

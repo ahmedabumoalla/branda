@@ -16,7 +16,7 @@ import { defaultLoyaltyActivityFilters } from "@/lib/loyalty/activity-types";
 export default async function LoyaltyCardsPage() {
   const features = await getOwnerFeatureCodes().catch(() => []);
   if (!featureCodesAllow(features, "loyalty")) {
-    return <DashboardFeatureBlockedState title="الولاء غير مفعل في هذه الباقة" backHref="/dashboard" />;
+    return <DashboardFeatureBlockedState title="الولاء والمكافآت" />;
   }
 
   const [dashboardResult, loyaltyResult] = await Promise.allSettled([

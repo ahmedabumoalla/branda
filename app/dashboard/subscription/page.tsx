@@ -4,7 +4,6 @@ export const fetchCache = "force-no-store";
 
 import { SubscriptionPageClient } from "@/components/dashboard/pages/subscription-page";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { ComponentProps } from "react";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getCafeFeatureOverrides, getOwnerActivePlanId } from "@/lib/data/admin";
@@ -13,6 +12,10 @@ import {
   getAvailablePlans,
   getOwnerPendingSubscription,
   getOwnerSubscriptionHistory,
+  getCurrentOwnerSubscription,
+  getBankTransferDetails,
+  getOwnerSubscriptionRequests,
+  getSubscriptionReferenceTime,
 } from "@/lib/data/subscription";
 import { getEffectiveBrandFeatureAccess, getPlanIncludedFeatures } from "@/lib/platform/feature-access";
 
@@ -30,15 +33,17 @@ export default async function SubscriptionPage() {
 
   const cafe = await getOwnerCafeContext().catch(() => null);
   if (!cafe) return <ServiceUnavailable />;
-  if (cafe.slug === "rast") redirect("/dashboard/menu");
 
   let pageProps: ComponentProps<typeof SubscriptionPageClient>;
   try {
-    const [plans, activePlanId, history, pending] = await Promise.all([
+    const [plans, activePlanId, history, pending, currentSubscription, bankDetails, requests] = await Promise.all([
       getAvailablePlans(),
       getOwnerActivePlanId(),
       getOwnerSubscriptionHistory(),
       getOwnerPendingSubscription(),
+      getCurrentOwnerSubscription(),
+      getBankTransferDetails(),
+      getOwnerSubscriptionRequests(),
     ]);
     const featureOverrides = await getCafeFeatureOverrides(cafe.id).catch(() => []);
     const initialFeatureAccess = getEffectiveBrandFeatureAccess(
@@ -52,6 +57,11 @@ export default async function SubscriptionPage() {
       initialHistory: history,
       initialPending: pending,
       initialFeatureAccess,
+      currentSubscription,
+      bankDetails,
+      initialRequests: requests,
+      customerName: cafe.name,
+      referenceTime: getSubscriptionReferenceTime(),
     };
   } catch (error) {
     console.error("[SubscriptionPage]", error);
@@ -61,6 +71,11 @@ export default async function SubscriptionPage() {
       initialHistory: [],
       initialPending: null,
       initialFeatureAccess: [],
+      currentSubscription: null,
+      bankDetails: null,
+      initialRequests: [],
+      customerName: cafe.name,
+      referenceTime: getSubscriptionReferenceTime(),
       configError: "تعذر تحميل الاشتراك والباقات",
     };
   }

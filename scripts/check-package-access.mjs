@@ -35,7 +35,10 @@ function serviceFixture(subscription, overrides = [], error = null) {
 }
 for (const subscription of [null, { ...current, status: "expired" }, { ...current, expires_at: new Date(now - 1).toISOString() }, { ...current, platform_plans: { active: false, features: ["all"] } }]) {
   const { module } = serviceFixture(subscription, [{ feature_id: "loyalty", enabled: true }]);
-  assert.deepEqual(await module.getCafeServiceAccess("brand"), { planId: "", features: [] }); checks++;
+  const result = await module.getCafeServiceAccess("brand");
+  assert.equal(result.planId, "");
+  assert.deepEqual(result.features, []);
+  assert.equal(result.subscription?.expiresAt ?? null, subscription?.expires_at ?? null); checks++;
 }
 for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"], ["orders", "branches", "standalone_menu"]]) {
   const { module, calls } = serviceFixture({ ...current, platform_plans: { active: true, features } });

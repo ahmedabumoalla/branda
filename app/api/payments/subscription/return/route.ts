@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { areOnlinePaymentsEnabled } from "@/lib/payments/payment-availability";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { capturePaypalOrder } from "@/lib/payments/paypal";
 import { activatePaidSubscription } from "@/lib/payments/subscription-activation";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  if (!areOnlinePaymentsEnabled()) return NextResponse.redirect(new URL("/dashboard/subscription?payment=bank_transfer", url));
   const orderId = url.searchParams.get("token");
   const subscriptionId = url.searchParams.get("subscriptionId");
   const baseUrl = `${url.protocol}//${url.host}`;

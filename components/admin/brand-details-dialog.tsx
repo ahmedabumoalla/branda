@@ -111,7 +111,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={cafe.logoUrl} alt={cafe.name} /> : <Building2 aria-hidden="true" />}</div>
           <div className={s.identityText}>
-            <p className={s.eyebrow}>{cafe.businessCategoryLabel || "علامة تجارية"}</p>
+            <p className={s.eyebrow}>علامة تجارية</p>
             <h2 dir="auto">{cafe.name}</h2>
             <div className={s.identityMeta}><span className={cafe.status === "نشط" ? s.active : s.inactive}><i />{cafe.status}</span><span>{planName}</span></div>
           </div>

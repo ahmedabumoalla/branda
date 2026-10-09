@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Package, Settings, Star } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Package, Settings, Star } from "lucide-react";
+import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
+import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
 import { NotificationsPanel } from "@/components/dashboard/notifications-panel";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
@@ -28,6 +30,7 @@ type NavigationState = {
   featureOverrides: BrandFeatureOverride[];
   settings: CafeSettings;
   notifications: AppNotification[];
+  subscription?: SubscriptionSummary | null;
 };
 const initialNavigation: NavigationState = {
   planId: "", plans: [], featureOverrides: [], notifications: [],
@@ -52,7 +55,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
     let cancelled = false;
     void getCachedDashboardShellSnapshot().then(snapshot => {
       if (cancelled || (snapshot as { unauthenticated?: boolean }).unauthenticated) return;
-      setNavigation({ planId: snapshot.planId, plans: snapshot.plans, featureOverrides: snapshot.featureOverrides ?? [], settings: snapshot.settings, notifications: snapshot.notifications });
+      setNavigation({ planId: snapshot.planId, plans: snapshot.plans, featureOverrides: snapshot.featureOverrides ?? [], settings: snapshot.settings, notifications: snapshot.notifications, subscription: snapshot.subscription });
     }).catch(error => {
       if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) console.error("[DashboardSidebar]", error);
     });
@@ -61,7 +64,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
-  const links = settings.cafeSlug ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides }) : [];
+  const links = settings.cafeSlug ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides, isTrial: navigation.subscription?.status === "trialing" }) : [];
 
   async function handleLogout() {
     if (onEndMaintenance) {
@@ -101,6 +104,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
           {settings.ownerName && <p className="mt-0.5 truncate text-[10px] font-normal text-[#8F8176]">{settings.ownerName}</p>}
         </div>
       </div>
+      {navigation.subscription && <SubscriptionCountdown subscription={navigation.subscription} />}
       <div className="mt-2.5 flex gap-1.5"><NotificationsPanel initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>
     </div>}
 
@@ -126,6 +130,13 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
           </span>}
         </Link>;
       })}
+      {settings.cafeSlug && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}
+        aria-label="الباقات والاشتراكات" title={collapsed ? "الباقات والاشتراكات" : undefined}
+        aria-current={pathname.startsWith("/dashboard/subscription") ? "page" : undefined}
+        className={`flex min-h-11 items-center rounded-lg text-[13px] font-medium transition hover:bg-white/[0.065] hover:text-white ${collapsed ? "justify-center" : "gap-2 px-3"} ${pathname.startsWith("/dashboard/subscription") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}>
+        <Layers className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {!collapsed && <span>الباقات والاشتراكات</span>}
+      </Link>}
     </nav>
 
     <div className={`border-t border-white/10 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>

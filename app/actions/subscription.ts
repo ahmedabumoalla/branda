@@ -7,6 +7,9 @@ import {
   getOwnerSubscriptionHistory,
   startOwnerPlanCheckout,
   validateOwnerPlanCoupon,
+  createOwnerBankRequest,
+  submitOwnerBankReceipt,
+  getOwnerSubscriptionRequests,
 } from "@/lib/data/subscription";
 
 export async function fetchOwnerSubscriptionHistoryAction() {
@@ -31,4 +34,20 @@ export async function completePlanPaymentAction(subscriptionId?: string) {
 
 export async function failPlanPaymentAction() {
   await failOwnerPlanPayment();
+}
+
+export async function createBankSubscriptionRequestAction(planId: string, durationMonths: number) {
+  return createOwnerBankRequest(planId, durationMonths);
+}
+
+export async function uploadSubscriptionReceiptAction(requestId: string, formData: FormData) {
+  return submitOwnerBankReceipt(requestId, formData);
+}
+
+export async function submitSubscriptionWhatsappAction(requestId: string) {
+  return submitOwnerBankReceipt(requestId);
+}
+
+export async function refreshSubscriptionRequestsAction() {
+  return getOwnerSubscriptionRequests();
 }

@@ -12,6 +12,8 @@ export type SubscriptionPaymentRequest = {
   branchId?: string;
   branchName?: string;
   receiptStoragePath?: string;
+  receiptChannel?: "upload" | "whatsapp";
+  receiptUrl?: string;
   status: "pending" | "approved" | "rejected" | "paid" | "failed" | string;
   createdAt: string;
   adminResponse?: string;

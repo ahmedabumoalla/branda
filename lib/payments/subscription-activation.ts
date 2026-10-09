@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { areOnlinePaymentsEnabled } from "@/lib/payments/payment-availability";
 
 export async function activatePaidSubscription(input: {
   cafeId: string;
@@ -12,6 +13,7 @@ export async function activatePaidSubscription(input: {
   paymobTransactionId?: string;
   paymobOrderId?: string;
 }) {
+  if (!areOnlinePaymentsEnabled()) return false;
   const admin = createAdminClient();
   const paidAt = new Date().toISOString();
   const provider = input.provider ?? "paypal";

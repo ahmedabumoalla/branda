@@ -4,7 +4,7 @@ import { Check, ChevronLeft, Layers3, Plus, Receipt, Save, Trash2 } from "lucide
 import { useRef, useState, type FormEvent } from "react";
 import { approveSubscriptionRequestAction, rejectSubscriptionRequestAction, savePlatformPlansAction } from "@/app/actions/admin";
 import { AdminPageShell } from "@/components/ui/design-system";
-import { BUSINESS_CATEGORIES, type BusinessCategoryId } from "@/lib/platform/business-categories";
+import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
 import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
@@ -15,7 +15,6 @@ const durationLabels: Record<PlanDurationUnit, string> = { day: "يوم", month:
 const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
   awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "مرفوض", cancelled: "ملغي",
 };
-const categories = BUSINESS_CATEGORIES.filter((category) => ["cafes_coffee", "restaurants", "events_conferences"].includes(category.id));
 const monthOptions = [1, 2, 12, 24];
 const numberFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 
@@ -32,8 +31,7 @@ function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
 export function AdminPlansPage({ initialPlans, initialRequests, configError }: Props) {
   const [plans, setPlans] = useState(initialPlans);
   const [requests, setRequests] = useState(initialRequests);
-  const [categoryId, setCategoryId] = useState<BusinessCategoryId>("cafes_coffee");
-  const [selectedId, setSelectedId] = useState(initialPlans.find((plan) => (plan.categoryId ?? "cafes_coffee") === "cafes_coffee")?.id ?? "");
+  const [selectedId, setSelectedId] = useState(initialPlans[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -42,7 +40,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   const saveLock = useRef(false);
   const noticeRef = useRef<HTMLDivElement>(null);
   const features = getBrandNavigationFeatures();
-  const visiblePlans = plans.filter((plan) => (plan.categoryId ?? "cafes_coffee") === categoryId);
+  const visiblePlans = plans;
   const plan = visiblePlans.find((item) => item.id === selectedId) ?? visiblePlans[0];
   const pendingCount = requests.filter((request) => request.status === "pending_review").length;
   const isIncluded = (item: PlatformPlan, feature: PlatformFeature) => item.features.includes("all") || item.features.includes(feature);
@@ -71,7 +69,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   }
 
   function addPlan() {
-    const next = createPlan(categoryId);
+    const next = createPlan("cafes_coffee");
     setPlans((current) => [...current, next]);
     setSelectedId(next.id);
     setDirty(true);
@@ -139,11 +137,6 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
 
         <form onSubmit={savePlans} className={styles.form}>
           <div className={styles.toolbar}>
-            <div className={styles.categories} aria-label="تصنيف الباقات">
-              {categories.map((category) => <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => { setCategoryId(category.id); setSelectedId(""); }}>
-                {category.label}<span>{numberFormat.format(plans.filter((item) => (item.categoryId ?? "cafes_coffee") === category.id).length)}</span>
-              </button>)}
-            </div>
             <button type="button" className={styles.secondary} onClick={addPlan} disabled={saving}><Plus size={18} aria-hidden="true" />إضافة باقة</button>
           </div>
 
@@ -157,12 +150,12 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <span className={styles.price}>{numberFormat.format(item.offerEnabled && item.offerPrice !== undefined ? item.offerPrice : item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
                 <span className={styles.choiceBottom}>{numberFormat.format(features.filter((feature) => isIncluded(item, feature.id)).length)} خدمات مفعلة<ChevronLeft size={17} aria-hidden="true" /></span>
               </button>)}
-              {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات لهذا التصنيف. أضف أول باقة لتحديد خدماتها.</p> : null}
+              {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات. أضف أول باقة لتحديد خدماتها.</p> : null}
             </aside>
 
-            {plan ? <section className={styles.editor} aria-label={`تحرير ${plan.name}`}>
+            {plan ? <fieldset disabled={plan.id === "owner_trial_7d"} className={styles.editor} aria-label={`تحرير ${plan.name}`}>
               <header className={styles.editorHeader}>
-                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>التغييرات لا تطبق إلا بعد الحفظ.</p></div>
+                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "تجربة ثابتة للحسابات الجديدة: 7 أيام للمنيو والإعدادات. متاحة مرة واحدة ولا تُعدّل من هنا." : "التغييرات لا تطبق إلا بعد الحفظ."}</p></div>
                 <label className={styles.toggle}><input type="checkbox" checked={plan.active} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
               </header>
 
@@ -181,7 +174,6 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <h3 id="plan-details-title">تفاصيل الباقة</h3>
                 <div className={styles.fields}>
                   <label>اسم الباقة<input required maxLength={120} value={plan.name} onChange={(event) => updatePlan(plan.id, { name: event.target.value })} /></label>
-                  <label>تصنيف النشاط<select value={plan.categoryId ?? "cafes_coffee"} onChange={(event) => { updatePlan(plan.id, { categoryId: event.target.value }); setCategoryId(event.target.value as BusinessCategoryId); setSelectedId(plan.id); }}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
                   <label className={styles.fullWidth}>وصف الباقة<textarea rows={3} value={plan.description} onChange={(event) => updatePlan(plan.id, { description: event.target.value })} placeholder="وصف مختصر لما تقدمه هذه الباقة" /></label>
                 </div>
               </section>
@@ -212,20 +204,20 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                   <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
                 </div>
                 <label className={styles.toggle}><input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />باقة مجانية بديلة بعد انتهاء التجربة</label>
-                <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية لهذا التصنيف</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />حذف الباقة</button> : null}</div>
+                <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />حذف الباقة</button> : null}</div>
               </section>
-            </section> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة، ثم اختر خدماتها وسعرها.</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
+            </fieldset> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة، ثم اختر خدماتها وسعرها.</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
           </fieldset>
 
           <div className={styles.saveBar}><span role="status">{saving ? "جارٍ حفظ الباقات..." : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving ? "جارٍ الحفظ..." : "حفظ جميع التعديلات"}</button></div>
         </form>
 
-        {visiblePlans.length ? <section className={styles.comparison} aria-labelledby="plan-comparison-title"><div className={styles.sectionHeading}><div><h2 id="plan-comparison-title">الخدمات في نظرة واحدة</h2><p>مقارنة الباقات ضمن التصنيف المحدد.</p></div></div><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="جدول مقارنة خدمات الباقات"><table><thead><tr><th scope="col">الخدمة</th>{visiblePlans.map((item) => <th scope="col" key={item.id}>{item.name}</th>)}</tr></thead><tbody>{features.map((feature) => <tr key={feature.id}><th scope="row">{feature.sidebarLabel ?? feature.titleAr}</th>{visiblePlans.map((item) => <td key={item.id}><span className={isIncluded(item, feature.id) ? styles.enabled : styles.disabled}>{isIncluded(item, feature.id) ? "مشمولة" : "غير مشمولة"}</span></td>)}</tr>)}</tbody></table></div></section> : null}
+        {visiblePlans.length ? <section className={styles.comparison} aria-labelledby="plan-comparison-title"><div className={styles.sectionHeading}><div><h2 id="plan-comparison-title">الخدمات في نظرة واحدة</h2></div></div><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="جدول مقارنة خدمات الباقات"><table><thead><tr><th scope="col">الخدمة</th>{visiblePlans.map((item) => <th scope="col" key={item.id}>{item.name}</th>)}</tr></thead><tbody>{features.map((feature) => <tr key={feature.id}><th scope="row">{feature.sidebarLabel ?? feature.titleAr}</th>{visiblePlans.map((item) => <td key={item.id}><span className={isIncluded(item, feature.id) ? styles.enabled : styles.disabled}>{isIncluded(item, feature.id) ? "مشمولة" : "غير مشمولة"}</span></td>)}</tr>)}</tbody></table></div></section> : null}
 
         <section id="payment-requests" className={styles.payments} aria-labelledby="payments-title">
           <div className={styles.sectionHeading}><div><h2 id="payments-title"><Receipt size={22} aria-hidden="true" />طلبات الدفع</h2><p>راجع طلبات الاشتراك واعتمد الدفع لتفعيل الباقة.</p></div><span className={styles.count}>{numberFormat.format(pendingCount)} للمراجعة</span></div>
           {requests.map((request) => <article key={request.id} className={styles.request}>
-            <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
+            <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><p>{request.receiptChannel === "whatsapp" ? "الإيصال مرسل عبر واتساب؛ تحقق من استلامه والتحويل قبل الاعتماد." : "تحقق من الإيصال والتحويل قبل اعتماد الطلب."}</p>{request.receiptUrl ? <a href={request.receiptUrl} target="_blank" rel="noreferrer" className={styles.secondary}>عرض إيصال التحويل</a> : null}<time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
             <div className={styles.requestAmount}><strong>{numberFormat.format(request.amount)} <small>ر.س</small></strong><span className={request.status === "approved" ? styles.enabled : request.status === "rejected" ? styles.rejected : styles.defaultBadge}>{requestStatusLabels[request.status]}</span></div>
             {request.status === "pending_review" ? <div className={styles.requestActions}><button type="button" className={styles.primary} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, true)}>{reviewingId === request.id ? "جارٍ تحديث الطلب…" : "اعتماد وتفعيل الباقة"}</button><button type="button" className={styles.dangerButton} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, false)}>رفض الطلب</button></div> : null}
           </article>)}

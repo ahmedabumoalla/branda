@@ -1,123 +1,119 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, MapPin, Store, Coffee, Utensils, Dumbbell, Scissors, Stethoscope, Shirt, Sofa, Flower2, ShoppingBag, Bath, PartyPopper } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useState, type FormEvent, type ReactNode, type ElementType } from "react";
-import { registerCafeOwnerAction } from "@/app/actions/auth";
-import { GoogleMapPicker } from "@/components/maps/google-map-picker";
+import { Eye, EyeOff, ArrowLeft, Check, ShieldCheck } from "lucide-react";
+import { useState, type FormEvent, type ReactNode } from "react";
+import { registerCafeOwnerAction, requestOwnerRegistrationOtpAction, verifyOwnerRegistrationOtpAction, resolveOwnerRegistrationMapAction } from "@/app/actions/auth";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
-import type { BusinessCategoryId } from "@/lib/platform/business-categories";
-import { BRAND_COLORS as C } from "@/lib/ui/brand-colors";
+import { isAllowedGoogleMapsUrl } from "@/lib/maps/google-maps-url";
+import styles from "./register.module.css";
 
-type BrandCategory = { id: BusinessCategoryId; label: string; available: boolean; icon: ElementType };
-type AvailableOwnerCategory = Extract<BusinessCategoryId, "cafes_coffee" | "restaurants" | "events_conferences">;
-
-const AVAILABLE_OWNER_CATEGORIES: AvailableOwnerCategory[] = ["cafes_coffee", "restaurants", "events_conferences"];
-
-function isAvailableOwnerCategory(category: BusinessCategoryId): category is AvailableOwnerCategory {
-  return AVAILABLE_OWNER_CATEGORIES.includes(category as AvailableOwnerCategory);
-}
-
-const BRAND_CATEGORIES: BrandCategory[] = [
-  { id: "cafes_coffee", label: "مقاهي وكوفيهات", available: true, icon: Coffee },
-  { id: "restaurants", label: "مطاعم", available: true, icon: Utensils },
-  { id: "events_conferences", label: "الفعاليات والمؤتمرات", available: true, icon: PartyPopper },
-  { id: "massage_centers", label: "مراكز مساج", available: false, icon: Bath },
-  { id: "beauty_centers", label: "مراكز تجميل", available: false, icon: Flower2 },
-  { id: "hair_salons", label: "صالونات العناية بالشعر", available: false, icon: Scissors },
-  { id: "clinics_health_centers", label: "العيادات والمراكز الصحية", available: false, icon: Stethoscope },
-  { id: "gyms_fitness", label: "صالات الرياضة واللياقة البدنية", available: false, icon: Dumbbell },
-  { id: "retail_stores", label: "متاجر البيع بالتجزئة", available: false, icon: ShoppingBag },
-  { id: "clothing_stores", label: "متاجر الملابس", available: false, icon: Shirt },
-  { id: "furniture", label: "المفروشات", available: false, icon: Sofa },
-];
-
-type SelectedLocation = { lat: number; lng: number };
-
+const steps = ["بيانات العلامة", "تحقق واتساب", "كلمة المرور"];
 function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-black text-[#6B3A25]">{label}</span>{children}</label>;
+  return <label className={styles.field}><span>{label}</span>{children}</label>;
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [ownerName, setOwnerName] = useState("");
-  const [brandName, setBrandName] = useState("");
-  const [brandCategory, setBrandCategory] = useState<BusinessCategoryId>("cafes_coffee");
-  const [slug, setSlug] = useState("");
-  const [email, setEmail] = useState("");
-  const [emailConfirm, setEmailConfirm] = useState("");
-  const [phone, setPhone] = useState("");
-  const [primaryBranchName, setPrimaryBranchName] = useState("الفرع الأساسي");
-  const [primaryBranchAddress, setPrimaryBranchAddress] = useState("");
-  const [primaryBranchCity, setPrimaryBranchCity] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
+  const [step, setStep] = useState(0);
+  const [draft, setDraft] = useState({ brandNameAr: "", brandNameEn: "", ownerName: "", email: "", phone: "", mapsUrl: "", couponCode: "" });
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [couponCode, setCouponCode] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const handleMapChange = useCallback((location: SelectedLocation) => setSelectedLocation(location), []);
-
+  const [resendAt, setResendAt] = useState(0);
+  const [map, setMap] = useState<{ url: string; latitude: number; longitude: number } | null>(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const update = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
+  async function previewMap() {
+    if (!draft.mapsUrl || !isAllowedGoogleMapsUrl(draft.mapsUrl)) return;
+    const url = draft.mapsUrl;
+    setMapLoading(true);
+    try {
+      const location = await resolveOwnerRegistrationMapAction(url);
+      setMap(location?.latitude != null && location.longitude != null ? { url, latitude: location.latitude, longitude: location.longitude } : null);
+    } catch { setMap(null); }
+    finally { setMapLoading(false); }
+  }
+  async function sendCode() {
+    const result = await requestOwnerRegistrationOtpAction(draft);
+    setMessage(result.message);
+    if (result.retryAfterSeconds) setResendAt(Date.now() + result.retryAfterSeconds * 1000);
+    if (result.ok) { setCode(""); setStep(1); }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (email.trim().toLowerCase() !== emailConfirm.trim().toLowerCase()) return setMessage("البريد الإلكتروني غير متطابق");
-    if (password !== passwordConfirm) return setMessage("كلمة المرور غير متطابقة");
-    if (!isAvailableOwnerCategory(brandCategory)) return setMessage("هذا التصنيف قريبًا");
-    if (!selectedLocation) return setMessage("حدد موقع الفرع الأساسي على الخريطة");
-    setSubmitting(true); setMessage("");
-    const result = await registerCafeOwnerAction({ ownerName, brandName, brandCategory, slug, email, phone, password, primaryBranchName, primaryBranchAddress, primaryBranchCity, primaryBranchLat: selectedLocation.lat, primaryBranchLng: selectedLocation.lng, primaryBranchRadiusMeters: 50, couponCode });
-    setSubmitting(false); setMessage(result.message);
-    if (result.ok && result.redirectTo) router.push(result.redirectTo);
+    if (pending) return;
+    setPending(true); setMessage("");
+    try {
+      if (step === 0) await sendCode();
+      else if (step === 1) {
+        const result = await verifyOwnerRegistrationOtpAction(code);
+        setMessage(result.message);
+        if (result.ok) setStep(2);
+      } else {
+        const result = await registerCafeOwnerAction({ password, confirmPassword });
+        setMessage(result.message);
+        if (result.ok && result.redirectTo) window.location.assign(result.redirectTo);
+      }
+    } catch { setMessage("تعذر الاتصال. حاول مجددًا دون إغلاق الصفحة."); }
+    finally { setPending(false); }
   }
-
-  const fieldClass = "barndaksa-neumo-inset h-11 w-full rounded-xl border px-4 text-right text-sm font-bold outline-none";
-
+  async function resend() {
+    if (pending) return;
+    if (Date.now() < resendAt) { setMessage(`يمكنك إعادة الإرسال بعد ${Math.ceil((resendAt - Date.now()) / 1000)} ثانية.`); return; }
+    setPending(true);
+    try { await sendCode(); } catch { setMessage("تعذر إرسال الرمز. حاول مجددًا."); }
+    finally { setPending(false); }
+  }
   return (
-    <main dir="rtl" className="grid min-h-screen lg:grid-cols-[0.85fr_1fr]" style={{ background: C.creamBase, color: C.espressoDark }}>
-      <section className="relative hidden flex-col items-center justify-center overflow-hidden px-10 lg:flex" style={{ background: `linear-gradient(to bottom right, ${C.warmSand}, ${C.creamBase})` }}>
-        <div className="max-w-xl text-center">
-          <p className="text-xs font-black tracking-[0.24em] text-[#9B6A34]">برندة</p>
-          <h1 className="mt-4 text-4xl font-black leading-tight" style={{ color: C.coffeeBrown }}>أهلاً بك في نافذة جديدة لنمو علامتك</h1>
-          <p className="mt-4 text-sm font-bold leading-7" style={{ color: C.mutedText }}>أنشئ فرعك الإلكتروني وابدأ إدارة المنتجات والطلبات والولاء من مكان واحد</p>
-        </div>
-      </section>
-
-      <section className="flex min-w-0 items-start justify-center bg-white px-4 py-5 sm:px-6 sm:py-6">
-        <div className="w-full max-w-[680px]">
-          <div className="mb-4 flex flex-col items-center text-center lg:hidden"><BarndaksaLogo variant="brown" width={140} height={56} /></div>
-          <h1 className="text-center text-2xl font-black" style={{ color: C.coffeeBrown }}>إنشاء حساب علامة تجارية</h1>
-          <p className="mt-1.5 text-center text-sm font-bold text-[#806A5E]">املأ البيانات التالية بدون أمثلة داخل الخانات</p>
-          <div className="my-4 grid grid-cols-2 overflow-hidden rounded-xl border text-sm" style={{ borderColor: C.borderSand }}><Link href="/login" className="bg-white py-3 text-center font-black" style={{ color: C.mutedText }}>تسجيل الدخول</Link><span className="py-3 text-center font-black" style={{ background: C.coffeeBrown, color: C.creamBase }}>إنشاء حساب</span></div>
-          {message ? <div className="mb-4 rounded-xl border border-[#D9A33F]/30 bg-[#FCF8F3] p-3 text-center text-sm font-black text-[#6B3A25]">{message}</div> : null}
-
-          <form className="space-y-3" onSubmit={submit}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="اسم المستخدم"><input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field>
-              <Field label="اسم العلامة التجارية"><input value={brandName} onChange={(e) => setBrandName(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field>
+    <main dir="rtl" className={styles.page}>
+      <aside className={styles.story}>
+        <BarndaksaLogo variant="dark" width={168} height={72} />
+        <div className={styles.storyBody}><span className={styles.kicker}>خطوة جديدة لعلامتك</span><h1>منيوك جاهز<br />ليحكي قصتك.</h1><p>أنشئ حساب علامتك، وأضف منتجاتك، وشارك منيوك مع عملائك من مكان واحد.</p><div className={styles.trial}><strong>٧</strong><div><b>أيام تجربة مجانية</b><span>المنيو والمنتجات وإعدادات العلامة</span></div></div><p className={styles.note}>بدون بطاقة دفع. يمكنك اختيار الباقة المناسبة لاحقًا من لوحة التحكم.</p></div>
+        <span className={styles.signature}>علامتك، بطابعها الخاص.</span>
+      </aside>
+      <section className={styles.content}><div className={styles.formWrap}>
+        <div className={styles.topline}><Link href="/">برندة</Link><span>لديك حساب؟ <Link href="/login">تسجيل الدخول</Link></span></div>
+        <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={14} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
+        <header className={styles.heading}><span className={styles.kicker}>إنشاء حساب علامة تجارية</span><h2>{step === 0 ? "لنبدأ بعلامتك" : step === 1 ? "تحقق من رقمك" : "الخطوة الأخيرة"}</h2><p>{step === 0 ? "بيانات بسيطة، ومساحة كاملة لعلامتك." : step === 1 ? `أدخل الرمز المرسل إلى واتساب ${draft.phone}.` : "اختر كلمة مرور آمنة، وسندخلك مباشرة إلى لوحة التحكم."}</p></header>
+        {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
+        <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
+          {step === 0 ? <>
+            <div className={styles.columns}>
+              <Field label="اسم العلامة بالعربية"><input value={draft.brandNameAr} onChange={event => update("brandNameAr", event.target.value)} required minLength={2} maxLength={120} autoComplete="organization" /></Field>
+              <Field label="اسم العلامة بالإنجليزية"><input value={draft.brandNameEn} onChange={event => update("brandNameEn", event.target.value)} required minLength={2} maxLength={120} dir="ltr" /></Field>
             </div>
-
-            <section className="rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] p-3"><div className="mb-2 flex items-center gap-2 text-[#6B3A25]"><Store className="h-4 w-4" /><h2 className="text-sm font-black">تصنيف العلامة التجارية</h2></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">{BRAND_CATEGORIES.map((category) => { const Icon = category.icon; const selected = brandCategory === category.id; return <button type="button" key={category.id} disabled={!category.available} onClick={() => category.available ? setBrandCategory(category.id) : setMessage("هذا التصنيف قريبًا")} className={`relative min-h-[78px] rounded-2xl border p-2 text-center transition ${selected ? "border-[#6B3A25] bg-white shadow-md" : "border-[#E7D7C6] bg-white/70"} ${!category.available ? "opacity-60" : "hover:-translate-y-0.5"}`}><Icon className="mx-auto h-5 w-5 text-[#6B3A25]" /><span className="mt-1.5 block text-[11px] font-black leading-4 text-[#3A2117]">{category.label}</span>{!category.available ? <span className="mt-1 inline-flex rounded-full bg-[#F5D58A] px-2 py-0.5 text-[10px] font-black text-[#6B3A25]">قريبًا</span> : null}</button>; })}</div></section>
-
-            <Field label="اسم العلامة التجارية بالانجيزي"><input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/\s+/g, "-"))} dir="ltr" required className={`${fieldClass} text-left`} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field>
-            <div className="grid gap-3 sm:grid-cols-2"><Field label="البريد الإلكتروني"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field><Field label="تأكيد البريد الإلكتروني"><input type="email" value={emailConfirm} onChange={(e) => setEmailConfirm(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field></div>
-            <Field label="رقم الجوال"><input value={phone} onChange={(e) => setPhone(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field>
-
-            <section className="rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] p-3 sm:p-4"><div className="mb-2 flex items-center gap-2 text-[#6B3A25]"><MapPin className="h-4 w-4" /><h2 className="text-sm font-black">موقع الفرع الأساسي</h2></div><p className="mb-3 text-xs font-bold text-[#806A5E]">يتم حفظ نقطة الموقع ونطاق 50 متر حولها للاستخدام داخل تجربة العلامة لاحقًا</p><div className="space-y-3"><Field label="اسم الفرع الأساسي"><input value={primaryBranchName} onChange={(e) => setPrimaryBranchName(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: "#ffffff" }} /></Field><Field label="العنوان التفصيلي للفرع أو المكتب"><input value={primaryBranchAddress} onChange={(e) => setPrimaryBranchAddress(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: "#ffffff" }} /></Field><Field label="المدينة"><input value={primaryBranchCity} onChange={(e) => setPrimaryBranchCity(e.target.value)} required className={fieldClass} style={{ borderColor: C.borderSand, background: "#ffffff" }} /></Field><GoogleMapPicker value={selectedLocation} onChange={handleMapChange} /></div></section>
-
-            <PasswordField label="كلمة المرور" value={password} setValue={setPassword} visible={showPassword} toggle={() => setShowPassword(!showPassword)} />
-            <PasswordField label="تأكيد كلمة المرور" value={passwordConfirm} setValue={setPasswordConfirm} visible={showPasswordConfirm} toggle={() => setShowPasswordConfirm(!showPasswordConfirm)} />
-            <Field label="كوبون الخصم اختياري"><input value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} className={fieldClass} style={{ borderColor: C.borderSand, background: C.creamBase }} /></Field>
-            <button type="submit" disabled={submitting} className="flex h-12 w-full items-center justify-center rounded-xl text-base font-black disabled:opacity-60" style={{ background: C.coffeeBrown, color: C.creamBase }}>{submitting ? "جاري إنشاء الحساب" : "تسجيل العلامة التجارية"}</button>
-          </form>
-        </div>
-      </section>
+            <Field label="اسم المسؤول"><input value={draft.ownerName} onChange={event => update("ownerName", event.target.value)} required minLength={2} maxLength={120} autoComplete="name" /></Field>
+            <div className={styles.columns}>
+              <Field label="البريد الإلكتروني"><input type="email" value={draft.email} onChange={event => update("email", event.target.value)} required maxLength={254} autoComplete="email" dir="ltr" /></Field>
+              <Field label="رقم الجوال المرتبط بواتساب"><input type="tel" value={draft.phone} onChange={event => update("phone", event.target.value)} required maxLength={24} autoComplete="tel" dir="ltr" /></Field>
+            </div>
+            <Field label="رابط موقع العلامة على خرائط Google"><input type="url" value={draft.mapsUrl} onChange={event => update("mapsUrl", event.target.value)} onBlur={previewMap} required maxLength={1000} dir="ltr" /><small>افتح موقعك في خرائط Google، ثم اختر مشاركة ونسخ الرابط.</small></Field>
+            {mapLoading ? <p role="status" className={styles.note}>جارٍ تحديد الموقع على خرائط Google…</p> : null}
+            {map?.url === draft.mapsUrl ? <iframe title="موقع العلامة على خرائط Google" loading="lazy" referrerPolicy="no-referrer" className={styles.map} src={`https://maps.google.com/maps?q=${map.latitude},${map.longitude}&z=16&output=embed`} /> : null}
+            {draft.mapsUrl.startsWith("https://") && isAllowedGoogleMapsUrl(draft.mapsUrl) ? <a href={draft.mapsUrl} target="_blank" rel="noopener noreferrer" className={styles.mapLink}>فتح الموقع على خرائط Google</a> : null}
+            <Field label="كوبون الخصم (اختياري)"><input value={draft.couponCode} onChange={event => update("couponCode", event.target.value)} maxLength={30} dir="ltr" autoCapitalize="characters" /></Field>
+          </> : step === 1 ? <>
+            <Field label="رمز التحقق"><input className={styles.otp} value={code} onChange={event => setCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 6))} required pattern="[0-9]{6}" maxLength={6} inputMode="numeric" autoComplete="one-time-code" dir="ltr" /></Field>
+            <p className={styles.note}>الرمز صالح لخمس دقائق. لا تشاركه مع أي شخص.</p>
+          </> : <>
+            <div className={styles.verified}><ShieldCheck size={20} aria-hidden="true" /> تم التحقق من رقم واتساب</div>
+            <PasswordField label="كلمة المرور" value={password} setValue={setPassword} visible={visible} toggle={() => setVisible(value => !value)} />
+            <PasswordField label="تأكيد كلمة المرور" value={confirmPassword} setValue={setConfirmPassword} visible={confirmVisible} toggle={() => setConfirmVisible(value => !value)} />
+            <p className={styles.note}>٨ أحرف على الأقل. يمكنك لصق كلمة المرور أو استخدام مدير كلمات المرور.</p>
+          </>}
+          <button className={styles.submit} type="submit">{pending ? "جارٍ إكمال الطلب…" : step === 0 ? "إرسال رمز التحقق عبر واتساب" : step === 1 ? "تحقق ومتابعة" : "إنشاء الحساب وبدء التجربة"}<ArrowLeft size={18} aria-hidden="true" /></button>
+          {step === 1 ? <div className={styles.secondary}><button type="button" onClick={resend}>إعادة إرسال الرمز</button><button type="button" onClick={() => { setStep(0); setMessage(""); }}>تعديل البيانات</button></div> : null}
+          {step === 2 ? <div className={styles.secondary}><button type="button" onClick={() => { setStep(0); setCode(""); setPassword(""); setConfirmPassword(""); setMessage(""); }}>بدء تحقق جديد أو تعديل البيانات</button></div> : null}
+        </fieldset></form>
+        <p className={styles.footer}>تجربة مجانية لمدة ٧ أيام، تشمل المنيو وإعدادات العلامة.</p>
+      </div></section>
     </main>
   );
 }
-
 function PasswordField({ label, value, setValue, visible, toggle }: { label: string; value: string; setValue: (value: string) => void; visible: boolean; toggle: () => void }) {
-  return <Field label={label}><div className="relative"><input type={visible ? "text" : "password"} minLength={8} value={value} onChange={(e) => setValue(e.target.value)} required className="barndaksa-neumo-inset h-11 w-full rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] px-4 pl-12 text-right text-sm font-bold outline-none" /><button type="button" onClick={toggle} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B3A25]">{visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></Field>;
+  return <Field label={label}><span className={styles.password}><input type={visible ? "text" : "password"} value={value} onChange={event => setValue(event.target.value)} minLength={8} maxLength={72} required autoComplete="new-password" dir="ltr" /><button type="button" onClick={toggle} aria-label={visible ? `إخفاء ${label}` : `إظهار ${label}`} aria-pressed={visible}>{visible ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}</button></span></Field>;
 }

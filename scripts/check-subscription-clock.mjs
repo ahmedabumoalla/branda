@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import ts from "typescript";
+const exports = {};
+new Function("exports", ts.transpileModule(fs.readFileSync("lib/platform/subscription-clock.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(exports);
+const now = Date.UTC(2026, 9, 9, 12);
+const at = (delta) => new Date(now + delta).toISOString();
+const remaining = exports.subscriptionTimeRemaining;
+assert.deepEqual(remaining(at(7 * 86400000), now), { expired: false, days: 7, fullDays: 7, hours: 0, minutes: 0, seconds: 0 });
+assert.deepEqual(remaining(at(7 * 86400000 - 1000), now), { expired: false, days: 7, fullDays: 6, hours: 23, minutes: 59, seconds: 59 });
+assert.equal(remaining(at(1), now).seconds, 1);
+assert.equal(remaining(at(0), now).expired, true);
+assert.equal(remaining(at(-86400000), now).days, 0);
+assert.equal(remaining("invalid", now), null);
+assert.equal(remaining(null, now), null);
+console.log("PASS subscription clock: 7 expiry, boundary and invalid-date checks.");
