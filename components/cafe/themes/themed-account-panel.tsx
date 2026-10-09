@@ -292,8 +292,8 @@ function OrdersView({ orders, isEvents = false }: { orders: CustomerOrder[]; isE
         </h2>
         <p className="mt-2 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#7d6f66)]">
           {isEvents
-            ? "عند شراء التذاكر أو الباقات ستظهر هنا كتذاكرك الخاصة بالفعالية."
-            : "عندما تؤكد العلامة طلبات الاستلام ستظهر هنا من بيانات الحساب الحالية."}
+            ? "عند شراء التذاكر أو الباقات ستظهر هنا كتذاكرك الخاصة بالفعالية"
+            : "عندما تؤكد العلامة طلبات الاستلام ستظهر هنا من بيانات الحساب الحالية"}
         </p>
       </Card>
     );
@@ -400,7 +400,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
             <p className="mt-3 break-words text-sm font-black text-[var(--ci-page-fg,#2d231d)]">{customer.email || "لا يوجد بريد مسجل"}</p>
           </div>
           <Card className="mt-6">
-            {props.passwordSlot ?? <p className="py-4 text-center text-sm font-bold text-[var(--ci-muted-fg,#7d6f66)]">تغيير كلمة المرور غير متاح حاليًا.</p>}
+            {props.passwordSlot ?? <p className="py-4 text-center text-sm font-bold text-[var(--ci-muted-fg,#7d6f66)]">تغيير كلمة المرور غير متاح حاليًا</p>}
           </Card>
         </div>
       </main>
@@ -444,7 +444,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
               <Field label="الاسم" value={props.editName} onChange={props.onEditName} autoComplete="name" />
               <Field label="رقم الجوال" value={props.editPhone} onChange={props.onEditPhone} inputMode="tel" autoComplete="tel" />
               <p className="rounded-[14px] bg-[var(--ci-page-bg,#faf6f1)] px-4 py-3 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#7d6f66)]">
-                البريد يعرض من الحساب الحالي ولا يتم تعديله من هذه الصفحة.
+                البريد يعرض من الحساب الحالي ولا يتم تعديله من هذه الصفحة
               </p>
               <button type="button" onClick={props.onSaveSettings} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-[var(--ci-button-bg,#4b3428)] px-5 text-sm font-black text-[var(--ci-button-fg,#fff)] shadow-sm">
                 <Save className="h-4 w-4" />
@@ -500,7 +500,7 @@ export function ThemedAccountPanel(props: ThemedAccountPanelProps) {
           cafeName={props.cafeName}
           logoUrl={props.logoUrl}
           title="الحساب"
-          subtitle="بياناتك، طلباتك، وإعدادات الأمان"
+          subtitle="بياناتك، طلباتك وإعدادات الأمان"
           action={
             <button
               type="button"

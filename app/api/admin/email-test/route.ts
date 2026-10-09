@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       html: `
         <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
           <h2>تم ربط Resend بنجاح</h2>
-          <p>هذه رسالة اختبار من منصة برندة.</p>
+          <p>هذه رسالة اختبار من منصة برندة</p>
           <p>وقت الإرسال: ${new Date().toISOString()}</p>
         </div>
       `,

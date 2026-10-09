@@ -160,7 +160,7 @@ export function MenuProductFormModal({
   const descriptionLabel = isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
   const priceLabel = isEvents ? "رسوم الدخول ر.س *" : "السعر ر.س *";
   const detailsLabel = isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
-  const detailsPlaceholder = isEvents ? "مثال: حضور، ورشة، شهادة..." : "مثال: حليب، قهوة...";
+  const detailsPlaceholder = isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
   const defaultProductName = isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
   const defaultDescription = isEvents ? "تذكرة أو باقة من قائمة الفعالية" : "منتج من قائمة العلامة التجارية";
 
@@ -377,7 +377,7 @@ export function MenuProductFormModal({
       alert(
         err instanceof ImagePipelineError
           ? err.message
-          : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP"
+          : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP"
       );
     } finally {
       setOptimizingImage(false);
@@ -396,7 +396,7 @@ export function MenuProductFormModal({
       for (const file of files) {
         if (isVideoFile(file)) {
           if (file.size > MAX_UPLOAD_BYTES) {
-            throw new ImagePipelineError("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
+            throw new ImagePipelineError("حجم الفيديو كبير جدًا اختر ملفًا أقل من 40MB");
           }
 
           if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
@@ -424,7 +424,7 @@ export function MenuProductFormModal({
       alert(
         err instanceof ImagePipelineError
           ? err.message
-          : "تعذر قراءة الملف، جرّب صورة PNG أو JPG أو WEBP أو فيديو MP4"
+          : "تعذر قراءة الملف جرّب صورة PNG أو JPG أو WEBP أو فيديو MP4"
       );
     } finally {
       setOptimizingImage(false);
@@ -837,7 +837,7 @@ export function MenuProductFormModal({
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117] disabled:opacity-60"
               >
                 <ImagePlus className="h-5 w-5" />
-                {optimizingImage ? "جاري تحسين الصورة..." : "اختيار صورة"}
+                {optimizingImage ? "جاري تحسين الصورة" : "اختيار صورة"}
               </button>
 
               {imagePreviewUrl || imageAssetId || legacyExternalImageUrl || imageGallery?.length || pendingImages.length || videoAssetId || pendingVideoFile ? (

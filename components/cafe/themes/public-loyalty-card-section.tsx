@@ -60,7 +60,7 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
         </div>
 
         <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
-          تظهر بطاقة الولاء الحقيقية فقط عند توفر كود بطاقة صادر للعميل من قاعدة البيانات.
+          تظهر بطاقة الولاء الحقيقية فقط عند توفر كود بطاقة صادر للعميل من قاعدة البيانات
         </p>
 
         <div className="mt-5 rounded-[22px] border border-dashed border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-page-bg,#FCF8F3)] p-5 text-center">
@@ -69,7 +69,7 @@ export function PublicLoyaltyCardSection({ slug, cafeName, program }: Props) {
             لا توجد بطاقة حقيقية متاحة للعرض الآن
           </p>
           <p className="mt-2 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#806A5E)]">
-            تم إيقاف كود المعاينة والرصيد المحلي في الواجهة العامة.
+            تم إيقاف كود المعاينة والرصيد المحلي في الواجهة العامة
           </p>
         </div>
 

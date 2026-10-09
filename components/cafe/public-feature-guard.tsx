@@ -34,7 +34,7 @@ export function PublicFeatureUnavailable({
           {title ?? publicFeatureTitle(feature)}
         </h1>
         <p className="mt-3 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
-          هذا القسم مخفي من التنقل العام لأنه غير متاح ضمن باقة هذه العلامة.
+          هذا القسم مخفي من التنقل العام لأنه غير متاح ضمن باقة هذه العلامة
         </p>
         <Link
           href={getCafePath(slug, "", previewThemeId)}

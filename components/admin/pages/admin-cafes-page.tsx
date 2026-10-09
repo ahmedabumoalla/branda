@@ -265,7 +265,7 @@ export function AdminCafesPage({
     <div className={styles.page}>
     <AdminPageShell
       title="العلامات التجارية"
-      subtitle="إدارة جميع العلامات التجارية المسجلة وتفاصيلها التشغيلية والمالية والدعم والصيانة."
+      subtitle="إدارة جميع العلامات التجارية المسجلة وتفاصيلها التشغيلية والمالية والدعم والصيانة"
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
@@ -288,7 +288,7 @@ export function AdminCafesPage({
             aria-label="البحث عن علامة تجارية"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث باسم العلامة، المالك، الجوال، رقم الصيانة..."
+            placeholder="ابحث باسم العلامة، المالك، الجوال، رقم الصيانة"
             className="pr-12"
           />
         </div>

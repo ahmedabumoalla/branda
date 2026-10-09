@@ -84,7 +84,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
       tableCode: null,
       table: null,
       currentRound: null,
-      errorMessage: "تعذر تحميل حرب الطاولات.",
+      errorMessage: "تعذر تحميل حرب الطاولات",
     };
   }
 
@@ -107,7 +107,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
       customer = await getCustomerProfileForCustomerSession(slug);
     } catch (error) {
       console.error("[table-wars] customer scope load failed", error);
-      pageError = "تعذر التحقق من جلسة اللاعب حاليًا. حاول تحديث الصفحة.";
+      pageError = "تعذر التحقق من جلسة اللاعب حاليًا حاول تحديث الصفحة";
     }
     if (pageError) {
       customer = null;
@@ -153,7 +153,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
           <div className="rounded-lg border border-[#E7D7C6] bg-white p-5 text-center shadow-[8px_8px_24px_rgba(49,25,18,0.05)]">
             <LockKeyhole className="mx-auto h-9 w-9 text-[#6B3A25]" />
             <p className="mx-auto mt-3 max-w-xl text-sm font-black leading-7 text-[#311912]">
-              {entry.errorMessage ?? "الميزة غير مفعلة لهذا الفرع."}
+              {entry.errorMessage ?? "الميزة غير مفعلة لهذا الفرع"}
             </p>
           </div>
         ) : !entry.gameEnabled ? (
@@ -164,7 +164,7 @@ export default async function PublicTableWarsPage({ params, searchParams }: Prop
             </p>
           </div>
         ) : hasTableQuery && !entry.table ? (
-          <MessageBox message={entry.errorMessage ?? "رمز الطاولة غير صالح لهذا الفرع."} />
+          <MessageBox message={entry.errorMessage ?? "رمز الطاولة غير صالح لهذا الفرع"} />
         ) : pageError ? (
           <MessageBox message={pageError} />
         ) : (

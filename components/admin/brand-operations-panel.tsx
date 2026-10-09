@@ -24,7 +24,7 @@ export function BrandOperationsPanel({ brandId }: { brandId: string }) {
     let cancelled = false;
     fetchBrandOperationsAction({ brandId, from: request.from, to: request.to })
       .then(result => { if (!cancelled) { setData(result); setLoading(false); } })
-      .catch(() => { if (!cancelled) { setError("تعذر تحميل عمليات العلامة. حاول مجددًا."); setLoading(false); } });
+      .catch(() => { if (!cancelled) { setError("تعذر تحميل عمليات العلامة حاول مجددًا"); setLoading(false); } });
     return () => { cancelled = true; };
   }, [brandId, request]);
 
@@ -44,7 +44,7 @@ export function BrandOperationsPanel({ brandId }: { brandId: string }) {
     </form>
     {loading ? <p role="status" className={s.operationNotice}>جارٍ تحميل عمليات العلامة…</p>
       : error ? <div role="alert" className={s.operationNotice}><p>{error}</p><button type="button" className={s.textButton} onClick={() => load(request.from, request.to)}>إعادة المحاولة</button></div>
-      : !brand ? <p role="status" className={s.operationNotice}>لا تتوفر بيانات لهذه العلامة.</p>
+      : !brand ? <p role="status" className={s.operationNotice}>لا تتوفر بيانات لهذه العلامة</p>
       : <>
         <div className={s.operationsToolbar}>
           <p>{data.filters.from || data.filters.to ? `${data.filters.from || "البداية"} — ${data.filters.to || "اليوم"}` : "جميع الفترات"}</p>
@@ -53,7 +53,7 @@ export function BrandOperationsPanel({ brandId }: { brandId: string }) {
         {metric ? <section>
           <button type="button" className={s.textButton} onClick={() => setMetricKey(null)}><ArrowRight aria-hidden="true" />جميع المؤشرات</button>
           <h3 className={s.groupHeading}>{metric.title}</h3>
-          {metric.status === "missing" ? <p className={s.operationNotice}>بيانات هذا المؤشر غير متاحة حاليًا.</p> : <DetailRows brand={brand} metric={metric} />}
+          {metric.status === "missing" ? <p className={s.operationNotice}>بيانات هذا المؤشر غير متاحة حاليًا</p> : <DetailRows brand={brand} metric={metric} />}
         </section> : <div className={s.actionGrid}>{brand.metrics.map(item => {
           const Icon = icons[item.key];
           return <button type="button" className={s.actionTile} key={item.key} onClick={() => setMetricKey(item.key)}>

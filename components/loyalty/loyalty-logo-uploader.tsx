@@ -96,7 +96,7 @@ export function LoyaltyLogoUploader({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-black text-[#311912]">{label}</p>
-          <p className="mt-1 text-xs font-bold text-[#806A5E]">معاينة محلية فقط بدون رفع حقيقي.</p>
+          <p className="mt-1 text-xs font-bold text-[#806A5E]">معاينة محلية فقط بدون رفع حقيقي</p>
         </div>
         {value ? (
           <button
@@ -128,7 +128,7 @@ export function LoyaltyLogoUploader({
         {value ? (
           <img src={value} alt="" className="h-12 w-12 rounded-xl border border-[#E7D7C6] bg-[#FCF8F3] object-contain p-1" />
         ) : (
-          <span className="text-xs font-bold text-[#806A5E]">لم يتم اختيار صورة.</span>
+          <span className="text-xs font-bold text-[#806A5E]">لم يتم اختيار صورة</span>
         )}
       </div>
 
@@ -158,7 +158,7 @@ export function LoyaltyLogoUploader({
             </label>
           ) : null}
           <p className="mt-2 text-[11px] font-bold leading-5 text-[#806A5E]">
-            المعالجة الحالية معاينة محلية وسيتم تحسين الإزالة عند الربط الفعلي.
+            المعالجة الحالية معاينة محلية وسيتم تحسين الإزالة عند الربط الفعلي
           </p>
         </div>
       ) : null}

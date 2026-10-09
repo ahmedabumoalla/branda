@@ -21,7 +21,7 @@ export function LoyaltyPointsSettings({ value, onChange }: Props) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-black text-[#311912]">قسم نقاط الولاء</h2>
-            <p className="mt-1 text-xs font-bold text-[#806A5E]">قواعد مالية واضحة لقيمة النقطة والاستبدال والرصيد الظاهر للعميل.</p>
+            <p className="mt-1 text-xs font-bold text-[#806A5E]">قواعد مالية واضحة لقيمة النقطة والاستبدال والرصيد الظاهر للعميل</p>
           </div>
           <button
             type="button"

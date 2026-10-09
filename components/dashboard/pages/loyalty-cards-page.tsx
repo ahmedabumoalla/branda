@@ -142,9 +142,9 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                 {availableRewardProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </NeumoSelect>
               {availableRewardProducts.length ? (
-                <span className="block text-xs font-bold text-[#806A5E]">تظهر هنا منتجات المنيو المتاحة داخل هذه العلامة فقط.</span>
+                <span className="block text-xs font-bold text-[#806A5E]">تظهر هنا منتجات المنيو المتاحة داخل هذه العلامة فقط</span>
               ) : (
-                <span className="block text-xs font-bold text-amber-700">لا توجد منتجات متاحة في منيو هذه العلامة لاختيارها كمكافأة.</span>
+                <span className="block text-xs font-bold text-amber-700">لا توجد منتجات متاحة في منيو هذه العلامة لاختيارها كمكافأة</span>
               )}
             </label>
             <label className="space-y-2"><span className="text-sm font-black text-[#6B3A25]">اسم المكافأة</span><NeumoInput value={rewardName} onChange={(e) => setRewardName(e.target.value)} /></label>
@@ -189,7 +189,7 @@ export function LoyaltyCardsPageClient({ initialDashboard, products, configError
                     />
                   </div>
                   <p className="text-xs font-bold leading-6 text-[#806A5E]">
-                    QR البطاقة خاص بهذه العلامة ويظهر للعميل عند كل عملية ولاء.
+                    QR البطاقة خاص بهذه العلامة ويظهر للعميل عند كل عملية ولاء
                   </p>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E7D7C6]"><div className="h-full rounded-full bg-[#D9A33F]" style={{ width: `${Math.min(100, (card.stampsInCycle / dashboard.program.purchasesRequired) * 100)}%` }} /></div>

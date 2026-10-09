@@ -119,19 +119,19 @@ export function SocialProofPanel({
     {
       icon: ShoppingBag,
       title: `${productCount} منتج`,
-      desc: "قائمة واضحة للتصفح والاختيار حسب التصنيف.",
+      desc: "قائمة واضحة للتصفح والاختيار حسب التصنيف",
     },
     {
       icon: BadgePercent,
       title: `${offerCount} عرض`,
-      desc: "عروض بارزة تساعد العميل على اكتشاف الجديد بسرعة.",
+      desc: "عروض بارزة تساعد العميل على اكتشاف الجديد بسرعة",
     },
     {
       icon: ShieldCheck,
       title: branchCount ? `${branchCount} فرع` : "تجربة موثقة",
       desc: branchCount
-        ? "الفروع وروابط الخريطة ضمن مسار واحد."
-        : "مساحة جاهزة لعرض آراء العملاء وتوثيق التجارب.",
+        ? "الفروع وروابط الخريطة ضمن مسار واحد"
+        : "مساحة جاهزة لعرض آراء العملاء وتوثيق التجارب",
     },
   ];
 
@@ -147,8 +147,8 @@ export function SocialProofPanel({
             تجربة موثقة حول {cafeName}
           </h2>
           <p className="mt-2 max-w-2xl text-sm font-bold leading-7 text-[var(--ci-muted-fg,var(--barndaksa-muted-text))]">
-            عندما لا تتوفر آراء عامة بعد، تعرض الواجهة مؤشرات حقيقية من
-            البيانات الحالية بدل إنشاء بيانات مصطنعة.
+            عندما لا تتوفر آراء عامة بعد تعرض الواجهة مؤشرات حقيقية من
+            البيانات الحالية بدل إنشاء بيانات مصطنعة
           </p>
         </div>
       </div>

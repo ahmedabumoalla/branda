@@ -34,7 +34,7 @@ export function PublicGamesPage({ slug, battleArenaEntryHref, tableWarsEntryHref
               الألعاب
             </h1>
             <p className={`mt-2 max-w-2xl text-sm font-bold leading-7 ${theme.muted}`}>
-              تحديات خفيفة أثناء الانتظار داخل {settings.cafeName || slug}.
+              تحديات خفيفة أثناء الانتظار داخل {settings.cafeName || slug}
             </p>
           </div>
           <BrandPwaInstallSection slug={slug} cafeName={settings.cafeName || slug} variant="icon" />
@@ -51,7 +51,7 @@ export function PublicGamesPage({ slug, battleArenaEntryHref, tableWarsEntryHref
                   <p className="text-xs font-black text-[#9A6A20]">متاحة الآن</p>
                   <h2 className="mt-1 text-xl font-black text-[#311912]">حرب الطاولات</h2>
                   <p className="mt-1 text-sm font-bold leading-7 text-[#6B3A25]">
-                    ادخل حرب الطاولات ونافس الطاولات داخل الفرع.
+                    ادخل حرب الطاولات ونافس الطاولات داخل الفرع
                   </p>
                 </div>
               </div>
@@ -77,7 +77,7 @@ export function PublicGamesPage({ slug, battleArenaEntryHref, tableWarsEntryHref
                 </p>
                 <h2 className="mt-1 text-xl font-black text-[#173D39]">حلبة الأبطال</h2>
                 <p className="mt-1 text-sm font-bold leading-7 text-[#365F58]">
-                  معركة قهوة خفيفة ضد بوت محلي، بدون تسجيل دخول أو حفظ نتائج.
+                  معركة قهوة خفيفة ضد بوت محلي بدون تسجيل دخول أو حفظ نتائج
                 </p>
               </div>
             </div>

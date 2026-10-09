@@ -18,7 +18,7 @@ export default async function LoyaltyCardDesignerRoute() {
 
   const configError =
     dashboardResult.status === "rejected" || loyaltyResult.status === "rejected"
-      ? "تعذر تحميل بعض بيانات الولاء. سيظهر المصمم بحالة آمنة إلى أن تكتمل إعدادات قاعدة البيانات."
+      ? "تعذر تحميل بعض بيانات الولاء سيظهر المصمم بحالة آمنة إلى أن تكتمل إعدادات قاعدة البيانات"
       : undefined;
 
   return (

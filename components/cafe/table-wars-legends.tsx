@@ -27,7 +27,7 @@ export function TableWarsLegends({ legends }: Props) {
 
       {legends.length === 0 ? (
         <p className="mt-4 rounded-lg border border-[#F2E7D9] bg-[#FCF8F3] p-4 text-sm font-bold text-[#806A5E]">
-          لم يتوج أحد بعد اليوم.
+          لم يتوج أحد بعد اليوم
         </p>
       ) : (
         <div className="mt-4 grid gap-2 sm:grid-cols-2">

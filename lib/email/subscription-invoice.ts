@@ -37,7 +37,7 @@ export async function sendSubscriptionInvoiceEmail(subscription: Record<string, 
             <tr><td style="border:1px solid #eadcc8;padding:10px">الخصم</td><td style="border:1px solid #eadcc8;padding:10px">${roundMoney(discount)} ر.س</td></tr>
             <tr><td style="border:1px solid #eadcc8;padding:10px"><strong>الإجمالي شامل الضريبة</strong></td><td style="border:1px solid #eadcc8;padding:10px"><strong>${roundMoney(amount)} ر.س</strong></td></tr>
           </table>
-          <p style="margin-top:22px;color:#6b3a25">شكرًا لاشتراككم في منصة برندة.</p>
+          <p style="margin-top:22px;color:#6b3a25">شكرًا لاشتراككم في منصة برندة</p>
         </div>
       </div>
     </div>`;
@@ -46,6 +46,6 @@ export async function sendSubscriptionInvoiceEmail(subscription: Record<string, 
     to,
     subject: `${invoiceType} من برندة - ${invoiceNumber}`,
     html,
-    text: `${invoiceType} من برندة. الإجمالي شامل الضريبة: ${roundMoney(amount)} ر.س`,
+    text: `${invoiceType} من برندة الإجمالي شامل الضريبة: ${roundMoney(amount)} ر.س`,
   });
 }

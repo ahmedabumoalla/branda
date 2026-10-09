@@ -161,7 +161,7 @@ export function OffersPageClient({
         setMessage("تم حفظ العرض وتحديث القائمة");
         setError(null);
       } catch {
-        setError("تعذر حفظ العرض. بقيت إدخالاتك كما هي");
+        setError("تعذر حفظ العرض بقيت إدخالاتك كما هي");
       }
     });
   }
@@ -224,7 +224,7 @@ export function OffersPageClient({
       setMessage("تم رفع صورة العرض وحفظها");
       setError(null);
     } catch {
-      setError("تعذر رفع الصورة. لم تتغير الصورة السابقة");
+      setError("تعذر رفع الصورة لم تتغير الصورة السابقة");
     } finally {
       setIsUploading(false);
     }
@@ -328,7 +328,7 @@ export function OffersPageClient({
                 </article>
               );
             })}
-            {!filteredOffers.length ? <p className="py-8 text-center text-sm font-bold text-[#806A5E]">لا توجد نتائج مطابقة.</p> : null}
+            {!filteredOffers.length ? <p className="py-8 text-center text-sm font-bold text-[#806A5E]">لا توجد نتائج مطابقة</p> : null}
           </div>
         </aside>
 
@@ -476,7 +476,7 @@ export function OffersPageClient({
           <div role="dialog" aria-modal="true" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <Trash2 className="h-7 w-7 text-rose-700" />
             <h2 className="mt-3 text-xl font-black text-[#3A2117]">تأكيد حذف العرض</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">{rastSpotlight ? "سيُخفى العرض من منيو مقهى الكواكب ولن يتم الحذف دون هذا التأكيد" : "سيُخفى العرض من الفرع الإلكتروني، ولن يتم الحذف دون هذا التأكيد."}</p>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">{rastSpotlight ? "سيُخفى العرض من منيو مقهى الكواكب ولن يتم الحذف دون هذا التأكيد" : "سيُخفى العرض من الفرع الإلكتروني ولن يتم الحذف دون هذا التأكيد"}</p>
             <div className="mt-5 flex gap-2">
               <button type="button" onClick={() => void confirmDelete()} className="min-h-11 rounded-xl bg-rose-700 px-4 text-sm font-black text-white">حذف العرض</button>
               <button type="button" onClick={() => setDeleteTarget(null)} className="min-h-11 rounded-xl border border-[#E7D7C6] px-4 text-sm font-black">إلغاء</button>

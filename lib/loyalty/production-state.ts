@@ -191,7 +191,7 @@ export function buildLoyaltyPointsState(settings: LoyaltySettings): LoyaltyPoint
     earningRule: firstEarn?.title || `${settings.pointsPerSar} نقطة لكل ريال`,
     redemptionRule: firstRedemption?.title || "لا توجد قاعدة استبدال مفعلة",
     expiryDays: 0,
-    policyText: firstRedemption?.description || "تظهر نقاط الولاء حسب القواعد المحفوظة في لوحة التحكم.",
+    policyText: firstRedemption?.description || "تظهر نقاط الولاء حسب القواعد المحفوظة في لوحة التحكم",
     customerPointsBalance: 320,
     usedPoints: 0,
     earnedLastOperation: 0,

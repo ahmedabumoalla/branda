@@ -1439,7 +1439,7 @@ export function BattleArenaGame() {
   const [structureHp, setStructureHp] = useState<StructureHp>(() => makeInitialStructureHp());
   const [energy, setEnergy] = useState(START_ENERGY);
   const [result, setResult] = useState<GameResult>("playing");
-  const [notice, setNotice] = useState("اختر بطاقة ثم ضعها داخل منطقتك.");
+  const [notice, setNotice] = useState("اختر بطاقة ثم ضعها داخل منطقتك");
   const [selectedCardKind, setSelectedCardKind] = useState<UnitKind | null>(null);
 
   const unitsRef = useRef<Unit[]>([]);
@@ -1556,13 +1556,13 @@ export function BattleArenaGame() {
       if (resultRef.current !== "playing") return;
 
       if (energyRef.current < card.cost) {
-        setNotice("الطاقة غير كافية لهذه البطاقة.");
+        setNotice("الطاقة غير كافية لهذه البطاقة");
         setSelectedCardKind(null);
         return;
       }
 
       setSelectedCardKind(card.kind);
-      setNotice(`${card.shortName}: اختر مكان الاستدعاء.`);
+      setNotice(`${card.shortName}: اختر مكان الاستدعاء`);
     },
     [],
   );
@@ -1575,7 +1575,7 @@ export function BattleArenaGame() {
       if (!card) return;
 
       if (energyRef.current < card.cost) {
-        setNotice("الطاقة غير كافية لهذه البطاقة.");
+        setNotice("الطاقة غير كافية لهذه البطاقة");
         setSelectedCardKind(null);
         return;
       }
@@ -1595,7 +1595,7 @@ export function BattleArenaGame() {
       syncEnergy(energyRef.current - card.cost);
       spawnUnit("player", card, laneFromX(point.x), point);
       setSelectedCardKind(null);
-      setNotice(`تم إرسال ${card.shortName}.`);
+      setNotice(`تم إرسال ${card.shortName}`);
     },
     [selectedCardKind, spawnUnit, syncEnergy],
   );
@@ -1606,7 +1606,7 @@ export function BattleArenaGame() {
     syncEnergy(START_ENERGY);
     syncResult("playing");
     setSelectedCardKind(null);
-    setNotice("جولة جديدة بدأت.");
+    setNotice("جولة جديدة بدأت");
     nextUnitIdRef.current = 1;
     nextLaneRef.current = 0;
     botTimerRef.current = 3.2;

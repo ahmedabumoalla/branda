@@ -160,7 +160,7 @@ function CafePageInner({ slug }: { slug: string }) {
     return (
       <ThemedCafeShell slug={slug} maxWidth="max-w-md">
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
-          <p className="font-black">جاري التحميل...</p>
+          <p className="font-black">جاري التحميل</p>
         </div>
       </ThemedCafeShell>
     );
@@ -320,7 +320,7 @@ export function CafePageClient({ slug }: { slug: string }) {
     <Suspense
       fallback={
         <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#e8e4df]">
-          <p className="font-black text-[#4a4540]">جاري التحميل...</p>
+          <p className="font-black text-[#4a4540]">جاري التحميل</p>
         </main>
       }
     >

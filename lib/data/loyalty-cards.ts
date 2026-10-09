@@ -422,7 +422,7 @@ export async function createOwnerCashier(input: {
   });
 
   // Do not return raw SQL/provider errors: they may include submitted credentials.
-  if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف. تحقق من البيانات وأن البريد غير مستخدم.");
+  if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف تحقق من البيانات وأن البريد غير مستخدم");
   let whatsappStatus: "queued" | "failed" | "unavailable" = "unavailable";
   if (isGreenApiConfigured()) {
     try {
@@ -485,7 +485,7 @@ export async function recordOwnerLoyaltyOperation(input: {
     parsed.cardCode.trim().toUpperCase();
 
   if (cafe.slug === "rast") {
-    throw new Error("استخدم شاشة الموظف لتسجيل أختام مقهى الكواكب وصرف المكافآت.");
+    throw new Error("استخدم شاشة الموظف لتسجيل أختام مقهى الكواكب وصرف المكافآت");
   }
 
   const normalizedInvoiceBarcode = parsed.invoiceBarcode?.trim()
@@ -548,9 +548,9 @@ export async function issueCurrentCustomerLoyaltyCard(slug: string) {
 
   if (slug === "rast") {
     const profile = await getVerifiedRastCustomerProfile();
-    if (!profile) throw new Error("تحقق من رقم جوالك أولًا.");
+    if (!profile) throw new Error("تحقق من رقم جوالك أولًا");
     const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
-    if (error) throw new Error("تعذر إصدار بطاقة الولاء.");
+    if (error) throw new Error("تعذر إصدار بطاقة الولاء");
     return String(data);
   }
 
@@ -635,7 +635,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
     const profile = await getVerifiedRastCustomerProfile();
     if (!profile || profile.id !== customerProfileId) return null;
     const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
-    if (error) throw new Error("تعذر إصدار بطاقة الولاء. تحقق من تفعيل البرنامج.");
+    if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");
     return getLoyaltyCardViewByCode(String(data));
   }
 

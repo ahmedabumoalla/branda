@@ -22,7 +22,7 @@ export async function startOwnerCashierAction() {
   try {
     await startOwnerCashierSession();
   } catch {
-    return { ok: false as const, message: "تعذر فتح نقطة التشغيل بجلسة المالك. تحقق من صلاحياتك وحاول مجددًا." };
+    return { ok: false as const, message: "تعذر فتح نقطة التشغيل بجلسة المالك تحقق من صلاحياتك وحاول مجددًا" };
   }
   redirect("/cashier");
 }

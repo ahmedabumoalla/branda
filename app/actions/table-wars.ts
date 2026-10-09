@@ -27,9 +27,9 @@ import type {
   TableWarsV2StartActionResult,
 } from "@/lib/table-wars/v2-types";
 
-const SAFE_JOIN_ERROR = "تعذر الانضمام إلى ردهة حرب الطاولات. حاول مرة أخرى.";
-const SAFE_START_ERROR = "تعذر بدء جولة حرب الطاولات حاليًا. حاول مرة أخرى.";
-const SAFE_SNAPSHOT_ERROR = "تعذر تحميل حالة حرب الطاولات حاليًا.";
+const SAFE_JOIN_ERROR = "تعذر الانضمام إلى ردهة حرب الطاولات حاول مرة أخرى";
+const SAFE_START_ERROR = "تعذر بدء جولة حرب الطاولات حاليًا حاول مرة أخرى";
+const SAFE_SNAPSHOT_ERROR = "تعذر تحميل حالة حرب الطاولات حاليًا";
 
 function tableWarsServerErrorDetails(error: unknown) {
   const value = error && typeof error === "object" ? (error as Record<string, unknown>) : null;
@@ -82,7 +82,7 @@ export async function joinTableWarsV2Team(
   requireStorefrontEnabled();
   const normalizedNickname = typeof nickname === "string" ? nickname.trim().replace(/\s+/g, " ") : "";
   if (normalizedNickname.length < 2 || normalizedNickname.length > 20) {
-    return { ok: false, message: "الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا." };
+    return { ok: false, message: "الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا" };
   }
   if (team !== "blue" && team !== "red") {
     return { ok: false, message: SAFE_JOIN_ERROR };
@@ -160,7 +160,7 @@ export async function startTableWarsV2LobbyRoundAction(
     const customerCafeId = customerProfile?.cafe_id ? String(customerProfile.cafe_id) : null;
     hasCustomerProfile = Boolean(customerProfileId && cafeId && customerCafeId === cafeId);
     if (!hasCustomerProfile || !cafeId || !customerProfileId) {
-      throw Object.assign(new Error("تعذر التحقق من جلسة لاعب حرب الطاولات."), {
+      throw Object.assign(new Error("تعذر التحقق من جلسة لاعب حرب الطاولات"), {
         code: "TABLE_WARS_START_PLAYER_MISSING",
       });
     }
@@ -189,7 +189,7 @@ export async function startTableWarsV2LobbyRoundAction(
     if (!isActive) {
       return {
         ok: false,
-        message: "بدأت محاولة الجولة، لكن تعذر تحميل حالتها النشطة. أعد المحاولة.",
+        message: "بدأت محاولة الجولة لكن تعذر تحميل حالتها النشطة أعد المحاولة",
         requiresRejoin: false,
       };
     }

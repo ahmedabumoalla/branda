@@ -113,7 +113,7 @@ const GOLD = "#D9A33F";
 const TABLE_TOP = "#6B3A25";
 const TABLE_EDGE = "#3A2118";
 const FLOOR = "#F4E7D7";
-const SEAT_NOT_BOUND_MESSAGE = "لم يتم ربط مقعدك بعد، أعد اختيار الفريق";
+const SEAT_NOT_BOUND_MESSAGE = "لم يتم ربط مقعدك بعد أعد اختيار الفريق";
 const TEAM_CELL_CONTROL_MESSAGE = "هذه طاولة فريقك ويمكنك التحكم بها";
 const ENEMY_CELL_MESSAGE = "هذه طاولة خصم";
 const OTHER_PLAYER_CELL_MESSAGE = "هذه طاولة لاعب آخر";
@@ -1392,24 +1392,24 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
         return;
       }
       if (cell.soldiers < MIN_SEND_SOLDIERS) {
-        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل.`);
+        noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل`);
         return;
       }
       state.selectedCellId = cell.id;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${reason.message}`, "اختر طاولة متصلة كهدف.");
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${reason.message}`, "اختر طاولة متصلة كهدف");
       return;
     }
 
     if (state.selectedCellId === cell.id) {
       state.selectedCellId = null;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تم إلغاء الاختيار.`);
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تم إلغاء الاختيار`);
       return;
     }
 
     const source = state.cellById.get(state.selectedCellId);
     if (!source) {
       state.selectedCellId = null;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا.`);
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا`);
       return;
     }
 
@@ -1422,13 +1422,13 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
 
     if (source.team !== state.currentPlayer?.team) {
       state.selectedCellId = null;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا.`);
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — اختر مصدرًا صالحًا`);
       return;
     }
 
     if (source.soldiers < MIN_SEND_SOLDIERS) {
       state.selectedCellId = null;
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل.`);
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — تحتاج الطاولة إلى جنديين على الأقل`);
       return;
     }
 
@@ -1439,11 +1439,11 @@ export const TableWarsCanvasGame = memo(function TableWarsCanvasGame({
     }
     const didSend = emitMove(state, "player_move", source, cell, soldiers, onLocalEventRef.current);
     if (!didSend) {
-      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — لا يمكن إرسال الجنود عبر هذا المسار.`);
+      noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — لا يمكن إرسال الجنود عبر هذا المسار`);
       return;
     }
     state.selectedCellId = null;
-    noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${cell.team === source.team ? "الدعم في الطريق." : "الهجوم في الطريق."}`);
+    noteInput(`آخر ضغطة: طاولة ${cell.slotIndex} — ${cell.team === source.team ? "الدعم في الطريق" : "الهجوم في الطريق"}`);
   }
 
   function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {

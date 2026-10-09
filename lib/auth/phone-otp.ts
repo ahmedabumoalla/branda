@@ -87,14 +87,14 @@ export function isAllowedCustomerOtpPhone(phoneNormalized: string, cafeSlug?: st
 function requestError(result: string | null | undefined, retryAfter?: number) {
   if (result === "cooldown") {
     return {
-      message: "انتظر قليلًا قبل طلب رمز جديد.",
+      message: "انتظر قليلًا قبل طلب رمز جديد",
       retryAfterSeconds: retryAfter ?? OTP_RESEND_SECONDS,
     };
   }
   if (result === "hourly_limit" || result === "daily_limit" || result === "global_limit") {
-    return { message: "تم بلوغ حد إرسال رموز التحقق. حاول لاحقًا." };
+    return { message: "تم بلوغ حد إرسال رموز التحقق حاول لاحقًا" };
   }
-  return { message: "تعذر إرسال رمز التحقق. حاول مرة أخرى." };
+  return { message: "تعذر إرسال رمز التحقق حاول مرة أخرى" };
 }
 
 export async function requestCustomerPhoneOtp(
@@ -111,14 +111,14 @@ export async function requestCustomerPhoneOtp(
     return {
       required: true,
       ok: false,
-      message: "أدخل رقم جوال سعودي صحيحًا.",
+      message: "أدخل رقم جوال سعودي صحيحًا",
     };
   }
   if (!isAllowedCustomerOtpPhone(phoneNormalized, slug)) {
     return {
       required: true,
       ok: false,
-      message: "تعذر إرسال رمز التحقق لهذا الرقم.",
+      message: "تعذر إرسال رمز التحقق لهذا الرقم",
     };
   }
 
@@ -127,7 +127,7 @@ export async function requestCustomerPhoneOtp(
     return {
       required: true,
       ok: false,
-      message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
     };
   }
 
@@ -190,7 +190,7 @@ export async function requestCustomerPhoneOtp(
     return {
       required: true,
       ok: false,
-      message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
     };
   }
 

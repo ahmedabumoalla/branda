@@ -4,7 +4,7 @@ import { loyaltyActivityKinds, loyaltyActivityOutcomes, type LoyaltyActivityFilt
 const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}, "التاريخ غير صالح.");
+}, "التاريخ غير صالح");
 
 const filtersSchema = z.object({
   from: calendarDate,
@@ -17,7 +17,7 @@ const filtersSchema = z.object({
 }).strict().refine((value) => {
   const days = (Date.parse(value.to) - Date.parse(value.from)) / 86400000;
   return days >= 0 && days <= 365;
-}, "اختر فترة صحيحة لا تتجاوز سنة.");
+}, "اختر فترة صحيحة لا تتجاوز سنة");
 
 export function parseLoyaltyActivityFilters(input: LoyaltyActivityFilters) {
   const filters = filtersSchema.parse(input);

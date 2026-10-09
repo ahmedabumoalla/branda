@@ -47,7 +47,7 @@ export function AdminOperationsPage({ initialOperations, configError }: Props) {
   return (
     <AdminPageShell
       title="كل العمليات"
-      subtitle="سجل كامل للطلبات والمدفوعات والتغييرات التي تتم داخل المنصة."
+      subtitle="سجل كامل للطلبات والمدفوعات والتغييرات التي تتم داخل المنصة"
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
@@ -56,7 +56,7 @@ export function AdminOperationsPage({ initialOperations, configError }: Props) {
           <AdminInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث في العمليات..."
+            placeholder="ابحث في العمليات"
             className="pr-12"
           />
         </div>

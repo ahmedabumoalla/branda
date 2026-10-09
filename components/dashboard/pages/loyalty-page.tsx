@@ -135,7 +135,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
       enabled: true,
       pointsCost: 75,
       discountPercent: 5,
-      description: "يستبدل العميل 75 نقطة ويحصل على خصم 5%.",
+      description: "يستبدل العميل 75 نقطة ويحصل على خصم 5%",
     };
     setSettings((prev) => ({
       ...prev,
@@ -167,7 +167,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
     <div dir="rtl">
       <DashboardPageShell
         title="نقاط الولاء"
-        subtitle="بناء قواعد الكسب والاستبدال — مع معاينة لما يراه العميل."
+        subtitle="بناء قواعد الكسب والاستبدال — مع معاينة لما يراه العميل"
         action={
           <PrimaryButton onClick={saveAll} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
@@ -199,7 +199,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
               <div>
                 <h2 className="text-2xl font-black text-[#3A2117]">إعدادات عامة</h2>
                 <p className="text-sm font-bold text-[#7A6255]">
-                  النقاط الأساسية ونقاط الترحيب وحالة البرنامج.
+                  النقاط الأساسية ونقاط الترحيب وحالة البرنامج
                 </p>
               </div>
             </div>
@@ -267,7 +267,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
                     ))
                   ) : (
                     <p className="text-sm font-bold text-[#CBB29C]">
-                      لا توجد مكافآت متاحة بهذا الرصيد — أضف قواعد استبدال أقل.
+                      لا توجد مكافآت متاحة بهذا الرصيد — أضف قواعد استبدال أقل
                     </p>
                   )}
                 </div>
@@ -442,7 +442,7 @@ export function LoyaltyPageClient({ initialSettings, initialRewards, configError
             <div>
               <h2 className="text-2xl font-black">تظهر المكافآت في صفحة العلامة</h2>
               <p className="mt-2 text-[#E5D8CD]">
-                عند الحفظ تُخزَّن الإعدادات في Supabase وتُحدَّث المكافآت في جدول loyalty_rewards.
+                عند الحفظ تُخزَّن الإعدادات في Supabase وتُحدَّث المكافآت في جدول loyalty_rewards
               </p>
             </div>
             <Gift className="ml-auto h-10 w-10 text-[#F6C35B]/50" />

@@ -24,6 +24,13 @@ This version has breaking changes - APIs, conventions, and file structure may al
 - Do not use bulk encoding-conversion tools without reviewing the resulting diff.
 - Do not consider the task complete until the text integrity check and TypeScript pass.
 
+## Platform interface copy
+
+- Write headings, descriptions, hints, buttons, validation messages and notifications without trailing periods or commas
+- Remove decorative dots and unnecessary commas from short interface phrases across the platform
+- Keep punctuation only when it carries meaning, such as list separators, questions, decimal values, currency abbreviations, email addresses and URLs
+- Apply this rule to new and edited Arabic interface copy and shared system messages without rewriting customer-authored content
+
 ## Communication Rules
 
 All assistant responses to the user must be in Arabic and rendered right-to-left using this wrapper:

@@ -256,7 +256,7 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
   }
 
   if (!saved) {
-    throw new Error("تعذر حفظ العرض، لم يرجع السجل من قاعدة البيانات");
+    throw new Error("تعذر حفظ العرض لم يرجع السجل من قاعدة البيانات");
   }
 
   await syncLinkedProductPromo(supabase, cafe.id, payload);

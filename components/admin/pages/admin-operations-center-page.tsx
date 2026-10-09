@@ -443,7 +443,7 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
   return (
     <AdminPageShell
       title="مركز العمليات"
-      subtitle="قراءة تشغيلية لكل علامة من الجداول الموجودة فقط، بدون أرقام وهمية أو توسيع صلاحيات."
+      subtitle="قراءة تشغيلية لكل علامة من الجداول الموجودة فقط بدون أرقام وهمية أو توسيع صلاحيات"
     >
       <AdminFilterBar>
         <div className="relative min-w-0 w-full flex-1">
@@ -451,7 +451,7 @@ export function AdminOperationsCenterPage({ data, configError }: Props) {
           <AdminInput
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="ابحث باسم العلامة أو الرابط..."
+            placeholder="ابحث باسم العلامة أو الرابط"
             className="pr-12"
           />
         </div>

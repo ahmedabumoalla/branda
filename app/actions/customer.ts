@@ -202,12 +202,12 @@ export async function sendBranchProximityEmailAction(input: BranchProximityEmail
       subject,
       text: `أهلًا ${customerName}
 ${cafeName} ترحب بك بالقرب من ${branchName}
-تفحص جديدنا، ممكن فيه شيء فاتك اليوم.
+تفحص جديدنا ممكن فيه شيء فاتك اليوم
 ${href}`,
       html: `<div dir="rtl" align="right" style="font-family:Tahoma,Arial,sans-serif;line-height:1.8;color:#311912">
   <p>أهلًا ${escapeEmailHtml(customerName)}</p>
   <p><strong>${escapeEmailHtml(cafeName)}</strong> ترحب بك بالقرب من <strong>${escapeEmailHtml(branchName)}</strong></p>
-  <p>تفحص جديدنا، ممكن فيه شيء فاتك اليوم.</p>
+  <p>تفحص جديدنا ممكن فيه شيء فاتك اليوم</p>
   <p><a href="${escapeEmailHtml(href)}" style="display:inline-block;background:#6B3A25;color:#FCF8F3;text-decoration:none;padding:12px 18px;border-radius:14px;font-weight:700">فتح صفحة العلامة</a></p>
 </div>`,
     });

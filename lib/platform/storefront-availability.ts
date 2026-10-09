@@ -6,7 +6,7 @@ export function isStorefrontEnabled() {
 }
 
 export function requireStorefrontEnabled() {
-  if (!isStorefrontEnabled()) throw new Error("الفرع الإلكتروني غير متاح حاليًا.");
+  if (!isStorefrontEnabled()) throw new Error("الفرع الإلكتروني غير متاح حاليًا");
 }
 
 export function isStorefrontPath(pathname: string) {
@@ -16,7 +16,7 @@ export function isStorefrontPath(pathname: string) {
 }
 
 export function storefrontUnavailableResponse() {
-  return new Response("الخدمة غير متاحة حاليًا.", {
+  return new Response("الخدمة غير متاحة حاليًا", {
     status: 404,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

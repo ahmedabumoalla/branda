@@ -71,7 +71,7 @@ export const mockOffers: CafeOffer[] = [
   {
     id: "1",
     title: "خصم 15% على أول طلب",
-    description: "خصم ترحيبي للعملاء الجدد عند أول طلب من الكوفي.",
+    description: "خصم ترحيبي للعملاء الجدد عند أول طلب من الكوفي",
     type: "خصم",
     status: "نشط",
     placement: "كلاهما",
@@ -85,7 +85,7 @@ export const mockOffers: CafeOffer[] = [
   {
     id: "2",
     title: "وصل مشروبنا الجديد",
-    description: "جرّب آيس سبانش لاتيه الجديد من قطرة.",
+    description: "جرّب آيس سبانش لاتيه الجديد من قطرة",
     type: "إطلاق منتج",
     status: "نشط",
     placement: "بانر الكوفي",
@@ -97,6 +97,6 @@ export const mockOffers: CafeOffer[] = [
     promoProductName: "آيس سبانش لاتيه",
     promoProductPrice: 21,
     promoProductCategory: "بارد",
-    promoProductDescription: "مشروب بارد بطعم متوازن ومناسب لعشاق القهوة الحلوة.",
+    promoProductDescription: "مشروب بارد بطعم متوازن ومناسب لعشاق القهوة الحلوة",
   },
 ];

@@ -67,7 +67,7 @@ export function LoyaltyCardBuilder({ value, onChange }: Props) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-black text-[#311912]">إعدادات البطاقة</h2>
-            <p className="mt-1 text-xs font-bold text-[#806A5E]">كل التعديلات محفوظة محلياً داخل المعاينة.</p>
+            <p className="mt-1 text-xs font-bold text-[#806A5E]">كل التعديلات محفوظة محلياً داخل المعاينة</p>
           </div>
           <button
             type="button"

@@ -117,7 +117,7 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
     return {
       ok: false as const,
       reason: "failed" as const,
-      message: "تعذر إكمال المصادقة. حاول مرة أخرى.",
+      message: "تعذر إكمال المصادقة حاول مرة أخرى",
     };
   }
 
@@ -151,8 +151,8 @@ export async function linkCustomerAfterSupabasePhoneOtp(input: {
           : ("conflict" as const),
       message:
         row.result === "not_found"
-          ? "لا يوجد حساب عميل لهذا الرقم في هذه العلامة. يمكنك إنشاء حساب جديد."
-          : "تعذر الدخول لهذا الرقم حاليًا. تواصل مع إدارة العلامة.",
+          ? "لا يوجد حساب عميل لهذا الرقم في هذه العلامة يمكنك إنشاء حساب جديد"
+          : "تعذر الدخول لهذا الرقم حاليًا تواصل مع إدارة العلامة",
     };
   }
 

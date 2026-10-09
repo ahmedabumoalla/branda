@@ -55,7 +55,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   const [nicknameInput, setNicknameInput] = useState(initialNickname);
   const [pendingNickname, setPendingNickname] = useState(initialNickname);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
-  const [message, setMessage] = useState("استعد للسيطرة على الطاولات.");
+  const [message, setMessage] = useState("استعد للسيطرة على الطاولات");
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(secondsUntil(initialSnapshot.round?.lobbyEndsAt));
   const [realtimeStatus, setRealtimeStatus] = useState<TableWarsRealtimeLiteConnectionStatus>("connecting");
@@ -166,13 +166,13 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           }
           if (result.snapshot.round?.status !== "active") {
             setStartFailure({
-              message: "بدأت محاولة الجولة، لكن تعذر تحميل حالتها النشطة. أعد المحاولة.",
+              message: "بدأت محاولة الجولة لكن تعذر تحميل حالتها النشطة أعد المحاولة",
               requiresRejoin: false,
             });
             return;
           }
           setSnapshot(result.snapshot);
-          setMessage("بدأت الجولة باللاعبين الموجودين.");
+          setMessage("بدأت الجولة باللاعبين الموجودين");
           setStartFailure(null);
           setError(null);
         })
@@ -184,7 +184,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
             startAttemptResult: "request-error",
           });
           setStartFailure({
-            message: startError instanceof Error ? startError.message : "تعذر بدء الجولة.",
+            message: startError instanceof Error ? startError.message : "تعذر بدء الجولة",
             requiresRejoin: false,
           });
         });
@@ -220,7 +220,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
           setError(null);
         })
         .catch((leaveError) => {
-          setError(leaveError instanceof Error ? leaveError.message : "تعذر الرجوع لاختيار الفريق.");
+          setError(leaveError instanceof Error ? leaveError.message : "تعذر الرجوع لاختيار الفريق");
         });
     });
   }, [round?.id, slug]);
@@ -266,9 +266,9 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
   }, [canShowGame, isRoundFinished, round?.id, slug, snapshot.cafeSlug]);
 
   const handleLocalRealtimeEvent = useCallback((event: TableWarsRealtimeLiteEvent) => {
-    if (event.type === "battle") setMessage("اشتباك في أحد المسارات.");
-    if (event.type === "capture") setMessage("تمت السيطرة على طاولة.");
-    if (event.type === "round_finished") setMessage("انتهت الجولة.");
+    if (event.type === "battle") setMessage("اشتباك في أحد المسارات");
+    if (event.type === "capture") setMessage("تمت السيطرة على طاولة");
+    if (event.type === "round_finished") setMessage("انتهت الجولة");
     return realtimeChannelRef.current?.send(event) ?? Promise.resolve();
   }, []);
 
@@ -279,7 +279,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       .then(setSnapshot)
       .catch((finishError) => {
         finishedSaveRef.current = false;
-        setError(finishError instanceof Error ? finishError.message : "تعذر حفظ نتيجة الجولة.");
+        setError(finishError instanceof Error ? finishError.message : "تعذر حفظ نتيجة الجولة");
       });
   }, [round?.id, slug]);
 
@@ -287,7 +287,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     finishedSaveRef.current = false;
     setRealtimeEvents([]);
     void startNewTableWarsLiteRoundAction(slug).then(setSnapshot).catch((startError) => {
-      setError(startError instanceof Error ? startError.message : "تعذر تجهيز جولة جديدة.");
+      setError(startError instanceof Error ? startError.message : "تعذر تجهيز جولة جديدة");
     });
   }, [slug]);
 
@@ -295,7 +295,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
     event.preventDefault();
     const nickname = normalizeNickname(nicknameInput);
     if (!isValidNickname(nickname)) {
-      setNicknameError("اكتب اسمًا مستعارًا من حرفين إلى 20 حرفًا.");
+      setNicknameError("اكتب اسمًا مستعارًا من حرفين إلى 20 حرفًا");
       return;
     }
     setPendingNickname(nickname);
@@ -311,7 +311,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
             }
             setSnapshot(result.snapshot);
           })
-          .catch((joinError) => setNicknameError(joinError instanceof Error ? joinError.message : "تعذر حفظ الاسم."));
+          .catch((joinError) => setNicknameError(joinError instanceof Error ? joinError.message : "تعذر حفظ الاسم"));
       });
     }
   }
@@ -330,7 +330,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
         <section className="rounded-2xl border border-[#E7D7C6] bg-white p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#4A281D]/10 text-[#4A281D]"><UserRound className="h-5 w-5" /></span>
-            <div><h2 className="font-black text-[#311912]">سجّل اسمك المستعار</h2><p className="text-xs font-bold text-[#806A5E]">سيظهر الاسم فوق الطاولة التي تديرها.</p></div>
+            <div><h2 className="font-black text-[#311912]">سجّل اسمك المستعار</h2><p className="text-xs font-bold text-[#806A5E]">سيظهر الاسم فوق الطاولة التي تديرها</p></div>
           </div>
           <form onSubmit={handleNicknameSubmit} className="mt-4 flex gap-2">
             <input value={nicknameInput} onChange={(event) => setNicknameInput(event.target.value)} minLength={2} maxLength={20} required className="h-11 min-w-0 flex-1 rounded-xl border border-[#E7D7C6] px-3 font-bold outline-none focus:border-[#6B3A25]" aria-label="الاسم المستعار" />
@@ -343,7 +343,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
       {canPickTeam ? (
         <TableWarsTeamPicker canJoinBlue={snapshot.canJoinBlue} canJoinRed={snapshot.canJoinRed} onJoin={(team) => joinTableWarsV2Team(slug, team, pendingNickname)} onJoined={(nextSnapshot) => {
           setSnapshot(nextSnapshot);
-          setMessage("تم الانضمام إلى ردهة الانتظار.");
+          setMessage("تم الانضمام إلى ردهة الانتظار");
         }} />
       ) : null}
 
@@ -380,7 +380,7 @@ export function TableWarsMultiplayerGame({ slug, initialSnapshot }: Props) {
               <h2 className="mt-3 text-lg font-black text-[#311912]">
                 {isRoundPending ? "جاري بدء الجولة" : "بانتظار المنافسين"}
               </h2>
-              <p className="mt-1 text-sm font-bold text-[#806A5E]">سيبدأ اللعب بالمتواجدين، والكمبيوتر يكمل المقاعد الفارغة.</p>
+              <p className="mt-1 text-sm font-bold text-[#806A5E]">سيبدأ اللعب بالمتواجدين والكمبيوتر يكمل المقاعد الفارغة</p>
             </>
           )}
           <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-white px-5 py-2 text-2xl font-black text-amber-800" aria-live="polite">

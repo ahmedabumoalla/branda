@@ -60,7 +60,7 @@ function menuImportErrorMessage(error: unknown, fallback: string) {
     text.includes("42501") ||
     (text.toLowerCase().includes("permission denied") && text.includes("menu_import"))
   ) {
-    return "تعذر إنشاء مسودة الاستيراد بسبب صلاحيات قاعدة البيانات. شغّل migration 053 ثم أعد المحاولة.";
+    return "تعذر إنشاء مسودة الاستيراد بسبب صلاحيات قاعدة البيانات شغّل migration 053 ثم أعد المحاولة";
   }
   return fallback;
 }
@@ -100,11 +100,11 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
 
   async function analyze() {
     setBusy(true);
-    setMessage(mode === "url" ? "جاري قراءة المنيو..." : "جاري قراءة الملف...");
+    setMessage(mode === "url" ? "جاري قراءة المنيو" : "جاري قراءة الملف");
     const progressTimer =
       mode === "url"
         ? window.setTimeout(() => {
-            setMessage("جاري ترتيب الأصناف...");
+            setMessage("جاري ترتيب الأصناف");
           }, 900)
         : undefined;
     try {
@@ -124,7 +124,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
       setMessage(nextJob.errorMessage ?? `تم استخراج ${nextItems.length} صنف`);
     } catch (error) {
       console.error("Menu import draft creation failed", error);
-      setMessage(menuImportErrorMessage(error, "تعذر إنشاء مسودة الاستيراد."));
+      setMessage(menuImportErrorMessage(error, "تعذر إنشاء مسودة الاستيراد"));
     } finally {
       if (progressTimer) window.clearTimeout(progressTimer);
       setBusy(false);
@@ -139,10 +139,10 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
       const nextJob = await updateMenuImportItemsAction(job.id, items);
       setJob(nextJob);
       setItems(editableFromJob(nextJob));
-      setMessage("تم حفظ تعديلات المسودة.");
+      setMessage("تم حفظ تعديلات المسودة");
     } catch (error) {
       console.error("Menu import draft save failed", error);
-      setMessage(menuImportErrorMessage(error, "تعذر حفظ تعديلات المسودة."));
+      setMessage(menuImportErrorMessage(error, "تعذر حفظ تعديلات المسودة"));
     } finally {
       setBusy(false);
     }
@@ -156,11 +156,11 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
       const nextJob = await approveMenuImportAction(job.id, items);
       setJob(nextJob);
       setItems(editableFromJob(nextJob));
-      setMessage("تم اعتماد المنتجات الجاهزة وإضافتها للمنيو.");
+      setMessage("تم اعتماد المنتجات الجاهزة وإضافتها للمنيو");
       onImported();
     } catch (error) {
       console.error("Menu import approval failed", error);
-      setMessage(menuImportErrorMessage(error, "تعذر اعتماد المسودة. راجع الصفوف التي تحتاج مراجعة."));
+      setMessage(menuImportErrorMessage(error, "تعذر اعتماد المسودة راجع الصفوف التي تحتاج مراجعة"));
     } finally {
       setBusy(false);
     }
@@ -183,7 +183,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
   async function reportIncompleteMenuUrl() {
     const targetUrl = reportUrl.trim() || (mode === "url" ? url.trim() : "");
     if (!targetUrl) {
-      setReportMessage("أدخل رابط المنيو المراد إرساله.");
+      setReportMessage("أدخل رابط المنيو المراد إرساله");
       return;
     }
 
@@ -198,7 +198,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
       if (result.ok) setReportUrl("");
     } catch (error) {
       console.error("Menu import URL report failed", error);
-      setReportMessage("تعذر الإرسال، حاول مرة أخرى.");
+      setReportMessage("تعذر الإرسال حاول مرة أخرى");
     } finally {
       setReportBusy(false);
     }
@@ -214,7 +214,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-black text-[#3A2117]">استيراد المنيو</h2>
-            <p className="mt-1 text-sm font-bold text-[#806A5E]">أنشئ مسودة من PDF أو رابط خارجي، ثم راجع الصفوف قبل الإضافة النهائية.</p>
+            <p className="mt-1 text-sm font-bold text-[#806A5E]">أنشئ مسودة من PDF أو رابط خارجي ثم راجع الصفوف قبل الإضافة النهائية</p>
           </div>
           <button
             type="button"
@@ -284,7 +284,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
           <div className="mb-3">
             <h3 className="text-base font-black text-[#3A2117]">لم يتم استخراج كامل الأصناف؟</h3>
             <p className="mt-1 text-sm font-bold text-[#806A5E]">
-              برجاء إرسال رابط المنيو للفريق التقني لمراجعته وإضافته للنظام.
+              برجاء إرسال رابط المنيو للفريق التقني لمراجعته وإضافته للنظام
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -340,7 +340,7 @@ export function MenuImportModal({ open, onClose, onImported }: Props) {
                 <tbody>
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-8 text-center font-bold text-[#806A5E]">لا توجد صفوف مستخرجة. جرّب مصدرًا آخر أو أعد المحاولة لاحقًا.</td>
+                      <td colSpan={10} className="p-8 text-center font-bold text-[#806A5E]">لا توجد صفوف مستخرجة جرّب مصدرًا آخر أو أعد المحاولة لاحقًا</td>
                     </tr>
                   ) : (
                     items.map((item, index) => (

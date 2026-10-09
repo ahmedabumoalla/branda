@@ -83,11 +83,11 @@ export const mockExperienceCampaigns: ExperienceCampaign[] = [
     cafeSlug: "qatrah",
     title: "وثّق تجربتك",
     description:
-      "صوّر تجربتك في الكوفي وانشرها على TikTok أو Instagram واحصل على نقاط ولاء.",
+      "صوّر تجربتك في الكوفي وانشرها على TikTok أو Instagram واحصل على نقاط ولاء",
     startDate: "2026-05-01",
     endDate: "2026-06-30",
     terms:
-      "يجب أن يظهر اسم الكوفي أو المنتج في الفيديو. لا تُقبل المحتوى المسيء أو المضلل.",
+      "يجب أن يظهر اسم الكوفي أو المنتج في الفيديو لا تُقبل المحتوى المسيء أو المضلل",
     platforms: ["tiktok", "instagram", "snapchat"],
     minFollowers: 500,
     basePoints: 25,

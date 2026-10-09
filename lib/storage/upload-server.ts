@@ -124,7 +124,7 @@ export async function uploadOptimizedImage(
   }
 
   if (file.size > MAX_SERVER_UPLOAD_BYTES) {
-    throw new Error("حجم الصورة كبير جدًا، اختر ملفًا أقل من 40MB");
+    throw new Error("حجم الصورة كبير جدًا اختر ملفًا أقل من 40MB");
   }
 
   const mimeType = normalizeMime(file.type || "application/octet-stream");
@@ -134,7 +134,7 @@ export async function uploadOptimizedImage(
   }
 
   if (!BUCKET_MIME[bucket].includes(mimeType)) {
-    throw new Error("صيغة الصورة غير مدعومة، جرّب PNG أو JPG أو WEBP");
+    throw new Error("صيغة الصورة غير مدعومة جرّب PNG أو JPG أو WEBP");
   }
 
   const ext = extensionFromMime(mimeType);
@@ -223,11 +223,11 @@ export async function uploadProductVideo(file: File, entityId: string) {
   const cafe = await requireOwnerCafeContext();
 
   if (file.size <= 0) throw new Error("Missing file");
-  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا، اختر ملفًا أقل من 40MB");
+  if (file.size > MAX_SERVER_UPLOAD_BYTES) throw new Error("حجم الفيديو كبير جدًا اختر ملفًا أقل من 40MB");
 
   const mimeType = videoMimeFromFile(file);
   if (!["video/mp4", "video/webm", "video/quicktime"].includes(mimeType)) {
-    throw new Error("صيغة الفيديو غير مدعومة، ارفع MP4 أو WEBM أو MOV");
+    throw new Error("صيغة الفيديو غير مدعومة ارفع MP4 أو WEBM أو MOV");
   }
 
   const ext = videoExtensionFromMime(mimeType);

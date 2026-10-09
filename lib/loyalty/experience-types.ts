@@ -13,7 +13,7 @@ export const defaultLoyaltyExperience: LoyaltyExperienceSettings = {
   rewardKind: "custom",
   rewardDiscountPercent: null,
   rewardValidityDays: 30,
-  nearbyMessage: "قريب منّا؟ خذ لك لحظة قهوة، يسعدنا نشوفك.",
+  nearbyMessage: "قريب منّا؟ خذ لك لحظة قهوة يسعدنا نشوفك",
   latitude: null,
   longitude: null,
 };

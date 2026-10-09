@@ -277,7 +277,7 @@ function LoyaltyPanel({ slug, payload }: { slug: string; payload: CustomerFastPa
         <WalletCards className="mx-auto h-10 w-10 text-[var(--fast-button)]" />
         <h2 className="mt-3 text-2xl font-black text-[var(--fast-text)]">بطاقة الولاء جاهزة بعد تسجيل الدخول</h2>
         <p className="mt-2 text-sm font-bold leading-7 text-[var(--fast-muted)]">
-          سجل دخولك مرة واحدة وستظهر البطاقة والـ QR بسرعة من التطبيق المثبت.
+          سجل دخولك مرة واحدة وستظهر البطاقة والـ QR بسرعة من التطبيق المثبت
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Link href={getCustomerLoginHref(slug, `/c/${slug}`)} className="rounded-2xl bg-[var(--fast-button)] px-5 py-3 font-black text-white">
@@ -296,7 +296,7 @@ function LoyaltyPanel({ slug, payload }: { slug: string; payload: CustomerFastPa
       <section className="rounded-[30px] border border-[var(--fast-border)] bg-white/90 p-5 text-center shadow-[0_18px_45px_rgba(49,25,18,0.08)]">
         <Loader2 className="mx-auto h-9 w-9 animate-spin text-[var(--fast-button)]" />
         <h2 className="mt-3 text-xl font-black text-[var(--fast-text)]">جاري تجهيز بطاقة الولاء</h2>
-        <p className="mt-2 text-sm font-bold leading-7 text-[var(--fast-muted)]">حدث التطبيق بعد لحظات أو افتح حسابك الكامل.</p>
+        <p className="mt-2 text-sm font-bold leading-7 text-[var(--fast-muted)]">حدث التطبيق بعد لحظات أو افتح حسابك الكامل</p>
         <Link href={`/c/${encodeURIComponent(slug)}/account`} className="mt-5 inline-flex rounded-2xl bg-[var(--fast-button)] px-5 py-3 font-black text-white">
           فتح الحساب الكامل
         </Link>
@@ -438,7 +438,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
       <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3] px-4">
         <div className="text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-[#6B3A25]" />
-          <p className="mt-4 font-black text-[#311912]">جاري فتح تطبيق العلامة...</p>
+          <p className="mt-4 font-black text-[#311912]">جاري فتح تطبيق العلامة</p>
         </div>
       </main>
     );
@@ -487,7 +487,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
       {offlineMode ? (
         <div className="mx-auto max-w-2xl px-4 pt-3">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-black text-amber-800">
-            يتم عرض نسخة محفوظة مؤقتًا حتى يعود الاتصال.
+            يتم عرض نسخة محفوظة مؤقتًا حتى يعود الاتصال
           </div>
         </div>
       ) : null}

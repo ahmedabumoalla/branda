@@ -137,9 +137,9 @@ export function LoyaltyDashboardPage({ initialDashboard, initialSettings, config
             }
           : current,
       );
-      setMessage("تم حفظ إعدادات بطاقة الولاء.");
+      setMessage("تم حفظ إعدادات بطاقة الولاء");
     } catch {
-      setMessage("تعذر حفظ إعدادات بطاقة الولاء.");
+      setMessage("تعذر حفظ إعدادات بطاقة الولاء");
     } finally {
       setSaving(null);
     }
@@ -152,9 +152,9 @@ export function LoyaltyDashboardPage({ initialDashboard, initialSettings, config
       const nextSettings = pointsToSettings(settings, nextPoints);
       await saveLoyaltySettingsAction(nextSettings);
       setSettings(nextSettings);
-      setMessage("تم حفظ إعدادات نقاط الولاء.");
+      setMessage("تم حفظ إعدادات نقاط الولاء");
     } catch {
-      setMessage("تعذر حفظ إعدادات نقاط الولاء.");
+      setMessage("تعذر حفظ إعدادات نقاط الولاء");
     } finally {
       setSaving(null);
     }
@@ -185,7 +185,7 @@ export function LoyaltyDashboardPage({ initialDashboard, initialSettings, config
     <div dir="rtl">
       <DashboardPageShell
         title="الولاء والمكافآت"
-        subtitle="إدارة بطاقة الولاء ونقاط الولاء من بيانات العلامة الحقيقية."
+        subtitle="إدارة بطاقة الولاء ونقاط الولاء من بيانات العلامة الحقيقية"
         action={
           <Link
             href="/dashboard/loyalty/card-designer"
@@ -239,7 +239,7 @@ export function LoyaltyDashboardPage({ initialDashboard, initialSettings, config
                 <div>
                   <h2 className="text-base font-black text-[#311912]">بطاقة الولاء</h2>
                   <p className="mt-1 text-xs font-bold leading-5 text-[#806A5E]">
-                    تعرض هذه المعاينة آخر تصميم محفوظ من قاعدة البيانات، مع حالة آمنة عند عدم وجود بطاقات عملاء.
+                    تعرض هذه المعاينة آخر تصميم محفوظ من قاعدة البيانات مع حالة آمنة عند عدم وجود بطاقات عملاء
                   </p>
                 </div>
                 <Link

@@ -29,7 +29,7 @@ export function RastCameraScanner({ onDetected, disabled = false }: { onDetected
     if (!open || disabled) return;
     const preview = video.current;
     if (!preview) return;
-    return startRastCameraSession({ video: preview, onDetected: (value) => { setOpen(false); callback.current(value); }, onError: () => setError("تعذر تشغيل الكاميرا. اسمح بالوصول إليها، أو استخدم جهاز القارئ وحقل الرمز.") });
+    return startRastCameraSession({ video: preview, onDetected: (value) => { setOpen(false); callback.current(value); }, onError: () => setError("تعذر تشغيل الكاميرا اسمح بالوصول إليها أو استخدم جهاز القارئ وحقل الرمز") });
   }, [open, disabled]);
   return <div>
     <button type="button" disabled={disabled} onClick={() => { setError(""); setOpen(true); }} aria-expanded={open} aria-haspopup="dialog" aria-controls={dialogId} className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-current px-5 py-3 font-bold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">
@@ -45,7 +45,7 @@ export function RastCameraScanner({ onDetected, disabled = false }: { onDetected
       <div className="relative min-h-40 flex-1 bg-black">
         <video ref={video} muted playsInline aria-label="معاينة كاميرا قارئ البطاقة" className="absolute inset-0 h-full w-full object-contain" />
       </div>
-      <p id={`${dialogId}-help`} role={error ? "alert" : "status"} className="shrink-0 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm leading-7">{error || (disabled ? "الكاميرا متوقفة مؤقتًا حتى تنتهي العملية." : "وجّه الكاميرا إلى رمز البطاقة أو المكافأة. ستظهر القراءة قبل تأكيد العملية.")}</p>
+      <p id={`${dialogId}-help`} role={error ? "alert" : "status"} className="shrink-0 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm leading-7">{error || (disabled ? "الكاميرا متوقفة مؤقتًا حتى تنتهي العملية" : "وجّه الكاميرا إلى رمز البطاقة أو المكافأة ستظهر القراءة قبل تأكيد العملية")}</p>
     </dialog>
   </div>;
 }

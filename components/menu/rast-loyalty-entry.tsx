@@ -21,8 +21,8 @@ export function RastLoyaltyEntry() {
       </span>
       <span className={s.copy}>
         <span className={s.eyebrow}>لأنك من أهل مقهى الكواكب</span>
-        <span className={s.title}>بطاقتك، معك في كل زيارة</span>
-        <span className={s.description}>حمّل بطاقة الولاء وخلي لحظاتك معنا أقرب.</span>
+        <span className={s.title}>بطاقتك معك في كل زيارة</span>
+        <span className={s.description}>حمّل بطاقة الولاء وخلي لحظاتك معنا أقرب</span>
       </span>
       <span className={s.action}>حمّل بطاقتك<ArrowUpLeft aria-hidden="true" /></span>
     </Link>

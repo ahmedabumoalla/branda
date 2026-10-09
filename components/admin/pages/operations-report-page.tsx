@@ -28,7 +28,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const [filters, setFilters] = useState<ReportFilters>({ ...defaultReportFilters });
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState(initialReport ? "" : "تعذر تحميل البيانات. أعد المحاولة بعد التحقق من صلاحية دخولك.");
+  const [error, setError] = useState(initialReport ? "" : "تعذر تحميل البيانات أعد المحاولة بعد التحقق من صلاحية دخولك");
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const request = useRef(0);
@@ -40,14 +40,14 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const dirtyPeriod = period.from !== (report?.from || "") || period.to !== (report?.to || "");
   const updateFilters = (patch: Partial<ReportFilters>) => { setFilters(previous => ({ ...previous, ...patch })); setPage(0); };
   async function load(next: ReportPeriod = period) {
-    if (!reportPeriodSchema.safeParse(next).success) { setError("أدخل فترة صحيحة؛ تاريخ النهاية يجب ألا يسبق البداية."); return; }
+    if (!reportPeriodSchema.safeParse(next).success) { setError("أدخل فترة صحيحة؛ تاريخ النهاية يجب ألا يسبق البداية"); return; }
     const sequence = ++request.current;
     setBusy(true); setError("");
     try {
       const result = await loadOperationsReportAction(next);
       if (sequence !== request.current) return;
       if (result.ok) { setReport(result.data); setPage(0); } else setError(result.message);
-    } catch { if (sequence === request.current) setError("تعذر الاتصال. حاول تحميل التقرير مرة أخرى."); }
+    } catch { if (sequence === request.current) setError("تعذر الاتصال حاول تحميل التقرير مرة أخرى"); }
     finally { if (sequence === request.current) setBusy(false); }
   }
   function preset(days: number | null) {
@@ -61,10 +61,10 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
     if (!report || busy || dirtyPeriod || !brands.length) return;
     setExporting(true); setError("");
     try { const { downloadOperationsReportPdf } = await import("@/lib/export/operations-report-pdf"); await downloadOperationsReportPdf(report, brands, filters); }
-    catch { setError("تعذر إنشاء ملف التقرير. حاول التصدير مرة أخرى."); }
+    catch { setError("تعذر إنشاء ملف التقرير حاول التصدير مرة أخرى"); }
     finally { setExporting(false); }
   }
-  return <div className={styles.page}><AdminPageShell title="عمليات العلامات" subtitle="صورة كاملة لأداء علاماتك. قارن الوصول والولاء، وحدّد البيانات التي تهمك."
+  return <div className={styles.page}><AdminPageShell title="عمليات العلامات" subtitle="صورة كاملة لأداء علاماتك قارن الوصول والولاء وحدّد البيانات التي تهمك"
     action={<button className={styles.primary} disabled={!report || busy || exporting || dirtyPeriod || !brands.length} onClick={() => void exportPdf()}><ArrowDownToLine size={19} aria-hidden="true" />{exporting ? "جارٍ تجهيز التقرير…" : "تصدير تقرير PDF"}<span className={styles.exportCount}>{number(brands.length)} علامة</span></button>}>
     <div className={styles.root}>
       {report && <div className={styles.summary} aria-live="polite">{[
@@ -88,7 +88,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           <label>الميزة المفعّلة<select value={filters.feature} onChange={event => updateFilters({ feature: event.target.value })}><option value="">كل المميزات</option>{features.map(feature => <option key={feature} value={feature}>{featureName(feature)}</option>)}</select></label>
         </div>
         <details className={styles.query}><summary><ListFilter size={17} aria-hidden="true" />استعلام رقمي متقدم {filters.conditions.length ? `· ${number(filters.conditions.length)} شروط` : ""}<ChevronDown size={16} aria-hidden="true" /></summary>
-          <p>تظهر العلامات التي تحقق جميع الشروط. مثال: زوار الفرع أكثر من ١٠٠ وبطاقات الولاء أقل من ٢٠.</p>
+          <p>تظهر العلامات التي تحقق جميع الشروط مثال: زوار الفرع أكثر من ١٠٠ وبطاقات الولاء أقل من ٢٠</p>
           {filters.conditions.map((condition, index) => <div className={styles.condition} key={index}>
             <select aria-label={`مؤشر الشرط ${index + 1}`} value={condition.metric} onChange={event => updateFilters({ conditions: filters.conditions.map((item, i) => i === index ? { ...item, metric: event.target.value as ReportMetric } : item) })}>{reportMetrics.map(metric => <option value={metric} key={metric}>{reportMetricLabels[metric]}</option>)}</select>
             <select aria-label={`مقارنة الشرط ${index + 1}`} value={condition.operator} onChange={event => updateFilters({ conditions: filters.conditions.map((item, i) => i === index ? { ...item, operator: event.target.value as "gte" | "lte" | "eq" } : item) })}><option value="gte">أكبر من أو يساوي</option><option value="lte">أقل من أو يساوي</option><option value="eq">يساوي</option></select>
@@ -99,15 +99,15 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
         </details>
       </section>
       {error && <div className={styles.error} role="alert">{error}</div>}
-      {dirtyPeriod && <p className={styles.notice}>الفترة المعدّلة لم تُطبّق بعد. الأرقام المعروضة تخص آخر فترة محمّلة؛ طبّق الفترة قبل التصدير.</p>}
+      {dirtyPeriod && <p className={styles.notice}>الفترة المعدّلة لم تُطبّق بعد الأرقام المعروضة تخص آخر فترة محمّلة؛ طبّق الفترة قبل التصدير</p>}
       {report && <>
         <section className={`${styles.panel} ${styles.results}`} aria-label="بيانات العلامات" aria-busy={busy}>
           <div className={styles.heading}><div><h2>مقارنة العلامات <span className={styles.resultCount}>{number(brands.length)} / {number(report.brands.length)}</span></h2><p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}<span className={styles.updated}>آخر تحديث: {saudiDate(report.generatedAt)}</span></p></div>
             <button className={styles.reset} onClick={() => updateFilters({ ...defaultReportFilters })}><RotateCcw size={15} aria-hidden="true" />مسح فلاتر العلامات</button></div>
           <div className={styles.tableToolbar}><div className={styles.sort}><ArrowUpDown size={17} aria-hidden="true" /><label><span className={styles.srOnly}>ترتيب حسب</span><select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastStorefrontVisit">آخر زيارة للفرع</option><option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label><label><span className={styles.srOnly}>الاتجاه</span><select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></div>
           <p className={styles.hint}><ArrowLeftRight size={16} aria-hidden="true" />مرّر للمقارنة · اضغط على العلامة لعرض التفاصيل</p></div>
-          <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول مقارنة العلامات، قابل للتمرير أفقيًا"><table>
-            <caption className={styles.srOnly}>مؤشرات العلامات خلال الفترة المحمّلة، وآخر الزيارات عبر كامل السجل</caption>
+          <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول مقارنة العلامات قابل للتمرير أفقيًا"><table>
+            <caption className={styles.srOnly}>مؤشرات العلامات خلال الفترة المحمّلة وآخر الزيارات عبر كامل السجل</caption>
             <thead><tr className={styles.columnGroups}><th scope="col" rowSpan={2}>العلامة التجارية<small>الاشتراك والمميزات</small></th><th scope="colgroup" colSpan={3}>الوصول الرقمي</th><th scope="colgroup" colSpan={3}>الولاء والتفاعل</th><th scope="colgroup" colSpan={2}>آخر نشاط مسجّل</th></tr><tr><th scope="col">زوار الفرع<small>والزيارات</small></th><th scope="col">حسابات الفرع<small>وإجمالي الحسابات الجديدة</small></th><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">المحافظ<small>آيفون / أندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">آخر زيارة للفرع</th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
             <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <Fragment key={brand.id}><tr className={expanded === brand.id ? styles.selectedRow : undefined}>
               <th scope="row"><button className={styles.brandButton} aria-expanded={expanded === brand.id} aria-controls={`brand-${brand.id}`} onClick={() => setExpanded(expanded === brand.id ? null : brand.id)}><span className={`${styles.avatar} ${brand.subscribed ? styles.green : styles.gold}`} aria-hidden="true">{brand.name.trim().slice(0, 1)}</span><span className={styles.brandName}>{brand.name}<span className={styles.brandSlug} dir="ltr">{brand.slug}</span></span><ChevronDown size={16} className={styles.expandIcon} aria-hidden="true" /><span className={styles.srOnly}>{expanded === brand.id ? "إغلاق التفاصيل" : "عرض التفاصيل"}</span></button><div className={styles.brandMeta}><span className={`${styles.status} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span><span className={styles.planName}>{brand.planName || "بدون باقة"}</span></div><div className={styles.chips}>{brand.features.filter(feature => ["loyalty", "standalone_menu", "orders", "menu"].includes(feature)).map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div></th>
@@ -126,15 +126,15 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
             </div></td></tr></Fragment>)}</tbody>
             {brands.length > 0 && <tfoot><tr><th scope="row">إجمالي النتائج</th><td>{number(totals.storefrontVisitors)}<small>{number(totals.storefrontVisits)} زيارة</small></td><td>{number(totals.storefrontAccounts)}<small>{number(totals.accounts)} إجمالي جديد</small></td><td>{number(totals.menuVisitors)}<small>{number(totals.menuVisits)} زيارة</small></td><td>{number(totals.loyaltyCards)}<small>{number(totals.loyaltyCustomers)} عميل</small></td><td>{number(totals.appleCards)} آيفون<small>{number(totals.googleCards)} أندرويد</small></td><td>{number(totals.stampOperations)} ختم<small>{number(totals.rewardOperations)} مكافأة</small></td><td colSpan={2}>جميع العلامات المطابقة</td></tr></tfoot>}
           </table></div>
-          {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر. غيّر الشروط أو امسح فلاتر العلامات.</p>}
+          {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر غيّر الشروط أو امسح فلاتر العلامات</p>}
           <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
         <section className={`${styles.panel} ${styles.explainer}`} aria-label="تعريف المؤشرات وتغطية البيانات"><h2><Info size={19} aria-hidden="true" />كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
-          <li>زوار الفرع جلسات تصفح مميزة، وزوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين. إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة.</li>
-          <li>الحسابات والبطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة. عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة.</li>
-          <li>آيفون: بطاقات طُلب تنزيلها. أندرويد: بطاقات أُنشئ لها رابط حفظ. قد تستخدم البطاقة النظامين؛ هذه الأرقام لا تؤكد تثبيتها على الجهاز.</li>
-          <li>قراءات الختم والمكافأة تشمل العمليات الناجحة المسجلة فقط. الاشتراكات والمميزات تعرض الوضع الحالي، وآخر زيارة في الجدول عبر كامل السجل.</li>
-          <li>تتبّع المنيو متاح منذ {saudiDate(report.menuTrackingSince)}، وتتبّع المحافظ منذ {saudiDate(report.walletTrackingSince)}، ومصدر إنشاء الحساب منذ {saudiDate(report.registrationTrackingSince)}. المصادر القديمة غير المعروفة تبقى غير محددة؛ الصفر يعني عدم وجود سجل مطابق ضمن البيانات المتاحة.</li>
+          <li>زوار الفرع جلسات تصفح مميزة وزوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة</li>
+          <li>الحسابات والبطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة</li>
+          <li>آيفون: بطاقات طُلب تنزيلها أندرويد: بطاقات أُنشئ لها رابط حفظ قد تستخدم البطاقة النظامين؛ هذه الأرقام لا تؤكد تثبيتها على الجهاز</li>
+          <li>قراءات الختم والمكافأة تشمل العمليات الناجحة المسجلة فقط الاشتراكات والمميزات تعرض الوضع الحالي وآخر زيارة في الجدول عبر كامل السجل</li>
+          <li>تتبّع المنيو متاح منذ {saudiDate(report.menuTrackingSince)} وتتبّع المحافظ منذ {saudiDate(report.walletTrackingSince)} ومصدر إنشاء الحساب منذ {saudiDate(report.registrationTrackingSince)}. المصادر القديمة غير المعروفة تبقى غير محددة؛ الصفر يعني عدم وجود سجل مطابق ضمن البيانات المتاحة</li>
         </ul></section>
       </>}
     </div>

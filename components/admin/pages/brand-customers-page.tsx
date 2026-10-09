@@ -94,7 +94,7 @@ function CustomerDialog({ selected, detail, pending, error, onClose, onLoad, onS
       <div className={s.sectionHeader}><div><h2>رحلة العميل لدى {customer.brand.name}</h2><p>من التسجيل حتى آخر قراءة أو مكافأة · الأحدث أولًا</p></div><span className={s.muted} role="status">{pending ? "جارٍ التحميل…" : detail ? `${n(detail.total)} حدث` : ""}</span></div>
       {detail?.events.length ? <ol className={s.timeline}>{detail.events.map((event) => <Event key={event.id} event={event} />)}</ol> : <div className={s.empty}><History aria-hidden="true" /><p>{pending ? "جارٍ تحميل سجل العميل…" : error ? "تعذر تحميل سجل العميل" : "لا توجد عمليات مسجلة لهذه العضوية"}</p></div>}
       {detail ? <div className={s.foot}><span>جميع الأوقات بتوقيت الرياض</span><Pagination page={detail.page} total={detail.total} size={detail.pageSize} pending={pending} onPage={onLoad} /></div> : null}
-      <p className={s.note}>تحميل ملف البطاقة يختلف عن تثبيتها. يظهر التثبيت عند تسجيل الجهاز لدى المحفظة؛ طلب رابط قوقل لا يثبت حفظ البطاقة. لا تُستنتج تواريخ تحميل قديمة لم تُسجل.</p>
+      <p className={s.note}>تحميل ملف البطاقة يختلف عن تثبيتها يظهر التثبيت عند تسجيل الجهاز لدى المحفظة؛ طلب رابط قوقل لا يثبت حفظ البطاقة لا تُستنتج تواريخ تحميل قديمة لم تُسجل</p>
     </div>
   </dialog>;
 }
@@ -126,7 +126,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
       setData(result.data); setApplied(filters); setDraft(filters);
       setKnownBrands((previous) => [...new Map([...previous, ...result.data.brands].map((brand) => [brand.id, brand])).values()]);
       if (focus) requestAnimationFrame(() => resultsRef.current?.focus());
-    } catch { if (request === listRequest.current) { setError("تعذر الاتصال. أعد المحاولة لتحميل بيانات العملاء."); requestAnimationFrame(() => errorRef.current?.focus()); } }
+    } catch { if (request === listRequest.current) { setError("تعذر الاتصال أعد المحاولة لتحميل بيانات العملاء"); requestAnimationFrame(() => errorRef.current?.focus()); } }
     finally { if (request === listRequest.current) setPending(false); }
   }
 
@@ -138,7 +138,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
       const result = await loadBrandCustomerDetailAction(customer.id, page);
       if (request !== detailRequest.current) return;
       if (result.ok) setDetail(result.data); else setDetailError(result.message);
-    } catch { if (request === detailRequest.current) setDetailError("تعذر تحميل ملف العميل. أعد المحاولة."); }
+    } catch { if (request === detailRequest.current) setDetailError("تعذر تحميل ملف العميل أعد المحاولة"); }
     finally { if (request === detailRequest.current) setDetailPending(false); }
   }
 
@@ -148,11 +148,11 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
   const dirty = draft.search !== applied.search || draft.brandId !== applied.brandId || draft.sort !== applied.sort;
 
   return <section className={s.page} dir="rtl" aria-labelledby="brand-customers-heading">
-    <header className={s.heading}><div><span className={s.eyebrow}><ShieldCheck aria-hidden="true" />خاص بالسوبر أدمن</span><h1 id="brand-customers-heading">عملاء العلامات التجارية</h1><p>كل عميل، كل علامة، وكل زيارة. تابع الأختام والمكافآت وافهم علاقة عملائك بالعلامات من مكان واحد.</p></div><button type="button" className={s.button} disabled={pending} onClick={() => void load(applied)}><RefreshCw aria-hidden="true" />{pending ? "جارٍ التحديث…" : "تحديث البيانات"}</button></header>
+    <header className={s.heading}><div><span className={s.eyebrow}><ShieldCheck aria-hidden="true" />خاص بالسوبر أدمن</span><h1 id="brand-customers-heading">عملاء العلامات التجارية</h1><p>كل عميل كل علامة وكل زيارة تابع الأختام والمكافآت وافهم علاقة عملائك بالعلامات من مكان واحد</p></div><button type="button" className={s.button} disabled={pending} onClick={() => void load(applied)}><RefreshCw aria-hidden="true" />{pending ? "جارٍ التحديث…" : "تحديث البيانات"}</button></header>
     {error ? <div className={s.error} role="alert" tabIndex={-1} ref={errorRef}><CircleAlert aria-hidden="true" /><span>{error}</span></div> : null}
     <div className={s.metrics} aria-label="ملخص العملاء حسب الفلاتر المطبقة">
       <div className={s.metric}><span>العملاء الفريدون</span><strong>{summary ? n(summary.uniqueCustomers) : "—"}</strong><small>{summary ? `${n(summary.memberships)} عضوية لدى العلامات` : "بانتظار البيانات"}</small></div>
-      <div className={s.metric} data-tone="shared"><span>مشتركون بين العلامات</span><strong>{summary ? n(summary.sharedCustomers) : "—"}</strong><small>عميل واحد، أكثر من علامة</small></div>
+      <div className={s.metric} data-tone="shared"><span>مشتركون بين العلامات</span><strong>{summary ? n(summary.sharedCustomers) : "—"}</strong><small>عميل واحد أكثر من علامة</small></div>
       <div className={s.metric} data-tone="reward"><span>المكافآت المصروفة</span><strong>{summary ? n(summary.rewardsRedeemed) : "—"}</strong><small>{summary ? `${n(summary.rewardsEarned)} مكافأة مكتسبة` : "بانتظار البيانات"}</small></div>
       <div className={s.metric}><span>مكافآت انتهت دون صرف</span><strong>{summary ? n(summary.rewardsExpired) : "—"}</strong><small>مكافآت فاتت صلاحيتها</small></div>
     </div>
@@ -169,7 +169,7 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
           <label className={s.field}>ترتيب العملاء<select disabled={pending} value={draft.sort ?? "recent"} onChange={(event) => setDraft({ ...draft, sort: event.target.value as BrandCustomerFilters["sort"] })}><option value="recent">الأحدث نشاطًا</option><option value="stamps">الأكثر أختامًا</option><option value="rewards">الأكثر مكافآت</option></select></label>
           <button type="submit" className={s.primary} disabled={pending}><Search aria-hidden="true" />عرض النتائج</button>
         </form>
-        {dirty ? <p className={s.note}>توجد تغييرات على البحث أو التصفية؛ اضغط «عرض النتائج» لتطبيقها.</p> : null}
+        {dirty ? <p className={s.note}>توجد تغييرات على البحث أو التصفية؛ اضغط «عرض النتائج» لتطبيقها</p> : null}
       </div>
       <div className={s.tableWrap} ref={resultsRef} tabIndex={-1} aria-busy={pending}>
         {data?.customers.length ? <table className={s.table}><caption className={s.srOnly}>عضويات العملاء لدى العلامات التجارية وبيانات الولاء</caption><thead><tr><th scope="col">العميل</th><th scope="col">العلامة</th><th scope="col">الأختام والقراءات</th><th scope="col">المكافآت</th><th scope="col">آخر نشاط</th><th scope="col"><span className={s.srOnly}>فتح الملف</span></th></tr></thead><tbody>{data.customers.map((customer) => <tr key={customer.id}>
@@ -179,12 +179,12 @@ export function BrandCustomersPage({ initialResult }: { initialResult: BrandCust
           <td data-label="المكافآت"><div className={s.rewardSplit}><span>{n(customer.rewardsEarned)}<small>مكتسبة</small></span><span>{n(customer.rewardsRedeemed)}<small>مصروفة</small></span><span>{n(customer.rewardsExpired)}<small>فاتت</small></span></div>{customer.rewardsAvailable > 0 ? <span className={s.badge} data-tone="green">{n(customer.rewardsAvailable)} متاحة للصرف</span> : null}</td>
           <td data-label="آخر نشاط"><DateTime value={customer.lastActivityAt} /></td>
           <td><button type="button" className={s.rowButton} onClick={() => void openCustomer(customer)} aria-label={`فتح ملف ${customer.name || "العميل"} لدى ${customer.brand.name}`}>ملف العميل<ArrowUpLeft aria-hidden="true" /></button></td>
-        </tr>)}</tbody></table> : <div className={s.empty}><Users aria-hidden="true" /><h3>{pending ? "جارٍ تحميل العملاء" : error ? "تعذر عرض العملاء" : "لا توجد عضويات مطابقة"}</h3><p>{error ? "أعد المحاولة باستخدام تحديث البيانات" : "ستظهر بيانات العملاء المسجلين في برامج الولاء هنا. يمكنك تعديل البحث أو اختيار كل العملاء."}</p></div>}
+        </tr>)}</tbody></table> : <div className={s.empty}><Users aria-hidden="true" /><h3>{pending ? "جارٍ تحميل العملاء" : error ? "تعذر عرض العملاء" : "لا توجد عضويات مطابقة"}</h3><p>{error ? "أعد المحاولة باستخدام تحديث البيانات" : "ستظهر بيانات العملاء المسجلين في برامج الولاء هنا يمكنك تعديل البحث أو اختيار كل العملاء"}</p></div>}
       </div>
-      {data ? <div className={s.foot}><span>الملخص يعكس جميع النتائج المطابقة، وليس هذه الصفحة فقط</span><Pagination page={data.page} total={data.total} size={data.pageSize} pending={pending} onPage={(page) => void load({ ...applied, page }, true)} /></div> : null}
+      {data ? <div className={s.foot}><span>الملخص يعكس جميع النتائج المطابقة وليس هذه الصفحة فقط</span><Pagination page={data.page} total={data.total} size={data.pageSize} pending={pending} onPage={(page) => void load({ ...applied, page }, true)} /></div> : null}
     </section>
-    <p className={s.note}>العميل المميز: {n(data?.frequentThreshold ?? 10)} أختام مكتسبة فأكثر. التمييز بين العلامات يعتمد على رقم الجوال الموحّد أو الحساب المسجل، وليس تشابه الأسماء.</p>
-    {data ? <p className={s.note}>بدأ سجل القراءات التفصيلي في {date(data.recordingStartedAt)}، وسجل تحميل المحفظة في {date(data.walletRecordingStartedAt)}. تظهر العمليات التاريخية المتاحة؛ القراءات غير المسجلة سابقًا غير قابلة للاسترجاع. جميع الأوقات بتوقيت الرياض.</p> : null}
+    <p className={s.note}>العميل المميز: {n(data?.frequentThreshold ?? 10)} أختام مكتسبة فأكثر التمييز بين العلامات يعتمد على رقم الجوال الموحّد أو الحساب المسجل وليس تشابه الأسماء</p>
+    {data ? <p className={s.note}>بدأ سجل القراءات التفصيلي في {date(data.recordingStartedAt)} وسجل تحميل المحفظة في {date(data.walletRecordingStartedAt)}. تظهر العمليات التاريخية المتاحة؛ القراءات غير المسجلة سابقًا غير قابلة للاسترجاع جميع الأوقات بتوقيت الرياض</p> : null}
     {selected ? <CustomerDialog selected={selected} detail={detail} pending={detailPending} error={detailError} onClose={closeCustomer} onLoad={(page) => void openCustomer(selected, page)} onSelect={(customer) => void openCustomer(customer)} /> : null}
   </section>;
 }

@@ -25,7 +25,7 @@ const menuPageTlsFallbackCodes = new Set([
   "CERT_HAS_EXPIRED",
   "SELF_SIGNED_CERT_IN_CHAIN",
 ]);
-const phpCatalogFailureMessage = "تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني";
+const phpCatalogFailureMessage = "تعذر استخراج المنيو تلقائيًا أرسل الرابط للفريق التقني";
 
 function isPrivateIp(host: string) {
   const normalized = host.toLowerCase().replace(/^\[|\]$/g, "");
@@ -575,8 +575,8 @@ async function analyzeYallaQrCodesMenu(sourceUrl: string): Promise<MenuImportAna
   }
 
   const notes = items.length
-    ? ["تم استخراج المنتجات من واجهة yallaqrcodes API بدون browser rendering."]
-    : ["لم يتم العثور على منتجات في واجهة yallaqrcodes API، ولم يتم اختراع أي منتجات."];
+    ? ["تم استخراج المنتجات من واجهة yallaqrcodes API بدون browser rendering"]
+    : ["لم يتم العثور على منتجات في واجهة yallaqrcodes API ولم يتم اختراع أي منتجات"];
 
   return buildAnalysis(
     items,
@@ -711,7 +711,7 @@ async function analyzeIWaiterMenu(sourceUrl: string): Promise<MenuImportAnalysis
         recognized: true,
         segments: hints.segments,
       },
-      ["تم التعرف على رابط iWaiter، لكن لم يتم العثور على slug المطعم داخل الرابط."]
+      ["تم التعرف على رابط iWaiter لكن لم يتم العثور على slug المطعم داخل الرابط"]
     );
   }
 
@@ -719,7 +719,7 @@ async function analyzeIWaiterMenu(sourceUrl: string): Promise<MenuImportAnalysis
   try {
     payload = await fetchIWaiterJson(hints.slug);
   } catch {
-    throw new Error("تعذر استخراج المنيو تلقائيًا، أرسل الرابط للفريق التقني");
+    throw new Error("تعذر استخراج المنيو تلقائيًا أرسل الرابط للفريق التقني");
   }
   const restaurant =
     payload && typeof payload === "object" && !Array.isArray(payload)
@@ -765,8 +765,8 @@ async function analyzeIWaiterMenu(sourceUrl: string): Promise<MenuImportAnalysis
   }
 
   const notes = items.length
-    ? ["تم استخراج المنتجات من واجهة iWaiter العامة بناءً على slug الرابط، مع حفظ معرف الفرع إن وجد."]
-    : ["تم التعرف على رابط iWaiter، لكن لم يتم العثور على منتجات واضحة في واجهته العامة."];
+    ? ["تم استخراج المنتجات من واجهة iWaiter العامة بناءً على slug الرابط مع حفظ معرف الفرع إن وجد"]
+    : ["تم التعرف على رابط iWaiter لكن لم يتم العثور على منتجات واضحة في واجهته العامة"];
 
   return buildAnalysis(
     items,
@@ -1058,7 +1058,7 @@ async function analyzePhpCatalogMenu(sourceUrl: string): Promise<MenuImportAnaly
       categoryLinksFound: categoryLinks.length,
       pagesRead: pages.length,
     },
-    ["تم استخراج المنتجات من صفحة PHP catalog مع قراءة عدد محدود من روابط التصنيفات المتاحة."]
+    ["تم استخراج المنتجات من صفحة PHP catalog مع قراءة عدد محدود من روابط التصنيفات المتاحة"]
   );
 }
 
@@ -1191,7 +1191,7 @@ export async function analyzeMenuUrl(sourceUrl: string): Promise<MenuImportAnaly
   }
   const notes = items.length
     ? []
-    : ["لم يتم العثور على منتجات واضحة في الرابط. يمكن إنشاء المسودة يدويًا من جدول المراجعة."];
+    : ["لم يتم العثور على منتجات واضحة في الرابط يمكن إنشاء المسودة يدويًا من جدول المراجعة"];
 
   return buildAnalysis(
     items,

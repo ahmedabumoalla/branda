@@ -338,7 +338,7 @@ export async function getPublicTableWarsEntry(
       tableCode,
       table: null,
       currentRound: null,
-      errorMessage: "لم يتم العثور على الفرع.",
+      errorMessage: "لم يتم العثور على الفرع",
     };
   }
 
@@ -357,7 +357,7 @@ export async function getPublicTableWarsEntry(
       tableCode,
       table: null,
       currentRound: null,
-      errorMessage: "الميزة غير مفعّلة لهذا الفرع.",
+      errorMessage: "الميزة غير مفعّلة لهذا الفرع",
     };
   }
 
@@ -423,7 +423,7 @@ export async function getPublicTableWarsEntry(
     tableCode,
     table: tableResult.rows[0] ?? null,
     currentRound: currentRoundResult.rows[0] ?? null,
-    errorMessage: tableResult.rows[0] ? undefined : "رمز الطاولة غير صالح لهذا الفرع.",
+    errorMessage: tableResult.rows[0] ? undefined : "رمز الطاولة غير صالح لهذا الفرع",
   };
 }
 
@@ -431,7 +431,7 @@ export async function enableOwnerTableWarsDemoTable() {
   const cafe = await requireOwnerCafeContext();
   const enabled = await hasBrandFeature(cafe.id, TABLE_WARS_FEATURE_KEY);
   if (!enabled) {
-    throw new Error("الميزة غير مفعّلة لهذه العلامة.");
+    throw new Error("الميزة غير مفعّلة لهذه العلامة");
   }
 
   const supabase = db(await createClient());
@@ -449,7 +449,7 @@ export async function enableOwnerTableWarsDemoTable() {
   );
 
   if (existing.missing) {
-    throw new Error("تعذر الوصول إلى جدول طاولات اللعبة.");
+    throw new Error("تعذر الوصول إلى جدول طاولات اللعبة");
   }
 
   const existingId = existing.rows[0]?.id;
@@ -467,7 +467,7 @@ export async function enableOwnerTableWarsDemoTable() {
       });
 
   if (result.error) {
-    throw new Error(result.error.message || "تعذر تفعيل اللعبة.");
+    throw new Error(result.error.message || "تعذر تفعيل اللعبة");
   }
 
   return cafe.slug;
@@ -477,7 +477,7 @@ export async function disableOwnerTableWarsTables() {
   const cafe = await requireOwnerCafeContext();
   const enabled = await hasBrandFeature(cafe.id, TABLE_WARS_FEATURE_KEY);
   if (!enabled) {
-    throw new Error("الميزة غير مفعّلة لهذه العلامة.");
+    throw new Error("الميزة غير مفعّلة لهذه العلامة");
   }
 
   const supabase = db(await createClient());
@@ -488,7 +488,7 @@ export async function disableOwnerTableWarsTables() {
     .eq("is_active", true);
 
   if (result.error) {
-    throw new Error(result.error.message || "تعذر تعطيل اللعبة.");
+    throw new Error(result.error.message || "تعذر تعطيل اللعبة");
   }
 
   return cafe.slug;

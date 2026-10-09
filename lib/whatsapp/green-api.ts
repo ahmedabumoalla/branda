@@ -37,7 +37,7 @@ export async function sendGreenApiCashierWelcome(input: {
         `البريد الإلكتروني: ${input.email}`,
         `كلمة المرور: ${input.password}`,
         "",
-        "هذه بيانات دخولك الخاصة. لا تشاركها مع أي شخص.",
+        "هذه بيانات دخولك الخاصة لا تشاركها مع أي شخص",
       ].join("\n"),
     }),
   });
@@ -106,7 +106,7 @@ export async function sendGreenApiOtp(input: {
     },
     body: JSON.stringify({
       chatId: `${input.phoneNormalized}@c.us`,
-      message: `رمز التحقق لعلامة ${input.brandName}: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة.`,
+      message: `رمز التحقق لعلامة ${input.brandName}: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة`,
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(greenApiTimeoutMs()),
@@ -137,7 +137,7 @@ export async function sendGreenApiSupabaseOtp(input: {
     },
     body: JSON.stringify({
       chatId: `${input.phoneNormalized}@c.us`,
-      message: `رمز التحقق في برندة: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة.`,
+      message: `رمز التحقق في برندة: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة`,
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(greenApiTimeoutMs()),

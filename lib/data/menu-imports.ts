@@ -270,7 +270,7 @@ async function insertAnalysisItems(cafeId: string, jobId: string, analysis: Menu
         ...analysis.rawSummary,
         report: analysis.report,
       },
-      error_message: rows.length ? null : "لم يتم استخراج منتجات واضحة. يمكن إدخال الصفوف يدويًا أو تجربة مصدر آخر.",
+      error_message: rows.length ? null : "لم يتم استخراج منتجات واضحة يمكن إدخال الصفوف يدويًا أو تجربة مصدر آخر",
     })
     .eq("id", jobId)
     .eq("cafe_id", cafeId);
@@ -573,7 +573,7 @@ export async function cancelMenuImport(jobId: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("menu_import_jobs")
-    .update({ status: "failed", error_message: "تم إلغاء الاستيراد قبل الاعتماد." })
+    .update({ status: "failed", error_message: "تم إلغاء الاستيراد قبل الاعتماد" })
     .eq("id", jobId)
     .eq("cafe_id", cafe.id)
     .neq("status", "imported");

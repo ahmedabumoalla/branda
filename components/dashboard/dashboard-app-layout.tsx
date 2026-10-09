@@ -108,7 +108,7 @@ export function DashboardAppLayout({
         clearDashboardShellSnapshot();
         window.location.assign("/admin/maintenance");
       } catch {
-        setMaintenanceError("تعذر إنهاء وضع الصيانة. حاول مرة أخرى.");
+        setMaintenanceError("تعذر إنهاء وضع الصيانة حاول مرة أخرى");
       }
     });
   }

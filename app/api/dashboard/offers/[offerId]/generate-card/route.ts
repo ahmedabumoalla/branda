@@ -18,7 +18,7 @@ function safeGenerationError(error: unknown) {
   if (error instanceof Error && error.message.includes("OPENAI_API_KEY")) {
     return "خدمة توليد الصور غير مهيأة حاليًا";
   }
-  return "تعذر توليد صورة العرض. حاول مرة أخرى بعد قليل";
+  return "تعذر توليد صورة العرض حاول مرة أخرى بعد قليل";
 }
 
 export async function POST(_request: Request, { params }: Params) {

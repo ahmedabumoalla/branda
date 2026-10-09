@@ -692,7 +692,7 @@ export async function savePlatformHomePromotions(input: PlatformHomePromotionIte
 
   if (existingError) {
     if (isMissingPlatformPromotionsTable(existingError)) {
-      throw new Error("جدول platform_home_promotions غير موجود. يلزم اعتماد migration قبل الحفظ.");
+      throw new Error("جدول platform_home_promotions غير موجود يلزم اعتماد migration قبل الحفظ");
     }
     throw existingError;
   }

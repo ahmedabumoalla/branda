@@ -23,7 +23,7 @@ export function ReportsPageClient({ initialOrders, initialCustomers, visitAnalyt
   const totalSales = completedOrders.reduce((sum, order) => sum + order.total, 0);
 
   return (
-    <DashboardPageShell title="التقارير" subtitle="ملخص الطلبات والعملاء وزيارات الفرع الإلكتروني.">
+    <DashboardPageShell title="التقارير" subtitle="ملخص الطلبات والعملاء وزيارات الفرع الإلكتروني">
       {configError ? <BentoCard variant="white" className="mb-6">{configError}</BentoCard> : null}
       <BentoGrid>
         <BentoCard variant="white"><ShoppingBag className="mb-3 h-7 w-7 text-[#6B3A25]" /><StatPill label="الطلبات" value={initialOrders.length} /></BentoCard>

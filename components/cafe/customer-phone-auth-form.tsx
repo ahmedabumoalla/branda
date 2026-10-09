@@ -116,13 +116,13 @@ export function CustomerPhoneAuthForm({
     if (mode === "signup") {
       const normalizedName = fullName.trim();
       if (normalizedName.length < 2 || normalizedName.length > 120) {
-        alert("أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا.");
+        alert("أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا");
         return;
       }
       if (normalizedName !== fullName) setFullName(normalizedName);
     }
     if (!phone.trim()) {
-      alert("أدخل رقم الجوال.");
+      alert("أدخل رقم الجوال");
       return;
     }
 
@@ -140,7 +140,7 @@ export function CustomerPhoneAuthForm({
         alert(
           result.required
             ? result.message
-            : "خدمة التحقق غير متاحة لهذه العلامة حاليًا.",
+            : "خدمة التحقق غير متاحة لهذه العلامة حاليًا",
         );
         return;
       }
@@ -158,7 +158,7 @@ export function CustomerPhoneAuthForm({
   async function verifyOtp() {
     if (pending) return;
     if (!/^\d{6}$/.test(code)) {
-      alert("أدخل رمز التحقق المكوّن من 6 أرقام.");
+      alert("أدخل رمز التحقق المكوّن من 6 أرقام");
       return;
     }
 
@@ -206,10 +206,10 @@ export function CustomerPhoneAuthForm({
       submitLabel={
         stage === "phone"
           ? pending === "send"
-            ? "جاري إرسال الرمز..."
+            ? "جاري إرسال الرمز"
             : "إرسال رمز التحقق"
           : pending === "verify"
-            ? "جاري التحقق..."
+            ? "جاري التحقق"
             : mode === "signup"
               ? "تحقق وأنشئ الحساب"
               : "تحقق وسجّل الدخول"
@@ -239,7 +239,7 @@ export function CustomerPhoneAuthForm({
         dir="ltr"
       />
       <p className="text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
-        سيصلك رمز تحقق عبر واتساب بعد الضغط على زر الإرسال.
+        سيصلك رمز تحقق عبر واتساب بعد الضغط على زر الإرسال
       </p>
 
       {stage === "code" ? (
@@ -275,7 +275,7 @@ export function CustomerPhoneAuthForm({
             className="mt-3 text-xs font-black text-[var(--ci-accent,#6B3A25)] disabled:opacity-50"
           >
             {pending === "resend"
-              ? "جاري إعادة الإرسال..."
+              ? "جاري إعادة الإرسال"
               : resendSeconds > 0
                 ? `إعادة الإرسال بعد ${resendSeconds} ثانية`
                 : "إعادة إرسال الرمز"}

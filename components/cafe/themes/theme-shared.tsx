@@ -324,7 +324,7 @@ export function ThemeSearchBar({
   slug,
   theme,
   previewThemeId,
-  placeholder = "ابحث في المنيو...",
+  placeholder = "ابحث في المنيو",
 }: {
   slug: string;
   theme: ThemeClasses;

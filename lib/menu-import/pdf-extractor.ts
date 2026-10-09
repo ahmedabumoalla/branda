@@ -72,8 +72,8 @@ export async function analyzeMenuPdf(file: File): Promise<{ analysis: MenuImport
   const text = extractTextFromPdfBytes(new Uint8Array(bytes));
   const items = parseMenuItemsFromText(text, null);
   const notes = items.length
-    ? ["تم استخراج نص من PDF وتحويله إلى مسودة مراجعة."]
-    : ["تم رفع الملف لكن يحتاج معالجة يدوية أو تفعيل تحليل ذكي للصور."];
+    ? ["تم استخراج نص من PDF وتحويله إلى مسودة مراجعة"]
+    : ["تم رفع الملف لكن يحتاج معالجة يدوية أو تفعيل تحليل ذكي للصور"];
 
   return {
     bytes,

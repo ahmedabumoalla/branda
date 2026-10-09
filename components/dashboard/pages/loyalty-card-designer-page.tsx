@@ -197,7 +197,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
 
   async function saveDesign() {
     if (!dashboard) {
-      setMessage(configError || "تعذر تحميل بيانات الولاء للحفظ.");
+      setMessage(configError || "تعذر تحميل بيانات الولاء للحفظ");
       window.setTimeout(() => setMessage(""), 2600);
       return;
     }
@@ -558,7 +558,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
             onToleranceChange={(logoBackgroundTolerance) => patchCard({ logoBackgroundTolerance })}
           />
           <p className="rounded-lg bg-[#FFF8EA] px-2 py-2 text-[11px] font-bold leading-5 text-[#806A5E]">
-            اسحب الشعار مباشرة على البطاقة، أو استخدم منزلقات العنصر المحدد.
+            اسحب الشعار مباشرة على البطاقة أو استخدم منزلقات العنصر المحدد
           </p>
         </div>
       );
@@ -597,7 +597,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
         <div className="grid gap-2">
           <CompactToggle enabled={draft.card.barcodeVisible} label={draft.card.barcodeVisible ? "إخفاء الباركود" : "إظهار الباركود"} onClick={() => patchCard({ barcodeVisible: !draft.card.barcodeVisible })} />
           <label className={labelClass}>رمز البطاقة<input className={inputClass} value={draft.card.sampleCode} onChange={(event) => patchCard({ sampleCode: event.target.value })} /></label>
-          <p className="rounded-lg bg-[#FFF8EA] px-2 py-2 text-[11px] font-bold leading-5 text-[#806A5E]">الباركود قابل للسحب وتغيير الحجم من اللوحة اليمنى.</p>
+          <p className="rounded-lg bg-[#FFF8EA] px-2 py-2 text-[11px] font-bold leading-5 text-[#806A5E]">الباركود قابل للسحب وتغيير الحجم من اللوحة اليمنى</p>
         </div>
       );
     }
@@ -607,7 +607,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
         <div className="grid gap-2">
           <label className={labelClass}>رمز البطاقة / QR<input className={inputClass} value={draft.card.sampleCode} onChange={(event) => patchCard({ sampleCode: event.target.value })} /></label>
           <p className="rounded-lg bg-[#FFF8EA] px-2 py-2 text-[11px] font-bold leading-5 text-[#806A5E]">
-            يمكن سحب رمز QR مباشرة داخل البطاقة وتعديل موضعه وحجمه من اللوحة اليمنى. يتم ضبط الحدود تلقائياً حتى يبقى داخل البطاقة.
+            يمكن سحب رمز QR مباشرة داخل البطاقة وتعديل موضعه وحجمه من اللوحة اليمنى يتم ضبط الحدود تلقائياً حتى يبقى داخل البطاقة
           </p>
         </div>
       );
@@ -725,10 +725,10 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
                 onCardChange={(card) => setDraft((current) => ({ ...current, card }))}
               />
               <p className="mt-3 text-center text-[12px] font-black text-[#2F7D69]">
-                يتم تطبيق هذا التصميم على بطاقة العميل العامة بعد حفظ تصميم البطاقة.
+                يتم تطبيق هذا التصميم على بطاقة العميل العامة بعد حفظ تصميم البطاقة
               </p>
               <p className="mt-3 text-center text-[12px] font-black text-[#6B3A25]">
-                اسحب العنصر داخل البطاقة، واستخدم منزلقات اللوحة الجانبية للضبط الدقيق.
+                اسحب العنصر داخل البطاقة واستخدم منزلقات اللوحة الجانبية للضبط الدقيق
               </p>
             </div>
           </section>
@@ -777,7 +777,7 @@ export function LoyaltyCardDesignerPage({ initialDashboard, initialSettings, con
                 </div>
               </div>
               <div className="mt-3 rounded-[12px] bg-white p-3 text-[11px] font-bold leading-5 text-[#806A5E]">
-                البطاقة تبقى ظاهرة دائماً أثناء تعديل النصوص، الشعار، الألوان، الأختام، الباركود أو النقاط.
+                البطاقة تبقى ظاهرة دائماً أثناء تعديل النصوص، الشعار، الألوان، الأختام، الباركود أو النقاط
               </div>
             </div>
           </aside>

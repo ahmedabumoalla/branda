@@ -16,7 +16,7 @@ export default function CafeCustomerRegisterPage() {
       hideFooter
       hideQuickDock
     >
-      <Suspense fallback={<p className="p-8 text-center font-black">جاري التحميل...</p>}>
+      <Suspense fallback={<p className="p-8 text-center font-black">جاري التحميل</p>}>
         <CustomerPhoneAuthForm mode="signup" />
       </Suspense>
     </CafeLayout>

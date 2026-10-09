@@ -50,13 +50,13 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
   return (
     <AdminPageShell
       title="خيارات المنصة العامة"
-      subtitle="تحكم في التسجيل، الموافقات، العمولة، والباقات الافتراضية."
+      subtitle="تحكم في التسجيل، الموافقات، العمولة والباقات الافتراضية"
       action={
         <div className="flex flex-col items-end gap-4 sm:flex-row sm:items-center">
           <BarndaksaLogo variant="dark" width={120} height={48} />
           <GoldButton onClick={save} disabled={saving} className="inline-flex items-center gap-2">
             <Save className="h-5 w-5" />
-            {saving ? "جاري الحفظ..." : "حفظ الخيارات"}
+            {saving ? "جاري الحفظ" : "حفظ الخيارات"}
           </GoldButton>
         </div>
       }
@@ -75,7 +75,7 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
             </div>
             <div>
               <h2 className="text-2xl font-black text-[#F8F4EF]">إعدادات التسجيل والموافقة</h2>
-              <p className="text-sm font-bold text-[#CBB29C]">تحكم في سياسات انضمام العلامات الجديدة.</p>
+              <p className="text-sm font-bold text-[#CBB29C]">تحكم في سياسات انضمام العلامات الجديدة</p>
             </div>
           </div>
 
@@ -126,7 +126,7 @@ export function AdminOptionsPage({ initialOptions, initialPlans, configError }: 
         <BentoCard variant="cyber" span="2">
           <h3 className="mb-4 text-lg font-black text-[#F8F4EF]">الباقة الافتراضية</h3>
           <p className="mb-4 text-sm font-bold text-[#CBB29C]">
-            تُعيَّن تلقائياً لأي علامة جديدة تسجّل في المنصة.
+            تُعيَّن تلقائياً لأي علامة جديدة تسجّل في المنصة
           </p>
           <AdminSelect
             value={options.defaultPlanId}

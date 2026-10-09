@@ -121,7 +121,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
 
     async function start() {
       try {
-        setHint("جاري تشغيل الكاميرا...");
+        setHint("جاري تشغيل الكاميرا");
         lastDetectedRef.current = "";
 
         if (!navigator.mediaDevices?.getUserMedia) {
@@ -130,7 +130,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
         }
 
         if (!window.BarcodeDetector) {
-          setError("قارئ QR غير مدعوم في هذا المتصفح. استخدم Chrome محدث أو أدخل الكود يدويًا.");
+          setError("قارئ QR غير مدعوم في هذا المتصفح استخدم Chrome محدث أو أدخل الكود يدويًا");
           return;
         }
 
@@ -156,7 +156,7 @@ export function BarcodeCameraScanner({ label, onDetected, expectedKind }: Props)
         setHint(`وجّه الكاميرا إلى QR ${codeLabel}`);
         timer = window.setTimeout(detectFrame, 250);
       } catch {
-        setError("تعذر تشغيل الكاميرا. تأكد من السماح للمتصفح باستخدام الكاميرا.");
+        setError("تعذر تشغيل الكاميرا تأكد من السماح للمتصفح باستخدام الكاميرا");
       }
     }
 

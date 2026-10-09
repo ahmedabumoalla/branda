@@ -71,7 +71,7 @@ function ThemedCafeShellInner({
   if (!hydrated) {
     return (
       <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3] px-4">
-        <p className="text-center font-black text-[#4a4540]">جاري التحميل...</p>
+        <p className="text-center font-black text-[#4a4540]">جاري التحميل</p>
       </main>
     );
   }

@@ -201,7 +201,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
   useEffect(() => {
     if (!containerRef.current) return;
     if (!token) {
-      setMapError("أضف مفتاح Mapbox العام في إعدادات البيئة لعرض الخريطة، ويمكنك إدخال الرابط أو استخدام تحديد موقعي.");
+      setMapError("أضف مفتاح Mapbox العام في إعدادات البيئة لعرض الخريطة ويمكنك إدخال الرابط أو استخدام تحديد موقعي");
       return;
     }
 
@@ -252,7 +252,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
           applyLocation(normalize(map.getCenter()), { flyTo: false });
         });
       })
-      .catch(() => setMapError("تعذر تحميل خريطة Mapbox، ويمكنك إدخال رابط الموقع أو استخدام تحديد موقعي."));
+      .catch(() => setMapError("تعذر تحميل خريطة Mapbox ويمكنك إدخال رابط الموقع أو استخدام تحديد موقعي"));
 
     return () => {
       cancelled = true;
@@ -299,7 +299,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
           setLinkMessage(result.message);
         }
       } catch {
-        setLinkMessage("هذا الرابط المختصر لا يحتوي إحداثيات واضحة. افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس، أو حدّد الموقع يدويًا من الخريطة.");
+        setLinkMessage("هذا الرابط المختصر لا يحتوي إحداثيات واضحة افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس أو حدّد الموقع يدويًا من الخريطة");
       } finally {
         setResolvingLink(false);
       }
@@ -347,7 +347,7 @@ export function GoogleMapPicker({ value, onChange, heightClassName = "h-[360px]"
           />
         </label>
         <p className="mt-2 text-xs font-bold text-[#806A5E]">
-          {resolvingLink ? "جاري فحص الرابط المختصر..." : linkMessage || "اختياري، ويمكنك الاستمرار بالتحديد اليدوي من الخريطة"}
+          {resolvingLink ? "جاري فحص الرابط المختصر" : linkMessage || "اختياري ويمكنك الاستمرار بالتحديد اليدوي من الخريطة"}
         </p>
       </div>
       <div className={`relative overflow-hidden rounded-[28px] border border-[#E5D8CD] bg-[#F8F4EF] ${heightClassName}`}>

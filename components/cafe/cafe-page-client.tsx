@@ -181,7 +181,7 @@ function CampaignBanner({ slug, previewThemeId }: { slug: string; previewThemeId
           </p>
           <h2 className="mt-2 text-2xl font-black sm:text-3xl">صوّر تجربتك واستفد من حملات العلامة</h2>
           <p className="mt-3 max-w-2xl text-sm font-bold leading-7 text-[var(--ci-secondary-fg)]">
-            هذا القسم إعلاني فقط، وكل الإجراءات الخاصة بالمكافآت والتوثيق تتم من حساب العميل داخل صفحة خدماتي أو مكافآتي
+            هذا القسم إعلاني فقط وكل الإجراءات الخاصة بالمكافآت والتوثيق تتم من حساب العميل داخل صفحة خدماتي أو مكافآتي
           </p>
         </div>
         <Link
@@ -594,7 +594,7 @@ function CafePageInner({ slug }: { slug: string }) {
             branchName: nearest.branch.name,
             message:
               nearest.branch.welcomeMessage ||
-              `أهلًا بك في ${nearest.branch.name}، سعداء بزيارتك`,
+              `أهلًا بك في ${nearest.branch.name} سعداء بزيارتك`,
             distance: Math.round(nearest.distance),
           });
         }
@@ -719,7 +719,7 @@ function CafePageInner({ slug }: { slug: string }) {
   if (loading || !hydrated) {
     return (
       <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3]">
-        <p className="font-black text-[#4a4540]">جاري التحميل...</p>
+        <p className="font-black text-[#4a4540]">جاري التحميل</p>
       </main>
     );
   }
@@ -771,7 +771,7 @@ function CafePageInner({ slug }: { slug: string }) {
                 {branchWelcome.message}
               </h3>
               <p className="mt-1 text-xs font-bold text-[var(--ci-muted-fg)]">
-                تم رصدك داخل نطاق الترحيب، على بعد تقريبًا {branchWelcome.distance} متر
+                تم رصدك داخل نطاق الترحيب على بعد تقريبًا {branchWelcome.distance} متر
               </p>
             </div>
             <button
@@ -849,7 +849,7 @@ function CafePageInner({ slug }: { slug: string }) {
         ) : hasFeature("menu") ? (
           <section className="mt-8 rounded-[28px] border border-dashed border-[var(--ci-border)] bg-[var(--ci-surface-bg)]/75 p-6 text-center">
             <p className="text-sm font-black text-[var(--ci-muted-fg)]">
-              {menuFallbackActive ? `تعذر تحميل المنيو الآن، وستظهر ${itemPluralLabel} عند توفرها.` : isEvents ? "لا توجد تذاكر متاحة حاليا." : "لا توجد منتجات متاحة حاليا."}
+              {menuFallbackActive ? `تعذر تحميل المنيو الآن وستظهر ${itemPluralLabel} عند توفرها` : isEvents ? "لا توجد تذاكر متاحة حاليا" : "لا توجد منتجات متاحة حاليا"}
             </p>
           </section>
         ) : null}
@@ -882,7 +882,7 @@ export function CafePageClient({ slug }: { slug: string }) {
     <Suspense
       fallback={
         <main dir="rtl" className="flex min-h-screen items-center justify-center bg-[#FCF8F3]">
-          <p className="font-black text-[#4a4540]">جاري التحميل...</p>
+          <p className="font-black text-[#4a4540]">جاري التحميل</p>
         </main>
       }
     >

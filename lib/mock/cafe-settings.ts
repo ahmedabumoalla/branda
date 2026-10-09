@@ -33,6 +33,6 @@ export const mockCafeSettings: CafeSettings = {
   ownerName: "مالك الكوفي",
   ownerEmail: "owner@qatrah.com",
   ownerPhone: "0550000000",
-  description: "كوفي مختص يقدم القهوة والحلويات بتجربة رقمية عبر برندة.",
+  description: "كوفي مختص يقدم القهوة والحلويات بتجربة رقمية عبر برندة",
   domainStatus: "غير مربوط",
 };

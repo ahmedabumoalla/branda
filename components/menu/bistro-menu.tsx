@@ -196,7 +196,7 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
       <div className={s.rastHeroCopy}>
         <p className={s.rastEyebrow}>أهلًا بك في مقهى الكواكب</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
-        <p className={s.rastHeroDescription}>قهوة تحبّها، حلا يكمّلها، ولحظة تستاهل تعيشها على مهلك</p>
+        <p className={s.rastHeroDescription}>قهوة تحبّها حلا يكمّلها ولحظة تستاهل تعيشها على مهلك</p>
         <a href="#rast-menu-items" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
         <p className={s.rastHeroFootnote}><span aria-hidden="true" />لكل وقت اختيار يليق به</p>
       </div>

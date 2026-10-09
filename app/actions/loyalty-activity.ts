@@ -7,6 +7,6 @@ export async function loadLoyaltyActivityAction(filters: LoyaltyActivityFilters)
   try {
     return { ok: true, data: await getOwnerLoyaltyActivity(filters) };
   } catch {
-    return { ok: false, message: "تعذر تحميل سجل العمليات. تحقق من الفترة المحددة وصلاحية دخولك، ثم أعد المحاولة." };
+    return { ok: false, message: "تعذر تحميل سجل العمليات تحقق من الفترة المحددة وصلاحية دخولك ثم أعد المحاولة" };
   }
 }

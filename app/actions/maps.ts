@@ -15,7 +15,7 @@ type ResolveSuccess = {
 };
 
 const unsupportedMessage =
-  "هذا الرابط المختصر لا يحتوي إحداثيات واضحة. افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس، أو حدّد الموقع يدويًا من الخريطة.";
+  "هذا الرابط المختصر لا يحتوي إحداثيات واضحة افتح Google Maps واضغط مطولًا على نقطة الموقع نفسها ثم شارك رابط الدبوس أو حدّد الموقع يدويًا من الخريطة";
 const maxRedirects = 5;
 const requestTimeoutMs = 9000;
 const browserLikeUserAgent = "Mozilla/5.0 BarndaksaBot/1.0";

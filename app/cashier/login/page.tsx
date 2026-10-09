@@ -16,7 +16,7 @@ export default async function CashierLoginPage({
     <CashierLoginForm
       initialMessage={
         reason === "session"
-          ? "انتهت الجلسة أو تم تعطيل الحساب. سجّل الدخول بحساب نشط"
+          ? "انتهت الجلسة أو تم تعطيل الحساب سجّل الدخول بحساب نشط"
           : ""
       }
     />

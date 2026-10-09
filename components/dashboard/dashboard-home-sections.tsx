@@ -52,7 +52,7 @@ export async function DashboardSummarySection() {
   try {
     summary = await getDashboardSummary();
   } catch {
-    return <p className={styles.errorState}>تعذر تحميل المؤشرات الآن.</p>;
+    return <p className={styles.errorState}>تعذر تحميل المؤشرات الآن</p>;
   }
 
   const cards = [
@@ -87,7 +87,7 @@ export async function DashboardSummarySection() {
       {summary.unavailableProducts > 0 ? (
         <div className={styles.warningBanner}>
           <AlertTriangle aria-hidden="true" />
-          يوجد {summary.unavailableProducts} منتج غير متاح ويحتاج إلى مراجعة.
+          يوجد {summary.unavailableProducts} منتج غير متاح ويحتاج إلى مراجعة
         </div>
       ) : null}
     </section>
@@ -99,7 +99,7 @@ export async function DashboardRecentOrdersSection() {
   try {
     orders = await getDashboardRecentOrders(5);
   } catch {
-    return <p className={styles.errorState}>تعذر تحميل آخر الطلبات.</p>;
+    return <p className={styles.errorState}>تعذر تحميل آخر الطلبات</p>;
   }
 
   return (
@@ -154,7 +154,7 @@ export async function DashboardRecentOrdersSection() {
           <div className={styles.emptyState}>
             <ShoppingBag aria-hidden="true" />
             <strong>الهدوء يسبق أول طلب</strong>
-            <span>ستظهر الطلبات الجديدة هنا لحظة وصولها.</span>
+            <span>ستظهر الطلبات الجديدة هنا لحظة وصولها</span>
           </div>
         )}
     </section>
@@ -166,7 +166,7 @@ export async function DashboardTrendSection() {
   try {
     values = await getDashboardOrderTrend();
   } catch {
-    return <p className={styles.errorState}>تعذر تحميل اتجاه الطلبات.</p>;
+    return <p className={styles.errorState}>تعذر تحميل اتجاه الطلبات</p>;
   }
 
   const max = Math.max(...values, 1);

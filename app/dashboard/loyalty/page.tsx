@@ -26,12 +26,12 @@ export default async function LoyaltyCardsPage() {
 
   const configError =
     dashboardResult.status === "rejected" || loyaltyResult.status === "rejected"
-      ? "تعذر تحميل بعض بيانات الولاء. ستظهر الصفحة بحالة آمنة إلى أن تكتمل إعدادات قاعدة البيانات."
+      ? "تعذر تحميل بعض بيانات الولاء ستظهر الصفحة بحالة آمنة إلى أن تكتمل إعدادات قاعدة البيانات"
       : undefined;
 
   if (dashboardResult.status === "fulfilled" && dashboardResult.value.cafeSlug === "rast") {
     const dashboard = dashboardResult.value;
-    const [brand, experience] = await Promise.all([getLoyaltyBrand(dashboard.cafeSlug), getLoyaltyExperience(dashboard.cafeId).then((settings) => ({ settings, error: undefined as string | undefined })).catch(() => ({ settings: defaultLoyaltyExperience, error: "إعدادات تجربة الولاء لم تُفعّل بعد. أكمل تهيئة قاعدة البيانات قبل الحفظ." }))]);
+    const [brand, experience] = await Promise.all([getLoyaltyBrand(dashboard.cafeSlug), getLoyaltyExperience(dashboard.cafeId).then((settings) => ({ settings, error: undefined as string | undefined })).catch(() => ({ settings: defaultLoyaltyExperience, error: "إعدادات تجربة الولاء لم تُفعّل بعد أكمل تهيئة قاعدة البيانات قبل الحفظ" }))]);
     const activityFilters = defaultLoyaltyActivityFilters();
     const [menu, activityResult] = await Promise.all([getOwnerMenu(), loadLoyaltyActivityAction(activityFilters)]);
     if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={dashboard} identity={brand.identity}

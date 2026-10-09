@@ -72,7 +72,7 @@ type AccountNotification = {
 const AVATAR_MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const AVATAR_MAX_DIMENSION = 1024;
 const CUSTOMER_ACCOUNT_LOAD_ERROR =
-  "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة.";
+  "تعذر تحميل بيانات الحساب سجّل الدخول مرة أخرى أو أعد المحاولة";
 
 const EMPTY_CUSTOMER_LOYALTY_POINTS = {
   enabled: false,
@@ -421,10 +421,10 @@ function CustomerCoffeeLoyaltyCard({
               <div>
                 <QrCode className="mx-auto h-10 w-10 text-[var(--ci-button-bg,#6B3A25)]" />
                 <p className="mt-3 text-sm font-black text-[var(--ci-page-fg,#311912)]">
-                  {loading ? "جاري تحميل بطاقة الولاء..." : "لا توجد بطاقة ولاء حقيقية متاحة الآن"}
+                  {loading ? "جاري تحميل بطاقة الولاء" : "لا توجد بطاقة ولاء حقيقية متاحة الآن"}
                 </p>
                 <p className="mt-2 text-xs font-bold leading-6 text-[var(--ci-muted-fg,#806A5E)]">
-                  لا يتم عرض بطاقة أو QR غير موثق في حساب العميل.
+                  لا يتم عرض بطاقة أو QR غير موثق في حساب العميل
                 </p>
               </div>
             </div>
@@ -563,8 +563,8 @@ function ExperienceProofPanel({
               مكافآت توثيق التجربة
             </h2>
             <p className="mt-2 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">
-              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك، ويتم تحديثها
-              تلقائيًا، ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو
+              هنا تظهر مكافآت العلامة بعد اعتماد توثيق تجربتك ويتم تحديثها
+              تلقائيًا ومع كل مكافأة QR خاص يستخدم مرة واحدة فقط عند الكاشير أو
               لوحة العلامة
             </p>
           </div>
@@ -733,7 +733,7 @@ function ExperienceProofPanel({
             لا توجد تنبيهات مكافآت حتى الآن
           </h3>
           <p className="mt-2 text-sm font-bold text-[var(--ci-muted-fg,#806A5E)]">
-            وثّق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا مع QR الخاص بها
+            وثّق تجربتك وبعد اعتماد العلامة ستظهر المكافأة هنا مع QR الخاص بها
           </p>
         </div>
       )}
@@ -889,7 +889,7 @@ function AccountAccessState({
           cafeName={cafeName || slug}
           logoUrl={logoUrl}
           title="الحساب"
-          subtitle="بياناتك، طلباتك، وإعدادات الأمان"
+          subtitle="بياناتك، طلباتك وإعدادات الأمان"
         />
         <section className="mt-5 rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-[0_10px_30px_rgba(23,20,18,0.07)]">
           {loading ? (
@@ -900,7 +900,7 @@ function AccountAccessState({
             </span>
           )}
           <h2 className="mt-4 text-lg font-black text-[var(--ci-page-fg,#311912)]">
-            {loading ? "جاري تجهيز حسابك..." : "سجّل الدخول للوصول إلى حسابك"}
+            {loading ? "جاري تجهيز حسابك" : "سجّل الدخول للوصول إلى حسابك"}
           </h2>
           <p className="mt-2 text-sm font-bold leading-7 text-[var(--ci-muted-fg,#806A5E)]">{message}</p>
           {!loading ? (
@@ -1260,7 +1260,7 @@ function AccountPageInner() {
     setOptimizingAvatar(true);
     setAvatarMessage({
       type: "success",
-      text: `حجم الصورة الأصلي ${formatFileSize(file.size)}، جاري تجهيزها للرفع.`,
+      text: `حجم الصورة الأصلي ${formatFileSize(file.size)} جاري تجهيزها للرفع`,
     });
     const previousPreview = customer.avatarUrl || "";
 
@@ -1271,7 +1271,7 @@ function AccountPageInner() {
         setEditAvatarPreview(previousPreview);
         setAvatarMessage({
           type: "error",
-          text: "تعذر ضغط الصورة بما يكفي، جرّب صورة أصغر أو بصيغة JPG/PNG.",
+          text: "تعذر ضغط الصورة بما يكفي جرّب صورة أصغر أو بصيغة JPG/PNG",
         });
         return;
       }
@@ -1292,7 +1292,7 @@ function AccountPageInner() {
         setEditAvatarPreview(previousPreview);
         setAvatarMessage({
           type: "error",
-          text: result.error || "تعذر رفع الصورة. تأكد من أن الملف صورة وبحجم أقل من 5MB.",
+          text: result.error || "تعذر رفع الصورة تأكد من أن الملف صورة وبحجم أقل من 5MB",
         });
         return;
       }
@@ -1314,7 +1314,7 @@ function AccountPageInner() {
       );
       setAvatarMessage({
         type: "success",
-        text: `تم تحديث صورة الحساب بعد ضغطها إلى ${formatFileSize(compressed.file.size)}.`,
+        text: `تم تحديث صورة الحساب بعد ضغطها إلى ${formatFileSize(compressed.file.size)}`,
       });
     } catch (err) {
       setEditAvatarPreview(previousPreview);
@@ -1322,8 +1322,8 @@ function AccountPageInner() {
         type: "error",
         text:
           err instanceof Error && err.message === "unsupported_heic"
-            ? "هذه الصيغة غير مدعومة حاليًا، فضلاً ارفع JPG أو PNG."
-            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+            ? "هذه الصيغة غير مدعومة حاليًا فضلاً ارفع JPG أو PNG"
+            : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP",
       });
     } finally {
       setOptimizingAvatar(false);
@@ -1360,14 +1360,14 @@ function AccountPageInner() {
     setPasswordMessage(null);
 
     if (!passwordForm.currentPassword) {
-      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة." });
+      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة" });
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
       setPasswordMessage({
         type: "error",
-        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف",
       });
       return;
     }
@@ -1375,7 +1375,7 @@ function AccountPageInner() {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordMessage({
         type: "error",
-        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة",
       });
       return;
     }
@@ -1435,7 +1435,7 @@ function AccountPageInner() {
       setExperienceProofOpen(false);
       alert("تم إرسال التوثيق للعلامة التجارية للمراجعة");
     } catch {
-      alert("تعذر إرسال التوثيق، تأكد من الرابط وحاول مرة أخرى");
+      alert("تعذر إرسال التوثيق تأكد من الرابط وحاول مرة أخرى");
     } finally {
       setSubmittingExperienceProof(false);
     }
@@ -1448,7 +1448,7 @@ function AccountPageInner() {
         previewThemeId={previewThemeId}
         cafeName={settings.cafeName}
         logoUrl={logoUrl}
-        message="نحمّل بياناتك ونشاطك الأخير."
+        message="نحمّل بياناتك ونشاطك الأخير"
         loginHref={accountLoginWithNextHref}
         loading
         businessCategory={settings.businessCategory}
@@ -1480,8 +1480,8 @@ function AccountPageInner() {
         logoUrl={logoUrl}
         message={
           redirectingToLogin
-            ? "تعذر تحميل بيانات الحساب. سجّل الدخول مرة أخرى أو أعد المحاولة."
-            : "لم يتم العثور على جلسة عميل نشطة."
+            ? "تعذر تحميل بيانات الحساب سجّل الدخول مرة أخرى أو أعد المحاولة"
+            : "لم يتم العثور على جلسة عميل نشطة"
         }
         loginHref={accountLoginWithNextHref}
         onRetry={() => setReloadToken((value) => value + 1)}
@@ -1495,7 +1495,7 @@ function AccountPageInner() {
       {optionalFailedSections.length ? (
         <div className="mx-auto mt-4 w-full max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-center">
           <p className="text-xs font-bold text-amber-800">
-            بعض أقسام الحساب لم تكتمل، بينما بيانات حسابك الأساسية جاهزة.
+            بعض أقسام الحساب لم تكتمل بينما بيانات حسابك الأساسية جاهزة
           </p>
           <button
             type="button"
@@ -1657,7 +1657,7 @@ function AccountPageInner() {
               disabled={passwordSaving}
               className="w-full rounded-2xl bg-[var(--ci-button-bg,var(--barndaksa-brand-brown))] px-5 py-4 font-black text-[var(--ci-button-fg,#fff)] disabled:opacity-60"
             >
-              {passwordSaving ? "جار تغيير كلمة المرور..." : "تغيير كلمة المرور"}
+              {passwordSaving ? "جار تغيير كلمة المرور" : "تغيير كلمة المرور"}
             </button>
           </form>
         }
@@ -1681,7 +1681,7 @@ export default function CafeCustomerAccountPage() {
       hideFooter
     >
       <Suspense
-        fallback={<p className="p-8 text-center font-black">جاري التحميل...</p>}
+        fallback={<p className="p-8 text-center font-black">جاري التحميل</p>}
       >
         <AccountPageInner />
       </Suspense>

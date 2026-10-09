@@ -47,7 +47,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
   return (
     <AdminPageShell
       title="عملاء العلامات"
-      subtitle="كل عميل موضح تابع لأي علامة مع إنفاقه ونقاطه وحالة حسابه."
+      subtitle="كل عميل موضح تابع لأي علامة مع إنفاقه ونقاطه وحالة حسابه"
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       <AdminFilterBar>
@@ -56,7 +56,7 @@ export function AdminCustomersPage({ initialCustomers, configError }: Props) {
           <AdminInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالاسم، الجوال، الإيميل، أو اسم العلامة..."
+            placeholder="ابحث بالاسم، الجوال، الإيميل أو اسم العلامة"
             className="pr-12"
           />
         </div>

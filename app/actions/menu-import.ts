@@ -27,24 +27,24 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
   const source = String(input.source ?? "dashboard-menu-import").trim() || "dashboard-menu-import";
 
   if (!menuUrl) {
-    return { ok: false, message: "أدخل رابط المنيو أولًا." };
+    return { ok: false, message: "أدخل رابط المنيو أولًا" };
   }
 
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(menuUrl);
   } catch {
-    return { ok: false, message: "رابط المنيو غير صحيح." };
+    return { ok: false, message: "رابط المنيو غير صحيح" };
   }
 
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    return { ok: false, message: "رابط المنيو يجب أن يبدأ بـ http أو https." };
+    return { ok: false, message: "رابط المنيو يجب أن يبدأ بـ http أو https" };
   }
 
   const cafe = await getOwnerCafeContext().catch(() => null);
   if (!isBarndaksaEmailConfigured()) {
     console.warn("[reportMenuImportUrlAction] Resend is not configured; menu URL report was not emailed.");
-    return { ok: false, message: "تعذر الإرسال، حاول مرة أخرى." };
+    return { ok: false, message: "تعذر الإرسال حاول مرة أخرى" };
   }
 
   const submittedAt = new Date().toISOString();
@@ -58,7 +58,7 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
       html: `
         <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#241610">
           <h2>رابط منيو يحتاج مراجعة تقنية</h2>
-          <p>هناك رابط منيو لم يتم تعريفه أو لم يتم استخراج أصنافه بالكامل داخل نظام استيراد المنيو.</p>
+          <p>هناك رابط منيو لم يتم تعريفه أو لم يتم استخراج أصنافه بالكامل داخل نظام استيراد المنيو</p>
           <div style="margin:16px 0;padding:14px;border:1px solid #eadfd5;border-radius:14px;background:#fcf8f3">
             <p><strong>رابط المنيو:</strong> <a href="${escapeEmailHtml(parsedUrl.toString())}">${escapeEmailHtml(parsedUrl.toString())}</a></p>
             <p><strong>اسم العلامة التجارية:</strong> ${escapeEmailHtml(cafeName)}</p>
@@ -70,7 +70,7 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
       `,
       text: [
         "رابط منيو يحتاج مراجعة تقنية",
-        "هناك رابط منيو لم يتم تعريفه أو لم يتم استخراج أصنافه بالكامل داخل نظام استيراد المنيو.",
+        "هناك رابط منيو لم يتم تعريفه أو لم يتم استخراج أصنافه بالكامل داخل نظام استيراد المنيو",
         `رابط المنيو: ${parsedUrl.toString()}`,
         `اسم العلامة التجارية: ${cafeName}`,
         `معرف العلامة: ${cafeId}`,
@@ -78,10 +78,10 @@ export async function reportMenuImportUrlAction(input: { menuUrl: string; source
         `المصدر: ${source}`,
       ].join("\n"),
     });
-    return { ok: true, message: "تم إرسال الرابط للفريق التقني." };
+    return { ok: true, message: "تم إرسال الرابط للفريق التقني" };
   } catch (error) {
     console.error("[reportMenuImportUrlAction]", error);
-    return { ok: false, message: "تعذر الإرسال، حاول مرة أخرى." };
+    return { ok: false, message: "تعذر الإرسال حاول مرة أخرى" };
   }
 }
 

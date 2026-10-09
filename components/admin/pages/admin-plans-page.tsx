@@ -79,7 +79,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   function removePlan(planId: string) {
     const target = plans.find((item) => item.id === planId);
     if (!target || target.isDefault) return;
-    if (!window.confirm(`حذف «${target.name}» من الباقات؟ سيطبق الحذف عند حفظ التعديلات.`)) return;
+    if (!window.confirm(`حذف «${target.name}» من الباقات؟ سيطبق الحذف عند حفظ التعديلات`)) return;
     setPlans((current) => current.filter((item) => item.id !== planId));
     setDirty(true);
     setNotice(null);
@@ -102,7 +102,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
       setDirty(false);
       setNotice({ text: "تم حفظ الباقات والخدمات المتاحة لكل باقة", error: false });
     } catch {
-      setNotice({ text: "تعذر الاتصال لحفظ الباقات. بقيت تعديلاتك هنا؛ حاول مجددًا.", error: true });
+      setNotice({ text: "تعذر الاتصال لحفظ الباقات بقيت تعديلاتك هنا؛ حاول مجددًا", error: true });
       requestAnimationFrame(() => noticeRef.current?.focus());
     } finally {
       saveLock.current = false;
@@ -126,7 +126,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
       setRequests(result.data);
       setNotice({ text: approve ? "تم اعتماد الطلب وتفعيل الباقة" : "تم رفض الطلب", error: false });
     } catch {
-      setNotice({ text: "تعذر الاتصال لتحديث الطلب. حاول مجددًا.", error: true });
+      setNotice({ text: "تعذر الاتصال لتحديث الطلب حاول مجددًا", error: true });
       requestAnimationFrame(() => noticeRef.current?.focus());
     } finally {
       reviewLock.current = false;
@@ -136,7 +136,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
 
   return (
     <div className={styles.page} dir="rtl">
-      <AdminPageShell title="الباقات والاشتراكات" subtitle="صمّم الباقة، وحدّد الخدمات التي تظهر للعلامة وتعمل لديها.">
+      <AdminPageShell title="الباقات والاشتراكات" subtitle="صمّم الباقة وحدّد الخدمات التي تظهر للعلامة وتعمل لديها">
         <div className={styles.summary} aria-label="ملخص الباقات">
           <div><span>الباقات</span><strong>{numberFormat.format(plans.length)}</strong></div>
           <div><span>باقات مفعلة</span><strong>{numberFormat.format(plans.filter((item) => item.active).length)}</strong></div>
@@ -162,24 +162,24 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <span className={styles.price}>{numberFormat.format(item.offerEnabled && item.offerPrice !== undefined ? item.offerPrice : item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
                 <span className={styles.choiceBottom}>{numberFormat.format(features.filter((feature) => isIncluded(item, feature.id)).length)} خدمات مفعلة<ChevronLeft size={17} aria-hidden="true" /></span>
               </button>)}
-              {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات. أضف أول باقة لتحديد خدماتها.</p> : null}
+              {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات أضف أول باقة لتحديد خدماتها</p> : null}
             </aside>
 
             {plan ? <fieldset disabled={plan.id === "owner_trial_7d"} className={styles.editor} aria-label={`تحرير ${plan.name}`}>
               <header className={styles.editorHeader}>
-                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "تجربة ثابتة للحسابات الجديدة: 7 أيام للمنيو والإعدادات. متاحة مرة واحدة ولا تُعدّل من هنا." : "التغييرات لا تطبق إلا بعد الحفظ."}</p></div>
+                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "تجربة ثابتة للحسابات الجديدة: 7 أيام للمنيو والإعدادات متاحة مرة واحدة ولا تُعدّل من هنا" : "التغييرات لا تطبق إلا بعد الحفظ"}</p></div>
                 <label className={styles.toggle}><input type="checkbox" checked={plan.active} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
               </header>
 
               <section className={styles.section} aria-labelledby="plan-services-title">
-                <div className={styles.sectionHeading}><div><h3 id="plan-services-title">الخدمات المتاحة للعلامة</h3><p>نفس خيارات القائمة الجانبية. فعّل فقط ما تتضمنه الباقة.</p></div><span className={styles.count}>{features.filter((feature) => isIncluded(plan, feature.id)).length} / {features.length}</span></div>
+                <div className={styles.sectionHeading}><div><h3 id="plan-services-title">الخدمات المتاحة للعلامة</h3><p>نفس خيارات القائمة الجانبية فعّل فقط ما تتضمنه الباقة</p></div><span className={styles.count}>{features.filter((feature) => isIncluded(plan, feature.id)).length} / {features.length}</span></div>
                 <div className={styles.featureGrid}>{features.map((feature) => {
                   const enabled = isIncluded(plan, feature.id);
                   return <button type="button" key={feature.id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleFeature(plan.id, feature.id)}>
                     <span><strong>{feature.sidebarLabel ?? feature.titleAr}</strong><small>{enabled ? "تظهر في حساب العلامة" : "غير متاحة ضمن هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
                   </button>;
                 })}</div>
-                <p className={styles.policy}>الخدمات غير المفعلة لا تظهر للعميل. عند عدم وجود اشتراك مفعّل، تتوقف خدمات العلامة بما فيها المنيو المستقل.</p>
+                <p className={styles.policy}>الخدمات غير المفعلة لا تظهر للعميل عند عدم وجود اشتراك مفعّل تتوقف خدمات العلامة بما فيها المنيو المستقل</p>
               </section>
 
               <section className={styles.section} aria-labelledby="plan-details-title">
@@ -212,28 +212,28 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               <section className={styles.section} aria-labelledby="plan-limits-title">
                 <h3 id="plan-limits-title">حدود المنتجات والتجربة</h3>
                 <div className={styles.fields}>
-                  <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود.</small></label>
+                  <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود</small></label>
                   <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
                 </div>
                 <label className={styles.toggle}><input type="checkbox" checked={Boolean(plan.freeAfterTrial)} onChange={(event) => updatePlan(plan.id, { freeAfterTrial: event.target.checked })} />باقة مجانية بديلة بعد انتهاء التجربة</label>
                 <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />حذف الباقة</button> : null}</div>
               </section>
-            </fieldset> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة، ثم اختر خدماتها وسعرها.</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
+            </fieldset> : <div className={styles.emptyEditor}><Layers3 size={38} aria-hidden="true" /><h2>ابدأ بباقة تناسب عملاءك</h2><p>أضف باقة ثم اختر خدماتها وسعرها</p><button type="button" className={styles.primary} onClick={addPlan}><Plus size={18} aria-hidden="true" />إضافة باقة</button></div>}
           </fieldset>
 
-          <div className={styles.saveBar}><span role="status">{saving ? "جارٍ حفظ الباقات..." : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving ? "جارٍ الحفظ..." : "حفظ جميع التعديلات"}</button></div>
+          <div className={styles.saveBar}><span role="status">{saving ? "جارٍ حفظ الباقات" : dirty ? "لديك تعديلات لم تحفظ بعد" : "لا توجد تعديلات غير محفوظة"}</span><button type="submit" className={styles.primary} disabled={saving || !dirty || Boolean(configError)}><Save size={18} aria-hidden="true" />{saving ? "جارٍ الحفظ" : "حفظ جميع التعديلات"}</button></div>
         </form>
 
         {visiblePlans.length ? <section className={styles.comparison} aria-labelledby="plan-comparison-title"><div className={styles.sectionHeading}><div><h2 id="plan-comparison-title">الخدمات في نظرة واحدة</h2></div></div><div className={styles.tableScroll} tabIndex={0} role="region" aria-label="جدول مقارنة خدمات الباقات"><table><thead><tr><th scope="col">الخدمة</th>{visiblePlans.map((item) => <th scope="col" key={item.id}>{item.name}</th>)}</tr></thead><tbody>{features.map((feature) => <tr key={feature.id}><th scope="row">{feature.sidebarLabel ?? feature.titleAr}</th>{visiblePlans.map((item) => <td key={item.id}><span className={isIncluded(item, feature.id) ? styles.enabled : styles.disabled}>{isIncluded(item, feature.id) ? "مشمولة" : "غير مشمولة"}</span></td>)}</tr>)}</tbody></table></div></section> : null}
 
         <section id="payment-requests" className={styles.payments} aria-labelledby="payments-title">
-          <div className={styles.sectionHeading}><div><h2 id="payments-title"><Receipt size={22} aria-hidden="true" />طلبات الدفع</h2><p>راجع طلبات الاشتراك واعتمد الدفع لتفعيل الباقة.</p></div><span className={styles.count}>{numberFormat.format(pendingCount)} للمراجعة</span></div>
+          <div className={styles.sectionHeading}><div><h2 id="payments-title"><Receipt size={22} aria-hidden="true" />طلبات الدفع</h2><p>راجع طلبات الاشتراك واعتمد الدفع لتفعيل الباقة</p></div><span className={styles.count}>{numberFormat.format(pendingCount)} للمراجعة</span></div>
           {requests.map((request) => <article key={request.id} className={styles.request}>
-            <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><p>{request.receiptChannel === "whatsapp" ? "الإيصال مرسل عبر واتساب؛ تحقق من استلامه والتحويل قبل الاعتماد." : "تحقق من الإيصال والتحويل قبل اعتماد الطلب."}</p>{request.receiptUrl ? <a href={request.receiptUrl} target="_blank" rel="noreferrer" className={styles.secondary}>عرض إيصال التحويل</a> : null}<time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
+            <div className={styles.requestInfo}><h3>{request.cafeName}</h3><p>{request.planName} · {request.paymentMethod === "card_paypal" ? "دفع بالبطاقة" : "حوالة بنكية"}</p><p>{request.receiptChannel === "whatsapp" ? "الإيصال مرسل عبر واتساب؛ تحقق من استلامه والتحويل قبل الاعتماد" : "تحقق من الإيصال والتحويل قبل اعتماد الطلب"}</p>{request.receiptUrl ? <a href={request.receiptUrl} target="_blank" rel="noreferrer" className={styles.secondary}>عرض إيصال التحويل</a> : null}<time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}</time></div>
             <div className={styles.requestAmount}><strong>{numberFormat.format(request.amount)} <small>ر.س</small></strong><span className={request.status === "approved" ? styles.enabled : request.status === "rejected" ? styles.rejected : styles.defaultBadge}>{requestStatusLabels[request.status]}</span></div>
             {request.status === "pending_review" ? <div className={styles.requestActions}><button type="button" className={styles.primary} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, true)}>{reviewingId === request.id ? "جارٍ تحديث الطلب…" : "اعتماد وتفعيل الباقة"}</button><button type="button" className={styles.dangerButton} disabled={reviewingId !== null} onClick={() => reviewRequest(request.id, false)}>رفض الطلب</button></div> : null}
           </article>)}
-          {!requests.length ? <p className={styles.empty}>لا توجد طلبات دفع حاليًا. ستظهر الطلبات الجديدة هنا للمراجعة.</p> : null}
+          {!requests.length ? <p className={styles.empty}>لا توجد طلبات دفع حاليًا ستظهر الطلبات الجديدة هنا للمراجعة</p> : null}
         </section>
       </AdminPageShell>
     </div>

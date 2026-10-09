@@ -75,7 +75,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
   async function save() {
     try {
       setSaving(true);
-      setToast({ type: "loading", message: "جاري الحفظ..." });
+      setToast({ type: "loading", message: "جاري الحفظ" });
       const next: CafeSettings = { ...settings };
       delete next.logoDataUrl;
 
@@ -101,7 +101,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
       showToast({
         type: "error",
         message:
-          err instanceof Error ? err.message : "تعذر حفظ الإعدادات، حاول مرة أخرى",
+          err instanceof Error ? err.message : "تعذر حفظ الإعدادات حاول مرة أخرى",
       });
     } finally {
       setSaving(false);
@@ -113,14 +113,14 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     setPasswordMessage(null);
 
     if (!passwordForm.currentPassword) {
-      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة." });
+      setPasswordMessage({ type: "error", text: "كلمة المرور الحالية مطلوبة" });
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
       setPasswordMessage({
         type: "error",
-        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+        text: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف",
       });
       return;
     }
@@ -128,7 +128,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordMessage({
         type: "error",
-        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+        text: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة",
       });
       return;
     }
@@ -136,7 +136,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     if (passwordForm.currentPassword === passwordForm.newPassword) {
       setPasswordMessage({
         type: "error",
-        text: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية.",
+        text: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية",
       });
       return;
     }
@@ -169,7 +169,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     e.target.value = "";
 
     setLogoUploading(true);
-    showToast({ type: "loading", message: "جاري تحسين الصورة..." });
+    showToast({ type: "loading", message: "جاري تحسين الصورة" });
     try {
       const optimized = await optimizeImageForStorage(file, "cafe-logo");
       revokeObjectUrl(logoPreviewUrl);
@@ -185,7 +185,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
         message:
           err instanceof ImagePipelineError
             ? err.message
-            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+            : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP",
       });
     } finally {
       setLogoUploading(false);
@@ -205,7 +205,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     });
     showToast({
       type: "success",
-      message: "تم حذف اللوجو، اضغط حفظ الإعدادات لتثبيت الحذف",
+      message: "تم حذف اللوجو اضغط حفظ الإعدادات لتثبيت الحذف",
     });
   }
 
@@ -213,7 +213,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
     <div dir="rtl">
       <DashboardPageShell
         title={`إعدادات ${copy.casualNoun}`}
-        subtitle="الشعار، بيانات الحساب، والوثائق الحكومية الاختيارية."
+        subtitle="الشعار، بيانات الحساب والوثائق الحكومية الاختيارية"
         action={
           <div className="flex flex-wrap gap-3">
             <PrimaryButton
@@ -222,7 +222,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               className="inline-flex items-center gap-2"
             >
               <Save className="h-5 w-5" />
-              {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+              {saving ? "جاري الحفظ" : "حفظ الإعدادات"}
             </PrimaryButton>
           </div>
         }
@@ -279,7 +279,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 className="mt-5 inline-flex items-center gap-2"
               >
                 <ImagePlus className="h-5 w-5" />
-                {logoUploading ? "جاري رفع اللوجو..." : `رفع لوجو ${copy.casualNoun}`}
+                {logoUploading ? "جاري رفع اللوجو" : `رفع لوجو ${copy.casualNoun}`}
               </PrimaryButton>
               {displayLogoUrl ? (
                 <button
@@ -408,7 +408,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
               ) : null}
 
               <PrimaryButton type="submit" disabled={passwordSaving} className="w-full">
-                {passwordSaving ? "جار تغيير كلمة المرور..." : "تغيير كلمة المرور"}
+                {passwordSaving ? "جار تغيير كلمة المرور" : "تغيير كلمة المرور"}
               </PrimaryButton>
             </form>
           </BentoCard>

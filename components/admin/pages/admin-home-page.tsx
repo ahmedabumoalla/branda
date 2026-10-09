@@ -141,7 +141,7 @@ export function AdminHomePage({
   return (
     <AdminPageShell
       title="مركز قيادة منصة برندة"
-      subtitle="مؤشرات المنصة والإيرادات وسجل العمليات من قاعدة البيانات الفعلية."
+      subtitle="مؤشرات المنصة والإيرادات وسجل العمليات من قاعدة البيانات الفعلية"
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? (
@@ -252,7 +252,7 @@ export function AdminHomePage({
               </div>
 
               <p className="mt-2 text-sm font-bold text-[#CBB29C]">
-                الإجراءات المسجلة بالتاريخ والوقت والمنفذ.
+                الإجراءات المسجلة بالتاريخ والوقت والمنفذ
               </p>
             </div>
 
@@ -290,7 +290,7 @@ export function AdminHomePage({
 
             {!overview.auditItems.length ? (
               <div className="rounded-2xl border border-dashed border-white/10 px-5 py-10 text-center font-bold text-[#CBB29C]">
-                لا توجد عمليات مسجلة حتى الآن.
+                لا توجد عمليات مسجلة حتى الآن
               </div>
             ) : null}
           </div>
@@ -308,7 +308,7 @@ export function AdminHomePage({
 
             <p className="mt-3 text-sm font-bold leading-7 text-[#CBB29C]">
               مساحة جاهزة لنموذج الذكاء الاصطناعي لتحليل المنصة واقتراح
-              القرارات التشغيلية.
+              القرارات التشغيلية
             </p>
 
             <div className="mt-5 rounded-xl border border-[#D9A33F]/25 bg-[#D9A33F]/10 px-4 py-3 text-center text-sm font-black text-[#F6C35B]">
@@ -327,7 +327,7 @@ export function AdminHomePage({
 
             <p className="mt-3 text-sm font-bold leading-7 text-[#CBB29C]">
               إدارة أكواد الإحالة واحتساب العلامات المرتبطة بكل مندوب لمدة
-              ستة أشهر من تاريخ الانضمام.
+              ستة أشهر من تاريخ الانضمام
             </p>
 
             <div className="mt-5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-black text-[#CBB29C]">

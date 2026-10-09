@@ -27,7 +27,7 @@ export function TableWarsTeamPicker({ canJoinBlue, canJoinRed, onJoin, onJoined 
           onJoined(result.snapshot);
         })
         .catch((joinError) => {
-          setError(joinError instanceof Error ? joinError.message : "تعذر الانضمام للفريق.");
+          setError(joinError instanceof Error ? joinError.message : "تعذر الانضمام للفريق");
         });
     });
   }
@@ -45,7 +45,7 @@ export function TableWarsTeamPicker({ canJoinBlue, canJoinRed, onJoin, onJoined 
         </span>
         <span className="mt-3 block text-base font-black text-sky-950">الفريق الأزرق</span>
         <span className="mt-1 block text-xs font-bold leading-5 text-sky-800">
-          مقعدان متاحان لكل جولة.
+          مقعدان متاحان لكل جولة
         </span>
       </button>
 
@@ -60,7 +60,7 @@ export function TableWarsTeamPicker({ canJoinBlue, canJoinRed, onJoin, onJoined 
         </span>
         <span className="mt-3 block text-base font-black text-rose-950">الفريق الأحمر</span>
         <span className="mt-1 block text-xs font-bold leading-5 text-rose-800">
-          مقعدان متاحان لكل جولة.
+          مقعدان متاحان لكل جولة
         </span>
       </button>
 

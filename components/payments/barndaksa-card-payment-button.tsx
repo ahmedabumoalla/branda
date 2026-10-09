@@ -36,7 +36,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
     try {
       setProcessing(paymentMethod);
       setError("");
-      onMessage?.(`جاري تحويلك إلى صفحة دفع ${label}...`);
+      onMessage?.(`جاري تحويلك إلى صفحة دفع ${label}`);
 
       const response = await fetch("/api/payments/subscription/paymob/create-intention", {
         method: "POST",
@@ -63,7 +63,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
     try {
       setProcessing("paypal");
       setError("");
-      onMessage?.("جاري تحويلك إلى PayPal...");
+      onMessage?.("جاري تحويلك إلى PayPal");
 
       const response = await fetch("/api/payments/subscription/create-order", {
         method: "POST",
@@ -96,7 +96,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
         <div>
           <h3 className="font-black text-[#311912]">اختر طريقة الدفع</h3>
           <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
-            سيتم تحويلك إلى صفحة الدفع الآمنة لإكمال العملية، ولا تتغير الباقة إلا بعد نجاح الدفع.
+            سيتم تحويلك إلى صفحة الدفع الآمنة لإكمال العملية ولا تتغير الباقة إلا بعد نجاح الدفع
           </p>
         </div>
       </div>
@@ -109,7 +109,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
           className="flex items-center justify-between gap-3 rounded-2xl bg-[#4A281D] px-5 py-4 text-right font-black text-white shadow-[0_14px_30px_rgba(74,40,29,0.18)] transition hover:bg-[#6B3A25] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span>
-            {processing === "card" ? "جاري تجهيز صفحة الدفع..." : "مدى / Visa / Mastercard"}
+            {processing === "card" ? "جاري تجهيز صفحة الدفع" : "مدى / Visa / Mastercard"}
           </span>
           <CreditCard className="h-5 w-5" />
         </button>
@@ -120,7 +120,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
           disabled={isDisabled}
           className="flex items-center justify-between gap-3 rounded-2xl border border-[#E7D7C6] bg-[#111111] px-5 py-4 text-right font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span>{processing === "apple_pay" ? "جاري تجهيز Apple Pay..." : "Apple Pay"}</span>
+          <span>{processing === "apple_pay" ? "جاري تجهيز Apple Pay" : "Apple Pay"}</span>
           <span className="text-lg"></span>
         </button>
 
@@ -130,7 +130,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
           disabled={isDisabled}
           className="flex items-center justify-between gap-3 rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] px-5 py-4 text-right font-black text-[#4A281D] transition hover:bg-[#F2E7D9] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span>{processing === "paypal" ? "جاري تجهيز PayPal..." : "PayPal"}</span>
+          <span>{processing === "paypal" ? "جاري تجهيز PayPal" : "PayPal"}</span>
           <Landmark className="h-5 w-5" />
         </button>
       </div>
@@ -143,7 +143,7 @@ export function BarndaksaCardPaymentButton({ subscriptionId, disabled, onMessage
 
       <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-xs font-black text-emerald-700">
         <ShieldCheck className="h-4 w-4" />
-        الدفع يتم عبر بوابة آمنة، والتفعيل النهائي يتم بعد تأكيد العملية من السيرفر.
+        الدفع يتم عبر بوابة آمنة والتفعيل النهائي يتم بعد تأكيد العملية من السيرفر
       </div>
     </div>
   );

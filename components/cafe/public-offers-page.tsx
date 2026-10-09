@@ -92,7 +92,7 @@ export function PublicOffersPage({ slug }: { slug: string }) {
           <div className={`rounded-[18px] border border-dashed border-[var(--ci-border,#E7D7C6)] p-8 text-center ${theme.card}`}>
             <Gift className={`mx-auto h-8 w-8 ${theme.accent}`} />
             <h2 className="mt-3 text-xl font-black">لا توجد عروض نشطة حاليًا</h2>
-            <p className={`mt-2 text-sm font-bold ${theme.muted}`}>ستظهر العروض الجديدة هنا عند نشرها.</p>
+            <p className={`mt-2 text-sm font-bold ${theme.muted}`}>ستظهر العروض الجديدة هنا عند نشرها</p>
           </div>
         )}
       </main>

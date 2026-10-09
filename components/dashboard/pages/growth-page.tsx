@@ -47,7 +47,7 @@ const recommendationToneClass: Record<GrowthRecommendation["tone"], string> = {
 function EmptyState() {
   return (
     <div className="rounded-2xl border border-dashed border-[#D8C4B3] bg-[#FCF8F3] p-4 text-sm font-bold text-[#806A5E]">
-      لا توجد بيانات ضمن الفترة المحددة.
+      لا توجد بيانات ضمن الفترة المحددة
     </div>
   );
 }
@@ -93,7 +93,7 @@ function LockedGrowthPage() {
         </span>
         <h1 className="mt-4 text-2xl font-black text-[#311912]">مركز النمو غير مفعّل في باقتك الحالية</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
-          تواصل مع الأدمن لتفعيل الميزة.
+          تواصل مع الأدمن لتفعيل الميزة
         </p>
       </div>
     </div>
@@ -120,7 +120,7 @@ export function GrowthPage({ data, period, configError }: Props) {
           <p className="font-black text-[#6B3A25]">لوحة برندة</p>
           <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">مركز النمو</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-7 text-[#806A5E]">
-            مؤشرات وتوصيات تساعدك على فهم نشاط علامتك وزيادة المبيعات.
+            مؤشرات وتوصيات تساعدك على فهم نشاط علامتك وزيادة المبيعات
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9A33F]/35 bg-[#FFF7E3] px-4 py-2 text-xs font-black text-[#6B3A25]">
@@ -210,14 +210,14 @@ export function GrowthPage({ data, period, configError }: Props) {
           </span>
           <h2 className="mt-4 text-base font-black">حملات واتساب</h2>
           <p className="mt-2 text-sm font-bold leading-7 text-[#D8C4B3]">
-            تجهيز حملات النمو سيأتي لاحقًا بدون إرسال أو إنشاء حملات في هذه المرحلة.
+            تجهيز حملات النمو سيأتي لاحقًا بدون إرسال أو إنشاء حملات في هذه المرحلة
           </p>
         </article>
       </section>
 
       {data.missingSources.length ? (
         <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold leading-6 text-amber-800">
-          بعض مصادر البيانات غير متاحة حاليًا، لذلك عُرضت قيمها كحالة فارغة بدون بيانات بديلة.
+          بعض مصادر البيانات غير متاحة حاليًا لذلك عُرضت قيمها كحالة فارغة بدون بيانات بديلة
         </div>
       ) : null}
 

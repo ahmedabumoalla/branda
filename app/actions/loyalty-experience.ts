@@ -17,17 +17,17 @@ import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 
 async function requireEnrollment(slug: string) {
-  if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب.");
-  if (!isPhoneOtpRequiredForBrand(slug)) throw new Error("التحقق بالواتساب غير متاح حاليًا.");
+  if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب");
+  if (!isPhoneOtpRequiredForBrand(slug)) throw new Error("التحقق بالواتساب غير متاح حاليًا");
   const brand = await getLoyaltyBrand(z.string().regex(/^[a-z0-9-]{1,80}$/).parse(slug));
-  if (!brand || !brand.program.enabled) throw new Error("برنامج الولاء غير متاح حاليًا.");
+  if (!brand || !brand.program.enabled) throw new Error("برنامج الولاء غير متاح حاليًا");
 }
 
 export async function requestLoyaltyOtpAction(slug: string, phone: string) {
   try {
     await requireEnrollment(slug);
     return await requestCustomerPhoneOtpAction(slug, phone, "customer_signup", "loyalty");
-  } catch { return { required: true as const, ok: false as const, message: "تعذر إرسال الرمز، حاول لاحقًا." }; }
+  } catch { return { required: true as const, ok: false as const, message: "تعذر إرسال الرمز حاول لاحقًا" }; }
 }
 
 export async function completeLoyaltyOtpAction(slug: string, phone: string, code: string, name: string) {
@@ -36,7 +36,7 @@ export async function completeLoyaltyOtpAction(slug: string, phone: string, code
     const result = await completeCustomerPhoneOtpAction(slug, phone, code, "customer_signup", name, "loyalty");
     if (!result.ok) return { ok: false as const, message: result.message };
     return { ok: true as const, returningCustomer: result.returningCustomer };
-  } catch { return { ok: false as const, message: "تعذر إكمال التسجيل، حاول لاحقًا." }; }
+  } catch { return { ok: false as const, message: "تعذر إكمال التسجيل حاول لاحقًا" }; }
 }
 
 export async function saveLoyaltyExperienceAction(input: LoyaltyExperienceSettings) {
@@ -55,7 +55,7 @@ export async function saveRastLoyaltySettingsAction(input: Parameters<typeof sav
     revalidatePath("/dashboard/loyalty");
     return { ok: true as const };
   } catch (error) {
-    return { ok: false as const, message: error instanceof GoogleMapsLocationError ? error.message : "تعذر حفظ إعدادات الولاء. تحقق من البيانات وحاول مرة أخرى." };
+    return { ok: false as const, message: error instanceof GoogleMapsLocationError ? error.message : "تعذر حفظ إعدادات الولاء تحقق من البيانات وحاول مرة أخرى" };
   }
 }
 
@@ -71,22 +71,22 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   const parsed = z.object({ value: z.string().trim().min(4).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
   const session = await requireCashierSessionContext();
   const token = session.token;
-  if (session.cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة.");
+  if (session.cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة");
   if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug("rast"), "loyalty")) {
-    throw new Error("برنامج الولاء غير متاح حاليًا.");
+    throw new Error("برنامج الولاء غير متاح حاليًا");
   }
   const value = parseBarndaksaQrPayload(parsed.value, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? parsed.value.toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new Error("الرمز غير صالح لنوع العملية المحدد.");
+  if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   const { data, error } = await createAdminClient().rpc("execute_loyalty_audited_operation", {
     p_session_token: token, p_code: value, p_request_id: parsed.requestId, p_operation: parsed.kind,
   });
-  if (error) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة وجلسة الموظف.");
+  if (error) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة وجلسة الموظف");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
   // An audited rejection means its transaction did not commit. Transport errors remain uncertain.
   if (result?.ok === false && ["invalid_code", "session_invalid", "request_conflict", "program_disabled", "card_unavailable", "reward_unavailable", "operation_failed"].includes(String(result.errorCode))) {
     return { ok: false, status: String(result.errorCode) };
   }
-  if (result?.ok !== true) throw new Error("تعذر تسجيل العملية. تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف.");
+  if (result?.ok !== true) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف");
   if (result?.cardCode && ["stamped", "reward_issued", "redeemed"].includes(String(result.status))) {
     // A provider outage must not turn an already-committed stamp into a failed scan.
     try { await syncWalletCardByCode(String(result.cardCode)); } catch { console.warn("[loyalty-wallet-sync] deferred"); }
@@ -97,9 +97,9 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
 export async function sendLoyaltyWalletAnnouncementAction(title: string, body: string) {
   const message = z.object({ title: z.string().trim().min(2).max(80), body: z.string().trim().min(2).max(240) }).parse({ title, body });
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب.");
-  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
+  if (cafe.slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب");
+  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const result = await notifyBrandWalletMembers(cafe.id, cafe.slug, message.title, message.body);
   const statuses = [result.apple.status, result.google.status];
-  return { ...result, message: statuses.includes("failed") ? "تعذر قبول بعض طلبات الإشعار. الإعلان محفوظ لإعادة المحاولة." : statuses.includes("accepted") ? "قبلت المحفظة طلب الإشعار. ظهوره يعتمد على إعدادات العميل." : "الإعلان محفوظ، ولم يُرسل إشعار لعدم وجود بطاقات مرتبطة جاهزة." };
+  return { ...result, message: statuses.includes("failed") ? "تعذر قبول بعض طلبات الإشعار الإعلان محفوظ لإعادة المحاولة" : statuses.includes("accepted") ? "قبلت المحفظة طلب الإشعار ظهوره يعتمد على إعدادات العميل" : "الإعلان محفوظ ولم يُرسل إشعار لعدم وجود بطاقات مرتبطة جاهزة" };
 }

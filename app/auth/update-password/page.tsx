@@ -55,13 +55,13 @@ export default function UpdatePasswordPage() {
         if (!mounted) return;
         setValidRecovery(result.ok);
         if (!result.ok) {
-          setMessage("رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.");
+          setMessage("رابط استعادة كلمة المرور غير صالح أو منتهي اطلب رابطًا جديدًا");
         }
       })
       .catch(() => {
         if (!mounted) return;
         setValidRecovery(false);
-        setMessage("رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.");
+        setMessage("رابط استعادة كلمة المرور غير صالح أو منتهي اطلب رابطًا جديدًا");
       })
       .finally(() => {
         if (mounted) setChecking(false);
@@ -77,12 +77,12 @@ export default function UpdatePasswordPage() {
     setMessage("");
 
     if (password.length < 8) {
-      setMessage("كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.");
+      setMessage("كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف");
       return;
     }
 
     if (password !== confirm) {
-      setMessage("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.");
+      setMessage("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة");
       return;
     }
 
@@ -105,7 +105,7 @@ export default function UpdatePasswordPage() {
         <h1 className="mt-6 text-2xl font-black text-[#311912]">تعيين كلمة مرور جديدة</h1>
 
         {checking ? (
-          <p className="mt-6 font-black text-[#6B3A25]">جار التحقق من رابط الاستعادة...</p>
+          <p className="mt-6 font-black text-[#6B3A25]">جار التحقق من رابط الاستعادة</p>
         ) : null}
 
         {!checking && (!validRecovery || success) ? (
@@ -142,7 +142,7 @@ export default function UpdatePasswordPage() {
             />
             {message ? <p className="font-black text-red-600">{message}</p> : null}
             <PrimaryButton disabled={saving} className="w-full">
-              {saving ? "جار تحديث كلمة المرور..." : "تحديث كلمة المرور"}
+              {saving ? "جار تحديث كلمة المرور" : "تحديث كلمة المرور"}
             </PrimaryButton>
           </form>
         ) : null}

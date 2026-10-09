@@ -177,7 +177,7 @@ function buildAcceptedOrderWhatsApp(input: {
       const lineTotal = quantity * unitPrice;
       const notes = String(item.notes ?? "").trim();
       return [
-        `${index + 1}. ${String(item.name ?? "منتج")}`,
+        `${index + 1} ${String(item.name ?? "منتج")}`,
         description ? `   الوصف: ${description}` : "",
         category ? `   التصنيف: ${category}` : "",
         `   الكمية: ${quantity}`,
@@ -193,7 +193,7 @@ function buildAcceptedOrderWhatsApp(input: {
   return [
     `مرحبا ${String(order.customer_name ?? "عميلنا العزيز")}`,
     `يسعدنا في ${input.cafeName} تأكيد قبول طلبك بنجاح ✅`,
-    "تمت مراجعة الطلب واعتماده ونعمل الآن على تجهيزه بكل عناية.",
+    "تمت مراجعة الطلب واعتماده ونعمل الآن على تجهيزه بكل عناية",
     "",
     "بيانات الطلب:",
     `رقم الطلب: ${shortOrderCode(String(order.id ?? ""))}`,
@@ -396,7 +396,7 @@ export async function updateOrderStatus(
       await sendBarndaksaEmail({
         to: customerEmail,
         subject: status === "مقبول" ? "تم قبول طلبك" : "تم تحديث طلبك",
-        text: `تم تحديث حالة طلبك إلى ${status}.`,
+        text: `تم تحديث حالة طلبك إلى ${status}`,
         html: `<div dir="rtl"><h2>تم تحديث طلبك</h2><p>العلامة: ${escapeEmailHtml(cafeName)}</p><p>الحالة: ${escapeEmailHtml(status)}</p><p>السبب/الملاحظة: ${escapeEmailHtml(rejectionReason ?? "-")}</p></div>`,
       }).catch(() => undefined);
     }
@@ -595,7 +595,7 @@ export async function createPickupOrder(
         await sendBarndaksaEmail({
           to: ownerEmail,
           subject: `طلب ${copy.casualNoun} جديد وصل عبر برندة`,
-          text: `وصل طلب ${copy.casualNoun} جديد للفرع ${parsed.branchName ?? "غير محدد"}.`,
+          text: `وصل طلب ${copy.casualNoun} جديد للفرع ${parsed.branchName ?? "غير محدد"}`,
           html: `<div dir="rtl"><h2>طلب ${escapeEmailHtml(copy.casualNoun)} جديد</h2><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p><p>الملاحظات: ${escapeEmailHtml(parsed.notes ?? "-")}</p></div>`,
         });
       }
@@ -606,7 +606,7 @@ export async function createPickupOrder(
         await sendBarndaksaEmail({
           to: customerEmail,
           subject: "تم استلام طلبك عبر برندة",
-          text: `تم استلام طلبك لدى ${cafe.name}.`,
+          text: `تم استلام طلبك لدى ${cafe.name}`,
           html: `<div dir="rtl"><h2>تم استلام طلبك</h2><p>العلامة: ${escapeEmailHtml(cafe.name)}</p><p>الفرع: ${escapeEmailHtml(parsed.branchName ?? "غير محدد")}</p><p>موعد الاستلام: ${escapeEmailHtml(parsed.pickupAt ?? "غير محدد")}</p></div>`,
         });
       }

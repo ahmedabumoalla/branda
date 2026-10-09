@@ -485,7 +485,7 @@ export async function registerCustomer(
 
   const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
   if (existing) {
-    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة.");
+    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة");
   }
 
   const { data: profile, error } = await admin
@@ -503,7 +503,7 @@ export async function registerCustomer(
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة.");
+      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة");
     }
     throw error;
   }
@@ -512,8 +512,8 @@ export async function registerCustomer(
     await sendBarndaksaEmail({
       to: email,
       subject: `مرحبًا بك في ${cafe.name}`,
-      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
-      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
+      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة`,
+      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة</p></div>`,
     }).catch(() => undefined);
   }
 
@@ -541,7 +541,7 @@ export async function registerVerifiedCustomer(input: {
   const email = normalizeCustomerEmail(parsed.email);
   const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
   if (existing) {
-    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة.");
+    throw new Error("يوجد حساب بهذا البريد لدى هذه العلامة");
   }
 
   const admin = createAdminClient();
@@ -557,23 +557,23 @@ export async function registerVerifiedCustomer(input: {
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة.");
+      throw new Error("البريد أو رقم الجوال مسجّل مسبقًا في هذه العلامة");
     }
     if (error.message?.includes("PHONE_OTP_VERIFICATION_REQUIRED")) {
-      throw new Error("يجب التحقق من رقم الجوال قبل إنشاء الحساب.");
+      throw new Error("يجب التحقق من رقم الجوال قبل إنشاء الحساب");
     }
     throw error;
   }
 
   const profile = (Array.isArray(data) ? data[0] : data) as CustomerProfileRow | null;
-  if (!profile) throw new Error("تعذر إنشاء الحساب بعد التحقق.");
+  if (!profile) throw new Error("تعذر إنشاء الحساب بعد التحقق");
 
   if (isBarndaksaEmailConfigured()) {
     await sendBarndaksaEmail({
       to: email,
       subject: `مرحبًا بك في ${cafe.name}`,
-      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة.`,
-      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة.</p></div>`,
+      text: `تم إنشاء حسابك في ${cafe.name} عبر برندة`,
+      html: `<div dir="rtl"><h2>مرحبًا ${escapeEmailHtml(parsed.fullName.trim())}</h2><p>تم إنشاء حسابك في <strong>${escapeEmailHtml(cafe.name)}</strong> عبر برندة</p></div>`,
     }).catch(() => undefined);
   }
 
@@ -595,7 +595,7 @@ export async function loginCustomerByEmail(
   const existing = await findCustomerProfileByCafeEmail(cafe.id, email);
 
   if (!existing) {
-    throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة. أنشئ حسابًا جديدًا أولًا.");
+    throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة أنشئ حسابًا جديدًا أولًا");
   }
 
   const passwordHash = existing.password_hash as string | null | undefined;
@@ -636,7 +636,7 @@ export async function loginCustomerByIdentifier(input: {
     const profile = await findCustomerProfileByCafeEmail(cafe.id, email);
 
     if (!profile) {
-      throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة. أنشئ حسابا جديدا أولا.");
+      throw new Error("لا يوجد حساب بهذا البريد لدى هذه العلامة أنشئ حسابا جديدا أولا");
     }
 
     const passwordHash = profile.password_hash as string | null | undefined;
@@ -661,7 +661,7 @@ export async function loginCustomerByIdentifier(input: {
 
   const profile = await findCustomerProfileByCafePhone(cafe.id, parsed.identifier);
   if (!profile) {
-    throw new Error("لا يوجد حساب بهذا رقم الجوال لدى هذه العلامة.");
+    throw new Error("لا يوجد حساب بهذا رقم الجوال لدى هذه العلامة");
   }
 
   const email = normalizeCustomerEmail(String(profile.email ?? ""));
@@ -702,7 +702,7 @@ export async function changeCustomerPassword(input: {
     .parse(input);
 
   if (parsed.newPassword !== parsed.confirmPassword) {
-    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.");
+    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة");
   }
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
@@ -727,7 +727,7 @@ export async function changeCustomerPassword(input: {
     (await verifyLegacySupabaseCustomerPassword(userId, email, parsed.currentPassword));
 
   if (!currentOk) {
-    throw new Error("كلمة المرور الحالية غير صحيحة.");
+    throw new Error("كلمة المرور الحالية غير صحيحة");
   }
 
   await setCustomerPasswordHash(parsed.customerId, parsed.newPassword);
@@ -788,7 +788,7 @@ export async function resetCustomerPasswordWithToken(input: {
     .parse(input);
 
   if (parsed.newPassword !== parsed.confirmPassword) {
-    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.");
+    throw new Error("تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة");
   }
 
   const cafe = await getCafeBySlug(parsed.cafeSlug);
@@ -804,7 +804,7 @@ export async function resetCustomerPasswordWithToken(input: {
     .maybeSingle();
 
   if (error) throw error;
-  if (!profile) throw new Error("رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.");
+  if (!profile) throw new Error("رابط استعادة كلمة المرور غير صالح أو منتهي اطلب رابطًا جديدًا");
 
   await setCustomerPasswordHash(profile.id as string, parsed.newPassword, {
     clearSessions: true,

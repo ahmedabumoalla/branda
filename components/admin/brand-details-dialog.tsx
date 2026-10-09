@@ -88,7 +88,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
     try {
       await navigator.clipboard.writeText(cafe.maintenanceAccountNumber || "");
       setCopyMessage("تم نسخ رقم الصيانة");
-    } catch { setCopyMessage("تعذر النسخ، يمكنك تحديد الرقم ونسخه يدويًا"); }
+    } catch { setCopyMessage("تعذر النسخ يمكنك تحديد الرقم ونسخه يدويًا"); }
     if (copyTimer.current) clearTimeout(copyTimer.current);
     copyTimer.current = setTimeout(() => setCopyMessage(""), 3500);
   }
@@ -143,7 +143,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقة الحالية<strong>{planName}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>
           <DataList items={[["تاريخ البداية", cafe.planStartedAt], ["تاريخ الانتهاء", cafe.planExpiresAt], ["المدة المتبقية", cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
-          <div className={s.planEditor}><label htmlFor="brand-next-plan">تغيير الباقة</label><p>تطبيق التغيير ينهي الاشتراك الحالي وينشئ اشتراكًا إداريًا جديدًا.</p>
+          <div className={s.planEditor}><label htmlFor="brand-next-plan">تغيير الباقة</label><p>تطبيق التغيير ينهي الاشتراك الحالي وينشئ اشتراكًا إداريًا جديدًا</p>
             <div><select id="brand-next-plan" value={nextPlan} disabled={planPending} onChange={event => setNextPlan(event.target.value)}><option value="" disabled>اختر الباقة</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
               <button type="button" className={s.primaryButton} disabled={planPending || !nextPlan || nextPlan === cafe.planId} onClick={() => updatePlan(cafe.id, nextPlan)}>{planPending ? "جارٍ تطبيق الباقة…" : "تطبيق الباقة"}</button></div>
           </div>
@@ -181,7 +181,7 @@ export function BrandFeatureControls({ rows, draft, saving, dirty, change, save 
       <div className={s.serviceSetting}><span className={row.effectiveEnabled ? s.active : s.inactive}>{resultLabels[row.result]}</span><select aria-label={`إتاحة ${row.feature.titleAr}`} value={draft[row.feature.id] ?? row.override} disabled={saving}
         onChange={event => change(row.feature.id, event.target.value as Override)}><option value="default">حسب الباقة</option><option value="enabled" disabled={row.feature.status === "hidden"}>تفعيل يدوي</option><option value="disabled">إيقاف يدوي</option></select></div>
     </div>; })}</div>
-    {!visible.length && <p className={s.empty}>لا توجد خدمة بهذا الاسم. جرّب بحثًا آخر.</p>}
+    {!visible.length && <p className={s.empty}>لا توجد خدمة بهذا الاسم جرّب بحثًا آخر</p>}
     <div className={s.saveBar}><p role="status">{dirty ? "لديك تغييرات لم تُحفظ بعد" : "الاستثناءات تخص هذه العلامة فقط"}</p><button className={s.primaryButton} type="button" onClick={save} disabled={saving || !dirty}>{saving ? "جارٍ الحفظ" : "حفظ التغييرات"}</button></div>
   </div>;
 }

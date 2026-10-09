@@ -1,10 +1,10 @@
 # Branda — start here after switching Codex accounts
 
-Updated 2026-10-09, Asia/Riyadh. This is the current handoff; old source bundles are historical.
+Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles are historical.
 
 ## Resume without restarting
 
-Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The latest application release is `3469267d818f2c8c5871c5d76c2880dabd2be489`, confirmed on production. A newer handoff-only commit does not change application behavior.
+Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
 Last issue: React441 appeared when requesting a package or saving packages, not the cashier. Fixed validation of package IDs containing underscores and returned structured action errors instead of throwing them through React. Published successfully; the user has not yet reported their retry result. If it recurs, inspect the actual action/data error for that operation; do not guess or revert completed changes.
 
@@ -18,6 +18,7 @@ Last issue: React441 appeared when requesting a package or saving packages, not 
 
 ## Product decisions already implemented
 
+- Platform copy uses no trailing periods or commas in headings, descriptions, hints or messages; remove unnecessary decorative separators while preserving meaningful lists, questions, numbers and URLs. This rule is recorded in AGENTS.md for future edits.
 - Every brand uses one shared service catalog for sidebar and package features: menu/products, offers, loyalty/rewards, settings. Subscriptions remain accessible. Admin navigation is separate.
 - Services require a current active package; no package/expiry closes public menu and other brand services. Positive overrides cannot add services missing from a package. Electronic storefronts are archived and disabled before reads/writes. Do not restore `/c` routes or branch/order fetching.
 - Signup: Arabic/English brand names, manager, email, WhatsApp phone, Google Maps link, optional coupon; WhatsApp verification first, then password/confirmation. Seven-day trial includes menu/settings; loyalty/offers require a suitable paid package. Registration design was completely refreshed.

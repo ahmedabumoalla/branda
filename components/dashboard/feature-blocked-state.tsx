@@ -21,7 +21,7 @@ export function DashboardFeatureBlockedState({
         </p>
         <h1 className="mt-3 text-3xl font-black text-[#311912]">{title}</h1>
         <p className="mt-4 font-bold leading-8 text-[#806A5E]">
-          اختر باقة تشمل هذه الخدمة لتبدأ استخدامها في حساب علامتك.
+          اختر باقة تشمل هذه الخدمة لتبدأ استخدامها في حساب علامتك
         </p>
         <Link href={backHref} className="mt-6 inline-flex rounded-2xl bg-[#4A281D] px-6 py-4 font-black text-white">
           العودة للباقات

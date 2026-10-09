@@ -22,7 +22,7 @@ import { getEffectiveBrandFeatureAccess, getPlanIncludedFeatures } from "@/lib/p
 function ServiceUnavailable() {
   return (
     <div dir="rtl" className="mx-auto max-w-2xl rounded-3xl border border-[#E7D7C6] bg-[#FCF8F3] p-8 text-center">
-      <p role="alert" className="font-bold text-[#311912]">تعذر تحميل بيانات العلامة. حاول مجددًا لاحقًا.</p>
+      <p role="alert" className="font-bold text-[#311912]">تعذر تحميل بيانات العلامة حاول مجددًا لاحقًا</p>
       <Link href="/dashboard/menu" className="mt-6 inline-flex min-h-11 items-center rounded-2xl bg-[#4A281D] px-6 py-3 font-black text-white">العودة إلى المنيو</Link>
     </div>
   );

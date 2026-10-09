@@ -529,7 +529,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         ownerEmail: String(settings?.owner_email ?? ownerProfile?.email ?? ""),
         ownerPhone: String(settings?.owner_phone ?? ""),
         ownerLoginEmail: String(ownerProfile?.email ?? settings?.owner_email ?? ""),
-        passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة.",
+        passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة",
         maintenanceAccountNumber: makeMaintenanceAccountNumber(cafeId, slug),
         logoUrl: String(settings?.logo_url ?? ""),
         logoAssetId: settings?.logo_storage_path ? String(settings.logo_storage_path) : undefined,

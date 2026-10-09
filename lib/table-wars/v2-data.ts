@@ -103,7 +103,7 @@ function boolValue(value: unknown) {
 
 function normalizeTeam(value: unknown): TableWarsTeam {
   if (value === "blue" || value === "red") return value;
-  throw new Error("فريق حرب الطاولات غير صالح.");
+  throw new Error("فريق حرب الطاولات غير صالح");
 }
 
 function mapRound(row: Record<string, unknown>): TableWarsV2Round {
@@ -228,7 +228,7 @@ function isValidTableWarsV2Nickname(value: unknown) {
 function assertValidTableWarsV2Nickname(value: unknown) {
   const nickname = normalizeTableWarsV2Nickname(value);
   if (!isValidTableWarsV2Nickname(nickname)) {
-    throw new Error("الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا.");
+    throw new Error("الاسم المستعار يجب أن يكون من 2 إلى 20 حرفًا");
   }
   return nickname;
 }
@@ -355,7 +355,7 @@ async function getActivePhysicalTableCount(cafeId: string) {
     .eq("cafe_id", cafeId)
     .eq("is_active", true);
 
-  if (error) throw new Error(error.message || "تعذر التحقق من تفعيل حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر التحقق من تفعيل حرب الطاولات");
   return Number(count ?? 0);
 }
 
@@ -383,9 +383,9 @@ async function getPublicTableWarsV2Playability(slug: string): Promise<Playabilit
 
 async function ensurePublicTableWarsV2Playable(slug: string) {
   const result = await getPublicTableWarsV2Playability(slug);
-  if (!result.cafe) throw new Error("لم يتم العثور على الفرع.");
-  if (!result.featureEnabled) throw new Error("ميزة حرب الطاولات غير مفعلة لهذا الفرع.");
-  if (!result.gameEnabled) throw new Error("حرب الطاولات غير مفعلة لهذه العلامة.");
+  if (!result.cafe) throw new Error("لم يتم العثور على الفرع");
+  if (!result.featureEnabled) throw new Error("ميزة حرب الطاولات غير مفعلة لهذا الفرع");
+  if (!result.gameEnabled) throw new Error("حرب الطاولات غير مفعلة لهذه العلامة");
   return result.cafe;
 }
 
@@ -400,7 +400,7 @@ export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
       .eq("id", round.id)
       .eq("cafe_id", round.cafeId);
     if (roundResult.error) {
-      throw new Error(roundResult.error.message || "تعذر تثبيت إعدادات خريطة حرب الطاولات.");
+      throw new Error(roundResult.error.message || "تعذر تثبيت إعدادات خريطة حرب الطاولات");
     }
   }
   const { data, error } = await supabase
@@ -409,7 +409,7 @@ export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
     .eq("cafe_id", round.cafeId)
     .eq("round_id", round.id);
 
-  if (error) throw new Error(error.message || "تعذر فحص خلايا جولة حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر فحص خلايا جولة حرب الطاولات");
 
   const existingSlots = new Set(
     (Array.isArray(data) ? data : []).map((row) => intValue((row as Record<string, unknown>).slot_index)),
@@ -421,7 +421,7 @@ export async function seedTableWarsV2RoundCells(round: TableWarsV2Round) {
     .from("table_wars_v2_cells")
     .upsert(missingCells, { onConflict: "round_id,slot_index", ignoreDuplicates: true });
   if (insertResult.error) {
-    throw new Error(insertResult.error.message || "تعذر إنشاء خلايا جولة حرب الطاولات.");
+    throw new Error(insertResult.error.message || "تعذر إنشاء خلايا جولة حرب الطاولات");
   }
 }
 
@@ -445,7 +445,7 @@ async function createTableWarsV2Room(cafeId: string): Promise<TableWarsV2Round> 
       })
       .select("*")
       .single(),
-    "تعذر إنشاء جولة حرب الطاولات.",
+    "تعذر إنشاء جولة حرب الطاولات",
   );
   const round = mapRound(created as Record<string, unknown>);
   await seedTableWarsV2RoundCells(round);
@@ -484,7 +484,7 @@ async function getRoundPlayers(round: TableWarsV2Round) {
     .eq("round_id", round.id)
     .order("joined_at", { ascending: true });
 
-  if (error) throw new Error(error.message || "تعذر جلب لاعبي حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر جلب لاعبي حرب الطاولات");
   return (Array.isArray(data) ? data : []).map((row) => mapPlayer(row as Record<string, unknown>));
 }
 
@@ -497,7 +497,7 @@ async function getRoundCells(round: TableWarsV2Round) {
     .eq("round_id", round.id)
     .order("slot_index", { ascending: true });
 
-  if (error) throw new Error(error.message || "تعذر جلب خلايا حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر جلب خلايا حرب الطاولات");
   return (Array.isArray(data) ? data : [])
     .map((row) => {
       const cell = mapCell(row as Record<string, unknown>);
@@ -517,7 +517,7 @@ async function getRoundMovingUnits(round: TableWarsV2Round) {
     .eq("status", "moving")
     .order("started_at", { ascending: true });
 
-  if (error) throw new Error(error.message || "تعذر جلب وحدات حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر جلب وحدات حرب الطاولات");
   return (Array.isArray(data) ? data : []).map((row) => mapUnit(row as Record<string, unknown>));
 }
 
@@ -567,7 +567,7 @@ async function getLegendsPreview(cafeId: string) {
     .order("play_seconds", { ascending: false })
     .limit(8);
 
-  if (error) throw new Error(error.message || "تعذر جلب أساطير حرب الطاولات.");
+  if (error) throw new Error(error.message || "تعذر جلب أساطير حرب الطاولات");
   return (Array.isArray(data) ? data : []).map((row) => mapLegend(row as Record<string, unknown>));
 }
 
@@ -581,7 +581,7 @@ async function getCurrentPlayer(round: TableWarsV2Round, customerId: string) {
     .eq("customer_id", customerId)
     .maybeSingle();
 
-  if (error) throw new Error(error.message || "تعذر جلب حالة اللاعب.");
+  if (error) throw new Error(error.message || "تعذر جلب حالة اللاعب");
   return data ? mapPlayer(data as Record<string, unknown>) : null;
 }
 
@@ -602,7 +602,7 @@ async function refreshRoundTeamCounts(round: TableWarsV2Round) {
       .eq("cafe_id", round.cafeId)
       .select("*")
       .single(),
-    "تعذر تحديث أعداد فرق حرب الطاولات.",
+    "تعذر تحديث أعداد فرق حرب الطاولات",
   );
   return {
     round: mapRound(updated as Record<string, unknown>),
@@ -695,7 +695,7 @@ async function assignBaseCell(round: TableWarsV2Round, team: TableWarsTeam, play
       : updateQuery.is("assigned_player_id", null);
     const { data, error } = await guardedQuery.select("*").maybeSingle();
 
-    if (error) throw new Error(error.message || "تعذر تعيين قلعة اللاعب.");
+    if (error) throw new Error(error.message || "تعذر تعيين قلعة اللاعب");
     if (data) return mapCell(data as Record<string, unknown>);
   }
 
@@ -713,7 +713,7 @@ async function updatePlayerBase(round: TableWarsV2Round, playerId: string, baseC
       .eq("round_id", round.id)
       .select("*")
       .single(),
-    "تعذر تحديث قلعة اللاعب.",
+    "تعذر تحديث قلعة اللاعب",
   );
   return mapPlayer(updated as Record<string, unknown>);
 }
@@ -727,7 +727,7 @@ async function releasePlayerCellAssignments(round: TableWarsV2Round, playerId: s
     .eq("round_id", round.id)
     .eq("assigned_player_id", playerId);
 
-  if (error) throw new Error(error.message || "تعذر تحرير مقعد اللاعب القديم.");
+  if (error) throw new Error(error.message || "تعذر تحرير مقعد اللاعب القديم");
 }
 
 async function updatePlayerSeatForJoin(
@@ -752,7 +752,7 @@ async function updatePlayerSeatForJoin(
       .eq("round_id", round.id)
       .select("*")
       .single(),
-    "تعذر ربط مقعد اللاعب.",
+    "تعذر ربط مقعد اللاعب",
   );
   return mapPlayer(updated as Record<string, unknown>);
 }
@@ -774,7 +774,7 @@ async function updatePlayerDisplayName(
       .eq("round_id", round.id)
       .select("*")
       .single(),
-    "تعذر تحديث الاسم المستعار.",
+    "تعذر تحديث الاسم المستعار",
   );
   return mapPlayer(updated as Record<string, unknown>);
 }
@@ -801,7 +801,7 @@ async function createRoundPlayer(input: {
       })
       .select("*")
       .single(),
-    "تعذر إنشاء لاعب حرب الطاولات.",
+    "تعذر إنشاء لاعب حرب الطاولات",
   );
   return mapPlayer(created as Record<string, unknown>);
 }
@@ -817,7 +817,7 @@ async function convertPlayerToSpectator(round: TableWarsV2Round, player: TableWa
       .eq("round_id", round.id)
       .select("*")
       .single(),
-    "تعذر تحويل اللاعب إلى متفرج.",
+    "تعذر تحويل اللاعب إلى متفرج",
   );
   return mapPlayer(updated as Record<string, unknown>);
 }
@@ -838,7 +838,7 @@ async function releaseAiPlaceholdersForTeam(round: TableWarsV2Round, team: Table
     .eq("round_id", round.id)
     .in("assigned_player_id", aiPlayerIds);
 
-  if (cellResult.error) throw new Error(cellResult.error.message || "تعذر تحرير مقاعد الكمبيوتر.");
+  if (cellResult.error) throw new Error(cellResult.error.message || "تعذر تحرير مقاعد الكمبيوتر");
 
   const playerResult = await supabase
     .from("table_wars_v2_players")
@@ -848,7 +848,7 @@ async function releaseAiPlaceholdersForTeam(round: TableWarsV2Round, team: Table
     .eq("team", team)
     .eq("role", "ai");
 
-  if (playerResult.error) throw new Error(playerResult.error.message || "تعذر تعطيل مقاعد الكمبيوتر.");
+  if (playerResult.error) throw new Error(playerResult.error.message || "تعذر تعطيل مقاعد الكمبيوتر");
 }
 
 async function createPlayerWithBase(input: {
@@ -1135,7 +1135,7 @@ export async function joinTableWarsV2Customer(
   const currentRoom = await getOpenTableWarsV2RoomForCustomer(cafe.id, customerId);
   if (currentRoom?.player.role === "player") {
     if (currentRoom.player.team !== team) {
-      throw new Error("لا يمكن تغيير الفريق بعد الانضمام إلى الجولة.");
+      throw new Error("لا يمكن تغيير الفريق بعد الانضمام إلى الجولة");
     }
     await updatePlayerDisplayName(currentRoom.round, currentRoom.player, displayName);
     const snapshot = await getTableWarsV2SnapshotForCustomer(cafe.slug);
@@ -1162,17 +1162,17 @@ export async function joinTableWarsV2Customer(
   const rpcRow = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
   const roundId = text(rpcRow?.round_id);
   const playerId = text(rpcRow?.player_id);
-  if (!roundId || !playerId) throw new Error("لم تُرجع ردهة حرب الطاولات بيانات الانضمام.");
+  if (!roundId || !playerId) throw new Error("لم تُرجع ردهة حرب الطاولات بيانات الانضمام");
 
   let round = await getRoundById(roundId, cafe.id);
   if (!round || round.status !== "waiting") {
-    throw new Error("تعذر العثور على ردهة انتظار صالحة.");
+    throw new Error("تعذر العثور على ردهة انتظار صالحة");
   }
 
   await seedTableWarsV2RoundCells(round);
   const joinedPlayer = await getCurrentPlayer(round, customerId);
   if (!joinedPlayer || joinedPlayer.id !== playerId || joinedPlayer.role !== "player") {
-    throw new Error("تعذر تثبيت مقعد اللاعب في الردهة.");
+    throw new Error("تعذر تثبيت مقعد اللاعب في الردهة");
   }
 
   const [cells, players] = await Promise.all([getRoundCells(round), getRoundPlayers(round)]);
@@ -1180,7 +1180,7 @@ export async function joinTableWarsV2Customer(
   let player = joinedPlayer;
   if (!currentBase) {
     const baseCell = await assignBaseCell(round, team, joinedPlayer.id);
-    if (!baseCell) throw new Error("اكتمل فريقك قبل تثبيت المقعد. جرّب ردهة جديدة.");
+    if (!baseCell) throw new Error("اكتمل فريقك قبل تثبيت المقعد جرّب ردهة جديدة");
     player = await updatePlayerBase(round, joinedPlayer.id, baseCell.id);
   }
 
@@ -1226,7 +1226,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
   const customerCafeId = text(customerContext.cafeId);
   const requestedPlayerId = nullableText(customerContext.playerId);
   if (!customerId || !customerCafeId || customerCafeId !== cafe.id) {
-    throw tableWarsV2StartError("تعذر التحقق من جلسة لاعب حرب الطاولات.", {
+    throw tableWarsV2StartError("تعذر التحقق من جلسة لاعب حرب الطاولات", {
       roundStatus: null,
       foundPlayer: false,
       playerIsConnected: false,
@@ -1253,7 +1253,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
   }
 
   if (!round || !player || player.role !== "player" || !player.isConnected || player.leftAt) {
-    throw tableWarsV2StartError("لم يعد مقعدك في الردهة نشطًا. اختر الفريق مجددًا.", {
+    throw tableWarsV2StartError("لم يعد مقعدك في الردهة نشطًا اختر الفريق مجددًا", {
       roundStatus: round?.status ?? null,
       foundPlayer: Boolean(player),
       playerIsConnected: Boolean(player?.isConnected && !player.leftAt),
@@ -1265,7 +1265,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
   }
 
   if (round.status !== "waiting") {
-    throw tableWarsV2StartError("انتهت ردهة الانتظار. اختر الفريق مجددًا.", {
+    throw tableWarsV2StartError("انتهت ردهة الانتظار اختر الفريق مجددًا", {
       roundStatus: round.status,
       foundPlayer: true,
       playerIsConnected: player.isConnected && !player.leftAt,
@@ -1301,7 +1301,7 @@ export async function startTableWarsV2LobbyRoundForCustomer(
     return getTableWarsV2SnapshotForCustomer(cafe.slug, round.id);
   }
 
-  throw tableWarsV2StartError("لم تنتقل الردهة إلى الجولة النشطة. أعد المحاولة.", {
+  throw tableWarsV2StartError("لم تنتقل الردهة إلى الجولة النشطة أعد المحاولة", {
     roundStatus: round.status,
     foundPlayer: true,
     playerIsConnected: player.isConnected && !player.leftAt,
@@ -1363,7 +1363,7 @@ export async function sendTableWarsV2UnitsForCustomer(input: {
   const freshFromCell = cells.find((cell) => cell.id === fromCell.id) ?? fromCell;
   const freshToCell = cells.find((cell) => cell.id === toCell.id) ?? toCell;
   if (!areTableWarsSlotsConnected(cells, freshFromCell.slotIndex, freshToCell.slotIndex)) {
-    throw new Error("يمكن الإرسال عبر المسارات الثلاثة المتصلة بالطاولة فقط.");
+    throw new Error("يمكن الإرسال عبر المسارات الثلاثة المتصلة بالطاولة فقط");
   }
   const canControl = canPlayerControlRoundCell(currentPlayer, freshFromCell, cells, players);
 
@@ -1549,7 +1549,7 @@ export async function leaveTableWarsV2RoundForCustomer(slug: string, roundId: st
     .eq("cafe_id", round.cafeId)
     .eq("round_id", round.id);
   if (playerResult.error) {
-    throw new Error(playerResult.error.message || "تعذر تسجيل الانسحاب من حرب الطاولات.");
+    throw new Error(playerResult.error.message || "تعذر تسجيل الانسحاب من حرب الطاولات");
   }
 
   const { counts } = await refreshRoundTeamCounts(round);
@@ -1561,7 +1561,7 @@ export async function leaveTableWarsV2RoundForCustomer(slug: string, roundId: st
       .eq("cafe_id", round.cafeId)
       .eq("status", "waiting");
     if (roundResult.error) {
-      throw new Error(roundResult.error.message || "تعذر إغلاق ردهة الانتظار الفارغة.");
+      throw new Error(roundResult.error.message || "تعذر إغلاق ردهة الانتظار الفارغة");
     }
   }
 

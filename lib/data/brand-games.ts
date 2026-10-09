@@ -27,7 +27,7 @@ export async function setOwnerBattleArenaEnabled(enabled: boolean) {
   const cafe = await requireOwnerCafeContext();
   const gamesFeatureEnabled = await hasBrandFeature(cafe.id, PUBLIC_GAMES_FEATURE_KEY);
   if (!gamesFeatureEnabled) {
-    throw new Error("ميزة ألعاب العلامة التجارية غير مفعّلة لهذه العلامة.");
+    throw new Error("ميزة ألعاب العلامة التجارية غير مفعّلة لهذه العلامة");
   }
 
   const admin = createAdminClient();

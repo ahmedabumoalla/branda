@@ -154,7 +154,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onPaid, onMe
         <div>
           <h3 className="font-black text-[#311912]">الدفع الإلكتروني بالبطاقة البنكية</h3>
           <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
-            يدعم الدفع ببطاقات فيزا وماستركارد والبطاقات البنكية المتاحة حسب البنك والبوابة.
+            يدعم الدفع ببطاقات فيزا وماستركارد والبطاقات البنكية المتاحة حسب البنك والبوابة
           </p>
         </div>
       </div>
@@ -168,18 +168,18 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onPaid, onMe
 
       {disabled || !subscriptionId ? (
         <div className="rounded-2xl bg-[#F8F4EF] p-4 text-center text-sm font-black text-[#806A5E]">
-          اختر الباقة أولًا لإظهار بوابة الدفع.
+          اختر الباقة أولًا لإظهار بوابة الدفع
         </div>
       ) : (
         <div ref={containerRef} className="min-h-[52px]" />
       )}
 
       {!ready && !error && !disabled && subscriptionId ? (
-        <p className="mt-3 text-center text-sm font-bold text-[#806A5E]">جاري تجهيز بوابة الدفع...</p>
+        <p className="mt-3 text-center text-sm font-bold text-[#806A5E]">جاري تجهيز بوابة الدفع</p>
       ) : null}
 
       {processing ? (
-        <p className="mt-3 text-center text-sm font-black text-[#6B3A25]">جاري معالجة الدفع...</p>
+        <p className="mt-3 text-center text-sm font-black text-[#6B3A25]">جاري معالجة الدفع</p>
       ) : null}
 
       {error ? (
@@ -190,7 +190,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onPaid, onMe
 
       <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-xs font-black text-emerald-700">
         <ShieldCheck className="h-4 w-4" />
-        يتم تأكيد الدفع من السيرفر فقط، ولا يتم تفعيل الباقة قبل نجاح العملية.
+        يتم تأكيد الدفع من السيرفر فقط ولا يتم تفعيل الباقة قبل نجاح العملية
       </div>
     </div>
   );

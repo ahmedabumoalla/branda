@@ -22,7 +22,7 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
       const result = await loginCashierAction(email, password);
       if (result && !result.ok) setMessage(result.message);
     } catch {
-      setMessage("تعذر بدء جلسة نقطة التشغيل. حاول مجددًا");
+      setMessage("تعذر بدء جلسة نقطة التشغيل حاول مجددًا");
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
         <form onSubmit={submit} className="p-6 sm:p-8">
           <h1 className="text-2xl font-black">دخول نقطة التشغيل</h1>
           <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            أدخل بيانات موظف الكاشير لبدء معالجة الطلبات والولاء والمكافآت.
+            أدخل بيانات موظف الكاشير لبدء معالجة الطلبات والولاء والمكافآت
           </p>
           <label className="mt-6 block text-sm font-black">
             البريد الإلكتروني
@@ -87,7 +87,7 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
             className="mt-6 inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 font-black text-white disabled:opacity-60"
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-            {loading ? "جارٍ التحقق..." : "دخول"}
+            {loading ? "جارٍ التحقق" : "دخول"}
           </button>
           <Link href="/login" className="mt-5 block text-center text-sm font-black text-[#6B3A25] underline underline-offset-4">
             العودة إلى تسجيل الدخول العام

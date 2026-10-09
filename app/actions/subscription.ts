@@ -38,17 +38,17 @@ export async function failPlanPaymentAction() {
 }
 
 export async function createBankSubscriptionRequestAction(planId: string, durationMonths: number) {
-  return actionResult(() => createOwnerBankRequest(planId, durationMonths), "تعذر إنشاء طلب الاشتراك. حاول مجددًا.");
+  return actionResult(() => createOwnerBankRequest(planId, durationMonths), "تعذر إنشاء طلب الاشتراك حاول مجددًا");
 }
 
 export async function uploadSubscriptionReceiptAction(requestId: string, formData: FormData) {
-  return actionResult(() => submitOwnerBankReceipt(requestId, formData), "تعذر إرسال الإيصال. حاول مجددًا.");
+  return actionResult(() => submitOwnerBankReceipt(requestId, formData), "تعذر إرسال الإيصال حاول مجددًا");
 }
 
 export async function submitSubscriptionWhatsappAction(requestId: string) {
-  return actionResult(() => submitOwnerBankReceipt(requestId), "تعذر إرسال الطلب للمراجعة. حاول مجددًا.");
+  return actionResult(() => submitOwnerBankReceipt(requestId), "تعذر إرسال الطلب للمراجعة حاول مجددًا");
 }
 
 export async function refreshSubscriptionRequestsAction() {
-  return actionResult(() => getOwnerSubscriptionRequests(), "تعذر تحديث حالة الطلب. حاول مجددًا.");
+  return actionResult(() => getOwnerSubscriptionRequests(), "تعذر تحديث حالة الطلب حاول مجددًا");
 }

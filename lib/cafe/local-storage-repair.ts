@@ -292,8 +292,8 @@ export async function migrateAllLegacyImageDataUrls(): Promise<MigrationReport> 
   if (report.migratedImages > 0 || report.repairedKeys.length > 0) {
     report.message =
       report.failedImages > 0
-        ? `تم نقل ${report.migratedImages} صورة. بعض الصور التالفة قد تحتاج إعادة رفع.`
-        : `تم نقل ${report.migratedImages} صورة وتحسين التخزين المحلي.`;
+        ? `تم نقل ${report.migratedImages} صورة بعض الصور التالفة قد تحتاج إعادة رفع`
+        : `تم نقل ${report.migratedImages} صورة وتحسين التخزين المحلي`;
   }
 
   return report;
@@ -351,7 +351,7 @@ export async function repairLocalImageStorage(
     repairedStorage: true,
     message:
       report.message ??
-      "تم إصلاح التخزين. أعد رفع الشعار أو الخلفية ثم احفظ الثيم إن لزم.",
+      "تم إصلاح التخزين أعد رفع الشعار أو الخلفية ثم احفظ الثيم إن لزم",
   };
 }
 

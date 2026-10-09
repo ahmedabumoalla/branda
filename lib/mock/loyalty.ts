@@ -89,7 +89,7 @@ export const mockLoyaltySettings: LoyaltySettings = {
       enabled: true,
       pointsCost: 50,
       discountPercent: 10,
-      description: "يستبدل العميل 50 نقطة ويحصل على خصم 10%.",
+      description: "يستبدل العميل 50 نقطة ويحصل على خصم 10%",
     },
     {
       id: "red_drink",
@@ -97,7 +97,7 @@ export const mockLoyaltySettings: LoyaltySettings = {
       title: "مشروب مجاني",
       enabled: true,
       pointsCost: 100,
-      description: "يستبدل العميل 100 نقطة ويحصل على مشروب مجاني.",
+      description: "يستبدل العميل 100 نقطة ويحصل على مشروب مجاني",
     },
   ],
 };
@@ -107,14 +107,14 @@ export const mockLoyaltyRewards: LoyaltyReward[] = [
     id: "1",
     title: "خصم 10%",
     points: 50,
-    description: "يستبدل العميل 50 نقطة ويحصل على خصم 10%.",
+    description: "يستبدل العميل 50 نقطة ويحصل على خصم 10%",
     active: true,
   },
   {
     id: "2",
     title: "مشروب مجاني",
     points: 100,
-    description: "يستبدل العميل 100 نقطة ويحصل على مشروب مجاني.",
+    description: "يستبدل العميل 100 نقطة ويحصل على مشروب مجاني",
     active: true,
   },
 ];

@@ -20,7 +20,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onMessage }:
     try {
       setProcessing(true);
       setError("");
-      onMessage?.("جاري تجهيز بوابة الدفع الآمنة...");
+      onMessage?.("جاري تجهيز بوابة الدفع الآمنة");
 
       const response = await fetch("/api/payments/subscription/create-order", {
         method: "POST",
@@ -56,7 +56,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onMessage }:
         <div>
           <h3 className="font-black text-[#311912]">الدفع الإلكتروني بالبطاقة البنكية</h3>
           <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">
-            ادفع بأمان عبر البطاقة البنكية. يتم تفعيل الباقة تلقائيًا بعد نجاح العملية.
+            ادفع بأمان عبر البطاقة البنكية يتم تفعيل الباقة تلقائيًا بعد نجاح العملية
           </p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onMessage }:
         disabled={disabled || !subscriptionId || processing}
         className="w-full rounded-2xl bg-[#4A281D] px-6 py-4 text-center font-black text-white shadow-[0_14px_30px_rgba(74,40,29,0.18)] transition hover:bg-[#6B3A25] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {processing ? "جاري تجهيز الدفع..." : "الدفع وتفعيل الباقة"}
+        {processing ? "جاري تجهيز الدفع" : "الدفع وتفعيل الباقة"}
       </button>
 
       {error ? (
@@ -85,7 +85,7 @@ export function BrandaCardPaymentButton({ subscriptionId, disabled, onMessage }:
 
       <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3 text-xs font-black text-emerald-700">
         <ShieldCheck className="h-4 w-4" />
-        يتم تأكيد الدفع من السيرفر فقط، ولا يتم تفعيل الباقة قبل نجاح العملية.
+        يتم تأكيد الدفع من السيرفر فقط ولا يتم تفعيل الباقة قبل نجاح العملية
       </div>
     </div>
   );

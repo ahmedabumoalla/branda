@@ -118,7 +118,7 @@ async function previewCouponForPlan(planId: string, planAmount: number, couponCo
     .maybeSingle();
 
   if (previousPaid) {
-    return { ok: false, message: "كوبون المندوب يستخدم مرة واحدة لأول اشتراك مدفوع فقط. استخدم كوبون خصم المنصة للتجديد أو الترقية." };
+    return { ok: false, message: "كوبون المندوب يستخدم مرة واحدة لأول اشتراك مدفوع فقط استخدم كوبون خصم المنصة للتجديد أو الترقية" };
   }
 
   const { data, error } = await admin
@@ -316,21 +316,21 @@ export async function getBankTransferDetails(): Promise<BankTransferDetails | nu
 
 export async function createOwnerBankRequest(planId: string, durationMonths: number): Promise<BankSubscriptionRequest[]> {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.role !== "owner") throw new Error("طلب الاشتراك متاح من حساب المالك. أنهِ وضع الصيانة وسجّل بحساب المالك لإنشاء الطلب.");
+  if (cafe.role !== "owner") throw new Error("طلب الاشتراك متاح من حساب المالك أنهِ وضع الصيانة وسجّل بحساب المالك لإنشاء الطلب");
   if (!planId || ![1, 2, 12, 24].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths });
   if (error) {
     const reasons: Record<string, string> = {
-      "An open request already exists": "لديك طلب اشتراك مفتوح بالفعل. حدّث الصفحة لمتابعة الطلب وإرسال الإيصال.",
-      "Plan unavailable": "هذه الباقة غير متاحة للاشتراك حاليًا. اختر باقة أخرى أو حدّث الصفحة.",
-      "Duration unavailable": "المدة المختارة غير متاحة لهذه الباقة. اختر مدة أخرى.",
-      "Invalid duration": "اختر مدة اشتراك صحيحة ثم تابع.",
-      "Unauthorized": "انتهت جلسة الدخول. سجّل الدخول إلى حساب المالك ثم حاول مجددًا.",
-      "Forbidden": "تعذر التحقق من ملكية الحساب. سجّل الدخول إلى حساب المالك ثم حاول مجددًا.",
+      "An open request already exists": "لديك طلب اشتراك مفتوح بالفعل حدّث الصفحة لمتابعة الطلب وإرسال الإيصال",
+      "Plan unavailable": "هذه الباقة غير متاحة للاشتراك حاليًا اختر باقة أخرى أو حدّث الصفحة",
+      "Duration unavailable": "المدة المختارة غير متاحة لهذه الباقة اختر مدة أخرى",
+      "Invalid duration": "اختر مدة اشتراك صحيحة ثم تابع",
+      "Unauthorized": "انتهت جلسة الدخول سجّل الدخول إلى حساب المالك ثم حاول مجددًا",
+      "Forbidden": "تعذر التحقق من ملكية الحساب سجّل الدخول إلى حساب المالك ثم حاول مجددًا",
     };
     console.error("[createOwnerBankRequest]", { code: error.code, message: error.message });
-    throw new Error(reasons[error.message] ?? "تعذر إنشاء طلب الاشتراك الآن. حاول مجددًا أو تواصل مع الدعم.");
+    throw new Error(reasons[error.message] ?? "تعذر إنشاء طلب الاشتراك الآن حاول مجددًا أو تواصل مع الدعم");
   }
   return getOwnerSubscriptionRequests();
 }
@@ -352,14 +352,14 @@ export async function submitOwnerBankReceipt(requestId: string, formData?: FormD
     const kind = bytes.subarray(0, 5).toString("ascii") === "%PDF-" ? "pdf"
       : bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? "jpg"
       : bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? "png" : null;
-    if (!kind) throw new Error("صيغة الإيصال غير مدعومة. استخدم PDF أو JPG أو PNG");
+    if (!kind) throw new Error("صيغة الإيصال غير مدعومة استخدم PDF أو JPG أو PNG");
     const storagePath = `${cafe.id}/${requestId}/${crypto.randomUUID()}.${kind}`;
     const { error: uploadError } = await supabase.storage.from("subscription-receipts").upload(storagePath, bytes, { contentType: kind === "pdf" ? "application/pdf" : kind === "jpg" ? "image/jpeg" : "image/png", upsert: false });
-    if (uploadError) throw new Error("تعذر رفع الإيصال. حاول مجددًا");
+    if (uploadError) throw new Error("تعذر رفع الإيصال حاول مجددًا");
     const { error } = await supabase.rpc("attach_subscription_payment_receipt", { p_request_id: requestId, p_storage_path: storagePath });
     if (error) {
       await supabase.storage.from("subscription-receipts").remove([storagePath]);
-      throw new Error("تعذر إرفاق الإيصال بالطلب. حاول مجددًا");
+      throw new Error("تعذر إرفاق الإيصال بالطلب حاول مجددًا");
     }
   }
   return getOwnerSubscriptionRequests();

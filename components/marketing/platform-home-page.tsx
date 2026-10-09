@@ -278,7 +278,7 @@ function ContactModal({
       setEmail("");
       setMessage("");
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "تعذر إرسال الرسالة، حاول مرة أخرى");
+      setSubmitError(error instanceof Error ? error.message : "تعذر إرسال الرسالة حاول مرة أخرى");
       setState("error");
     }
   }
@@ -524,7 +524,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
               </h2>
             </div>
             <p className="max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
-              منتجات وعروض يختارها فريق المنصة من العلامات النشطة لتصل للزائر مباشرة إلى الفرع المناسب.
+              منتجات وعروض يختارها فريق المنصة من العلامات النشطة لتصل للزائر مباشرة إلى الفرع المناسب
             </p>
           </div>
 
@@ -567,7 +567,7 @@ export function PlatformHomePage({ data }: { data: PublicPlatformHomeData }) {
                     </p>
                   ) : (
                     <p className="mt-2 min-h-14 text-sm font-bold leading-7 text-[#806A5E]">
-                      تجربة مختارة من الفرع الإلكتروني للعلامة.
+                      تجربة مختارة من الفرع الإلكتروني للعلامة
                     </p>
                   )}
                   <Link

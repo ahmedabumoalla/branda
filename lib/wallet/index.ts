@@ -197,7 +197,7 @@ export async function notifyBrandWalletMembers(cafeId: string, _cafeSlug: string
   if (!title.trim() || title.length > 80 || !body.trim() || body.length > 240) throw new Error("wallet_invalid_message");
   const { data, error } = await createAdminClient().rpc("enqueue_rast_wallet_announcement", { p_cafe_id: cafeId, p_title: title.trim(), p_body: body.trim() });
   if (error) {
-    if (error.message?.includes("Announcement daily limit reached")) throw new Error("يمكن إرسال ثلاثة إعلانات خلال ٢٤ ساعة. حاول لاحقًا.");
+    if (error.message?.includes("Announcement daily limit reached")) throw new Error("يمكن إرسال ثلاثة إعلانات خلال ٢٤ ساعة حاول لاحقًا");
     throw new Error("wallet_job_unavailable");
   }
   const job = (Array.isArray(data) ? data[0] : data) as { id?: string; created?: boolean; delivery_state?: Partial<WalletDeliveryResult> } | null;

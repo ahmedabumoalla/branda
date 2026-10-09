@@ -191,7 +191,7 @@ function buildRecommendations(input: {
     return [
       {
         title: "ابدأ من الأساسيات",
-        body: "ابدأ بتفعيل المنيو والطلبات والولاء حتى تظهر توصيات أدق.",
+        body: "ابدأ بتفعيل المنيو والطلبات والولاء حتى تظهر توصيات أدق",
         tone: "muted" as const,
       },
     ];
@@ -200,7 +200,7 @@ function buildRecommendations(input: {
   if (input.visits >= 20 && input.orders * 10 < input.visits) {
     recommendations.push({
       title: "حسّن تحويل الزيارات",
-      body: "لديك زيارات جيدة لكن التحويل إلى طلبات منخفض، جرّب عرضًا واضحًا في الصفحة الرئيسية.",
+      body: "لديك زيارات جيدة لكن التحويل إلى طلبات منخفض جرّب عرضًا واضحًا في الصفحة الرئيسية",
       tone: "gold",
     });
   }
@@ -208,7 +208,7 @@ function buildRecommendations(input: {
   if (input.previousOrders > 0 && input.orders < input.previousOrders) {
     recommendations.push({
       title: "استعد زخم الطلبات",
-      body: "الطلبات أقل من الفترة السابقة، جرّب تفعيل عرض محدود.",
+      body: "الطلبات أقل من الفترة السابقة جرّب تفعيل عرض محدود",
       tone: "blue",
     });
   }
@@ -216,7 +216,7 @@ function buildRecommendations(input: {
   if (input.loyaltyOperations > 0 || input.rewardRedemptions > 0) {
     recommendations.push({
       title: "وسّع نشاط الولاء",
-      body: "عملاء الولاء يتفاعلون بشكل جيد، جرّب مكافأة زيارة متكررة.",
+      body: "عملاء الولاء يتفاعلون بشكل جيد جرّب مكافأة زيارة متكررة",
       tone: "green",
     });
   }
@@ -226,7 +226,7 @@ function buildRecommendations(input: {
     : [
         {
           title: "راقب الاتجاه القادم",
-          body: "البيانات الحالية مستقرة. تابع الطلبات والزيارات خلال الفترة القادمة لاختيار خطوة نمو مناسبة.",
+          body: "البيانات الحالية مستقرة تابع الطلبات والزيارات خلال الفترة القادمة لاختيار خطوة نمو مناسبة",
           tone: "muted" as const,
         },
       ];

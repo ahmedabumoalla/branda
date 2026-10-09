@@ -58,7 +58,7 @@ async function vercelFetch(path: string, init?: RequestInit) {
 export function validateDomainInput(domainInput: string) {
   const domain = normalizeDomain(domainInput);
   if (!isValidDomain(domain)) {
-    throw new Error("صيغة الدومين غير صحيحة.");
+    throw new Error("صيغة الدومين غير صحيحة");
   }
   const tld = extractTld(domain);
   return { domain, tld, supportedTld: isSupportedDirectPurchaseTld(tld) };
@@ -74,7 +74,7 @@ export async function resolveAvailability(domainInput: string): Promise<DomainAv
       supportedTld: false,
       status: "unavailable",
       message:
-        "هذا الامتداد غير مدعوم للشراء المباشر حاليًا، يمكنك ربطه يدويًا من خيار الدومين الخارجي.",
+        "هذا الامتداد غير مدعوم للشراء المباشر حاليًا يمكنك ربطه يدويًا من خيار الدومين الخارجي",
     };
   }
 
@@ -114,7 +114,7 @@ export async function resolvePrice(domainInput: string, years = 1): Promise<Doma
       currency: "SAR",
       status: "failed",
       message:
-        "هذا الامتداد غير مدعوم للشراء المباشر حاليًا، يمكنك ربطه يدويًا من خيار الدومين الخارجي.",
+        "هذا الامتداد غير مدعوم للشراء المباشر حاليًا يمكنك ربطه يدويًا من خيار الدومين الخارجي",
     };
   }
 

@@ -27,7 +27,7 @@ const BarcodeCameraScanner = dynamic(
     import("@/components/loyalty/barcode-camera-scanner").then(
       (module) => module.BarcodeCameraScanner,
     ),
-  { loading: () => <p className="text-sm font-bold text-[#806A5E]">جارٍ تجهيز الكاميرا...</p> },
+  { loading: () => <p className="text-sm font-bold text-[#806A5E]">جارٍ تجهيز الكاميرا</p> },
 );
 
 type Row = Record<string, unknown>;
@@ -136,7 +136,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
       setOrdersLoadError(result.dataError);
       setLastUpdated(new Date());
     } catch {
-      setOrdersLoadError("تعذر تحميل الطلبات. الجلسة ما زالت فعالة ويمكنك إعادة المحاولة");
+      setOrdersLoadError("تعذر تحميل الطلبات الجلسة ما زالت فعالة ويمكنك إعادة المحاولة");
     } finally {
       setRefreshing(false);
     }
@@ -192,7 +192,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
       setCardCode("");
       setMessage("تمت إضافة الزيارة إلى بطاقة العميل");
     } catch {
-      setMessage("تعذر إضافة الزيارة. تحقق من البطاقة وصلاحيتها لهذه العلامة");
+      setMessage("تعذر إضافة الزيارة تحقق من البطاقة وصلاحيتها لهذه العلامة");
     } finally {
       setOperationPending("");
     }
@@ -211,7 +211,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
       setRewardCode("");
       setMessage(`تم صرف ${redeemedName} للعميل ${String(result.customerName ?? "")}`);
     } catch {
-      setMessage("تعذر صرف المكافأة. تحقق من الكود وحالته والعلامة التابعة له");
+      setMessage("تعذر صرف المكافأة تحقق من الكود وحالته والعلامة التابعة له");
     } finally {
       setOperationPending("");
     }
@@ -322,7 +322,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
                           {text(item, "notes") ? <p className="mt-2 break-words rounded-lg bg-amber-50 p-2 text-xs font-bold text-amber-900">ملاحظة: {text(item, "notes")}</p> : null}
                         </div>
                       ))}
-                      {!items.length ? <p className="text-xs font-bold text-[#806A5E]">لا توجد عناصر مسجلة لهذا الطلب.</p> : null}
+                      {!items.length ? <p className="text-xs font-bold text-[#806A5E]">لا توجد عناصر مسجلة لهذا الطلب</p> : null}
                     </div>
 
                     {orderErrors[id] ? <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-xs font-black text-red-700">{orderErrors[id]}</p> : null}
@@ -354,7 +354,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
         {activeTab === "loyalty" ? (
           <section className="rounded-[2rem] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="flex items-center gap-2 text-xl font-black"><BadgeCheck className="h-5 w-5" /> إضافة زيارة ولاء</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">امسح بطاقة العميل أو أدخل الكود لإضافة ختم واحد.</p>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">امسح بطاقة العميل أو أدخل الكود لإضافة ختم واحد</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
               <input value={cardCode} onChange={(event) => setCardCode(event.target.value.toUpperCase())} placeholder="كود بطاقة الولاء" className="min-h-12 min-w-0 rounded-2xl border border-[#E8DED5] px-4 font-bold outline-none focus:border-[#6B3A25]" />
               <button type="button" disabled={!cardCode.trim() || Boolean(operationPending)} onClick={() => void addLoyaltyStamp()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 font-black text-white disabled:opacity-50"><BadgeCheck className="h-5 w-5" /> إضافة الزيارة</button>
@@ -368,7 +368,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
         {activeTab === "rewards" ? (
           <section className="rounded-[2rem] bg-white p-5 shadow-sm sm:p-7">
             <h2 className="flex items-center gap-2 text-xl font-black"><Gift className="h-5 w-5" /> صرف مكافأة</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">امسح رمز المكافأة أو أدخل الكود، ثم نفّذ الصرف مرة واحدة.</p>
+            <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">امسح رمز المكافأة أو أدخل الكود ثم نفّذ الصرف مرة واحدة</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
               <input value={rewardCode} onChange={(event) => setRewardCode(event.target.value.toUpperCase())} placeholder="كود المكافأة" className="min-h-12 min-w-0 rounded-2xl border border-[#E8DED5] px-4 font-bold outline-none focus:border-[#6B3A25]" />
               <button type="button" disabled={!rewardCode.trim() || Boolean(operationPending)} onClick={() => void redeemReward()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#6B3A25] px-5 font-black text-white disabled:opacity-50"><Gift className="h-5 w-5" /> صرف المكافأة</button>

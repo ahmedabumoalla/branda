@@ -45,12 +45,12 @@ export function buildOperationsReportContent(report: OperationsReport, brands: R
     filterRows,
     totalRows: metricRows(totals),
     notes: [
-      `تتبع الزيارات متاح منذ ${saudiDate(report.menuTrackingSince)}. تتبع إصدار المحافظ منذ ${saudiDate(report.walletTrackingSince)}. تصنيف مصدر التسجيل منذ ${saudiDate(report.registrationTrackingSince)}.`,
-      "الأصفار تعني عدم وجود سجلات ضمن البيانات المتاحة؛ لا تعني استعادة زيارات تاريخية قبل بدء التتبع. الزوار متصفحات مميزة تقريبية وليست أعداد أشخاص مؤكدة.",
-      "بطاقات آيفون وأندرويد تعني سجلات إصدار أو تسليم رابط المحفظة، ولا تثبت حفظ البطاقة على الجهاز. قد تظهر البطاقة نفسها لدى المزودين وتُحسب مرة واحدة في الإجمالي.",
-      "الختم والمكافأة عمليتان ناجحتان فقط؛ لا تُحسب محاولات المسح أو العمليات المرفوضة. الحسابات ذات المصدر غير المحدد لم يُفترض أنها مسجلة من الفرع.",
-      "كل المؤشرات العددية ضمن الفترة المختارة. الاشتراك والباقة والميزات حالات حالية وقت إعداد التقرير. آخر زيارة إجمالية مستقلة عن مرشح الفترة.",
-      "الإجماليات تجمع أرقام العلامات المطابقة؛ قد يُحسب العميل أو المتصفح نفسه لدى أكثر من علامة، وليست أعداد أشخاص فريدة على مستوى المنصة.",
+      `تتبع الزيارات متاح منذ ${saudiDate(report.menuTrackingSince)} تتبع إصدار المحافظ منذ ${saudiDate(report.walletTrackingSince)} تصنيف مصدر التسجيل منذ ${saudiDate(report.registrationTrackingSince)}`,
+      "الأصفار تعني عدم وجود سجلات ضمن البيانات المتاحة؛ لا تعني استعادة زيارات تاريخية قبل بدء التتبع الزوار متصفحات مميزة تقريبية وليست أعداد أشخاص مؤكدة",
+      "بطاقات آيفون وأندرويد تعني سجلات إصدار أو تسليم رابط المحفظة ولا تثبت حفظ البطاقة على الجهاز قد تظهر البطاقة نفسها لدى المزودين وتُحسب مرة واحدة في الإجمالي",
+      "الختم والمكافأة عمليتان ناجحتان فقط؛ لا تُحسب محاولات المسح أو العمليات المرفوضة الحسابات ذات المصدر غير المحدد لم يُفترض أنها مسجلة من الفرع",
+      "كل المؤشرات العددية ضمن الفترة المختارة الاشتراك والباقة والميزات حالات حالية وقت إعداد التقرير آخر زيارة إجمالية مستقلة عن مرشح الفترة",
+      "الإجماليات تجمع أرقام العلامات المطابقة؛ قد يُحسب العميل أو المتصفح نفسه لدى أكثر من علامة وليست أعداد أشخاص فريدة على مستوى المنصة",
     ],
     brands: brands.map(brand => ({
       id: brand.id, name: brand.name, subscribed: brand.subscribed,
@@ -155,7 +155,7 @@ export function buildOperationsReportPdf(report: OperationsReport, brands: Repor
 
 async function fetchFont(path: string) {
   const response = await fetch(path);
-  if (!response.ok) throw new Error("تعذر تحميل خط التقرير. أعد المحاولة.");
+  if (!response.ok) throw new Error("تعذر تحميل خط التقرير أعد المحاولة");
   const bytes = new Uint8Array(await response.arrayBuffer());
   let binary = "";
   for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));

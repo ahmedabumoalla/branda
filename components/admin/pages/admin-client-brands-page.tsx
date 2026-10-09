@@ -169,10 +169,10 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
       void (async () => {
         try {
           await savePlatformHomePromotionsAction(promotions);
-          setMessage("تم حفظ اختيارات الصفحة الرئيسية بنجاح.");
+          setMessage("تم حفظ اختيارات الصفحة الرئيسية بنجاح");
           router.refresh();
         } catch (error) {
-          setMessage(error instanceof Error ? error.message : "تعذر حفظ اختيارات الصفحة الرئيسية.");
+          setMessage(error instanceof Error ? error.message : "تعذر حفظ اختيارات الصفحة الرئيسية");
         }
       })();
     });
@@ -181,13 +181,13 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
   return (
     <AdminPageShell
       title="إدارة العلامات التجارية للعملاء"
-      subtitle="تحكم في علامات تثق بنا، وقسم اكتشف علاماتنا وعروضهم في الصفحة الرئيسية."
+      subtitle="تحكم في علامات تثق بنا وقسم اكتشف علاماتنا وعروضهم في الصفحة الرئيسية"
       action={<BarndaksaLogo variant="dark" width={130} height={52} />}
     >
       {configError ? <p className="mb-5 rounded-2xl bg-red-500/10 p-4 font-black text-red-300">{configError}</p> : null}
       {initialData.promotionsTableMissing ? (
         <p className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 font-black text-amber-200">
-          جدول العروض الترويجية غير موجود بعد. يمكن معاينة المصادر، لكن الحفظ يحتاج اعتماد migration لجدول platform_home_promotions.
+          جدول العروض الترويجية غير موجود بعد يمكن معاينة المصادر لكن الحفظ يحتاج اعتماد migration لجدول platform_home_promotions
         </p>
       ) : null}
       {message ? <p className="mb-5 rounded-2xl bg-[#D9A33F]/10 p-4 font-black text-[#F6C35B]">{message}</p> : null}
@@ -274,7 +274,7 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
             })}
             {!filteredAvailable.length ? (
               <p className="rounded-2xl border border-white/10 p-6 text-center font-bold text-[#7A6255]">
-                لا توجد مصادر مطابقة.
+                لا توجد مصادر مطابقة
               </p>
             ) : null}
           </div>
@@ -332,7 +332,7 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
             })}
             {!promotions.length ? (
               <p className="rounded-2xl border border-white/10 p-6 text-center font-bold text-[#7A6255]">
-                أضف علامات أو منتجات أو عروض لعرضها في الصفحة الرئيسية.
+                أضف علامات أو منتجات أو عروض لعرضها في الصفحة الرئيسية
               </p>
             ) : null}
           </div>
@@ -344,14 +344,14 @@ export function AdminClientBrandsPage({ initialData, configError }: Props) {
           <Eye className="h-6 w-6 text-[#F6C35B]" />
           <div>
             <h2 className="text-xl font-black text-[#F8F4EF]">معاينة قبل الحفظ</h2>
-            <p className="mt-1 text-xs font-bold text-[#CBB29C]">الاسم، العلامة، اللوكيشن، والرابط كما سيظهرون تقريبًا في الصفحة الرئيسية.</p>
+            <p className="mt-1 text-xs font-bold text-[#CBB29C]">الاسم، العلامة، اللوكيشن والرابط كما سيظهرون تقريبًا في الصفحة الرئيسية</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {sortedPromotions.slice(0, 9).map((item) => (
             <PreviewCard key={`preview:${itemKey(item)}`} item={item} />
           ))}
-          {!sortedPromotions.length ? <p className="font-bold text-[#7A6255]">لا توجد عناصر للمعاينة.</p> : null}
+          {!sortedPromotions.length ? <p className="font-bold text-[#7A6255]">لا توجد عناصر للمعاينة</p> : null}
         </div>
       </BentoCard>
     </AdminPageShell>

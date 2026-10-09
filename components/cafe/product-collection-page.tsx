@@ -52,19 +52,19 @@ type Props = {
 const viewInfo: Record<string, { title: string; desc: string }> = {
   offers: {
     title: "العروض",
-    desc: "كل العروض والخصومات والمنتجات الترويجية المتاحة في الفرع الإلكتروني.",
+    desc: "كل العروض والخصومات والمنتجات الترويجية المتاحة في الفرع الإلكتروني",
   },
   latest: {
     title: "أحدث المنتجات",
-    desc: "أحدث المنتجات المضافة أولًا.",
+    desc: "أحدث المنتجات المضافة أولًا",
   },
   popular: {
     title: "المنتجات",
-    desc: "المنتجات الأعلى طلبًا.",
+    desc: "المنتجات الأعلى طلبًا",
   },
   branches: {
     title: "أقرب الفروع إليك",
-    desc: "استعرض الفروع القريبة.",
+    desc: "استعرض الفروع القريبة",
   },
 };
 
@@ -80,15 +80,15 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const eventViewInfo: Record<string, { title: string; desc: string }> = {
     offers: {
       title: "العروض",
-      desc: "كل عروض وخصومات التذاكر والباقات المتاحة في الفرع الإلكتروني.",
+      desc: "كل عروض وخصومات التذاكر والباقات المتاحة في الفرع الإلكتروني",
     },
     latest: {
       title: "أحدث التذاكر",
-      desc: "أحدث التذاكر والباقات المضافة أولًا.",
+      desc: "أحدث التذاكر والباقات المضافة أولًا",
     },
     popular: {
       title: "أكثر التذاكر طلبًا",
-      desc: "التذاكر والباقات الأعلى طلبًا.",
+      desc: "التذاكر والباقات الأعلى طلبًا",
     },
     branches: viewInfo.branches,
   };
@@ -96,7 +96,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
   const itemLabel = isEvents ? "تذكرة" : "منتج";
   const itemPluralLabel = isEvents ? "التذاكر والباقات" : "المنتجات";
   const filterLabel = isEvents ? "فلترة التذاكر والباقات" : "فلترة المنتجات";
-  const queryPlaceholder = isEvents ? "ابحث عن تذكرة أو باقة..." : "ابحث عن منتج...";
+  const queryPlaceholder = isEvents ? "ابحث عن تذكرة أو باقة" : "ابحث عن منتج";
   const offersOnlyLabel = isEvents ? "تذاكر العروض فقط" : "العروض فقط";
   const offersSortLabel = isEvents ? "التذاكر ذات العروض" : "المنتجات ذات العروض";
   const noMatchesTitle = isEvents ? "لا توجد تذاكر مطابقة" : "لا توجد منتجات مطابقة";
@@ -236,7 +236,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
     return (
       <CafeLayout slug={slug} hideHeader hideFooter hideQuickDock>
         <div className={`rounded-3xl p-8 text-center ${theme.card}`}>
-          <p className="font-black">جاري التحميل...</p>
+          <p className="font-black">جاري التحميل</p>
         </div>
       </CafeLayout>
     );
@@ -281,7 +281,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             فروع {settings.cafeName}
           </h1>
           <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
-            اختر الفرع المناسب، افتح موقعه على خرائط جوجل، أو تواصل معه مباشرة إذا كان رقم الفرع متاحًا.
+            اختر الفرع المناسب افتح موقعه على خرائط جوجل أو تواصل معه مباشرة إذا كان رقم الفرع متاحًا
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
@@ -329,7 +329,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
               </article>
             ))
           ) : (
-            <p className={`font-bold ${theme.muted}`}>لا توجد فروع متاحة حاليًا.</p>
+            <p className={`font-bold ${theme.muted}`}>لا توجد فروع متاحة حاليًا</p>
           )}
         </div>
         <CustomerBottomDock
@@ -443,7 +443,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             <div className={`rounded-[28px] border border-dashed border-[var(--ci-border,#E7D7C6)] p-8 text-center shadow-sm ${theme.card}`}>
               <h3 className="text-xl font-black">{noMatchesTitle}</h3>
               <p className={`mt-2 text-sm font-bold leading-7 ${theme.muted}`}>
-                جرّب تصنيفًا آخر أو امسح الفلاتر الحالية.
+                جرّب تصنيفًا آخر أو امسح الفلاتر الحالية
               </p>
               <button
                 type="button"
@@ -703,7 +703,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             {currentViewInfo?.title || `${itemPluralLabel} ${copy.casualNoun}`}
           </h1>
           <p className={`mt-3 max-w-2xl text-sm font-bold leading-7 sm:text-base ${theme.muted}`}>
-            {currentViewInfo?.desc || `استعرض ${itemPluralLabel} ${copy.casualNoun}.`}
+            {currentViewInfo?.desc || `استعرض ${itemPluralLabel} ${copy.casualNoun}`}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className={`rounded-2xl px-4 py-2 text-sm font-black ${theme.badge}`}>
@@ -764,7 +764,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           <PremiumSectionHeader
             eyebrow="المعرض"
             title={itemPluralLabel}
-            description={isEvents ? "الفلاتر والفرز كما هي، لكن النتائج تظهر كتذاكر وباقات مع مساحة إعلان داخلية." : "الفلاتر والفرز كما هي، لكن النتائج تظهر الآن بتكوين بصري أوسع مع مساحة إعلان داخلية."}
+            description={isEvents ? "الفلاتر والفرز كما هي لكن النتائج تظهر كتذاكر وباقات مع مساحة إعلان داخلية" : "الفلاتر والفرز كما هي لكن النتائج تظهر الآن بتكوين بصري أوسع مع مساحة إعلان داخلية"}
             action={
               <span className={`rounded-xl px-4 py-2 text-sm font-black ${theme.badge}`}>
                 {orderedProducts.length} {itemLabel}
@@ -786,7 +786,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
                       prefetch={false}
                       title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "استكشف عروض العلامة"}
                       eyebrow="إعلان داخل القائمة"
-                      description={activeOffers[0]?.description || "مساحة مدمجة بين المنتجات تقود العميل إلى العروض أو المنتج المرتبط بدون تغيير مسار القائمة."}
+                      description={activeOffers[0]?.description || "مساحة مدمجة بين المنتجات تقود العميل إلى العروض أو المنتج المرتبط بدون تغيير مسار القائمة"}
                       href={activeOffers[0]?.linkedProductId ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId) : getCafePath(slug, "products/offers", previewThemeId)}
                       cta={activeOffers[0]?.ctaText || "فتح العرض"}
                       metric={activeOffers.length ? `${activeOffers.length} عروض` : orderedProducts.length}
@@ -800,7 +800,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
           {!orderedProducts.length ? (
             <div className={`mt-8 p-10 text-center ${theme.card}`}>
               <h3 className="text-2xl font-black">لا توجد منتجات مطابقة للفلاتر الحالية</h3>
-              <p className={`mt-2 ${theme.muted}`}>جرّب تغيير التصنيف أو مسح الفلاتر.</p>
+              <p className={`mt-2 ${theme.muted}`}>جرّب تغيير التصنيف أو مسح الفلاتر</p>
               <button
                 type="button"
                 onClick={resetFilters}
@@ -818,7 +818,7 @@ export function ProductCollectionPage({ slug, view }: Props) {
             prefetch={false}
             title={activeOffers[0]?.promoProductName || activeOffers[0]?.title || "مساحة عروض العلامة"}
             eyebrow="إعلان داخل القائمة"
-            description={activeOffers[0]?.description || "مساحة مدمجة تظهر حتى عندما تكون نتائج الفلترة قليلة."}
+            description={activeOffers[0]?.description || "مساحة مدمجة تظهر حتى عندما تكون نتائج الفلترة قليلة"}
             href={activeOffers[0]?.linkedProductId ? getCafePath(slug, `product/${activeOffers[0].linkedProductId}`, previewThemeId) : getCafePath(slug, "products/offers", previewThemeId)}
             cta={activeOffers[0]?.ctaText || "فتح العرض"}
           />

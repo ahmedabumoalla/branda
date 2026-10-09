@@ -538,7 +538,7 @@ async function loadCashierOrders(
     });
     return {
       orders: [],
-      dataError: "تعذر تحميل الطلبات. الجلسة ما زالت فعالة ويمكنك إعادة المحاولة",
+      dataError: "تعذر تحميل الطلبات الجلسة ما زالت فعالة ويمكنك إعادة المحاولة",
     };
   }
 
@@ -727,8 +727,8 @@ export async function cashierUpdateOrderStatus(
       title: status === "accepted" ? "تم قبول طلبك" : "تم رفض طلبك",
       body:
         status === "accepted"
-          ? `تم قبول طلبك من ${session.cafeName}.`
-          : `تم رفض طلبك من ${session.cafeName}. السبب: ${reason}`,
+          ? `تم قبول طلبك من ${session.cafeName}`
+          : `تم رفض طلبك من ${session.cafeName} السبب: ${reason}`,
       type: status === "accepted" ? "order_accepted" : "order_rejected",
       meta: {
         orderId,
@@ -805,11 +805,11 @@ export async function cashierScanLoyalty(input: {
 
   if (session.cafeSlug === "rast") {
     await assertRastLoyaltyEntitlement(currentCafeId);
-    if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها.");
+    if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها");
     const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
       p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
     });
-    if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم. تحقق من البطاقة وجلسة الموظف.");
+    if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم تحقق من البطاقة وجلسة الموظف");
     return data as Record<string, unknown>;
   }
 

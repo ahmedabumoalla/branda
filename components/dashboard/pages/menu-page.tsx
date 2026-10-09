@@ -175,14 +175,14 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
 
       showToast({
         type: "error",
-        message: "تعذر حذف التصنيف. حدّث الصفحة وحاول مرة أخرى.",
+        message: "تعذر حذف التصنيف حدّث الصفحة وحاول مرة أخرى",
       });
       return false;
     } catch (error) {
       console.error("Menu category deletion action failed", {
         name: error instanceof Error ? error.name : "UnknownError",
       });
-      showToast({ type: "error", message: "تعذر حذف التصنيف. حاول مرة أخرى." });
+      showToast({ type: "error", message: "تعذر حذف التصنيف حاول مرة أخرى" });
       return false;
     } finally {
       setSaving(false);

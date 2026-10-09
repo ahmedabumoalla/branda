@@ -145,7 +145,7 @@ export function CustomerSegmentsPage({ data, period, configError }: Props) {
           <p className="font-black text-[#6B3A25]">لوحة برندة</p>
           <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">شرائح العملاء</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-7 text-[#806A5E]">
-            تقسيم عملي للعملاء حسب النشاط والولاء والمكافآت داخل علامتك فقط.
+            تقسيم عملي للعملاء حسب النشاط والولاء والمكافآت داخل علامتك فقط
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9A33F]/35 bg-[#FFF7E3] px-4 py-2 text-xs font-black text-[#6B3A25]">
@@ -194,7 +194,7 @@ export function CustomerSegmentsPage({ data, period, configError }: Props) {
           </span>
           <h2 className="mt-4 text-base font-black">الحملات الذكية قريبًا</h2>
           <p className="mt-2 text-sm font-bold leading-7 text-[#D8C4B3]">
-            هذه الصفحة تعرض الشرائح فقط الآن، بدون إرسال أو إنشاء حملات.
+            هذه الصفحة تعرض الشرائح فقط الآن بدون إرسال أو إنشاء حملات
           </p>
         </article>
         <article className="rounded-2xl border border-[#E7D7C6] bg-[#FCF8F3] p-4">
@@ -235,7 +235,7 @@ export function CustomerSegmentsPage({ data, period, configError }: Props) {
 
       {data.missingSources.length ? (
         <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold leading-6 text-amber-800">
-          بعض مصادر البيانات غير متاحة حاليًا، لذلك تعرض الشرائح المتأثرة عبارة "لا توجد بيانات كافية" بدلًا من رقم غير دقيق.
+          بعض مصادر البيانات غير متاحة حاليًا لذلك تعرض الشرائح المتأثرة عبارة "لا توجد بيانات كافية" بدلًا من رقم غير دقيق
         </div>
       ) : null}
 

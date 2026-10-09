@@ -50,7 +50,7 @@ export async function savePlatformPlansAction(plans: PlatformPlan[]) {
   return actionResult(async () => {
     await savePlatformPlans(plans);
     return getAdminPlatformPlans();
-  }, "تعذر حفظ الباقات. بقيت تعديلاتك محفوظة في الصفحة؛ حاول مجددًا.");
+  }, "تعذر حفظ الباقات بقيت تعديلاتك محفوظة في الصفحة؛ حاول مجددًا");
 }
 
 export async function fetchAdminSubscriptionRequestsAction() {
@@ -61,14 +61,14 @@ export async function approveSubscriptionRequestAction(requestId: string) {
   return actionResult(async () => {
     await approveSubscriptionRequest(requestId);
     return getAdminSubscriptionRequests();
-  }, "تعذر اعتماد الطلب. حدّث حالته وتأكد من الإيصال ثم حاول مجددًا.");
+  }, "تعذر اعتماد الطلب حدّث حالته وتأكد من الإيصال ثم حاول مجددًا");
 }
 
 export async function rejectSubscriptionRequestAction(requestId: string, response: string) {
   return actionResult(async () => {
     await rejectSubscriptionRequest(requestId, response);
     return getAdminSubscriptionRequests();
-  }, "تعذر تحديث الطلب. حاول مجددًا.");
+  }, "تعذر تحديث الطلب حاول مجددًا");
 }
 
 export async function updateCafePlanAction(cafeId: string, planId: string) {

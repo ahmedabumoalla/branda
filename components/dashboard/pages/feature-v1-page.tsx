@@ -43,7 +43,7 @@ function EmptyState() {
     <div className="rounded-2xl border border-dashed border-[#D8C4B3] bg-[#FCF8F3] p-6 text-center">
       <h2 className="text-lg font-black text-[#311912]">لا توجد بيانات كافية بعد</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm font-bold leading-7 text-[#806A5E]">
-        ستظهر المؤشرات بدقة أكبر بعد توفر طلبات ومنتجات ونشاط عملاء للعلامة.
+        ستظهر المؤشرات بدقة أكبر بعد توفر طلبات ومنتجات ونشاط عملاء للعلامة
       </p>
     </div>
   );
@@ -155,7 +155,7 @@ export function FeatureV1Page({ data, title, configError }: Props) {
 
       {data.missingSources.length ? (
         <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold leading-6 text-amber-800">
-          بعض مصادر البيانات غير متاحة حاليًا، لذلك تعرض المؤشرات المتأثرة عبارة "لا توجد بيانات كافية" بدلًا من رقم غير دقيق.
+          بعض مصادر البيانات غير متاحة حاليًا لذلك تعرض المؤشرات المتأثرة عبارة "لا توجد بيانات كافية" بدلًا من رقم غير دقيق
         </div>
       ) : null}
 

@@ -114,17 +114,17 @@ export function getCafeOrderFailureCode(error: unknown): CafeOrderFailureCode {
 export function getCafeOrderFailureMessage(code: CafeOrderFailureCode) {
   switch (code) {
     case "login_required":
-      return "يجب تسجيل الدخول لإرسال الطلب.";
+      return "يجب تسجيل الدخول لإرسال الطلب";
     case "invalid_customer_session":
-      return "جلسة العميل غير صالحة. سجّل الدخول مرة أخرى.";
+      return "جلسة العميل غير صالحة سجّل الدخول مرة أخرى";
     case "customer_profile_not_found":
-      return "لا يوجد حساب عميل لهذه العلامة.";
+      return "لا يوجد حساب عميل لهذه العلامة";
     case "product_unavailable":
-      return "المنتج غير متاح حاليًا.";
+      return "المنتج غير متاح حاليًا";
     case "database_order_failed":
-      return "تعذر إنشاء الطلب من قاعدة البيانات.";
+      return "تعذر إنشاء الطلب من قاعدة البيانات";
     default:
-      return "تعذر إرسال الطلب. تحقق من البيانات وحاول مرة أخرى.";
+      return "تعذر إرسال الطلب تحقق من البيانات وحاول مرة أخرى";
   }
 }
 
@@ -206,7 +206,7 @@ export async function acceptPickupOrder(orderId: string, cafeSlug = "qatrah") {
       audience: "customer",
       customerId: order.customerId,
       title: "تم قبول طلبك",
-      body: `طلبك ${orderId} مقبول. الدفع عند الاستلام في ${order.branchName || "الفرع"}.`,
+      body: `طلبك ${orderId} مقبول الدفع عند الاستلام في ${order.branchName || "الفرع"}`,
       type: "order_accepted",
       meta: { orderId },
     });
@@ -239,7 +239,7 @@ export async function rejectPickupOrder(
       audience: "customer",
       customerId: order.customerId,
       title: "تم رفض طلبك",
-      body: `طلبك ${orderId} مرفوض. السبب: ${reason.trim() || "غير محدد"}`,
+      body: `طلبك ${orderId} مرفوض السبب: ${reason.trim() || "غير محدد"}`,
       type: "order_rejected",
       meta: { orderId },
     });

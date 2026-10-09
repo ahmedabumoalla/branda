@@ -173,7 +173,7 @@ export async function submitCustomerExperienceRewardProof(
         await sendBarndaksaEmail({
           to: ownerEmail,
           subject: "توثيق تجربة جديد يحتاج مراجعة",
-          text: `وصل توثيق تجربة جديد من ${String(profile.full_name ?? "عميل")}. الرابط: ${parsed.experienceUrl}`,
+          text: `وصل توثيق تجربة جديد من ${String(profile.full_name ?? "عميل")} الرابط: ${parsed.experienceUrl}`,
           html: `<div dir="rtl"><h2>توثيق تجربة جديد</h2><p>العميل: ${escapeEmailHtml(String(profile.full_name ?? "عميل"))}</p><p>الرابط: ${escapeEmailHtml(parsed.experienceUrl)}</p><p>المشاهدات: ${parsed.currentViews}</p><p>التعليقات: ${parsed.currentComments}</p></div>`,
         });
       }
@@ -445,7 +445,7 @@ export async function approveOwnerExperienceRewardSubmission(
     audience: "customer",
     customerId: String(submission.customer_id),
     title: "لديك مكافأة مقابل توثيق التجربة",
-    body: `مكافأتك: ${itemsText}. صالحة حتى ${parsed.rewardExpiresAt}. كود المكافأة ${rewardCode}`,
+    body: `مكافأتك: ${itemsText} صالحة حتى ${parsed.rewardExpiresAt} كود المكافأة ${rewardCode}`,
     type: "experience_reward",
     meta: {
       submissionId: parsed.submissionId,
@@ -468,7 +468,7 @@ export async function approveOwnerExperienceRewardSubmission(
     await sendBarndaksaEmail({
       to: customerEmail,
       subject: "تم اعتماد توثيق تجربتك",
-      text: `تم اعتماد توثيق تجربتك. مكافأتك: ${itemsText}.`,
+      text: `تم اعتماد توثيق تجربتك مكافأتك: ${itemsText}`,
       html: `<div dir="rtl"><h2>تم اعتماد توثيق تجربتك</h2><p>المكافأة: ${escapeEmailHtml(itemsText)}</p><p>كود المكافأة: <strong>${escapeEmailHtml(rewardCode)}</strong></p><p>صالحة حتى: ${escapeEmailHtml(parsed.rewardExpiresAt)}</p></div>`,
     }).catch(() => undefined);
   }

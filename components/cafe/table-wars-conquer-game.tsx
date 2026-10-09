@@ -175,7 +175,7 @@ export function TableWarsConquerGame() {
   const [now, setNow] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<GameResult>("playing");
-  const [message, setMessage] = useState("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم.");
+  const [message, setMessage] = useState("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم");
   const enemyTimerRef = useRef<number | null>(null);
   const towersRef = useRef(towers);
   const unitsRef = useRef(units);
@@ -255,9 +255,9 @@ export function TableWarsConquerGame() {
       if (!selectedId) {
         if (tower.owner === "player" && tower.soldiers >= 2) {
           setSelectedId(tower.id);
-          setMessage("اختر أي طاولة أخرى لإرسال نصف الجنود.");
+          setMessage("اختر أي طاولة أخرى لإرسال نصف الجنود");
         } else {
-          setMessage("اختر طاولة زرقاء فيها جنديان على الأقل.");
+          setMessage("اختر طاولة زرقاء فيها جنديان على الأقل");
         }
         return;
       }
@@ -265,29 +265,29 @@ export function TableWarsConquerGame() {
       const source = getTower(towers, selectedId);
       if (tower.id === selectedId) {
         setSelectedId(null);
-        setMessage("تم إلغاء الاختيار.");
+        setMessage("تم إلغاء الاختيار");
         return;
       }
 
       if (!source || source.owner !== "player") {
         setSelectedId(null);
-        setMessage("اختر طاولة زرقاء أولًا.");
+        setMessage("اختر طاولة زرقاء أولًا");
         return;
       }
 
       const sent = sendUnits(source.id, tower.id, "player");
       if (sent === "sent") {
         setSelectedId(null);
-        setMessage("انطلقت وحداتك نحو الطاولة الهدف.");
+        setMessage("انطلقت وحداتك نحو الطاولة الهدف");
         return;
       }
 
       if (sent === "busy") {
-        setMessage("كل خطوط الإرسال مشغولة، انتظر وصول الجنود.");
+        setMessage("كل خطوط الإرسال مشغولة انتظر وصول الجنود");
         return;
       }
 
-      setMessage("لا يمكن الإرسال الآن، انتظر زيادة الجنود.");
+      setMessage("لا يمكن الإرسال الآن انتظر زيادة الجنود");
     },
     [result, selectedId, sendUnits, towers],
   );
@@ -317,7 +317,7 @@ export function TableWarsConquerGame() {
         candidates.sort(bySoldiersThenDistance)[0];
 
       if (target && sendUnits(source.id, target.id, "enemy") === "sent") {
-        setMessage("الخصم تحرك نحو طاولة ضعيفة.");
+        setMessage("الخصم تحرك نحو طاولة ضعيفة");
         return;
       }
     }
@@ -332,7 +332,7 @@ export function TableWarsConquerGame() {
     setNow(Date.now());
     setElapsed(0);
     setResult("playing");
-    setMessage("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم.");
+    setMessage("اختر طاولة زرقاء ثم اختر أي طاولة للهجوم");
   }
 
   useEffect(() => {
@@ -483,7 +483,7 @@ export function TableWarsConquerGame() {
           <div>
             <p className="text-xs font-black text-[#6B3A25]">Branda Play</p>
             <h2 className="mt-1 text-2xl font-black text-[#311912]">حرب الطاولات</h2>
-            <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">سيطر على الطاولات قبل الخصم.</p>
+            <p className="mt-1 text-sm font-bold leading-7 text-[#806A5E]">سيطر على الطاولات قبل الخصم</p>
           </div>
           <button
             type="button"
@@ -628,7 +628,7 @@ export function TableWarsConquerGame() {
               <Sparkles className="mx-auto h-9 w-9 text-[#D9A33F]" />
               <h3 className="mt-3 text-2xl font-black text-[#311912]">{overlayTitle}</h3>
               <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-                هذه تجربة لعب تجريبية، النقاط والجوائز ستفعل لاحقًا.
+                هذه تجربة لعب تجريبية النقاط والجوائز ستفعل لاحقًا
               </p>
               <button
                 type="button"
@@ -651,16 +651,16 @@ export function TableWarsConquerGame() {
           <div>
             <p className="text-sm font-black text-[#311912]">{message}</p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              اختر طاولة زرقاء ثم اختر أي طاولة للهجوم. عدد النقاط تحت الطاولة يوضح عدد خطوط الإرسال المتاحة.
+              اختر طاولة زرقاء ثم اختر أي طاولة للهجوم عدد النقاط تحت الطاولة يوضح عدد خطوط الإرسال المتاحة
             </p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              كلما زاد عدد الجنود زادت خطوط الإرسال حتى 3 خطوط.
+              كلما زاد عدد الجنود زادت خطوط الإرسال حتى 3 خطوط
             </p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              قد تتقاتل الجنود في الطريق إذا تقابلت من اتجاهين متعاكسين.
+              قد تتقاتل الجنود في الطريق إذا تقابلت من اتجاهين متعاكسين
             </p>
             <p className="mt-1 text-xs font-bold leading-6 text-[#806A5E]">
-              هذه تجربة لعب تجريبية، النقاط والجوائز ستفعل لاحقًا.
+              هذه تجربة لعب تجريبية النقاط والجوائز ستفعل لاحقًا
             </p>
           </div>
         </div>

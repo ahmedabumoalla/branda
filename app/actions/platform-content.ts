@@ -141,10 +141,10 @@ export async function submitContactRequestAction(input: {
           <p><strong>البريد:</strong> ${escapeEmailHtml(parsed.email)}</p>
           <p><strong>الرسالة:</strong></p>
           <div style="white-space:pre-wrap;border:1px solid #eee;padding:12px;border-radius:12px;background:#fcf8f3">${escapeEmailHtml(parsed.message)}</div>
-          <p style="margin-top:16px;color:#806A5E">تظهر هذه الرسالة أيضًا في لوحة الأدمن: إدارة محتوى المنصة ← طلبات التواصل الواردة.</p>
+          <p style="margin-top:16px;color:#806A5E">تظهر هذه الرسالة أيضًا في لوحة الأدمن: إدارة محتوى المنصة ← طلبات التواصل الواردة</p>
         </div>
       `,
-      text: `طلب تواصل جديد\nالاسم: ${parsed.fullName}\nالبريد: ${parsed.email}\nالرسالة: ${parsed.message}\n\nتظهر الرسالة في لوحة الأدمن: إدارة محتوى المنصة ← طلبات التواصل الواردة.`,
+      text: `طلب تواصل جديد\nالاسم: ${parsed.fullName}\nالبريد: ${parsed.email}\nالرسالة: ${parsed.message}\n\nتظهر الرسالة في لوحة الأدمن: إدارة محتوى المنصة ← طلبات التواصل الواردة`,
     }).catch((mailError) => {
       console.error("[submitContactRequestAction:email]", mailError);
     });

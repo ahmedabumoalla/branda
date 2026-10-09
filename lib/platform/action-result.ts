@@ -6,7 +6,7 @@ export async function actionResult<T>(operation: () => Promise<T>, fallback: str
     return { ok: true, data: await operation() };
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
-      return { ok: false, message: "راجع بيانات الباقة: الاسم والأسعار والمدة، ثم احفظ مجددًا." };
+      return { ok: false, message: "راجع بيانات الباقة: الاسم والأسعار والمدة ثم احفظ مجددًا" };
     }
     // Only application-authored Arabic Error messages are user-facing.
     // Raw database objects, stack traces and framework errors stay on the server.

@@ -170,7 +170,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false, varian
     }
 
     setProgress(90);
-    setMessage("في Chrome على الجوال افتح القائمة واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية، وإذا كان تطبيق علامة أخرى مثبتًا احذفه أولًا ثم أعد فتح الصفحة");
+    setMessage("في Chrome على الجوال افتح القائمة واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية وإذا كان تطبيق علامة أخرى مثبتًا احذفه أولًا ثم أعد فتح الصفحة");
   }, [installPrompt, slug]);
 
   if (installed) return null;
@@ -226,7 +226,7 @@ export function BrandPwaInstallSection({ slug, cafeName, compact = false, varian
             <p className="font-black text-[var(--ci-accent-bg,var(--barndaksa-gold-accent))]">تطبيق العلامة</p>
             <h2 className="mt-2 text-3xl font-black">حمّل تطبيق {cafeName}</h2>
             <p className="mt-3 max-w-xl font-bold leading-8 text-white/74">
-              واجهة عميل أخف وأسرع للمنيو والعروض وبطاقة الولاء، تعمل من شاشة الجوال مباشرة
+              واجهة عميل أخف وأسرع للمنيو والعروض وبطاقة الولاء تعمل من شاشة الجوال مباشرة
             </p>
           </div>
           <button

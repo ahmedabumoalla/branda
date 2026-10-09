@@ -70,8 +70,8 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
   const isEvents = copy.kind === "events";
   const ordersTitle = isEvents ? "طلبات شراء التذاكر" : "طلبات الاستلام";
   const ordersSubtitle = isEvents
-    ? `طلبات شراء التذاكر من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`
-    : `طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح.`;
+    ? `طلبات شراء التذاكر من ${copy.pageNoun} — قبول أو رفض مع سبب واضح`
+    : `طلبات الاستلام من ${copy.pageNoun} — قبول أو رفض مع سبب واضح`;
   const itemLabel = isEvents ? "تذاكر" : "منتجات";
   const itemSingular = isEvents ? "تذكرة" : "منتج";
   const pickupTimeLabel = isEvents ? "وقت الحضور" : "وقت الاستلام";
@@ -246,8 +246,8 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                 <h2 className="mt-4 text-2xl font-black">{isEvents ? "لا توجد طلبات تذاكر" : "لا توجد طلبات"}</h2>
                 <p className="mt-2 max-w-md text-sm font-bold leading-7 text-[#7A6255]">
                   {isEvents
-                    ? "ستظهر طلبات شراء التذاكر هنا فور وصولها من صفحة التذاكر، مع بيانات العميل والإجراءات المطلوبة."
-                    : "ستظهر طلبات الاستلام هنا فور وصولها من صفحة المنيو، مع بيانات العميل والإجراءات المطلوبة."}
+                    ? "ستظهر طلبات شراء التذاكر هنا فور وصولها من صفحة التذاكر مع بيانات العميل والإجراءات المطلوبة"
+                    : "ستظهر طلبات الاستلام هنا فور وصولها من صفحة المنيو مع بيانات العميل والإجراءات المطلوبة"}
                 </p>
               </SoftCard>
             ) : (
@@ -582,7 +582,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                   </div>
                   <h2 className="mt-4 text-xl font-black">{isEvents ? "اختر عملية شراء" : "اختر طلبًا"}</h2>
                   <p className="mt-2 max-w-xs text-sm font-bold leading-7 text-[#7A6255]">
-                    {isEvents ? "اضغط تفاصيل شراء التذاكر لعرض كامل البيانات." : "اضغط تفاصيل الطلب لعرض كامل البيانات."}
+                    {isEvents ? "اضغط تفاصيل شراء التذاكر لعرض كامل البيانات" : "اضغط تفاصيل الطلب لعرض كامل البيانات"}
                   </p>
                 </div>
               )}
@@ -774,7 +774,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
                 <SoftCard className="text-center">
                   <h2 className="text-2xl font-black">{isEvents ? "لا توجد طلبات تذاكر" : "لا توجد طلبات"}</h2>
                   <p className="mt-2 text-[#7A6255]">
-                    {isEvents ? "ستظهر طلبات شراء التذاكر هنا عند إنشائها." : "ستظهر طلبات الاستلام هنا عند إنشائها."}
+                    {isEvents ? "ستظهر طلبات شراء التذاكر هنا عند إنشائها" : "ستظهر طلبات الاستلام هنا عند إنشائها"}
                   </p>
                 </SoftCard>
               ) : null}
@@ -860,7 +860,7 @@ export function OrdersPageClient({ initialOrders, businessCategory, configError 
               <SoftCard className="text-center">
                 <h2 className="text-xl font-black">اختر طلبًا</h2>
                 <p className="mt-2 text-[#7A6255]">
-                  اضغط تفاصيل الطلب لعرض كامل البيانات.
+                  اضغط تفاصيل الطلب لعرض كامل البيانات
                 </p>
               </SoftCard>
             )}

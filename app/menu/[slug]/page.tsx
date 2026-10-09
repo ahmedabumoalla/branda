@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   return {
     title: `${menu.name} | المنيو`,
-    description: `اكتشف منيو ${menu.name}، الأصناف والأسعار والمكونات والتفاصيل.`,
+    description: `اكتشف منيو ${menu.name} الأصناف والأسعار والمكونات والتفاصيل`,
   };
 }
 

@@ -119,8 +119,8 @@ export function DashboardHomeClient({
             <h1 className={styles.title}>{cafeName}</h1>
             <p className={styles.subtitle}>
               {ownerName
-                ? `أهلًا ${ownerName}، هذه صورة علامتك الآن وما يستحق انتباهك.`
-                : "صورة تشغيلية سريعة لعلامتك، من الطلب إلى المنتج والعميل."}
+                ? `أهلًا ${ownerName} هذه صورة علامتك الآن وما يستحق انتباهك`
+                : "صورة تشغيلية سريعة لعلامتك من الطلب إلى المنتج والعميل"}
             </p>
 
             <div className={styles.heroActions}>
@@ -201,7 +201,7 @@ export function DashboardHomeClient({
               <span className={styles.sectionKicker}>مسارات مختصرة</span>
               <h2>تحرّك بسرعة</h2>
             </div>
-            <p>كل ما تحتاجه لإدارة يومك، على بعد خطوة.</p>
+            <p>كل ما تحتاجه لإدارة يومك على بعد خطوة</p>
           </div>
 
           <div className={styles.quickGrid}>

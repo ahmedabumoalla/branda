@@ -18,7 +18,7 @@ function DefaultUpgradeFallback() {
         <LockKeyhole className="h-6 w-6" />
       </span>
       <p className="mt-3 text-sm font-black text-[#806A5E]">
-        هذه الميزة غير مفعلة في الباقة الحالية.
+        هذه الميزة غير مفعلة في الباقة الحالية
       </p>
       <Link href="/dashboard/subscription" className="mt-4 inline-flex rounded-xl bg-[#4A281D] px-4 py-3 text-sm font-black text-white">
         عرض الباقات

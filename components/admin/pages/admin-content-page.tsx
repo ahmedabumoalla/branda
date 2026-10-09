@@ -292,7 +292,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
           <form onSubmit={uploadMedia} className="mb-5 space-y-3 rounded-2xl border border-[#D9A33F]/25 bg-[#D9A33F]/10 p-4">
             <input type="hidden" name="placement" value="loyalty_cards" />
             <p className="font-black text-[#F6C35B]">صورة بطاقة الولاء في الصفحة الرئيسية</p>
-            <p className="text-xs font-bold text-[#CBB29C]">رفع صورة جديدة يستبدل الصورة الحالية تلقائيًا ويحفظها في التخزين وقاعدة البيانات.</p>
+            <p className="text-xs font-bold text-[#CBB29C]">رفع صورة جديدة يستبدل الصورة الحالية تلقائيًا ويحفظها في التخزين وقاعدة البيانات</p>
             <AdminInput name="altText" placeholder="وصف صورة بطاقة الولاء" />
             <AdminInput name="file" type="file" accept="image/*" required />
             <GoldButton type="submit" disabled={saving} className="inline-flex items-center gap-2">
@@ -340,7 +340,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
             <AdminInput value={contacts.tiktok} onChange={(e) => setContacts({ ...contacts, tiktok: e.target.value })} placeholder="رابط تيك توك" />
             <AdminInput value={contacts.x} onChange={(e) => setContacts({ ...contacts, x: e.target.value })} placeholder="رابط منصة إكس" />
           </div>
-          <p className="mt-4 text-xs font-bold text-[#CBB29C]">يتم حفظ وسائل التواصل مباشرة في قاعدة البيانات وتظهر بعد تحديث الصفحة.</p>
+          <p className="mt-4 text-xs font-bold text-[#CBB29C]">يتم حفظ وسائل التواصل مباشرة في قاعدة البيانات وتظهر بعد تحديث الصفحة</p>
         </BentoCard>
       </BentoGrid>
 
@@ -350,7 +350,7 @@ export function AdminContentPage({ initialData, configError }: Props) {
             <ContactRound className="h-7 w-7 text-[#F6C35B]" />
             <div>
               <h2 className="text-xl font-black text-[#F8F4EF]">طلبات التواصل الواردة</h2>
-              <p className="mt-1 text-xs font-bold text-[#CBB29C]">هذه هي رسائل قسم تواصل معنا في الصفحة الرئيسية، ويتم إرسال نسخة إلى cto.branda@gmail.com عند توفر إعدادات Resend.</p>
+              <p className="mt-1 text-xs font-bold text-[#CBB29C]">هذه هي رسائل قسم تواصل معنا في الصفحة الرئيسية ويتم إرسال نسخة إلى cto.branda@gmail.com عند توفر إعدادات Resend</p>
             </div>
           </div>
           <StatusBadge tone="gold">المسار: الأدمن ← إدارة محتوى المنصة</StatusBadge>

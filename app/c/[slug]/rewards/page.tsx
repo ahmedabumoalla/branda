@@ -57,7 +57,7 @@ type CustomerAccountSnapshot = Awaited<
 >;
 
 const REWARDS_LOAD_ERROR =
-  "تعذر تحميل المكافآت. سجل الدخول مرة أخرى أو أعد المحاولة.";
+  "تعذر تحميل المكافآت سجل الدخول مرة أخرى أو أعد المحاولة";
 const REWARD_QR_FIT_CLASS =
   "[&>div]:overflow-hidden [&>div]:rounded-[10px] [&>div]:p-2 [&_svg]:block [&_svg]:h-full [&_svg]:w-full";
 const EMPTY_CUSTOMER_LOYALTY_POINTS = {
@@ -191,7 +191,7 @@ function BrandHeader({
       cafeName={cafeName}
       logoUrl={logoUrl}
       title={title}
-      subtitle={title === "المكافآت" ? "رصيدك، بطاقاتك، ومكافآتك الجاهزة" : "كل تفاصيل المكافآت في مكان واحد"}
+      subtitle={title === "المكافآت" ? "رصيدك بطاقاتك ومكافآتك الجاهزة" : "كل تفاصيل المكافآت في مكان واحد"}
       action={
         <>
         {action}
@@ -355,7 +355,7 @@ function LoyaltyQrPreviewCard({
             {cardCode}
           </p>
           <p className="mt-2 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
-            اعرضه للكاشير عند الشراء أو صرف المكافأة.
+            اعرضه للكاشير عند الشراء أو صرف المكافأة
           </p>
         </div>
       ) : (
@@ -370,7 +370,7 @@ function LoyaltyQrPreviewCard({
                 : "سجّل دخولك لعرض بطاقة الولاء"}
             </p>
             <p className="mt-1 text-xs font-bold leading-5 text-[var(--ci-muted-fg,#806A5E)]">
-              سيظهر QR هنا عند توفر بطاقة الولاء في حسابك.
+              سيظهر QR هنا عند توفر بطاقة الولاء في حسابك
             </p>
           </div>
         </div>
@@ -548,7 +548,7 @@ function ExperienceRewardCard({
           <p className="flex items-center gap-2">
             <Clock3 className="h-4 w-4" />
             تنتهي في {formatRewardDate(reward.rewardExpiresAt)}
-            {remaining !== null ? `، ${remaining >= 0 ? `باقي ${remaining} يوم` : "انتهت"}` : ""}
+            {remaining !== null ? ` ${remaining >= 0 ? `باقي ${remaining} يوم` : "انتهت"}` : ""}
           </p>
         ) : null}
       </div>
@@ -607,12 +607,12 @@ function ExperienceRewardCard({
       ) : expired ? (
         <div className="mt-3 flex items-center gap-2 rounded-[18px] bg-[var(--ci-page-bg,#FCF8F3)] px-3 py-3 text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
           <History className="h-4 w-4" />
-          هذه المكافأة منتهية أو تم صرفها.
+          هذه المكافأة منتهية أو تم صرفها
         </div>
       ) : (
         <div className="mt-3 flex items-center gap-2 rounded-[18px] border border-dashed border-[var(--ci-border,#E7D7C6)] px-3 py-3 text-xs font-black text-[var(--ci-muted-fg,#806A5E)]">
           <QrCode className="h-4 w-4" />
-          يظهر QR بعد اعتماد العلامة للمكافأة.
+          يظهر QR بعد اعتماد العلامة للمكافأة
         </div>
       )}
     </article>
@@ -756,7 +756,7 @@ function ExperienceProofSheet({
           className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-[var(--ci-button-bg,#2F7A52)] px-5 text-sm font-black text-[var(--ci-button-fg,#fff)] transition active:scale-95 disabled:opacity-60"
         >
           <Send className="h-4 w-4" />
-          {busy ? "جاري الإرسال..." : `إرسال إلى ${cafeName} للمراجعة`}
+          {busy ? "جاري الإرسال" : `إرسال إلى ${cafeName} للمراجعة`}
         </button>
       </form>
     </BottomSheet>
@@ -992,7 +992,7 @@ function RewardsPageInner() {
       setProofOpen(false);
       alert(`تم إرسال التوثيق إلى ${cafeName} للمراجعة`);
     } catch {
-      alert("تعذر إرسال التوثيق، تأكد من الرابط وحاول مرة أخرى");
+      alert("تعذر إرسال التوثيق تأكد من الرابط وحاول مرة أخرى");
     } finally {
       setSubmittingProof(false);
     }
@@ -1007,7 +1007,7 @@ function RewardsPageInner() {
         <div className="rounded-[18px] border border-[var(--ci-border,#E7D7C6)] bg-[var(--ci-surface-bg,#fff)] p-8 text-center shadow-sm">
           <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-[var(--ci-border,#E7D7C6)] border-t-[var(--ci-button-bg,#2F7A52)]" />
           <p className="mt-4 text-sm font-black text-[var(--ci-page-fg,#311912)]">
-            جاري تجهيز مكافآتك...
+            جاري تجهيز مكافآتك
           </p>
         </div>
       </>
@@ -1098,12 +1098,12 @@ function RewardsPageInner() {
           ) : loyaltyTab === "expired" ? (
             <EmptyState
               title="لا توجد مكافآت منتهية"
-              desc="أي مكافآت ولاء مستخدمة أو منتهية ستظهر هنا."
+              desc="أي مكافآت ولاء مستخدمة أو منتهية ستظهر هنا"
             />
           ) : (
             <EmptyState
               title="لا توجد مكافآت حالية لهذه العلامة"
-              desc="ستظهر مكافأة الولاء هنا عند اكتمال شروط البطاقة."
+              desc="ستظهر مكافأة الولاء هنا عند اكتمال شروط البطاقة"
             />
           )}
         </div>
@@ -1160,8 +1160,8 @@ function RewardsPageInner() {
               }
               desc={
                 experienceTab === "current"
-                  ? "وثق تجربتك، وبعد اعتماد العلامة ستظهر المكافأة هنا."
-                  : "المكافآت المصروفة أو المنتهية ستظهر هنا."
+                  ? "وثق تجربتك وبعد اعتماد العلامة ستظهر المكافأة هنا"
+                  : "المكافآت المصروفة أو المنتهية ستظهر هنا"
               }
             />
           )}
@@ -1233,7 +1233,7 @@ function RewardsPageInner() {
             <div className="col-span-2">
               <EmptyState
                 title="لا توجد عناصر مكافآت"
-                desc="ستظهر بطاقة الولاء وتوثيق التجارب عند تفعيلها للعلامة."
+                desc="ستظهر بطاقة الولاء وتوثيق التجارب عند تفعيلها للعلامة"
               />
             </div>
           )}
@@ -1242,7 +1242,7 @@ function RewardsPageInner() {
         {hasReadyLoyaltyReward || readyExperienceRewards.length ? null : (
           <EmptyState
             title="لا توجد مكافآت حالية لهذه العلامة"
-            desc="بطاقة الولاء قد تظهر كهوية للعميل، لكنها لا تُحسب كمكافأة إلا عند توفر مكافأة جاهزة للاسترداد."
+            desc="بطاقة الولاء قد تظهر كهوية للعميل لكنها لا تُحسب كمكافأة إلا عند توفر مكافأة جاهزة للاسترداد"
           />
         )}
       </>
@@ -1273,7 +1273,7 @@ export default function CafeCustomerRewardsPage() {
     <CafeLayout slug={params.slug} hideHeader hideFooter hideQuickDock>
       <Suspense
         fallback={
-          <p className="p-8 text-center font-black">جاري تحميل المكافآت...</p>
+          <p className="p-8 text-center font-black">جاري تحميل المكافآت</p>
         }
       >
         <RewardsPageInner />

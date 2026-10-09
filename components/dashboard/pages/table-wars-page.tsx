@@ -44,7 +44,7 @@ function LockedTableWarsPage() {
           ألعاب العلامة التجارية غير مفعّلة في باقتك الحالية
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-7 text-[#806A5E]">
-          فعّل الميزة من الباقة أو من إعدادات الأدمن لتظهر أدوات ألعاب العلامة داخل لوحة التحكم.
+          فعّل الميزة من الباقة أو من إعدادات الأدمن لتظهر أدوات ألعاب العلامة داخل لوحة التحكم
         </p>
       </div>
     </div>
@@ -53,7 +53,7 @@ function LockedTableWarsPage() {
 
 function RoundList({ rounds }: { rounds: TableWarsRoundSummary[] }) {
   if (!rounds.length) {
-    return <EmptyState message="لا توجد جولات مسجلة بعد." />;
+    return <EmptyState message="لا توجد جولات مسجلة بعد" />;
   }
 
   return (
@@ -97,7 +97,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
           <p className="font-black text-[#6B3A25]">Branda Play</p>
           <h1 className="mt-1.5 text-2xl font-black text-[#311912] lg:text-3xl">ألعاب العلامة التجارية</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-7 text-[#806A5E]">
-            مساحة لإدارة التجارب التفاعلية المتاحة للعملاء داخل الفرع الإلكتروني.
+            مساحة لإدارة التجارب التفاعلية المتاحة للعملاء داخل الفرع الإلكتروني
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9A33F]/35 bg-[#FFF7E3] px-4 py-2 text-xs font-black text-[#6B3A25]">
@@ -115,7 +115,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
               </span>
               <h2 className="mt-4 text-xl font-black text-[#173D39]">حلبة الأبطال</h2>
               <p className="mt-2 text-sm font-bold leading-7 text-[#365F58]">
-                لعبة معركة قهوة خفيفة يمكن إظهارها أو إخفاؤها من صفحة ألعاب العلامة.
+                لعبة معركة قهوة خفيفة يمكن إظهارها أو إخفاؤها من صفحة ألعاب العلامة
               </p>
             </div>
             <div className="mt-5 rounded-xl border border-[#CFE9E3] bg-white/80 p-4">
@@ -158,7 +158,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
               </span>
               <h2 className="mt-4 text-xl font-black text-[#311912]">حرب الطاولات</h2>
               <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-                لعبة تفاعلية محلية تجعل الطاولات أبراجًا متصلة يتحرك بينها اللاعب والخصم.
+                لعبة تفاعلية محلية تجعل الطاولات أبراجًا متصلة يتحرك بينها اللاعب والخصم
               </p>
             </div>
             <div className="mt-5 rounded-xl border border-[#F2E7D9] bg-[#FCF8F3] p-4">
@@ -208,7 +208,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
           <Trophy className="h-6 w-6" />
           <p className="mt-4 text-xs font-black text-[#6B3A25]">تنبيه</p>
           <p className="mt-1.5 text-sm font-black leading-7">
-            النقاط والمكافآت ستفعّل في مرحلة لاحقة.
+            النقاط والمكافآت ستفعّل في مرحلة لاحقة
           </p>
         </article>
       </section>
@@ -259,7 +259,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
           </div>
         ) : (
           <div className="space-y-4">
-            <EmptyState message="لم تُضف طاولات حرب الطاولات بعد. أنشئ طاولة تجريبية نشطة لتفعيل ظهور اللعبة في الفرع الإلكتروني." />
+            <EmptyState message="لم تُضف طاولات حرب الطاولات بعد أنشئ طاولة تجريبية نشطة لتفعيل ظهور اللعبة في الفرع الإلكتروني" />
             <form action={enableOwnerTableWarsDemoAction}>
               <button
                 type="submit"
@@ -274,7 +274,7 @@ export function TableWarsPage({ data, battleArenaEnabled = false, configError }:
 
       {data.missingSources.length ? (
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold leading-6 text-amber-800">
-          بعض جداول حرب الطاولات غير متاحة في قاعدة البيانات الحالية، لذلك قد تظهر المؤشرات فارغة حتى تطبيق migration.
+          بعض جداول حرب الطاولات غير متاحة في قاعدة البيانات الحالية لذلك قد تظهر المؤشرات فارغة حتى تطبيق migration
         </div>
       ) : null}
     </div>

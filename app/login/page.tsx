@@ -29,7 +29,7 @@ export default function LoginPage() {
     try {
       result = await loginOwnerAction(email, password);
     } catch {
-      setLoginMessage("تعذر تسجيل الدخول. حاول مجددًا");
+      setLoginMessage("تعذر تسجيل الدخول حاول مجددًا");
       setLoading(false);
       return;
     }
@@ -110,7 +110,7 @@ export default function LoginPage() {
             <NeumoInput type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="البريد الإلكتروني" className="mt-5" />
             {resetMessage ? <p className="mt-3 font-bold text-[#6B3A25]">{resetMessage}</p> : null}
             <PrimaryButton disabled={resetLoading} className="mt-5 w-full">
-              {resetLoading ? "جار إرسال الرابط..." : "إرسال الرابط"}
+              {resetLoading ? "جار إرسال الرابط" : "إرسال الرابط"}
             </PrimaryButton>
           </form>
         </div>

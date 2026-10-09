@@ -69,7 +69,7 @@ export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, confi
   return (
     <AdminPageShell
       title="كوبونات خصم المنصة"
-      subtitle="كوبونات مستقلة عن كوبونات المناديب، تستخدم عند الاشتراك أو التجديد أو ترقية الباقة داخل الدفع."
+      subtitle="كوبونات مستقلة عن كوبونات المناديب تستخدم عند الاشتراك أو التجديد أو ترقية الباقة داخل الدفع"
       action={<BarndaksaLogo variant="dark" width={140} height={56} />}
     >
       {configError ? <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center font-black text-amber-200">{configError}</div> : null}
@@ -92,7 +92,7 @@ export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, confi
             <AdminInput type="date" value={editing.validUntil?.slice(0, 10) ?? ""} onChange={(e) => setEditing({ ...editing, validUntil: e.target.value || undefined })} />
           </div>
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="mb-3 text-sm font-black text-[#CBB29C]">الباقات التي يشملها الكوبون، وتركها فارغة يعني جميع الباقات.</p>
+            <p className="mb-3 text-sm font-black text-[#CBB29C]">الباقات التي يشملها الكوبون وتركها فارغة يعني جميع الباقات</p>
             <div className="flex flex-wrap gap-2">
               {plans.map((plan) => {
                 const selected = editing.eligiblePlanIds.includes(plan.id);
@@ -101,7 +101,7 @@ export function AdminPlatformCouponsPage({ coupons: initialCoupons, plans, confi
             </div>
           </div>
           <label className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 p-4 font-black text-[#F8F4EF]"><input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> الكوبون نشط</label>
-          <GoldButton type="button" disabled={saving} onClick={saveCoupon} className="mt-5 inline-flex items-center gap-2"><Save className="h-5 w-5" />{saving ? "جاري الحفظ..." : "حفظ الكوبون"}</GoldButton>
+          <GoldButton type="button" disabled={saving} onClick={saveCoupon} className="mt-5 inline-flex items-center gap-2"><Save className="h-5 w-5" />{saving ? "جاري الحفظ" : "حفظ الكوبون"}</GoldButton>
         </BentoCard>
 
         <BentoCard variant="cyber">

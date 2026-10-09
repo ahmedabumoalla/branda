@@ -58,7 +58,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
         : null
     );
     setEditingBranchId(branch.id);
-    setMessage("يمكنك تعديل بيانات الفرع ثم حفظها.");
+    setMessage("يمكنك تعديل بيانات الفرع ثم حفظها");
   }
 
   function useCurrentLocation() {
@@ -99,7 +99,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
         lng: location.lng,
         mapUrl: buildMapboxMapUrl(location.lat, location.lng),
         geofenceRadiusM: DEFAULT_BRANCH_GEOFENCE_RADIUS_M,
-        welcomeMessage: `أهلًا بك في ${name.trim()}، سعداء بزيارتك`,
+        welcomeMessage: `أهلًا بك في ${name.trim()} سعداء بزيارتك`,
         active: editingBranchId
           ? branches.find((branch) => branch.id === editingBranchId)?.active ?? true
           : true,
@@ -266,7 +266,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
                   <div>
                     <p className="font-black text-[#3A2117]">موقع الفرع على Mapbox</p>
                     <p className="mt-1 text-xs font-bold text-[#7A6255]">
-                      حرّك الخريطة أو اسحب الدبوس، وسيتم حفظ الموقع مع نطاق ترحيب 50 متر حول الفرع
+                      حرّك الخريطة أو اسحب الدبوس وسيتم حفظ الموقع مع نطاق ترحيب 50 متر حول الفرع
                     </p>
                   </div>
                   <button
@@ -304,7 +304,7 @@ export function BranchesPageClient({ initialBranches, configError }: Props) {
                 ) : null}
 
                 <div className="mt-4 rounded-2xl border border-[#E5D8CD] bg-white p-4 text-sm font-bold leading-7 text-[#7A6255]">
-                  سيتم حفظ دائرة ترحيب حول الفرع بنطاق 50 متر، وعند دخول العميل هذا النطاق تظهر له رسالة ترحيبية تلقائيًا في صفحة العلامة.
+                  سيتم حفظ دائرة ترحيب حول الفرع بنطاق 50 متر وعند دخول العميل هذا النطاق تظهر له رسالة ترحيبية تلقائيًا في صفحة العلامة
                 </div>
               </SoftCard>
 

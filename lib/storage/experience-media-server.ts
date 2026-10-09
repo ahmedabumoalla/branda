@@ -8,7 +8,7 @@ const MAX_ORIGINAL_BYTES = 10 * 1024 * 1024;
 const MAX_FINAL_BYTES = 5 * 1024 * 1024;
 
 const DIRECT_VIDEO_UPLOAD_DISABLED_MESSAGE =
-  "رفع الفيديو المباشر غير متاح حاليًا. يمكنك إضافة رابط TikTok أو Instagram أو YouTube بدلًا من ذلك.";
+  "رفع الفيديو المباشر غير متاح حاليًا يمكنك إضافة رابط TikTok أو Instagram أو YouTube بدلًا من ذلك";
 
 function assertSafePathSegment(segment: string) {
   if (!segment || segment.includes("..") || segment.includes("/") || segment.includes("\\")) {

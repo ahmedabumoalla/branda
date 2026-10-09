@@ -8,19 +8,19 @@ const mapHosts = new Set(["google.com", "maps.google.com", "google.com.sa", "map
 const numberPattern = "(-?\\d+(?:\\.\\d+)?)";
 const pairPattern = new RegExp(`^${numberPattern}\\s*,\\s*${numberPattern}$`);
 const pinPattern = new RegExp(`!3d${numberPattern}!4d${numberPattern}(?=!|/|$)`, "g");
-const unsupported = "تعذر تحديد نقطة الفرع من الرابط. افتح موقع الفرع في قوقل ماب وشارك رابط المكان أو دبوس الموقع نفسه.";
+const unsupported = "تعذر تحديد نقطة الفرع من الرابط افتح موقع الفرع في قوقل ماب وشارك رابط المكان أو دبوس الموقع نفسه";
 
 export class GoogleMapsLocationError extends Error {}
 
 function readAllowedUrl(value: string): URL {
   let url: URL;
-  try { url = new URL(value); } catch { throw new GoogleMapsLocationError("أدخل رابط قوقل ماب كاملًا يبدأ بـ https://."); }
+  try { url = new URL(value); } catch { throw new GoogleMapsLocationError("أدخل رابط قوقل ماب كاملًا يبدأ بـ https://"); }
   const host = url.hostname.replace(/^www\./, "");
   const short = host === "maps.app.goo.gl" || (host === "goo.gl" && /^\/maps\/[a-zA-Z0-9_-]+\/?$/.test(url.pathname));
   const maps = mapHosts.has(host) && (/^\/maps(?:\/|$)/.test(url.pathname) || (host.startsWith("maps.") && url.pathname === "/"));
   if (value.length > maxUrlLength || url.protocol !== "https:" || url.username || url.password || url.port
     || /[\u0000-\u0020\u007f]/.test(value) || (!short && !maps)) {
-    throw new GoogleMapsLocationError("استخدم رابط موقع من قوقل ماب أو رابط المشاركة المختصر فقط.");
+    throw new GoogleMapsLocationError("استخدم رابط موقع من قوقل ماب أو رابط المشاركة المختصر فقط");
   }
   if (/^\/maps\/(?:dir|d|embed)(?:\/|$)/.test(normalizeGoogleMapsText(url.pathname)) || url.searchParams.get("map_action")) {
     throw new GoogleMapsLocationError(unsupported);
@@ -126,7 +126,7 @@ export async function resolveBranchGoogleMapsUrl(input: string): Promise<BranchL
     }
   } catch (error) {
     if (error instanceof GoogleMapsLocationError) throw error;
-    throw new GoogleMapsLocationError("تعذر التحقق من رابط قوقل ماب الآن. حاول مرة أخرى؛ لم يتغير موقع الفرع المحفوظ.");
+    throw new GoogleMapsLocationError("تعذر التحقق من رابط قوقل ماب الآن حاول مرة أخرى؛ لم يتغير موقع الفرع المحفوظ");
   }
   throw new GoogleMapsLocationError(unsupported);
 }

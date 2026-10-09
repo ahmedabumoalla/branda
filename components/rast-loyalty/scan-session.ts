@@ -17,7 +17,7 @@ type Dependencies = {
 function canonicalCode(value: string, kind: RastScanKind) {
   if (kind === "redeem") return rastRedemptionCode(value);
   const code = parseBarndaksaQrPayload(value, kind === "stamp" ? "loyalty-card" : "customer-reward") ?? value.trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("الرمز غير صالح لنوع العملية المحدد.");
+  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   return code;
 }
 
@@ -46,7 +46,7 @@ export function createRastScanSession(dependencies: Dependencies) {
         if (kind === "stamp") preview = { kind, value: code, card: await dependencies.lookupCard(code) };
         else {
           const reward = await dependencies.lookupReward(code);
-          if (reward.sourceType !== "loyalty") throw new Error("هذا الرمز ليس مكافأة من برنامج الولاء.");
+          if (reward.sourceType !== "loyalty") throw new Error("هذا الرمز ليس مكافأة من برنامج الولاء");
           preview = { kind, value: code, reward };
         }
         return preview;
@@ -55,15 +55,15 @@ export function createRastScanSession(dependencies: Dependencies) {
     async confirm(kind: RastScanKind, value: string): Promise<Record<string, unknown> | null> {
       if (busy) return null;
       const code = canonicalCode(value, kind);
-      if (!preview || preview.kind !== kind || preview.value !== code) throw new Error("افحص الرمز وراجع بيانات العميل أولًا.");
+      if (!preview || preview.kind !== kind || preview.value !== code) throw new Error("افحص الرمز وراجع بيانات العميل أولًا");
       if (preview.kind === "redeem" && !preview.retryPending) {
-        if (!preview.reward.canRedeem) throw new Error(preview.reward.invalidReason || "المكافأة غير متاحة للصرف.");
-        if (preview.reward.expiresAt && Date.parse(preview.reward.expiresAt) <= (dependencies.now?.() ?? Date.now())) throw new Error("انتهت صلاحية المكافأة. افحصها مرة أخرى.");
+        if (!preview.reward.canRedeem) throw new Error(preview.reward.invalidReason || "المكافأة غير متاحة للصرف");
+        if (preview.reward.expiresAt && Date.parse(preview.reward.expiresAt) <= (dependencies.now?.() ?? Date.now())) throw new Error("انتهت صلاحية المكافأة افحصها مرة أخرى");
       }
       const key = `${kind}:${code}`;
       const previous = uncertainRequests.get(key);
       const targetCode = previous?.targetCode ?? (preview.kind === "redeem" ? preview.reward.rewardCode : code);
-      if (!/^[A-Z0-9_-]{4,100}$/.test(targetCode)) throw new Error("رمز المكافأة غير صالح. أعد فحص البطاقة.");
+      if (!/^[A-Z0-9_-]{4,100}$/.test(targetCode)) throw new Error("رمز المكافأة غير صالح أعد فحص البطاقة");
       const requestId = previous?.requestId ?? dependencies.createRequestId();
       const confirmedPreview = preview;
       uncertainRequests.set(key, { requestId, targetCode, preview: confirmedPreview });

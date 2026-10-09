@@ -40,7 +40,7 @@ export function AdminMaintenancePage({ configError }: Props) {
   return (
     <AdminPageShell
       title="الصيانة"
-      subtitle="دخول مؤقت وآمن إلى لوحة علامة تجارية باستخدام رقم الصيانة، بدون استخدام أو تخزين كلمات مرور المالك."
+      subtitle="دخول مؤقت وآمن إلى لوحة علامة تجارية باستخدام رقم الصيانة بدون استخدام أو تخزين كلمات مرور المالك"
       action={<Wrench className="h-10 w-10 text-[#F6C35B]" />}
     >
       {configError ? (
@@ -88,10 +88,10 @@ export function AdminMaintenancePage({ configError }: Props) {
             <div>
               <h2 className="text-xl font-black text-[#F8F4EF]">ضوابط الأمان</h2>
               <div className="mt-4 space-y-3 text-sm font-bold leading-7 text-[#CBB29C]">
-                <p>الدخول متاح فقط لحساب مدير المنصة الحالي.</p>
-                <p>الجلسة مؤقتة وتظهر داخل لوحة العلامة كبانر دخول صيانة.</p>
-                <p>لا يتم استخدام حساب المالك ولا كلمة مروره ولا جلساته.</p>
-                <p>لا يتم حفظ كلمة مرور أو رابط إعادة تعيين.</p>
+                <p>الدخول متاح فقط لحساب مدير المنصة الحالي</p>
+                <p>الجلسة مؤقتة وتظهر داخل لوحة العلامة كبانر دخول صيانة</p>
+                <p>لا يتم استخدام حساب المالك ولا كلمة مروره ولا جلساته</p>
+                <p>لا يتم حفظ كلمة مرور أو رابط إعادة تعيين</p>
               </div>
             </div>
           </div>

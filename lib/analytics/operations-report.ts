@@ -20,7 +20,7 @@ export const reportMetrics = Object.keys(reportMetricLabels) as ReportMetric[];
 const count = z.number().int().nonnegative();
 const date = z.string().refine(value => !value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value));
 export const reportPeriodSchema = z.object({ from: date.default(""), to: date.default("") }).strict()
-  .refine(value => !value.from || !value.to || value.from <= value.to, { message: "تاريخ النهاية يجب ألا يسبق البداية." });
+  .refine(value => !value.from || !value.to || value.from <= value.to, { message: "تاريخ النهاية يجب ألا يسبق البداية" });
 export const reportBrandSchema = z.object({
   id: z.uuid(), name: z.string(), slug: z.string(), status: z.string(),
   subscriptionStatus: z.string(), planName: z.string(), expiresAt: z.string().nullable(), subscribed: z.boolean(),

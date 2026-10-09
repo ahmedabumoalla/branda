@@ -288,7 +288,7 @@ export async function lookupCashierCustomerReward(
     const { data, error } = await admin.rpc("preview_loyalty_reward", {
       p_session_token: token, p_reward_code: code,
     });
-    if (error || data?.ok !== true) throw new Error("تعذر قراءة المكافأة. تحقق من صلاحية البطاقة وجلسة الموظف.");
+    if (error || data?.ok !== true) throw new Error("تعذر قراءة المكافأة تحقق من صلاحية البطاقة وجلسة الموظف");
   }
   return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
 }
@@ -296,32 +296,32 @@ export async function lookupCashierCustomerReward(
 export async function lookupRastCashierReward(rawCode: string): Promise<CashierRewardPreview> {
   const code = rastRedemptionCode(rawCode);
   const { admin, token, cafeId, cafeSlug } = await getValidCashierSession();
-  if (cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة.");
+  if (cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة");
   await assertRastLoyaltyEntitlement(cafeId);
 
   const { data: card, error: cardError } = await admin.from("loyalty_cards")
     .select("id,customer_profile_id").eq("cafe_id", cafeId).eq("card_code", code).maybeSingle();
-  if (cardError) throw new Error("تعذر فحص البطاقة. حاول مرة أخرى.");
+  if (cardError) throw new Error("تعذر فحص البطاقة حاول مرة أخرى");
   let rewardCode = code;
   if (card) {
     // Validate the active card/customer/program through the existing audited RPC.
     const { data: checked, error } = await admin.rpc("preview_loyalty_card", { p_session_token: token, p_card_code: code });
-    if (error || checked?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف.");
-    if (!card.customer_profile_id) throw new Error("البطاقة غير مرتبطة بعميل صالح.");
+    if (error || checked?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف");
+    if (!card.customer_profile_id) throw new Error("البطاقة غير مرتبطة بعميل صالح");
     const { data: earned, error: rewardError } = await admin.from("customer_reward_instances")
       .select("reward_code").eq("cafe_id", cafeId).eq("loyalty_card_id", card.id)
       .eq("customer_id", card.customer_profile_id).eq("source_type", "loyalty").eq("status", "available")
       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order("expires_at", { ascending: true, nullsFirst: false })
       .order("issued_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle();
-    if (rewardError) throw new Error("تعذر قراءة المكافآت. حاول مرة أخرى.");
-    if (!earned) throw new Error("لا توجد مكافأة متاحة للصرف لهذه البطاقة. قد تكون صُرفت أو انتهت صلاحيتها.");
+    if (rewardError) throw new Error("تعذر قراءة المكافآت حاول مرة أخرى");
+    if (!earned) throw new Error("لا توجد مكافأة متاحة للصرف لهذه البطاقة قد تكون صُرفت أو انتهت صلاحيتها");
     rewardCode = String(earned.reward_code);
   }
   // Pin a real reward instance before confirmation; never redeem by selecting the next reward.
   const reward = await lookupCashierCustomerReward(rewardCode);
   if (reward.sourceType !== "loyalty" || (card && (reward.loyaltyCardId !== card.id || reward.customerId !== card.customer_profile_id))) {
-    throw new Error("هذه المكافأة غير متاحة لهذه البطاقة.");
+    throw new Error("هذه المكافأة غير متاحة لهذه البطاقة");
   }
   return reward;
 }
@@ -338,7 +338,7 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
     const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
       p_session_token: token, p_code: code, p_request_id: randomUUID(), p_operation: "redeem",
     });
-    if (error || data?.ok !== true) throw new Error("تعذر صرف المكافأة. ربما صُرفت أو انتهت صلاحيتها.");
+    if (error || data?.ok !== true) throw new Error("تعذر صرف المكافأة ربما صُرفت أو انتهت صلاحيتها");
     const result = data as Record<string, unknown>;
     return {
       ok: true, rewardInstanceId: reward.id, customerName: reward.customerName,

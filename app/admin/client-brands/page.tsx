@@ -15,7 +15,7 @@ export default async function AdminClientBrandsRoutePage() {
           availableItems: [],
           promotionsTableMissing: true,
         }}
-        configError="قم بإعداد Supabase قبل إدارة علامات العملاء."
+        configError="قم بإعداد Supabase قبل إدارة علامات العملاء"
       />
     );
   }
@@ -32,7 +32,7 @@ export default async function AdminClientBrandsRoutePage() {
           availableItems: [],
           promotionsTableMissing: true,
         }}
-        configError="تعذر تحميل إدارة العلامات التجارية للعملاء."
+        configError="تعذر تحميل إدارة العلامات التجارية للعملاء"
       />
     );
   }

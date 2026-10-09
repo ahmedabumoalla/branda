@@ -7,6 +7,6 @@ export type BankSubscriptionRequest = {
 };
 
 export function subscriptionWhatsappUrl(customerName: string, planName: string, requestId?: string) {
-  const message = `مرحبًا، أرغب بالاشتراك في باقة ${planName}. اسم العميل: ${customerName}.${requestId ? ` رقم الطلب: ${requestId}. سأرفق إيصال التحويل هنا للمراجعة.` : " أرجو إرسال بيانات التحويل البنكي باسم العنوان الحصري."}`;
+  const message = `مرحبًا أرغب بالاشتراك في باقة ${planName} اسم العميل: ${customerName}${requestId ? ` رقم الطلب: ${requestId} سأرفق إيصال التحويل هنا للمراجعة` : " أرجو إرسال بيانات التحويل البنكي باسم العنوان الحصري"}`;
   return `https://wa.me/966508424401?text=${encodeURIComponent(message)}`;
 }

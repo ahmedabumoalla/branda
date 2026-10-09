@@ -206,7 +206,7 @@ export function CategoryManager({
             {isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
           </h2>
           <p className="mt-1 text-sm font-bold text-[#7A6255]">
-            رتّب التصنيفات وتحكم في ظهورها للعميل.
+            رتّب التصنيفات وتحكم في ظهورها للعميل
           </p>
         </div>
         <PrimaryButton onClick={openAdd} className="inline-flex min-h-10 items-center gap-2 px-4 py-2">
@@ -257,7 +257,7 @@ export function CategoryManager({
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black">
                   <ImagePlus className="h-4 w-4" />
-                  {optimizingImage ? "جاري تحسين الصورة..." : "رفع صورة"}
+                  {optimizingImage ? "جاري تحسين الصورة" : "رفع صورة"}
                   <input
                     type="file"
                     accept="image/*"

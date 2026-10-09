@@ -64,7 +64,7 @@ export async function uploadCustomerAvatarAction(
     if (file.size > CUSTOMER_AVATAR_MAX_BYTES) {
       return {
         success: false,
-        error: `حجم الصورة ${formatUploadSize(file.size)}، الحد الأقصى ${formatUploadSize(CUSTOMER_AVATAR_MAX_BYTES)}.`,
+        error: `حجم الصورة ${formatUploadSize(file.size)} الحد الأقصى ${formatUploadSize(CUSTOMER_AVATAR_MAX_BYTES)}`,
         code: "file_too_large",
       };
     }

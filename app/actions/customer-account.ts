@@ -21,7 +21,7 @@ type OptionalSection =
   | "experience_rewards"
   | "customer_rewards";
 
-const CORE_LOAD_ERROR = "تعذر تحميل بيانات الحساب الأساسية. حاول مرة أخرى.";
+const CORE_LOAD_ERROR = "تعذر تحميل بيانات الحساب الأساسية حاول مرة أخرى";
 const OPTIONAL_TIMEOUT_MS = 8_000;
 const emptyLoyaltyPoints = {
   enabled: false,
@@ -160,7 +160,7 @@ export async function fetchCustomerAccountCoreAction(cafeSlug: string) {
       return {
         success: false as const,
         code: "invalid_session" as const,
-        message: "انتهت جلسة العميل. سجّل الدخول مرة أخرى.",
+        message: "انتهت جلسة العميل سجّل الدخول مرة أخرى",
         data: null,
       };
     }

@@ -50,7 +50,7 @@ async function requireCustomerAuthService(cafeSlug: string, source: Registration
   }
   // Source is caller-controlled; a loyalty label is not authorization.
   const features = await getPublicCafeFeatureCodesBySlug(cafeSlug);
-  if (!featureCodesAllow(features, "loyalty")) throw new Error("خدمة الولاء غير مفعلة لهذه العلامة.");
+  if (!featureCodesAllow(features, "loyalty")) throw new Error("خدمة الولاء غير مفعلة لهذه العلامة");
 }
 
 type BasicActionResult = {
@@ -298,7 +298,7 @@ export async function requestPasswordResetAction(
 ): Promise<BasicActionResult> {
   const parsed = z.string().trim().email().safeParse(email);
   if (!parsed.success) {
-    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
+    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا" };
   }
 
   const supabase = await createClient();
@@ -310,7 +310,7 @@ export async function requestPasswordResetAction(
 
   return {
     ok: true as const,
-    message: "إذا كان البريد مسجلًا لدينا، سيصلك رابط استعادة كلمة المرور خلال دقائق.",
+    message: "إذا كان البريد مسجلًا لدينا سيصلك رابط استعادة كلمة المرور خلال دقائق",
   };
 }
 
@@ -364,14 +364,14 @@ export async function updatePasswordAction(
   if (!parsed.success) {
     return {
       ok: false as const,
-      message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.",
+      message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف",
     };
   }
 
   if (confirmPassword !== undefined && parsed.data !== confirmPassword) {
     return {
       ok: false as const,
-      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة",
     };
   }
 
@@ -379,7 +379,7 @@ export async function updatePasswordAction(
   if (cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value !== "1") {
     return {
       ok: false as const,
-      message: "رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.",
+      message: "رابط استعادة كلمة المرور غير صالح أو منتهي اطلب رابطًا جديدًا",
     };
   }
 
@@ -392,7 +392,7 @@ export async function updatePasswordAction(
   if (userError || !user) {
     return {
       ok: false as const,
-      message: "رابط استعادة كلمة المرور غير صالح أو منتهي. اطلب رابطًا جديدًا.",
+      message: "رابط استعادة كلمة المرور غير صالح أو منتهي اطلب رابطًا جديدًا",
     };
   }
 
@@ -400,14 +400,14 @@ export async function updatePasswordAction(
   if (error) {
     return {
       ok: false as const,
-      message: "تعذر تحديث كلمة المرور. اطلب رابطًا جديدًا وحاول مرة أخرى.",
+      message: "تعذر تحديث كلمة المرور اطلب رابطًا جديدًا وحاول مرة أخرى",
     };
   }
 
   cookieStore.delete(PASSWORD_RECOVERY_COOKIE);
   return {
     ok: true as const,
-    message: "تم تحديث كلمة المرور بنجاح، يمكنك تسجيل الدخول الآن.",
+    message: "تم تحديث كلمة المرور بنجاح يمكنك تسجيل الدخول الآن",
   };
 }
 
@@ -426,12 +426,12 @@ export async function changeOwnerPasswordAction(input: {
   if (!parsed.success) {
     const errors = parsed.error.flatten().fieldErrors;
     if (errors.currentPassword) {
-      return { ok: false as const, message: "كلمة المرور الحالية مطلوبة." };
+      return { ok: false as const, message: "كلمة المرور الحالية مطلوبة" };
     }
     if (errors.newPassword) {
-      return { ok: false as const, message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف." };
+      return { ok: false as const, message: "كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف" };
     }
-    return { ok: false as const, message: "تحقق من حقول كلمة المرور وحاول مرة أخرى." };
+    return { ok: false as const, message: "تحقق من حقول كلمة المرور وحاول مرة أخرى" };
   }
 
   const { currentPassword, newPassword, confirmPassword } = parsed.data;
@@ -439,14 +439,14 @@ export async function changeOwnerPasswordAction(input: {
   if (newPassword !== confirmPassword) {
     return {
       ok: false as const,
-      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+      message: "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة",
     };
   }
 
   if (currentPassword === newPassword) {
     return {
       ok: false as const,
-      message: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية.",
+      message: "كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية",
     };
   }
 
@@ -460,7 +460,7 @@ export async function changeOwnerPasswordAction(input: {
     if (userError) logAuthError("[changeOwnerPasswordAction:getUser]", userError);
     return {
       ok: false as const,
-      message: "يجب تسجيل الدخول لتغيير كلمة المرور.",
+      message: "يجب تسجيل الدخول لتغيير كلمة المرور",
     };
   }
 
@@ -480,7 +480,7 @@ export async function changeOwnerPasswordAction(input: {
     if (profileError) logAuthError("[changeOwnerPasswordAction:profile]", profileError);
     return {
       ok: false as const,
-      message: "لا تملك صلاحية تغيير كلمة مرور هذا الحساب.",
+      message: "لا تملك صلاحية تغيير كلمة مرور هذا الحساب",
     };
   }
 
@@ -506,7 +506,7 @@ export async function changeOwnerPasswordAction(input: {
 
   if (verifyError || !verified.user || verified.user.id !== user.id) {
     if (verifyError) logAuthError("[changeOwnerPasswordAction:verifyCurrentPassword]", verifyError);
-    return { ok: false as const, message: "كلمة المرور الحالية غير صحيحة." };
+    return { ok: false as const, message: "كلمة المرور الحالية غير صحيحة" };
   }
 
   const admin = createAdminClient();
@@ -523,12 +523,12 @@ export async function changeOwnerPasswordAction(input: {
     return {
       ok: false as const,
       message: weakPassword
-        ? "كلمة المرور الجديدة ضعيفة أو غير مقبولة."
-        : "تعذر تغيير كلمة المرور، حاول مرة أخرى.",
+        ? "كلمة المرور الجديدة ضعيفة أو غير مقبولة"
+        : "تعذر تغيير كلمة المرور حاول مرة أخرى",
     };
   }
 
-  return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح." };
+  return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح" };
 }
 
 export async function logoutAction(): Promise<never> {
@@ -549,7 +549,7 @@ export async function registerCustomerAction(
     if (isPhoneOtpRequiredForBrand(cafeSlug)) {
       return {
         ok: false,
-        message: "استخدم التسجيل برقم الجوال ورمز التحقق.",
+        message: "استخدم التسجيل برقم الجوال ورمز التحقق",
       };
     }
 
@@ -562,7 +562,7 @@ export async function registerCustomerAction(
     const safeOtpError =
       error instanceof Error && /[\u0600-\u06ff]/.test(error.message)
         ? error.message
-        : "تعذر إنشاء الحساب بعد التحقق. حاول مرة أخرى.";
+        : "تعذر إنشاء الحساب بعد التحقق حاول مرة أخرى";
     return {
       ok: false,
       message: isPhoneOtpRequiredForBrand(cafeSlug)
@@ -586,7 +586,7 @@ export async function requestCustomerPhoneOtpAction(
       return {
         required: true as const,
         ok: false as const,
-        message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+        message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
       };
     }
     return await requestCustomerPhoneOtp(cafeSlug, phone, purpose);
@@ -595,7 +595,7 @@ export async function requestCustomerPhoneOtpAction(
     return {
       required: true as const,
       ok: false as const,
-      message: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
     };
   }
 }
@@ -611,10 +611,10 @@ export async function completeCustomerPhoneOtpAction(
   await requireCustomerAuthService(cafeSlug, registrationSource);
   try {
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
-      return { ok: false as const, message: "تعذر التحقق من الرمز." };
+      return { ok: false as const, message: "تعذر التحقق من الرمز" };
     }
     if (!isPhoneOtpRequiredForBrand(cafeSlug)) {
-      return { ok: false as const, message: "التحقق غير متاح لهذه العلامة." };
+      return { ok: false as const, message: "التحقق غير متاح لهذه العلامة" };
     }
     const parsedName =
       purpose === "customer_signup"
@@ -623,7 +623,7 @@ export async function completeCustomerPhoneOtpAction(
     if (purpose === "customer_signup" && !parsedName?.success) {
       return {
         ok: false as const,
-        message: "أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا.",
+        message: "أدخل اسمًا صحيحًا من حرفين إلى 120 حرفًا",
       };
     }
     const phoneNormalized = normalizeSaudiPhone(phone);
@@ -632,7 +632,7 @@ export async function completeCustomerPhoneOtpAction(
       !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug) ||
       !/^\d{6}$/.test(code)
     ) {
-      return { ok: false as const, message: "رمز التحقق غير صحيح." };
+      return { ok: false as const, message: "رمز التحقق غير صحيح" };
     }
 
     const supabase = await createClient();
@@ -643,11 +643,11 @@ export async function completeCustomerPhoneOtpAction(
         type: "sms",
       });
     if (verificationError || !verified.user || !verified.session) {
-      return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي." };
+      return { ok: false as const, message: "رمز التحقق غير صحيح أو منتهي" };
     }
     if (normalizeSaudiPhone(verified.user.phone ?? "") !== phoneNormalized) {
       await supabase.auth.signOut({ scope: "local" });
-      return { ok: false as const, message: "تعذر التحقق من رقم الجوال." };
+      return { ok: false as const, message: "تعذر التحقق من رقم الجوال" };
     }
 
     const finalized = await linkCustomerAfterSupabasePhoneOtp({
@@ -673,8 +673,8 @@ export async function completeCustomerPhoneOtpAction(
       ok: true as const,
       message:
         purpose === "customer_signup"
-          ? "تم إنشاء الحساب وتسجيل الدخول."
-          : "تم تسجيل الدخول.",
+          ? "تم إنشاء الحساب وتسجيل الدخول"
+          : "تم تسجيل الدخول",
       returningCustomer: finalized.returningCustomer,
       session: finalized.session,
     };
@@ -682,7 +682,7 @@ export async function completeCustomerPhoneOtpAction(
     logAuthError("[completeCustomerPhoneOtpAction]", error);
     return {
       ok: false as const,
-      message: "تعذر التحقق من الرمز. حاول مرة أخرى.",
+      message: "تعذر التحقق من الرمز حاول مرة أخرى",
     };
   }
 }
@@ -766,7 +766,7 @@ export async function changeCustomerPasswordAction(input: {
   try {
     const session = await getCustomerSessionAction(input.cafeSlug);
     if (!session) {
-      return { ok: false as const, message: "يجب تسجيل الدخول لتغيير كلمة المرور." };
+      return { ok: false as const, message: "يجب تسجيل الدخول لتغيير كلمة المرور" };
     }
 
     await changeCustomerPassword({
@@ -777,14 +777,14 @@ export async function changeCustomerPasswordAction(input: {
       confirmPassword: input.confirmPassword,
     });
 
-    return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح." };
+    return { ok: true as const, message: "تم تغيير كلمة المرور بنجاح" };
   } catch (error) {
     return {
       ok: false as const,
       message:
         error instanceof Error
           ? error.message
-          : "تعذر تغيير كلمة المرور الآن. حاول مرة أخرى.",
+          : "تعذر تغيير كلمة المرور الآن حاول مرة أخرى",
     };
   }
 }
@@ -796,7 +796,7 @@ export async function requestCustomerPasswordResetAction(
   requireStorefrontEnabled();
   const parsedEmail = z.string().trim().email().safeParse(email);
   if (!parsedEmail.success) {
-    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا." };
+    return { ok: false as const, message: "أدخل بريدًا إلكترونيًا صحيحًا" };
   }
 
   try {
@@ -816,9 +816,9 @@ export async function requestCustomerPasswordResetAction(
         html: `
           <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8">
             <h2>استعادة كلمة المرور</h2>
-            <p>مرحبًا ${escapeEmailHtml(reset.customerName)}، يمكنك تعيين كلمة مرور جديدة لحسابك في <strong>${escapeEmailHtml(reset.cafeName)}</strong> من الرابط التالي:</p>
+            <p>مرحبًا ${escapeEmailHtml(reset.customerName)} يمكنك تعيين كلمة مرور جديدة لحسابك في <strong>${escapeEmailHtml(reset.cafeName)}</strong> من الرابط التالي:</p>
             <p><a href="${resetUrl}">تعيين كلمة مرور جديدة</a></p>
-            <p>إذا لم تطلب الاستعادة فتجاهل هذه الرسالة.</p>
+            <p>إذا لم تطلب الاستعادة فتجاهل هذه الرسالة</p>
           </div>
         `,
       });
@@ -832,7 +832,7 @@ export async function requestCustomerPasswordResetAction(
   return {
     ok: true as const,
     message:
-      "إذا كان البريد مسجلًا لدى هذه العلامة، سيصلك رابط استعادة كلمة المرور خلال دقائق.",
+      "إذا كان البريد مسجلًا لدى هذه العلامة سيصلك رابط استعادة كلمة المرور خلال دقائق",
   };
 }
 
@@ -847,7 +847,7 @@ export async function resetCustomerPasswordAction(input: {
     await resetCustomerPasswordWithToken(input);
     return {
       ok: true as const,
-      message: "تم تحديث كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.",
+      message: "تم تحديث كلمة المرور بنجاح يمكنك تسجيل الدخول الآن",
     };
   } catch (error) {
     return {
@@ -855,7 +855,7 @@ export async function resetCustomerPasswordAction(input: {
       message:
         error instanceof Error
           ? error.message
-          : "تعذر حفظ كلمة المرور. اطلب رابطًا جديدًا وحاول مرة أخرى.",
+          : "تعذر حفظ كلمة المرور اطلب رابطًا جديدًا وحاول مرة أخرى",
     };
   }
 }

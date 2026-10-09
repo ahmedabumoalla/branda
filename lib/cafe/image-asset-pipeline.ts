@@ -175,7 +175,7 @@ async function loadImageSource(file: File): Promise<{
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
       reject(
-        new ImagePipelineError("تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP")
+        new ImagePipelineError("تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP")
       );
     };
     img.src = objectUrl;
@@ -240,7 +240,7 @@ async function encodeOptimized(
   }
 
   if (!bestBlob) {
-    throw new ImagePipelineError("تعذر ضغط الصورة، جرّب ملفًا آخر");
+    throw new ImagePipelineError("تعذر ضغط الصورة جرّب ملفًا آخر");
   }
 
   return { blob: bestBlob, mimeType: bestMime, width, height };
@@ -256,7 +256,7 @@ export async function optimizeImageForStorage(
 
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new ImagePipelineError(
-      "حجم الصورة كبير جدًا للمعالجة، اختر ملفًا أقل من 40MB"
+      "حجم الصورة كبير جدًا للمعالجة اختر ملفًا أقل من 40MB"
     );
   }
 
@@ -266,7 +266,7 @@ export async function optimizeImageForStorage(
   }
 
   if (!ACCEPTED_MIMES.has(mime)) {
-    throw new ImagePipelineError("تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP");
+    throw new ImagePipelineError("تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP");
   }
 
   const config = PURPOSE_CONFIG[purpose];

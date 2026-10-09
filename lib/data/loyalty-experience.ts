@@ -19,7 +19,7 @@ import type { WalletMember } from "@/lib/wallet/types";
 export async function getLoyaltyExperience(cafeId: string) {
   const { data, error } = await createAdminClient().from("cafe_loyalty_experience")
     .select("reward_validity_days,reward_kind,reward_discount_percent,nearby_message,branch_latitude,branch_longitude,offer_title,offer_body,offer_updated_at,updated_at").eq("cafe_id", cafeId).maybeSingle();
-  if (error) throw new Error("إعدادات تجربة الولاء تحتاج إكمال تهيئة قاعدة البيانات.");
+  if (error) throw new Error("إعدادات تجربة الولاء تحتاج إكمال تهيئة قاعدة البيانات");
   return data ? {
     rewardValidityDays: Number(data.reward_validity_days), nearbyMessage: String(data.nearby_message),
     rewardKind: data.reward_kind as "product" | "discount" | "custom",
@@ -66,7 +66,7 @@ export async function loadWalletMemberByCode(cardCode: string): Promise<WalletMe
   const { count, error } = await createAdminClient().from("customer_reward_instances").select("id", { count: "exact", head: true })
     .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-  if (error) throw new Error("تعذر تحديث مكافآت البطاقة.");
+  if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
   return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience: await getLoyaltyExperience(view.card.cafeId) };
 }
 
@@ -87,8 +87,8 @@ const experienceSchema = z.object({
   rewardDiscountPercent: z.number().int().min(1).max(100).nullable().optional().default(null),
   rewardValidityDays: z.number().int().min(1).max(365), nearbyMessage: z.string().trim().min(2).max(240),
   latitude: z.number().min(-90).max(90).nullable(), longitude: z.number().min(-180).max(180).nullable(),
-}).refine((value) => (value.latitude === null) === (value.longitude === null), "أدخل إحداثيات الفرع كاملة.")
-  .refine((value) => value.rewardKind !== "discount" || value.rewardDiscountPercent !== null, "حدد نسبة الخصم.");
+}).refine((value) => (value.latitude === null) === (value.longitude === null), "أدخل إحداثيات الفرع كاملة")
+  .refine((value) => value.rewardKind !== "discount" || value.rewardDiscountPercent !== null, "حدد نسبة الخصم");
 
 async function parseExperienceInput(input: LoyaltyExperienceInput) {
   const mapsUrl = z.string().trim().max(2048).optional().parse(input.mapsUrl);
@@ -98,15 +98,15 @@ async function parseExperienceInput(input: LoyaltyExperienceInput) {
 
 export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) {
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب.");
-  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
+  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب");
+  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const parsed = await parseExperienceInput(input);
   const { error } = await (await createClient()).from("cafe_loyalty_experience").upsert({
     cafe_id: cafe.id, reward_validity_days: parsed.rewardValidityDays, nearby_message: parsed.nearbyMessage,
     reward_kind: parsed.rewardKind, reward_discount_percent: parsed.rewardKind === "discount" ? parsed.rewardDiscountPercent : null,
     branch_latitude: parsed.latitude, branch_longitude: parsed.longitude,
   }, { onConflict: "cafe_id" });
-  if (error) throw new Error("تعذر حفظ إعدادات الولاء.");
+  if (error) throw new Error("تعذر حفظ إعدادات الولاء");
 }
 
 const programSchema = z.object({
@@ -121,12 +121,12 @@ const programSchema = z.object({
 export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceInput }) {
   const program = programSchema.parse(input.program);
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب.");
-  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك.");
+  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب");
+  if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const experience = await parseExperienceInput(input.experience);
-  if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة.");
+  if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة");
   const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: program, p_experience: experience });
-  if (error) throw new Error("تعذر حفظ برنامج الولاء. إعداداتك لم تتغير.");
+  if (error) throw new Error("تعذر حفظ برنامج الولاء إعداداتك لم تتغير");
 }
 
 // Compatibility with the concurrent Rast editor; same validated atomic service.
@@ -135,17 +135,17 @@ export const saveRastLoyaltySettings = saveBrandLoyaltyProgram;
 export async function lookupRastCashierCard(rawCode: string) {
   const input = z.string().trim().min(4).max(500).parse(rawCode);
   const code = parseBarndaksaQrPayload(input, "loyalty-card") ?? input.toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("رمز البطاقة غير صالح.");
+  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("رمز البطاقة غير صالح");
   const admin = createAdminClient();
   const session = await requireCashierSessionContext(admin);
   const token = session.token;
-  if (session.cafeSlug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة.");
+  if (session.cafeSlug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة");
   await assertRastLoyaltyEntitlement(session.cafeId);
   // The database checks the card and customer, and commits the read audit together.
   const { data, error: previewError } = await admin.rpc("preview_loyalty_card", {
     p_session_token: token, p_card_code: code,
   });
-  if (previewError || data?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف.");
+  if (previewError || data?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف");
   return z.object({
     customerName: z.string(), stampsInCycle: z.number().int().nonnegative(),
     purchasesRequired: z.number().int().positive(), availableRewards: z.number().int().nonnegative(), rewardName: z.string(),

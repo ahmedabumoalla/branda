@@ -268,7 +268,7 @@ export function CustomIdentityBuilder({
     e.target.value = "";
 
     setOptimizingLogo(true);
-    showToast({ type: "loading", message: "جاري تحسين الصورة..." });
+    showToast({ type: "loading", message: "جاري تحسين الصورة" });
     try {
       const optimized = await optimizeImageForStorage(file, "custom-theme-logo");
       setLogoPreview(URL.createObjectURL(optimized.blob));
@@ -283,7 +283,7 @@ export function CustomIdentityBuilder({
         message:
           err instanceof ImagePipelineError
             ? err.message
-            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+            : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP",
       });
     } finally {
       setOptimizingLogo(false);
@@ -296,7 +296,7 @@ export function CustomIdentityBuilder({
     e.target.value = "";
 
     setOptimizingBackground(true);
-    showToast({ type: "loading", message: "جاري تحسين الصورة..." });
+    showToast({ type: "loading", message: "جاري تحسين الصورة" });
     try {
       const optimized = await optimizeImageForStorage(file, "custom-theme-background");
       setBackgroundPreview(URL.createObjectURL(optimized.blob));
@@ -311,7 +311,7 @@ export function CustomIdentityBuilder({
         message:
           err instanceof ImagePipelineError
             ? err.message
-            : "تعذر قراءة الصورة، جرّب ملف PNG أو JPG أو WEBP",
+            : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP",
       });
     } finally {
       setOptimizingBackground(false);
@@ -369,7 +369,7 @@ export function CustomIdentityBuilder({
       setToast({
         type: "loading",
         message:
-          pendingLogo || pendingBackground ? "جاري حفظ الصور..." : "جاري حفظ الهوية...",
+          pendingLogo || pendingBackground ? "جاري حفظ الصور" : "جاري حفظ الهوية",
       });
     }
 
@@ -404,7 +404,7 @@ export function CustomIdentityBuilder({
 
       if (showMessages && (pendingLogo || pendingBackground)) {
         setFlowStatus("saving");
-        setToast({ type: "loading", message: "جاري حفظ الهوية..." });
+        setToast({ type: "loading", message: "جاري حفظ الهوية" });
       }
 
       await persistCustomIdentityTheme(next);
@@ -426,11 +426,11 @@ export function CustomIdentityBuilder({
         showToast({
           type: "error",
           message: isQuotaError(err)
-            ? "تعذر الحفظ محليًا بسبب حجم الملفات. أعد رفع صورة أصغر."
+            ? "تعذر الحفظ محليًا بسبب حجم الملفات أعد رفع صورة أصغر"
             : err instanceof Error &&
                 err.message.includes("IndexedDB")
-              ? "تعذر حفظ الصورة محليًا. جرّب صورة أصغر."
-              : "تعذر تطبيق الثيم، حاول مرة أخرى",
+              ? "تعذر حفظ الصورة محليًا جرّب صورة أصغر"
+              : "تعذر تطبيق الثيم حاول مرة أخرى",
         });
       }
       return false;
@@ -443,7 +443,7 @@ export function CustomIdentityBuilder({
 
   async function handleApplyTheme() {
     setFlowStatus("applying");
-    setToast({ type: "loading", message: `جاري تطبيق الثيم على صفحة ${copy.casualNoun}...` });
+    setToast({ type: "loading", message: `جاري تطبيق الثيم على صفحة ${copy.casualNoun}` });
 
     try {
       const saved =
@@ -452,7 +452,7 @@ export function CustomIdentityBuilder({
           : true;
       if (!saved) {
         setFlowStatus("error");
-        showToast({ type: "error", message: "تعذر تطبيق الثيم، حاول مرة أخرى" });
+        showToast({ type: "error", message: "تعذر تطبيق الثيم حاول مرة أخرى" });
         return;
       }
 
@@ -468,7 +468,7 @@ export function CustomIdentityBuilder({
     } catch (err) {
       console.error("[custom-identity] apply failed", err);
       setFlowStatus("error");
-      showToast({ type: "error", message: "تعذر تطبيق الثيم، حاول مرة أخرى" });
+      showToast({ type: "error", message: "تعذر تطبيق الثيم حاول مرة أخرى" });
     }
   }
 
@@ -523,7 +523,7 @@ export function CustomIdentityBuilder({
             <p className="mt-2 max-w-2xl text-sm font-bold text-[#E5D8CD]/90">
               الألوان والإعدادات في{" "}
               <span className="font-mono text-xs">cafe_custom_identity</span> — الصور
-              في IndexedDB محليًا (mock) وليس base64.
+              في IndexedDB محليًا (mock) وليس base64
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -545,7 +545,7 @@ export function CustomIdentityBuilder({
                 disabled={repairing}
                 className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-black text-red-100"
               >
-                {repairing ? "جاري الإصلاح..." : "إصلاح وتحسين الصور القديمة"}
+                {repairing ? "جاري الإصلاح" : "إصلاح وتحسين الصور القديمة"}
               </button>
             ) : null}
           </div>
@@ -785,9 +785,9 @@ export function CustomIdentityBuilder({
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
                 {flowStatus === "savingAsset"
-                  ? "جاري حفظ الصور..."
+                  ? "جاري حفظ الصور"
                   : flowStatus === "saving"
-                    ? "جاري حفظ الهوية..."
+                    ? "جاري حفظ الهوية"
                     : "حفظ إعدادات الهوية"}
               </PrimaryButton>
               <button
@@ -802,7 +802,7 @@ export function CustomIdentityBuilder({
                   <Check className="h-4 w-4" />
                 )}
                 {flowStatus === "applying"
-                  ? `جاري تطبيق الثيم على صفحة ${copy.casualNoun}...`
+                  ? `جاري تطبيق الثيم على صفحة ${copy.casualNoun}`
                   : "اعتماد الثيم وتطبيقه"}
               </button>
             </div>

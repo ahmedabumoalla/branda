@@ -208,7 +208,7 @@ export function ExperienceRewardReviewsPageClient({
             قارئ QR مكافآت توثيق التجربة
           </h2>
           <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">
-            يقرأ QR المكافأة من داخل لوحة العلامة فقط، وبعد الصرف يتوقف الكود ولا يمكن استخدامه مرة ثانية.
+            يقرأ QR المكافأة من داخل لوحة العلامة فقط وبعد الصرف يتوقف الكود ولا يمكن استخدامه مرة ثانية
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto]">
             <input

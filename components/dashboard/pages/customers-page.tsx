@@ -14,7 +14,7 @@ type Props = {
 
 export function CustomersPageClient({ initialCustomers, initialOrders, configError }: Props) {
   return (
-    <DashboardPageShell title="العملاء" subtitle="سجل العملاء وملخص طلباتهم.">
+    <DashboardPageShell title="العملاء" subtitle="سجل العملاء وملخص طلباتهم">
       {configError ? <BentoCard variant="white" className="mb-6">{configError}</BentoCard> : null}
       <BentoGrid className="mb-6">
         <BentoCard variant="white"><Users className="mb-3 h-7 w-7" /><StatPill label="العملاء" value={initialCustomers.length} /></BentoCard>
