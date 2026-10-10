@@ -6,7 +6,7 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
-Latest release: discounted subscription cards highlight annual percentage, before/after total and savings with direct annual selection, published at `4c61963f5ce0da92b80ad7bc9240f5b294d9001e` and verified in Production. Fixed year-month-day coupon inputs, annual pricing, duration-scoped coupons and expiry gating remain published. See task-state for evidence. The earlier persistent package-deletion fix remains intact.
+Latest release: exiting maintenance returns to the brand directory and maintenance links are removed from the admin sidebar/home, published at `602aa1ccb0183d621e9cd9a5d14e509619fbbf4c` and verified in Production. Direct maintenance entry remains in brand details. Annual-offer cards, fixed coupon date inputs, annual pricing, duration-scoped coupons, expiry gating and persistent package deletion remain published. See task-state for evidence.
 
 The earlier React441 package request/save issue was fixed by accepting IDs containing underscores and returning structured action errors. Do not revert this completed fix.
 

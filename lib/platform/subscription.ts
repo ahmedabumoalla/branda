@@ -2,6 +2,10 @@ export type SubscriptionPaymentRequest = {
   id: string;
   cafeId: string;
   cafeName: string;
+  cafeSlug?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
   planId: string;
   planName: string;
   baseAmount: number;
@@ -18,6 +22,15 @@ export type SubscriptionPaymentRequest = {
   status: "pending" | "approved" | "rejected" | "paid" | "failed" | string;
   createdAt: string;
   adminResponse?: string;
+};
+
+export type SubscriptionRequestFilter = "pending_review" | "awaiting_receipt" | "approved" | "closed" | "all";
+export type SubscriptionRequestPage = {
+  requests: SubscriptionPaymentRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+  filter: SubscriptionRequestFilter;
 };
 
 export type SubscriptionPaymentStatus = "pending" | "paid" | "failed";

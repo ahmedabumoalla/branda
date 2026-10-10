@@ -13,7 +13,7 @@ import styles from "./admin-plans-page.module.css";
 type Props = { initialPlans: PlatformPlan[]; initialRequests: SubscriptionPaymentRequest[]; configError?: string };
 const durationLabels: Record<PlanDurationUnit, string> = { day: "يوم", month: "شهر", year: "سنة" };
 const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
-  awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "مرفوض", cancelled: "ملغي",
+  awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "ملغي بعد الرفض", cancelled: "ملغي",
 };
 const monthOptions = [1, 3, 6, 12];
 const numberFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });

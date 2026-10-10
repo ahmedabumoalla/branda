@@ -23,7 +23,7 @@ type Props = {
 };
 const money = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 const date = (value?: string | null) => value ? new Date(value).toLocaleDateString("ar-SA", { calendar: "gregory", timeZone: "Asia/Riyadh" }) : "غير محدد";
-const statuses: Record<string, string> = { awaiting_receipt: "بانتظار الإيصال", pending_review: "قيد مراجعة التحويل", approved: "تم الاعتماد", rejected: "مرفوض", cancelled: "ملغي" };
+const statuses: Record<string, string> = { awaiting_receipt: "بانتظار الإيصال", pending_review: "قيد مراجعة التحويل", approved: "تم الاعتماد", rejected: "ملغي بعد الرفض", cancelled: "ملغي" };
 
 export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanId, initialHistory, initialFeatureAccess, currentSubscription, bankDetails, initialRequests, customerName, referenceTime, configError }: Props) {
   const router = useRouter();

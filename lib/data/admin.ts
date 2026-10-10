@@ -19,7 +19,7 @@ import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
 import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
 import { adminSubscriptionSummary } from "@/lib/platform/admin-subscription-status";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
-import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
+import type { SubscriptionPaymentRequest, SubscriptionRequestPage } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
 
 
@@ -435,12 +435,17 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
 }
 
 function mapRequest(row: Record<string, unknown>): SubscriptionPaymentRequest {
-  const cafe = row.cafes as { name?: string } | null;
+  const cafe = row.cafes as { name?: string; slug?: string; cafe_settings?: { owner_name?: string; owner_email?: string; owner_phone?: string } | { owner_name?: string; owner_email?: string; owner_phone?: string }[] } | null;
+  const settings = Array.isArray(cafe?.cafe_settings) ? cafe.cafe_settings[0] : cafe?.cafe_settings;
   const branch = row.branches as { name?: string } | null;
   return {
     id: String(row.id),
     cafeId: String(row.cafe_id),
     cafeName: cafe?.name ?? "",
+    cafeSlug: cafe?.slug,
+    ownerName: settings?.owner_name,
+    ownerEmail: settings?.owner_email,
+    ownerPhone: settings?.owner_phone,
     planId: String(row.plan_id),
     planName: String(row.plan_name),
     baseAmount: Number(row.base_amount_sar),
@@ -469,13 +474,37 @@ export async function getAdminSubscriptionRequests(): Promise<SubscriptionPaymen
     .limit(50);
 
   if (error) throw error;
-  const requests = (data ?? []).map(mapRequest);
+  return signSubscriptionReceipts(supabase, (data ?? []).map(mapRequest));
+}
+
+async function signSubscriptionReceipts(supabase: Awaited<ReturnType<typeof createClient>>, requests: SubscriptionPaymentRequest[]) {
   const paths = requests.flatMap(request => request.receiptStoragePath?.startsWith(`${request.cafeId}/${request.id}/`) && !request.receiptStoragePath.includes("..") ? [request.receiptStoragePath] : []);
   if (!paths.length) return requests;
   const signed = await supabase.storage.from("subscription-receipts").createSignedUrls(paths, 300);
   if (signed.error) return requests;
   const urls = new Map((signed.data ?? []).filter(row => !row.error).map(row => [row.path, row.signedUrl]));
   return requests.map(request => ({ ...request, receiptUrl: urls.get(request.receiptStoragePath ?? "") ?? undefined }));
+}
+
+export async function getAdminSubscriptionRequestPage(input: unknown = {}): Promise<SubscriptionRequestPage> {
+  await requirePlatformAdmin();
+  const { page, filter } = z.object({
+    page: z.number().int().min(0).max(100000).default(0),
+    filter: z.enum(["pending_review", "awaiting_receipt", "approved", "closed", "all"]).default("pending_review"),
+  }).parse(input);
+  const pageSize = 20;
+  const supabase = await createClient();
+  let query = supabase.from("subscription_payment_requests")
+    .select("*, cafes(name,slug,cafe_settings(owner_name,owner_email,owner_phone))", { count: "exact" })
+    .order("created_at", { ascending: false }).order("id", { ascending: false });
+  if (filter === "closed") query = query.in("status", ["rejected", "cancelled"]);
+  else if (filter !== "all") query = query.eq("status", filter);
+  const { data, error, count } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+  if (error) throw error;
+  if (page > 0 && page * pageSize >= (count ?? 0)) {
+    return getAdminSubscriptionRequestPage({ page: Math.max(0, Math.ceil((count ?? 0) / pageSize) - 1), filter });
+  }
+  return { requests: await signSubscriptionReceipts(supabase, (data ?? []).map(mapRequest)), total: count ?? 0, page, pageSize, filter };
 }
 
 export async function approveSubscriptionRequest(requestId: string) {
