@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import ts from "typescript";
+
+const source = fs.readFileSync("components/menu/menu-auto-refresh.tsx", "utf8");
+const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+const effects = [], listeners = new Map();
+let now = 0, calls = 0, timer, interval, cleared = false;
+const document = { visibilityState: "visible", addEventListener: (k,v) => listeners.set(k,v), removeEventListener: k => listeners.delete(k) };
+const window = { ...document, setInterval(fn,ms) { timer=fn; interval=ms; return 1; }, clearInterval() { cleared=true; } };
+const navigator = { onLine: true };
+const exports = {};
+new Function("require","exports","window","document","navigator","Date",compiled)(name => {
+  if(name === "react") return { useEffect: fn => effects.push(fn), useRef: value => ({current:value}), useTransition: () => [false,fn=>fn()] };
+  if(name === "next/navigation") return { useRouter: () => ({refresh:()=>calls++}) };
+  throw Error(name);
+},exports,window,document,navigator,{now:()=>now});
+exports.MenuAutoRefresh();
+const cleanups=effects.map(fn=>fn());
+assert.equal(calls,0); assert.equal(interval,30000);
+now=30000;timer();assert.equal(calls,1);
+listeners.get("focus")();listeners.get("pageshow")();assert.equal(calls,1,"deduplicate foreground events");
+document.visibilityState="hidden";now=60000;timer();assert.equal(calls,1,"hidden tabs do not fetch");
+document.visibilityState="visible";listeners.get("visibilitychange")();assert.equal(calls,2);
+navigator.onLine=false;now=90000;timer();assert.equal(calls,2,"offline tabs do not fetch");
+navigator.onLine=true;listeners.get("online")();assert.equal(calls,3);
+now=120000;listeners.get("pageshow")();assert.equal(calls,4,"bfcache return refreshes");
+for(const fn of cleanups) fn?.();assert(cleared);assert.equal(listeners.size,0);
+const page=fs.readFileSync("app/menu/[slug]/page.tsx","utf8");
+assert(page.includes('<MenuAutoRefresh />'));assert(page.includes('dynamic = "force-dynamic"'));
+assert(!source.includes("location.reload"));
+console.log("Menu auto-refresh timing, foreground, reconnect, deduplication, cleanup and route integration passed");
