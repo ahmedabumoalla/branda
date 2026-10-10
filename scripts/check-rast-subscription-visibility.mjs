@@ -191,7 +191,7 @@ await test("Maintenance notice precedes content and sidebar exits maintenance, i
   const element = layoutElement("other", true, { maintenanceSession });
   const html = renderToStaticMarkup(element);
   assert(html.indexOf("أنت في وضع الصيانة") < html.indexOf("PROTECTED_FEATURE_CONTENT"));
-  assert(html.includes("إنهاء وضع الصيانة والعودة للأدمن"));
+  assert(html.includes("إنهاء الصيانة والعودة للعلامات التجارية"));
   assert.equal(element.props.mobileTitle, "لوحة التحكم — وضع الصيانة");
   assert.equal(typeof element.props.sidebar(() => {}).props.onEndMaintenance, "function");
   for (const collapsed of [false, true]) {
@@ -238,8 +238,8 @@ for (const failure of [false, true]) await test(`Maintenance completion ${failur
     assert.deepEqual(calls, ["exit"]);
     finish();
     await transition;
-    assert.deepEqual(calls, failure ? ["exit"] : ["exit", "clear-cache", "/admin/maintenance"]);
-    if (failure) assert.equal(state.at(-1), "تعذر إنهاء وضع الصيانة. حاول مرة أخرى.");
+    assert.deepEqual(calls, failure ? ["exit"] : ["exit", "clear-cache", "/admin/cafes"]);
+    if (failure) assert.equal(state.at(-1), "تعذر إنهاء وضع الصيانة حاول مرة أخرى");
   } finally { globalThis.window = previousWindow; }
 });
 await test("Pending maintenance exit disables both controls and error is announced", () => {

@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowDownLeft, ArrowUpLeft, BarChart3, Building2, Check, ChevronLeft, Clock3, FileImage, Layers3, Minus, Package, Search, ShieldCheck, Users, Wrench } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpLeft, BarChart3, Building2, Check, ChevronLeft, Clock3, FileImage, Layers3, Minus, Package, Search, ShieldCheck, Users } from "lucide-react";
 import type { AdminDashboardOverview, AdminMonthlyRevenuePoint } from "@/lib/data/admin-dashboard";
 import s from "./admin-home-page.module.css";
 
@@ -74,7 +74,6 @@ const shortcuts = [
   { title: "العلامات التجارية", hint: "إدارة البيانات والخدمات", href: "/admin/cafes", icon: Building2 },
   { title: "الباقات والاشتراكات", hint: "مراجعة الباقات وأسعارها", href: "/admin/plans", icon: Layers3 },
   { title: "تقارير العمليات", hint: "متابعة أداء العلامات", href: "/admin/operations", icon: BarChart3 },
-  { title: "وضع الصيانة", hint: "الدخول إلى لوحة العلامة", href: "/admin/maintenance", icon: Wrench },
 ];
 
 export function AdminHomePage({ overview, configError }: Props) {

@@ -130,7 +130,7 @@ export function DashboardAppLayout({
       try {
         await exitMaintenanceModeAction();
         clearDashboardShellSnapshot();
-        window.location.assign("/admin/maintenance");
+        window.location.assign("/admin/cafes");
       } catch {
         setMaintenanceError("تعذر إنهاء وضع الصيانة حاول مرة أخرى");
       }
@@ -179,7 +179,7 @@ export function DashboardAppLayout({
               disabled={isEndingMaintenance}
               className="rounded-2xl bg-[#3A2117] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
             >
-              {isEndingMaintenance ? "جاري إنهاء الصيانة" : "إنهاء وضع الصيانة والعودة للأدمن"}
+              {isEndingMaintenance ? "جاري إنهاء الصيانة" : "إنهاء الصيانة والعودة للعلامات التجارية"}
             </button>
           </div>
           {maintenanceError && <p role="alert" className="mt-3 text-sm font-bold text-red-800">{maintenanceError}</p>}

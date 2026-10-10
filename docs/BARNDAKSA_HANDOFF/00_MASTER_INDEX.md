@@ -6,7 +6,7 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
-Latest release: coupon validity inputs display fixed year-month-day order with the native calendar retained, published at `c82b91ab7deee9bc9a9e45a2380c77e763473454` and verified in Production. Annual plan pricing, duration-scoped marketing coupons and the subscription-expiry dashboard gate remain published with their applied database migration. See task-state for evidence. The earlier persistent package-deletion fix remains intact.
+Latest release: discounted subscription cards highlight annual percentage, before/after total and savings with direct annual selection, published at `4c61963f5ce0da92b80ad7bc9240f5b294d9001e` and verified in Production. Fixed year-month-day coupon inputs, annual pricing, duration-scoped coupons and expiry gating remain published. See task-state for evidence. The earlier persistent package-deletion fix remains intact.
 
 The earlier React441 package request/save issue was fixed by accepting IDs containing underscores and returning structured action errors. Do not revert this completed fix.
 
