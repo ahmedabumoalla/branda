@@ -4,7 +4,9 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 ## Resume without restarting
 
-Finance in progress: `/admin/finance` implemented and two source migrations live. Manual collection records payment AND activates the plan atomically. Exclusive Address is `C:/Projects/pixis-group`; existing source bridge/local views now include Branda collections/payments without merging group receipt totals. See task-state for final checks/publication; preserve unrelated offers/menu/loyalty edits.
+Current task: premium customer intelligence directory and cross-brand customer profile implemented at `/admin/customers` with actual audit/wallet activity and new authenticated browser/device/active-duration telemetry. Migration `20261010010926_customer_intelligence` is live and role/read checks passed. Tests/text/TypeScript and isolated production build passed04:12; exact Production publication pending. See `docs/customer-intelligence.md` and task-state. Never invent historical usage/device data or attribute anonymous visits to known customers. Preserve unrelated offers/menu/loyalty changes.
+
+Finance COMPLETE: `/admin/finance` published at `f67149a6b0627d30d7fb9550aafc64d5890f29fb`, exact Production verified03:52. Manual collection records payment AND activates the plan atomically; expenses/private receipts/category totals and idempotent retries are available. Source migrations `20261010004458_platform_finance` / `20261010004502_group_finance_summary` are live. Exclusive Address is `C:/Projects/pixis-group`; existing signed source bridge/local views now include Branda collections/payments without merging group receipt totals. Group frontend remains local on5173; no public hosting configured. See task-state for actual checks/evidence; preserve unrelated offers/menu/loyalty edits.
 
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 

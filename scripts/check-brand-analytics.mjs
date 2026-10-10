@@ -107,7 +107,8 @@ try {
   override("fetch",async(url,options)=>{fetches.push({url,options});throw new Error("offline");});
   const tracker=load("lib/analytics/public-tracking.ts");
   tracker.trackBrandEngagement("rast","menu_view");tracker.trackBrandEngagement("rast","menu_loyalty_click");
-  const first=JSON.parse(await beacons[0].body.text()),second=JSON.parse(await beacons[1].body.text());
+  const aggregateBeacons=beacons.filter(item=>item.url==="/api/analytics/events");
+  const first=JSON.parse(await aggregateBeacons[0].body.text()),second=JSON.parse(await aggregateBeacons[1].body.text());
   check(first.visitorId===second.visitorId && first.eventId!==second.eventId,"same browser UUID, distinct event IDs");
   check(schema.engagementInputSchema.safeParse(first).success,"client produces valid recorder payload");
   check(beacons[0].url==="/api/analytics/events","first-party telemetry only");
@@ -115,7 +116,8 @@ try {
   check(fetches[0].options.keepalive && fetches[0].options.credentials==="same-origin","fallback survives navigation without blocking");
   override("localStorage",{getItem:()=>{throw new Error("blocked");},setItem:()=>{throw new Error("blocked");}});
   const blocked=load("lib/analytics/public-tracking.ts");blocked.trackBrandEngagement("rast","menu_view");blocked.trackBrandEngagement("rast","menu_loyalty_click");
-  check(JSON.parse(fetches[1].options.body).visitorId===JSON.parse(fetches[2].options.body).visitorId,"blocked storage uses stable current-session identifier");
+  const aggregateFetches=fetches.filter(item=>item.url==="/api/analytics/events");
+  check(JSON.parse(aggregateFetches[1].options.body).visitorId===JSON.parse(aggregateFetches[2].options.body).visitorId,"blocked storage uses stable current-session identifier");
   const tracked=[],listeners=new Map();
   const doc={visibilityState:"hidden",addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name)=>listeners.delete(name)};
   override("document",doc);

@@ -3,26 +3,18 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { AdminCustomersPage } from "@/components/admin/pages/admin-customers-page";
-import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getAdminCustomers } from "@/lib/data/admin";
-import { mockPlatformCustomers } from "@/lib/platform/admin-data";
+import { getCustomerIntelligence } from "@/lib/data/customer-intelligence";
+import { requirePlatformAdmin } from "@/lib/data/cafes";
 
 export default async function AdminCustomersRoutePage() {
-  if (!isSupabaseConfigured()) {
-    return (
-      <AdminCustomersPage
-        initialCustomers={mockPlatformCustomers}
-        configError="قم بإعداد Supabase في .env.local"
-      />
-    );
-  }
+  await requirePlatformAdmin();
 
   try {
-    const customers = await getAdminCustomers();
-    return <AdminCustomersPage initialCustomers={customers} />;
+    const data = await getCustomerIntelligence({});
+    return <AdminCustomersPage initialData={data} />;
   } catch {
     return (
-      <AdminCustomersPage initialCustomers={[]} configError="تعذر تحميل العملاء" />
+      <AdminCustomersPage initialData={null} configError="تعذر تحميل العملاء حاول تحديث البيانات" />
     );
   }
 }
