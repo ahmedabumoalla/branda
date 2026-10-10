@@ -86,23 +86,44 @@ try {
   assert.equal(downstream, 0); checks += 2;
   const nextResponse = {
     next: () => ({ kind: "next" }), rewrite: () => ({ kind: "rewrite" }),
+    redirect: (url, status) => new Response(null, { status, headers: { location: url.toString() } }),
   };
   const proxy = load("proxy.ts", { "next/server": { NextResponse: nextResponse } }).proxy;
-  function request(pathname, host = "barndaksa.com") {
+  function request(pathname, host = "barndaksa.com", method = "GET") {
     const url = new URL(`https://${host}${pathname}`);
     url.clone = () => new URL(url);
-    return { nextUrl: url, headers: new Headers({ host }) };
+    return { nextUrl: url, headers: new Headers({ host }), method };
   }
-  for (const pathname of ["/c", "/c/sample", "/c/sample/products/popular", "/c/sample/logo.png", "/api/public/cafe/sample", "/api/customer-fast/sample", "/api/pwa/sample/manifest.json"]) {
+  for (const pathname of ["/c", "/c/sample/logo.png", "/api/public/cafe/sample", "/api/customer-fast/sample", "/api/pwa/sample/manifest.json"]) {
     assert.equal((await proxy(request(pathname))).status, 404); checks++;
   }
-  assert.equal((await proxy(request("/", "sample.barndaksa.com"))).status, 404); checks++;
+  for (const pathname of ["/c/sample", "/c/sample/", "/c/sample/products/popular", "/c/sample/product/saved-id", "/c/sample/login", "/app/sample"]) {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await proxy(request(pathname, "barndaksa.com", method));
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get("location"), "https://barndaksa.com/menu/sample"); checks++;
+    }
+  }
+  const campaign = await proxy(request("/c/sample/products/popular?utm_source=whatsapp&source=qr&token=private&next=https://foreign.test"));
+  assert.equal(campaign.headers.get("location"), "https://barndaksa.com/menu/sample?source=qr&utm_source=whatsapp"); checks++;
+  for (const pathname of ["/", "/products/popular", "/menu/sample", "/c/sample"]) {
+    const response = await proxy(request(pathname, "sample.barndaksa.com"));
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get("location"), "https://barndaksa.com/menu/sample"); checks++;
+  }
+  for (const method of ["POST", "PUT", "DELETE"]) {
+    assert.equal((await proxy(request("/c/sample", "barndaksa.com", method))).status, 404); checks++;
+  }
+  for (const host of ["www.barndaksa.com", "app.barndaksa.com", "sample.foreign.test", "sample.nested.barndaksa.com"]) {
+    assert.equal((await proxy(request("/", host))).kind, "next"); checks++;
+  }
+  assert.equal((await proxy(request("/api/public/cafe/sample", "sample.barndaksa.com"))).status, 404); checks++;
   for (const pathname of ["/menu/sample", "/loyalty/sample", "/api/wallet/google/card"]) {
     assert.equal((await proxy(request(pathname))).kind, "next"); checks++;
   }
   process.env.STOREFRONT_ENABLED = "true";
-  assert.equal((await proxy(request("/", "sample.barndaksa.com"))).kind, "rewrite");
-  assert.equal((await proxy(request("/c/sample"))).kind, "next"); checks += 2;
+  assert.equal((await proxy(request("/", "sample.barndaksa.com"))).status, 308);
+  assert.equal((await proxy(request("/c/sample"))).status, 308); checks += 2;
   delete process.env.STOREFRONT_ENABLED;
   assert.equal(downstream, 0);
 
