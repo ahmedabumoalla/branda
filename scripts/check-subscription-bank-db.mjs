@@ -145,5 +145,6 @@ try {
   check(Number(await value("SELECT public.move_expired_trials_to_free_plan()"))===2,'both paid and trial expire');
   check(await value("SELECT count(*) FROM public.subscriptions")===countBefore,'expiry never creates fallback subscriptions');
   await denied(()=>query("UPDATE public.platform_plans SET free_after_trial=true WHERE id='paid'"));
-  console.log(`PASS subscription bank PostgreSQL: ${checks} authorization, pricing, trial exclusion, manual review, expiry, duplicate and audit checks.`);
+  await (await import('./platform-finance-db-cases.mjs')).checkPlatformFinance({ db, query, value, id, check, denied });
+  console.log(`PASS subscription bank and platform finance PostgreSQL: ${checks} authorization, pricing, activation, receipt, idempotency, rollback and audit checks.`);
 } finally { await db.close(); }

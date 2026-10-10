@@ -32,6 +32,7 @@ const links = [
   ["العمليات", "/admin/operations", ClipboardList],
   ["الباقات", "/admin/plans", Layers3],
   ["طلبات الاشتراك في الباقات", "/admin/subscription-requests", Receipt],
+  ["المالية", "/admin/finance", CircleDollarSign],
   ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
   ["المحتوى ورسائل التواصل", "/admin/content", Megaphone],
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],

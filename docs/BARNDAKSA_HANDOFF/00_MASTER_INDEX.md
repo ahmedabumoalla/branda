@@ -4,9 +4,11 @@ Updated 2026-10-10, Asia/Riyadh. This is the current handoff; old source bundles
 
 ## Resume without restarting
 
+Finance in progress: `/admin/finance` implemented and two source migrations live. Manual collection records payment AND activates the plan atomically. Exclusive Address is `C:/Projects/pixis-group`; existing source bridge/local views now include Branda collections/payments without merging group receipt totals. See task-state for final checks/publication; preserve unrelated offers/menu/loyalty edits.
+
 Read AGENTS.md and ../task-state.md, check git status, then continue with the user's next request. Do not rerun setup, regenerate bundles or reimplement completed work. The task-state record identifies the latest verified production release and any pending publication. A handoff-only commit does not change application behavior.
 
-Latest release: exiting maintenance returns to the brand directory and maintenance links are removed from the admin sidebar/home, published at `602aa1ccb0183d621e9cd9a5d14e509619fbbf4c` and verified in Production. Direct maintenance entry remains in brand details. Annual-offer cards, fixed coupon date inputs, annual pricing, duration-scoped coupons, expiry gating and persistent package deletion remain published. See task-state for evidence.
+Latest release: dedicated subscription-request review at `/admin/subscription-requests`, published at `84acc215ed7c25a5453282ae8f8aa622689dac50` and verified in Production. Shows brand/owner, plan/amount/term and private receipt links; approval activates immediately through the existing admin RPC, rejection closes the request without activating or cancelling the existing subscription. Rejected requests are displayed as cancelled after rejection and permit a new request. No migration required. See task-state for tests/build and live-verification limits. Prior maintenance navigation, annual offers, coupon dates/durations, expiry gating and persistent deletion remain published.
 
 The earlier React441 package request/save issue was fixed by accepting IDs containing underscores and returning structured action errors. Do not revert this completed fix.
 
