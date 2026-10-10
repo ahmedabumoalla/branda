@@ -42,6 +42,20 @@
 .plan > p { color: var(--muted); font-size: 13px; margin: 10px 0; min-height: 44px; }
 .price { font-size: 37px; font-weight: 700; line-height: 1.4; margin-bottom: 18px; }
 .price > span { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.annualOffer { --offer-accent: #f0dba8; --offer-muted: #d5dfd4; --offer-line: #64765f; --offer-shade: #344d3d; --offer-radius: 12px; --offer-space: 16px; --offer-small: 12px; position: relative; margin: 0 0 20px; padding: var(--offer-space); border: 1px solid var(--offer-line); border-top: 2px solid var(--offer-accent); border-radius: var(--offer-radius); background: linear-gradient(135deg, var(--offer-shade), var(--dark)); color: var(--paper); animation: annualReveal .35s ease-out both; }
+.annualOfferHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 700; }
+.annualBadge { display: inline-flex; padding: 3px 9px; border-radius: 6px; background: var(--offer-accent); color: var(--dark); font-size: var(--offer-small); white-space: nowrap; }
+.annualOriginal { display: flex; flex-wrap: wrap; gap: 6px; color: var(--offer-muted); font-size: 13px; }
+.annualOriginal del { text-decoration-thickness: 1px; }
+.annualPrice { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.annualPrice strong { font-size: 34px; line-height: 1.3; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+.annualPrice > span { color: var(--offer-muted); font-size: 13px; white-space: nowrap; }
+.annualOffer .annualSaving { margin: 0 0 4px; color: var(--offer-accent); font-size: 13px; line-height: 1.8; }
+.annualPayment { display: block; color: var(--offer-muted); font-size: var(--offer-small); line-height: 1.8; }
+.annualButton { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 46px; margin-top: 16px; padding: 10px 12px; border: 1px solid var(--offer-accent); border-radius: 8px; background: var(--offer-accent); color: var(--dark); font-size: 13px; font-weight: 700; text-align: start; transition: background-color .18s ease, border-color .18s ease; }
+.annualButton:hover:not(:disabled) { background: var(--paper); border-color: var(--paper); }
+.annualOffer .annualButton:focus-visible { outline-color: var(--offer-accent); }
+@keyframes annualReveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .plan ul { display: grid; gap: 10px; border-top: 1px solid var(--line); padding: 18px 0; margin: 0 0 14px; flex: 1; list-style: none; }
 .plan li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
 .plan li > span:first-child { width: 17px; text-align: center; }
@@ -99,6 +113,6 @@
 @media (max-width: 1100px) { .checkout { grid-template-columns: 1fr; } .bankDetails { border-inline-start: 0; border-top: 1px solid var(--line); } .bankDetails dl { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 800px) { .current { grid-template-columns: 1fr; } .currentDetails { border-inline-start: 0; border-top: 1px solid #50634e; } .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .page > div { padding: 24px 14px 48px; } .currentIdentity, .currentDetails, .checkoutMain, .bankDetails, .history { padding: 23px 18px; } .plans, .orderForm, .receiptOptions { grid-template-columns: 1fr; } .receiptOptions > div + div { border-inline-start: 0; border-top: 1px solid var(--line); padding: 22px 0 0; } .bankDetails dl { grid-template-columns: 1fr; } .currentDetails strong { font-size: 20px; } .sectionHeading h2 { font-size: 23px; } .total strong { font-size: 25px; } }
-@media (prefers-reduced-motion: reduce) { .page * { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { .page * { scroll-behavior: auto; } .annualOffer { animation: none; } .annualButton { transition: none; } }
 
 .couponField,.priceBreakdown{grid-column:1/-1}.couponField>div{display:flex;gap:10px;margin-top:8px}.couponField input{flex:1;min-width:0;padding:12px;border:1px solid #958877;border-radius:8px;background:var(--paper);color:var(--ink)}.couponField small{display:block;font-size:12px;color:var(--muted);margin-top:8px}.couponField .secondary{white-space:nowrap}.priceBreakdown{display:grid;gap:10px;padding-top:14px;font-size:14px}.priceBreakdown>div{display:flex;justify-content:space-between;gap:18px}.priceBreakdown dd{white-space:nowrap;font-weight:600}.priceBreakdown b{font-size:12px}

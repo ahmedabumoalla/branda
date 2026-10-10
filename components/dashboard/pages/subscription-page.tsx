@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock3, CreditCard, Download, ExternalLink, Layers3, MessageCircle, ShieldCheck, Upload } from "lucide-react";
+import { ArrowUpLeft, Check, Clock3, CreditCard, Download, ExternalLink, Layers3, MessageCircle, ShieldCheck, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
@@ -68,10 +68,10 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
     finally { couponLock.current = false; setCheckingCoupon(false); }
   }
 
-  function selectPlan(plan: PlatformPlan) {
+  function selectPlan(plan: PlatformPlan, durationMonths = getPlanDurationOptions(plan)[0]?.months ?? 1) {
     invalidateCoupon();
     setSelectedId(plan.id);
-    setMonths(getPlanDurationOptions(plan)[0]?.months ?? 1);
+    setMonths(durationMonths);
     setMessage(null);
     checkoutRef.current?.focus({ preventScroll: true });
     checkoutRef.current?.scrollIntoView({ block: "start" });
@@ -110,11 +110,22 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
     </section>
 
     <section id="available-plans" className={styles.plansSection} aria-labelledby="available-plans-title"><div className={styles.sectionHeading}><div><span className={styles.eyebrow}>اختر ما يناسب علامتك</span><h2 id="available-plans-title">باقات واضحة خدمات تختارها</h2><p>جميع الأسعار شاملة ضريبة القيمة المضافة</p></div><span className={styles.bankBadge}><ShieldCheck size={17} aria-hidden="true" />تحويل بنكي ومراجعة يدوية</span></div>
-      <div className={styles.plans}>{purchasablePlans.map(plan => <article key={plan.id} className={`${styles.plan} ${selectedId === plan.id ? styles.selectedPlan : ""}`}>
+      <div className={styles.plans}>{purchasablePlans.map(plan => {
+        const annual = calculateSubscriptionPricing(plan, 12);
+        const hasAnnualOffer = annual.discountAmount > 0;
+        return <article key={plan.id} className={`${styles.plan} ${selectedId === plan.id ? styles.selectedPlan : ""}`}>
         <div className={styles.planTop}><Layers3 size={22} aria-hidden="true" />{initialActivePlanId === plan.id && active ? <span>باقتك الحالية</span> : selectedId === plan.id ? <span>الباقة المختارة</span> : null}</div><h3>{plan.name}</h3><p>{plan.description || "خدمات واضحة لإدارة علامتك"}</p><div className={styles.price}>{money.format(getPlanMonthlyAmount(plan))}<span>ر.س / شهر</span></div>
+        {hasAnnualOffer ? <div className={styles.annualOffer} role="group" aria-label={`عرض الاشتراك السنوي لباقة ${plan.name}`}>
+          <div className={styles.annualOfferHeading}><span>سنة كاملة بتوفير أكبر</span><strong className={styles.annualBadge}>خصم {money.format(annual.discountPercent)}٪</strong></div>
+          <div className={styles.annualOriginal}><span>بدلًا من</span><del>{money.format(annual.baseAmount)} ر.س</del></div>
+          <div className={styles.annualPrice}><strong>{money.format(annual.totalAmount)}</strong><span>ر.س / سنة</span></div>
+          <p className={styles.annualSaving}>توفر <strong>{money.format(annual.discountAmount)} ر.س</strong> مع الاشتراك السنوي</p>
+          <span className={styles.annualPayment}>دفعة واحدة مقابل ١٢ شهرًا شامل الضريبة</span>
+          <button className={styles.annualButton} type="button" disabled={busy || Boolean(configError)} onClick={() => selectPlan(plan, 12)} aria-label={`اختيار الاشتراك السنوي لباقة ${plan.name}`}>اختيار الاشتراك السنوي<ArrowUpLeft size={18} aria-hidden="true" /></button>
+        </div> : null}
         <ul>{catalog.map(feature => { const included = plan.features.includes("all") || plan.features.includes(feature.id); return <li key={feature.id} className={included ? styles.included : styles.excluded}><span aria-hidden="true">{included ? "✓" : "—"}</span>{feature.sidebarLabel ?? feature.titleAr}<span className={styles.srOnly}>{included ? "مشمولة" : "غير مشمولة"}</span></li>; })}</ul>
-        <button className={selectedId === plan.id ? styles.primary : styles.secondary} type="button" onClick={() => selectPlan(plan)} disabled={busy || Boolean(configError)}>{initialActivePlanId === plan.id && active ? "تجديد الباقة" : "اختيار الباقة"}</button>
-      </article>)}</div>{!purchasablePlans.length && !configError ? <p className={styles.empty}>لا توجد باقات متاحة حاليًا تواصل معنا لمساعدتك</p> : null}
+        <button className={selectedId === plan.id && !hasAnnualOffer ? styles.primary : styles.secondary} type="button" onClick={() => selectPlan(plan)} disabled={busy || Boolean(configError)}>{hasAnnualOffer ? "اختيار الاشتراك الشهري" : initialActivePlanId === plan.id && active ? "تجديد الباقة" : "اختيار الباقة"}</button>
+      </article>})}</div>{!purchasablePlans.length && !configError ? <p className={styles.empty}>لا توجد باقات متاحة حاليًا تواصل معنا لمساعدتك</p> : null}
     </section>
 
     <section ref={checkoutRef} tabIndex={-1} className={styles.checkout} aria-labelledby="checkout-title">
