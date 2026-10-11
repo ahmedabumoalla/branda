@@ -3,7 +3,8 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpLeft, Bell, Check, Copy, Download, Gift, History, LoaderCircle, MapPin, Save, ScanLine } from "lucide-react";
+import { ArrowUpLeft, Bell, Check, Copy, Download, Gift, History, LoaderCircle, MapPin, Save, ScanLine, Users } from "lucide-react";
+import { LoyaltyCustomerDirectory } from "@/components/loyalty/customer-directory";
 import { saveRastLoyaltySettingsAction, sendLoyaltyWalletAnnouncementAction } from "@/app/actions/loyalty-experience";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
 import type { LoyaltyExperienceSettings, LoyaltyIdentity } from "@/lib/loyalty/experience-types";
@@ -14,7 +15,7 @@ import type { RastWalletAvailability } from "./rast-member-card";
 import s from "./rast-loyalty.module.css";
 
 type Props = {
-  initialDashboard: LoyaltyCardsDashboard;
+  initialDashboard: Pick<LoyaltyCardsDashboard, "program">;
   initialExperience: LoyaltyExperienceSettings;
   identity: LoyaltyIdentity;
   signupUrl: string;
@@ -25,7 +26,7 @@ type Props = {
 
 export function RastLoyaltyDashboard({ initialDashboard, initialExperience, identity, signupUrl, walletAvailability, products = [], activityLog }: Props) {
   const router = useRouter();
-  const [section, setSection] = useState<"settings" | "activity">("settings");
+  const [section, setSection] = useState<"settings" | "activity" | "customers">("settings");
   const [program, setProgram] = useState(initialDashboard.program);
   const [savedActivation, setSavedActivation] = useState({ enabled: initialDashboard.program.enabled, apple: initialDashboard.program.appleWalletEnabled, google: initialDashboard.program.googleWalletEnabled });
   const [experience, setExperience] = useState(initialExperience);
@@ -97,10 +98,12 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
 
   return <div className={s.dashboard} dir="rtl">
     <header className={s.dashboardHeader}><div><span className={s.eyebrow}>أهل مقهى الكواكب</span><h1>الولاء بطابع مقهى الكواكب</h1><p>بطاقة يعرفها عميلك ومكافأة ترجّعه لك</p></div><Link className={s.secondary} href="/dashboard/cashier"><ScanLine aria-hidden="true" />إدارة الكاشير</Link></header>
-    {activityLog && <nav className={s.dashboardSections} aria-label="أقسام الولاء والمكافآت">
+    <nav className={s.dashboardSections} aria-label="أقسام الولاء والمكافآت">
       <button type="button" aria-pressed={section === "settings"} aria-controls="rast-program-panel" onClick={() => setSection("settings")}><Gift aria-hidden="true" />البرنامج والمكافآت</button>
-      <button type="button" aria-pressed={section === "activity"} aria-controls="rast-activity-panel" onClick={() => setSection("activity")}><History aria-hidden="true" />سجل العمليات والموظفين</button>
-    </nav>}
+      <button type="button" aria-pressed={section === "customers"} aria-controls="rast-customers-panel" onClick={() => setSection("customers")}><Users aria-hidden="true" />سجل العملاء</button>
+      {activityLog && <button type="button" aria-pressed={section === "activity"} aria-controls="rast-activity-panel" onClick={() => setSection("activity")}><History aria-hidden="true" />سجل العمليات والموظفين</button>}
+    </nav>
+    {section === "customers" && <div id="rast-customers-panel"><LoyaltyCustomerDirectory /></div>}
     {activityLog && <div id="rast-activity-panel" hidden={section !== "activity"}>{activityLog}</div>}
     <div id="rast-program-panel" hidden={section !== "settings"}>
     <div className={s.dashboardLayout}>

@@ -34,10 +34,11 @@ export default async function LoyaltyCardsPage() {
     const [brand, experience] = await Promise.all([getLoyaltyBrand(dashboard.cafeSlug), getLoyaltyExperience(dashboard.cafeId).then((settings) => ({ settings, error: undefined as string | undefined })).catch(() => ({ settings: defaultLoyaltyExperience, error: "إعدادات تجربة الولاء لم تُفعّل بعد أكمل تهيئة قاعدة البيانات قبل الحفظ" }))]);
     const activityFilters = defaultLoyaltyActivityFilters();
     const [menu, activityResult] = await Promise.all([getOwnerMenu(), loadLoyaltyActivityAction(activityFilters)]);
-    if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={dashboard} identity={brand.identity}
+    if (brand) return <>{experience.error && <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">{experience.error}</p>}<RastLoyaltyDashboard initialDashboard={{ program: dashboard.program }} identity={brand.identity}
       initialExperience={experience.settings} walletAvailability={getWalletReadiness()} products={menu.products.map(({ id, name }) => ({ id, name }))}
       activityLog={<LoyaltyActivityLog initialResult={activityResult} initialFilters={activityFilters} />}
       signupUrl={`${(process.env.NEXT_PUBLIC_APP_URL || "https://barndaksa.com").replace(/\/$/, "")}/loyalty/rast?source=qr`} /></>;
+    return <p role="alert" className="mx-6 mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">تعذر تحميل هوية برنامج الولاء حاول تحديث الصفحة</p>;
   }
 
   return (
