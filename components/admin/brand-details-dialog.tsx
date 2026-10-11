@@ -12,11 +12,13 @@ import { formatSar } from "@/lib/format";
 import { StandaloneMenuControl } from "./standalone-menu-control";
 import { BrandOperationsPanel } from "./brand-operations-panel";
 import { BrandAnalyticsPanel } from "./brand-analytics-panel";
-import { ClipboardCheck, Wrench } from "lucide-react";
+import { BellRing, ClipboardCheck, Wrench } from "lucide-react";
+import { PagerBrandPanel } from "@/components/pager/pager-brand-panel";
 import s from "./brand-details.module.css";
 
-type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations";
+type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations" | "pager";
 const sections = [
+  { id: "pager", title: "نظام البيجر", description: "الفواتير والاستدعاءات وأوقات الانتظار وتقييمات العملاء", icon: BellRing },
   { id: "account", title: "بيانات العلامة", description: "بيانات المالك والتواصل", icon: Building2 },
   { id: "plan", title: "الباقة والاشتراك", description: "الباقة الحالية، المدة والتجديدات", icon: CreditCard },
   { id: "services", title: "الخدمات والصلاحيات", description: "الخدمات المتاحة واستثناءات العلامة", icon: SlidersHorizontal },
@@ -181,6 +183,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           </div>
         </>}
         {section === "services" && services}
+        {section === "pager" && <PagerBrandPanel key={cafe.id} cafeId={cafe.id} />}
         {section === "menu" && <StandaloneMenuControl />}
         {section === "operations" && <BrandOperationsPanel key={cafe.id} brandId={cafe.id} />}
         {section === "analytics" && <><BrandAnalyticsPanel key={cafe.id} brandId={cafe.id} /><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}

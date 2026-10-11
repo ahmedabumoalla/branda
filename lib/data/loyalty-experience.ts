@@ -8,7 +8,7 @@ import { getPublicCafeFeatureCodesBySlug, getOwnerFeatureCodes } from "@/lib/dat
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getPublicLoyaltyProgramBySlug, getLoyaltyCardViewByCode, getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
 import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
-import { requireCashierSessionContext } from "@/lib/data/cashier";
+import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createBarndaksaQrPayload, parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
@@ -137,7 +137,7 @@ export async function lookupRastCashierCard(rawCode: string) {
   const code = parseBarndaksaQrPayload(input, "loyalty-card") ?? input.toUpperCase();
   if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("رمز البطاقة غير صالح");
   const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
+  const session = await requireCashierPermission("loyalty", admin);
   const token = session.token;
   if (session.cafeSlug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة");
   await assertRastLoyaltyEntitlement(session.cafeId);

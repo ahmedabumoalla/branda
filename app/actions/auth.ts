@@ -189,14 +189,14 @@ export async function loginOwnerAction(
         };
       }
 
-      const { loginCashierWithPassword } = await import("@/lib/data/cashier");
+      const { loginCashierWithPassword, getCashierLandingPath } = await import("@/lib/data/cashier");
       const cashier = await loginCashierWithPassword(normalizedEmail, password);
 
       if (cashier) {
         return {
           ok: true as const,
           message: "تم تسجيل الدخول بنجاح",
-          redirectTo: "/cashier",
+          redirectTo: await getCashierLandingPath(),
         };
       }
 

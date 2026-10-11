@@ -10,6 +10,21 @@ export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }
 
+/** A provider ID means queued by GREEN-API, not delivered or read */
+export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
+  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+    body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
+  });
+  if (!response.ok) throw new Error("PAGER_PROVIDER_REJECTED");
+  const payload = await response.json() as GreenApiSendResponse;
+  if (typeof payload.idMessage !== "string" || !payload.idMessage) throw new Error("PAGER_PROVIDER_INVALID_RESPONSE");
+  return { providerMessageId: payload.idMessage };
+}
+
 /** Credentials are sent once after account creation; never log or persist this payload. */
 export async function sendGreenApiCashierWelcome(input: {
   phone: string;

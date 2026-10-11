@@ -8,6 +8,7 @@ import {
   cashierScanLoyalty,
   cashierUpdateOrderStatus,
   getCashierOrders,
+  getCashierLandingPath,
   loginCashierWithPassword,
   logoutCashier,
   startOwnerCashierSession,
@@ -24,7 +25,7 @@ export async function startOwnerCashierAction() {
   } catch {
     return { ok: false as const, message: "تعذر فتح نقطة التشغيل بجلسة المالك تحقق من صلاحياتك وحاول مجددًا" };
   }
-  redirect("/cashier");
+  redirect(await getCashierLandingPath());
 }
 
 export async function loginCashierAction(email: string, password: string) {
@@ -32,7 +33,7 @@ export async function loginCashierAction(email: string, password: string) {
   if (!result) {
     return { ok: false as const, message: "بيانات الكاشير غير صحيحة أو الحساب معطل" };
   }
-  redirect("/cashier");
+  redirect(await getCashierLandingPath());
 }
 
 export async function logoutCashierAction() {

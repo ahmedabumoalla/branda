@@ -8,7 +8,7 @@ import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { createNotification } from "@/lib/data/notifications";
 import { sendWhatsAppMessage } from "@/lib/notifications/whatsapp";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
-import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
+import { getCafeFeatureCodes, getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
@@ -28,6 +28,9 @@ export type CashierConsole = {
     fullName: string;
     email: string;
     employeeNumber?: string | null;
+    canUseLoyalty?: boolean;
+    canUsePager?: boolean;
+    pagerStation?: string;
   };
   orders: Array<Record<string, unknown>>;
   operationOrders?: Array<Record<string, unknown>>;
@@ -341,7 +344,10 @@ export async function startOwnerCashierSession() {
   });
 }
 
-type CashierSessionContext = {
+export type CashierSessionContext = {
+  canUseLoyalty: boolean;
+  canUsePager: boolean;
+  pagerStation: string;
   token: string;
   cafeId: string;
   cashierId: string;
@@ -398,7 +404,7 @@ export async function requireCashierSessionContext(
     await Promise.all([
       admin
         .from("cafe_cashiers")
-        .select("id,full_name,email,employee_number,active,owner_user_id")
+        .select("id,full_name,email,employee_number,active,owner_user_id,can_use_loyalty,can_use_pager,pager_station")
         .eq("id", String(session.cashier_id))
         .eq("cafe_id", String(session.cafe_id))
         .maybeSingle(),
@@ -409,7 +415,7 @@ export async function requireCashierSessionContext(
         .maybeSingle(),
     ]);
 
-  if (cashierError || cafeError || !cafe) {
+  if (cashierError || cafeError || !cafe || cafe.deleted_at || !["active", "published"].includes(cafe.status)) {
     console.warn("[cashier-session]", {
       stage: "load_context",
       cashierId: String(session.cashier_id),
@@ -447,6 +453,9 @@ export async function requireCashierSessionContext(
   }
 
   return {
+    canUseLoyalty: cashier.can_use_loyalty === true,
+    canUsePager: cashier.can_use_pager === true,
+    pagerStation: String(cashier.pager_station ?? ""),
     token,
     cafeId: String(session.cafe_id),
     cashierId: String(session.cashier_id),
@@ -456,6 +465,26 @@ export async function requireCashierSessionContext(
     cafeSlug: String(cafe.slug ?? ""),
     businessCategory: String(cafe.business_category ?? "cafes_coffee"),
   };
+}
+
+export async function requireCashierPermission(
+  permission: "loyalty" | "pager",
+  admin = createAdminClient(),
+): Promise<CashierSessionContext> {
+  const context = await requireCashierSessionContext(admin);
+  const allowed = permission === "loyalty" ? context.canUseLoyalty : context.canUsePager;
+  if (!allowed || !featureCodesAllow(await getCafeFeatureCodes(context.cafeId), permission)) {
+    throw new Error("لا تملك صلاحية استخدام هذه الخدمة أو أن اشتراكها غير مفعّل");
+  }
+  return context;
+}
+
+export async function getCashierLandingPath() {
+  const context = await requireCashierSessionContext();
+  const features = await getCafeFeatureCodes(context.cafeId);
+  if (context.canUsePager && featureCodesAllow(features, "pager")
+    && (!context.canUseLoyalty || !featureCodesAllow(features, "loyalty"))) return "/pager";
+  return "/cashier";
 }
 
 async function writeCashierAudit(
@@ -551,7 +580,7 @@ async function loadCashierOrders(
 
 export async function getCashierConsole(): Promise<CashierConsole | null> {
   const admin = createAdminClient();
-  const verifiedSession = await requireCashierSessionContext(admin).catch((error) => {
+  const verifiedSession = await requireCashierPermission("loyalty", admin).catch((error) => {
     console.warn("[cashier-console]", {
       stage: "session_context",
       reason: error instanceof Error ? error.message : "unknown",
@@ -580,6 +609,9 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
       id: verifiedSession.cashierId,
       fullName: verifiedSession.cashierName,
       email: verifiedSession.cashierEmail,
+      canUseLoyalty: verifiedSession.canUseLoyalty,
+      canUsePager: verifiedSession.canUsePager,
+      pagerStation: verifiedSession.pagerStation,
     },
     orders,
     operationOrders: orders,
@@ -589,7 +621,7 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
 
 export async function getCashierOrders(): Promise<CashierOrdersResult> {
   const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin).catch(() => null);
+  const session = await requireCashierPermission("loyalty", admin).catch(() => null);
   if (!session) return { authenticated: false, orders: [], dataError: null };
   const result = await loadCashierOrders(admin, session);
   return { authenticated: true, ...result };
@@ -620,7 +652,7 @@ export async function cashierUpdateOrderStatus(
   rejectionReason?: string,
 ) {
   const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
+  const session = await requireCashierPermission("loyalty", admin);
   const reason = rejectionReason?.trim() ?? "";
 
   if (!orderId) throw new Error("Order id is required");
@@ -796,7 +828,7 @@ export async function cashierScanLoyalty(input: {
     : makeLoyaltyScanReference(normalizedCardCode);
 
   const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
+  const session = await requireCashierPermission("loyalty", admin);
   const token = session.token;
   const currentCafeId = session.cafeId;
   if (input.cafeId && input.cafeId !== currentCafeId) {

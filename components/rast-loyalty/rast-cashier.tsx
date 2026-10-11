@@ -70,7 +70,8 @@ export function RastCashier({ initialData }: { initialData: CashierConsole }) {
     <div className="mx-auto max-w-4xl">
       <header className="mb-12 flex flex-wrap items-center justify-between gap-5 border-b border-[#561C2B]/20 pb-6">
         <div><p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p><h1 className="mt-2 text-2xl font-bold">كل زيارة تستاهل</h1><p className="mt-2 text-sm">أهلًا {initialData.cashier.fullName} هنا تسجّل الأختام وتصرف المكافآت</p></div>
-        <form action={logoutCashierAction}><button disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl border border-current px-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><LogOut size={18} aria-hidden="true" />تسجيل الخروج</button></form>
+        {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">نظام البيجر</Link> : null}
+            <form action={logoutCashierAction}><button disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl border border-current px-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><LogOut size={18} aria-hidden="true" />تسجيل الخروج</button></form>
       </header>
       <div className="grid gap-8 md:grid-cols-[1fr_240px]">
         <section aria-labelledby="scan-heading" className="min-w-0 rounded-3xl border border-[#561C2B]/20 bg-white/60 p-5 sm:p-8">

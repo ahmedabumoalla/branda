@@ -17,6 +17,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { startOwnerCashierAction } from "@/app/actions/cashier";
 import {
   createLoyaltyCashierAction,
+  updateCashierPermissionsAction,
   setLoyaltyCashierStatusAction,
 } from "@/app/actions/loyalty-cards";
 import { DashboardPageShell, SoftCard } from "@/components/ui/design-system";
@@ -59,6 +60,9 @@ export function OperationalCashierPageClient({
 }: Props) {
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [permission, setPermission] = useState("loyalty");
+  const [station, setStation] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [employeeNumber, setEmployeeNumber] = useState("");
@@ -93,7 +97,44 @@ export function OperationalCashierPageClient({
   function openAddDialog() {
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setFormError("");
+    setEditingId(null);
+    setFullName("");
+    setEmail("");
+    setPhone("");
+    setPassword("");
+    setEmployeeNumber("");
+    setPermission("loyalty");
+    setStation("");
     setIsAdding(true);
+  }
+
+  function openPermissions(cashier: CashierOperationsDashboard["cashiers"][number]) {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setEditingId(cashier.id);
+    setFullName(cashier.fullName);
+    setPermission(cashier.canUsePager ? cashier.canUseLoyalty ? "both" : "pager" : "loyalty");
+    setStation(cashier.pagerStation ?? "");
+    setFormError("");
+    setIsAdding(true);
+  }
+
+  async function savePermissions() {
+    if (!editingId || mutationPendingRef.current) return;
+    mutationPendingRef.current = true;
+    setPendingId("create");
+    setFormError("");
+    try {
+      const result = await updateCashierPermissionsAction({
+        cashierId: editingId, canUseLoyalty: permission !== "pager",
+        canUsePager: permission !== "loyalty", pagerStation: station.trim(),
+      });
+      setDashboard((current) => ({ ...current, cashiers: current.cashiers.map((cashier) =>
+        cashier.id === editingId ? { ...cashier, ...result } : cashier) }));
+      setIsAdding(false);
+      setMessage("تم حفظ الصلاحيات يسجل الموظف الدخول مجددًا لتطبيقها");
+    } catch {
+      setFormError("تعذر حفظ الصلاحيات تأكد أن الخدمات المختارة مفعلة في باقتك");
+    } finally { mutationPendingRef.current = false; setPendingId(null); }
   }
 
   function closeAddDialog() {
@@ -147,6 +188,9 @@ export function OperationalCashierPageClient({
         employeeNumber: employeeNumber.trim() || undefined,
         phone: phone.trim(),
         password,
+        canUseLoyalty: permission !== "pager",
+        canUsePager: permission !== "loyalty",
+        pagerStation: station.trim(),
       });
       setDashboard((current) => ({
         ...current,
@@ -230,7 +274,7 @@ export function OperationalCashierPageClient({
             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${ready ? "bg-emerald-400/20 text-emerald-200" : "bg-amber-300/20 text-amber-100"}`}>
               {ready ? "جاهز للتشغيل" : "يحتاج إضافة موظف نشط"}
             </span>
-            <h2 className="mt-4 text-2xl font-black sm:text-3xl">شغّل الطلبات والولاء والمكافآت بثقة</h2>
+            <h2 className="mt-4 text-2xl font-black sm:text-3xl">فريق واحد للولاء واستدعاء الطلبات</h2>
             <p className="mt-2 text-sm font-bold leading-7 text-white/70">
               لديك {activeCount} حساب تشغيل نشط {dashboard.canOpenAsOwner ? "افتح البوابة مباشرة وسجّل العمليات باسمك بصفتك مالك العلامة" : "العمليات الفعلية تتم من بوابة الكاشير المنفصلة"}
             </p>
@@ -269,7 +313,7 @@ export function OperationalCashierPageClient({
       <section className="mb-6 rounded-[2rem] bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><UsersRound className="h-5 w-5" /> فريق الكاشير</h2>
+            <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><UsersRound className="h-5 w-5" /> فريق التشغيل</h2>
             <p className="mt-1 text-sm font-bold text-[#806A5E]">{dashboard.cashiers.length} حساب تشغيل</p>
           </div>
           <div className="flex gap-2">
@@ -286,7 +330,7 @@ export function OperationalCashierPageClient({
           <table className="w-full min-w-[760px] text-right text-sm">
             <thead className="text-xs font-black text-[#806A5E]">
               <tr className="border-b border-[#EFE6DD]">
-                <th scope="col" className="p-3">الموظف</th><th scope="col" className="p-3">البريد</th><th scope="col" className="p-3">الجوال</th><th scope="col" className="p-3">الرقم الوظيفي</th><th scope="col" className="p-3">الحالة</th><th scope="col" className="p-3">آخر دخول</th><th scope="col" className="p-3">الإجراء</th>
+                <th scope="col" className="p-3">الموظف</th><th scope="col" className="p-3">البريد</th><th scope="col" className="p-3">الجوال</th><th scope="col" className="p-3">الرقم الوظيفي</th><th scope="col" className="p-3">الصلاحيات والمحطة</th><th scope="col" className="p-3">الحالة</th><th scope="col" className="p-3">آخر دخول</th><th scope="col" className="p-3">الإجراء</th>
               </tr>
             </thead>
             <tbody>
@@ -296,6 +340,7 @@ export function OperationalCashierPageClient({
                   <td className="p-3 break-all text-[#806A5E]">{cashier.email}</td>
                   <td className="p-3"><bdi dir="ltr">{cashier.phone || "—"}</bdi></td>
                   <td className="p-3">{cashier.employeeNumber || "—"}</td>
+                  <td className="p-3 text-xs">{cashier.canUsePager ? cashier.canUseLoyalty ? "ولاء وبيجر" : "بيجر فقط" : "ولاء فقط"}<span className="mt-1 block text-[#806A5E]">{cashier.pagerStation || "بدون محطة محددة"}</span>{!cashier.ownerUserId ? <button type="button" disabled={pendingId !== null} onClick={() => openPermissions(cashier)} className="mt-2 min-h-11 rounded-xl border border-[#E8DED5] px-3 font-black disabled:opacity-50">تعديل الصلاحيات</button> : null}</td>
                   <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs ${cashier.active ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-600"}`}>{cashier.active ? "نشط" : "معطل"}</span></td>
                   <td className="p-3 text-xs text-[#806A5E]">{formatDate(cashier.lastLoginAt)}</td>
                   <td className="p-3">
@@ -315,6 +360,8 @@ export function OperationalCashierPageClient({
                 <div className="min-w-0"><h3 className="font-black">{cashier.fullName}</h3>{cashier.ownerUserId ? <p className="mt-1 text-xs font-bold text-[#6B3A25]">مالك العلامة</p> : null}<p className="mt-1 break-all text-xs font-bold text-[#806A5E]">{cashier.email}</p></div>
                 <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${cashier.active ? "bg-emerald-50 text-emerald-700" : "bg-stone-200 text-stone-600"}`}>{cashier.active ? "نشط" : "معطل"}</span>
               </div>
+              <p className="mt-3 text-sm font-bold">{cashier.canUsePager ? cashier.canUseLoyalty ? "ولاء وبيجر" : "بيجر فقط" : "ولاء فقط"} {cashier.pagerStation ? `— ${cashier.pagerStation}` : ""}</p>
+              {!cashier.ownerUserId ? <button type="button" disabled={pendingId !== null} onClick={() => openPermissions(cashier)} className="mt-2 min-h-11 rounded-xl bg-white px-4 text-sm font-bold disabled:opacity-50">تعديل الصلاحيات والمحطة</button> : null}
               <p className="mt-3 text-xs font-bold text-[#806A5E]">الرقم الوظيفي: {cashier.employeeNumber || "—"}</p>
               <p className="mt-1 text-xs font-bold text-[#806A5E]">الجوال: <bdi dir="ltr">{cashier.phone || "—"}</bdi></p>
               <p className="mt-1 text-xs font-bold text-[#806A5E]">آخر دخول: {formatDate(cashier.lastLoginAt)}</p>
@@ -354,18 +401,24 @@ export function OperationalCashierPageClient({
           onCancel={(event) => { event.preventDefault(); closeAddDialog(); }}
           className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-[2rem] border-0 bg-white p-5 text-[#311912] shadow-2xl backdrop:bg-black/40 sm:p-7"
         >
-          <div className="flex items-center justify-between gap-3"><h2 id="cashier-dialog-title" className="text-xl font-black">إضافة موظف كاشير</h2><button type="button" onClick={closeAddDialog} disabled={pendingId === "create"} className="grid min-h-11 min-w-11 place-items-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-50" aria-label="إغلاق"><X aria-hidden="true" className="h-5 w-5" /></button></div>
-          <p id="cashier-dialog-description" className="mt-2 text-sm font-bold leading-6 text-[#806A5E]">حدّد بيانات الموظف وكلمة مروره ستُرسل بيانات الدخول ورابط بوابة الكاشير إلى جواله عبر واتساب عند توفر الخدمة</p>
-          <form onSubmit={(event) => { event.preventDefault(); void createCashier(); }}>
+          <div className="flex items-center justify-between gap-3"><h2 id="cashier-dialog-title" className="text-xl font-black">{editingId ? `صلاحيات ${fullName}` : "إضافة موظف تشغيل"}</h2><button type="button" onClick={closeAddDialog} disabled={pendingId === "create"} className="grid min-h-11 min-w-11 place-items-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-50" aria-label="إغلاق"><X aria-hidden="true" className="h-5 w-5" /></button></div>
+          <p id="cashier-dialog-description" className="mt-2 text-sm font-bold leading-6 text-[#806A5E]">{editingId ? "اختر مهام الموظف ومحطة الاستدعاء ستنتهي جلساته الحالية عند حفظ التغييرات" : "حدّد بيانات الموظف وصلاحياته وكلمة المرور للدخول إلى الولاء أو البيجر من المتصفح"}</p>
+          <form onSubmit={(event) => { event.preventDefault(); void (editingId ? savePermissions() : createCashier()); }}>
             {formError ? <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-800">{formError}</p> : null}
             <fieldset disabled={pendingId === "create"} className="mt-5 space-y-4 disabled:opacity-60">
+              {!editingId ? <>
               <label className="block text-sm font-black">الاسم<input required minLength={2} maxLength={80} value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="name" /></label>
               <label className="block text-sm font-black">البريد الإلكتروني<input required type="email" maxLength={254} dir="ltr" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="email" /></label>
               <label className="block text-sm font-black">جوال الموظف المرتبط بواتساب<input required type="tel" inputMode="tel" dir="ltr" maxLength={20} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="05xxxxxxxx" aria-describedby="cashier-phone-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="tel" /><span id="cashier-phone-help" className="mt-1 block text-xs font-bold text-[#806A5E]">رقم سعودي يبدأ بـ ٠٥ أو بمفتاح الدولة ٩٦٦</span></label>
               <label className="block text-sm font-black">كلمة المرور التي تختارها<input required type="password" minLength={8} maxLength={40} dir="ltr" value={password} onChange={(event) => setPassword(event.target.value)} aria-describedby="cashier-password-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="new-password" /><span id="cashier-password-help" className="mt-1 block text-xs font-bold text-[#806A5E]">من ٨ إلى ٤٠ حرفًا تُرسل للموظف مع بريده ورابط الدخول</span></label>
               <label className="block text-sm font-black">الرقم الوظيفي <span className="text-[#806A5E]">(اختياري)</span><input maxLength={40} value={employeeNumber} onChange={(event) => setEmployeeNumber(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" /></label>
+              </> : null}
+              <label className="block text-sm font-black">صلاحيات الموظف<select value={permission} onChange={(event) => setPermission(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] bg-white px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]">
+                <option value="loyalty">قراءة الولاء فقط</option><option value="pager">استدعاء الطلبات فقط</option><option value="both">قراءة الولاء واستدعاء الطلبات</option>
+              </select></label>
+              <label className="block text-sm font-black">محطة الاستدعاء <span className="text-[#806A5E]">اختياري</span><input value={station} maxLength={80} onChange={(event) => setStation(event.target.value)} placeholder="الكاشير أو البار أو المطعم الداخلي" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]" /></label>
             </fieldset>
-            <button type="submit" disabled={pendingId === "create"} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] px-4 font-black text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-60">{pendingId === "create" ? "جارٍ إنشاء الحساب" : "إنشاء الحساب وإرسال بيانات الدخول"}</button>
+            <button type="submit" disabled={pendingId === "create"} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] px-4 font-black text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-60">{pendingId === "create" ? "جارٍ الحفظ" : editingId ? "حفظ الصلاحيات" : "إنشاء الحساب وإرسال بيانات الدخول"}</button>
           </form>
         </dialog>
       ) : null}

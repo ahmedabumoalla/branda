@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import dynamic from "next/dynamic";
 import {
   BadgeCheck,
@@ -231,6 +233,7 @@ export function CashierConsoleClient({ initialData }: { initialData: CashierCons
             <button type="button" disabled={refreshing} onClick={() => void refreshOrders()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-white/10 px-3 text-xs font-black disabled:opacity-50">
               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> تحديث
             </button>
+            {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">نظام البيجر</Link> : null}
             <button type="button" onClick={() => void logoutCashierAction()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-white px-3 text-xs font-black text-[#311912]">
               <LogOut className="h-4 w-4" /> خروج
             </button>

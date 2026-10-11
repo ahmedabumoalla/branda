@@ -2,6 +2,7 @@
 
 import {
   createOwnerCashier,
+  updateOwnerCashierPermissions,
   getOwnerLoyaltyCardsDashboard,
   issueCurrentCustomerLoyaltyCard,
   getCurrentCustomerLoyaltyCardView,
@@ -74,9 +75,19 @@ export async function createLoyaltyCashierAction(input: {
   phone: string;
   password: string;
   employeeNumber?: string;
+  canUseLoyalty?: boolean;
+  canUsePager?: boolean;
+  pagerStation?: string;
 }) {
   await assertOwnerCashierEnabled();
   return createOwnerCashier(input);
+}
+
+export async function updateCashierPermissionsAction(input: {
+  cashierId: string; canUseLoyalty: boolean; canUsePager: boolean; pagerStation: string;
+}) {
+  await assertOwnerCashierEnabled();
+  return updateOwnerCashierPermissions(input);
 }
 
 export async function setLoyaltyCashierStatusAction(cashierId: string, active: boolean) {
@@ -90,7 +101,7 @@ export async function recordLoyaltyCardOperationAction(input: {
   invoiceAmount?: number;
   operation?: "stamp" | "redeem";
 }) {
-  await assertOwnerCashierEnabled();
+  await assertOwnerLoyaltyEnabled();
   return recordOwnerLoyaltyOperation(input);
 }
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { CashierLoginForm } from "@/components/cashier/cashier-login-form";
-import { hasValidCashierSession } from "@/lib/data/cashier";
+import { getCashierLandingPath } from "@/lib/data/cashier";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,7 +10,8 @@ export default async function CashierLoginPage({
 }: {
   searchParams: Promise<{ reason?: string }>;
 }) {
-  if (await hasValidCashierSession()) redirect("/cashier");
+  const landing = await getCashierLandingPath().catch(() => null);
+  if (landing) redirect(landing);
   const { reason } = await searchParams;
   return (
     <CashierLoginForm

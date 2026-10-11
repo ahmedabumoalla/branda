@@ -34,16 +34,16 @@ const [
 ]);
 
 if (!process.argv.includes("--session-only")) {
-assert.match(cashierActions, /loginCashierWithPassword[\s\S]+redirect\("\/cashier"\)/);
+assert.match(cashierActions, /loginCashierWithPassword[\s\S]+redirect\(await getCashierLandingPath\(\)\)/);
 assert.doesNotMatch(cashierActions, /message: "تم تسجيل الدخول"/);
 assert.match(authActions, /loginUnifiedAction[\s\S]+redirect\(result\.redirectTo\)/);
 assert.match(authActions, /redirectTo: "\/admin"/);
 assert.match(authActions, /redirectTo: "\/representative"/);
-assert.match(authActions, /redirectTo: "\/cashier"/);
+assert.match(authActions, /redirectTo: await getCashierLandingPath\(\)/);
 assert.match(unifiedLogin, /loginUnifiedAction/);
 assert.doesNotMatch(unifiedLogin, /redirectTo === "\/cashier"|router\.push|window\.location\.assign/);
 
-assert.match(cashierLoginPage, /hasValidCashierSession\(\)[\s\S]+redirect\("\/cashier"\)/);
+assert.match(cashierLoginPage, /getCashierLandingPath\(\)[\s\S]+redirect\(landing\)/);
 assert.match(cashierPage, /redirect\("\/cashier\/login"\)/);
 assert.match(cashierPage, /cashier\/session\/clear/);
 assert.match(clearRoute, /maxAge: 0/);
@@ -114,7 +114,7 @@ assert.match(portalUi, /min-w-0|break-words/);
 }
 
 for (const source of [cashierData, customerRewards, experienceRewards]) {
-  assert.match(source, /requireCashierSessionContext\(/);
+  assert.match(source, /requireCashierPermission\("loyalty",/);
   assert.match(source, /session\.cafe_id|cafeId/);
 }
 // All privileged reward paths share the cashier guard, including owner Auth checks.

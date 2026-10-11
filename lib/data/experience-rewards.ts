@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { requireCustomerProfileForSession } from "@/lib/data/customers";
 import { createNotification } from "@/lib/data/notifications";
-import { requireCashierSessionContext } from "@/lib/data/cashier";
+import { requireCashierPermission } from "@/lib/data/cashier";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import {
   escapeEmailHtml,
@@ -669,7 +669,7 @@ export async function redeemCashierExperienceReward(rewardCode: string) {
 
   const admin = createAdminClient();
 
-  const context = await requireCashierSessionContext(admin);
+  const context = await requireCashierPermission("loyalty", admin);
   const session = { cafe_id: context.cafeId, cashier_id: context.cashierId };
   const cashier = { full_name: context.cashierName, email: context.cashierEmail };
 

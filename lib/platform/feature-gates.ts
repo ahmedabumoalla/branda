@@ -6,6 +6,6 @@ export const ALWAYS_ENABLED_FEATURES = new Set<string>(["subscription"]);
 export function featureCodesAllow(features: FeatureCode[] | null | undefined, feature: string) {
   if (ALWAYS_ENABLED_FEATURES.has(feature)) return true;
   const list = Array.isArray(features) ? features.map(String) : [];
-  if (feature === "cashier") return list.includes("loyalty");
+  if (feature === "cashier") return list.includes("loyalty") || list.includes("pager");
   return list.includes(feature);
 }

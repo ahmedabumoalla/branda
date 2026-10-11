@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Package, Settings, Star } from "lucide-react";
+import { BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Package, Settings, Star } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -110,7 +110,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
 
     <nav aria-label="قائمة العلامة" className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
       {links.map(({ feature, access }) => {
-        const Icon = feature.id === "menu" ? Package : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : Settings;
+        const Icon = feature.id === "menu" ? Package : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : Settings;
         const title = feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;
         const href = feature.route;

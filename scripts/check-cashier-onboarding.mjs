@@ -86,9 +86,9 @@ try {
   });
   await check("chosen credentials normalize safely and result excludes password", async () => {
     const result = await createOwnerCashier(input);
-    assert.deepEqual(calls[0], { name: "create_cafe_cashier_with_contact", args: {
+    assert.deepEqual(calls[0], { name: "create_cafe_staff", args: {
       p_cafe_id: cafeId, p_full_name: "Test employee", p_email: "employee@example.test",
-      p_password: password, p_phone: "+966501234567", p_employee_number: "E-17",
+      p_password: password, p_phone: "+966501234567", p_employee_number: "E-17", p_can_use_loyalty: true, p_can_use_pager: false, p_pager_station: "",
     } });
     assert.deepEqual(sent[0], { phone: "+966501234567", fullName: "Test employee", brandName: "Test brand", email: "employee@example.test", password });
     assert.equal(result.cashier.id, cashierId); assert.equal(result.whatsappStatus, "queued");
@@ -120,7 +120,7 @@ try {
   });
 
   const cookieWrites = [], rpcCalls = [], filters = [];
-  let role = "owner", features = ["cashier"], token = "test-session-token", authReads = 0;
+  let role = "owner", features = ["loyalty"], token = "test-session-token", authReads = 0;
   let ownerSession = { token, cafe_id: cafeId, expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() };
   let rpcFailure = null, user = { id: ownerId }, authError = null, profileError = null;
   let session = { id: "session", cafe_id: cafeId, cashier_id: cashierId, revoked_at: null };
@@ -154,7 +154,7 @@ try {
   role = "owner";
   await check("owner start denies missing cashier entitlement", async () => {
     features = []; await assert.rejects(cashierData.startOwnerCashierSession, /FORBIDDEN/);
-    assert.equal(rpcCalls.length, 0); assert.equal(cookieWrites.length, 0); features = ["cashier"];
+    assert.equal(rpcCalls.length, 0); assert.equal(cookieWrites.length, 0); features = ["loyalty"];
   });
   await check("owner start issues only secure scoped cookie with bounded lifetime", async () => {
     const previous = process.env.NODE_ENV; process.env.NODE_ENV = "production";

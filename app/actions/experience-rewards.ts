@@ -92,7 +92,7 @@ export async function ownerRedeemExperienceRewardAction(rewardCode: string) {
 
 export async function ownerOperationalRedeemExperienceRewardAction(rewardCode: string) {
   const features = await getOwnerFeatureCodes();
-  if (!featureCodesAllow(features, "cashier")) {
+  if (!featureCodesAllow(features, "loyalty")) {
     throw new Error("خدمات التشغيل غير مفعلة في باقتك الحالية");
   }
   return redeemOwnerExperienceReward(rewardCode);

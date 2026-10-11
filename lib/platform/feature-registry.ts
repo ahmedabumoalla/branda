@@ -27,6 +27,7 @@ export type PlatformFeatureDefinition = {
     | "offers"
     | "loyalty"
     | "cashier"
+    | "pager"
     | "customers"
     | "reports"
     | "settings"
@@ -65,6 +66,22 @@ export type PlatformFeatureId = PlatformFeatureDefinition["id"];
 export type PlatformFeatureCode = "all" | PlatformFeatureId;
 
 export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
+  {
+    id: "pager",
+    brandNavigation: true,
+    titleAr: "نظام البيجر",
+    titleEn: "Digital Pager",
+    descriptionAr: "استدعاء العملاء عبر واتساب ومتابعة الاستلام وتقييم الخدمة",
+    category: "operations",
+    route: "/dashboard/pager",
+    sidebarVisible: true,
+    packageAssignable: true,
+    defaultEnabled: false,
+    iconKey: "BellRing",
+    riskLevel: "integration",
+    status: "active",
+    sortOrder: 85,
+  },
   {
     id: "home",
     titleAr: "لوحة التحكم",

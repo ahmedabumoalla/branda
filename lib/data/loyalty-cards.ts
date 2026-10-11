@@ -50,6 +50,9 @@ export type LoyaltyCashier = {
   email: string;
   employeeNumber: string;
   temporaryPassword: string;
+  canUseLoyalty?: boolean;
+  canUsePager?: boolean;
+  pagerStation?: string;
   phone?: string;
   ownerUserId?: string | null;
   active: boolean;
@@ -284,7 +287,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
     await Promise.all([
       supabase
         .from("cafe_cashiers")
-        .select("id,full_name,email,phone,owner_user_id,employee_number,active,last_login_at,last_logout_at,created_at")
+        .select("id,full_name,email,phone,owner_user_id,employee_number,active,last_login_at,last_logout_at,created_at,can_use_loyalty,can_use_pager,pager_station")
         .eq("cafe_id", cafe.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -310,6 +313,9 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
       email: String(row.email),
       phone: String(row.phone ?? ""),
       ownerUserId: row.owner_user_id ? String(row.owner_user_id) : null,
+      canUseLoyalty: row.can_use_loyalty === true,
+      canUsePager: row.can_use_pager === true,
+      pagerStation: String(row.pager_station ?? ""),
       employeeNumber: String(row.employee_number ?? ""),
       active: Boolean(row.active),
       lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
@@ -399,6 +405,9 @@ export async function createOwnerCashier(input: {
   phone: string;
   password: string;
   employeeNumber?: string;
+  canUseLoyalty?: boolean;
+  canUsePager?: boolean;
+  pagerStation?: string;
 }) {
   const parsed = z.object({
     fullName: z.string().trim().min(2).max(80).regex(/^[^\r\n\x00-\x1f]+$/),
@@ -407,18 +416,24 @@ export async function createOwnerCashier(input: {
     password: z.string().min(8).max(40).refine((value) => Buffer.byteLength(value, "utf8") <= 72)
       .refine((value) => !/[\x00-\x1f\x7f]/.test(value) && value.trim().length >= 8),
     employeeNumber: z.string().trim().max(40).optional(),
+    canUseLoyalty: z.boolean().default(true),
+    canUsePager: z.boolean().default(false),
+    pagerStation: z.string().trim().max(80).default(""),
   }).parse(input);
 
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const phone = `+${parsed.phone}`;
-  const { data: cashierId, error } = await supabase.rpc("create_cafe_cashier_with_contact", {
+  const { data: cashierId, error } = await supabase.rpc("create_cafe_staff", {
     p_cafe_id: cafe.id,
     p_full_name: parsed.fullName,
     p_email: parsed.email,
     p_password: parsed.password,
     p_phone: phone,
     p_employee_number: parsed.employeeNumber || null,
+    p_can_use_loyalty: parsed.canUseLoyalty,
+    p_can_use_pager: parsed.canUsePager,
+    p_pager_station: parsed.pagerStation,
   });
 
   // Do not return raw SQL/provider errors: they may include submitted credentials.
@@ -439,9 +454,28 @@ export async function createOwnerCashier(input: {
   const cashier: Omit<LoyaltyCashier, "temporaryPassword"> = {
     id: cashierId, fullName: parsed.fullName, email: parsed.email, phone,
     employeeNumber: parsed.employeeNumber ?? "", active: true, ownerUserId: null,
+    canUseLoyalty: parsed.canUseLoyalty, canUsePager: parsed.canUsePager, pagerStation: parsed.pagerStation,
     lastLoginAt: null, lastLogoutAt: null, createdAt: new Date().toISOString(),
   };
   return { cashier, whatsappStatus };
+}
+
+export async function updateOwnerCashierPermissions(input: {
+  cashierId: string; canUseLoyalty: boolean; canUsePager: boolean; pagerStation: string;
+}) {
+  const parsed = z.object({
+    cashierId: z.string().uuid(), canUseLoyalty: z.boolean(), canUsePager: z.boolean(),
+    pagerStation: z.string().trim().max(80).regex(/^[^\x00-\x1f]*$/),
+  }).refine((value) => value.canUseLoyalty || value.canUsePager).parse(input);
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_cafe_staff_permissions", {
+    p_cafe_id: cafe.id, p_cashier_id: parsed.cashierId,
+    p_can_use_loyalty: parsed.canUseLoyalty, p_can_use_pager: parsed.canUsePager,
+    p_pager_station: parsed.pagerStation,
+  });
+  if (error) throw new Error("تعذر حفظ صلاحيات الموظف تحقق من الباقة وحاول مجددًا");
+  return parsed;
 }
 
 export async function setOwnerCashierStatus(cashierId: string, active: boolean) {

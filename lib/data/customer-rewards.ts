@@ -2,7 +2,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireCashierSessionContext } from "@/lib/data/cashier";
+import { requireCashierPermission } from "@/lib/data/cashier";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { rastRedemptionCode } from "@/lib/loyalty/rast-redemption-code";
@@ -150,7 +150,7 @@ async function isLoyaltyCardProgramEnabled(
 
 async function getValidCashierSession() {
   const admin = createAdminClient();
-  const session = await requireCashierSessionContext(admin);
+  const session = await requireCashierPermission("loyalty", admin);
   return { admin, ...session };
 }
 
