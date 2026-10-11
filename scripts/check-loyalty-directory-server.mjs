@@ -57,13 +57,14 @@ async function harness(options={}){
   return{api,calls,customerRequests,counters:()=>({contextCalls,featureCalls,dbCalls})};
 }
 
-for(const options of [{contextError:true},{slug:"other-brand"},{role:"staff"},{role:"unknown"},{features:[]},{user:false},
+for(const options of [{contextError:true},{role:"staff"},{role:"unknown"},{features:[]},{user:false},
   {profileStatus:"suspended"},{profileMissing:true},{profileError:true},{brandStatus:"suspended"},{brandMissing:true},{brandError:true}]){
   const h=await harness(options);await rejects(()=>h.api.getOwnerLoyaltyCustomers(),"list fails closed without full authorization");
   await rejects(()=>h.api.getOwnerLoyaltyCustomerDetail(customerId(1)),"detail independently fails closed without full authorization");
   equal(h.customerRequests.length,0,"denied identity never queries customer rows");
 }
 for(const role of ["owner","manager","platform_admin"]){const h=await harness({role});equal((await h.api.getOwnerLoyaltyCustomers()).total,2,"authorized role can list current tenant");}
+for(const slug of ["basilico","test-cafe","new-brand"]){const h=await harness({slug});equal((await h.api.getOwnerLoyaltyCustomers()).total,2,"every entitled brand can list its own customers");}
 let h=await harness({brandStatus:"published"});equal((await h.api.getOwnerLoyaltyCustomers()).total,2,"published brand supported");
 for(const input of [{page:-1},{page:1.1},{page:100001},{page:"1"},{query:"x".repeat(101)},{query:1}]){
   h=await harness();await rejects(()=>h.api.getOwnerLoyaltyCustomers(input),"invalid filter rejected");equal(h.counters().contextCalls,0,"invalid filters rejected before DB access");
@@ -112,12 +113,13 @@ for(const operation of [()=>actions.loadLoyaltyCustomersAction(),()=>actions.loa
 // Execute the server page using a tiny JSX runtime to inspect the actual client props
 const jsx=(type,props)=>({type,props});
 let brandAvailable=true;
+let pageSlug="rast";
 const page=await load("app/dashboard/loyalty/page.tsx",{
   "react/jsx-runtime":{jsx,jsxs:jsx,Fragment:"Fragment"},
   "@/components/dashboard/pages/loyalty-dashboard-page":{LoyaltyDashboardPage:"GenericLoyalty"},
   "@/components/dashboard/feature-blocked-state":{DashboardFeatureBlockedState:"Blocked"},
   "@/lib/data/feature-entitlements":{getOwnerFeatureCodes:async()=>["loyalty"]},
-  "@/lib/data/loyalty-cards":{getOwnerLoyaltyCardsDashboard:async()=>({cafeSlug:"rast",cafeId:"brand-one",program:{enabled:true},cards:[{phone:"private-bulk-phone"}],customers:[{email:"private-bulk-email"}]})},
+  "@/lib/data/loyalty-cards":{getOwnerLoyaltyCardsDashboard:async()=>({cafeSlug:pageSlug,cafeId:"brand-one",program:{enabled:true},cards:[{phone:"private-bulk-phone"}],customers:[{email:"private-bulk-email"}]})},
   "@/lib/data/loyalty":{getOwnerLoyalty:async()=>({settings:{}})},
   "@/lib/platform/feature-gates":{featureCodesAllow:()=>true},
   "@/components/rast-loyalty/rast-dashboard":{RastLoyaltyDashboard:"RastLoyaltyDashboard"},
@@ -135,6 +137,7 @@ const rast=find(rendered);check(!!rast,"Rast owner receives intended client comp
 equal(rast.props.initialDashboard,{program:{enabled:true}},"server passes program only to Rast client");
 check(!JSON.stringify(rendered).includes("private-bulk-phone")&&!JSON.stringify(rendered).includes("private-bulk-email"),"rendered client props exclude bulk customer contacts");
 equal(rast.props.products,[{id:"product-one",name:"Tea"}],"product props also use explicit safe projection");
+for(const slug of ["basilico","test-cafe","new-brand"]){pageSlug=slug;const tree=await page.default();const shared=find(tree);check(!!shared,"every entitled brand receives approved loyalty experience");check(shared.props.signupUrl.endsWith(`/loyalty/${slug}?source=qr`),"signup URL belongs to current brand");check(!JSON.stringify(tree).includes("private-bulk"),"all brands omit bulk contact props");}
 brandAvailable=false;
 const unavailable=await page.default();
 equal(unavailable.props.role,"alert","missing brand fails closed with an alert");

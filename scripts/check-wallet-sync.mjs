@@ -45,6 +45,7 @@ function queryFor(run) {
   return query;
 }
 const baseStubs = {
+  "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => ["loyalty"] },
   "./config": { appleConfig: () => ({ passTypeIdentifier: "pass.test" }), getWalletReadiness: () => ({ apple: true, google: false }) },
   "./apple": { verifyAppleAuth: request => request.headers.get("authorization") === "ApplePass test", issueApplePass: async () => Buffer.from("signed-test-bundle") },
   "@/lib/data/loyalty-experience": { loadWalletMemberByCode: async () => member },

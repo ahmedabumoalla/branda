@@ -1,0 +1,73 @@
+.page { --rast-cream: #f8f2e8; --rast-wine: #3b1420; --rast-red: #970e29; --rast-blush: #efe2dc; --rast-muted: #6e5b56; --rast-border: #dfcec5; --editor-white: #fffdf9; --error: #970e29; --success: #24583b; color: var(--rast-wine); padding: clamp(16px, 3vw, 40px); max-width: 1560px; margin-inline: auto; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.header h1 { font-size: clamp(27px, 3vw, 38px); margin: 8px 0; font-weight: 700; }
+.header p, .hint { color: var(--rast-muted); font-size: 12px; line-height: 1.9; }
+.eyebrow { color: var(--rast-red); font-size: 11px; }
+.page button, .page input, .page select, .page textarea { font: inherit; }
+.page button, .page a, .page input, .page select, .page textarea { -webkit-tap-highlight-color: transparent; }
+.page button:focus-visible, .page a:focus-visible, .page input:focus-visible, .page textarea:focus-visible, .page select:focus-visible { outline: 2px solid var(--rast-red); outline-offset: 3px; }
+.page button { cursor: pointer; }
+.page button:disabled { cursor: default; opacity: .55; }
+.primary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; border: 0; border-radius: 8px; padding: 12px 22px; background: var(--rast-wine); color: var(--rast-cream); font-size: 13px !important; flex-shrink: 0; }
+.primary svg, .delete svg, .upload svg { width: 18px; height: 18px; }
+.workspace { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 28px; align-items: start; }
+.library { border-block: 1px solid var(--rast-border); padding-block: 18px; min-width: 0; }
+.libraryHeading { display: flex; align-items: center; justify-content: space-between; }
+.library h2, .editor h2, .preview h2 { font-size: 17px; margin: 0; }
+.libraryHeading > span { font-size: 12px; color: var(--rast-muted); }
+.libraryItem { display: flex; align-items: start; flex-direction: column; gap: 9px; text-align: start; padding: 16px; border: 1px solid transparent; border-bottom-color: var(--rast-border); background: transparent; color: var(--rast-wine); width: 100%; border-radius: 6px; margin-block: 8px; }
+.libraryItem[aria-pressed="true"] { border-color: var(--rast-red); background: var(--rast-cream); }
+.libraryItem > span { font-size: 10px; color: var(--rast-muted); }
+.libraryItem strong { font-size: 14px; overflow-wrap: anywhere; }
+.libraryItem small { font-size: 10px; color: var(--rast-red); }
+.empty { font-size: 13px; line-height: 2; color: var(--rast-muted); margin: 32px 0; }
+.menuLink { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; color: var(--rast-red); margin-top: 12px; }
+.editor { min-width: 0; }
+.fields { border: 1px solid var(--rast-border); background: var(--editor-white); padding: clamp(18px, 3vw, 30px); border-radius: 12px; margin: 0; min-width: 0; }
+.srOnly { position: absolute; height: 1px; width: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.editorHeading { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.editorHeading > span { font-size: 10px; color: var(--rast-muted); }
+.kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 28px; }
+.kinds button { text-align: start; display: flex; align-items: start; flex-direction: column; gap: 10px; border: 1px solid var(--rast-border); border-radius: 8px; padding: 16px; color: var(--rast-wine); background: transparent; }
+.kinds button[aria-pressed="true"] { border-color: var(--rast-red); background: var(--rast-cream); box-shadow: inset 0 -3px var(--rast-red); }
+.kinds svg { width: 22px; height: 22px; color: var(--rast-red); }
+.kinds strong { font-size: 13px; }
+.kinds small { color: var(--rast-muted); font-size: 10px; line-height: 1.8; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.formGrid label, .search { display: flex; align-items: start; flex-direction: column; gap: 9px; font-size: 12px; }
+.formGrid label > small { font-size: 10px; color: var(--rast-muted); }
+.formGrid input:not([type="checkbox"]), .formGrid textarea, .formGrid select, .search input { border: 1px solid var(--rast-border); border-radius: 6px; min-height: 46px; padding: 10px 12px; width: 100%; min-width: 0; color: var(--rast-wine); background: var(--editor-white); font-size: 14px; }
+.formGrid textarea { resize: vertical; line-height: 1.8; }
+.full { grid-column: 1 / -1; }
+.products, .schedule { border: 0; border-top: 1px solid var(--rast-border); padding: 22px 0 0; margin: 28px 0 0; min-width: 0; }
+.products legend, .schedule legend { font-size: 13px; padding-inline-end: 12px; }
+.products legend span { color: var(--rast-muted); font-size: 11px; }
+.productList { max-height: 250px; overflow-y: auto; margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.productList label { min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--rast-border); border-radius: 5px; font-size: 12px; cursor: pointer; }
+.productList label:has(input:checked) { background: var(--rast-cream); border-color: var(--rast-red); }
+.productList small { display: block; font-size: 10px; color: var(--rast-muted); margin-top: 5px; }
+.page input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--rast-red); flex-shrink: 0; }
+.formGrid .visibility { flex-direction: row; align-items: center; gap: 10px; min-height: 46px; }
+.note { background: var(--rast-cream); color: var(--rast-red); padding: 16px; margin-block: 24px 0; line-height: 1.8; font-size: 12px; }
+.upload { padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--rast-border); }
+.upload label { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.upload input { font-size: 11px; max-width: 100%; min-height: 44px; padding-block: 10px; }
+.textButton { border: 0; background: transparent; color: var(--rast-red); font-size: 12px !important; min-height: 44px; }
+.saveBar { display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--rast-border); padding-top: 24px; margin-top: 24px; }
+.delete { display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: var(--rast-red); background: transparent; border: 1px solid var(--rast-border); border-radius: 6px; padding: 10px 16px; min-height: 44px; font-size: 12px !important; }
+.error, .success { border: 1px solid currentColor; padding: 14px 18px; border-radius: 6px; line-height: 1.8; font-size: 13px; overflow-wrap: anywhere; }
+.error { color: var(--error); }
+.success { color: var(--success); }
+.preview { margin-top: 30px; container-type: inline-size; }
+.previewHeading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.previewHeading span { color: var(--rast-muted); font-size: 11px; }
+.dialog { border: 1px solid var(--rast-border); border-radius: 12px; padding: 28px; max-width: min(440px, calc(100% - 32px)); color: var(--rast-wine); background: var(--editor-white); margin: auto; }
+.dialog::backdrop { background: #3b142099; }
+.dialog p { line-height: 1.9; font-size: 14px; overflow-wrap: anywhere; }
+.dialog > div { display: flex; gap: 12px; margin-top: 20px; }
+.dialog button { border: 1px solid var(--rast-border); border-radius: 6px; min-height: 44px; padding: 10px 20px; background: transparent; }
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 1100px) { .workspace { grid-template-columns: minmax(0, 1fr); } .library { display: flex; flex-wrap: wrap; gap: 10px; } .libraryHeading, .library > .hint { width: 100%; } .libraryItem { width: min(230px, 100%); margin: 0; } .menuLink { margin-inline-start: auto; } }
+@media (max-width: 600px) { .header { align-items: start; flex-direction: column; gap: 12px; } .kinds { grid-template-columns: 1fr; gap: 8px; } .kinds button { display: grid; grid-template-columns: 24px 1fr; gap: 6px 12px; padding: 12px; } .kinds svg { grid-row: span 2; } .kinds small { grid-column: 2; } .formGrid, .productList { grid-template-columns: 1fr; } .libraryItem { width: 100%; } .page { padding-inline: 14px; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

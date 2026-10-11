@@ -18,6 +18,7 @@ function load(relative, stubs = {}, cache = new Map()) {
   const exports = {}; cache.set(relative, exports);
   new Function("require", "exports", output)((name) => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
+    if (name === "@/lib/data/feature-entitlements") return { getCafeFeatureCodes: async () => ["loyalty"] };
     if (name === "server-only") return {};
     if (name.startsWith("@/") || name.startsWith(".")) {
       const file = name.startsWith("@/") ? name.slice(2) : path.join(path.dirname(relative), name);
@@ -183,7 +184,11 @@ try {
   for (const [name, digest] of Object.entries(manifest)) assert.equal(createHash("sha1").update(bundle[name]).digest("hex"), digest);
   const signature = forge.asn1.fromDer(bundle.signature.toString("binary"));
   assert(forge.pkcs7.messageFromAsn1(signature), "Pass includes a parseable PKCS7 signature");
-  await assert.rejects(apple.issueApplePass({ ...member, cafeSlug: "other-brand" }), /wallet_disabled/);
+  const otherMember = { ...member, cafeSlug: "other-brand", cafeName: "Other cafe", card: { ...member.card, cafeId: "10000000-0000-4000-8000-000000000099" }, program: { ...member.program, cardBackground: "#112233", cardForeground: "#ffffff", cardAccent: "#ffaa00" } };
+  const otherPass = JSON.parse(unzip(await apple.issueApplePass(otherMember))["pass.json"].toString());
+  assert.equal(otherPass.organizationName, "Other cafe");
+  assert.equal(otherPass.backgroundColor, "rgb(17, 34, 51)");
+  await assert.rejects(apple.issueApplePass({ ...otherMember, program: { ...otherMember.program, appleWalletEnabled: false } }), /wallet_disabled/);
   const calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), method: options.method, body: options.body && JSON.parse(options.body instanceof URLSearchParams ? "{}" : options.body) });
@@ -202,7 +207,9 @@ try {
   assert.equal(objectWrite.body.loyaltyPoints.balance.string, "3 / 7");
   assert.equal(objectWrite.body.secondaryLoyaltyPoints.balance.int, 1);
   assert(!JSON.stringify(calls).includes("PRIVATE_"));
-  await assert.rejects(google.issueGoogleSaveUrl({ ...member, cafeSlug: "other-brand" }), /wallet_disabled/);
+  assert((await google.issueGoogleSaveUrl(otherMember)).startsWith("https://pay.google.com/gp/v/save/"));
+  assert.notEqual(payload.googleClassId(env.GOOGLE_WALLET_ISSUER_ID, otherMember.card.cafeId), payload.googleClassId(env.GOOGLE_WALLET_ISSUER_ID, member.card.cafeId));
+  await assert.rejects(google.issueGoogleSaveUrl({ ...otherMember, program: { ...otherMember.program, googleWalletEnabled: false } }), /wallet_disabled/);
   const updates = [];
   globalThis.fetch = async (url, options = {}) => {
     if (String(url).includes("loyaltyObject/") && options.method === "PATCH") {

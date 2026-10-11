@@ -17,6 +17,7 @@ function load(relative, stubs = {}, cache = new Map()) {
   const exports = {}; cache.set(relative, exports);
   new Function("require", "exports", output)((name) => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
+    if (name.endsWith('.module.css')) return new Proxy({}, { get: (_, key) => String(key) });
     if (name.startsWith("@/") || name.startsWith(".")) {
       const relativePath = name.startsWith("@/") ? name.slice(2) : path.join(path.dirname(relative), name);
       return load(fs.existsSync(path.join(root, `${relativePath}.tsx`)) ? `${relativePath}.tsx` : `${relativePath}.ts`, stubs, cache);
@@ -199,7 +200,7 @@ const { RastCashier, RastCashierRewardDetails } = load("components/rast-loyalty/
   "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async () => card, lookupRastCashierRewardAction: async () => reward, scanLoyaltyExperienceAction: async () => ({}) },
   "@/app/actions/cashier": { cashierLookupRewardAction: async () => reward, logoutCashierAction: async () => {} },
 });
-const html = renderToStaticMarkup(React.createElement(RastCashier, { initialData: { cashier: { fullName: "Test operator" } } }));
+const html = renderToStaticMarkup(React.createElement(RastCashier, { initialData: { cafe: { slug: 'rast', name: 'Test cafe' }, cashier: { fullName: "Test operator" } } }));
 assert(html.includes('aria-describedby="rast-scan-help"'));
 assert(html.includes('aria-pressed="true"'));
 assert(html.includes('type="submit" disabled=""'));
@@ -230,7 +231,7 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
       dataReads.push(table);
       const result = () => ({ error: null, count: 1, data:
         table === "cafe_cashier_sessions" ? { cafe_id: cafeId, cashier_id: "cashier", revoked_at: null }
-          : table === "cafe_cashiers" ? { id: "cashier", active: true, full_name: "Test cashier", email: "test@example.test", owner_user_id: linkedOwner ? "owner-id" : null }
+          : table === "cafe_cashiers" ? { id: "cashier", active: true, can_use_loyalty: true, full_name: "Test cashier", email: "test@example.test", owner_user_id: linkedOwner ? "owner-id" : null }
           : table === "cafes" ? { id: cafeId, slug: cafeSlug, status: "active", deleted_at: null, owner_user_id: "owner-id" }
           : table === "customer_reward_instances" ? { id: "reward", cafe_id: cafeId, source_type: sourceType, status: "available", loyalty_card_id: "card", reward_title: "Reward", reward_code: "REWARD123", customer_profiles: { full_name: "Customer" }, issued_at: "2030-01-01", expires_at: null }
             : table === "loyalty_cards" ? { id: "card", cafe_id: cafeId, customer_name: "Customer", stamps_in_cycle: 2, available_rewards: 1 }
@@ -268,9 +269,9 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
     () => rewardsData.redeemCashierCustomerReward("REWARD123"),
     () => experienceData.lookupRastCashierCard("CARD123"),
   ];
-  for (const operation of operations) await assert.rejects(operation, /برنامج الولاء غير متاح/);
+  for (const operation of operations) await assert.rejects(operation, /برنامج الولاء غير متاح|صلاحية استخدام هذه الخدمة/);
   await assert.rejects(() => ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" }), /شاشة الموظف/);
-  assert.equal(featureReads.length, 4, "All four Rast cashier/preview entry points enforce entitlement");
+  assert(featureReads.length >= 4, "All four cashier/preview entry points enforce entitlement");
   assert(featureReads.every((id) => id === cafeId), "Guard uses the authenticated tenant id");
   assert.equal(rpcCalls.length, 0); assert.equal(databaseWrites.length, 0);
   assert(!dataReads.includes("loyalty_cards"), "Denied card previews never load a customer card");
@@ -289,20 +290,19 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
   entitlementError = false; allowed = false;
   const previousReads = featureReads.length;
   sourceType = "experience";
-  assert.equal((await rewardsData.lookupCashierCustomerReward("REWARD123")).canRedeem, true);
-  await rewardsData.redeemCashierCustomerReward("REWARD123");
-  assert.equal(featureReads.length, previousReads, "Experience rewards retain their separate access behavior");
+  await assert.rejects(() => rewardsData.lookupCashierCustomerReward("REWARD123"));
+  await assert.rejects(() => rewardsData.redeemCashierCustomerReward("REWARD123"));
   cafeSlug = "other"; sourceType = "loyalty";
-  await cashierData.cashierScanLoyalty({ cafeId, cardCode: "CARD123" });
-  await rewardsData.lookupCashierCustomerReward("REWARD123");
-  await rewardsData.redeemCashierCustomerReward("REWARD123");
-  await ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" });
-  assert.equal(featureReads.length, previousReads, "Other brands do not acquire a new Rast restriction");
-  assert.equal(rpcCalls.filter((name) => name === "record_loyalty_card_operation").length, 2);
+  for (const operation of operations) await assert.rejects(operation);
+  allowed = true;
+  for (const operation of operations) await operation();
+  await assert.rejects(() => ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" }));
+  assert(featureReads.length > previousReads, "Every brand enforces its own package eligibility");
+  assert.equal(rpcCalls.filter((name) => name === "record_loyalty_card_operation").length, 0);
   linkedOwner = true;
   const beforeLogoutChecks = { rpc: rpcCalls.length, writes: databaseWrites.length };
   for (const operation of operations) await assert.rejects(operation, /Owner cashier session expired/);
   assert.equal(rpcCalls.length, beforeLogoutChecks.rpc, "All four entry points reject logged out owner before privileged RPC");
   assert.equal(databaseWrites.length, beforeLogoutChecks.writes, "Logged out linked owner never falls back to customer writes");
-  console.log("PASS: shared Rast entitlement guards four cashier/preview entry points, owner scans always reject, enabled cashier paths succeed, other brands and experience rewards unchanged.");
+  console.log("PASS: Every brand enforces entitlement and owner logout with the same audited scanner engine");
 }

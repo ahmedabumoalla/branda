@@ -96,10 +96,12 @@ try {
   admittedSlug="legacy-test";
   expect((await POST(request(body("+966500000001")))).status,200,"existing allowed test brand/phone remains supported");
   admittedSlug="legacy-test";
-  expect((await POST(request())).status,403,"other-brand test phone restriction retained");
+  expect((await POST(request())).status,200,"SQL-admitted loyalty brand supports its customer phones");
   admittedSlug="unlisted-brand";
-  expect((await POST(request(body("+966500000001")))).status,403,"other-brand test slug restriction retained");
-  expect(deliveries.length,2,"only valid Rast and existing test sends occurred");
+  expect((await POST(request(body("+966500000001")))).status,200,"SQL-admitted package brand uses the same OTP flow");
+  expect(deliveries.length,4,"only admitted customer requests were sent");
+  expect(isPhoneOtpRequiredForBrand("unlisted-brand","loyalty"),true,"loyalty scope supports entitled new brands");
+  expect(isAllowedCustomerOtpPhone("966500000099","unlisted-brand","loyalty"),true,"loyalty customers can verify their own phones");
   expect(isPhoneOtpRequiredForBrand("rast"),true,"Rast enabled in test mode");
   expect(isPhoneOtpRequiredForBrand("unlisted-brand"),false,"test mode is not globally broadened");
   expect(isAllowedCustomerOtpPhone("966500000099","rast"),true,"public Rast phone accepted");

@@ -1,6 +1,6 @@
 .directory, .dialog {
-  --directory-wine: #3b1420;
-  --directory-red: #970e29;
+  --directory-wine: var(--wine, #3b1420);
+  --directory-red: var(--red, #970e29);
   --directory-paper: #fffdfa;
   --directory-blush: #f6eceb;
   --directory-muted: #78636a;

@@ -50,14 +50,14 @@ async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: st
 }
 
 export async function updateGooglePass(member: WalletMember, notify = false) {
-  if (member.cafeSlug !== "rast") throw new Error("wallet_disabled");
+  if (!member.program.enabled || !member.program.googleWalletEnabled) throw new Error("wallet_disabled");
   const config = googleConfig();
   await upsert("loyaltyClass", buildGoogleClass(member, config.issuerId, config.baseUrl));
   await upsert("loyaltyObject", { ...buildGoogleObject(member, config.issuerId, walletArtUrl(member)), ...(notify ? { notifyPreference: "NOTIFY_ON_UPDATE" } : {}) });
 }
 
 export async function issueGoogleSaveUrl(member: WalletMember) {
-  if (member.cafeSlug !== "rast" || !member.program.enabled || !member.program.googleWalletEnabled) throw new Error("wallet_disabled");
+  if (!member.program.enabled || !member.program.googleWalletEnabled) throw new Error("wallet_disabled");
   if (process.env.GOOGLE_WALLET_PUBLISHING_APPROVED !== "true") throw new Error("wallet_not_configured");
   await updateGooglePass(member);
   const config = googleConfig();

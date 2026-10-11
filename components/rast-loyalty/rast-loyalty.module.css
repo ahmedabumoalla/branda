@@ -20,7 +20,9 @@
 .publicHeader, .cardTop { flex-wrap: wrap; }
 .brand { min-width: 0; }
 .logo { flex-shrink: 0; }
-.brandLight { color: var(--cream); }
+.brandLight { color: var(--card-foreground, var(--cream)); }
+.logoFallback { max-width: 150px; font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.ownBrand.brandLight .logo { filter: none; opacity: 1; background: #ffffff; border-radius: 10px; padding: 6px; }
 .brandLight .logo { filter: brightness(0) invert(1); opacity: .96; }
 .brandLight > span { border-color: #f8f2e838; }
 .menuLink { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; color: var(--wine); text-decoration: none; }
@@ -62,36 +64,36 @@
 .welcome p { color: var(--muted); font-size: 14px; }
 .enrollmentPreview { position: relative; }
 .enrollmentPreview > p { text-align: center; margin: 22px 0 0; color: var(--muted); font-size: 11px; }
-.stampCard { position: relative; background: var(--wine); color: var(--cream); border-radius: 20px; padding: clamp(23px, 3vw, 36px); box-shadow: 0 28px 52px -38px #3b142090; overflow: hidden; min-width: 0; isolation: isolate; }
+.stampCard { position: relative; background: var(--card-background, var(--wine)); color: var(--card-foreground, var(--cream)); border-radius: 20px; padding: clamp(23px, 3vw, 36px); box-shadow: 0 28px 52px -38px #3b142090; overflow: hidden; min-width: 0; isolation: isolate; }
 .stampCard::before { content: ""; position: absolute; width: 290px; height: 290px; border: 1px solid #f8f2e80a; border-radius: 50%; inset-inline-end: -160px; top: 40px; z-index: -1; box-shadow: 0 0 0 40px #f8f2e805, 0 0 0 80px #f8f2e803; }
 .cardTop { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .cardTop .logo { width: 86px; height: 47px; }
 .cardTop .brand > span { font-size: 9px; padding-inline-start: 12px; }
 .cardTop .brand { gap: 12px; }
-.cardCaption { color: #e2c9c9; font-size: 9px; white-space: nowrap; }
+.cardCaption { color: var(--card-muted, #e2c9c9); font-size: 9px; white-space: nowrap; }
 .cardIdentity { margin-top: 27px; margin-bottom: 20px; }
 .cardIdentity p { margin: 0 0 3px; font-size: 23px; font-weight: 600; overflow-wrap: anywhere; }
-.cardIdentity > span { font-size: 11px; color: #e2c9c9; }
-.stampHeading { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #e2c9c9; margin-bottom: 14px; }
+.cardIdentity > span { font-size: 11px; color: var(--card-muted, #e2c9c9); }
+.stampHeading { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--card-muted, #e2c9c9); margin-bottom: 14px; }
 .stampHeading strong { font-weight: 400; }
-.stampHeading strong b { font-size: 25px; font-weight: 600; color: var(--cream); }
+.stampHeading strong b { font-size: 25px; font-weight: 600; color: var(--card-foreground, var(--cream)); }
 .stamps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
-.stamps li { display: grid; place-items: center; position: relative; aspect-ratio: 1; border: 1px solid #f8f2e82b; border-radius: 50%; color: #c8a8ae; background: #f8f2e807; }
+.stamps li { display: grid; place-items: center; position: relative; aspect-ratio: 1; border: 1px solid #f8f2e82b; border-radius: 50%; color: var(--card-muted, #c8a8ae); background: #f8f2e807; }
 .stamps li > svg { width: 25px; height: 25px; stroke-width: 1.25; }
-.stamps .collected { background: var(--cream); color: var(--wine); border-color: #ffedde; box-shadow: 0 0 0 4px #f8f2e80a, 0 0 21px #f5d8b72e, inset 0 0 10px #ffffff; }
-.stamps li > .stampCheck { position: absolute; inset-inline-end: 0; bottom: 0; width: 17px; height: 17px; padding: 2px; border-radius: 50%; background: #a13b50; color: #fff; stroke-width: 3; }
+.stamps .collected { background: var(--card-stamp-background, var(--cream)); color: var(--card-stamp-foreground, var(--wine)); border-color: #ffedde; box-shadow: 0 0 0 4px #f8f2e80a, 0 0 21px #f5d8b72e, inset 0 0 10px #ffffff; }
+.stamps li > .stampCheck { position: absolute; inset-inline-end: 0; bottom: 0; width: 17px; height: 17px; padding: 2px; border-radius: 50%; background: var(--card-check, #a13b50); color: #fff; stroke-width: 3; }
 .manyStamps { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 9px; }
 .manyStamps li > svg { width: 19px; height: 19px; }
 .cardReward { display: flex; align-items: center; gap: 12px; border-block: 1px solid #f8f2e822; padding-block: 18px; margin-top: 25px; }
 .cardReward > svg { width: 24px; height: 24px; stroke-width: 1.4; flex-shrink: 0; }
-.cardReward span { display: block; font-size: 9px; color: #e2c9c9; margin-bottom: 3px; }
+.cardReward span { display: block; font-size: 9px; color: var(--card-muted, #e2c9c9); margin-bottom: 3px; }
 .cardReward strong { display: block; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.cardFoot { display: flex; justify-content: space-between; gap: 12px; padding-top: 18px; font-size: 8px; color: #e2c9c9; }
+.cardFoot { display: flex; justify-content: space-between; gap: 12px; padding-top: 18px; font-size: 8px; color: var(--card-muted, #e2c9c9); }
 .cardFoot > span:first-child { letter-spacing: 2px; }
 .memberQr { display: flex; align-items: center; gap: 22px; padding-top: 25px; }
 .memberQr > svg { width: 132px; height: 132px; flex-shrink: 0; border: 5px solid white; border-radius: 8px; }
 .memberQr strong { display: block; font-size: 14px; font-weight: 600; }
-.memberQr p { font-size: 10px; color: #e2c9c9; margin-block: 6px; }
+.memberQr p { font-size: 10px; color: var(--card-muted, #e2c9c9); margin-block: 6px; }
 .memberQr div > span { font-size: 10px; letter-spacing: 1px; overflow-wrap: anywhere; display: inline-block; }
 .publicFooter { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border); padding-block: 24px max(24px, env(safe-area-inset-bottom)); color: var(--muted); font-size: 10px; }
 .memberLayout { align-items: start; }

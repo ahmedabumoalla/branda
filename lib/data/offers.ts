@@ -1,3 +1,4 @@
+import "server-only";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,11 @@ import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/ca
 import { mapDbOfferToCafeOffer } from "@/lib/data/mappers";
 import type { CafeOffer } from "@/lib/mock/offers";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
+import { rastCampaignSchema } from "@/lib/offers/rast-offers";
+import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
+import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 function invalidatePublicOffers(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
@@ -20,7 +26,7 @@ function normalizeOfferStatusToDb(status: string) {
 
   if (value === "active" || status === "نشط") return "active";
   if (value === "scheduled" || value === "published" || status === "مجدول") return "scheduled";
-  if (value === "inactive" || status === "غير نشط") return "inactive";
+  if (value === "inactive" || status === "غير نشط" || status === "متوقف") return "inactive";
   if (value === "expired" || status === "منتهي") return "expired";
   if (value === "draft" || status === "مسودة") return "draft";
 
@@ -33,7 +39,7 @@ function normalizeOfferStatusToUi(row: Record<string, unknown>) {
 
   if (status === "active") next.status = "نشط";
   else if (status === "scheduled" || status === "published") next.status = "مجدول";
-  else if (status === "inactive") next.status = "غير نشط";
+  else if (status === "inactive") next.status = "متوقف";
   else if (status === "expired") next.status = "منتهي";
   else if (status === "draft") next.status = "مسودة";
 
@@ -44,60 +50,10 @@ function mapOffer(row: Record<string, unknown>): CafeOffer {
   return mapDbOfferToCafeOffer(normalizeOfferStatusToUi(row));
 }
 
-function isActiveOfferPayload(payload: {
-  status: string;
-  visible_in_cafe: boolean;
-  discount_percent: number | null;
-  linked_product_id: string | null;
-}) {
-  return (
-    (payload.status === "active" || payload.status === "scheduled" || payload.status === "published") &&
-    payload.visible_in_cafe &&
-    payload.discount_percent != null &&
-    payload.discount_percent > 0 &&
-    Boolean(payload.linked_product_id)
-  );
-}
-
-async function syncLinkedProductPromo(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  cafeId: string,
-  payload: {
-    status: string;
-    discount_percent: number | null;
-    start_date: string | null;
-    end_date: string | null;
-    linked_product_id: string | null;
-    title: string;
-  }
-) {
-  if (!payload.linked_product_id) return;
-
-  if (!isActiveOfferPayload({ ...payload, visible_in_cafe: true })) {
-    return;
-  }
-
-  const promo = {
-    kind: "خصم",
-    discountMode: "percent",
-    discountPercent: Number(payload.discount_percent),
-    startDate: payload.start_date ?? new Date().toISOString().slice(0, 10),
-    endDate: payload.end_date ?? "2099-12-31",
-    customText: payload.title,
-  };
-
-  const { error } = await supabase
-    .from("menu_products")
-    .update({ promo })
-    .eq("id", payload.linked_product_id)
-    .eq("cafe_id", cafeId);
-
-  if (error) throw error;
-}
-
 export async function getPublicOffersBySlug(slug: string): Promise<CafeOffer[]> {
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return [];
+  if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "offers")) return [];
 
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -114,15 +70,15 @@ export async function getPublicOffersBySlug(slug: string): Promise<CafeOffer[]> 
   const visibleOffers = ((data ?? []) as Record<string, unknown>[])
     .map(mapOffer)
     .filter((offer) => {
-      const startsAt = offer.startDate ? new Date(offer.startDate).getTime() : null;
-      const endsAt = offer.endDate ? new Date(offer.endDate).getTime() : null;
+      const startsAt = offer.startDate ? new Date(`${offer.startDate}T00:00:00+03:00`).getTime() : null;
+      const endsAt = offer.endDate ? new Date(`${offer.endDate}T23:59:59.999+03:00`).getTime() : null;
       return (
         (!startsAt || Number.isNaN(startsAt) || startsAt <= now) &&
         (!endsAt || Number.isNaN(endsAt) || endsAt >= now)
       );
     });
   const preferredPaths = visibleOffers
-    .map((offer) => offer.cardStoragePath || offer.bannerAssetId)
+    .map((offer) => [offer.cardStoragePath, offer.bannerAssetId].find((path) => path && isOwnedMenuAsset(path, cafe.id) && path.startsWith(`${cafe.id}/${offer.id}/`)))
     .filter((path): path is string => Boolean(path));
   const signedByPath = new Map<string, string>();
   if (preferredPaths.length) {
@@ -148,7 +104,9 @@ export async function getPublicOffersBySlug(slug: string): Promise<CafeOffer[]> 
 }
 
 export async function getOwnerOffers(): Promise<CafeOffer[]> {
+  await assertOwnerServiceEnabled("offers");
   const cafe = await requireOwnerCafeContext();
+  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("ليس لديك صلاحية إدارة العروض");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("offers")
@@ -158,7 +116,14 @@ export async function getOwnerOffers(): Promise<CafeOffer[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return ((data ?? []) as Record<string, unknown>[]).map(mapOffer);
+  const offers = ((data ?? []) as Record<string, unknown>[]).map(mapOffer);
+  const paths = offers.flatMap((offer) => [offer.cardStoragePath, offer.bannerAssetId]
+    .filter((path): path is string => Boolean(path && isOwnedMenuAsset(path, cafe.id) && path.startsWith(`${cafe.id}/${offer.id}/`))));
+  if (!paths.length) return offers;
+  const { data: images, error: imageError } = await supabase.storage.from("offer-banners").createSignedUrls([...new Set(paths)], 3600);
+  if (imageError) throw imageError;
+  const signed = new Map((images ?? []).map((image) => [image.path, image.signedUrl]));
+  return offers.map((offer) => ({ ...offer, bannerImageUrl: signed.get(offer.cardStoragePath ?? "") || signed.get(offer.bannerAssetId ?? "") || undefined }));
 }
 
 const offerSchema = z.object({
@@ -188,9 +153,39 @@ const offerSchema = z.object({
 });
 
 export async function upsertOffer(input: z.infer<typeof offerSchema>) {
+  await assertOwnerServiceEnabled("offers");
   const parsed = offerSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
+  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("ليس لديك صلاحية إدارة العروض");
   const supabase = await createClient();
+
+  // Resolve the tenant from the authenticated owner, never from a client flag.
+  {
+    const validated = rastCampaignSchema.safeParse(parsed);
+    if (!validated.success) throw new Error(validated.error.issues[0]?.message ?? "راجع بيانات العرض");
+    Object.assign(parsed, validated.data);
+    const rules = validated.data.offerRules;
+    const ids = [...new Set(rules.selectedProductIds)];
+    if (rules.rastKind === "products") {
+      const { data: owned, error } = await supabase.from("menu_products").select("id")
+        .eq("cafe_id", cafe.id).is("deleted_at", null).in("id", ids);
+      if (error) throw error;
+      if (owned?.length !== ids.length) throw new Error("بعض المنتجات غير متاحة في حساب علامتك أعد اختيارها");
+    }
+    for (const path of [parsed.bannerStoragePath, parsed.cardStoragePath]) {
+      if (path && (!parsed.id || !isOwnedMenuAsset(path, cafe.id) || !path.startsWith(`${cafe.id}/${parsed.id}/`))) {
+        throw new Error("الصورة لا تخص هذا العرض");
+      }
+    }
+    parsed.offerRules = { ...rules, selectedProductIds: rules.rastKind === "products" ? ids : [], appliesToAllProducts: rules.rastKind === "general" };
+    parsed.type = rules.rastKind === "event" ? "عرض مخصص" : "خصم";
+    parsed.targetType = rules.rastKind === "event" ? "experience_campaign" : "products";
+    parsed.linkedProductId = rules.rastKind === "products" ? ids[0] : null;
+    parsed.discountPercent = rules.rastKind === "event" ? null : parsed.discountPercent;
+    parsed.code = rules.rastKind === "event" ? null : parsed.code;
+    parsed.placement = "بانر الكوفي";
+    if (parsed.status === "متوقف") parsed.status = "inactive";
+  }
 
   const payload = {
     cafe_id: cafe.id,
@@ -224,7 +219,10 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
   if (parsed.id) {
     const { data, error } = await supabase
       .from("offers")
-      .upsert({ id: parsed.id, ...payload }, { onConflict: "id" })
+      .update(payload)
+      .eq("id", parsed.id)
+      .eq("cafe_id", cafe.id)
+      .is("deleted_at", null)
       .select("*")
       .maybeSingle();
 
@@ -242,37 +240,31 @@ export async function upsertOffer(input: z.infer<typeof offerSchema>) {
   }
 
   if (!saved) {
-    const { data, error } = await supabase
-      .from("offers")
-      .select("*")
-      .eq("cafe_id", cafe.id)
-      .eq("title", parsed.title)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw error;
-    saved = (data as Record<string, unknown> | null) ?? null;
-  }
-
-  if (!saved) {
     throw new Error("تعذر حفظ العرض لم يرجع السجل من قاعدة البيانات");
   }
 
-  await syncLinkedProductPromo(supabase, cafe.id, payload);
+  // Published campaign prices are derived at read time for every brand
+  // Saving or hiding an offer never mutates a product's independent promotion
   invalidatePublicOffers(cafe.slug);
 
   return mapOffer(saved);
 }
 
 export async function softDeleteOffer(offerId: string) {
+  await assertOwnerServiceEnabled("offers");
+  z.string().uuid().parse(offerId);
   const cafe = await requireOwnerCafeContext();
+  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("ليس لديك صلاحية إدارة العروض");
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("offers")
     .update({ deleted_at: new Date().toISOString(), is_archived: true })
     .eq("id", offerId)
-    .eq("cafe_id", cafe.id);
+    .eq("cafe_id", cafe.id)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("العرض غير متاح أو تم حذفه");
   invalidatePublicOffers(cafe.slug);
 }

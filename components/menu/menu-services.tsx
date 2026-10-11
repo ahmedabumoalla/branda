@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Check, MapPin, Navigation, Send, Star, X, ChevronDown, Menu } from "lucide-react";
+import { Camera, Check, Gift, MapPin, Navigation, Send, Star, Tag, X, ChevronDown, Menu } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { StandaloneMenu } from "@/lib/menu/standalone-menu";
 import { menuDisplayText } from "@/lib/menu/standalone-menu";
@@ -72,8 +72,16 @@ function FeedbackForm({ slug }: { slug: string }) {
 }
 
 export function MenuServices({ menu, compact = false }: { menu: StandaloneMenu; compact?: boolean }) {
-  const [panel, setPanel] = useState<"about" | "location" | "feedback" | null>(null);
+  const [panel, setPanel] = useState<"about" | "location" | "feedback" | "offers" | null>(null);
   const [copied, setCopied] = useState("");
+  const [now, setNow] = useState(menu.highlights?.asOf ?? 0);
+  useEffect(() => {
+    if (!menu.highlights?.items.length) return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [menu.highlights]);
+  const offers = (menu.highlights?.items ?? []).filter((item) => item.expiresAt == null || item.expiresAt >= now);
   const location = menu.contacts.location;
   async function copyLocation() {
     if (!location) return;
@@ -85,11 +93,28 @@ export function MenuServices({ menu, compact = false }: { menu: StandaloneMenu; 
     {panel === "about" && <ServiceDialog title={menuDisplayText(menu.name)} close={() => setPanel(null)}>
     <p className={s.serviceDescription}>{menuDisplayText(menu.description || "لكل مزاج مذاق يستحق")}</p>
     <nav className={s.serviceDock} aria-label="تواصل مع العلامة">
+      {menu.loyaltyEnabled && <a href={`/loyalty/${encodeURIComponent(menu.slug)}`}><Gift aria-hidden="true" /><span>الولاء والمكافآت<small>بطاقتك ومكافآتك من هنا</small></span></a>}
+      {offers.length > 0 && <button type="button" onClick={() => setPanel("offers")}><Tag aria-hidden="true" /><span>العروض<small>اكتشف عروضنا الحالية</small></span></button>}
       {location && <button type="button" onClick={() => { setCopied(""); setPanel("location"); }}><MapPin aria-hidden="true" /><span>ننتظرك هنا<small>موقع الفرع والاتجاهات</small></span></button>}
       {menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noopener noreferrer"><Camera aria-hidden="true" /><span>تفاصيل يومنا<small>تابعنا على إنستقرام</small></span></a>}
       {menu.slug === "basilico" && <a href="https://www.tiktok.com/@basilico_sa?_r=1&amp;_t=ZS-99mEsafhMUp" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M19.321 5.562a5.124 5.124 0 0 1-4.43-4.53V0h-3.447v13.672a2.89 2.89 0 0 1-5.2 1.743 2.89 2.89 0 0 1 2.31-4.623c.298 0 .595.047.879.138V7.43a6.33 6.33 0 0 0-5.394 10.692 6.33 6.33 0 0 0 10.852-4.45V6.687a8.182 8.182 0 0 0 4.43 1.297V4.58c-.329 0-.658-.033-.98-.098z" /></svg><span>تيك توك<small>تابعنا على تيك توك</small></span></a>}
       {menu.contacts.feedbackEnabled && <button type="button" onClick={() => setPanel("feedback")}><Star aria-hidden="true" /><span>كيف كانت تجربتك<small>رأيك يصل لفريقنا</small></span></button>}
     </nav>
+    </ServiceDialog>}
+    {panel === "offers" && <ServiceDialog title="عروضنا الحالية" close={() => setPanel(null)}>
+      <div className={s.serviceDock}>
+        {offers.map((offer) => <article key={offer.id}>
+          <h3>{menuDisplayText(offer.title)}</h3>
+          {offer.productName && <p>{menuDisplayText(offer.productName)}</p>}
+          {offer.imageUrl && <img src={offer.imageUrl} alt={menuDisplayText(offer.title)} width={480} height={270} style={{ width: "100%", height: "auto", maxHeight: 260, objectFit: "contain", borderRadius: 16 }} loading="lazy" />}
+          <p className={s.serviceDescription}>{menuDisplayText(offer.description)}</p>
+          {offer.discountPercent != null && <p>خصم {offer.discountPercent}٪ {offer.kind === "general" ? "على المنيو كاملًا" : ""}</p>}
+          {offer.code && <p>كود العرض <bdi>{offer.code}</bdi></p>}
+          {offer.eventDate && <p>الموعد <bdi>{offer.eventDate}</bdi> {offer.eventTime && <bdi>{offer.eventTime}</bdi>}</p>}
+          {offer.eventLocation && <p>{offer.eventLocation}</p>}
+        </article>)}
+        {!offers.length && <p className={s.serviceDescription}>لا توجد عروض سارية حاليًا</p>}
+      </div>
     </ServiceDialog>}
     {panel === "location" && location && <ServiceDialog title="لحظتك تبدأ من هنا" close={() => setPanel(null)}>
       <div className={s.locationArt} aria-hidden="true"><span /><span /><MapPin /></div>

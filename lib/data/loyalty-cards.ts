@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getVerifiedRastCustomerProfile } from "@/lib/auth/rast-loyalty-session";
+import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
@@ -117,7 +117,7 @@ export type CashierOperationsDashboard = {
 };
 
 const defaultProgram: LoyaltyCardProgram = {
-  enabled: true,
+  enabled: false,
   cardTitle: "بطاقة الولاء",
   cardSubtitle: "اجمع الأختام واستبدل مكافأتك بسهولة",
   purchasesRequired: 7,
@@ -487,91 +487,15 @@ export async function setOwnerCashierStatus(cashierId: string, active: boolean) 
   if (error) throw error;
 }
 
-function makeLoyaltyScanReference(cardCode: string) {
-  const normalized =
-    cardCode
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9_-]/g, "")
-      .slice(0, 64) || "CARD";
-  const suffix = Math.random().toString(36).slice(2, 10).toUpperCase();
-  return `LOYALTY-CARD-${normalized}-${Date.now()}-${suffix}`;
-}
-
 export async function recordOwnerLoyaltyOperation(input: {
   cardCode: string;
   invoiceBarcode?: string;
   invoiceAmount?: number;
   operation?: "stamp" | "redeem";
 }) {
-  const parsed = z.object({
-    cardCode: z.string().min(4).max(500),
-    invoiceBarcode: z.string().max(500).optional(),
-    invoiceAmount: z.number().min(0).max(999999).optional(),
-    operation: z.enum(["stamp", "redeem"]).optional(),
-  }).parse(input);
-
-  const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
-
-  const normalizedCardCode =
-    parseBarndaksaQrPayload(parsed.cardCode, "loyalty-card") ??
-    parsed.cardCode.trim().toUpperCase();
-
-  if (cafe.slug === "rast") {
-    throw new Error("استخدم شاشة الموظف لتسجيل أختام مقهى الكواكب وصرف المكافآت");
-  }
-
-  const normalizedInvoiceBarcode = parsed.invoiceBarcode?.trim()
-    ? parseBarndaksaQrPayload(parsed.invoiceBarcode, "invoice") ?? parsed.invoiceBarcode.trim()
-    : makeLoyaltyScanReference(normalizedCardCode);
-
-  const admin = createAdminClient();
-  const { data: scannedCard, error: cardLookupError } = await admin
-    .from("loyalty_cards")
-    .select("id,cafe_id")
-    .eq("card_code", normalizedCardCode)
-    .maybeSingle();
-
-  if (cardLookupError) throw cardLookupError;
-  if (scannedCard && String(scannedCard.cafe_id) !== cafe.id) {
-    throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
-  }
-
-  const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
-    p_cafe_id: cafe.id,
-    p_card_code: normalizedCardCode,
-    p_invoice_barcode: normalizedInvoiceBarcode,
-    p_invoice_amount: parsed.invoiceAmount ?? 0,
-    p_operation: parsed.operation ?? "stamp",
-    p_cashier_session_token: null,
-  });
-
-  if (error) throw error;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const operationResult = Array.isArray(data) ? data[0] : data;
-
-  await recordOperationEvent({
-    cafeId: cafe.id,
-    eventType: operationEventTypes.loyaltyScan,
-    actorType: "brand_user",
-    actorId: user?.id ?? null,
-    actorName: user?.user_metadata?.full_name ? String(user.user_metadata.full_name) : null,
-    actorEmail: user?.email ?? null,
-    entityType: "loyalty_card",
-    entityId: scannedCard?.id ? String(scannedCard.id) : null,
-    metadata: {
-      cardCode: normalizedCardCode,
-      invoiceBarcode: normalizedInvoiceBarcode,
-      invoiceAmount: parsed.invoiceAmount ?? 0,
-      operation: parsed.operation ?? "stamp",
-      result: operationResult ?? null,
-    },
-  });
-
-  return data as Record<string, unknown>;
+  await requireOwnerCafeContext();
+  void input;
+  throw new Error("استخدم شاشة الموظف لتسجيل الأختام وصرف المكافآت");
 }
 
 export async function issueCurrentCustomerLoyaltyCard(slug: string) {
@@ -580,19 +504,10 @@ export async function issueCurrentCustomerLoyaltyCard(slug: string) {
     throw new Error("بطاقة الولاء غير مفعلة لهذه العلامة التجارية");
   }
 
-  if (slug === "rast") {
-    const profile = await getVerifiedRastCustomerProfile();
-    if (!profile) throw new Error("تحقق من رقم جوالك أولًا");
-    const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
-    if (error) throw new Error("تعذر إصدار بطاقة الولاء");
-    return String(data);
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("issue_loyalty_card_for_customer", {
-    p_cafe_slug: slug,
-  });
-  if (error) throw error;
+  const profile = await getVerifiedLoyaltyCustomerProfile(slug);
+  if (!profile) throw new Error("تحقق من رقم جوالك أولًا");
+  const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+  if (error) throw new Error("تعذر إصدار بطاقة الولاء");
   return String(data);
 }
 
@@ -665,71 +580,11 @@ export async function getCustomerLoyaltyCardViewForProfile(
   if (!cafe) return null;
   if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "loyalty")) return null;
 
-  if (slug === "rast") {
-    const profile = await getVerifiedRastCustomerProfile();
-    if (!profile || profile.id !== customerProfileId) return null;
-    const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
-    if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");
-    return getLoyaltyCardViewByCode(String(data));
-  }
-
-  const supabase = createAdminClient();
-  const { data: profileRow, error: profileError } = await supabase
-    .from("customer_profiles")
-    .select("id,cafe_id,full_name,phone,email")
-    .eq("id", customerProfileId)
-    .eq("cafe_id", cafe.id)
-    .maybeSingle();
-
-  if (profileError) throw profileError;
-  if (!profileRow) return null;
-
-  const { data: existingCard, error } = await supabase
-    .from("loyalty_cards")
-    .select("*")
-    .eq("cafe_id", cafe.id)
-    .eq("customer_profile_id", customerProfileId)
-    .eq("status", "active")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  let cardRow = existingCard;
-
-  const { data: programRow } = await supabase
-    .from("cafe_loyalty_programs")
-    .select("*, menu_products(name)")
-    .eq("cafe_id", cafe.id)
-    .maybeSingle();
-
-  const program = mapProgram(programRow);
-  if (programRow && !program.enabled) return null;
-
-  if (!cardRow) {
-    const { data: issuedCard, error: issueError } = await supabase
-      .from("loyalty_cards")
-      .upsert({
-        cafe_id: cafe.id,
-        customer_profile_id: customerProfileId,
-        customer_name: String(profileRow.full_name ?? "عميل"),
-        customer_phone: profileRow.phone ? String(profileRow.phone) : null,
-        customer_email: profileRow.email ? String(profileRow.email) : null,
-      }, { onConflict: "cafe_id,customer_profile_id" })
-      .select("*")
-      .single();
-
-    if (issueError) throw issueError;
-    cardRow = issuedCard;
-  }
-
-  return {
-    card: mapCard(cardRow),
-    program,
-    cafeSlug: slug,
-    cafeName: cafe.name,
-    businessCategory: cafe.businessCategory,
-  };
+  const profile = await getVerifiedLoyaltyCustomerProfile(slug);
+  if (!profile || profile.id !== customerProfileId) return null;
+  const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
+  if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");
+  return getLoyaltyCardViewByCode(String(data));
 }
 
 export async function getPublicLoyaltyProgramBySlug(slug: string) {

@@ -589,7 +589,7 @@ export async function requestCustomerPhoneOtpAction(
         message: "تعذر إرسال رمز التحقق حاول مرة أخرى",
       };
     }
-    return await requestCustomerPhoneOtp(cafeSlug, phone, purpose);
+    return await requestCustomerPhoneOtp(cafeSlug, phone, purpose, registrationSource);
   } catch (error) {
     logAuthError("[requestCustomerPhoneOtpAction]", error);
     return {
@@ -613,7 +613,7 @@ export async function completeCustomerPhoneOtpAction(
     if (purpose !== "customer_signup" && purpose !== "customer_login") {
       return { ok: false as const, message: "تعذر التحقق من الرمز" };
     }
-    if (!isPhoneOtpRequiredForBrand(cafeSlug)) {
+    if (!isPhoneOtpRequiredForBrand(cafeSlug, registrationSource)) {
       return { ok: false as const, message: "التحقق غير متاح لهذه العلامة" };
     }
     const parsedName =
@@ -629,7 +629,7 @@ export async function completeCustomerPhoneOtpAction(
     const phoneNormalized = normalizeSaudiPhone(phone);
     if (
       !phoneNormalized ||
-      !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug) ||
+      !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug, registrationSource) ||
       !/^\d{6}$/.test(code)
     ) {
       return { ok: false as const, message: "رمز التحقق غير صحيح" };

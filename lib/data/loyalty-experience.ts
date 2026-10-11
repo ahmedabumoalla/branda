@@ -33,14 +33,13 @@ export async function getLoyaltyExperience(cafeId: string) {
 }
 
 export async function getLoyaltyBrand(slug: string) {
-  if (slug !== "rast") return null;
   const features = await getPublicCafeFeatureCodesBySlug(slug);
   if (!featureCodesAllow(features, "loyalty")) return null;
   const [cafe, program, settings] = await Promise.all([
     getCafeBySlug(slug), getPublicLoyaltyProgramBySlug(slug), getPublicCafeSettings(slug),
   ]);
   if (!cafe || !program) return null;
-  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl: settings?.logoDataUrl ?? null }, program };
+  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl: settings?.logoDataUrl ?? null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
 }
 
 export async function getLoyaltyMembership(slug: string) {
@@ -98,7 +97,6 @@ async function parseExperienceInput(input: LoyaltyExperienceInput) {
 
 export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) {
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const parsed = await parseExperienceInput(input);
   const { error } = await (await createClient()).from("cafe_loyalty_experience").upsert({
@@ -121,7 +119,6 @@ const programSchema = z.object({
 export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof programSchema>; experience: LoyaltyExperienceInput }) {
   const program = programSchema.parse(input.program);
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه التجربة مخصصة لمقهى الكواكب");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const experience = await parseExperienceInput(input.experience);
   if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة");
@@ -139,7 +136,6 @@ export async function lookupRastCashierCard(rawCode: string) {
   const admin = createAdminClient();
   const session = await requireCashierPermission("loyalty", admin);
   const token = session.token;
-  if (session.cafeSlug !== "rast") throw new Error("هذه البطاقة غير متاحة لهذه الجلسة");
   await assertRastLoyaltyEntitlement(session.cafeId);
   // The database checks the card and customer, and commits the read audit together.
   const { data, error: previewError } = await admin.rpc("preview_loyalty_card", {

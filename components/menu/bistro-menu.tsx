@@ -11,6 +11,7 @@ import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
 import { RastLoyaltyEntry } from "./rast-loyalty-entry";
+import { getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import spotlight from "./rast-spotlight.module.css";
 
 function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {
@@ -205,7 +206,15 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
   </section>;
 }
 
-export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
+export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
+  const [offerTime, setOfferTime] = useState(sourceMenu.highlights?.asOf ?? 0);
+  useEffect(() => {
+    if (!sourceMenu.highlights) return;
+    setOfferTime(Date.now());
+    const timer = window.setInterval(() => setOfferTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [sourceMenu.highlights]);
+  const menu = sourceMenu.highlights ? { ...sourceMenu, products: sourceMenu.products.map((product) => ({ ...product, promo: getPublishedOfferPromo(product, sourceMenu.highlights, offerTime) })) } : sourceMenu;
   const reduce = useReducedMotion();
   const isDoubleB = menu.slug === "double-b-bistro";
   const isRast = menu.slug === "rast";
@@ -336,6 +345,6 @@ export function BistroMenu({ menu }: { menu: StandaloneMenu }) {
       <div><span>المنيو الرقمي</span><span>بواسطة <b>برندة</b></span></div>
     </footer>
     {shareMessage && <div className={s.toast} role="status"><Check size={18} aria-hidden="true" />{shareMessage}</div>}
-    <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={selected} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
+    <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main>;
 }

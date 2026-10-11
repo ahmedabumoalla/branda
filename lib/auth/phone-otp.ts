@@ -66,18 +66,18 @@ function maskedPhone(phone: string) {
   return `${phone.slice(0, 4)}****${phone.slice(-4)}`;
 }
 
-export function isPhoneOtpRequiredForBrand(slug: string) {
+export function isPhoneOtpRequiredForBrand(slug: string, source?: "loyalty" | "storefront") {
   if (!enabled(process.env.PHONE_OTP_ENABLED)) return false;
   if (process.env.WHATSAPP_PROVIDER?.trim().toLowerCase() !== "green_api") return false;
-  if (slug.trim().toLowerCase() === "rast") return true;
+  if (source === "loyalty" || slug.trim().toLowerCase() === "rast") return true;
   if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
   return csvSet(process.env.PHONE_OTP_ALLOWED_BRAND_SLUGS).has(
     slug.trim().toLowerCase(),
   );
 }
 
-export function isAllowedCustomerOtpPhone(phoneNormalized: string, cafeSlug?: string) {
-  if (cafeSlug?.trim().toLowerCase() === "rast") return true;
+export function isAllowedCustomerOtpPhone(phoneNormalized: string, cafeSlug?: string, source?: "loyalty" | "storefront") {
+  if (source === "loyalty" || cafeSlug?.trim().toLowerCase() === "rast") return true;
   if (!enabled(process.env.PHONE_OTP_TEST_MODE)) return true;
   return [...csvSet(process.env.PHONE_OTP_ALLOWED_PHONES)].some(
     (phone) => normalizeSaudiPhone(phone) === phoneNormalized,
@@ -101,8 +101,9 @@ export async function requestCustomerPhoneOtp(
   slug: string,
   phone: string,
   purpose: CustomerPhoneOtpPurpose,
+  source?: "loyalty" | "storefront",
 ): Promise<PhoneOtpRequestResult> {
-  if (!isPhoneOtpRequiredForBrand(slug)) {
+  if (!isPhoneOtpRequiredForBrand(slug, source)) {
     return { required: false, ok: true };
   }
 
@@ -114,7 +115,7 @@ export async function requestCustomerPhoneOtp(
       message: "أدخل رقم جوال سعودي صحيحًا",
     };
   }
-  if (!isAllowedCustomerOtpPhone(phoneNormalized, slug)) {
+  if (!isAllowedCustomerOtpPhone(phoneNormalized, slug, source)) {
     return {
       required: true,
       ok: false,

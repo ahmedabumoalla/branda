@@ -69,8 +69,9 @@ export async function POST(request: Request) {
       p_phone_normalized: phoneNormalized,
       p_provider_instance: greenApiProviderInstanceKey(),
     });
-    if (error || typeof cafeSlug !== "string" || !isPhoneOtpRequiredForBrand(cafeSlug)
-      || !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug)) return errorResponse(403);
+    // Dispatch admission validates a current loyalty package and enabled program in SQL
+    if (error || typeof cafeSlug !== "string" || !isPhoneOtpRequiredForBrand(cafeSlug, "loyalty")
+      || !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug, "loyalty")) return errorResponse(403);
     await sendGreenApiSupabaseOtp({
       phoneNormalized,
       code: parsed.data.sms.otp,

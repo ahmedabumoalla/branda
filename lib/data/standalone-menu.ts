@@ -93,11 +93,11 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
     logoUrl = await publishedMenuLogo(admin, String(cafe.id), settings.logo_storage_path) || logoUrl;
   }
   logoUrl = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url) || logoUrl || "/brand/barndaksa-logo-brown.png";
-  const highlights = cafe.slug === "rast" && featureCodesAllow(features, "offers") ? await getStandaloneHighlights(cafe.id, products).catch(() => {
+  const highlights = await getStandaloneHighlights(cafe.id, products, featureCodesAllow(features, "offers")).catch(() => {
     // An optional promotional surface must not take down the published catalog.
     console.error("Standalone highlights unavailable");
     return { asOf: Date.now(), items: [] };
-  }) : undefined;
+  });
   return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

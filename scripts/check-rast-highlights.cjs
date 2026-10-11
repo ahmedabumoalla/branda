@@ -56,7 +56,7 @@ async function run() {
         is(key, value) { return this.eq(key, value); },
         in(key, values) { selected = selected.filter((row) => values.includes(row[key])); return this; },
         or(expression) { const [key] = expression.split("."); assert(expression.includes(today)); selected = selected.filter((row) => row[key] == null || (key === "start_date" ? row[key] <= today : row[key] >= today)); return this; },
-        order() { return this; }, limit() { return this; },
+        order() { return this; }, limit() { return this; }, range(from, to) { selected = selected.slice(from, to + 1); return this; },
         then(resolve) { return Promise.resolve({ data: selected, error: null }).then(resolve); },
       };
       return query;
@@ -70,6 +70,35 @@ async function run() {
   assert.equal(highlights.items[1].imageUrl, product.images[0].url);
   assert.equal(highlights.items[0].expiresAt, Date.parse(`${today}T23:59:59.999+03:00`));
   assert(!JSON.stringify(highlights).includes("MUST_NOT_LEAK"));
+
+  rows.push(
+    { ...base, id: "multi", linked_product_id: "p1", offer_rules: { rastKind: "products", selectedProductIds: ["p1", "p3", "foreign-p", "p2"] } },
+    { ...base, id: "general", linked_product_id: null, offer_rules: { rastKind: "general", appliesToAllProducts: true } },
+    { ...base, id: "event", linked_product_id: null, offer_type: "عرض مخصص", target_type: "experience_campaign", offer_rules: { rastKind: "event", eventDate: today, eventTime: "19:30", eventLocation: "Rast branch" } },
+  );
+  const secondProduct = { ...product, id: "p3", name: "Second coffee", images: [{ url: "https://example.com/second.webp", alt: "Second coffee" }] };
+  const campaigns = await getStandaloneHighlights("rast", [product, secondProduct, { ...product, id: "p2", available: false }]);
+  assert.deepEqual(campaigns.items.filter((item) => item.id.startsWith("multi")).map((item) => [item.productId, item.imageUrl]), [["p1", product.images[0].url], ["p3", secondProduct.images[0].url]]);
+  assert.equal(campaigns.items.find((item) => item.id === "general").kind, "general");
+  const event = campaigns.items.find((item) => item.id === "event");
+  assert.equal(event.kind, "event");
+  assert.equal(event.discountPercent, null);
+  assert.equal(event.code, null);
+  assert.equal(event.eventLocation, "Rast branch");
+  rows.push({ ...base, id: "old-event", linked_product_id: null, offer_type: "عرض مخصص", offer_rules: { rastKind: "event", eventDate: "2020-01-01" } });
+  assert(!(await getStandaloneHighlights("rast", [product])).items.some((item) => item.id === "old-event"));
+  const legacyPromo = { kind: "خصم", discountMode: "percent", discountPercent: 20, customText: base.title, startDate: today, endDate: today };
+  const withLegacy = { ...product, promo: legacyPromo };
+  const signedBeforeDisabled = signedPaths.length;
+  const disabled = await getStandaloneHighlights("rast", [withLegacy], false);
+  assert.deepEqual(disabled.items, []);
+  assert.deepEqual(disabled.managedProductIds, [product.id]);
+  assert.equal(signedPaths.length, signedBeforeDisabled, "Disabled feature never signs campaign media");
+  const manual = await getStandaloneHighlights("rast", [{ ...withLegacy, promo: { ...legacyPromo, customText: "Independent product promo" } }], false);
+  assert.deepEqual(manual.managedProductIds, []);
+  assert.deepEqual((await getStandaloneHighlights("no-other-brand", [withLegacy], false)).managedProductIds, []);
+  rows.push({ ...base, id: "other-owned", cafe_id: "basilico" });
+  assert.deepEqual((await getStandaloneHighlights("basilico", [product])).items.map((item) => item.id), ["other-owned"]);
 
   const { BistroMenu } = load("components/menu/bistro-menu.tsx");
   const menu = { name: "Rast", slug: "rast", logoUrl: null, description: null, products: [product], categories: [{ id: "coffee", name: "Coffee", description: null }], contacts: { feedbackEnabled: false, instagramUrl: null, location: null }, highlights };
@@ -85,6 +114,14 @@ async function run() {
   assert(!expired.includes("Featured coffee"));
   assert(!render({ ...menu, products: [], highlights: undefined }).includes('id="rast-spotlight-title"'));
   assert(!render({ ...menu, slug: "basilico" }).includes('id="rast-spotlight-title"'));
+  // Expanded artwork is the editor preview only; public menu keeps its approved layout
+  const { RastSpotlight } = load("components/menu/rast-spotlight.tsx");
+  const preview = (items) => renderToStaticMarkup(React.createElement(RastSpotlight, { menu: { ...menu, highlights: { asOf: Date.now(), items } }, preview: true, onSelect() {} }));
+  const general = preview(campaigns.items.filter((item) => item.id === "general"));
+  assert(general.includes("على المنيو كاملًا") && general.includes("discountArt") && general.includes("20"));
+  const eventHtml = preview([event]);
+  assert(eventHtml.includes("eventArt") && eventHtml.includes("Rast branch") && eventHtml.includes("19:30") && !eventHtml.includes("كود العرض"));
+  assert(!render({ ...menu, slug: "basilico", highlights: campaigns }).includes("eventArt"));
   require("postcss").parse(fs.readFileSync(path.join(root, "components/menu/rast-spotlight.module.css"), "utf8"));
   console.log("PASS Rast highlights: publication/date/tenant/product filters, owned media, safe DTO, expiry, discount, selector, fallback, empty state, brand isolation and CSS");
 }

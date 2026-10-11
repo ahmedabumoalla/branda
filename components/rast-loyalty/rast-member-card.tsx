@@ -10,6 +10,7 @@ import { RastHeader } from "./rast-brand";
 import { RastStampCard } from "./rast-stamp-card";
 import { RastQrCode } from "./qr-code";
 import s from "./rast-loyalty.module.css";
+import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
 
 export type RastWalletAvailability = { apple: boolean; google: boolean };
 export type RastMembership = CustomerLoyaltyCardView & { rewards: CustomerRewardInstance[] };
@@ -42,12 +43,12 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
   }, [router]);
   const remaining = Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle);
 
-  return <main className={s.publicPage} dir="rtl">
+  return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl">
     <RastHeader identity={identity} />
     <div className={s.memberLayout}>
       <div className={s.memberIntro}>
-        <span className={s.eyebrow}>أنت من أهل مقهى الكواكب</span>
-        <h1>يا هلا برجعتك<br /><span>{member.card.customerName}.</span></h1>
+        <span className={s.eyebrow}>أنت من {loyaltyCommunityName(identity)}</span>
+        <h1>يا هلا برجعتك<br /><span>{member.card.customerName}</span></h1>
         <p className={s.intro}>{member.rewards.length ? "لك مكافأة بانتظارك خلّ زيارتك الجاية أحلى" : remaining === 1 ? "باقي ختم واحد ومكافأتك تنتظرك" : `باقي ${remaining} أختام على مكافأتك نشوفك على خير`}</p>
         <div className={s.walletSection}>
           <h2>خلّ بطاقتك قريبة</h2><p>أضفها لمحفظة جوالك واعرضها عند الكاشير</p>
@@ -70,6 +71,6 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
         </section>
       </div>
     </div>
-    <footer className={s.publicFooter}><span>أهل مقهى الكواكب</span><span>كل زيارة لها مكان</span></footer>
+    <footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>كل زيارة لها مكان</span></footer>
   </main>;
 }

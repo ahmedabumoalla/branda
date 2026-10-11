@@ -268,7 +268,7 @@ async function findCashierReward(rawRewardCode: string) {
     throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
   }
 
-  if (context.cafeSlug === "rast" && reward.sourceType === "loyalty") {
+  if (reward.sourceType === "loyalty") {
     await assertRastLoyaltyEntitlement(context.cafeId);
   }
 
@@ -284,19 +284,18 @@ export async function lookupCashierCustomerReward(
   rawRewardCode: string,
 ): Promise<CashierRewardPreview> {
   const { reward, loyaltyCardEnabled, cafeSlug, admin, token, code } = await findCashierReward(rawRewardCode);
-  if (cafeSlug === "rast" && reward.sourceType === "loyalty") {
+  if (reward.sourceType === "loyalty") {
     const { data, error } = await admin.rpc("preview_loyalty_reward", {
       p_session_token: token, p_reward_code: code,
     });
     if (error || data?.ok !== true) throw new Error("تعذر قراءة المكافأة تحقق من صلاحية البطاقة وجلسة الموظف");
   }
-  return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
+  return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: reward.sourceType === "loyalty" });
 }
 
 export async function lookupRastCashierReward(rawCode: string): Promise<CashierRewardPreview> {
   const code = rastRedemptionCode(rawCode);
   const { admin, token, cafeId, cafeSlug } = await getValidCashierSession();
-  if (cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة");
   await assertRastLoyaltyEntitlement(cafeId);
 
   const { data: card, error: cardError } = await admin.from("loyalty_cards")
@@ -329,12 +328,12 @@ export async function lookupRastCashierReward(rawCode: string): Promise<CashierR
 export async function redeemCashierCustomerReward(rawRewardCode: string) {
   const { admin, reward, code, cafeId, cashierId, cashierName, cashierEmail, loyaltyCardEnabled, cafeSlug, token } =
     await findCashierReward(rawRewardCode);
-  const preview = previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: cafeSlug === "rast" });
+  const preview = previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: reward.sourceType === "loyalty" });
   if (!preview.canRedeem) {
     throw new Error(preview.invalidReason ?? "هذه المكافأة غير قابلة للصرف");
   }
 
-  if (cafeSlug === "rast" && reward.sourceType === "loyalty") {
+  if (reward.sourceType === "loyalty") {
     const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
       p_session_token: token, p_code: code, p_request_id: randomUUID(), p_operation: "redeem",
     });
@@ -397,25 +396,6 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
       .is("used_at", null);
   }
 
-  if (reward.sourceType === "loyalty" && reward.loyaltyCardId) {
-    const { data: card } = await admin
-      .from("loyalty_cards")
-      .select("available_rewards")
-      .eq("id", reward.loyaltyCardId)
-      .eq("cafe_id", cafeId)
-      .maybeSingle();
-    const nextRewards = Math.max(0, Number(card?.available_rewards ?? 1) - 1);
-    await admin
-      .from("loyalty_cards")
-      .update({
-        available_rewards: nextRewards,
-        last_used_at: redeemedAt,
-        updated_at: redeemedAt,
-      })
-      .eq("id", reward.loyaltyCardId)
-      .eq("cafe_id", cafeId);
-  }
-
   await admin.from("cafe_cashier_activity_logs").insert({
     cafe_id: cafeId,
     cashier_id: cashierId,
@@ -456,10 +436,7 @@ export async function redeemCashierCustomerReward(rawRewardCode: string) {
     rewardInstanceId: reward.id,
     customerName: reward.customerName,
     rewardName: reward.rewardTitle,
-    rewardType:
-      reward.sourceType === "loyalty"
-        ? "مكافأة ولاء"
-        : "مكافأة توثيق تجربة",
+    rewardType: "مكافأة توثيق تجربة",
     rewardCode: code,
     issuedAt: reward.issuedAt,
     expiresAt: reward.expiresAt ?? "",

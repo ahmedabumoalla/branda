@@ -16,6 +16,10 @@ export type OfferTargetType = "products" | "experience_campaign";
 export type OfferCardGenerationStatus = "idle" | "generating" | "ready" | "failed";
 
 export type OfferRules = {
+  rastKind?: "products" | "general" | "event";
+  eventDate?: string;
+  eventTime?: string;
+  eventLocation?: string;
   buyProductId?: string;
   buyQuantity?: number;
   rewardKind?: "free_product" | "gift";

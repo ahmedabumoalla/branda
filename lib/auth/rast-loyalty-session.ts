@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCustomerProfileByUser } from "@/lib/data/customers";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 
-/** Rast cards require a verified phone OTP session, never a legacy password cookie. */
+/** Loyalty cards require a verified phone OTP session, never a legacy password cookie. */
 export async function getVerifiedLoyaltyCustomerProfile(slug: string) {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();

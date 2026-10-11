@@ -801,17 +801,6 @@ export async function cashierUpdateOrderStatus(
   return { ok: true as const, order: updatedOrder };
 }
 
-function makeLoyaltyScanReference(cardCode: string) {
-  const normalized =
-    cardCode
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9_-]/g, "")
-      .slice(0, 64) || "CARD";
-  const suffix = Math.random().toString(36).slice(2, 10).toUpperCase();
-  return `LOYALTY-CARD-${normalized}-${Date.now()}-${suffix}`;
-}
-
 export async function cashierScanLoyalty(input: {
   cafeId: string;
   cardCode: string;
@@ -823,10 +812,6 @@ export async function cashierScanLoyalty(input: {
     parseBarndaksaQrPayload(input.cardCode, "loyalty-card") ??
     input.cardCode.trim().toUpperCase();
 
-  const normalizedInvoiceBarcode = input.invoiceBarcode?.trim()
-    ? parseBarndaksaQrPayload(input.invoiceBarcode, "invoice") ?? input.invoiceBarcode.trim()
-    : makeLoyaltyScanReference(normalizedCardCode);
-
   const admin = createAdminClient();
   const session = await requireCashierPermission("loyalty", admin);
   const token = session.token;
@@ -835,59 +820,11 @@ export async function cashierScanLoyalty(input: {
     throw new Error("جلسة الكاشير لا تطابق العلامة التجارية");
   }
 
-  if (session.cafeSlug === "rast") {
-    await assertRastLoyaltyEntitlement(currentCafeId);
-    if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها");
-    const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
-      p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
-    });
-    if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم تحقق من البطاقة وجلسة الموظف");
-    return data as Record<string, unknown>;
-  }
-
-  const { data: scannedCard, error: cardLookupError } = await admin
-    .from("loyalty_cards")
-    .select("id,cafe_id")
-    .eq("card_code", normalizedCardCode)
-    .maybeSingle();
-
-  if (cardLookupError) throw cardLookupError;
-  if (scannedCard && String(scannedCard.cafe_id) !== currentCafeId) {
-    console.warn("[cashierScanLoyalty:cross-cafe-card]", {
-      currentCafeId,
-      rewardCafeId: String(scannedCard.cafe_id),
-      reason: "loyalty_card_belongs_to_another_cafe",
-    });
-    throw new Error("هذه المكافأة تابعة لعلامة تجارية أخرى");
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("record_loyalty_card_operation", {
-    p_cafe_id: currentCafeId,
-    p_card_code: normalizedCardCode,
-    p_invoice_barcode: normalizedInvoiceBarcode,
-    p_invoice_amount: input.invoiceAmount ?? 0,
-    p_operation: input.operation ?? "stamp",
-    p_cashier_session_token: token,
+  await assertRastLoyaltyEntitlement(currentCafeId);
+  if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها");
+  const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
+    p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
   });
-  if (error) throw error;
-  const operationResult = Array.isArray(data) ? data[0] : data;
-  await recordOperationEvent({
-    cafeId: currentCafeId,
-    eventType: operationEventTypes.loyaltyScan,
-    actorType: "cashier",
-    actorId: session.cashierId,
-    actorName: session.cashierName,
-    actorEmail: session.cashierEmail,
-    entityType: "loyalty_card",
-    entityId: scannedCard?.id ? String(scannedCard.id) : null,
-    metadata: {
-      cardCode: normalizedCardCode,
-      invoiceBarcode: normalizedInvoiceBarcode,
-      invoiceAmount: input.invoiceAmount ?? 0,
-      operation: input.operation ?? "stamp",
-      result: operationResult ?? null,
-    },
-  });
+  if (error || data?.ok !== true) throw new Error("تعذر تسجيل الختم تحقق من البطاقة وجلسة الموظف");
   return data as Record<string, unknown>;
 }

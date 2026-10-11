@@ -18,7 +18,14 @@ export const defaultLoyaltyExperience: LoyaltyExperienceSettings = {
   longitude: null,
 };
 
-export type LoyaltyIdentity = { name: string; slug: string; logoUrl: string | null };
+export type LoyaltyIdentity = {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  cardBackground?: string;
+  cardForeground?: string;
+  cardAccent?: string;
+};
 export type LoyaltyMemberCard = {
   customerName: string;
   cardCode: string;

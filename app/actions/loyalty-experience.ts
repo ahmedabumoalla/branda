@@ -17,8 +17,7 @@ import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 
 async function requireEnrollment(slug: string) {
-  if (slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب");
-  if (!isPhoneOtpRequiredForBrand(slug)) throw new Error("التحقق بالواتساب غير متاح حاليًا");
+  if (!isPhoneOtpRequiredForBrand(slug, "loyalty")) throw new Error("التحقق بالواتساب غير متاح حاليًا");
   const brand = await getLoyaltyBrand(z.string().regex(/^[a-z0-9-]{1,80}$/).parse(slug));
   if (!brand || !brand.program.enabled) throw new Error("برنامج الولاء غير متاح حاليًا");
 }
@@ -51,7 +50,7 @@ export async function saveBrandLoyaltyProgramAction(input: Parameters<typeof sav
 export async function saveRastLoyaltySettingsAction(input: Parameters<typeof saveRastLoyaltySettings>[0]) {
   try {
     await saveRastLoyaltySettings(input);
-    revalidatePath("/loyalty/rast");
+    revalidatePath("/loyalty/[slug]", "page");
     revalidatePath("/dashboard/loyalty");
     return { ok: true as const };
   } catch (error) {
@@ -71,8 +70,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   const parsed = z.object({ value: z.string().trim().min(4).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
   const session = await requireCashierPermission("loyalty");
   const token = session.token;
-  if (session.cafeSlug !== "rast") throw new Error("هذه العملية غير متاحة لهذه العلامة");
-  if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug("rast"), "loyalty")) {
+  if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug(session.cafeSlug), "loyalty")) {
     throw new Error("برنامج الولاء غير متاح حاليًا");
   }
   const value = parseBarndaksaQrPayload(parsed.value, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? parsed.value.toUpperCase();
@@ -97,7 +95,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
 export async function sendLoyaltyWalletAnnouncementAction(title: string, body: string) {
   const message = z.object({ title: z.string().trim().min(2).max(80), body: z.string().trim().min(2).max(240) }).parse({ title, body });
   const [cafe, features] = await Promise.all([requireOwnerCafeContext(), getOwnerFeatureCodes()]);
-  if (cafe.slug !== "rast") throw new Error("هذه الخدمة مخصصة لمقهى الكواكب");
+  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("لا تملك صلاحية إرسال تنبيهات الولاء");
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const result = await notifyBrandWalletMembers(cafe.id, cafe.slug, message.title, message.body);
   const statuses = [result.apple.status, result.google.status];

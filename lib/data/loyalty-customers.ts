@@ -9,7 +9,7 @@ const filterSchema = z.object({ page: z.number().int().min(0).max(100000).defaul
 
 async function directoryContext() {
   const cafe = await requireOwnerCafeContext();
-  if (cafe.slug !== "rast" || !["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("Customer directory access denied");
+  if (!["owner", "manager", "platform_admin"].includes(cafe.role)) throw new Error("Customer directory access denied");
   if (!(await getCafeFeatureCodes(cafe.id)).includes("loyalty")) throw new Error("Loyalty unavailable");
   const db = await createClient();
   const { data: { user } } = await db.auth.getUser();

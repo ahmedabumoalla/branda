@@ -23,7 +23,7 @@ export type StandaloneMenu = {
   description: string | null;
   categories: { id: string; name: string; description: string | null }[];
   products: StandaloneMenuProduct[];
-  highlights?: { asOf: number; items: StandaloneHighlight[] };
+  highlights?: { asOf: number; items: StandaloneHighlight[]; managedProductIds?: string[] };
   contacts: {
     feedbackEnabled: boolean;
     instagramUrl: string | null;
@@ -32,6 +32,11 @@ export type StandaloneMenu = {
 };
 
 export type StandaloneHighlight = {
+  kind?: "products" | "general" | "event";
+  productName?: string;
+  eventDate?: string;
+  eventTime?: string;
+  eventLocation?: string;
   id: string;
   title: string;
   description: string;

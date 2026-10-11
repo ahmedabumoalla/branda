@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { CashierConsoleClient } from "@/components/cashier/cashier-console-client";
+import { getLoyaltyBrand } from "@/lib/data/loyalty-experience";
 import { getCashierConsole, getCashierToken, getCashierLandingPath } from "@/lib/data/cashier";
 import { RastCashier } from "@/components/rast-loyalty/rast-cashier";
 
@@ -19,5 +19,6 @@ export default async function CashierPage() {
     redirect("/cashier/login");
   }
 
-  return data.cafe.slug === "rast" ? <RastCashier initialData={data} /> : <CashierConsoleClient initialData={data} />;
+  const brand = await getLoyaltyBrand(data.cafe.slug);
+  return <RastCashier initialData={data} identity={brand?.identity} />;
 }

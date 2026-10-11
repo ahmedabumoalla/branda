@@ -76,7 +76,7 @@ function rgb(hex: string) {
 }
 
 export async function issueApplePass(member: WalletMember) {
-  if (member.cafeSlug !== "rast" || !member.program.enabled || !member.program.appleWalletEnabled) throw new Error("wallet_disabled");
+  if (!member.program.enabled || !member.program.appleWalletEnabled) throw new Error("wallet_disabled");
   const config = appleConfig();
   const colors = walletColors(member);
   const asset = await brandAsset(member);

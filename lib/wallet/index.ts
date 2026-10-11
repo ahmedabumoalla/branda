@@ -5,6 +5,8 @@ import { issueApplePass as generateApplePass, pushAppleDevice } from "./apple";
 import { issueGoogleSaveUrl as generateGoogleSaveUrl, updateGooglePass, notifyGoogleBrand } from "./google";
 import type { WalletMember, WalletDeliveryResult } from "./types";
 import { appleUpdateTag } from "./update-tags";
+import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
+import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export { getWalletReadiness } from "./config";
 export { walletBrandLogo } from "./apple";
@@ -145,6 +147,7 @@ export async function syncWalletCardByCode(code: string) {
 
 async function deliverBrandMessage(cafeId: string, title: string, body: string, messageId: string, previous?: WalletDeliveryResult) {
   const result = skipped();
+  if (!featureCodesAllow(await getCafeFeatureCodes(cafeId), "loyalty")) return result;
   const readiness = getWalletReadiness();
   const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider").eq("cafe_id", cafeId);
   if (error) throw new Error("wallet_tracking_unavailable");
@@ -193,7 +196,6 @@ export async function retryWalletNotificationJobs(limit = 10) {
 
 // Caller enforces owner tenant; the RPC atomically persists, deduplicates and rate-limits the announcement.
 export async function notifyBrandWalletMembers(cafeId: string, _cafeSlug: string, title: string, body: string) {
-  if (_cafeSlug !== "rast") throw new Error("wallet_disabled");
   if (!title.trim() || title.length > 80 || !body.trim() || body.length > 240) throw new Error("wallet_invalid_message");
   const { data, error } = await createAdminClient().rpc("enqueue_rast_wallet_announcement", { p_cafe_id: cafeId, p_title: title.trim(), p_body: body.trim() });
   if (error) {
