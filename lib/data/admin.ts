@@ -690,46 +690,16 @@ export async function getAdminOperations(): Promise<PlatformOperation[]> {
 
 export async function updateCafePlan(cafeId: string, planId: string) {
   await requirePlatformAdmin();
-  const admin = createAdminClient();
-  const { data: plan, error: planError } = await admin
-    .from("platform_plans")
-    .select("id, name, price_sar, duration_unit, duration_count")
-    .eq("id", planId)
-    .maybeSingle();
-  if (planError) throw planError;
-  if (!plan) throw new Error("الباقة غير موجودة");
-
+  z.string().uuid().parse(cafeId);
+  planSchema.shape.id.parse(planId);
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_assign_plan_without_payment", {
     p_cafe_id: cafeId,
     p_plan_id: planId,
   });
 
-  if (error) {
-    await admin
-      .from("subscriptions")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-      .eq("cafe_id", cafeId)
-      .in("status", ["active", "trialing", "past_due"]);
-
-    const { error: insertError } = await admin.from("subscriptions").insert({
-      cafe_id: cafeId,
-      plan_id: planId,
-      status: "active",
-      amount_sar: Number(plan.price_sar ?? 0),
-      base_amount_sar: Number(plan.price_sar ?? 0),
-      discount_amount_sar: 0,
-      plan_name_snapshot: String(plan.name ?? planId),
-      duration_unit: String(plan.duration_unit ?? "month"),
-      duration_count: Number(plan.duration_count ?? 1),
-      activation_source: "admin_manual_change",
-      payment_provider: "admin",
-      payment_method_label: "تغيير يدوي من الأدمن",
-      started_at: new Date().toISOString(),
-      expires_at: null,
-    });
-    if (insertError) throw insertError;
-  }
+  // Never turn a rejected atomic assignment into a service-role, unbounded grant.
+  if (error) throw error;
 }
 
 export async function updateCafeStatus(cafeId: string, active: boolean) {

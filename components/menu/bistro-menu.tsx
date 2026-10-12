@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownLeft, ArrowUpLeft, ArrowRight, CakeSlice, Check, ChevronLeft, ChevronRight, Clock3, Coffee, CookingPot, Flame, GlassWater, LayoutGrid, List, Search, Share2, SlidersHorizontal, Utensils, X } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, LayoutGroup, motion, useInView, useReducedMotion } from "motion/react";
 import { menuMotion, menuSprings } from "@/lib/menu/motion-foundations";
 import { isPromoActive, productFinalPrice, promoBadgeText } from "@/lib/mock/menu";
@@ -15,6 +15,9 @@ import { getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import spotlight from "./rast-spotlight.module.css";
 import kath from "./kath-menu.module.css";
 import { KathLoyaltyEntry } from "./kath-loyalty-entry";
+import { kathResponsiveImage } from "@/lib/menu/kath-images";
+
+const KathImages = createContext(false);
 
 function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {
   const brandName = menu.slug === "kat-coffe" ? "مقهى كاث" : "مقهى الكواكب";
@@ -69,12 +72,15 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
   </section>;
 }
 
-function FoodImage({ src, alt, className = "", priority = false }: { src?: string; alt: string; className?: string; priority?: boolean }) {
+function FoodImage({ src, alt, className = "", priority = false, sizes = "(max-width: 1000px) 50vw, 400px" }: { src?: string; alt: string; className?: string; priority?: boolean; sizes?: string }) {
   const [failed, setFailed] = useState(false);
+  const [originalFallback, setOriginalFallback] = useState(false);
+  const isKath = useContext(KathImages);
+  const responsive = isKath && src && !originalFallback ? kathResponsiveImage(src, sizes) : null;
   if (!src || failed) return <span className={`${s.imageFallback} ${className}`} role="img" aria-label={alt}><Utensils aria-hidden="true" /></span>;
   // Original, signed Storage and imported menu images; never substitute stock photography.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className={className} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" onError={() => setFailed(true)} />;
+  return <img src={src} {...responsive} alt={alt} className={className} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" onError={() => responsive ? setOriginalFallback(true) : setFailed(true)} />;
 }
 
 function Price({ product }: { product: StandaloneMenuProduct }) {
@@ -145,7 +151,7 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
           initial={{ opacity: 0, scale: reduce ? 1 : menuMotion.scale.photo }} animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }} transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}>
         {current?.type === "video" ? <FoodVideo key={current.url} src={current.url} alt={current.alt} poster={product.images[0]?.url} />
-          : <FoodImage key={current?.url ?? product.id} src={current?.url} alt={current?.alt || product.name} priority />}
+          : <FoodImage key={current?.url ?? product.id} src={current?.url} alt={current?.alt || product.name} priority sizes="(max-width: 640px) 100vw, 60vw" />}
         </motion.div>
         </AnimatePresence>
         {media.length > 1 && <div className={s.galleryControls}>
@@ -181,13 +187,14 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
 function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
   const isKath = menu.slug === "kat-coffe";
   const brandName = isKath ? "مقهى كاث" : "مقهى الكواكب";
-  const kathPhoto = menu.products.find((product) => product.available && product.images.length && /قهوة|لاتيه|كابتشينو|اسبريسو/.test(product.name))?.images[0]?.url
+  const kathPhoto = menu.products.find((product) => product.available && product.images.length && product.name.trim() === "لاتيه")?.images[0]?.url
+    ?? menu.products.find((product) => product.available && product.images.length && /قهوة|لاتيه|كابتشينو|اسبريسو/.test(product.name))?.images[0]?.url
     ?? menu.products.find((product) => product.available && product.images.length)?.images[0]?.url;
   return <section className={`${s.rastHero}${isKath ? ` ${kath.hero}` : ""}`} aria-label={`مرحبًا في ${brandName}`}>
     {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
-    <div className={s.rastHeroBackdrop} aria-hidden="true">
-      <FoodImage src={isKath ? kathPhoto : "/menu-art/rast-coffee-editorial-v1.webp"} alt="" priority />
-    </div>
+    {!isKath && <div className={s.rastHeroBackdrop} aria-hidden="true">
+      <FoodImage src="/menu-art/rast-coffee-editorial-v1.webp" alt="" priority />
+    </div>}
     <header className={s.rastHeader}>
       <div className={s.heroActions}>
         <MenuServices menu={menu} compact />
@@ -200,8 +207,9 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
       <FoodImage src={menu.logoUrl || (isKath ? "/menu-logos/kath-transparent-v1.webp" : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={`${s.rastWordmark}${isKath ? ` ${kath.wordmark}` : ""}`} priority />
       <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">COFFEE &amp; GOOD MOMENTS</span></div>
     </div>
-    <div className={s.rastHeroGrid}>
-      <div className={s.rastHeroCopy}>
+    <div className={`${s.rastHeroGrid}${isKath ? ` ${kath.heroGrid}` : ""}`}>
+      {isKath && <div className={kath.heroPhoto} aria-hidden="true"><FoodImage src={kathPhoto} alt="" priority sizes="(max-width: 680px) 100vw, 50vw" /></div>}
+      <div className={`${s.rastHeroCopy}${isKath ? ` ${kath.heroCopy}` : ""}`}>
         <p className={s.rastEyebrow}>أهلًا بك في {brandName}</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
         <p className={s.rastHeroDescription}>قهوة تحبّها حلا يكمّلها ولحظة تستاهل تعيشها على مهلك</p>
@@ -271,7 +279,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     shareTimer.current = setTimeout(() => setShareMessage(""), 4000);
   }
 
-  return <main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isKath ? ` ${kath.theme}` : ""}`} dir="rtl"
+  return <KathImages.Provider value={isKath}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isKath ? ` ${kath.theme}` : ""}`} dir="rtl"
     style={menu.slug === "kat-coffe" ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
     <a href={isEditorial ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
     {isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
@@ -356,5 +364,5 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     </footer>
     {shareMessage && <div className={s.toast} role="status"><Check size={18} aria-hidden="true" />{shareMessage}</div>}
     <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
-  </main>;
+  </main></KathImages.Provider>;
 }

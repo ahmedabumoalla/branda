@@ -30,10 +30,10 @@ const fixtureProduct = {
   promo: null, deleted_at: null, sort_order: 1,
 };
 
-function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false } = {}) {
+function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false, slug = "double-b-bistro" } = {}) {
   const queries = [], signedPaths = [];
   const tables = {
-    cafes: [{ id: cafeId, slug: "double-b-bistro", name: "Double B Bistro", status, is_public: false, deleted_at: deleted ? "deleted" : null }],
+    cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, is_public: false, deleted_at: deleted ? "deleted" : null }],
     brand_feature_overrides: published === null ? [] : [{ cafe_id: cafeId, feature_id: "standalone_menu", enabled: published }],
     menu_categories: [
       { id: "category", cafe_id: cafeId, name: "Category", visible: true, deleted_at: null },
@@ -69,12 +69,19 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
 
 function loader(client, features = ["menu"]) {
   return loadTs("lib/data/standalone-menu.ts", {
+    "next/cache": { unstable_cache: fn => fn },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => features },
     "server-only": {}, react: { cache: (fn) => fn }, "@/lib/supabase/admin": { createAdminClient: () => client },
   }).getStandaloneMenu;
 }
 
 async function run() {
+  const kath = fakeClient({slug:'kat-coffe'});
+  assert.equal(await loader(kath.client,[])('kat-coffe'),null);
+  assert.equal(kath.signedPaths.length,0,'cached media must remain behind current package authorization');
+  const kathMenu=await loader(kath.client)('kat-coffe');assert.equal(kathMenu.products.length,1);assert.ok(kath.signedPaths.includes(imagePath));
+  const foreignKath=fakeClient({slug:'kat-coffe',products:[{...fixtureProduct,image_storage_path:'other/secret.webp',media:[]}]});
+  await loader(foreignKath.client)('kat-coffe');assert.equal(foreignKath.signedPaths.length,0,'cache never signs another tenant asset');
   const empty = await loader(fakeClient({ products: [] }).client)("double-b-bistro");
   assert.deepEqual(empty.products, [], "New brands must never receive sample products");
   assert.equal(empty.logoUrl, "/brand/barndaksa-logo-brown.png", "Empty brand uses transparent platform mark");

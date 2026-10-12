@@ -53,6 +53,8 @@ if(process.env.KATH_LIVE_FIXTURE) {
   const live=JSON.parse(fs.readFileSync(process.env.KATH_LIVE_FIXTURE,'utf8'));
   assert.equal(live.slug,'kat-coffe');html=render(live);
   assert.equal((html.match(/aria-label="عرض تفاصيل /g)||[]).length,live.products.length);
+  assert(html.includes('heroPhoto')&&!html.includes('rastHeroBackdrop'),'Kath photo is independent of background scrims');
+  assert(html.includes('/_next/image?url=')&&html.includes('srcSet=')&&html.includes('loading="lazy"'),'Kath publishes optimized responsive lazy images');
   assert(!/الكواكب|KAWAKIB|\/loyalty\/rast|rast-coffee-editorial/.test(html));
   console.log(`PASS Kath live fixture: ${live.products.length} own products, original logo and actual loyalty availability`);
 }

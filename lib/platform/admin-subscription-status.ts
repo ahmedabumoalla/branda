@@ -19,8 +19,8 @@ export function adminSubscriptionSummary(rows: Record<string, unknown>[], now = 
   return {
     planId: row ? String(row.plan_id ?? "") : "",
     planName: row ? String(row.plan_name_snapshot ?? row.plan_id ?? "") : "",
-    planStartedAt: startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : undefined,
-    planExpiresAt: expiresAt && Number.isFinite(Date.parse(expiresAt)) ? new Date(expiresAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : undefined,
+    planStartedAt: startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : null,
+    planExpiresAt: expiresAt && Number.isFinite(Date.parse(expiresAt)) ? new Date(expiresAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : null,
     planRemainingDays: expiry !== null && Number.isFinite(expiry) ? Math.max(0, Math.ceil((expiry - now) / 86400000)) : null,
     hasActivePlan,
     subscriptionStatus,

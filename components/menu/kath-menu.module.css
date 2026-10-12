@@ -18,11 +18,12 @@
   background: var(--kath-brown);
 }
 .theme .hero::before {
-  background:
-    linear-gradient(180deg, #733b27 0, #733b27f5 var(--rast-brand-height), #733b2700 calc(var(--rast-brand-height) + 100px)),
-    linear-gradient(90deg, #2d180fee 0%, #2d180fe0 42%, #2d180f38 78%),
-    linear-gradient(0deg, #2d180fcc 0%, #2d180f00 60%);
+  background: none;
 }
+.theme .heroGrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: clamp(28px, 5vw, 80px); padding-top: 32px; }
+.theme .heroCopy { width: 100%; margin: 0; }
+.heroPhoto { overflow: hidden; border-radius: 160px 160px 24px 24px; border: 1px solid var(--kath-gold); background: #fff; }
+.heroPhoto > img { display: block; width: 100%; height: auto; aspect-ratio: 1.1; object-fit: cover; object-position: center; }
 .theme .hero header { border-color: #e5b57245; }
 .theme .hero header button { color: var(--kath-gold); border-color: #e5b57266; }
 .theme .hero header p { color: var(--kath-gold); }
@@ -32,14 +33,14 @@
 .theme .loyalty { --rast-red: var(--kath-gold); }
 .theme .loyaltyCard { background: var(--kath-brown); color: var(--kath-ivory); }
 .loyaltyCard img { display: block; object-fit: contain; max-width: 100%; }
-.inactiveLoyalty > span:last-child { background: transparent; color: var(--kath-ivory); border-color: #e5b57266; }
+.theme .loyalty .loyaltyAction { background: var(--kath-gold); color: var(--kath-espresso); border-color: var(--kath-gold); }
+.theme .loyalty a:hover .loyaltyAction, .theme .loyalty a:focus-visible .loyaltyAction { background: var(--kath-ivory); color: var(--kath-espresso); }
+.theme .loyalty .inactiveLoyalty .loyaltyAction, .theme .loyalty .inactiveLoyalty:hover .loyaltyAction { background: transparent; color: var(--kath-ivory); border-color: #e5b57266; }
 .theme .closing > img { background: var(--kath-brown); border-radius: 12px; margin-top: 28px; }
 
 @media (max-width: 680px) {
   .theme .hero { --rast-wordmark-height: clamp(150px, 43vw, 210px); }
-  .theme .hero::before {
-    background:
-      linear-gradient(180deg, #733b27 0, #733b27f5 var(--rast-brand-height), #733b2700 calc(var(--rast-brand-height) + 100px)),
-      linear-gradient(180deg, #2d180f00 calc(var(--rast-brand-height) + 65px), #2d180fe0 calc(var(--rast-brand-height) + 210px), #2d180ff2 100%);
-  }
+  .theme .heroGrid { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 12px; }
+  .heroPhoto { border-radius: 90px 90px 20px 20px; }
+  .heroPhoto > img { aspect-ratio: 1.5; }
 }

@@ -28,7 +28,7 @@ export function BrandPlanSummary({ cafe, plans }: { cafe: PlatformCafe; plans: P
   const validDate = cafe.planExpiresAt && Number.isFinite(Date.parse(cafe.planExpiresAt));
   return <div className={s.plan}>
     <strong>{name}</strong><span className={cafe.hasActivePlan ? s.planActive : s.planInactive}>{cafe.planId ? `اشتراك ${cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}` : "بدون اشتراك"}</span>
-    <span className={s.expiry}>{validDate ? <>ينتهي في <time dateTime={cafe.planExpiresAt}>{date.format(new Date(cafe.planExpiresAt!))}</time></> : cafe.planId ? "بدون تاريخ انتهاء محدد" : "لم يتم تفعيل باقة"}</span>
+    <span className={s.expiry}>{validDate ? <>ينتهي في <time dateTime={cafe.planExpiresAt ?? undefined}>{date.format(new Date(cafe.planExpiresAt!))}</time></> : cafe.planId ? "بدون تاريخ انتهاء محدد" : "لم يتم تفعيل باقة"}</span>
   </div>;
 }
 

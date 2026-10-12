@@ -23,7 +23,7 @@ function load(file,cache=new Map()){
  const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  new Function('require','exports',source)(name=>Object.hasOwn(stubs,name)?stubs[name]:name.startsWith('@/')?load(path.resolve(name.slice(2)+'.ts'),cache):dependency(name),exports);return exports;
 }
-const {savePlatformPlans}=load('lib/data/admin.ts');
+const {savePlatformPlans,updateCafePlan}=load('lib/data/admin.ts');
 const trial={id:'configured',name:'Configured trial',priceMonthly:0,offerEnabled:false,durationUnit:'day',durationCount:15,description:'',active:true,isDefault:true,features:['menu','offers','loyalty','pager','settings'],trialDays:7,categoryId:'cafes_coffee'};
 const paid={...trial,id:'paid',priceMonthly:100,isDefault:false,trialDays:0,durationCount:12,durationUnit:'month'};
 for(const fallback of [false,true]){
@@ -37,3 +37,6 @@ for(const fallback of [false,true]){
 for(const trialDays of [0,null,-1,366]){writes.length=0;await assert.rejects(()=>savePlatformPlans([{...trial,trialDays}]));assert.equal(writes.length,0,'invalid default rejected before any write');}
 writes.length=0;authorized=false;await assert.rejects(()=>savePlatformPlans([trial]),/Forbidden/);assert.equal(writes.length,0);
 console.log('PASS default trial save: authorization, configured duration, RPC/fallback consistency, paid billing and invalid-day rejection');
+authorized=true;rpcError=true;writes.length=0;
+await assert.rejects(()=>updateCafePlan('00000000-0000-4000-8000-000000000001','configured'));
+assert.equal(writes.length,1);assert.equal(writes[0].name,'admin_assign_plan_without_payment','failed RPC never falls back to a non-atomic unlimited grant');

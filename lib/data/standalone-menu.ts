@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { getKathMenuAssets } from "@/lib/data/kath-menu-assets";
 import { menuContacts } from "@/lib/menu/contacts";
 import { getStandaloneHighlights } from "@/lib/data/standalone-highlights";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
@@ -65,7 +66,9 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
   const signed = new Map<string, string>();
   // Only assets referenced by this published menu and isolated to its tenant are signed.
   if (paths.size) {
-    const { data, error } = await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
+    const { data, error } = slug === "kat-coffe"
+      ? { data: await getKathMenuAssets([...paths]), error: null }
+      : await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
     if (error) throw error;
     for (const item of data ?? []) if (item.path && item.signedUrl && !item.error) signed.set(item.path, item.signedUrl);
   }

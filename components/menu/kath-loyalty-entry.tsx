@@ -26,7 +26,7 @@ export function KathLoyaltyEntry({ menu }: { menu: StandaloneMenu }) {
       <span className={s.title}>{menu.loyaltyEnabled ? "بطاقتك معك في كل زيارة" : "الولاء والمكافآت"}</span>
       <span className={s.description}>{menu.loyaltyEnabled ? "حمّل بطاقة الولاء وخلي لحظاتك معنا أقرب" : "بطاقة الولاء غير متاحة حاليًا"}</span>
     </span>
-    <span className={s.action}>{menu.loyaltyEnabled ? <>حمّل بطاقتك<ArrowUpLeft aria-hidden="true" /></> : "غير مفعّلة حاليًا"}</span>
+    <span className={`${s.action} ${kath.loyaltyAction}`}>{menu.loyaltyEnabled ? <>حمّل بطاقتك<ArrowUpLeft aria-hidden="true" /></> : "غير مفعّلة حاليًا"}</span>
   </>;
   return <section className={`${s.section} ${kath.loyalty}`} aria-label="بطاقة ولاء مقهى كاث">
     {menu.loyaltyEnabled ? <Link href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} prefetch={false} className={s.entry}

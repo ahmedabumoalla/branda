@@ -36,4 +36,6 @@ for (const rows of [[active, expiredNewest], [expiredNewest, active]]) {
 }
 assert.equal(summarize([active, { ...active, status: "past_due", plan_id: "pending", created_at: "2026-10-09T00:00:00Z" }], now).planId, "current"); checks++;
 assert.equal(summarize([{ ...active, expires_at: "2026-10-09T22:30:00Z" }], now).planExpiresAt, "2026-10-10"); checks++;
+const missingExpiry=JSON.parse(JSON.stringify(summarize([{...active,expires_at:null}],now)));
+assert.equal({...{planExpiresAt:'2026-10-31'},...missingExpiry}.planExpiresAt,null,'serialized response clears previous plan expiry');checks++;
 console.log(`PASS admin subscription status: ${checks} actual expiry, trial, inactive plan, missing subscription, order, pending renewal and Saudi-date checks.`);

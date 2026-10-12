@@ -1,6 +1,13 @@
 ﻿import type { NextConfig } from "next";
 
+import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH } from "./lib/menu/kath-images";
+
 const nextConfig = {
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${KATH_IMAGE_PATH}**` }],
+    formats: ["image/webp"],
+    minimumCacheTTL: 60,
+  },
   async rewrites() {
     return {
       beforeFiles: [

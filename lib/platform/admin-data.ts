@@ -56,8 +56,8 @@ export type PlatformCafe = {
   maroofCertificate?: string;
   planId: string;
   planName?: string;
-  planExpiresAt?: string;
-  planStartedAt?: string;
+  planExpiresAt?: string | null;
+  planStartedAt?: string | null;
   planRemainingDays?: number | null;
   hasActivePlan?: boolean;
   subscriptionStatus?: string;
