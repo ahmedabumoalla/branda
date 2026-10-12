@@ -96,8 +96,54 @@ nodes(feedback.render()).find(n => n.type === 'textarea').props.onChange({ targe
 await form(feedback).props.onSubmit({ preventDefault() {} });
 check('feedback sends selected rating with notes then closes form', () => { assert.deepEqual(feedback.calls[0], ['feedback', 'a'.repeat(64), 4, 'خدمة جميلة']); assert.ok(!html(feedback).includes('<form')); assert.match(html(feedback), /شكرًا لرأيك/); });
 
-const noPip = consoleHarness(); await button(noPip, 'النافذة المصغرة').props.onClick(); await tick();
-check('unsupported browser gets truthful fallback instead of opening tab', () => assert.match(html(noPip), /المتصفح لا يدعم النافذة العائمة/));
+const noPip = consoleHarness();
+input(noPip, 'invoiceNumber').props.onChange({ target: { value: '0008-A' } });
+input(noPip, 'phone').props.onChange({ target: { value: '0500000001' } });
+await button(noPip, 'النافذة المصغرة').props.onClick(); await tick();
+check('browser without PiP opens an accessible compact dialog with working controls', () => {
+  assert.ok(nodes(noPip.render()).some(n => n.type === 'dialog' && n.props['aria-label']));
+  assert.ok(button(noPip, 'إرجاع للصفحة'));
+  assert.equal(input(noPip, 'invoiceNumber').props.value, '0008-A');
+  assert.equal(input(noPip, 'phone').props.value, '0500000001');
+  assert.ok(!html(noPip).includes('role="alert"'));
+});
+await form(noPip).props.onSubmit({ preventDefault() {} });
+check('mobile compact form uses the same authorized create and refresh actions', () => {
+  assert.equal(noPip.calls.find(c => c[0] === 'create')[1].invoiceNumber, '0008-A');
+  assert.ok(noPip.calls.some(c => c[0] === 'fetch'));
+});
+input(noPip, 'invoiceNumber').props.onChange({ target: { value: '0009-B' } });
+button(noPip, 'إرجاع للصفحة').props.onClick();
+check('restoring full page keeps the next unsaved draft', () => {
+  assert.ok(button(noPip, 'النافذة المصغرة'));
+  assert.equal(input(noPip, 'invoiceNumber').props.value, '0009-B');
+});
+await button(noPip, 'النافذة المصغرة').props.onClick();
+let cancelled = false;
+nodes(noPip.render()).find(n => n.type === 'dialog').props.onCancel({ preventDefault() { cancelled = true; } });
+check('native Escape dismisses compact mode without losing form state', () => { assert.ok(cancelled); assert.ok(button(noPip, 'النافذة المصغرة')); assert.equal(input(noPip, 'invoiceNumber').props.value, '0009-B'); });
+const rejectedPip = consoleHarness({}, {}, { './pager-pip': { pagerPictureInPicture: () => ({ requestWindow: async () => { throw Error('NotAllowedError'); } }) } });
+await button(rejectedPip, 'النافذة المصغرة').props.onClick(); await tick();
+check('denied desktop PiP falls back to usable compact controls', () => { assert.ok(nodes(rejectedPip.render()).some(n => n.type === 'dialog')); assert.ok(button(rejectedPip, 'إرجاع للصفحة')); });
+
+const { preparePagerDialog } = load('components/pager/pager-pip.ts');
+const viewportListeners = {}, viewportStyles = {};
+let focusCalls = 0;
+globalThis.document.body = { style: { overflow: 'auto' } };
+globalThis.window.visualViewport = { height: 768, offsetTop: 0, addEventListener(e, fn) { viewportListeners[e] = fn; }, removeEventListener(e) { delete viewportListeners[e]; } };
+const dialog = { open: false, style: { setProperty(k, v) { viewportStyles[k] = v; } }, showModal() { this.open = true; }, close() { this.open = false; }, querySelector: () => ({ focus() { focusCalls++; } }) };
+const cleanDialog = preparePagerDialog(dialog);
+check('native modal opens, focuses return control and locks background scrolling', () => { assert.ok(dialog.open); assert.equal(focusCalls, 1); assert.equal(document.body.style.overflow, 'hidden'); assert.equal(viewportStyles['--pager-viewport-height'], '768px'); });
+window.visualViewport.height = 290; window.visualViewport.offsetTop = 110; viewportListeners.resize();
+check('compact viewport follows mobile keyboard and panned visual viewport', () => { assert.equal(viewportStyles['--pager-viewport-height'], '290px'); assert.equal(viewportStyles['--pager-viewport-top'], '110px'); });
+window.visualViewport.height = 375; window.visualViewport.offsetTop = 0; viewportListeners.scroll();
+check('rotation restores panel bounds', () => { assert.equal(viewportStyles['--pager-viewport-height'], '375px'); assert.equal(viewportStyles['--pager-viewport-top'], '0px'); });
+cleanDialog();
+check('closing compact mode restores scroll and removes viewport listeners', () => { assert.equal(document.body.style.overflow, 'auto'); assert.equal(dialog.open, false); assert.equal(Object.keys(viewportListeners).length, 0); });
+delete window.visualViewport; window.innerHeight = 600;
+const cleanNoViewport = preparePagerDialog(dialog);
+check('browsers without VisualViewport use innerHeight', () => assert.equal(viewportStyles['--pager-viewport-height'], '600px'));
+cleanNoViewport();
 let opened = 0, closed = 0;
 const childListeners = {};
 const child = { closed: false, setTimeout, focus() {}, addEventListener(event, fn) { childListeners[event] = fn; }, removeEventListener(event) { delete childListeners[event]; }, close() { closed++; childListeners.pagehide?.(); } };

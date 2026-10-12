@@ -1,5 +1,17 @@
 # Pager backend operational notes
 
+## Compact console across devices
+
+The compact button uses Document Picture-in-Picture when the browser exposes it
+If the API is unavailable or its window request is rejected, the same console opens in a native modal dialog inside the current page
+This supports current iPad, tablet and phone browsers without requiring a popup permission or a second login
+The dialog follows the visual viewport during keyboard display and rotation, preserves the current invoice/phone/search state and restores focus on return
+It has a single scroll area, safe-area spacing, touch-sized controls, native focus containment and Escape dismissal
+The in-page mode cannot float above another application; external always-on-top windows remain limited by browser and operating-system support
+The same authorized actions, polling and server notification worker remain in use
+
+## Notification timing
+
 The initial ready notification becomes due immediately and a minute scheduler drains the queue
 Without an immediate server worker kick it starts at the next scheduler tick plus processing time
 This is a nominal minute service rather than an exact real-time timer

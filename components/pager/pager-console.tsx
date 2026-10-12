@@ -8,7 +8,7 @@ import { createPagerOrderAction, fetchPagerPageAction, updatePagerOrderAction } 
 import { logoutCashierAction } from "@/app/actions/cashier";
 import type { PagerContext, PagerPage } from "@/lib/pager/types";
 import { PagerOrderCard } from "./pager-order-card";
-import { pagerPictureInPicture, preparePagerWindow } from "./pager-pip";
+import { pagerPictureInPicture, preparePagerDialog, preparePagerWindow } from "./pager-pip";
 import styles from "./pager.module.css";
 
 export function PagerConsole({ context, initialPage, mode = "staff" }: { context: PagerContext; initialPage: PagerPage; mode?: "owner" | "staff" }) {
@@ -26,6 +26,10 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   const [pipNode, setPipNode] = useState<HTMLElement | null>(null);
   const [pipSupported, setPipSupported] = useState(false);
   const [pipOpening, setPipOpening] = useState(false);
+  const [inlineCompact, setInlineCompact] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const compactButtonRef = useRef<HTMLButtonElement>(null);
+  const opening = useRef(false);
   const invoiceRef = useRef<HTMLInputElement>(null);
   const pipWindow = useRef<Window | null>(null);
   const pipCleanup = useRef<(() => void) | null>(null);
@@ -39,6 +43,15 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     setPipSupported(Boolean(pagerPictureInPicture()));
     return () => { mounted.current = false; requestSequence.current++; pipCleanup.current?.(); pipWindow.current?.close(); };
   }, []);
+
+  useEffect(() => {
+    if (!inlineCompact || !dialogRef.current) return;
+    const cleanup = preparePagerDialog(dialogRef.current);
+    return () => {
+      cleanup();
+      window.setTimeout(() => compactButtonRef.current?.focus({ preventScroll: true }), 0);
+    };
+  }, [inlineCompact]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { setSearch(query); setPage(0); }, 300);
@@ -105,8 +118,10 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
 
   async function openCompact() {
     const api = pagerPictureInPicture();
-    if (!api) { setError("المتصفح لا يدعم النافذة العائمة استخدم متصفح كروم أو إيدج على الكمبيوتر أو واصل العمل من هذه الصفحة"); return; }
+    if (!api) { setInlineCompact(true); return; }
     if (pipWindow.current && !pipWindow.current.closed) { pipWindow.current.focus(); return; }
+    if (opening.current) return;
+    opening.current = true;
     setPipOpening(true);
     try {
       const child = await api.requestWindow({ width: 440, height: 690 });
@@ -119,22 +134,27 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
       pipCleanup.current = () => { child.removeEventListener("pagehide", close); child.removeEventListener("keydown", escape); };
       setPipNode(preparePagerWindow(child));
       child.setTimeout(() => invoiceRef.current?.focus(), 100);
-    } catch { pipWindow.current?.close(); setError("تعذر فتح النافذة المصغرة اسمح بها من المتصفح ثم حاول مجددًا"); }
-    finally { setPipOpening(false); }
+    } catch {
+      pipWindow.current?.close();
+      if (mounted.current) setInlineCompact(true);
+    }
+    finally { opening.current = false; if (mounted.current) setPipOpening(false); }
   }
 
-  const content = <section data-pager-console dir="rtl" className={`${styles.root} ${pipNode ? styles.compact : mode === "staff" ? styles.standalone : ""}`}>
+  const compact = Boolean(pipNode) || inlineCompact;
+  const closeCompact = () => { if (pipNode) pipWindow.current?.close(); else setInlineCompact(false); };
+  const content = <section data-pager-console dir="rtl" className={`${styles.root} ${compact ? styles.compact : mode === "staff" ? styles.standalone : ""}`}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>{context.cafeName}</p><h1 className={styles.title}>نداء برندة</h1><p className={styles.muted}>{context.actorName}{context.station ? ` — ${context.station}` : ""}</p></div>
       <div className={styles.tools}>
-        {pipNode ? <button type="button" className={styles.secondary} onClick={() => pipWindow.current?.close()}><Maximize2 size={17} aria-hidden="true" />إرجاع للصفحة</button>
-          : <button type="button" className={styles.button} onClick={() => void openCompact()} disabled={pipOpening}><PictureInPicture2 size={18} aria-hidden="true" />{pipOpening ? "جار الفتح" : "النافذة المصغرة"}</button>}
-        {!pipNode && mode === "owner" && <Link className={styles.secondary} href="/dashboard/cashier"><Users size={17} aria-hidden="true" />الفريق والصلاحيات</Link>}
-        {!pipNode && mode === "staff" && context.canUseLoyalty && <Link className={styles.secondary} href="/cashier">قارئ الولاء</Link>}
-        {!pipNode && mode === "staff" && <form action={logoutCashierAction}><button className={styles.secondary} type="submit">تسجيل الخروج</button></form>}
+        {compact ? <button type="button" className={styles.secondary} onClick={closeCompact}><Maximize2 size={17} aria-hidden="true" />إرجاع للصفحة</button>
+          : <button ref={compactButtonRef} type="button" className={styles.button} onClick={() => void openCompact()} disabled={pipOpening}><PictureInPicture2 size={18} aria-hidden="true" />{pipOpening ? "جار الفتح" : "النافذة المصغرة"}</button>}
+        {!compact && mode === "owner" && <Link className={styles.secondary} href="/dashboard/cashier"><Users size={17} aria-hidden="true" />الفريق والصلاحيات</Link>}
+        {!compact && mode === "staff" && context.canUseLoyalty && <Link className={styles.secondary} href="/cashier">قارئ الولاء</Link>}
+        {!compact && mode === "staff" && <form action={logoutCashierAction}><button className={styles.secondary} type="submit">تسجيل الخروج</button></form>}
       </div>
     </header>
-    {!pipNode && <div className={styles.notice}>{pipSupported ? "افتح النافذة المصغرة لتبقى فوق تطبيق الكاشير واترك صفحة المتصفح مفتوحة" : "التشغيل متاح من هذه الصفحة والنافذة العائمة تحتاج متصفحًا يدعمها على الكمبيوتر"}</div>}
+    {!pipNode && <div className={styles.notice}>{inlineCompact ? "النافذة المصغرة تعمل داخل هذه الصفحة ويمكنك إرجاعها بالحجم الكامل في أي وقت" : pipSupported ? "افتح النافذة المصغرة واترك الصفحة مفتوحة لتواصل متابعة الطلبات" : "النافذة المصغرة متاحة داخل الصفحة على الجوال والآيباد والتابلت ولا تظهر فوق التطبيقات الأخرى"}</div>}
     <div className={styles.metrics}>
       <div className={styles.metric}><span>قيد التجهيز</span><strong>{data.metrics.waiting}</strong></div>
       <div className={styles.metric}><span>بانتظار الاستلام</span><strong>{data.metrics.ready}</strong></div>
@@ -170,5 +190,6 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
     </div>
   </section>;
 
+  if (inlineCompact) return <dialog ref={dialogRef} className={styles.compactDialog} dir="rtl" aria-label="نداء برندة في نافذة مصغرة" onCancel={(event) => { event.preventDefault(); setInlineCompact(false); }} onClose={() => setInlineCompact(false)}>{content}</dialog>;
   return pipNode ? <><section className={`${styles.root} ${styles.standalone}`} dir="rtl"><div className={styles.empty}><BellRing size={36} aria-hidden="true" /><h1 className={styles.title}>النداء يعمل في النافذة المصغرة</h1><p className={styles.muted}>اترك هذه الصفحة مفتوحة أثناء العمل في تطبيق الكاشير</p><button type="button" className={styles.button} onClick={() => pipWindow.current?.close()}>إرجاع لوحة النداء هنا</button></div></section>{createPortal(content, pipNode)}</> : content;
 }

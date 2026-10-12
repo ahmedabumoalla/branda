@@ -6,6 +6,31 @@ export function pagerPictureInPicture(): PagerPictureInPicture | null {
   return api && typeof api.requestWindow === "function" ? api : null;
 }
 
+/** Native modal focus handling with bounds that follow the mobile keyboard and rotation. */
+export function preparePagerDialog(dialog: HTMLDialogElement) {
+  const viewport = window.visualViewport;
+  const previousOverflow = document.body.style.overflow;
+  const resize = () => {
+    dialog.style.setProperty("--pager-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+    dialog.style.setProperty("--pager-viewport-top", `${viewport?.offsetTop ?? 0}px`);
+  };
+  resize();
+  dialog.showModal();
+  document.body.style.overflow = "hidden";
+  // Keep the keyboard closed until the operator chooses an input.
+  dialog.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  viewport?.addEventListener("resize", resize);
+  viewport?.addEventListener("scroll", resize);
+  window.addEventListener("resize", resize);
+  return () => {
+    viewport?.removeEventListener("resize", resize);
+    viewport?.removeEventListener("scroll", resize);
+    window.removeEventListener("resize", resize);
+    document.body.style.overflow = previousOverflow;
+    if (dialog.open) dialog.close();
+  };
+}
+
 /** Copy styles rather than moving nodes so the main application retains its styles */
 export function preparePagerWindow(target: Window) {
   const doc = target.document;

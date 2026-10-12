@@ -88,6 +88,23 @@
 .compact .invoice { font-size: 25px; }
 .compact .toolbar { gap: 8px; }
 .compact .search { max-width: none; }
+.compactDialog {
+  --pager-viewport-height: 100dvh;
+  --pager-viewport-top: 0px;
+  --pager-top-gap: max(12px, env(safe-area-inset-top));
+  --pager-bottom-gap: max(12px, env(safe-area-inset-bottom));
+  position: fixed; inset: auto 0; top: calc(var(--pager-viewport-top) + var(--pager-top-gap));
+  width: min(440px, calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-width: none; height: min(740px, calc(var(--pager-viewport-height) - var(--pager-top-gap) - var(--pager-bottom-gap)));
+  max-height: none; margin: 0 auto; padding: 0; border: 0; border-radius: 20px;
+  font: inherit; overflow: auto; overscroll-behavior: contain; box-shadow: 0 20px 70px #14251c40;
+}
+.compactDialog::backdrop { background: #14251c80; }
+.compactDialog .compact { min-height: 100%; }
+.compactDialog .input { font-size: 16px; }
+.compact .header > div, .compact .toolbar > * { min-width: 0; }
+.compact .toolbar .search { flex-basis: 160px; }
+@media (max-width: 380px) { .compact .entry form { grid-template-columns: minmax(0, 1fr); } .compact .cardActions { flex-wrap: wrap; } }
 .feedback { max-width: 540px; margin: 8vh auto; padding: 34px; }
 .feedbackHead { text-align: center; margin-bottom: 30px; }
 .feedbackHead > svg { margin: 0 auto 20px; color: var(--pg-gold); }
