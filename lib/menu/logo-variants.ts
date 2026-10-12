@@ -11,7 +11,7 @@ export function standaloneLogoVariant(cafeId: string, source: string | null | un
     return "/menu-logos/meknes-transparent-v1.webp";
   }
   if (cafeId === "83b37bcd-353a-43e2-aa1a-735ba21d65ed" && sourceHash === "eb956eed75ca3171143ce1f8fc41001388f755b43f3c585593d913e21780e45c") {
-    return "/menu-logos/shahi-transparent-v1.webp";
+    return "/menu-logos/shahi-transparent-v2.webp";
   }
   return null;
 }

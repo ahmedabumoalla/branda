@@ -16,11 +16,13 @@ import spotlight from "./rast-spotlight.module.css";
 import kath from "./kath-menu.module.css";
 import { KathLoyaltyEntry } from "./kath-loyalty-entry";
 import { kathResponsiveImage } from "@/lib/menu/kath-images";
+import { editorialBrand } from "@/lib/menu/editorial-brand";
+import shahi from "./shahi-menu.module.css";
 
 const KathImages = createContext(false);
 
 function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {
-  const brandName = menu.slug === "kat-coffe" ? "مقهى كاث" : "مقهى الكواكب";
+  const brandName = menu.slug === "rast" ? "مقهى الكواكب" : editorialBrand(menu.slug).name;
   const [selectedId, setSelectedId] = useState("");
   const [now, setNow] = useState(menu.highlights?.asOf ?? 0);
   const hasExpiry = menu.highlights?.items.some((item) => item.expiresAt != null);
@@ -60,7 +62,7 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
       </div>
       <div className={spotlight.media}>
         {active.imageUrl ? <FoodImage key={active.imageUrl} src={active.imageUrl} alt={menuDisplayText(active.title)} />
-          : <span className={spotlight.typographicArt} aria-hidden="true">{menu.slug === "kat-coffe" ? "KATH" : "KAWAKIB"}<span>على ذوقك</span></span>}
+          : <span className={spotlight.typographicArt} aria-hidden="true">{menu.slug === "rast" ? "KAWAKIB" : editorialBrand(menu.slug).wordmark}<span>على ذوقك</span></span>}
         <span className={spotlight.photoCaption} aria-hidden="true" dir="ltr">A MOMENT WORTH CHOOSING</span>
       </div>
     </article>
@@ -185,35 +187,37 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
 }
 
 function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
-  const isKath = menu.slug === "kat-coffe";
-  const brandName = isKath ? "مقهى كاث" : "مقهى الكواكب";
-  return <section className={`${s.rastHero}${isKath ? ` ${kath.hero}` : ""}`} aria-label={`مرحبًا في ${brandName}`}>
+  const isCustomEditorial = menu.slug !== "rast";
+  const isShahi = menu.slug === "shahi-w-hail";
+  const brand = editorialBrand(menu.slug);
+  const brandName = isCustomEditorial ? brand.name : "مقهى الكواكب";
+  return <section className={`${s.rastHero}${isCustomEditorial ? ` ${kath.hero}` : ""}${isShahi ? ` ${shahi.hero}` : ""}`} aria-label={`مرحبًا في ${brandName}`}>
     {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
-    <div className={`${s.rastHeroBackdrop}${isKath ? ` ${kath.heroBackdrop}` : ""}`} aria-hidden="true">
-      <FoodImage src={isKath ? "/menu-art/kath-coffee-editorial-v1.webp" : "/menu-art/rast-coffee-editorial-v1.webp"} alt="" priority />
+    <div className={`${s.rastHeroBackdrop}${isCustomEditorial ? ` ${kath.heroBackdrop}` : ""}`} aria-hidden="true">
+      <FoodImage src={isCustomEditorial ? brand.hero : "/menu-art/rast-coffee-editorial-v1.webp"} alt="" priority />
     </div>
     <header className={s.rastHeader}>
       <div className={s.heroActions}>
         <MenuServices menu={menu} compact />
         <button type="button" className={s.heroIcon} onClick={onSearch} aria-label="البحث في المنيو"><Search aria-hidden="true" /></button>
       </div>
-      <p className={s.rastHeaderNote}>قهوة تفاصيل لحظات</p>
+      <p className={s.rastHeaderNote}>{isShahi ? brand.note : "قهوة تفاصيل لحظات"}</p>
       <button type="button" className={s.heroIcon} onClick={onShare} aria-label="مشاركة رابط المنيو"><Share2 aria-hidden="true" /></button>
     </header>
     <div className={s.rastMasthead}>
-      <FoodImage src={menu.logoUrl || (isKath ? "/menu-logos/kath-transparent-v1.webp" : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={`${s.rastWordmark}${isKath ? ` ${kath.wordmark}` : ""}`} priority />
-      <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">COFFEE &amp; GOOD MOMENTS</span></div>
+      <FoodImage src={menu.logoUrl || (isCustomEditorial ? brand.logo : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={`${s.rastWordmark}${isCustomEditorial ? ` ${kath.wordmark}` : ""}${isShahi ? ` ${shahi.wordmark}` : ""}`} priority />
+      <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">{isShahi ? brand.caption : "COFFEE & GOOD MOMENTS"}</span></div>
     </div>
     <div className={s.rastHeroGrid}>
       <div className={s.rastHeroCopy}>
         <p className={s.rastEyebrow}>أهلًا بك في {brandName}</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
-        <p className={s.rastHeroDescription}>قهوة تحبّها حلا يكمّلها ولحظة تستاهل تعيشها على مهلك</p>
+        <p className={s.rastHeroDescription}>{isShahi ? brand.description : "قهوة تحبّها حلا يكمّلها ولحظة تستاهل تعيشها على مهلك"}</p>
         <a href="#rast-menu-items" className={s.rastExplore}>اكتشف قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
         <p className={s.rastHeroFootnote}><span aria-hidden="true" />لكل وقت اختيار يليق به</p>
       </div>
     </div>
-    <div className={`${s.rastRibbon}${isKath ? ` ${kath.ribbon}` : ""}`} aria-hidden="true"><span>{brandName} على ذوقك</span><span>قهوة ومزاج</span><span dir="ltr">{isKath ? "KATH COFFEE & MORE" : "SLOW DOWN SIP ENJOY"}</span></div>
+    <div className={`${s.rastRibbon}${isCustomEditorial ? ` ${kath.ribbon}` : ""}${isShahi ? ` ${shahi.ribbon}` : ""}`} aria-hidden="true"><span>{brandName} على ذوقك</span><span>{isShahi ? brand.mood : "قهوة ومزاج"}</span><span dir="ltr">{isShahi ? brand.wordmark : isCustomEditorial ? "KATH COFFEE & MORE" : "SLOW DOWN SIP ENJOY"}</span></div>
   </section>;
 }
 
@@ -230,7 +234,9 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   const isDoubleB = menu.slug === "double-b-bistro";
   const isRast = menu.slug === "rast";
   const isKath = menu.slug === "kat-coffe";
-  const isEditorial = isRast || isKath;
+  const isShahi = menu.slug === "shahi-w-hail";
+  const isCustomEditorial = isKath || isShahi;
+  const isEditorial = isRast || isCustomEditorial;
   const displayName = isDoubleB ? "دبل بي" : menuDisplayText(menu.name);
   const heroImage = isDoubleB ? "/menu-art/double-b-hero.webp" : menu.products.find((product) => product.images.length)?.images[0]?.url;
   const [query, setQuery] = useState("");
@@ -275,8 +281,8 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     shareTimer.current = setTimeout(() => setShareMessage(""), 4000);
   }
 
-  return <KathImages.Provider value={isKath}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isKath ? ` ${kath.theme}` : ""}`} dir="rtl"
-    style={menu.slug === "kat-coffe" ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
+  return <KathImages.Provider value={isCustomEditorial}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isCustomEditorial ? ` ${kath.theme}` : ""}${isShahi ? ` ${shahi.theme}` : ""}`} dir="rtl"
+    style={isCustomEditorial ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
     <a href={isEditorial ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
     {isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
       {/* Decorative artwork from the supplied design reference, not a catalogue product photo */}
@@ -295,14 +301,14 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       <p className={s.heroAside} dir="ltr">SIMPLE<br />INGREDIENTS<br />EXTRAORDINARY<br />FLAVORS</p>
     </section>}
     {isRast && <RastConnect />}
-    {isKath && <RastConnect previewBrand="مقهى كاث" />}
+    {isCustomEditorial && <RastConnect previewBrand={editorialBrand(menu.slug).name} />}
     {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry />}
-    {isKath && <KathLoyaltyEntry menu={menu} />}
+    {isCustomEditorial && <KathLoyaltyEntry menu={menu} />}
     <div className={s.catalog} id="menu-catalog">
       {isEditorial && <RastSpotlight menu={menu} onSelect={setSelected} />}
       {isEditorial && <div className={s.rastCatalogHeading} id="rast-menu-items">
-        <div><p className={s.rastEyebrow}>قائمة {isKath ? "مقهى كاث" : "مقهى الكواكب"}</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
-        <p>من أول قهوة لآخر لقمة<br />اختَر لحظتك المفضّلة</p>
+        <div><p className={s.rastEyebrow}>قائمة {isCustomEditorial ? editorialBrand(menu.slug).name : "مقهى الكواكب"}</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
+        <p>{isShahi ? "من أول رشفة لآخر لقمة" : "من أول قهوة لآخر لقمة"}<br />اختَر لحظتك المفضّلة</p>
       </div>}
       <div className={s.toolbar}>
         <LayoutGroup id={`menu-categories-${menu.slug}`}><nav className={s.categories} aria-label="أقسام المنيو">
@@ -312,15 +318,15 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
             <span className={s.categoryLabel}>{menuDisplayText(item.name)} <small>{item.id === "all" ? menu.products.length : menu.products.filter((product) => (product.categoryId || "uncategorized") === item.id).length}</small></span>
           </button>)}
         </nav></LayoutGroup>
-        <div className={`${s.tools}${isKath ? ` ${kath.compactTools}` : ""}`}>
-          <label className={`${s.search}${isKath ? ` ${kath.compactSearch}` : ""}`}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isKath ? "ابحث عن صنف" : "ما الذي تشتهيه اليوم؟"} aria-label="ابحث في الأصناف والمكونات" /></label>
-          <button className={`${s.filterToggle}${isKath ? ` ${kath.compactFilter}` : ""}`} type="button" aria-label={isKath ? availableOnly || priceOrder !== "original" ? "تصفية الأصناف مفعلة" : "تصفية الأصناف" : undefined} aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
-          {isKath && <div className={`${s.viewSwitch} ${kath.compactViews}`} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" title="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
+        <div className={`${s.tools}${isCustomEditorial ? ` ${kath.compactTools}` : ""}`}>
+          <label className={`${s.search}${isCustomEditorial ? ` ${kath.compactSearch}` : ""}`}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isCustomEditorial ? "ابحث عن صنف" : "ما الذي تشتهيه اليوم؟"} aria-label="ابحث في الأصناف والمكونات" /></label>
+          <button className={`${s.filterToggle}${isCustomEditorial ? ` ${kath.compactFilter}` : ""}`} type="button" aria-label={isCustomEditorial ? availableOnly || priceOrder !== "original" ? "تصفية الأصناف مفعلة" : "تصفية الأصناف" : undefined} aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
+          {isCustomEditorial && <div className={`${s.viewSwitch} ${kath.compactViews}`} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" title="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
         </div>
         {filterOpen && <div id="menu-filters" className={s.filterPanel}>
           <label><input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} />المتوفر حاليًا فقط</label>
           <label>ترتيب الأصناف<select value={priceOrder} onChange={(event) => setPriceOrder(event.target.value as typeof priceOrder)}><option value="original">ترتيب المنيو</option><option value="asc">الأقل سعرًا داخل القسم</option><option value="desc">الأعلى سعرًا داخل القسم</option></select></label>
-          {!isKath && <div className={s.viewSwitch} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الصور" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
+          {!isCustomEditorial && <div className={s.viewSwitch} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الصور" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
           <button className={s.resetFilters} type="button" onClick={() => { setAvailableOnly(false); setPriceOrder("original"); setQuery(""); setCategory("all"); }}>إعادة ضبط التصفية</button>
         </div>}
       </div>
@@ -353,10 +359,10 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       {!visible.length && <div className={s.empty}><Utensils aria-hidden="true" /><h3>{menu.products.length ? "لم نجد ما تبحث عنه" : "قائمتنا قيد التحضير"}</h3><p>{menu.products.length ? "جرّب اسمًا آخر أو تصفّح جميع الأصناف" : "عد قريبًا لاكتشاف أصنافنا"}</p>{menu.products.length > 0 && <button onClick={() => { setQuery(""); setCategory("all"); setAvailableOnly(false); setPriceOrder("original"); }}>عرض كل المنيو</button>}</div>}
     </div>
     <footer className={s.footer}>
-      {isEditorial ? <section className={`${s.rastClosing}${isKath ? ` ${kath.closing}` : ""}`} aria-label={menu.name}>
+      {isEditorial ? <section className={`${s.rastClosing}${isCustomEditorial ? ` ${kath.closing}` : ""}`} aria-label={menu.name}>
         <p className={s.rastEyebrow}>كل مرة لحظة حلوة</p><h2>نفس المكان<br /><span>مزاج يتجدّد</span></h2>
         <a href="#menu-catalog" className={s.rastClosingLink}>نرجع لشي تشتهيه<ArrowUpLeft aria-hidden="true" /></a>
-        <FoodImage src={menu.logoUrl || (isKath ? "/menu-logos/kath-transparent-v1.webp" : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={s.rastClosingLogo} />
+        <FoodImage src={menu.logoUrl || (isCustomEditorial ? editorialBrand(menu.slug).logo : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={s.rastClosingLogo} />
       </section> : <section className={s.brandSignature} aria-label={menu.name}>{menu.logoUrl ? <FoodImage src={menu.logoUrl} alt={menu.name} className={s.footerLogo} /> : <span className={s.footerName}>{displayName}</span>}<p>لحظتك أحلى مع {displayName}</p><a href="#menu-catalog" className={s.signatureReturn}>نرجع لشي تشتهيه <span aria-hidden="true">↑</span></a></section>}
       <div><span>المنيو الرقمي</span><a className={s.platformCredit} href="https://barndaksa.com" aria-label="بواسطة برندة — اكتشف المنصة">
         <span>بواسطة</span>

@@ -60,6 +60,15 @@ html=render({...kath,logoUrl:'/own-replacement-logo.png',products:[{...product,n
 assert(html.includes('/own-replacement-logo.png')&&!html.includes('kath-transparent-v1.webp'));
 assert(html.includes('Updated dashboard product')&&html.includes('33')&&!html.includes('قهوة كاث'));
 html=render({...kath,products:[]});assert(html.includes('قائمتنا قيد التحضير')&&!html.includes('rast-spotlight-title'));
+const shahi={...kath,slug:'shahi-w-hail',name:'شاهي وهيل',logoUrl:'/menu-logos/shahi-transparent-v2.webp',loyaltyEnabled:true,products:[{...product,name:'شاي احمر',images:[{url:'https://images.test/shahi-tea.webp',alt:'شاي احمر'}]}]};
+html=render(shahi);
+assert(html.includes('shahi-tea-editorial-v1.webp')&&html.includes('TEA &amp; HEEL')&&html.includes('قائمة شاهي وهيل'));
+assert(html.includes('/loyalty/shahi-w-hail?source=menu')&&html.includes('بطاقة ولاء شاهي وهيل')&&html.includes('compactTools'));
+assert(!/KAWAKIB|الكواكب|مقهى كاث|KATH|kath-coffee|rast-coffee|966532751005/.test(html));
+for(const name of ['سناب شات','تيك توك','إنستقرام','واتساب'])assert(html.includes(name));
+html=render({...shahi,loyaltyEnabled:false});assert(!html.includes('/loyalty/')&&html.includes('بطاقة الولاء غير متاحة حاليًا'));
+html=render({...shahi,logoUrl:'/owner-new-logo.png',products:[{...product,name:'Own tea update',price:17}]});
+assert(html.includes('/owner-new-logo.png')&&html.includes('Own tea update')&&html.includes('17'));
 if(process.env.KATH_LIVE_FIXTURE) {
   const live=JSON.parse(fs.readFileSync(process.env.KATH_LIVE_FIXTURE,'utf8'));
   assert.equal(live.slug,'kat-coffe');html=render(live);

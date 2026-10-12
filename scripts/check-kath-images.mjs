@@ -5,6 +5,7 @@ const compile=file=>ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOpt
 const images={};new Function('exports',compile('lib/menu/kath-images.ts'))(images);
 const url=images.KATH_IMAGE_ORIGIN+images.KATH_IMAGE_PATH+'product/photo.png?token=public-signature';
 const responsive=images.kathResponsiveImage(url,'50vw');assert(responsive);assert.equal(responsive.sizes,'50vw');
+assert(images.kathResponsiveImage(images.KATH_IMAGE_ORIGIN+images.SHAHI_IMAGE_PATH+'product/photo.png?token=public-signature','50vw'));
 assert.equal(new URL(responsive.src,'https://barndaksa.com').searchParams.get('url'),url);
 assert.equal(responsive.srcSet.split(', ').length,6);
 for(const bad of ['data:image/png,abc','https://evil.example/photo.png',url.replace('menu-products','customer-avatars'),url.replace('fbd92cd0-c4b6-41b5-81dd-1d45a01d01e8','other-tenant'),url.split('?')[0]])assert.equal(images.kathResponsiveImage(bad,'50vw'),null);

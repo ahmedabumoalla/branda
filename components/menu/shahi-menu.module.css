@@ -1,0 +1,31 @@
+/* Shahi w Hail's current charcoal, green and ivory identity */
+.theme.theme.theme {
+  --kath-brown: #232421;
+  --kath-espresso: #172015;
+  --kath-gold: #289302;
+  --kath-ivory: #fcf8f3;
+  --rast-red: #258205;
+  --rast-wine: #232421;
+  --rast-cream: #fcf8f3;
+  --rast-blush: #e7ecdf;
+  --rast-muted: #58634f;
+  --rast-border: #d4dbcc;
+  --card-paper: #fffdf8;
+}
+.theme.theme .hero::before {
+  background:
+    linear-gradient(180deg, #fcf8f3 0, #fcf8f3f5 calc(var(--rast-brand-height) - 24px), #fcf8f300 calc(var(--rast-brand-height) + 80px)),
+    linear-gradient(90deg, #151b13ed 0%, #151b13d9 38%, #151b1314 72%),
+    linear-gradient(0deg, #151b13e6 0%, #151b1300 52%);
+}
+.theme.theme .wordmark { filter: brightness(0) saturate(100%) invert(11%); width: min(100%, 680px); }
+.theme.theme .ribbon { color: #fcf8f3; background: #258205; }
+.theme.theme .loyaltyAction { background: #258205; color: #fcf8f3; border-color: #258205; }
+.theme.theme a:hover .loyaltyAction, .theme.theme a:focus-visible .loyaltyAction { background: #fcf8f3; color: #232421; border-color: #fcf8f3; }
+@media (max-width: 640px) {
+  .theme.theme .hero::before {
+    background:
+      linear-gradient(180deg, #fcf8f3 0, #fcf8f3f5 calc(var(--rast-brand-height) - 24px), #fcf8f300 calc(var(--rast-brand-height) + 52px)),
+      linear-gradient(180deg, #151b1300 calc(var(--rast-brand-height) + 82px), #151b13d9 calc(var(--rast-brand-height) + 252px), #151b13f5 100%);
+  }
+}
