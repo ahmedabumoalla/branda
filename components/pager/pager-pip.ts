@@ -1,5 +1,10 @@
 export type PagerPictureInPicture = { requestWindow: (options: { width: number; height: number }) => Promise<Window> };
 
+// Presentation only: the user agent never grants access to any data or operation.
+export function isPagerCompanion() {
+  return typeof navigator !== "undefined" && String(navigator.userAgent ?? "").includes("BrandaPagerNative/1.0");
+}
+
 export function pagerPictureInPicture(): PagerPictureInPicture | null {
   if (typeof window === "undefined") return null;
   const api = (window as Window & { documentPictureInPicture?: PagerPictureInPicture }).documentPictureInPicture;

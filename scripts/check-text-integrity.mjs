@@ -11,6 +11,12 @@ const checkedExtensions = new Set([
   ".md",
   ".sql",
   ".json",
+  ".java",
+  ".swift",
+  ".xml",
+  ".plist",
+  ".gradle",
+  ".yml",
 ]);
 
 const ignoredDirectories = new Set([

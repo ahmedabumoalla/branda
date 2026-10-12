@@ -99,13 +99,18 @@ check('feedback sends selected rating with notes then closes form', () => { asse
 const noPip = consoleHarness();
 input(noPip, 'invoiceNumber').props.onChange({ target: { value: '0008-A' } });
 input(noPip, 'phone').props.onChange({ target: { value: '0500000001' } });
-await button(noPip, 'النافذة المصغرة').props.onClick(); await tick();
+await button(noPip, 'نافذة فوق التطبيقات').props.onClick(); await tick();
+check('unsupported external window never silently opens an in-page dialog', () => {
+  assert.ok(!nodes(noPip.render()).some(n => n.type === 'dialog'));
+  assert.match(html(noPip), /تحتاج تطبيق نداء برندة/);
+  assert.ok(html(noPip).includes('/pager/download'));
+});
+button(noPip, 'عرض مصغر داخل الصفحة').props.onClick();
 check('browser without PiP opens an accessible compact dialog with working controls', () => {
   assert.ok(nodes(noPip.render()).some(n => n.type === 'dialog' && n.props['aria-label']));
   assert.ok(button(noPip, 'إرجاع للصفحة'));
   assert.equal(input(noPip, 'invoiceNumber').props.value, '0008-A');
   assert.equal(input(noPip, 'phone').props.value, '0500000001');
-  assert.ok(!html(noPip).includes('role="alert"'));
 });
 await form(noPip).props.onSubmit({ preventDefault() {} });
 check('mobile compact form uses the same authorized create and refresh actions', () => {
@@ -115,16 +120,16 @@ check('mobile compact form uses the same authorized create and refresh actions',
 input(noPip, 'invoiceNumber').props.onChange({ target: { value: '0009-B' } });
 button(noPip, 'إرجاع للصفحة').props.onClick();
 check('restoring full page keeps the next unsaved draft', () => {
-  assert.ok(button(noPip, 'النافذة المصغرة'));
+  assert.ok(button(noPip, 'نافذة فوق التطبيقات'));
   assert.equal(input(noPip, 'invoiceNumber').props.value, '0009-B');
 });
-await button(noPip, 'النافذة المصغرة').props.onClick();
+button(noPip, 'عرض مصغر داخل الصفحة').props.onClick();
 let cancelled = false;
 nodes(noPip.render()).find(n => n.type === 'dialog').props.onCancel({ preventDefault() { cancelled = true; } });
-check('native Escape dismisses compact mode without losing form state', () => { assert.ok(cancelled); assert.ok(button(noPip, 'النافذة المصغرة')); assert.equal(input(noPip, 'invoiceNumber').props.value, '0009-B'); });
-const rejectedPip = consoleHarness({}, {}, { './pager-pip': { pagerPictureInPicture: () => ({ requestWindow: async () => { throw Error('NotAllowedError'); } }) } });
-await button(rejectedPip, 'النافذة المصغرة').props.onClick(); await tick();
-check('denied desktop PiP falls back to usable compact controls', () => { assert.ok(nodes(rejectedPip.render()).some(n => n.type === 'dialog')); assert.ok(button(rejectedPip, 'إرجاع للصفحة')); });
+check('native Escape dismisses compact mode without losing form state', () => { assert.ok(cancelled); assert.ok(button(noPip, 'نافذة فوق التطبيقات')); assert.equal(input(noPip, 'invoiceNumber').props.value, '0009-B'); });
+const rejectedPip = consoleHarness({}, {}, { './pager-pip': { isPagerCompanion: () => false, pagerPictureInPicture: () => ({ requestWindow: async () => { throw Error('NotAllowedError'); } }) } });
+await button(rejectedPip, 'نافذة فوق التطبيقات').props.onClick(); await tick();
+check('denied desktop PiP reports failure without pretending a modal is external', () => { assert.ok(!nodes(rejectedPip.render()).some(n => n.type === 'dialog')); assert.match(html(rejectedPip), /تعذر فتح النافذة الخارجية/); assert.ok(button(rejectedPip, 'عرض مصغر داخل الصفحة')); });
 
 const { preparePagerDialog } = load('components/pager/pager-pip.ts');
 const viewportListeners = {}, viewportStyles = {};
@@ -147,15 +152,24 @@ cleanNoViewport();
 let opened = 0, closed = 0;
 const childListeners = {};
 const child = { closed: false, setTimeout, focus() {}, addEventListener(event, fn) { childListeners[event] = fn; }, removeEventListener(event) { delete childListeners[event]; }, close() { closed++; childListeners.pagehide?.(); } };
-const pip = consoleHarness({}, {}, { './pager-pip': { pagerPictureInPicture: () => ({ requestWindow: async () => { opened++; return child; } }), preparePagerWindow: () => ({}) } });
+const pip = consoleHarness({}, {}, { './pager-pip': { isPagerCompanion: () => false, pagerPictureInPicture: () => ({ requestWindow: async () => { opened++; return child; } }), preparePagerWindow: () => ({}) } });
 pip.render(); const cleanup = pip.effects[0]();
-await button(pip, 'النافذة المصغرة').props.onClick(); await tick();
+await button(pip, 'نافذة فوق التطبيقات').props.onClick(); await tick();
 check('PiP opens only after a user action', () => assert.equal(opened, 1));
 check('PiP keeps controls in React portal and opener explanatory state', () => assert.match(html(pip), /النداء يعمل في النافذة المصغرة/));
 childListeners.keydown({ key: 'Escape' });
-check('Escape closes PiP and restores main controls', () => { assert.equal(closed, 1); assert.ok(!html(pip).includes('النداء يعمل في النافذة المصغرة')); assert.ok(button(pip, 'النافذة المصغرة')); });
-await button(pip, 'النافذة المصغرة').props.onClick(); await tick(); cleanup();
+check('Escape closes PiP and restores main controls', () => { assert.equal(closed, 1); assert.ok(!html(pip).includes('النداء يعمل في النافذة المصغرة')); assert.ok(button(pip, 'نافذة فوق التطبيقات')); });
+await button(pip, 'نافذة فوق التطبيقات').props.onClick(); await tick(); cleanup();
 check('unmount closes floating window and removes handlers', () => { assert.equal(closed, 2); assert.equal(Object.keys(childListeners).length, 0); });
+
+const native = consoleHarness({}, {}, { './pager-pip': { isPagerCompanion: () => true, pagerPictureInPicture: () => null } });
+native.render(); native.effects[0]();
+check('native companion uses compact console without a nested modal or PiP control', () => {
+  assert.match(html(native), /root compact/);
+  assert.ok(!nodes(native.render()).some(n => n.type === 'dialog'));
+  assert.ok(!button(native, 'نافذة فوق التطبيقات'));
+  assert.ok(form(native));
+});
 
 const css = fs.readFileSync('components/pager/pager.module.css', 'utf8');
 transform({ filename: 'pager.module.css', code: Buffer.from(css), minify: false });

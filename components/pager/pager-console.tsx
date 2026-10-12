@@ -8,7 +8,7 @@ import { createPagerOrderAction, fetchPagerPageAction, updatePagerOrderAction } 
 import { logoutCashierAction } from "@/app/actions/cashier";
 import type { PagerContext, PagerPage } from "@/lib/pager/types";
 import { PagerOrderCard } from "./pager-order-card";
-import { pagerPictureInPicture, preparePagerDialog, preparePagerWindow } from "./pager-pip";
+import { isPagerCompanion, pagerPictureInPicture, preparePagerDialog, preparePagerWindow } from "./pager-pip";
 import styles from "./pager.module.css";
 
 export function PagerConsole({ context, initialPage, mode = "staff" }: { context: PagerContext; initialPage: PagerPage; mode?: "owner" | "staff" }) {
@@ -27,6 +27,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   const [pipSupported, setPipSupported] = useState(false);
   const [pipOpening, setPipOpening] = useState(false);
   const [inlineCompact, setInlineCompact] = useState(false);
+  const [nativeCompact, setNativeCompact] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const compactButtonRef = useRef<HTMLButtonElement>(null);
   const opening = useRef(false);
@@ -41,6 +42,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
   useEffect(() => {
     mounted.current = true;
     setPipSupported(Boolean(pagerPictureInPicture()));
+    setNativeCompact(isPagerCompanion());
     return () => { mounted.current = false; requestSequence.current++; pipCleanup.current?.(); pipWindow.current?.close(); };
   }, []);
 
@@ -118,7 +120,7 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
 
   async function openCompact() {
     const api = pagerPictureInPicture();
-    if (!api) { setInlineCompact(true); return; }
+    if (!api) { setError("النافذة فوق التطبيقات تحتاج تطبيق نداء برندة على هذا الجهاز افتح رابط التطبيق"); return; }
     if (pipWindow.current && !pipWindow.current.closed) { pipWindow.current.focus(); return; }
     if (opening.current) return;
     opening.current = true;
@@ -136,25 +138,26 @@ export function PagerConsole({ context, initialPage, mode = "staff" }: { context
       child.setTimeout(() => invoiceRef.current?.focus(), 100);
     } catch {
       pipWindow.current?.close();
-      if (mounted.current) setInlineCompact(true);
+      if (mounted.current) setError("تعذر فتح النافذة الخارجية تحقق من صلاحيات المتصفح أو استخدم تطبيق نداء برندة");
     }
     finally { opening.current = false; if (mounted.current) setPipOpening(false); }
   }
 
-  const compact = Boolean(pipNode) || inlineCompact;
+  const compact = Boolean(pipNode) || inlineCompact || nativeCompact;
   const closeCompact = () => { if (pipNode) pipWindow.current?.close(); else setInlineCompact(false); };
   const content = <section data-pager-console dir="rtl" className={`${styles.root} ${compact ? styles.compact : mode === "staff" ? styles.standalone : ""}`}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>{context.cafeName}</p><h1 className={styles.title}>نداء برندة</h1><p className={styles.muted}>{context.actorName}{context.station ? ` — ${context.station}` : ""}</p></div>
       <div className={styles.tools}>
-        {compact ? <button type="button" className={styles.secondary} onClick={closeCompact}><Maximize2 size={17} aria-hidden="true" />إرجاع للصفحة</button>
-          : <button ref={compactButtonRef} type="button" className={styles.button} onClick={() => void openCompact()} disabled={pipOpening}><PictureInPicture2 size={18} aria-hidden="true" />{pipOpening ? "جار الفتح" : "النافذة المصغرة"}</button>}
+        {!nativeCompact && (compact ? <button type="button" className={styles.secondary} onClick={closeCompact}><Maximize2 size={17} aria-hidden="true" />إرجاع للصفحة</button>
+          : <><button ref={compactButtonRef} type="button" className={styles.button} onClick={() => void openCompact()} disabled={pipOpening}><PictureInPicture2 size={18} aria-hidden="true" />{pipOpening ? "جار الفتح" : "نافذة فوق التطبيقات"}</button><button type="button" className={styles.secondary} onClick={() => setInlineCompact(true)}>عرض مصغر داخل الصفحة</button></>)}
+        {!nativeCompact && <Link className={styles.secondary} href="/pager/download">تطبيق النافذة العائمة</Link>}
         {!compact && mode === "owner" && <Link className={styles.secondary} href="/dashboard/cashier"><Users size={17} aria-hidden="true" />الفريق والصلاحيات</Link>}
         {!compact && mode === "staff" && context.canUseLoyalty && <Link className={styles.secondary} href="/cashier">قارئ الولاء</Link>}
         {!compact && mode === "staff" && <form action={logoutCashierAction}><button className={styles.secondary} type="submit">تسجيل الخروج</button></form>}
       </div>
     </header>
-    {!pipNode && <div className={styles.notice}>{inlineCompact ? "النافذة المصغرة تعمل داخل هذه الصفحة ويمكنك إرجاعها بالحجم الكامل في أي وقت" : pipSupported ? "افتح النافذة المصغرة واترك الصفحة مفتوحة لتواصل متابعة الطلبات" : "النافذة المصغرة متاحة داخل الصفحة على الجوال والآيباد والتابلت ولا تظهر فوق التطبيقات الأخرى"}</div>}
+    {!pipNode && !nativeCompact && <div className={styles.notice}>{inlineCompact ? "هذا عرض مصغر داخل الصفحة وللعمل فوق التطبيقات افتح تطبيق النافذة العائمة" : pipSupported ? "افتح نافذة فوق التطبيقات واترك صفحة المتصفح مفتوحة أو استخدم تطبيق نداء برندة المستقل" : "للظهور فوق الكاشير على أندرويد أو الماك نزّل تطبيق النافذة العائمة وسجّل الدخول بحسابك"}</div>}
     <div className={styles.metrics}>
       <div className={styles.metric}><span>قيد التجهيز</span><strong>{data.metrics.waiting}</strong></div>
       <div className={styles.metric}><span>بانتظار الاستلام</span><strong>{data.metrics.ready}</strong></div>

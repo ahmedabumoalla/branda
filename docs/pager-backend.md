@@ -2,12 +2,14 @@
 
 ## Compact console across devices
 
-The compact button uses Document Picture-in-Picture when the browser exposes it
-If the API is unavailable or its window request is rejected, the same console opens in a native modal dialog inside the current page
-This supports current iPad, tablet and phone browsers without requiring a popup permission or a second login
-The dialog follows the visual viewport during keyboard display and rotation, preserves the current invoice/phone/search state and restores focus on return
-It has a single scroll area, safe-area spacing, touch-sized controls, native focus containment and Escape dismissal
-The in-page mode cannot float above another application; external always-on-top windows remain limited by browser and operating-system support
+The external-window button uses Document Picture-in-Picture when the browser exposes it
+Missing/rejected support now produces an explicit message and a companion-download link instead of silently substituting an in-page modal
+The in-page compact view is a separate, explicitly labelled control; its viewport/focus handling and draft preservation remain available
+`/pager/download` provides independent Android and macOS applications from `companions/` with verified binary/source identities under `public/downloads/pager-companions.json`
+Android uses a user-granted TYPE_APPLICATION_OVERLAY foreground service; macOS uses a floating NSPanel across Spaces, independently of browser choice
+The companion user-agent marker changes presentation only and never grants access
+See `companions/README.md` for build/signing, security boundaries and device-test limits
+Actual installation and overlay permission still require action on the user's device, and iPadOS does not have an equivalent general overlay permission
 The same authorized actions, polling and server notification worker remain in use
 
 ## Notification timing

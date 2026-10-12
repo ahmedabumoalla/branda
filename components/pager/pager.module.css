@@ -102,6 +102,9 @@
 .compactDialog::backdrop { background: #14251c80; }
 .compactDialog .compact { min-height: 100%; }
 .compactDialog .input { font-size: 16px; }
+.compact .input { font-size: 16px; }
+.installSteps { padding-inline-start: 24px; margin-block: 20px; font-size: 15px; line-height: 2; }
+.installSteps li + li { margin-top: 12px; }
 .compact .header > div, .compact .toolbar > * { min-width: 0; }
 .compact .toolbar .search { flex-basis: 160px; }
 @media (max-width: 380px) { .compact .entry form { grid-template-columns: minmax(0, 1fr); } .compact .cardActions { flex-wrap: wrap; } }
