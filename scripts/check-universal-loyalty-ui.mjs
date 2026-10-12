@@ -131,6 +131,14 @@ check("Member page retains wallet links card QR and reward details per brand", (
   assert(!html.includes("الكواكب"));
 });
 const { RastCashier } = load("components/rast-loyalty/rast-cashier.tsx");
+check("Member greeting separates and isolates Arabic and Latin names for every brand", () => {
+  for (const brand of [identity, rast, { ...identity, slug: "kat-coffe" }]) {
+    for (const customerName of ["احمد", "أحمد عبد الرحمن محمد", "Ahmed Abdullah"]) {
+      const html = render(RastMemberCard, { identity: brand, member: { card: { cardCode: "CARD-TEST", customerName, stampsInCycle: 0 }, program, rewards: [] }, walletAvailability: { apple: true, google: true } });
+      assert(html.includes(`<h1>يا هلا برجعتك <span class="memberName"><bdi>${customerName}</bdi></span></h1>`));
+    }
+  }
+});
 check("Cashier offers approved stamp reward and camera flow for own brand", () => {
   const initialData = { cafe: { id: "cafe", slug: identity.slug, name: identity.name }, cashier: { fullName: "موظف تجريبي", canUsePager: true } };
   const html = render(RastCashier, { initialData, identity });

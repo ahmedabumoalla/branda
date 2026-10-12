@@ -49,7 +49,7 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
     <div className={s.memberLayout}>
       <div className={s.memberIntro}>
         <span className={s.eyebrow}>أنت من {loyaltyCommunityName(identity)}</span>
-        <h1>يا هلا برجعتك<br /><span>{member.card.customerName}</span></h1>
+        <h1>يا هلا برجعتك <span className={s.memberName}><bdi>{member.card.customerName}</bdi></span></h1>
         <p className={s.intro}>{member.rewards.length ? "لك مكافأة بانتظارك خلّ زيارتك الجاية أحلى" : remaining === 1 ? "باقي ختم واحد ومكافأتك تنتظرك" : `باقي ${remaining} أختام على مكافأتك نشوفك على خير`}</p>
         <div className={s.walletSection}>
           <h2>خلّ بطاقتك قريبة</h2><p>أضفها لمحفظة جوالك واعرضها عند الكاشير</p>
