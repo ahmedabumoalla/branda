@@ -121,7 +121,7 @@ export async function completeOwnerOnboarding(input: { password: string; confirm
     if (created.error || !created.data.user) return { ok: false, message: "تعذر إنشاء الحساب قد يكون البريد أو الجوال مسجلًا مسبقًا؛ جرّب تسجيل الدخول" };
     (await cookies()).delete(COOKIE);
     const signedIn = await (await createClient()).auth.signInWithPassword({ phone: `+${phone}`, password: password.data });
-    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربة المنيو ٧ أيام سجّل الدخول للمتابعة", redirectTo: "/login" };
-    return { ok: true, message: "حسابك جاهز بدأت تجربة المنيو المجانية لمدة ٧ أيام", redirectTo: "/dashboard/menu" };
+    if (signedIn.error || !signedIn.data.session) return { ok: true, message: "تم إنشاء حسابك وتفعيل تجربة الباقة الأساسية سجّل الدخول للمتابعة", redirectTo: "/login" };
+    return { ok: true, message: "حسابك جاهز بدأت تجربة الباقة الأساسية المجانية", redirectTo: "/dashboard" };
   } catch { return unavailable(); }
 }

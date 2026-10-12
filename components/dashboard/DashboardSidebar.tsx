@@ -18,6 +18,7 @@ import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 
 type SidebarProps = {
+  servicesAvailable?: boolean;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   onNavigate?: () => void;
@@ -41,7 +42,7 @@ const initialNavigation: NavigationState = {
 };
 
 
-export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
+export function DashboardSidebar({ servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const [navigation, setNavigation] = useState<NavigationState>(initialNavigation);
@@ -64,7 +65,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
-  const links = settings.cafeSlug ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides, isTrial: navigation.subscription?.status === "trialing" }) : [];
+  const links = settings.cafeSlug && servicesAvailable ? getSidebarFeaturesForBrand({ planId: navigation.planId, plans: navigation.plans, overrides: navigation.featureOverrides, isTrial: navigation.subscription?.status === "trialing" }) : [];
 
   async function handleLogout() {
     if (onEndMaintenance) {
@@ -105,7 +106,7 @@ export function DashboardSidebar({ collapsed = false, onCollapsedChange, onNavig
         </div>
       </div>
       {navigation.subscription && <SubscriptionCountdown subscription={navigation.subscription} />}
-      <div className="mt-2.5 flex gap-1.5"><NotificationsPanel initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>
+      {servicesAvailable && <div className="mt-2.5 flex gap-1.5"><NotificationsPanel initialNotifications={notifications} className="[&>button]:h-8 [&>button]:w-8 [&>button]:rounded-lg [&>button]:border-white/10 [&>button]:bg-white/[0.06]" /></div>}
     </div>}
 
     <nav aria-label="قائمة العلامة" className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>

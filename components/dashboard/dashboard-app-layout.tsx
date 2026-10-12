@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { exitMaintenanceModeAction } from "@/app/actions/maintenance";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
@@ -42,6 +42,7 @@ export function DashboardAppLayout({
   maintenanceSession?: MaintenanceBannerSession | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [guard, setGuard] = useState<GuardState>({ loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
@@ -93,9 +94,10 @@ export function DashboardAppLayout({
       if (remaining > 2147483647) { setRetry(value => value + 1); return; }
       clearDashboardShellSnapshot();
       setGuard(state => ({ ...state, activePlanId: "" }));
+      router.refresh();
     }, Math.max(0, Math.min(remaining, 2147483647)));
     return () => window.clearTimeout(timer);
-  }, [guard.activePlanId, guard.expiresAt, retry]);
+  }, [guard.activePlanId, guard.expiresAt, retry, router]);
 
   useEffect(() => {
     try {
@@ -153,6 +155,7 @@ export function DashboardAppLayout({
       desktopSidebarWidth={sidebarCollapsed ? "72px" : "252px"}
       sidebar={(close) => (
         <DashboardSidebar
+          servicesAvailable={!guard.loading && !guard.error && Boolean(guard.activePlanId)}
           collapsed={sidebarCollapsed}
           onCollapsedChange={handleSidebarCollapsedChange}
           onNavigate={close}

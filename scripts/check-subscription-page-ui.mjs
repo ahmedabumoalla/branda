@@ -159,3 +159,6 @@ const source = await fs.promises.readFile("components/dashboard/pages/subscripti
 for (const [, className] of source.matchAll(/styles\.([a-zA-Z]+)/g)) assert.ok(css.includes(`.${className}`), `defined ${className}`);
 assert.ok(css.includes(":focus-visible") && css.includes("prefers-reduced-motion") && css.includes("max-width: 560px"));
 console.log("PASS subscription UI: actual SSR/handlers, current trial/remaining, paid choices, shared services, durations, bank details fallback, receipt upload, WhatsApp explicit review and approved refresh.");
+
+const expiredPage=renderToStaticMarkup(harness({initialActivePlanId:'',referenceTime:Date.parse('2026-11-01T00:00:00Z')}).render());
+assert.ok(expiredPage.includes('انتهت مدة باقتك')&&expiredPage.includes('https://wa.me/966508424401')&&expiredPage.includes('0508424401'));

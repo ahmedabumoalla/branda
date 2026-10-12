@@ -192,7 +192,7 @@ const planSchema = z.object({
   annualDiscountPercent: z.number().min(0).max(100).optional(),
   offerPrice: z.number().nonnegative().max(1000000).optional(),
   durationUnit: z.enum(["day", "month", "year"]),
-  durationCount: z.number().int().positive().max(120),
+  durationCount: z.number().int().positive().max(365),
   description: z.string().trim().max(500),
   active: z.boolean(),
   isDefault: z.boolean(),
@@ -330,8 +330,8 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     ...plan,
     offerEnabled: false,
     freeAfterTrial: false,
-    durationUnit: plan.priceMonthly > 0 ? "month" as const : plan.durationUnit,
-    durationCount: plan.priceMonthly > 0 ? 1 : plan.durationCount,
+    durationUnit: plan.priceMonthly > 0 ? "month" as const : (plan.trialDays ?? 0) > 0 ? "day" as const : plan.durationUnit,
+    durationCount: plan.priceMonthly > 0 ? 1 : (plan.trialDays ?? 0) > 0 ? plan.trialDays! : plan.durationCount,
     durationOptions: [1, 3, 6, 12],
     features: getBrandNavigationFeatures().filter(feature => plan.features.includes("all") || plan.features.includes(feature.id)).map(feature => feature.id),
   }));
@@ -342,6 +342,9 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
 
   const defaultCategories = new Set<string>();
   for (const plan of defaults) {
+    if (!plan.trialDays || plan.trialDays < 1) {
+      throw new Error("حدد أيام التجربة للباقة الأساسية من يوم إلى 365 يومًا");
+    }
     const categoryId = normalizePlanCategoryId(plan.categoryId);
     if (defaultCategories.has(categoryId)) {
       throw new Error("حدد باقة أساسية واحدة فقط لكل تصنيف");

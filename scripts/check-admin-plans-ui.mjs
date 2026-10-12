@@ -101,7 +101,15 @@ assert.deepEqual(empty.values[0][0].features, [], "new plans do not silently gra
 const trialEditor = harness([{ ...fixture("owner_trial_7d", ["menu", "settings"]), priceMonthly: 0, durationCount: 7, durationUnit: "day" }]);
 const trialTree = trialEditor.render();
 assert.equal(nodes(trialTree).find(node => node.props?.className === "editor").props.disabled, true, "dedicated trial cannot be edited through package controls");
-assert.ok(renderToStaticMarkup(trialTree).includes("7 أيام"));
+assert.ok(renderToStaticMarkup(trialTree).includes("التسجيل الجديد يتبع الباقة الأساسية"));
+const configured = harness([{ ...fixture("configured", ["menu"]), isDefault:true, priceMonthly:0, durationCount:15, durationUnit:"day", trialDays:7 }]);
+tree=configured.render();
+assert.ok(text(nodes(tree).find(node=>node.props?.className==='price')).includes('/ 7 يوم'),'saved seven-day trial replaces stale 15-day card');
+const trialInput=nodes(tree).find(node=>node.type==='label' && text(node).startsWith('أيام التجربة')).props.children.find(node=>node?.type==='input');
+trialInput.props.onChange({target:{value:'10'}});
+assert.ok(text(nodes(configured.render()).find(node=>node.props?.className==='price')).includes('/ 10 يوم'),'editing days updates card immediately');
+await nodes(configured.render()).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});
+assert.equal(configured.calls[0][1][0].durationCount,10);
 
 const selection = harness(initial);
 tree = selection.render();

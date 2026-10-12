@@ -40,9 +40,9 @@ for (const subscription of [null, { ...current, status: "expired" }, { ...curren
   assert.deepEqual(result.features, []);
   assert.equal(result.subscription?.expiresAt ?? null, subscription?.expires_at ?? null); checks++;
 }
-for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"], ["orders", "branches", "standalone_menu"]]) {
+for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["pager"], ["settings"], ["all"], ["orders", "branches", "standalone_menu"]]) {
   const { module, calls } = serviceFixture({ ...current, platform_plans: { active: true, features } });
-  const expected = features.includes("all") ? ["menu", "offers", "loyalty", "settings"] : features.filter(f => ["menu", "offers", "loyalty", "settings"].includes(f));
+  const expected = features.includes("all") ? ["menu", "offers", "loyalty", "pager", "settings"] : features.filter(f => ["menu", "offers", "loyalty", "pager", "settings"].includes(f));
   assert.deepEqual(await module.getOwnerFeatureCodes(), expected);
   assert.deepEqual(calls, ["subscriptions", "brand_feature_overrides"]); checks++;
 }

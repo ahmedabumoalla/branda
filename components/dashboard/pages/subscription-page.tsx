@@ -103,6 +103,7 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
   }
 
   return <div className={styles.page} dir="rtl"><DashboardPageShell title="الباقات والاشتراكات" subtitle="كل ما تحتاجه لعلامتك في باقة تختارها بنفسك">
+    {!active && <section role="status" className={styles.currentIdentity}><p>انتهت مدة باقتك فعّل اشتراكك لاستعادة خدمات اللوحة أو تواصل معنا للمساعدة</p><a href="https://wa.me/966508424401" target="_blank" rel="noopener noreferrer" className={styles.lightButton}><MessageCircle size={17} aria-hidden="true" />تواصل معنا عبر واتساب <span dir="ltr">0508424401</span></a></section>}
     {configError ? <p role="alert" className={styles.error}>{configError}</p> : null}
     <section className={styles.current} aria-labelledby="current-plan-title">
       <div className={styles.currentIdentity}><span className={styles.eyebrow}>اشتراكك الحالي</span><h2 id="current-plan-title">{active ? activePlan?.name : "انتهى اشتراككم مع برندة"}</h2><p>{active ? currentSubscription?.status === "trialing" ? "أنت الآن في الفترة التجريبية" : "خدمات علامتك متاحة حسب باقتك" : "اختر باقة لتفعيل خدمات علامتك والمنيو المستقل"}</p><a href="#available-plans" className={styles.lightButton}>{active ? "استعراض الباقات والترقية" : "اختر باقتك"}<Layers3 size={17} aria-hidden="true" /></a></div>

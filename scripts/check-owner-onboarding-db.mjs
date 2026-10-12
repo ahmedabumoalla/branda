@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -34,6 +34,17 @@ try {
     INSERT INTO public.subscriptions VALUES(NULL,'paid','active',99,now(),now()+interval '1 month','Paid','month',1,'paid');
   `);
   await db.exec(await readFile("supabase/migrations/20261009213000_owner_verified_onboarding.sql","utf8"));
+  await db.exec(`CREATE TABLE public.platform_settings(id text PRIMARY KEY,default_plan_id text);
+    CREATE TABLE public.category_default_plans(category_id text PRIMARY KEY,default_plan_id text);
+    ALTER TABLE public.subscriptions ADD COLUMN base_amount_sar numeric, ADD COLUMN discount_amount_sar numeric, ADD COLUMN payment_provider text, ADD COLUMN payment_method_label text;
+    INSERT INTO platform_plans VALUES('configured','Configured',0,'["menu","offers","loyalty","pager","settings"]',true,'day',15,'cafes_coffee',7,false,1);
+    INSERT INTO platform_settings VALUES('default','owner_trial_7d');
+    INSERT INTO category_default_plans VALUES('cafes_coffee','configured');
+  `);
+  const configuredMigration=(await readdir('supabase/migrations')).find(file=>file.endsWith('_configured_default_trial.sql'));
+  await db.exec(await readFile(`supabase/migrations/${configuredMigration}`,'utf8'));
+  await db.exec('CREATE TRIGGER before_signup_default_plan_trial BEFORE INSERT ON subscriptions FOR EACH ROW EXECUTE FUNCTION public.force_signup_default_plan_to_trial();');
+  check(await v("SELECT duration_count=7 AND duration_unit='day' FROM platform_plans WHERE id='configured'"),'legacy 15-day display repaired');
   await db.exec("CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();");
   check(await v("SELECT features='[\"menu\",\"settings\"]'::jsonb FROM platform_plans WHERE id='owner_trial_7d'"),"trial features exact");
   check(await v("SELECT price_sar=99 FROM platform_plans WHERE id='paid'"),"paid plan untouched");
@@ -58,7 +69,8 @@ try {
   check(await v("SELECT count(*)=0 FROM branches"),"no storefront branch created");
   check(await v("SELECT count(*)=1 FROM cafes WHERE name_en='Test Brand'"),"English brand saved");
   check(await v("SELECT count(*)=1 FROM cafe_settings WHERE google_maps_latitude=24 AND google_maps_longitude=46"),"Google location saved without branch");
-  check(await v("SELECT count(*)=1 FROM subscriptions WHERE status='trialing' AND expires_at-started_at=interval '7 days' AND plan_id='owner_trial_7d'"),"seven day exact trial");
+  check(await v("SELECT count(*)=1 FROM subscriptions WHERE status='trialing' AND expires_at-started_at=interval '7 days' AND plan_id='configured' AND duration_count=7 AND amount_sar=0"),"configured default overrides legacy plan and expires in exactly seven days");
+  check(await v("SELECT features='[\"menu\",\"offers\",\"loyalty\",\"pager\",\"settings\"]'::jsonb FROM platform_plans WHERE id=(SELECT plan_id FROM subscriptions WHERE status='trialing')"),'trial includes the configured package services');
   await assert.rejects(()=>create(11)); checks++;
   check(!await v("SELECT public.get_verified_owner_onboarding($1,$2)",[id(1),proof]),"consumed proof inaccessible");
   check(!(await begin(2)).ok,"registered phone cannot get a second trial");
@@ -75,7 +87,7 @@ try {
   await q("SELECT public.mark_owner_onboarding_sent($1,$2,true)",[id(4),proof]);
   await q("UPDATE owner_onboarding_private.challenges SET expires_at=now()-interval '1 second' WHERE id=$1",[id(4)]);
   check(!(await verify(4)).ok,"expired code denied");
-  await q("INSERT INTO subscriptions(plan_id,status,amount_sar,expires_at,activation_source) VALUES('owner_trial_7d','trialing',0,now()-interval '1 day','default_trial')");
+  await q("INSERT INTO subscriptions(plan_id,status,amount_sar,started_at,expires_at,activation_source) VALUES('owner_trial_7d','trialing',0,now()-interval '8 days',now()-interval '1 day','default_trial')");
   const before=await v("SELECT count(*) FROM subscriptions");
   check(await v("SELECT public.move_expired_trials_to_free_plan()")===1,"expire only old trial");
   check(await v("SELECT count(*) FROM subscriptions")===before,"no free subscription generated");
@@ -83,6 +95,21 @@ try {
   check(await v("SELECT count(*)=1 FROM subscriptions WHERE status='trialing'"),"valid trial preserved");
   check(!await v("SELECT has_function_privilege('authenticated','public.move_expired_trials_to_free_plan()','EXECUTE')"),"no client expiry RPC");
   check(!await v("SELECT has_function_privilege('authenticated','public.activate_default_trial_subscription_for_cafe(uuid)','EXECUTE')"),"no legacy trial grant");
+  await denied("SELECT public.activate_default_trial_subscription_for_cafe($1)",[id(10)]);
+  await q("UPDATE platform_plans SET trial_days=3 WHERE id='configured'");
+  check(await v("SELECT duration_count=3 FROM platform_plans WHERE id='configured'"),'future plan edits synchronize display');
+  check(await v("SELECT expires_at-started_at=interval '7 days' FROM subscriptions WHERE plan_id='configured'"),'configuration edits never reset existing trial deadlines');
+  check((await begin(6,'966566666666',{...draft,email:'third@example.invalid',slug:'third-brand'})).ok,'new configured trial challenge');
+  await q("SELECT public.mark_owner_onboarding_sent($1,$2,true)",[id(6),proof]);await verify(6);
+  await q("UPDATE platform_plans SET active=false WHERE id='configured'");
+  await denied("INSERT INTO auth.users(id,phone,raw_user_meta_data,raw_app_meta_data) VALUES($1,'966566666666','{\"account_type\":\"cafe_owner\"}',$2::jsonb)",[id(16),JSON.stringify({owner_onboarding_id:id(6),owner_onboarding_proof:proof})]);
+  check(await v("SELECT consumed_by IS NULL FROM owner_onboarding_private.challenges WHERE id=$1",[id(6)]),'invalid default cannot consume verified signup');
+  await q("UPDATE platform_plans SET active=true,trial_days=0 WHERE id='configured'");
+  await assert.rejects(()=>create(16,6,null,'966566666666'));checks++;
+  await q("UPDATE platform_plans SET trial_days=3 WHERE id='configured'");
+  await create(16,6,null,'966566666666');
+  check(await v("SELECT count(*)=1 FROM subscriptions WHERE plan_id='configured' AND expires_at-started_at=interval '3 days'"),'next registration follows edited days with no 7/15 hardcoding');
+  check(await v("SELECT duration_unit='month' AND duration_count=1 AND amount_sar=99 FROM subscriptions WHERE plan_id='paid'"),'paid billing preserved');
   await db.exec(await readFile("supabase/tests/owner_onboarding_postflight.sql","utf8")); checks++;
   console.log(`PASS owner onboarding SQL: ${checks} real PostgreSQL checks; no provider or production mutation.`);
 } finally { await db.close(); }

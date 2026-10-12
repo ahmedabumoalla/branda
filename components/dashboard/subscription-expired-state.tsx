@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Clock3 } from "lucide-react";
+import { ArrowLeft, Clock3, MessageCircle } from "lucide-react";
 
 export function SubscriptionExpiredState() {
   return <section dir="rtl" className="mx-auto my-12 max-w-2xl rounded-3xl border border-[#ded5c4] bg-[#fffdf8] px-6 py-12 text-center text-[#2d2922] sm:px-12" aria-labelledby="expired-subscription-title">
@@ -8,5 +8,7 @@ export function SubscriptionExpiredState() {
     <h1 id="expired-subscription-title" className="text-2xl font-bold sm:text-3xl">انتهى اشتراككم مع برندة</h1>
     <p className="mt-4 leading-8 text-[#71695c]">توقفت خدمات علامتكم حتى تفعيل الاشتراك اختر الباقة المناسبة لمتابعة العمل</p>
     <Link href="/dashboard/subscription" className="mt-8 inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-[#38251b] px-6 py-3 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#805b20]">الانتقال إلى الباقات والاشتراكات<ArrowLeft size={18} aria-hidden="true" /></Link>
+    <p className="mt-6 leading-8 text-[#71695c]">انتهت مدة باقتك فعّل اشتراكك أو تواصل معنا للمساعدة</p>
+    <a href="https://wa.me/966508424401" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-12 flex-wrap items-center justify-center gap-2 rounded-xl border border-[#805b20] px-5 py-3 font-bold text-[#805b20] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#805b20]"><MessageCircle size={18} aria-hidden="true" />تواصل معنا عبر واتساب <span dir="ltr">0508424401</span></a>
   </section>;
 }

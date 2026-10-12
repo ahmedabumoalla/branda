@@ -91,7 +91,7 @@ export default function RegisterPage() {
         <div className={styles.formCard}>
         <ol className={styles.steps} aria-label="خطوات التسجيل">{steps.map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={step >= index ? styles.current : ""}><span>{step > index ? <Check size={16} aria-hidden="true" /> : index + 1}</span><b>{label}</b></li>)}</ol>
         <header className={styles.heading}><span className={styles.kicker}>خطوتك الأولى مع برندة</span><h2>{step === 0 ? "أهلًا بعلامتك" : step === 1 ? "رسالة واحدة ونكمل" : "باقي خطوة وتبدأ"}</h2><p>{step === 0 ? "عرّفنا بعلامتك وجهّز أول منيو لك من مكان واحد" : step === 1 ? `أرسلنا رمز التحقق إلى واتساب ${draft.phone} أدخله لإكمال التسجيل` : "احمِ حسابك بكلمة مرور ثم انتقل إلى لوحة تحكم علامتك"}</p></header>
-        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>٧ أيام لتجربة منيو علامتك</b><span>تبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>مجانية</span></div>
+        <div className={styles.trial}><span className={styles.trialIcon}><Sparkles size={21} aria-hidden="true" /></span><div><b>جرّب الباقة الأساسية لعلامتك</b><span>تبدأ بعد إنشاء الحساب بدون بطاقة دفع</span></div><span className={styles.free}>مجانية</span></div>
         {message ? <p className={styles.message} role="status" aria-live="polite">{message}</p> : null}
         <form onSubmit={submit} aria-busy={pending}><fieldset disabled={pending} className={styles.fields}>
           {step === 0 ? <>

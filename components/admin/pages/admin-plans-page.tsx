@@ -8,6 +8,7 @@ import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
 import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
+import { normalizeTrialDuration } from "@/lib/platform/plan-trial";
 import styles from "./admin-plans-page.module.css";
 
 type Props = { initialPlans: PlatformPlan[]; initialRequests: SubscriptionPaymentRequest[]; configError?: string };
@@ -29,7 +30,7 @@ function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
 }
 
 export function AdminPlansPage({ initialPlans, initialRequests, configError }: Props) {
-  const [plans, setPlans] = useState(initialPlans);
+  const [plans, setPlans] = useState(() => initialPlans.map(normalizeTrialDuration));
   const [requests, setRequests] = useState(initialRequests);
   const [selectedId, setSelectedId] = useState(initialPlans[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
@@ -48,7 +49,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   const isIncluded = (item: PlatformPlan, feature: PlatformFeature) => item.features.includes("all") || item.features.includes(feature);
 
   function updatePlan(planId: string, patch: Partial<PlatformPlan>) {
-    setPlans((current) => current.map((item) => item.id === planId ? { ...item, ...patch } : item));
+    setPlans((current) => current.map((item) => item.id === planId ? normalizeTrialDuration({ ...item, ...patch }) : item));
     setDirty(true);
     setNotice(null);
   }
@@ -197,7 +198,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
 
             {plan ? <fieldset disabled={plan.id === "owner_trial_7d"} className={styles.editor} aria-label={`تحرير ${plan.name}`}>
               <header className={styles.editorHeader}>
-                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "تجربة ثابتة للحسابات الجديدة: 7 أيام للمنيو والإعدادات متاحة مرة واحدة ولا تُعدّل من هنا" : "التغييرات لا تطبق إلا بعد الحفظ"}</p></div>
+                <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "باقة تجربة سابقة محفوظة للاشتراكات القديمة التسجيل الجديد يتبع الباقة الأساسية المحددة" : "التغييرات لا تطبق إلا بعد الحفظ"}</p></div>
                 <label className={styles.toggle}><input type="checkbox" checked={plan.active} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
               </header>
 
@@ -234,7 +235,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <h3 id="plan-limits-title">حدود المنتجات والتجربة</h3>
                 <div className={styles.fields}>
                   <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود</small></label>
-                  <label>أيام التجربة<input type="number" min={0} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} /></label>
+                  <label>أيام التجربة<input type="number" min={plan.isDefault ? 1 : 0} max={365} required={plan.isDefault} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} />{plan.isDefault ? <small>تُفعّل هذه الباقة تلقائيًا للحساب الجديد مرة واحدة بهذه المدة من وقت التسجيل</small> : null}</label>
                 </div>
                 <p className={styles.policy}>عند انتهاء الاشتراك تتوقف الخدمات حتى تفعيل اشتراك جديد دون الانتقال إلى باقة بديلة</p>
                 <div className={styles.editorFooter}>{plan.isDefault ? <span className={styles.defaultBadge}>الباقة الأساسية</span> : <button type="button" className={styles.secondary} onClick={() => selectDefault(plan.id)}>تعيين كباقة أساسية</button>}{!plan.isDefault ? <button type="button" className={styles.dangerButton} disabled={saving || Boolean(configError)} onClick={() => removePlan(plan.id)}><Trash2 size={16} aria-hidden="true" />{deletingId === plan.id ? "جارٍ حذف الباقة" : "حذف الباقة"}</button> : null}</div>
