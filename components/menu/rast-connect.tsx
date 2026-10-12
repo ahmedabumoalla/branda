@@ -29,16 +29,17 @@ function WhatsappMark() {
 }
 
 // Only owner-supplied destinations are active; remaining accounts stay as previews.
-export function RastConnect() {
+export function RastConnect({ previewBrand }: { previewBrand?: string } = {}) {
+  const brandName = previewBrand || "مقهى الكواكب";
   const accounts = [
     { name: "سناب شات", Icon: SnapchatMark },
     { name: "تيك توك", Icon: TiktokMark },
     { name: "إنستقرام", Icon: InstagramMark },
-    { name: "واتساب", Icon: WhatsappMark, featured: true, href: "https://wa.me/966532751005" },
+    { name: "واتساب", Icon: WhatsappMark, featured: true, href: previewBrand ? undefined : "https://wa.me/966532751005" },
   ];
 
-  return <section className={s.connect} aria-label="مقهى الكواكب على منصات التواصل وموقع الفرع">
-    <div className={s.inner}>
+  return <section className={s.connect} aria-label={`${brandName} على منصات التواصل${previewBrand ? "" : " وموقع الفرع"}`}>
+    <div className={`${s.inner}${previewBrand ? ` ${s.preview}` : ""}`}>
       <div className={s.intro}>
         <span className={s.overline} dir="ltr">KEEP IN TOUCH</span>
         <h2>لحظتنا تكمل <span>معك</span></h2>
@@ -52,10 +53,10 @@ export function RastConnect() {
           </li>;
         })}
       </ul>
-      <a className={s.location} href="https://maps.app.goo.gl/pr6HtT5qx37rW5ZQ8?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="موقع فرع مقهى الكواكب على خرائط قوقل">
+      {!previewBrand && <a className={s.location} href="https://maps.app.goo.gl/pr6HtT5qx37rW5ZQ8?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="موقع فرع مقهى الكواكب على خرائط قوقل">
         <span className={s.pin}><MapPin aria-hidden="true" /></span>
         <span><span className={s.locationTitle}>نلقاك في مقهى الكواكب</span><span className={s.locationCaption}>موقع الفرع</span></span>
-      </a>
+      </a>}
     </div>
   </section>;
 }

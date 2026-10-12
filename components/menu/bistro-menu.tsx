@@ -295,6 +295,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       <p className={s.heroAside} dir="ltr">SIMPLE<br />INGREDIENTS<br />EXTRAORDINARY<br />FLAVORS</p>
     </section>}
     {isRast && <RastConnect />}
+    {isKath && <RastConnect previewBrand="مقهى كاث" />}
     {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry />}
     {isKath && <KathLoyaltyEntry menu={menu} />}
     <div className={s.catalog} id="menu-catalog">

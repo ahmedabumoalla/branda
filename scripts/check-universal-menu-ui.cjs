@@ -42,6 +42,10 @@ assert(html.includes('rast-spotlight-title')&&html.includes('قائمة مقهى
 assert(html.includes('kath-transparent-v1.webp')&&html.includes('images.test/kath-coffee.webp'));
 assert(html.includes('بطاقة الولاء غير متاحة حاليًا')&&!html.includes('/loyalty/'));
 assert(!/KAWAKIB|الكواكب|rast-coffee-editorial|kawakib-transparent|966532751005|pr6HtT5/.test(html),'Kath must never inherit Kawakib identity, photos or contacts');
+const kathSocial=html.match(/<section[^>]+aria-label="مقهى كاث على منصات التواصل"[\s\S]*?<\/section>/)?.[0];
+assert(kathSocial,'Kath exposes the same social icon strip');
+for(const name of ['سناب شات','تيك توك','إنستقرام','واتساب'])assert(kathSocial.includes(name));
+assert(!kathSocial.includes('href=')&&!kathSocial.includes('<button'),'unconfigured social icons have no invented destinations or empty actions');
 html=render({...kath,loyaltyEnabled:true,highlights:{asOf:Date.now(),items:[active]}});
 assert(html.includes('/loyalty/kat-coffe?source=menu')&&!html.includes('/loyalty/rast'));
 assert(html.includes('Active offer')&&html.includes('BRAND20'));

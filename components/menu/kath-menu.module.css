@@ -19,17 +19,18 @@
 }
 .theme .hero::before {
   background:
-    linear-gradient(180deg, #733b27 0, #733b27f5 calc(var(--rast-brand-height) - 24px), #733b2700 calc(var(--rast-brand-height) + 80px)),
+    linear-gradient(180deg, #fbf6ed 0, #fbf6edf5 calc(var(--rast-brand-height) - 24px), #fbf6ed00 calc(var(--rast-brand-height) + 80px)),
     linear-gradient(90deg, #25150fed 0%, #25150fd9 38%, #25150f14 72%),
     linear-gradient(0deg, #25150fe6 0%, #25150f00 52%);
 }
 .theme .heroBackdrop { top: 160px; }
 .theme .heroBackdrop > img { object-position: 65% center; }
-.theme .hero header { border-color: #e5b57245; }
-.theme .hero header button { color: var(--kath-gold); border-color: #e5b57266; }
-.theme .hero header p { color: var(--kath-gold); }
-.theme .wordmark { width: min(100%, 680px); }
-.theme .wordmark + div { color: var(--kath-ivory); }
+.theme .hero header { border-color: var(--rast-border); }
+.theme .hero header button { color: var(--kath-brown); border-color: var(--rast-border); }
+.theme .hero header button:hover { color: var(--kath-ivory); }
+.theme .hero header p { color: var(--kath-brown); }
+.theme .wordmark { width: min(100%, 680px); filter: brightness(0) saturate(100%) invert(24%) sepia(44%) saturate(918%) hue-rotate(333deg) brightness(95%) contrast(87%); }
+.theme .wordmark + div { color: var(--rast-muted); }
 .theme .ribbon { color: var(--kath-espresso); background: var(--kath-gold); }
 .theme .loyalty { --rast-red: var(--kath-gold); }
 .theme .loyaltyCard { background: var(--kath-brown); color: var(--kath-ivory); }
@@ -44,7 +45,7 @@
   .theme .heroBackdrop { top: 60px; }
   .theme .hero::before {
     background:
-      linear-gradient(180deg, #733b27 0, #733b27f5 calc(var(--rast-brand-height) - 24px), #733b2700 calc(var(--rast-brand-height) + 52px)),
+      linear-gradient(180deg, #fbf6ed 0, #fbf6edf5 calc(var(--rast-brand-height) - 24px), #fbf6ed00 calc(var(--rast-brand-height) + 52px)),
       linear-gradient(180deg, #25150f00 calc(var(--rast-brand-height) + 82px), #25150fd9 calc(var(--rast-brand-height) + 252px), #25150ff5 100%);
   }
 }
