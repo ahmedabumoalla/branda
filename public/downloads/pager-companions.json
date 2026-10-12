@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-10-12T12:42:04.009Z",
+  "artifacts": [
+    {
+      "platform": "android",
+      "file": "branda-pager-android.apk",
+      "version": "1.0.0",
+      "bytes": 660853,
+      "sha256": "6501c8fd9ad6f5aebd73ef4cb8510c6f856cc1d89e61e8fa7398390e69d3fa3e",
+      "sourceSha256": "a8a9bb5ae15021909efcf73a7a9b1916cd0379a22e22cb6dd77c891be1b2bb1d",
+      "signing": "release-key",
+      "physicalDeviceTested": false
+    },
+    {
+      "platform": "macos",
+      "file": "branda-pager-macos.zip",
+      "version": "1.0.0",
+      "bytes": 62112,
+      "sha256": "6965ea9fbc85b489cd3eb108902e6ed81405128bb28723664567559dc0fc46c9",
+      "sourceSha256": "c6e8bcf493f05b09bcfbc1fde24df01bdbae6d4e8e147e3088b1eb1eb3f6d146",
+      "signing": "ad-hoc-not-notarized",
+      "physicalDeviceTested": false
+    }
+  ]
+}

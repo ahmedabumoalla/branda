@@ -47,3 +47,4 @@ next-env.d.ts
 BARNDAKSA_*_PATCH/
 BARNDAKSA_*_HOTFIX/
 BARNDAKSA_SAFE_CLEANUP_NODE/
+/public/downloads/*.idsig
