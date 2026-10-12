@@ -36,9 +36,30 @@ const {BistroMenu}=load('components/menu/bistro-menu.tsx');
 const render=menu=>{hook=0;return renderToStaticMarkup(React.createElement(BistroMenu,{menu}));};
 for(const slug of ['basilico','new-brand','double-b-bistro']) {html=render({...base,slug});assert(!html.includes('rast-spotlight-title'));assert(html.includes('menu-catalog'));assert(html.includes('Actual product'));}
 html=render({...enabled,slug:'basilico'});assert(!html.includes('rast-spotlight-title'));assert(html.includes('16'));
+const kath={...base,slug:'kat-coffe',name:'مقهى كاث kath',logoUrl:'/menu-logos/kath-transparent-v1.webp',products:[{...product,name:'قهوة كاث',images:[{url:'https://images.test/kath-coffee.webp',alt:'قهوة كاث'}]}]};
+html=render(kath);
+assert(html.includes('rast-spotlight-title')&&html.includes('قائمة مقهى كاث')&&html.includes('بطاقة ولاء مقهى كاث'));
+assert(html.includes('kath-transparent-v1.webp')&&html.includes('images.test/kath-coffee.webp'));
+assert(html.includes('بطاقة الولاء غير متاحة حاليًا')&&!html.includes('/loyalty/'));
+assert(!/KAWAKIB|الكواكب|rast-coffee-editorial|kawakib-transparent|966532751005|pr6HtT5/.test(html),'Kath must never inherit Kawakib identity, photos or contacts');
+html=render({...kath,loyaltyEnabled:true,highlights:{asOf:Date.now(),items:[active]}});
+assert(html.includes('/loyalty/kat-coffe?source=menu')&&!html.includes('/loyalty/rast'));
+assert(html.includes('Active offer')&&html.includes('BRAND20'));
+html=render({...kath,logoUrl:'/own-replacement-logo.png',products:[{...product,name:'Updated dashboard product',price:33}]});
+assert(html.includes('/own-replacement-logo.png')&&!html.includes('kath-transparent-v1.webp'));
+assert(html.includes('Updated dashboard product')&&html.includes('33')&&!html.includes('قهوة كاث'));
+html=render({...kath,products:[]});assert(html.includes('قائمتنا قيد التحضير')&&!html.includes('rast-spotlight-title'));
+if(process.env.KATH_LIVE_FIXTURE) {
+  const live=JSON.parse(fs.readFileSync(process.env.KATH_LIVE_FIXTURE,'utf8'));
+  assert.equal(live.slug,'kat-coffe');html=render(live);
+  assert.equal((html.match(/aria-label="عرض تفاصيل /g)||[]).length,live.products.length);
+  assert(!/الكواكب|KAWAKIB|\/loyalty\/rast|rast-coffee-editorial/.test(html));
+  console.log(`PASS Kath live fixture: ${live.products.length} own products, original logo and actual loyalty availability`);
+}
 if(process.env.MENU_BASELINE_FILE) {
   const {BistroMenu:Previous}=load('components/menu/bistro-menu.tsx',{'components/menu/bistro-menu.tsx':fs.readFileSync(process.env.MENU_BASELINE_FILE,'utf8')});
-  for(const slug of ['basilico','new-brand','double-b-bistro','rast']) {const menu={...base,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(render(menu),previous,`Preserve ${slug} full menu markup when optional services are inactive`);}
-  console.log('PASS four complete standalone menu SSR baselines unchanged');
+  for(const slug of ['basilico','new-brand','double-b-bistro','rast']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(render(menu),previous,`Preserve ${slug} full menu markup with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
+  console.log('PASS eight complete standalone menu SSR baselines unchanged with services on and off');
 }
 console.log('PASS universal menu service gates own-brand links offers expiry event details existing layout and published pricing');
+console.log('PASS Kath editorial identity, own loyalty gates, dashboard data replacement and empty catalog');

@@ -1,0 +1,45 @@
+/* Kath's original brown and gold identity, scoped to its standalone menu only */
+.theme.theme {
+  --kath-brown: #733b27;
+  --kath-espresso: #3b241b;
+  --kath-gold: #e5b572;
+  --kath-ivory: #fbf6ed;
+  --rast-red: var(--kath-brown);
+  --rast-wine: var(--kath-espresso);
+  --rast-cream: var(--kath-ivory);
+  --rast-blush: #efdfc9;
+  --rast-muted: #755b4e;
+  --rast-border: #dfcab5;
+  --card-paper: #fffdf8;
+  color-scheme: light;
+}
+.theme .hero {
+  --rast-wordmark-height: clamp(170px, 25vw, 290px);
+  background: var(--kath-brown);
+}
+.theme .hero::before {
+  background:
+    linear-gradient(180deg, #733b27 0, #733b27f5 var(--rast-brand-height), #733b2700 calc(var(--rast-brand-height) + 100px)),
+    linear-gradient(90deg, #2d180fee 0%, #2d180fe0 42%, #2d180f38 78%),
+    linear-gradient(0deg, #2d180fcc 0%, #2d180f00 60%);
+}
+.theme .hero header { border-color: #e5b57245; }
+.theme .hero header button { color: var(--kath-gold); border-color: #e5b57266; }
+.theme .hero header p { color: var(--kath-gold); }
+.theme .wordmark { width: min(100%, 680px); }
+.theme .wordmark + div { color: var(--kath-ivory); }
+.theme .ribbon { color: var(--kath-espresso); background: var(--kath-gold); }
+.theme .loyalty { --rast-red: var(--kath-gold); }
+.theme .loyaltyCard { background: var(--kath-brown); color: var(--kath-ivory); }
+.loyaltyCard img { display: block; object-fit: contain; max-width: 100%; }
+.inactiveLoyalty > span:last-child { background: transparent; color: var(--kath-ivory); border-color: #e5b57266; }
+.theme .closing > img { background: var(--kath-brown); border-radius: 12px; margin-top: 28px; }
+
+@media (max-width: 680px) {
+  .theme .hero { --rast-wordmark-height: clamp(150px, 43vw, 210px); }
+  .theme .hero::before {
+    background:
+      linear-gradient(180deg, #733b27 0, #733b27f5 var(--rast-brand-height), #733b2700 calc(var(--rast-brand-height) + 100px)),
+      linear-gradient(180deg, #2d180f00 calc(var(--rast-brand-height) + 65px), #2d180fe0 calc(var(--rast-brand-height) + 210px), #2d180ff2 100%);
+  }
+}
