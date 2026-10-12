@@ -14,17 +14,17 @@
   color-scheme: light;
 }
 .theme .hero {
-  --rast-wordmark-height: clamp(170px, 25vw, 290px);
+  --rast-wordmark-height: clamp(140px, 20vw, 240px);
   background: var(--kath-brown);
 }
 .theme .hero::before {
-  background: none;
+  background:
+    linear-gradient(180deg, #733b27 0, #733b27f5 calc(var(--rast-brand-height) - 24px), #733b2700 calc(var(--rast-brand-height) + 80px)),
+    linear-gradient(90deg, #25150fed 0%, #25150fd9 38%, #25150f14 72%),
+    linear-gradient(0deg, #25150fe6 0%, #25150f00 52%);
 }
-.theme .heroGrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: clamp(28px, 5vw, 80px); padding-top: 32px; }
-.theme .heroCopy { width: 100%; margin: 0; }
-/* Transparent cup artwork sits directly on the hero, with no panel or scrim. */
-.heroPhoto { min-width: 0; pointer-events: none; }
-.heroPhoto > img { display: block; width: 100%; height: auto; aspect-ratio: 1.1; object-fit: cover; object-position: center; }
+.theme .heroBackdrop { top: 160px; }
+.theme .heroBackdrop > img { object-position: 65% center; }
 .theme .hero header { border-color: #e5b57245; }
 .theme .hero header button { color: var(--kath-gold); border-color: #e5b57266; }
 .theme .hero header p { color: var(--kath-gold); }
@@ -39,8 +39,12 @@
 .theme .loyalty .inactiveLoyalty .loyaltyAction, .theme .loyalty .inactiveLoyalty:hover .loyaltyAction { background: transparent; color: var(--kath-ivory); border-color: #e5b57266; }
 .theme .closing > img { background: var(--kath-brown); border-radius: 12px; margin-top: 28px; }
 
-@media (max-width: 680px) {
-  .theme .hero { --rast-wordmark-height: clamp(150px, 43vw, 210px); }
-  .theme .heroGrid { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 12px; }
-  .heroPhoto > img { aspect-ratio: 1.15; }
+@media (max-width: 640px) {
+  .theme .hero { --rast-wordmark-height: clamp(104px, 31vw, 170px); }
+  .theme .heroBackdrop { top: 60px; }
+  .theme .hero::before {
+    background:
+      linear-gradient(180deg, #733b27 0, #733b27f5 calc(var(--rast-brand-height) - 24px), #733b2700 calc(var(--rast-brand-height) + 52px)),
+      linear-gradient(180deg, #25150f00 calc(var(--rast-brand-height) + 82px), #25150fd9 calc(var(--rast-brand-height) + 252px), #25150ff5 100%);
+  }
 }

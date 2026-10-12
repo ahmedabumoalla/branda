@@ -189,9 +189,9 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
   const brandName = isKath ? "مقهى كاث" : "مقهى الكواكب";
   return <section className={`${s.rastHero}${isKath ? ` ${kath.hero}` : ""}`} aria-label={`مرحبًا في ${brandName}`}>
     {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
-    {!isKath && <div className={s.rastHeroBackdrop} aria-hidden="true">
-      <FoodImage src="/menu-art/rast-coffee-editorial-v1.webp" alt="" priority />
-    </div>}
+    <div className={`${s.rastHeroBackdrop}${isKath ? ` ${kath.heroBackdrop}` : ""}`} aria-hidden="true">
+      <FoodImage src={isKath ? "/menu-art/kath-coffee-editorial-v1.webp" : "/menu-art/rast-coffee-editorial-v1.webp"} alt="" priority />
+    </div>
     <header className={s.rastHeader}>
       <div className={s.heroActions}>
         <MenuServices menu={menu} compact />
@@ -204,9 +204,8 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
       <FoodImage src={menu.logoUrl || (isKath ? "/menu-logos/kath-transparent-v1.webp" : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={`${s.rastWordmark}${isKath ? ` ${kath.wordmark}` : ""}`} priority />
       <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">COFFEE &amp; GOOD MOMENTS</span></div>
     </div>
-    <div className={`${s.rastHeroGrid}${isKath ? ` ${kath.heroGrid}` : ""}`}>
-      {isKath && <div className={kath.heroPhoto} aria-hidden="true"><FoodImage src="/menu-art/kath-latte-cutout-v1.webp" alt="" priority /></div>}
-      <div className={`${s.rastHeroCopy}${isKath ? ` ${kath.heroCopy}` : ""}`}>
+    <div className={s.rastHeroGrid}>
+      <div className={s.rastHeroCopy}>
         <p className={s.rastEyebrow}>أهلًا بك في {brandName}</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>
         <p className={s.rastHeroDescription}>قهوة تحبّها حلا يكمّلها ولحظة تستاهل تعيشها على مهلك</p>
