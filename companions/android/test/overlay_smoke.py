@@ -47,7 +47,15 @@ for label in ("تصغير", "تكبير"):
                  "com.barndaksa.pager.probe/.OverlayProbe")
     assert "PASS native overlay control" in result, result
 adb("shell", "input", "keyevent", "KEYCODE_SLEEP")
-time.sleep(3)
-services = adb("shell", "dumpsys", "activity", "services", package)
+for _ in range(30):
+    services = adb("shell", "dumpsys", "activity", "services", package)
+    if not re.search(r"ServiceRecord\{[^\n]*OverlayService", services):
+        break
+    time.sleep(0.5)
+with open("native-smoke-shutdown.txt", "w", encoding="utf-8") as result:
+    result.write(services + "\n" + adb("shell", "dumpsys", "power"))
+if re.search(r"ServiceRecord\{[^\n]*OverlayService", services):
+    print(services)
+    print(adb("shell", "dumpsys", "power"))
 assert not re.search(r"ServiceRecord\{[^\n]*OverlayService", services), "Overlay service survived screen lock"
 print("PASS: overlay stays above the launcher, collapses/restores, and stops on screen lock")

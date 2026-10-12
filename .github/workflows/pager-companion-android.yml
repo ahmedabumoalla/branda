@@ -42,5 +42,5 @@ jobs:
         if: always()
         with:
           name: pager-native-window-api-${{ matrix.api }}
-          path: native-smoke-windows.txt
+          path: native-smoke-*.txt
           if-no-files-found: ignore
