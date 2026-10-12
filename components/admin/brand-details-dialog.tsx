@@ -184,7 +184,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         </>}
         {section === "services" && services}
         {section === "pager" && <PagerBrandPanel key={cafe.id} cafeId={cafe.id} />}
-        {section === "menu" && <StandaloneMenuControl />}
+        {section === "menu" && <StandaloneMenuControl cafe={cafe} plans={plans} />}
         {section === "operations" && <BrandOperationsPanel key={cafe.id} brandId={cafe.id} />}
         {section === "analytics" && <><BrandAnalyticsPanel key={cafe.id} brandId={cafe.id} /><div className={s.analyticsGrid}>{stats.map(({ label, value, icon: Icon }) => <div key={label}><Icon aria-hidden="true" /><span>{label}</span><strong>{value}</strong></div>)}</div>{activity}</>}
         {section === "support" && <>
