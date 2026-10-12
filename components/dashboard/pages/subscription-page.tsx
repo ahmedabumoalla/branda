@@ -89,6 +89,7 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
       setMessage({ text: success, error: false });
       if (openRequest && nextRequests.some(request => request.id === openRequest.id && request.status === "approved")) {
         clearDashboardShellSnapshot();
+        window.dispatchEvent(new Event("barndaksa:subscription-updated"));
         router.refresh();
       }
     }

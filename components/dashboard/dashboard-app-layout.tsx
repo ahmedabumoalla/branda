@@ -80,9 +80,11 @@ export function DashboardAppLayout({
     load();
     const refresh = () => { clearDashboardShellSnapshot(); load(); };
     window.addEventListener("focus", refresh);
+    window.addEventListener("barndaksa:subscription-updated", load);
     return () => {
       cancelled = true;
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("barndaksa:subscription-updated", load);
     };
   }, [pathname, retry]);
 

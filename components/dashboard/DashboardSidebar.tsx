@@ -54,13 +54,15 @@ export function DashboardSidebar({ servicesAvailable = false, collapsed = false,
 
   useEffect(() => {
     let cancelled = false;
-    void getCachedDashboardShellSnapshot().then(snapshot => {
+    function load() { void getCachedDashboardShellSnapshot().then(snapshot => {
       if (cancelled || (snapshot as { unauthenticated?: boolean }).unauthenticated) return;
       setNavigation({ planId: snapshot.planId, plans: snapshot.plans, featureOverrides: snapshot.featureOverrides ?? [], settings: snapshot.settings, notifications: snapshot.notifications, subscription: snapshot.subscription });
     }).catch(error => {
       if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) console.error("[DashboardSidebar]", error);
-    });
-    return () => { cancelled = true; };
+    }); }
+    load();
+    window.addEventListener("barndaksa:subscription-updated", load);
+    return () => { cancelled = true; window.removeEventListener("barndaksa:subscription-updated", load); };
   }, []);
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.

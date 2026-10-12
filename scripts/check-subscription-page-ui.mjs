@@ -7,6 +7,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const dependency = createRequire(import.meta.url);
+const events=[];
+globalThis.window={dispatchEvent:event=>{events.push(event.type);return true;}};
 function load(file, stubs = {}, cache = new Map()) {
   if (cache.has(file)) return cache.get(file);
   const exports = {};
@@ -89,6 +91,7 @@ assert.deepEqual(view.calls[1], ["whatsapp", request.id]);
 assert.ok(renderToStaticMarkup(view.render()).includes("طلبك لدى فريق المراجعة"));
 await button(view.render(), "تحديث حالة الطلب").props.onClick();
 assert.deepEqual(view.calls.slice(-2), [["clear-cache"], ["refresh"]], "approved review updates shell and page");
+assert.ok(events.includes("barndaksa:subscription-updated"),"approved renewal immediately reloads sidebar and expiry guard");
 
 const upload = harness({ initialRequests: [request] });
 tree = upload.render();
