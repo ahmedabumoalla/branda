@@ -15,8 +15,8 @@ final class PagerApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavig
     var expandedFrame = NSRect.zero
     var home: URL { URL(string: owner ? "https://barndaksa.com/dashboard/pager" : "https://barndaksa.com/pager")! }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        panel = PagerPanel(contentRect: NSRect(x: 100, y: 100, width: 440, height: 690), styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
+    static func makePanel() -> PagerPanel {
+        let panel = PagerPanel(contentRect: NSRect(x: 100, y: 100, width: 440, height: 690), styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
         panel.title = "نداء برندة"
         panel.level = .floating
         panel.isFloatingPanel = true
@@ -24,6 +24,10 @@ final class PagerApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavig
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.minSize = NSSize(width: 340, height: 100)
         panel.isReleasedWhenClosed = false
+        return panel
+    }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        panel = Self.makePanel()
         panel.delegate = self
         let stack = NSStackView()
         stack.orientation = .vertical
@@ -103,6 +107,10 @@ final class PagerApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavig
         alert.beginSheetModal(for: panel) { completionHandler($0 == .alertFirstButtonReturn) }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func application(_ application: NSApplication, open urls: [URL]) {
+        // External URLs may only bring the app forward, never choose a web URL or inject a session.
+        if panel != nil { panel.makeKeyAndOrderFront(nil); application.activate(ignoringOtherApps: true) }
+    }
 }
 
 if CommandLine.arguments.contains("--self-test") {
@@ -111,6 +119,13 @@ if CommandLine.arguments.contains("--self-test") {
         precondition(!PagerApp.trusted(URL(string: input)))
     }
     print("Navigation boundary checks passed")
+    _ = NSApplication.shared
+    let testPanel = PagerApp.makePanel()
+    testPanel.orderFrontRegardless()
+    precondition(testPanel.isVisible && testPanel.level == .floating && !testPanel.hidesOnDeactivate)
+    precondition(testPanel.canBecomeKey && testPanel.collectionBehavior.contains(.canJoinAllSpaces))
+    testPanel.close()
+    print("Native floating panel opens and closes with cross-space and focus support")
 } else {
     let application = NSApplication.shared
     let delegate = PagerApp()
