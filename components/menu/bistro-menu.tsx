@@ -358,7 +358,12 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
         <a href="#menu-catalog" className={s.rastClosingLink}>نرجع لشي تشتهيه<ArrowUpLeft aria-hidden="true" /></a>
         <FoodImage src={menu.logoUrl || (isKath ? "/menu-logos/kath-transparent-v1.webp" : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={s.rastClosingLogo} />
       </section> : <section className={s.brandSignature} aria-label={menu.name}>{menu.logoUrl ? <FoodImage src={menu.logoUrl} alt={menu.name} className={s.footerLogo} /> : <span className={s.footerName}>{displayName}</span>}<p>لحظتك أحلى مع {displayName}</p><a href="#menu-catalog" className={s.signatureReturn}>نرجع لشي تشتهيه <span aria-hidden="true">↑</span></a></section>}
-      <div><span>المنيو الرقمي</span><span>بواسطة <b>برندة</b></span></div>
+      <div><span>المنيو الرقمي</span><a className={s.platformCredit} href="https://barndaksa.com" aria-label="بواسطة برندة — اكتشف المنصة">
+        <span>بواسطة</span>
+        {/* Small local asset avoids an image optimizer round trip */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/barndaksa-footer-v1.webp" alt="برندة" width={68} height={37} loading="lazy" decoding="async" />
+      </a></div>
     </footer>
     {shareMessage && <div className={s.toast} role="status"><Check size={18} aria-hidden="true" />{shareMessage}</div>}
     <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>

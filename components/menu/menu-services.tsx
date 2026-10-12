@@ -1,6 +1,8 @@
 "use client";
 
-import { Camera, Check, Gift, MapPin, Navigation, Send, Star, Tag, X, ChevronDown, Menu } from "lucide-react";
+import { Camera, Check, MapPin, Navigation, Send, Star, Tag, X, ChevronDown, Menu } from "lucide-react";
+import Link from "next/link";
+import { LoyaltyLinkContent } from "./loyalty-link-content";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { StandaloneMenu } from "@/lib/menu/standalone-menu";
 import { menuDisplayText } from "@/lib/menu/standalone-menu";
@@ -93,7 +95,7 @@ export function MenuServices({ menu, compact = false }: { menu: StandaloneMenu; 
     {panel === "about" && <ServiceDialog title={menuDisplayText(menu.name)} close={() => setPanel(null)}>
     <p className={s.serviceDescription}>{menuDisplayText(menu.description || "لكل مزاج مذاق يستحق")}</p>
     <nav className={s.serviceDock} aria-label="تواصل مع العلامة">
-      {menu.loyaltyEnabled && <a href={`/loyalty/${encodeURIComponent(menu.slug)}`}><Gift aria-hidden="true" /><span>الولاء والمكافآت<small>بطاقتك ومكافآتك من هنا</small></span></a>}
+      {menu.loyaltyEnabled && <Link href={`/loyalty/${encodeURIComponent(menu.slug)}`}><LoyaltyLinkContent service /></Link>}
       {offers.length > 0 && <button type="button" onClick={() => setPanel("offers")}><Tag aria-hidden="true" /><span>العروض<small>اكتشف عروضنا الحالية</small></span></button>}
       {location && <button type="button" onClick={() => { setCopied(""); setPanel("location"); }}><MapPin aria-hidden="true" /><span>ننتظرك هنا<small>موقع الفرع والاتجاهات</small></span></button>}
       {menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noopener noreferrer"><Camera aria-hidden="true" /><span>تفاصيل يومنا<small>تابعنا على إنستقرام</small></span></a>}

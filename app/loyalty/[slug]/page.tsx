@@ -12,11 +12,12 @@ export const metadata = { title: "بطاقة الولاء والمكافآت", r
 
 export default async function LoyaltyJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ source?: string | string[] }> }) {
   const { slug } = await params;
-  const brand = await getLoyaltyBrand(slug);
+  const [brand, profile] = await Promise.all([getLoyaltyBrand(slug), getVerifiedLoyaltyCustomerProfile(slug)]);
   if (!brand) notFound();
-  const membership = brand.program.enabled ? await getLoyaltyMembership(slug) : null;
+  // Anonymous visitors do not need the authenticated membership query waterfall.
+  const membership = brand.program.enabled && profile ? await getLoyaltyMembership(slug) : null;
   const readiness = getWalletReadiness();
   const analytics = brand.program.enabled ? <PublicPageAnalytics slug={slug} kind={loyaltyVisitKind((await searchParams).source)} /> : null;
   if (membership) return <>{analytics}<RastMemberCard identity={brand.identity} member={membership} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
-  return <>{analytics}<RastEnrollment identity={brand.identity} program={brand.program} authenticated={Boolean(await getVerifiedLoyaltyCustomerProfile(slug))} /></>;
+  return <>{analytics}<RastEnrollment identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
 }

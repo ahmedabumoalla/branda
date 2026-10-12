@@ -1,0 +1,10 @@
+.spinner { width: 20px; height: 20px; flex-shrink: 0; }
+.label { min-width: 7.5em; }
+.loading { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 32px; background: #fbf6ed; color: #54291c; text-align: center; }
+.loading p { margin: 0; font-size: 17px; font-weight: 600; }
+.loading small { font-size: 13px; }
+.loading .spinner { width: 32px; height: 32px; }
+@media (prefers-reduced-motion: no-preference) {
+  .spinner { animation: turn 800ms linear infinite; }
+}
+@keyframes turn { to { transform: rotate(360deg); } }

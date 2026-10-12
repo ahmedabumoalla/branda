@@ -141,20 +141,57 @@ check("Cashier offers approved stamp reward and camera flow for own brand", () =
   assert(!html.includes("الكواكب"));
 });
 
-let requestedSlug, profileSlug, member = null;
+let requestedSlug, profileSlug, member = null, profile = null, membershipCalls = 0;
 const { default: PublicPage } = load("app/loyalty/[slug]/page.tsx", {
   "next/navigation": { notFound: () => { throw new Error("not-found"); } },
-  "@/lib/data/loyalty-experience": { getLoyaltyBrand: async (slug) => { requestedSlug = slug; return slug === "missing" ? null : { identity, program }; }, getLoyaltyMembership: async () => member },
-  "@/lib/auth/rast-loyalty-session": { getVerifiedLoyaltyCustomerProfile: async (slug) => { profileSlug = slug; return null; } },
+  "@/lib/data/loyalty-experience": { getLoyaltyBrand: async (slug) => { requestedSlug = slug; return slug === "missing" ? null : { identity, program }; }, getLoyaltyMembership: async () => { membershipCalls++; return member; } },
+  "@/lib/auth/rast-loyalty-session": { getVerifiedLoyaltyCustomerProfile: async (slug) => { profileSlug = slug; return profile; } },
   "@/lib/wallet": { getWalletReadiness: () => ({ apple: true, google: true }) },
   "@/components/analytics/public-page-analytics": { PublicPageAnalytics: () => null },
-  "@/components/rast-loyalty/rast-enrollment": { RastEnrollment: "enrollment" },
-  "@/components/rast-loyalty/rast-member-card": { RastMemberCard: "membership" },
+  "@/components/rast-loyalty/rast-enrollment": { RastEnrollment: () => React.createElement("div", { "data-view": "enrollment" }) },
+  "@/components/rast-loyalty/rast-member-card": { RastMemberCard: () => React.createElement("div", { "data-view": "membership" }) },
 });
 await PublicPage({ params: Promise.resolve({ slug: identity.slug }), searchParams: Promise.resolve({}) });
 check("Public route authorizes and checks OTP identity against requested brand", () => {
   assert.equal(requestedSlug, identity.slug);
   assert.equal(profileSlug, identity.slug);
+  assert.equal(membershipCalls, 0, "Anonymous enrollment skips redundant brand and membership queries");
+});
+profile = { id: "verified-customer" }; member = { card: { id: "own-card" } };
+let page = await PublicPage({ params: Promise.resolve({ slug: identity.slug }), searchParams: Promise.resolve({}) });
+check("Verified members retain their authorized card flow", () => {
+  assert.equal(membershipCalls, 1);
+  assert(renderToStaticMarkup(page).includes('data-view="membership"'));
+});
+member = null;
+page = await PublicPage({ params: Promise.resolve({ slug: identity.slug }), searchParams: Promise.resolve({}) });
+check("Verified nonmembers retain enrollment", () => assert(renderToStaticMarkup(page).includes('data-view="enrollment"')));
+program.enabled = false;
+const previousCalls = membershipCalls;
+await PublicPage({ params: Promise.resolve({ slug: identity.slug }), searchParams: Promise.resolve({}) });
+check("Disabled programs never load a membership", () => assert.equal(membershipCalls, previousCalls));
+program.enabled = true;
+
+let pending = false;
+const { LoyaltyLinkContent } = load("components/menu/loyalty-link-content.tsx", {
+  "next/link": { useLinkStatus: () => ({ pending }) },
+});
+for (const service of [false, true]) {
+  pending = false;
+  const idle = render(LoyaltyLinkContent, { service });
+  pending = true;
+  const busy = render(LoyaltyLinkContent, { service });
+  check(`Loyalty link immediately exposes accessible pending feedback (service=${service})`, () => {
+    assert(!idle.includes("جار فتح بطاقتك"));
+    assert(busy.includes("جار فتح بطاقتك") && busy.includes("spinner") && busy.includes('role="status"'));
+  });
+  pending = false;
+  check("Router cancellation resets feedback", () => assert.equal(render(LoyaltyLinkContent, { service }), idle));
+}
+const { default: Loading } = load("app/loyalty/[slug]/loading.tsx");
+check("Shared dynamic loyalty route streams an accessible loading boundary", () => {
+  const html = render(Loading);
+  assert(html.includes("جار فتح بطاقتك") && html.includes('role="status"') && html.includes('dir="rtl"'));
 });
 await assert.rejects(() => PublicPage({ params: Promise.resolve({ slug: "missing" }), searchParams: Promise.resolve({}) }), /not-found/);
 checks++;

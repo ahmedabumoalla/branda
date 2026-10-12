@@ -3,12 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
-import { ArrowUpLeft, WalletCards } from "lucide-react";
+import { WalletCards } from "lucide-react";
+import { LoyaltyLinkContent } from "./loyalty-link-content";
 import s from "./rast-loyalty-entry.module.css";
 
 export function RastLoyaltyEntry() {
   return <section className={s.section} aria-label="بطاقة ولاء مقهى الكواكب">
-    <Link href="/loyalty/rast?source=menu" prefetch={false} className={s.entry} aria-label="حمّل بطاقة ولاء مقهى الكواكب"
+    <Link href="/loyalty/rast?source=menu" className={s.entry} aria-label="حمّل بطاقة ولاء مقهى الكواكب"
       onClick={() => trackBrandEngagement("rast", "menu_loyalty_click")}
       onAuxClick={event => { if (event.button === 1) trackBrandEngagement("rast", "menu_loyalty_click"); }}>
       <span className={s.cardIllustration} aria-hidden="true">
@@ -24,7 +25,7 @@ export function RastLoyaltyEntry() {
         <span className={s.title}>بطاقتك معك في كل زيارة</span>
         <span className={s.description}>حمّل بطاقة الولاء وخلي لحظاتك معنا أقرب</span>
       </span>
-      <span className={s.action}>حمّل بطاقتك<ArrowUpLeft aria-hidden="true" /></span>
+      <LoyaltyLinkContent className={s.action} />
     </Link>
   </section>;
 }

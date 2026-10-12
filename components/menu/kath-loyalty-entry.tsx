@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpLeft, WalletCards } from "lucide-react";
+import { WalletCards } from "lucide-react";
+import { LoyaltyLinkContent } from "./loyalty-link-content";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import type { StandaloneMenu } from "@/lib/menu/standalone-menu";
 import s from "./rast-loyalty-entry.module.css";
@@ -26,10 +27,11 @@ export function KathLoyaltyEntry({ menu }: { menu: StandaloneMenu }) {
       <span className={s.title}>{menu.loyaltyEnabled ? "بطاقتك معك في كل زيارة" : "الولاء والمكافآت"}</span>
       <span className={s.description}>{menu.loyaltyEnabled ? "حمّل بطاقة الولاء وخلي لحظاتك معنا أقرب" : "بطاقة الولاء غير متاحة حاليًا"}</span>
     </span>
-    <span className={`${s.action} ${kath.loyaltyAction}`}>{menu.loyaltyEnabled ? <>حمّل بطاقتك<ArrowUpLeft aria-hidden="true" /></> : "غير مفعّلة حاليًا"}</span>
+    {menu.loyaltyEnabled ? <LoyaltyLinkContent className={`${s.action} ${kath.loyaltyAction}`} />
+      : <span className={`${s.action} ${kath.loyaltyAction}`}>غير مفعّلة حاليًا</span>}
   </>;
   return <section className={`${s.section} ${kath.loyalty}`} aria-label="بطاقة ولاء مقهى كاث">
-    {menu.loyaltyEnabled ? <Link href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} prefetch={false} className={s.entry}
+    {menu.loyaltyEnabled ? <Link href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} className={s.entry}
       aria-label="حمّل بطاقة ولاء مقهى كاث"
       onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}
       onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}>{content}</Link>

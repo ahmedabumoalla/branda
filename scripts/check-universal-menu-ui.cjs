@@ -34,6 +34,10 @@ html=services({...enabled,highlights:{asOf:Date.now(),items:[{...active,kind:'ev
 forcedPanel=null;
 const {BistroMenu}=load('components/menu/bistro-menu.tsx');
 const render=menu=>{hook=0;return renderToStaticMarkup(React.createElement(BistroMenu,{menu}));};
+for(const slug of ['rast','kat-coffe','test-cafe','basilico']) {
+  const credit=render({...base,slug}).match(/<a[^>]*class="platformCredit"[\s\S]*?<\/a>/)?.[0];
+  assert(credit?.includes('href="https://barndaksa.com"')&&credit.includes('/brand/barndaksa-footer-v1.webp')&&credit.includes('alt="برندة"'),'Every menu credits Branda with its real linked logo');
+}
 for(const slug of ['basilico','new-brand','double-b-bistro']) {html=render({...base,slug});assert(!html.includes('rast-spotlight-title'));assert(html.includes('menu-catalog'));assert(html.includes('Actual product'));}
 html=render({...enabled,slug:'basilico'});assert(!html.includes('rast-spotlight-title'));assert(html.includes('16'));
 const kath={...base,slug:'kat-coffe',name:'مقهى كاث kath',logoUrl:'/menu-logos/kath-transparent-v1.webp',products:[{...product,name:'قهوة كاث',images:[{url:'https://images.test/kath-coffee.webp',alt:'قهوة كاث'}]}]};
@@ -67,8 +71,9 @@ if(process.env.KATH_LIVE_FIXTURE) {
 }
 if(process.env.MENU_BASELINE_FILE) {
   const {BistroMenu:Previous}=load('components/menu/bistro-menu.tsx',{'components/menu/bistro-menu.tsx':fs.readFileSync(process.env.MENU_BASELINE_FILE,'utf8')});
-  for(const slug of ['basilico','new-brand','double-b-bistro','rast']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(render(menu),previous,`Preserve ${slug} full menu markup with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
-  console.log('PASS eight complete standalone menu SSR baselines unchanged with services on and off');
+  const withoutCredit=html=>html.replace(/<a[^>]*class="platformCredit"[\s\S]*?<\/a>|<span>بواسطة <b>برندة<\/b><\/span>/g,'BRANDA_CREDIT');
+  for(const slug of ['basilico','new-brand','double-b-bistro','rast']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(withoutCredit(render(menu)),withoutCredit(previous),`Preserve ${slug} full menu markup except requested shared credit with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
+  console.log('PASS eight standalone menu SSR baselines unchanged outside the requested shared footer credit');
 }
 console.log('PASS universal menu service gates own-brand links offers expiry event details existing layout and published pricing');
 console.log('PASS Kath editorial identity, own loyalty gates, dashboard data replacement and empty catalog');
