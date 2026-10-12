@@ -13,6 +13,7 @@ def adb(*args):
 
 assert adb("shell", "getprop", "ro.kernel.qemu") == "1", "This test must only operate on an emulator"
 adb("install", "-r", "public/downloads/branda-pager-android.apk")
+adb("install", "-r", "scripts/android-overlay-probe/build/outputs/apk/debug/android-overlay-probe-debug.apk")
 adb("shell", "appops", "set", package, "SYSTEM_ALERT_WINDOW", "allow")
 if int(adb("shell", "getprop", "ro.build.version.sdk")) >= 33:
     adb("shell", "pm", "grant", package, "android.permission.POST_NOTIFICATIONS")
@@ -39,8 +40,12 @@ with open("native-smoke-windows.txt", "w", encoding="utf-8") as result:
     result.write(windows)
 blocks = re.split(r"(?=Window #\d+ Window\{)", windows)
 assert any(package in block and ("APPLICATION_OVERLAY" in block or "ty=2038" in block) and "mHasSurface=true" in block for block in blocks), "No displayed application-overlay surface after Home"
-native_button("تصغير")
-native_button("تكبير")
+for label in ("تصغير", "تكبير"):
+    # The shell dump only returns the active window, which is the launcher after Home
+    # This test-only instrumentation retrieves all interactive native windows
+    result = adb("shell", "am", "instrument", "-w", "-e", "label", label,
+                 "com.barndaksa.pager.probe/.OverlayProbe")
+    assert "PASS native overlay control" in result, result
 adb("shell", "input", "keyevent", "KEYCODE_SLEEP")
 time.sleep(3)
 services = adb("shell", "dumpsys", "activity", "services", package)
