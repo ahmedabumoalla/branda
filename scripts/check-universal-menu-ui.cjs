@@ -46,6 +46,9 @@ const kathSocial=html.match(/<section[^>]+aria-label="مقهى كاث على م�
 assert(kathSocial,'Kath exposes the same social icon strip');
 for(const name of ['سناب شات','تيك توك','إنستقرام','واتساب'])assert(kathSocial.includes(name));
 assert(!kathSocial.includes('href=')&&!kathSocial.includes('<button'),'unconfigured social icons have no invented destinations or empty actions');
+assert(html.includes('placeholder="ابحث عن صنف"')&&html.includes('compactTools'),'Kath has a compact search row');
+assert(html.includes('aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed="true"')&&html.includes('aria-label="عرض القائمة" title="عرض القائمة" aria-pressed="false"'),'both layout choices are visible before opening filters');
+assert(!html.includes('id="menu-filters"')&&(html.match(/aria-label="طريقة عرض المنيو"/g)||[]).length===1,'layout choice is outside the collapsed filter panel, without duplicates');
 html=render({...kath,loyaltyEnabled:true,highlights:{asOf:Date.now(),items:[active]}});
 assert(html.includes('/loyalty/kat-coffe?source=menu')&&!html.includes('/loyalty/rast'));
 assert(html.includes('Active offer')&&html.includes('BRAND20'));

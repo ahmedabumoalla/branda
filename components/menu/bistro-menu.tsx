@@ -312,14 +312,15 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
             <span className={s.categoryLabel}>{menuDisplayText(item.name)} <small>{item.id === "all" ? menu.products.length : menu.products.filter((product) => (product.categoryId || "uncategorized") === item.id).length}</small></span>
           </button>)}
         </nav></LayoutGroup>
-        <div className={s.tools}>
-          <label className={s.search}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ما الذي تشتهيه اليوم؟" aria-label="ابحث في الأصناف والمكونات" /></label>
-          <button className={s.filterToggle} type="button" aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
+        <div className={`${s.tools}${isKath ? ` ${kath.compactTools}` : ""}`}>
+          <label className={`${s.search}${isKath ? ` ${kath.compactSearch}` : ""}`}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isKath ? "ابحث عن صنف" : "ما الذي تشتهيه اليوم؟"} aria-label="ابحث في الأصناف والمكونات" /></label>
+          <button className={`${s.filterToggle}${isKath ? ` ${kath.compactFilter}` : ""}`} type="button" aria-label={isKath ? availableOnly || priceOrder !== "original" ? "تصفية الأصناف مفعلة" : "تصفية الأصناف" : undefined} aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
+          {isKath && <div className={`${s.viewSwitch} ${kath.compactViews}`} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" title="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
         </div>
         {filterOpen && <div id="menu-filters" className={s.filterPanel}>
           <label><input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} />المتوفر حاليًا فقط</label>
           <label>ترتيب الأصناف<select value={priceOrder} onChange={(event) => setPriceOrder(event.target.value as typeof priceOrder)}><option value="original">ترتيب المنيو</option><option value="asc">الأقل سعرًا داخل القسم</option><option value="desc">الأعلى سعرًا داخل القسم</option></select></label>
-          <div className={s.viewSwitch} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الصور" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>
+          {!isKath && <div className={s.viewSwitch} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الصور" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
           <button className={s.resetFilters} type="button" onClick={() => { setAvailableOnly(false); setPriceOrder("original"); setQuery(""); setCategory("all"); }}>إعادة ضبط التصفية</button>
         </div>}
       </div>

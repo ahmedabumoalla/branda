@@ -40,7 +40,21 @@
 .theme .loyalty .inactiveLoyalty .loyaltyAction, .theme .loyalty .inactiveLoyalty:hover .loyaltyAction { background: transparent; color: var(--kath-ivory); border-color: #e5b57266; }
 .theme .closing > img { background: var(--kath-brown); border-radius: 12px; margin-top: 28px; }
 
+.theme .compactTools { justify-content: flex-start; gap: 8px; }
+.theme .compactSearch { min-width: 0; max-width: 340px; padding-inline: 12px; border-radius: 10px; }
+.theme .compactSearch input { height: 46px; font-size: 16px; }
+.theme .compactSearch > svg { width: 18px; height: 18px; }
+.theme .compactFilter { min-height: 48px; padding: 0 14px; gap: 8px; flex-shrink: 0; border-radius: 10px; font-size: 13px; }
+.theme .compactFilter > svg { width: 18px; height: 18px; }
+.theme .compactViews { flex-shrink: 0; padding: 1px; gap: 2px; border-radius: 10px; border-color: var(--rast-border); background: var(--rast-blush); }
+.theme .compactViews button { width: 44px; height: 44px; border-radius: 8px; color: var(--rast-muted); }
+.theme .compactViews button[aria-pressed="true"] { background: var(--kath-ivory); color: var(--kath-brown); box-shadow: 0 1px 4px #3b241b14; }
+.theme .compactViews button:hover { color: var(--kath-brown); }
+
 @media (max-width: 640px) {
+  .theme .compactSearch { max-width: none; }
+  .theme .compactFilter { width: 48px; padding: 0; }
+  .compactFilter > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .theme .hero { --rast-wordmark-height: clamp(104px, 31vw, 170px); }
   .theme .heroBackdrop { top: 60px; }
   .theme .hero::before {
