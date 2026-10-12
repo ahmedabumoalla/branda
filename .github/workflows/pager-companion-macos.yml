@@ -1,0 +1,23 @@
+name: Build pager companion for macOS
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/pager-native-*']
+    paths: ['companions/macos/**', '.github/workflows/pager-companion-macos.yml']
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal application and verify signature and navigation rules
+        run: bash companions/macos/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: branda-pager-macos
+          path: |
+            companions/macos/build/branda-pager-macos.zip
+            companions/macos/build/SHA256SUMS
+          if-no-files-found: error
