@@ -16,9 +16,8 @@ export function googleObjectId(issuerId: string, member: WalletMember) {
 
 export function walletColors(member: WalletMember) {
   if (member.cafeSlug === "rast") return { background: "#3b1420", foreground: "#f8f2e8", accent: "#d8b67a" };
-  const design = member.program.cardDesign;
   const hex = (value: string | undefined, fallback: string) => /^#[\da-f]{6}$/i.test(value ?? "") ? value! : fallback;
-  return { background: hex(design?.cardBackground ?? member.program.cardBackground, "#52212b"), foreground: hex(design?.cardForeground ?? member.program.cardForeground, "#fff8eb"), accent: hex(design?.cardAccent ?? member.program.cardAccent, "#d8b67a") };
+  return { background: hex(member.program.cardBackground, "#4a281d"), foreground: hex(member.program.cardForeground, "#fcf8f3"), accent: hex(member.program.cardAccent, "#d9a33f") };
 }
 
 export function walletLocations(member: WalletMember) {

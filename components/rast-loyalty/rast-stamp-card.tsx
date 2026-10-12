@@ -1,4 +1,5 @@
 import { Check, Coffee, Gift } from "lucide-react";
+import type { ReactNode } from "react";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { RastBrand } from "./rast-brand";
 import { RastQrCode } from "./qr-code";
@@ -13,9 +14,10 @@ type Props = {
   rewardName: string;
   cardCode?: string;
   preview?: boolean;
+  details?: ReactNode;
 };
 
-export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, preview = false }: Props) {
+export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, preview = false, details }: Props) {
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
   return <section className={s.stampCard} style={loyaltyTheme(identity)} aria-label={`${preview ? "معاينة بطاقة" : "بطاقة"} ${loyaltyCommunityName(identity)}`}>
@@ -28,6 +30,7 @@ export function RastStampCard({ identity, customerName, stamps, required, reward
       </li>)}
     </ol>
     <div className={s.cardReward}><Gift aria-hidden="true" /><div><span>عند اكتمال الأختام</span><strong>{rewardName}</strong></div></div>
+    {details}
     {cardCode ? <div className={s.memberQr}><RastQrCode value={cardCode} label="رمز بطاقتك لجمع الأختام عند الكاشير" /><div><strong>ختمك يبدأ من هنا</strong><p>اعرض الرمز للكاشير عند زيارتك</p><span dir="ltr">{cardCode}</span></div></div> : null}
     <div className={s.cardFoot}><span>{identity.slug === "rast" ? "KAWAKIB COFFEE" : identity.name}</span><span>لحظاتك لها مكافأة</span></div>
   </section>;

@@ -9,6 +9,7 @@ import { appleConfig, walletBaseUrl } from "./config";
 import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
 import { walletColors, walletLocations } from "./payload";
 import type { WalletMember } from "./types";
+import { clearLogoBackdrop } from "@/lib/loyalty/logo-alpha";
 
 export { walletStampArtwork } from "./art";
 
@@ -68,7 +69,11 @@ async function brandAsset(member: Pick<WalletMember, "logoUrl" | "cafeName" | "p
 }
 
 export async function walletBrandLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
-  return sharp(await brandAsset(member), { limitInputPixels: 16_000_000 }).resize(640, 200, { fit: "contain", background: "#f8f2e8" }).flatten({ background: "#f8f2e8" }).png().toBuffer();
+  const { data, info } = await sharp(await brandAsset(member), { limitInputPixels: 16_000_000 })
+    .resize(640, 400, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  clearLogoBackdrop(data, info.width, info.height);
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).trim()
+    .resize(640, 200, { fit: "contain", background: "#00000000" }).png().toBuffer();
 }
 
 function rgb(hex: string) {
@@ -79,7 +84,7 @@ export async function issueApplePass(member: WalletMember) {
   if (!member.program.enabled || !member.program.appleWalletEnabled) throw new Error("wallet_disabled");
   const config = appleConfig();
   const colors = walletColors(member);
-  const asset = await brandAsset(member);
+  const asset = await walletBrandLogo(member);
   const image = sharp(asset, { limitInputPixels: 16_000_000 });
   const assets: Record<string, Buffer> = {};
   await Promise.all(([1, 2, 3] as const).map(async scale => {

@@ -8,7 +8,9 @@ export async function GET(_request: Request, context: Context) {
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(slug)) return new Response(null, { status: 404 });
   try {
     const brand = await getLoyaltyBrand(slug);
-    if (!brand?.program.enabled) return new Response(null, { status: 404 });
+    // The public brand mark also appears in the owner's inactive-program preview.
+    // getLoyaltyBrand still enforces the current brand/package entitlement.
+    if (!brand) return new Response(null, { status: 404 });
     const logo = await walletBrandLogo({ cafeName: brand.identity.name, logoUrl: brand.identity.logoUrl, program: brand.program });
     return new Response(new Uint8Array(logo), { headers: { "content-type": "image/png", "cache-control": "public, max-age=300", "x-content-type-options": "nosniff" } });
   } catch { return new Response(null, { status: 503, headers: { "cache-control": "no-store" } }); }

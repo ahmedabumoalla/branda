@@ -6,8 +6,8 @@ import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName } from "./loyalty-theme";
 
 export function RastBrand({ identity, light = false }: { identity: LoyaltyIdentity; light?: boolean }) {
-  return <div className={`${s.brand} ${light ? s.brandLight : ""} ${identity.slug !== "rast" ? s.ownBrand : ""}`}>
-    {identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={identity.name} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{identity.name}</strong>}
+  return <div className={`${s.brand} ${light ? s.brandLight : ""}`}>
+    {identity.logoUrl || identity.slug === "rast" ? <Image src={identity.logoDisplayUrl || identity.logoUrl || "/menu-logos/kawakib-transparent-20261008.png"} alt={identity.name} width={144} height={78} className={s.logo} unoptimized /> : <strong className={s.logoFallback}>{identity.name}</strong>}
     <span>{loyaltyCommunityName(identity)}</span>
   </div>;
 }

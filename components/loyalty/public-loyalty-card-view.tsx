@@ -70,9 +70,9 @@ function publicCardDesign(input: {
     terms: "",
     stampsRequired: input.required,
     completedStamps: input.lit,
-    cardBackground: "#F6BE18",
-    cardForeground: "#17212B",
-    cardAccent: "#64BFA9",
+    cardBackground: "#4a281d",
+    cardForeground: "#fcf8f3",
+    cardAccent: "#d9a33f",
     logoRemoveLightBackground: false,
     logoBackgroundTolerance: 20,
     logoPlacement: "top-right",
@@ -214,7 +214,7 @@ export function PublicLoyaltyCardView({
             </div>
 
             {availableRewards > 0 ? (
-              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#F6BE18] p-5 font-black text-[#17212B]">
+              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#4a281d] p-5 font-black text-[#fcf8f3]">
                 <Gift className="h-6 w-6" />
                 {"اكتملت البطاقة لديك"} {rewardName}
               </div>

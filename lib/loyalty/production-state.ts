@@ -15,13 +15,13 @@ const fallbackProgram = {
   rewardName: "مشروب مجاني عند اكتمال البطاقة",
   stampLabel: "ختم",
   terms: "",
-  cardBackground: "#F6BE18",
-  cardForeground: "#17212B",
-  cardAccent: "#64BFA9",
+  cardBackground: "#4a281d",
+  cardForeground: "#fcf8f3",
+  cardAccent: "#d9a33f",
 };
 
-const referenceLayoutVersion = "reference-horizontal-v1" as const;
-const oldDefaultBackgrounds = new Set(["#4A281D", "#3A2117"]);
+const referenceLayoutVersion = "brand-stamps-v1" as const;
+const oldDefaultBackgrounds = new Set(["#F6BE18"]);
 
 function safeCardBackground(value: string | undefined) {
   const normalized = String(value ?? "").trim();
@@ -109,6 +109,8 @@ export function buildLoyaltyCardDesign(input: {
   const completed = Math.max(0, Math.min(required, Number(input.card?.stampsInCycle ?? 0)));
   const code = String(input.card?.cardCode ?? "");
   const base: LoyaltyCardDesign = {
+    brandSlug: input.program?.brandSlug,
+    logoPreviewUrl: input.program?.logoUrl,
     layoutVersion: referenceLayoutVersion,
     enabled: Boolean(program.enabled ?? true),
     brandName: input.cafeName,
@@ -168,6 +170,11 @@ export function buildLoyaltyCardDesign(input: {
 
   return sanitizeDesign(base, {
     ...savedDesign,
+    brandSlug: base.brandSlug,
+    logoPreviewUrl: base.logoPreviewUrl || savedDesign.logoPreviewUrl,
+    cardBackground: base.cardBackground,
+    cardForeground: base.cardForeground,
+    cardAccent: base.cardAccent,
     enabled: base.enabled,
     brandName: savedDesign.brandName || base.brandName,
     cardTitle: savedDesign.cardTitle || base.cardTitle,

@@ -22,6 +22,7 @@ export type LoyaltyIdentity = {
   name: string;
   slug: string;
   logoUrl: string | null;
+  logoDisplayUrl?: string | null;
   cardBackground?: string;
   cardForeground?: string;
   cardAccent?: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, LoaderCircle, MessageCircle, ShieldCheck } from "lucide-react";
@@ -18,6 +18,8 @@ function westernDigits(value: string) {
 
 export function RastEnrollment({ identity, program, authenticated = false }: { identity: LoyaltyIdentity; program: LoyaltyCardProgram; authenticated?: boolean }) {
   const router = useRouter();
+  const [opening, startOpening] = useTransition();
+  function openCard() { if (!opening) startOpening(() => router.refresh()); }
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -69,14 +71,14 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
       const result = await completeLoyaltyOtpAction(identity.slug, westernDigits(phone), code, name.trim());
       if (!result.ok) { setError(result.message); return; }
       setReturning(result.returningCustomer); setStage("done");
-      router.refresh();
+      openCard();
     } catch { setError("تعذر إكمال التحقق حاول مرة أخرى مع الاحتفاظ بالرمز"); }
     finally { pendingRef.current = false; setPending(false); }
   }
 
   if (!program.enabled) return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl"><RastHeader identity={identity} /><section className={s.enrollmentLayout}><div className={s.enrollmentCopy}><span className={s.eyebrow}>{loyaltyCommunityName(identity)} برنامج الولاء</span><h1>نجهّز لك تجربة {loyaltyCommunityName(identity)}<br /><span>ترقّب الجديد</span></h1><p className={s.intro}>التسجيل في برنامج الولاء غير متاح حاليًا تقدر تتصفّح قائمة {identity.name}</p><Link href={`/menu/${identity.slug}`} className={s.primary}>تصفّح قائمة {identity.name} <ArrowLeft aria-hidden="true" /></Link></div></section><footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>{identity.slug === "rast" ? "القهوة تجمعنا" : "كل زيارة لها مكافأة"}</span></footer></main>;
 
-  if (authenticated) return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl"><RastHeader identity={identity} /><section className={s.memberIntro}><span className={s.eyebrow}>{loyaltyCommunityName(identity)}</span><h1>يا هلا برجعتك</h1><p className={s.intro}>تعذر فتح بطاقتك حاليًا جرّب تحديث الصفحة أو تواصل مع فريق {identity.name} لمراجعة حالة بطاقتك</p><button type="button" className={s.primary} onClick={() => router.refresh()}>تحديث الصفحة</button></section></main>;
+  if (authenticated) return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl"><RastHeader identity={identity} /><section className={s.memberIntro}><span className={s.eyebrow}>{loyaltyCommunityName(identity)}</span><h1>يا هلا برجعتك</h1><p className={s.intro}>تعذر فتح بطاقتك حاليًا جرّب تحديث الصفحة أو تواصل مع فريق {identity.name} لمراجعة حالة بطاقتك</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : null}<span role="status">{opening ? "جار فتح بطاقتك" : "تحديث الصفحة"}</span></button></section></main>;
 
   return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl">
     <RastHeader identity={identity} />
@@ -85,7 +87,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
         <span className={s.eyebrow}>{loyaltyCommunityName(identity)} برنامج الولاء</span>
         <h1>زيارتك تسعدنا<br /><span>ولحظاتك معنا مكافأة</span></h1>
         <p className={s.intro}>اجمع أختام زياراتك واستمتع بمكافأتك بطاقتك معك وكل زيارة تحسب لك</p>
-        {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>بطاقتك تجمع لحظاتك الحلوة معنا</p><button type="button" className={s.primary} onClick={() => router.refresh()}>عرض بطاقتي <ArrowLeft aria-hidden="true" /></button></div> : <form className={s.enrollmentForm} onSubmit={verifyCode} aria-busy={pending}>
+        {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>بطاقتك تجمع لحظاتك الحلوة معنا</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}><span role="status">{opening ? "جار فتح بطاقتك" : "عرض بطاقتي"}</span>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button></div> : <form className={s.enrollmentForm} onSubmit={verifyCode} aria-busy={pending}>
           <div className={s.formHeading}><h2>{stage === "details" ? `انضم إلى ${loyaltyCommunityName(identity)}` : "باقي خطوة ونقول يا هلا"}</h2><span>{stage === "details" ? "١ / ٢" : "٢ / ٢"}</span></div>
           {stage === "details" ? <>
             <label className={s.field} htmlFor="rast-name"><span>اسمك</span><input id="rast-name" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder="الاسم اللي نناديك فيه" required disabled={pending} /></label>

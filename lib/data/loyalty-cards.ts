@@ -10,8 +10,11 @@ import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured, sendGreenApiCashierWelcome } from "@/lib/whatsapp/green-api";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 
 export type LoyaltyCardProgram = {
+  brandSlug?: string;
+  logoUrl?: string;
   enabled: boolean;
   cardTitle: string;
   cardSubtitle: string;
@@ -126,21 +129,13 @@ const defaultProgram: LoyaltyCardProgram = {
   rewardName: "مشروب مجاني عند اكتمال البطاقة",
   stampLabel: "ختم",
   terms: "تطبق الشروط والأحكام الخاصة بالعلامة التجارية",
-  cardBackground: "#F6BE18",
-  cardForeground: "#17212B",
-  cardAccent: "#64BFA9",
+  cardBackground: "#4a281d",
+  cardForeground: "#fcf8f3",
+  cardAccent: "#d9a33f",
   cardDesign: null,
   appleWalletEnabled: false,
   googleWalletEnabled: false,
 };
-
-function safeCardBackground(value: unknown) {
-  const normalized = String(value ?? "").trim();
-  if (!normalized || normalized.toUpperCase() === "#4A281D" || normalized.toUpperCase() === "#3A2117") {
-    return defaultProgram.cardBackground;
-  }
-  return normalized;
-}
 
 function safeCardSubtitle(value: unknown) {
   const normalized = String(value ?? "").trim();
@@ -153,8 +148,10 @@ function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
   return value as LoyaltyCardDesign;
 }
 
-function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCardProgram {
-  if (!row) return defaultProgram;
+async function mapProgram(row: Record<string, unknown> | null | undefined, cafeId: string, slug: string): Promise<LoyaltyCardProgram> {
+  const { colors } = await getLoyaltyBrandAppearance(cafeId, slug);
+  const brandColors = { brandSlug: slug, logoUrl: `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1`, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent };
+  if (!row) return { ...defaultProgram, ...brandColors };
   const product = Array.isArray(row.menu_products) ? row.menu_products[0] : row.menu_products;
   return {
     enabled: Boolean(row.enabled ?? true),
@@ -169,10 +166,8 @@ function mapProgram(row: Record<string, unknown> | null | undefined): LoyaltyCar
     rewardName: String(row.reward_name ?? defaultProgram.rewardName),
     stampLabel: String(row.stamp_label ?? defaultProgram.stampLabel),
     terms: String(row.terms ?? defaultProgram.terms),
-    cardBackground: safeCardBackground(row.card_background ?? defaultProgram.cardBackground),
-    cardForeground: String(row.card_foreground ?? defaultProgram.cardForeground),
-    cardAccent: String(row.card_accent ?? defaultProgram.cardAccent),
-    cardDesign: mapCardDesign(row.card_design),
+    ...brandColors,
+    cardDesign: row.card_design ? { ...mapCardDesign(row.card_design)!, ...brandColors, layoutVersion: "brand-stamps-v1", logoPreviewUrl: brandColors.logoUrl } : null,
     appleWalletEnabled: Boolean(row.apple_wallet_enabled ?? false),
     googleWalletEnabled: Boolean(row.google_wallet_enabled ?? false),
   };
@@ -235,7 +230,7 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
     cafeSlug: cafe.slug,
     cafeName: cafe.name,
     businessCategory: cafe.businessCategory,
-    program: mapProgram(programRow),
+    program: await mapProgram(programRow, cafe.id, cafe.slug),
     cards: (cardRows ?? []).map(mapCard),
     cashiers: (cashierRows ?? []).map((row) => ({
       id: String(row.id),
@@ -549,7 +544,7 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
     .select("*, menu_products(name)")
     .eq("cafe_id", String(cardRow.cafe_id))
     .maybeSingle();
-  const program = mapProgram(programRow);
+  const program = await mapProgram(programRow, String(cardRow.cafe_id), cafeSlug);
   if (programRow && !program.enabled) return null;
 
   return {
@@ -599,5 +594,5 @@ export async function getPublicLoyaltyProgramBySlug(slug: string) {
     .eq("cafe_id", cafe.id)
     .maybeSingle();
 
-  return data ? mapProgram(data) : defaultProgram;
+  return mapProgram(data, cafe.id, cafe.slug);
 }

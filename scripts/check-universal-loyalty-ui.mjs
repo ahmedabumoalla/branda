@@ -51,7 +51,9 @@ check("Other brand uses its configured card colors", () => {
 });
 check("Invalid colors cannot enter generated theme styles", () => {
   const theme = loyaltyTheme({ ...identity, cardBackground: "url(https://invalid.test)", cardForeground: "red", cardAccent: "initial" });
-  assert(Object.values(theme).every((value) => /^#[a-f0-9]{6}$/i.test(value)));
+  assert(Object.entries(theme).every(([key, value]) => key === "--card-logo-filter"
+    ? ["brightness(0)", "brightness(0) invert(1)"].includes(value)
+    : /^#[a-f0-9]{6}$/i.test(value)));
 });
 function lum(color) {
   const values = color.slice(1).match(/../g).map((part) => parseInt(part, 16) / 255).map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);

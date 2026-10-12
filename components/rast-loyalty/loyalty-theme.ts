@@ -46,6 +46,7 @@ export function loyaltyTheme(identity: LoyaltyIdentity): CSSProperties | undefin
     "--cream": "#f7f7f4", "--white": "#ffffff", "--wine": ink,
     "--red": readableInk(accent), "--blush": "#eeeee8", "--muted": "#62615d", "--border": "#deded8",
     "--card-background": background, "--card-foreground": foreground, "--card-muted": foreground,
+    "--card-logo-filter": luminance(foreground) > .5 ? "brightness(0) invert(1)" : "brightness(0)",
     "--card-stamp-background": foreground, "--card-stamp-foreground": background,
     "--card-check": contrast(accent, "#ffffff") >= 4.5 ? accent : ink,
     "--cashier-ink": ink, "--cashier-paper": "#f7f7f4", "--cashier-button-text": "#ffffff",

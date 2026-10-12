@@ -5,7 +5,7 @@ import { walletBaseUrl } from "./config";
 import { walletColors } from "./payload";
 import type { WalletMember } from "./types";
 
-export const WALLET_ART_VERSION = "2026-10-04-stamp-icons-v2";
+export const WALLET_ART_VERSION = "2026-10-13-brand-stamps-v1";
 
 export function walletArtToken(cardId: string) {
   const secret = process.env.WALLET_AUTH_SECRET;

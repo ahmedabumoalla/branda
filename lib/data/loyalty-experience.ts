@@ -15,6 +15,9 @@ import { getCustomerRewardInstances } from "@/lib/data/customer-rewards";
 import { defaultLoyaltyExperience, type LoyaltyExperienceInput } from "@/lib/loyalty/experience-types";
 import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 import type { WalletMember } from "@/lib/wallet/types";
+import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
+import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
+import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const { data, error } = await createAdminClient().from("cafe_loyalty_experience")
@@ -39,7 +42,13 @@ export async function getLoyaltyBrand(slug: string) {
     getCafeBySlug(slug), getPublicLoyaltyProgramBySlug(slug), getPublicCafeSettings(slug),
   ]);
   if (!cafe || !program) return null;
-  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl: settings?.logoDataUrl ?? null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
+  const appearance = await getLoyaltyBrandAppearance(cafe.id, slug);
+  const source = settings?.logoAssetId || settings?.logoDataUrl || appearance.logoPath || appearance.logoUrl;
+  const logoUrl = standaloneLogoVariant(cafe.id, source)
+    || settings?.logoDataUrl
+    || (appearance.logoPath ? await resolvePublishedStoragePathToUrl(storageBucketForLogo(), appearance.logoPath) : appearance.logoUrl)
+    || (slug === "rast" ? "/menu-logos/kawakib-transparent-20261008.png" : null);
+  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
 }
 
 export async function getLoyaltyMembership(slug: string) {

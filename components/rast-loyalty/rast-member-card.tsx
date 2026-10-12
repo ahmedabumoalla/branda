@@ -8,6 +8,7 @@ import type { CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import type { CustomerRewardInstance } from "@/lib/data/customer-rewards";
 import { RastHeader } from "./rast-brand";
 import { RastStampCard } from "./rast-stamp-card";
+import { WalletDownloadLink } from "./wallet-download-link";
 import { RastQrCode } from "./qr-code";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
@@ -53,7 +54,7 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
         <div className={s.walletSection}>
           <h2>خلّ بطاقتك قريبة</h2><p>أضفها لمحفظة جوالك واعرضها عند الكاشير</p>
           <div className={s.walletButtons}>
-            {([{ id: "apple", name: "Apple Wallet", available: walletAvailability.apple }, { id: "google", name: "Google Wallet", available: walletAvailability.google }] as const).map((wallet) => wallet.available ? <a key={wallet.id} className={s.walletButton} href={`/api/wallet/${wallet.id}/${encodeURIComponent(member.card.cardCode)}`}><Wallet aria-hidden="true" /><span><small>إضافة إلى</small><strong dir="ltr">{wallet.name}</strong></span></a> : <button key={wallet.id} type="button" className={s.walletButton} disabled aria-describedby="wallet-unavailable"><Wallet aria-hidden="true" /><span><small>غير متاحة حاليًا</small><strong dir="ltr">{wallet.name}</strong></span></button>)}
+            {([{ id: "apple", name: "Apple Wallet", available: walletAvailability.apple }, { id: "google", name: "Google Wallet", available: walletAvailability.google }] as const).map((wallet) => wallet.available ? <WalletDownloadLink key={wallet.id} provider={wallet.id} cardCode={member.card.cardCode} /> : <button key={wallet.id} type="button" className={s.walletButton} disabled aria-describedby="wallet-unavailable"><Wallet aria-hidden="true" /><span><small>غير متاحة حاليًا</small><strong dir="ltr">{wallet.name}</strong></span></button>)}
           </div>
           {!walletAvailability.apple || !walletAvailability.google ? <p className={s.hint} id="wallet-unavailable">الإضافة للمحافظ غير المتاحة لم تُفعّل بعد تقدر تستخدم رمز بطاقتك من هذه الصفحة</p> : null}
         </div>
