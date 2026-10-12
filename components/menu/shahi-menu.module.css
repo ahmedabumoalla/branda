@@ -18,7 +18,7 @@
     linear-gradient(90deg, #151b13ed 0%, #151b13d9 38%, #151b1314 72%),
     linear-gradient(0deg, #151b13e6 0%, #151b1300 52%);
 }
-.theme.theme .wordmark { filter: brightness(0) saturate(100%) invert(11%); width: min(100%, 680px); }
+.theme.theme .wordmark { filter: drop-shadow(0 1px 1px #23242199); width: min(100%, 680px); }
 .theme.theme .ribbon { color: #fcf8f3; background: #258205; }
 .theme.theme .loyaltyAction { background: #258205; color: #fcf8f3; border-color: #258205; }
 .theme.theme a:hover .loyaltyAction, .theme.theme a:focus-visible .loyaltyAction { background: #fcf8f3; color: #232421; border-color: #fcf8f3; }
