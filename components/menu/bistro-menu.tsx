@@ -187,9 +187,6 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
 function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
   const isKath = menu.slug === "kat-coffe";
   const brandName = isKath ? "مقهى كاث" : "مقهى الكواكب";
-  const kathPhoto = menu.products.find((product) => product.available && product.images.length && product.name.trim() === "لاتيه")?.images[0]?.url
-    ?? menu.products.find((product) => product.available && product.images.length && /قهوة|لاتيه|كابتشينو|اسبريسو/.test(product.name))?.images[0]?.url
-    ?? menu.products.find((product) => product.available && product.images.length)?.images[0]?.url;
   return <section className={`${s.rastHero}${isKath ? ` ${kath.hero}` : ""}`} aria-label={`مرحبًا في ${brandName}`}>
     {/* Decorative brand atmosphere behind the entire opening, never a catalog product. */}
     {!isKath && <div className={s.rastHeroBackdrop} aria-hidden="true">
@@ -208,7 +205,7 @@ function RastHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch:
       <div className={s.rastMastheadCaption}><span>مساحتك للحظة أحلى</span><span dir="ltr">COFFEE &amp; GOOD MOMENTS</span></div>
     </div>
     <div className={`${s.rastHeroGrid}${isKath ? ` ${kath.heroGrid}` : ""}`}>
-      {isKath && <div className={kath.heroPhoto} aria-hidden="true"><FoodImage src={kathPhoto} alt="" priority sizes="(max-width: 680px) 100vw, 50vw" /></div>}
+      {isKath && <div className={kath.heroPhoto} aria-hidden="true"><FoodImage src="/menu-art/kath-latte-cutout-v1.webp" alt="" priority /></div>}
       <div className={`${s.rastHeroCopy}${isKath ? ` ${kath.heroCopy}` : ""}`}>
         <p className={s.rastEyebrow}>أهلًا بك في {brandName}</p>
         <h1>خذ وقتك<br /><span>هذا مزاجك</span></h1>

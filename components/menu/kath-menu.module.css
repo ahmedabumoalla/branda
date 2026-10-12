@@ -22,7 +22,8 @@
 }
 .theme .heroGrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: clamp(28px, 5vw, 80px); padding-top: 32px; }
 .theme .heroCopy { width: 100%; margin: 0; }
-.heroPhoto { overflow: hidden; border-radius: 160px 160px 24px 24px; border: 1px solid var(--kath-gold); background: #fff; }
+/* Transparent cup artwork sits directly on the hero, with no panel or scrim. */
+.heroPhoto { min-width: 0; pointer-events: none; }
 .heroPhoto > img { display: block; width: 100%; height: auto; aspect-ratio: 1.1; object-fit: cover; object-position: center; }
 .theme .hero header { border-color: #e5b57245; }
 .theme .hero header button { color: var(--kath-gold); border-color: #e5b57266; }
@@ -41,6 +42,5 @@
 @media (max-width: 680px) {
   .theme .hero { --rast-wordmark-height: clamp(150px, 43vw, 210px); }
   .theme .heroGrid { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 12px; }
-  .heroPhoto { border-radius: 90px 90px 20px 20px; }
-  .heroPhoto > img { aspect-ratio: 1.5; }
+  .heroPhoto > img { aspect-ratio: 1.15; }
 }
