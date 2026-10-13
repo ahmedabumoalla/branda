@@ -40,9 +40,10 @@ export function CashierLanguageProvider({ initialLocale, children }: { initialLo
 }
 export function CashierLanguageSwitch({ dark = false }: { dark?: boolean }) {
   const { locale, selectLocale } = useCashierLanguage();
-  return <div className={`${s.switch} ${dark ? s.dark : ""}`} role="group" aria-label={locale === "ar" ? "لغة الواجهة" : "Interface language"} dir="ltr">
-    <Languages size={17} aria-hidden="true" className={s.icon} />
-    <button type="button" lang="ar" aria-pressed={locale === "ar"} onClick={() => selectLocale("ar")}>العربية</button>
-    <button type="button" lang="en" aria-pressed={locale === "en"} onClick={() => selectLocale("en")}>English</button>
-  </div>;
+  const nextLocale = locale === "ar" ? "en" : "ar";
+  const label = locale === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Arabic";
+  return <button type="button" className={`${s.switch} ${dark ? s.dark : ""}`} aria-label={label} title={label} dir="ltr" onClick={() => selectLocale(nextLocale)}>
+    <Languages size={16} strokeWidth={1.7} aria-hidden="true" className={s.icon} />
+    <span lang={nextLocale}>{nextLocale === "en" ? "English" : "العربية"}</span>
+  </button>;
 }

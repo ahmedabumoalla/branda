@@ -40,7 +40,7 @@ test("Arabic and English render on the server with correct direction and transla
     assert(html.includes(locale === "ar" ? "دخول نقطة التشغيل" : "Your shift starts here"));
     assert(html.includes(locale === "ar" ? "الحساب معطل" : "inactive account"));
     assert.match(html, /type="email" dir="ltr"/);
-    assert.match(html, /aria-pressed="true"/);
+    assert(html.includes(locale === "ar" ? 'aria-label="التبديل إلى الإنجليزية"' : 'aria-label="Switch to Arabic"'));
   }
 });
 test("reward product, description and earned terms all use the chosen language without mutating the reward", () => {
@@ -78,11 +78,11 @@ test("language choice persists in a shared cookie and updates live subscribers w
   const doc = { get cookie() { return cookie; }, set cookie(value) { savedCookie = value; cookie = value.split(";")[0]; } };
   const hooks = { ...React, useContext: () => "ar", useMemo: run => run(), useSyncExternalStore: (subscribe, get) => { subscribe(() => updates++); return get(); } };
   const module = load("components/cashier/cashier-language.tsx", { react: hooks }, new Map(), { document: doc, location: { protocol: "https:" }, Event: class { constructor(type) { this.type = type; } }, localStorage: { setItem: (key, value) => { stored = [key, value]; } }, window: { addEventListener: (key, fn) => events.set(key, fn), removeEventListener() {}, dispatchEvent: event => events.get(event.type)?.() } });
-  const first = module.useCashierLanguage(); assert.equal(first.locale, "ar"); first.selectLocale("en");
+  const first = module.CashierLanguageSwitch({}); assert.equal(first.type, "button"); assert.equal(first.props["aria-label"], "التبديل إلى الإنجليزية"); first.props.onClick();
   assert.equal(module.useCashierLanguage().locale, "en"); assert.equal(updates, 1);
   assert(savedCookie.includes("Path=/") && savedCookie.includes("SameSite=Lax") && savedCookie.includes("Secure"));
   assert.deepEqual(stored, ["branda-cashier-language", "en"]);
-  module.useCashierLanguage().selectLocale("ar"); assert.equal(module.useCashierLanguage().dir, "rtl");
+  const second = module.CashierLanguageSwitch({ dark: true }); assert.equal(second.props["aria-label"], "Switch to Arabic"); second.props.onClick(); assert.equal(module.useCashierLanguage().dir, "rtl");
 });
 test("catalog translation batches identical text once, handles failures honestly and preserves originals", async () => {
   const calls = [];
