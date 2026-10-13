@@ -11,6 +11,9 @@
 .fields .fieldTitle { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 24px; line-height: 24px; margin: 0 0 8px; }
 .fields small { color: var(--muted); font-size: 12px; }
 .fieldTitle small { flex-shrink: 0; font-weight: 400; }
+.sectionHint { grid-column: 1 / -1; margin: -4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.ownerEditor { margin: 18px 0; padding-top: 4px; border-top: 1px solid var(--line); }
+.ownerEditor .fields { margin: 18px 0; }
 .fields .fieldHint { display: block; margin-top: 8px; line-height: 1.7; }
 .fields input, .fields select { box-sizing: border-box; display: block; width: 100%; min-width: 0; height: 48px; margin: 0; padding: 10px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; font: inherit; }
 .password { position: relative; width: 100%; }

@@ -37,6 +37,38 @@ test("phone normalization and account validation reject invalid input", () => {
     assert.equal(schema.adminBrandAccountSchema.safeParse({ ...input, ...change }).success, false);
   }
 });
+test("a brand can be prepared without owner details, phone, email, password or a manual slug", async () => {
+  const draft = { ...input, ownerName: "", phone: "", email: "", password: "", slug: "" };
+  assert.equal(schema.adminBrandAccountSchema.safeParse(draft).success, true);
+  const { api, calls } = service();
+  await api.createAdminBrandAccount(draft);
+  const auth = calls.find(call => call.name === "createUser").args;
+  assert.equal(auth.phone, undefined); assert.equal(auth.email_confirm, false);
+  assert.match(auth.email, /^prepared-.*@accounts\.barndaksa\.invalid$/);
+  assert(auth.password.length >= 32);
+  const staged = calls.find(call => call.name === "admin_prepare_brand_account").args;
+  assert.equal(staged.p_draft.phone, ""); assert.equal(staged.p_draft.email, "");
+  assert.equal(staged.p_draft.passwordReady, false); assert.match(staged.p_draft.slug, /^brand-/);
+  assert(!calls.some(call => call.name === "send" || call.name === "admin_finish_brand_welcome"));
+});
+
+test("owner editing uses Auth API, preserves blank password and recovers an ambiguous committed response", async () => {
+  const calls = []; let prepared = 0;
+  const api = module("lib/data/admin-brand-onboarding.ts", {
+    "node:crypto": crypto, zod: { z }, "@/lib/platform/brand-onboarding": schema, "@/lib/auth/brand-welcome-secret": secrets,
+    "@/lib/data/cafes": { requirePlatformAdmin: async () => ({ id: "admin-fixture" }) },
+    "@/lib/supabase/admin": { createAdminClient: () => ({
+      rpc: async (name, args) => { calls.push({ name, args }); return { error: null, data: { done: prepared++ > 0, ownerId: "owner-fixture", proof: "proof" } }; },
+      auth: { admin: { updateUserById: async (owner, args) => { calls.push({ name: "updateUserById", owner, args }); return { error: Error("ambiguous response") }; } } },
+    }) }, "@/lib/whatsapp/green-api": {},
+  });
+  await api.updateAdminBrandOwner({ requestId: id, cafeId, ownerName: "Owner", phone: "0500000099", email: "", password: "" });
+  const auth = calls.find(call => call.name === "updateUserById");
+  assert.equal(auth.owner, "owner-fixture"); assert.equal(auth.args.phone, "+966500000099");
+  assert.equal(auth.args.phone_confirm, true); assert.equal(auth.args.password, undefined);
+  assert.equal(calls.filter(call => call.name === "updateUserById").length, 1);
+  assert(!calls.some(call => call.name === "admin_cancel_brand_owner_edit"));
+});
 
 function service({ authorized = true, sendError = null, sent = false, finalizeFailures = 0, createError = false } = {}) {
   const calls = []; let preparedCount = 0, finishCount = 0;

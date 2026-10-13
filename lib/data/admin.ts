@@ -550,7 +550,7 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
   ]);
   if (onboarding.error) throw onboarding.error;
   const deliveryByCafe = new Map<string, PlatformCafe["ownerDelivery"]>(
-    (Array.isArray(onboarding.data) ? onboarding.data : []).map((row: { cafeId: string; state: "ready" | "sending" | "uncertain" | "sent"; sentAt: string | null }) => [row.cafeId, { state: row.state, sentAt: row.sentAt }]),
+    (Array.isArray(onboarding.data) ? onboarding.data : []).map((row: { cafeId: string } & NonNullable<PlatformCafe["ownerDelivery"]>) => [row.cafeId, { state: row.state, sentAt: row.sentAt, detailsReady: row.detailsReady, passwordReady: row.passwordReady }]),
   );
 
   if (error) throw error;

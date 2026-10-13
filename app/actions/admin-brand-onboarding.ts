@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminCafes } from "@/lib/data/admin";
-import { createAdminBrandAccount, sendBrandOwnerWelcome } from "@/lib/data/admin-brand-onboarding";
+import { createAdminBrandAccount, sendBrandOwnerWelcome, updateAdminBrandOwner } from "@/lib/data/admin-brand-onboarding";
 import { actionResult } from "@/lib/platform/action-result";
-import type { AdminBrandAccountInput } from "@/lib/platform/brand-onboarding";
+import type { AdminBrandAccountInput, AdminBrandOwnerInput } from "@/lib/platform/brand-onboarding";
 
 async function updatedBrand(id: string) {
   revalidatePath("/admin", "layout");
@@ -21,4 +21,7 @@ export async function sendBrandOwnerWelcomeAction(cafeId: string, retryUncertain
 }
 export async function refreshAdminBrandAction(cafeId: string) {
   return actionResult(async () => updatedBrand(cafeId), "تعذر تحديث حالة العلامة");
+}
+export async function updateAdminBrandOwnerAction(input: AdminBrandOwnerInput) {
+  return actionResult(async () => { await updateAdminBrandOwner(input); return updatedBrand(input.cafeId); }, "تعذر حفظ بيانات المالك");
 }
