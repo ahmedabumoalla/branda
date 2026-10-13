@@ -39,6 +39,7 @@ export type CustomerRewardInstance = {
 };
 
 export type CashierRewardPreview = CustomerRewardInstance & {
+  catalog?: import("@/lib/cashier/catalog-translation").CashierCatalog;
   canRedeem: boolean;
   invalidReason: string | null;
   remainingText: string;

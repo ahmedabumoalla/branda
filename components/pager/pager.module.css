@@ -1,7 +1,7 @@
 .root {
   --pg-bg: #f7f5ef; --pg-card: #fffefa; --pg-ink: #21382f; --pg-muted: #69736a;
   --pg-line: #dddeda; --pg-gold: #a57624; --pg-soft: #edf1eb; --pg-danger: #a33530;
-  direction: rtl; color: var(--pg-ink); background: var(--pg-bg); border-radius: 28px;
+  color: var(--pg-ink); background: var(--pg-bg); border-radius: 28px;
   font-family: inherit; padding: clamp(18px, 3vw, 36px); min-width: 0;
 }
 .standalone { max-width: 1360px; margin: 24px auto; }

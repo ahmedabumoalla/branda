@@ -16,7 +16,7 @@ export async function getCafeBySlug(slug: string) {
 
   const { data, error } = await supabase
     .from("cafes")
-    .select("id, slug, name, status, is_public, business_category")
+    .select("id, slug, name, name_en, status, is_public, business_category")
     .eq("slug", normalizedSlug)
     .is("deleted_at", null)
     .maybeSingle();
@@ -44,7 +44,7 @@ export async function getPublicCafeBySlugAdmin(slug: string) {
 
   const { data, error } = await supabase
     .from("cafes")
-    .select("id, slug, name, status, is_public, business_category")
+    .select("id, slug, name, name_en, status, is_public, business_category")
     .eq("slug", normalizedSlug)
     .is("deleted_at", null)
     .maybeSingle();

@@ -20,6 +20,7 @@ export const defaultLoyaltyExperience: LoyaltyExperienceSettings = {
 
 export type LoyaltyIdentity = {
   name: string;
+  nameEn?: string;
   slug: string;
   logoUrl: string | null;
   logoDisplayUrl?: string | null;

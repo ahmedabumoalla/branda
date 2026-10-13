@@ -15,6 +15,7 @@ import { syncWalletCardByCode, notifyBrandWalletMembers } from "@/lib/wallet";
 import type { LoyaltyExperienceSettings } from "@/lib/loyalty/experience-types";
 import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
+import { localizeCashierCatalog } from "@/lib/cashier/catalog-translation";
 
 async function requireEnrollment(slug: string) {
   if (!isPhoneOtpRequiredForBrand(slug, "loyalty")) throw new Error("التحقق بالواتساب غير متاح حاليًا");
@@ -59,11 +60,16 @@ export async function saveRastLoyaltySettingsAction(input: Parameters<typeof sav
 }
 
 export async function lookupRastCashierCardAction(value: string) {
-  return lookupRastCashierCard(value);
+  const card = await lookupRastCashierCard(value);
+  return { ...card, catalog: await localizeCashierCatalog({ rewardName: card.rewardName }) };
 }
 
 export async function lookupRastCashierRewardAction(value: string) {
-  return lookupRastCashierReward(z.string().trim().min(4).max(500).parse(value));
+  const reward = await lookupRastCashierReward(z.string().trim().min(4).max(500).parse(value));
+  const raw = reward.metadata?.termsSnapshot;
+  const terms = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  return { ...reward, catalog: await localizeCashierCatalog({ title: reward.rewardTitle, description: reward.rewardDescription,
+    product: typeof terms.rewardProductName === "string" ? terms.rewardProductName : "", terms: typeof terms.terms === "string" ? terms.terms : "" }) };
 }
 
 export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem" }) {

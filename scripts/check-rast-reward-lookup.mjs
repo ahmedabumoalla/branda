@@ -75,7 +75,7 @@ function fixture() {
   };
   const stubs = {
     "@/lib/supabase/admin": { createAdminClient: () => admin },
-    "@/lib/data/cashier": { requireCashierSessionContext: async () => { if (!state.authorized) throw new Error("No session"); return { cafeId, cafeSlug: state.slug, token: "valid-session" }; } },
+    "@/lib/data/cashier": { requireCashierPermission: async permission => { assert.equal(permission, "loyalty"); if (!state.authorized) throw new Error("No session"); return { cafeId, cafeSlug: state.slug, token: "valid-session" }; } },
     "@/lib/data/rast-loyalty-access": { assertRastLoyaltyEntitlement: async (id) => { assert.equal(id, cafeId); if (!state.entitled) throw new Error("Denied"); } },
     "@/lib/data/operation-events": {}, "@/lib/data/cafes": {},
   };
@@ -98,11 +98,16 @@ for (const changes of [{ status: "redeemed" }, { status: "cancelled" }, { expire
     assert(!state.rpcs.some(([name]) => name === "preview_loyalty_reward"));
   });
 }
-for (const changes of [{ authorized: false }, { entitled: false }, { slug: "other" }]) {
+for (const changes of [{ authorized: false }, { entitled: false }]) {
   await test("authorization fails before any customer query", async ({ state, lookupRastCashierReward: lookup }) => {
     Object.assign(state, changes); await assert.rejects(() => lookup("CARD123")); assert.equal(state.queries.length, 0);
   });
 }
+await test("all entitled brands use their own scoped reward lookup", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.slug = "another-entitled-brand";
+  assert.equal((await lookup("CARD123")).rewardCode, "REWARDFIRST");
+  assert(state.queries.every(q => q.filters.some(([key, value]) => key === "cafe_id" && value === cafeId)));
+});
 for (const key of ["cardAllowed", "rewardAllowed"]) {
   await test("database preview denial fails closed", async ({ state, lookupRastCashierReward: lookup }) => { state[key] = false; await assert.rejects(() => lookup("CARD123")); });
 }

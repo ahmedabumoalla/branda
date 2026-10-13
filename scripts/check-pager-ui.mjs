@@ -16,6 +16,7 @@ function load(file, stubs = {}) {
   const exports = {};
   new Function('require', 'exports', output)(name => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
+    if (name === '@/components/cashier/cashier-language') return { CashierLanguageSwitch: () => null, useCashierLanguage: () => ({ locale: 'ar', dir: 'rtl', t: value => typeof value === 'string' ? value : value.text.replace(/\{(\w+)\}/g, (_, key) => String(value.values[key])), errorText: value => value }) };
     if (name.endsWith('.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) };
     if (name.startsWith('@/') || name.startsWith('./')) {
       const base = name.startsWith('@/') ? path.resolve(name.slice(2)) : path.resolve(path.dirname(file), name);

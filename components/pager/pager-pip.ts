@@ -1,4 +1,9 @@
 export type PagerPictureInPicture = { requestWindow: (options: { width: number; height: number }) => Promise<Window> };
+export function setPagerWindowLanguage(target: Window, locale: "ar" | "en") {
+  target.document.documentElement.lang = locale;
+  target.document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+  target.document.title = locale === "ar" ? "نداء برندة" : "Branda Pager";
+}
 
 // Presentation only: the user agent never grants access to any data or operation.
 export function isPagerCompanion() {

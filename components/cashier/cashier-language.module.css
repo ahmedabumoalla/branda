@@ -1,0 +1,8 @@
+.frame { min-width: 0; font-family: inherit; text-align: start; }
+.switch { --language-ink: var(--cashier-ink, #563421); --language-paper: #ffffff; --language-line: #56342124; display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 4px; border: 1px solid var(--language-line); border-radius: 16px; background: var(--language-paper); color: var(--language-ink); box-shadow: 0 3px 16px #31191208; }
+.switch button { min-width: 74px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 11px; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color .16s ease, color .16s ease; }
+.switch button[aria-pressed="true"] { background: var(--language-ink); color: var(--language-paper); box-shadow: 0 2px 6px #00000012; }
+.switch button:focus-visible { outline: 2px solid var(--language-ink); outline-offset: 3px; }
+.icon { margin-inline: 8px 2px; }
+.dark { --language-ink: #f1cb83; --language-paper: #311912; --language-line: #f1cb8338; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .switch button { transition: none; } }

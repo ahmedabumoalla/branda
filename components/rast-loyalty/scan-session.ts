@@ -3,7 +3,7 @@ import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { rastRedemptionCode } from "@/lib/loyalty/rast-redemption-code";
 
 export type RastScanKind = "stamp" | "redeem";
-export type RastCardPreview = { customerName: string; stampsInCycle: number; purchasesRequired: number; availableRewards: number; rewardName: string };
+export type RastCardPreview = { customerName: string; stampsInCycle: number; purchasesRequired: number; availableRewards: number; rewardName: string; catalog?: import("@/lib/cashier/catalog-translation").CashierCatalog };
 export type RastScanPreview = ({ kind: "stamp"; value: string; card: RastCardPreview } | { kind: "redeem"; value: string; reward: CashierRewardPreview }) & { retryPending?: boolean };
 
 type Dependencies = {

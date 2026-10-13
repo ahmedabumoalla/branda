@@ -12,28 +12,33 @@ import { createRastScanSession, type RastScanPreview } from "./scan-session";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { loyaltyTheme } from "./loyalty-theme";
 import { RastBrand } from "./rast-brand";
+import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/cashier-language";
+import { localizedText, type CashierMessage } from "@/lib/cashier/language";
 
 export function RastCashierRewardDetails({ reward }: { reward: CashierRewardPreview }) {
+  const { t, locale } = useCashierLanguage();
+  const content = (key: string, source: string) => localizedText(locale, source, reward.catalog?.fields[key]);
   const raw = reward.metadata?.termsSnapshot;
   const terms = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   const discount = terms.rewardKind === "discount" && typeof terms.discountPercent === "number" ? terms.discountPercent : null;
   const product = terms.rewardKind === "product" && typeof terms.rewardProductName === "string" ? terms.rewardProductName : null;
   return <div className="mt-3 space-y-2 text-sm leading-7">
-    {discount ? <p className="text-lg font-bold">خصم {discount}% وفق شروط المكافأة</p> : null}
-    {product ? <p className="font-bold">المنتج المستحق: {product}</p> : null}
-    {reward.rewardDescription ? <p className="whitespace-pre-line">{reward.rewardDescription}</p> : null}
-    {typeof terms.terms === "string" && terms.terms && terms.terms !== reward.rewardDescription ? <p className="whitespace-pre-line">{terms.terms}</p> : null}
-    {discount ? <p>طبّق النسبة على الفاتورة وفق الشروط ثم أكّد صرف المكافأة</p> : null}
+    {discount ? <p className="text-lg font-bold">{t({ text: "خصم {percent}% وفق شروط المكافأة", values: { percent: discount } })}</p> : null}
+    {product ? <p className="font-bold">{t("المنتج المستحق:")} {content("product", product)}</p> : null}
+    {reward.rewardDescription ? <p className="whitespace-pre-line">{content("description", reward.rewardDescription)}</p> : null}
+    {typeof terms.terms === "string" && terms.terms && terms.terms !== reward.rewardDescription ? <p className="whitespace-pre-line">{content("terms", terms.terms)}</p> : null}
+    {discount ? <p>{t("طبّق النسبة على الفاتورة وفق الشروط ثم أكّد صرف المكافأة")} </p> : null}
   </div>;
 }
 
 export function RastCashier({ initialData, identity: suppliedIdentity }: { initialData: CashierConsole; identity?: LoyaltyIdentity }) {
+  const { t, errorText, locale, dir } = useCashierLanguage();
   const identity = suppliedIdentity ?? { name: initialData.cafe.name, slug: initialData.cafe.slug, logoUrl: null };
   const [kind, setKind] = useState<"stamp" | "redeem">("stamp");
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<CashierMessage>("");
   const [checkedAt, setCheckedAt] = useState(0);
   const [preview, setPreview] = useState<RastScanPreview | null>(null);
   const [session] = useState(() => createRastScanSession({ lookupCard: lookupRastCashierCardAction, lookupReward: lookupRastCashierRewardAction, commit: scanLoyaltyExperienceAction, createRequestId: () => crypto.randomUUID() }));
@@ -57,10 +62,14 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
       const status = String(result.status ?? "");
       if (["stamped", "reward_issued", "redeemed"].includes(status)) {
         const reward = preview?.kind === "redeem" ? preview.reward : null;
-        setMessage(result.replayed ? "هذه العملية مسجلة سابقًا؛ لم تتكرر إضافة الختم أو صرف المكافأة" : status === "redeemed" ? `تم صرف ${String(result.rewardName ?? reward?.rewardTitle ?? "المكافأة")} بنجاح` : status === "reward_issued" ? `اكتملت البطاقة! استحق ${String(result.customerName ?? "العميل")} مكافأته` : `تم تسجيل الختم رصيد ${String(result.customerName ?? "العميل")}: ${Number(result.stampsInCycle)} من ${Number(result.purchasesRequired)}`);
+        const customer = result.customerName ? String(result.customerName) : { ar: "العميل", en: "Customer" };
+        setMessage(result.replayed ? "هذه العملية مسجلة سابقًا؛ لم تتكرر إضافة الختم أو صرف المكافأة" : status === "redeemed"
+          ? { text: "تم صرف {reward} بنجاح", values: { reward: reward?.catalog?.fields.title ?? { ar: reward?.rewardTitle ?? "المكافأة", en: "Reward" } } }
+          : status === "reward_issued" ? { text: "اكتملت البطاقة! استحق {name} مكافأته", values: { name: customer } }
+          : { text: "تم تسجيل الختم رصيد {name}: {stamps} من {required}", values: { name: customer, stamps: Number(result.stampsInCycle), required: Number(result.purchasesRequired) } });
         focusInputAfterScan.current = true; setValue(""); setPreview(null);
       } else {
-        const errors: Record<string, string> = { recent_scan: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: `الرمز غير صالح أو لا يتبع ${identity.name}`, duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
+        const errors: Record<string, string> = { recent_scan: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: "الرمز غير صالح أو لا يتبع هذه العلامة", duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
         setError(errors[status] ?? "لم تسجل العملية تحقق من البطاقة وصلاحية البرنامج");
       }
     } catch (cause) { if (confirm) setPreview(session.preview); setError(cause instanceof Error && /[\u0600-\u06ff]/.test(cause.message) ? cause.message : "تعذر إتمام العملية يمكنك إعادة المحاولة بأمان"); }
@@ -69,36 +78,40 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const reward = preview?.kind === "redeem" ? preview.reward : null;
   const expiry = reward?.expiresAt ? new Date(reward.expiresAt) : null;
   const validExpiry = expiry && Number.isFinite(expiry.getTime()) ? expiry : null;
+  const remainingText = !validExpiry ? t("بدون تاريخ انتهاء") : validExpiry.getTime() <= checkedAt ? t("انتهت") : t({ text: "باقي {days} يوم", values: { days: Math.ceil((validExpiry.getTime() - checkedAt) / 86_400_000) } });
+  const catalog = preview?.kind === "stamp" ? preview.card.catalog : preview?.reward.catalog;
   const canRedeem = preview?.retryPending || (reward?.canRedeem && (!validExpiry || validExpiry.getTime() > checkedAt));
-  return <main dir="rtl" style={{ "--cashier-ink": "#561C2B", "--cashier-paper": "#F5F0E7", "--cashier-button-text": "#FFF6E7", ...loyaltyTheme(identity) } as CSSProperties} className="min-h-dvh bg-[var(--cashier-paper)] px-4 py-7 text-[var(--cashier-ink)] sm:px-8">
+  return <main dir={dir} lang={locale} style={{ "--cashier-ink": "#561C2B", "--cashier-paper": "#F5F0E7", "--cashier-button-text": "#FFF6E7", ...loyaltyTheme(identity) } as CSSProperties} className="min-h-dvh bg-[var(--cashier-paper)] px-4 py-7 text-[var(--cashier-ink)] sm:px-8">
     <div className="mx-auto max-w-4xl">
       <header className="mb-12 flex flex-wrap items-center justify-between gap-5 border-b border-[var(--cashier-ink)]/20 pb-6">
-        <div>{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} />}<h1 className="mt-2 text-2xl font-bold">كل زيارة تستاهل</h1><p className="mt-2 text-sm">أهلًا {initialData.cashier.fullName} هنا تسجّل الأختام وتصرف المكافآت</p></div>
-        {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">نظام البيجر</Link> : null}
-            <form action={logoutCashierAction}><button disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl border border-current px-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><LogOut size={18} aria-hidden="true" />تسجيل الخروج</button></form>
+        <div className="min-w-0 flex-1">{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} locale={locale} />}<h1 className="mt-2 text-2xl font-bold">{t("كل زيارة تستاهل")}</h1><p className="mt-2 text-sm leading-7">{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p></div>
+        <CashierLanguageSwitch />
+        {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">{t("نظام البيجر")} </Link> : null}
+            <form action={logoutCashierAction}><button disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl border border-current px-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><LogOut size={18} aria-hidden="true" />{t("تسجيل الخروج")} </button></form>
       </header>
       <div className="grid gap-8 md:grid-cols-[1fr_240px]">
         <section aria-labelledby="scan-heading" className="min-w-0 rounded-3xl border border-[var(--cashier-ink)]/20 bg-white/60 p-5 sm:p-8">
-          <div className="mb-7 grid grid-cols-2 gap-2" role="group" aria-label="نوع العملية">
-            {([{ id: "stamp", title: "تسجيل ختم", icon: BadgeCheck }, { id: "redeem", title: "صرف مكافأة", icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-14 items-center justify-center gap-2 rounded-xl px-3 font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
+          <div className="mb-7 grid grid-cols-2 gap-2" role="group" aria-label={t("نوع العملية")}>
+            {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-14 items-center justify-center gap-2 rounded-xl px-3 font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
           </div>
-          <h2 id="scan-heading" className="text-xl font-bold">{kind === "stamp" ? "اقرأ بطاقة العميل" : "افحص مكافأة العميل"}</h2>
-          <p id="rast-scan-help" className="mt-3 text-sm leading-7">{kind === "stamp" ? "افحص البطاقة وراجع اسم العميل ورصيده بعد التأكد من الشراء أكّد تسجيل ختم واحد" : "اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة"}</p>
+          <h2 id="scan-heading" className="text-xl font-bold">{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
+          <p id="rast-scan-help" className="mt-3 text-sm leading-7">{kind === "stamp" ? t("افحص البطاقة وراجع اسم العميل ورصيده بعد التأكد من الشراء أكّد تسجيل ختم واحد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
           <form onSubmit={(event) => { event.preventDefault(); void processScan(); }} className="my-6 space-y-3" aria-busy={pending}>
-            <label htmlFor="rast-scan-code" className="block text-sm font-bold">{kind === "stamp" ? "رمز بطاقة الولاء" : "رمز البطاقة أو المكافأة"}</label>
-            <input id="rast-scan-code" ref={input} dir="ltr" value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={500} placeholder="امسح بالقارئ أو أدخل الرمز" className="min-h-14 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
-            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><ScanLine size={19} aria-hidden="true" />{pending ? "جاري التحقق" : kind === "stamp" ? "فحص بطاقة العميل" : "فحص المكافأة"}</button>
+            <label htmlFor="rast-scan-code" className="block text-sm font-bold">{kind === "stamp" ? t("رمز بطاقة الولاء") : t("رمز البطاقة أو المكافأة")}</label>
+            <input id="rast-scan-code" ref={input} dir="ltr" value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={500} placeholder={t("امسح بالقارئ أو أدخل الرمز")} className="min-h-14 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
+            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><ScanLine size={19} aria-hidden="true" />{pending ? t("جاري التحقق") : kind === "stamp" ? t("فحص بطاقة العميل") : t("فحص المكافأة")}</button>
           </form>
           <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />
           {preview && <section ref={previewElement} tabIndex={-1} className="mt-6 rounded-2xl border border-[var(--cashier-ink)]/25 p-5 focus-visible:outline-2 focus-visible:outline-offset-4" aria-labelledby="rast-scan-preview">
-            {preview.retryPending && <p role="status" className="mb-4 text-sm leading-7">لم يصل تأكيد العملية السابقة أعد التأكيد للتحقق من نتيجتها بأمان؛ لن يتم اختيار مكافأة أخرى أو تكرار الصرف لا تسلّم المكافأة مرة أخرى إذا سبق تسليمها</p>}
-            <p className="text-xs">{preview.kind === "stamp" ? "بطاقة العميل" : "مكافأة العميل"}</p><h3 id="rast-scan-preview" className="mt-2 break-words text-xl font-bold">{preview.kind === "stamp" ? preview.card.customerName : preview.reward.customerName}</h3><p dir="ltr" className="mt-2 break-all text-left text-xs opacity-70">{preview.value}</p>
-            {preview.kind === "stamp" ? <><dl className="my-5 grid grid-cols-2 gap-4 text-sm"><div><dt>رصيد الأختام</dt><dd className="mt-1 text-xl font-bold">{preview.card.stampsInCycle} / {preview.card.purchasesRequired}</dd></div><div><dt>المكافآت المتاحة</dt><dd className="mt-1 text-xl font-bold">{preview.card.availableRewards}</dd></div></dl><p className="text-sm leading-7">المكافأة عند الاكتمال: {preview.card.rewardName}</p><button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">تأكيد الشراء وتسجيل ختم واحد</button></> : <><h4 className="mt-5 text-lg font-bold">{preview.reward.rewardTitle}</h4><RastCashierRewardDetails reward={preview.reward} /><p className="mt-4 font-bold">{preview.reward.remainingText}</p>{validExpiry && <time className="mt-1 block text-sm" dateTime={validExpiry.toISOString()}>{new Intl.DateTimeFormat("ar-SA", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Riyadh", calendar: "gregory" }).format(validExpiry)}</time>}{canRedeem ? <button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">تأكيد تسليم المكافأة وصرفها</button> : <p role="alert" className="mt-4 font-bold">{preview.reward.invalidReason || "انتهت صلاحية المكافأة"}</p>}</>}
+            {catalog && <p className="mb-3 text-xs leading-6 opacity-75" role={catalog.unavailable ? "status" : undefined}>{t(catalog.unavailable ? "تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا" : "ترجمة تلقائية لتفاصيل المكافأة")}</p>}
+            {preview.retryPending && <p role="status" className="mb-4 text-sm leading-7">{t("لم يصل تأكيد العملية السابقة أعد التأكيد للتحقق من نتيجتها بأمان؛ لن يتم اختيار مكافأة أخرى أو تكرار الصرف لا تسلّم المكافأة مرة أخرى إذا سبق تسليمها")} </p>}
+            <p className="text-xs">{preview.kind === "stamp" ? t("بطاقة العميل") : t("مكافأة العميل")}</p><h3 id="rast-scan-preview" className="mt-2 break-words text-xl font-bold">{preview.kind === "stamp" ? preview.card.customerName : preview.reward.customerName}</h3><p dir="ltr" className="mt-2 break-all text-left text-xs opacity-70">{preview.value}</p>
+            {preview.kind === "stamp" ? <><dl className="my-5 grid grid-cols-2 gap-4 text-sm"><div><dt>{t("رصيد الأختام")} </dt><dd className="mt-1 text-xl font-bold">{preview.card.stampsInCycle} / {preview.card.purchasesRequired}</dd></div><div><dt>{t("المكافآت المتاحة")} </dt><dd className="mt-1 text-xl font-bold">{preview.card.availableRewards}</dd></div></dl><p className="text-sm leading-7">{t("المكافأة عند الاكتمال:")} {localizedText(locale, preview.card.rewardName, preview.card.catalog?.fields.rewardName)}</p><button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{t("تأكيد الشراء وتسجيل ختم واحد")} </button></> : <><h4 className="mt-5 text-lg font-bold">{localizedText(locale, preview.reward.rewardTitle, preview.reward.catalog?.fields.title)}</h4><RastCashierRewardDetails reward={preview.reward} /><p className="mt-4 font-bold">{remainingText}</p>{validExpiry && <time className="mt-1 block text-sm" dateTime={validExpiry.toISOString()}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Riyadh", calendar: "gregory" }).format(validExpiry)}</time>}{canRedeem ? <button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{t("تأكيد تسليم المكافأة وصرفها")} </button> : <p role="alert" className="mt-4 font-bold">{preview.reward.invalidReason ? errorText(preview.reward.invalidReason) : t("انتهت صلاحية المكافأة")}</p>}</>}
           </section>}
-          {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{error}</p>}
-          {message && <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 font-bold leading-7 text-emerald-900">{message}</p>}
+          {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{errorText(error)}</p>}
+          {message && <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 font-bold leading-7 text-emerald-900">{t(message)}</p>}
         </section>
-        <aside className="space-y-5 pt-3 text-sm leading-8"><h2 className="text-lg font-bold">ببساطة وبثقة</h2><p>ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل</p><p>قراءة الرمز لا تسجّل ختمًا راجع بيانات العميل ثم أكّد الشراء من زر التأكيد</p><p>المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد</p><Link href={`/loyalty/${identity.slug}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">صفحة عضوية {identity.name}</Link></aside>
+        <aside className="space-y-5 pt-3 text-sm leading-8"><h2 className="text-lg font-bold">{t("ببساطة وبثقة")} </h2><p>{t("ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p><p>{t("قراءة الرمز لا تسجّل ختمًا راجع بيانات العميل ثم أكّد الشراء من زر التأكيد")} </p><p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p><Link href={`/loyalty/${identity.slug}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link></aside>
       </div>
     </div>
   </main>;

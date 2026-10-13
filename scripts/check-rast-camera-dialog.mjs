@@ -37,6 +37,7 @@ const react = {
 };
 const stubs = {
   react,
+  "@/components/cashier/cashier-language": { useCashierLanguage: () => ({ locale: "ar", dir: "rtl", t: value => value, errorText: value => value }) },
   "./camera-session": { startRastCameraSession(options) { starts++; session = options; return () => { stops++; }; } },
 };
 const exports = {};

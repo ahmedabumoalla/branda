@@ -48,7 +48,7 @@ export async function getLoyaltyBrand(slug: string) {
     || settings?.logoDataUrl
     || (appearance.logoPath ? await resolvePublishedStoragePathToUrl(storageBucketForLogo(), appearance.logoPath) : appearance.logoUrl)
     || (slug === "rast" ? "/menu-logos/kawakib-transparent-20261008.png" : null);
-  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
+  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
 }
 
 export async function getLoyaltyMembership(slug: string) {
