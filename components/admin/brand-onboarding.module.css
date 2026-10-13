@@ -5,15 +5,17 @@
 .intro h2 { margin: 0; font-size: 23px; }
 .intro p, .welcome p { color: var(--muted); font-size: 14px; line-height: 1.8; margin: 5px 0 12px; }
 .note { background: #e5bd760a; border: 1px solid #e5bd7630; padding: 15px 18px; border-radius: 12px; color: var(--accent); font-size: 14px; line-height: 1.9; }
-.fields { border: 0; padding: 0; margin: 24px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.fields { border: 0; padding: 0; margin: 28px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 18px; align-items: start; }
 .fields legend { color: var(--accent); padding: 0 0 14px; font-weight: 600; }
-.fields label { display: block; font-size: 14px; min-width: 0; }
+.fields label, .field { display: block; font-size: 14px; min-width: 0; }
+.fields .fieldTitle { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 24px; line-height: 24px; margin: 0 0 8px; }
 .fields small { color: var(--muted); font-size: 12px; }
-.fields label > small { display: block; margin-top: 6px; line-height: 1.7; }
-.fields input, .fields select { display: block; width: 100%; min-width: 0; min-height: 46px; margin-top: 7px; padding: 10px 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 9px; font: inherit; }
-.password { display: flex; align-items: center; gap: 5px; }
-.password input { flex: 1; }
-.password button { display: grid; place-items: center; min-width: 44px; height: 46px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--surface); margin-top: 7px; }
+.fieldTitle small { flex-shrink: 0; font-weight: 400; }
+.fields .fieldHint { display: block; margin-top: 8px; line-height: 1.7; }
+.fields input, .fields select { box-sizing: border-box; display: block; width: 100%; min-width: 0; height: 48px; margin: 0; padding: 10px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; font: inherit; }
+.password { position: relative; width: 100%; }
+.password input { padding-left: 48px; }
+.password button { position: absolute; left: 2px; top: 2px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; padding: 10px 17px; border-radius: 10px; font: inherit; font-size: 14px; cursor: pointer; }
 .primary { background: var(--accent); color: #241c11; border: 1px solid transparent; font-weight: 600; }
