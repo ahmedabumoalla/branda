@@ -529,11 +529,11 @@ export async function rejectSubscriptionRequest(requestId: string, response: str
   if (error) throw error;
 }
 
-export async function getAdminCafes(): Promise<PlatformCafe[]> {
+export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe[]> {
   await requirePlatformAdmin();
   const supabase = await createClient();
 
-  const { data: cafes, error } = await supabase
+  let cafeQuery = supabase
     .from("cafes")
     .select(`
       *,
@@ -543,6 +543,15 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
     `)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+
+  if (cafeIdFilter) cafeQuery = cafeQuery.eq("id", cafeIdFilter);
+  const [{ data: cafes, error }, onboarding] = await Promise.all([
+    cafeQuery, supabase.rpc("admin_brand_onboarding_status"),
+  ]);
+  if (onboarding.error) throw onboarding.error;
+  const deliveryByCafe = new Map<string, PlatformCafe["ownerDelivery"]>(
+    (Array.isArray(onboarding.data) ? onboarding.data : []).map((row: { cafeId: string; state: "ready" | "sending" | "uncertain" | "sent"; sentAt: string | null }) => [row.cafeId, { state: row.state, sentAt: row.sentAt }]),
+  );
 
   if (error) throw error;
 
@@ -604,6 +613,7 @@ export async function getAdminCafes(): Promise<PlatformCafe[]> {
         ownerName: String(settings?.owner_name ?? ownerProfile?.full_name ?? ""),
         ownerEmail: String(settings?.owner_email ?? ownerProfile?.email ?? ""),
         ownerPhone: String(settings?.owner_phone ?? ""),
+        ownerDelivery: deliveryByCafe.get(cafeId),
         ownerLoginEmail: String(ownerProfile?.email ?? settings?.owner_email ?? ""),
         passwordAccessNote: "لا يمكن عرض كلمة المرور الأصلية؛ استخدم رابط إعادة التعيين أو تحديثها من لوحة الصيانة الآمنة",
         maintenanceAccountNumber: makeMaintenanceAccountNumber(cafeId, slug),

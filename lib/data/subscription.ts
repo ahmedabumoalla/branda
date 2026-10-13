@@ -301,10 +301,10 @@ export async function getOwnerSubscriptionRequests() {
 export async function getCurrentOwnerSubscription(): Promise<CurrentSubscription | null> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const { data, error } = await supabase.from("subscriptions").select("id,plan_id,status,started_at,expires_at")
+  const { data, error } = await supabase.from("subscriptions").select("id,plan_id,status,started_at,expires_at,activation_source")
     .eq("cafe_id", cafe.id).in("status", ["active", "trialing"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
-  return data ? { id: String(data.id), planId: String(data.plan_id), status: String(data.status), startedAt: data.started_at ? String(data.started_at) : null, expiresAt: data.expires_at ? String(data.expires_at) : null } : null;
+  return data ? { id: String(data.id), planId: String(data.plan_id), status: String(data.status), startedAt: data.activation_source === "admin_prepared_trial" ? null : data.started_at ? String(data.started_at) : null, expiresAt: data.expires_at ? String(data.expires_at) : null, awaitingOwnerDelivery: data.activation_source === "admin_prepared_trial" && data.status === "trialing" } : null;
 }
 
 export async function getBankTransferDetails(): Promise<BankTransferDetails | null> {

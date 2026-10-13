@@ -4,6 +4,7 @@ import { BrandDetailsDialog, BrandFeatureControls } from "@/components/admin/bra
 
 import { BrandDirectory } from "@/components/admin/brand-directory";
 import { PendingBrandDeletionCleanup } from "@/components/admin/brand-deletion-control";
+import { BrandAccountCreate } from "@/components/admin/brand-account-create";
 import type { BrandDeletionResult, PendingBrandDeletion } from "@/lib/data/brand-deletion";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -71,6 +72,7 @@ export function AdminCafesPage({
   pendingDeletions = [],
 }: Props) {
   const router = useRouter();
+  const [creatingBrand, setCreatingBrand] = useState(false);
   const [deletionNotice, setDeletionNotice] = useState("");
   const [localPendingDeletions, setLocalPendingDeletions] = useState<PendingBrandDeletion[]>([]);
   const [finishedDeletionIds, setFinishedDeletionIds] = useState<string[]>([]);
@@ -240,7 +242,8 @@ export function AdminCafesPage({
     <div>
       {deletionNotice && <p role="status" className="mb-4 text-sm text-[#e5bd76]">{deletionNotice}</p>}
       <PendingBrandDeletionCleanup jobs={deletionJobs} onCompleted={id => { setFinishedDeletionIds(previous => [...previous, id]); setDeletionNotice("اكتمل حذف ملفات العلامة نهائيًا"); router.refresh(); }} />
-      <BrandDirectory cafes={cafes} plans={plans} onManage={setModalCafe} configError={configError} />
+      <BrandDirectory cafes={cafes} plans={plans} onManage={setModalCafe} onCreate={() => setCreatingBrand(true)} configError={configError} />
+      {creatingBrand && <BrandAccountCreate close={() => setCreatingBrand(false)} onCreated={cafe => { setCafes(previous => [cafe, ...previous.filter(item => item.id !== cafe.id)]); setCreatingBrand(false); setModalCafe(cafe); setDeletionNotice("تم إنشاء حساب العلامة وصلاحيات التجربة جاهزة مدة السبعة أيام تبدأ بعد إرسال تفاصيل الدخول"); router.refresh(); }} />}
 
       {modalCafe && (
         <BrandDetailsDialog
@@ -317,6 +320,7 @@ export function AdminCafesPage({
           updatePlan={updatePlan}
           close={() => setModalCafe(null)}
           onDeleted={onBrandDeleted}
+          onUpdated={cafe => { setCafes(previous => previous.map(item => item.id === cafe.id ? cafe : item)); setModalCafe(cafe); }}
         />
       )}
     </div>

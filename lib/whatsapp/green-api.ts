@@ -6,6 +6,28 @@ type GreenApiSendResponse = {
   idMessage?: string;
 };
 
+/** Provider acknowledgement starts the trial; this does not claim delivery/read receipt. */
+export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string }) {
+  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+    body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
+      `حساب ${input.brandName} جاهز في برندة`,
+      "المنصة: https://barndaksa.com",
+      "الدخول: https://barndaksa.com/login",
+      `الجوال: ${input.phone}`,
+      `كلمة المرور: ${input.password}`,
+      "تجربتك المجانية ٧ أيام من اليوم",
+    ].join("\n") }),
+  });
+  if (!response.ok) throw new Error(response.status < 500 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");
+  const data = await response.json() as GreenApiSendResponse;
+  if (typeof data.idMessage !== "string" || !data.idMessage) throw new Error("OWNER_WELCOME_UNCERTAIN");
+  return { providerMessageId: data.idMessage };
+}
+
 export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }

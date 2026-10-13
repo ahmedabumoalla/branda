@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Layers3, Search, Settings2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Layers3, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import s from "./brand-directory.module.css";
 
-type Props = { cafes: PlatformCafe[]; plans: PlatformPlan[]; onManage: (cafe: PlatformCafe) => void; configError?: string };
+type Props = { cafes: PlatformCafe[]; plans: PlatformPlan[]; onManage: (cafe: PlatformCafe) => void; onCreate?: () => void; configError?: string };
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const date = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" });
 const pageSize = 12;
@@ -28,7 +28,7 @@ export function BrandPlanSummary({ cafe, plans }: { cafe: PlatformCafe; plans: P
   const validDate = cafe.planExpiresAt && Number.isFinite(Date.parse(cafe.planExpiresAt));
   return <div className={s.plan}>
     <strong>{name}</strong><span className={cafe.hasActivePlan ? s.planActive : s.planInactive}>{cafe.planId ? `اشتراك ${cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}` : "بدون اشتراك"}</span>
-    <span className={s.expiry}>{validDate ? <>ينتهي في <time dateTime={cafe.planExpiresAt ?? undefined}>{date.format(new Date(cafe.planExpiresAt!))}</time></> : cafe.planId ? "بدون تاريخ انتهاء محدد" : "لم يتم تفعيل باقة"}</span>
+    <span className={s.expiry}>{cafe.trialAwaitingDelivery ? "جاهزة للتجهيز — تبدأ ٧ أيام بعد إرسال الدخول" : validDate ? <>ينتهي في <time dateTime={cafe.planExpiresAt ?? undefined}>{date.format(new Date(cafe.planExpiresAt!))}</time></> : cafe.planId ? "بدون تاريخ انتهاء محدد" : "لم يتم تفعيل باقة"}</span>
   </div>;
 }
 
@@ -47,7 +47,7 @@ function ManageButton({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props[
   return <button type="button" className={s.manage} onClick={() => onManage(cafe)} aria-label={`إدارة ${cafe.name}`} aria-haspopup="dialog"><Settings2 aria-hidden="true" />إدارة<ChevronLeft aria-hidden="true" /></button>;
 }
 
-export function BrandDirectory({ cafes, plans, onManage, configError }: Props) {
+export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }: Props) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [subscription, setSubscription] = useState("all");
@@ -76,7 +76,7 @@ export function BrandDirectory({ cafes, plans, onManage, configError }: Props) {
   ];
 
   return <div className={s.directory} dir="rtl">
-    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div></header>
+    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>{onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
     {configError ? <section className={s.error} role="alert"><Building2 aria-hidden="true" /><h2>تعذر تحميل العلامات التجارية</h2><p>{configError}</p><button type="button" className={s.manage} onClick={() => window.location.reload()}>إعادة المحاولة<ArrowLeft aria-hidden="true" /></button></section> : <>
       <section className={s.stats} aria-label="ملخص العلامات التجارية">{stats.map(({ label, value, hint, icon: Icon, currency }) => <article key={label}><div><span>{label}</span><Icon aria-hidden="true" /></div><strong><bdi>{number.format(value)}</bdi>{currency && <small>ريال</small>}</strong><p>{hint}</p></article>)}</section>
       <section className={s.panel} aria-labelledby="brand-directory-title">

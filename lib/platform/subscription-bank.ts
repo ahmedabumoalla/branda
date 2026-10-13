@@ -1,5 +1,5 @@
 export type BankTransferDetails = { beneficiary: string; bankName: string; iban: string; accountNumber: string };
-export type CurrentSubscription = { id: string; planId: string; status: string; startedAt: string | null; expiresAt: string | null };
+export type CurrentSubscription = { id: string; planId: string; status: string; startedAt: string | null; expiresAt: string | null; awaitingOwnerDelivery?: boolean };
 export type BankSubscriptionRequest = {
   id: string; planId: string; planName: string; amount: number; durationMonths: number;
   status: string; receiptChannel: "upload" | "whatsapp"; receiptStoragePath?: string;

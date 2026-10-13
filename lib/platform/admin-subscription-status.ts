@@ -4,6 +4,7 @@ export function adminSubscriptionSummary(rows: Record<string, unknown>[], now = 
   const ordered = [...rows].sort((a, b) => (Date.parse(String(b.created_at ?? "")) || 0) - (Date.parse(String(a.created_at ?? "")) || 0));
   // Match the service gate: newest active/trialing assignment, even if expired.
   const row = ordered.find(item => ["active", "trialing"].includes(String(item.status))) ?? ordered[0];
+  const awaitingDelivery = row?.activation_source === "admin_prepared_trial" && row.status === "trialing";
   const startedAt = row?.started_at ? String(row.started_at) : undefined;
   const expiresAt = row?.expires_at ? String(row.expires_at) : undefined;
   const hasActivePlan = isCurrentSubscription(row ? {
@@ -19,7 +20,8 @@ export function adminSubscriptionSummary(rows: Record<string, unknown>[], now = 
   return {
     planId: row ? String(row.plan_id ?? "") : "",
     planName: row ? String(row.plan_name_snapshot ?? row.plan_id ?? "") : "",
-    planStartedAt: startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : null,
+    trialAwaitingDelivery: awaitingDelivery,
+    planStartedAt: !awaitingDelivery && startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : null,
     planExpiresAt: expiresAt && Number.isFinite(Date.parse(expiresAt)) ? new Date(expiresAt).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) : null,
     planRemainingDays: expiry !== null && Number.isFinite(expiry) ? Math.max(0, Math.ceil((expiry - now) / 86400000)) : null,
     hasActivePlan,

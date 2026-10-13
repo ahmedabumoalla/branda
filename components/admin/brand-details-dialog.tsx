@@ -18,6 +18,7 @@ import s from "./brand-details.module.css";
 import { BrandDeletionControl } from "./brand-deletion-control";
 import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
+import { BrandOwnerWelcome } from "./brand-owner-welcome";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations" | "pager";
 const sections = [
@@ -80,15 +81,17 @@ type Props = {
   updatePlan: (id: string, planId: string) => void;
   close: () => void;
   onDeleted: (result: BrandDeletionResult) => void;
+  onUpdated: (cafe: PlatformCafe) => void;
 };
 
-export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close, onDeleted }: Props) {
+export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close, onDeleted, onUpdated }: Props) {
   const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
   const [maintenanceError, setMaintenanceError] = useState("");
   const maintenanceInFlight = useRef(false);
   const [statusPending, setStatusPending] = useState(false);
   const [deletionPending, setDeletionPending] = useState(false);
+  const [welcomePending, setWelcomePending] = useState(false);
   const [section, setSection] = useState<Section | null>(null);
   const [nextPlan, setNextPlan] = useState(cafe.planId || "");
   const [copyMessage, setCopyMessage] = useState("");
@@ -133,7 +136,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
     { label: "المكافآت", value: cafe.experienceRewardsCount ?? 0, icon: TicketCheck },
   ];
   return <>
-    <BrandDialog title="ملف العلامة التجارية" close={close}>
+    <BrandDialog title="ملف العلامة التجارية" close={close} busy={welcomePending}>
       <div className={s.overview}>
         <div className={s.identity}>
           <div className={s.avatar}>{cafe.logoUrl
@@ -150,15 +153,16 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           <div><Users aria-hidden="true" /><span><strong>{cafe.customersCount ?? 0}</strong><small>عميل مسجل</small></span></div>
           <div><CircleDollarSign aria-hidden="true" /><span><strong>{formatSar(cafe.totalRevenue)}</strong><small>إجمالي إيراد الطلبات</small></span></div>
         </div>
+        <BrandOwnerWelcome cafe={cafe} disabled={maintenancePending} onBusyChange={setWelcomePending} onUpdated={onUpdated} />
         <div className={s.sectionLabel}><h3>إدارة العلامة</h3><span>اختر قسمًا لعرض التفاصيل والتحكم</span></div>
         <div className={s.actionGrid}>{sections.map(({ id, title, description, icon: Icon }) => <button type="button" key={id} className={s.actionTile}
-          aria-haspopup="dialog" onClick={() => setSection(id)}>
+          aria-haspopup="dialog" disabled={welcomePending} onClick={() => setSection(id)}>
           <span className={s.tileIcon}><Icon aria-hidden="true" /></span><span className={s.tileText}><strong>{title}</strong><small>{description}</small></span><ChevronLeft className={s.chevron} aria-hidden="true" />
         </button>)}</div>
         <footer className={s.overviewFooter}><span>حساب الصيانة <b dir="ltr">{cafe.maintenanceAccountNumber || "غير مضاف"}</b></span>
           <div className={s.maintenanceActions}>
             <button type="button" className={s.textButton} disabled={!cafe.maintenanceAccountNumber} onClick={copyAccount}><Copy aria-hidden="true" />نسخ الرقم</button>
-            <button type="button" className={`${s.primaryButton} ${s.maintenanceButton}`} disabled={maintenancePending || !cafe.maintenanceAccountNumber} aria-busy={maintenancePending} onClick={enterMaintenance}>
+            <button type="button" className={`${s.primaryButton} ${s.maintenanceButton}`} disabled={maintenancePending || welcomePending || !cafe.maintenanceAccountNumber} aria-busy={maintenancePending} onClick={enterMaintenance}>
               <Wrench aria-hidden="true" />{maintenancePending ? "جارٍ الدخول إلى وضع الصيانة" : "دخول وضع الصيانة"}
             </button>
           </div>
@@ -178,7 +182,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         </>}
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقة الحالية<strong>{planName}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>
-          <DataList items={[["تاريخ البداية", cafe.planStartedAt], ["تاريخ الانتهاء", cafe.planExpiresAt], ["المدة المتبقية", cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
+          <DataList items={[["تاريخ البداية", cafe.trialAwaitingDelivery ? "بعد إرسال تفاصيل الدخول" : cafe.planStartedAt], ["تاريخ الانتهاء", cafe.trialAwaitingDelivery ? "٧ أيام من وقت الإرسال" : cafe.planExpiresAt], ["المدة المتبقية", cafe.trialAwaitingDelivery ? "العداد لم يبدأ" : cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
           <div className={s.planEditor}><label htmlFor="brand-next-plan">تغيير الباقة</label><p>تطبيق التغيير ينهي الاشتراك الحالي وينشئ اشتراكًا إداريًا جديدًا</p>
             <div><select id="brand-next-plan" value={nextPlan} disabled={planPending} onChange={event => setNextPlan(event.target.value)}><option value="" disabled>اختر الباقة</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
               <button type="button" className={s.primaryButton} disabled={planPending || !nextPlan || nextPlan === cafe.planId} onClick={() => updatePlan(cafe.id, nextPlan)}>{planPending ? "جارٍ تطبيق الباقة…" : "تطبيق الباقة"}</button></div>

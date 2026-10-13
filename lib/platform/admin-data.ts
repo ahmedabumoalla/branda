@@ -41,6 +41,8 @@ export type PlatformCafe = {
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
+  ownerDelivery?: import("@/lib/platform/brand-onboarding").BrandOwnerDelivery;
+  trialAwaitingDelivery?: boolean;
   ownerLoginEmail?: string;
   passwordAccessNote?: string;
   maintenanceAccountNumber?: string;
