@@ -17,6 +17,7 @@ import { PagerBrandPanel } from "@/components/pager/pager-brand-panel";
 import s from "./brand-details.module.css";
 import { BrandDeletionControl } from "./brand-deletion-control";
 import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
+import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations" | "pager";
 const sections = [
@@ -36,15 +37,11 @@ export function BrandDialog({ title, children, close, detail = false, busy = fal
   useEffect(() => {
     const dialog = ref.current;
     const focused = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
-    const rootOverflow = document.documentElement.style.overflow;
     dialog?.showModal();
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
+    const releaseScroll = lockPageScroll();
     return () => {
       dialog?.close();
-      document.body.style.overflow = overflow;
-      document.documentElement.style.overflow = rootOverflow;
+      releaseScroll();
       if (focused?.isConnected) focused.focus({ preventScroll: true });
     };
   }, []);
