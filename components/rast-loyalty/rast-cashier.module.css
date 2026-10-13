@@ -1,0 +1,13 @@
+.frame { width: 100%; max-width: 56rem; min-width: 0; margin-inline: auto; container-type: inline-size; }
+.header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
+.identity { min-width: 0; overflow-wrap: anywhere; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-width: 0; }
+.tools > * { flex-shrink: 0; max-width: 100%; }
+.tools a, .tools button { white-space: nowrap; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.body > * { min-width: 0; }
+@container (min-width: 48rem) {
+  .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 48px; }
+  .tools { max-width: 28rem; justify-content: flex-end; }
+  .body { grid-template-columns: minmax(0, 1fr) 240px; }
+}

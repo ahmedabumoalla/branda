@@ -14,6 +14,7 @@ import { loyaltyTheme } from "./loyalty-theme";
 import { RastBrand } from "./rast-brand";
 import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/cashier-language";
 import { localizedText, type CashierMessage } from "@/lib/cashier/language";
+import layout from "./rast-cashier.module.css";
 
 export function RastCashierRewardDetails({ reward }: { reward: CashierRewardPreview }) {
   const { t, locale } = useCashierLanguage();
@@ -82,14 +83,16 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const catalog = preview?.kind === "stamp" ? preview.card.catalog : preview?.reward.catalog;
   const canRedeem = preview?.retryPending || (reward?.canRedeem && (!validExpiry || validExpiry.getTime() > checkedAt));
   return <main dir={dir} lang={locale} style={{ "--cashier-ink": "#561C2B", "--cashier-paper": "#F5F0E7", "--cashier-button-text": "#FFF6E7", ...loyaltyTheme(identity) } as CSSProperties} className="min-h-dvh bg-[var(--cashier-paper)] px-4 py-7 text-[var(--cashier-ink)] sm:px-8">
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-12 flex flex-wrap items-center justify-between gap-5 border-b border-[var(--cashier-ink)]/20 pb-6">
-        <div className="min-w-0 flex-1">{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} locale={locale} />}<h1 className="mt-2 text-2xl font-bold">{t("كل زيارة تستاهل")}</h1><p className="mt-2 text-sm leading-7">{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p></div>
+    <div className={layout.frame}>
+      <header className={layout.header}>
+        <div className={layout.identity}>{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} locale={locale} />}<h1 className="mt-2 text-2xl font-bold">{t("كل زيارة تستاهل")}</h1><p className="mt-2 text-sm leading-7">{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p></div>
+        <div className={layout.tools}>
         <CashierLanguageSwitch />
         {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">{t("نظام البيجر")} </Link> : null}
             <form action={logoutCashierAction}><button disabled={pending} className="flex min-h-12 items-center gap-2 rounded-xl border border-current px-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><LogOut size={18} aria-hidden="true" />{t("تسجيل الخروج")} </button></form>
+        </div>
       </header>
-      <div className="grid gap-8 md:grid-cols-[1fr_240px]">
+      <div className={layout.body}>
         <section aria-labelledby="scan-heading" className="min-w-0 rounded-3xl border border-[var(--cashier-ink)]/20 bg-white/60 p-5 sm:p-8">
           <div className="mb-7 grid grid-cols-2 gap-2" role="group" aria-label={t("نوع العملية")}>
             {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-14 items-center justify-center gap-2 rounded-xl px-3 font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
