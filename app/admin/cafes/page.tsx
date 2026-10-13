@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { AdminCafesPage } from "@/components/admin/pages/admin-cafes-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
+import { getPendingBrandDeletions } from "@/lib/data/brand-deletion";
 import {
   getAdminCafes,
   getAdminCustomers,
@@ -30,22 +31,25 @@ export default async function AdminCafesRoutePage() {
     );
   }
 
-  try {
-    const [cafes, plans, customers, operations] = await Promise.all([
+  const data = await Promise.all([
       getAdminCafes(),
       getPlatformPlans(),
       getAdminCustomers(),
       getAdminOperations(),
-    ]);
+      getPendingBrandDeletions(),
+    ]).catch(() => null);
+  if (data) {
+    const [cafes, plans, customers, operations, pendingDeletions] = data;
     return (
       <AdminCafesPage
         initialCafes={cafes}
         initialPlans={plans}
         initialCustomers={customers}
         initialOperations={operations}
+        pendingDeletions={pendingDeletions}
       />
     );
-  } catch {
+  } else {
     return (
       <AdminCafesPage
         initialCafes={[]}

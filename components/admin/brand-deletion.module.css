@@ -1,0 +1,28 @@
+.zone, .pendingZone { --danger-ink: #ffb4ab; --danger-line: #ef8e7e45; --danger-bg: #b33c3012; --danger-button: #9d3029; --muted: #b7aea2; margin-top: 28px; padding: 22px; border: 1px solid var(--danger-line); border-radius: 14px; background: var(--danger-bg); text-align: start; }
+.zone { border-inline-start-width: 3px; }
+.heading { display: flex; align-items: center; gap: 12px; color: var(--danger-ink); }
+.zone h3, .pendingZone h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.zone p, .pendingZone p { font-size: 14px; line-height: 1.8; }
+.heading p { margin: 3px 0 16px; color: var(--muted); }
+.heading svg { flex-shrink: 0; align-self: flex-start; margin-top: 4px; }
+.warning { color: #f4e4df; margin: 0 0 8px; }
+.note { color: var(--muted); margin: 0 0 18px; }
+.zone label { display: block; color: #f4f0e9; font-size: 14px; }
+.slug { display: block; margin-block: 6px; width: fit-content; padding: 3px 9px; border-radius: 6px; background: #ffffff08; color: var(--danger-ink); overflow-wrap: anywhere; }
+.zone input { display: block; width: 100%; min-height: 46px; margin-block: 10px 18px; border-radius: 9px; border: 1px solid #ffffff30; background: #171513; color: #f4f0e9; padding: 10px 12px; font: inherit; }
+.actions, .pendingRow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.danger, .cancel { min-height: 46px; display: inline-flex; gap: 9px; align-items: center; justify-content: center; border-radius: 10px; padding: 10px 17px; font: inherit; font-size: 14px; cursor: pointer; }
+.danger { background: var(--danger-button); color: #fff7f4; border: 1px solid #df776b; }
+.danger:hover:not(:disabled) { background: #b03c32; }
+.cancel { color: #f4f0e9; background: #ffffff08; border: 1px solid #ffffff25; }
+.danger:disabled, .cancel:disabled { opacity: .5; cursor: not-allowed; }
+.zone :is(button,input):focus-visible, .pendingZone button:focus-visible { outline: 2px solid #e5bd76; outline-offset: 4px; }
+.error { color: var(--danger-ink); }
+.pendingZone { margin: 0 0 20px; color: #f4f0e9; background: #211e1b; }
+.pendingZone > p { color: var(--muted); }
+.pendingRow { justify-content: space-between; padding-block: 10px; border-top: 1px solid var(--danger-line); }
+.pendingRow bdi { overflow-wrap: anywhere; }
+.spinner { animation: turn 1s linear infinite; }
+@keyframes turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+@media (max-width: 520px) { .zone, .pendingZone { padding: 17px; } .actions > button { width: 100%; } }

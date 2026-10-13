@@ -15,6 +15,8 @@ import { BrandAnalyticsPanel } from "./brand-analytics-panel";
 import { BellRing, ClipboardCheck, Wrench } from "lucide-react";
 import { PagerBrandPanel } from "@/components/pager/pager-brand-panel";
 import s from "./brand-details.module.css";
+import { BrandDeletionControl } from "./brand-deletion-control";
+import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations" | "pager";
 const sections = [
@@ -28,7 +30,7 @@ const sections = [
   { id: "support", title: "الدعم والمستندات", description: "الصيانة، الدعم وبيانات النشاط", icon: Headphones },
 ] as const;
 
-export function BrandDialog({ title, children, close, detail = false }: { title: string; children: ReactNode; close: () => void; detail?: boolean }) {
+export function BrandDialog({ title, children, close, detail = false, busy = false }: { title: string; children: ReactNode; close: () => void; detail?: boolean; busy?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -47,12 +49,12 @@ export function BrandDialog({ title, children, close, detail = false }: { title:
     };
   }, []);
   return <dialog ref={ref} className={`${s.dialog} ${detail ? s.detailDialog : ""}`} dir="rtl" aria-labelledby={titleId}
-    onCancel={event => { event.preventDefault(); close(); }}
-    onClick={event => { if (event.target === event.currentTarget) close(); }}>
+    onCancel={event => { event.preventDefault(); if (!busy) close(); }}
+    onClick={event => { if (!busy && event.target === event.currentTarget) close(); }}>
     <div className={s.dialogSurface}>
       <header className={s.dialogBar}>
         <span id={titleId}>{title}</span>
-        <button type="button" className={s.iconButton} onClick={close} aria-label={detail ? "العودة إلى ملخص العلامة" : "إغلاق النافذة"} autoFocus>
+        <button type="button" className={s.iconButton} onClick={close} disabled={busy} aria-label={detail ? "العودة إلى ملخص العلامة" : "إغلاق النافذة"} autoFocus>
           {detail ? <ArrowLeft aria-hidden="true" /> : <X aria-hidden="true" />}
         </button>
       </header>
@@ -80,14 +82,16 @@ type Props = {
   planPending: boolean;
   updatePlan: (id: string, planId: string) => void;
   close: () => void;
+  onDeleted: (result: BrandDeletionResult) => void;
 };
 
-export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close }: Props) {
+export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close, onDeleted }: Props) {
   const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
   const [maintenanceError, setMaintenanceError] = useState("");
   const maintenanceInFlight = useRef(false);
   const [statusPending, setStatusPending] = useState(false);
+  const [deletionPending, setDeletionPending] = useState(false);
   const [section, setSection] = useState<Section | null>(null);
   const [nextPlan, setNextPlan] = useState(cafe.planId || "");
   const [copyMessage, setCopyMessage] = useState("");
@@ -166,13 +170,14 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         <p className={s.liveMessage} role="status">{copyMessage}</p>
       </div>
     </BrandDialog>
-    {section && selectedSection && <BrandDialog key={section} title={`${selectedSection.title} · ${cafe.name}`} close={() => setSection(null)} detail>
+    {section && selectedSection && <BrandDialog key={section} title={`${selectedSection.title} · ${cafe.name}`} close={() => setSection(null)} detail busy={deletionPending}>
       <div className={s.panelBody}>
         <div className={s.panelIntro}><span className={s.tileIcon}><selectedSection.icon aria-hidden="true" /></span><div><h2>{selectedSection.title}</h2><p>{selectedSection.description}</p></div></div>
         {section === "account" && <>
           <SectionHeading icon={UserRound}>بيانات الحساب والمالك</SectionHeading>
           <DataList items={[["اسم العلامة", cafe.name], ["الرابط المختصر", cafe.slug], ["اسم المالك", cafe.ownerName], ["البريد الإلكتروني", cafe.ownerEmail], ["بريد الدخول", cafe.ownerLoginEmail], ["الوصول لكلمة المرور", cafe.passwordAccessNote], ["جوال المالك", cafe.ownerPhone], ["تاريخ الانضمام", cafe.createdAt]]} />
-          <button type="button" className={s.primaryButton} disabled={statusPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
+          <button type="button" className={s.primaryButton} disabled={statusPending || deletionPending} onClick={async () => { setStatusPending(true); try { await toggleStatus(); } finally { setStatusPending(false); } }}>{statusPending ? "جارٍ تحديث الحالة…" : cafe.status === "نشط" ? "إيقاف العلامة" : "تفعيل العلامة"}</button>
+          <BrandDeletionControl cafeId={cafe.id} name={cafe.name} slug={cafe.slug} disabled={statusPending} onBusyChange={setDeletionPending} onDeleted={onDeleted} />
         </>}
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقة الحالية<strong>{planName}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>

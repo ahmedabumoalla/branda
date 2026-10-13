@@ -3,6 +3,9 @@
 import { BrandDetailsDialog, BrandFeatureControls } from "@/components/admin/brand-details-dialog";
 
 import { BrandDirectory } from "@/components/admin/brand-directory";
+import { PendingBrandDeletionCleanup } from "@/components/admin/brand-deletion-control";
+import type { BrandDeletionResult, PendingBrandDeletion } from "@/lib/data/brand-deletion";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   saveCafeFeatureOverridesAction,
@@ -32,6 +35,7 @@ type Props = {
   initialCustomers: PlatformCustomer[];
   initialOperations: PlatformOperation[];
   configError?: string;
+  pendingDeletions?: PendingBrandDeletion[];
 };
 
 type FeatureOverrideChoice = EffectiveBrandFeatureAccess["override"];
@@ -64,7 +68,12 @@ export function AdminCafesPage({
   initialCustomers,
   initialOperations,
   configError,
+  pendingDeletions = [],
 }: Props) {
+  const router = useRouter();
+  const [deletionNotice, setDeletionNotice] = useState("");
+  const [localPendingDeletions, setLocalPendingDeletions] = useState<PendingBrandDeletion[]>([]);
+  const [finishedDeletionIds, setFinishedDeletionIds] = useState<string[]>([]);
   const [cafes, setCafes] = useState<PlatformCafe[]>(initialCafes);
   const [plans] = useState<PlatformPlan[]>(initialPlans);
   const [customers] = useState<PlatformCustomer[]>(initialCustomers);
@@ -76,6 +85,16 @@ export function AdminCafesPage({
   const [savingFeatureOverridesCafeId, setSavingFeatureOverridesCafeId] = useState<string | null>(null);
   const [isPlanUpdatePending, startPlanUpdateTransition] = useTransition();
   const [isFeatureOverridePending, startFeatureOverrideTransition] = useTransition();
+
+  function onBrandDeleted(result: BrandDeletionResult) {
+    setCafes(previous => previous.filter(cafe => cafe.id !== result.cafeId));
+    setModalCafe(null);
+    setDeletionNotice(result.cleanupPending ? "حُذفت بيانات العلامة وتبقى استكمال حذف ملفاتها" : "تم حذف العلامة وبياناتها وملفاتها نهائيًا");
+    if (result.cleanupPending) setLocalPendingDeletions(previous => [...previous.filter(job => job.cafeId !== result.cafeId), result]);
+    router.refresh();
+  }
+  const deletionJobs = [...new Map([...pendingDeletions, ...localPendingDeletions].map(job => [job.cafeId, job])).values()]
+    .filter(job => !finishedDeletionIds.includes(job.cafeId));
 
   const cafeCustomers = useMemo(
     () => (modalCafe ? customers.filter((c) => c.cafeId === modalCafe.id) : []),
@@ -219,6 +238,8 @@ export function AdminCafesPage({
 
   return (
     <div>
+      {deletionNotice && <p role="status" className="mb-4 text-sm text-[#e5bd76]">{deletionNotice}</p>}
+      <PendingBrandDeletionCleanup jobs={deletionJobs} onCompleted={id => { setFinishedDeletionIds(previous => [...previous, id]); setDeletionNotice("اكتمل حذف ملفات العلامة نهائيًا"); router.refresh(); }} />
       <BrandDirectory cafes={cafes} plans={plans} onManage={setModalCafe} configError={configError} />
 
       {modalCafe && (
@@ -295,6 +316,7 @@ export function AdminCafesPage({
           planPending={isPlanUpdatePending && updatingPlanCafeId === modalCafe.id}
           updatePlan={updatePlan}
           close={() => setModalCafe(null)}
+          onDeleted={onBrandDeleted}
         />
       )}
     </div>
