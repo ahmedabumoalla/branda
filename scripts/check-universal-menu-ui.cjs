@@ -62,10 +62,10 @@ assert(html.includes('Updated dashboard product')&&html.includes('33')&&!html.in
 html=render({...kath,products:[]});assert(html.includes('قائمتنا قيد التحضير')&&!html.includes('rast-spotlight-title'));
 const shahi={...kath,slug:'shahi-w-hail',name:'شاهي وهيل',logoUrl:'/menu-logos/shahi-transparent-v2.webp',loyaltyEnabled:true,products:[{...product,name:'شاي احمر',images:[{url:'https://images.test/shahi-tea.webp',alt:'شاي احمر'}]}]};
 html=render(shahi);
-assert(html.includes('shahi-tea-editorial-v1.webp')&&html.includes('TEA &amp; HEEL')&&html.includes('قائمة شاهي وهيل'));
+assert(html.includes('shahi-tea-atmosphere-v2.webp')&&html.includes('TEA &amp; HEEL')&&html.includes('قائمة شاهي وهيل'));
 assert(html.includes('/loyalty/shahi-w-hail?source=menu')&&html.includes('بطاقة ولاء شاهي وهيل')&&html.includes('compactTools'));
 assert(!/KAWAKIB|الكواكب|مقهى كاث|KATH|kath-coffee|rast-coffee|966532751005/.test(html));
-assert(html.includes('للشاهي وقته')&&html.includes('وللجلسة أهلها')&&!html.includes('rastHeroBackdrop'),'Shahi has an independent tea-majlis composition');
+assert(html.includes('شاهي يُـروّق')&&html.includes('وهيل يطيّب الخاطر')&&html.includes('shahi-tea-atmosphere-v2.webp')&&!html.includes('rastHeroBackdrop'),'Shahi has an independent tea atmosphere composition');
 assert(html.includes('aria-label="عرض القائمة" title="عرض القائمة" aria-pressed="true"'),'Shahi starts with the readable menu list');
 assert(!html.includes('rast-spotlight-title'),'Do not repeat a fallback product before Shahi catalog');
 html=render({...shahi,highlights:{asOf:Date.now(),items:[active]}});assert(html.includes('Active offer')&&html.includes('BRAND20'),'Published offers remain visible in Shahi');

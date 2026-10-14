@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpLeft, Search, Share2, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpLeft, Leaf, Search, Share2, WalletCards } from "lucide-react";
 import type { StandaloneMenu } from "@/lib/menu/standalone-menu";
 import { editorialBrand } from "@/lib/menu/editorial-brand";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
@@ -17,9 +17,14 @@ function ShahiMark({ menu, className }: { menu: StandaloneMenu; className: strin
 
 export function ShahiHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void }) {
   return <section className={s.majlis} aria-label="مرحبًا في شاهي وهيل">
+    <div className={s.teaScene} aria-hidden="true">
+      {/* Editorial atmosphere only; catalog photography remains the owner's */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/menu-art/shahi-tea-atmosphere-v2.webp" alt="" width={1536} height={1024} fetchPriority="high" decoding="async" />
+    </div>
     <header className={s.topbar}>
       <a href="#" className={s.brandLink} aria-label={menu.name}><ShahiMark menu={menu} className={s.brandLogo} /></a>
-      <span className={s.topNote}>حيّاك على فنجال ومجلس طيّب</span>
+      <span className={s.topNote}>للّحظات اللي تستاهل نروّق لها</span>
       <div className={s.topTools}>
         <button className={s.iconButton} type="button" onClick={onSearch} aria-label="البحث في المنيو"><Search aria-hidden="true" /></button>
         <button className={s.iconButton} type="button" onClick={onShare} aria-label="مشاركة رابط المنيو"><Share2 aria-hidden="true" /></button>
@@ -28,22 +33,15 @@ export function ShahiHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; o
     </header>
     <div className={s.heroBody}>
       <div className={s.heroCopy}>
-        <p className={s.eyebrow}><span aria-hidden="true" />شاهي وهيل</p>
-        <h1>للشاهي وقته<br /><span>وللجلسة أهلها</span></h1>
-        <p className={s.intro}>ريحة الهيل وأول رشفة شاهي<br />وباقي الحكاية على ذوقك</p>
-        <a className={s.explore} href="#rast-menu-items">تفضّل على قائمتنا<ArrowDownLeft aria-hidden="true" /></a>
-        <span className={s.heroCaption} dir="ltr">TEA &amp; HEEL — A MOMENT TO SAVOUR</span>
+        <p className={s.eyebrow}><Leaf aria-hidden="true" />مزاج يبدأ من أول رشفة</p>
+        <h1>شاهي يُـروّق<span>وهيل يطيّب الخاطر</span></h1>
+        <p className={s.intro}>خذ من زحمة اليوم لحظة لك<br />شاهي على مهل وجلسة تحلى بأهلها</p>
+        <a className={s.explore} href="#rast-menu-items">اكتشف قائمتنا<span><ArrowDownLeft aria-hidden="true" /></span></a>
+        <span className={s.heroCaption} dir="ltr">TEA &amp; HEEL / THE ART OF SLOW MOMENTS</span>
       </div>
-      <figure className={s.teaPortrait}>
-        <div className={s.teaArch}>
-          {/* Decorative tea atmosphere, never substituted for a catalog product */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/menu-art/shahi-tea-editorial-v1.webp" alt="" width={1536} height={1024} fetchPriority="high" decoding="async" />
-        </div>
-        <figcaption><span>على مهل</span><span>كل رشفة لها حكاية</span></figcaption>
-      </figure>
+      <div className={s.sceneNote} aria-hidden="true"><span>على رواق</span><span>شاهي وهيل</span></div>
     </div>
-    <div className={s.heroEnd} aria-hidden="true"><span>شاهي يعدّل المزاج</span><span className={s.ornament}>✦</span><span>وهيل يطيّب الجلسة</span></div>
+    <div className={s.heroEnd}><span><Leaf aria-hidden="true" />ريحة هيل ودفا شاهي</span><a href="#rast-menu-items">لحظتك الحلوة تبدأ هنا<ArrowDownLeft aria-hidden="true" /></a></div>
   </section>;
 }
 
