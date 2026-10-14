@@ -1,0 +1,119 @@
+/* Forest ink, the original green mark, linen paper and brass details */
+.theme.theme.theme {
+  --shahi-forest: #163d30; --shahi-deep: #102d24; --shahi-paper: #f5f3e9;
+  --shahi-brass: #d5bb83; --shahi-muted: #607065; --shahi-line: #d7ded1;
+  --kath-brown: var(--shahi-forest); --kath-espresso: var(--shahi-deep); --kath-gold: var(--shahi-brass); --kath-ivory: var(--shahi-paper);
+  --rast-red: var(--shahi-forest); --rast-wine: var(--shahi-deep); --rast-cream: var(--shahi-paper);
+  --rast-blush: #e9ede1; --rast-muted: var(--shahi-muted); --rast-border: var(--shahi-line); --card-paper: #fffef9;
+  background: var(--shahi-paper); color: var(--shahi-deep); color-scheme: light;
+}
+.majlis { background: var(--shahi-deep); color: var(--shahi-paper); overflow: hidden; }
+.topbar { max-width: 1280px; margin: auto; padding: 20px var(--rast-gutter); display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #f5f3e921; }
+.brandLink { display: flex; flex-shrink: 0; }
+.brandLogo { width: 136px; height: 78px; object-fit: contain; }
+.topNote { font-size: 12px; color: #d5ddcd; }
+.topTools { display: flex; gap: 8px; align-items: center; }
+.theme .topTools > button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #f5f3e945; border-radius: 50%; color: var(--shahi-paper); background: transparent; cursor: pointer; transition: background .18s ease; }
+.theme .topTools > button:hover { background: #f5f3e916; color: var(--shahi-paper); }
+.topTools > button > svg { width: 18px; height: 18px; }
+.heroBody { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: clamp(36px, 6vw, 96px); max-width: 1280px; margin: auto; padding: 56px var(--rast-gutter) 40px; }
+.heroCopy { min-width: 0; }
+.eyebrow { display: flex; gap: 12px; align-items: center; font-size: 13px; font-weight: 500; color: var(--shahi-brass); margin: 0 0 24px; }
+.eyebrow > span { width: 32px; height: 1px; background: currentColor; }
+.heroCopy h1 { font-family: "Bistro Arabic", sans-serif; font-size: clamp(40px, 4.8vw, 70px); line-height: 1.5; font-weight: 700; margin: 0; letter-spacing: 0; }
+.heroCopy h1 > span { color: var(--shahi-brass); }
+.intro { margin: 24px 0 30px; color: #d5ddcd; font-size: 16px; line-height: 2; }
+.explore { display: inline-flex; align-items: center; gap: 28px; min-height: 52px; padding: 12px 22px; background: var(--shahi-paper); color: var(--shahi-deep); border-radius: 4px 18px 4px 18px; text-decoration: none; font-size: 14px; font-weight: 600; transition: background .18s ease; }
+.explore:hover { background: var(--shahi-brass); }
+.explore svg { width: 20px; }
+.heroCaption { display: block; margin-top: 28px; font-size: 9px; letter-spacing: .14em; color: #bdccbf; text-align: start; }
+.teaPortrait { min-width: 0; margin: 0; position: relative; padding: 12px 12px 0; }
+.teaPortrait::before { content: ""; position: absolute; inset: 0 0 42px; border: 1px solid #d5bb8370; border-radius: 50% 50% 6px 6px / 38% 38% 6px 6px; pointer-events: none; }
+.teaArch { overflow: hidden; aspect-ratio: .92; border-radius: 50% 50% 4px 4px / 38% 38% 4px 4px; background: #32402e; }
+.teaArch img { width: 100%; height: 100%; object-fit: cover; object-position: 77% center; display: block; }
+.teaPortrait figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 0 0; font-size: 11px; color: #d5ddcd; }
+.teaPortrait figcaption > span:first-child { font-family: "Bistro Arabic", sans-serif; font-size: 20px; color: var(--shahi-brass); }
+.heroEnd { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 20px; border-top: 1px solid #f5f3e921; font-size: 12px; color: #d5ddcd; }
+.ornament { color: var(--shahi-brass); }
+.membership { max-width: 1280px; margin: auto; padding: 0 var(--rast-gutter); }
+.membershipLink { display: flex; align-items: center; gap: 24px; padding: 30px 0; border-bottom: 1px solid var(--shahi-line); color: var(--shahi-deep); text-decoration: none; }
+.loyaltySeal { display: grid; place-items: center; width: 64px; height: 64px; flex-shrink: 0; border: 1px solid var(--shahi-line); border-radius: 50%; background: #e9ede1; }
+.loyaltySeal svg { width: 26px; height: 26px; stroke-width: 1.3; }
+.loyaltyCopy { display: grid; gap: 5px; min-width: 0; }
+.loyaltyCopy small { font-size: 11px; color: var(--shahi-muted); }
+.loyaltyCopy strong { font-size: 19px; font-weight: 500; }
+.loyaltyCopy > span { font-size: 12px; color: var(--shahi-muted); }
+.loyaltyAction { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; flex-shrink: 0; gap: 8px; padding: 8px 14px; margin-inline-start: auto; background: var(--shahi-forest); color: var(--shahi-paper); border-radius: 24px; font-size: 12px; }
+.membershipLink:hover .loyaltyAction { background: var(--shahi-deep); }
+.theme.theme .catalog { max-width: 1280px; padding-top: 48px; }
+.catalogIntro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; scroll-margin-top: 24px; }
+.catalogIntro p { color: var(--shahi-muted); font-size: 12px; line-height: 1.9; margin: 0; }
+.catalogIntro h2 { font-family: "Bistro Arabic", sans-serif; font-weight: 700; font-size: clamp(32px, 4vw, 48px); line-height: 1.5; margin: 6px 0 0; }
+.theme.theme .categories { padding-bottom: 14px; border-bottom: 1px solid var(--shahi-line); }
+.theme.theme .categories button { border-radius: 24px; min-height: 48px; padding: 12px 20px; }
+.theme.theme .categorySection { margin-top: 44px; }
+.theme.theme .sectionHeading { border-bottom: 0; margin-bottom: 8px; padding-bottom: 8px; }
+.theme.theme .sectionHeading h2 { font-size: 24px; font-weight: 500; -webkit-text-stroke: 0; }
+.theme.theme .productGrid > article { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.theme.theme .productGrid .productButton { border-bottom: 1px solid var(--shahi-line); border-radius: 0; height: 100%; }
+.theme.theme .productImage { border-radius: 16px; background: #fff; }
+.theme.theme .productBody { padding: 18px 0 24px; }
+.theme.theme .productBody h3 { font-size: 19px; font-weight: 500; }
+.theme.theme .productBody > p { font-size: 12px; min-height: 0; }
+.theme.theme .listView { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 44px; row-gap: 0; }
+.theme.theme .listView .productButton { grid-template-columns: 112px minmax(0, 1fr); gap: 20px; align-items: center; padding: 24px 0; }
+.theme.theme .listView .productImage { height: 112px; aspect-ratio: 1; border-radius: 16px; }
+.theme.theme .listView .productBody { padding: 0; }
+.theme.theme .listView > article:has(> .productImage) { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 20px; align-items: center; border-bottom: 1px solid var(--shahi-line); }
+.theme.theme .listView > article:has(> .productImage) > .productButton { display: block; border: 0; }
+.theme.theme .spotlight { margin: 0 0 44px; }
+.theme.theme .spotlight > article { border-radius: 18px; }
+.theme.theme .spotlight > div h2 { font-size: 30px; }
+.theme.theme .footer { padding-top: 0; background: var(--shahi-deep); color: var(--shahi-paper); }
+.farewell { display: flex; align-items: center; justify-content: space-between; gap: 32px; max-width: 1152px; margin: 0 auto 32px; padding: 48px 0; border-bottom: 1px solid #f5f3e921; }
+.closingLogo { width: 160px; height: 104px; object-fit: contain; }
+.farewell p { color: var(--shahi-brass); font-size: 12px; margin: 0 0 10px; }
+.farewell h2 { font-family: "Bistro Arabic", sans-serif; font-size: 32px; line-height: 1.5; font-weight: 700; margin: 0; }
+.farewell a { display: inline-flex; align-items: center; gap: 16px; min-height: 48px; padding-block: 10px; color: var(--shahi-paper); border-bottom: 1px solid var(--shahi-brass); font-size: 13px; text-decoration: none; }
+.theme :is(.explore, .membershipLink, .brandLink, .topTools > button, .farewell a):focus-visible { outline: 2px solid var(--shahi-brass); outline-offset: 5px; }
+@media (max-width: 900px) {
+  .topNote { display: none; }
+  .heroBody { gap: 32px; }
+  .heroCopy h1 { font-size: 42px; }
+  .theme.theme .listView { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .topbar { gap: 12px; padding-block: 14px; }
+  .brandLogo { width: 106px; height: 60px; }
+  .topTools { gap: 6px; }
+  .heroBody { grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 32px; padding-bottom: 28px; }
+  .heroCopy h1 { font-size: clamp(36px, 10vw, 48px); line-height: 1.45; }
+  .eyebrow { margin-bottom: 16px; }
+  .intro { margin: 16px 0 22px; font-size: 14px; }
+  .heroCaption { display: none; }
+  .teaPortrait { width: min(100%, 340px); margin-inline: auto; padding: 8px 8px 0; }
+  .teaArch { aspect-ratio: 1.3; }
+  .teaPortrait::before { bottom: 38px; }
+  .teaPortrait figcaption { padding-top: 12px; }
+  .heroEnd { gap: 16px; padding: 16px 12px; font-size: 10px; }
+  .membershipLink { gap: 14px; padding-block: 24px; }
+  .loyaltySeal { width: 44px; height: 44px; }
+  .loyaltyCopy strong { font-size: 15px; line-height: 1.7; }
+  .loyaltyCopy > span { font-size: 11px; }
+  .loyaltyAction { width: 44px; padding: 8px; }
+  .loyaltyAction > span:not([aria-hidden]) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .theme.theme .catalog { padding-top: 32px; padding-bottom: 48px; }
+  .catalogIntro { align-items: start; margin-bottom: 20px; }
+  .catalogIntro > p { max-width: 108px; padding-top: 8px; font-size: 11px; }
+  .theme.theme .categories button { padding: 10px 16px; }
+  .theme.theme .productBody h3 { font-size: 17px; }
+  .theme.theme .listView .productButton { grid-template-columns: 88px minmax(0, 1fr); gap: 16px; padding: 20px 0; }
+  .theme.theme .listView .productImage { height: 88px; }
+  .theme.theme .listView > article:has(> .productImage) { grid-template-columns: 88px minmax(0, 1fr); gap: 16px; }
+  .theme.theme .sectionHeading h2 { font-size: 21px; }
+  .farewell { flex-wrap: wrap; justify-content: start; gap: 24px; padding: 32px 0; }
+  .closingLogo { width: 100px; height: 70px; }
+  .farewell h2 { font-size: 25px; }
+  .farewell > a { margin-inline-start: 124px; }
+}
+@media (prefers-reduced-motion: reduce) { .theme .topTools > button, .explore { transition: none; } }

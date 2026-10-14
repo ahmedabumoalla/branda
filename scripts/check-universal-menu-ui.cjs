@@ -65,6 +65,10 @@ html=render(shahi);
 assert(html.includes('shahi-tea-editorial-v1.webp')&&html.includes('TEA &amp; HEEL')&&html.includes('قائمة شاهي وهيل'));
 assert(html.includes('/loyalty/shahi-w-hail?source=menu')&&html.includes('بطاقة ولاء شاهي وهيل')&&html.includes('compactTools'));
 assert(!/KAWAKIB|الكواكب|مقهى كاث|KATH|kath-coffee|rast-coffee|966532751005/.test(html));
+assert(html.includes('للشاهي وقته')&&html.includes('وللجلسة أهلها')&&!html.includes('rastHeroBackdrop'),'Shahi has an independent tea-majlis composition');
+assert(html.includes('aria-label="عرض القائمة" title="عرض القائمة" aria-pressed="true"'),'Shahi starts with the readable menu list');
+assert(!html.includes('rast-spotlight-title'),'Do not repeat a fallback product before Shahi catalog');
+html=render({...shahi,highlights:{asOf:Date.now(),items:[active]}});assert(html.includes('Active offer')&&html.includes('BRAND20'),'Published offers remain visible in Shahi');
 for(const name of ['سناب شات','تيك توك','إنستقرام','واتساب'])assert(html.includes(name));
 html=render({...shahi,loyaltyEnabled:false});assert(!html.includes('/loyalty/')&&html.includes('بطاقة الولاء غير متاحة حاليًا'));
 html=render({...shahi,logoUrl:'/owner-new-logo.png',products:[{...product,name:'Own tea update',price:17}]});
@@ -78,11 +82,19 @@ if(process.env.KATH_LIVE_FIXTURE) {
   assert(!/الكواكب|KAWAKIB|\/loyalty\/rast|rast-coffee-editorial/.test(html));
   console.log(`PASS Kath live fixture: ${live.products.length} own products, original logo and actual loyalty availability`);
 }
+if(process.env.SHAHI_LIVE_FIXTURE) {
+  const live=JSON.parse(fs.readFileSync(process.env.SHAHI_LIVE_FIXTURE,'utf8'));
+  assert.equal(live.slug,'shahi-w-hail');html=render(live);
+  assert.equal((html.match(/aria-label="عرض تفاصيل /g)||[]).length,live.products.length);
+  for(const product of live.products) assert(html.includes(`data-product-id="${product.id}"`));
+  assert(html.includes('srcSet=')&&html.includes('loading="lazy"'));
+  console.log(`PASS Shahi live fixture: ${live.products.length} original products, independent layout, original logo and working service gates`);
+}
 if(process.env.MENU_BASELINE_FILE) {
   const {BistroMenu:Previous}=load('components/menu/bistro-menu.tsx',{'components/menu/bistro-menu.tsx':fs.readFileSync(process.env.MENU_BASELINE_FILE,'utf8')});
   const withoutCredit=html=>html.replace(/<a[^>]*class="platformCredit"[\s\S]*?<\/a>|<span>بواسطة <b>برندة<\/b><\/span>/g,'BRANDA_CREDIT');
-  for(const slug of ['basilico','new-brand','double-b-bistro','rast']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(withoutCredit(render(menu)),withoutCredit(previous),`Preserve ${slug} full menu markup except requested shared credit with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
-  console.log('PASS eight standalone menu SSR baselines unchanged outside the requested shared footer credit');
+  for(const slug of ['basilico','new-brand','double-b-bistro','rast','kat-coffe']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(withoutCredit(render(menu)),withoutCredit(previous),`Preserve ${slug} full menu markup except requested shared credit with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
+  console.log('PASS ten standalone menu SSR baselines unchanged outside the requested shared footer credit');
 }
 console.log('PASS universal menu service gates own-brand links offers expiry event details existing layout and published pricing');
 console.log('PASS Kath editorial identity, own loyalty gates, dashboard data replacement and empty catalog');
