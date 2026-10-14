@@ -114,12 +114,13 @@
 @media(max-width: 700px) {
   .header { min-height: 86px; padding: 10px 20px; gap: 14px; }
   .logo { width: 95px; height: 57px; } .brand > span { display: none; }
-  .heroInner { min-height: 0; padding: 34px 24px 57px; display: flex; flex-direction: column; align-items: stretch; gap: 38px; }
-  .copy h1 { font-size: clamp(48px, 13vw, 72px); line-height: 1.23; }
-  .eyebrow { font-size: 11px; margin-bottom: 20px; }
-  .description { font-size: 13px; margin: 18px 0 23px; }
-  .explore { min-height: 49px; font-size: 13px; gap: 36px; }
-  .quickServices { gap: 22px; margin-top: 13px; } .quickServices > a, .quickServices > button { font-size: 11px; }
+  .heroInner { min-height: 0; padding: 24px 24px 44px; display: flex; flex-direction: column; align-items: stretch; gap: 32px; }
+  .withoutImage .heroInner { min-height: 0; }
+  .copy h1 { font-size: clamp(36px, 9vw, 44px); line-height: 1.25; }
+  .eyebrow { font-size: 11px; margin-bottom: 12px; }
+  .description { font-size: 13px; line-height: 1.8; margin: 14px 0 16px; }
+  .explore { min-height: 48px; font-size: 13px; gap: 36px; }
+  .quickServices { gap: 22px; margin-top: 8px; } .quickServices > a, .quickServices > button { min-height: 44px; font-size: 11px; }
   .composition { width: 84%; max-width: 380px; margin: 5px 4% 0 auto; padding: 0 0 13px; }
   .photoNote { top: -18px; font-size: 7px; left: 4px; letter-spacing: .1em; }
   .feature { border-width: 5px; border-radius: 46% 46% 12px 12px; }
