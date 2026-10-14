@@ -1,13 +1,14 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpLeft, Coffee, Download, Search, Share2, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpLeft, Coffee, Search, Share2, WalletCards } from "lucide-react";
 import type { StandaloneMenu, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { kathResponsiveImage } from "@/lib/menu/kath-images";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { MenuServices } from "./menu-services";
 import { LoyaltyLinkContent } from "./loyalty-link-content";
 import s from "./taza-menu.module.css";
+import loyalty from "./rast-loyalty-entry.module.css";
 
 function TazaMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
   // Preserve the owner's current logo and its original colors
@@ -38,7 +39,6 @@ export function TazaHero({ menu, onSearch, onShare, onSelect }: { menu: Standalo
         <div className={s.copy}>
           <p className={s.eyebrow}><span />قهوة مختصة وحلا على ذوقك</p>
           <h1>خذ لحظة<br /><span>خلّها <em>تازا</em></span></h1>
-          <p className={s.description}>رشفة تضبط مزاجك ولقمة تكمّلها<br />هنا التفاصيل الصغيرة لها طعم ثاني</p>
           <a href="#rast-menu-items" className={s.explore}>اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>
           <nav className={s.quickServices} aria-label="خدمات تازا">
             {menu.loyaltyEnabled && <a href="#taza-membership"><WalletCards aria-hidden="true" /><span>بطاقتك ومكافآتك</span></a>}
@@ -64,14 +64,24 @@ export function TazaHero({ menu, onSearch, onShare, onSelect }: { menu: Standalo
 export function TazaLoyalty({ menu }: { menu: StandaloneMenu }) {
   if (!menu.loyaltyEnabled) return null;
   return <section className={s.membership} id="taza-membership" aria-label="بطاقة ولاء تازا">
-    <div className={s.membershipPanel}>
-      <div className={s.cardStage} aria-hidden="true"><span className={s.cardShadow} /><div className={s.cardArt}><div className={s.cardTop}><TazaMark menu={menu} className={s.cardLogo} /><WalletCards /></div><span className={s.cardTitle}>لأهل الذوق</span><span className={s.cardRule} /><span className={s.cardBottom}><span dir="ltr">TAZA MEMBERS</span><Coffee /></span></div><span className={s.cardTag}>كل زيارة تقرّبك</span></div>
-      <div className={s.memberCopy}><p className={s.memberEyebrow}>أهل تازا لهم أكثر</p><h2>ذوقك الحلو<br /><span>يرجع لك مكافأة</span></h2><p>خلّ بطاقتك في جوالك واجمع أختامك مع كل زيارة</p>
-        <Link className={s.memberAction} href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")} onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}><Download aria-hidden="true" /><LoyaltyLinkContent label="اضغط هنا لتحميل بطاقة الولاء" /></Link>
-        <p className={s.memberHint}>سجّل بياناتك ثم أضف البطاقة إلى محفظة جوالك</p>
-      </div>
-      <span className={s.memberWord} aria-hidden="true" dir="ltr">MEMBERS</span>
-    </div>
+    <Link className={loyalty.entry} href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} aria-label="حمّل بطاقة ولاء تازا"
+      onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}
+      onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}>
+      <span className={loyalty.cardIllustration} aria-hidden="true">
+        <span className={loyalty.cardBack} />
+        <span className={loyalty.cardFront}>
+          <span className={loyalty.cardTop}><span dir="ltr">TAZA</span><WalletCards /></span>
+          <span className={loyalty.cardBrand}><TazaMark menu={menu} className={s.cardLogo} /></span>
+          <span className={loyalty.cardCaption}>بطاقة الولاء</span>
+        </span>
+      </span>
+      <span className={loyalty.copy}>
+        <span className={loyalty.eyebrow}>لأنك من أهل تازا</span>
+        <span className={loyalty.title}>بطاقتك معك في كل زيارة</span>
+        <span className={loyalty.description}>حمّل بطاقة الولاء واجمع أختامك مع كل زيارة</span>
+      </span>
+      <LoyaltyLinkContent className={`${loyalty.action} ${s.memberAction}`} />
+    </Link>
   </section>;
 }
 

@@ -87,7 +87,7 @@ html=render(taza);
 assert(html.includes('قائمة تازا')&&html.includes('TAZA COFFEE')&&html.includes('/loyalty/taza?source=menu'));
 assert(!/KAWAKIB|الكواكب|مقهى كاث|شاهي وهيل|kath-coffee|rast-coffee/.test(html),'Taza identity stays isolated');
 assert(html.includes('aria-label="العروض"')&&html.includes('compactTools'));
-assert(html.includes('اضغط هنا لتحميل بطاقة الولاء')&&html.includes('سجّل بياناتك ثم أضف البطاقة إلى محفظة جوالك'));
+assert(html.includes('aria-label="حمّل بطاقة ولاء تازا"')&&html.includes('حمّل بطاقتك')&&html.includes('لأنك من أهل تازا'));
 html=render({...taza,loyaltyEnabled:false,products:[]});
 assert(!html.includes('/loyalty/')&&html.includes('قائمتنا قيد التحضير'));
 html=render({...taza,logoUrl:'/owner-taza-logo.png',products:[{...product,name:'Owner Taza update',price:37}]});
