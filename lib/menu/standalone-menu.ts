@@ -33,6 +33,10 @@ export type StandaloneMenu = {
 };
 
 export type StandaloneHighlight = {
+  freeProductId?: string;
+  buyProductId?: string;
+  buyQuantity?: number;
+  rewardQuantity?: number;
   showInSpotlight?: boolean;
   offerType?: string;
   kind?: "products" | "general" | "event";

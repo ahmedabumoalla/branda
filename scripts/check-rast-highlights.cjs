@@ -136,6 +136,24 @@ async function run() {
   }
   const directPromo = render({ ...menu, slug: "taza", highlights: undefined, products: [{ ...product, promo: { kind: "عرض مخصص", customText: "Owner product special", startDate: "2000-01-01", endDate: "2099-12-31" } }] });
   assert(directPromo.includes("Owner product special"), "Direct owner product promotions are visible too");
+  assert(directPromo.includes('class="offerBadge"'), "Custom offer is prominent over the product image");
+  const gift = { ...secondProduct, images: [{ url: "https://example.com/real-gift.webp", alt: "Real gift" }] };
+  const giftProduct = { ...product, promo: { kind: "منتج مجاني مع الطلب", freeProductId: gift.id, startDate: "2000-01-01", endDate: "2099-12-31" } };
+  const { ProductOfferDetails } = load("components/menu/product-offer-details.tsx");
+  for (const detailed of [false, true]) {
+    const markup = renderToStaticMarkup(React.createElement(ProductOfferDetails, { product: giftProduct, products: [giftProduct, gift], detailed }));
+    assert(markup.includes('src="https://example.com/real-gift.webp"') && markup.includes(gift.name) && markup.includes("مجانًا"), "Card and dialog show the actual named gift image and condition");
+  }
+  const hiddenGift = renderToStaticMarkup(React.createElement(ProductOfferDetails, { product: giftProduct, products: [giftProduct, { ...gift, available: false }] }));
+  assert(!hiddenGift.includes('real-gift.webp'), "Unavailable or unpublished gifts must not leak into the offer");
+  const expiredGift = renderToStaticMarkup(React.createElement(ProductOfferDetails, { product: { ...giftProduct, promo: { ...giftProduct.promo, endDate: "2000-01-01" } }, products: [gift] }));
+  assert.equal(expiredGift, "", "Expired direct promotions have no offer panel");
+  const fixedDiscount = render({ ...menu, slug: "test-cafe", highlights: undefined, products: [{ ...product, promo: { kind: "خصم", discountMode: "fixed_price", discountedPrice: 12, startDate: "2000-01-01", endDate: "2099-12-31" } }] });
+  assert(fixedDiscount.includes('<del>20</del>') && fixedDiscount.includes('dir="ltr">12</b>'), "Configured fixed-price discount is applied with original price struck through");
+  const buyGet = linked.items.find(item => item.id === "buy-get");
+  assert.equal(buyGet.freeProductId, gift.id);
+  assert.equal(buyGet.buyQuantity, 2);
+  assert.equal(buyGet.rewardQuantity, 1);
   const active = render(menu);
   assert(active.includes("List-only offer"), "List-only offer is rendered on the product card");
   assert(!active.match(/<section[^>]*aria-labelledby="rast-spotlight-title"[\s\S]*?<\/section>/)?.[0].includes("List-only offer"), "Card-only placement never leaks into the marketing spotlight");

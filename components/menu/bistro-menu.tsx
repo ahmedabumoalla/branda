@@ -4,7 +4,7 @@ import { ArrowDownLeft, ArrowUpLeft, ArrowRight, CakeSlice, Check, ChevronLeft, 
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, LayoutGroup, motion, useInView, useReducedMotion } from "motion/react";
 import { menuMotion, menuSprings } from "@/lib/menu/motion-foundations";
-import { isPromoActive, productFinalPrice, promoBadgeText } from "@/lib/mock/menu";
+import { isPromoActive, productFinalPrice } from "@/lib/mock/menu";
 import { matchesMenuSearch, menuDisplayText, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import s from "./bistro-menu.module.css";
 import { MenuServices } from "./menu-services";
@@ -12,6 +12,7 @@ import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
 import { RastLoyaltyEntry } from "./rast-loyalty-entry";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
+import { ProductOfferBadge, ProductOfferDetails } from "./product-offer-details";
 import spotlight from "./rast-spotlight.module.css";
 import kath from "./kath-menu.module.css";
 import { KathLoyaltyEntry } from "./kath-loyalty-entry";
@@ -97,21 +98,6 @@ function Price({ product }: { product: StandaloneMenuProduct }) {
   </span>;
 }
 
-function ProductOffers({ product, detailed = false }: { product: StandaloneMenuProduct; detailed?: boolean }) {
-  const offers = product.offers ?? [];
-  const promo = product.available && product.promo && isPromoActive(product.promo) ? product.promo : null;
-  if (!offers.length && !promo) return null;
-  return <span className={s.productOffers} id={detailed ? undefined : `product-offers-${product.id}`}>
-    {promo && !offers.some((offer) => offer.title === promo.customText) && <span className={s.productOffer}><strong>{promoBadgeText(promo)}</strong></span>}
-    {offers.map((offer) => <span key={offer.id} className={s.productOffer}>
-      <strong>{offer.discountPercent ? `خصم ${offer.discountPercent}%` : offer.offerType || "عرض خاص"}</strong>
-      <span dir="auto">{menuDisplayText(offer.title)}</span>
-      {detailed && offer.description && <span className={s.offerDescription} dir="auto">{menuDisplayText(offer.description)}</span>}
-      {offer.code && <span>كود العرض <b dir="ltr">{offer.code}</b></span>}
-    </span>)}
-  </span>;
-}
-
 function FoodVideo({ src, alt, poster, paused = false }: { src: string; alt: string; poster?: string; paused?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const inView = useInView(videoRef, { amount: 0.2 });
@@ -140,7 +126,7 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-function ProductDetails({ product, close, browse, position, total }: { product: StandaloneMenuProduct; close: () => void; browse: (direction: number) => void; position: number; total: number }) {
+function ProductDetails({ product, products, close, browse, position, total }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [mediaIndex, setMediaIndex] = useState(0);
@@ -185,7 +171,7 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
         <p className={s.eyebrow}>{menuDisplayText(product.category)}</p>
         <h2 id="dish-title" dir="auto">{menuDisplayText(product.name)}</h2>
         <div className={s.detailPrice}><Price product={product} />{!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}</div>
-        <ProductOffers product={product} detailed />
+        <ProductOfferDetails product={product} products={products} detailed />
         <div className={s.facts}>
           {product.calories != null && <span><Flame aria-hidden="true" />{product.calories} سعرة حرارية</span>}
           {product.preparationTimeMinutes != null && <span><Clock3 aria-hidden="true" />التحضير: {product.preparationTimeMinutes} دقيقة</span>}
@@ -361,18 +347,20 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
           {section.products.map((product, productIndex) => <DishMotion key={product.id} id={product.id}>
             {product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}`} data-dish-photo>
               <FoodVideo src={product.videos[0].url} alt={product.name} poster={product.images[0]?.url} paused={Boolean(selected)} />
+              <ProductOfferBadge product={product} products={menu.products} />
               {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
             </div>}
             <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`} aria-describedby={product.offers?.length || (product.available && product.promo && isPromoActive(product.promo)) ? `product-offers-${product.id}` : undefined}>
               {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}`} data-dish-photo>
                 <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />
+                <ProductOfferBadge product={product} products={menu.products} />
                 {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
                 <span className={s.imageArrow} aria-hidden="true"><ArrowUpLeft size={19} /></span>
               </div>}
               <div className={`${s.productBody}${isShahi ? ` ${majlis.productBody}` : ""}${isTaza ? ` ${taza.productBody}` : ""}`}>
                 <div className={s.productName}><h3 dir="auto">{menuDisplayText(product.name)}</h3></div>
                 {product.description && <p className={s.productDescription} dir="auto">{menuDisplayText(product.description)}</p>}
-                <ProductOffers product={product} />
+                <ProductOfferDetails product={product} products={menu.products} />
                 <div className={s.productMeta}>{product.calories != null && <span><Flame size={13} aria-hidden="true" />{product.calories} سعرة</span>}<Price product={product} /></div>
               </div>
             </button>
@@ -396,6 +384,6 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       </a></div>
     </footer>
     {shareMessage && <div className={s.toast} role="status"><Check size={18} aria-hidden="true" />{shareMessage}</div>}
-    <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
+    <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} products={menu.products} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main></KathImages.Provider>;
 }

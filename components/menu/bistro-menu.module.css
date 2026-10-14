@@ -98,11 +98,31 @@
 .imageArrow { position: absolute; left: 12px; bottom: 12px; border: 1px solid #ffffff4d; background: var(--ink); border-radius: 50%; width: 35px; height: 35px; display: grid; place-items: center; color: var(--paper); transition: background .2s; }
 .productButton:hover .imageArrow { background: var(--gold); color: var(--ink); }
 .productBody { padding: 18px 2px 0; }
-.productOffers { display: grid; gap: 7px; margin-block: 10px 14px; min-width: 0; color: inherit; text-align: start; }
-.productOffer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding-inline-start: 10px; border-inline-start: 2px solid currentColor; font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
-.productOffer strong { font-size: 11px; font-weight: 700; }
+.offerBadge { position: absolute; z-index: 2; inset-block-start: 10px; inset-inline-start: 10px; max-width: calc(100% - 20px); display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 9px; background: var(--paper); color: var(--ink); border: 1px solid var(--gold); box-shadow: 0 3px 12px #0002; font-size: 13px; font-weight: 700; line-height: 1.5; pointer-events: none; overflow-wrap: anywhere; }
+.offerBadge svg { width: 17px; height: 17px; flex-shrink: 0; }
+.offerBadge small { font-size: 11px; }
+.productOffers { display: grid; gap: 10px; margin-block: 12px 16px; min-width: 0; color: inherit; text-align: start; }
+.productOffer { display: grid; gap: 8px; padding: 12px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); border-inline-start: 3px solid var(--gold); border-radius: 12px; background: color-mix(in srgb, var(--gold) 12%, transparent); font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.offerHeading { display: flex; align-items: center; gap: 7px; }
+.offerHeading svg { width: 18px; height: 18px; flex-shrink: 0; }
+.offerHeading strong { font-size: 14px; font-weight: 700; }
 .productOffer > span { min-width: 0; }
-.offerDescription { flex-basis: 100%; }
+.offerTitle { font-size: 15px; font-weight: 700; }
+.offerDescription { white-space: pre-line; }
+.offerGift { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center; }
+.offerGift > img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; }
+.offerGift > svg { width: 32px; height: 32px; }
+.offerGift > span { display: grid; gap: 2px; min-width: 0; }
+.offerGift small { font-size: 12px; }
+.offerGift strong, .offerGift b { font-size: 15px; }
+.offerCode { border-block-start: 1px solid var(--line); padding-block-start: 8px; }
+.detailedOffers .productOffer { padding: 16px; }
+@media (max-width: 640px) {
+  .offerBadge { inset-block-start: 7px; inset-inline-start: 7px; max-width: calc(100% - 14px); padding: 6px; font-size: 12px; }
+  .productOffer { padding: 9px; }
+  .offerGift { grid-template-columns: 1fr; gap: 6px; }
+  .detailedOffers .offerGift { grid-template-columns: 72px minmax(0, 1fr); }
+}
 .productName { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .productName h3 { font-family: var(--display-font); margin: 0; font-size: 19px; font-weight: 500; line-height: 1.65; overflow-wrap: anywhere; letter-spacing: normal; }
 .price { flex-shrink: 0; display: inline-flex; align-items: baseline; gap: 5px; color: var(--gold); }
