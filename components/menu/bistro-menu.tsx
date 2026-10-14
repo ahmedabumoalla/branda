@@ -20,6 +20,8 @@ import { editorialBrand } from "@/lib/menu/editorial-brand";
 import shahi from "./shahi-menu.module.css";
 import majlis from "./shahi-majlis.module.css";
 import { ShahiHero, ShahiLoyalty, ShahiClosing } from "./shahi-menu-scenes";
+import taza from "./taza-menu.module.css";
+import { TazaHero, TazaLoyalty, TazaClosing } from "./taza-menu-scenes";
 
 const KathImages = createContext(false);
 
@@ -237,7 +239,8 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   const isRast = menu.slug === "rast";
   const isKath = menu.slug === "kat-coffe";
   const isShahi = menu.slug === "shahi-w-hail";
-  const isCustomEditorial = isKath || isShahi;
+  const isTaza = menu.slug === "taza";
+  const isCustomEditorial = isKath || isShahi || isTaza;
   const isEditorial = isRast || isCustomEditorial;
   const displayName = isDoubleB ? "دبل بي" : menuDisplayText(menu.name);
   const heroImage = isDoubleB ? "/menu-art/double-b-hero.webp" : menu.products.find((product) => product.images.length)?.images[0]?.url;
@@ -283,10 +286,10 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     shareTimer.current = setTimeout(() => setShareMessage(""), 4000);
   }
 
-  return <KathImages.Provider value={isCustomEditorial}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isCustomEditorial ? ` ${kath.theme}` : ""}${isShahi ? ` ${majlis.theme}` : ""}`} dir="rtl"
+  return <KathImages.Provider value={isCustomEditorial}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isCustomEditorial ? ` ${kath.theme}` : ""}${isShahi ? ` ${majlis.theme}` : ""}${isTaza ? ` ${taza.theme}` : ""}`} dir="rtl"
     style={isCustomEditorial ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
     <a href={isEditorial ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
-    {isShahi ? <ShahiHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
+    {isTaza ? <TazaHero menu={menu} onSelect={setSelected} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isShahi ? <ShahiHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
       {/* Decorative artwork from the supplied design reference, not a catalogue product photo */}
       {heroImage && <FoodImage src={heroImage} alt="" className={s.heroBackdrop} priority />}
       <header className={s.referenceHeader}>
@@ -307,9 +310,10 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry />}
     {isKath && <KathLoyaltyEntry menu={menu} />}
     {isShahi && <ShahiLoyalty menu={menu} />}
-    <div className={`${s.catalog}${isShahi ? ` ${majlis.catalog}` : ""}`} id="menu-catalog">
-      {isEditorial && <RastSpotlight menu={menu} onSelect={setSelected} />}
-      {isShahi ? <div className={majlis.catalogIntro} id="rast-menu-items"><div><p>قائمة شاهي وهيل</p><h2>وش نجهّز لك؟</h2></div><p>من أول رشفة<br />إلى آخر لقمة</p></div> : isEditorial && <div className={s.rastCatalogHeading} id="rast-menu-items">
+    {isTaza && <TazaLoyalty menu={menu} />}
+    <div className={`${s.catalog}${isShahi ? ` ${majlis.catalog}` : ""}${isTaza ? ` ${taza.catalog}` : ""}`} id="menu-catalog">
+      {isEditorial && !isTaza && <RastSpotlight menu={menu} onSelect={setSelected} />}
+      {isTaza ? <div className={taza.catalogIntro} id="rast-menu-items"><div><p>قائمة تازا</p><h2>اختيارات على <span>ذوقك</span></h2></div><p dir="ltr">CRAFTED COFFEE<br />SWEET MOMENTS</p></div> : isShahi ? <div className={majlis.catalogIntro} id="rast-menu-items"><div><p>قائمة شاهي وهيل</p><h2>وش نجهّز لك؟</h2></div><p>من أول رشفة<br />إلى آخر لقمة</p></div> : isEditorial && <div className={s.rastCatalogHeading} id="rast-menu-items">
         <div><p className={s.rastEyebrow}>قائمة {isCustomEditorial ? editorialBrand(menu.slug).name : "مقهى الكواكب"}</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
         <p>{isShahi ? "من أول رشفة لآخر لقمة" : "من أول قهوة لآخر لقمة"}<br />اختَر لحظتك المفضّلة</p>
       </div>}
@@ -338,19 +342,19 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
         <div className={`${s.sectionHeading}${isShahi ? ` ${majlis.sectionHeading}` : ""}`}><h2 id={`category-${section.id}`}>{menuDisplayText(section.name)}<small>{section.products.length}</small></h2>
           {section.description && <details className={s.categoryDescription}><summary aria-label={`عن قسم ${menuDisplayText(section.name)}`}>عن القسم</summary><p>{menuDisplayText(section.description)}</p></details>}
         </div>
-        <div className={`${s.productGrid} ${view === "list" ? s.listView : ""}${isShahi ? ` ${majlis.productGrid}${view === "list" ? ` ${majlis.listView}` : ""}` : ""}`}>
+        <div className={`${s.productGrid} ${view === "list" ? s.listView : ""}${isShahi ? ` ${majlis.productGrid}${view === "list" ? ` ${majlis.listView}` : ""}` : ""}${isTaza ? ` ${taza.productGrid}${view === "list" ? ` ${taza.listView}` : ""}` : ""}`}>
           {section.products.map((product, productIndex) => <DishMotion key={product.id} id={product.id}>
-            {product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}`} data-dish-photo>
+            {product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}`} data-dish-photo>
               <FoodVideo src={product.videos[0].url} alt={product.name} poster={product.images[0]?.url} paused={Boolean(selected)} />
               {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
             </div>}
-            <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`}>
-              {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}`} data-dish-photo>
+            <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`}>
+              {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}`} data-dish-photo>
                 <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />
                 {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
                 <span className={s.imageArrow} aria-hidden="true"><ArrowUpLeft size={19} /></span>
               </div>}
-              <div className={`${s.productBody}${isShahi ? ` ${majlis.productBody}` : ""}`}>
+              <div className={`${s.productBody}${isShahi ? ` ${majlis.productBody}` : ""}${isTaza ? ` ${taza.productBody}` : ""}`}>
                 <div className={s.productName}><h3 dir="auto">{menuDisplayText(product.name)}</h3></div>
                 {product.description && <p className={s.productDescription} dir="auto">{menuDisplayText(product.description)}</p>}
                 <div className={s.productMeta}>{product.calories != null && <span><Flame size={13} aria-hidden="true" />{product.calories} سعرة</span>}<Price product={product} /></div>
@@ -362,8 +366,8 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       {!visible.length && <div className={s.empty}><Utensils aria-hidden="true" /><h3>{menu.products.length ? "لم نجد ما تبحث عنه" : "قائمتنا قيد التحضير"}</h3><p>{menu.products.length ? "جرّب اسمًا آخر أو تصفّح جميع الأصناف" : "عد قريبًا لاكتشاف أصنافنا"}</p>{menu.products.length > 0 && <button onClick={() => { setQuery(""); setCategory("all"); setAvailableOnly(false); setPriceOrder("original"); }}>عرض كل المنيو</button>}</div>}
     </div>
     {isShahi && <RastConnect previewBrand={editorialBrand(menu.slug).name} />}
-    <footer className={`${s.footer}${isShahi ? ` ${majlis.footer}` : ""}`}>
-      {isShahi ? <ShahiClosing menu={menu} /> : isEditorial ? <section className={`${s.rastClosing}${isCustomEditorial ? ` ${kath.closing}` : ""}`} aria-label={menu.name}>
+    <footer className={`${s.footer}${isShahi ? ` ${majlis.footer}` : ""}${isTaza ? ` ${taza.footer}` : ""}`}>
+      {isTaza ? <TazaClosing menu={menu} /> : isShahi ? <ShahiClosing menu={menu} /> : isEditorial ? <section className={`${s.rastClosing}${isCustomEditorial ? ` ${kath.closing}` : ""}`} aria-label={menu.name}>
         <p className={s.rastEyebrow}>كل مرة لحظة حلوة</p><h2>نفس المكان<br /><span>مزاج يتجدّد</span></h2>
         <a href="#menu-catalog" className={s.rastClosingLink}>نرجع لشي تشتهيه<ArrowUpLeft aria-hidden="true" /></a>
         <FoodImage src={menu.logoUrl || (isCustomEditorial ? editorialBrand(menu.slug).logo : "/menu-logos/kawakib-transparent-20261008.png")} alt={menu.name} className={s.rastClosingLogo} />

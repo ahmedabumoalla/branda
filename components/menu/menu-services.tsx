@@ -73,7 +73,7 @@ function FeedbackForm({ slug }: { slug: string }) {
   </form>;
 }
 
-export function MenuServices({ menu, compact = false }: { menu: StandaloneMenu; compact?: boolean }) {
+export function MenuServices({ menu, compact = false, offersTrigger = false }: { menu: StandaloneMenu; compact?: boolean; offersTrigger?: boolean }) {
   const [panel, setPanel] = useState<"about" | "location" | "feedback" | "offers" | null>(null);
   const [copied, setCopied] = useState("");
   const [now, setNow] = useState(menu.highlights?.asOf ?? 0);
@@ -91,7 +91,7 @@ export function MenuServices({ menu, compact = false }: { menu: StandaloneMenu; 
     catch { setCopied("يمكنك فتح الموقع ونسخ الرابط من الخرائط"); }
   }
   return <>
-    <button type="button" className={compact ? s.heroIcon : s.aboutTrigger} onClick={() => setPanel("about")} aria-haspopup="dialog" aria-label={compact ? "عن المطعم والتواصل" : undefined}>{compact ? <Menu aria-hidden="true" /> : <>عن المطعم<ChevronDown size={15} aria-hidden="true" /></>}</button>
+    <button type="button" className={compact ? s.heroIcon : s.aboutTrigger} onClick={() => setPanel(offersTrigger ? "offers" : "about")} aria-haspopup="dialog" aria-label={offersTrigger ? "العروض" : compact ? "عن المطعم والتواصل" : undefined}>{offersTrigger ? <><Tag aria-hidden="true" /><span>العروض</span></> : compact ? <Menu aria-hidden="true" /> : <>عن المطعم<ChevronDown size={15} aria-hidden="true" /></>}</button>
     {panel === "about" && <ServiceDialog title={menuDisplayText(menu.name)} close={() => setPanel(null)}>
     <p className={s.serviceDescription}>{menuDisplayText(menu.description || "لكل مزاج مذاق يستحق")}</p>
     <nav className={s.serviceDock} aria-label="تواصل مع العلامة">

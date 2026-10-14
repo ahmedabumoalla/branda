@@ -66,7 +66,7 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
   const signed = new Map<string, string>();
   // Only assets referenced by this published menu and isolated to its tenant are signed.
   if (paths.size) {
-    const { data, error } = ["kat-coffe", "shahi-w-hail"].includes(slug)
+    const { data, error } = ["kat-coffe", "shahi-w-hail", "taza"].includes(slug)
       ? { data: await getKathMenuAssets([...paths]), error: null }
       : await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
     if (error) throw error;

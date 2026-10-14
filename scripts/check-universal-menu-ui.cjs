@@ -82,6 +82,23 @@ if(process.env.KATH_LIVE_FIXTURE) {
   assert(!/الكواكب|KAWAKIB|\/loyalty\/rast|rast-coffee-editorial/.test(html));
   console.log(`PASS Kath live fixture: ${live.products.length} own products, original logo and actual loyalty availability`);
 }
+const taza={...base,slug:'taza',name:'تازا',logoUrl:'/menu-logos/taza-extracted-20261014.webp',loyaltyEnabled:true};
+html=render(taza);
+assert(html.includes('قائمة تازا')&&html.includes('TAZA COFFEE')&&html.includes('/loyalty/taza?source=menu'));
+assert(!/KAWAKIB|الكواكب|مقهى كاث|شاهي وهيل|kath-coffee|rast-coffee/.test(html),'Taza identity stays isolated');
+assert(html.includes('aria-label="العروض"')&&html.includes('compactTools'));
+html=render({...taza,loyaltyEnabled:false,products:[]});
+assert(!html.includes('/loyalty/')&&html.includes('قائمتنا قيد التحضير'));
+html=render({...taza,logoUrl:'/owner-taza-logo.png',products:[{...product,name:'Owner Taza update',price:37}]});
+assert(html.includes('/owner-taza-logo.png')&&html.includes('Owner Taza update')&&html.includes('37'));
+if(process.env.TAZA_LIVE_FIXTURE) {
+  const live=JSON.parse(fs.readFileSync(process.env.TAZA_LIVE_FIXTURE,'utf8'));
+  assert.equal(live.slug,'taza');html=render(live);
+  assert.equal((html.match(/aria-label="عرض تفاصيل /g)||[]).length,live.products.length);
+  for(const product of live.products) assert(html.includes(`data-product-id="${product.id}"`));
+  assert(html.includes('srcSet=')&&html.includes('loading="lazy"'));
+  console.log(`PASS Taza live fixture: ${live.products.length} products, own identity, dashboard updates, service gates and empty states`);
+}
 if(process.env.SHAHI_LIVE_FIXTURE) {
   const live=JSON.parse(fs.readFileSync(process.env.SHAHI_LIVE_FIXTURE,'utf8'));
   assert.equal(live.slug,'shahi-w-hail');html=render(live);

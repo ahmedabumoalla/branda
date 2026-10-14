@@ -1,0 +1,27 @@
+{
+  "slug": "taza",
+  "cafeId": "95c159fc-7ef5-4892-baef-1f1bfec1972f",
+  "priceSource": "WhatsApp Image 2026-10-13 at 11.50.51 PM.jpeg",
+  "currency": "SAR",
+  "categories": ["الإسبريسو", "المشروبات الحارة", "المشروبات الباردة", "الحلويات", "الماء"],
+  "products": [
+    {"key":"espresso-premium","name":"إسبريسو فاخر","price":18,"category":0,"file":"إسبريسو فاخر في فنجان أبيض-1.png"},
+    {"key":"espresso-colombian","name":"إسبريسو كولومبي","price":16,"category":0,"file":"فنجان إسبريسو كولومبي فاخر-2.png"},
+    {"key":"espresso-gedeb","name":"إسبريسو قيدب","price":14,"category":0,"file":"إسبريسو قيدب بكريما ذهبية-3.png"},
+    {"key":"v60-hot-yemeni","name":"V60 حار يمني فاخر","price":20,"category":1,"file":"قهوة V60 اليمنية الساخنة-4.png"},
+    {"key":"v60-hot-ethiopian","name":"V60 حار إثيوبي","price":18,"category":1,"file":"قهوة V60 إثيوبية ساخنة-6.png"},
+    {"key":"v60-hot-ugandan","name":"V60 حار أوغندي","price":18,"category":1,"file":"قهوة V60 أوغندية ساخنة-5.png"},
+    {"key":"v60-iced-yemeni","name":"V60 بارد يمني فاخر","price":22,"category":2,"file":"قهوة V60 المثلجة اليمنية الفاخرة-7.png"},
+    {"key":"v60-iced-ethiopian","name":"V60 بارد إثيوبي","price":19,"category":2,"file":"قهوة V60 إثيوبية مثلجة-8.png"},
+    {"key":"v60-iced-ugandan","name":"V60 بارد أوغندي","price":19,"category":2,"file":"قهوة V60 باردة أوغندية-9.png"},
+    {"key":"alfredo","name":"ألفريدو","price":16,"category":2,"file":"ألفريدو بارد بتصميم فاخر-12.png"},
+    {"key":"alfredo-premium","name":"ألفريدو فاخر","price":20,"category":2,"file":"فريدو إسبريسو فاخر-10.png"},
+    {"key":"mango-trifle","name":"ترايفل مانجو","price":24,"category":3,"file":"ترايفل مانجو بطبقات ذهبية أنيقة-11.png"},
+    {"key":"madrid-cheesecake","name":"تشيز مدريد","price":24,"category":3,"file":"تشيز مدريد الفاخر بطبقة كراميل-14.png"},
+    {"key":"pecan-tiramisu","name":"تراميسو بيكان","price":24,"category":3,"file":"تراميسو بيكان في كأس زجاجي-13.png"},
+    {"key":"crunchy-caramel","name":"كرانشي كراميل","price":11,"category":3,"file":"بار كراميل مقرمش فاخر-15.png"},
+    {"key":"crunchy-salted-caramel","name":"كرانشي سولتد كراميل","price":11,"category":3,"file":"بار كرانشي بالكراميل المملح-16.png"},
+    {"key":"water","name":"ماء","price":1,"category":4,"file":"زجاجة ماء فاخرة بتصميم أزرق-17.png"}
+  ],
+  "loyalty": {"stamps":7,"reward":"مشروب مجاني","approvedByUser":true}
+}
