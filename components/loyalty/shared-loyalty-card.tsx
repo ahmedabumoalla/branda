@@ -8,6 +8,7 @@ export type LoyaltyGraphicLayer = "logo" | "points" | "barcode" | "qr";
 export type LoyaltyDesignerLayer = `text:${LoyaltyTextElementId}` | LoyaltyGraphicLayer;
 type Props = {
   card: Partial<LoyaltyCardDesign>;
+  displayNumber?: string;
   pointsBalance?: number;
   pointValueSar?: number;
   compact?: boolean;
@@ -38,7 +39,7 @@ export function LoyaltyBarcode({ value, dark = false, showValue = true }: { valu
 
 
 /** Every preview/customer surface uses the same approved stamp-card composition. */
-export function SharedLoyaltyCard({ card, pointsBalance = 0, pointValueSar = 0, pointsEnabled }: Props) {
+export function SharedLoyaltyCard({ card, displayNumber, pointsBalance = 0, pointValueSar = 0, pointsEnabled }: Props) {
   const background = card.cardBackground?.toLowerCase() === "#f6be18" ? DEFAULT_LOYALTY_COLORS.background
     : validBrandColor(card.cardBackground) || DEFAULT_LOYALTY_COLORS.background;
   const code = card.sampleCode && card.sampleCode !== "LOYALTY-CARD" ? card.sampleCode : undefined;
@@ -47,7 +48,7 @@ export function SharedLoyaltyCard({ card, pointsBalance = 0, pointValueSar = 0, 
     <RastStampCard identity={{ slug: card.brandSlug || "", name: card.brandName || "بطاقة الولاء", logoUrl: card.logoPreviewUrl || null,
       cardBackground: background, cardForeground: readableBrandForeground(background, card.cardForeground), cardAccent: validBrandColor(card.cardAccent) || DEFAULT_LOYALTY_COLORS.accent }}
       stamps={card.completedStamps || 0} required={card.stampsRequired || 7} rewardName={card.rewardTitle || "مكافأتك عند اكتمال الأختام"}
-      cardCode={code} preview={!code}
+      cardCode={code} displayNumber={displayNumber} stampStyle={card.stampStyle} preview={!code}
       details={(pointsEnabled ?? card.pointsEnabled ?? card.pointsBadgeVisible) ? <p>رصيد النقاط <strong>{balance}</strong> · قيمة النقاط <strong>{(balance * Math.max(0, pointValueSar)).toFixed(2)} ر.س</strong></p> : null} />
   </div>;
 }

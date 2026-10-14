@@ -7,6 +7,7 @@ import type { LoyaltyCardDesign, LoyaltyTextElementId } from "@/lib/loyalty/type
 
 type Props = {
   cardCode: string;
+  displayNumber?: string;
   cafeName: string;
   cafeHref: string;
   backHref: string;
@@ -115,6 +116,7 @@ function publicCardDesign(input: {
 
 export function PublicLoyaltyCardView({
   cardCode,
+  displayNumber,
   cafeName,
   cafeHref,
   backHref,
@@ -177,6 +179,7 @@ export function PublicLoyaltyCardView({
           <section>
             <SharedLoyaltyCard
               card={previewCard}
+              displayNumber={displayNumber}
               pointsBalance={320}
               pointValueSar={0.25}
               pointsEnabled={pointsEnabled ?? previewCard.pointsEnabled ?? true}

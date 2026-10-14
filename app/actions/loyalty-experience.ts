@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard } from "@/lib/data/loyalty-experience";
+import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
 import { enrollLoyaltyCustomer } from "@/lib/data/loyalty-enrollment";
 import type { PhoneOtpRequestResult } from "@/lib/auth/phone-otp";
 import { revalidatePath } from "next/cache";
@@ -77,7 +77,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   const value = parseBarndaksaQrPayload(parsed.value, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? parsed.value.toUpperCase();
   if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   const { data, error } = await createAdminClient().rpc("execute_loyalty_audited_operation", {
-    p_session_token: token, p_code: value, p_request_id: parsed.requestId, p_operation: parsed.kind,
+    p_session_token: token, p_code: parsed.kind === "stamp" ? await resolveCashierCardNumber(value, session.cafeId) : value, p_request_id: parsed.requestId, p_operation: parsed.kind,
   });
   if (error) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة وجلسة الموظف");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;

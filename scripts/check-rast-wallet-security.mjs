@@ -175,6 +175,25 @@ try {
       fs.writeFileSync(path.join(process.env.WALLET_ART_PREVIEW_DIR, `stamps-${stamps}-of-${required}.png`), await art.walletStampArtwork(example, 3));
     }
   }
+  const shortMember = { ...member, card: { ...member.card, displayNumber: "10001" } };
+  const shortPass = JSON.parse(unzip(await apple.issueApplePass(shortMember))["pass.json"].toString());
+  assert.equal(shortPass.serialNumber, member.card.cardCode);
+  assert.equal(shortPass.barcodes[0].message, pass.barcodes[0].message);
+  assert.equal(shortPass.barcodes[0].altText, "10001");
+  const shortObject = payload.buildGoogleObject(shortMember, env.GOOGLE_WALLET_ISSUER_ID);
+  assert.equal(shortObject.barcode.alternateText, "10001");
+  assert.equal(shortObject.barcode.value, payload.buildGoogleObject(member, env.GOOGLE_WALLET_ISSUER_ID).barcode.value);
+  const { stampPaths } = load("lib/loyalty/stamp-style.ts");
+  for (const stampStyle of ["ceramic", "paper", "meal"]) {
+    const example = { ...member, program: { ...member.program, stampStyle } };
+    assert(art.walletStampSvg(example).includes(stampPaths[stampStyle]));
+    assert((await art.walletStampArtwork(example)).length > 1000);
+    assert(new URL(art.walletArtUrl(example)).searchParams.get("v").includes(`:${stampStyle}:`));
+  }
+  const fixtureLogo = `data:image/png;base64,${(await sharp({ create: { width: 20, height: 20, channels: 4, background: "#2457c1" } }).png().toBuffer()).toString("base64")}`;
+  const branded = { ...member, logoUrl: fixtureLogo, program: { ...member.program, stampStyle: "brand" } };
+  assert(art.walletStampSvg(branded, 2, false, fixtureLogo).includes('<image '));
+  assert((await art.walletStampArtwork(branded)).length > 1000);
   const luminance = hex => {
     const channels = hex.match(/[0-9a-f]{2}/g).map(channel => parseInt(channel, 16) / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
     return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;

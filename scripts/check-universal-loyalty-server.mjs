@@ -19,6 +19,22 @@ function load(file,stubs) {
 let checks=0;
 const check=(condition,label)=>{assert.ok(condition,label);checks++;};
 const reject=async(fn)=>{await assert.rejects(fn);checks++;};
+const experienceSource=fs.readFileSync('lib/data/loyalty-experience.ts','utf8');
+const isolatedStubs=Object.fromEntries([...experienceSource.matchAll(/from "(@\/[^\"]+)"/g)].map(match=>[match[1],{}]));
+const lookupFilters=[];
+let lookupCalls=0,lookupResult={data:{card_code:'SECURE-CARD-CODE'},error:null};
+isolatedStubs['@/lib/supabase/admin']={createAdminClient:()=>({from:()=>{lookupCalls++;const query={select:()=>query,eq:(key,value)=>{lookupFilters.push([key,value]);return query;},maybeSingle:async()=>lookupResult};return query;}})};
+const experience=load('lib/data/loyalty-experience.ts',isolatedStubs);
+assert.equal(await experience.resolveCashierCardNumber('SECURE-CARD-CODE','own-brand'),'SECURE-CARD-CODE');
+check(lookupCalls===0,'Legacy secure codes need no number lookup');
+assert.equal(await experience.resolveCashierCardNumber('10001','own-brand'),'SECURE-CARD-CODE');
+check(lookupFilters.some(([key,value])=>key==='cafe_id'&&value==='own-brand'),'Short lookup always scoped to authenticated brand');
+check(lookupFilters.some(([key,value])=>key==='display_number'&&value===10001),'Short lookup uses display number');
+lookupResult={data:null,error:null};
+assert.equal(await experience.resolveCashierCardNumber('10000','own-brand'),'10000');
+check(true,'Existing numeric secure codes remain usable');
+lookupResult={data:null,error:{message:'offline'}};
+await reject(()=>experience.resolveCashierCardNumber('10001','own-brand'));
 let role='owner', entitled=true, slug='other-cafe', enabled=true, sent=0, otp=0, mutations=0;
 const featureCalls=[],paths=[];
 const context={id:'10000000-0000-4000-8000-000000000001'};
@@ -27,7 +43,7 @@ const brand=()=>({identity:{slug,name:'Own cafe',logoUrl:null},program:{enabled}
 const actions=load('app/actions/loyalty-experience.ts',{
   'next/cache':{revalidatePath:(...value)=>paths.push(value)},
   '@/app/actions/auth':{requestCustomerPhoneOtpAction:async(cafe,phone,purpose,source)=>{assert.equal(cafe,slug);assert.equal(source,'loyalty');otp++;return {required:true,ok:true};},completeCustomerPhoneOtpAction:async()=>({ok:true})},
-  '@/lib/data/loyalty-experience':{getLoyaltyBrand:async(value)=>{assert.equal(value,slug);return entitled?brand():null;},saveRastLoyaltySettings:async()=>{},saveBrandLoyaltyProgram:async()=>{},saveOwnerLoyaltyExperience:async()=>{}},
+  '@/lib/data/loyalty-experience':{resolveCashierCardNumber:async(code,cafeId)=>{assert.equal(cafeId,context.id);return code;},getLoyaltyBrand:async(value)=>{assert.equal(value,slug);return entitled?brand():null;},saveRastLoyaltySettings:async()=>{},saveBrandLoyaltyProgram:async()=>{},saveOwnerLoyaltyExperience:async()=>{}},
   '@/lib/data/loyalty-enrollment':{enrollLoyaltyCustomer:async()=>({ok:true,returningCustomer:false})},
   '@/lib/auth/phone-otp':{isPhoneOtpRequiredForBrand:(cafe,source)=>{assert.equal(cafe,slug);assert.equal(source,'loyalty');return true;}},
   '@/lib/data/cashier':{requireCashierPermission:async()=>({cafeId:context.id,cafeSlug:slug,token:'own-token'})},

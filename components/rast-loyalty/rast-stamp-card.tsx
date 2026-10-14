@@ -1,4 +1,6 @@
-import { Check, Coffee, Gift } from "lucide-react";
+import { StampGlyph } from "./stamp-glyph";
+import type { LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
+import { Check, Gift } from "lucide-react";
 import type { ReactNode } from "react";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { RastBrand } from "./rast-brand";
@@ -13,11 +15,13 @@ type Props = {
   required: number;
   rewardName: string;
   cardCode?: string;
+  displayNumber?: string;
+  stampStyle?: LoyaltyStampStyle;
   preview?: boolean;
   details?: ReactNode;
 };
 
-export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, preview = false, details }: Props) {
+export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, displayNumber, stampStyle, preview = false, details }: Props) {
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
   return <section className={s.stampCard} style={loyaltyTheme(identity)} aria-label={`${preview ? "معاينة بطاقة" : "بطاقة"} ${loyaltyCommunityName(identity)}`}>
@@ -26,12 +30,12 @@ export function RastStampCard({ identity, customerName, stamps, required, reward
     <div className={s.stampHeading}><span>رصيد الزيارات</span><strong><b>{collected}</b><span> / {goal}</span></strong></div>
     <ol className={`${s.stamps} ${goal > 10 ? s.manyStamps : ""}`} aria-label={`${collected} من ${goal} أختام مكتملة`}>
       {Array.from({ length: goal }, (_, index) => <li key={index} className={index < collected ? s.collected : ""} aria-label={`الختم ${index + 1}${index < collected ? " مكتمل" : " لم يكتمل"}`}>
-        {index < collected ? <><Coffee aria-hidden="true" /><Check className={s.stampCheck} aria-hidden="true" /></> : index === goal - 1 ? <Gift aria-hidden="true" /> : <Coffee aria-hidden="true" />}
+        {index < collected ? <><StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} /><Check className={s.stampCheck} aria-hidden="true" /></> : index === goal - 1 ? <Gift aria-hidden="true" /> : <StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} />}
       </li>)}
     </ol>
     <div className={s.cardReward}><Gift aria-hidden="true" /><div><span>عند اكتمال الأختام</span><strong>{rewardName}</strong></div></div>
     {details}
-    {cardCode ? <div className={s.memberQr}><RastQrCode value={cardCode} label="رمز بطاقتك لجمع الأختام عند الكاشير" /><div><strong>ختمك يبدأ من هنا</strong><p>اعرض الرمز للكاشير عند زيارتك</p><span dir="ltr">{cardCode}</span></div></div> : null}
+    {cardCode ? <div className={s.memberQr}><RastQrCode value={cardCode} label="رمز بطاقتك لجمع الأختام عند الكاشير" /><div><strong>ختمك يبدأ من هنا</strong><p>اعرض الرمز للكاشير عند زيارتك</p><span dir="ltr">{displayNumber || cardCode}</span></div></div> : null}
     <div className={s.cardFoot}><span>{identity.slug === "rast" ? "KAWAKIB COFFEE" : identity.name}</span><span>لحظاتك لها مكافأة</span></div>
   </section>;
 }

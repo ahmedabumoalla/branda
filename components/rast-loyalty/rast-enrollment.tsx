@@ -67,7 +67,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
           <button type="submit" className={s.primary} disabled={pending}><span role="status">{pending ? "جار فتح بطاقتك" : "افتح بطاقتي"}</span>{pending ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>
         </form>}
       </div>
-      <aside className={s.enrollmentPreview}><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></aside>
+      <aside className={s.enrollmentPreview}><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></aside>
     </div>
     <footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>{identity.slug === "rast" ? "القهوة تجمعنا والولاء يقرّبنا" : "زيارتك تسعدنا والولاء يقرّبنا"}</span></footer>
   </main>;

@@ -47,7 +47,7 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
   return {
     id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
-    barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.cardCode },
+    barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
     loyaltyPoints: { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
     secondaryLoyaltyPoints: { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     merchantLocations: walletLocations(member),

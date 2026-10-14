@@ -41,7 +41,7 @@ async function run() {
     { ...base, id: "deleted", deleted_at: "2020-01-01" },
     { ...base, id: "future", start_date: "2099-01-01" },
     { ...base, id: "expired", end_date: "2020-01-01" },
-    { ...base, id: "wrong-placement", placement: "قائمة العروض" },
+    { ...base, id: "wrong-placement", title: "List-only offer", placement: "قائمة العروض" },
     { ...base, id: "foreign-product", linked_product_id: "foreign-p" },
     { ...base, id: "unavailable", linked_product_id: "p2" },
   ];
@@ -65,7 +65,8 @@ async function run() {
   };
   const { getStandaloneHighlights } = load("lib/data/standalone-highlights.ts");
   const highlights = await getStandaloneHighlights("rast", [product, { ...product, id: "p2", available: false }]);
-  assert.deepEqual(highlights.items.map((item) => item.id), ["o1", "o2"]);
+  assert.deepEqual(highlights.items.map((item) => item.id), ["o1", "o2", "wrong-placement"]);
+  assert.equal(highlights.items.find((item) => item.id === "wrong-placement").showInSpotlight, false, "Offer-list placement still reaches product cards without changing the spotlight");
   assert.deepEqual(signedPaths, ["rast/o1/photo.webp"]);
   assert.equal(highlights.items[1].imageUrl, product.images[0].url);
   assert.equal(highlights.items[0].expiresAt, Date.parse(`${today}T23:59:59.999+03:00`));
@@ -100,10 +101,44 @@ async function run() {
   rows.push({ ...base, id: "other-owned", cafe_id: "basilico" });
   assert.deepEqual((await getStandaloneHighlights("basilico", [product])).items.map((item) => item.id), ["other-owned"]);
 
+  rows.push(
+    { ...base, id: "bundle", title: "Coffee and dessert bundle", description: "", offer_type: "عرض موسمي", linked_product_id: null, offer_rules: { selectedProductIds: ["p1", "p3"], seasonalMode: "package", packageDescription: "Two products together" } },
+    { ...base, id: "buy-get", title: "Buy coffee get dessert", offer_type: "اشتر واحصل", linked_product_id: null, offer_rules: { buyProductId: "p1", freeProductId: "p3", buyQuantity: 2, rewardQuantity: 1 } },
+    { ...base, id: "hidden-bundle", offer_type: "اشتر واحصل", linked_product_id: null, offer_rules: { buyProductId: "p2", freeProductId: "p1" } },
+  );
+  const linked = await getStandaloneHighlights("rast", [product, secondProduct]);
+  for (const id of ["bundle", "buy-get"]) {
+    const items = linked.items.filter((item) => item.id === id || item.id.startsWith(`${id}:`));
+    assert.deepEqual(items.map((item) => item.productId), ["p1", "p3"]);
+    assert(items.every((item) => item.discountPercent === null), "Bundle reward must never become an unconditional item discount");
+  }
+  assert.equal(linked.items.find((item) => item.id === "bundle").description, "Two products together");
+  assert(!linked.items.some((item) => item.id.startsWith("hidden-bundle")));
+  const manyProducts = Array.from({ length: 26 }, (_, index) => ({ ...product, id: `many-${index}` }));
+  rows.push({ ...base, id: "large-bundle", linked_product_id: null, offer_rules: { selectedProductIds: manyProducts.map((item) => item.id) } });
+  assert.equal((await getStandaloneHighlights("rast", manyProducts)).items.filter((item) => item.id.startsWith("large-bundle")).length, 26);
+  rows.push(...Array.from({ length: 501 }, (_, index) => ({ ...base, id: `page-${index}`, cafe_id: "paged-brand" })));
+  assert.equal((await getStandaloneHighlights("paged-brand", [product])).items.length, 501, "Product offers survive both old 24-row cap and API page limit");
+
   const { BistroMenu } = load("components/menu/bistro-menu.tsx");
   const menu = { name: "Rast", slug: "rast", logoUrl: null, description: null, products: [product], categories: [{ id: "coffee", name: "Coffee", description: null }], contacts: { feedbackEnabled: false, instagramUrl: null, location: null }, highlights };
   const render = (m) => renderToStaticMarkup(React.createElement(BistroMenu, { menu: m }));
+  for (const slug of ["taza", "rast", "kat-coffe", "shahi-w-hail", "basilico", "new-brand", "double-b-bistro"]) {
+    const cards = render({ ...menu, slug, products: [product, secondProduct], highlights: linked });
+    const firstCard = cards.match(/<button[^>]*aria-label="عرض تفاصيل Real coffee"[\s\S]*?<\/button>/)?.[0];
+    const secondCard = cards.match(/<button[^>]*aria-label="عرض تفاصيل Second coffee"[\s\S]*?<\/button>/)?.[0];
+    for (const card of [firstCard, secondCard]) {
+      assert(card?.includes("Coffee and dessert bundle") && card.includes("Buy coffee get dessert"), `${slug}: related cards show bundles and buy/get offers`);
+      assert(card.includes('aria-describedby="product-offers-'), "Offer descriptions are associated with the product button");
+    }
+    assert(firstCard.includes("خصم 20%") && firstCard.includes('dir="ltr">16</b>'), `${slug}: discount label and price reach product card`);
+    assert(!cards.includes("MUST_NOT_LEAK") && !cards.includes("hidden-bundle"));
+  }
+  const directPromo = render({ ...menu, slug: "taza", highlights: undefined, products: [{ ...product, promo: { kind: "عرض مخصص", customText: "Owner product special", startDate: "2000-01-01", endDate: "2099-12-31" } }] });
+  assert(directPromo.includes("Owner product special"), "Direct owner product promotions are visible too");
   const active = render(menu);
+  assert(active.includes("List-only offer"), "List-only offer is rendered on the product card");
+  assert(!active.match(/<section[^>]*aria-labelledby="rast-spotlight-title"[\s\S]*?<\/section>/)?.[0].includes("List-only offer"), "Card-only placement never leaks into the marketing spotlight");
   assert(active.includes('id="rast-spotlight-title"'));
   assert(active.includes("Featured coffee") && active.includes('dir="ltr">COFFEE</b>'));
   assert(active.includes('dir="ltr">16</b>'));

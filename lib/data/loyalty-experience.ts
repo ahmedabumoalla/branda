@@ -117,6 +117,7 @@ export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) 
 }
 
 const programSchema = z.object({
+  stampStyle: z.enum(["ceramic", "paper", "meal", "brand"]).optional(),
   enabled: z.boolean(), cardTitle: z.string().trim().min(2).max(80), cardSubtitle: z.string().trim().min(2).max(140),
   purchasesRequired: z.number().int().min(1).max(100), rewardProductId: z.string().uuid().nullable(),
   rewardName: z.string().trim().min(2).max(80), stampLabel: z.string().min(1).max(40), terms: z.string().max(1000),
@@ -131,12 +132,21 @@ export async function saveBrandLoyaltyProgram(input: { program: z.infer<typeof p
   if (!featureCodesAllow(features, "loyalty")) throw new Error("الولاء غير متاح في باقتك");
   const experience = await parseExperienceInput(input.experience);
   if (experience.rewardKind === "product" && !program.rewardProductId) throw new Error("اختر منتج المكافأة");
-  const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: program, p_experience: experience });
+  const { error } = await (await createClient()).rpc("set_rast_loyalty_settings", { p_cafe_id: cafe.id, p_program: { ...program, cardDesign: { ...(program.cardDesign && typeof program.cardDesign === "object" && !Array.isArray(program.cardDesign) ? program.cardDesign : {}), ...(program.stampStyle ? { stampStyle: program.stampStyle } : {}) } }, p_experience: experience });
   if (error) throw new Error("تعذر حفظ برنامج الولاء إعداداتك لم تتغير");
 }
 
 // Compatibility with the concurrent Rast editor; same validated atomic service.
 export const saveRastLoyaltySettings = saveBrandLoyaltyProgram;
+
+// The short number is an owner/cashier convenience, never a public credential.
+export async function resolveCashierCardNumber(code: string, cafeId: string) {
+  if (!/^\d{5}$/.test(code)) return code;
+  const { data, error } = await createAdminClient().from("loyalty_cards").select("card_code")
+    .eq("cafe_id", cafeId).eq("display_number", Number(code)).maybeSingle();
+  if (error) throw new Error("تعذر البحث عن البطاقة");
+  return data ? String(data.card_code) : code;
+}
 
 export async function lookupRastCashierCard(rawCode: string) {
   const input = z.string().trim().min(4).max(500).parse(rawCode);
@@ -148,7 +158,7 @@ export async function lookupRastCashierCard(rawCode: string) {
   await assertRastLoyaltyEntitlement(session.cafeId);
   // The database checks the card and customer, and commits the read audit together.
   const { data, error: previewError } = await admin.rpc("preview_loyalty_card", {
-    p_session_token: token, p_card_code: code,
+    p_session_token: token, p_card_code: await resolveCashierCardNumber(code, session.cafeId),
   });
   if (previewError || data?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف");
   return z.object({

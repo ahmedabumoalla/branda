@@ -1,3 +1,4 @@
+import { loyaltyStampStyle, type LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
 import { z } from "zod";
 import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +14,7 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 
 export type LoyaltyCardProgram = {
+  stampStyle?: LoyaltyStampStyle;
   brandSlug?: string;
   logoUrl?: string;
   enabled: boolean;
@@ -36,6 +38,7 @@ export type LoyaltyBrandCard = {
   id: string;
   cafeId: string;
   cardCode: string;
+  displayNumber?: string;
   customerName: string;
   customerPhone: string;
   customerEmail: string;
@@ -165,6 +168,7 @@ async function mapProgram(row: Record<string, unknown> | null | undefined, cafeI
         ? String((product as { name?: string }).name ?? "")
         : "",
     rewardName: String(row.reward_name ?? defaultProgram.rewardName),
+    stampStyle: loyaltyStampStyle((row.card_design as Record<string, unknown> | null)?.stampStyle),
     stampLabel: String(row.stamp_label ?? defaultProgram.stampLabel),
     terms: String(row.terms ?? defaultProgram.terms),
     ...brandColors,
@@ -179,6 +183,7 @@ function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
     id: String(row.id),
     cafeId: String(row.cafe_id ?? ""),
     cardCode: String(row.card_code),
+    displayNumber: row.display_number == null ? undefined : String(row.display_number),
     customerName: String(row.customer_name ?? "عميل"),
     customerPhone: String(row.customer_phone ?? ""),
     customerEmail: String(row.customer_email ?? ""),

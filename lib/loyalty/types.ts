@@ -34,6 +34,7 @@ export type LoyaltyLogoPlacement =
   | "custom";
 
 export type LoyaltyCardDesign = {
+  stampStyle?: import("./stamp-style").LoyaltyStampStyle;
   brandSlug?: string;
   layoutVersion?: "brand-stamps-v1" | "reference-horizontal-v1";
   pointsEnabled?: boolean;

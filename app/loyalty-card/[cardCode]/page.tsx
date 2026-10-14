@@ -38,6 +38,7 @@ export default async function LoyaltyCardPage({ params, searchParams }: Props) {
   return (
     <PublicLoyaltyCardView
       cardCode={card.cardCode}
+      displayNumber={card.displayNumber}
       cafeName={cafeName}
       cafeHref={cafeHref}
       backHref={backHref}

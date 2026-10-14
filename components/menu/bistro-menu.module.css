@@ -98,6 +98,11 @@
 .imageArrow { position: absolute; left: 12px; bottom: 12px; border: 1px solid #ffffff4d; background: var(--ink); border-radius: 50%; width: 35px; height: 35px; display: grid; place-items: center; color: var(--paper); transition: background .2s; }
 .productButton:hover .imageArrow { background: var(--gold); color: var(--ink); }
 .productBody { padding: 18px 2px 0; }
+.productOffers { display: grid; gap: 7px; margin-block: 10px 14px; min-width: 0; color: inherit; text-align: start; }
+.productOffer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding-inline-start: 10px; border-inline-start: 2px solid currentColor; font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.productOffer strong { font-size: 11px; font-weight: 700; }
+.productOffer > span { min-width: 0; }
+.offerDescription { flex-basis: 100%; }
 .productName { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .productName h3 { font-family: var(--display-font); margin: 0; font-size: 19px; font-weight: 500; line-height: 1.65; overflow-wrap: anywhere; letter-spacing: normal; }
 .price { flex-shrink: 0; display: inline-flex; align-items: baseline; gap: 5px; color: var(--gold); }

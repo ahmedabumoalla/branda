@@ -62,7 +62,7 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
         {member.program.terms ? <details className={s.terms}><summary>تفاصيل البرنامج <ChevronDown aria-hidden="true" /></summary><p>{member.program.terms}</p></details> : null}
       </div>
       <div className={s.memberCardColumn}>
-        <RastStampCard identity={identity} customerName={member.card.customerName} stamps={member.card.stampsInCycle} required={member.program.purchasesRequired} rewardName={member.program.rewardName} cardCode={member.card.cardCode} />
+        <RastStampCard identity={identity} customerName={member.card.customerName} stamps={member.card.stampsInCycle} required={member.program.purchasesRequired} rewardName={member.program.rewardName} cardCode={member.card.cardCode} displayNumber={member.card.displayNumber} stampStyle={member.program.stampStyle} />
         <section className={s.rewards} aria-labelledby="rast-rewards-title">
           <div className={s.rewardHeading}><h2 id="rast-rewards-title">مكافآتك</h2><span>{member.rewards.length} متاحة</span></div>
           {member.rewards.length === 0 ? <div className={s.emptyRewards}><Gift aria-hidden="true" /><p>أول مكافأة تبدأ بأول زيارة<br /><span>اجمع أختامك وخلّ الباقي علينا</span></p></div> : member.rewards.map((reward) => <article key={reward.id} className={s.reward}>

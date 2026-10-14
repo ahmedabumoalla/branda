@@ -11,7 +11,7 @@ import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
 import { RastLoyaltyEntry } from "./rast-loyalty-entry";
-import { getPublishedOfferPromo } from "@/lib/offers/published-offers";
+import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import spotlight from "./rast-spotlight.module.css";
 import kath from "./kath-menu.module.css";
 import { KathLoyaltyEntry } from "./kath-loyalty-entry";
@@ -35,7 +35,7 @@ function RastSpotlight({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (pr
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, [hasExpiry]);
-  const offers = (menu.highlights?.items ?? []).filter((item) => item.expiresAt == null || item.expiresAt >= now);
+  const offers = (menu.highlights?.items ?? []).filter((item) => item.showInSpotlight !== false && (item.expiresAt == null || item.expiresAt >= now));
   const fallback = menu.products.find((product) => product.available && product.images.length) ?? menu.products.find((product) => product.available);
   const items = offers.length ? offers : fallback ? [{
     id: `discover-${fallback.id}`, title: fallback.name, description: fallback.description,
@@ -94,6 +94,21 @@ function Price({ product }: { product: StandaloneMenuProduct }) {
   return <span className={s.price}>
     {final !== product.price && <del>{product.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</del>}
     <b dir="ltr">{final.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span>
+  </span>;
+}
+
+function ProductOffers({ product, detailed = false }: { product: StandaloneMenuProduct; detailed?: boolean }) {
+  const offers = product.offers ?? [];
+  const promo = product.available && product.promo && isPromoActive(product.promo) ? product.promo : null;
+  if (!offers.length && !promo) return null;
+  return <span className={s.productOffers} id={detailed ? undefined : `product-offers-${product.id}`}>
+    {promo && !offers.some((offer) => offer.title === promo.customText) && <span className={s.productOffer}><strong>{promoBadgeText(promo)}</strong></span>}
+    {offers.map((offer) => <span key={offer.id} className={s.productOffer}>
+      <strong>{offer.discountPercent ? `خصم ${offer.discountPercent}%` : offer.offerType || "عرض خاص"}</strong>
+      <span dir="auto">{menuDisplayText(offer.title)}</span>
+      {detailed && offer.description && <span className={s.offerDescription} dir="auto">{menuDisplayText(offer.description)}</span>}
+      {offer.code && <span>كود العرض <b dir="ltr">{offer.code}</b></span>}
+    </span>)}
   </span>;
 }
 
@@ -170,7 +185,7 @@ function ProductDetails({ product, close, browse, position, total }: { product: 
         <p className={s.eyebrow}>{menuDisplayText(product.category)}</p>
         <h2 id="dish-title" dir="auto">{menuDisplayText(product.name)}</h2>
         <div className={s.detailPrice}><Price product={product} />{!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}</div>
-        {product.promo && isPromoActive(product.promo) && <p className={s.promo}>{promoBadgeText(product.promo)}</p>}
+        <ProductOffers product={product} detailed />
         <div className={s.facts}>
           {product.calories != null && <span><Flame aria-hidden="true" />{product.calories} سعرة حرارية</span>}
           {product.preparationTimeMinutes != null && <span><Clock3 aria-hidden="true" />التحضير: {product.preparationTimeMinutes} دقيقة</span>}
@@ -233,7 +248,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     const timer = window.setInterval(() => setOfferTime(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, [sourceMenu.highlights]);
-  const menu = sourceMenu.highlights ? { ...sourceMenu, products: sourceMenu.products.map((product) => ({ ...product, promo: getPublishedOfferPromo(product, sourceMenu.highlights, offerTime) })) } : sourceMenu;
+  const menu = sourceMenu.highlights ? { ...sourceMenu, products: sourceMenu.products.map((product) => ({ ...product, promo: getPublishedOfferPromo(product, sourceMenu.highlights, offerTime), offers: getProductOffers(product, sourceMenu.highlights, offerTime) })) } : sourceMenu;
   const reduce = useReducedMotion();
   const isDoubleB = menu.slug === "double-b-bistro";
   const isRast = menu.slug === "rast";
@@ -348,7 +363,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
               <FoodVideo src={product.videos[0].url} alt={product.name} poster={product.images[0]?.url} paused={Boolean(selected)} />
               {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
             </div>}
-            <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`}>
+            <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`} aria-describedby={product.offers?.length || (product.available && product.promo && isPromoActive(product.promo)) ? `product-offers-${product.id}` : undefined}>
               {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}`} data-dish-photo>
                 <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />
                 {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
@@ -357,6 +372,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
               <div className={`${s.productBody}${isShahi ? ` ${majlis.productBody}` : ""}${isTaza ? ` ${taza.productBody}` : ""}`}>
                 <div className={s.productName}><h3 dir="auto">{menuDisplayText(product.name)}</h3></div>
                 {product.description && <p className={s.productDescription} dir="auto">{menuDisplayText(product.description)}</p>}
+                <ProductOffers product={product} />
                 <div className={s.productMeta}>{product.calories != null && <span><Flame size={13} aria-hidden="true" />{product.calories} سعرة</span>}<Price product={product} /></div>
               </div>
             </button>

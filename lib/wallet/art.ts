@@ -1,11 +1,13 @@
 import "server-only";
+import { loyaltyStampStyle, stampPaths } from "@/lib/loyalty/stamp-style";
+import { walletBrandLogo } from "./logo";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
 import { walletBaseUrl } from "./config";
 import { walletColors } from "./payload";
 import type { WalletMember } from "./types";
 
-export const WALLET_ART_VERSION = "2026-10-13-brand-stamps-v1";
+export const WALLET_ART_VERSION = "2026-10-14-stamp-options-v2";
 
 export function walletArtToken(cardId: string) {
   const secret = process.env.WALLET_AUTH_SECRET;
@@ -21,21 +23,23 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 }
 
 export function walletArtUrl(member: WalletMember) {
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${member.card.updatedAt}`)}`;
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${loyaltyStampStyle(member.program.stampStyle)}:${member.card.updatedAt}`)}`;
 }
 
 // The artwork supplements native, accessible balance fields. Never bake text or
 // a barcode into it: Wallet can crop strip images on smaller devices and watches.
-const coffeeIcon = '<path d="M6 8h11v7a4 4 0 0 1-4 4h-3a4 4 0 0 1-4-4V8Zm11 1h1.5a3 3 0 0 1 0 6H17M4 22h16M9 3v2m5-2v2"/>';
+
 const giftIcon = '<path d="M5 11h14v10H5V11ZM3 7h18v4H3V7Zm9 0v14m0-14C6 7 5 5 6.5 3.5S12 3 12 7Zm0 0c6 0 7-2 5.5-3.5S12 3 12 7Z"/>';
 
-export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
+export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false, brandLogoDataUrl?: string) {
   const colors = walletColors(member);
   const required = Math.max(1, Math.min(100, Math.trunc(member.program.purchasesRequired) || 1));
   const earned = Math.max(0, Math.min(required, Math.trunc(member.card.stampsInCycle) || 0));
   const paper = dark ? colors.background : colors.foreground;
   const ink = dark ? colors.foreground : colors.background;
   const icon = (content: string, x: number, y: number, size: number, color: string) => `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${content}</g>`;
+  const selected = loyaltyStampStyle(member.program.stampStyle);
+  const stampIcon = `<path d="${stampPaths[selected === "brand" ? "ceramic" : selected]}"/>`;
   let stamps: string;
 
   if (required > 30) {
@@ -59,7 +63,10 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
       const glyph = Math.min(29, cell * .6);
       const frame = `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="${Math.min(14, cell * .25)}" fill="${filled ? ink : paper}" stroke="${ink}" stroke-width="${last ? 1.5 : 1}"${filled ? "" : ' stroke-dasharray="2 3"'}/>`;
       const check = filled && cell >= 40 ? `<path d="m${x + cell - 13} ${y + 9} 2 2 4-4" fill="none" stroke="${paper}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>` : "";
-      return frame + icon(last ? giftIcon : coffeeIcon, x + (cell - glyph) / 2, y + (cell - glyph) / 2, glyph, filled ? paper : ink) + check;
+      const stamp = !last && selected === "brand" && brandLogoDataUrl
+        ? `<image x="${x + (cell - glyph) / 2}" y="${y + (cell - glyph) / 2}" width="${glyph}" height="${glyph}" href="${brandLogoDataUrl}"/>`
+        : icon(last ? giftIcon : stampIcon, x + (cell - glyph) / 2, y + (cell - glyph) / 2, glyph, filled ? paper : ink);
+      return frame + stamp + check;
     }).join("");
   }
 
@@ -67,5 +74,7 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
 }
 
 export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
-  return sharp(Buffer.from(walletStampSvg(member, scale, dark))).png().toBuffer();
+  const logo = member.program.stampStyle === "brand" && member.logoUrl
+    ? `data:image/png;base64,${(await walletBrandLogo(member)).toString("base64")}` : undefined;
+  return sharp(Buffer.from(walletStampSvg(member, scale, dark, logo))).png().toBuffer();
 }

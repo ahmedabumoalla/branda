@@ -11,6 +11,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo"
 > & {
+  offers?: StandaloneHighlight[];
   images: { url: string; alt: string }[];
   videos: { url: string; alt: string }[];
 };
@@ -32,6 +33,8 @@ export type StandaloneMenu = {
 };
 
 export type StandaloneHighlight = {
+  showInSpotlight?: boolean;
+  offerType?: string;
   kind?: "products" | "general" | "event";
   productName?: string;
   eventDate?: string;

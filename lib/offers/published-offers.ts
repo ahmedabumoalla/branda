@@ -20,14 +20,19 @@ export function matchesLegacyOfferPromo(product: StandaloneMenuProduct, offer: L
     && promo.endDate === (offer.end_date || "2099-12-31"));
 }
 
-/** Highest applicable discount wins without stacking or changing stored product data */
+/** Product cards share the same eligibility window as published price offers. */
+export function getProductOffers(product: StandaloneMenuProduct, highlights: PublishedOffers | undefined, now = Date.now()) {
+  if (!product.available) return [];
+  return (highlights?.items ?? []).filter((item) => item.kind !== "event"
+    && (item.kind === "general" || item.productId === product.id)
+    && (item.expiresAt == null || item.expiresAt >= now));
+}
+
+/** Highest applicable discount wins without stacking or changing stored product data. */
 export function getPublishedOfferPromo(product: StandaloneMenuProduct, highlights: PublishedOffers | undefined, now = Date.now()): ProductPromo | null {
   const base = highlights?.managedProductIds?.includes(product.id) ? null : product.promo ?? null;
   if (!product.available || !highlights) return base;
-  const applicable = highlights.items.filter((item) => item.kind !== "event"
-    && (item.kind === "general" || item.productId === product.id)
-    && (item.expiresAt == null || item.expiresAt >= now)
-    && item.discountPercent != null && item.discountPercent > 0 && item.discountPercent <= 100);
+  const applicable = getProductOffers(product, highlights, now).filter((item) => item.discountPercent != null && item.discountPercent > 0 && item.discountPercent <= 100);
   const best = applicable.reduce<StandaloneHighlight | undefined>((current, item) => !current || item.discountPercent! > current.discountPercent! ? item : current, undefined);
   if (!best) return base;
   const offerPrice = Math.round(product.price * (1 - best.discountPercent! / 100) * 100) / 100;

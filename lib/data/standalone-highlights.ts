@@ -28,21 +28,32 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
     }
   }
   if (!enabled) return { asOf, items: [] as StandaloneHighlight[], managedProductIds: [...managedProductIds] };
-  const { data, error } = await admin.from("offers")
-    .select("id,title,description,offer_type,target_type,offer_rules,discount_percent,code,linked_product_id,banner_storage_path,card_storage_path,end_date")
+  const query = () => admin.from("offers")
+    .select("id,title,description,offer_type,target_type,offer_rules,discount_percent,code,linked_product_id,banner_storage_path,card_storage_path,end_date,placement")
     .eq("cafe_id", cafeId).eq("visible_in_cafe", true).eq("is_archived", false).is("deleted_at", null)
     .in("status", ["active", "scheduled", "published"])
-    .in("placement", ["بانر الكوفي", "كلاهما", "banner", "both"])
     .or(`start_date.is.null,start_date.lte.${today}`).or(`end_date.is.null,end_date.gte.${today}`)
-    .order("created_at", { ascending: false }).order("id").limit(24);
-  if (error) throw error;
+    .order("created_at", { ascending: false }).order("id");
+  const first = await query().range(0, 499);
+  if (first.error) throw first.error;
+  const data = [...(first.data ?? [])];
+  for (let offset = 500; data.length === offset; offset += 500) {
+    const page = await query().range(offset, offset + 499);
+    if (page.error) throw page.error;
+    data.push(...(page.data ?? []));
+  }
   const publishedProducts = new Map(products.filter((product) => product.available).map((product) => [product.id, product]));
+  const linkedIds = (row: (typeof data)[number]): string[] => [...new Set<string>([
+    ...(Array.isArray(row.offer_rules?.selectedProductIds) ? row.offer_rules.selectedProductIds : []),
+    row.linked_product_id, row.offer_rules?.buyProductId, row.offer_rules?.freeProductId,
+  ].filter((id): id is string => typeof id === "string" && Boolean(id)))];
   // Hidden, deleted, unavailable or foreign linked products must never be promoted.
   const rows = (data ?? []).filter((row) => {
     const rules = row.offer_rules ?? {};
-    return Array.isArray(rules.selectedProductIds) && rules.selectedProductIds.length
-      ? rules.selectedProductIds.some((id: string) => publishedProducts.has(id))
-      : !row.linked_product_id || publishedProducts.has(row.linked_product_id);
+    if (rules.buyProductId && !publishedProducts.has(rules.buyProductId)) return false;
+    if (rules.freeProductId && !publishedProducts.has(rules.freeProductId)) return false;
+    const ids = linkedIds(row);
+    return !ids.length || ids.some((id) => publishedProducts.has(id));
   });
   const paths = rows.map((row) => {
     const candidates = [row.card_storage_path, row.banner_storage_path];
@@ -58,15 +69,17 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
   const items: StandaloneHighlight[] = rows.flatMap((row, index) => {
     const rules = row.offer_rules ?? {};
     const kind = rules.rastKind === "event" || row.target_type === "experience_campaign" ? "event"
-      : rules.appliesToAllProducts || rules.rastKind === "general" || (!row.linked_product_id && !rules.selectedProductIds?.length && row.offer_type === "خصم") ? "general" : "products";
-    const productIds = kind === "products" ? [...new Set<string>(Array.isArray(rules.selectedProductIds) && rules.selectedProductIds.length ? rules.selectedProductIds : row.linked_product_id ? [row.linked_product_id] : [])].filter((id) => publishedProducts.has(id)).slice(0, 24) : [];
-    if (kind === "products" && (row.linked_product_id || rules.selectedProductIds?.length) && !productIds.length) return [];
+      : rules.appliesToAllProducts || rules.rastKind === "general" || (!linkedIds(row).length && row.offer_type === "خصم") ? "general" : "products";
+    const productIds = kind === "products" ? linkedIds(row).filter((id) => publishedProducts.has(id)) : [];
+    if (kind === "products" && linkedIds(row).length && !productIds.length) return [];
     const eventDate = kind === "event" && typeof rules.eventDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rules.eventDate) ? rules.eventDate : undefined;
     const expiryDate = [row.end_date, eventDate].filter(Boolean).sort()[0];
     if (expiryDate && expiryDate < today) return [];
     return (productIds.length ? productIds : [null]).map((productId, productIndex) => ({
       id: productIndex ? `${row.id}:${productId}` : row.id, kind,
-      title: row.title, description: row.description,
+      showInSpotlight: ["بانر الكوفي", "كلاهما", "banner", "both"].includes(row.placement),
+      offerType: row.offer_type,
+      title: row.title, description: row.description || (typeof rules.packageDescription === "string" ? rules.packageDescription : ""),
       productName: productId ? publishedProducts.get(productId)?.name : undefined,
       imageUrl: (productIds.length > 1 && productId ? publishedProducts.get(productId)?.images[0]?.url : null) || (paths[index] ? signed.get(paths[index]!) : null) || publishedProducts.get(productId ?? "")?.images[0]?.url || null,
       productId, code: kind === "event" ? null : row.code,

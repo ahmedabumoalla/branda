@@ -84,6 +84,20 @@ check("Missing brand logo falls back to its name not another business", () => {
 check("Kawakib keeps its established logo fallback", () => assert(render(RastBrand, { identity: rast }).includes("kawakib-transparent-20261008.png")));
 
 const { RastStampCard } = load("components/rast-loyalty/rast-stamp-card.tsx");
+check("New short numbers are display only and old cards keep their original number", () => {
+  const props = { identity, stamps: 0, required: 7, rewardName: program.rewardName, cardCode: "SECURE-ORIGINAL-CARD" };
+  assert(render(RastStampCard, props).includes('<span dir="ltr">SECURE-ORIGINAL-CARD</span>'));
+  const html = render(RastStampCard, { ...props, displayNumber: "10001" });
+  assert(html.includes('<span dir="ltr">10001</span>'));
+  assert(!html.includes('<span dir="ltr">SECURE-ORIGINAL-CARD</span>'));
+});
+check("All stamp choices render their own artwork and only the current brand logo", () => {
+  const { stampPaths } = load("lib/loyalty/stamp-style.ts");
+  for (const stampStyle of ["paper", "ceramic", "meal", "brand"]) {
+    const html = render(RastStampCard, { identity, stampStyle, stamps: 2, required: 7, rewardName: program.rewardName });
+    assert(stampStyle === "brand" ? html.includes('src="/own-logo.png"') : html.includes(`d="${stampPaths[stampStyle]}"`));
+  }
+});
 check("Member card carries own brand and exact QR membership value", () => {
   const html = render(RastStampCard, { identity, customerName: "عميل تجريبي", stamps: 2, required: 7, rewardName: program.rewardName, cardCode: "CARD-TEST-123" });
   assert(html.includes("CARD-TEST-123"));
