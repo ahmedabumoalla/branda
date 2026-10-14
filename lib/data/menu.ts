@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext, getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { clearServerMemoryCache } from "@/lib/performance/server-memory-cache";
+import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
 import {
   mapDbCategoryToRecord,
   mapDbProductToMenuProduct,
@@ -261,6 +262,20 @@ export async function getOwnerMenu() {
   const mappedProducts = ((products ?? []) as DbMenuProduct[]).map((p) =>
     mapDbProductToMenuProduct(p, p.category_id ? categoryMap.get(p.category_id) : undefined)
   );
+
+  // This owner/maintenance context is authorized before signing tenant media
+  const paths = [...new Set(mappedProducts.flatMap(product => [product.imageAssetId,
+    ...(product.imageGallery ?? []).map(image => image.imageAssetId)]))]
+    .filter((path): path is string => Boolean(path && isOwnedMenuAsset(path, cafe.id)));
+  if (paths.length) {
+    const { data: signed, error: imageError } = await createAdminClient().storage.from("menu-products").createSignedUrls(paths, 600);
+    if (imageError) throw new Error("تعذر تحميل صور المنتجات حاول تحديث الصفحة");
+    const urls = new Map((signed ?? []).filter(item => item.path && item.signedUrl && !item.error).map(item => [item.path, item.signedUrl]));
+    for (const product of mappedProducts) {
+      if (product.imageAssetId && urls.has(product.imageAssetId)) product.imageDataUrl = urls.get(product.imageAssetId)!;
+      product.imageGallery = (product.imageGallery ?? []).map(image => ({ ...image, imageDataUrl: image.imageAssetId && urls.get(image.imageAssetId) || image.imageDataUrl }));
+    }
+  }
 
   return {
     cafe,
