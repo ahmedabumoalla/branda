@@ -47,13 +47,11 @@ export async function sendGreenApiPagerMessage(input: { phone: string; message: 
   return { providerMessageId: payload.idMessage };
 }
 
-/** Credentials are sent once after account creation; never log or persist this payload. */
+/** New staff use phone OTP; the welcome message contains no credentials. */
 export async function sendGreenApiCashierWelcome(input: {
   phone: string;
   fullName: string;
   brandName: string;
-  email: string;
-  password: string;
 }) {
   if (!/^\+9665\d{8}$/.test(input.phone)) throw new Error("INVALID_CASHIER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
@@ -71,10 +69,9 @@ export async function sendGreenApiCashierWelcome(input: {
         "",
         "رابط الدخول:",
         "https://barndaksa.com/cashier/login",
-        `البريد الإلكتروني: ${input.email}`,
-        `كلمة المرور: ${input.password}`,
+        "أدخل رقم جوالك واطلب رمز التحقق عبر واتساب للدخول",
         "",
-        "هذه بيانات دخولك الخاصة لا تشاركها مع أي شخص",
+        "لا تشارك رمز التحقق مع أي شخص",
       ].join("\n"),
     }),
   });

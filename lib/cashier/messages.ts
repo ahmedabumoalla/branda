@@ -1,5 +1,17 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "للحسابات الجديدة أدخل رقم واتساب المسجل لدى الفرع": "New accounts: enter the WhatsApp number registered by your branch",
+  "الحسابات السابقة تدخل بالبريد وكلمة المرور المعتادة": "Existing accounts: use your usual email and password",
+  "طريقة الدخول": "Sign-in method", "رمز واتساب": "WhatsApp code", "البريد وكلمة المرور": "Email and password",
+  "رقم واتساب": "WhatsApp number", "تغيير الرقم": "Change number", "رمز التحقق": "Verification code",
+  "إعادة الإرسال بعد {seconds} ثانية": "Resend in {seconds} seconds", "إعادة إرسال الرمز": "Resend code", "أرسل رمز واتساب": "Send WhatsApp code",
+  "تعذر إرسال رمز واتساب حاول مجددًا بعد قليل": "Could not send a WhatsApp code Try again shortly",
+  "أدخل رقم جوال سعودي صحيحًا": "Enter a valid Saudi mobile number",
+  "انتظر قليلًا قبل طلب رمز آخر أو حاول لاحقًا إذا بلغت حد المحاولات": "Wait before requesting another code or try later if you reached the attempt limit",
+  "إذا كان الرقم مسجلًا لحساب موظف جديد فسيصلك رمز واتساب صالح لخمس دقائق": "If this number belongs to a new staff account, a WhatsApp code valid for five minutes will arrive",
+  "أدخل رمز التحقق المكوّن من ستة أرقام": "Enter the six-digit verification code",
+  "اطلب رمز تحقق جديدًا": "Request a new verification code",
+  "الرمز غير صحيح أو منتهي اطلب رمزًا جديدًا عند الحاجة": "The code is incorrect or expired Request a new code if needed",
   "تعذر تحميل نقطة التشغيل": "Unable to load your workspace",
   "النداء فوق تطبيق الكاشير": "Your pager, above your POS",
   "نافذة مستقلة تتحرك معك خارج المتصفح وتستخدم حسابك وصلاحياتك في المنصة": "A standalone floating window outside your browser, using your existing account and permissions",

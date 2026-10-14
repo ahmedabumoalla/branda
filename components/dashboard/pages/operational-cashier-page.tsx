@@ -64,10 +64,8 @@ export function OperationalCashierPageClient({
   const [permission, setPermission] = useState("loyalty");
   const [station, setStation] = useState("");
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [employeeNumber, setEmployeeNumber] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
@@ -99,9 +97,7 @@ export function OperationalCashierPageClient({
     setFormError("");
     setEditingId(null);
     setFullName("");
-    setEmail("");
     setPhone("");
-    setPassword("");
     setEmployeeNumber("");
     setPermission("loyalty");
     setStation("");
@@ -139,7 +135,6 @@ export function OperationalCashierPageClient({
 
   function closeAddDialog() {
     if (mutationPendingRef.current) return;
-    setPassword("");
     setIsAdding(false);
   }
 
@@ -164,16 +159,8 @@ export function OperationalCashierPageClient({
       setFormError("أدخل اسمًا واضحًا للموظف");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setFormError("أدخل بريدًا إلكترونيًا صحيحًا");
-      return;
-    }
     if (!/^(?:(?:00)?966|0)?5\d{8}$/.test(phone.replace(/\D/g, ""))) {
       setFormError("أدخل رقم جوال سعوديًا صحيحًا مرتبطًا بواتساب");
-      return;
-    }
-    if (password.trim().length < 8 || password.length > 40 || new TextEncoder().encode(password).length > 72) {
-      setFormError("اختر كلمة مرور من ٨ إلى ٤٠ حرفًا إذا استخدمت حروفًا عربية اجعلها أقصر من ٣٧ حرفًا");
       return;
     }
 
@@ -184,10 +171,8 @@ export function OperationalCashierPageClient({
     try {
       const result = await createLoyaltyCashierAction({
         fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
         employeeNumber: employeeNumber.trim() || undefined,
         phone: phone.trim(),
-        password,
         canUseLoyalty: permission !== "pager",
         canUsePager: permission !== "loyalty",
         pagerStation: station.trim(),
@@ -197,18 +182,16 @@ export function OperationalCashierPageClient({
         cashiers: [result.cashier, ...current.cashiers],
       }));
       setFullName("");
-      setEmail("");
       setEmployeeNumber("");
       setPhone("");
-      setPassword("");
       setIsAdding(false);
       setMessage(result.whatsappStatus === "queued"
-        ? "تم إنشاء حساب الموظف وجدولة رسالة واتساب ببيانات الدخول وصول الرسالة يعتمد على مزود الخدمة"
+        ? "تم إنشاء حساب الموظف وجدولة رسالة واتساب برابط الدخول يدخل الموظف برمز تحقق على جواله"
         : result.whatsappStatus === "failed"
-          ? "تم إنشاء حساب الموظف لكن تعذر إرسال رسالة واتساب شارك رابط الدخول والبيانات التي حددتها معه مباشرة"
-          : "تم إنشاء حساب الموظف إرسال واتساب غير متاح حاليًا؛ شارك رابط الدخول والبيانات التي حددتها معه مباشرة");
+          ? "تم إنشاء حساب الموظف لكن تعذر إرسال رسالة الترحيب شارك رابط الدخول معه ليطلب رمز واتساب"
+          : "تم إنشاء حساب الموظف خدمة واتساب غير متاحة حاليًا ويحتاجها الموظف لاستقبال رمز الدخول");
     } catch {
-      setFormError("تعذر إنشاء الحساب تحقق من البيانات وأن البريد غير مستخدم ثم حاول مجددًا");
+      setFormError("تعذر إنشاء الحساب تحقق من البيانات وأن رقم واتساب غير مستخدم لحساب موظف جديد");
     } finally {
       mutationPendingRef.current = false;
       setPendingId(null);
@@ -330,14 +313,14 @@ export function OperationalCashierPageClient({
           <table className="w-full min-w-[760px] text-right text-sm">
             <thead className="text-xs font-black text-[#806A5E]">
               <tr className="border-b border-[#EFE6DD]">
-                <th scope="col" className="p-3">الموظف</th><th scope="col" className="p-3">البريد</th><th scope="col" className="p-3">الجوال</th><th scope="col" className="p-3">الرقم الوظيفي</th><th scope="col" className="p-3">الصلاحيات والمحطة</th><th scope="col" className="p-3">الحالة</th><th scope="col" className="p-3">آخر دخول</th><th scope="col" className="p-3">الإجراء</th>
+                <th scope="col" className="p-3">الموظف</th><th scope="col" className="p-3">طريقة الدخول</th><th scope="col" className="p-3">الجوال</th><th scope="col" className="p-3">الرقم الوظيفي</th><th scope="col" className="p-3">الصلاحيات والمحطة</th><th scope="col" className="p-3">الحالة</th><th scope="col" className="p-3">آخر دخول</th><th scope="col" className="p-3">الإجراء</th>
               </tr>
             </thead>
             <tbody>
               {dashboard.cashiers.map((cashier) => (
                 <tr key={cashier.id} className="border-b border-[#F5EFE9] font-bold">
                   <td className="p-3 font-black">{cashier.fullName}{cashier.ownerUserId ? <span className="mt-1 block text-xs text-[#806A5E]">مالك العلامة</span> : null}</td>
-                  <td className="p-3 break-all text-[#806A5E]">{cashier.email}</td>
+                  <td className="p-3 break-all text-[#806A5E]">{cashier.authMethod === "whatsapp_otp" ? "رمز واتساب" : cashier.email}</td>
                   <td className="p-3"><bdi dir="ltr">{cashier.phone || "—"}</bdi></td>
                   <td className="p-3">{cashier.employeeNumber || "—"}</td>
                   <td className="p-3 text-xs">{cashier.canUsePager ? cashier.canUseLoyalty ? "ولاء وبيجر" : "بيجر فقط" : "ولاء فقط"}<span className="mt-1 block text-[#806A5E]">{cashier.pagerStation || "بدون محطة محددة"}</span>{!cashier.ownerUserId ? <button type="button" disabled={pendingId !== null} onClick={() => openPermissions(cashier)} className="mt-2 min-h-11 rounded-xl border border-[#E8DED5] px-3 font-black disabled:opacity-50">تعديل الصلاحيات</button> : null}</td>
@@ -357,7 +340,7 @@ export function OperationalCashierPageClient({
           {dashboard.cashiers.map((cashier) => (
             <article key={cashier.id} className="rounded-2xl bg-[#F8F4EF] p-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><h3 className="font-black">{cashier.fullName}</h3>{cashier.ownerUserId ? <p className="mt-1 text-xs font-bold text-[#6B3A25]">مالك العلامة</p> : null}<p className="mt-1 break-all text-xs font-bold text-[#806A5E]">{cashier.email}</p></div>
+                <div className="min-w-0"><h3 className="font-black">{cashier.fullName}</h3>{cashier.ownerUserId ? <p className="mt-1 text-xs font-bold text-[#6B3A25]">مالك العلامة</p> : null}<p className="mt-1 break-all text-xs font-bold text-[#806A5E]">{cashier.authMethod === "whatsapp_otp" ? "الدخول برمز واتساب" : cashier.email}</p></div>
                 <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${cashier.active ? "bg-emerald-50 text-emerald-700" : "bg-stone-200 text-stone-600"}`}>{cashier.active ? "نشط" : "معطل"}</span>
               </div>
               <p className="mt-3 text-sm font-bold">{cashier.canUsePager ? cashier.canUseLoyalty ? "ولاء وبيجر" : "بيجر فقط" : "ولاء فقط"} {cashier.pagerStation ? `— ${cashier.pagerStation}` : ""}</p>
@@ -402,15 +385,13 @@ export function OperationalCashierPageClient({
           className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-[2rem] border-0 bg-white p-5 text-[#311912] shadow-2xl backdrop:bg-black/40 sm:p-7"
         >
           <div className="flex items-center justify-between gap-3"><h2 id="cashier-dialog-title" className="text-xl font-black">{editingId ? `صلاحيات ${fullName}` : "إضافة موظف تشغيل"}</h2><button type="button" onClick={closeAddDialog} disabled={pendingId === "create"} className="grid min-h-11 min-w-11 place-items-center rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-50" aria-label="إغلاق"><X aria-hidden="true" className="h-5 w-5" /></button></div>
-          <p id="cashier-dialog-description" className="mt-2 text-sm font-bold leading-6 text-[#806A5E]">{editingId ? "اختر مهام الموظف ومحطة الاستدعاء ستنتهي جلساته الحالية عند حفظ التغييرات" : "حدّد بيانات الموظف وصلاحياته وكلمة المرور للدخول إلى الولاء أو البيجر من المتصفح"}</p>
+          <p id="cashier-dialog-description" className="mt-2 text-sm font-bold leading-6 text-[#806A5E]">{editingId ? "اختر مهام الموظف ومحطة الاستدعاء ستنتهي جلساته الحالية عند حفظ التغييرات" : "أضف اسم الموظف ورقم واتساب وصلاحياته يدخل برمز تحقق يصله على جواله"}</p>
           <form onSubmit={(event) => { event.preventDefault(); void (editingId ? savePermissions() : createCashier()); }}>
             {formError ? <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-800">{formError}</p> : null}
             <fieldset disabled={pendingId === "create"} className="mt-5 space-y-4 disabled:opacity-60">
               {!editingId ? <>
               <label className="block text-sm font-black">الاسم<input required minLength={2} maxLength={80} value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="name" /></label>
-              <label className="block text-sm font-black">البريد الإلكتروني<input required type="email" maxLength={254} dir="ltr" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="email" /></label>
               <label className="block text-sm font-black">جوال الموظف المرتبط بواتساب<input required type="tel" inputMode="tel" dir="ltr" maxLength={20} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="05xxxxxxxx" aria-describedby="cashier-phone-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="tel" /><span id="cashier-phone-help" className="mt-1 block text-xs font-bold text-[#806A5E]">رقم سعودي يبدأ بـ ٠٥ أو بمفتاح الدولة ٩٦٦</span></label>
-              <label className="block text-sm font-black">كلمة المرور التي تختارها<input required type="password" minLength={8} maxLength={40} dir="ltr" value={password} onChange={(event) => setPassword(event.target.value)} aria-describedby="cashier-password-help" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" autoComplete="new-password" /><span id="cashier-password-help" className="mt-1 block text-xs font-bold text-[#806A5E]">من ٨ إلى ٤٠ حرفًا تُرسل للموظف مع بريده ورابط الدخول</span></label>
               <label className="block text-sm font-black">الرقم الوظيفي <span className="text-[#806A5E]">(اختياري)</span><input maxLength={40} value={employeeNumber} onChange={(event) => setEmployeeNumber(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" /></label>
               </> : null}
               <label className="block text-sm font-black">صلاحيات الموظف<select value={permission} onChange={(event) => setPermission(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] bg-white px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]">
@@ -418,7 +399,7 @@ export function OperationalCashierPageClient({
               </select></label>
               <label className="block text-sm font-black">محطة الاستدعاء <span className="text-[#806A5E]">اختياري</span><input value={station} maxLength={80} onChange={(event) => setStation(event.target.value)} placeholder="الكاشير أو البار أو المطعم الداخلي" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]" /></label>
             </fieldset>
-            <button type="submit" disabled={pendingId === "create"} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] px-4 font-black text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-60">{pendingId === "create" ? "جارٍ الحفظ" : editingId ? "حفظ الصلاحيات" : "إنشاء الحساب وإرسال بيانات الدخول"}</button>
+            <button type="submit" disabled={pendingId === "create"} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] px-4 font-black text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-60">{pendingId === "create" ? "جارٍ الحفظ" : editingId ? "حفظ الصلاحيات" : "إنشاء الحساب وإرسال رابط الدخول"}</button>
           </form>
         </dialog>
       ) : null}

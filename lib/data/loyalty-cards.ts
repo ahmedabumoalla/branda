@@ -53,6 +53,7 @@ export type LoyaltyCashier = {
   email: string;
   employeeNumber: string;
   temporaryPassword: string;
+  authMethod?: "password" | "whatsapp_otp";
   canUseLoyalty?: boolean;
   canUsePager?: boolean;
   pagerStation?: string;
@@ -235,7 +236,7 @@ export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashb
     cashiers: (cashierRows ?? []).map((row) => ({
       id: String(row.id),
       fullName: String(row.full_name),
-      email: String(row.email),
+      email: String(row.email ?? ""),
       employeeNumber: String(row.employee_number ?? ""),
       temporaryPassword: String(row.temporary_password ?? ""),
       active: Boolean(row.active),
@@ -282,7 +283,7 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
     await Promise.all([
       supabase
         .from("cafe_cashiers")
-        .select("id,full_name,email,phone,owner_user_id,employee_number,active,last_login_at,last_logout_at,created_at,can_use_loyalty,can_use_pager,pager_station")
+        .select("id,full_name,email,phone,auth_method,owner_user_id,employee_number,active,last_login_at,last_logout_at,created_at,can_use_loyalty,can_use_pager,pager_station")
         .eq("cafe_id", cafe.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -305,7 +306,8 @@ export async function getOwnerCashierOperations(): Promise<CashierOperationsDash
     cashiers: (cashierRows ?? []).map((row) => ({
       id: String(row.id),
       fullName: String(row.full_name),
-      email: String(row.email),
+      email: String(row.email ?? ""),
+      authMethod: row.auth_method === "whatsapp_otp" ? "whatsapp_otp" : "password",
       phone: String(row.phone ?? ""),
       ownerUserId: row.owner_user_id ? String(row.owner_user_id) : null,
       canUseLoyalty: row.can_use_loyalty === true,
@@ -396,9 +398,7 @@ export async function saveOwnerLoyaltyProgram(input: z.infer<typeof programSchem
 
 export async function createOwnerCashier(input: {
   fullName: string;
-  email: string;
   phone: string;
-  password: string;
   employeeNumber?: string;
   canUseLoyalty?: boolean;
   canUsePager?: boolean;
@@ -406,24 +406,19 @@ export async function createOwnerCashier(input: {
 }) {
   const parsed = z.object({
     fullName: z.string().trim().min(2).max(80).regex(/^[^\r\n\x00-\x1f]+$/),
-    email: z.string().trim().toLowerCase().email().max(254),
     phone: z.string().max(30).transform(normalizeSaudiPhone).refine(Boolean),
-    password: z.string().min(8).max(40).refine((value) => Buffer.byteLength(value, "utf8") <= 72)
-      .refine((value) => !/[\x00-\x1f\x7f]/.test(value) && value.trim().length >= 8),
     employeeNumber: z.string().trim().max(40).optional(),
     canUseLoyalty: z.boolean().default(true),
     canUsePager: z.boolean().default(false),
     pagerStation: z.string().trim().max(80).default(""),
-  }).parse(input);
+  }).refine((value) => value.canUseLoyalty || value.canUsePager).parse(input);
 
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const phone = `+${parsed.phone}`;
-  const { data: cashierId, error } = await supabase.rpc("create_cafe_staff", {
+  const { data: cashierId, error } = await supabase.rpc("create_cafe_staff_whatsapp", {
     p_cafe_id: cafe.id,
     p_full_name: parsed.fullName,
-    p_email: parsed.email,
-    p_password: parsed.password,
     p_phone: phone,
     p_employee_number: parsed.employeeNumber || null,
     p_can_use_loyalty: parsed.canUseLoyalty,
@@ -432,13 +427,12 @@ export async function createOwnerCashier(input: {
   });
 
   // Do not return raw SQL/provider errors: they may include submitted credentials.
-  if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف تحقق من البيانات وأن البريد غير مستخدم");
+  if (error || typeof cashierId !== "string") throw new Error("تعذر إنشاء الموظف تحقق من البيانات وأن رقم واتساب غير مستخدم لحساب موظف جديد");
   let whatsappStatus: "queued" | "failed" | "unavailable" = "unavailable";
   if (isGreenApiConfigured()) {
     try {
       await sendGreenApiCashierWelcome({
         phone, fullName: parsed.fullName, brandName: cafe.name,
-        email: parsed.email, password: parsed.password,
       });
       whatsappStatus = "queued";
     } catch {
@@ -447,7 +441,7 @@ export async function createOwnerCashier(input: {
   }
   // Account creation remains successful even if the provider fails afterwards.
   const cashier: Omit<LoyaltyCashier, "temporaryPassword"> = {
-    id: cashierId, fullName: parsed.fullName, email: parsed.email, phone,
+    id: cashierId, fullName: parsed.fullName, email: "", phone, authMethod: "whatsapp_otp",
     employeeNumber: parsed.employeeNumber ?? "", active: true, ownerUserId: null,
     canUseLoyalty: parsed.canUseLoyalty, canUsePager: parsed.canUsePager, pagerStation: parsed.pagerStation,
     lastLoginAt: null, lastLogoutAt: null, createdAt: new Date().toISOString(),

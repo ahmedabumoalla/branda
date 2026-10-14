@@ -3,6 +3,7 @@
 import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import { redirect } from "next/navigation";
+import { requestCashierOtp, verifyCashierOtp } from "@/lib/auth/cashier-otp";
 import {
   cashierAcceptOrder,
   cashierScanLoyalty,
@@ -33,6 +34,16 @@ export async function loginCashierAction(email: string, password: string) {
   if (!result) {
     return { ok: false as const, message: "بيانات الكاشير غير صحيحة أو الحساب معطل" };
   }
+  redirect(await getCashierLandingPath());
+}
+
+export async function requestCashierOtpAction(phone: string) {
+  return requestCashierOtp(phone);
+}
+
+export async function verifyCashierOtpAction(code: string) {
+  const result = await verifyCashierOtp(code);
+  if (!result.ok) return result;
   redirect(await getCashierLandingPath());
 }
 

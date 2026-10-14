@@ -67,11 +67,8 @@ try {
   });
   const invalidCases = [
     ["short name", { fullName: "x" }], ["newline name", { fullName: "Test\nEmployee" }],
-    ["long name", { fullName: "x".repeat(81) }], ["bad email", { email: "invalid" }],
+    ["long name", { fullName: "x".repeat(81) }],
     ["bad phone", { phone: "123" }], ["international phone", { phone: "+12025550123" }],
-    ["short password", { password: "short" }], ["blank password", { password: "        " }],
-    ["long password", { password: "x".repeat(41) }], ["control password", { password: "ValidPass\n9" }],
-    ["bcrypt byte overflow", { password: "🔐".repeat(19) }],
   ];
   for (const [label, patch] of invalidCases) await check(`reject ${label} before mutation`, async () => {
     const before = calls.length;
@@ -86,11 +83,11 @@ try {
   });
   await check("chosen credentials normalize safely and result excludes password", async () => {
     const result = await createOwnerCashier(input);
-    assert.deepEqual(calls[0], { name: "create_cafe_staff", args: {
-      p_cafe_id: cafeId, p_full_name: "Test employee", p_email: "employee@example.test",
-      p_password: password, p_phone: "+966501234567", p_employee_number: "E-17", p_can_use_loyalty: true, p_can_use_pager: false, p_pager_station: "",
+    assert.deepEqual(calls[0], { name: "create_cafe_staff_whatsapp", args: {
+      p_cafe_id: cafeId, p_full_name: "Test employee",
+      p_phone: "+966501234567", p_employee_number: "E-17", p_can_use_loyalty: true, p_can_use_pager: false, p_pager_station: "",
     } });
-    assert.deepEqual(sent[0], { phone: "+966501234567", fullName: "Test employee", brandName: "Test brand", email: "employee@example.test", password });
+    assert.deepEqual(sent[0], { phone: "+966501234567", fullName: "Test employee", brandName: "Test brand" });
     assert.equal(result.cashier.id, cashierId); assert.equal(result.whatsappStatus, "queued");
     assert(!JSON.stringify(result).includes(password));
     assert(!Object.hasOwn(result.cashier, "password")); assert(!Object.hasOwn(result.cashier, "temporaryPassword"));
@@ -223,8 +220,8 @@ try {
       assert.equal(options.method, "POST"); assert.equal(options.cache, "no-store"); assert(options.signal instanceof AbortSignal);
       assert.equal(timeoutDurations[0], 4321);
       const body = JSON.parse(options.body);
-      assert.equal(body.chatId, "966501234567@c.us"); assert.equal(body.linkPreview, false);
-      for (const value of ["https://barndaksa.com/cashier/login", message.email, password, message.fullName, message.brandName]) assert(body.message.includes(value));
+      assert.equal(body.chatId, "966501234567@c.us"); assert.equal(body.linkPreview, false); assert(!body.message.includes(password)); assert(!body.message.includes(message.email));
+      for (const value of ["https://barndaksa.com/cashier/login", message.fullName, message.brandName]) assert(body.message.includes(value));
       assert(!JSON.stringify(result).includes(password)); assert(!JSON.stringify(result).includes("test-secret"));
     });
     await check("welcome rejects invalid recipient before fetch", async () => {
