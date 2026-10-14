@@ -121,6 +121,15 @@ check("Verified membership failure does not expose fresh registration", () => {
 });
 
 const { RastMemberCard } = load("components/rast-loyalty/rast-member-card.tsx");
+check("Taza explains enrollment and actual wallet download without changing routes", () => {
+  const taza = { ...identity, slug: "taza", name: "تازا" };
+  const enrollment = render(RastEnrollment, { identity: taza, program });
+  assert(enrollment.includes("حمّل بطاقة ولاء تازا في خطوتين"));
+  const member = { card: { cardCode: "TAZA-TEST", customerName: "عميل", stampsInCycle: 0 }, program, rewards: [] };
+  const html = render(RastMemberCard, { identity: taza, member, walletAvailability: { apple: true, google: true } });
+  assert(html.includes("حمّل بطاقة الولاء من هنا") && html.includes("اضغط على محفظة جوالك بالأسفل"));
+  assert(html.includes('/api/wallet/apple/TAZA-TEST') && html.includes('/api/wallet/google/TAZA-TEST'));
+});
 check("Member page retains wallet links card QR and reward details per brand", () => {
   const member = { card: { cardCode: "CARD-TEST-123", customerName: "عميل تجريبي", stampsInCycle: 2 }, program, rewards: [{ id: "reward-1", rewardTitle: "هدية العميل", rewardCode: "REWARD-123", expiresAt: null, metadata: { termsSnapshot: { rewardKind: "discount", discountPercent: 20 } } }] };
   const html = render(RastMemberCard, { identity, member, walletAvailability: { apple: true, google: true } });

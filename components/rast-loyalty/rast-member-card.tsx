@@ -52,7 +52,7 @@ export function RastMemberCard({ identity, member, walletAvailability }: { ident
         <h1>يا هلا برجعتك <span className={s.memberName}><bdi>{member.card.customerName}</bdi></span></h1>
         <p className={s.intro}>{member.rewards.length ? "لك مكافأة بانتظارك خلّ زيارتك الجاية أحلى" : remaining === 1 ? "باقي ختم واحد ومكافأتك تنتظرك" : `باقي ${remaining} أختام على مكافأتك نشوفك على خير`}</p>
         <div className={s.walletSection}>
-          <h2>خلّ بطاقتك قريبة</h2><p>أضفها لمحفظة جوالك واعرضها عند الكاشير</p>
+          <h2>{identity.slug === "taza" ? "حمّل بطاقة الولاء من هنا" : "خلّ بطاقتك قريبة"}</h2><p>{identity.slug === "taza" ? "اضغط على محفظة جوالك بالأسفل ثم اختر إضافة لحفظ بطاقتك واعرضها عند الكاشير في كل زيارة" : "أضفها لمحفظة جوالك واعرضها عند الكاشير"}</p>
           <div className={s.walletButtons}>
             {([{ id: "apple", name: "Apple Wallet", available: walletAvailability.apple }, { id: "google", name: "Google Wallet", available: walletAvailability.google }] as const).map((wallet) => wallet.available ? <WalletDownloadLink key={wallet.id} provider={wallet.id} cardCode={member.card.cardCode} /> : <button key={wallet.id} type="button" className={s.walletButton} disabled aria-describedby="wallet-unavailable"><Wallet aria-hidden="true" /><span><small>غير متاحة حاليًا</small><strong dir="ltr">{wallet.name}</strong></span></button>)}
           </div>

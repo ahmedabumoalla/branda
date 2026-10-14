@@ -86,7 +86,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
       <div className={s.enrollmentCopy}>
         <span className={s.eyebrow}>{loyaltyCommunityName(identity)} برنامج الولاء</span>
         <h1>زيارتك تسعدنا<br /><span>ولحظاتك معنا مكافأة</span></h1>
-        <p className={s.intro}>اجمع أختام زياراتك واستمتع بمكافأتك بطاقتك معك وكل زيارة تحسب لك</p>
+        <p className={s.intro}>{identity.slug === "taza" ? "حمّل بطاقة ولاء تازا في خطوتين سجّل اسمك وجوالك ثم بعد التحقق اضغط على محفظة جوالك لإضافة البطاقة" : "اجمع أختام زياراتك واستمتع بمكافأتك بطاقتك معك وكل زيارة تحسب لك"}</p>
         {stage === "done" ? <div className={s.welcome} role="status"><Check aria-hidden="true" /><h2>{returning ? `يا هلا برجعتك ${name.trim()}` : `يا هلا فيك يا ${name.trim()}`}</h2><p>بطاقتك تجمع لحظاتك الحلوة معنا</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}><span role="status">{opening ? "جار فتح بطاقتك" : "عرض بطاقتي"}</span>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button></div> : <form className={s.enrollmentForm} onSubmit={verifyCode} aria-busy={pending}>
           <div className={s.formHeading}><h2>{stage === "details" ? `انضم إلى ${loyaltyCommunityName(identity)}` : "باقي خطوة ونقول يا هلا"}</h2><span>{stage === "details" ? "١ / ٢" : "٢ / ٢"}</span></div>
           {stage === "details" ? <>
