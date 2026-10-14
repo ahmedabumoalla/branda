@@ -7,7 +7,7 @@ import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCafeFeatureCodesBySlug, getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getPublicLoyaltyProgramBySlug, getLoyaltyCardViewByCode, getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
-import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
+import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
 import { createBarndaksaQrPayload, parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
@@ -54,7 +54,7 @@ export async function getLoyaltyBrand(slug: string) {
 export async function getLoyaltyMembership(slug: string) {
   const brand = await getLoyaltyBrand(slug);
   if (!brand || !brand.program.enabled) return null;
-  const profile = await getVerifiedLoyaltyCustomerProfile(slug);
+  const profile = await getLoyaltyCustomerProfile(slug);
   if (!profile) return null;
   const view = await getCustomerLoyaltyCardViewForProfile(slug, String(profile.id));
   if (!view) return null;
@@ -82,7 +82,7 @@ export async function getAuthorizedWalletMember(cardCode: string) {
   const code = z.string().trim().min(4).max(100).parse(cardCode);
   const view = await getLoyaltyCardViewByCode(code);
   if (!view) return null;
-  const profile = await getVerifiedLoyaltyCustomerProfile(view.cafeSlug);
+  const profile = await getLoyaltyCustomerProfile(view.cafeSlug);
   if (!profile) return null;
   const { data, error } = await createAdminClient().from("loyalty_cards").select("id")
     .eq("id", view.card.id).eq("cafe_id", view.card.cafeId).eq("customer_profile_id", profile.id).maybeSingle();

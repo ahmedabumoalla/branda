@@ -3,7 +3,7 @@ import { getLoyaltyBrand, getLoyaltyMembership } from "@/lib/data/loyalty-experi
 import { getWalletReadiness } from "@/lib/wallet";
 import { RastEnrollment } from "@/components/rast-loyalty/rast-enrollment";
 import { RastMemberCard } from "@/components/rast-loyalty/rast-member-card";
-import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
+import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
 import { loyaltyVisitKind } from "@/lib/analytics/brand-analytics";
 
@@ -12,7 +12,7 @@ export const metadata = { title: "بطاقة الولاء والمكافآت", r
 
 export default async function LoyaltyJoinPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ source?: string | string[] }> }) {
   const { slug } = await params;
-  const [brand, profile] = await Promise.all([getLoyaltyBrand(slug), getVerifiedLoyaltyCustomerProfile(slug)]);
+  const [brand, profile] = await Promise.all([getLoyaltyBrand(slug), getLoyaltyCustomerProfile(slug)]);
   if (!brand) notFound();
   // Anonymous visitors do not need the authenticated membership query waterfall.
   const membership = brand.program.enabled && profile ? await getLoyaltyMembership(slug) : null;

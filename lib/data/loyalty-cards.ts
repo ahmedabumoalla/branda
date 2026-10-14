@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getVerifiedLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
+import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
@@ -499,8 +499,8 @@ export async function issueCurrentCustomerLoyaltyCard(slug: string) {
     throw new Error("بطاقة الولاء غير مفعلة لهذه العلامة التجارية");
   }
 
-  const profile = await getVerifiedLoyaltyCustomerProfile(slug);
-  if (!profile) throw new Error("تحقق من رقم جوالك أولًا");
+  const profile = await getLoyaltyCustomerProfile(slug);
+  if (!profile) throw new Error("أدخل اسمك ورقم جوالك لفتح بطاقتك");
   const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
   if (error) throw new Error("تعذر إصدار بطاقة الولاء");
   return String(data);
@@ -575,7 +575,7 @@ export async function getCustomerLoyaltyCardViewForProfile(
   if (!cafe) return null;
   if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "loyalty")) return null;
 
-  const profile = await getVerifiedLoyaltyCustomerProfile(slug);
+  const profile = await getLoyaltyCustomerProfile(slug);
   if (!profile || profile.id !== customerProfileId) return null;
   const { data, error } = await createAdminClient().rpc("issue_rast_loyalty_card", { p_customer_profile_id: profile.id });
   if (error) throw new Error("تعذر إصدار بطاقة الولاء تحقق من تفعيل البرنامج");

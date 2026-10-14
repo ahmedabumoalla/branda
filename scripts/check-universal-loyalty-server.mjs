@@ -28,6 +28,7 @@ const actions=load('app/actions/loyalty-experience.ts',{
   'next/cache':{revalidatePath:(...value)=>paths.push(value)},
   '@/app/actions/auth':{requestCustomerPhoneOtpAction:async(cafe,phone,purpose,source)=>{assert.equal(cafe,slug);assert.equal(source,'loyalty');otp++;return {required:true,ok:true};},completeCustomerPhoneOtpAction:async()=>({ok:true})},
   '@/lib/data/loyalty-experience':{getLoyaltyBrand:async(value)=>{assert.equal(value,slug);return entitled?brand():null;},saveRastLoyaltySettings:async()=>{},saveBrandLoyaltyProgram:async()=>{},saveOwnerLoyaltyExperience:async()=>{}},
+  '@/lib/data/loyalty-enrollment':{enrollLoyaltyCustomer:async()=>({ok:true,returningCustomer:false})},
   '@/lib/auth/phone-otp':{isPhoneOtpRequiredForBrand:(cafe,source)=>{assert.equal(cafe,slug);assert.equal(source,'loyalty');return true;}},
   '@/lib/data/cashier':{requireCashierPermission:async()=>({cafeId:context.id,cafeSlug:slug,token:'own-token'})},
   '@/lib/data/cafes':{requireOwnerCafeContext:async()=>({...context,slug,role})},
@@ -37,10 +38,10 @@ const actions=load('app/actions/loyalty-experience.ts',{
   '@/lib/maps/resolve-branch-location':{GoogleMapsLocationError:class extends Error{}},
   '@/lib/data/customer-rewards':{},
 });
-check((await actions.requestLoyaltyOtpAction(slug,'0500000000')).ok,'another brand enrolls through its own slug');
-enabled=false;check(!(await actions.requestLoyaltyOtpAction(slug,'0500000000')).ok,'disabled program blocks OTP');
-enabled=true;entitled=false;check(!(await actions.requestLoyaltyOtpAction(slug,'0500000000')).ok,'unsubscribed brand blocks OTP');
-check(otp===1,'only eligible enabled program can request OTP');
+check(!(await actions.requestLoyaltyOtpAction(slug,'0500000000')).ok,'retired OTP action cannot send messages');
+check(!(await actions.completeLoyaltyOtpAction(slug,'0500000000','123456','Test Member')).ok,'retired verification action cannot create sessions');
+check(otp===0,'no OTP provider calls');
+entitled=false;
 await reject(()=>actions.scanLoyaltyExperienceAction({value:'CARD123',requestId:context.id,kind:'stamp'}));
 check(mutations===0,'unsubscribed scan does not call mutation');
 entitled=true;

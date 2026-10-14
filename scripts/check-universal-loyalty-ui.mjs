@@ -100,12 +100,13 @@ check("Preview clamps malformed stamp counts", () => {
 });
 
 const { RastEnrollment } = load("components/rast-loyalty/rast-enrollment.tsx");
-check("Enrollment names its own brand and retains phone OTP inputs", () => {
+check("Enrollment asks only for name and phone with no OTP", () => {
   const html = render(RastEnrollment, { identity, program });
   assert(html.includes(identity.name));
   assert(!html.includes("الكواكب"));
   assert(html.includes('name="phone"'));
-  assert(html.includes("واتساب"));
+  assert(html.includes('name="name"') && html.includes("افتح بطاقتي"));
+  assert(!html.includes("واتساب") && !html.includes("رمز التحقق") && !html.includes('name="code"'));
 });
 check("Disabled enrollment has own menu link and no registration form", () => {
   const html = render(RastEnrollment, { identity, program: { ...program, enabled: false } });
@@ -124,7 +125,7 @@ const { RastMemberCard } = load("components/rast-loyalty/rast-member-card.tsx");
 check("Taza explains enrollment and actual wallet download without changing routes", () => {
   const taza = { ...identity, slug: "taza", name: "تازا" };
   const enrollment = render(RastEnrollment, { identity: taza, program });
-  assert(enrollment.includes("حمّل بطاقة ولاء تازا في خطوتين"));
+  assert(enrollment.includes("حمّل بطاقة ولاء تازا سجّل اسمك وجوالك"));
   const member = { card: { cardCode: "TAZA-TEST", customerName: "عميل", stampsInCycle: 0 }, program, rewards: [] };
   const html = render(RastMemberCard, { identity: taza, member, walletAvailability: { apple: true, google: true } });
   assert(html.includes("حمّل بطاقة الولاء من هنا") && html.includes("اضغط على محفظة جوالك بالأسفل"));
@@ -164,7 +165,7 @@ let requestedSlug, profileSlug, member = null, profile = null, membershipCalls =
 const { default: PublicPage } = load("app/loyalty/[slug]/page.tsx", {
   "next/navigation": { notFound: () => { throw new Error("not-found"); } },
   "@/lib/data/loyalty-experience": { getLoyaltyBrand: async (slug) => { requestedSlug = slug; return slug === "missing" ? null : { identity, program }; }, getLoyaltyMembership: async () => { membershipCalls++; return member; } },
-  "@/lib/auth/rast-loyalty-session": { getVerifiedLoyaltyCustomerProfile: async (slug) => { profileSlug = slug; return profile; } },
+  "@/lib/auth/rast-loyalty-session": { getLoyaltyCustomerProfile: async (slug) => { profileSlug = slug; return profile; } },
   "@/lib/wallet": { getWalletReadiness: () => ({ apple: true, google: true }) },
   "@/components/analytics/public-page-analytics": { PublicPageAnalytics: () => null },
   "@/components/rast-loyalty/rast-enrollment": { RastEnrollment: () => React.createElement("div", { "data-view": "enrollment" }) },

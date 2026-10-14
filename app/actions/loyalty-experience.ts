@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { completeCustomerPhoneOtpAction, requestCustomerPhoneOtpAction } from "@/app/actions/auth";
-import { getLoyaltyBrand, saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard } from "@/lib/data/loyalty-experience";
-import { isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
+import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard } from "@/lib/data/loyalty-experience";
+import { enrollLoyaltyCustomer } from "@/lib/data/loyalty-enrollment";
+import type { PhoneOtpRequestResult } from "@/lib/auth/phone-otp";
 import { revalidatePath } from "next/cache";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
@@ -17,26 +17,21 @@ import { GoogleMapsLocationError } from "@/lib/maps/resolve-branch-location";
 import { lookupRastCashierReward } from "@/lib/data/customer-rewards";
 import { localizeCashierCatalog } from "@/lib/cashier/catalog-translation";
 
-async function requireEnrollment(slug: string) {
-  if (!isPhoneOtpRequiredForBrand(slug, "loyalty")) throw new Error("التحقق بالواتساب غير متاح حاليًا");
-  const brand = await getLoyaltyBrand(z.string().regex(/^[a-z0-9-]{1,80}$/).parse(slug));
-  if (!brand || !brand.program.enabled) throw new Error("برنامج الولاء غير متاح حاليًا");
-}
-
-export async function requestLoyaltyOtpAction(slug: string, phone: string) {
+export async function enrollLoyaltyAction(slug: string, phone: string, name: string) {
   try {
-    await requireEnrollment(slug);
-    return await requestCustomerPhoneOtpAction(slug, phone, "customer_signup", "loyalty");
-  } catch { return { required: true as const, ok: false as const, message: "تعذر إرسال الرمز حاول لاحقًا" }; }
-}
-
-export async function completeLoyaltyOtpAction(slug: string, phone: string, code: string, name: string) {
-  try {
-    await requireEnrollment(slug);
-    const result = await completeCustomerPhoneOtpAction(slug, phone, code, "customer_signup", name, "loyalty");
-    if (!result.ok) return { ok: false as const, message: result.message };
-    return { ok: true as const, returningCustomer: result.returningCustomer };
+    return await enrollLoyaltyCustomer({ slug, phone, name });
   } catch { return { ok: false as const, message: "تعذر إكمال التسجيل حاول لاحقًا" }; }
+}
+
+// Old open tabs and unpublished legacy components receive a refresh instruction, never an OTP.
+export async function requestLoyaltyOtpAction(...input: [string, string]): Promise<PhoneOtpRequestResult> {
+  void input;
+  return { required: true, ok: false, message: "حدّث الصفحة لفتح بطاقتك بالاسم ورقم الجوال مباشرة" };
+}
+
+export async function completeLoyaltyOtpAction(...input: [string, string, string, string]): Promise<{ ok: true; returningCustomer: boolean } | { ok: false; message: string }> {
+  void input;
+  return { ok: false, message: "حدّث الصفحة لفتح بطاقتك بالاسم ورقم الجوال مباشرة" };
 }
 
 export async function saveLoyaltyExperienceAction(input: LoyaltyExperienceSettings) {
