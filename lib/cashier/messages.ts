@@ -1,5 +1,6 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "لا توجد مكافآت حالية للصرف": "No rewards are currently available to redeem",
   "للحسابات الجديدة أدخل رقم واتساب المسجل لدى الفرع": "New accounts: enter the WhatsApp number registered by your branch",
   "الحسابات السابقة تدخل بالبريد وكلمة المرور المعتادة": "Existing accounts: use your usual email and password",
   "طريقة الدخول": "Sign-in method", "رمز واتساب": "WhatsApp code", "البريد وكلمة المرور": "Email and password",

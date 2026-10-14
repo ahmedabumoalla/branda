@@ -50,6 +50,14 @@ const session = createRastScanSession({
 
 await assert.rejects(session.confirm("stamp", "CARD123"));
 assert.equal(writes.length, 0, "Uninspected cards cannot reach the mutation");
+await session.inspect("redeem", "REWARD123");
+assert(session.preview, "A prior reward preview exists before checking a depleted card");
+returnedReward = null;
+assert.equal(await session.inspect("redeem", "10000"), null);
+assert.equal(session.preview, null, "An eligible card without rewards cannot create a confirmation preview");
+await assert.rejects(session.confirm("redeem", "10000"));
+assert.equal(writes.length, 0, "No rewards means no redemption RPC");
+returnedReward = reward; reads.length = 0;
 const cardQr = createBarndaksaQrPayload("loyalty-card", "CARD123");
 const stampPreview = await session.inspect("stamp", cardQr);
 assert.equal(stampPreview.card.customerName, card.customerName);
@@ -196,10 +204,16 @@ function cameraFixture() {
   assert.equal(fixture.events.errors, 0, "Unmounted camera never reports a late error");
 }
 
-const { RastCashier, RastCashierRewardDetails } = load("components/rast-loyalty/rast-cashier.tsx", {
+const { RastCashier, RastCashierRewardDetails, RastCashierEmptyRewards } = load("components/rast-loyalty/rast-cashier.tsx", {
   "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async () => card, lookupRastCashierRewardAction: async () => reward, scanLoyaltyExperienceAction: async () => ({}) },
   "@/app/actions/cashier": { cashierLookupRewardAction: async () => reward, logoutCashierAction: async () => {} },
 });
+const emptyHtml = renderToStaticMarkup(React.createElement(RastCashierEmptyRewards));
+assert(emptyHtml.includes('role="status"') && !emptyHtml.includes('role="alert"'));
+assert(!emptyHtml.includes('<button') && !emptyHtml.includes('bg-red-'));
+const { cashierText } = load("lib/cashier/language.ts");
+assert.equal(cashierText("en", "لا توجد مكافآت حالية للصرف"), "No rewards are currently available to redeem");
+assert(emptyHtml.includes(cashierText("ar", "لا توجد مكافآت حالية للصرف")));
 const html = renderToStaticMarkup(React.createElement(RastCashier, { initialData: { cafe: { slug: 'rast', name: 'Test cafe' }, cashier: { fullName: "Test operator" } } }));
 assert(html.includes('aria-describedby="rast-scan-help"'));
 assert(html.includes('aria-pressed="true"'));

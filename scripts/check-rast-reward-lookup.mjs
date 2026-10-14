@@ -33,7 +33,7 @@ const reward = (rewardCode, changes = {}) => ({
 });
 function fixture() {
   const state = { authorized: true, entitled: true, slug: "rast", cardAllowed: true, rewardAllowed: true, failQuery: false, queries: [], rpcs: [],
-    cards: [{ id: cardId, customer_profile_id: customerId, cafe_id: cafeId, card_code: "CARD123" }],
+    cards: [{ id: cardId, customer_profile_id: customerId, cafe_id: cafeId, card_code: "CARD123", display_number: 10000 }],
     rewards: [reward("REWARDLATE"), reward("REWARDFIRST", { expires_at: future(2) })],
   };
   const admin = {
@@ -83,18 +83,19 @@ function fixture() {
 }
 let passed = 0;
 async function test(name, run) { try { await run(fixture()); passed++; } catch (error) { throw new Error(name, { cause: error }); } }
-for (const input of ["CARD123", " card123 ", createBarndaksaQrPayload("loyalty-card", "CARD123")]) {
+for (const input of ["10000", "CARD123", " card123 ", createBarndaksaQrPayload("loyalty-card", "CARD123")]) {
   await test("membership resolves one earliest-expiring earned reward", async ({ state, lookupRastCashierReward: lookup }) => {
     const result = await lookup(input);
     assert.equal(result.rewardCode, "REWARDFIRST"); assert.equal(result.canRedeem, true);
     assert.equal(result.metadata.termsSnapshot.terms, "Earned terms");
+    assert.equal(state.rpcs.find(([name])=>name==="preview_loyalty_card")[1].p_card_code,"CARD123");
     const selection = state.queries.find((q) => q.limit === 1);
     for (const filter of [["cafe_id", cafeId], ["loyalty_card_id", cardId], ["customer_id", customerId], ["source_type", "loyalty"], ["status", "available"]]) assert(selection.filters.some((f) => JSON.stringify(f) === JSON.stringify(filter)));
   });
 }
 for (const changes of [{ status: "redeemed" }, { status: "cancelled" }, { expires_at: future(-1) }, { cafe_id: "foreign" }, { loyalty_card_id: "foreign" }, { customer_id: "foreign" }, { source_type: "experience" }]) {
   await test("unavailable or foreign rewards cannot be selected", async ({ state, lookupRastCashierReward: lookup }) => {
-    state.rewards = [reward("REWARD123", changes)]; await assert.rejects(() => lookup("CARD123"));
+    state.rewards = [reward("REWARD123", changes)]; assert.equal(await lookup("CARD123"), null);
     assert(!state.rpcs.some(([name]) => name === "preview_loyalty_reward"));
   });
 }
@@ -123,5 +124,20 @@ await test("foreign direct reward cannot expose customer details", async ({ stat
 for (const input of [createBarndaksaQrPayload("invoice", "CARD123"), createBarndaksaQrPayload("experience-reward", "CARD123"), "BARNDAKSA_QR:v1:broken", "A".repeat(501)]) {
   await test("wrong-kind and malformed inputs fail before database reads", async ({ state, lookupRastCashierReward: lookup }) => { await assert.rejects(() => lookup(input)); assert.equal(state.queries.length, 0); });
 }
-await test("depleted balance returns no reward", async ({ state, lookupRastCashierReward: lookup }) => { state.rewards = []; await assert.rejects(() => lookup("CARD123"), /لا توجد مكافأة/); });
+for (const code of ["10000", "CARD123"]) await test("depleted valid card returns a neutral empty result", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.rewards = []; assert.equal(await lookup(code), null);
+  assert.deepEqual(state.rpcs.map(([name])=>name),["preview_loyalty_card"]);
+});
+await test("legacy numeric code remains usable", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.cards[0].card_code="12345"; state.cards[0].display_number=null;
+  assert.equal((await lookup("12345")).rewardCode,"REWARDFIRST");
+});
+await test("foreign short number is not a valid empty card", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.cards[0].cafe_id="foreign"; await assert.rejects(()=>lookup("10000"));
+  assert.equal(state.rpcs.length,0);
+  assert(state.queries.every(q=>q.filters.some(([key,value])=>key==="cafe_id"&&value===cafeId)));
+});
+await test("short card database failure is still an error", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.failQuery=true; await assert.rejects(()=>lookup("10000")); assert.equal(state.rpcs.length,0);
+});
 console.log(`PASS: ${passed} Rast membership/reward lookup, isolation, eligibility, ordering and fail-closed cases.`);

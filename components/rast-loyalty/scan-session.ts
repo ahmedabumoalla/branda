@@ -8,7 +8,7 @@ export type RastScanPreview = ({ kind: "stamp"; value: string; card: RastCardPre
 
 type Dependencies = {
   lookupCard: (value: string) => Promise<RastCardPreview>;
-  lookupReward: (value: string) => Promise<CashierRewardPreview>;
+  lookupReward: (value: string) => Promise<CashierRewardPreview | null>;
   commit: (input: { value: string; kind: RastScanKind; requestId: string }) => Promise<Record<string, unknown>>;
   createRequestId: () => string;
   now?: () => number;
@@ -46,6 +46,7 @@ export function createRastScanSession(dependencies: Dependencies) {
         if (kind === "stamp") preview = { kind, value: code, card: await dependencies.lookupCard(code) };
         else {
           const reward = await dependencies.lookupReward(code);
+          if (!reward) return null;
           if (reward.sourceType !== "loyalty") throw new Error("هذا الرمز ليس مكافأة من برنامج الولاء");
           preview = { kind, value: code, reward };
         }

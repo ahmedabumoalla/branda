@@ -294,18 +294,26 @@ export async function lookupCashierCustomerReward(
   return previewFromReward(reward, { loyaltyCardEnabled, exactExpiry: reward.sourceType === "loyalty" });
 }
 
-export async function lookupRastCashierReward(rawCode: string): Promise<CashierRewardPreview> {
+export async function lookupRastCashierReward(rawCode: string): Promise<CashierRewardPreview | null> {
   const code = rastRedemptionCode(rawCode);
   const { admin, token, cafeId, cafeSlug } = await getValidCashierSession();
   await assertRastLoyaltyEntitlement(cafeId);
 
-  const { data: card, error: cardError } = await admin.from("loyalty_cards")
-    .select("id,customer_profile_id").eq("cafe_id", cafeId).eq("card_code", code).maybeSingle();
+  const shortNumber = /^\d{5}$/.test(code);
+  let { data: card, error: cardError } = await admin.from("loyalty_cards")
+    .select("id,customer_profile_id,card_code").eq("cafe_id", cafeId)
+    .eq(shortNumber ? "display_number" : "card_code", shortNumber ? Number(code) : code).maybeSingle();
   if (cardError) throw new Error("تعذر فحص البطاقة حاول مرة أخرى");
+  if (!card && shortNumber) {
+    // Preserve preexisting numeric card codes; short numbers never cross brands.
+    ({ data: card, error: cardError } = await admin.from("loyalty_cards")
+      .select("id,customer_profile_id,card_code").eq("cafe_id", cafeId).eq("card_code", code).maybeSingle());
+    if (cardError) throw new Error("تعذر فحص البطاقة حاول مرة أخرى");
+  }
   let rewardCode = code;
   if (card) {
     // Validate the active card/customer/program through the existing audited RPC.
-    const { data: checked, error } = await admin.rpc("preview_loyalty_card", { p_session_token: token, p_card_code: code });
+    const { data: checked, error } = await admin.rpc("preview_loyalty_card", { p_session_token: token, p_card_code: card.card_code });
     if (error || checked?.ok !== true) throw new Error("البطاقة غير متاحة أو البرنامج موقوف");
     if (!card.customer_profile_id) throw new Error("البطاقة غير مرتبطة بعميل صالح");
     const { data: earned, error: rewardError } = await admin.from("customer_reward_instances")
@@ -315,7 +323,7 @@ export async function lookupRastCashierReward(rawCode: string): Promise<CashierR
       .order("expires_at", { ascending: true, nullsFirst: false })
       .order("issued_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle();
     if (rewardError) throw new Error("تعذر قراءة المكافآت حاول مرة أخرى");
-    if (!earned) throw new Error("لا توجد مكافأة متاحة للصرف لهذه البطاقة قد تكون صُرفت أو انتهت صلاحيتها");
+    if (!earned) return null;
     rewardCode = String(earned.reward_code);
   }
   // Pin a real reward instance before confirmation; never redeem by selecting the next reward.

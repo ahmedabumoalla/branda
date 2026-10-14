@@ -61,6 +61,7 @@ export async function lookupRastCashierCardAction(value: string) {
 
 export async function lookupRastCashierRewardAction(value: string) {
   const reward = await lookupRastCashierReward(z.string().trim().min(4).max(500).parse(value));
+  if (!reward) return null;
   const raw = reward.metadata?.termsSnapshot;
   const terms = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   return { ...reward, catalog: await localizeCashierCatalog({ title: reward.rewardTitle, description: reward.rewardDescription,

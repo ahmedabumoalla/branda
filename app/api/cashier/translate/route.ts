@@ -6,6 +6,6 @@ export async function POST(request: Request) {
   if (!input.success) return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
   try {
     const preview = input.data.kind === "stamp" ? await lookupRastCashierCardAction(input.data.code) : await lookupRastCashierRewardAction(input.data.code);
-    return Response.json({ catalog: preview.catalog }, { headers: { "Cache-Control": "private, no-store" } });
+    return Response.json({ catalog: preview?.catalog ?? null }, { headers: { "Cache-Control": "private, no-store" } });
   } catch { return Response.json({ error: "CARD_UNAVAILABLE" }, { status: 403 }); }
 }

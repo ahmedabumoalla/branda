@@ -16,6 +16,11 @@ import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/
 import { localizedText, type CashierMessage } from "@/lib/cashier/language";
 import layout from "./rast-cashier.module.css";
 
+export function RastCashierEmptyRewards() {
+  const { t } = useCashierLanguage();
+  return <p role="status" className="mt-5 rounded-xl border border-[var(--cashier-ink)]/20 bg-white/70 p-4 text-sm leading-7">{t("لا توجد مكافآت حالية للصرف")}</p>;
+}
+
 export function RastCashierRewardDetails({ reward }: { reward: CashierRewardPreview }) {
   const { t, locale } = useCashierLanguage();
   const content = (key: string, source: string) => localizedText(locale, source, reward.catalog?.fields[key]);
@@ -39,6 +44,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [noRewards, setNoRewards] = useState(false);
   const [message, setMessage] = useState<CashierMessage>("");
   const [checkedAt, setCheckedAt] = useState(0);
   const [preview, setPreview] = useState<RastScanPreview | null>(null);
@@ -50,13 +56,13 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   useEffect(() => { if (preview) previewElement.current?.focus(); }, [preview]);
   useEffect(() => { if (error) errorElement.current?.focus(); }, [error]);
   useEffect(() => { if (!pending && focusInputAfterScan.current) { focusInputAfterScan.current = false; input.current?.focus(); } }, [pending]);
-  function updateCode(code: string) { if (session.busy) return; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); }
+  function updateCode(code: string) { if (session.busy) return; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); }
   function detectCode(code: string) { if (session.busy) return; updateCode(code); setMessage("تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
   async function processScan(confirm = false) {
     if (session.busy || !value.trim()) return;
-    setPending(true); setError(""); setMessage("");
+    setPending(true); setError(""); setMessage(""); setNoRewards(false);
     try {
-      if (!confirm) { setPreview(null); setPreview(await session.inspect(kind, value)); return; }
+      if (!confirm) { setPreview(null); const next = await session.inspect(kind, value); setPreview(next); setNoRewards(kind === "redeem" && next === null); return; }
       const result = await session.confirm(kind, value);
       if (!result) return;
       setPreview(session.preview);
@@ -111,6 +117,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
             <p className="text-xs">{preview.kind === "stamp" ? t("بطاقة العميل") : t("مكافأة العميل")}</p><h3 id="rast-scan-preview" className="mt-2 break-words text-xl font-bold">{preview.kind === "stamp" ? preview.card.customerName : preview.reward.customerName}</h3><p dir="ltr" className="mt-2 break-all text-left text-xs opacity-70">{preview.value}</p>
             {preview.kind === "stamp" ? <><dl className="my-5 grid grid-cols-2 gap-4 text-sm"><div><dt>{t("رصيد الأختام")} </dt><dd className="mt-1 text-xl font-bold">{preview.card.stampsInCycle} / {preview.card.purchasesRequired}</dd></div><div><dt>{t("المكافآت المتاحة")} </dt><dd className="mt-1 text-xl font-bold">{preview.card.availableRewards}</dd></div></dl><p className="text-sm leading-7">{t("المكافأة عند الاكتمال:")} {localizedText(locale, preview.card.rewardName, preview.card.catalog?.fields.rewardName)}</p><button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{t("تأكيد الشراء وتسجيل ختم واحد")} </button></> : <><h4 className="mt-5 text-lg font-bold">{localizedText(locale, preview.reward.rewardTitle, preview.reward.catalog?.fields.title)}</h4><RastCashierRewardDetails reward={preview.reward} /><p className="mt-4 font-bold">{remainingText}</p>{validExpiry && <time className="mt-1 block text-sm" dateTime={validExpiry.toISOString()}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Riyadh", calendar: "gregory" }).format(validExpiry)}</time>}{canRedeem ? <button type="button" disabled={pending} onClick={() => void processScan(true)} className="mt-5 min-h-12 w-full rounded-xl bg-[var(--cashier-ink)] p-3 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{t("تأكيد تسليم المكافأة وصرفها")} </button> : <p role="alert" className="mt-4 font-bold">{preview.reward.invalidReason ? errorText(preview.reward.invalidReason) : t("انتهت صلاحية المكافأة")}</p>}</>}
           </section>}
+          {noRewards && <RastCashierEmptyRewards />}
           {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{errorText(error)}</p>}
           {message && <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 font-bold leading-7 text-emerald-900">{t(message)}</p>}
         </section>
