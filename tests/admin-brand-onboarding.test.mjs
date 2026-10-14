@@ -43,6 +43,7 @@ test("a brand can be prepared without owner details, phone, email, password or a
   const { api, calls } = service();
   await api.createAdminBrandAccount(draft);
   const auth = calls.find(call => call.name === "createUser").args;
+  assert.equal(auth.id, id, "Auth INSERT identity must match the admin-only staged request before app_metadata is applied");
   assert.equal(auth.phone, undefined); assert.equal(auth.email_confirm, false);
   assert.match(auth.email, /^prepared-.*@accounts\.barndaksa\.invalid$/);
   assert(auth.password.length >= 32);
@@ -70,16 +71,16 @@ test("owner editing uses Auth API, preserves blank password and recovers an ambi
   assert(!calls.some(call => call.name === "admin_cancel_brand_owner_edit"));
 });
 
-function service({ authorized = true, sendError = null, sent = false, finalizeFailures = 0, createError = false } = {}) {
+function service({ authorized = true, sendError = null, sent = false, finalizeFailures = 0, createError = false, recoverCreation = true } = {}) {
   const calls = []; let preparedCount = 0, finishCount = 0;
   const db = { rpc: async (name, args) => {
     calls.push({ name, args });
-    if (name === "admin_prepare_brand_account") return { data: { proof: "proof", cafeId: preparedCount++ ? cafeId : null }, error: null };
+    if (name === "admin_prepare_brand_account") return { data: { proof: "proof", cafeId: preparedCount++ && recoverCreation ? cafeId : null }, error: null };
     if (name === "admin_claim_brand_welcome") return { data: { sent, requestId: id, phone: "966500000099", brandName: "Fixture", ciphertext: secrets.sealWelcomePassword(input.password, id) }, error: null };
     if (name === "admin_finish_brand_welcome") return { error: finishCount++ < finalizeFailures ? { message: "temporary" } : null };
     if (name === "admin_fail_brand_welcome") return { error: null };
     throw Error(name);
-  }, auth: { admin: { createUser: async args => { calls.push({ name: "createUser", args }); return { data: { user: { id } }, error: createError ? Error("network ambiguity") : null }; } } } };
+  }, auth: { admin: { createUser: async args => { calls.push({ name: "createUser", args }); return { data: { user: { id } }, error: typeof createError === "object" ? createError : createError ? Error("network ambiguity") : null }; } } } };
   const api = module("lib/data/admin-brand-onboarding.ts", {
     "node:crypto": crypto, zod: { z }, "@/lib/platform/brand-onboarding": schema, "@/lib/auth/brand-welcome-secret": secrets,
     "@/lib/data/cafes": { requirePlatformAdmin: async () => { if (!authorized) throw Error("forbidden"); return { id: "admin-fixture" }; } },
@@ -101,6 +102,7 @@ test("creation provisions phone/password without sending or starting the clock",
   assert.equal(await api.createAdminBrandAccount(input), cafeId);
   assert.deepEqual(calls.map(c => c.name), ["admin_prepare_brand_account", "createUser", "admin_prepare_brand_account"]);
   const auth = calls[1].args;
+  assert.equal(auth.id, id);
   assert.equal(auth.phone, "+966500000099"); assert.equal(auth.password, input.password);
   assert(!JSON.stringify(calls[0].args).includes(input.password));
   assert.equal(auth.app_metadata.admin_brand_onboarding_id, id);
@@ -109,6 +111,12 @@ test("ambiguous Auth response recovers existing brand without duplicate create",
   const { api, calls } = service({ createError: true });
   assert.equal(await api.createAdminBrandAccount(input), cafeId);
   assert.equal(calls.filter(c => c.name === "createUser").length, 1);
+});
+for (const [code, message] of [["phone_exists", /رقم الجوال مرتبط/], ["email_exists", /البريد الإلكتروني مرتبط/], ["unexpected_failure", /تعذر إنشاء حساب الدخول/]]) test(`creation reports the actual error category: ${code}`, async () => {
+  const { api, calls } = service({ createError: { code }, recoverCreation: false });
+  await assert.rejects(api.createAdminBrandAccount(input), message);
+  assert.equal(calls.filter(c => c.name === "createUser").length, 1);
+  assert(!calls.some(c => c.name === "send"));
 });
 for (const code of ["OWNER_WELCOME_REJECTED", "timeout"]) test(`failed send ${code} never starts trial`, async () => {
   const { api, calls } = service({ sendError: code });

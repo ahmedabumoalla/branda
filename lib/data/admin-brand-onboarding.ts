@@ -43,6 +43,8 @@ export async function createAdminBrandAccount(input: AdminBrandAccountInput) {
   if (prepared.error) accountError(prepared.error.message);
   if (prepared.data?.cafeId) return String(prepared.data.cafeId);
   const created = await admin.auth.admin.createUser({
+    // Auth applies app_metadata after INSERT, so the trigger uses this staged UUID
+    id: requestId,
     ...(draft.phone ? { phone: `+${draft.phone}`, phone_confirm: true } : { email: `prepared-${requestId}@accounts.barndaksa.invalid`, email_confirm: false }),
     password: prepared.data?.ciphertext ? openWelcomePassword(String(prepared.data.ciphertext), requestId) : password,
     user_metadata: { account_type: "cafe_owner", full_name: draft.ownerName },
@@ -52,7 +54,11 @@ export async function createAdminBrandAccount(input: AdminBrandAccountInput) {
   // Recover an ambiguous response without creating or resetting another account.
   const completed = await admin.rpc("admin_prepare_brand_account", args);
   if (completed.data?.cafeId) return String(completed.data.cafeId);
-  if (created.error) throw new Error("تعذر إنشاء الحساب قد يكون الجوال أو البريد أو الرابط مستخدمًا راجع البيانات ثم افتح نموذجًا جديدًا");
+  if (created.error) {
+    if (created.error.code === "phone_exists") accountError("PHONE_EXISTS");
+    if (created.error.code === "email_exists") accountError("EMAIL_EXISTS");
+    throw new Error("تعذر إنشاء حساب الدخول حاول مجددًا وإذا استمر الخطأ تواصل مع دعم المنصة");
+  }
   throw new Error("تعذر تأكيد إنشاء الحساب حدّث قائمة العلامات قبل إعادة المحاولة");
 }
 
