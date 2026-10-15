@@ -88,6 +88,11 @@ assert(html.includes('قائمة تازا')&&html.includes('TAZA COFFEE')&&html.
 assert(!/KAWAKIB|الكواكب|مقهى كاث|شاهي وهيل|kath-coffee|rast-coffee/.test(html),'Taza identity stays isolated');
 assert(html.includes('aria-label="العروض"')&&html.includes('compactTools'));
 assert(html.includes('aria-label="حمّل بطاقة ولاء تازا"')&&html.includes('حمّل بطاقتك')&&html.includes('لأنك من أهل تازا'));
+const tazaSourcePhoto='https://images.test/taza-20261014/espresso-premium-4f24dc824d9a.webp';
+html=render({...taza,products:[{...product,images:[{url:tazaSourcePhoto,alt:'Original espresso'}]}]});
+assert(html.includes('/menu-art/taza-espresso-cutout-v1.webp')&&html.includes(tazaSourcePhoto),'The hero uses the derived cutout while the catalog retains the original photo');
+html=render({...taza,products:[{...product,images:[{url:'https://images.test/new-owner-cover.webp',alt:'New cover'}]}]});
+assert(!html.includes('/menu-art/taza-espresso-cutout-v1.webp')&&html.includes('new-owner-cover.webp'),'A changed owner cover must not retain the old derived cup');
 html=render({...taza,loyaltyEnabled:false,products:[]});
 assert(!html.includes('/loyalty/')&&html.includes('قائمتنا قيد التحضير'));
 html=render({...taza,logoUrl:'/owner-taza-logo.png',products:[{...product,name:'Owner Taza update',price:37}]});

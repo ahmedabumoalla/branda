@@ -16,17 +16,22 @@ function TazaMark({ menu, className }: { menu: StandaloneMenu; className: string
   return <img src={menu.logoUrl || "/menu-logos/taza-extracted-20261014.webp"} alt={menu.name} width={180} height={90} className={className} decoding="async" />;
 }
 
-function ProductPhoto({ product, secondary = false }: { product: StandaloneMenuProduct; secondary?: boolean }) {
+function ProductPhoto({ product, cutout = false }: { product: StandaloneMenuProduct; cutout?: boolean }) {
+  if (cutout) {
+    // Derived from this exact supplied photograph; never substitutes future owner uploads
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src="/menu-art/taza-espresso-cutout-v1.webp" alt="" width={1200} height={800} fetchPriority="high" decoding="async" />;
+  }
   const src = product.images[0]?.url;
   if (!src) return null;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} {...kathResponsiveImage(src, secondary ? "(max-width: 700px) 36vw, 220px" : "(max-width: 700px) 82vw, 520px")} alt="" width={1080} height={1080} fetchPriority={secondary ? undefined : "high"} decoding="async" />;
+  return <img src={src} {...kathResponsiveImage(src, "(max-width: 700px) 92vw, 640px")} alt="" width={1080} height={1080} fetchPriority="high" decoding="async" />;
 }
 
 export function TazaHero({ menu, onSearch, onShare, onSelect }: { menu: StandaloneMenu; onSearch: () => void; onShare: () => void; onSelect: (product: StandaloneMenuProduct) => void }) {
   const available = menu.products.filter(product => product.available && product.images.length);
   const feature = available.find(product => product.name === "إسبريسو فاخر") || available[0];
-  const sweet = available.find(product => product.name === "ترايفل مانجو") || available.find(product => product.category === "الحلويات" && product.id !== feature?.id);
+  const cutout = feature?.images[0]?.url.includes("/taza-20261014/espresso-premium-4f24dc824d9a.webp") ?? false;
   return <section className={s.opening} aria-label={`مرحبًا في ${menu.name}`}>
     <header className={s.header}>
       <a href="#" aria-label={menu.name} className={s.brand}><TazaMark menu={menu} className={s.logo} /><span dir="ltr">TAZA COFFEE</span></a>
@@ -45,15 +50,12 @@ export function TazaHero({ menu, onSearch, onShare, onSelect }: { menu: Standalo
             <MenuServices menu={menu} offersTrigger />
           </nav>
         </div>
-        {feature && <div className={s.composition}>
-          <span className={s.orbit} aria-hidden="true" />
+        {feature && <div className={`${s.composition}${cutout ? ` ${s.cutout}` : ""}`}>
           <span className={s.photoNote} dir="ltr">TAZA COFFEE · A LITTLE DAILY RITUAL</span>
           <button type="button" className={s.feature} onClick={() => onSelect(feature)} aria-label={`اكتشف ${feature.name}`}>
-            <span className={s.photograph}><ProductPhoto product={feature} /></span>
+            <span className={s.photograph}><ProductPhoto product={feature} cutout={cutout} /></span>
             <span className={s.featureCaption}><span><small>بداية على مزاجك</small><strong>{feature.name}</strong></span><ArrowUpLeft aria-hidden="true" /></span>
           </button>
-          {sweet && <button type="button" className={s.sweet} onClick={() => onSelect(sweet)} aria-label={`اكتشف ${sweet.name}`}><ProductPhoto product={sweet} secondary /><span>{sweet.name}<ArrowUpLeft aria-hidden="true" /></span></button>}
-          <span className={s.seal} aria-hidden="true"><Coffee /><span>قهوة وحلا<br /><b>ولحظة لك</b></span></span>
         </div>}
       </div>
     </div>
