@@ -96,18 +96,30 @@ function useVisibleOffers(menu: StandaloneMenu) {
   return menu.highlights?.items.filter(offer => offer.showInSpotlight !== false && (offer.expiresAt == null || offer.expiresAt >= now)) ?? [];
 }
 
-function HeroPhoto({ product }: { product: StandaloneMenuProduct }) {
+/** Only the supplied studio artwork gets a tonal stage; later owner photos stay untouched. */
+export function deliProductVisual(product: StandaloneMenuProduct) {
+  const first = product.images[0];
+  const suppliedStudio = Boolean(first && /(?:\/deli-20261015\/dish-|\/deli-cake\/dishes\/dish-)/.test(first.url));
+  const image = suppliedStudio && product.images[1] ? product.images[1] : first;
+  return { image, studio: suppliedStudio && image === first };
+}
+
+export function DeliProductImage({ product, priority = false, hero = false }: { product: StandaloneMenuProduct; priority?: boolean; hero?: boolean }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const original = product.images[0].url;
-  const responsive = failedSrc === original ? null : kathResponsiveImage(original, "(max-width: 700px) 65vw, 520px");
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={original} {...responsive} alt="" width={800} height={800} fetchPriority="high" decoding="async" onError={() => { if (responsive) setFailedSrc(original); }} />;
+  const { image, studio } = deliProductVisual(product);
+  if (!image) return <span className={s.imageSurface} aria-label={product.name} role="img"><Coffee aria-hidden="true" /></span>;
+  const original = image.url;
+  const responsive = failedSrc === original ? null : kathResponsiveImage(original, hero ? "(max-width: 700px) 90vw, 640px" : "(max-width: 700px) 50vw, 420px");
+  return <span className={`${s.imageSurface}${studio ? ` ${s.studio}` : ` ${s.photograph}`}`}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={original} {...responsive} alt={product.name} width={800} height={800} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" onError={() => { if (responsive) setFailedSrc(original); }} />
+  </span>;
 }
 
 export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: StandaloneMenu; onShare: () => void; onSearch: () => void; onSelect: (product: StandaloneMenuProduct) => void }) {
   const offers = useVisibleOffers(menu);
   const photographed = menu.products.filter(product => product.available && product.images[0]);
-  const feature = photographed.find(product => /حلو|كيك|تشيز|سويس|cake|dessert/i.test(`${product.category} ${product.name}`)) || photographed[0];
+  const feature = photographed.find(product => /دولتشي|بيكان/.test(product.name)) || photographed.find(product => /حلو|كيك|تشيز|سويس|cake|dessert/i.test(`${product.category} ${product.name}`)) || photographed[0];
   return <section className={s.opening} aria-label={`مرحبًا في ${menu.name}`}>
     <header className={s.header}>
       <a href="#" className={s.brand} aria-label={menu.name}><DeliMark menu={menu} className={s.logo} /></a>
@@ -129,7 +141,7 @@ export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: Standalo
         <span className={s.handwritten} dir="ltr" aria-hidden="true">A little sweetness</span>
         <button type="button" className={s.feature} onClick={() => onSelect(feature)} aria-label={`اكتشف ${feature.name}`}>
           <span className={s.plate}>
-            <HeroPhoto product={feature} />
+            <DeliProductImage product={feature} priority hero />
           </span>
           <span className={s.featureCaption}><span><small>من منيو ديلي</small><strong>{menuDisplayText(feature.name)}</strong></span><ArrowUpLeft aria-hidden="true" /></span>
         </button>

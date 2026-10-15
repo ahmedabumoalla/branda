@@ -24,7 +24,7 @@ import { ShahiHero, ShahiLoyalty, ShahiClosing } from "./shahi-menu-scenes";
 import taza from "./taza-menu.module.css";
 import { TazaHero, TazaLoyalty, TazaClosing } from "./taza-menu-scenes";
 import deli from "./deli-menu.module.css";
-import { DeliBackground, DeliHero, DeliLoyalty, DeliOffers, DeliOrigins, DeliClosing } from "./deli-menu-scenes";
+import { DeliBackground, DeliHero, DeliLoyalty, DeliOffers, DeliOrigins, DeliClosing, DeliProductImage } from "./deli-menu-scenes";
 
 const KathImages = createContext(false);
 
@@ -128,10 +128,10 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-function ProductDetails({ product, products, close, browse, position, total }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number }) {
+function ProductDetails({ product, products, close, browse, position, total, brandSlug }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [mediaIndex, setMediaIndex] = useState(0);
+  const [mediaIndex, setMediaIndex] = useState(brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
   const media = [...product.videos.map((item) => ({ ...item, type: "video" as const })), ...product.images.map((item) => ({ ...item, type: "image" as const }))];
   const current = media[mediaIndex];
   useEffect(() => {
@@ -153,10 +153,10 @@ function ProductDetails({ product, products, close, browse, position, total }: {
     onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
     <div className={s.dialogInner}>
       <button type="button" className={s.close} onClick={close} aria-label="إغلاق تفاصيل المنتج" autoFocus><X aria-hidden="true" /></button>
-      <div className={s.detailMedia}>
+      <div className={s.detailMedia} data-deli-part={brandSlug === "delicake" ? "detail-media" : undefined}>
         <span className={s.dishWatermark} aria-hidden="true">{product.category}</span>
         <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={current?.url ?? product.id} className={s.detailPhotoFrame}
+        <motion.div key={current?.url ?? product.id} className={s.detailPhotoFrame} data-deli-studio={brandSlug === "delicake" && current?.url.includes("/deli-20261015/dish-") || undefined}
           initial={{ opacity: 0, scale: reduce ? 1 : menuMotion.scale.photo }} animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }} transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}>
         {current?.type === "video" ? <FoodVideo key={current.url} src={current.url} alt={current.alt} poster={product.images[0]?.url} />
@@ -291,7 +291,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   }
 
   return <KathImages.Provider value={isCustomEditorial}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isCustomEditorial ? ` ${kath.theme}` : ""}${isShahi ? ` ${majlis.theme}` : ""}${isTaza ? ` ${taza.theme}` : ""}${isDeli ? ` ${deli.theme}` : ""}`} dir="rtl"
-    style={isCustomEditorial ? { "--product-image-background": "#fff" } as CSSProperties : undefined}>
+    style={isCustomEditorial ? { "--product-image-background": isDeli ? "#c7c4a5" : "#fff" } as CSSProperties : undefined}>
     {isDeli && <DeliBackground />}
     <a href={isEditorial ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
     {isDeli ? <DeliHero menu={menu} onSelect={setSelected} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isTaza ? <TazaHero menu={menu} onSelect={setSelected} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isShahi ? <ShahiHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
@@ -324,20 +324,20 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
         <div><p className={s.rastEyebrow}>قائمة {isCustomEditorial ? editorialBrand(menu.slug).name : "مقهى الكواكب"}</p><h2>وش يكمّل <span>مزاجك؟</span></h2></div>
         <p>{isShahi ? "من أول رشفة لآخر لقمة" : "من أول قهوة لآخر لقمة"}<br />اختَر لحظتك المفضّلة</p>
       </div>}
-      <div className={s.toolbar}>
-        <LayoutGroup id={`menu-categories-${menu.slug}`}><nav className={`${s.categories}${isShahi ? ` ${majlis.categories}` : ""}`} aria-label="أقسام المنيو">
+      <div className={s.toolbar} data-deli-part={isDeli ? "toolbar" : undefined}>
+        <LayoutGroup id={`menu-categories-${menu.slug}`}><nav className={`${s.categories}${isShahi ? ` ${majlis.categories}` : ""}`} aria-label="أقسام المنيو" data-deli-part={isDeli ? "categories" : undefined}>
           {[{ id: "all", name: "الكل" }, ...categories].map((item) => <button type="button" key={item.id} aria-pressed={category === item.id} onClick={() => selectCategory(item.id)}>
             {category === item.id && <motion.span className={s.activeCategory} layoutId={reduce ? undefined : "active-category"} initial={false} transition={reduce ? { duration: 0 } : menuSprings.snappy} />}
             <CategoryIcon name={menuDisplayText(item.name)} all={item.id === "all"} />
             <span className={s.categoryLabel}>{menuDisplayText(item.name)} <small>{item.id === "all" ? menu.products.length : menu.products.filter((product) => (product.categoryId || "uncategorized") === item.id).length}</small></span>
           </button>)}
         </nav></LayoutGroup>
-        <div className={`${s.tools}${isCustomEditorial ? ` ${kath.compactTools}` : ""}`}>
-          <label className={`${s.search}${isCustomEditorial ? ` ${kath.compactSearch}` : ""}`}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isCustomEditorial ? "ابحث عن صنف" : "ما الذي تشتهيه اليوم؟"} aria-label="ابحث في الأصناف والمكونات" /></label>
-          <button className={`${s.filterToggle}${isCustomEditorial ? ` ${kath.compactFilter}` : ""}`} type="button" aria-label={isCustomEditorial ? availableOnly || priceOrder !== "original" ? "تصفية الأصناف مفعلة" : "تصفية الأصناف" : undefined} aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
-          {isCustomEditorial && <div className={`${s.viewSwitch} ${kath.compactViews}`} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" title="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
+        <div className={`${s.tools}${isCustomEditorial ? ` ${kath.compactTools}` : ""}`} data-deli-part={isDeli ? "tools" : undefined}>
+          <label data-deli-part={isDeli ? "search" : undefined} className={`${s.search}${isCustomEditorial ? ` ${kath.compactSearch}` : ""}`}><Search size={18} aria-hidden="true" /><input ref={searchInput} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isCustomEditorial ? "ابحث عن صنف" : "ما الذي تشتهيه اليوم؟"} aria-label="ابحث في الأصناف والمكونات" /></label>
+          <button data-deli-part={isDeli ? "filter" : undefined} className={`${s.filterToggle}${isCustomEditorial ? ` ${kath.compactFilter}` : ""}`} type="button" aria-label={isCustomEditorial ? availableOnly || priceOrder !== "original" ? "تصفية الأصناف مفعلة" : "تصفية الأصناف" : undefined} aria-expanded={filterOpen} aria-controls="menu-filters" onClick={() => setFilterOpen(!filterOpen)}><SlidersHorizontal aria-hidden="true" /><span>تصفية{(availableOnly || priceOrder !== "original") && <span aria-label="تصفية مفعلة"> ✓</span>}</span></button>
+          {isCustomEditorial && <div data-deli-part={isDeli ? "views" : undefined} className={`${s.viewSwitch} ${kath.compactViews}`} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الشبكة" title="عرض الشبكة" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" title="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
         </div>
-        {filterOpen && <div id="menu-filters" className={s.filterPanel}>
+        {filterOpen && <div id="menu-filters" data-deli-part={isDeli ? "filters" : undefined} className={s.filterPanel}>
           <label><input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} />المتوفر حاليًا فقط</label>
           <label>ترتيب الأصناف<select value={priceOrder} onChange={(event) => setPriceOrder(event.target.value as typeof priceOrder)}><option value="original">ترتيب المنيو</option><option value="asc">الأقل سعرًا داخل القسم</option><option value="desc">الأعلى سعرًا داخل القسم</option></select></label>
           {!isCustomEditorial && <div className={s.viewSwitch} role="group" aria-label="طريقة عرض المنيو"><button type="button" aria-label="عرض الصور" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={18} aria-hidden="true" /></button><button type="button" aria-label="عرض القائمة" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={20} aria-hidden="true" /></button></div>}
@@ -346,7 +346,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       </div>
       <p className={query ? s.resultCount : s.screenReaderOnly} role="status">{query ? `${visible.length} نتيجة بحث` : `${visible.length} صنفًا`}</p>
       {sections.map((section, sectionIndex) => <section key={section.id} className={`${s.categorySection}${isShahi ? ` ${majlis.categorySection}` : ""}`} aria-labelledby={`category-${section.id}`}>
-        <div className={`${s.sectionHeading}${isShahi ? ` ${majlis.sectionHeading}` : ""}`}><h2 id={`category-${section.id}`}>{menuDisplayText(section.name)}<small>{section.products.length}</small></h2>
+        <div data-deli-part={isDeli ? "section-heading" : undefined} className={`${s.sectionHeading}${isShahi ? ` ${majlis.sectionHeading}` : ""}`}><h2 id={`category-${section.id}`}>{menuDisplayText(section.name)}<small>{section.products.length}</small></h2>
           {section.description && <details className={s.categoryDescription}><summary aria-label={`عن قسم ${menuDisplayText(section.name)}`}>عن القسم</summary><p>{menuDisplayText(section.description)}</p></details>}
         </div>
         <div className={`${s.productGrid} ${view === "list" ? s.listView : ""}${isShahi ? ` ${majlis.productGrid}${view === "list" ? ` ${majlis.listView}` : ""}` : ""}${isTaza ? ` ${taza.productGrid}${view === "list" ? ` ${taza.listView}` : ""}` : ""}${isDeli ? ` ${deli.productGrid}${view === "list" ? ` ${deli.listView}` : ""}` : ""}`}>
@@ -358,16 +358,16 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
             </div>}
             <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}${isDeli ? ` ${deli.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`} aria-describedby={product.offers?.length || (product.available && product.promo && isPromoActive(product.promo)) ? `product-offers-${product.id}` : undefined}>
               {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}${isDeli ? ` ${deli.productImage}` : ""}`} data-dish-photo>
-                <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />
+                {isDeli ? <DeliProductImage product={product} priority={sectionIndex === 0 && productIndex < 2} /> : <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />}
                 <ProductOfferBadge product={product} products={menu.products} />
                 {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
-                <span className={s.imageArrow} aria-hidden="true"><ArrowUpLeft size={19} /></span>
+                <span className={s.imageArrow} data-deli-part={isDeli ? "image-arrow" : undefined} aria-hidden="true"><ArrowUpLeft size={19} /></span>
               </div>}
               <div className={`${s.productBody}${isShahi ? ` ${majlis.productBody}` : ""}${isTaza ? ` ${taza.productBody}` : ""}${isDeli ? ` ${deli.productBody}` : ""}`}>
                 <div className={s.productName}><h3 dir="auto">{menuDisplayText(product.name)}</h3></div>
                 {product.description && <p className={s.productDescription} dir="auto">{menuDisplayText(product.description)}</p>}
                 <ProductOfferDetails product={product} products={menu.products} />
-                <div className={s.productMeta}>{product.calories != null && <span><Flame size={13} aria-hidden="true" />{product.calories} سعرة</span>}<Price product={product} /></div>
+                <div className={s.productMeta} data-deli-part={isDeli ? "meta" : undefined}>{isDeli && <span className={deli.detailHint}>اكتشف التفاصيل<ArrowUpLeft aria-hidden="true" /></span>}{product.calories != null && <span><Flame size={13} aria-hidden="true" />{product.calories} سعرة</span>}<Price product={product} /></div>
               </div>
             </button>
           </DishMotion>)}
@@ -391,6 +391,6 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
       </a></div>
     </footer>
     {shareMessage && <div className={s.toast} role="status"><Check size={18} aria-hidden="true" />{shareMessage}</div>}
-    <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} products={menu.products} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
+    <AnimatePresence mode="wait">{selected && <ProductDetails brandSlug={menu.slug} key={selected.id} product={menu.products.find((product) => product.id === selected.id) ?? selected} products={menu.products} close={() => setSelected(null)} browse={browseDish} position={browseProducts.findIndex((product) => product.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main></KathImages.Provider>;
 }

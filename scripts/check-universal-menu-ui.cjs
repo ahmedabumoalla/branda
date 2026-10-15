@@ -101,6 +101,11 @@ if(process.env.TAZA_LIVE_FIXTURE) {
   console.log(`PASS Taza live fixture: ${live.products.length} products, own identity, dashboard updates, service gates and empty states`);
 }
 const deli={...base,slug:'delicake',name:'DeliCake',logoUrl:'/deli-cake/logo.webp',products:[{...product,price:0,name:'إسبريسو فريدو',images:[{url:'https://images.test/deli.webp',alt:'إسبريسو فريدو'}]}]};
+const {deliProductVisual}=load('components/menu/deli-menu-scenes.tsx');
+const studio={url:'/deli-cake/dishes/dish-04.webp',alt:'Studio'},gallery={url:'/deli-cake/photos/DSC_2747.webp',alt:'Gallery'},owner={url:'/owner-new-photo.webp',alt:'Owner'};
+assert.deepEqual(deliProductVisual({...product,images:[studio,gallery]}),{image:gallery,studio:false},'Use the supplied lifestyle photograph when present');
+assert.deepEqual(deliProductVisual({...product,images:[studio]}),{image:studio,studio:true},'Only supplied studio artwork receives the tonal stage');
+assert.deepEqual(deliProductVisual({...product,images:[owner,gallery]}),{image:owner,studio:false},'Future owner cover photos retain priority and original colors');
 html=render(deli);
 assert(html.includes('منيو ديلي كيك')&&html.includes('background-poster.webp'));
 assert(html.includes('إسبريسو فريدو')&&html.includes('>0</b>'),'Owner-approved zero price remains visible');

@@ -2,10 +2,11 @@
 
 2026-10-15 — an Arabic patisserie menu with the supplied identity, actual photography and a continuous film backdrop
 
-- Identity: olive `#343923`, muted olive `#787352`, cream `#F8EBDD`, burgundy `#6C1510` from the client's guideline. Cream is required by this identity, not an unrelated template choice
+- Identity: olive `#343923`, muted olive `#787352`, cream `#F8EBDD`, burgundy `#6C1510` from the client's guideline. After the user's card review, olive is the dominant surface, burgundy marks selections and cream is reserved for readable text and original artwork
 - Typography: local Bistro Arabic (Tajawal) for the expressive Arabic headlines, existing Bistro Sans for navigation and data, restrained Georgia italic for English accents. The guideline names Lyon Arabic Display but no licensed font files were supplied; no substitution is claimed to be that font
 - Composition: compact logo/services header → Arabic headline beside a dessert photograph on a framed patisserie display → loyalty entry where entitled → actual active offers → existing searchable catalog → original coffee-origin cards → a quiet brand closing
-- Signature: a burgundy seal beside actual dessert photography, with the client's films playing behind a translucent cream veil throughout the menu
+- Signature: a burgundy seal beside actual dessert photography, with the client's films playing behind a translucent deep olive veil throughout the menu
+- Product display: matching supplied lifestyle galleries lead nine products; remaining supplied studio images blend into sage stages using CSS, without modifying source assets. Future owner cover uploads retain priority and original colors. Dark olive cards, clearer prices, integrated category counts and icons, full-width search and distinct filter/layout controls
 - Film behavior: only the current MP4 is requested, advancing through three films on ended; silent inline playback, visible pause/play, poster fallback, hidden-page pause, reduced-motion/data-saving default off, explicit play available
 - Motion: short opening reveal and existing product motion; no autoplay animation for reduced motion. Product browsing, keyboard focus, touch targets and readable card surfaces take priority
 - Loyalty: the existing entitlement route only; no invented stamps, gifts or enabled program. Owner-managed logo, contacts, products and promotions remain authoritative
