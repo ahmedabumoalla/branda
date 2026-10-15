@@ -15,10 +15,10 @@
 .filmControl { position: fixed; inset: auto auto max(14px, env(safe-area-inset-bottom)) 14px; z-index: 12; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 9px 14px; border: 1px solid var(--deli-line); border-radius: 28px; background: #343923; color: var(--deli-cream); box-shadow: 0 4px 20px #34392314; cursor: pointer; }
 .filmControl span { font-size: 11px; }.filmControl svg { width: 15px; height: 15px; }
 .opening { position: relative; max-width: 1440px; margin: auto; }
-.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 116px; padding: 12px 5%; border-bottom: 1px solid var(--deli-line); }
-.brand { flex-shrink: 0; isolation: isolate; }.logo { display: block; width: 200px; height: 176px; object-fit: contain; }
-/* Light follows the transparent mark, preserving its original olive and burgundy pixels */
-.logo, .cardLogo, .closingLogo { background: transparent; border-radius: 0; padding: 0; mix-blend-mode: normal; filter: drop-shadow(0 0 1px #f8ebdd) drop-shadow(0 0 2px #f8ebddcc) drop-shadow(0 0 12px #e2cba566); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 244px; padding: 12px 5%; background: linear-gradient(180deg, #192014f5 0%, #192014d9 72%, #19201400 100%); }
+.brand { flex-shrink: 0; isolation: isolate; }.logo { display: block; width: 180px; height: 220px; object-fit: contain; }
+/* Use the approved light vector artwork itself: no halo, outline or color filter */
+.logo, .cardLogo, .closingLogo { background: transparent; border-radius: 0; padding: 0; mix-blend-mode: normal; filter: none; }
 .headerNote { display: flex; flex-direction: column; gap: 9px; text-align: center; font-size: 12px; margin: 0; }.headerNote span { font-size: 9px; letter-spacing: .26em; }
 .actions { display: flex; gap: 8px; align-items: center; }.actions > button { width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #343923b3; color: var(--deli-cream); border: 1px solid var(--deli-line); transition: background .2s, color .2s; }.actions > button:hover { background: var(--deli-olive); color: var(--deli-cream); }.actions svg { width: 18px; height: 18px; }
 .hero { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 5%; max-width: 1260px; min-height: 640px; margin: auto; padding: 66px 5% 72px; }
@@ -84,7 +84,7 @@
 }
 @media (max-width: 1000px) { .hero { min-height: 560px; }.heroCopy h1 { font-size: 54px; }.seal { width: 88px; height: 88px; left: -12px; font-size: 12px; }.memberLink { gap: 20px; padding: 20px; }.memberCopy strong { font-size: 21px; }.memberAction { gap: 12px; }.closingNote { display: none; } }
 @media (max-width: 700px) {
-  .header { min-height: 164px; padding: 7px 18px; gap: 8px; }.logo { width: clamp(132px, 40vw, 160px); height: 150px; }.headerNote { display: none; }.actions { gap: 6px; }
+  .header { min-height: 214px; padding: 7px 18px; gap: 8px; }.logo { width: clamp(132px, 40vw, 160px); height: 200px; }.headerNote { display: none; }.actions { gap: 6px; }
   .hero { min-height: 0; grid-template-columns: 1fr; padding: 30px 24px 34px; gap: 28px; }.heroCopy h1 { font-size: clamp(37px, 9.5vw, 51px); line-height: 1.22; }.eyebrow { margin-bottom: 14px; font-size: 11px; }.heroDescription { margin-top: 15px; font-size: 13px; line-height: 1.8; }.explore { margin-top: 18px; min-height: 48px; font-size: 13px; gap: 35px; }.heroLinks { margin-top: 6px; }.heroLinks a { font-size: 11px; }
   .confection { width: 76%; max-width: 340px; justify-self: center; padding: 16px 0 0; margin-top: 6px; }.handwritten { font-size: 20px; top: -14px; inset-inline-start: 5px; }.plate { padding: 8px; }.seal { width: 76px; height: 76px; left: -32px; top: 24%; font-size: 10px; border-width: 4px; }.seal > span { font-size: 6px; margin-top: 2px; }.featureCaption { padding: 15px 7px 0; }.featureCaption strong { font-size: 14px; }.featureCaption small { font-size: 9px; }.featureCaption > svg { width: 34px; height: 34px; padding: 8px; }
   .signature { padding: 7px 20px; font-size: 11px; gap: 12px; }.signatureEnglish { display: none; }.withoutImage { min-height: 0; }

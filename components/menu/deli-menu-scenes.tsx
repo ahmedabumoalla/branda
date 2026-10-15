@@ -79,8 +79,12 @@ export function DeliBackground() {
 }
 
 function DeliMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
+  // The supplied light vector lockup replaces only the known damaged processed logo
+  const originalLogo = !menu.logoUrl || menu.logoUrl === "/deli-cake/logo.webp"
+    || menu.logoUrl.includes("/processed-logos/v1-229f2465fe74ea4776aa1eccd2e0cdb5be6e60d490f7a6d5c363b9a2632d62f6.webp")
+    || menu.logoUrl.includes("/deli-20261015/logo-7c0b3589e4f3.webp");
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={menu.logoUrl || "/deli-cake/logo.webp"} alt={menu.name} width={240} height={150} className={className} decoding="async" />;
+  return <img src={originalLogo ? "/deli-cake/logo-official-light-v2.svg" : menu.logoUrl!} alt={menu.name} width={128} height={200} className={className} decoding="async" />;
 }
 
 function useVisibleOffers(menu: StandaloneMenu) {

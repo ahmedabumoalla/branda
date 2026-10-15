@@ -112,6 +112,7 @@ assert.deepEqual(deliProductVisual({...product,images:[studio,gallery]}),{image:
 assert.deepEqual(deliProductVisual({...product,images:[studio]}),{image:studio,studio:true},'Only supplied studio artwork receives the tonal stage');
 assert.deepEqual(deliProductVisual({...product,images:[owner,gallery]}),{image:owner,studio:false},'Future owner cover photos retain priority and original colors');
 html=render(deli);
+assert(html.includes('/deli-cake/logo-official-light-v2.svg'),'Deli uses its approved vector logo instead of the damaged processed bitmap');
 assert(html.includes('منيو ديلي كيك')&&html.includes('background-poster.webp'));
 assert(html.includes('إسبريسو فريدو')&&html.includes('>0</b>'),'Owner-approved zero price remains visible');
 assert(!html.includes('id="deli-offers"')&&!html.includes('/loyalty/'),'No fabricated campaign or unavailable loyalty service');
@@ -122,6 +123,7 @@ html=render({...deli,loyaltyEnabled:true,highlights:{asOf:Date.now(),items:[acti
 assert(html.includes('/loyalty/delicake?source=menu')&&html.includes('id="deli-offers"')&&html.includes('BRAND20'));
 html=render({...deli,logoUrl:'/updated-deli-logo.webp',products:[{...product,name:'Owner Deli update',price:29}]});
 assert(html.includes('/updated-deli-logo.webp')&&html.includes('Owner Deli update')&&html.includes('29'),'Owner changes reach the designed menu');
+assert(!html.includes('/deli-cake/logo-official-light-v2.svg'),'A future owner logo is not replaced by the original derived asset');
 html=render({...deli,products:[]});assert(html.includes('قائمتنا قيد التحضير')&&!html.includes('id="deli-offers"'));
 html=render({...deli,highlights:{asOf:Date.now(),items:[{...active,expiresAt:1}]}});assert(!html.includes('id="deli-offers"'),'Expired offers are not promoted');
 if(process.env.DELI_LIVE_FIXTURE) {
