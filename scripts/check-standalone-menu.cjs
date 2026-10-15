@@ -76,6 +76,13 @@ function loader(client, features = ["menu"]) {
 }
 
 async function run() {
+  const deli = fakeClient({slug:'delicake'});
+  assert.equal(await loader(deli.client,[])('delicake'),null);
+  assert.equal(deli.signedPaths.length,0,'Deli media remains behind current package authorization');
+  assert.equal((await loader(deli.client)('delicake')).products.length,1);
+  assert(deli.signedPaths.includes(imagePath));
+  const foreignDeli=fakeClient({slug:'delicake',products:[{...fixtureProduct,image_storage_path:'other/secret.webp',media:[]}]});
+  await loader(foreignDeli.client)('delicake');assert.equal(foreignDeli.signedPaths.length,0,'Deli never signs another tenant asset');
   const kath = fakeClient({slug:'kat-coffe'});
   assert.equal(await loader(kath.client,[])('kat-coffe'),null);
   assert.equal(kath.signedPaths.length,0,'cached media must remain behind current package authorization');

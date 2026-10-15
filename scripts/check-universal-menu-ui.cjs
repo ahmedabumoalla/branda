@@ -100,6 +100,28 @@ if(process.env.TAZA_LIVE_FIXTURE) {
   assert(html.includes('srcSet=')&&html.includes('loading="lazy"'));
   console.log(`PASS Taza live fixture: ${live.products.length} products, own identity, dashboard updates, service gates and empty states`);
 }
+const deli={...base,slug:'delicake',name:'DeliCake',logoUrl:'/deli-cake/logo.webp',products:[{...product,price:0,name:'إسبريسو فريدو',images:[{url:'https://images.test/deli.webp',alt:'إسبريسو فريدو'}]}]};
+html=render(deli);
+assert(html.includes('منيو ديلي كيك')&&html.includes('background-poster.webp'));
+assert(html.includes('إسبريسو فريدو')&&html.includes('>0</b>'),'Owner-approved zero price remains visible');
+assert(!html.includes('id="deli-offers"')&&!html.includes('/loyalty/'),'No fabricated campaign or unavailable loyalty service');
+assert(!/KAWAKIB|TAZA|KATH|شاهي وهيل|مقهى الكواكب/.test(html),'Deli has its own identity');
+assert.equal((html.match(/<details/g)||[]).length,4,'Four accessible coffee origin cards');
+assert(html.includes('تشغيل فيديو الخلفية')&&html.includes('preload="none"')&&!html.includes('src="/deli-cake/background-01.mp4"'),'SSR does not force video downloads before preferences are known');
+html=render({...deli,loyaltyEnabled:true,highlights:{asOf:Date.now(),items:[active]}});
+assert(html.includes('/loyalty/delicake?source=menu')&&html.includes('id="deli-offers"')&&html.includes('BRAND20'));
+html=render({...deli,logoUrl:'/updated-deli-logo.webp',products:[{...product,name:'Owner Deli update',price:29}]});
+assert(html.includes('/updated-deli-logo.webp')&&html.includes('Owner Deli update')&&html.includes('29'),'Owner changes reach the designed menu');
+html=render({...deli,products:[]});assert(html.includes('قائمتنا قيد التحضير')&&!html.includes('id="deli-offers"'));
+html=render({...deli,highlights:{asOf:Date.now(),items:[{...active,expiresAt:1}]}});assert(!html.includes('id="deli-offers"'),'Expired offers are not promoted');
+if(process.env.DELI_LIVE_FIXTURE) {
+  const live=JSON.parse(fs.readFileSync(process.env.DELI_LIVE_FIXTURE,'utf8'));assert.equal(live.slug,'delicake');html=render(live);
+  assert.equal((html.match(/aria-label="عرض تفاصيل /g)||[]).length,live.products.length);
+  for(const product of live.products)assert(html.includes(`data-product-id="${product.id}"`));
+  assert(html.includes('srcSet=')&&html.includes('loading="lazy"'));
+  console.log(`PASS Deli live fixture: ${live.products.length} products, source prices, independent identity and gated services`);
+}
+console.log('PASS Deli video fallback, origin cards, real offers, zero pricing, owner updates and empty states');
 if(process.env.SHAHI_LIVE_FIXTURE) {
   const live=JSON.parse(fs.readFileSync(process.env.SHAHI_LIVE_FIXTURE,'utf8'));
   assert.equal(live.slug,'shahi-w-hail');html=render(live);
@@ -111,8 +133,8 @@ if(process.env.SHAHI_LIVE_FIXTURE) {
 if(process.env.MENU_BASELINE_FILE) {
   const {BistroMenu:Previous}=load('components/menu/bistro-menu.tsx',{'components/menu/bistro-menu.tsx':fs.readFileSync(process.env.MENU_BASELINE_FILE,'utf8')});
   const withoutCredit=html=>html.replace(/<a[^>]*class="platformCredit"[\s\S]*?<\/a>|<span>بواسطة <b>برندة<\/b><\/span>/g,'BRANDA_CREDIT');
-  for(const slug of ['basilico','new-brand','double-b-bistro','rast','kat-coffe']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(withoutCredit(render(menu)),withoutCredit(previous),`Preserve ${slug} full menu markup except requested shared credit with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
-  console.log('PASS ten standalone menu SSR baselines unchanged outside the requested shared footer credit');
+  for(const slug of ['basilico','new-brand','double-b-bistro','rast','kat-coffe','shahi-w-hail','taza']) for(const fixture of [base,enabled]) {const menu={...fixture,slug};hook=0;const previous=renderToStaticMarkup(React.createElement(Previous,{menu}));assert.equal(withoutCredit(render(menu)),withoutCredit(previous),`Preserve ${slug} full menu markup except requested shared credit with optional services ${Boolean(fixture.loyaltyEnabled)}`);}
+  console.log('PASS fourteen standalone menu SSR baselines unchanged outside the requested shared footer credit');
 }
 console.log('PASS universal menu service gates own-brand links offers expiry event details existing layout and published pricing');
 console.log('PASS Kath editorial identity, own loyalty gates, dashboard data replacement and empty catalog');

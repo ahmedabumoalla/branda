@@ -1,0 +1,958 @@
+{
+  "brand": "DeliCake",
+  "slug": "delicake",
+  "preparedDate": "2026-10-15",
+  "palette": {
+    "olive": "#343923",
+    "mutedOlive": "#787352",
+    "cream": "#F8EBDD",
+    "burgundy": "#6C1510"
+  },
+  "typography": {
+    "specified": "Lyon Arabic Display",
+    "weights": [
+      "Regular",
+      "Medium",
+      "Bold"
+    ],
+    "fontFilesSupplied": false
+  },
+  "logo": "/deli-cake/logo.webp",
+  "logoNote": "Official supplied logo PDF lower-left lockup extracted with original cream background",
+  "backgroundVideos": [
+    {
+      "path": "/deli-cake/background-01.mp4",
+      "sourceBytes": 88889989,
+      "bytes": 1417623,
+      "sha256": "9b6d1818e6a24512f0db9cd8ab003feb1dfe6784e3743a9cff773846f008c443"
+    },
+    {
+      "path": "/deli-cake/background-02.mp4",
+      "sourceBytes": 55948740,
+      "bytes": 1099682,
+      "sha256": "ab6b799a7ef88d74caea84f475f3d50efd0ac7aa70063f82083ca17d2811612b"
+    },
+    {
+      "path": "/deli-cake/background-03.mp4",
+      "sourceBytes": 98645494,
+      "bytes": 3824443,
+      "sha256": "fdc147cc6de39aac15413ddfbda74c232f18c2bd8504cdb4d196fcce0557ca6a"
+    }
+  ],
+  "backgroundPoster": "/deli-cake/background-poster.webp",
+  "products": [
+    {
+      "key": "cheesecake",
+      "name": "تشيز كيك",
+      "category": "حلويات",
+      "price": 23,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-04.webp",
+      "flavors": [
+        "بيكان",
+        "مانجو",
+        "توت"
+      ],
+      "sortOrder": 1,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2747.webp",
+        "/deli-cake/photos/DSC_2749.webp",
+        "/deli-cake/photos/DSC_2751.webp",
+        "/deli-cake/photos/DSC_2753.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "swiss-roll",
+      "name": "سويسرول",
+      "category": "حلويات",
+      "price": 15,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-06.webp",
+      "flavors": [
+        "توت",
+        "مانجو"
+      ],
+      "sortOrder": 2,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2756.webp",
+        "/deli-cake/photos/DSC_2758.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "english-marble",
+      "name": "إنقلش كيك ماربل",
+      "category": "حلويات",
+      "price": 9,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-05.webp",
+      "flavors": [],
+      "sortOrder": 3,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "dolce-pecan",
+      "name": "دولتشي بيكان",
+      "category": "حلويات",
+      "price": 22,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-01.webp",
+      "flavors": [],
+      "sortOrder": 4,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2779.webp",
+        "/deli-cake/photos/DSC_2783.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "london-cake",
+      "name": "كيكة لندن",
+      "category": "حلويات",
+      "price": 25,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-07.webp",
+      "flavors": [],
+      "sortOrder": 5,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2765.webp",
+        "/deli-cake/photos/DSC_2767.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "honey-cake",
+      "name": "كيكة العسل",
+      "category": "حلويات",
+      "price": 24,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-02.webp",
+      "flavors": [],
+      "sortOrder": 6,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2760.webp",
+        "/deli-cake/photos/DSC_2763.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "classic-cookie",
+      "name": "كوكيز كلاسيك",
+      "category": "حلويات",
+      "price": 9,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-08.webp",
+      "flavors": [],
+      "sortOrder": 7,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2785.webp",
+        "/deli-cake/photos/DSC_2787.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "brownie",
+      "name": "براونيز قطع",
+      "category": "حلويات",
+      "price": 10,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-03.webp",
+      "flavors": [],
+      "sortOrder": 8,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "crunchy-pudding",
+      "name": "بودينق كرانشي",
+      "category": "حلويات",
+      "price": 17,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-10.webp",
+      "flavors": [],
+      "sortOrder": 9,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "matcha-classic",
+      "name": "ماتشا كلاسيك",
+      "category": "المشروبات الباردة",
+      "price": 23,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-14.webp",
+      "flavors": [],
+      "sortOrder": 10,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "matcha-latte",
+      "name": "ماتشا لاتيه",
+      "category": "المشروبات الباردة",
+      "price": 22,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-11.webp",
+      "flavors": [],
+      "sortOrder": 11,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2813.webp",
+        "/deli-cake/photos/DSC_2820.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "matcha-blue",
+      "name": "ماتشا بلو",
+      "category": "المشروبات الباردة",
+      "price": 22,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-15.webp",
+      "flavors": [],
+      "sortOrder": 12,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2792.webp",
+        "/deli-cake/photos/DSC_2798.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "hibiscus",
+      "name": "كركديه",
+      "category": "المشروبات الباردة",
+      "price": 18,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-13.webp",
+      "flavors": [],
+      "sortOrder": 13,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": [
+        "/deli-cake/photos/DSC_2809.webp",
+        "/deli-cake/photos/DSC_2811.webp"
+      ],
+      "galleryEvidence": "Visually matched supplied photography to the corresponding supplied product artwork; flavor-specific identity is not asserted"
+    },
+    {
+      "key": "peach-tea",
+      "name": "آيس تي خوخ",
+      "category": "المشروبات الباردة",
+      "price": 17,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-12.webp",
+      "flavors": [],
+      "sortOrder": 14,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "espresso",
+      "name": "إسبريسو",
+      "category": "مشروبات القهوة",
+      "price": 11,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-16.webp",
+      "flavors": [],
+      "sortOrder": 15,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "espresso-freddo",
+      "name": "إسبريسو فريدو",
+      "category": "مشروبات القهوة",
+      "price": 0,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-17.webp",
+      "flavors": [],
+      "sortOrder": 16,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": "Artwork shows 0; user explicitly requested unclear prices remain 0 for owner editing",
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "v60-classic",
+      "name": "V60 كلاسيك",
+      "category": "مشروبات القهوة",
+      "price": 18,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-19.webp",
+      "flavors": [],
+      "sortOrder": 17,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": "Shared black-coffee image from supplied product pack; no distinct V60 photo supplied",
+      "galleryImages": []
+    },
+    {
+      "key": "v60-premium",
+      "name": "V60 فاخر",
+      "category": "مشروبات القهوة",
+      "price": 26,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-19.webp",
+      "flavors": [],
+      "sortOrder": 18,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": "Shared black-coffee image from supplied product pack; no distinct V60 photo supplied",
+      "galleryImages": []
+    },
+    {
+      "key": "daily-cold",
+      "name": "قهوة اليوم بارد",
+      "category": "مشروبات القهوة",
+      "price": 12,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-18.webp",
+      "flavors": [],
+      "sortOrder": 19,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    },
+    {
+      "key": "daily-hot",
+      "name": "قهوة اليوم حار",
+      "category": "مشروبات القهوة",
+      "price": 10,
+      "currency": "SAR",
+      "image": "/deli-cake/dishes/dish-19.webp",
+      "flavors": [],
+      "sortOrder": 20,
+      "priceSource": "User supplied menu artwork pages 06-08",
+      "priceNote": null,
+      "imageNote": null,
+      "galleryImages": []
+    }
+  ],
+  "extras": [
+    {
+      "name": "إضافة أي صوص",
+      "price": 3,
+      "source": "Menu artwork page06",
+      "scope": "Desserts",
+      "flavorsNotSpecified": true
+    }
+  ],
+  "unmappedDishImages": [
+    {
+      "path": "/deli-cake/dishes/dish-09.webp",
+      "reason": "Chocolate layered slice has no unambiguous separate name or price in supplied printed menu"
+    }
+  ],
+  "suppliedCards": {
+    "purpose": "Coffee origin and tasting information cards, not discount offers",
+    "paths": [
+      "/deli-cake/cards/cards-01.webp",
+      "/deli-cake/cards/cards-02.webp",
+      "/deli-cake/cards/cards-03.webp",
+      "/deli-cake/cards/cards-04.webp",
+      "/deli-cake/cards/cards-05.webp",
+      "/deli-cake/cards/cards-06.webp",
+      "/deli-cake/cards/cards-07.webp",
+      "/deli-cake/cards/cards-08.webp"
+    ]
+  },
+  "assets": [
+    {
+      "path": "/deli-cake/dishes/dish-01.webp",
+      "bytes": 54228,
+      "width": 1000,
+      "height": 571,
+      "sha256": "e4ce1cb840401aad172dbf8712e7fbece30005b9fb928f96e2512d4e35011478"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-02.webp",
+      "bytes": 44522,
+      "width": 1000,
+      "height": 571,
+      "sha256": "504630a62f61922d0dc1391f2305e5b29ee0412d1101883e7023c0bcd46f1724"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-03.webp",
+      "bytes": 30972,
+      "width": 1000,
+      "height": 571,
+      "sha256": "7bc3b5b35eb8de76c1aeb220bd6bfee234ca7be4ccb33a901e2f85be5cb3e34d"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-04.webp",
+      "bytes": 14706,
+      "width": 1000,
+      "height": 563,
+      "sha256": "a3d196f88a3d410f9f440c3762f925cb13d69d77d830ba11e26c4e2a0503853a"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-05.webp",
+      "bytes": 32416,
+      "width": 1000,
+      "height": 566,
+      "sha256": "4b4b42392c9d2be9897f4bc32f2ace9910eba52ba12578ab16758149c63cd017"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-06.webp",
+      "bytes": 34542,
+      "width": 1000,
+      "height": 571,
+      "sha256": "7a02ec632e00a7067eb7614afdbf0cf32bbf76d74026cfeb821156146e2d0103"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-07.webp",
+      "bytes": 20598,
+      "width": 1000,
+      "height": 571,
+      "sha256": "4a46808f46618e7f7e625281a0f23bdcab2d77c5be72312231629f7c339645e3"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-08.webp",
+      "bytes": 20524,
+      "width": 1000,
+      "height": 571,
+      "sha256": "e5a9831e992d5e42d5da0fac4d02640d1e16922744585acf3def6e30ba7884c7"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-09.webp",
+      "bytes": 23270,
+      "width": 1000,
+      "height": 571,
+      "sha256": "17123388e2bb06aaa15e188d0e635e0904886038229ff39fd207e05c5d5330c4"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-10.webp",
+      "bytes": 35736,
+      "width": 1000,
+      "height": 742,
+      "sha256": "b1b6915369d0679a31f0be5a5ea0f92833befd96c99cc5bad9f7e54a00f8b80c"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-11.webp",
+      "bytes": 62446,
+      "width": 1000,
+      "height": 1259,
+      "sha256": "888ceabda3e79068184efa239313f9abddeba01b62e64f061de3a100fdb2a125"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-12.webp",
+      "bytes": 53944,
+      "width": 1000,
+      "height": 1250,
+      "sha256": "449774e28b224a248e228a444c447d8353cea3d4ca5ea6937fd3e9c7fe9d16c9"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-13.webp",
+      "bytes": 80588,
+      "width": 1000,
+      "height": 1250,
+      "sha256": "dc12901a624e62f3ed9c3d7a707f7cf82cb5260ddf74f5a2d40c2be37477d7a8"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-14.webp",
+      "bytes": 47710,
+      "width": 1000,
+      "height": 1250,
+      "sha256": "72534e10b8b15f6fa0b8908b4a35d7b950eb7dcc9848d4670867842517e8c061"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-15.webp",
+      "bytes": 47836,
+      "width": 1000,
+      "height": 1250,
+      "sha256": "95af1d3005ee2eeccaba2a309d0a138249d33307831d25d1dd4ceaf171c39726"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-16.webp",
+      "bytes": 15860,
+      "width": 1000,
+      "height": 1000,
+      "sha256": "c9ea6289f9dfde1475564fbbf6826a0cc7b2588bd2aab5dd6b1740b5004fac2b"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-17.webp",
+      "bytes": 41438,
+      "width": 1000,
+      "height": 1000,
+      "sha256": "10090c3de8e1f88499a93235e3d3cf584215f030c0a6fe3ed8197a1bb9fe4c8f"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-18.webp",
+      "bytes": 65864,
+      "width": 1000,
+      "height": 1000,
+      "sha256": "93055028d4776b346e08b5df5abb6c37f49226e2c51eea87a09494b87222dcc5"
+    },
+    {
+      "path": "/deli-cake/dishes/dish-19.webp",
+      "bytes": 47650,
+      "width": 1000,
+      "height": 1000,
+      "sha256": "8aba67658557c60ba497617477f5341d7718df1c79c69363590ee5d54b9bec14"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2747.webp",
+      "bytes": 129258,
+      "width": 1400,
+      "height": 934,
+      "sha256": "cea02795bb431fe1660e416474a63e6fea35d824d50ca3acd105437553c4220a"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2749.webp",
+      "bytes": 185820,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "a6db4b655ceb2c7ab83ebb278ad3e64d5591fb39c30a305df62c4117080ef558"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2751.webp",
+      "bytes": 129610,
+      "width": 1400,
+      "height": 934,
+      "sha256": "ab48f18600a90157afbfed82b5cbecdb9ca969990023ce4db516accfcf2de023"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2753.webp",
+      "bytes": 199772,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "f69bdc96d5379e8e26d934d1e163ec4f0658a417f7e14a88d855f8aff26fdb3c"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2756.webp",
+      "bytes": 133048,
+      "width": 1400,
+      "height": 934,
+      "sha256": "39d8f0d5f7964b38f276a4b9f5700801188e52a6c6a81eab9089881c71681658"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2758.webp",
+      "bytes": 224916,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "9591bb4dc95c5f428c696770d3cb9c3177ca7cd6fd1b3a599fefa61ab9dfb6a5"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2760.webp",
+      "bytes": 158014,
+      "width": 1400,
+      "height": 934,
+      "sha256": "ed3835811aff2d404df413e4594fec811af2e4e5fd7d2ec1d5a251056eef8d09"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2763.webp",
+      "bytes": 259316,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "d4d78f6430fd1c7a72cdf1d0ecf88f685fac26c2c9cd34ffb153ef9cf28b50f7"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2765.webp",
+      "bytes": 133624,
+      "width": 1400,
+      "height": 934,
+      "sha256": "39d72e57f29652d0973536564dee533fe77b4774927263efc6cdea5cbc7d92e2"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2767.webp",
+      "bytes": 192864,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "f3329463a6ead9c4b38ae2f99a071f389d14a40cc7547f48545d203521fa70be"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2769.webp",
+      "bytes": 131636,
+      "width": 1400,
+      "height": 934,
+      "sha256": "f868b4dacd0007e31cf69f893d6e40b9fd33b6b9128aa6192aeb3c52269f4681"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2771.webp",
+      "bytes": 240178,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "7a5a64028a5c0d1456e2758a1222f9feed281cb573dc1687a61d96a2face676c"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2775.webp",
+      "bytes": 135384,
+      "width": 1400,
+      "height": 934,
+      "sha256": "740bc9b103ad90a67eab6355fad1bac973469790faf3750e268391ba54a16d66"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2777.webp",
+      "bytes": 217204,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "b3fc363fe6fa0b3e2feb4869e0f251a7dbb609beed1b617f1b051f622fd51ddf"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2779.webp",
+      "bytes": 130884,
+      "width": 1400,
+      "height": 934,
+      "sha256": "ee020ffc3af518c6770df22c835267188da0ccbdf35d25660c54b3c2b6a9fb2d"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2783.webp",
+      "bytes": 219788,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "5a023b332f218a6d1f17091316f77ec7ba7dcbb9bf91dd463731d3417bf66dba"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2785.webp",
+      "bytes": 125194,
+      "width": 1400,
+      "height": 934,
+      "sha256": "7e8e1f007f78c7dab706b0e1a8831e0acd1f28d4de6f56637ef58c84f790ff1d"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2787.webp",
+      "bytes": 205032,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "657e0aeb4894f857633ef4341582b454cccc28938ac79941cd91254042c59819"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2792.webp",
+      "bytes": 89810,
+      "width": 1400,
+      "height": 934,
+      "sha256": "c8b96202a01e0bafe55b3f1501ca599cb7a3da4a6c5a4fa2f54501a78665fb40"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2798.webp",
+      "bytes": 133526,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "bab4cdac94e0ce6c3349b1954279f36d84e4beb19eb6c08897683e26996b59dd"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2804.webp",
+      "bytes": 70328,
+      "width": 1400,
+      "height": 934,
+      "sha256": "17ef5b98ff251eeb2fbf6d8f6c9bc2c3ac2318d9303acb9b8e2f0ffc7f24c5db"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2806.webp",
+      "bytes": 116660,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "883b421a746f687fec9610ef812b769c610ae5a9601fe9090bb859d10843df70"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2809.webp",
+      "bytes": 73822,
+      "width": 1400,
+      "height": 934,
+      "sha256": "c16b86920410fa8301cfa2c6caece67579affc1a0074f62b071ced8e946c424e"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2811.webp",
+      "bytes": 128458,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "a126484be82a917ba5d29d6477d10858e1e7dab4f013c692e5fc71dac08dc30a"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2813.webp",
+      "bytes": 81350,
+      "width": 1400,
+      "height": 934,
+      "sha256": "7080bcafc1a892ced0bf4cc21fd1974190f87c9c1c733baddc97d0409897089b"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2820.webp",
+      "bytes": 126504,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "7c68946c7660b58f2093285f503731fe6b7954705d30eef017c59f900719190c"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2827.webp",
+      "bytes": 151122,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "5e152b31ec7fe41dc7bd9693f22b4729c50b8d3e6f017fa1d2352f15ff36a750"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2829.webp",
+      "bytes": 94584,
+      "width": 1400,
+      "height": 934,
+      "sha256": "3983980102db7b4d50d56f03ec023d734e003cdd88fe5b3f25bd18be48cc68a4"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2832.webp",
+      "bytes": 109572,
+      "width": 1400,
+      "height": 934,
+      "sha256": "48a836826d10a9d5dfa43d6b3ad26dfefa725dd86f0751eb779fc5d7c5b68f89"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2837.webp",
+      "bytes": 191034,
+      "width": 1400,
+      "height": 2098,
+      "sha256": "ec6d9f22782124645bcbc5fc1ca7ef18008cf0657957fc6e773d3153a79a39da"
+    },
+    {
+      "path": "/deli-cake/cards/cards-01.webp",
+      "bytes": 58514,
+      "width": 900,
+      "height": 1599,
+      "sha256": "13743b7ed0a9a7e11eb5a5ada81a2fa0f9e8eeca694fca9894b6e7a142d5b993",
+      "renderSource": "Official supplied cards PDF page 2 matching clipped card artwork, rendered from vector at 900px width"
+    },
+    {
+      "path": "/deli-cake/cards/cards-02.webp",
+      "bytes": 65098,
+      "width": 900,
+      "height": 1599,
+      "sha256": "73fb8eebcd93c9459ca30bdeec775520b7be48043e28ce147014c71ae4d551e0",
+      "renderSource": "Official supplied cards PDF page 2 matching clipped card artwork, rendered from vector at 900px width"
+    },
+    {
+      "path": "/deli-cake/cards/cards-03.webp",
+      "bytes": 66678,
+      "width": 900,
+      "height": 1599,
+      "sha256": "013102e9934397a045147a3492bacf69bcc5882bd0065e53c3eb03f82d8499da",
+      "renderSource": "Official supplied cards PDF page 2 matching clipped card artwork, rendered from vector at 900px width"
+    },
+    {
+      "path": "/deli-cake/cards/cards-04.webp",
+      "bytes": 76056,
+      "width": 900,
+      "height": 1599,
+      "sha256": "f91dfefbb9fd46859491b4824af347913641101461993fa505f36a97567e0d9a",
+      "renderSource": "Official supplied cards PDF page 2 matching clipped card artwork, rendered from vector at 900px width"
+    },
+    {
+      "path": "/deli-cake/cards/cards-05.webp",
+      "bytes": 10426,
+      "width": 259,
+      "height": 478,
+      "sha256": "faf81b9936cef6223aff8ac1a26a4df3706ca0a3208d792edd407bb5b7dd7a17"
+    },
+    {
+      "path": "/deli-cake/cards/cards-06.webp",
+      "bytes": 11496,
+      "width": 259,
+      "height": 478,
+      "sha256": "923389692c9c93301bc4b81aa819eb89c89a243aa5086c28126107952c9f6c73"
+    },
+    {
+      "path": "/deli-cake/cards/cards-07.webp",
+      "bytes": 12326,
+      "width": 259,
+      "height": 478,
+      "sha256": "5804b1b65733801996bdfd5f6f70b959fa499208a69760b39b00cad0d5d1e1d5"
+    },
+    {
+      "path": "/deli-cake/cards/cards-08.webp",
+      "bytes": 13302,
+      "width": 259,
+      "height": 478,
+      "sha256": "256c0b709e32b1650882eb2213c784879fdd658eddebf621ee1cbc42d925b506"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-01.webp",
+      "bytes": 71730,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "2ced4e437a7191eac8a630061a746076588c934c30263d6537ec341ea321bf81"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-02.webp",
+      "bytes": 132076,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "e959fbb768f8fa48101e24ed9b133166df4e1a0115ca013f47a2f6ab1a97ca11"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-03.webp",
+      "bytes": 100800,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "ab079556d1d9a6c5542fa745d009c9aa018a90ebcb4ff10cf1535d56e0739608"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-04.webp",
+      "bytes": 104492,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "3a8a22995bb9878434d4884b7ddb040e15ab29f77905ed6bb17197676a72abec"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-05.webp",
+      "bytes": 57210,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "1b90d8d5993122c8806434f99ae5316ce93027d2c43639c626092989e2a82988"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-06.webp",
+      "bytes": 123126,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "9c7a2bc446fee0324e25b44d0b80bb846ab446fd7d0f1ff53d44c7b877b1ab19"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-07.webp",
+      "bytes": 96664,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "62f5b4143827e7fe06de3a28e8173974f831eb585a41160d2ef210fe21ee2843"
+    },
+    {
+      "path": "/deli-cake/reference-menu/menu-08.webp",
+      "bytes": 102584,
+      "width": 1080,
+      "height": 1920,
+      "sha256": "0ab80e990022ecb0824da2ed990940431ab4bfdaeb3168c2d5236e2ddfebfde8"
+    },
+    {
+      "path": "/deli-cake/logo.webp",
+      "bytes": 18304,
+      "width": 687,
+      "height": 687,
+      "sha256": "7c0b3589e4f31b02e90bc8ef0d58d2a7744487c6d4e4a64d2ff974fb0ac2f80f"
+    },
+    {
+      "path": "/deli-cake/background-poster.webp",
+      "bytes": 60930,
+      "width": 720,
+      "height": 1280,
+      "sha256": "6d721e491e319c695a611d579bbb2e93936dc7d1ec8d8ffbe0f8e9958b2a4e38"
+    },
+    {
+      "path": "/deli-cake/background-poster-02.webp",
+      "bytes": 58168,
+      "width": 720,
+      "height": 1280,
+      "sha256": "c19be616e9d66ddcad6fe1d46287e600026c4928cd0a0fac8f30fdc49563ddf2"
+    },
+    {
+      "path": "/deli-cake/background-poster-03.webp",
+      "bytes": 146378,
+      "width": 720,
+      "height": 1280,
+      "sha256": "0d05b35c05c3d4fd1e8d16a44df1fe6cb236ca97ca282d9909120070a8a8d9e4"
+    }
+  ],
+  "sourceArchives": [
+    {
+      "label": "brand-assets",
+      "bytes": 449037172,
+      "sha256": "1869f6594bd10896b909a1efd1b2d6ea66ee8f79350901e3c2c1e7e8cabf55ec"
+    },
+    {
+      "label": "photography",
+      "bytes": 200937821,
+      "sha256": "cd83f5d0cbbf74ead38971f5b196f827826594e8d15605a7f0a018fe801ff7d7"
+    }
+  ],
+  "notes": [
+    "Original source files remain untouched in Downloads",
+    "Source zip filenames were corrupted; extraction used ASCII group and numeric names",
+    "Product identities/prices read visually from supplied source artwork",
+    "No invented business offers or loyalty conditions"
+  ],
+  "unassignedPhotos": [
+    {
+      "path": "/deli-cake/photos/DSC_2769.webp",
+      "reason": "Round chocolate-topped dessert; specific menu item cannot be established"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2771.webp",
+      "reason": "Portrait companion of DSC_2769; specific menu item cannot be established"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2775.webp",
+      "reason": "Layered chocolate slice resembles unmapped dish-09; printed menu does not establish its identity"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2777.webp",
+      "reason": "Portrait companion of DSC_2775; printed menu does not establish its identity"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2804.webp",
+      "reason": "Amber drink with foam in clear cup; could be a coffee or tea preparation, identity not reliably established from artwork"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2806.webp",
+      "reason": "Portrait companion of DSC_2804; identity not reliably established"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2827.webp",
+      "reason": "Foamy drink in paper cup; cannot establish espresso freddo from image alone"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2829.webp",
+      "reason": "Companion of DSC_2827; cannot establish espresso freddo from image alone"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2832.webp",
+      "reason": "Coffee in ceramic cup with crema; exact espresso or milk-coffee preparation not established"
+    },
+    {
+      "path": "/deli-cake/photos/DSC_2837.webp",
+      "reason": "Portrait companion of DSC_2832; exact preparation not established"
+    }
+  ],
+  "gallerySummary": {
+    "mappedPhotos": 20,
+    "mappedProducts": 9,
+    "unassignedPhotos": 10,
+    "policy": "Uncertain photographs remain preserved and indexed without speculative product association"
+  },
+  "assetTotals": {
+    "webpCount": 69,
+    "videoCount": 3,
+    "bytes": 13021268
+  }
+}
