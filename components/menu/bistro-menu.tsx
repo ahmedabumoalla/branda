@@ -182,7 +182,7 @@ function ProductDetails({ product, products, close, browse, position, total, bra
         {product.ingredients.length > 0 && <div className={s.ingredients}>
           <h3>المكونات</h3><ul>{product.ingredients.map((ingredient, index) => <li key={`${index}-${ingredient}`}>{menuDisplayText(ingredient)}</li>)}</ul>
         </div>}
-        <p className={s.detailFooter}>Good food <i>Beautiful moments</i></p>
+        <p className={s.detailFooter}>{brandSlug === "delicake" ? <>Sweet moments <i>Deli details</i></> : <>Good food <i>Beautiful moments</i></>}</p>
       </motion.div>
     </div>
     {total > 1 && <nav className={s.dishNavigation} aria-label="استكشف الأطباق">
@@ -291,7 +291,7 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   }
 
   return <KathImages.Provider value={isCustomEditorial}><main className={`${s.menu} ${s.venueMenu} ${s.referenceMenu} ${isEditorial ? s.rastMenu : ""}${isCustomEditorial ? ` ${kath.theme}` : ""}${isShahi ? ` ${majlis.theme}` : ""}${isTaza ? ` ${taza.theme}` : ""}${isDeli ? ` ${deli.theme}` : ""}`} dir="rtl"
-    style={isCustomEditorial ? { "--product-image-background": isDeli ? "#c7c4a5" : "#fff" } as CSSProperties : undefined}>
+    style={isCustomEditorial ? { "--product-image-background": isDeli ? "transparent" : "#fff" } as CSSProperties : undefined}>
     {isDeli && <DeliBackground />}
     <a href={isEditorial ? "#rast-menu-items" : "#menu-catalog"} className={s.skipLink}>انتقل إلى الأصناف</a>
     {isDeli ? <DeliHero menu={menu} onSelect={setSelected} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isTaza ? <TazaHero menu={menu} onSelect={setSelected} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isShahi ? <ShahiHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : isEditorial ? <RastHero menu={menu} onShare={share} onSearch={() => { searchInput.current?.scrollIntoView({ block: "center" }); searchInput.current?.focus({ preventScroll: true }); }} /> : <section className={`${s.referenceHero} ${!isDoubleB ? s.brandHero : ""}`} aria-label={`مرحبًا في ${displayName}`}>
