@@ -34,7 +34,7 @@ const brand = index => ({
 });
 const report = {
   generatedAt: "2026-10-09T21:15:00Z", from: "2026-10-01", to: "2026-10-09",
-  menuTrackingSince: "2026-10-05T00:00:00Z", walletTrackingSince: "2026-09-01T00:00:00Z", registrationTrackingSince: "2026-10-09T00:00:00Z",
+  menuTrackingSince: "2026-10-05T00:00:00Z", walletTrackingSince: "2026-09-01T00:00:00Z", promotionTrackingSince: "2026-10-09T00:00:00Z",
   brands: Array.from({ length: 31 }, (_, index) => brand(index + 1)),
 };
 const injection = '<script>globalThis.pdfInjection = true</script> /JavaScript /OpenAction';
@@ -42,7 +42,7 @@ const filters = { ...defaultReportFilters, query: injection, subscription: "subs
   conditions: [{ metric: "loyaltyCards", operator: "gte", value: 30 }], sort: "rewardOperations", direction: "desc" };
 const content = buildOperationsReportContent(report, report.brands, filters);
 assert.equal(content.brands.length, 31);
-assert.equal(content.brands.at(-1).metrics.length, 13);
+assert.equal(content.brands.at(-1).metrics.length, reportMetrics.length);
 assert.deepEqual(content.brands[0].metrics.map(row => row[1]), reportMetrics.map(metric => reportMetricLabels[metric]));
 assert.equal(content.totalRows[0][0], new Intl.NumberFormat("en-US").format(49600));
 assert.ok(content.filterRows.some(row => row[0] === injection));
@@ -50,10 +50,11 @@ assert.ok(content.filterRows.some(row => row[0] === "المنيو المستقل
 assert.ok(content.filterRows.some(row => row[0] === "المشتركة فقط"));
 assert.ok(content.filterRows.some(row => row[1] === reportMetricLabels.loyaltyCards && row[0].includes("أكبر من أو يساوي")));
 assert.match(content.filterRows[0][0], /١٠|10/); // UTC date is October 9; Riyadh is October 10.
-assert.equal(content.brands[0].visits.length, 4);
+assert.equal(content.brands[0].visits.length, 2);
 assert.match(content.brands[0].visits[0][0], /لا توجد/);
 assert.ok(content.notes.some(note => note.includes("لا تثبت حفظ")));
-assert.ok(content.notes.some(note => note.includes("مصدر غير المحدد")));
+assert.ok(content.notes.some(note => note.includes("لا يثبت وصول")));
+assert.ok(!/زوار الفرع|حسابات الفرع|آخر زيارة للفرع/.test(JSON.stringify(content)));
 const original = JSON.stringify(report);
 const one = buildOperationsReportPdf(report, [report.brands[0]], defaultReportFilters, fonts);
 for (const style of ["normal", "bold"]) {

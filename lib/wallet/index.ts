@@ -39,16 +39,35 @@ function providerFailed(error: unknown): WalletDeliveryResult["google"] {
   return { status: "failed", count: 0, ...(error instanceof Error && /_429$/.test(error.message) ? { retryAfterSeconds: 86400 } : {}) };
 }
 
-async function pushRegistrations(cafeId: string, cardId?: string) {
+async function recordPromotionRecipients(jobId: string, cafeId: string, provider: "apple" | "google", cardIds: string[]) {
+  const ids = [...new Set(cardIds)];
+  for (let offset = 0; offset < ids.length; offset += 500) {
+    const { error } = await createAdminClient().rpc("record_wallet_promotion_recipients", {
+      p_job: jobId, p_cafe: cafeId, p_provider: provider, p_cards: ids.slice(offset, offset + 500),
+    });
+    if (error) throw new Error("wallet_promotion_tracking_unavailable");
+  }
+}
+
+async function pushRegistrations(cafeId: string, cardId?: string, promotionJobId?: string) {
   const db = createAdminClient();
   const registered = new Set<string>();
+  const cardsByToken = new Map<string, Set<string>>();
   for (let offset = 0; ; offset += 500) {
-    let query = db.from("wallet_apple_registrations").select("push_token").eq("cafe_id", cafeId)
+    let query = db.from("wallet_apple_registrations").select("push_token,card_id").eq("cafe_id", cafeId)
       .order("device_library_id").order("card_id").range(offset, offset + 499);
     if (cardId) query = query.eq("card_id", cardId);
     const { data, error } = await query;
     if (error) throw new Error("wallet_registration_unavailable");
-    for (const row of data ?? []) registered.add(String(row.push_token));
+    for (const row of data ?? []) {
+      const token = String(row.push_token);
+      registered.add(token);
+      if (row.card_id) {
+        const cards = cardsByToken.get(token) ?? new Set<string>();
+        cards.add(String(row.card_id));
+        cardsByToken.set(token, cards);
+      }
+    }
     if (!data || data.length < 500) break;
   }
   const tokens = [...registered];
@@ -57,7 +76,11 @@ async function pushRegistrations(cafeId: string, cardId?: string) {
   // Bound connection concurrency without discarding registered devices.
   for (let offset = 0; offset < tokens.length; offset += 8) {
     const batch = await Promise.allSettled(tokens.slice(offset, offset + 8).map(async (token) => {
-      try { await pushAppleDevice(token); return true; } catch (error) {
+      try {
+        await pushAppleDevice(token);
+        if (promotionJobId) await recordPromotionRecipients(promotionJobId, cafeId, "apple", [...(cardsByToken.get(token) ?? [])]);
+        return true;
+      } catch (error) {
         if (error instanceof Error && error.message === "apple_push_410") {
           const { error: deleteError } = await db.from("wallet_apple_registrations").delete().eq("cafe_id", cafeId).eq("push_token", token);
           if (deleteError) throw new Error("wallet_registration_unavailable");
@@ -149,8 +172,14 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   const result = skipped();
   if (!featureCodesAllow(await getCafeFeatureCodes(cafeId), "loyalty")) return result;
   const readiness = getWalletReadiness();
-  const { data: passes, error } = await createAdminClient().from("wallet_passes").select("provider").eq("cafe_id", cafeId);
-  if (error) throw new Error("wallet_tracking_unavailable");
+  const passes: { provider: string; card_id: string }[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await createAdminClient().from("wallet_passes").select("provider,card_id").eq("cafe_id", cafeId)
+      .order("card_id").order("provider").range(offset, offset + 499);
+    if (error) throw new Error("wallet_tracking_unavailable");
+    passes.push(...(data ?? []));
+    if (!data || data.length < 500) break;
+  }
   const { data: program, error: programError } = await createAdminClient().from("cafe_loyalty_programs").select("enabled,apple_wallet_enabled,google_wallet_enabled").eq("cafe_id", cafeId).maybeSingle();
   if (programError) throw new Error("wallet_program_unavailable");
   if (!program?.enabled) return result;
@@ -160,11 +189,15 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
   if (appleCount && !readiness.apple) result.apple.pending = true;
   if (previous?.google?.status === "accepted") result.google = previous.google;
   else if (readiness.google && googleCount) {
-    try { await notifyGoogleBrand(cafeId, title, body, messageId); result.google = { status: "accepted", count: 1 }; } catch (error) { result.google = providerFailed(error); }
+    try {
+      await notifyGoogleBrand(cafeId, title, body, messageId);
+      await recordPromotionRecipients(messageId, cafeId, "google", passes.filter(pass => pass.provider === "google").map(pass => pass.card_id));
+      result.google = { status: "accepted", count: 1 };
+    } catch (error) { result.google = providerFailed(error); }
   }
   if (previous?.apple?.status === "accepted") result.apple = previous.apple;
   else if (readiness.apple && appleCount) {
-    try { const pushed = await pushRegistrations(cafeId); result.apple = { status: pushed.status, count: pushed.count }; } catch { result.apple.status = "failed"; }
+    try { const pushed = await pushRegistrations(cafeId, undefined, messageId); result.apple = { status: pushed.status, count: pushed.count }; } catch { result.apple.status = "failed"; }
   }
   return result;
 }

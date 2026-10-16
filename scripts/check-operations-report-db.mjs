@@ -125,6 +125,7 @@ try {
     modules.set(file.replace(/\.ts$/, ""), exports);
   }
   const { getAdminOperationsReport } = modules.get("lib/data/operations-report");
+  auth.result = { ...auth.result, promotionTrackingSince: new Date().toISOString(), brands: auth.result.brands.map(b => ({ ...b, metrics: { ...b.metrics, pagerUses: 0, promotionCustomers: 0, promotionSends: 0 } })) };
   const actual = await getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-05" });
   check(actual.brands.length === 3 && rpcCalls === 1, "real TypeScript loader uses one aggregate RPC and parses actual PostgreSQL DTO");
   const actualAlpha = actual.brands.find(b => b.id === id(10));
@@ -141,7 +142,7 @@ try {
   await rejects(() => getAdminOperationsReport({ from: "2026-02-30", to: "" }));
   await rejects(() => getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-04" }));
   await rejects(() => getAdminOperationsReport({ from: "", to: "" }));
-  auth.result = { ...period, brands: [{ ...alpha, metrics: { ...alpha.metrics, accounts: -1 } }] };
+  auth.result = { ...period, promotionTrackingSince: new Date().toISOString(), brands: [{ ...alpha, metrics: { ...alpha.metrics, pagerUses: -1, promotionCustomers: 0, promotionSends: 0 } }] };
   await rejects(() => getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-05" }));
   const failed = await modules.get("app/actions/operations-report").loadOperationsReportAction({ from: "", to: "" });
   check(!failed.ok && !JSON.stringify(failed).includes("metrics"), "server action returns safe error with no partial or fabricated report");
@@ -175,5 +176,42 @@ try {
   checks++;
   await db.exec("ALTER TABLE operations_report_private.registration_sources RENAME TO unavailable_sources; SET ROLE service_role");
   check((await signup("966500000050")).rows[0].result === "authenticated", "attribution storage failure does not block authentication");
+  await db.exec("RESET ROLE");
+  await db.exec(`ALTER TABLE loyalty_cards ADD COLUMN id uuid PRIMARY KEY DEFAULT gen_random_uuid();
+    CREATE TABLE wallet_notification_jobs(id uuid PRIMARY KEY,cafe_id uuid,kind text);
+    CREATE TABLE pager_orders(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),cafe_id uuid,created_at timestamptz);
+    ALTER TABLE pager_orders ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE wallet_notification_jobs ENABLE ROW LEVEL SECURITY;`);
+  await db.exec(await readFile("supabase/migrations/20261017001500_operations_pager_promotions.sql", "utf8"));
+  const reportV2 = (from=null,to=null) => value("SELECT get_admin_operations_report_v2($1,$2)",[from,to]);
+  for(const user of [0,2,3,4]) { await asUser(user); await rejects(() => reportV2()); }
+  await db.exec("RESET ROLE");
+  await query("INSERT INTO wallet_notification_jobs VALUES($1,$3,'message'),($2,$3,'message'),($4,$5,'message'),($6,$3,'sync')",[id(100),id(101),id(10),id(102),id(11),id(103)]);
+  const card = await value("SELECT id FROM loyalty_cards WHERE cafe_id=$1 LIMIT 1",[id(10)]);
+  await db.exec("SET ROLE authenticated");
+  const receipt = (job=id(100), cafe=id(10), provider='apple', cards=[card]) => query("SELECT record_wallet_promotion_recipients($1,$2,$3,$4)",[job,cafe,provider,cards]);
+  await rejects(() => receipt());
+  await db.exec("RESET ROLE; SET ROLE service_role");
+  await rejects(() => query("SELECT * FROM operations_report_private.promotion_recipients"));
+  await rejects(() => reportV2());
+  await rejects(() => receipt(id(102),id(11)));
+  await rejects(() => receipt(id(103)));
+  await rejects(() => receipt(id(100),id(10),'forged'));
+  await receipt(); await receipt(); await receipt(id(100),id(10),'google'); await receipt(id(101));
+  await db.exec("RESET ROLE");
+  check(await value("SELECT count(*) FROM operations_report_private.promotion_recipients") === 3,"retry is idempotent per provider and card");
+  await query("UPDATE operations_report_private.promotion_recipients SET accepted_at='2026-10-04T21:00:00Z'");
+  await query("INSERT INTO pager_orders(cafe_id,created_at) VALUES($1,'2026-10-04T20:59:59Z'),($1,'2026-10-04T21:00:00Z'),($1,'2026-10-05T20:59:59Z'),($1,'2026-10-05T21:00:00Z'),($2,'2026-10-05T12:00:00Z')",[id(10),id(11)]);
+  await asUser(1);
+  const fresh = await reportV2('2026-10-05','2026-10-05');
+  const metrics = fresh.brands.find(b => b.id === id(10)).metrics;
+  auth.result = fresh;
+  const loadedV2 = await getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-05" });
+  check(loadedV2.brands.find(b => b.id === id(10)).metrics.promotionSends === 2, "actual v2 PostgreSQL response passes production loader and schema");
+  check(metrics.pagerUses===2 && metrics.promotionCustomers===1 && metrics.promotionSends===2,"Saudi date bounds, distinct customer across providers, repeat announcements counted once per customer");
+  check(fresh.brands.find(b => b.id===id(11)).metrics.pagerUses===1 && fresh.brands.find(b => b.id===id(11)).metrics.promotionCustomers===0,"new metrics are tenant isolated");
+  check(!JSON.stringify(fresh).match(/storefront|accounts|lastStorefront/i),"retired branch metrics absent from v2 payload");
+  check(fresh.promotionTrackingSince && (await reportV2('2026-10-06','2026-10-06')).brands.every(b=>b.metrics.promotionCustomers===0),"tracking coverage and period exclusion");
+  await rejects(() => reportV2('2026-10-06','2026-10-05'));
   console.log(`PASS ${checks} operations-report PostgreSQL checks`);
 } finally { await db.close(); }

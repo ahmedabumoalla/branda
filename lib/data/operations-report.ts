@@ -26,7 +26,7 @@ export async function getAdminOperationsReport(input: ReportPeriod = { from: "",
   if (authError || !user) throw new Error("Admin access denied");
   const { data: profile, error } = await supabase.from("profiles").select("role,status").eq("id", user.id).maybeSingle();
   if (error || profile?.role !== "platform_admin" || profile.status !== "active") throw new Error("Admin access denied");
-  const result = await supabase.rpc("get_admin_operations_report", { p_from: filters.from || null, p_to: filters.to || null });
+  const result = await supabase.rpc("get_admin_operations_report_v2", { p_from: filters.from || null, p_to: filters.to || null });
   if (result.error) throw new Error("Operations report unavailable");
   const raw = rawReportSchema.parse(result.data);
   if (raw.from !== (filters.from || null) || raw.to !== (filters.to || null)) throw new Error("Report period mismatch");

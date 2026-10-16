@@ -25,7 +25,7 @@ const { OperationsReportPage } = load(path.resolve("components/admin/pages/opera
 const { defaultReportFilters: defaults, filterReportBrands: filter, reportMetrics, reportPeriodSchema } = api;
 const brands = Array.from({ length: 31 }, (_, index) => ({ id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, name: index === 0 ? "مَقْهَى ألوان" : `Brand ${String(index).padStart(2, "0")}`, slug: `brand-${index}`, status: "active", subscriptionStatus: index % 2 ? "expired" : "active", planName: "Pro", subscribed: index % 2 === 0, expiresAt: null, features: index % 2 ? ["menu"] : ["loyalty", "menu"], lastStorefrontVisit: null, lastMenuVisit: null, periodLastStorefrontVisit: null, periodLastMenuVisit: null, metrics: Object.fromEntries(reportMetrics.map(metric => [metric, index])) }));
 assert.equal(filter(brands, { ...defaults, query: "مقهي الوان" })[0].id, brands[0].id);
-assert.equal(filter(brands, { ...defaults, query: "brand Pro", subscription: "subscribed", feature: "loyalty", conditions: [{ metric: "storefrontVisitors", operator: "gte", value: 10 }, { metric: "loyaltyCards", operator: "lte", value: 16 }] }).length, 4);
+assert.equal(filter(brands, { ...defaults, query: "brand Pro", subscription: "subscribed", feature: "loyalty", conditions: [{ metric: "pagerUses", operator: "gte", value: 10 }, { metric: "loyaltyCards", operator: "lte", value: 16 }] }).length, 4);
 assert.deepEqual(filter(brands, { ...defaults, brandId: brands[3].id }).map(brand => brand.id), [brands[3].id]);
 assert.equal(filter(brands, { ...defaults, sort: "appleCards", direction: "desc" })[0].metrics.appleCards, 30);
 assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "rewardOperations", operator: "eq", value: 21 }] })[0].id, brands[21].id);
@@ -36,11 +36,12 @@ assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-10", to: "2026-10-09"
 assert.equal(reportPeriodSchema.safeParse({ from: "2026-10-09", to: "2026-10-09" }).success, true);
 assert.equal(reportPeriodSchema.safeParse({ from: "", to: "", injected: true }).success, false);
 const date = "2026-10-09T12:00:00Z";
-const report = { generatedAt: date, from: null, to: null, menuTrackingSince: date, walletTrackingSince: date, registrationTrackingSince: date, brands };
+const report = { generatedAt: date, from: null, to: null, menuTrackingSince: date, walletTrackingSince: date, promotionTrackingSince: date, brands };
 const html = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: report }));
 assert.equal((html.match(/scope="row"/g) || []).length, 26, "25 brands plus total, independent of export scope");
 assert.ok(html.includes("٣١ علامة"), "export includes all matching brands");
-for (const label of ["مصدر غير محدد", "أندرويد", "بدون اشتراك ساري", "تصدير تقرير PDF", "قراءات ناجحة", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
+for (const label of ["استخدامات البيجر", "عملاء رسائل الترويج", "أندرويد", "بدون اشتراك ساري", "تصدير تقرير PDF", "قراءات ناجحة", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
+assert.ok(!/زوار الفرع|حسابات الفرع|آخر زيارة للفرع/.test(html));
 assert.ok(html.includes('tabindex="0"') && html.includes('aria-expanded="false"'));
 const missing = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: null }));
 assert.ok(missing.includes('role="alert"'));

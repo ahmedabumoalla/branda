@@ -24,7 +24,7 @@ const statusLabel = (status: string) => ({ active: "نشط", trial: "تجريب�
 export function buildOperationsReportContent(report: OperationsReport, brands: ReportBrand[], filters: ReportFilters) {
   const selected = report.brands.find(brand => brand.id === filters.brandId);
   const sortLabel = filters.sort === "name" ? "اسم العلامة" : filters.sort === "lastMenuVisit" ? "آخر زيارة للمنيو"
-    : filters.sort === "lastStorefrontVisit" ? "آخر زيارة للفرع" : reportMetricLabels[filters.sort];
+    : reportMetricLabels[filters.sort];
   const filterRows: ReportRow[] = [
     [saudiDate(report.generatedAt), "وقت إعداد البيانات — بتوقيت الرياض"],
     [`${report.from ?? "بداية السجل"} — ${report.to ?? "نهاية السجل"}`, "الفترة — أيام شاملة بتوقيت الرياض"],
@@ -45,10 +45,13 @@ export function buildOperationsReportContent(report: OperationsReport, brands: R
     filterRows,
     totalRows: metricRows(totals),
     notes: [
-      `تتبع الزيارات متاح منذ ${saudiDate(report.menuTrackingSince)} تتبع إصدار المحافظ منذ ${saudiDate(report.walletTrackingSince)} تصنيف مصدر التسجيل منذ ${saudiDate(report.registrationTrackingSince)}`,
+      "استخدامات البيجر هي الطلبات المسجلة خلال الفترة بما فيها الملغاة إعادة النداء لا تزيد العدد",
+      "عملاء الترويج فريدون لكل علامة خلال الفترة ومرات الإرسال تحسب كل إعلان لكل عميل مرة واحدة عبر المحفظتين",
+      "الترويج يشمل الإرسال المقبول من المزوّد ولا يثبت وصول الإشعار أو قراءته على الجهاز لا تُحتسب المحاولات الفاشلة أو المعلقة ولا يُعاد بناء مستلمي الإعلانات القديمة",
+      `تتبع الزيارات متاح منذ ${saudiDate(report.menuTrackingSince)} تتبع إصدار المحافظ منذ ${saudiDate(report.walletTrackingSince)} تتبع مستلمي الترويج منذ ${saudiDate(report.promotionTrackingSince)}`,
       "الأصفار تعني عدم وجود سجلات ضمن البيانات المتاحة؛ لا تعني استعادة زيارات تاريخية قبل بدء التتبع الزوار متصفحات مميزة تقريبية وليست أعداد أشخاص مؤكدة",
       "بطاقات آيفون وأندرويد تعني سجلات إصدار أو تسليم رابط المحفظة ولا تثبت حفظ البطاقة على الجهاز قد تظهر البطاقة نفسها لدى المزودين وتُحسب مرة واحدة في الإجمالي",
-      "الختم والمكافأة عمليتان ناجحتان فقط؛ لا تُحسب محاولات المسح أو العمليات المرفوضة الحسابات ذات المصدر غير المحدد لم يُفترض أنها مسجلة من الفرع",
+      "الختم والمكافأة عمليتان ناجحتان فقط؛ لا تُحسب محاولات المسح أو العمليات المرفوضة",
       "كل المؤشرات العددية ضمن الفترة المختارة الاشتراك والباقة والميزات حالات حالية وقت إعداد التقرير آخر زيارة إجمالية مستقلة عن مرشح الفترة",
       "الإجماليات تجمع أرقام العلامات المطابقة؛ قد يُحسب العميل أو المتصفح نفسه لدى أكثر من علامة وليست أعداد أشخاص فريدة على مستوى المنصة",
     ],
@@ -66,9 +69,7 @@ export function buildOperationsReportContent(report: OperationsReport, brands: R
       metrics: metricRows(brand.metrics),
       visits: [
         [saudiDate(brand.lastMenuVisit), "آخر زيارة للمنيو — إجمالاً"],
-        [saudiDate(brand.lastStorefrontVisit), "آخر زيارة للفرع — إجمالاً"],
         [saudiDate(brand.periodLastMenuVisit), "آخر زيارة للمنيو — ضمن الفترة"],
-        [saudiDate(brand.periodLastStorefrontVisit), "آخر زيارة للفرع — ضمن الفترة"],
       ] as ReportRow[],
     })),
   };

@@ -1,11 +1,9 @@
 import { z } from "zod";
 
 export const reportMetricLabels = {
-  storefrontVisitors: "زوار الفرع الإلكتروني",
-  storefrontVisits: "زيارات الفرع الإلكتروني",
-  storefrontAccounts: "حسابات أُنشئت من الفرع",
-  accounts: "حسابات العملاء الجديدة",
-  unattributedAccounts: "حسابات بمصدر غير محدد",
+  pagerUses: "استخدامات البيجر",
+  promotionCustomers: "عملاء رسائل الولاء الترويجية",
+  promotionSends: "مرات إرسال الترويج للعملاء",
   menuVisitors: "زوار المنيو المستقل",
   menuVisits: "زيارات المنيو المستقل",
   loyaltyCards: "بطاقات الولاء الصادرة",
@@ -25,22 +23,22 @@ export const reportBrandSchema = z.object({
   id: z.uuid(), name: z.string(), slug: z.string(), status: z.string(),
   subscriptionStatus: z.string(), planName: z.string(), expiresAt: z.string().nullable(), subscribed: z.boolean(),
   features: z.array(z.string()),
-  lastStorefrontVisit: z.string().nullable(), lastMenuVisit: z.string().nullable(),
-  periodLastStorefrontVisit: z.string().nullable(), periodLastMenuVisit: z.string().nullable(),
-  metrics: z.object({ storefrontVisitors: count, storefrontVisits: count, storefrontAccounts: count, accounts: count,
-    unattributedAccounts: count, menuVisitors: count, menuVisits: count, loyaltyCards: count, loyaltyCustomers: count,
+  lastMenuVisit: z.string().nullable(),
+  periodLastMenuVisit: z.string().nullable(),
+  metrics: z.object({ pagerUses: count, promotionCustomers: count, promotionSends: count,
+    menuVisitors: count, menuVisits: count, loyaltyCards: count, loyaltyCustomers: count,
     appleCards: count, googleCards: count, stampOperations: count, rewardOperations: count }),
 });
 export const operationsReportSchema = z.object({
   generatedAt: z.string(), from: z.string().nullable(), to: z.string().nullable(),
-  menuTrackingSince: z.string(), walletTrackingSince: z.string(), registrationTrackingSince: z.string(),
+  menuTrackingSince: z.string(), walletTrackingSince: z.string(), promotionTrackingSince: z.string(),
   brands: z.array(reportBrandSchema),
 });
 export type OperationsReport = z.infer<typeof operationsReportSchema>;
 export type ReportBrand = z.infer<typeof reportBrandSchema>;
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 export type MetricCondition = { metric: ReportMetric; operator: "gte" | "lte" | "eq"; value: number };
-export type ReportFilters = { query: string; brandId: string; subscription: "all" | "subscribed" | "unsubscribed"; feature: string; conditions: MetricCondition[]; sort: ReportMetric | "name" | "lastMenuVisit" | "lastStorefrontVisit"; direction: "asc" | "desc" };
+export type ReportFilters = { query: string; brandId: string; subscription: "all" | "subscribed" | "unsubscribed"; feature: string; conditions: MetricCondition[]; sort: ReportMetric | "name" | "lastMenuVisit"; direction: "asc" | "desc" };
 export const defaultReportFilters: ReportFilters = { query: "", brandId: "", subscription: "all", feature: "", conditions: [], sort: "name", direction: "asc" };
 const normalize = (value: string) => value.toLocaleLowerCase("ar").normalize("NFKC").replace(/[\u064b-\u065f\u0640]/g, "").replace(/[أإآ]/g, "ا").replace(/ى/g, "ي");
 export function filterReportBrands(brands: ReportBrand[], filters: ReportFilters) {
@@ -54,7 +52,7 @@ export function filterReportBrands(brands: ReportBrand[], filters: ReportFilters
     .sort((a, b) => {
       const key = filters.sort;
       const comparison = key === "name" ? a.name.localeCompare(b.name, "ar")
-        : key === "lastMenuVisit" || key === "lastStorefrontVisit" ? (a[key] || "").localeCompare(b[key] || "")
+        : key === "lastMenuVisit" ? (a[key] || "").localeCompare(b[key] || "")
           : a.metrics[key] - b.metrics[key];
       return (filters.direction === "asc" ? comparison : -comparison) || a.id.localeCompare(b.id);
     });
