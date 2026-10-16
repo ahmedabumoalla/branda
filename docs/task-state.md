@@ -1,46 +1,39 @@
 # Current task state
 
-Updated 2026-10-12 00:04 +03:00 — Asia/Riyadh
+Updated 2026-10-17 01:06 +03:00 - Asia/Riyadh
 
 ## Resume here
 
-- Workspace `C:/Projects/branda-platform`, branch `main`
-- Current task: save continuity before closing VS Code or changing the Codex account
-- Latest application HEAD and last verified Production commit: `393749df3c2794d1832e3389d53f3278b085f84f`
-- Universal package loyalty/offers COMPLETE; no pending implementation, migration or publication for that request
-- GREEN-API checking STOPPED by explicit user request after they reported an outage; do not resume or send another partnership application until asked
-- Partnership approval remains UNKNOWN; the interrupted check did not reach authenticated account status and no follow-up was sent
-- Next action: read [current handoff](BARNDAKSA_HANDOFF/00_MASTER_INDEX.md), inspect Git status and continue only the user's next request
+- Latest application release: `7854ed177552d1f12d0b5083cdb4b825b76264d3` on `main`, verified on correct Vercel `branda-2` production `dpl_GZgp8kM42sgozvWQVXJJZUKnMyWU` at 2026-10-17 00:17 +03:00
+- This handoff update changes documentation only and preserves that exact application tree. The documentation commit is identified by `git log -1 --format=%H -- docs/task-state.md`; verify its GitHub/Vercel status and live alias using `.git/handoff-production.json` after publication. Do not confuse the application release hash above with the later documentation commit
+- Completed user requests: Deli catalog/photos, primary image or video selection, optional descriptions, actual menu visibility/offers, immediate product updates/cancel preserving scroll position, dashboard image renewal, and operations/PDF pager and promotional recipient metrics. No pending implementation or database migration for these requests
 
-## Established scope
+## Established behavior
 
-- Kawakib (`rast`) is the functional reference for package-enabled loyalty/rewards/cards/cashier/scanning/notifications and offers across brands
-- Preserve ALL existing standalone menu designs: Kawakib retains its distinct design and other brands retain their existing Basilico-style design
-- Each brand uses its own identity/data and active-package/tenant authorization; never copy Kawakib customers or program data to another brand
-- Pager uses Branda's current WhatsApp number temporarily; reminders start at ready status and stop at received/cancelled; receipt triggers one rating invitation
-- Only `test-cafe` was granted the existing technical administration plan for testing through 2026-11-11 05:22 +03:00; do not activate it for other brands
+- Product media primary choice persists in existing media JSON; unavailable/deleted products and unavailable free rewards stay hidden. Offers include the full Saudi end date and server validation. Failed saves retain drafts. Public menu refresh retains the established 30-second/foreground/reconnect behavior
+- Dashboard product media signs on authenticated lazy load through the tenant-scoped owner endpoint; fixed private Storage bucket, no public credential or policy change. Public menu images remain intact
+- Operations and PDF exclude electronic-branch visitors/accounts/last visit. Pager usage counts orders created, including cancelled orders, once per order. Promotional customers are distinct per brand/period; sends count each announcement/customer once across both wallets
+- Migration `20261017001500_operations_pager_promotions` is applied and recorded. Private RLS recipient ledger and service-only tenant-validated insertion; active platform-admin-only aggregate. Existing v1 RPC remains for rollout compatibility
+- Promotion recipient tracking begins 2026-10-17 00:11:35 +03:00. Counts represent provider-accepted dispatch, not confirmed notification delivery/reading or wallet installation. No invented historical audience. Failed/pending attempts do not count; partial accepted recipients do. No real messages sent during implementation verification
+- Deli catalog migration is complete: never replay the earlier bulk update. Publication had 45 owner products; later owner availability changes are intentional and must be preserved. Source mapping: `docs/deli-catalog-20261016.json`
+- Preserve each brand's approved identity and tenant/package boundaries. Direct loyalty name/phone enrollment is intentional; do not reintroduce OTP there. Existing staff WhatsApp OTP remains separate. Legacy electronic storefronts remain archived
 
-## Last verified release evidence — historical runs, not rerun today
+## Verification and release evidence
 
-- Production verified 2026-10-11 16:53 +03:00 for exact commit above, GitHub deployment `6996484234`, correct Vercel project `branda-2`, success at 13:50:45Z
-- Deployment URL `https://branda-2-bs50jyywf-ahmedabumoallas-projects.vercel.app`; evidence `.git/universal-services-production.json`
-- Live GET: test-cafe/rast loyalty 200 with own-menu links/enrollment; basilico loyalty 404 because its package excludes loyalty; menus 200 with distinct Rast hero only for Rast
-- Migration `20261011134719_universal_package_loyalty` applied and verified; 14 brand locks generalized while package/tenant guards and restrictive RLS stayed intact; 118 cards, 8 programs and 11 staff at verification, not current counts
-- Isolated `next build --webpack` passed on Node24.21.0/Next16.3.8 at application commit `87b44a6` in `C:/Projects/branda-universal-services-release-20261011`; later application unchanged after migration-path/documentation amendment
-- RUN at 16:47 +03:00: 38 SQL, 15 server, 38 OTP, 16 UI, 144 directory and 23 directory UI checks plus scanner/wallet/offers/menu checks, text integrity and TypeScript passed; detailed provenance in archive
-- Four complete inactive-service menu SSR baselines matched `44e8ba9`; published public-menu stylesheet files unchanged
-- Evidence `.git/universal-services-build-exit.json`, `.git/universal-loyalty-migration.json`, `.git/universal-loyalty-live-verified.json`; private evidence stays local and must not be committed
-- No customer messages or business test transactions were sent for this release; real WhatsApp delivery and actual phone wallet installation remain unverified
+- RUN2026-10-17 00:13-00:15 +03:00 Node24.21.0: 74 PostgreSQL auth/tenant/RLS/date/dedup/real-loader checks, actual React report SSR/filter/empty states, 31-brand PDF, 1201-recipient pagination/partial success/failure/retry checks, existing wallet-sync regression, text integrity, TypeScript and scoped ESLint PASS
+- Exact isolated Next16.3.8 webpack + TypeScript build PASS00:15:14+03 at application commit above; temporary environment file removed. Evidence `.git/operations-checks.json`, `.git/operations-build-exit.json`
+- Live authenticated SQL read-only rollback: 14 brands, 12 pager orders, zero newly tracked promotional recipients, removed metrics absent. Function/source hashes and migration registry match; privilege assertions passed. These are verification-time counts, not permanently fixed totals. Evidence `.git/operations-database-live.json`
+- Production exact alias/menu200 and anonymous report-data denial verified; anonymous admin shell returns200 with an authorization error and no report metrics. Evidence `.git/operations-production.json`
+- REUSED 2026-10-17 01:06 +03:00: all recorded source/test/dependency/config hashes matched prior passing evidence, Node24 unchanged. Documentation-only task requires no new application build. Evidence `.git/handoff-check-reuse.json`; text integrity and documentation diff reviewed again before commit
+- Browser was limited to necessary authenticated Supabase SQL migration; no fresh application-browser or physical-phone test. Management API token expired and Vercel direct API returned403 historically; GitHub deployment/status plus exact live alias provide production evidence. Never print credentials or assume an account switch restored them
 
-## Local unfinished alternatives — preserve and never publish wholesale
+## Unpublished work and remaining limits
 
-Observed 2026-10-11: modified `AGENTS.md` generated Next block and `components/menu/rast-spotlight.module.css`; untracked `app/loyalty/scan/`, generic loyalty dashboard/card/membership/scanner/login components, `public/menu-logos/rast-transparent-v1.png`, `scripts/check-loyalty-database.mjs`, `scripts/check-wallet-integration.mjs`, `supabase/tests/013_loyalty_experience_atomic_scanner_test.sql`, `supabase/.temp/`
+- Preserve unrelated modified `AGENTS.md`, Rast CSS and Taza catalog draft, untracked generic loyalty/scanner files, local generated assets/output/tests and Supabase temporary files. They are not pending pieces of the completed release; never stage all files or deploy the old `.vercel/project.json`
+- Physical POS overlay behavior, real wallet installation/notification reading and real customer WhatsApp delivery were not tested in this release. Historical follow-ups outside this task remain in the archive; do not claim them resolved
+- GREEN-API account/partnership investigation remains stopped at the user's earlier explicit instruction. Do not resume, resubmit, or message anyone without a new request
+- Continue from the user's next request, reading actual git status first. No data resets, repeated catalog SQL, credential changes or unsolicited messages
 
-These are NOT pending parts of the completed universal release; inspect before reuse and do not reset or stage all files
+## History
 
-## Handoff-only update
-
-- Condensed this record and refreshed the master index; full prior record preserved verbatim in [archive through 2026-10-11](BARNDAKSA_HANDOFF/history/task-state-through-20261011.md)
-- No application, environment, database, browser account or production change in this task
-- RUN 2026-10-12 00:03 +03:00 on Windows with Node24.21.0: `node scripts/check-text-integrity.mjs` and `node node_modules/typescript/bin/tsc --noEmit --incremental false` passed against the preserved current workspace/dependencies; changes in this task are documentation only. No application build or fresh live-service verification performed. Initial documentation diff check found one trailing blank line, removed before commit
-- Files persist in this same workspace after editor/account changes; credentials and browser sessions remain machine/account dependent, with no claim of another-device synchronization
+Detailed previous records preserved verbatim in [task history through October 17](BARNDAKSA_HANDOFF/history/task-state-through-20261017.md) and [handoff history through October 17](BARNDAKSA_HANDOFF/history/handoff-through-20261017.md). Historical headings and counts are not current state. Evidence under `.git` remains local and is not synchronized to GitHub or another device
