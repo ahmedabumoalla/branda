@@ -749,7 +749,7 @@ function MenuProductEditor({
                   {imageChoices.map((item, index) => (
                     <button type="button" key={item.key} aria-pressed={primaryKey === item.key}
                       disabled={submitting} onClick={() => setPrimaryKey(item.key)} className={styles.mediaChoice}>
-                      <ProductImage product={item.image} alt={`صورة ${index + 1}`} className={styles.mediaThumbnail} />
+                      <ProductImage ownerMenu product={item.image} alt={`صورة ${index + 1}`} className={styles.mediaThumbnail} />
                       <span>{primaryKey === item.key ? "الصورة الرئيسية" : `صورة ${index + 1}`}</span>
                     </button>
                   ))}
@@ -1201,6 +1201,7 @@ function MenuProductEditor({
           <div className="overflow-hidden rounded-3xl border border-[#E5D8CD] bg-white shadow-xl">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#F8F4EF]">
               <ProductMediaDisplay
+                ownerMenu
                 product={previewProduct}
                 alt=""
                 className="h-full w-full object-contain"

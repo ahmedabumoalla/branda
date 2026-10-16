@@ -68,6 +68,7 @@ export function MenuProductCard({
     >
       <div className={styles.media}>
         <ProductMediaDisplay
+          ownerMenu
           product={product}
           alt=""
           className={styles.mediaAsset}

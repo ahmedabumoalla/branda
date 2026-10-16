@@ -46,18 +46,18 @@ export function useLocalAssetUrl(
   assetId?: string,
   fallbackSrc?: string | null,
   previewUrl?: string,
-  publicBucket?: string
+  publicBucket?: string,
+  ownerMenu = false
 ) {
+  const ownerUrl = ownerMenu && publicBucket === "menu-products" && assetId?.includes("/")
+    ? `/api/owner/menu-media?path=${encodeURIComponent(assetId)}` : undefined;
   const [url, setUrl] = useState<string | undefined>(() =>
     previewUrl ||
     (isRenderableUrl(fallbackSrc) ? fallbackSrc ?? undefined : undefined)
   );
 
   useEffect(() => {
-    if (previewUrl) {
-      setUrl(previewUrl);
-      return;
-    }
+    if (ownerUrl || previewUrl) return;
 
     let cancelled = false;
     let objectUrl: string | undefined;
@@ -91,7 +91,7 @@ export function useLocalAssetUrl(
       cancelled = true;
       if (objectUrl) revokeObjectUrl(objectUrl);
     };
-  }, [assetId, fallbackSrc, previewUrl, publicBucket]);
+  }, [assetId, fallbackSrc, previewUrl, publicBucket, ownerUrl]);
 
-  return url;
+  return previewUrl || ownerUrl || url;
 }

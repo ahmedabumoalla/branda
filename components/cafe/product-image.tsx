@@ -15,6 +15,7 @@ type ProductMediaSource = Pick<
 >;
 
 type Props = {
+  ownerMenu?: boolean;
   product: ProductImageSource;
   alt: string;
   className?: string;
@@ -61,7 +62,7 @@ export function getProductImageSources(product: ProductImageSource): MenuProduct
   });
 }
 
-export function ProductImage({ product, alt, className = "", previewUrl, fallback = null }: Props) {
+export function ProductImage({ product, alt, className = "", previewUrl, fallback = null, ownerMenu }: Props) {
   const first = getProductImageSources(product)[0] ?? {
     imageAssetId: product.imageAssetId,
     imageDataUrl: product.imageDataUrl,
@@ -76,6 +77,7 @@ export function ProductImage({ product, alt, className = "", previewUrl, fallbac
       className={className}
       fallback={fallback}
       publicBucket="menu-products"
+      ownerMenu={ownerMenu}
     />
   );
 }
@@ -98,6 +100,7 @@ export function getProductVideoSource(product: ProductMediaSource) {
 }
 
 type CarouselProps = {
+  ownerMenu?: boolean;
   product: ProductImageSource;
   alt: string;
   className?: string;
@@ -105,6 +108,7 @@ type CarouselProps = {
 };
 
 export function ProductMediaCarousel({
+  ownerMenu,
   product,
   alt,
   className = "",
@@ -141,6 +145,7 @@ export function ProductMediaCarousel({
         className={`${className} barndaksa-product-media-fade`}
         fallback={fallback}
         publicBucket="menu-products"
+        ownerMenu={ownerMenu}
       />
 
       {sources.length > 1 ? (
@@ -163,6 +168,7 @@ export function ProductMediaCarousel({
 }
 
 type ProductMediaDisplayProps = {
+  ownerMenu?: boolean;
   product: ProductMediaSource;
   alt: string;
   className?: string;
@@ -233,6 +239,7 @@ export function AutoplayProductVideo({
 }
 
 export function ProductMediaDisplay({
+  ownerMenu,
   product,
   alt,
   className = "",
@@ -245,7 +252,8 @@ export function ProductMediaDisplay({
     video?.assetId,
     mediaUrl(video?.url),
     videoPreviewUrl,
-    "menu-products"
+    "menu-products",
+    ownerMenu
   );
 
   if (videoSrc && primaryMediaType(product) === "video") {
@@ -260,6 +268,7 @@ export function ProductMediaDisplay({
 
   return (
     <ProductMediaCarousel
+      ownerMenu={ownerMenu}
       product={product}
       alt={alt}
       className={className}
