@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-16",
+  "tool": "built-in image_gen",
+  "prompt": "Use case: product-mockup. Create one square photorealistic premium Deli Cake menu product photograph. First reference supplies exact real coffee takeaway box appearance: ONLY the two boxes in the bottom row of the POS screenshot, hot and cold use same packaging. Second reference supplies scene style and official intertwined cream/olive monogram. Recreate one realistic CLOSED cream cardboard coffee takeaway carrier box, gently curved broad front panel and subtle burgundy curved lower-right corner as shown, neat integrated handle along top, small faithful dark olive Deli monogram on front. Box centered fully visible at three-quarter camera angle, on warm cream travertine tabletop, softly blurred cream and olive wall, natural warm side sunlight, premium clean product photography. Match actual package silhouette visible in POS; no invented cups or serving quantities, no people, no food, no screen, no prices, no captions, no other props, no watermark. Avoid textual branding except the original monogram; do not invent lettering. Actual coffee contents not visible. This identical box represents both hot and cold coffee products.",
+  "source": "C:/Users/pc/.codex/generated_images/01a1448f-43b7-72e0-b2cd-b679a97e4e0a/exec-30e9464f-7c81-4242-8170-4d5d4d8dfea6.png",
+  "outputs": [
+    "public/deli-cake/catalog-20261016/coffee-box-hot.webp",
+    "public/deli-cake/catalog-20261016/coffee-box-cold.webp"
+  ],
+  "review": "Same closed package is shown for both products in supplied POS screenshot; output visually reviewed and exported at WebP quality92; no serving quantities inferred"
+}

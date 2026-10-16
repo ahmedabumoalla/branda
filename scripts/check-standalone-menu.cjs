@@ -76,13 +76,33 @@ function loader(client, features = ["menu"]) {
 }
 
 async function run() {
-  const deli = fakeClient({slug:'delicake'});
+  const availableDeliProduct = { ...fixtureProduct, id: "latte", available: true };
+  const deli = fakeClient({slug:'delicake',products:[availableDeliProduct]});
   assert.equal(await loader(deli.client,[])('delicake'),null);
   assert.equal(deli.signedPaths.length,0,'Deli media remains behind current package authorization');
   assert.equal((await loader(deli.client)('delicake')).products.length,1);
   assert(deli.signedPaths.includes(imagePath));
-  const foreignDeli=fakeClient({slug:'delicake',products:[{...fixtureProduct,image_storage_path:'other/secret.webp',media:[]}]});
+  const foreignDeli=fakeClient({slug:'delicake',products:[{...availableDeliProduct,image_storage_path:'other/secret.webp',media:[]}]});
   await loader(foreignDeli.client)('delicake');assert.equal(foreignDeli.signedPaths.length,0,'Deli never signs another tenant asset');
+  const pausedDeliProduct = { ...fixtureProduct, id: "mocha", name: "Mocha", available: false };
+  const deliCatalog = [pausedDeliProduct, availableDeliProduct];
+  const originalDeliCatalog = structuredClone(deliCatalog);
+  const mixedDeli = await loader(fakeClient({ slug: "delicake", products: deliCatalog }).client)("delicake");
+  assert.deepEqual(mixedDeli.products.map((product) => product.id), ["latte"], "Deli guests only see available products");
+  assert.deepEqual(deliCatalog, originalDeliCatalog, "Hiding paused Deli products must not alter the owner catalog");
+  const pausedOnlyDeli = fakeClient({ slug: "delicake", products: [pausedDeliProduct] });
+  assert.deepEqual((await loader(pausedOnlyDeli.client)("delicake")).products, []);
+  assert.equal(pausedOnlyDeli.signedPaths.length, 0, "Paused-only Deli products must not have private media signed");
+  for (const slug of ["taza", "kat-coffe", "double-b-bistro"]) {
+    const otherMenu = await loader(fakeClient({ slug, products: deliCatalog }).client)(slug);
+    assert.deepEqual(otherMenu.products.map((product) => product.id), ["mocha", "latte"], `${slug} retains its existing availability behavior`);
+    assert.equal(otherMenu.products[0].available, false);
+  }
+  const pagedDeli = fakeClient({ slug: "delicake", products: [
+    ...Array.from({ length: 500 }, (_, index) => ({ ...pausedDeliProduct, id: `paused-${index}` })),
+    availableDeliProduct,
+  ] });
+  assert.deepEqual((await loader(pagedDeli.client)("delicake")).products.map((product) => product.id), ["latte"], "A full paused page must not truncate later available Deli products");
   const kath = fakeClient({slug:'kat-coffe'});
   assert.equal(await loader(kath.client,[])('kat-coffe'),null);
   assert.equal(kath.signedPaths.length,0,'cached media must remain behind current package authorization');

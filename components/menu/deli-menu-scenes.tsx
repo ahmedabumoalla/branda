@@ -142,7 +142,7 @@ export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: Standalo
         </div>
       </div>
       {feature && <div className={s.confection}>
-        <span className={s.handwritten} dir="ltr" aria-hidden="true">A little sweetness</span>
+        <span className={s.handwritten} dir="ltr">More than delicious cake</span>
         <button type="button" className={s.feature} onClick={() => onSelect(feature)} aria-label={`اكتشف ${feature.name}`}>
           <span className={s.plate}>
             <DeliProductImage product={feature} priority hero />
@@ -214,5 +214,13 @@ export function DeliOrigins() {
 }
 
 export function DeliClosing({ menu }: { menu: StandaloneMenu }) {
-  return <section className={s.closing} aria-label={menu.name}><DeliMark menu={menu} className={s.closingLogo} /><div><p>كل لحظة حلوة تستاهل ديلي</p><h2>نختمها <em>بحلا</em></h2><a href="#rast-menu-items">ارجع لاختيارك المفضل<ArrowUpLeft aria-hidden="true" /></a></div><span className={s.closingNote} dir="ltr">Until the<br /><em>next sweet moment</em></span></section>;
+  return <>
+    <section className={s.connect} aria-labelledby="deli-connect-title">
+      <div className={s.connectCopy}><p>تبقى الحلاوة ونبقى على تواصل</p><h2 id="deli-connect-title">للحكاية <em>بقية</em></h2><span>تعرّف على عالم ديلي كيك وتابع جديدنا</span></div>
+      <a className={s.connectLink} href="https://linktr.ee/Deli.cake?utm_source=linktree_profile_share&ltsid=ebad9ee3-42c1-44ed-82b2-b7dd971dd009" target="_blank" rel="noopener noreferrer" aria-label="اكتشف روابط ديلي كيك في نافذة جديدة">
+        <span><strong>كل روابط ديلي كيك</strong><small dir="ltr">DELI CAKE</small></span><ArrowUpLeft aria-hidden="true" />
+      </a>
+    </section>
+    <section className={s.closing} aria-label={menu.name}><DeliMark menu={menu} className={s.closingLogo} /><div><p>كل لحظة حلوة تستاهل ديلي</p><h2>نختمها <em>بحلا</em></h2><a href="#rast-menu-items">ارجع لاختيارك المفضل<ArrowUpLeft aria-hidden="true" /></a></div><span className={s.closingNote} dir="ltr">Until the<br /><em>next sweet moment</em></span></section>
+  </>;
 }

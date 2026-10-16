@@ -53,7 +53,9 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
       .eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order").order("id")
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
-    rows.push(...((data ?? []) as unknown as DbMenuProduct[]).filter((row) => isStandaloneProductVisible(row, categoryIds)));
+    // Deli keeps paused products in its owner catalog while hiding them from guests
+    rows.push(...((data ?? []) as unknown as DbMenuProduct[]).filter((row) =>
+      isStandaloneProductVisible(row, categoryIds) && (slug !== "delicake" || row.available !== false)));
     if ((data?.length ?? 0) < PAGE_SIZE) break;
   }
   const mapped = rows.map((row) => mapDbProductToMenuProduct(row, categoryNames.get(row.category_id ?? "")));
