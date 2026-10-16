@@ -24,7 +24,7 @@ const cafeId = "bb404c1a-a439-41ab-aed8-ea0c17875bd9";
 const imagePath = `${cafeId}/product/photo.webp`;
 const fixtureProduct = {
   id: "product", cafe_id: cafeId, category_id: "category", name: "Original dish", description: "Full description\nOption +8 SAR",
-  price: 18.75, calories: 0, preparation_time_minutes: 0, ingredients: ["Milk", "Nuts"], available: false,
+  price: 18.75, calories: 0, preparation_time_minutes: 0, ingredients: ["Milk", "Nuts"], available: true,
   image_storage_path: imagePath, image_url: null, image_gallery: [], gallery_storage_paths: [],
   media: [{ type: "image", assetId: imagePath }, { type: "video", assetId: `${cafeId}/product/video.mp4` }],
   promo: null, deleted_at: null, sort_order: 1,
@@ -87,6 +87,10 @@ async function run() {
   const pausedDeliProduct = { ...fixtureProduct, id: "mocha", name: "Mocha", available: false };
   const deliCatalog = [pausedDeliProduct, availableDeliProduct];
   const originalDeliCatalog = structuredClone(deliCatalog);
+  const selectedImageMenu = await loader(fakeClient({products:[{...fixtureProduct,media:[{type:'image',assetId:imagePath,primary:true},{type:'video',assetId:`${cafeId}/product/video.mp4`}]}]}).client)('double-b-bistro');
+  assert.equal(selectedImageMenu.products[0].primaryMediaType,'image');
+  const freebieMenu = await loader(fakeClient({products:[{...fixtureProduct,promo:{kind:'منتج مجاني مع الطلب',freeProductId:'mocha',startDate:'2020-01-01',endDate:'2099-12-31'}},pausedDeliProduct]}).client)('double-b-bistro');
+  assert.equal(freebieMenu.products[0].promo,null,'An unavailable free product must not be promised in the menu');
   const mixedDeli = await loader(fakeClient({ slug: "delicake", products: deliCatalog }).client)("delicake");
   assert.deepEqual(mixedDeli.products.map((product) => product.id), ["latte"], "Deli guests only see available products");
   assert.deepEqual(deliCatalog, originalDeliCatalog, "Hiding paused Deli products must not alter the owner catalog");
@@ -95,8 +99,8 @@ async function run() {
   assert.equal(pausedOnlyDeli.signedPaths.length, 0, "Paused-only Deli products must not have private media signed");
   for (const slug of ["taza", "kat-coffe", "double-b-bistro"]) {
     const otherMenu = await loader(fakeClient({ slug, products: deliCatalog }).client)(slug);
-    assert.deepEqual(otherMenu.products.map((product) => product.id), ["mocha", "latte"], `${slug} retains its existing availability behavior`);
-    assert.equal(otherMenu.products[0].available, false);
+    assert.deepEqual(otherMenu.products.map((product) => product.id), ["latte"], `${slug} hides unavailable products`);
+    assert.equal(otherMenu.products[0].available, true);
   }
   const pagedDeli = fakeClient({ slug: "delicake", products: [
     ...Array.from({ length: 500 }, (_, index) => ({ ...pausedDeliProduct, id: `paused-${index}` })),

@@ -5,6 +5,7 @@ import { Coffee } from "lucide-react";
 import { LocalAssetImage } from "@/components/ui/local-asset-image";
 import { useLocalAssetUrl } from "@/lib/cafe/use-local-asset-url";
 import type { MenuProduct, MenuProductImage } from "@/lib/mock/menu";
+import { primaryMediaType } from "@/lib/menu/product-media";
 import { isHttpImageUrl } from "@/lib/cafe/image-asset-pipeline";
 
 type ProductImageSource = Pick<MenuProduct, "imageAssetId" | "imageDataUrl" | "imageGallery">;
@@ -114,7 +115,7 @@ export function ProductMediaCarousel({
 
   useEffect(() => {
     setIndex(0);
-  }, [sources.length]);
+  }, [sources.length, product.imageAssetId, product.imageDataUrl]);
 
   if (!sources.length) {
     return (
@@ -247,7 +248,7 @@ export function ProductMediaDisplay({
     "menu-products"
   );
 
-  if (videoSrc) {
+  if (videoSrc && primaryMediaType(product) === "video") {
     return (
       <AutoplayProductVideo
         src={videoSrc}

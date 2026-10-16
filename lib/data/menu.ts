@@ -27,6 +27,7 @@ function invalidatePublicMenuSurfaces(slug: string) {
   clearServerMemoryCache(`public-product:${normalizedSlug}`);
   clearServerMemoryCache(`public-product-catalog-summary:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
+  revalidatePath(`/menu/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/products/latest`);
   revalidatePath(`/c/${normalizedSlug}/products/popular`);
@@ -300,7 +301,7 @@ const productSchema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid().optional().nullable(),
   category: z.string().optional(),
-  description: z.string(),
+  description: z.string().optional().default(""),
   price: z.number().min(0),
   calories: z.number().optional().nullable(),
   loyaltyPoints: z.number().int().min(0),
@@ -318,12 +319,22 @@ const productSchema = z.object({
   videoStoragePath: z.string().optional().nullable(),
   media: z.array(z.object({
     type: z.enum(["image", "video"]),
+    primary: z.boolean().optional(),
     assetId: z.string().optional(),
     url: z.string().optional().nullable(),
     alt: z.string().optional(),
     mimeType: z.string().optional(),
   })).optional().default([]),
-  promo: z.unknown().optional().nullable(),
+  promo: z.object({
+    kind: z.enum(["خصم", "منتج مجاني مع الطلب", "عرض مخصص"]),
+    discountMode: z.enum(["percent", "fixed_price"]).optional(),
+    discountPercent: z.number().min(0).max(100).optional(),
+    discountedPrice: z.number().min(0).optional(),
+    freeProductId: z.string().uuid().optional(),
+    customText: z.string().optional(),
+    startDate: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+    endDate: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+  }).optional().nullable(),
   eventTicketSettings: z.object({
     eventStartAt: z.string().optional().nullable(),
     eventEndAt: z.string().optional().nullable(),
@@ -336,6 +347,15 @@ const productSchema = z.object({
     maxPerCustomer: z.number().int().positive().optional().nullable(),
     checkinPolicy: z.enum(["single_use", "multi_use"]).optional().default("single_use"),
   }).optional().nullable(),
+}).superRefine((product, context) => {
+  const promo = product.promo;
+  if (!promo) return;
+  const invalid = Date.parse(promo.endDate) < Date.parse(promo.startDate)
+    || (promo.kind === "خصم" && (promo.discountMode === "fixed_price"
+      ? promo.discountedPrice == null || promo.discountedPrice >= product.price
+      : !promo.discountPercent))
+    || (promo.kind === "منتج مجاني مع الطلب" && !promo.freeProductId);
+  if (invalid) context.addIssue({ code: "custom", path: ["promo"], message: "تحقق من سعر العرض وتواريخه والمنتج المرتبط" });
 });
 
 type MenuProductPayload = {
@@ -410,6 +430,7 @@ function normalizeProductMedia(
   return media
     .map((item) => ({
       type: item.type,
+      primary: item.primary === true,
       assetId: item.assetId?.trim() || undefined,
       url: persistableUrl(item.url),
       alt: item.alt?.trim() || undefined,
@@ -483,10 +504,10 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const imageGallery = normalizeProductImageGallery(parsed.imageGallery ?? []);
   const requestedVideoStoragePath = parsed.videoStoragePath?.trim() || undefined;
   const media = normalizeProductMedia([
-    ...(requestedVideoStoragePath
+    ...parsed.media,
+    ...(requestedVideoStoragePath && !parsed.media.some((item) => item.type === "video" && item.assetId === requestedVideoStoragePath)
       ? [{ type: "video" as const, assetId: requestedVideoStoragePath }]
       : []),
-    ...parsed.media,
   ]);
   const videoStoragePath =
     requestedVideoStoragePath ??

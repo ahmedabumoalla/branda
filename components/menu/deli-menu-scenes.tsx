@@ -104,7 +104,7 @@ function useVisibleOffers(menu: StandaloneMenu) {
 export function deliProductVisual(product: StandaloneMenuProduct) {
   const first = product.images[0];
   const suppliedStudio = Boolean(first && /(?:\/deli-20261015\/dish-|\/deli-cake\/dishes\/dish-)/.test(first.url));
-  const image = suppliedStudio && product.images[1] ? product.images[1] : first;
+  const image = !product.primaryMediaType && suppliedStudio && product.images[1] ? product.images[1] : first;
   return { image, studio: suppliedStudio && image === first };
 }
 

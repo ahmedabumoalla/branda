@@ -21,6 +21,7 @@ export type MenuProductImage = {
 
 export type MenuProductMedia = {
   type: "image" | "video";
+  primary?: boolean;
   assetId?: string;
   url?: string | null;
   alt?: string;
@@ -94,9 +95,10 @@ export const PROMO_KINDS: PromoKind[] = [
   "عرض مخصص",
 ];
 
-export function isPromoActive(promo: ProductPromo) {
-  const now = new Date();
-  return now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
+export function isPromoActive(promo: ProductPromo, now = Date.now()) {
+  const boundary = (value: string, end: boolean) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T${end ? "23:59:59.999" : "00:00:00"}+03:00` : value).getTime();
+  return now >= boundary(promo.startDate, false) && now <= boundary(promo.endDate, true);
 }
 
 export function promoBadgeText(promo: ProductPromo) {

@@ -1,4 +1,4 @@
-import type { ProductPromo } from "@/lib/mock/menu";
+import { isPromoActive, type ProductPromo } from "@/lib/mock/menu";
 import type { StandaloneHighlight, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
 type PublishedOffers = { items: StandaloneHighlight[]; managedProductIds?: string[] };
@@ -36,7 +36,7 @@ export function getPublishedOfferPromo(product: StandaloneMenuProduct, highlight
   const best = applicable.reduce<StandaloneHighlight | undefined>((current, item) => !current || item.discountPercent! > current.discountPercent! ? item : current, undefined);
   if (!best) return base;
   const offerPrice = Math.round(product.price * (1 - best.discountPercent! / 100) * 100) / 100;
-  if (base?.kind === "خصم" && now >= new Date(base.startDate).getTime() && now <= new Date(base.endDate).getTime()) {
+  if (base?.kind === "خصم" && isPromoActive(base, now)) {
     const basePrice = base.discountMode === "fixed_price" && base.discountedPrice != null
       ? Math.max(0, base.discountedPrice)
       : product.price * (1 - Math.min(100, Math.max(0, Number(base.discountPercent ?? 0))) / 100);

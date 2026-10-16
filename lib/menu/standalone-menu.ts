@@ -11,6 +11,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo"
 > & {
+  primaryMediaType?: "image" | "video";
   offers?: StandaloneHighlight[];
   images: { url: string; alt: string }[];
   videos: { url: string; alt: string }[];
@@ -66,10 +67,10 @@ export function matchesMenuSearch(product: StandaloneMenuProduct, query: string)
 
 /** Only published, non-deleted categories are eligible; unassigned products remain visible. */
 export function isStandaloneProductVisible(
-  product: { deleted_at?: string | null; category_id: string | null },
+  product: { available?: boolean; deleted_at?: string | null; category_id: string | null },
   visibleCategoryIds: ReadonlySet<string>,
 ) {
-  return !product.deleted_at && (!product.category_id || visibleCategoryIds.has(product.category_id));
+  return product.available !== false && !product.deleted_at && (!product.category_id || visibleCategoryIds.has(product.category_id));
 }
 
 export function isOwnedMenuAsset(path: string, cafeId: string) {

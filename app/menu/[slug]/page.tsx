@@ -27,5 +27,5 @@ export default async function StandaloneMenuPage({ params }: Props) {
   const { slug } = await params;
   const menu = await getStandaloneMenu(slug);
   if (!menu) notFound();
-  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh /><BistroMenu menu={menu} /></>;
+  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} /><BistroMenu menu={menu} /></>;
 }

@@ -131,9 +131,11 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
 function ProductDetails({ product, products, close, browse, position, total, brandSlug }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [mediaIndex, setMediaIndex] = useState(brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
-  const media = [...product.videos.map((item) => ({ ...item, type: "video" as const })), ...product.images.map((item) => ({ ...item, type: "image" as const }))];
-  const current = media[mediaIndex];
+  const [mediaIndex, setMediaIndex] = useState(!product.primaryMediaType && brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
+  const images = product.images.map((item) => ({ ...item, type: "image" as const }));
+  const videos = product.videos.map((item) => ({ ...item, type: "video" as const }));
+  const media = product.primaryMediaType === "image" ? [...images, ...videos] : [...videos, ...images];
+  const current = media[mediaIndex] ?? media[0];
   useEffect(() => {
     const element = dialog.current;
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -255,7 +257,8 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [priceOrder, setPriceOrder] = useState<"original" | "asc" | "desc">("original");
   const searchInput = useRef<HTMLInputElement>(null);
-  const [selected, setSelected] = useState<StandaloneMenuProduct | null>(null);
+  const [selectedSnapshot, setSelected] = useState<StandaloneMenuProduct | null>(null);
+  const selected = menu.products.find((product) => product.id === selectedSnapshot?.id) ?? null;
   const [shareMessage, setShareMessage] = useState("");
   const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (shareTimer.current) clearTimeout(shareTimer.current); }, []);
@@ -351,13 +354,13 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
         </div>
         <div className={`${s.productGrid} ${view === "list" ? s.listView : ""}${isShahi ? ` ${majlis.productGrid}${view === "list" ? ` ${majlis.listView}` : ""}` : ""}${isTaza ? ` ${taza.productGrid}${view === "list" ? ` ${taza.listView}` : ""}` : ""}${isDeli ? ` ${deli.productGrid}${view === "list" ? ` ${deli.listView}` : ""}` : ""}`}>
           {section.products.map((product, productIndex) => <DishMotion key={product.id} id={product.id}>
-            {product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}${isDeli ? ` ${deli.productImage}` : ""}`} data-dish-photo>
+            {product.primaryMediaType !== "image" && product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}${isDeli ? ` ${deli.productImage}` : ""}`} data-dish-photo>
               <FoodVideo src={product.videos[0].url} alt={product.name} poster={product.images[0]?.url} paused={Boolean(selected)} />
               <ProductOfferBadge product={product} products={menu.products} />
               {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}
             </div>}
             <button type="button" className={`${s.productButton}${isShahi ? ` ${majlis.productButton}` : ""}${isTaza ? ` ${taza.productButton}` : ""}${isDeli ? ` ${deli.productButton}` : ""}`} onClick={() => setSelected(product)} aria-label={`عرض تفاصيل ${product.name}`} aria-describedby={product.offers?.length || (product.available && product.promo && isPromoActive(product.promo)) ? `product-offers-${product.id}` : undefined}>
-              {!product.videos[0] && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}${isDeli ? ` ${deli.productImage}` : ""}`} data-dish-photo>
+              {(product.primaryMediaType === "image" || !product.videos[0]) && <div className={`${s.productImage}${isShahi ? ` ${majlis.productImage}` : ""}${isTaza ? ` ${taza.productImage}` : ""}${isDeli ? ` ${deli.productImage}` : ""}`} data-dish-photo>
                 {isDeli ? <DeliProductImage product={product} priority={sectionIndex === 0 && productIndex < 2} /> : <FoodImage src={product.images[0]?.url} alt={product.name} priority={sectionIndex === 0 && productIndex < 2} />}
                 <ProductOfferBadge product={product} products={menu.products} />
                 {!product.available && <span className={s.unavailable}>غير متوفر حاليًا</span>}

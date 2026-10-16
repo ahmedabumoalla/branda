@@ -9,13 +9,13 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ProductMediaDisplay } from "@/components/cafe/product-image";
+import { useEffect, useRef, useState } from "react";
+import { imageKey, orderedProductMedia, primaryMediaType } from "@/lib/menu/product-media";
+import { ProductImage, getProductImageSources, ProductMediaDisplay } from "@/components/cafe/product-image";
 import { uploadImageAction, uploadProductVideoAction } from "@/app/actions/upload";
 import {
   ImagePipelineError,
   MAX_UPLOAD_BYTES,
-  isHttpImageUrl,
   optimizeImageForStorage,
   type OptimizedImageResult,
 } from "@/lib/cafe/image-asset-pipeline";
@@ -29,6 +29,7 @@ import {
   isPromoActive,
   PROMO_KINDS,
   promoBadgeText,
+  productFinalPrice,
   type MenuImageVariant,
   type MenuProduct,
   type ProductPromo,
@@ -51,7 +52,7 @@ type Props = {
     categories: MenuCategoryRecord[]
   ) => Promise<MenuCategoryRecord[]> | MenuCategoryRecord[] | void;
   onClose: () => void;
-  onSave: (product: MenuProduct) => void;
+  onSave: (product: MenuProduct) => Promise<boolean>;
 };
 
 const VARIANT_OPTIONS: { id: MenuImageVariant; label: string }[] = [
@@ -140,7 +141,11 @@ function buildPromoFromForm(
   };
 }
 
-export function MenuProductFormModal({
+export function MenuProductFormModal(props: Props) {
+  return props.open ? <MenuProductEditor key={props.editingProduct?.id ?? "new"} {...props} /> : null;
+}
+
+function MenuProductEditor({
   open,
   mode,
   editingProduct,
@@ -162,162 +167,65 @@ export function MenuProductFormModal({
   const detailsLabel = isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
   const detailsPlaceholder = isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
   const defaultProductName = isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
-  const defaultDescription = isEvents ? "تذكرة أو باقة من قائمة الفعالية" : "منتج من قائمة العلامة التجارية";
 
-  const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+
+  const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+  const [draftProductId] = useState(() => editingProduct?.id || crypto.randomUUID());
+  const previewUrls = useRef(new Set<string>());
+  const initialImages = editingProduct ? getProductImageSources(editingProduct) : [];
+  const [primaryKey, setPrimaryKey] = useState(() => editingProduct && primaryMediaType(editingProduct) === "video"
+    ? "video" : imageKey(initialImages[0] ?? {}));
+  const [name, setName] = useState(() => editingProduct?.name ?? "");
+  const [categoryId, setCategoryId] = useState(() => editingProduct?.categoryId ?? categories[0]?.id ?? "");
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(() => editingProduct?.description ?? "");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [imageAssetId, setImageAssetId] = useState<string | undefined>();
-  const [imageGallery, setImageGallery] = useState<MenuProduct["imageGallery"]>([]);
+  const [imageAssetId, setImageAssetId] = useState<string | undefined>(editingProduct?.imageAssetId);
+  const [imageGallery, setImageGallery] = useState<MenuProduct["imageGallery"]>(() => initialImages);
   const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([]);
-  const [legacyExternalImageUrl, setLegacyExternalImageUrl] = useState<string | null>(null);
-  const [pendingOptimized, setPendingOptimized] = useState<OptimizedImageResult | null>(null);
+
   const [optimizingImage, setOptimizingImage] = useState(false);
-  const [videoAssetId, setVideoAssetId] = useState<string | undefined>();
+  const [videoAssetId, setVideoAssetId] = useState<string | undefined>(editingProduct?.videoAssetId);
   const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | undefined>();
-  const [imageVariant, setImageVariant] = useState<MenuImageVariant>("latte");
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | undefined>(editingProduct?.media?.find((item) => item.type === "video")?.url ?? undefined);
+  const [imageVariant, setImageVariant] = useState<MenuImageVariant>(() => editingProduct?.imageVariant ?? "latte");
 
-  const [calories, setCalories] = useState("");
-  const [price, setPrice] = useState("18");
-  const [preparationTimeMinutes, setPreparationTimeMinutes] = useState("");
-  const [availableForPickup, setAvailableForPickup] = useState(true);
-  const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState("");
-  const [eventStartAt, setEventStartAt] = useState("");
-  const [eventEndAt, setEventEndAt] = useState("");
-  const [venueName, setVenueName] = useState("");
-  const [gateName, setGateName] = useState("");
-  const [capacity, setCapacity] = useState("");
-  const [ticketType, setTicketType] = useState("general_admission");
-  const [ticketValidFrom, setTicketValidFrom] = useState("");
-  const [ticketValidUntil, setTicketValidUntil] = useState("");
-  const [maxPerCustomer, setMaxPerCustomer] = useState("");
-  const [checkinPolicy, setCheckinPolicy] = useState<"single_use" | "multi_use">("single_use");
+  const [calories, setCalories] = useState(() => editingProduct?.calories == null ? "" : String(editingProduct.calories));
+  const [price, setPrice] = useState(() => String(editingProduct?.price ?? 18));
+  const [preparationTimeMinutes, setPreparationTimeMinutes] = useState(() => editingProduct?.preparationTimeMinutes == null ? "" : String(editingProduct.preparationTimeMinutes));
+  const [availableForPickup, setAvailableForPickup] = useState(() => editingProduct?.availableForPickup !== false);
+  const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState(() => editingProduct?.pickupLeadTimeMinutes == null ? "" : String(editingProduct.pickupLeadTimeMinutes));
+  const [eventStartAt, setEventStartAt] = useState(() => editingProduct?.eventTicketSettings?.eventStartAt?.slice(0, 16) ?? "");
+  const [eventEndAt, setEventEndAt] = useState(() => editingProduct?.eventTicketSettings?.eventEndAt?.slice(0, 16) ?? "");
+  const [venueName, setVenueName] = useState(() => editingProduct?.eventTicketSettings?.venueName ?? "");
+  const [gateName, setGateName] = useState(() => editingProduct?.eventTicketSettings?.gateName ?? "");
+  const [capacity, setCapacity] = useState(() => editingProduct?.eventTicketSettings?.capacity == null ? "" : String(editingProduct.eventTicketSettings.capacity));
+  const [ticketType, setTicketType] = useState(() => editingProduct?.eventTicketSettings?.ticketType ?? "general_admission");
+  const [ticketValidFrom, setTicketValidFrom] = useState(() => editingProduct?.eventTicketSettings?.ticketValidFrom?.slice(0, 16) ?? "");
+  const [ticketValidUntil, setTicketValidUntil] = useState(() => editingProduct?.eventTicketSettings?.ticketValidUntil?.slice(0, 16) ?? "");
+  const [maxPerCustomer, setMaxPerCustomer] = useState(() => editingProduct?.eventTicketSettings?.maxPerCustomer == null ? "" : String(editingProduct.eventTicketSettings.maxPerCustomer));
+  const [checkinPolicy, setCheckinPolicy] = useState<"single_use" | "multi_use">(() => editingProduct?.eventTicketSettings?.checkinPolicy ?? "single_use");
 
-  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [ingredients, setIngredients] = useState<string[]>(() => [...(editingProduct?.ingredients ?? [])]);
   const [ingredientDraft, setIngredientDraft] = useState("");
-  const [available, setAvailable] = useState(true);
+  const [available, setAvailable] = useState(() => editingProduct?.available ?? true);
 
-  const [promoLinked, setPromoLinked] = useState(false);
-  const [promoKind, setPromoKind] = useState<PromoKind>("خصم");
-  const [promoDiscountMode, setPromoDiscountMode] = useState<"percent" | "fixed_price">("percent");
-  const [promoDiscount, setPromoDiscount] = useState("10");
-  const [promoDiscountedPrice, setPromoDiscountedPrice] = useState("");
-  const [promoFreeId, setPromoFreeId] = useState("");
-  const [promoCustom, setPromoCustom] = useState("");
-  const [promoStart, setPromoStart] = useState("2026-05-10");
-  const [promoEnd, setPromoEnd] = useState("2026-05-31");
+  const [promoLinked, setPromoLinked] = useState(() => Boolean(editingProduct?.promo));
+  const [promoKind, setPromoKind] = useState<PromoKind>(() => editingProduct?.promo?.kind ?? "خصم");
+  const [promoDiscountMode, setPromoDiscountMode] = useState<"percent" | "fixed_price">(() => editingProduct?.promo?.discountMode ?? "percent");
+  const [promoDiscount, setPromoDiscount] = useState(() => String(editingProduct?.promo?.discountPercent ?? 10));
+  const [promoDiscountedPrice, setPromoDiscountedPrice] = useState(() => editingProduct?.promo?.discountedPrice == null ? "" : String(editingProduct.promo.discountedPrice));
+  const [promoFreeId, setPromoFreeId] = useState(() => editingProduct?.promo?.freeProductId ?? "");
+  const [promoCustom, setPromoCustom] = useState(() => editingProduct?.promo?.customText ?? "");
+  const [promoStart, setPromoStart] = useState(() => editingProduct?.promo?.startDate ?? new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [promoEnd, setPromoEnd] = useState(() => editingProduct?.promo?.endDate ?? new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10));
 
   useEffect(() => {
-    if (!open) return;
-
-    if (mode === "edit" && editingProduct) {
-      setName(editingProduct.name);
-      setCategoryId(editingProduct.categoryId ?? "");
-      setCreatingCategory(false);
-      setNewCategoryName("");
-      setDescription(editingProduct.description);
-      setImagePreviewUrl(null);
-      setImageAssetId(editingProduct.imageAssetId);
-      setImageGallery(editingProduct.imageGallery ?? []);
-      setPendingImages([]);
-      setLegacyExternalImageUrl(
-        isHttpImageUrl(editingProduct.imageDataUrl) ? editingProduct.imageDataUrl! : null
-      );
-      setPendingOptimized(null);
-      setVideoAssetId(editingProduct.videoAssetId);
-      setPendingVideoFile(null);
-      setVideoPreviewUrl(undefined);
-      setImageVariant(editingProduct.imageVariant);
-      setPrice(String(editingProduct.price));
-      setCalories(
-        editingProduct.calories === undefined ? "" : String(editingProduct.calories)
-      );
-      setPreparationTimeMinutes(
-        editingProduct.preparationTimeMinutes === undefined
-          ? ""
-          : String(editingProduct.preparationTimeMinutes)
-      );
-      setAvailableForPickup(editingProduct.availableForPickup !== false);
-      setPickupLeadTimeMinutes(
-        editingProduct.pickupLeadTimeMinutes === undefined
-          ? ""
-          : String(editingProduct.pickupLeadTimeMinutes)
-      );
-      setEventStartAt(editingProduct.eventTicketSettings?.eventStartAt?.slice(0, 16) ?? "");
-      setEventEndAt(editingProduct.eventTicketSettings?.eventEndAt?.slice(0, 16) ?? "");
-      setVenueName(editingProduct.eventTicketSettings?.venueName ?? "");
-      setGateName(editingProduct.eventTicketSettings?.gateName ?? "");
-      setCapacity(editingProduct.eventTicketSettings?.capacity == null ? "" : String(editingProduct.eventTicketSettings.capacity));
-      setTicketType(editingProduct.eventTicketSettings?.ticketType ?? "general_admission");
-      setTicketValidFrom(editingProduct.eventTicketSettings?.ticketValidFrom?.slice(0, 16) ?? "");
-      setTicketValidUntil(editingProduct.eventTicketSettings?.ticketValidUntil?.slice(0, 16) ?? "");
-      setMaxPerCustomer(editingProduct.eventTicketSettings?.maxPerCustomer == null ? "" : String(editingProduct.eventTicketSettings.maxPerCustomer));
-      setCheckinPolicy(editingProduct.eventTicketSettings?.checkinPolicy ?? "single_use");
-      setIngredients([...editingProduct.ingredients]);
-      setAvailable(editingProduct.available);
-
-      const promo = editingProduct.promo;
-      setPromoLinked(!!promo);
-
-      if (promo) {
-        setPromoKind(promo.kind);
-        setPromoDiscountMode(promo.discountMode ?? "percent");
-        setPromoDiscount(String(promo.discountPercent ?? 10));
-        setPromoDiscountedPrice(promo.discountedPrice == null ? "" : String(promo.discountedPrice));
-        setPromoFreeId(promo.freeProductId ?? "");
-        setPromoCustom(promo.customText ?? "");
-        setPromoStart(promo.startDate);
-        setPromoEnd(promo.endDate);
-      }
-    } else {
-      setName("");
-      setCategoryId(categories[0]?.id ?? "");
-      setCreatingCategory(false);
-      setNewCategoryName("");
-      setDescription("");
-      setImagePreviewUrl(null);
-      setImageAssetId(undefined);
-      setImageGallery([]);
-      setPendingImages([]);
-      setLegacyExternalImageUrl(null);
-      setPendingOptimized(null);
-      setVideoAssetId(undefined);
-      setPendingVideoFile(null);
-      setVideoPreviewUrl(undefined);
-      setImageVariant("latte");
-      setPrice("18");
-      setCalories("");
-      setPreparationTimeMinutes("");
-      setAvailableForPickup(true);
-      setPickupLeadTimeMinutes("");
-      setEventStartAt("");
-      setEventEndAt("");
-      setVenueName("");
-      setGateName("");
-      setCapacity("");
-      setTicketType("general_admission");
-      setTicketValidFrom("");
-      setTicketValidUntil("");
-      setMaxPerCustomer("");
-      setCheckinPolicy("single_use");
-      setIngredients([]);
-      setIngredientDraft("");
-      setAvailable(true);
-      setPromoLinked(false);
-      setPromoKind("خصم");
-      setPromoDiscountMode("percent");
-      setPromoDiscount("10");
-      setPromoDiscountedPrice("");
-      setPromoFreeId("");
-      setPromoCustom("");
-      setPromoStart("2026-05-10");
-      setPromoEnd("2026-05-31");
-    }
-  }, [open, mode, editingProduct, categories]);
+    const urls = previewUrls.current;
+    return () => { urls.forEach(revokeObjectUrl); urls.clear(); };
+  }, [open]);
 
   const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
@@ -327,7 +235,7 @@ export function MenuProductFormModal({
       const now = new Date().toISOString().slice(0, 10);
       const maxOrder = categories.reduce((max, c) => Math.max(max, c.sortOrder), 0);
       const newCat: MenuCategoryRecord = {
-        id: `cat_${Date.now()}`,
+        id: `cat_${crypto.randomUUID()}`,
         cafeSlug: "test-cafe",
         name: newCategoryName.trim(),
         sortOrder: maxOrder + 1,
@@ -361,29 +269,6 @@ export function MenuProductFormModal({
     setIngredientDraft("");
   }
 
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-
-    setOptimizingImage(true);
-    try {
-      const optimized = await optimizeImageForStorage(file, "product-image");
-      if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
-      setImagePreviewUrl(URL.createObjectURL(optimized.blob));
-      setPendingOptimized(optimized);
-      setLegacyExternalImageUrl(null);
-    } catch (err) {
-      alert(
-        err instanceof ImagePipelineError
-          ? err.message
-          : "تعذر قراءة الصورة جرّب ملف PNG أو JPG أو WEBP"
-      );
-    } finally {
-      setOptimizingImage(false);
-    }
-  }
-
   async function onPickMediaFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
@@ -401,24 +286,28 @@ export function MenuProductFormModal({
 
           if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
           setPendingVideoFile(file);
-          setVideoPreviewUrl(URL.createObjectURL(file));
+          setPrimaryKey("video");
+          const preview = URL.createObjectURL(file);
+          previewUrls.current.add(preview);
+          setVideoPreviewUrl(preview);
           continue;
         }
 
         const optimized = await optimizeImageForStorage(file, "product-image");
+        const previewUrl = URL.createObjectURL(optimized.blob);
+        previewUrls.current.add(previewUrl);
         nextImages.push({
           id: crypto.randomUUID(),
           optimized,
-          previewUrl: URL.createObjectURL(optimized.blob),
+          previewUrl,
         });
       }
 
       if (nextImages.length) {
         setPendingImages((current) => [...current, ...nextImages]);
-        setPendingOptimized(nextImages[0].optimized);
-        if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
+        setPrimaryKey(nextImages[0].id);
         setImagePreviewUrl(nextImages[0].previewUrl);
-        setLegacyExternalImageUrl(null);
+
       }
     } catch (err) {
       alert(
@@ -440,7 +329,12 @@ export function MenuProductFormModal({
     creatingCategory ? newCategoryName.trim() || "أخرى" : "أخرى"
   );
 
-  const previewProduct: MenuProduct = useMemo(() => {
+  const imageChoices: { key: string; image: NonNullable<MenuProduct["imageGallery"]>[number] }[] = [
+    ...(imageGallery ?? []).map((item) => ({ key: imageKey(item), image: item })),
+    ...pendingImages.map((item) => ({ key: item.id, image: { imageDataUrl: item.previewUrl, alt: name } })),
+  ];
+  const cover = imageChoices.find((item) => item.key === primaryKey)?.image ?? imageChoices[0]?.image;
+  const previewProduct: MenuProduct = (() => {
     const promo = buildPromoFromForm(
       promoLinked,
       promoKind,
@@ -458,9 +352,9 @@ export function MenuProductFormModal({
       name: name.trim() || defaultProductName,
       category: displayCategory,
       categoryId: resolvedCategoryId,
-      description: description.trim() || defaultDescription,
-      imageAssetId,
-      imageDataUrl: legacyExternalImageUrl,
+      description: description.trim(),
+      imageAssetId: cover?.imageAssetId,
+      imageDataUrl: cover?.imageDataUrl,
       imageGallery: [
         ...(imageGallery ?? []),
         ...pendingImages.map((item) => ({
@@ -470,6 +364,7 @@ export function MenuProductFormModal({
       ],
       videoAssetId,
       media: [
+        ...(primaryKey !== "video" && cover ? [{ type: "image" as const, primary: true, assetId: cover.imageAssetId, url: cover.imageDataUrl }] : []),
         ...(pendingVideoFile && videoPreviewUrl
           ? [{
               type: "video" as const,
@@ -477,7 +372,7 @@ export function MenuProductFormModal({
               mimeType: videoMimeFromFile(pendingVideoFile),
             }]
           : videoAssetId
-            ? [{ type: "video" as const, assetId: videoAssetId }]
+            ? [{ type: "video" as const, assetId: videoAssetId, url: videoPreviewUrl }]
             : []),
       ],
       imageVariant,
@@ -511,63 +406,22 @@ export function MenuProductFormModal({
           }
         : null,
     };
-  }, [
-    isEvents,
-    name,
-    displayCategory,
-    resolvedCategoryId,
-    description,
-    imageAssetId,
-    imageGallery,
-    pendingImages,
-    legacyExternalImageUrl,
-    imagePreviewUrl,
-    pendingOptimized,
-    videoAssetId,
-    pendingVideoFile,
-    videoPreviewUrl,
-    imageVariant,
-    price,
-    calories,
-    preparationTimeMinutes,
-    availableForPickup,
-    pickupLeadTimeMinutes,
-    eventStartAt,
-    eventEndAt,
-    venueName,
-    gateName,
-    capacity,
-    ticketType,
-    ticketValidFrom,
-    ticketValidUntil,
-    maxPerCustomer,
-    checkinPolicy,
-    ingredients,
-    available,
-    promoLinked,
-    promoKind,
-    promoDiscountMode,
-    promoDiscount,
-    promoDiscountedPrice,
-    promoFreeId,
-    promoCustom,
-    promoStart,
-    promoEnd,
-  ]);
+  })();
 
   const freeProductOptions = productList.filter(
-    (product) => product.id !== editingProduct?.id
+    (product) => product.available && product.id !== editingProduct?.id
   );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitLock.current || optimizingImage) return;
 
     if (!name.trim()) {
       alert(isEvents ? "اكتب اسم التذكرة أو الباقة" : "اكتب اسم المنتج");
       return;
     }
 
-        if (!price || Number.isNaN(Number(price))) {
+        if (!price || !Number.isFinite(Number(price)) || Number(price) < 0) {
       alert("السعر مطلوب");
       return;
     }
@@ -582,6 +436,19 @@ export function MenuProductFormModal({
       return;
     }
 
+    if (promoLinked && (!promoStart || !promoEnd || promoEnd < promoStart)) {
+      alert("حدد بداية العرض ونهايته بترتيب صحيح");
+      return;
+    }
+    if (promoLinked && promoKind === "خصم" && (promoDiscountMode === "percent"
+      ? !promoDiscount.trim() || !Number.isFinite(Number(promoDiscount)) || Number(promoDiscount) <= 0 || Number(promoDiscount) > 100
+      : !promoDiscountedPrice.trim() || !Number.isFinite(Number(promoDiscountedPrice)) || Number(promoDiscountedPrice) < 0 || Number(promoDiscountedPrice) >= Number(price))) {
+      alert("أدخل خصمًا صحيحًا أقل من السعر الأساسي");
+      return;
+    }
+    submitLock.current = true;
+    setSubmitting(true);
+    try {
     const categoryRecord = await resolveCategoryRecord();
     if (!categoryRecord || !UUID_PATTERN.test(categoryRecord.id)) {
       alert("تعذر حفظ التصنيف");
@@ -590,6 +457,10 @@ export function MenuProductFormModal({
 
     const nextCategoryId = categoryRecord.id;
     const categoryName = categoryRecord.name;
+    if (creatingCategory) {
+      setCategoryId(nextCategoryId);
+      setCreatingCategory(false);
+    }
 
     if (promoLinked && promoKind === "منتج مجاني مع الطلب" && !promoFreeId) {
       alert(isEvents ? "اختر التذكرة أو الباقة المجانية" : "اختر المنتج المجاني");
@@ -608,9 +479,10 @@ export function MenuProductFormModal({
       promoEnd
     );
 
-    const productId = editingProduct?.id || crypto.randomUUID();
+    const productId = draftProductId;
     let finalAssetId = imageAssetId;
     let finalVideoAssetId = videoAssetId;
+    let selectedImage = imageChoices.find((item) => item.key === primaryKey)?.image;
     const finalGallery = (imageGallery ?? []).filter(
       (item) => item.imageAssetId || isPersistableUrl(item.imageDataUrl)
     );
@@ -631,6 +503,7 @@ export function MenuProductFormModal({
           alt: name.trim() || undefined,
         };
         finalGallery.push(galleryItem);
+        if (primaryKey === pendingImage.id) selectedImage = galleryItem;
         finalAssetId = finalAssetId ?? uploaded.storagePath;
       }
 
@@ -641,35 +514,29 @@ export function MenuProductFormModal({
         finalVideoAssetId = uploaded.storagePath;
       }
     } catch {
-      alert(isEvents ? "تعذر حفظ صورة التذكرة أو الباقة محليًا" : "تعذر حفظ صورة المنتج محليًا");
+      alert(isEvents ? "تعذر رفع وسائط التذكرة أو الباقة حاول مرة أخرى" : "تعذر رفع وسائط المنتج حاول مرة أخرى");
       return;
     }
 
+    const selectedKey = selectedImage && imageKey(selectedImage);
+    const orderedGallery = selectedKey
+      ? [...finalGallery.filter((item) => imageKey(item) === selectedKey), ...finalGallery.filter((item) => imageKey(item) !== selectedKey)]
+      : finalGallery;
+    finalAssetId = orderedGallery[0]?.imageAssetId;
     const payload: MenuProduct = {
       id: productId,
       name: name.trim(),
       category: categoryName,
       categoryId: nextCategoryId,
-      description: description.trim() || defaultDescription,
+      description: description.trim(),
       imageAssetId: finalAssetId,
-      imageDataUrl: isPersistableUrl(legacyExternalImageUrl) ? legacyExternalImageUrl : null,
-      imageGallery: finalGallery,
+      imageDataUrl: orderedGallery[0]?.imageAssetId ? null : orderedGallery[0]?.imageDataUrl ?? null,
+      imageGallery: orderedGallery,
       videoAssetId: finalVideoAssetId,
-      media: [
-        ...(finalVideoAssetId
-          ? [{
-              type: "video" as const,
-              assetId: finalVideoAssetId,
-              mimeType: pendingVideoFile ? videoMimeFromFile(pendingVideoFile) : undefined,
-            }]
-          : []),
-        ...finalGallery.map((item) => ({
-          type: "image" as const,
-          assetId: item.imageAssetId,
-          url: item.imageDataUrl ?? null,
-          alt: item.alt,
-        })),
-      ],
+      media: orderedProductMedia(orderedGallery, finalVideoAssetId ? {
+        type: "video", assetId: finalVideoAssetId,
+        mimeType: pendingVideoFile ? videoMimeFromFile(pendingVideoFile) : undefined,
+      } : undefined, primaryKey === "video" ? "video" : "image"),
       imageVariant,
       price: Number(price),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
@@ -702,11 +569,17 @@ export function MenuProductFormModal({
         : null,
     };
 
-    onSave(payload);
+    if (!await onSave(payload)) return;
     if (imagePreviewUrl?.startsWith("blob:")) revokeObjectUrl(imagePreviewUrl);
     pendingImages.forEach((item) => revokeObjectUrl(item.previewUrl));
     if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
     onClose();
+    } catch {
+      alert("تعذر حفظ المنتج حاول مرة أخرى");
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
+    }
   }
 
   const variantGradient: Record<MenuImageVariant, string> = {
@@ -725,11 +598,12 @@ export function MenuProductFormModal({
       open={open}
       panelClassName={styles.editorPanel}
       title={mode === "add" ? `إضافة ${productNoun}` : `تعديل ${productNoun}`}
-      onClose={onClose}
+      onClose={() => { if (!submitLock.current) onClose(); }}
       footer={
         <>
           <button
             type="button"
+            disabled={submitting}
             onClick={onClose}
             className="rounded-2xl border border-[#E5D8CD] px-5 py-3 text-sm font-black text-[#3A2117] hover:bg-[#F8F4EF]"
           >
@@ -739,9 +613,10 @@ export function MenuProductFormModal({
           <button
             type="submit"
             form="menu-product-form"
+            disabled={submitting || optimizingImage}
             className="rounded-2xl bg-[#3A2117] px-6 py-3 text-sm font-black text-[#F8E8D2]"
           >
-            {mode === "add" ? `حفظ ${productNoun}` : `تحديث ${productNoun}`}
+            {submitting ? "جاري الحفظ" : mode === "add" ? `حفظ ${productNoun}` : `تحديث ${productNoun}`}
           </button>
         </>
       }
@@ -749,6 +624,8 @@ export function MenuProductFormModal({
       <form
         id="menu-product-form"
         onSubmit={handleSubmit}
+        aria-busy={submitting}
+        inert={submitting}
         className={`${styles.productEditor} grid gap-8 lg:grid-cols-2`}
       >
         <div className="space-y-5">
@@ -805,10 +682,9 @@ export function MenuProductFormModal({
 
           <label className="block">
             <span className="text-xs font-black text-[#7A6255]">
-              {descriptionLabel}
+              {descriptionLabel} اختياري
             </span>
             <textarea
-              required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -818,7 +694,7 @@ export function MenuProductFormModal({
           </label>
 
           <div className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
-            <p className="text-xs font-black text-[#7A6255]">{isEvents ? "صورة التذكرة أو الباقة" : "صورة المنتج"}</p>
+            <p className="text-xs font-black text-[#7A6255]">{isEvents ? "صور وفيديو التذكرة أو الباقة" : "صور وفيديو المنتج"}</p>
 
             <input
               ref={fileRef}
@@ -833,14 +709,14 @@ export function MenuProductFormModal({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                disabled={optimizingImage}
+                disabled={optimizingImage || submitting}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117] disabled:opacity-60"
               >
                 <ImagePlus className="h-5 w-5" />
-                {optimizingImage ? "جاري تحسين الصورة" : "اختيار صورة"}
+                {optimizingImage ? "جاري تجهيز الوسائط" : "إضافة صور أو فيديو"}
               </button>
 
-              {imagePreviewUrl || imageAssetId || legacyExternalImageUrl || imageGallery?.length || pendingImages.length || videoAssetId || pendingVideoFile ? (
+              {imagePreviewUrl || imageAssetId || imageGallery?.length || pendingImages.length || videoAssetId || pendingVideoFile ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -848,11 +724,12 @@ export function MenuProductFormModal({
                     pendingImages.forEach((item) => revokeObjectUrl(item.previewUrl));
                     if (videoPreviewUrl?.startsWith("blob:")) revokeObjectUrl(videoPreviewUrl);
                     setImagePreviewUrl(null);
-                    setPendingOptimized(null);
+
                     setPendingImages([]);
                     setImageGallery([]);
+      setPrimaryKey("");
                     setImageAssetId(undefined);
-                    setLegacyExternalImageUrl(null);
+
                     setVideoAssetId(undefined);
                     setPendingVideoFile(null);
                     setVideoPreviewUrl(undefined);
@@ -865,24 +742,26 @@ export function MenuProductFormModal({
               ) : null}
             </div>
 
-            {pendingImages.length || imageGallery?.length || videoPreviewUrl || videoAssetId ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {videoPreviewUrl || videoAssetId ? (
-                  <span className="rounded-2xl bg-[#3A2117] px-3 py-2 text-xs font-black text-[#F8E8D2]">
-                    فيديو
-                  </span>
-                ) : null}
-                {imageGallery?.map((item, index) => (
-                  <span key={item.imageAssetId || item.imageDataUrl || index} className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#3A2117]">
-                    صورة {index + 1}
-                  </span>
-                ))}
-                {pendingImages.map((item, index) => (
-                  <span key={item.id} className="rounded-2xl bg-[#F8F4EF] px-3 py-2 text-xs font-black text-[#3A2117]">
-                    صورة جديدة {index + 1}
-                  </span>
-                ))}
-              </div>
+            {imageChoices.length || videoPreviewUrl || videoAssetId ? (
+              <fieldset className="mt-4">
+                <legend className="text-xs font-black text-[#7A6255]">اختر الصورة أو الفيديو الرئيسي</legend>
+                <div className={styles.mediaChoices}>
+                  {imageChoices.map((item, index) => (
+                    <button type="button" key={item.key} aria-pressed={primaryKey === item.key}
+                      disabled={submitting} onClick={() => setPrimaryKey(item.key)} className={styles.mediaChoice}>
+                      <ProductImage product={item.image} alt={`صورة ${index + 1}`} className={styles.mediaThumbnail} />
+                      <span>{primaryKey === item.key ? "الصورة الرئيسية" : `صورة ${index + 1}`}</span>
+                    </button>
+                  ))}
+                  {videoPreviewUrl || videoAssetId ? (
+                    <button type="button" aria-pressed={primaryKey === "video"} disabled={submitting}
+                      onClick={() => setPrimaryKey("video")} className={styles.mediaChoice}>
+                      <span className={styles.videoChoice}>▶</span>
+                      <span>{primaryKey === "video" ? "الفيديو الرئيسي" : "الفيديو"}</span>
+                    </button>
+                  ) : null}
+                </div>
+              </fieldset>
             ) : null}
 
             <label className="mt-4 block">
@@ -950,7 +829,7 @@ export function MenuProductFormModal({
               />
             </label>
 
-            <label className="block">
+            {isEvents ? <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
                 {isEvents ? "مهلة تجهيز التذكرة (دقيقة) اختياري" : "مهلة الاستلام (دقيقة) اختياري"}
               </span>
@@ -961,10 +840,10 @@ export function MenuProductFormModal({
                 placeholder="مثال: 15"
                 className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
               />
-            </label>
+            </label> : null}
           </div>
 
-          <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
+          {isEvents ? <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
               {isEvents ? "خيارات شراء التذكرة" : "خيارات الاستلام"}
             </legend>
@@ -978,7 +857,7 @@ export function MenuProductFormModal({
               {isEvents ? "متاحة للشراء" : "متاح للاستلام"}
             </label>
 
-          </fieldset>
+          </fieldset> : null}
 
           {isEvents ? (
             <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
@@ -1110,6 +989,7 @@ export function MenuProductFormModal({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+    if (submitLock.current || optimizingImage) return;
                     addIngredient();
                   }
                 }}
@@ -1150,7 +1030,7 @@ export function MenuProductFormModal({
 
           <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
-              {isEvents ? "حالة التذكرة أو الباقة" : "حالة المنتج"}
+              {isEvents ? "حالة التذكرة أو الباقة" : "الظهور في المنيو"}
             </legend>
 
             <div className="mt-3 flex gap-5">
@@ -1160,7 +1040,7 @@ export function MenuProductFormModal({
                   checked={available}
                   onChange={() => setAvailable(true)}
                 />
-                متاح
+                ظاهر في المنيو
               </label>
 
               <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
@@ -1169,7 +1049,7 @@ export function MenuProductFormModal({
                   checked={!available}
                   onChange={() => setAvailable(false)}
                 />
-                غير متاح
+                مخفي من المنيو
               </label>
             </div>
           </fieldset>
@@ -1324,7 +1204,6 @@ export function MenuProductFormModal({
                 product={previewProduct}
                 alt=""
                 className="h-full w-full object-contain"
-                imagePreviewUrl={imagePreviewUrl ?? undefined}
                 videoPreviewUrl={videoPreviewUrl}
                 fallback={
                   <div
@@ -1351,7 +1230,7 @@ export function MenuProductFormModal({
                     : "bg-white text-[#3A2117]"
                 }`}
               >
-                {previewProduct.available ? "متاح" : "غير متاح"}
+                {previewProduct.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
               </span>
             </div>
 
@@ -1374,7 +1253,7 @@ export function MenuProductFormModal({
                     السعر
                   </p>
                   <p className="font-black text-[#3A2117]">
-                    {formatSar(previewProduct.price)}
+                    {formatSar(productFinalPrice(previewProduct.price, previewProduct.promo))}
                   </p>
                 </div>
 

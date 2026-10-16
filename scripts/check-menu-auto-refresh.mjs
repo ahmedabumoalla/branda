@@ -13,9 +13,10 @@ const exports = {};
 new Function("require","exports","window","document","navigator","Date",compiled)(name => {
   if(name === "react") return { useEffect: fn => effects.push(fn), useRef: value => ({current:value}), useTransition: () => [false,fn=>fn()] };
   if(name === "next/navigation") return { useRouter: () => ({refresh:()=>calls++}) };
+  if(name === "@/lib/menu/menu-change") return { MENU_CHANGE_KEY: "branda-menu-change" };
   throw Error(name);
 },exports,window,document,navigator,{now:()=>now});
-exports.MenuAutoRefresh();
+exports.MenuAutoRefresh({slug:"delicake"});
 const cleanups=effects.map(fn=>fn());
 assert.equal(calls,0); assert.equal(interval,30000);
 now=30000;timer();assert.equal(calls,1);
@@ -25,8 +26,11 @@ document.visibilityState="visible";listeners.get("visibilitychange")();assert.eq
 navigator.onLine=false;now=90000;timer();assert.equal(calls,2,"offline tabs do not fetch");
 navigator.onLine=true;listeners.get("online")();assert.equal(calls,3);
 now=120000;listeners.get("pageshow")();assert.equal(calls,4,"bfcache return refreshes");
+listeners.get("storage")({key:"branda-menu-change",newValue:JSON.stringify({slug:"other"})});assert.equal(calls,4);
+listeners.get("storage")({key:"branda-menu-change",newValue:JSON.stringify({slug:"delicake"})});assert.equal(calls,5,"Owner save refreshes matching menu immediately without the focus throttle");
+listeners.get("storage")({key:"branda-menu-change",newValue:"invalid"});assert.equal(calls,5);
 for(const fn of cleanups) fn?.();assert(cleared);assert.equal(listeners.size,0);
 const page=fs.readFileSync("app/menu/[slug]/page.tsx","utf8");
-assert(page.includes('<MenuAutoRefresh />'));assert(page.includes('dynamic = "force-dynamic"'));
+assert(page.includes('<MenuAutoRefresh slug={menu.slug} />'));assert(page.includes('dynamic = "force-dynamic"'));
 assert(!source.includes("location.reload"));
 console.log("Menu auto-refresh timing, foreground, reconnect, deduplication, cleanup and route integration passed");

@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mappers";
+import { primaryMediaType } from "@/lib/menu/product-media";
 import { isOwnedMenuAsset, isStandaloneProductVisible, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
 const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
@@ -55,7 +56,7 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
     if (error) throw error;
     // Deli keeps paused products in its owner catalog while hiding them from guests
     rows.push(...((data ?? []) as unknown as DbMenuProduct[]).filter((row) =>
-      isStandaloneProductVisible(row, categoryIds) && (slug !== "delicake" || row.available !== false)));
+      isStandaloneProductVisible(row, categoryIds)));
     if ((data?.length ?? 0) < PAGE_SIZE) break;
   }
   const mapped = rows.map((row) => mapDbProductToMenuProduct(row, categoryNames.get(row.category_id ?? "")));
@@ -89,9 +90,14 @@ export const getStandaloneMenu = cache(async (slug: string): Promise<StandaloneM
       description: product.description, price: product.price, calories: product.calories,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,
       available: product.available, promo: product.promo,
+      primaryMediaType: product.media?.some((item) => item.primary) ? primaryMediaType(product) : undefined,
       images: images.filter((item, index) => images.findIndex((other) => other.url === item.url) === index), videos,
     };
   });
+  const publishedIds = new Set(products.map((product) => product.id));
+  for (const product of products) {
+    if (product.promo?.kind === "منتج مجاني مع الطلب" && !publishedIds.has(product.promo.freeProductId ?? "")) product.promo = null;
+  }
   const settings = settingsResult.data;
   let logoUrl = safeMediaUrl(settings?.logo_url);
   if (settings?.logo_storage_path && isOwnedMenuAsset(settings.logo_storage_path, cafe.id)) {

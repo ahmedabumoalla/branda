@@ -2,9 +2,9 @@
 
 import { ChevronDown, ExternalLink, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  fetchOwnerMenuAction,
   deleteMenuCategoryAction,
   deleteMenuProductAction,
   saveMenuCategoriesAction,
@@ -22,6 +22,8 @@ import { getCategoryNameById, type MenuCategoryRecord } from "@/lib/mock/menu-ca
 import { AppToast, useAppToast } from "@/components/ui/app-toast";
 import { type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { captureProductPosition } from "@/lib/menu/product-position";
+import { notifyMenuChanged } from "@/lib/menu/menu-change";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 function ModalLoadingPlaceholder() {
@@ -79,7 +81,17 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [editing, setEditing] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
+  const actionLock = useRef(false);
+  const restorePosition = useRef<(() => void) | null>(null);
+  useLayoutEffect(() => {
+    const restore = restorePosition.current;
+    restore?.();
+    restorePosition.current = null;
+    if (restore) {
+      const frame = requestAnimationFrame(restore);
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [products, open]);
   const { toast, showToast } = useAppToast();
   const menuTitle = copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
   const importLabel = copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
@@ -111,6 +123,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   const availableCount = products.filter((p) => p.available).length;
 
   async function saveProduct(product: MenuProduct) {
+    if (actionLock.current) return false;
+    actionLock.current = true;
+    restorePosition.current = captureProductPosition(product.id);
     setSaving(true);
     try {
       const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
@@ -118,16 +133,34 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       const id = await saveMenuProductAction(normalized);
       const saved = { ...normalized, id: id || normalized.id };
 
-      if (product.id) {
-        setProducts((prev) => prev.map((p) => (p.id === product.id ? saved : p)));
-      } else {
-        setProducts((prev) => [saved, ...prev]);
-      }
+      setProducts((prev) => prev.some((item) => item.id === saved.id)
+        ? prev.map((item) => item.id === saved.id ? saved : item) : [...prev, saved]);
+      notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ التذكرة أو الباقة" : "تم حفظ المنتج" });
-      router.refresh();
+      return true;
     } catch {
       showToast({ type: "error", message: copy.kind === "events" ? "تعذر حفظ التذكرة أو الباقة" : "تعذر حفظ المنتج" });
+      return false;
     } finally {
+      actionLock.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function deleteProduct(productId: string) {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setSaving(true);
+    restorePosition.current = captureProductPosition(productId);
+    try {
+      await deleteMenuProductAction(productId);
+      setProducts((prev) => prev.filter((product) => product.id !== productId));
+      notifyMenuChanged(cafeSlug);
+      showToast({ type: "success", message: "تم حذف المنتج" });
+    } catch {
+      showToast({ type: "error", message: "تعذر حذف المنتج حاول مرة أخرى" });
+    } finally {
+      actionLock.current = false;
       setSaving(false);
     }
   }
@@ -137,7 +170,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     try {
       const saved = await saveMenuCategoriesAction(next);
       setCategories(saved);
-      router.refresh();
+      notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ فئات التذاكر" : "تم حفظ تصنيفات المنيو" });
       return saved;
     } catch {
@@ -155,7 +188,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
 
       if (result.ok) {
         setCategories((current) => current.filter((category) => category.id !== categoryId));
-        router.refresh();
+        notifyMenuChanged(cafeSlug);
         showToast({
           type: "success",
           message: copy.kind === "events" ? "تم حذف فئة التذاكر" : "تم حذف التصنيف",
@@ -242,7 +275,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         <section className={styles.summaryGrid} aria-label="ملخص المنيو">
           {[
             [copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
-            [copy.kind === "events" ? "تذاكر متاحة" : "متاح للبيع", availableCount],
+            [copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
             ["التصنيفات", categories.length],
             ["نتائج البحث", filtered.length],
           ].map(([label, value], index) => (
@@ -344,6 +377,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                   <MenuProductCard
                     key={product.id}
                     product={product}
+                    busy={saving}
                     index={index}
                     categoryLabel={getCategoryNameById(
                       categories,
@@ -356,6 +390,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                         : undefined
                     }
                     onEdit={() => {
+                      restorePosition.current = captureProductPosition(product.id);
                       setEditing(product);
                       setProductModalRequested(true);
                       setOpen(true);
@@ -363,12 +398,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                     onToggleAvailability={() => {
                       void saveProduct({ ...product, available: !product.available });
                     }}
-                    onDelete={() => {
-                      void deleteMenuProductAction(product.id).then(() => {
-                        setProducts((prev) => prev.filter((p) => p.id !== product.id));
-                        showToast({ type: "success", message: copy.kind === "events" ? "تم حذف التذكرة أو الباقة" : "تم حذف المنتج" });
-                      });
-                    }}
+                    onDelete={() => { void deleteProduct(product.id); }}
                     businessCategory={businessCategory}
                   />
               ))}
@@ -385,7 +415,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             categories={categories}
             businessCategory={businessCategory}
             onCategoriesChange={handleCategoriesChange}
-            onClose={() => setOpen(false)}
+            onClose={() => {
+              if (editing) restorePosition.current = captureProductPosition(editing.id);
+              setOpen(false);
+            }}
             onSave={saveProduct}
           />
         ) : null}
@@ -393,9 +426,16 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           <MenuImportModal
             open={importOpen}
             onClose={() => setImportOpen(false)}
-            onImported={() => {
+            onImported={async () => {
               setImportOpen(false);
-              router.refresh();
+              notifyMenuChanged(cafeSlug);
+              try {
+                const menu = await fetchOwnerMenuAction();
+                setProducts(menu.products);
+                setCategories(menu.categories);
+              } catch {
+                showToast({ type: "error", message: "تم الاستيراد وتعذر تحديث القائمة أعد فتحها" });
+              }
             }}
           />
         ) : null}

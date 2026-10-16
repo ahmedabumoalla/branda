@@ -108,6 +108,7 @@ function mapUnknownMedia(value: unknown): NonNullable<MenuProduct["media"]> {
         url: typeof item.url === "string" ? item.url : null,
         alt: stringOrUndefined(item.alt),
         mimeType: stringOrUndefined(item.mimeType),
+        primary: item.primary === true,
     };
 
     if (mapped.assetId || mapped.url) {
@@ -229,8 +230,8 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     seenGallery.add(storagePath);
   }
 
-  const media = mapUnknownMedia(row.image_gallery);
-  pushUniqueMedia(media, mapUnknownMedia(row.media));
+  const media = mapUnknownMedia(row.media);
+  pushUniqueMedia(media, mapUnknownMedia(row.image_gallery));
   if (row.video_storage_path && !media.some((item) => item.type === "video" && item.assetId === row.video_storage_path)) {
     media.unshift({ type: "video", assetId: row.video_storage_path });
   }

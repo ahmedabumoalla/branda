@@ -34,6 +34,10 @@ html=services({...enabled,highlights:{asOf:Date.now(),items:[{...active,kind:'ev
 forcedPanel=null;
 const {BistroMenu}=load('components/menu/bistro-menu.tsx');
 const render=menu=>{hook=0;return renderToStaticMarkup(React.createElement(BistroMenu,{menu}));};
+const coverVideo = 'https://images.test/owner-selected-video.mp4';
+const mixedMedia = {...product, images:[{url:'https://images.test/owner-cover.webp',alt:'Cover'}], videos:[{url:coverVideo,alt:'Video'}]};
+assert(!render({...base, products:[{...mixedMedia,primaryMediaType:'image'}]}).includes(`src="${coverVideo}"`),'Selected image leads the menu card even with a video');
+assert(render({...base, products:[{...mixedMedia,primaryMediaType:'video'}]}).includes(`src="${coverVideo}"`),'Selected video leads the menu card');
 for(const slug of ['rast','kat-coffe','test-cafe','basilico']) {
   const credit=render({...base,slug}).match(/<a[^>]*class="platformCredit"[\s\S]*?<\/a>/)?.[0];
   assert(credit?.includes('href="https://barndaksa.com"')&&credit.includes('/brand/barndaksa-footer-v1.webp')&&credit.includes('alt="برندة"'),'Every menu credits Branda with its real linked logo');
@@ -109,6 +113,7 @@ const deli={...base,slug:'delicake',name:'DeliCake',logoUrl:'/deli-cake/logo.web
 const {deliProductVisual}=load('components/menu/deli-menu-scenes.tsx');
 const studio={url:'/deli-cake/dishes/dish-04.webp',alt:'Studio'},gallery={url:'/deli-cake/photos/DSC_2747.webp',alt:'Gallery'},owner={url:'/owner-new-photo.webp',alt:'Owner'};
 assert.deepEqual(deliProductVisual({...product,images:[studio,gallery]}),{image:gallery,studio:false},'Use the supplied lifestyle photograph when present');
+assert.deepEqual(deliProductVisual({...product,primaryMediaType:'image',images:[studio,gallery]}),{image:studio,studio:true},'Explicit owner selection overrides legacy Deli cover presentation');
 assert.deepEqual(deliProductVisual({...product,images:[studio]}),{image:studio,studio:true},'Only supplied studio artwork receives the tonal stage');
 assert.deepEqual(deliProductVisual({...product,images:[owner,gallery]}),{image:owner,studio:false},'Future owner cover photos retain priority and original colors');
 html=render(deli);

@@ -33,6 +33,7 @@ const variantGradient: Record<MenuImageVariant, string> = {
 type Props = {
   product: MenuProduct;
   index?: number;
+  busy?: boolean;
   categoryLabel?: string;
   freeProductLabel?: string;
   onEdit: () => void;
@@ -44,6 +45,7 @@ type Props = {
 export function MenuProductCard({
   product,
   index = 0,
+  busy = false,
   categoryLabel,
   freeProductLabel,
   onEdit,
@@ -59,6 +61,8 @@ export function MenuProductCard({
 
   return (
     <article
+      data-menu-product-id={product.id}
+      aria-busy={busy}
       className={styles.productCard}
       style={{ "--card-order": index % 8 } as CSSProperties}
     >
@@ -94,7 +98,7 @@ export function MenuProductCard({
               : ""
           }`}
         >
-          {product.available ? "متاح" : "غير متاح"}
+          {product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
         </span>
       </div>
 
@@ -164,14 +168,14 @@ export function MenuProductCard({
 
           <div className={styles.stat}>
             <p className={styles.statLabel}>
-              {isEvents ? "الدخول" : "الاستلام"}
+              {isEvents ? "الدخول" : "المنيو"}
             </p>
             <p className={`${styles.statValue} ${styles.statAccent}`}>
               {isEvents
                 ? product.eventTicketSettings?.checkinPolicy === "multi_use"
                   ? "متعدد"
                   : "مرة"
-                : product.availableForPickup === false ? "لا" : "متاح"}
+                : product.available ? "ظاهر" : "مخفي"}
             </p>
           </div>
         </div>
@@ -191,6 +195,7 @@ export function MenuProductCard({
         <div className={styles.cardActions}>
           <button
             type="button"
+            disabled={busy}
             onClick={onEdit}
             className={`${styles.cardButton} ${styles.editButton}`}
           >
@@ -200,6 +205,7 @@ export function MenuProductCard({
 
           <button
             type="button"
+            disabled={busy}
             onClick={onToggleAvailability}
             className={`${styles.cardButton} ${styles.toggleButton}`}
           >
@@ -209,6 +215,7 @@ export function MenuProductCard({
 
           <button
             type="button"
+            disabled={busy}
             onClick={onDelete}
             className={`${styles.cardButton} ${styles.deleteButton}`}
           >
