@@ -1,11 +1,18 @@
 # Branda — current handoff
 
-Updated 2026-10-19 15:05 +03:00 - Asia/Riyadh
+Updated 2026-10-19 15:38 +03:00 - Asia/Riyadh
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
-## Published state
+## Current work ready for deployment
 
+- User now authorizes full marketing package launch and per-brand WhatsApp pairing; earlier admin-only scope is superseded. Implementation and focused checks are complete locally, not published. Existing marketing plan/price retained, no automatic subscriptions or customer messages
+- Vercel production configuration succeeded on explicit `branda-2` project15:28. Supabase scoped access works; migration20261019122042 applied/registered15:49 with exact source SQL,5 private RLS tables/11 service-only functions verified and zero initial work. Five INFO advisor entries are expected for server-only tables without client policies
+- Next: deploy explicit `.git/marketing-files.json` and verify exact production commit. Tests/build hashes revalidated before deployment; evidence is in [task state](../task-state.md). Preserve unrelated dirty files and all existing customer data. Each brand must scan its own QR; no real messages sent
+
+## Previous published state
+
+- VERIFIED2026-10-19 15:07 +03: application `91527ebec742fd96df45963cf22c5ed883ecef72`, production `dpl_G7kTy6qJGcuEZ83VacMyrWMhtzDj`, exact domain and runtime checks passed. `.git/showcase-partner-production.json`; no browser test and production partner-key environment still unverified403
 - Latest requested release: faster genuine menu previews, success partners below the hero with the internal demo hidden, plus admin-only campaign package preparation. Identify commit via `git log -1 --format=%H -- lib/whatsapp/green-api-partner.ts`; exact production proof `.git/showcase-partner-production.json`. Missing proof means publication is not verified
 - Preview query/media work is parallel and signatures reusable;3 selected frames start eagerly, no full-screen loading mask or background refresh. Full genuine menu design/data and current gates retained. Normal menu refresh unchanged. Partner placement moved without duplicating the section; demo account/menu intact
 - Campaign service is selectable/saveable in admin plans, excluded from customer navigation/runtime/public service descriptions even with overrides. Server-only partner reader prepared; local account authentication confirmed15:01. No campaigns, paired/provisioned instances or customer messages. Production environment verification returns403; local key does not establish production readiness

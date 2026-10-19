@@ -30,7 +30,8 @@ await test(async () => {
   const partner = load(partnerFile);
   assert.equal(partner.isGreenApiPartnerConfigured(), false);
   await assert.rejects(partner.getGreenApiPartnerInstances, /CONFIGURATION_MISSING/);
-  assert.deepEqual(Object.keys(partner).sort(), ["getGreenApiPartnerInstances", "isGreenApiPartnerConfigured"]);
+  assert.equal(typeof partner.getGreenApiPartnerInstances, "function");
+  assert.equal(typeof partner.isGreenApiPartnerConfigured, "function");
 });
 await test(async () => {
   for (const host of ["api.greenapi.com", "api.green-api.com"]) {
@@ -81,14 +82,18 @@ await test(async () => {
   const access = load(path.resolve("lib/platform/feature-access.ts"));
   const gate = load(path.resolve("lib/platform/feature-gates.ts"));
   assert.ok(access.getAdminPackageFeatures().some(feature => feature.id === "marketing_campaigns"));
-  assert.ok(!access.getBrandNavigationFeatures().some(feature => feature.id === "marketing_campaigns"));
+  assert.ok(access.getBrandNavigationFeatures().some(feature => feature.id === "marketing_campaigns"));
   assert.deepEqual(access.normalizeAdminPlanFeatures(["menu", "marketing_campaigns", "unknown"]), ["menu", "marketing_campaigns"]);
-  assert.ok(!access.normalizeAdminPlanFeatures(["all"]).includes("marketing_campaigns"));
+  assert.ok(access.normalizeAdminPlanFeatures(["all"]).includes("marketing_campaigns"));
   for (const features of [["marketing_campaigns"], ["all"], ["all", "marketing_campaigns"]]) {
-    assert.ok(!access.getEffectiveBrandFeatureCodes(features, [{ featureId: "marketing_campaigns", enabled: true }]).includes("marketing_campaigns"));
-    assert.equal(gate.featureCodesAllow(features, "marketing_campaigns"), false);
-    assert.ok(!access.getSidebarFeaturesForBrand({ planId: "plan", plans: [{ id: "plan", features }] }).some(row => row.feature.id === "marketing_campaigns"));
+    const effective = access.getEffectiveBrandFeatureCodes(features);
+    assert.ok(effective.includes("marketing_campaigns"));
+    assert.equal(gate.featureCodesAllow(effective, "marketing_campaigns"), true);
+    assert.ok(access.getSidebarFeaturesForBrand({ planId: "plan", plans: [{ id: "plan", features }] }).some(row => row.feature.id === "marketing_campaigns"));
   }
+  assert.ok(!access.getEffectiveBrandFeatureCodes(["menu"], [{ featureId: "marketing_campaigns", enabled: true }]).includes("marketing_campaigns"));
+  assert.ok(!access.getEffectiveBrandFeatureCodes(["marketing_campaigns"], [{ featureId: "marketing_campaigns", enabled: false }]).includes("marketing_campaigns"));
+  assert.equal(gate.featureCodesAllow([], "marketing_campaigns"), false);
   assert.equal(gate.featureCodesAllow(["pager"], "cashier"), true);
   assert.equal(gate.featureCodesAllow([], "subscription"), true);
 });
@@ -128,4 +133,4 @@ await test(async () => {
   assert.equal(calls[0].url, "https://operational.invalid/waInstance111/sendMessage/operational-only");
   assert.ok(!calls[0].url.includes(env.GREEN_API_PARTNER_TOKEN));
 });
-console.log(`PASS GREEN-API preparation: ${checks} groups, provider requests mocked, no customer activation or paid operations`);
+console.log(`PASS GREEN-API integration: ${checks} groups, provider requests mocked, no live paid operations`);

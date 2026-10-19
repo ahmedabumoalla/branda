@@ -97,12 +97,12 @@ assert.deepEqual(wildcard.calls[0][1][0].features, catalog.filter(feature => fea
 const prepared = harness([fixture("prepared", ["menu"])]);
 tree = prepared.render();
 assert.equal(featureButton(tree, "marketing_campaigns").props["aria-pressed"], false);
-assert.ok(text(featureButton(tree, "marketing_campaigns")).includes("لا يظهر للعملاء حاليًا"));
+assert.ok(text(featureButton(tree, "marketing_campaigns")).includes("غير متاحة ضمن هذه الباقة"));
 featureButton(tree, "marketing_campaigns").props.onClick();
 assert.equal(featureButton(prepared.render(), "marketing_campaigns").props["aria-pressed"], true);
 await nodes(prepared.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
 assert.deepEqual(prepared.calls[0][1][0].features, ["menu", "marketing_campaigns"]);
-assert.ok(!access.getEffectiveBrandFeatureCodes(prepared.calls[0][1][0].features).includes("marketing_campaigns"));
+assert.ok(access.getEffectiveBrandFeatureCodes(prepared.calls[0][1][0].features).includes("marketing_campaigns"));
 featureButton(prepared.render(), "marketing_campaigns").props.onClick();
 assert.equal(featureButton(prepared.render(), "marketing_campaigns").props["aria-pressed"], false);
 

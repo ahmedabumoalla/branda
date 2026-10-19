@@ -1,8 +1,19 @@
 # Current task state
 
-Updated 2026-10-19 15:05 +03:00 - Asia/Riyadh
+Updated 2026-10-19 15:38 +03:00 - Asia/Riyadh
 
 ## Resume here
+
+- CURRENT authorized work: user explicitly requested full brand-number pairing and activation with the existing marketing campaign package, superseding the earlier admin-only restriction. Implementation is local and NOT yet published
+- Brand-scoped QR pairing, encrypted credentials, explicit consent/review/scheduling, durable queue, delivery/read receipts, opt-out links/STOP, cancellation and history are implemented. Active/current plan entitlement is checked again before dispatch. Disconnect cancels outstanding work; uncertain sends are never automatically retried. Operational WhatsApp/OTP remains separate
+- Existing active plan `plan-2690ddc7` already includes `marketing_campaigns` at278SAR/month; no plan prices, subscriptions or customer assignments were changed. Registry/sidebar now activate the feature for entitled brands
+- Production environment setup SUCCEEDED2026-10-19 15:28 +03 via authenticated Vercel CLI63.1.2 on correct project `branda-2` / `prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow`: partner token, partner API URL, stable encryption key and public origin. No values in evidence `.git/marketing-production-env.json`. Do not rotate the encryption key. Existing `.vercel/project.json` still points to old project: always pass explicit correct project
+- RESOLVED2026-10-19 15:49 +03: user supplied scoped Supabase management access. Migration `20261019122042_brand_marketing_campaigns` applied and recorded atomically on `kpguwjfkkylrdlvzeezz`; exact stored SQL matches source hash. Five private RLS tables and11 service-only functions verified, zero connections/campaigns/recipients, existing marketing plan unchanged. Advisors show only5 expected INFO entries for RLS tables deliberately having no client policies. Evidence `.git/marketing-database-production.json`. Initial SQL-registration wrapper syntax failed and rolled back; corrected wrapper succeeded, no partial migration
+- NEXT: publish explicit files from `.git/marketing-files.json` to main and verify exact branda-2 production commit/alias, API authorization and configured empty worker. Do not publish unrelated dirty loyalty/Rast/catalog work. No paid provider instances or real customer sends were performed; each brand still needs to scan its own QR
+- RUN2026-10-19 15:38 +03 Node24.21.0: partner8/provider12/UI14/backend16 groups and SQL60 assertions PASS, admin-plan/catalog tests PASS, text integrity/TypeScript/scoped ESLint PASS. Exact commands/input hashes `.git/marketing-checks.json`; SQL/backend detailed evidence `.git/marketing-db-checks.json` and `.git/marketing-backend-checks.json`. SQL uses isolated PGlite and controlled interleavings, not simultaneous production sessions
+- RUN2026-10-19 15:39:03 +03 isolated production build PASS at `C:/Projects/branda-marketing-release-20261019`, clean91527eb plus25 explicit task files. Temporary environment removed; all25 current/build/check hashes match. Evidence `.git/marketing-build-exit.json`; passing checks/build reused15:48 after all recorded application/test/dependency/config inputs and Node runtime matched
+
+## Previous published release snapshot
 
 - Latest requested release: faster genuine menu previews, success partners below the hero excluding the internal demo brand, and admin-only marketing campaign package preparation. Application identity: `git log -1 --format=%H -- lib/whatsapp/green-api-partner.ts`; exact production proof `.git/showcase-partner-production.json`. Missing proof means publication is not yet verified
 - Partner logos moved immediately under the hero. Excluded demo brand ID `2e08901c-5aac-4bec-8c97-a135058e508b` from public partners/menu gallery before signing media; its account and standalone menu are untouched. Live read-only catalog at15:02 returned4 plans/13 partners/13 menus/13 logos; user/admin data may change
@@ -32,6 +43,7 @@ Updated 2026-10-19 15:05 +03:00 - Asia/Riyadh
 
 ## Latest verification
 
+- RUN2026-10-19 15:07:09 +03 production verified: commit `91527ebec742fd96df45963cf22c5ed883ecef72`, branda-2 deployment `dpl_G7kTy6qJGcuEZ83VacMyrWMhtzDj`, exact barndaksa.com alias200. Current catalog4 plans/13 partners/13 menus; demo excluded, partners before previews,3 eager inert frames, annual totals match current admin prices (3 discounted plans), campaigns excluded publicly. Preview HTML requests1888/1818/2164ms for Rast/Deli/Taza; excludes browser paint/image time. `.git/verify-showcase-partner-production.cjs` and `.git/showcase-partner-production.json`; all18 application/test/config files match checked/built/published hashes
 - RUN2026-10-19 15:04 +03 Node24.21.0: homepage21/catalog17/preview7/partner8 grouped checks and admin-plan UI passed, with text integrity and TypeScript. Scoped ESLint has0 new errors/1 existing CMS-image warning. Broader admin.ts lint still has2 existing no-explicit-any errors at39:19/39:27; exact diagnostics match baseline, not suppressed. Commands, runtime and input hashes: `.git/showcase-partner-checks.json`
 - RUN2026-10-19 15:04:38 +03 isolated `next build --webpack` PASS at `C:/Projects/branda-showcase-partner-release-20261019`, cleanbb90d81 plus18 explicit task files. Temporary environment removed. `.git/showcase-partner-build-exit.json`
 - RUN2026-10-19 15:03 direct read-only loader benchmark preserved49 products/48 images/5 categories: prior4.47-6.05s, optimized cold3.98s/warm1.76s; network requests11 to7 warm. Next shared cache simulated in memory across isolated loaders; not an end-to-end browser/production speed guarantee. `.git/showcase-loader-timing.json`

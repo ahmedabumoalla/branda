@@ -8,6 +8,10 @@
     {
       "path": "/api/wallet/jobs",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/marketing/jobs",
+      "schedule": "* * * * *"
     }
   ]
 }
