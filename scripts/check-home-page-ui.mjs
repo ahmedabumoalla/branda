@@ -38,7 +38,7 @@ const settings = {
 };
 const data = { settings, contacts: { email: "", whatsapp: "", instagram: "", facebook: "", tiktok: "", x: "" }, heroImages: [], loyaltyImages: [], brands: [], promotions: [], videoViews: 0, videoClicks: 0 };
 const baseStubs = {
-  "next/link": { __esModule: true, default: "a" },
+  "next/link": { __esModule: true, default: ({ prefetch, ...props }) => { void prefetch; return React.createElement("a", props); } },
   "@/components/ui/barndaksa-logo": { BarndaksaLogo: () => React.createElement("span", null, "برندة") },
   "@/app/actions/platform-content": { recordIntroVideoEventAction: async () => {}, submitContactRequestAction: async () => {} },
 };
@@ -169,19 +169,19 @@ await test(() => {
   const values = [], effects = [], events = new Map(); let cursor = 0, reduced = false, observer, played = 0, stopped = 0, disconnected = 0;
   const element = { dataset: {}, style: { removeProperty() {} } };
   const hooks = { useRef(initial) { const slot = cursor++; if (!(slot in values)) values[slot] = { current: initial }; return values[slot]; }, useState(initial) { const slot = cursor++; if (!(slot in values)) values[slot] = initial; return [values[slot], next => { values[slot] = next; }]; }, useEffect(effect) { effects.push(effect); } };
-  class Observer { constructor(callback) { this.callback = callback; observer = this; } observe() {} unobserve() {} disconnect() { disconnected++; } }
+  class Observer { constructor(callback) { observer = callback; } observe() {} unobserve() {} disconnect() { disconnected++; } }
   const doc = { visibilityState: "visible", addEventListener(name, fn) { events.set(name, fn); }, removeEventListener(name) { events.delete(name); } };
   for (const [key, value] of Object.entries({ window: { IntersectionObserver: Observer }, document: doc, navigator: { hardwareConcurrency: 8 }, IntersectionObserver: Observer })) Object.defineProperty(globalThis, key, { value, configurable: true });
   try {
-    const { useHomeMotion } = load(path.join(root, "components/marketing/home-motion.ts"), { react: hooks, "motion/react": { useReducedMotion: () => reduced, animate() { played++; return { stop() { stopped++; } }; } } });
-    const render = paused => { cursor = 0; effects.length = 0; return useHomeMotion(paused); };
+    const { useHomeMotion: runHomeMotion } = load(path.join(root, "components/marketing/home-motion.ts"), { react: hooks, "motion/react": { useReducedMotion: () => reduced, animate() { played++; return { stop() { stopped++; } }; } } });
+    const render = paused => { cursor = 0; effects.length = 0; return runHomeMotion(paused); };
     const initial = render(false); assert.equal(initial.active, false);
     initial.root.current = { querySelectorAll: () => [element] };
     const removeVisibility = effects[0]();
     assert.equal(render(false).active, true);
     const stopAnimations = effects[1]();
-    observer.callback([{ target: element, isIntersecting: true }]); assert.equal(played, 1);
-    observer.callback([{ target: element, isIntersecting: true }]); assert.equal(played, 1);
+    observer([{ target: element, isIntersecting: true }]); assert.equal(played, 1);
+    observer([{ target: element, isIntersecting: true }]); assert.equal(played, 1);
     doc.visibilityState = "hidden"; events.get("visibilitychange")();
     assert.equal(render(false).active, false);
     stopAnimations(); assert.equal(stopped, 1); assert.equal(disconnected, 1);
@@ -204,4 +204,53 @@ await test(() => {
   }
   for (const [, asset] of css.matchAll(/url\("([^"\)]+)"\)/g)) assert(fs.existsSync(path.join(root, "public", asset)));
 });
-console.log(`PASS homepage: ${checks} isolated SSR, CMS, tabs, navigation, contact, video, timer, CSS and contrast checks; no live messages`);
+await test(() => {
+  for (const accountHref of ["/admin", "/dashboard"]) {
+    const h = harness("PlatformHomePage", { data, accountHref });
+    let tree = h.render();
+    assert.equal(byLabel(tree, "حسابي").props.href, accountHref);
+    assert(!nodes(tree).some(node => node.props?.href === "/login"));
+    byLabel(tree, "فتح القائمة").props.onClick();
+    tree = h.render();
+    assert(nodes(byId(tree, "home-mobile-nav")).some(node => node.props?.href === accountHref && text(node).includes("حسابي")));
+    const { PlatformHomePage } = load(homeFile, baseStubs);
+    const html = renderToStaticMarkup(React.createElement(PlatformHomePage, { data, accountHref }));
+    assert(html.includes('aria-label="حسابي"') && html.includes(`href="${accountHref}"`));
+    assert(!html.includes('href="/login"'));
+  }
+  const guest = harness().render();
+  assert(!byLabel(guest, "حسابي"));
+  assert(nodes(guest).some(node => node.props?.href === "/login"));
+});
+await test(async () => {
+  let role = "platform_admin", status = "active", user = { id: "current-user" }, failure = false;
+  const account = load(path.join(root, "lib/data/home-account.ts"), {
+    "server-only": {},
+    "@/lib/supabase/server": { createClient: async () => ({
+      auth: { getUser: async () => { if (failure) throw new Error("Unavailable"); return { data: { user }, error: null }; } },
+      from: table => { assert.equal(table, "profiles"); return { select: fields => { assert.equal(fields, "role,status"); return { eq: (field, value) => { assert.equal(field, "id"); assert.equal(value, "current-user"); return { maybeSingle: async () => ({ data: { role, status }, error: null }) }; } }; } }; },
+    }) },
+  });
+  assert.equal(await account.getHomeAccountHref(), "/admin");
+  for (role of ["cafe_owner", "cafe_manager", "cafe_staff"]) assert.equal(await account.getHomeAccountHref(), "/dashboard");
+  role = "customer"; assert.equal(await account.getHomeAccountHref(), null);
+  role = "platform_admin"; status = "suspended"; assert.equal(await account.getHomeAccountHref(), null);
+  status = "active"; user = null; assert.equal(await account.getHomeAccountHref(), null);
+  failure = true; assert.equal(await account.getHomeAccountHref(), null);
+});
+await test(() => {
+  const { AdminSidebar } = load(path.join(root, "components/admin/AdminSidebar.tsx"), {
+    ...baseStubs,
+    "next/navigation": { usePathname: () => "/admin", useRouter: () => ({ push() {} }) },
+    "@/lib/platform/auth": { logoutBarndaksaAuth() {} },
+  });
+  for (const collapsed of [false, true]) {
+    let navigated = false;
+    const tree = AdminSidebar({ collapsed, onNavigate: () => { navigated = true; } });
+    const logo = byLabel(tree, "برندة الرئيسية");
+    assert.equal(logo.props.href, "/");
+    assert.equal(logo.props.prefetch, false);
+    logo.props.onClick(); assert(navigated);
+  }
+});
+console.log(`PASS homepage: ${checks} isolated SSR, account routing, CMS, tabs, navigation, contact, video, timer, CSS and contrast checks; no live messages`);

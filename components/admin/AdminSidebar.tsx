@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BarChart3,
   BriefcaseBusiness,
   BadgePercent,
   Building2,
@@ -11,7 +10,6 @@ import {
   ChevronsRight,
   CircleDollarSign,
   ClipboardList,
-  CalendarDays,
   Home,
   Layers3,
   Receipt,
@@ -73,7 +71,7 @@ export function AdminSidebar({
     >
       <div className={`border-b border-white/10 ${collapsed ? "px-2 py-3" : "px-4 py-5"}`}>
         <div className={`flex items-center ${collapsed ? "flex-col gap-2" : "justify-between gap-3"}`}>
-          <div className={collapsed ? "flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08] ring-1 ring-white/10" : "min-w-0 flex-1"}>
+          <Link href="/" prefetch={false} onClick={onNavigate} aria-label="برندة الرئيسية" className={`${collapsed ? "flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-white/[0.08] ring-1 ring-white/10" : "min-w-0 flex-1"} rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F6C35B]`}>
             <BarndaksaLogo
               variant="dark"
               width={collapsed ? 36 : 132}
@@ -81,7 +79,7 @@ export function AdminSidebar({
               priority
               className={collapsed ? "scale-90" : "mx-auto"}
             />
-          </div>
+          </Link>
           <button
             type="button"
             onClick={handleToggleCollapsed}

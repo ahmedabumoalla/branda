@@ -1,16 +1,25 @@
 # Current task state
 
-Updated 2026-10-19 13:38 +03:00 - Asia/Riyadh
+Updated 2026-10-19 13:54 +03:00 - Asia/Riyadh
 
 ## Resume here
 
-- Latest application: wallet message history on `main` for production `branda-2`. Identify its commit with `git log -1 --format=%H -- app/api/loyalty/messages/route.ts`; exact GitHub/deployment/production-alias verification is recorded in `.git/message-history-production.json` when publication completes
+- Latest application: admin-logo/home-account navigation on `main` for production `branda-2`. Identify its commit with `git log -1 --format=%H -- lib/data/home-account.ts`; exact publication evidence is `.git/home-account-production.json`. Missing evidence means deployment is not verified
+- Admin sidebar logo opens `/` in expanded/collapsed/mobile states. Homepage renders a visible account icon from the validated active server session: platform admin to `/admin`, brand owner/manager/staff to `/dashboard`. Guests/inactive or unavailable sessions keep sign-in links. Existing destination authorization remains unchanged; no credentials or user profile data enter client props
+- Account icon remains visible on mobile; mobile/footer links use the same destination. Public content and account lookup run independently so a CMS failure does not remove a valid account link. Homepage remains dynamic and not publicly cached
+- Previous release: wallet history `0a875fbf0a9b9733fca7d24ce93872a88d63b064`, production `dpl_BWRjQtoxqqP9uchwhBo8RK9zU9Sw` verified 2026-10-19 13:40 +03:00 in `.git/message-history-production.json`
 - Owner loyalty dashboard now shows saved announcement title/body, creation/update timestamps, queue/provider states, total distinct messages and 10-message pages. History refreshes after a send attempt; admin operations has a per-brand history dialog beside promotional totals
 - History covers all saved announcements, independent of the report period. Report customer/send counts remain unchanged. Provider acceptance does not prove delivery or reading; provider request counts are not shown as customer totals. There is no per-message audience count in this release
 - No schema change or message dispatch was needed. Server verifies active profile and owner/manager membership or platform-admin access, excludes deleted brands and sync jobs, and returns allowlisted fields with private/no-store caching
 - Previous application release `7854ed177552d1f12d0b5083cdb4b825b76264d3` and documentation baseline `9b4f18097d8f43fec673c2a3f106df23f979421f` remain the source of established catalog/operations behavior below
 
 ## Latest verification
+
+- RUN 2026-10-19 13:53 +03:00 Node24.21.0: `node scripts/check-home-page-ui.mjs` passed 16 grouped SSR/auth/role/sidebar/mobile/CMS/motion checks; text integrity, `tsc --noEmit --incremental false` and scoped ESLint passed. One existing unoptimized CMS-image warning remains; two pre-existing test-harness lint errors were fixed without suppression. Exact commands and input hashes: `.git/home-account-checks.json`
+- RUN 2026-10-19 13:53:00 +03:00 isolated `next build --webpack` PASS in `C:/Projects/branda-home-account-release-20261019`; temporary environment removed. `.git/home-account-build-exit.json` captures application hashes. Only test-harness lint cleanup followed the build and was rerun separately; production verifier matches application hashes to the build and the test file to its later passing run
+- Publication check `.git/verify-home-account-production.cjs` verifies exact main SHA/project/alias, guest home200 with login and no account link, private/no-store response and admin logo home link. Authenticated role rendering tested in isolated session/SSR checks; no browser or physical-device test
+
+## Message-history verification
 
 - RUN 2026-10-19 13:36 +03:00 Node24.21.0: `node scripts/check-wallet-message-history.mjs` passed 36 auth/tenant/pagination/provider-state/HTTP/React SSR checks; existing `node scripts/check-operations-report-ui.mjs`, `node scripts/check-text-integrity.mjs`, `tsc --noEmit --incremental false` and scoped ESLint passed. Commands, timestamps and changed-source/dependency/config hashes: `.git/message-history-checks.json`
 - RUN 2026-10-19 13:37:57 +03:00 isolated `next build --webpack` PASS at `C:/Projects/branda-message-history-release-20261019`; only the nine task files over the clean baseline were built. Temporary environment file removed. Source hashes and baseline: `.git/message-history-build-exit.json`; publication verification asserts the published application matches, allowing only accompanying documentation differences
