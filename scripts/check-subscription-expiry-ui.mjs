@@ -34,7 +34,7 @@ function harness(snapshot,pathname='/dashboard',error=false){
  globalThis.window={addEventListener(name,fn){listeners.set(name,fn)},removeEventListener(name){listeners.delete(name)},setTimeout(fn,ms){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)}};
  globalThis.localStorage={getItem:()=>null};
  const {DashboardAppLayout}=load(path.resolve('components/dashboard/dashboard-app-layout.tsx'),{react:hooks,'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},'@/app/actions/maintenance':{exitMaintenanceModeAction:async()=>{}},'@/components/dashboard/DashboardSidebar':{DashboardSidebar:()=>null},'@/components/dashboard/feature-blocked-state':{DashboardFeatureBlockedState:()=>React.createElement('p',null,'feature blocked')},'@/components/dashboard/subscription-expired-state':{SubscriptionExpiredState:()=>React.createElement('p',null,'subscription expired')},'@/components/ui/responsive-app-shell':{ResponsiveAppShell:({children})=>React.createElement('main',null,children)},'@/lib/performance/dashboard-shell-client':{clearDashboardShellSnapshot(){},getCachedDashboardShellSnapshot:async()=>{if(error)throw new Error('Unauthorized');return snapshot}}});
- return {timers,router,async renew(next){snapshot=next;listeners.get('barndaksa:subscription-updated')?.();await flush()},render(){index=0;return DashboardAppLayout({children:React.createElement('p',null,'PROTECTED CONTENT')})},async effects(){for(const fn of pending.splice(0))fn();await flush()},cleanup(){for(const fn of cleanups)fn?.()},setPath(value){pathname=value}};
+ return {timers,router,async renew(next,event='barndaksa:subscription-updated'){snapshot=next;listeners.get(event)?.();await flush()},render(){index=0;return DashboardAppLayout({children:React.createElement('p',null,'PROTECTED CONTENT')})},async effects(){for(const fn of pending.splice(0))fn();await flush()},cleanup(){for(const fn of cleanups)fn?.()},setPath(value){pathname=value}};
 }
 const base={planId:'paid',settings:{cafeSlug:'brand'},plans:[{id:'paid',active:true,features:['menu']}],featureOverrides:[],subscription:{status:'active',expiresAt:new Date(Date.now()+60000).toISOString()}};
 const expired=harness({...base,planId:'',subscription:{status:'trialing',expiresAt:new Date(Date.now()-1).toISOString()}});
@@ -51,7 +51,7 @@ console.log('PASS expiry gate: loading, expired trials, stale cache, live deadli
 
 // Render the actual desktop/mobile sidebar with a previously loaded active plan.
 const sidebar=load(path.resolve('components/dashboard/DashboardSidebar.tsx'),{
- react:{...React,useEffect(){},useState:()=>[{...base,settings:{cafeSlug:'brand',cafeName:'Brand'},notifications:[]},()=>{}]},
+ react:React,
  'next/link':({children,...props})=>React.createElement('a',props,children),
  'next/navigation':{usePathname:()=>'/dashboard',useRouter:()=>({push(){}})},
  '@/lib/cafe/use-resolved-cafe-logo':{useResolvedCafeLogoUrl:()=>''},
@@ -63,10 +63,36 @@ const sidebar=load(path.resolve('components/dashboard/DashboardSidebar.tsx'),{
  '@/components/dashboard/subscription-countdown':{SubscriptionCountdown:()=>null},
 });
 for(const collapsed of [false,true]) {
- const locked=renderToStaticMarkup(React.createElement(sidebar.DashboardSidebar,{servicesAvailable:false,collapsed}));
+ const snapshot={...base,settings:{cafeSlug:'brand',cafeName:'Brand'},notifications:[]};
+ const locked=renderToStaticMarkup(React.createElement(sidebar.DashboardSidebar,{snapshot,servicesAvailable:false,collapsed}));
  assert.ok(locked.includes('href="/dashboard/subscription"'));
  assert.ok(!locked.includes('href="/dashboard/menu"'),'expired sidebar hides service links even with stale plan');
- const enabled=renderToStaticMarkup(React.createElement(sidebar.DashboardSidebar,{servicesAvailable:true,collapsed}));
+ const enabled=renderToStaticMarkup(React.createElement(sidebar.DashboardSidebar,{snapshot,servicesAvailable:true,collapsed}));
  assert.ok(enabled.includes('href="/dashboard/menu"'),'active sidebar keeps assigned services');
 }
 console.log('PASS actual expanded/collapsed sidebar: only subscription navigation after expiry');
+
+// Feed the actual layout's latest props into the actual sidebar, including focus refresh.
+const original={...base,settings:{cafeSlug:'brand',cafeName:'Brand'},notifications:[]};
+const withCampaigns={...original,plans:[{...original.plans[0],features:['menu','marketing_campaigns']}]};
+for(const collapsed of [false,true]) {
+ const ctx=harness(original,'/dashboard/campaigns');
+ const markup=()=>renderToStaticMarkup(React.createElement(sidebar.DashboardSidebar,{...ctx.render().props.sidebar(()=>{}).props,collapsed}));
+ assert.ok(!markup().includes('href="/dashboard/campaigns"'),'loading never guesses campaign access');
+ await ctx.effects();
+ assert.ok(!markup().includes('href="/dashboard/campaigns"'));
+ assert.ok(renderToStaticMarkup(ctx.render()).includes('feature blocked'));
+ await ctx.renew(withCampaigns,'focus');
+ assert.ok(markup().includes('href="/dashboard/campaigns"'),'focus refresh updates mounted navigation');
+ assert.ok(renderToStaticMarkup(ctx.render()).includes('PROTECTED CONTENT'),'guard and sidebar agree');
+ await ctx.renew(original);
+ assert.ok(!markup().includes('href="/dashboard/campaigns"'),'removing service updates navigation');
+ await ctx.renew(withCampaigns);
+ assert.ok(markup().includes('href="/dashboard/campaigns"'),'subscription update restores link');
+ await ctx.renew({...withCampaigns,subscription:{...base.subscription,expiresAt:new Date(Date.now()-1).toISOString()}});
+ assert.ok(!markup().includes('href="/dashboard/campaigns"'),'expired subscription hides campaigns');
+ await ctx.renew({unauthenticated:true});
+ assert.ok(!markup().includes('href="/dashboard/subscription"'),'lost session clears previous brand snapshot');
+ ctx.cleanup();
+}
+console.log('PASS shared sidebar snapshot: focus refresh, plan additions/removals, expiry and lost session in expanded/collapsed navigation');

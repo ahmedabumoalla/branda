@@ -11,12 +11,14 @@ import { ResponsiveAppShell } from "@/components/ui/responsive-app-shell";
 import {
   clearDashboardShellSnapshot,
   getCachedDashboardShellSnapshot,
+  type DashboardShellSnapshot,
 } from "@/lib/performance/dashboard-shell-client";
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
 
 type GuardState = {
+  snapshot?: DashboardShellSnapshot;
   loading: boolean;
   error?: boolean;
   expiresAt?: string | null;
@@ -62,6 +64,7 @@ export function DashboardAppLayout({
           return;
         }
         setGuard({
+          snapshot,
           loading: false,
           expiresAt: snapshot.subscription?.expiresAt,
           cafeSlug: snapshot.settings.cafeSlug,
@@ -80,11 +83,11 @@ export function DashboardAppLayout({
     load();
     const refresh = () => { clearDashboardShellSnapshot(); load(); };
     window.addEventListener("focus", refresh);
-    window.addEventListener("barndaksa:subscription-updated", load);
+    window.addEventListener("barndaksa:subscription-updated", refresh);
     return () => {
       cancelled = true;
       window.removeEventListener("focus", refresh);
-      window.removeEventListener("barndaksa:subscription-updated", load);
+      window.removeEventListener("barndaksa:subscription-updated", refresh);
     };
   }, [pathname, retry]);
 
@@ -157,6 +160,7 @@ export function DashboardAppLayout({
       desktopSidebarWidth={sidebarCollapsed ? "72px" : "252px"}
       sidebar={(close) => (
         <DashboardSidebar
+          snapshot={guard.snapshot}
           servicesAvailable={!guard.loading && !guard.error && Boolean(guard.activePlanId)}
           collapsed={sidebarCollapsed}
           onCollapsedChange={handleSidebarCollapsedChange}

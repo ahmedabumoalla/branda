@@ -1,10 +1,15 @@
 import { getMarketingDashboard, runMarketingAction, MarketingError } from "@/lib/data/marketing";
+import { GreenApiProviderError } from "@/lib/whatsapp/green-api-partner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 90;
 const headers = { "Cache-Control": "private, no-store" };
 function failure(error: unknown) {
+  if (!(error instanceof MarketingError)) {
+    const code = error instanceof GreenApiProviderError && /^GREEN_API_[A-Z0-9_]+$/.test(error.code) ? error.code : "UNEXPECTED_FAILURE";
+    console.error("[marketing:request]", { code });
+  }
   return Response.json({ ok: false, message: error instanceof MarketingError ? error.message : "تعذر إكمال الطلب حاول مجددًا" }, { status: error instanceof MarketingError ? error.status : 503, headers });
 }
 export async function GET() {

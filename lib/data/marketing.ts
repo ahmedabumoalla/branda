@@ -8,7 +8,7 @@ import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { encryptMarketingSecret, decryptMarketingSecret, hashMarketingToken, marketingConfigured, marketingPublicOrigin } from "@/lib/marketing/crypto";
 import { provisionGreenApiMarketingInstance, configureGreenApiMarketingWebhook, getGreenApiMarketingState, getGreenApiMarketingAccount, getGreenApiMarketingQr, deleteGreenApiMarketingInstance, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
-import type { MarketingDashboard, MarketingResult, MarketingConnectionStatus, MarketingCampaignSummary } from "@/lib/marketing/types";
+import type { MarketingDashboard, MarketingResult, MarketingConnectionStatus, MarketingCampaignSummary, MarketingAudienceMember } from "@/lib/marketing/types";
 
 export class MarketingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -16,12 +16,13 @@ export class MarketingError extends Error {
 const phone = z.string().max(30).transform(value => value.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x06f0 : 0x0660))))
   .refine(value => /^[+\d\s()-]+$/.test(value), "أدخل رقم جوال سعودي صحيح")
   .transform(value => normalizeSaudiPhone(value)).refine((value): value is string => Boolean(value), "أدخل رقم جوال سعودي صحيح");
+const customerId = z.string().regex(/^(customer|loyalty):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const inputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("connect"), phone }),
   z.object({ action: z.enum(["refresh", "qr", "disconnect"]) }),
-  z.object({ action: z.literal("optOut"), phone }),
+  z.object({ action: z.literal("optOut"), customerId }).strict(),
   z.object({ action: z.literal("cancelCampaign"), campaignId: z.uuid() }),
-  z.object({ action: z.literal("createCampaign"), idempotencyKey: z.uuid(), title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000), recipients: z.array(phone).min(1).max(1000), consent: z.literal(true), scheduledAt: z.iso.datetime({ offset: true }).optional() }),
+  z.object({ action: z.literal("createCampaign"), idempotencyKey: z.uuid(), title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000), customerIds: z.array(customerId).min(1).max(1000), consent: z.literal(true), scheduledAt: z.iso.datetime({ offset: true }).optional() }).strict(),
 ]);
 
 export async function requireMarketingContext() {
@@ -48,6 +49,46 @@ export async function requireMarketingContext() {
   return { db, cafeId, userId: user.id, brandName: String(cafe.name), eligible: eligible === true };
 }
 type Context = Awaited<ReturnType<typeof requireMarketingContext>>;
+
+/** Read only tenant contact fields; page explicitly to avoid the database's default row cap */
+async function audienceRows(context: Context, table: string, columns: string, order: string) {
+  const rows: Record<string, unknown>[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await context.db.from(table).select(columns).eq("cafe_id", context.cafeId).order(order).range(offset, offset + 499);
+    if (error) throw new MarketingError("تعذر تحميل عملاء العلامة حاول مجددًا", 503);
+    rows.push(...(data ?? []) as unknown as Record<string, unknown>[]);
+    if (!data || data.length < 500) return rows;
+  }
+}
+async function audience(context: Context): Promise<MarketingAudienceMember[]> {
+  const [customers, cards, suppressions] = await Promise.all([
+    audienceRows(context, "customer_profiles", "id,full_name,phone,status,blocked_at,phone_auth_conflict", "id"),
+    audienceRows(context, "loyalty_cards", "id,customer_name,customer_phone,status,customer_profile_id", "id"),
+    audienceRows(context, "brand_marketing_suppressions", "phone", "phone"),
+  ]);
+  const suppressed = new Set(suppressions.flatMap(row => { const parsed = phone.safeParse(row.phone); return parsed.success ? [parsed.data] : []; }));
+  const blockedCustomers = new Set(customers.filter(row => row.status !== "active" || row.blocked_at || row.phone_auth_conflict).map(row => String(row.id)));
+  const customerById = new Map(customers.map(row => [String(row.id), row]));
+  const blockedNumbers = new Set(customers.filter(row => blockedCustomers.has(String(row.id))).flatMap(row => { const parsed = phone.safeParse(row.phone); return parsed.success ? [parsed.data] : []; }));
+  const byPhone = new Map<string, MarketingAudienceMember>();
+  for (const [source, rows] of [["customer", customers], ["loyalty", cards]] as const) {
+    for (const row of rows) {
+      if (source === "customer" && blockedCustomers.has(String(row.id))) continue;
+      const linkedCustomer = row.customer_profile_id ? customerById.get(String(row.customer_profile_id)) : undefined;
+      if (source === "loyalty" && (row.status !== "active" || (row.customer_profile_id && (!linkedCustomer || blockedCustomers.has(String(row.customer_profile_id)))))) continue;
+      const normalized = phone.safeParse(source === "customer" ? row.phone : linkedCustomer ? linkedCustomer.phone : row.customer_phone);
+      if (!normalized.success) continue;
+      if (blockedNumbers.has(normalized.data)) continue;
+      const number = normalized.data, previous = byPhone.get(number);
+      if (previous) {
+        if (previous.source !== source) previous.source = "both";
+        continue;
+      }
+      byPhone.set(number, { id: `${source}:${String(row.id)}`, name: String((source === "customer" ? row.full_name : row.customer_name) || "عميل بدون اسم"), phone: number, suppressed: suppressed.has(number), source });
+    }
+  }
+  return [...byPhone.values()].sort((a, b) => a.name.localeCompare(b.name, "ar") || a.id.localeCompare(b.id));
+}
 type Connection = { cafe_id: string; requested_phone: string; verified_phone: string | null; status: MarketingConnectionStatus; instance_id: string | null; encrypted_credentials: string | null; generation: string; lease_token: string | null; lease_until: string | null; allow_create?: boolean; last_error: string | null };
 async function connection(context: Context) {
   const { data, error } = await context.db.from("brand_marketing_connections").select("*").eq("cafe_id", context.cafeId).maybeSingle();
@@ -59,9 +100,10 @@ function credentials(row: Connection) {
   return decryptMarketingSecret<GreenApiMarketingCredentials>(row.encrypted_credentials, `${row.cafe_id}:${row.instance_id}`);
 }
 async function dashboard(context: Context): Promise<MarketingDashboard> {
-  const [row, history, suppressions] = await Promise.all([
+  const [row, history, suppressions, members] = await Promise.all([
     connection(context), context.db.rpc("marketing_campaign_history", { p_cafe: context.cafeId }),
     context.db.from("brand_marketing_suppressions").select("phone", { count: "exact", head: true }).eq("cafe_id", context.cafeId),
+    audience(context),
   ]);
   if (history.error || suppressions.error) throw new MarketingError("تعذر تحميل سجل الحملات", 503);
   return {
@@ -69,14 +111,17 @@ async function dashboard(context: Context): Promise<MarketingDashboard> {
     connection: row ? { status: row.status, phone: row.requested_phone, verifiedPhone: row.verified_phone,
       lastError: row.status === "mismatch" ? "الرقم المربوط مختلف عن الرقم المطلوب افصل الاتصال وأعد المحاولة" : row.status === "uncertain" ? "نتحقق من حالة الاتصال قبل السماح بالمحاولة التالية" : row.last_error ? "تعذر إكمال الاتصال أعد التحقق من حالته" : null } : null,
     campaigns: (history.data ?? []) as MarketingCampaignSummary[],
+    audience: members,
   };
 }
 export async function getMarketingDashboard() { return dashboard(await requireMarketingContext()); }
 
 async function refreshConnection(context: Context, row: Connection) {
-  if (["disconnected", "disconnecting", "provisioning"].includes(row.status) || !row.encrypted_credentials) return;
+  if (["disconnected", "disconnecting", "provisioning"].includes(row.status) || !row.encrypted_credentials) return null;
   const auth = credentials(row);
   const state = await getGreenApiMarketingState(auth);
+  if (state === "blocked" || state === "suspended") throw new MarketingError("اتصال واتساب موقوف تحقق من الحساب ثم أعد المحاولة", 409);
+  if (state === "starting" || state === "sleepMode") return state;
   let status: MarketingConnectionStatus = "pairing", verified: string | null = null;
   if (state === "authorized") {
     const account = await getGreenApiMarketingAccount(auth);
@@ -86,6 +131,11 @@ async function refreshConnection(context: Context, row: Connection) {
   const { error } = await context.db.from("brand_marketing_connections").update({ status, verified_phone: verified, last_error: null, updated_at: new Date().toISOString() })
     .eq("cafe_id", context.cafeId).eq("generation", row.generation).not("status", "in", "(disconnecting,disconnected,provisioning)");
   if (error) throw new MarketingError("تعذر حفظ حالة الاتصال", 503);
+  return state;
+}
+
+function temporaryProviderFailure(error: unknown) {
+  return error instanceof GreenApiProviderError && /^GREEN_API_MARKETING_(REQUEST_FAILED|REQUEST_REJECTED_(408|429|5\d\d))$/.test(error.code);
 }
 
 export async function runMarketingAction(raw: unknown): Promise<MarketingResult> {
@@ -120,13 +170,24 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
   } else if (input.action === "refresh" || input.action === "qr") {
     const row = await connection(context);
     if (row) {
-      await refreshConnection(context, row);
-      if (input.action === "qr") {
-        const fresh = await connection(context);
-        if (!fresh || !["pairing", "error"].includes(fresh.status)) throw new MarketingError("تحقق من حالة الاتصال قبل طلب رمز الربط", 409);
-        const result = await getGreenApiMarketingQr(credentials(fresh));
-        qrStatus = result.type;
-        if (result.type === "qrCode" && /^[A-Za-z0-9+/=\r\n]+$/.test(result.message) && result.message.length < 300_000) qr = result.message;
+      try {
+        const state = await refreshConnection(context, row);
+        if (input.action === "qr") {
+          if (state === null || state === "starting" || state === "sleepMode") qrStatus = "timeout";
+          else {
+            const fresh = await connection(context);
+            if (state === "authorized" && fresh?.status === "connected") qrStatus = "alreadyLogged";
+            else {
+              if (!fresh || !["pairing", "error"].includes(fresh.status)) throw new MarketingError("تحقق من حالة الاتصال قبل طلب رمز الربط", 409);
+              const result = await getGreenApiMarketingQr(credentials(fresh));
+              qrStatus = result.type;
+              if (result.type === "qrCode" && /^[A-Za-z0-9+/=\r\n]+$/.test(result.message) && result.message.length < 300_000) qr = result.message;
+            }
+          }
+        }
+      } catch (error) {
+        if (!temporaryProviderFailure(error)) throw error;
+        qrStatus = "timeout";
       }
     }
   } else if (input.action === "disconnect") {
@@ -147,7 +208,9 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
       }
     }
   } else if (input.action === "optOut") {
-    const { error } = await context.db.rpc("marketing_suppress", { p_cafe: context.cafeId, p_phone: input.phone, p_reason: "manual" });
+    const customer = (await audience(context)).find(member => member.id === input.customerId);
+    if (!customer) throw new MarketingError("العميل غير متاح ضمن عملاء هذه العلامة", 400);
+    const { error } = await context.db.rpc("marketing_suppress", { p_cafe: context.cafeId, p_phone: customer.phone, p_reason: "manual" });
     if (error) throw new MarketingError("تعذر تسجيل إيقاف الرسائل", 503);
   } else if (input.action === "cancelCampaign") {
     const { error } = await context.db.rpc("marketing_cancel_campaign", { p_cafe: context.cafeId, p_id: input.campaignId });
@@ -155,7 +218,11 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
   } else if (input.action === "createCampaign") {
     const scheduled = input.scheduledAt ? Date.parse(input.scheduledAt) : Date.now();
     if (scheduled < Date.now() - 60_000 || scheduled > Date.now() + 90 * 86400_000) throw new MarketingError("اختر موعدًا قادمًا خلال تسعين يومًا");
-    const recipients = [...new Set(input.recipients)].sort();
+    const members = new Map((await audience(context)).map(member => [member.id, member]));
+    const selected = [...new Set(input.customerIds)].map(id => members.get(id));
+    if (selected.some(member => !member)) throw new MarketingError("بعض العملاء لم يعودوا متاحين ضمن هذه العلامة حدّث القائمة", 400);
+    const recipients = [...new Set(selected.filter(member => member && !member.suppressed).map(member => member!.phone))].sort();
+    if (!recipients.length) throw new MarketingError("اختر عملاء لم يوقفوا استقبال الرسائل", 400);
     const hash = createHash("sha256").update(JSON.stringify({ title: input.title, body: input.body, recipients, scheduledAt: input.scheduledAt ?? null })).digest("hex");
     const { error } = await context.db.rpc("marketing_create_campaign", { p_cafe: context.cafeId, p_actor: context.userId, p_key: input.idempotencyKey, p_hash: hash, p_title: input.title, p_body: input.body, p_phones: recipients, p_scheduled: new Date(scheduled).toISOString() });
     if (error) throw new MarketingError("تعذر تجهيز الحملة تحقق من اتصال الرقم وبيانات الطلب", 409);

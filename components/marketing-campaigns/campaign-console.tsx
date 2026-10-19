@@ -13,8 +13,8 @@ const campaignLabels: Record<string, string> = { queued: "بانتظار الإ�
 const formatNumber = (value: number) => value.toLocaleString("ar-SA");
 const formatDate = (value: string) => new Date(value).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" });
 type ApiResult = { ok: boolean; message?: string; data?: { dashboard: MarketingDashboard; qr?: string; qrStatus?: string } };
-type Draft = { title: string; body: string; recipients: string; consent: boolean; scheduledAt: string };
-const emptyDraft: Draft = { title: "", body: "", recipients: "", consent: false, scheduledAt: "" };
+type Draft = { title: string; body: string; customerIds: string[]; consent: boolean; scheduledAt: string };
+const emptyDraft: Draft = { title: "", body: "", customerIds: [], consent: false, scheduledAt: "" };
 
 export function CampaignConsole({ initialDashboard }: { initialDashboard: MarketingDashboard | null }) {
   const [dashboard, setDashboard] = useState(initialDashboard);
@@ -25,9 +25,14 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [review, setReview] = useState(false);
+  const [reviewedAudience, setReviewedAudience] = useState("");
   const [disconnectReview, setDisconnectReview] = useState(false);
   const [cancelReview, setCancelReview] = useState<string | null>(null);
-  const [optOutPhone, setOptOutPhone] = useState("");
+  const [audienceSearch, setAudienceSearch] = useState("");
+  const [audiencePage, setAudiencePage] = useState(0);
+  const [qrWaiting, setQrWaiting] = useState(false);
+  const qrIntent = useRef<{ started: number; lastRequest: number; received: boolean } | null>(null);
+  const authorizationLost = useRef(false);
   const requestRef = useRef<AbortController | null>(null);
   const sequence = useRef(0);
   const mutation = useRef(false);
@@ -46,17 +51,43 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     const timeout = window.setTimeout(() => controller.abort(), 45000);
     try {
       const response = await fetch("/api/marketing", { method: action ? "POST" : "GET", headers: action ? { "Content-Type": "application/json" } : undefined, body: action ? JSON.stringify(action) : undefined, cache: "no-store", signal: controller.signal });
+      if (response.status === 401 || response.status === 403) {
+        authorizationLost.current = true;
+        qrIntent.current = null;
+        setQrWaiting(false);
+        setQr(null);
+      }
+      if (action?.action === "qr" && response.status >= 400 && response.status < 500 && ![408, 429].includes(response.status)) {
+        qrIntent.current = null; setQrWaiting(false); setQr(null);
+      }
       const result = await response.json() as ApiResult;
       if (!response.ok || !result.ok || !result.data?.dashboard) throw new Error(result.message || "تعذر إتمام الطلب حاول مجددًا");
       if (!mounted.current || current !== sequence.current) return null;
       setDashboard(result.data.dashboard);
-      if (result.data.qr !== undefined) setQr(campaignQrSource(result.data.qr));
-      if (result.data.dashboard.connection?.status !== "pairing") setQr(null);
+      const availableIds = new Set(result.data.dashboard.audience.filter((customer) => !customer.suppressed).map((customer) => customer.id));
+      setDraft((previous) => ({ ...previous, customerIds: previous.customerIds.filter((id) => availableIds.has(id)) }));
+      if (result.data.qr !== undefined && qrIntent.current) {
+        const source = campaignQrSource(result.data.qr);
+        setQr(source);
+        if (source && qrIntent.current) qrIntent.current.received = true;
+        if (source) setQrWaiting(false);
+      }
+      if (result.data.dashboard.connection?.status !== "pairing") { setQr(null); qrIntent.current = null; setQrWaiting(false); }
+      if (action?.action === "qr") {
+        if (result.data.qrStatus === "error" || result.data.qrStatus === "passkeyRequired") {
+          qrIntent.current = null; setQr(null); setQrWaiting(false);
+          setNotice(result.data.qrStatus === "passkeyRequired" ? "يحتاج واتساب إلى تأكيد إضافي افتح التطبيق على جوالك وأكمل التأكيد ثم أعد طلب الرمز" : "تعذر تجهيز رمز الربط الآن أعد طلبه بعد قليل");
+        } else if (result.data.qrStatus === "alreadyLogged") {
+          qrIntent.current = null; setQr(null); setQrWaiting(false);
+          setNotice("تم تسجيل اتصال واتساب جارٍ التحقق من رقم العلامة");
+        } else if (result.data.qrStatus === "timeout" && qrIntent.current && !qrIntent.current.received) setQrWaiting(true);
+      }
       setError("");
       return result.data;
     } catch (failure) {
       if (mounted.current && current === sequence.current) {
-        setError(controller.signal.aborted ? "استغرق الطلب وقتًا طويلًا تحقق من الاتصال ثم أعد المحاولة بنفس البيانات" : failure instanceof Error ? failure.message : "تعذر الاتصال حاول مجددًا");
+        if (action?.action === "qr" && qrIntent.current && !authorizationLost.current) setQrWaiting(true);
+        else setError(controller.signal.aborted ? "استغرق الطلب وقتًا طويلًا تحقق من الاتصال ثم أعد المحاولة بنفس البيانات" : failure instanceof Error ? failure.message : "تعذر الاتصال حاول مجددًا");
       }
       return null;
     } finally {
@@ -73,27 +104,40 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   useEffect(() => {
     mounted.current = true;
     const lifecycleSequence = sequence;
-    return () => { mounted.current = false; lifecycleSequence.current++; requestRef.current?.abort(); };
+    return () => { mounted.current = false; qrIntent.current = null; lifecycleSequence.current++; requestRef.current?.abort(); };
   }, []);
   useEffect(() => {
     if (!dashboard?.eligible) return;
     let ticks = 0;
     const poll = () => {
+      if (authorizationLost.current) return;
+      const intent = qrIntent.current;
+      if (intent && Date.now() - intent.started >= 300000) {
+        qrIntent.current = null; setQrWaiting(false); setQr(null);
+        setNotice("انتهت مهلة تجهيز الرمز يمكنك طلب رمز جديد عندما تكون جاهزًا للربط");
+      }
       if (document.visibilityState !== "visible" || !navigator.onLine || mutation.current) return;
       ticks++;
+      if (qrIntent.current && connectionStatus === "pairing") {
+        if (Date.now() - qrIntent.current.lastRequest >= (qrIntent.current.received ? 20000 : 5000)) {
+          qrIntent.current.lastRequest = Date.now();
+          void request({ action: "qr" }, true);
+          return;
+        }
+      }
       const pairing = ["pairing", "provisioning", "uncertain", "disconnecting"].includes(connectionStatus ?? "");
-      if (pairing) void request({ action: qr && ticks % 4 === 0 ? "qr" : "refresh" }, true);
+      if (pairing) void request({ action: "refresh" }, true);
       else if (ticks % 3 === 0) void request(undefined, true);
     };
     const timer = window.setInterval(poll, 5000);
-    const foreground = () => { if (document.visibilityState === "visible" && navigator.onLine) void request(undefined, true); };
+    const foreground = () => { if (!authorizationLost.current && document.visibilityState === "visible" && navigator.onLine) poll(); };
     window.addEventListener("online", foreground);
     document.addEventListener("visibilitychange", foreground);
     return () => { window.clearInterval(timer); window.removeEventListener("online", foreground); document.removeEventListener("visibilitychange", foreground); };
-  }, [connectionStatus, dashboard?.eligible, qr, request]);
+  }, [connectionStatus, dashboard?.eligible, request]);
   useEffect(() => { if (review) reviewRef.current?.focus(); }, [review]);
 
-  function edit(field: keyof Draft, value: string | boolean) {
+  function edit(field: keyof Draft, value: string | boolean | string[]) {
     setDraft((previous) => ({ ...previous, [field]: value }));
     setReview(false);
   }
@@ -108,12 +152,14 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     event.preventDefault();
     const invalid = campaignDraftError(draft);
     if (invalid) { setError(invalid); errorRef.current?.focus(); return; }
+    setReviewedAudience(JSON.stringify(draft.customerIds));
     setError(""); setNotice(""); setReview(true);
   }
   async function launch() {
+    if (reviewedAudience !== JSON.stringify(draft.customerIds)) { setReview(false); setError("تغير العملاء المحددون راجع الحملة مجددًا قبل الإرسال"); return; }
     const invalid = campaignDraftError(draft);
     if (invalid) { setError(invalid); setReview(false); return; }
-    const payload = { title: draft.title.trim(), body: draft.body.trim(), recipients: parseCampaignRecipients(draft.recipients).phones, consent: true, ...(draft.scheduledAt ? { scheduledAt: new Date(draft.scheduledAt).toISOString() } : {}) };
+    const payload = { title: draft.title.trim(), body: draft.body.trim(), customerIds: draft.customerIds, consent: true, ...(draft.scheduledAt ? { scheduledAt: new Date(draft.scheduledAt).toISOString() } : {}) };
     const fingerprint = JSON.stringify(payload);
     if (!attempt.current || attempt.current.fingerprint !== fingerprint) attempt.current = { fingerprint, key: crypto.randomUUID() };
     const result = await request({ action: "createCampaign", ...payload, idempotencyKey: attempt.current.key });
@@ -122,7 +168,13 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
 
   const connected = connectionStatus === "connected" && Boolean(dashboard?.connection?.verifiedPhone);
   const ready = Boolean(dashboard?.eligible && dashboard.configured && connected);
-  const recipientInfo = parseCampaignRecipients(draft.recipients);
+  const audience = dashboard?.audience ?? [];
+  const filteredAudience = audience.filter((customer) => `${customer.name} ${customer.phone}`.toLocaleLowerCase("ar").includes(audienceSearch.trim().toLocaleLowerCase("ar")));
+  const eligibleAudience = filteredAudience.filter((customer) => !customer.suppressed);
+  const page = Math.min(audiencePage, Math.max(0, Math.ceil(filteredAudience.length / 20) - 1));
+  const visibleAudience = filteredAudience.slice(page * 20, (page + 1) * 20);
+  const selectedIds = new Set(draft.customerIds);
+  const reviewing = review && reviewedAudience === JSON.stringify(draft.customerIds);
   const canConnect = !dashboard?.connection || connectionStatus === "disconnected";
 
   if (dashboard && !dashboard.eligible && !dashboard.connection && !dashboard.campaigns.length) return <DashboardFeatureBlockedState title="الحملات التسويقية" />;
@@ -140,7 +192,8 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
             {dashboard.connection?.lastError && <p className={styles.error}>{dashboard.connection.lastError}</p>}
             {connectionStatus === "mismatch" && <p className={styles.error}>الرقم الذي مسح الرمز مختلف عن رقم الإرسال المطلوب افصل الاتصال ثم اربط الرقم الصحيح</p>}
             {["uncertain", "provisioning", "error"].includes(connectionStatus ?? "") && <div className={styles.actions}><button className={styles.secondary} disabled={busy || !dashboard.configured || !dashboard.eligible} onClick={() => void request({ action: "connect", phone: dashboard.connection?.phone })}>استكمال ربط الرقم</button></div>}
-            {connectionStatus === "pairing" && <div className={styles.actions}><button className={styles.button} disabled={busy || !dashboard.eligible} onClick={() => void request({ action: "qr" })}><QrCode size={17} aria-hidden="true" />{qr ? "تجديد رمز الربط" : "إظهار رمز الربط"}</button></div>}
+            {connectionStatus === "pairing" && <div className={styles.actions}><button className={styles.button} disabled={busy || qrWaiting || !dashboard.eligible} onClick={() => { qrIntent.current = { started: Date.now(), lastRequest: Date.now(), received: false }; setQrWaiting(true); setQr(null); void request({ action: "qr" }); }}><QrCode size={17} aria-hidden="true" />{qrWaiting ? "جارٍ تجهيز رمز الربط" : qr ? "تجديد رمز الربط" : "إظهار رمز الربط"}</button></div>}
+            {qrWaiting && connectionStatus === "pairing" && <p className={styles.hint} role="status">ننتظر جاهزية واتساب وسيظهر الرمز تلقائيًا قد يستغرق التجهيز حتى خمس دقائق أبق الصفحة مفتوحة</p>}
             {qr && connectionStatus === "pairing" && <div className={styles.pairing}>
               {/* The provider returns an ephemeral PNG payload, never a remote URL or credential */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -157,21 +210,30 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
             <div className={styles.fields}>
               <label className={styles.field} htmlFor="campaign-title">اسم الحملة<input id="campaign-title" className={styles.input} value={draft.title} maxLength={100} required disabled={busy} onChange={(event) => edit("title", event.target.value)} placeholder="مثل عرض نهاية الأسبوع" /></label>
               <label className={styles.field} htmlFor="campaign-body">نص رسالة واتساب<textarea id="campaign-body" className={styles.input} rows={6} maxLength={3000} required disabled={busy} value={draft.body} onChange={(event) => edit("body", event.target.value)} placeholder="اكتب رسالتك بطابع علامتك" /></label>
-              <label className={styles.field} htmlFor="campaign-recipients">أرقام العملاء<textarea id="campaign-recipients" className={styles.input} rows={4} dir="ltr" required disabled={busy} value={draft.recipients} onChange={(event) => edit("recipients", event.target.value)} placeholder={"+9665XXXXXXXX\n+9665XXXXXXXX"} aria-describedby="recipient-help" /></label>
-              <p id="recipient-help" className={styles.count}>رقم جوال سعودي في كل سطر — {formatNumber(recipientInfo.phones.length)} رقم فريد{recipientInfo.duplicates > 0 && <> — تم استبعاد {formatNumber(recipientInfo.duplicates)} تكرار</>}</p>
+              <fieldset className={styles.audience} aria-describedby="recipient-help">
+                <legend>عملاء الحملة</legend>
+                <p id="recipient-help" className={styles.hint}>عملاء علامتك وأصحاب بطاقات الولاء دون تكرار الأرقام وجود العميل أو تحميل بطاقته لا يعني موافقته على الرسائل التسويقية</p>
+                <label className={styles.field} htmlFor="audience-search">ابحث بالاسم أو رقم الجوال<input id="audience-search" className={styles.input} type="search" value={audienceSearch} onChange={(event) => { setAudienceSearch(event.target.value); setAudiencePage(0); }} placeholder="ابحث في عملاء علامتك" /></label>
+                <div className={styles.audienceTools}><label className={styles.check}><input type="checkbox" aria-label="تحديد كل العملاء الظاهرين في البحث" disabled={busy || !eligibleAudience.length} checked={eligibleAudience.length > 0 && eligibleAudience.every((customer) => selectedIds.has(customer.id))} onChange={(event) => { const ids = new Set(draft.customerIds); for (const customer of eligibleAudience) { if (event.target.checked) ids.add(customer.id); else ids.delete(customer.id); } edit("customerIds", [...ids]); }} /><span>{audienceSearch ? "تحديد نتائج البحث" : "تحديد الكل"}</span></label><span className={styles.count} role="status">{formatNumber(draft.customerIds.length)} محدد من {formatNumber(audience.length)} عميل</span></div>
+                {!filteredAudience.length ? <p className={styles.empty}>{audience.length ? "لا يوجد عميل يطابق البحث" : "سيظهر هنا عملاء علامتك وأصحاب بطاقات الولاء عند توفر أرقامهم"}</p> : <ul className={styles.audienceList}>{visibleAudience.map((customer) => <li key={customer.id} className={styles.customer} data-suppressed={customer.suppressed}>
+                  <label className={styles.check}><input type="checkbox" aria-label={`اختيار ${customer.name} ${customer.phone}`} checked={!customer.suppressed && selectedIds.has(customer.id)} disabled={busy || customer.suppressed} onChange={(event) => edit("customerIds", event.target.checked ? [...new Set([...draft.customerIds, customer.id])] : draft.customerIds.filter((id) => id !== customer.id))} /><span><strong>{customer.name}</strong><bdi dir="ltr">+{customer.phone}</bdi><small>{customer.source === "both" ? "عميل العلامة وصاحب بطاقة ولاء" : customer.source === "loyalty" ? "صاحب بطاقة ولاء" : "عميل العلامة"}</small></span></label>
+                  <button type="button" className={styles.secondary} disabled={busy || customer.suppressed} aria-label={customer.suppressed ? `الإرسال موقوف إلى ${customer.phone}` : `إيقاف الإرسال إلى ${customer.phone}`} onClick={async () => { const result = await request({ action: "optOut", customerId: customer.id }); if (result) { setReview(false); setNotice("تم إيقاف الرسائل التسويقية لهذا العميل واستبعاده من الحملات"); } }}>{customer.suppressed ? "الإرسال موقوف" : "إيقاف الإرسال"}</button>
+                </li>)}</ul>}
+                {filteredAudience.length > 20 && <div className={styles.audienceTools}><button type="button" className={styles.secondary} disabled={page === 0} onClick={() => setAudiencePage(page - 1)}>السابق</button><span className={styles.count}>صفحة {formatNumber(page + 1)} من {formatNumber(Math.ceil(filteredAudience.length / 20))}</span><button type="button" className={styles.secondary} disabled={(page + 1) * 20 >= filteredAudience.length} onClick={() => setAudiencePage(page + 1)}>التالي</button></div>}
+                <p className={styles.count}>استخدم إيقاف الإرسال إذا لم يوافق العميل أو طلب عدم التواصل معه — {formatNumber(dashboard.optOutCount)} رقم موقوف</p>
+              </fieldset>
               <label className={styles.field} htmlFor="campaign-date">موعد الإرسال اختياري<input id="campaign-date" className={styles.input} type="datetime-local" value={draft.scheduledAt} disabled={busy} onChange={(event) => edit("scheduledAt", event.target.value)} aria-describedby="schedule-help" /></label>
               <p id="schedule-help" className={styles.count}>اتركه فارغًا لبدء الإرسال بعد التأكيد — اختيار الموعد حسب توقيت جهازك</p>
               <label className={styles.check}><input type="checkbox" checked={draft.consent} disabled={busy} onChange={(event) => edit("consent", event.target.checked)} /><span>أؤكد أن أصحاب هذه الأرقام وافقوا على استقبال رسائل علامتي التسويقية وأنني سأحترم طلبات إيقافها</span></label>
             </div>
-            {!review && <div className={styles.actions}><button className={styles.button} disabled={busy || !ready}><Send size={16} aria-hidden="true" />مراجعة الحملة</button></div>}
-            {review && <div ref={reviewRef} tabIndex={-1} className={styles.review} aria-label="مراجعة الحملة قبل الإرسال"><h3>راجع التفاصيل قبل الإرسال</h3><dl><dt>من الرقم</dt><dd><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></dd><dt>عدد الأرقام</dt><dd>{formatNumber(recipientInfo.phones.length)}</dd><dt>موعد البدء</dt><dd>{draft.scheduledAt ? formatDate(draft.scheduledAt) : "بعد التأكيد"}</dd></dl><p>سترسل الرسالة الظاهرة في المعاينة إلى الأرقام التي أدخلتها ولن تُرسل إلى الأرقام المستبعدة من الحملات</p><div className={styles.actions}><button type="button" className={styles.button} disabled={busy || !ready} onClick={() => void launch()}>{busy ? "جارٍ تأكيد الحملة" : draft.scheduledAt ? "تأكيد جدولة الحملة" : "تأكيد بدء الإرسال"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setReview(false)}>العودة للتعديل</button></div></div>}
+            {!reviewing && <div className={styles.actions}><button className={styles.button} disabled={busy || !ready}><Send size={16} aria-hidden="true" />مراجعة الحملة</button></div>}
+            {reviewing && <div ref={reviewRef} tabIndex={-1} className={styles.review} aria-label="مراجعة الحملة قبل الإرسال"><h3>راجع التفاصيل قبل الإرسال</h3><dl><dt>من الرقم</dt><dd><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></dd><dt>عدد العملاء</dt><dd>{formatNumber(draft.customerIds.length)}</dd><dt>موعد البدء</dt><dd>{draft.scheduledAt ? formatDate(draft.scheduledAt) : "بعد التأكيد"}</dd></dl><p>سترسل الرسالة الظاهرة في المعاينة إلى العملاء الذين اخترتهم ولن تُرسل إلى الأرقام الموقوفة من الحملات</p><div className={styles.actions}><button type="button" className={styles.button} disabled={busy || !ready} onClick={() => void launch()}>{busy ? "جارٍ تأكيد الحملة" : draft.scheduledAt ? "تأكيد جدولة الحملة" : "تأكيد بدء الإرسال"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setReview(false)}>العودة للتعديل</button></div></div>}
           </form>
           <aside className={styles.preview} aria-label="معاينة رسالة واتساب"><div className={styles.previewHeader}><MessageCircle aria-hidden="true" /><div>{dashboard.brandName}<p className={styles.hint}>معاينة رسالتك</p></div></div><p className={styles.bubble}>{draft.body.trim() ? `${draft.body.trim()}\n\nلإيقاف الرسائل أرسل إيقاف أو استخدم الرابط\n[رابط إيقاف الرسائل الخاص بالعميل]` : "ستظهر رسالتك هنا أثناء كتابتها"}</p><p className={styles.hint}>تظهر الرسالة من حساب واتساب المرتبط ونضيف تلقائيًا نص إيقاف الرسائل ورابطًا خاصًا بكل عميل عند الإرسال</p></aside>
         </section>
         <section className={styles.panel} aria-labelledby="history-heading"><div className={styles.heading}><div><p className={styles.eyebrow}>متابعة الرسائل</p><h2 id="history-heading">سجل الحملات</h2><p className={styles.hint}>قبول الإرسال لا يعني وصول الرسالة أو قراءتها تتحدث الحالات عند ورود تأكيدها</p></div><span className={styles.badge}>{formatNumber(dashboard.campaigns.length)} حملة</span></div>
           {!dashboard.campaigns.length ? <p className={styles.empty}>لم تنشئ حملات بعد<br />بعد تأكيد حملتك الأولى ستظهر رسالتها ونتائجها هنا</p> : <div className={styles.history}>{dashboard.campaigns.map((campaign) => <article key={campaign.id} className={styles.campaign}><div className={styles.heading}><div><h3>{campaign.title}</h3><p className={styles.count}>{formatDate(campaign.createdAt)} بتوقيت السعودية{campaign.scheduledAt && <> — مجدولة {formatDate(campaign.scheduledAt)}</>}</p></div><span className={styles.badge}>{campaignLabels[campaign.status] ?? "قيد التحقق"}</span></div><p className={styles.message}>{campaign.body}</p><div className={styles.metrics}>{([["الأرقام", campaign.total], ["بانتظار الإرسال", campaign.queued], ["مقبولة للإرسال", campaign.accepted], ["تم التسليم", campaign.delivered], ["تمت القراءة", campaign.read]] as const).map(([label, value]) => <div className={styles.metric} key={label}><strong>{formatNumber(value)}</strong>{label}</div>)}</div><details><summary>تفاصيل الحالات الأخرى</summary><dl><dt>تعذر الإرسال</dt><dd>{formatNumber(campaign.failed)}</dd><dt>لم يتأكد الإرسال</dt><dd>{formatNumber(campaign.uncertain)}</dd><dt>ملغاة</dt><dd>{formatNumber(campaign.cancelled)}</dd><dt>مستبعدة</dt><dd>{formatNumber(campaign.suppressed)}</dd></dl><p className={styles.hint}>الرسائل التي لم يتأكد إرسالها لا يعاد إرسالها تلقائيًا لتجنب التكرار</p></details>{["queued", "scheduled", "sending", "paused"].includes(campaign.status) && <div className={styles.cancel}>{cancelReview !== campaign.id ? <button className={styles.secondary} disabled={busy} onClick={() => setCancelReview(campaign.id)}>إلغاء الرسائل المتبقية</button> : <div className={styles.review}><p>سيُلغى انتظار الرسائل المتبقية ولا يمكن استرجاع ما أُرسل بالفعل</p><div className={styles.actions}><button className={styles.danger} disabled={busy} onClick={async () => { const result = await request({ action: "cancelCampaign", campaignId: campaign.id }); if (result) { setCancelReview(null); setNotice("تم إلغاء الرسائل التي لم يبدأ إرسالها"); } }}>تأكيد الإلغاء</button><button className={styles.secondary} disabled={busy} onClick={() => setCancelReview(null)}>متابعة الحملة</button></div></div>}</div>}</article>)}</div>}
         </section>
-        <section className={styles.panel} aria-labelledby="optout-heading"><p className={styles.eyebrow}>احترم رغبة عملائك</p><h2 id="optout-heading">إيقاف الرسائل لعميل</h2><p className={styles.hint}>إذا طلب عميل إيقاف الرسائل أضف رقمه هنا لاستبعاده من حملات علامتك — {formatNumber(dashboard.optOutCount)} رقم مستبعد</p><form className={styles.inline} onSubmit={async (event) => { event.preventDefault(); const parsed = parseCampaignRecipients(optOutPhone); if (parsed.phones.length !== 1 || parsed.invalid.length) { setError("أدخل رقم العميل مع رمز الدولة"); return; } const result = await request({ action: "optOut", phone: parsed.phones[0] }); if (result) { setOptOutPhone(""); setNotice("تم استبعاد الرقم من الرسائل التسويقية لعلامتك"); } }}><label className={styles.field} htmlFor="optout-phone">رقم العميل<input id="optout-phone" className={styles.input} type="tel" inputMode="tel" dir="ltr" required value={optOutPhone} disabled={busy} maxLength={24} onChange={(event) => setOptOutPhone(event.target.value)} placeholder="+9665XXXXXXXX" /></label><button className={styles.secondary} disabled={busy}>استبعاد الرقم من الحملات</button></form></section>
       </>}
     </div>
   </DashboardPageShell>;

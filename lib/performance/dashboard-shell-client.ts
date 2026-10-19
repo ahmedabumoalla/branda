@@ -2,7 +2,7 @@
 
 import { fetchOwnerDashboardShellAction } from "@/app/actions/dashboard-shell";
 
-type DashboardShellSnapshot = Awaited<ReturnType<typeof fetchOwnerDashboardShellAction>>;
+export type DashboardShellSnapshot = Awaited<ReturnType<typeof fetchOwnerDashboardShellAction>>;
 
 const DASHBOARD_SHELL_TTL_MS = 30_000;
 let cachedSnapshot: { at: number; value: DashboardShellSnapshot } | null = null;

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
@@ -12,12 +11,13 @@ import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { useResolvedCafeLogoUrl } from "@/lib/cafe/use-resolved-cafe-logo";
 import { logoutBarndaksaAuth } from "@/lib/platform/auth";
 import { getSidebarFeaturesForBrand, type BrandFeatureOverride } from "@/lib/platform/feature-access";
-import { getCachedDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
+import type { DashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 
 type SidebarProps = {
+  snapshot?: DashboardShellSnapshot;
   servicesAvailable?: boolean;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -42,28 +42,15 @@ const initialNavigation: NavigationState = {
 };
 
 
-export function DashboardSidebar({ servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
+export function DashboardSidebar({ snapshot, servicesAvailable = false, collapsed = false, onCollapsedChange, onNavigate, onEndMaintenance, isEndingMaintenance = false }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
-  const [navigation, setNavigation] = useState<NavigationState>(initialNavigation);
+  const navigation = snapshot ?? initialNavigation;
   const { settings, notifications } = navigation;
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const cafeName = settings.cafeName || "العلامة";
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
-
-  useEffect(() => {
-    let cancelled = false;
-    function load() { void getCachedDashboardShellSnapshot().then(snapshot => {
-      if (cancelled || (snapshot as { unauthenticated?: boolean }).unauthenticated) return;
-      setNavigation({ planId: snapshot.planId, plans: snapshot.plans, featureOverrides: snapshot.featureOverrides ?? [], settings: snapshot.settings, notifications: snapshot.notifications, subscription: snapshot.subscription });
-    }).catch(error => {
-      if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) console.error("[DashboardSidebar]", error);
-    }); }
-    load();
-    window.addEventListener("barndaksa:subscription-updated", load);
-    return () => { cancelled = true; window.removeEventListener("barndaksa:subscription-updated", load); };
-  }, []);
 
   // The shared package catalog also defines desktop, collapsed and mobile navigation.
   // Wait for account context; never flash guessed package permissions.
