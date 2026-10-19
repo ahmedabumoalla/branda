@@ -233,6 +233,16 @@ await test("unsubscribe GET is read-only and signed POST suppresses only origina
   assert.equal((await api.POST(new Request(url,{method:"POST",body:new URLSearchParams({id:id(3),token})}))).status,200);assert.equal(db.calls.at(-1).args.p_cafe,id(10));
   assert.equal((await api.GET(new Request(url.replace(id(3),id(4))))).status,400);
 });
+await test("operations diagnostic authenticates before reads and never returns QR credentials or personal data",async()=>{
+  const secret=crypto.encryptMarketingSecret(creds,`${id(10)}:${creds.idInstance}`);
+  const db=database(()=>({data:{cafe_id:id(10),instance_id:creds.idInstance,encrypted_credentials:secret,status:"pairing"}}));
+  const api=loader({"@/lib/supabase/admin":{createAdminClient:()=>db},"@/lib/whatsapp/green-api-marketing":{GreenApiProviderError:ProviderError,getGreenApiMarketingState:async()=>"notAuthorized",getGreenApiMarketingQr:async()=>({type:"qrCode",message:"PRIVATE_QR_PAYLOAD"})}})("app/api/marketing/diagnostics/route.ts");
+  const url=`https://barndaksa.com/api/marketing/diagnostics?brand=${id(10)}`;
+  assert.equal((await api.GET(new Request(url))).status,401);assert.equal(db.calls.length,0);
+  const result=await api.GET(new Request(url,{headers:{authorization:`Bearer ${env.CRON_SECRET}`}}));
+  assert.deepEqual(await result.json(),{stage:"qr",ok:true,state:"notAuthorized",qrType:"qrCode",qrAvailable:true});
+  assert(result.headers.get("cache-control").includes("no-store"));assert(db.calls.every(c=>c.filters.some(([key,value])=>key==="cafe_id"&&value===id(10))));
+});
 inputs.add(path.resolve(import.meta.filename));
 fs.writeFileSync(".git/marketing-backend-checks.json",JSON.stringify({executedAt:new Date().toISOString(),node:process.version,checks,providerMutations:0,liveDatabaseWrites:0,inputs:Object.fromEntries([...inputs].map(file=>[path.relative(process.cwd(),file),createHash("sha256").update(fs.readFileSync(file)).digest("hex")]))},null,2));
 console.log(`Marketing backend: ${checks} grouped checks passed with mocked provider and database`);

@@ -38,6 +38,22 @@ async function test(run) { await run(); checks++; }
 function errorIs(uncertain, code) { return error => { assert.equal(error.uncertain, uncertain); if (code) assert.ok(error.code.endsWith(code)); assert.ok(!error.stack.includes(token)); assert.equal(error.cause, undefined); return true; }; }
 
 await test(async () => {
+  for (const denied of [new Response("Unauthorized", { status: 401 }), { code: 401 }]) {
+    const h = harness(call => call.url.startsWith(credentials.apiUrl) ? denied : { type: "qrCode", message: "aGVsbG8=" });
+    assert.equal((await h.getGreenApiMarketingQr(credentials)).type, "qrCode");
+    assert.equal(h.calls.length, 2);
+    assert(h.calls[1].url.startsWith("https://api.greenapi.com/waInstance"));
+    assert(h.calls.every(call => call.method === "GET"));
+  }
+  const denied = harness(() => new Response("Unauthorized", { status: 401 }));
+  await assert.rejects(() => denied.getGreenApiMarketingQr(credentials), errorIs(false, "401"));
+  assert.equal(denied.calls.length, 2, "universal fallback is bounded to one read retry");
+  const mutation = harness(() => new Response("Unauthorized", { status: 401 }));
+  await assert.rejects(() => mutation.configureGreenApiMarketingWebhook(credentials, webhook), errorIs(false, "401"));
+  assert.equal(mutation.calls.length, 1, "mutations never use the read fallback");
+});
+
+await test(async () => {
   const h = harness(call => call.url.includes("getInstances") ? [] : { ...credentials, idInstance: Number(credentials.idInstance) });
   assert.deepEqual(await h.provisionGreenApiMarketingInstance({ brandId, ...webhook, allowCreate: true }), { credentials, reused: false });
   assert.equal(h.calls.length, 2);

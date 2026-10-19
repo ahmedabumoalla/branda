@@ -53,6 +53,7 @@ function webhookSettings(input: GreenApiMarketingWebhook) {
 /** No retry: a lost acknowledgement of a mutation must be reconciled by the caller. */
 async function instanceRequest(credentials: GreenApiMarketingCredentials, method: string, body?: JsonObject, mutation = false): Promise<unknown> {
   const config = validateCredentials(credentials);
+  const canUseUniversalHost = !mutation && !body && config.apiUrl !== UNIVERSAL_HOST && ["getStateInstance", "qr", "getWaSettings"].includes(method);
   let response: Response;
   const requested = Number(process.env.GREEN_API_REQUEST_TIMEOUT_MS);
   const timeout = Number.isSafeInteger(requested) && requested > 0 ? Math.min(requested, 30_000) : 10_000;
@@ -62,11 +63,13 @@ async function instanceRequest(credentials: GreenApiMarketingCredentials, method
       cache: "no-store", redirect: "error", signal: AbortSignal.timeout(timeout),
     });
   } catch { return fail("REQUEST_FAILED", mutation); }
+  if (response.status === 401 && canUseUniversalHost) return instanceRequest({ ...config, apiUrl: UNIVERSAL_HOST }, method);
   if (!response.ok) fail(`REQUEST_REJECTED_${response.status}`, mutation && (response.status >= 500 || response.status === 408));
   let payload: unknown;
   try { payload = await response.json(); } catch { return fail("RESPONSE_INVALID", mutation); }
   if (payload && typeof payload === "object" && "code" in payload) {
     const status = Number((payload as JsonObject).code);
+    if (status === 401 && canUseUniversalHost) return instanceRequest({ ...config, apiUrl: UNIVERSAL_HOST }, method);
     const validStatus = Number.isInteger(status) && status >= 100 && status <= 599;
     fail(`REQUEST_REJECTED_${validStatus ? status : "UNKNOWN"}`, mutation && (!validStatus || status < 400 || status >= 500 || status === 408));
   }
