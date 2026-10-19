@@ -7,7 +7,9 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type R
 import { recordIntroVideoEventAction, submitContactRequestAction } from "@/app/actions/platform-content";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import type { PublicPlatformHomeData } from "@/lib/data/platform-content";
-import { HomeProductPreview } from "./home-product-preview";
+import type { PublicHomeCatalog } from "@/lib/platform/public-home-catalog";
+import { HomeMenuDesigns, HomePartners, HomePricing, HomeServiceExplorer } from "./home-showcase";
+import { unavailableHomeCatalog, useHomeCatalog } from "./use-home-catalog";
 import { homeMotion, useHomeMotion } from "./home-motion";
 import styles from "./platform-home-page.module.css";
 
@@ -18,12 +20,7 @@ const fontFamilies = {
   "ibm-plex-sans-arabic": '"IBM Plex Sans Arabic", "Branda Home", sans-serif',
   "noto-kufi-arabic": '"Noto Kufi Arabic", "Branda Home", sans-serif',
 };
-const features = [
-  { icon: LayoutGrid, title: "منيو يليق بعلامتك", text: "منتجات وصور وأسعار في منيو مستقل يسهل مشاركته وتحديثه", tag: "حضور يترك انطباعًا" },
-  { icon: Gift, title: "سبب جديد للعودة", text: "بطاقات ولاء وأختام ومكافآت تقرّب عملاءك من علامتك", tag: "علاقة تستمر" },
-  { icon: Sparkles, title: "كل عرض له وقته", text: "اعرض جديدك وقدّم عروضك ومناسباتك في مساحة تحمل هويتك", tag: "تفاصيل تتجدد" },
-];
-const navigation = [["#features", "المزايا"], ["#solutions", "الحلول"], ["#about", "من نحن"], ["/careers", "الوظائف"]] as const;
+const navigation = [["#menu-designs", "تصاميمنا"], ["#features", "خدماتنا"], ["#pricing", "الباقات"], ["#partners", "شركاء النجاح"], ["#about", "عن برندة"]] as const;
 const setupSteps = [
   { icon: Store, title: "أنشئ مساحة علامتك", description: "ابدأ باسمك وهويتك" },
   { icon: LayoutGrid, title: "أضف تفاصيلك", description: "منتجاتك وصورها وأسعارها" },
@@ -113,12 +110,13 @@ function LoyaltyShowcase({ images }: { images: PublicPlatformHomeData["loyaltyIm
   </div>;
 }
 
-export function PlatformHomePage({ data, accountHref = null }: { data: PublicPlatformHomeData; accountHref?: "/admin" | "/dashboard" | null }) {
+export function PlatformHomePage({ data, accountHref = null, initialCatalog = unavailableHomeCatalog }: { data: PublicPlatformHomeData; accountHref?: "/admin" | "/dashboard" | null; initialCatalog?: PublicHomeCatalog }) {
   const [paused, setPaused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const { catalog, refreshing, refresh } = useHomeCatalog(initialCatalog);
   const { root, active, reduced } = useHomeMotion(paused);
   const { scrollYProgress } = useScroll();
   const promotionRow = useRef<HTMLDivElement>(null);
@@ -158,7 +156,7 @@ export function PlatformHomePage({ data, accountHref = null }: { data: PublicPla
         <Link href="/" aria-label="برندة الرئيسية" className={styles.logo}><BarndaksaLogo variant="brown" width={114} height={46} priority /></Link>
         <nav className={styles.desktopNav} aria-label="القائمة الرئيسية">{navigation.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}</nav>
         <div className={styles.headerActions}>
-          {accountHref ? <Link href={accountHref} prefetch={false} className={styles.accountLink} aria-label="حسابي" title="حسابي"><UserRound size={20} aria-hidden="true" /><span>حسابي</span></Link> : <><Link href="/login" className={styles.loginLink}>تسجيل الدخول</Link><Link href="/register" className={styles.headerCta}>ابدأ مجانًا <ArrowUpLeft size={17} aria-hidden="true" /></Link></>}
+          {accountHref ? <Link href={accountHref} prefetch={false} className={styles.accountLink} aria-label="حسابي" title="حسابي"><UserRound size={20} aria-hidden="true" /><span>حسابي</span></Link> : <><Link href="/login" className={styles.loginLink}>تسجيل الدخول</Link><Link href="/register" className={styles.headerCta}>ابدأ علامتك <ArrowUpLeft size={17} aria-hidden="true" /></Link></>}
           <button type="button" className={styles.motionButton} aria-label={paused ? "تشغيل حركة الصفحة" : "إيقاف حركة الصفحة"} aria-pressed={paused} onClick={() => setPaused(current => !current)}>{paused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}</button>
           <button ref={mobileTrigger} type="button" className={styles.menuButton} aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"} aria-expanded={menuOpen} aria-controls="home-mobile-nav" onClick={() => setMenuOpen(current => !current)}>{menuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}</button>
         </div>
@@ -173,18 +171,15 @@ export function PlatformHomePage({ data, accountHref = null }: { data: PublicPla
         <h1 id="home-title">{titleParts.map((part, index) => <span key={index} className={styles.heroLine} style={{ "--line-index": index } as CSSProperties}>{part}</span>)}</h1>
         <p className={styles.heroDescription}>{copy(data.settings.heroDescription)}</p>
         <div className={styles.heroActions}><Link href="/register" className={styles.primaryButton}>ابدأ تجربة علامتك <ArrowUpLeft size={20} aria-hidden="true" /></Link><button type="button" className={styles.videoButton} onClick={openVideo}><span><Play size={16} aria-hidden="true" /></span>{data.introVideo ? "شاهد كيف تعمل برندة" : "استكشف التجربة"}</button></div>
-        <div className={styles.trialNote}><ShieldCheck size={17} aria-hidden="true" /><span>٧ أيام لتجربة المنيو بدون بطاقة دفع</span></div>
-        <a href="#features" className={styles.discover}>تفاصيل صغيرة تصنع فرقًا كبيرًا <ArrowDown size={17} aria-hidden="true" /></a>
+        <div className={styles.trialNote}><ShieldCheck size={17} aria-hidden="true" /><span>تصميم مخصص لهويتك وإدارة من مكان واحد</span></div>
+        <a href="#menu-designs" className={styles.discover}>شاهد كيف تبدو كل علامة بطريقتها <ArrowDown size={17} aria-hidden="true" /></a>
       </div>
-      <div id="product-demo" className={styles.heroProduct}><HomeProductPreview animate={active} /></div>
+      <div id="product-demo" className={styles.heroProduct}><HomeMenuDesigns menus={catalog.menus} />{catalog.errors.menus ? <p role="status" className={styles.catalogError}>تعذر تحديث معرض التصاميم <button type="button" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? "جارٍ التحديث" : "إعادة المحاولة"}</button></p> : !catalog.menus.length ? <p className={styles.catalogError}>ستظهر هنا تصاميم المنيوهات عند إتاحتها</p> : null}</div>
     </section>
 
     <div className={`${styles.container} ${styles.serviceStrip}`}><span>من أول انطباع إلى الزيارة القادمة</span><div><LayoutGrid size={17} aria-hidden="true" />منيو يحمل هويتك</div><div><Gift size={17} aria-hidden="true" />ولاء يقرب عملاءك</div><div><Sparkles size={17} aria-hidden="true" />عروض تتجدد معك</div></div>
 
-    <section id="features" className={`${styles.container} ${styles.section}`} aria-labelledby="features-heading">
-      <div className={styles.sectionHeading} data-reveal><div><span className={styles.eyebrow}>حضور يليق بعلامتك</span><h2 id="features-heading">{copy(data.settings.featuresTitle)}</h2></div><p>أدوات تعمل معًا لتبقى التفاصيل بين يديك<br />والتجربة أقرب إلى عملائك</p></div>
-      <div className={styles.featureGrid}>{features.map((feature, index) => <article key={feature.title} className={styles.featureCard} data-reveal data-delay={index}><div className={styles.featureTop}><feature.icon size={26} strokeWidth={1.5} aria-hidden="true" /><ArrowUpLeft size={18} aria-hidden="true" /></div><span className={styles.featureTag}>{feature.tag}</span><h3>{feature.title}</h3><p>{feature.text}</p><div className={styles.featureIllustration} data-kind={index} aria-hidden="true">{index === 0 ? <><span /><span /><span /></> : index === 1 ? <>{[0, 1, 2, 3, 4].map(item => <i key={item}>{item < 3 ? <Coffee size={22} /> : <Gift size={22} />}</i>)}</> : <><span>جديد علامتك</span><Sparkles size={36} /></>}</div></article>)}</div>
-    </section>
+    <HomeServiceExplorer title={copy(data.settings.featuresTitle)} />
 
     <section id="solutions" className={styles.loyaltySection} aria-labelledby="loyalty-heading"><div className={`${styles.container} ${styles.loyaltyInner}`}>
       <div data-reveal><span className={styles.eyebrow}>لأن العلاقة لا تنتهي عند الزيارة</span><h2 id="loyalty-heading">زيارة أولى<br /><em>وعلاقة تستمر</em></h2><p>{copy(data.settings.loyaltyDescription)}</p><ul><li><Check size={18} aria-hidden="true" />بطاقة ولاء تحمل هوية علامتك</li><li><Check size={18} aria-hidden="true" />أختام ومكافآت تدعو للعودة</li><li><Check size={18} aria-hidden="true" />إدارة واضحة من لوحة واحدة</li></ul><Link href="/register" className={styles.goldButton}>ابدأ بناء علاقتك بعملائك <ArrowUpLeft size={20} aria-hidden="true" /></Link><small className={styles.packageNote}>الولاء والعروض متاحة ضمن الباقات التي تدعمها</small></div>
@@ -193,7 +188,8 @@ export function PlatformHomePage({ data, accountHref = null }: { data: PublicPla
 
     <section className={`${styles.container} ${styles.experienceSection}`} aria-labelledby="experience-heading"><div data-reveal><span className={styles.eyebrow}>من لوحة واحدة</span><h2 id="experience-heading">{copy(data.settings.heroSideText)}</h2><p>أضف منتجاتك وحدّث تفاصيل علامتك وشارك منيوك المستقل مع عملائك</p><Link href="/register" className={styles.textLink}>أعطِ علامتك مساحتها <ArrowLeft size={19} aria-hidden="true" /></Link></div><div data-reveal data-delay="1">{data.heroImages.length ? <MediaGallery images={data.heroImages} active={active} interval={data.settings.carouselIntervalSeconds} /> : <div className={styles.workflow}>{setupSteps.map((step, index) => <div key={step.title}><span className={styles.stepNumber}>{index + 1}</span><div><strong>{step.title}</strong><p>{step.description}</p></div><step.icon size={23} aria-hidden="true" /></div>)}</div>}</div></section>
 
-    {data.brands.length ? <section className={`${styles.container} ${styles.brandsSection}`} aria-labelledby="brands-heading"><div data-reveal><span className={styles.eyebrow}>لكل علامة حكاية</span><h2 id="brands-heading">علامات اختارت برندة</h2></div><div className={styles.brandGrid}>{data.brands.map(brand => { const content = <><MediaImage src={brand.logoUrl} alt={brand.name} /><strong>{brand.name}</strong>{brand.locationLabel ? <span>{brand.locationLabel}</span> : null}</>; return brand.href ? <Link href={brand.href} key={brand.id} className={styles.brandItem}>{content}</Link> : <div key={brand.id} className={styles.brandItem}>{content}</div>; })}</div></section> : null}
+    <HomePartners catalog={catalog} refreshing={refreshing} onRefresh={() => void refresh()} />
+    <HomePricing catalog={catalog} refreshing={refreshing} onRefresh={() => void refresh()} />
 
     {data.promotions.length ? <section className={`${styles.container} ${styles.promotions}`} aria-labelledby="promotions-heading"><div className={styles.sectionHeading} data-reveal><div><span className={styles.eyebrow}>من عالم علاماتنا</span><h2 id="promotions-heading">أشياء تستحق الاكتشاف</h2></div><div className={styles.rowControls}><button type="button" aria-label="الاختيارات السابقة" onClick={() => promotionRow.current?.scrollBy({ left: 340, behavior: active ? "smooth" : "instant" })}><ArrowRight size={20} aria-hidden="true" /></button><button type="button" aria-label="الاختيارات التالية" onClick={() => promotionRow.current?.scrollBy({ left: -340, behavior: active ? "smooth" : "instant" })}><ArrowLeft size={20} aria-hidden="true" /></button></div></div><div ref={promotionRow} className={styles.promotionRow} tabIndex={0} role="region" aria-label="اختيارات العلامات التجارية">{data.promotions.map((item, index) => <article key={`${item.itemType}-${item.id ?? item.itemId ?? index}`} className={styles.promotionCard}><div className={styles.promotionImage}><MediaImage src={item.imageUrl} alt={item.title} /><span>{item.badge || (item.itemType === "offer" ? "عرض خاص" : item.itemType === "product" ? "منتج مختار" : "علامة مختارة")}</span></div><div className={styles.promotionBody}><small>{item.brandName}</small><h3>{item.title}</h3>{item.subtitle ? <p>{item.subtitle}</p> : null}{item.locationLabel ? <span className={styles.location}><MapPin size={14} aria-hidden="true" />{item.locationLabel}</span> : null}<Link href={item.href}>اكتشف التفاصيل <ExternalLink size={17} aria-hidden="true" /></Link></div></article>)}</div></section> : null}
 

@@ -12,6 +12,10 @@ export function sanitizeDurationMonths(value: unknown) {
 export function getPlanDurationOptions(_plan?: Pick<PlatformPlan, "durationOptions"> | null) { return DEFAULT_SUBSCRIPTION_DURATIONS; }
 export function isPlanOfferActive(_plan: Pick<PlatformPlan, "offerEnabled" | "offerPrice" | "offerEndsAt">) { return false; }
 export function getPlanMonthlyAmount(plan: Pick<PlatformPlan, "priceMonthly">) { return plan.priceMonthly; }
+/** Shared visibility for the public catalog and the brand subscription chooser. */
+export function isPurchasablePlan(plan: Pick<PlatformPlan, "id" | "priceMonthly">) {
+  return plan.priceMonthly > 0 && plan.id !== "owner_trial_7d";
+}
 export function calculateSubscriptionPricing(plan: Pick<PlatformPlan, "priceMonthly" | "annualDiscountPercent">, months: number) {
   const baseCents = Math.round(plan.priceMonthly * 100) * sanitizeDurationMonths(months);
   const discountPercent = months === 12 ? Math.min(100, Math.max(0, plan.annualDiscountPercent ?? 0)) : 0;

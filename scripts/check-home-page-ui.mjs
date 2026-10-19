@@ -16,6 +16,10 @@ const compiled = transform({ filename: "platform-home-page.module.css", code: Bu
 for (const file of [homeFile, path.join(root, "components/marketing/home-product-preview.tsx")]) {
   for (const [, name] of fs.readFileSync(file, "utf8").matchAll(/styles\.(\w+)/g)) assert(compiled.exports[name], `Missing CSS: ${name}`);
 }
+const showcaseFile = path.join(root, "components/marketing/home-showcase.tsx");
+const showcaseCss = fs.readFileSync(path.join(root, "components/marketing/home-showcase.module.css"), "utf8");
+const showcaseCompiled = transform({ filename: "home-showcase.module.css", code: Buffer.from(showcaseCss), cssModules: true, minify: true });
+for (const [, name] of fs.readFileSync(showcaseFile, "utf8").matchAll(/styles\.(\w+)/g)) assert(showcaseCompiled.exports[name], `Missing showcase CSS: ${name}`);
 
 function load(file, stubs, cache = new Map()) {
   if (cache.has(file)) return cache.get(file);
@@ -37,6 +41,7 @@ const settings = {
   heroBadgeFontSize: 14, heroTitleFontSize: 48, heroDescriptionFontSize: 18, heroSideTextFontSize: 30, featuresTitleFontSize: 36, loyaltyTitleFontSize: 36, loyaltyDescriptionFontSize: 18, ctaTitleFontSize: 36, ctaDescriptionFontSize: 18, aboutCardsFontSize: 15,
 };
 const data = { settings, contacts: { email: "", whatsapp: "", instagram: "", facebook: "", tiktok: "", x: "" }, heroImages: [], loyaltyImages: [], brands: [], promotions: [], videoViews: 0, videoClicks: 0 };
+const catalog = { plans: [], partners: [], menus: [], errors: { plans: false, partners: false, menus: false } };
 const baseStubs = {
   "next/link": { __esModule: true, default: ({ prefetch, ...props }) => { void prefetch; return React.createElement("a", props); } },
   "@/components/ui/barndaksa-logo": { BarndaksaLogo: () => React.createElement("span", null, "برندة") },
@@ -48,13 +53,16 @@ function harness(component = "PlatformHomePage", props = { data }, overrides = {
     useState(initial) { const slot = cursor++; if (!(slot in values)) values[slot] = initial; return [values[slot], next => { values[slot] = typeof next === "function" ? next(values[slot]) : next; }]; },
     useRef(initial) { const slot = cursor++; if (!(slot in values)) values[slot] = { current: initial }; return values[slot]; },
     useEffect(effect) { effects.push(effect); },
+    useCallback(callback) { return callback; },
   };
   const stubs = { ...baseStubs, react: hooks,
     "./home-motion": { homeMotion: { duration: { fast: .18, slow: .8 }, stagger: .09, distance: 28, tilt: 5 }, homeSprings: { perspective: {} }, useHomeMotion: () => ({ root: { current: null }, active: true, reduced: false }) },
     "motion/react": { motion: new Proxy({}, { get: (_, name) => name }), useScroll: () => ({ scrollYProgress: 0 }), useInView: () => true, useMotionValue: () => ({ set: value => calls.push(["motion", value]) }), useSpring: () => 0, AnimatePresence: React.Fragment },
     "@/app/actions/platform-content": { recordIntroVideoEventAction: async (...args) => { calls.push(["video", ...args]); }, submitContactRequestAction: async (...args) => { calls.push(["contact", ...args]); } }, ...overrides,
   };
-  const file = component === "HomeProductPreview" ? path.join(root, "components/marketing/home-product-preview.tsx") : homeFile;
+  const file = component === "HomeProductPreview" ? path.join(root, "components/marketing/home-product-preview.tsx")
+    : component === "useHomeCatalog" ? path.join(root, "components/marketing/use-home-catalog.ts")
+    : ["HomeServiceExplorer", "HomePlanCard", "HomeMenuDesigns", "PartnerLogo"].includes(component) ? showcaseFile : homeFile;
   const Component = load(file, stubs)[component];
   return { calls, effects, render(nextProps = props) { cursor = 0; effects.length = 0; return Component(nextProps); } };
 }
@@ -83,7 +91,7 @@ await test(() => {
 await test(() => {
   const populated = { ...data, contacts: { ...data.contacts, whatsapp: "966511111111", instagram: "https://example.invalid/social" }, heroImages: [{ id: "photo", url: "https://example.invalid/hero.png", altText: "صورة الإدارة" }], loyaltyImages: [{ id: "loyalty", url: "https://example.invalid/card.png", altText: "بطاقة الإدارة" }], brands: [{ id: "brand", name: "علامة من الإدارة", href: "/menu/test" }], promotions: [{ id: "offer", itemType: "offer", title: "عرض من الإدارة", brandName: "العلامة", href: "/menu/test?offer=1" }] };
   const { PlatformHomePage } = load(homeFile, baseStubs);
-  const html = renderToStaticMarkup(React.createElement(PlatformHomePage, { data: populated }));
+  const html = renderToStaticMarkup(React.createElement(PlatformHomePage, { data: populated, initialCatalog: { ...catalog, partners: populated.brands.map(brand => ({ ...brand, logoUrl: null })) } }));
   for (const expected of ["صورة الإدارة", "بطاقة الإدارة", "علامة من الإدارة", "عرض من الإدارة", "https://wa.me/966511111111", "https://example.invalid/social"]) assert(html.includes(expected), expected);
   assert(!html.includes("undefined"));
 });
@@ -253,4 +261,74 @@ await test(() => {
     logo.props.onClick(); assert(navigated);
   }
 });
-console.log(`PASS homepage: ${checks} isolated SSR, account routing, CMS, tabs, navigation, contact, video, timer, CSS and contrast checks; no live messages`);
+await test(() => {
+  const h = harness("HomeServiceExplorer", { title: "خدمات العلامة" });
+  assert.equal(byId(h.render(), "service-tab-menu").props["aria-selected"], true);
+  byId(h.render(), "service-tab-pager").props.onClick();
+  assert(text(byId(h.render(), "service-panel-pager")).includes("إنشاء الطلب ومتابعة حالته"));
+  let focused;
+  byId(h.render(), "service-tab-pager").props.onKeyDown({ key: "End", preventDefault() {}, currentTarget: { parentElement: { querySelector: selector => ({ focus() { focused = selector; } }) } } });
+  assert.equal(focused, "#service-tab-settings");
+  assert(byId(h.render(), "service-panel-settings"));
+  assert(!text(h.render()).includes("الذكاء الاصطناعي"));
+});
+await test(() => {
+  const plan = { id: "menu-plan", name: "اسم الباقة من الإدارة", description: "الوصف المعتمد", priceMonthly: 100, durationUnit: "month", durationCount: 1, trialDays: null, freeAfterTrial: false, maxProductsMonthly: 50, maxBranches: 1, features: [{ id: "menu", label: "المنيو" }], durations: [{ months: 1, label: "شهر واحد", totalAmount: 100, discountAmount: 0, discountPercent: 0 }, { months: 12, label: "سنة", totalAmount: 1140, discountAmount: 60, discountPercent: 5 }] };
+  const h = harness("HomePlanCard", { plan });
+  assert(text(h.render()).includes(plan.name));
+  byId(h.render(), "duration-menu-plan").props.onChange({ target: { value: "12" } });
+  assert(text(h.render()).includes(new Intl.NumberFormat("ar-SA").format(1140)));
+  assert(text(h.render()).includes("إجمالي الاشتراك سنة"));
+  assert(text(h.render()).includes("وفّر"));
+  const updated = { ...plan, name: "اسم جديد", features: [{ id: "loyalty", label: "ميزة جديدة" }], durations: [{ months: 1, label: "شهر واحد", totalAmount: 150, discountAmount: 0, discountPercent: 0 }] };
+  const tree = h.render({ plan: updated });
+  assert(text(tree).includes("اسم جديد") && text(tree).includes("ميزة جديدة"));
+  assert(!text(tree).includes("إجمالي الاشتراك سنة"));
+  assert.equal(byId(tree, "duration-menu-plan").props.value, 1);
+});
+await test(() => {
+  const menus = Array.from({ length: 14 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoUrl: `/logo-${index}.png`, href: `/menu/brand-${index}` }));
+  const h = harness("HomeMenuDesigns", { menus });
+  const initial = h.render();
+  const frames = nodes(initial).filter(node => node.type === "iframe");
+  assert.equal(frames.length, 3);
+  assert.equal(frames[0].props.src, "/menu/brand-0?showcase=1");
+  assert.equal(frames[0].props.tabIndex, -1);
+  assert(nodes(initial).some(node => node.props?.href === "/menu/brand-0" && node.props?.target === "_blank"));
+  for (let index = 0; index < 4; index++) byLabel(h.render(), "التصاميم التالية").props.onClick();
+  assert.equal(nodes(h.render()).filter(node => node.type === "iframe").length, 2);
+  assert.equal(byLabel(h.render(), "التصاميم التالية").props.disabled, true);
+  const shrunk = h.render({ menus: menus.slice(0, 1) });
+  assert.equal(nodes(shrunk).find(node => node.type === "iframe").props.src, "/menu/brand-0?showcase=1");
+  const { HomePartners } = load(showcaseFile, baseStubs);
+  const html = renderToStaticMarkup(React.createElement(HomePartners, { catalog: { ...catalog, partners: menus }, refreshing: false, onRefresh() {} }));
+  for (const partner of menus) assert(html.includes(partner.name));
+});
+await test(async () => {
+  const original = Object.fromEntries(["window", "document", "fetch"].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const events = new Map(), timers = new Map(); let next = { ...catalog, plans: [{ id: "new" }] }, requests = 0, failed = false;
+  const target = prefix => ({ addEventListener(name, fn) { events.set(`${prefix}:${name}`, fn); }, removeEventListener(name) { events.delete(`${prefix}:${name}`); } });
+  const doc = { ...target("document"), visibilityState: "visible" };
+  Object.defineProperty(globalThis, "document", { configurable: true, value: doc });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { ...target("window"), setInterval(fn, delay) { timers.set("interval", { fn, delay }); return 1; }, clearInterval() { timers.delete("interval"); }, setTimeout() { return 2; }, clearTimeout() {} } });
+  Object.defineProperty(globalThis, "fetch", { configurable: true, value: async (url, options) => { requests++; assert.equal(url, "/api/public/home-catalog"); assert.equal(options.cache, "no-store"); if (failed) throw Error("offline"); return { ok: true, json: async () => next }; } });
+  try {
+    const h = harness("useHomeCatalog", { ...catalog, partners: [{ id: "old-partner" }], menus: [{ id: "old-menu" }] });
+    h.render(); const dispose = h.effects[0]();
+    assert.equal(timers.get("interval").delay, 30000);
+    await h.render().refresh();
+    assert.deepEqual(h.render().catalog.plans, [{ id: "new" }]);
+    assert.deepEqual(h.render().catalog.partners, []);
+    next = { ...catalog, plans: [], partners: [{ id: "added-brand" }], errors: { plans: true, partners: false, menus: false } };
+    await h.render().refresh();
+    assert.deepEqual(h.render().catalog.plans, [{ id: "new" }]);
+    assert.deepEqual(h.render().catalog.partners, [{ id: "added-brand" }]);
+    failed = true; await h.render().refresh();
+    assert(h.render().catalog.errors.plans);
+    assert.deepEqual(h.render().catalog.partners, [{ id: "added-brand" }]);
+    const before = requests; doc.visibilityState = "hidden"; await h.render().refresh(); assert.equal(requests, before);
+    assert(events.has("window:focus") && events.has("window:online") && events.has("document:visibilitychange"));
+    dispose(); assert.equal(events.size, 0); assert.equal(timers.size, 0);
+  } finally { for (const [key, descriptor] of Object.entries(original)) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } }
+});
+console.log(`PASS homepage: ${checks} isolated SSR, account routing, CMS, services, live pricing/catalog, menu showcase, navigation, contact, video, timer, CSS and contrast checks; no live messages`);

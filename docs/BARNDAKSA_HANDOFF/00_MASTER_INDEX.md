@@ -1,14 +1,17 @@
 # Branda — current handoff
 
-Updated 2026-10-19 13:54 +03:00 - Asia/Riyadh
+Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Published state
 
-- Latest application: admin logo opens the public homepage and the homepage account icon returns the active user to `/admin` or `/dashboard`. Icon stays visible on mobile; guests retain sign-in links. Server checks the real session and active profile; no auth credentials or access-policy changes
-- Release identity: `git log -1 --format=%H -- lib/data/home-account.ts` on `main` / Vercel `branda-2`. Exact production evidence: `.git/home-account-production.json`; missing evidence means publication is not verified. Six task files plus documentation only; unrelated drafts preserved
-- 16 grouped homepage/account/sidebar tests, text integrity, TypeScript, scoped ESLint and isolated production build passed on 2026-10-19. One existing CMS-image lint warning remains. Detailed provenance and source-only responsive/accessibility review are in current task state
+- Latest application: premium Arabic homepage with actual menu-design gallery, service sidebar, subscription pricing and success-partner logos. Gallery shows three genuine active public menus per page with logos and normal open links; preview mode is inert and does not record visitor/customer activity
+- Release identity: `git log -1 --format=%H -- lib/data/public-home-catalog.ts` on `main` / Vercel `branda-2`. Exact production evidence: `.git/home-redesign-production.json`; missing evidence means publication is not verified. Fourteen task files plus documentation only; unrelated drafts preserved
+- Public plans use the same active paid-plan visibility and pricing helper as brand subscriptions. Administrative/trial/historical free grants stay excluded. New purchasable packages and edited prices/services update automatically; refresh every30 seconds plus focus/reconnect. Source data had3 paid plans and14 partners/eligible menus; no Plus-named plan existed and no names were changed
+- All existing non-deleted brands appear as partners; menu previews additionally require publication and current menu entitlement. Allowlisted public DTO, no-store responses, independent failure/retry states and retained successful data. No migration or production-data writes
+- 16 catalog/preview and20 homepage interaction/SSR checks, text integrity, TypeScript, scoped ESLint and isolated production build passed2026-10-19. Three pre-existing lint warnings remain; no browser/device test. Exact runtime/input evidence is in current task state
+- Existing admin logo/account navigation remains: logo opens `/`, visible active-session account icon returns to `/admin` or `/dashboard`, guests retain sign-in. Previous verified release `e81a0a9`, evidence `.git/home-account-production.json`
 - Previous wallet-history release `0a875fbf0a9b9733fca7d24ce93872a88d63b064` was verified on production at 2026-10-19 13:40 +03:00; `.git/message-history-production.json`
 - History appears below the owner's announcement form and in a per-brand dialog from admin operations. It shows full saved title/body, Saudi timestamps, provider/queue statuses, actual message count and pagination, with refresh after send attempts
 - All saved messages are shown regardless of report period. Promotional report metrics still count customers and sends; history counts messages. No per-message recipient estimate or delivery/read claim. DeliCake had four saved messages at the read-only check on 2026-10-19
@@ -38,7 +41,7 @@ Vercel project ID: prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow
 Supabase project: kpguwjfkkylrdlvzeezz
 Node: 24.21.0; Next: 16.3.8
 Node executable: C:/Users/pc/AppData/Local/npm-cache/_npx/538786c08bcb9442/node_modules/node/bin/node.exe
-Latest isolated application build: C:/Projects/branda-home-account-release-20261019
+Latest isolated application build: C:/Projects/branda-home-redesign-release-20261019
 ```
 
 - Local `.vercel/project.json` points at the old project. Deploy through the correct GitHub branch and verify exact production SHA and live alias; a push alone is not deployment proof

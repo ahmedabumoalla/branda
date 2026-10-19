@@ -12,6 +12,7 @@ import {
 } from "@/lib/data/platform-content";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getHomeAccountHref } from "@/lib/data/home-account";
+import { getPublicHomeCatalog } from "@/lib/data/public-home-catalog";
 
 const emptyData: PublicPlatformHomeData = {
   settings: defaultPlatformHomeSettings,
@@ -29,9 +30,10 @@ export default async function HomePage() {
     return <PlatformHomePage data={emptyData} />;
   }
 
-  const [data, accountHref] = await Promise.all([
+  const [data, accountHref, initialCatalog] = await Promise.all([
     getPublicPlatformHomeData().catch(error => { console.error("[HomePage]", error); return emptyData; }),
     getHomeAccountHref(),
+    getPublicHomeCatalog(),
   ]);
-  return <PlatformHomePage data={data} accountHref={accountHref} />;
+  return <PlatformHomePage data={data} accountHref={accountHref} initialCatalog={initialCatalog} />;
 }

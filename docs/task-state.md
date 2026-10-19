@@ -1,10 +1,15 @@
 # Current task state
 
-Updated 2026-10-19 13:54 +03:00 - Asia/Riyadh
+Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
 
 ## Resume here
 
-- Latest application: admin-logo/home-account navigation on `main` for production `branda-2`. Identify its commit with `git log -1 --format=%H -- lib/data/home-account.ts`; exact publication evidence is `.git/home-account-production.json`. Missing evidence means deployment is not verified
+- Latest application: public homepage redesign with real menu designs, service sidebar, live subscription pricing and all success partners on `main` / production `branda-2`. Identify its commit with `git log -1 --format=%H -- lib/data/public-home-catalog.ts`; exact publication evidence is `.git/home-redesign-production.json`. Missing evidence means deployment is not verified
+- Homepage uses actual active public menus in read-only frames, three at a time with pagination and each brand logo underneath. Normal links open the real menu. `?showcase=1` retains public/active/subscription checks, disables visitor/customer analytics and adds inert content; normal menu behavior is unchanged
+- Public plans share `isPurchasablePlan` and duration/pricing calculations with the brand subscription chooser. Active paid plans only, excluding `owner_trial_7d`; no trials, administrative grants or historical free grants. New purchasable plans and admin price/features changes appear automatically. No hardcoded plan names or invented Plus plan; the live data had menu125, loyalty170 and menu+loyalty295 SAR/month
+- Public catalog refreshes every30 seconds while visible and on focus/visibility/reconnect. Each failed section retains its last successful data with retry state; successful empty responses remove old entries. Server-only allowlisted DTO, no-store API and no schema/credential changes
+- All non-deleted brands are success partners; menu links are restricted to active/published public brands with current menu entitlement. Read-only live check found3 purchasable plans,14 partners,14 eligible menus and14 available logos; counts reflect verification time
+- Previous account-navigation release `e81a0a95f8fe8f266a5927fd3cc46a22bb850325` is verified in `.git/home-account-production.json`
 - Admin sidebar logo opens `/` in expanded/collapsed/mobile states. Homepage renders a visible account icon from the validated active server session: platform admin to `/admin`, brand owner/manager/staff to `/dashboard`. Guests/inactive or unavailable sessions keep sign-in links. Existing destination authorization remains unchanged; no credentials or user profile data enter client props
 - Account icon remains visible on mobile; mobile/footer links use the same destination. Public content and account lookup run independently so a CMS failure does not remove a valid account link. Homepage remains dynamic and not publicly cached
 - Previous release: wallet history `0a875fbf0a9b9733fca7d24ce93872a88d63b064`, production `dpl_BWRjQtoxqqP9uchwhBo8RK9zU9Sw` verified 2026-10-19 13:40 +03:00 in `.git/message-history-production.json`
@@ -14,6 +19,13 @@ Updated 2026-10-19 13:54 +03:00 - Asia/Riyadh
 - Previous application release `7854ed177552d1f12d0b5083cdb4b825b76264d3` and documentation baseline `9b4f18097d8f43fec673c2a3f106df23f979421f` remain the source of established catalog/operations behavior below
 
 ## Latest verification
+
+- RUN 2026-10-19 14:38 +03:00 Node24.21.0: `node scripts/check-public-home-catalog.mjs` passed16 grouped pricing/visibility/privacy/pagination/logo/entitlement/preview/API checks; `node scripts/check-home-page-ui.mjs` passed20 grouped SSR/account/CMS/services/keyboard/pricing-refresh/gallery/motion checks. Text integrity, `tsc --noEmit --incremental false`, scoped ESLint passed with3 existing warnings (CMS img and2 unused subscription helper parameters). Exact commands/input hashes: `.git/home-redesign-checks.json`
+- RUN 2026-10-19 14:40:10 +03:00 isolated `next build --webpack` PASS in `C:/Projects/branda-home-redesign-release-20261019` over clean `e81a0a9`;14 task files only, temporary environment removed. Application/test hashes and runtime: `.git/home-redesign-build-exit.json`
+- RUN 2026-10-19 14:36 +03:00 actual read-only catalog queries found3 plans/14 partners/14 menus/14 logos with no database writes. Source/entitlement/dependency hashes: `.git/home-catalog-live.json`
+- Production verifier `.git/verify-home-redesign-production.cjs` checks exact commit/project/alias, SSR sections/three frames/guest account state, no-store public catalog with allowlisted fields/current prices and3 live inert menu previews with embedding permitted. Source review covers responsive layouts, native controls, keyboard tabs, focus, loading/empty/error states and reduced motion. No browser or physical-device inspection
+
+## Previous account-navigation verification
 
 - RUN 2026-10-19 13:53 +03:00 Node24.21.0: `node scripts/check-home-page-ui.mjs` passed 16 grouped SSR/auth/role/sidebar/mobile/CMS/motion checks; text integrity, `tsc --noEmit --incremental false` and scoped ESLint passed. One existing unoptimized CMS-image warning remains; two pre-existing test-harness lint errors were fixed without suppression. Exact commands and input hashes: `.git/home-account-checks.json`
 - RUN 2026-10-19 13:53:00 +03:00 isolated `next build --webpack` PASS in `C:/Projects/branda-home-account-release-20261019`; temporary environment removed. `.git/home-account-build-exit.json` captures application hashes. Only test-harness lint cleanup followed the build and was rerun separately; production verifier matches application hashes to the build and the test file to its later passing run

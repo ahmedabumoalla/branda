@@ -7,7 +7,7 @@ import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-c
 import { DashboardPageShell } from "@/components/ui/design-system";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 import { getBrandNavigationFeatures, type EffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
-import { calculateSubscriptionPricing, formatSubscriptionDuration, getPlanDurationOptions, getPlanMonthlyAmount } from "@/lib/platform/subscription-durations";
+import { calculateSubscriptionPricing, formatSubscriptionDuration, getPlanDurationOptions, getPlanMonthlyAmount, isPurchasablePlan } from "@/lib/platform/subscription-durations";
 import { subscriptionWhatsappUrl, type BankSubscriptionRequest, type BankTransferDetails, type CurrentSubscription } from "@/lib/platform/subscription-bank";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
 import { createBankSubscriptionRequestAction, previewBankSubscriptionAction, refreshSubscriptionRequestsAction, submitSubscriptionWhatsappAction, uploadSubscriptionReceiptAction } from "@/app/actions/subscription";
@@ -27,7 +27,7 @@ const statuses: Record<string, string> = { awaiting_receipt: "بانتظار ا�
 
 export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanId, initialHistory, initialFeatureAccess, currentSubscription, bankDetails, initialRequests, customerName, referenceTime, configError }: Props) {
   const router = useRouter();
-  const purchasablePlans = plans.filter(plan => plan.priceMonthly > 0 && plan.id !== "owner_trial_7d");
+  const purchasablePlans = plans.filter(isPurchasablePlan);
   const [selectedId, setSelectedId] = useState(purchasablePlans.find(plan => plan.id === initialActivePlanId)?.id || purchasablePlans[0]?.id || "");
   const [months, setMonths] = useState(getPlanDurationOptions(plans.find(plan => plan.id === selectedId))[0]?.months ?? 1);
   const [requests, setRequests] = useState(initialRequests);
