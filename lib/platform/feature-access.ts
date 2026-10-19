@@ -45,9 +45,21 @@ export function getPackageAssignableFeatures() {
   return getBrandNavigationFeatures().filter((feature) => feature.packageAssignable);
 }
 
-/** Single catalog for package editing and every brand navigation surface. */
+/** Prepared services may be assigned by an admin without launching them. */
+export function getAdminPackageFeatures() {
+  return getAllPlatformFeatures().filter((feature) =>
+    feature.packageAssignable && (feature.brandNavigation || feature.adminPackageOnly));
+}
+
+export function normalizeAdminPlanFeatures(features: readonly string[]): PlatformFeatureId[] {
+  return getAdminPackageFeatures().filter((feature) =>
+    features.includes(feature.id) || (features.includes("all") && !feature.adminPackageOnly))
+    .map((feature) => feature.id);
+}
+
+/** Customer navigation and runtime entitlement catalog, excluding admin-only preparation. */
 export function getBrandNavigationFeatures() {
-  return getAllPlatformFeatures().filter((feature) => feature.brandNavigation);
+  return getAllPlatformFeatures().filter((feature) => feature.brandNavigation && !feature.adminPackageOnly);
 }
 
 export function getDashboardSidebarFeatures() {

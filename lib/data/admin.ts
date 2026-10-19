@@ -15,7 +15,7 @@ import {
   platformFeatureIds,
   type PlatformFeatureId,
 } from "@/lib/platform/feature-registry";
-import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
+import { normalizeAdminPlanFeatures } from "@/lib/platform/feature-access";
 import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
 import { adminSubscriptionSummary } from "@/lib/platform/admin-subscription-status";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
@@ -333,7 +333,7 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     durationUnit: plan.priceMonthly > 0 ? "month" as const : (plan.trialDays ?? 0) > 0 ? "day" as const : plan.durationUnit,
     durationCount: plan.priceMonthly > 0 ? 1 : (plan.trialDays ?? 0) > 0 ? plan.trialDays! : plan.durationCount,
     durationOptions: [1, 3, 6, 12],
-    features: getBrandNavigationFeatures().filter(feature => plan.features.includes("all") || plan.features.includes(feature.id)).map(feature => feature.id),
+    features: normalizeAdminPlanFeatures(plan.features),
   }));
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);
   if (defaults.length < 1) {

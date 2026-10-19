@@ -87,6 +87,9 @@ await test(() => {
   assert(!html.includes("أشياء تستحق الاكتشاف"));
   assert(!html.includes('opacity:0'));
   assert.equal((html.match(/<h1[ >]/g) || []).length, 1);
+  assert.equal((html.match(/id="partners"/g) || []).length, 1);
+  assert(html.indexOf('id="partners"') > html.indexOf('id="home-title"'));
+  assert(html.indexOf('id="partners"') < html.indexOf('id="product-demo"'), "Partners belong directly beneath the hero before the menu gallery");
 });
 await test(() => {
   const populated = { ...data, contacts: { ...data.contacts, whatsapp: "966511111111", instagram: "https://example.invalid/social" }, heroImages: [{ id: "photo", url: "https://example.invalid/hero.png", altText: "صورة الإدارة" }], loyaltyImages: [{ id: "loyalty", url: "https://example.invalid/card.png", altText: "بطاقة الإدارة" }], brands: [{ id: "brand", name: "علامة من الإدارة", href: "/menu/test" }], promotions: [{ id: "offer", itemType: "offer", title: "عرض من الإدارة", brandName: "العلامة", href: "/menu/test?offer=1" }] };
@@ -330,6 +333,7 @@ await test(() => {
   assert.equal(frames.length, 3);
   assert.equal(frames[0].props.src, "/menu/brand-0?showcase=1");
   assert.equal(frames[0].props.tabIndex, -1);
+  assert(frames.every(frame => frame.props.loading === "eager"), "The three selected previews start without waiting for scroll");
   assert(nodes(initial).some(node => node.props?.href === "/menu/brand-0" && node.props?.target === "_blank"));
   for (let index = 0; index < 4; index++) byLabel(h.render(), "التصاميم التالية").props.onClick();
   assert.equal(nodes(h.render()).filter(node => node.type === "iframe").length, 2);

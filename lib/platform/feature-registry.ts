@@ -25,6 +25,7 @@ export type PlatformFeatureDefinition = {
     | "orders"
 
     | "offers"
+    | "marketing_campaigns"
     | "loyalty"
     | "cashier"
     | "pager"
@@ -53,6 +54,8 @@ export type PlatformFeatureDefinition = {
   sidebarVisible: boolean;
   brandNavigation?: boolean;
   packageAssignable: boolean;
+  /** Configuration in the admin plan editor only; never grants customer access. */
+  adminPackageOnly?: boolean;
   defaultEnabled: boolean;
   requiredPlanLevel?: PlatformFeaturePlanLevel;
   iconKey?: string;
@@ -66,6 +69,23 @@ export type PlatformFeatureId = PlatformFeatureDefinition["id"];
 export type PlatformFeatureCode = "all" | PlatformFeatureId;
 
 export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
+  {
+    id: "marketing_campaigns",
+    titleAr: "الحملات التسويقية",
+    titleEn: "Marketing Campaigns",
+    descriptionAr: "حملات واتساب من رقم العلامة التجارية",
+    category: "growth",
+    route: "",
+    sidebarVisible: false,
+    brandNavigation: false,
+    packageAssignable: true,
+    adminPackageOnly: true,
+    defaultEnabled: false,
+    iconKey: "Megaphone",
+    riskLevel: "integration",
+    status: "hidden",
+    sortOrder: 75,
+  },
   {
     id: "pager",
     brandNavigation: true,

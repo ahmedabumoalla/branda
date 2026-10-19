@@ -101,6 +101,18 @@ await test(async () => {
   assert(db.queries.filter(query => query.table === "cafes").every(query => query.columns === "id,name,slug,status,is_public,cafe_settings(logo_storage_path,logo_url)"));
 });
 await test(async () => {
+  const demoId = "2e08901c-5aac-4bec-8c97-a135058e508b";
+  const partners = Array.from({ length: 501 }, (_, index) => ({ id: index === 0 ? demoId : `brand-${index}`, name: index === 0 ? "تجربة الكوفي" : `Brand ${index}`, slug: `brand-${index}`, status: "active", is_public: true, cafe_settings: { logo_storage_path: `${index === 0 ? demoId : `brand-${index}`}/logo.png` } }));
+  const db = database({ partners, enabledMenus: partners.map(partner => partner.id) });
+  const catalog = await db.getPublicHomeCatalog();
+  assert.equal(catalog.partners.length, 500, "Hidden demo must not truncate database pagination");
+  assert.equal(catalog.menus.length, 500);
+  assert(!catalog.partners.some(partner => partner.id === demoId));
+  assert(!catalog.menus.some(menu => menu.id === demoId));
+  assert(!db.signedCalls.some(call => call.paths.some(path => path.startsWith(demoId))));
+  assert(!db.entitlementCalls.includes(demoId));
+});
+await test(async () => {
   const partners = [
     { id: "own", name: "Own", cafe_settings: { logo_storage_path: "own/upload/logo.png" } },
     { id: "foreign", name: "Foreign", cafe_settings: [{ logo_storage_path: "other/private.png" }] },
@@ -250,13 +262,14 @@ await test(async () => {
   const preview = renderToStaticMarkup(await page.default(props));
   assert(preview.includes("real-menu"));
   assert(preview.includes("inert"));
-  assert(preview.includes("REFRESH"));
+  assert(!preview.includes("REFRESH"), "Showcase must not keep reloading full menus in the background");
   assert(!preview.includes("ANALYTICS"));
   const metadata = await page.generateMetadata(props);
   assert.equal(metadata.robots.index, false);
   assert.equal(metadata.alternates.canonical, "/menu/brand");
   const ordinary = renderToStaticMarkup(await page.default({ params: props.params }));
   assert(ordinary.includes("ANALYTICS"));
+  assert(ordinary.includes("REFRESH"), "Normal customer menus retain live updates");
   assert(!ordinary.includes("inert"));
   allowed = false;
   const before = menuCalls;
@@ -294,7 +307,7 @@ if (process.argv.includes("--live")) {
   const admin = createAdminClient();
   const [{ count: planCount, error: planError }, { count: partnerCount, error: partnerError }] = await Promise.all([
     admin.from("platform_plans").select("id", { count: "exact", head: true }).eq("active", true).gt("price_sar", 0).neq("id", "owner_trial_7d"),
-    admin.from("cafes").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    admin.from("cafes").select("id", { count: "exact", head: true }).is("deleted_at", null).neq("id", "2e08901c-5aac-4bec-8c97-a135058e508b"),
   ]);
   assert.equal(planError, null);
   assert.equal(partnerError, null);
@@ -305,8 +318,8 @@ if (process.argv.includes("--live")) {
     const response = await fetch(new URL(partner.logoUrl, "https://barndaksa.com"), { method: "HEAD" });
     assert.equal(response.status, 200, "A signed partner logo is unavailable");
   }
-  const evidence = { executedAt: new Date().toISOString(), node: process.version, plans: planCount, partners: partnerCount, menus: catalog.menus.length, availableLogos: logos.length, allNonDeletedBrandsIncluded: true, databaseWrites: 0, inputHashes: Object.fromEntries(["lib/data/public-home-catalog.ts", "lib/platform/public-home-catalog.ts", "app/api/public/home-catalog/route.ts", "app/menu/[slug]/page.tsx", "components/dashboard/pages/subscription-page.tsx", "scripts/check-public-home-catalog.mjs", "lib/data/feature-entitlements.ts", "lib/platform/active-subscription.ts", "lib/platform/feature-access.ts", "lib/platform/feature-registry.ts", "lib/platform/subscription-durations.ts", "package-lock.json"].map(file => [file, dependency("node:crypto").createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex")])) };
-  fs.writeFileSync(path.join(root, ".git/home-catalog-live.json"), JSON.stringify(evidence, null, 2));
+  const evidence = { executedAt: new Date().toISOString(), node: process.version, plans: planCount, partners: partnerCount, menus: catalog.menus.length, availableLogos: logos.length, allNonDemoBrandsIncluded: true, databaseWrites: 0, inputHashes: Object.fromEntries(["lib/data/public-home-catalog.ts", "lib/platform/public-home-catalog.ts", "app/api/public/home-catalog/route.ts", "app/menu/[slug]/page.tsx", "components/dashboard/pages/subscription-page.tsx", "scripts/check-public-home-catalog.mjs", "lib/data/feature-entitlements.ts", "lib/platform/active-subscription.ts", "lib/platform/feature-access.ts", "lib/platform/feature-registry.ts", "lib/platform/subscription-durations.ts", "package-lock.json"].map(file => [file, dependency("node:crypto").createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex")])) };
+  fs.writeFileSync(path.join(root, ".git/home-catalog-fast-live.json"), JSON.stringify(evidence, null, 2));
   console.log(`Live catalog passed: ${planCount} public active plans, ${partnerCount} partners, ${catalog.menus.length} public active menus, ${logos.length} available logos; no writes`);
 }
 console.log(`Public homepage catalog: ${checks} grouped checks passed`);

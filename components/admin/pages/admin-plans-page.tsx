@@ -5,7 +5,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { approveSubscriptionRequestAction, deletePlatformPlanAction, rejectSubscriptionRequestAction, savePlatformPlansAction } from "@/app/actions/admin";
 import { AdminPageShell } from "@/components/ui/design-system";
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
-import { getBrandNavigationFeatures } from "@/lib/platform/feature-access";
+import { getAdminPackageFeatures, normalizeAdminPlanFeatures } from "@/lib/platform/feature-access";
 import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { normalizeTrialDuration } from "@/lib/platform/plan-trial";
@@ -42,11 +42,11 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   const reviewLock = useRef(false);
   const saveLock = useRef(false);
   const noticeRef = useRef<HTMLDivElement>(null);
-  const features = getBrandNavigationFeatures();
+  const features = getAdminPackageFeatures();
   const visiblePlans = plans;
   const plan = visiblePlans.find((item) => item.id === selectedId) ?? visiblePlans[0];
   const pendingCount = requests.filter((request) => request.status === "pending_review").length;
-  const isIncluded = (item: PlatformPlan, feature: PlatformFeature) => item.features.includes("all") || item.features.includes(feature);
+  const isIncluded = (item: PlatformPlan, feature: PlatformFeature) => normalizeAdminPlanFeatures(item.features).some((id) => id === feature);
 
   function updatePlan(planId: string, patch: Partial<PlatformPlan>) {
     setPlans((current) => current.map((item) => item.id === planId ? normalizeTrialDuration({ ...item, ...patch }) : item));
@@ -67,7 +67,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
   function toggleFeature(planId: string, feature: PlatformFeature) {
     const target = plans.find((item) => item.id === planId);
     if (!target) return;
-    const explicit: PlatformFeature[] = target.features.includes("all") ? features.map((item) => item.id) : target.features;
+    const explicit: PlatformFeature[] = normalizeAdminPlanFeatures(target.features);
     updatePlan(planId, { features: explicit.includes(feature) ? explicit.filter((item) => item !== feature) : [...explicit, feature] });
   }
 
@@ -171,7 +171,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
         <div className={styles.summary} aria-label="ملخص الباقات">
           <div><span>الباقات</span><strong>{numberFormat.format(plans.length)}</strong></div>
           <div><span>باقات مفعلة</span><strong>{numberFormat.format(plans.filter((item) => item.active).length)}</strong></div>
-          <div><span>خدمات القائمة</span><strong>{numberFormat.format(features.length)}</strong></div>
+          <div><span>خدمات الباقات</span><strong>{numberFormat.format(features.length)}</strong></div>
           <a href="#payment-requests"><span>طلبات للمراجعة</span><strong>{numberFormat.format(pendingCount)}<ChevronLeft size={19} aria-hidden="true" /></strong></a>
         </div>
 
@@ -203,11 +203,11 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               </header>
 
               <section className={styles.section} aria-labelledby="plan-services-title">
-                <div className={styles.sectionHeading}><div><h3 id="plan-services-title">الخدمات المتاحة للعلامة</h3><p>نفس خيارات القائمة الجانبية فعّل فقط ما تتضمنه الباقة</p></div><span className={styles.count}>{features.filter((feature) => isIncluded(plan, feature.id)).length} / {features.length}</span></div>
+                <div className={styles.sectionHeading}><div><h3 id="plan-services-title">خدمات الباقة</h3><p>اختر الخدمات المشمولة في الباقة</p></div><span className={styles.count}>{features.filter((feature) => isIncluded(plan, feature.id)).length} / {features.length}</span></div>
                 <div className={styles.featureGrid}>{features.map((feature) => {
                   const enabled = isIncluded(plan, feature.id);
                   return <button type="button" key={feature.id} className={styles.feature} aria-pressed={enabled} onClick={() => toggleFeature(plan.id, feature.id)}>
-                    <span><strong>{feature.sidebarLabel ?? feature.titleAr}</strong><small>{enabled ? "تظهر في حساب العلامة" : "غير متاحة ضمن هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
+                    <span><strong>{feature.sidebarLabel ?? feature.titleAr}</strong><small>{feature.adminPackageOnly ? "إعداد للباقة فقط ولا يظهر للعملاء حاليًا" : enabled ? "تظهر في حساب العلامة" : "غير متاحة ضمن هذه الباقة"}</small></span><span className={styles.checkBox} aria-hidden="true">{enabled ? <Check size={17} /> : null}</span>
                   </button>;
                 })}</div>
                 <p className={styles.policy}>الخدمات غير المفعلة لا تظهر للعميل عند عدم وجود اشتراك مفعّل تتوقف خدمات العلامة بما فيها المنيو المستقل</p>

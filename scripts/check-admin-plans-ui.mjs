@@ -25,7 +25,8 @@ function load(file, stubs = {}, cache = new Map()) {
   }, exports);
   return exports;
 }
-const catalog = load(path.resolve("lib/platform/feature-access.ts")).getBrandNavigationFeatures();
+const access = load(path.resolve("lib/platform/feature-access.ts"));
+const catalog = access.getAdminPackageFeatures();
 const fixture = (id, features, categoryId = "cafes_coffee") => ({ id, name: `Plan ${id}`, description: "", categoryId,
   priceMonthly: 100, offerEnabled: false, durationCount: 1, durationUnit: "month", active: true,
   isDefault: false, features, maxOrdersMonthly: 42, maxBranches: 3, maxProductsMonthly: 20,
@@ -86,12 +87,24 @@ assert.ok(renderToStaticMarkup(view.render()).includes("تم حفظ الباقا
 
 const wildcard = harness([fixture("all", ["all"])]);
 tree = wildcard.render();
-assert.ok(catalog.every(feature => featureButton(tree, feature.id).props["aria-pressed"]));
+assert.ok(catalog.every(feature => featureButton(tree, feature.id).props["aria-pressed"] === !feature.adminPackageOnly));
 featureButton(tree, "loyalty").props.onClick();
 tree = wildcard.render();
 assert.equal(featureButton(tree, "loyalty").props["aria-pressed"], false);
 await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
-assert.deepEqual(wildcard.calls[0][1][0].features, catalog.filter(feature => feature.id !== "loyalty").map(feature => feature.id), "wildcard expands to explicit shared navigation services");
+assert.deepEqual(wildcard.calls[0][1][0].features, catalog.filter(feature => feature.id !== "loyalty" && !feature.adminPackageOnly).map(feature => feature.id), "wildcard never silently includes prepared services");
+
+const prepared = harness([fixture("prepared", ["menu"])]);
+tree = prepared.render();
+assert.equal(featureButton(tree, "marketing_campaigns").props["aria-pressed"], false);
+assert.ok(text(featureButton(tree, "marketing_campaigns")).includes("لا يظهر للعملاء حاليًا"));
+featureButton(tree, "marketing_campaigns").props.onClick();
+assert.equal(featureButton(prepared.render(), "marketing_campaigns").props["aria-pressed"], true);
+await nodes(prepared.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+assert.deepEqual(prepared.calls[0][1][0].features, ["menu", "marketing_campaigns"]);
+assert.ok(!access.getEffectiveBrandFeatureCodes(prepared.calls[0][1][0].features).includes("marketing_campaigns"));
+featureButton(prepared.render(), "marketing_campaigns").props.onClick();
+assert.equal(featureButton(prepared.render(), "marketing_campaigns").props["aria-pressed"], false);
 
 const empty = harness([]);
 html = renderToStaticMarkup(empty.render());

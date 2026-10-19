@@ -10,6 +10,8 @@ import type { PublicHomeCatalog, PublicHomeMenu, PublicHomePartner, PublicHomePl
 type Row = Record<string, unknown>;
 type Admin = ReturnType<typeof createAdminClient>;
 const PAGE_SIZE = 500;
+// Internal demo brand is excluded from public marketing only, not from its own account/menu.
+const HIDDEN_SHOWCASE_BRAND_IDS = new Set(["2e08901c-5aac-4bec-8c97-a135058e508b"]);
 const PLAN_COLUMNS = "id,name,description,price_sar,annual_discount_percent,duration_unit,duration_count,trial_days,free_after_trial,max_products_monthly,max_orders_monthly,max_branches,features";
 
 function number(value: unknown, fallback = 0) {
@@ -103,13 +105,13 @@ async function readPartners(admin: Admin): Promise<{ partners: PublicHomePartner
   const partners: PublicHomePartner[] = [];
   const menuCandidates: PublicHomeMenu[] = [];
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    // The homepage intentionally lists every existing brand, independent of menu publication.
+    // The homepage lists existing non-demo brands, independent of menu publication.
     // Do not return slugs, unpublished menu links, owner details or other tenant data.
     const { data, error } = await admin.from("cafes")
       .select("id,name,slug,status,is_public,cafe_settings(logo_storage_path,logo_url)").is("deleted_at", null)
       .order("created_at", { ascending: false }).order("id").range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
-    const rows = (data ?? []) as Row[];
+    const rows = ((data ?? []) as Row[]).filter(row => !HIDDEN_SHOWCASE_BRAND_IDS.has(String(row.id)));
     const paths = rows.map(logoPath);
     const validPaths = [...new Set(paths.filter((path): path is string => Boolean(path)))];
     const signed = new Map<string, string>();
@@ -133,7 +135,7 @@ async function readPartners(admin: Admin): Promise<{ partners: PublicHomePartner
         menuCandidates.push({ ...pagePartners[index], href: `/menu/${slug}` });
       }
     });
-    if (rows.length < PAGE_SIZE) return { partners, menuCandidates };
+    if (!data || data.length < PAGE_SIZE) return { partners, menuCandidates };
   }
 }
 
