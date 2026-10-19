@@ -1,13 +1,14 @@
 # Branda — current handoff
 
-Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
+Updated 2026-10-19 14:52 +03:00 - Asia/Riyadh
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Published state
 
-- Latest application: premium Arabic homepage with actual menu-design gallery, service sidebar, subscription pricing and success-partner logos. Gallery shows three genuine active public menus per page with logos and normal open links; preview mode is inert and does not record visitor/customer activity
-- Release identity: `git log -1 --format=%H -- lib/data/public-home-catalog.ts` on `main` / Vercel `branda-2`. Exact production evidence: `.git/home-redesign-production.json`; missing evidence means publication is not verified. Fourteen task files plus documentation only; unrelated drafts preserved
+- Latest application: homepage annual pricing selected by default, shared monthly/annual comparison, monthly equivalent plus explicit annual total, actual discount/saving badges and a monthly-to-annual prompt. Real administrator discounts only; no price/billing changes. Existing menu-design gallery/service sidebar/partner logos and account navigation preserved
+- Release identity: `git log -1 --format=%H -- components/marketing/home-showcase.tsx` on `main` / Vercel `branda-2`. Exact production evidence: `.git/annual-pricing-production.json`; missing evidence means publication is not verified. Three task files plus documentation only; unrelated drafts preserved.21 homepage test groups, text integrity, TypeScript, scoped lint and isolated build passed2026-10-19 14:52; source-only responsive/accessibility review
+- Previous homepage release867cd2a verified14:42 via `.git/home-redesign-production.json`. Gallery shows3 genuine active public menus per page with logos and normal open links; preview mode is inert and does not record visitor/customer activity
 - Public plans use the same active paid-plan visibility and pricing helper as brand subscriptions. Administrative/trial/historical free grants stay excluded. New purchasable packages and edited prices/services update automatically; refresh every30 seconds plus focus/reconnect. Source data had3 paid plans and14 partners/eligible menus; no Plus-named plan existed and no names were changed
 - All existing non-deleted brands appear as partners; menu previews additionally require publication and current menu entitlement. Allowlisted public DTO, no-store responses, independent failure/retry states and retained successful data. No migration or production-data writes
 - 16 catalog/preview and20 homepage interaction/SSR checks, text integrity, TypeScript, scoped ESLint and isolated production build passed2026-10-19. Three pre-existing lint warnings remain; no browser/device test. Exact runtime/input evidence is in current task state
@@ -41,7 +42,7 @@ Vercel project ID: prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow
 Supabase project: kpguwjfkkylrdlvzeezz
 Node: 24.21.0; Next: 16.3.8
 Node executable: C:/Users/pc/AppData/Local/npm-cache/_npx/538786c08bcb9442/node_modules/node/bin/node.exe
-Latest isolated application build: C:/Projects/branda-home-redesign-release-20261019
+Latest isolated application build: C:/Projects/branda-annual-pricing-release-20261019
 ```
 
 - Local `.vercel/project.json` points at the old project. Deploy through the correct GitHub branch and verify exact production SHA and live alias; a push alone is not deployment proof
@@ -51,7 +52,7 @@ Latest isolated application build: C:/Projects/branda-home-redesign-release-2026
 
 ## Next action and historical limits
 
-- No unfinished implementation from the latest user requests. Continue with the user's next task using short Arabic updates, relevant checks and scoped changes
+- Pending2026-10-19: brand-scoped GREEN-API marketing campaigns. Partner approval/deposit is evidenced by user screenshots; user has not configured the partner token yet. Empty server-only token slot added to ignored `.env.local` and template at their request. See task-state for source audit/report; campaign connections/queue/UI are not implemented or deployed. Preserve existing OTP/operational sender, require each brand's QR pairing, keep provider fees/limits in chat only
 - Physical-device/real-message verification remains outside the completed checks. Phone-only password recovery and historical bank-detail follow-ups were not resolved by this release; consult history only if requested
-- GREEN-API investigation remains stopped by the user's instruction; do not restart or send follow-ups without a new request
+- User explicitly reopened GREEN-API research/integration preparation2026-10-19. No support messages, repeat applications, instance deletion or real test campaign dispatch
 - [Detailed task history](history/task-state-through-20261017.md) and [previous handoff](history/handoff-through-20261017.md) preserve earlier findings verbatim. This current handoff supersedes their stale “latest” headings and counts

@@ -62,24 +62,33 @@ function freeDuration(plan: PublicHomePlan) {
   return `لمدة ${number.format(plan.durationCount)} ${plan.durationUnit === "day" ? "يوم" : plan.durationUnit === "year" ? "سنة" : "شهر"}`;
 }
 
-export function HomePlanCard({ plan }: { plan: PublicHomePlan }) {
-  const [months, setMonths] = useState(plan.durations[0]?.months ?? 1);
+export function HomePlanCard({ plan, preferredMonths = 12 }: { plan: PublicHomePlan; preferredMonths?: number }) {
+  const [months, setMonths] = useState(preferredMonths);
   const duration = plan.durations.find(item => item.months === months) ?? plan.durations[0];
   const paid = plan.priceMonthly > 0;
-  return <article className={styles.plan} aria-labelledby={`plan-${plan.id}`} data-paid={paid}>
-    <div className={styles.planTop}><span>{paid ? "اشتراك علامتك" : plan.trialDays ? "مساحة للتجربة" : "باقة مجانية"}</span><span aria-hidden="true">↗</span></div>
+  const annual = plan.durations.find(item => item.months === 12);
+  const isAnnual = paid && duration?.months === 12;
+  const annualSaving = annual && annual.discountAmount > 0 ? annual : null;
+  const amount = duration?.totalAmount ?? plan.priceMonthly;
+  return <article className={styles.plan} aria-labelledby={`plan-${plan.id}`} data-paid={paid} data-annual-saving={Boolean(isAnnual && annualSaving)}>
+    <div className={styles.planTop}><span>{isAnnual && annualSaving ? <span className={styles.annualBadge}><Sparkles size={14} aria-hidden="true" />خصم سنوي {number.format(annualSaving.discountPercent)}٪</span> : paid ? "اشتراك علامتك" : plan.trialDays ? "مساحة للتجربة" : "باقة مجانية"}</span><span aria-hidden="true">↗</span></div>
     <h3 id={`plan-${plan.id}`}>{plan.name}</h3><p className={styles.planDescription}>{plan.description}</p>
-    <div className={styles.planPrice}><strong>{paid ? number.format(duration?.totalAmount ?? plan.priceMonthly) : "مجانًا"}</strong>{paid ? <span>ريال سعودي</span> : null}</div>
-    <p className={styles.billingNote}>{paid ? `إجمالي الاشتراك ${duration?.label ?? "لمدة شهر"}` : freeDuration(plan)}</p>
+    <div className={styles.priceContext}>{isAnnual ? "ما يعادل شهريًا عند الاشتراك السنوي" : paid ? "إجمالي المدة المختارة" : "بداية علامتك"}</div>
+    <div className={styles.planPrice}><strong key={`${duration?.months}-${amount}`} className={styles.priceValue}>{paid ? number.format(isAnnual ? amount / 12 : amount) : "مجانًا"}</strong>{paid ? <span>{isAnnual ? "ريال / شهر" : "ريال سعودي"}</span> : null}{isAnnual && annualSaving ? <del className={styles.monthlyBefore} aria-label={`السعر الشهري دون خصم ${number.format(plan.priceMonthly)} ريال`}>{number.format(plan.priceMonthly)}</del> : null}</div>
+    <p className={styles.billingNote}>{isAnnual ? <>تُدفع <strong>{number.format(amount)} ريال</strong> سنويًا{annualSaving ? <> بدل <del>{number.format(annualSaving.baseAmount)}</del></> : null}</> : paid ? `إجمالي الاشتراك ${duration?.label ?? "لمدة شهر"}` : freeDuration(plan)}</p>
     {paid && duration ? <label className={styles.durationLabel} htmlFor={`duration-${plan.id}`}>مدة الاشتراك<select id={`duration-${plan.id}`} value={duration.months} onChange={event => setMonths(Number(event.target.value))}>{plan.durations.map(option => <option key={option.months} value={option.months}>{option.label}</option>)}</select></label> : <p className={styles.freeNote}>{plan.freeAfterTrial ? "تستمر الباقة مجانًا بعد التجربة" : plan.trialDays ? "جرّب الخدمات قبل اختيار اشتراكك" : "وفق مدة الباقة وشروط تفعيلها"}</p>}
-    {duration && duration.discountAmount > 0 ? <p className={styles.saving}>وفّر {number.format(duration.discountAmount)} ريال <span>خصم {number.format(duration.discountPercent)}٪</span></p> : <div className={styles.savingSpace} aria-hidden="true" />}
+    {isAnnual && annualSaving ? <p className={styles.annualSaving}><Gift size={19} aria-hidden="true" /><span>وفّر <strong>{number.format(annualSaving.discountAmount)} ريال</strong> في السنة<small>نفس الخدمات بقيمة أفضل</small></span></p> : !isAnnual && annualSaving ? <button type="button" className={styles.annualNudge} onClick={() => setMonths(12)}>اختر السنوي ووفّر {number.format(annualSaving.discountAmount)} ريال<ArrowLeft size={17} aria-hidden="true" /></button> : <div className={styles.savingSpace} aria-hidden="true" />}
     <ul className={styles.planFeatures}>{plan.features.map(feature => <li key={feature.id}><Check size={17} aria-hidden="true" />{feature.label}</li>)}{plan.maxProductsMonthly !== null ? <li><Check size={17} aria-hidden="true" />حتى {number.format(plan.maxProductsMonthly)} منتج شهريًا</li> : null}{plan.maxBranches !== null ? <li><Check size={17} aria-hidden="true" />{number.format(plan.maxBranches)} فرع</li> : null}</ul>
-    <Link className={styles.planLink} href="/register">{paid ? "ابدأ مع برندة" : "اكتشف الباقة"}<ArrowUpLeft size={18} aria-hidden="true" /></Link>
+    <Link className={styles.planLink} href="/register">{isAnnual ? "ابدأ عامًا مع برندة" : paid ? "ابدأ مع برندة" : "اكتشف الباقة"}<ArrowUpLeft size={18} aria-hidden="true" /></Link>
   </article>;
 }
 
 export function HomePricing({ catalog, refreshing, onRefresh }: { catalog: PublicHomeCatalog; refreshing: boolean; onRefresh: () => void }) {
-  return <section id="pricing" className={styles.pricing} aria-labelledby="pricing-heading"><div className={styles.heading}><div><span className={styles.kicker}>بداية مناسبة لطموحك</span><h2 id="pricing-heading">اختر مساحة نمو علامتك</h2></div><p>خدمات واضحة وأسعار أمامك<br />اختر الباقة والمدة الأنسب لك</p></div><CatalogNotice failed={catalog.errors.plans} empty={!catalog.plans.length} refreshing={refreshing} onRefresh={onRefresh}>لا توجد باقات متاحة حاليًا تواصل معنا لمساعدتك</CatalogNotice><div className={styles.planGrid}>{catalog.plans.map(plan => <HomePlanCard key={plan.id} plan={plan} />)}</div><p className={styles.sectionNote}>الأسعار بالريال السعودي ويظهر إجمالي المدة المختارة لكل باقة</p></section>;
+  const [preferredMonths, setPreferredMonths] = useState(12);
+  const maxDiscount = Math.max(0, ...catalog.plans.flatMap(plan => plan.durations.filter(duration => duration.months === 12 && duration.discountAmount > 0).map(duration => duration.discountPercent)));
+  return <section id="pricing" className={styles.pricing} aria-labelledby="pricing-heading"><div className={styles.heading}><div><span className={styles.kicker}>بداية مناسبة لطموحك</span><h2 id="pricing-heading">اختر مساحة نمو علامتك</h2></div><p>عام كامل لبناء حضورك<br />وبداية تناسب طموح علامتك</p></div>
+    {catalog.plans.length ? <div className={styles.billingBar}><div><strong>خطّط لعام علامتك القادم</strong><p>{maxDiscount > 0 ? `وفّر حتى ${number.format(maxDiscount)}٪ مع الاشتراك السنوي في الباقات المشمولة` : "قارن المدد واختر ما يناسب علامتك"}</p></div><div className={styles.billingToggle} role="group" aria-label="مقارنة الاشتراك الشهري والسنوي"><button type="button" aria-pressed={preferredMonths === 1} onClick={() => setPreferredMonths(1)}>شهري</button><button type="button" aria-pressed={preferredMonths === 12} onClick={() => setPreferredMonths(12)}>سنوي{maxDiscount > 0 ? <span>وفّر حتى {number.format(maxDiscount)}٪</span> : null}</button></div></div> : null}
+    <CatalogNotice failed={catalog.errors.plans} empty={!catalog.plans.length} refreshing={refreshing} onRefresh={onRefresh}>لا توجد باقات متاحة حاليًا تواصل معنا لمساعدتك</CatalogNotice><div className={styles.planGrid}>{catalog.plans.map(plan => <HomePlanCard key={`${plan.id}-${preferredMonths}`} plan={plan} preferredMonths={preferredMonths} />)}</div><p className={styles.sectionNote}>الأسعار بالريال السعودي ويُدفع الإجمالي السنوي دفعة واحدة مع عرض ما يعادله شهريًا للمقارنة</p></section>;
 }
 
 export function HomeMenuDesigns({ menus }: { menus: (PublicHomePartner & { href: string })[] }) {

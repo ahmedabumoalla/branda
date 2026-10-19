@@ -1,10 +1,17 @@
 # Current task state
 
-Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
+Updated 2026-10-19 14:52 +03:00 - Asia/Riyadh
 
 ## Resume here
 
-- Latest application: public homepage redesign with real menu designs, service sidebar, live subscription pricing and all success partners on `main` / production `branda-2`. Identify its commit with `git log -1 --format=%H -- lib/data/public-home-catalog.ts`; exact publication evidence is `.git/home-redesign-production.json`. Missing evidence means deployment is not verified
+- Pending GREEN-API request2026-10-19: user explicitly reopened partnership work and supplied support screenshots confirming approval and200USD deposit. They want brand-owned WhatsApp senders for marketing campaigns and a very short limits/billing report in chat only. No provider/customer messages or instance creation/deletion is authorized for verification
+- User confirmed partner token was not configured and requested its location in the environment file. Added empty server-only `GREEN_API_PARTNER_TOKEN` and `GREEN_API_PARTNER_API_URL=https://api.greenapi.com` to ignored `.env.local` and the public template. Existing shared-instance credentials untouched; never print/copy the token into chat or client code. User still needs to fill the token; no partner API account check or actual pairing performed
+- Source audit: current GREEN-API transport uses one server environment instance for OTP/onboarding/pager/feedback. Old marketing table was dropped by migration077; tenant-scoped campaign connections/queue/UI are NOT implemented yet. Preserve operational/OTP sender while implementing separate brand campaign connections after credentials are ready; each brand must authorize its chosen number via QR. No new campaign or partner instance has been provisioned
+- Official-doc review2026-10-19: public partner price0.40USD/instance/day, debit on creation then00:00UTC+3 until deleted; account-specific support terms say prepaid first3months (overrides generic docs' second-month credit). Mailing recommendation1message/minute,200customers/day,8hours/day,3consecutive days then14days without mailings, opt-in/previous contact and unsubscribe; not a guaranteed WhatsApp quota. API accepting50send requests/sec is distinct from safe delivery throughput; queued messages expire24hours. Sources: `https://green-api.com/en/docs/faq/how-to-make-mailings-without-the-risk-of-blocking/`, `/en/docs/api/ratelimiter/`, `/en/docs/api/send-messages-delay/`, `/en/become-a-partner`, `/en/docs/partners/`. Linked documentation opens; old FAQ anchor is generic, YouTube content was not reviewable. Keep provider limits/fees out of product UI as requested
+- Latest application: annual-pricing presentation on the homepage, `main` / production `branda-2`. Identify its application commit with `git log -1 --format=%H -- components/marketing/home-showcase.tsx`; exact publication evidence is `.git/annual-pricing-production.json`. Missing evidence means deployment is not verified
+- Annual selected by default with shared monthly/yearly comparison and per-plan duration controls retained. Annual cards show the monthly equivalent alongside explicit full annual payment, actual before/after prices and yearly savings. Discounted annual plan gets a gold badge/CTA; monthly view offers a one-click annual-saving prompt. No invented savings or popularity claims, no billing/price changes. Admin updates/removals change the badge/prices immediately on the existing catalog refresh
+- Read-only production catalog at14:48 showed menu+loyalty295/month, annual3363 after5%/177saving (280.25monthly equivalent), other2 plans no annual discount. These are check-time values, never hardcoded. Brief price transition respects reduced motion and page pause; source-reviewed responsive controls/contrast/focus, no browser inspection
+- Previous homepage release `867cd2a967f3624d195f76ad7dd5d3d8da28a1ea` verified14:42 +03 at `dpl_BDpzhwoKR83mqWtVKSHGEdo5zFwm`; evidence `.git/home-redesign-production.json`
 - Homepage uses actual active public menus in read-only frames, three at a time with pagination and each brand logo underneath. Normal links open the real menu. `?showcase=1` retains public/active/subscription checks, disables visitor/customer analytics and adds inert content; normal menu behavior is unchanged
 - Public plans share `isPurchasablePlan` and duration/pricing calculations with the brand subscription chooser. Active paid plans only, excluding `owner_trial_7d`; no trials, administrative grants or historical free grants. New purchasable plans and admin price/features changes appear automatically. No hardcoded plan names or invented Plus plan; the live data had menu125, loyalty170 and menu+loyalty295 SAR/month
 - Public catalog refreshes every30 seconds while visible and on focus/visibility/reconnect. Each failed section retains its last successful data with retry state; successful empty responses remove old entries. Server-only allowlisted DTO, no-store API and no schema/credential changes
@@ -19,6 +26,12 @@ Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
 - Previous application release `7854ed177552d1f12d0b5083cdb4b825b76264d3` and documentation baseline `9b4f18097d8f43fec673c2a3f106df23f979421f` remain the source of established catalog/operations behavior below
 
 ## Latest verification
+
+- RUN2026-10-19 14:51 +03 Node24.21.0: homepage script passed21 groups including annual default, shared toggle, monthly upsell, full yearly total, equivalent monthly amount, no-discount plans, removed duration and live discount updates. Text integrity, TypeScript and scoped ESLint passed without warnings. Exact commands/source/dependency/config fingerprints: `.git/annual-pricing-checks.json`
+- RUN2026-10-19 14:52:06 +03 isolated `next build --webpack` PASS at `C:/Projects/branda-annual-pricing-release-20261019`, clean baseline867cd2a plus3 task files. Temporary environment removed; `.git/annual-pricing-build-exit.json`
+- Production verifier `.git/verify-annual-pricing-production.cjs` validates exact SHA/project/alias, selected annual control, per-plan current full total/monthly equivalent/savings and absent false discount against the live catalog, plus matching build/check fingerprints. No database or subscription mutations
+
+## Previous homepage-redesign verification
 
 - RUN 2026-10-19 14:38 +03:00 Node24.21.0: `node scripts/check-public-home-catalog.mjs` passed16 grouped pricing/visibility/privacy/pagination/logo/entitlement/preview/API checks; `node scripts/check-home-page-ui.mjs` passed20 grouped SSR/account/CMS/services/keyboard/pricing-refresh/gallery/motion checks. Text integrity, `tsc --noEmit --incremental false`, scoped ESLint passed with3 existing warnings (CMS img and2 unused subscription helper parameters). Exact commands/input hashes: `.git/home-redesign-checks.json`
 - RUN 2026-10-19 14:40:10 +03:00 isolated `next build --webpack` PASS in `C:/Projects/branda-home-redesign-release-20261019` over clean `e81a0a9`;14 task files only, temporary environment removed. Application/test hashes and runtime: `.git/home-redesign-build-exit.json`
@@ -62,7 +75,7 @@ Updated 2026-10-19 14:40 +03:00 - Asia/Riyadh
 
 - Preserve unrelated modified `AGENTS.md`, Rast CSS and Taza catalog draft, untracked generic loyalty/scanner files, local generated assets/output/tests and Supabase temporary files. They are not pending pieces of the completed release; never stage all files or deploy the old `.vercel/project.json`
 - Physical POS overlay behavior, real wallet installation/notification reading and real customer WhatsApp delivery were not tested in this release. Historical follow-ups outside this task remain in the archive; do not claim them resolved
-- GREEN-API account/partnership investigation remains stopped at the user's earlier explicit instruction. Do not resume, resubmit, or message anyone without a new request
+- GREEN-API earlier stop was superseded by the explicit2026-10-19 request above. Research and implementation preparation are authorized; do not resubmit the already-approved partnership, message support, delete existing instances or send customer campaigns as a test
 - Continue from the user's next request, reading actual git status first. No data resets, repeated catalog SQL, credential changes or unsolicited messages
 
 ## History

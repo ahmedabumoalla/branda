@@ -62,7 +62,7 @@ function harness(component = "PlatformHomePage", props = { data }, overrides = {
   };
   const file = component === "HomeProductPreview" ? path.join(root, "components/marketing/home-product-preview.tsx")
     : component === "useHomeCatalog" ? path.join(root, "components/marketing/use-home-catalog.ts")
-    : ["HomeServiceExplorer", "HomePlanCard", "HomeMenuDesigns", "PartnerLogo"].includes(component) ? showcaseFile : homeFile;
+    : ["HomeServiceExplorer", "HomePlanCard", "HomePricing", "HomeMenuDesigns", "PartnerLogo"].includes(component) ? showcaseFile : homeFile;
   const Component = load(file, stubs)[component];
   return { calls, effects, render(nextProps = props) { cursor = 0; effects.length = 0; return Component(nextProps); } };
 }
@@ -276,15 +276,51 @@ await test(() => {
   const plan = { id: "menu-plan", name: "اسم الباقة من الإدارة", description: "الوصف المعتمد", priceMonthly: 100, durationUnit: "month", durationCount: 1, trialDays: null, freeAfterTrial: false, maxProductsMonthly: 50, maxBranches: 1, features: [{ id: "menu", label: "المنيو" }], durations: [{ months: 1, label: "شهر واحد", totalAmount: 100, discountAmount: 0, discountPercent: 0 }, { months: 12, label: "سنة", totalAmount: 1140, discountAmount: 60, discountPercent: 5 }] };
   const h = harness("HomePlanCard", { plan });
   assert(text(h.render()).includes(plan.name));
+  assert.equal(byId(h.render(), "duration-menu-plan").props.value, 12, "Annual is initially presented");
+  assert(text(h.render()).includes("ما يعادل شهريًا عند الاشتراك السنوي"));
+  assert(text(h.render()).includes(new Intl.NumberFormat("ar-SA").format(95)));
+  assert(text(h.render()).includes("سنويًا"));
+  byId(h.render(), "duration-menu-plan").props.onChange({ target: { value: "1" } });
+  assert(!text(h.render()).includes("ما يعادل شهريًا عند الاشتراك السنوي"));
+  assert(text(h.render()).includes("اختر السنوي ووفّر"));
+  const nudge = nodes(h.render()).find(node => node.type === "button" && text(node).includes("اختر السنوي ووفّر"));
+  nudge.props.onClick();
+  assert.equal(byId(h.render(), "duration-menu-plan").props.value, 12);
   byId(h.render(), "duration-menu-plan").props.onChange({ target: { value: "12" } });
   assert(text(h.render()).includes(new Intl.NumberFormat("ar-SA").format(1140)));
-  assert(text(h.render()).includes("إجمالي الاشتراك سنة"));
+  assert(text(h.render()).includes("تُدفع"));
+  assert(text(h.render()).includes("ريال سنويًا"));
   assert(text(h.render()).includes("وفّر"));
   const updated = { ...plan, name: "اسم جديد", features: [{ id: "loyalty", label: "ميزة جديدة" }], durations: [{ months: 1, label: "شهر واحد", totalAmount: 150, discountAmount: 0, discountPercent: 0 }] };
   const tree = h.render({ plan: updated });
   assert(text(tree).includes("اسم جديد") && text(tree).includes("ميزة جديدة"));
-  assert(!text(tree).includes("إجمالي الاشتراك سنة"));
+  assert(!text(tree).includes("تُدفع"));
   assert.equal(byId(tree, "duration-menu-plan").props.value, 1);
+  const noDiscount = { ...plan, durations: plan.durations.map(duration => ({ ...duration, discountAmount: 0, discountPercent: 0, totalAmount: duration.months * 100 })) };
+  const noDiscountTree = h.render({ plan: noDiscount });
+  assert(!text(noDiscountTree).includes("وفّر") && !text(noDiscountTree).includes("خصم"));
+  assert(!nodes(noDiscountTree).some(node => node.type === "del"));
+  assert.equal(noDiscountTree.props["data-annual-saving"], false);
+  const annualUpdate = h.render({ plan: { ...plan, durations: plan.durations.map(duration => duration.months === 12 ? { ...duration, totalAmount: 1080, discountAmount: 120, discountPercent: 10 } : duration) } });
+  assert(text(annualUpdate).includes(new Intl.NumberFormat("ar-SA").format(90)));
+  assert(text(annualUpdate).includes(new Intl.NumberFormat("ar-SA").format(1080)));
+  assert.equal(annualUpdate.props["data-annual-saving"], true);
+});
+await test(() => {
+  const plan = { id: "live-plan", durations: [{ months: 12, discountAmount: 100, discountPercent: 5 }] };
+  const props = { catalog: { ...catalog, plans: [plan] }, refreshing: false, onRefresh() {} };
+  const h = harness("HomePricing", props);
+  assert(nodes(h.render()).some(node => node.props?.preferredMonths === 12 && node.props?.plan === plan));
+  button(h.render(), "شهري").props.onClick();
+  assert.equal(button(h.render(), "شهري").props["aria-pressed"], true);
+  assert(nodes(h.render()).some(node => node.props?.preferredMonths === 1));
+  const annualButton = nodes(h.render()).find(node => node.type === "button" && text(node).startsWith("سنوي"));
+  annualButton.props.onClick();
+  assert(nodes(h.render()).some(node => node.props?.preferredMonths === 12));
+  assert(text(h.render()).includes("وفّر حتى"));
+  const updated = h.render({ ...props, catalog: { ...catalog, plans: [{ ...plan, durations: [{ months: 12, discountAmount: 0, discountPercent: 0 }] }] } });
+  assert(!text(updated).includes("وفّر حتى"), "No invented discount after admin removes it");
+  assert(text(updated).includes("يُدفع الإجمالي السنوي دفعة واحدة"));
 });
 await test(() => {
   const menus = Array.from({ length: 14 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoUrl: `/logo-${index}.png`, href: `/menu/brand-${index}` }));
