@@ -1,12 +1,22 @@
 # Current task state
 
-Updated 2026-10-17 01:06 +03:00 - Asia/Riyadh
+Updated 2026-10-19 13:38 +03:00 - Asia/Riyadh
 
 ## Resume here
 
-- Latest application release: `7854ed177552d1f12d0b5083cdb4b825b76264d3` on `main`, verified on correct Vercel `branda-2` production `dpl_GZgp8kM42sgozvWQVXJJZUKnMyWU` at 2026-10-17 00:17 +03:00
-- This handoff update changes documentation only and preserves that exact application tree. The documentation commit is identified by `git log -1 --format=%H -- docs/task-state.md`; verify its GitHub/Vercel status and live alias using `.git/handoff-production.json` after publication. Do not confuse the application release hash above with the later documentation commit
-- Completed user requests: Deli catalog/photos, primary image or video selection, optional descriptions, actual menu visibility/offers, immediate product updates/cancel preserving scroll position, dashboard image renewal, and operations/PDF pager and promotional recipient metrics. No pending implementation or database migration for these requests
+- Latest application: wallet message history on `main` for production `branda-2`. Identify its commit with `git log -1 --format=%H -- app/api/loyalty/messages/route.ts`; exact GitHub/deployment/production-alias verification is recorded in `.git/message-history-production.json` when publication completes
+- Owner loyalty dashboard now shows saved announcement title/body, creation/update timestamps, queue/provider states, total distinct messages and 10-message pages. History refreshes after a send attempt; admin operations has a per-brand history dialog beside promotional totals
+- History covers all saved announcements, independent of the report period. Report customer/send counts remain unchanged. Provider acceptance does not prove delivery or reading; provider request counts are not shown as customer totals. There is no per-message audience count in this release
+- No schema change or message dispatch was needed. Server verifies active profile and owner/manager membership or platform-admin access, excludes deleted brands and sync jobs, and returns allowlisted fields with private/no-store caching
+- Previous application release `7854ed177552d1f12d0b5083cdb4b825b76264d3` and documentation baseline `9b4f18097d8f43fec673c2a3f106df23f979421f` remain the source of established catalog/operations behavior below
+
+## Latest verification
+
+- RUN 2026-10-19 13:36 +03:00 Node24.21.0: `node scripts/check-wallet-message-history.mjs` passed 36 auth/tenant/pagination/provider-state/HTTP/React SSR checks; existing `node scripts/check-operations-report-ui.mjs`, `node scripts/check-text-integrity.mjs`, `tsc --noEmit --incremental false` and scoped ESLint passed. Commands, timestamps and changed-source/dependency/config hashes: `.git/message-history-checks.json`
+- RUN 2026-10-19 13:37:57 +03:00 isolated `next build --webpack` PASS at `C:/Projects/branda-message-history-release-20261019`; only the nine task files over the clean baseline were built. Temporary environment file removed. Source hashes and baseline: `.git/message-history-build-exit.json`; publication verification asserts the published application matches, allowing only accompanying documentation differences
+- RUN 2026-10-19 13:35 +03:00 read-only actual database loader queries found four DeliCake messages with intact content. Session was mocked as the existing owner; actual database/profile/tenant queries and anonymous queue denial verified. No customer payloads saved in evidence, no messages sent. `.git/message-history-live.json`
+- Source review covered responsive wrapping, theme inheritance, native modal keyboard/focus behavior, loading/empty/error/retry states and escaped customer-authored text. No browser or physical-device test. Management CLI still returns403; no database migration was required
+- Final live verification uses `.git/verify-message-history-production.cjs`: correct project and exact main commit/deployment alias, menu200, anonymous history403/no-store and malformed page400. Missing evidence is not a successful deployment
 
 ## Established behavior
 
@@ -18,10 +28,10 @@ Updated 2026-10-17 01:06 +03:00 - Asia/Riyadh
 - Deli catalog migration is complete: never replay the earlier bulk update. Publication had 45 owner products; later owner availability changes are intentional and must be preserved. Source mapping: `docs/deli-catalog-20261016.json`
 - Preserve each brand's approved identity and tenant/package boundaries. Direct loyalty name/phone enrollment is intentional; do not reintroduce OTP there. Existing staff WhatsApp OTP remains separate. Legacy electronic storefronts remain archived
 
-## Verification and release evidence
+## Previous release verification and evidence
 
 - RUN2026-10-17 00:13-00:15 +03:00 Node24.21.0: 74 PostgreSQL auth/tenant/RLS/date/dedup/real-loader checks, actual React report SSR/filter/empty states, 31-brand PDF, 1201-recipient pagination/partial success/failure/retry checks, existing wallet-sync regression, text integrity, TypeScript and scoped ESLint PASS
-- Exact isolated Next16.3.8 webpack + TypeScript build PASS00:15:14+03 at application commit above; temporary environment file removed. Evidence `.git/operations-checks.json`, `.git/operations-build-exit.json`
+- Exact isolated Next16.3.8 webpack + TypeScript build PASS00:15:14+03 at previous application commit `7854ed177552d1f12d0b5083cdb4b825b76264d3`; temporary environment file removed. Evidence `.git/operations-checks.json`, `.git/operations-build-exit.json`
 - Live authenticated SQL read-only rollback: 14 brands, 12 pager orders, zero newly tracked promotional recipients, removed metrics absent. Function/source hashes and migration registry match; privilege assertions passed. These are verification-time counts, not permanently fixed totals. Evidence `.git/operations-database-live.json`
 - Production exact alias/menu200 and anonymous report-data denial verified; anonymous admin shell returns200 with an authorization error and no report metrics. Evidence `.git/operations-production.json`
 - REUSED 2026-10-17 01:06 +03:00: all recorded source/test/dependency/config hashes matched prior passing evidence, Node24 unchanged. Documentation-only task requires no new application build. Evidence `.git/handoff-check-reuse.json`; text integrity and documentation diff reviewed again before commit

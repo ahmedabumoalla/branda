@@ -4,6 +4,7 @@ import { Fragment, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, BadgeCheck, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Users, Info } from "lucide-react";
 import { loadOperationsReportAction } from "@/app/actions/operations-report";
 import { AdminPageShell } from "@/components/ui/design-system";
+import { WalletMessageHistory } from "@/components/loyalty/wallet-message-history";
 import { defaultReportFilters, filterReportBrands, reportMetricLabels, reportMetrics, reportPeriodSchema, saudiDate, totalReportMetrics, type OperationsReport, type ReportFilters, type ReportMetric, type ReportPeriod } from "@/lib/analytics/operations-report";
 import { getPlatformFeatureDefinition } from "@/lib/platform/feature-registry";
 import styles from "./operations-report-page.module.css";
@@ -31,6 +32,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const [error, setError] = useState(initialReport ? "" : "تعذر تحميل البيانات أعد المحاولة بعد التحقق من صلاحية دخولك");
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [messageBrand, setMessageBrand] = useState<{ id: string; name: string } | null>(null);
   const request = useRef(0);
   const brands = filterReportBrands(report?.brands || [], filters);
   const totals = totalReportMetrics(brands);
@@ -116,7 +118,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
               <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.appleCards)}</strong><small>آيفون</small></span><span><strong>{number(brand.metrics.googleCards)}</strong><small>أندرويد</small></span></div></td>
               <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.stampOperations)}</strong><small>ختم</small></span><span><strong>{number(brand.metrics.rewardOperations)}</strong><small>مكافأة</small></span></div></td>
               <td><strong>{number(brand.metrics.pagerUses)}</strong><small>طلب بيجر</small></td>
-              <td><strong>{number(brand.metrics.promotionCustomers)}</strong><small>{number(brand.metrics.promotionSends)} إرسال للعميل</small></td>
+              <td><strong>{number(brand.metrics.promotionCustomers)}</strong><small>{number(brand.metrics.promotionSends)} إرسال للعميل</small><button type="button" className={styles.historyButton} aria-label={`سجل رسائل ${brand.name}`} aria-haspopup="dialog" onClick={() => setMessageBrand({ id: brand.id, name: brand.name })}>سجل الرسائل</button></td>
               <td className={styles.date}><LastVisit value={brand.lastMenuVisit} /></td>
             </tr><tr id={`brand-${brand.id}`} hidden={expanded !== brand.id}><td colSpan={8}><div className={styles.detail}>
               <p>حالة العلامة: {statusName[brand.status] || brand.status} · حالة الاشتراك المسجلة: {subscriptionName[brand.subscriptionStatus] || brand.subscriptionStatus} · انتهاء الاشتراك: {brand.expiresAt ? saudiDate(brand.expiresAt) : "غير محدد"}</p>
@@ -129,6 +131,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر غيّر الشروط أو امسح فلاتر العلامات</p>}
           <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
+        {messageBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setMessageBrand(null)} aria-label={`سجل رسائل ${messageBrand.name}`}><div className={styles.historyClose}><button type="button" onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق السجل</button></div><WalletMessageHistory key={messageBrand.id} brandId={messageBrand.id} brandName={messageBrand.name} dark /></dialog>}
         <section className={`${styles.panel} ${styles.explainer}`} aria-label="تعريف المؤشرات وتغطية البيانات"><h2><Info size={19} aria-hidden="true" />كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
           <li>زوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة</li>
           <li>البطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة</li>

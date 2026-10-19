@@ -1,14 +1,17 @@
 # Branda — current handoff
 
-Updated 2026-10-17 01:06 +03:00 - Asia/Riyadh
+Updated 2026-10-19 13:38 +03:00 - Asia/Riyadh
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Published state
 
-- Latest application: `7854ed177552d1f12d0b5083cdb4b825b76264d3`; production verified2026-10-17 00:17+03 on `branda-2`, deployment `dpl_GZgp8kM42sgozvWQVXJJZUKnMyWU`
-- Current handoff publication is documentation only; application code is identical to that verified release. The later documentation commit is available from Git history; its fresh deployment/alias verification is recorded locally in `.git/handoff-production.json`
-- All current requested product/image/editor/menu and operations-report changes are implemented. Required checks and exact application build passed. Migration `20261017001500_operations_pager_promotions` is applied and recorded; no pending catalog operation or migration
+- Latest application: wallet message history on `main` and Vercel `branda-2`; release commit is `git log -1 --format=%H -- app/api/loyalty/messages/route.ts`. Verify exact production evidence in `.git/message-history-production.json`; a missing file means publication is not verified
+- History appears below the owner's announcement form and in a per-brand dialog from admin operations. It shows full saved title/body, Saudi timestamps, provider/queue statuses, actual message count and pagination, with refresh after send attempts
+- All saved messages are shown regardless of report period. Promotional report metrics still count customers and sends; history counts messages. No per-message recipient estimate or delivery/read claim. DeliCake had four saved messages at the read-only check on 2026-10-19
+- Active owner/manager or platform-admin authorization, tenant filters, private/no-store responses and display-field allowlisting protect history. No database change or real message sending
+- 36 targeted checks, report regression, text integrity, TypeScript, scoped lint and isolated production build passed. Detailed provenance and verification limits are in the current task state
+- Prior catalog/product media/operations changes remain complete with no pending migration. Previous release `7854ed177552d1f12d0b5083cdb4b825b76264d3` is historical, not the latest application
 
 ## Product decisions to preserve
 
@@ -32,7 +35,7 @@ Vercel project ID: prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow
 Supabase project: kpguwjfkkylrdlvzeezz
 Node: 24.21.0; Next: 16.3.8
 Node executable: C:/Users/pc/AppData/Local/npm-cache/_npx/538786c08bcb9442/node_modules/node/bin/node.exe
-Last exact application build: C:/Projects/branda-operations-release-20261017
+Latest isolated application build: C:/Projects/branda-message-history-release-20261019
 ```
 
 - Local `.vercel/project.json` points at the old project. Deploy through the correct GitHub branch and verify exact production SHA and live alias; a push alone is not deployment proof

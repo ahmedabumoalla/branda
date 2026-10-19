@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUpLeft, Bell, Check, Copy, Download, Gift, History, LoaderCircle, MapPin, Save, ScanLine, Users } from "lucide-react";
 import { LoyaltyCustomerDirectory } from "@/components/loyalty/customer-directory";
+import { WalletMessageHistory } from "@/components/loyalty/wallet-message-history";
 import { saveRastLoyaltySettingsAction, sendLoyaltyWalletAnnouncementAction } from "@/app/actions/loyalty-experience";
 import type { LoyaltyCardsDashboard } from "@/lib/data/loyalty-cards";
 import type { LoyaltyExperienceSettings, LoyaltyIdentity } from "@/lib/loyalty/experience-types";
@@ -41,6 +42,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
   const [body, setBody] = useState("");
   const [notificationError, setNotificationError] = useState("");
   const [notificationResult, setNotificationResult] = useState("");
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [mapsUrl, setMapsUrl] = useState(() => initialExperience.latitude != null && initialExperience.longitude != null
     ? `https://www.google.com/maps/search/?api=1&query=${initialExperience.latitude},${initialExperience.longitude}`
     : "");
@@ -95,7 +97,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
       setNotificationResult(count ? `قبلت خدمة المحافظ ${count} طلبات تحديث${failed ? " وتعذر تنفيذ بعض الطلبات" : ""} ظهور الإشعار على الجوال يعتمد على إعدادات العميل` : failed ? "تعذر تسليم الإشعار حاليًا بقيت الرسالة في قائمة إعادة المحاولة" : "لم تُرسل إشعارات؛ لا توجد محافظ جاهزة لاستقبالها حاليًا");
       announcementDialog.current?.close();
     } catch { setNotificationError("تعذر إرسال الإشعار تحقق من الإعدادات وحاول مرة أخرى"); announcementDialog.current?.close(); }
-    finally { setSending(false); sendLock.current = false; }
+    finally { setSending(false); sendLock.current = false; setHistoryVersion(value => value + 1); }
   }
 
   return <div className={s.dashboard} dir="rtl" style={loyaltyTheme(identity)}>
@@ -145,6 +147,7 @@ export function RastLoyaltyDashboard({ initialDashboard, initialExperience, iden
           </fieldset>
         </form>
         <section className={s.notifications} aria-labelledby="notifications-title"><div className={s.settingsHeading}><div><Bell aria-hidden="true" /><h2 id="notifications-title">خلّ أخبار {identity.name} توصلهم</h2></div></div><p className={s.sectionDescription}>أرسل عرضًا أو خبرًا إلى العملاء الذين أضافوا بطاقتهم إلى المحفظة</p><form onSubmit={(event) => { event.preventDefault(); if (!sending && anyWalletReady) announcementDialog.current?.showModal(); }}><fieldset disabled={sending || !anyWalletReady} className={s.notificationFields}><legend className={s.srOnly}>محتوى الإشعار</legend><label className={s.field}><span>عنوان الإشعار</span><input value={title} onChange={(event) => setTitle(event.target.value)} minLength={2} maxLength={80} required placeholder={`شي حلو ينتظرك في ${identity.name}`} /></label><label className={s.field}><span>نص الرسالة</span><textarea rows={3} value={body} onChange={(event) => setBody(event.target.value)} minLength={2} maxLength={240} required placeholder="اكتب العرض أو الخبر الذي ترغب بإرساله" /></label><button type="submit" className={s.primary}><Bell aria-hidden="true" />مراجعة الإشعار وإرساله</button></fieldset></form>{!anyWalletReady ? <p className={s.hint}>إرسال الإشعارات متاح بعد تفعيل إحدى المحافظ وإضافة العملاء لبطاقاتهم</p> : null}{notificationError ? <p className={s.error} role="alert">{notificationError}</p> : null}{notificationResult ? <p className={s.deliveryResult} role="status">{notificationResult}</p> : null}</section>
+        <WalletMessageHistory key={historyVersion} brandName={identity.name} />
       </div>
       <aside className={s.dashboardPreview}><div className={s.previewTitle}><h2>بطاقة أهل {identity.name}</h2><span>معاينة مباشرة</span></div><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p className={s.hint}>الشعار والألوان من هوية {identity.name} الأختام المكتملة تضيء في بطاقة العميل</p><div className={s.walletReadiness}><h3>حالة المحافظ المحفوظة</h3><p><span dir="ltr">Apple Wallet</span><strong>{!walletAvailability.apple ? "بانتظار اكتمال الربط" : savedActivation.enabled && savedActivation.apple ? "مفعّلة للعملاء" : "جاهزة للتفعيل"}</strong></p><p><span dir="ltr">Google Wallet</span><strong>{!walletAvailability.google ? "بانتظار اكتمال الربط" : savedActivation.enabled && savedActivation.google ? "مفعّلة للعملاء" : "جاهزة للتفعيل"}</strong></p></div></aside>
     </div>
