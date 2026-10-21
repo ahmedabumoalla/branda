@@ -20,12 +20,15 @@ function load(file, stubs = {}) {
   new Function("require", "exports", output)((name) => {
     if (name in stubs) return stubs[name];
     if (name.endsWith(".css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) };
+    if (name.startsWith("@/")) return load(path.resolve(root, `${name.slice(2)}.ts`), stubs);
     if (name.startsWith(".")) return load(path.resolve(path.dirname(file), `${name}.ts`), stubs);
     return dependency(name);
   }, exports);
   return exports;
 }
 const helpers = load(path.join(folder, "campaign-form.ts"));
+const mediaRules = load(path.join(root, "lib/marketing/media-rules.ts"));
+let uploadFile = async () => ({ error: null });
 const checks = [];
 async function check(name, run) { await run(); checks.push(name); console.log(`PASS ${name}`); }
 const audience = [{ id: "customer:11111111-1111-4111-8111-111111111111", name: "عميل أول", phone: "966511111111", suppressed: false, source: "both" }, { id: "loyalty:22222222-2222-4222-8222-222222222222", name: "عميل ولاء", phone: "966522222222", suppressed: false, source: "loyalty" }, { id: "customer:33333333-3333-4333-8333-333333333333", name: "عميل موقوف", phone: "966533333333", suppressed: true, source: "customer" }];
@@ -35,7 +38,7 @@ function harness(initial = base) {
   const values = [], effects = [], cleanups = new Map(); let cursor = 0;
   const same = (left, right) => left && right && left.length === right.length && left.every((value, i) => Object.is(value, right[i]));
   const hooks = { ...React, useState(initialValue) { const slot = cursor++; if (!(slot in values)) values[slot] = initialValue; return [values[slot], value => { values[slot] = typeof value === "function" ? value(values[slot]) : value; }]; }, useRef(initialValue) { const slot = cursor++; if (!(slot in values)) values[slot] = { current: initialValue }; return values[slot]; }, useCallback(fn, deps) { const slot = cursor++; if (!same(values[slot]?.deps, deps)) values[slot] = { fn, deps }; return values[slot].fn; }, useEffect(fn, deps) { const slot = cursor++; if (!same(values[slot], deps)) { values[slot] = deps; effects.push(() => { cleanups.get(slot)?.(); const cleanup = fn(); cleanups.set(slot, cleanup); return cleanup; }); } } };
-  const { CampaignConsole } = load(path.join(folder, "campaign-console.tsx"), { react: hooks, "@/components/ui/design-system": { DashboardPageShell: ({ title, action, children }) => React.createElement("main", null, React.createElement("h1", null, title), action, children) }, "@/components/dashboard/feature-blocked-state": { DashboardFeatureBlockedState: () => React.createElement("div", null, "FEATURE_BLOCKED") } });
+  const { CampaignConsole } = load(path.join(folder, "campaign-console.tsx"), { react: hooks, "@/lib/supabase/client": { createClient: () => ({ storage: { from: bucket => ({ uploadToSignedUrl: (...args) => uploadFile(bucket, ...args) }) } }) }, "@/components/ui/design-system": { DashboardPageShell: ({ title, action, children }) => React.createElement("main", null, React.createElement("h1", null, title), action, children) }, "@/components/dashboard/feature-blocked-state": { DashboardFeatureBlockedState: () => React.createElement("div", null, "FEATURE_BLOCKED") } });
   return { effects, flushEffects() { effects.splice(0).forEach(effect => effect()); }, unmount() { cleanups.forEach(cleanup => cleanup?.()); cleanups.clear(); }, render() { cursor = 0; effects.length = 0; return CampaignConsole({ initialDashboard: initial }); } };
 }
 function all(node, predicate) {
@@ -104,7 +107,8 @@ try {
     formFor(tree, "campaign-title").props.onSubmit({ preventDefault() {} }); tree = h.render();
     assert.equal(requests.length, before); assert(button(tree, "تأكيد بدء الإرسال"));
     const preview = all(tree, node => node.type === "aside" && node.props["aria-label"] === "معاينة رسالة واتساب")[0];
-    assert.match(text(preview), /رسالة تجريبية لا ترسل\n\nلإيقاف الرسائل أرسل إيقاف أو استخدم الرابط\n\[رابط إيقاف الرسائل الخاص بالعميل\]/);
+    assert.match(text(preview), /رسالة تجريبية لا ترسل\n\nلإيقاف الرسائل أرسل كلمة إيقاف/);
+    assert.doesNotMatch(text(preview), /استخدم الرابط|رابط إيقاف الرسائل الخاص/);
     assert.doesNotMatch(text(preview), /token=|https?:\/\//);
     assert.equal(all(preview, node => node.type === "a").length, 0);
     const successFetch = globalThis.fetch;
@@ -116,6 +120,156 @@ try {
     button(tree, "تأكيد بدء الإرسال").props.onClick(); await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(requests.at(-1).json.idempotencyKey, failed.idempotencyKey);
     tree = h.render(); assert.equal(field(tree, "campaign-body").props.value, "");
+  });
+  await check("media validation matches shared types sizes caption limits and blocked upload states", () => {
+    for (const [type, rule] of Object.entries(mediaRules.MARKETING_MEDIA_TYPES)) {
+      assert.equal(helpers.campaignMediaError({ type, size: rule.maxSize }), null);
+      assert(helpers.campaignMediaError({ type, size: rule.maxSize + 1 }));
+    }
+    for (const file of [{ type: "image/svg+xml", size: 50 }, { type: "video/webm", size: 50 }, { type: "image/png", size: 0 }]) assert(helpers.campaignMediaError(file));
+    const draft = { title: "حملة", body: "رسالة", consent: true, customerIds: [audience[0].id], scheduledAt: "" };
+    assert.match(helpers.campaignDraftError({ ...draft, mediaStatus: "uploading" }), /انتظر/);
+    assert.match(helpers.campaignDraftError({ ...draft, mediaStatus: "failed" }), /أعد رفع/);
+    assert.match(helpers.campaignDraftError({ ...draft, mediaStatus: "ready" }), /تعذر التحقق/);
+    assert.equal(helpers.campaignDraftError({ ...draft, mediaStatus: "ready", mediaId: "media", body: "x".repeat(mediaRules.MARKETING_MEDIA_BODY_LIMIT) }), null);
+    assert.match(helpers.campaignDraftError({ ...draft, mediaId: "media", body: "x".repeat(mediaRules.MARKETING_MEDIA_BODY_LIMIT + 1) }), /اختصر/);
+    assert.equal(helpers.campaignDraftError({ ...draft, body: "x".repeat(3000) }), null, "text-only campaigns retain their previous length");
+  });
+  await check("signed media upload verifies before review and campaign retry preserves media and idempotency", async () => {
+    const oldFetch = globalThis.fetch, oldCreate = URL.createObjectURL, oldRevoke = URL.revokeObjectURL;
+    const revoked = [], mediaRequests = [], uploads = [], launches = [];
+    const media = { id: "11111111-1111-4111-8111-999999999999", kind: "image", mimeType: "image/png", fileName: "offer.png", size: 20 };
+    let finishUpload;
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      URL.createObjectURL = () => "blob:campaign-image"; URL.revokeObjectURL = url => revoked.push(url);
+      uploadFile = (...args) => { uploads.push(args); return new Promise(resolve => { finishUpload = resolve; }); };
+      globalThis.fetch = async (url, options) => {
+        const payload = JSON.parse(options.body);
+        if (url === "/api/marketing/media") {
+          mediaRequests.push(payload);
+          return { ok: true, json: async () => ({ ok: true, data: payload.action === "prepare" ? { mediaId: media.id, bucket: "marketing-media", upload: { path: "scoped/object", token: "signed-upload-token" } } : { media } }) };
+        }
+        launches.push(payload);
+        if (launches.length === 1) throw new Error("uncertain request");
+        return { ok: true, json: async () => ({ ok: true, data: { dashboard: connected } }) };
+      };
+      const h = harness(connected); let tree = h.render(); h.effects[0]();
+      for (const [id, value] of [["campaign-title", "عرض مصور"], ["campaign-body", "نص الرسالة مع الصورة"]]) { field(tree, id).props.onChange({ target: { value } }); tree = h.render(); }
+      const scheduledAt = new Date(Date.now() + 86400_000).toISOString().slice(0, 16);
+      field(tree, "campaign-date").props.onChange({ target: { value: scheduledAt } }); tree = h.render();
+      all(tree, n => n.type === "input" && n.props["aria-label"] === "تحديد كل العملاء الظاهرين في البحث")[0].props.onChange({ target: { checked: true } }); tree = h.render();
+      all(tree, n => n.type === "input" && n.props.type === "checkbox" && !n.props["aria-label"])[0].props.onChange({ target: { checked: true } }); tree = h.render();
+      const file = new File(["sample image"], "offer.png", { type: "image/png" });
+      field(tree, "campaign-media").props.onChange({ target: { files: [file], value: "local-file" } }); await flush(); tree = h.render();
+      assert.equal(button(tree, "مراجعة الحملة").props.disabled, true);
+      assert.equal(field(tree, "campaign-body").props.maxLength, mediaRules.MARKETING_MEDIA_BODY_LIMIT);
+      assert.match(renderToStaticMarkup(tree), /blob:campaign-image/);
+      formFor(tree, "campaign-title").props.onSubmit({ preventDefault() {} }); tree = h.render();
+      assert.match(text(tree), /انتظر حتى يكتمل/); assert.equal(launches.length, 0);
+      assert.deepEqual(mediaRequests, [{ action: "prepare", fileName: "offer.png", mimeType: "image/png", size: file.size }]);
+      assert.deepEqual(uploads[0], ["marketing-media", "scoped/object", "signed-upload-token", file, { contentType: "image/png" }]);
+      finishUpload({ error: null }); await flush(); tree = h.render();
+      assert.deepEqual(mediaRequests.at(-1), { action: "finalize", mediaId: media.id });
+      assert.equal(button(tree, "مراجعة الحملة").props.disabled, false);
+      formFor(tree, "campaign-title").props.onSubmit({ preventDefault() {} }); tree = h.render();
+      const review = all(tree, n => n.props?.["aria-label"] === "مراجعة الحملة قبل الإرسال")[0];
+      const reviewMarkup = renderToStaticMarkup(review);
+      assert.match(reviewMarkup, /offer.png/); assert.match(reviewMarkup, /blob:campaign-image/); assert.match(reviewMarkup, /نص الرسالة مع الصورة/); assert.match(reviewMarkup, /لإيقاف الرسائل أرسل كلمة إيقاف/);
+      button(tree, "تأكيد جدولة الحملة").props.onClick(); await flush(); tree = h.render();
+      assert.equal(launches[0].mediaId, media.id); assert.equal(launches[0].body, "نص الرسالة مع الصورة");
+      assert.equal(launches[0].scheduledAt, new Date(scheduledAt).toISOString());
+      assert(!("media" in launches[0]) && !("url" in launches[0]), "campaign sends only server media identity");
+      assert.equal(field(tree, "campaign-body").props.value, "نص الرسالة مع الصورة");
+      assert.match(renderToStaticMarkup(tree), /blob:campaign-image/); assert.equal(revoked.length, 0);
+      button(tree, "تأكيد جدولة الحملة").props.onClick(); await flush(); tree = h.render();
+      assert.equal(launches[1].idempotencyKey, launches[0].idempotencyKey); assert.equal(uploads.length, 1);
+      assert.equal(field(tree, "campaign-body").props.value, ""); assert.deepEqual(revoked, ["blob:campaign-image"]);
+      h.unmount(); assert.equal(revoked.length, 1);
+    } finally { globalThis.fetch = oldFetch; URL.createObjectURL = oldCreate; URL.revokeObjectURL = oldRevoke; uploadFile = async () => ({ error: null }); }
+  });
+  await check("failed media upload retains draft blocks submission and supports explicit retry or removal", async () => {
+    const oldFetch = globalThis.fetch, oldCreate = URL.createObjectURL, oldRevoke = URL.revokeObjectURL;
+    const revoked = []; let prepares = 0, uploads = 0;
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      URL.createObjectURL = () => `blob:attempt-${prepares}`; URL.revokeObjectURL = url => revoked.push(url);
+      uploadFile = async () => ({ error: ++uploads === 1 ? { message: "provider private diagnostic" } : null });
+      globalThis.fetch = async (_url, options) => {
+        const payload = JSON.parse(options.body);
+        if (payload.action === "prepare") prepares++;
+        return { ok: true, json: async () => ({ ok: true, data: payload.action === "prepare" ? { mediaId: `media-${prepares}`, bucket: "marketing-media", upload: { path: "scoped", token: "token" } } : { media: { id: "media-2", kind: "image", mimeType: "image/png", fileName: "retry.png", size: 12 } } }) };
+      };
+      const h = harness(connected); let tree = h.render(); h.effects[0]();
+      field(tree, "campaign-body").props.onChange({ target: { value: "نص محفوظ" } }); tree = h.render();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["test"], "retry.png", { type: "image/png" })], value: "" } }); await flush(); tree = h.render();
+      assert.equal(field(tree, "campaign-body").props.value, "نص محفوظ"); assert.equal(button(tree, "مراجعة الحملة").props.disabled, true);
+      assert.match(text(tree), /تعذر رفع المرفق/); assert.doesNotMatch(text(tree), /provider private diagnostic/);
+      button(tree, "إعادة رفع المرفق").props.onClick(); await flush(); tree = h.render();
+      assert.equal(prepares, 2); assert.equal(button(tree, "مراجعة الحملة").props.disabled, false); assert.equal(revoked.length, 1);
+      button(tree, "إزالة المرفق").props.onClick(); tree = h.render();
+      assert.equal(field(tree, "campaign-body").props.value, "نص محفوظ"); assert.equal(field(tree, "campaign-body").props.maxLength, 3000); assert.equal(revoked.length, 2);
+      const before = prepares;
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["<svg/>"], "bad.svg", { type: "image/svg+xml" })], value: "" } }); await flush(); tree = h.render();
+      assert.equal(prepares, before); assert.equal(button(tree, "مراجعة الحملة").props.disabled, true); assert.match(text(tree), /اختر صورة بصيغة/);
+      button(tree, "إزالة المرفق").props.onClick(); assert.equal(button(h.render(), "مراجعة الحملة").props.disabled, false);
+      h.unmount();
+    } finally { globalThis.fetch = oldFetch; URL.createObjectURL = oldCreate; URL.revokeObjectURL = oldRevoke; uploadFile = async () => ({ error: null }); }
+  });
+  await check("replacing image with video ignores stale upload and revokes every local preview on unmount", async () => {
+    const oldFetch = globalThis.fetch, oldCreate = URL.createObjectURL, oldRevoke = URL.revokeObjectURL;
+    const revoked = [], finalized = []; let finishOldUpload, sequence = 0;
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      URL.createObjectURL = file => `blob:${file.name}`; URL.revokeObjectURL = url => revoked.push(url);
+      uploadFile = async (_bucket, _path, _token, file) => file.type === "image/png" ? new Promise(resolve => { finishOldUpload = resolve; }) : { error: null };
+      globalThis.fetch = async (_url, options) => {
+        const payload = JSON.parse(options.body);
+        if (payload.action === "prepare") return { ok: true, json: async () => ({ ok: true, data: { mediaId: `media-${++sequence}`, bucket: "marketing-media", upload: { path: "scoped", token: "token" } } }) };
+        finalized.push(payload.mediaId);
+        return { ok: true, json: async () => ({ ok: true, data: { media: { id: payload.mediaId, kind: "video", mimeType: "video/mp4", fileName: "new.mp4", size: 9 } } }) };
+      };
+      const h = harness(connected); let tree = h.render(); h.effects[0]();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["old"], "old.png", { type: "image/png" })], value: "" } }); await flush(); tree = h.render();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["new"], "new.mp4", { type: "video/mp4" })], value: "" } }); await flush(); tree = h.render();
+      assert.deepEqual(revoked, ["blob:old.png"]); assert.deepEqual(finalized, ["media-2"]);
+      let markup = renderToStaticMarkup(tree); assert.match(markup, /<video/); assert.match(markup, /controls=""/); assert.match(markup, /playsInline=""/); assert.doesNotMatch(markup, /autoPlay|blob:old.png/);
+      finishOldUpload({ error: null }); await flush(); tree = h.render(); markup = renderToStaticMarkup(tree);
+      assert.deepEqual(finalized, ["media-2"]); assert.match(markup, /blob:new.mp4/); assert.equal(button(tree, "مراجعة الحملة").props.disabled, false);
+      h.unmount(); assert.deepEqual(revoked, ["blob:old.png", "blob:new.mp4"]);
+    } finally { globalThis.fetch = oldFetch; URL.createObjectURL = oldCreate; URL.revokeObjectURL = oldRevoke; uploadFile = async () => ({ error: null }); }
+  });
+  await check("server finalization failure never makes an attachment sendable", async () => {
+    const oldFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (_url, options) => JSON.parse(options.body).action === "prepare" ? { ok: true, json: async () => ({ ok: true, data: { mediaId: "bad", bucket: "marketing-media", upload: { path: "scoped", token: "token" } } }) } : { ok: false, json: async () => ({ ok: false, message: "محتوى الملف لا يطابق الصيغة" }) };
+      const h = harness(connected); let tree = h.render(); h.effects[0]();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["not png"], "bad.png", { type: "image/png" })], value: "" } }); await new Promise(resolve => setTimeout(resolve, 0)); tree = h.render();
+      assert.equal(button(tree, "مراجعة الحملة").props.disabled, true); assert.match(text(tree), /محتوى الملف لا يطابق الصيغة/);
+      h.unmount();
+    } finally { globalThis.fetch = oldFetch; }
+  });
+  await check("upload timeout and unmount prevent late verification and release their timers", async () => {
+    const oldFetch = globalThis.fetch, oldWindow = globalThis.window;
+    const timers = new Map(); let finishUpload, prepareSignal, finalized = 0;
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      globalThis.window = { ...oldWindow, setTimeout(callback, delay) { if (delay === 180000) { timers.set(42, callback); return 42; } return setTimeout(callback, delay); }, clearTimeout(id) { if (id === 42) timers.delete(id); else clearTimeout(id); } };
+      uploadFile = () => new Promise(resolve => { finishUpload = resolve; });
+      globalThis.fetch = async (_url, options) => {
+        const payload = JSON.parse(options.body); prepareSignal = options.signal;
+        if (payload.action === "finalize") finalized++;
+        return { ok: true, json: async () => ({ ok: true, data: { mediaId: "media-timeout", bucket: "marketing-media", upload: { path: "scoped", token: "token" } } }) };
+      };
+      const h = harness(connected); let tree = h.render(); h.effects[0]();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["image"], "slow.png", { type: "image/png" })], value: "" } }); await flush();
+      timers.get(42)(); tree = h.render();
+      assert.equal(prepareSignal.aborted, true); assert.equal(button(tree, "مراجعة الحملة").props.disabled, true); assert.match(text(tree), /استغرق رفع المرفق وقتًا طويلًا/);
+      finishUpload({ error: null }); await flush(); assert.equal(finalized, 0); assert.equal(timers.size, 0);
+      button(tree, "إعادة رفع المرفق").props.onClick(); await flush();
+      assert.equal(timers.size, 1); h.unmount(); assert.equal(timers.size, 0); assert.equal(prepareSignal.aborted, true);
+      finishUpload({ error: null }); await flush(); assert.equal(finalized, 0);
+    } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow; uploadFile = async () => ({ error: null }); }
   });
   await check("campaign history separates accepted delivered read and uncertain", () => {
     const h = harness({ ...connected, campaigns: [{ id: "id1", title: "حملة محفوظة", body: "النص الفعلي", status: "completed", createdAt: "2026-10-19T10:00:00Z", scheduledAt: "", total: 15, queued: 1, accepted: 5, delivered: 3, read: 2, failed: 1, uncertain: 1, cancelled: 1, suppressed: 1 }] });

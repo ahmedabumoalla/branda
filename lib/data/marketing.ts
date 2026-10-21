@@ -9,6 +9,7 @@ import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { encryptMarketingSecret, decryptMarketingSecret, hashMarketingToken, marketingConfigured, marketingPublicOrigin } from "@/lib/marketing/crypto";
 import { provisionGreenApiMarketingInstance, configureGreenApiMarketingWebhook, getGreenApiMarketingState, getGreenApiMarketingAccount, getGreenApiMarketingQr, deleteGreenApiMarketingInstance, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 import type { MarketingDashboard, MarketingResult, MarketingConnectionStatus, MarketingCampaignSummary, MarketingAudienceMember } from "@/lib/marketing/types";
+import { MARKETING_MEDIA_BODY_LIMIT } from "@/lib/marketing/media-rules";
 
 export class MarketingError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -22,7 +23,7 @@ const inputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.enum(["refresh", "qr", "disconnect"]) }),
   z.object({ action: z.literal("optOut"), customerId }).strict(),
   z.object({ action: z.literal("cancelCampaign"), campaignId: z.uuid() }),
-  z.object({ action: z.literal("createCampaign"), idempotencyKey: z.uuid(), title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000), customerIds: z.array(customerId).min(1).max(1000), consent: z.literal(true), scheduledAt: z.iso.datetime({ offset: true }).optional() }).strict(),
+  z.object({ action: z.literal("createCampaign"), idempotencyKey: z.uuid(), title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000), customerIds: z.array(customerId).min(1).max(1000), consent: z.literal(true), scheduledAt: z.iso.datetime({ offset: true }).optional(), mediaId: z.uuid().optional() }).strict(),
 ]);
 
 export async function requireMarketingContext() {
@@ -216,6 +217,7 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
     const { error } = await context.db.rpc("marketing_cancel_campaign", { p_cafe: context.cafeId, p_id: input.campaignId });
     if (error) throw new MarketingError("تعذر إلغاء الحملة", 503);
   } else if (input.action === "createCampaign") {
+    if (input.mediaId && input.body.length > MARKETING_MEDIA_BODY_LIMIT) throw new MarketingError(`اختصر نص الحملة المرفقة إلى ${MARKETING_MEDIA_BODY_LIMIT} حرفًا`);
     const scheduled = input.scheduledAt ? Date.parse(input.scheduledAt) : Date.now();
     if (scheduled < Date.now() - 60_000 || scheduled > Date.now() + 90 * 86400_000) throw new MarketingError("اختر موعدًا قادمًا خلال تسعين يومًا");
     const members = new Map((await audience(context)).map(member => [member.id, member]));
@@ -223,8 +225,8 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
     if (selected.some(member => !member)) throw new MarketingError("بعض العملاء لم يعودوا متاحين ضمن هذه العلامة حدّث القائمة", 400);
     const recipients = [...new Set(selected.filter(member => member && !member.suppressed).map(member => member!.phone))].sort();
     if (!recipients.length) throw new MarketingError("اختر عملاء لم يوقفوا استقبال الرسائل", 400);
-    const hash = createHash("sha256").update(JSON.stringify({ title: input.title, body: input.body, recipients, scheduledAt: input.scheduledAt ?? null })).digest("hex");
-    const { error } = await context.db.rpc("marketing_create_campaign", { p_cafe: context.cafeId, p_actor: context.userId, p_key: input.idempotencyKey, p_hash: hash, p_title: input.title, p_body: input.body, p_phones: recipients, p_scheduled: new Date(scheduled).toISOString() });
+    const hash = createHash("sha256").update(JSON.stringify({ title: input.title, body: input.body, recipients, scheduledAt: input.scheduledAt ?? null, ...(input.mediaId ? { mediaId: input.mediaId } : {}) })).digest("hex");
+    const { error } = await context.db.rpc("marketing_create_campaign", { p_cafe: context.cafeId, p_actor: context.userId, p_key: input.idempotencyKey, p_hash: hash, p_title: input.title, p_body: input.body, p_phones: recipients, p_scheduled: new Date(scheduled).toISOString(), p_media: input.mediaId ?? null });
     if (error) throw new MarketingError("تعذر تجهيز الحملة تحقق من اتصال الرقم وبيانات الطلب", 409);
   }
   return { dashboard: await dashboard(context), ...(qr ? { qr } : {}), ...(qrStatus ? { qrStatus } : {}) };

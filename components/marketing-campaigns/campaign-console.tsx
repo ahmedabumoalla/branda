@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { CheckCheck, MessageCircle, QrCode, RefreshCw, Send, Smartphone } from "lucide-react";
+import { CheckCheck, ImagePlus, MessageCircle, QrCode, RefreshCw, Send, Smartphone, Trash2 } from "lucide-react";
 import { DashboardPageShell } from "@/components/ui/design-system";
 import { DashboardFeatureBlockedState } from "@/components/dashboard/feature-blocked-state";
-import type { MarketingDashboard } from "@/lib/marketing/types";
-import { campaignDraftError, campaignQrSource, parseCampaignRecipients } from "./campaign-form";
+import type { MarketingCampaignMedia, MarketingDashboard } from "@/lib/marketing/types";
+import { MARKETING_MEDIA_BODY_LIMIT, MARKETING_MEDIA_TYPES, MARKETING_STOP_FOOTER } from "@/lib/marketing/media-rules";
+import { createClient } from "@/lib/supabase/client";
+import { campaignDraftError, campaignMediaError, campaignQrSource, parseCampaignRecipients } from "./campaign-form";
 import styles from "./campaigns.module.css";
 
 const connectionLabels: Record<string, string> = { disconnected: "غير متصل", provisioning: "جارٍ تجهيز الاتصال", pairing: "بانتظار ربط واتساب", connected: "متصل وجاهز", mismatch: "الرقم المرتبط مختلف", uncertain: "حالة الاتصال قيد التحقق", error: "تعذر الاتصال", disconnecting: "جارٍ فصل الرقم" };
@@ -14,7 +16,18 @@ const formatNumber = (value: number) => value.toLocaleString("ar-SA");
 const formatDate = (value: string) => new Date(value).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" });
 type ApiResult = { ok: boolean; message?: string; data?: { dashboard: MarketingDashboard; qr?: string; qrStatus?: string } };
 type Draft = { title: string; body: string; customerIds: string[]; consent: boolean; scheduledAt: string };
+type Attachment = { file: File; previewUrl: string | null; kind: "image" | "video"; status: "uploading" | "ready" | "failed"; media: MarketingCampaignMedia | null; error: string };
 const emptyDraft: Draft = { title: "", body: "", customerIds: [], consent: false, scheduledAt: "" };
+
+function CampaignMediaPreview({ attachment }: { attachment: Attachment }) {
+  if (!attachment.previewUrl) return null;
+  return <div className={styles.mediaPreview}>
+    {attachment.kind === "video" ? <video src={attachment.previewUrl} controls playsInline preload="metadata" aria-label={`معاينة الفيديو ${attachment.file.name}`} /> :
+      // A local object URL previews the selected file before its private upload completes.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={attachment.previewUrl} alt={`معاينة صورة الحملة ${attachment.file.name}`} />}
+  </div>;
+}
 
 export function CampaignConsole({ initialDashboard }: { initialDashboard: MarketingDashboard | null }) {
   const [dashboard, setDashboard] = useState(initialDashboard);
@@ -24,6 +37,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   const [error, setError] = useState(initialDashboard ? "" : "تعذر تحميل الحملات أعد المحاولة");
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [review, setReview] = useState(false);
   const [reviewedAudience, setReviewedAudience] = useState("");
   const [disconnectReview, setDisconnectReview] = useState(false);
@@ -40,6 +54,10 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null);
   const reviewRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  const uploadRef = useRef<AbortController | null>(null);
+  const uploadTimer = useRef<number | null>(null);
+  const uploadSequence = useRef(0);
+  const previewUrlRef = useRef<string | null>(null);
 
   const request = useCallback(async (action?: Record<string, unknown>, quiet = false): Promise<ApiResult["data"] | null> => {
     if (mutation.current || (quiet && requestRef.current)) return null;
@@ -104,7 +122,13 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   useEffect(() => {
     mounted.current = true;
     const lifecycleSequence = sequence;
-    return () => { mounted.current = false; qrIntent.current = null; lifecycleSequence.current++; requestRef.current?.abort(); };
+    const lifecycleUploadSequence = uploadSequence;
+    return () => {
+      mounted.current = false; qrIntent.current = null; lifecycleSequence.current++; requestRef.current?.abort();
+      lifecycleUploadSequence.current++; uploadRef.current?.abort();
+      if (uploadTimer.current !== null) window.clearTimeout(uploadTimer.current);
+      if (previewUrlRef.current) { URL.revokeObjectURL(previewUrlRef.current); previewUrlRef.current = null; }
+    };
   }, []);
   useEffect(() => {
     if (!dashboard?.eligible) return;
@@ -141,6 +165,52 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     setDraft((previous) => ({ ...previous, [field]: value }));
     setReview(false);
   }
+  function removeAttachment() {
+    uploadSequence.current++; uploadRef.current?.abort(); uploadRef.current = null;
+    if (uploadTimer.current !== null) { window.clearTimeout(uploadTimer.current); uploadTimer.current = null; }
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setAttachment(null); setReview(false);
+  }
+  async function uploadAttachment(file: File) {
+    removeAttachment();
+    const invalid = campaignMediaError(file);
+    const kind = MARKETING_MEDIA_TYPES[file.type as keyof typeof MARKETING_MEDIA_TYPES]?.kind ?? "image";
+    if (invalid) { setAttachment({ file, kind, previewUrl: null, status: "failed", media: null, error: invalid }); return; }
+    const previewUrl = URL.createObjectURL(file);
+    previewUrlRef.current = previewUrl;
+    setAttachment({ file, kind, previewUrl, status: "uploading", media: null, error: "" });
+    const current = ++uploadSequence.current;
+    const controller = new AbortController(); uploadRef.current = controller;
+    const isCurrent = () => mounted.current && uploadSequence.current === current;
+    const timeout = window.setTimeout(() => {
+      if (!isCurrent()) return;
+      uploadSequence.current++; controller.abort(); uploadRef.current = null;
+      uploadTimer.current = null;
+      setAttachment(previous => previous ? { ...previous, status: "failed", error: "استغرق رفع المرفق وقتًا طويلًا تحقق من الاتصال وأعد المحاولة" } : null);
+    }, 180000);
+    uploadTimer.current = timeout;
+    try {
+      const prepared = await fetch("/api/marketing/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "prepare", fileName: file.name, mimeType: file.type, size: file.size }), cache: "no-store", signal: controller.signal });
+      const preparation = await prepared.json() as { ok: boolean; message?: string; data?: { mediaId: string; bucket: string; upload: { path: string; token: string } } };
+      if (!isCurrent()) return;
+      if (!prepared.ok || !preparation.ok || !preparation.data?.upload) throw new Error(preparation.message || "تعذر تجهيز رفع المرفق حاول مجددًا");
+      const target = preparation.data;
+      const { error: uploadError } = await createClient().storage.from(target.bucket).uploadToSignedUrl(target.upload.path, target.upload.token, file, { contentType: file.type });
+      if (!isCurrent()) return;
+      if (uploadError) throw new Error("تعذر رفع المرفق احتفظنا برسالتك ويمكنك المحاولة مجددًا");
+      const verified = await fetch("/api/marketing/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "finalize", mediaId: target.mediaId }), cache: "no-store", signal: controller.signal });
+      const verification = await verified.json() as { ok: boolean; message?: string; data?: { media: MarketingCampaignMedia } };
+      if (!isCurrent()) return;
+      if (!verified.ok || !verification.ok || !verification.data?.media?.id) throw new Error(verification.message || "تعذر التحقق من المرفق اختر ملفًا آخر أو أعد المحاولة");
+      setAttachment({ file, kind, previewUrl, status: "ready", media: verification.data.media, error: "" });
+    } catch (failure) {
+      if (isCurrent()) setAttachment(previous => previous ? { ...previous, status: "failed", error: failure instanceof Error && /[\u0600-\u06ff]/.test(failure.message) ? failure.message : "تعذر رفع المرفق تحقق من الاتصال وأعد المحاولة" } : null);
+    } finally {
+      window.clearTimeout(timeout);
+      if (uploadSequence.current === current) { uploadRef.current = null; uploadTimer.current = null; }
+    }
+  }
   async function connect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsed = parseCampaignRecipients(phone);
@@ -150,24 +220,26 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   }
   function prepare(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const invalid = campaignDraftError(draft);
+    const invalid = campaignDraftError({ ...draft, mediaId: attachment?.media?.id, mediaStatus: attachment?.status });
     if (invalid) { setError(invalid); errorRef.current?.focus(); return; }
     setReviewedAudience(JSON.stringify(draft.customerIds));
     setError(""); setNotice(""); setReview(true);
   }
   async function launch() {
     if (reviewedAudience !== JSON.stringify(draft.customerIds)) { setReview(false); setError("تغير العملاء المحددون راجع الحملة مجددًا قبل الإرسال"); return; }
-    const invalid = campaignDraftError(draft);
+    const invalid = campaignDraftError({ ...draft, mediaId: attachment?.media?.id, mediaStatus: attachment?.status });
     if (invalid) { setError(invalid); setReview(false); return; }
-    const payload = { title: draft.title.trim(), body: draft.body.trim(), customerIds: draft.customerIds, consent: true, ...(draft.scheduledAt ? { scheduledAt: new Date(draft.scheduledAt).toISOString() } : {}) };
+    const payload = { title: draft.title.trim(), body: draft.body.trim(), customerIds: draft.customerIds, consent: true, ...(attachment?.media ? { mediaId: attachment.media.id } : {}), ...(draft.scheduledAt ? { scheduledAt: new Date(draft.scheduledAt).toISOString() } : {}) };
     const fingerprint = JSON.stringify(payload);
     if (!attempt.current || attempt.current.fingerprint !== fingerprint) attempt.current = { fingerprint, key: crypto.randomUUID() };
     const result = await request({ action: "createCampaign", ...payload, idempotencyKey: attempt.current.key });
-    if (result) { attempt.current = null; setDraft(emptyDraft); setReview(false); setNotice("تمت إضافة الحملة تابع حالة كل مرحلة في سجل الحملات"); }
+    if (result) { attempt.current = null; setDraft(emptyDraft); removeAttachment(); setReview(false); setNotice("تمت إضافة الحملة تابع حالة كل مرحلة في سجل الحملات"); }
   }
 
   const connected = connectionStatus === "connected" && Boolean(dashboard?.connection?.verifiedPhone);
   const ready = Boolean(dashboard?.eligible && dashboard.configured && connected);
+  const mediaPending = attachment !== null && attachment.status !== "ready";
+  const messageLimit = attachment ? MARKETING_MEDIA_BODY_LIMIT : 3000;
   const audience = dashboard?.audience ?? [];
   const filteredAudience = audience.filter((customer) => `${customer.name} ${customer.phone}`.toLocaleLowerCase("ar").includes(audienceSearch.trim().toLocaleLowerCase("ar")));
   const eligibleAudience = filteredAudience.filter((customer) => !customer.suppressed);
@@ -209,7 +281,20 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
             {!ready && <p className={styles.hint}>يمكنك تجهيز الرسالة الآن ويصبح الإرسال متاحًا بعد تأكيد اتصال رقم علامتك</p>}
             <div className={styles.fields}>
               <label className={styles.field} htmlFor="campaign-title">اسم الحملة<input id="campaign-title" className={styles.input} value={draft.title} maxLength={100} required disabled={busy} onChange={(event) => edit("title", event.target.value)} placeholder="مثل عرض نهاية الأسبوع" /></label>
-              <label className={styles.field} htmlFor="campaign-body">نص رسالة واتساب<textarea id="campaign-body" className={styles.input} rows={6} maxLength={3000} required disabled={busy} value={draft.body} onChange={(event) => edit("body", event.target.value)} placeholder="اكتب رسالتك بطابع علامتك" /></label>
+              <label className={styles.field} htmlFor="campaign-body">نص رسالة واتساب<textarea id="campaign-body" className={styles.input} rows={6} maxLength={messageLimit} required disabled={busy} value={draft.body} onChange={(event) => edit("body", event.target.value)} placeholder="اكتب رسالتك بطابع علامتك" aria-describedby="campaign-body-help" /></label>
+              <p id="campaign-body-help" className={styles.count}>{formatNumber(draft.body.trim().length)} من {formatNumber(messageLimit)} حرف{attachment ? " — يصل النص مع الصورة أو الفيديو في رسالة واحدة" : " — يمكنك إضافة صورة أو فيديو لرسالتك"}</p>
+              <fieldset className={styles.mediaPicker} aria-describedby="campaign-media-help">
+                <legend>صورة أو فيديو اختياري</legend>
+                <p id="campaign-media-help" className={styles.hint}>مرفق واحد للحملة صورة JPG أو PNG أو WebP حتى ١٠ ميجابايت أو فيديو MP4 حتى ٥٠ ميجابايت</p>
+                <div className={styles.mediaActions}>
+                  <label className={`${styles.secondary} ${styles.fileChoice}`} data-disabled={busy || !dashboard.eligible || !dashboard.configured}><ImagePlus size={18} aria-hidden="true" /><span>{attachment ? "استبدال المرفق" : "إضافة صورة أو فيديو"}</span><input id="campaign-media" className={styles.fileInput} type="file" accept="image/jpeg,image/png,image/webp,video/mp4" disabled={busy || !dashboard.eligible || !dashboard.configured} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadAttachment(file); }} /></label>
+                  {attachment && <button type="button" className={styles.secondary} disabled={busy} onClick={removeAttachment}><Trash2 size={16} aria-hidden="true" />إزالة المرفق</button>}
+                </div>
+                {attachment && <div className={styles.attachment} data-state={attachment.status} aria-busy={attachment.status === "uploading"}>
+                  <div className={styles.attachmentInfo}><strong>{attachment.file.name}</strong><span>{attachment.kind === "video" ? "فيديو" : "صورة"} · {formatNumber(Math.max(0.01, attachment.file.size / (1024 * 1024)))} ميجابايت</span></div>
+                  {attachment.status === "uploading" ? <p className={styles.mediaStatus} role="status">جارٍ رفع المرفق والتحقق منه يمكنك متابعة كتابة الرسالة</p> : attachment.status === "failed" ? <><p className={styles.mediaError} role="alert">{attachment.error}</p><button type="button" className={styles.secondary} disabled={busy} onClick={() => void uploadAttachment(attachment.file)}>إعادة رفع المرفق</button></> : <p className={styles.mediaStatus} role="status"><CheckCheck size={16} aria-hidden="true" />المرفق جاهز للإرسال</p>}
+                </div>}
+              </fieldset>
               <fieldset className={styles.audience} aria-describedby="recipient-help">
                 <legend>عملاء الحملة</legend>
                 <p id="recipient-help" className={styles.hint}>عملاء علامتك وأصحاب بطاقات الولاء دون تكرار الأرقام وجود العميل أو تحميل بطاقته لا يعني موافقته على الرسائل التسويقية</p>
@@ -220,16 +305,16 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
                   <button type="button" className={styles.secondary} disabled={busy || customer.suppressed} aria-label={customer.suppressed ? `الإرسال موقوف إلى ${customer.phone}` : `إيقاف الإرسال إلى ${customer.phone}`} onClick={async () => { const result = await request({ action: "optOut", customerId: customer.id }); if (result) { setReview(false); setNotice("تم إيقاف الرسائل التسويقية لهذا العميل واستبعاده من الحملات"); } }}>{customer.suppressed ? "الإرسال موقوف" : "إيقاف الإرسال"}</button>
                 </li>)}</ul>}
                 {filteredAudience.length > 20 && <div className={styles.audienceTools}><button type="button" className={styles.secondary} disabled={page === 0} onClick={() => setAudiencePage(page - 1)}>السابق</button><span className={styles.count}>صفحة {formatNumber(page + 1)} من {formatNumber(Math.ceil(filteredAudience.length / 20))}</span><button type="button" className={styles.secondary} disabled={(page + 1) * 20 >= filteredAudience.length} onClick={() => setAudiencePage(page + 1)}>التالي</button></div>}
-                <p className={styles.count}>استخدم إيقاف الإرسال إذا لم يوافق العميل أو طلب عدم التواصل معه — {formatNumber(dashboard.optOutCount)} رقم موقوف</p>
+                <p className={styles.count}>عندما يرسل العميل كلمة إيقاف أوقف الإرسال إليه يدويًا من هذه القائمة — {formatNumber(dashboard.optOutCount)} رقم موقوف</p>
               </fieldset>
               <label className={styles.field} htmlFor="campaign-date">موعد الإرسال اختياري<input id="campaign-date" className={styles.input} type="datetime-local" value={draft.scheduledAt} disabled={busy} onChange={(event) => edit("scheduledAt", event.target.value)} aria-describedby="schedule-help" /></label>
               <p id="schedule-help" className={styles.count}>اتركه فارغًا لبدء الإرسال بعد التأكيد — اختيار الموعد حسب توقيت جهازك</p>
               <label className={styles.check}><input type="checkbox" checked={draft.consent} disabled={busy} onChange={(event) => edit("consent", event.target.checked)} /><span>أؤكد أن أصحاب هذه الأرقام وافقوا على استقبال رسائل علامتي التسويقية وأنني سأحترم طلبات إيقافها</span></label>
             </div>
-            {!reviewing && <div className={styles.actions}><button className={styles.button} disabled={busy || !ready}><Send size={16} aria-hidden="true" />مراجعة الحملة</button></div>}
-            {reviewing && <div ref={reviewRef} tabIndex={-1} className={styles.review} aria-label="مراجعة الحملة قبل الإرسال"><h3>راجع التفاصيل قبل الإرسال</h3><dl><dt>من الرقم</dt><dd><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></dd><dt>عدد العملاء</dt><dd>{formatNumber(draft.customerIds.length)}</dd><dt>موعد البدء</dt><dd>{draft.scheduledAt ? formatDate(draft.scheduledAt) : "بعد التأكيد"}</dd></dl><p>سترسل الرسالة الظاهرة في المعاينة إلى العملاء الذين اخترتهم ولن تُرسل إلى الأرقام الموقوفة من الحملات</p><div className={styles.actions}><button type="button" className={styles.button} disabled={busy || !ready} onClick={() => void launch()}>{busy ? "جارٍ تأكيد الحملة" : draft.scheduledAt ? "تأكيد جدولة الحملة" : "تأكيد بدء الإرسال"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setReview(false)}>العودة للتعديل</button></div></div>}
+            {!reviewing && <div className={styles.actions}><button className={styles.button} disabled={busy || !ready || mediaPending}><Send size={16} aria-hidden="true" />مراجعة الحملة</button></div>}
+            {reviewing && <div ref={reviewRef} tabIndex={-1} className={styles.review} aria-label="مراجعة الحملة قبل الإرسال"><h3>راجع التفاصيل قبل الإرسال</h3><dl><dt>من الرقم</dt><dd><bdi dir="ltr">+{dashboard.connection?.verifiedPhone}</bdi></dd><dt>عدد العملاء</dt><dd>{formatNumber(draft.customerIds.length)}</dd><dt>موعد البدء</dt><dd>{draft.scheduledAt ? formatDate(draft.scheduledAt) : "بعد التأكيد"}</dd>{attachment?.media && <><dt>المرفق</dt><dd>{attachment.kind === "video" ? "فيديو" : "صورة"} — {attachment.file.name}</dd></>}</dl>{attachment && <CampaignMediaPreview attachment={attachment} />}<p className={styles.reviewMessage}>{draft.body.trim()}{"\n\n"}{MARKETING_STOP_FOOTER}</p><p>سترسل الرسالة إلى العملاء الذين اخترتهم ولن تُرسل إلى الأرقام الموقوفة من الحملات</p><div className={styles.actions}><button type="button" className={styles.button} disabled={busy || !ready || mediaPending} onClick={() => void launch()}>{busy ? "جارٍ تأكيد الحملة" : draft.scheduledAt ? "تأكيد جدولة الحملة" : "تأكيد بدء الإرسال"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={() => setReview(false)}>العودة للتعديل</button></div></div>}
           </form>
-          <aside className={styles.preview} aria-label="معاينة رسالة واتساب"><div className={styles.previewHeader}><MessageCircle aria-hidden="true" /><div>{dashboard.brandName}<p className={styles.hint}>معاينة رسالتك</p></div></div><p className={styles.bubble}>{draft.body.trim() ? `${draft.body.trim()}\n\nلإيقاف الرسائل أرسل إيقاف أو استخدم الرابط\n[رابط إيقاف الرسائل الخاص بالعميل]` : "ستظهر رسالتك هنا أثناء كتابتها"}</p><p className={styles.hint}>تظهر الرسالة من حساب واتساب المرتبط ونضيف تلقائيًا نص إيقاف الرسائل ورابطًا خاصًا بكل عميل عند الإرسال</p></aside>
+          <aside className={styles.preview} aria-label="معاينة رسالة واتساب"><div className={styles.previewHeader}><MessageCircle aria-hidden="true" /><div>{dashboard.brandName}<p className={styles.hint}>معاينة رسالتك</p></div></div><div className={styles.bubble}>{attachment && <CampaignMediaPreview attachment={attachment} />}<p>{draft.body.trim() ? `${draft.body.trim()}\n\n${MARKETING_STOP_FOOTER}` : "ستظهر رسالتك هنا أثناء كتابتها"}</p></div><p className={styles.hint}>نضيف عبارة إيقاف الرسائل تلقائيًا دون رابط وعند طلب العميل الإيقاف يمكنك استبعاده من قائمة العملاء</p></aside>
         </section>
         <section className={styles.panel} aria-labelledby="history-heading"><div className={styles.heading}><div><p className={styles.eyebrow}>متابعة الرسائل</p><h2 id="history-heading">سجل الحملات</h2><p className={styles.hint}>قبول الإرسال لا يعني وصول الرسالة أو قراءتها تتحدث الحالات عند ورود تأكيدها</p></div><span className={styles.badge}>{formatNumber(dashboard.campaigns.length)} حملة</span></div>
           {!dashboard.campaigns.length ? <p className={styles.empty}>لم تنشئ حملات بعد<br />بعد تأكيد حملتك الأولى ستظهر رسالتها ونتائجها هنا</p> : <div className={styles.history}>{dashboard.campaigns.map((campaign) => <article key={campaign.id} className={styles.campaign}><div className={styles.heading}><div><h3>{campaign.title}</h3><p className={styles.count}>{formatDate(campaign.createdAt)} بتوقيت السعودية{campaign.scheduledAt && <> — مجدولة {formatDate(campaign.scheduledAt)}</>}</p></div><span className={styles.badge}>{campaignLabels[campaign.status] ?? "قيد التحقق"}</span></div><p className={styles.message}>{campaign.body}</p><div className={styles.metrics}>{([["الأرقام", campaign.total], ["بانتظار الإرسال", campaign.queued], ["مقبولة للإرسال", campaign.accepted], ["تم التسليم", campaign.delivered], ["تمت القراءة", campaign.read]] as const).map(([label, value]) => <div className={styles.metric} key={label}><strong>{formatNumber(value)}</strong>{label}</div>)}</div><details><summary>تفاصيل الحالات الأخرى</summary><dl><dt>تعذر الإرسال</dt><dd>{formatNumber(campaign.failed)}</dd><dt>لم يتأكد الإرسال</dt><dd>{formatNumber(campaign.uncertain)}</dd><dt>ملغاة</dt><dd>{formatNumber(campaign.cancelled)}</dd><dt>مستبعدة</dt><dd>{formatNumber(campaign.suppressed)}</dd></dl><p className={styles.hint}>الرسائل التي لم يتأكد إرسالها لا يعاد إرسالها تلقائيًا لتجنب التكرار</p></details>{["queued", "scheduled", "sending", "paused"].includes(campaign.status) && <div className={styles.cancel}>{cancelReview !== campaign.id ? <button className={styles.secondary} disabled={busy} onClick={() => setCancelReview(campaign.id)}>إلغاء الرسائل المتبقية</button> : <div className={styles.review}><p>سيُلغى انتظار الرسائل المتبقية ولا يمكن استرجاع ما أُرسل بالفعل</p><div className={styles.actions}><button className={styles.danger} disabled={busy} onClick={async () => { const result = await request({ action: "cancelCampaign", campaignId: campaign.id }); if (result) { setCancelReview(null); setNotice("تم إلغاء الرسائل التي لم يبدأ إرسالها"); } }}>تأكيد الإلغاء</button><button className={styles.secondary} disabled={busy} onClick={() => setCancelReview(null)}>متابعة الحملة</button></div></div>}</div>}</article>)}</div>}

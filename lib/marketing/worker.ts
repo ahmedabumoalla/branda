@@ -1,10 +1,12 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { decryptMarketingSecret, marketingConfigured, marketingPublicOrigin, signMarketingUnsubscribe } from "@/lib/marketing/crypto";
-import { getGreenApiMarketingState, getGreenApiMarketingAccount, sendGreenApiMarketingMessage, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
+import { decryptMarketingSecret, marketingConfigured } from "@/lib/marketing/crypto";
+import { getGreenApiMarketingState, getGreenApiMarketingAccount, sendGreenApiMarketingMessage, sendGreenApiMarketingMedia, GreenApiProviderError, type GreenApiMarketingCredentials } from "@/lib/whatsapp/green-api-marketing";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { MARKETING_STOP_FOOTER } from "@/lib/marketing/media-rules";
+import { signMarketingMedia } from "@/lib/marketing/media";
 
-type Job = { id: string; cafe_id: string; campaign_id: string; phone: string; body: string; title: string; created_by: string; lease_token: string; instance_id: string; encrypted_credentials: string; requested_phone: string; generation: string };
+type Job = { id: string; cafe_id: string; campaign_id: string; phone: string; body: string; title: string; created_by: string; lease_token: string; instance_id: string; encrypted_credentials: string; requested_phone: string; generation: string; media_id?: string | null };
 
 export async function runMarketingJobs() {
   if (!marketingConfigured()) throw new Error("MARKETING_CONFIGURATION_MISSING");
@@ -29,13 +31,13 @@ export async function runMarketingJobs() {
         await db.from("brand_marketing_connections").update({ status: state === "authorized" ? "mismatch" : "pairing", verified_phone: verified, updated_at: new Date().toISOString() }).eq("cafe_id", job.cafe_id).eq("generation", job.generation).eq("status", "connected");
         await finish(job, "queued"); result.deferred++; return;
       }
-      const unsubscribe = `${marketingPublicOrigin()}/api/marketing/unsubscribe?id=${job.id}&token=${signMarketingUnsubscribe(job.id)}`;
-      const message = `${job.body}\n\nلإيقاف الرسائل أرسل إيقاف أو استخدم الرابط\n${unsubscribe}`;
+      const message = `${job.body}\n\n${MARKETING_STOP_FOOTER}`;
+      const media = job.media_id ? await signMarketingMedia(job.cafe_id, job.media_id) : null;
       // Last transactional check covers current profile, package, brand, cancellation, opt-out and pacing.
       const begin = await db.rpc("marketing_begin_dispatch", { p_id: job.id, p_lease: job.lease_token, p_generation: job.generation });
       if (begin.error || begin.data !== true) { await finish(job, "queued"); result.deferred++; return; }
       attempted = true;
-      const response = await sendGreenApiMarketingMessage(credentials, { phone: job.phone, message });
+      const response = media ? await sendGreenApiMarketingMedia(credentials, { phone: job.phone, caption: message, ...media }) : await sendGreenApiMarketingMessage(credentials, { phone: job.phone, message });
       await finish(job, "accepted", response.providerMessageId);
       result.accepted++;
     } catch (error) {

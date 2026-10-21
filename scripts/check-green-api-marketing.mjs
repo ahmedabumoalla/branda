@@ -174,4 +174,15 @@ await test(async () => {
   await assert.rejects(() => wrong.deleteGreenApiMarketingInstance(credentials), errorIs(false, "DELETE_FORBIDDEN"));
   assert.equal(wrong.calls.length, 1);
 });
+await test(async () => {
+  const media = { phone: "966500000001", caption: "Caption", url: "https://project.supabase.co/storage/v1/object/sign/marketing-media/brand/ready/file.mp4?token=signed", fileName: "campaign.mp4" };
+  const h = harness(() => ({ idMessage: "media-one" }), { NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co" });
+  assert.equal((await h.sendGreenApiMarketingMedia(credentials, media)).providerMessageId, "media-one");
+  assert.equal(h.calls.length, 1);assert(h.calls[0].url.includes('/sendFileByUrl/'));
+  assert.deepEqual(h.calls[0].body, { chatId: "966500000001@c.us", urlFile: media.url, fileName: "campaign.mp4", caption: "Caption" });
+  for (const changes of [{ url: 'https://evil.test/file.mp4' },{ url: media.url.replace('/object/sign/','/object/public/') },{ caption: 'x'.repeat(1025) },{ fileName: '../secret.txt' }]) await assert.rejects(()=>h.sendGreenApiMarketingMedia(credentials,{...media,...changes}));
+  assert.equal(h.calls.length, 1);
+  const uncertain=harness(()=>{throw new Error('network');},{NEXT_PUBLIC_SUPABASE_URL:'https://project.supabase.co'});
+  await assert.rejects(()=>uncertain.sendGreenApiMarketingMedia(credentials,media),errorIs(true,'REQUEST_FAILED'));assert.equal(uncertain.calls.length,1);
+});
 console.log(`PASS GREEN-API marketing provider: ${checks} groups; all requests mocked, zero live sends/provision/deletions`);

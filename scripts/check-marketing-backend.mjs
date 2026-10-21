@@ -54,13 +54,15 @@ await test("configuration and signed unsubscribe reject missing keys and changed
   assert(!crypto.verifyMarketingUnsubscribe(id(1),token+"x"));
 });
 
-function workerHarness({begin=true,state="authorized",phone="966500000001",sendError,finalError=false}={}) {
+function workerHarness({begin=true,state="authorized",phone="966500000001",sendError,finalError=false,media=false,mediaError=false}={}) {
   const job={id:id(3),cafe_id:id(1),campaign_id:id(2),phone:"966500000002",requested_phone:"966500000001",body:"Campaign",lease_token:id(4),generation:id(5),instance_id:creds.idInstance,encrypted_credentials:crypto.encryptMarketingSecret(creds,`${id(1)}:${creds.idInstance}`)};
+  if(media)job.media_id=id(42);
   let sends=0, sentMessage;
   const db=database(call=>call.rpc==="marketing_claim_jobs"?{data:[job]}:call.rpc==="marketing_begin_dispatch"?{data:begin}:call.rpc==="marketing_finish_dispatch"&&finalError?{error:{message:"test"}}:{data:null});
-  const load=loader({"@/lib/supabase/admin":{createAdminClient:()=>db},"@/lib/whatsapp/green-api-marketing":{
+  const load=loader({"@/lib/marketing/media":{signMarketingMedia:async(cafe,mediaId)=>{assert.equal(cafe,id(1));assert.equal(mediaId,id(42));if(mediaError)throw Error('unavailable');return {url:'https://storage.test/signed',fileName:'campaign.mp4'};}},"@/lib/supabase/admin":{createAdminClient:()=>db},"@/lib/whatsapp/green-api-marketing":{
     GreenApiProviderError:ProviderError,getGreenApiMarketingState:async()=>state,getGreenApiMarketingAccount:async()=>({phone}),
     sendGreenApiMarketingMessage:async(_,message)=>{sends++;sentMessage=message;if(sendError)throw sendError;return {providerMessageId:"provider-1"};},
+    sendGreenApiMarketingMedia:async(_,message)=>{sends++;sentMessage=message;if(sendError)throw sendError;return {providerMessageId:"provider-1"};},
   }});
   return {run:load("lib/marketing/worker.ts").runMarketingJobs,db,sends:()=>sends,message:()=>sentMessage};
 }
@@ -70,11 +72,17 @@ await test("worker verifies sender and last transactional gate before sending",a
     assert.equal(h.db.calls.at(-1).args.p_status,"queued");
   }
 });
-await test("provider acceptance is recorded separately and includes signed opt-out",async()=>{
+await test("provider acceptance is recorded separately and includes exact manual stop footer",async()=>{
   const h=workerHarness();const result=await h.run();assert.equal(h.sends(),1);assert.equal(result.accepted,1);
   assert.equal(h.db.calls.at(-1).args.p_status,"accepted");assert.equal(h.db.calls.at(-1).args.p_message,"provider-1");
-  const link=h.message().message.split("\n").at(-1);const parsed=new URL(link);
-  assert(crypto.verifyMarketingUnsubscribe(parsed.searchParams.get("id"),parsed.searchParams.get("token")));
+  assert.equal(h.message().message,"Campaign\n\nلإيقاف الرسائل أرسل كلمة إيقاف");
+  assert(!h.message().message.includes('/unsubscribe'));
+});
+await test("media dispatch signs tenant object and sends caption with file exactly once",async()=>{
+  const h=workerHarness({media:true});assert.equal((await h.run()).accepted,1);assert.equal(h.sends(),1);
+  assert.equal(h.message().caption,"Campaign\n\nلإيقاف الرسائل أرسل كلمة إيقاف");assert.equal(h.message().fileName,'campaign.mp4');
+  const failed=workerHarness({media:true,mediaError:true});assert.equal((await failed.run()).deferred,1);assert.equal(failed.sends(),0);
+  const uncertain=workerHarness({media:true,sendError:new ProviderError(true)});assert.equal((await uncertain.run()).uncertain,1);assert.equal(uncertain.sends(),1);
 });
 await test("uncertain sends and lost final acknowledgement never retry",async()=>{
   for(const config of [{sendError:new ProviderError(true)},{sendError:new Error("network failure")},{finalError:true}]){
@@ -215,13 +223,13 @@ await test("cron requires exact secret before running worker",async()=>{
   assert.equal((await api.GET(new Request("https://barndaksa.com/api/marketing/jobs"))).status,401);
   assert.equal((await api.GET(new Request("https://barndaksa.com/api/marketing/jobs",{headers:{authorization:`Bearer ${env.CRON_SECRET}`}}))).status,200);assert.equal(runs,1);
 });
-await test("authenticated webhook rejects wrong instance, handles STOP and delivery distinctly",async()=>{
+await test("authenticated webhook rejects wrong instance, leaves STOP manual and records delivery",async()=>{
   const token="t".repeat(43),db=database(c=>c.rpc?{data:null}:{data:{instance_id:creds.idInstance,webhook_token_hash:crypto.hashMarketingToken(token),generation:id(5),status:"connected"}});
   const api=loader({"@/lib/supabase/admin":{createAdminClient:()=>db}})("app/api/marketing/webhook/[brandId]/route.ts");
   const event={typeWebhook:"incomingMessageReceived",instanceData:{idInstance:creds.idInstance},senderData:{sender:"966500000001@c.us"},messageData:{textMessageData:{textMessage:"إيقاف"}}};
   const send=(payload,authorization=`Bearer ${token}`)=>api.POST(new Request("https://barndaksa.com/api/marketing/webhook/"+id(10),{method:"POST",headers:{authorization},body:JSON.stringify(payload)}),{params:Promise.resolve({brandId:id(10)})});
   assert.equal((await send(event,token)).status,401);assert.equal((await send({...event,instanceData:{idInstance:"12345"}})).status,400);assert(!db.calls.some(c=>c.rpc));
-  assert.equal((await send(event)).status,204);assert.equal(db.calls.at(-1).rpc,"marketing_suppress");assert.equal(db.calls.at(-1).args.p_cafe,id(10));
+  assert.equal((await send(event)).status,204);assert(!db.calls.some(c=>c.rpc==='marketing_suppress'));
   assert.equal((await send({...event,typeWebhook:"outgoingMessageStatus",idMessage:"message",status:"delivered"})).status,204);assert.equal(db.calls.at(-1).args.p_status,"delivered");
   const count=db.calls.filter(c=>c.rpc).length;await send({...event,senderData:{sender:"966500000001@g.us"}});assert.equal(db.calls.filter(c=>c.rpc).length,count);
 });

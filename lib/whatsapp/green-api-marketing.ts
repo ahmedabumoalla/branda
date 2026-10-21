@@ -56,7 +56,7 @@ async function instanceRequest(credentials: GreenApiMarketingCredentials, method
   const canUseUniversalHost = !mutation && !body && config.apiUrl !== UNIVERSAL_HOST && ["getStateInstance", "qr", "getWaSettings"].includes(method);
   let response: Response;
   const requested = Number(process.env.GREEN_API_REQUEST_TIMEOUT_MS);
-  const timeout = Number.isSafeInteger(requested) && requested > 0 ? Math.min(requested, 30_000) : 10_000;
+  const timeout = Number.isSafeInteger(requested) && requested > 0 ? Math.min(requested, 30_000) : method === "sendFileByUrl" ? 30_000 : 10_000;
   try {
     response = await fetch(`${config.apiUrl}/waInstance${config.idInstance}/${method}/${encodeURIComponent(config.apiTokenInstance)}`, {
       method: body ? "POST" : "GET", ...(body ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}),
@@ -138,6 +138,17 @@ export async function sendGreenApiMarketingMessage(credentials: GreenApiMarketin
   const result = record(await instanceRequest(credentials, "sendMessage", {
     chatId: `${input.phone}@c.us`, message: input.message, linkPreview: false,
   }, true), true);
+  if (typeof result.idMessage !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(result.idMessage)) fail("ACKNOWLEDGEMENT_MISSING", true);
+  return { providerMessageId: result.idMessage };
+}
+
+/** One file with one caption; never fall back to a second text send after an uncertain request */
+export async function sendGreenApiMarketingMedia(credentials: GreenApiMarketingCredentials, input: { phone: string; caption: string; url: string; fileName: string }): Promise<{ providerMessageId: string }> {
+  if (!/^[1-9]\d{6,14}$/.test(input.phone) || !input.caption.trim() || input.caption.length > 1024 || !/^campaign\.(jpg|png|webp|mp4)$/.test(input.fileName)) fail("MEDIA_INVALID");
+  let url: URL, expected: URL;
+  try { url = new URL(input.url); expected = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""); } catch { return fail("MEDIA_URL_INVALID"); }
+  if (url.protocol !== "https:" || url.origin !== expected.origin || url.username || url.password || url.hash || !url.pathname.startsWith("/storage/v1/object/sign/marketing-media/") || !url.searchParams.get("token")) fail("MEDIA_URL_INVALID");
+  const result = record(await instanceRequest(credentials, "sendFileByUrl", { chatId: `${input.phone}@c.us`, urlFile: url.href, fileName: input.fileName, caption: input.caption }, true), true);
   if (typeof result.idMessage !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(result.idMessage)) fail("ACKNOWLEDGEMENT_MISSING", true);
   return { providerMessageId: result.idMessage };
 }
