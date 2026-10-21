@@ -92,8 +92,8 @@ await test("uncertain sends and lost final acknowledgement never retry",async()=
   const h=workerHarness({sendError:new ProviderError(false)});assert.equal((await h.run()).failed,1);assert.equal(h.sends(),1);
 });
 
-function ownerHarness({profile={role:"cafe_owner",status:"active"},user={id:id(1)},owner=id(1),member="staff",eligible=true,maintenance=null,connection=null,provisionError,reused=false, customers=[{id:id(30),full_name:"Customer",phone:"0500000001",status:"active"}],cards=[],suppressed=[],audienceError=false,state="authorized",stateError,qrError,accountPhone="966500000099"}={}) {
-  let row=connection, provisions=[],settings=0,qrCalls=0;
+function ownerHarness({profile={role:"cafe_owner",status:"active"},user={id:id(1)},owner=id(1),member="staff",eligible=true,maintenance=null,connection=null,provisionError,reused=false, customers=[{id:id(30),full_name:"Customer",phone:"0500000001",status:"active"}],cards=[],suppressed=[],audienceError=false,state="authorized",stateError,qrError,accountPhone="966500000099",deleteError,disconnectSaveError=false}={}) {
+  let row=connection, provisions=[],settings=0,qrCalls=0,deletions=0;
   const db=database(call=>{
     if(call.rpc==="marketing_actor_allowed")return {data:eligible};
     if(call.rpc==="marketing_campaign_history")return {data:[]};
@@ -101,22 +101,51 @@ function ownerHarness({profile={role:"cafe_owner",status:"active"},user={id:id(1
       row={cafe_id:id(10),requested_phone:call.args.p_phone,status:"provisioning",generation:id(5),lease_token:id(6),allow_create:!row?.provision_attempted_at,provision_attempted_at:new Date().toISOString()};return {data:row};
     }
     if(call.rpc==="marketing_suppress"){suppressed.push(call.args.p_phone);return {data:true};}
+    if(call.rpc==="marketing_disconnect_connection"){assert.equal(call.args.p_generation,row.generation);row={...row,status:"disconnecting",generation:id(8),lease_until:new Date(Date.now()+60000).toISOString()};return {data:row.generation};}
     if(call.rpc)return {data:true};
     if(call.table==="cafes")return {data:{id:id(10),name:"Brand",owner_user_id:owner,status:"active"}};
     if(call.table==="cafe_members")return {data:{role:member}};
     if(call.table==="brand_marketing_suppressions")return {count:suppressed.length,data:suppressed.map(phone=>({phone}))};
     if(["customer_profiles","loyalty_cards"].includes(call.table))return audienceError?{error:{message:"private"}}:{data:(call.table==="customer_profiles"?customers:cards).slice(call.range[0],call.range[1]+1)};
     if(call.table==="brand_marketing_connections"){
+      if(call.update?.status==="disconnected"&&disconnectSaveError)return {error:{message:"private database diagnostic"}};
       if(call.update)row={...row,...call.update};return {data:row};
     }
     throw new Error(`Unexpected table ${call.table}`);
   });
   const session={auth:{getUser:async()=>({data:{user}})},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:profile})})})})};
   const load=loader({"@/lib/supabase/admin":{createAdminClient:()=>db},"@/lib/supabase/server":{createClient:async()=>session},"@/lib/data/cafes":{requireOwnerCafeContext:async()=>({id:id(10)})},"@/lib/platform/maintenance":{readMaintenanceSessionCookie:async()=>maintenance},"@/lib/whatsapp/green-api-marketing":{
+    deleteGreenApiMarketingInstance:async auth=>{assert.deepEqual(auth,creds);assert.equal(row.status,"disconnecting");deletions++;if(deleteError)throw deleteError;},
     GreenApiProviderError:ProviderError,provisionGreenApiMarketingInstance:async args=>{provisions.push(args);if(provisionError)throw provisionError;return {credentials:creds,reused};},configureGreenApiMarketingWebhook:async()=>{settings++;},getGreenApiMarketingState:async()=>{if(stateError)throw stateError;return state;},getGreenApiMarketingAccount:async()=>({phone:accountPhone}),getGreenApiMarketingQr:async()=>{qrCalls++;if(qrError)throw qrError;return {type:"qrCode",message:"YWJj"};},
   }});
-  return {...load("lib/data/marketing.ts"),db,provisions,row:()=>row,settings:()=>settings,qrCalls:()=>qrCalls};
+  return {...load("lib/data/marketing.ts"),db,provisions,row:()=>row,settings:()=>settings,qrCalls:()=>qrCalls,deletions:()=>deletions};
 }
+await test("disconnect failure preserves tenant credentials and stores only a bounded provider code",async()=>{
+  const connection={cafe_id:id(10),requested_phone:"966500000001",verified_phone:"966500000001",status:"connected",generation:id(5),instance_id:creds.idInstance,encrypted_credentials:crypto.encryptMarketingSecret(creds,`${id(10)}:${creds.idInstance}`)};
+  for(const code of ["GREEN_API_MARKETING_REQUEST_REJECTED_401","GREEN_API_PARTNER_REQUEST_FAILED","GREEN_API_MARKETING_DELETE_UNCONFIRMED","GREEN_API_MARKETING_private-token",`GREEN_API_MARKETING_${"A".repeat(97)}`]){
+    const failure=new ProviderError(true);failure.code=code;failure.message="private credential payload";
+    const h=ownerHarness({connection,deleteError:failure});
+    await assert.rejects(()=>h.runMarketingAction({action:"disconnect"}),error=>error.status===503&&!error.message.includes("private"));
+    assert.equal(h.row().status,"disconnecting");assert.equal(h.row().encrypted_credentials,connection.encrypted_credentials);assert.equal(h.row().instance_id,creds.idInstance);
+    const expected=/^GREEN_API_(?:PARTNER|MARKETING)_[A-Z0-9_]{1,96}$/.test(code)?code:"DISCONNECT_UNCERTAIN";
+    assert.equal(h.row().last_error,expected);assert.equal(h.row().lease_until,null);assert(Number.isFinite(Date.parse(h.row().updated_at)));
+    const update=h.db.calls.find(call=>call.update?.last_error===expected);assert.deepEqual(update.filters,[["cafe_id",id(10)],["generation",id(8)]]);
+    const refreshed=await h.runMarketingAction({action:"refresh"});assert.equal(refreshed.dashboard.connection.status,"disconnecting");
+    assert(!JSON.stringify(refreshed).includes(code));assert.equal(h.deletions(),1);assert.equal(h.provisions.length,0);
+  }
+  for(const config of [{deleteError:new Error("private-token-in-url")},{disconnectSaveError:true}]){
+    const h=ownerHarness({connection,...config});await assert.rejects(()=>h.runMarketingAction({action:"disconnect"}),error=>error.status===503);
+    assert.equal(h.row().last_error,"DISCONNECT_UNCERTAIN");assert.equal(h.row().encrypted_credentials,connection.encrypted_credentials);assert.equal(h.row().status,"disconnecting");
+  }
+});
+await test("explicit disconnect succeeds only after provider confirmation and is available after expiry",async()=>{
+  const connection={cafe_id:id(10),requested_phone:"966500000001",verified_phone:"966500000001",status:"disconnecting",generation:id(5),instance_id:creds.idInstance,encrypted_credentials:crypto.encryptMarketingSecret(creds,`${id(10)}:${creds.idInstance}`),lease_until:null};
+  const h=ownerHarness({connection,eligible:false});const result=await h.runMarketingAction({action:"disconnect"});
+  assert.equal(result.dashboard.connection.status,"disconnected");assert.equal(h.deletions(),1);
+  for(const key of ["encrypted_credentials","instance_id","verified_phone","webhook_token_hash","last_error"])assert.equal(h.row()[key],null);
+  const update=h.db.calls.find(call=>call.update?.status==="disconnected");assert.deepEqual(update.filters,[["cafe_id",id(10)],["generation",id(8)]]);
+  await h.runMarketingAction({action:"disconnect"});assert.equal(h.deletions(),1);
+});
 await test("inactive profiles, staff and admin without selected maintenance brand denied",async()=>{
   for(const config of [{user:null},{profile:{role:"cafe_owner",status:"suspended"}},{owner:id(2),member:"staff"},{profile:{role:"platform_admin",status:"active"}}]){
     await assert.rejects(()=>ownerHarness(config).getMarketingDashboard(),error=>[401,403].includes(error.status));

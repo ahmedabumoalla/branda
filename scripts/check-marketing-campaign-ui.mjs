@@ -339,7 +339,48 @@ try {
     const h = harness(connected); let tree = h.render(); const before = requests.length;
     button(tree, "فصل الرقم أو تغييره").props.onClick(); tree = h.render(); assert.equal(requests.length, before);
     assert.match(text(tree), /تُلغى الحملات النشطة/); assert.match(text(tree), /لن تُستأنف عند ربط رقم مجددًا/);
-    await button(tree, "تأكيد فصل الرقم").props.onClick(); assert.equal(requests.at(-1).json.action, "disconnect");
+    const savedFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, options) => { requests.push({ url, ...options, json: JSON.parse(options.body) }); return { ok: true, status: 200, json: async () => ({ ok: true, data: { dashboard: { ...connected, connection: { ...connected.connection, status: "disconnected" } } } }) }; };
+      await button(tree, "تأكيد فصل الرقم").props.onClick(); tree = h.render();
+      assert.equal(requests.length, before + 1); assert.equal(requests.at(-1).json.action, "disconnect");
+      assert.match(text(tree), /تم فصل الرقم وإلغاء الحملات النشطة/); assert.doesNotMatch(text(tree), /متصل وجاهز|تأكيد فصل الرقم/);
+    } finally { globalThis.fetch = savedFetch; }
+  });
+  await check("failed disconnect reads stored status once and preserves the action error and explicit retry", async () => {
+    const savedFetch = globalThis.fetch;
+    try {
+      for (const readSucceeds of [true, false]) {
+        const calls = [], failureMessage = "تعذر فصل الرقم أعد المحاولة";
+        globalThis.fetch = async (url, options) => {
+          calls.push({ url, ...options, json: options.body ? JSON.parse(options.body) : null });
+          if (options.method === "POST") return { ok: false, status: 503, json: async () => ({ ok: false, message: failureMessage }) };
+          return readSucceeds
+            ? { ok: true, status: 200, json: async () => ({ ok: true, data: { dashboard: { ...connected, connection: { ...connected.connection, status: "disconnecting" } } } }) }
+            : { ok: false, status: 503, json: async () => ({ ok: false, message: "تعذر تحديث الحالة" }) };
+        };
+        const h = harness(connected); let tree = h.render(); assert.match(text(tree), /متصل وجاهز/);
+        button(tree, "فصل الرقم أو تغييره").props.onClick(); tree = h.render();
+        await button(tree, "تأكيد فصل الرقم").props.onClick(); tree = h.render();
+        assert.deepEqual(calls.map(call => [call.method, call.json]), [["POST", { action: "disconnect" }], ["GET", null]]);
+        assert.equal(calls[1].cache, "no-store"); assert.match(text(tree), new RegExp(failureMessage));
+        assert.doesNotMatch(text(tree), /تم فصل الرقم وإلغاء الحملات النشطة|تعذر تحديث الحالة/);
+        assert.equal(button(tree, "تأكيد فصل الرقم").props.disabled, false);
+        if (readSucceeds) { assert.match(text(tree), /جارٍ فصل الرقم/); assert.doesNotMatch(text(tree), /متصل وجاهز/); assert.equal(button(tree, "مراجعة الحملة").props.disabled, true); }
+        else { assert.match(text(tree), /متصل وجاهز/); assert.doesNotMatch(text(tree), /جارٍ فصل الرقم/); }
+        h.render(); assert.equal(calls.length, 2, "render never repeats the disconnect mutation");
+      }
+    } finally { globalThis.fetch = savedFetch; }
+  });
+  await check("disconnect authorization failure does not issue a followup request", async () => {
+    const savedFetch = globalThis.fetch, calls = [];
+    try {
+      globalThis.fetch = async (url, options) => { calls.push({ url, ...options }); return { ok: false, status: 403, json: async () => ({ ok: false, message: "انتهت صلاحية الجلسة" }) }; };
+      const h = harness(connected); let tree = h.render();
+      button(tree, "فصل الرقم أو تغييره").props.onClick(); tree = h.render();
+      await button(tree, "تأكيد فصل الرقم").props.onClick(); tree = h.render();
+      assert.equal(calls.length, 1); assert.equal(calls[0].method, "POST"); assert.match(text(tree), /انتهت صلاحية الجلسة/);
+    } finally { globalThis.fetch = savedFetch; }
   });
   await check("pairing QR requires an explicit request and provides device instructions", async () => {
     const pairing = { ...connected, connection: { ...connected.connection, status: "pairing", verifiedPhone: null } };

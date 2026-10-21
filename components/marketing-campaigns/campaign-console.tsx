@@ -61,7 +61,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   const uploadSequence = useRef(0);
   const previewUrlRef = useRef<string | null>(null);
 
-  const request = useCallback(async (action?: Record<string, unknown>, quiet = false): Promise<ApiResult["data"] | null> => {
+  const request = useCallback(async (action?: Record<string, unknown>, quiet = false, preserveError = false): Promise<ApiResult["data"] | null> => {
     if (mutation.current || (quiet && requestRef.current)) return null;
     if (!quiet) { mutation.current = true; setBusy(true); setError(""); setNotice(""); }
     requestRef.current?.abort();
@@ -102,12 +102,12 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
           setNotice("تم تسجيل اتصال واتساب جارٍ التحقق من رقم العلامة");
         } else if (result.data.qrStatus === "timeout" && qrIntent.current && !qrIntent.current.received) setQrWaiting(true);
       }
-      setError("");
+      if (!preserveError) setError("");
       return result.data;
     } catch (failure) {
       if (mounted.current && current === sequence.current) {
         if (action?.action === "qr" && qrIntent.current && !authorizationLost.current) setQrWaiting(true);
-        else setError(controller.signal.aborted ? "استغرق الطلب وقتًا طويلًا تحقق من الاتصال ثم أعد المحاولة بنفس البيانات" : failure instanceof Error ? failure.message : "تعذر الاتصال حاول مجددًا");
+        else if (!preserveError) setError(controller.signal.aborted ? "استغرق الطلب وقتًا طويلًا تحقق من الاتصال ثم أعد المحاولة بنفس البيانات" : failure instanceof Error ? failure.message : "تعذر الاتصال حاول مجددًا");
       }
       return null;
     } finally {
@@ -286,7 +286,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
               <img className={styles.qr} src={qr} width={200} height={200} alt="رمز ربط واتساب العلامة امسحه من الأجهزة المرتبطة" />
               <div><h3>اربط واتساب من جوالك</h3><ol className={styles.steps}><li>افتح واتساب على الرقم الموضح أعلاه</li><li>اختر الأجهزة المرتبطة ثم ربط جهاز</li><li>امسح الرمز وانتظر تأكيد الرقم هنا</li></ol><p className={styles.hint}>يتجدد الرمز أثناء فتح هذه الصفحة</p></div>
             </div>}
-            {!disconnectReview ? <div className={styles.actions}><button className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(true)}>فصل الرقم أو تغييره</button></div> : <div className={styles.review}><h3>فصل رقم العلامة؟</h3><p>سيُفصل واتساب وتُلغى الحملات النشطة ورسائلها التي لم تُرسل ولن تُستأنف عند ربط رقم مجددًا ولا يمكن استرجاع الرسائل التي أُرسلت بالفعل</p><div className={styles.actions}><button className={styles.danger} disabled={busy} onClick={async () => { const result = await request({ action: "disconnect" }); if (result) { setDisconnectReview(false); setQr(null); setNotice("تم طلب فصل الرقم وإلغاء الحملات النشطة تابع حالة الاتصال أعلاه"); } }}>تأكيد فصل الرقم</button><button className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(false)}>الاحتفاظ بالاتصال</button></div></div>}
+            {!disconnectReview ? <div className={styles.actions}><button className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(true)}>فصل الرقم أو تغييره</button></div> : <div className={styles.review}><h3>فصل رقم العلامة؟</h3><p>سيُفصل واتساب وتُلغى الحملات النشطة ورسائلها التي لم تُرسل ولن تُستأنف عند ربط رقم مجددًا ولا يمكن استرجاع الرسائل التي أُرسلت بالفعل</p><div className={styles.actions}><button className={styles.danger} disabled={busy} onClick={async () => { const result = await request({ action: "disconnect" }); if (result) { setDisconnectReview(false); setQr(null); setNotice("تم فصل الرقم وإلغاء الحملات النشطة"); } else if (mounted.current && !authorizationLost.current) { await request(undefined, true, true); } }}>تأكيد فصل الرقم</button><button className={styles.secondary} disabled={busy} onClick={() => setDisconnectReview(false)}>الاحتفاظ بالاتصال</button></div></div>}
           </>}
         </section>
         <section className={styles.compose} aria-labelledby="compose-heading">

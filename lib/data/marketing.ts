@@ -203,8 +203,9 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
         await deleteGreenApiMarketingInstance(credentials(row));
         const { error } = await context.db.from("brand_marketing_connections").update({ status: "disconnected", encrypted_credentials: null, instance_id: null, verified_phone: null, webhook_token_hash: null, provision_attempted_at: null, lease_token: null, lease_until: null, last_error: null, updated_at: new Date().toISOString() }).eq("cafe_id", context.cafeId).eq("generation", generation);
         if (error) throw new Error("DISCONNECT_SAVE_FAILED");
-      } catch {
-        await context.db.from("brand_marketing_connections").update({ status: "disconnecting", lease_until: null, last_error: "DISCONNECT_UNCERTAIN" }).eq("cafe_id", context.cafeId).eq("generation", generation);
+      } catch (error) {
+        const code = error instanceof GreenApiProviderError && /^GREEN_API_(?:PARTNER|MARKETING)_[A-Z0-9_]{1,96}$/.test(error.code) ? error.code : "DISCONNECT_UNCERTAIN";
+        await context.db.from("brand_marketing_connections").update({ status: "disconnecting", lease_until: null, last_error: code, updated_at: new Date().toISOString() }).eq("cafe_id", context.cafeId).eq("generation", generation);
         throw new MarketingError("تعذر تأكيد الفصل أعد المحاولة لاستكمال إيقاف الاتصال", 503);
       }
     }
