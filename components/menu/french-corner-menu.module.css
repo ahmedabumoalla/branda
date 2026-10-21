@@ -54,7 +54,7 @@
 .discoveryNumber { position:absolute; z-index:1; top:24px; left:50%; transform:translateX(-50%); background:#080908b3; color:var(--gold); border:1px solid var(--line); border-radius:50%; width:34px; height:34px; display:grid; place-items:center; font:12px Georgia,serif; }
 .discoveryName { position:absolute; bottom:22px; inset-inline:18px; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:19px; }
 .discoveryName svg { flex-shrink:0; width:19px; color:var(--gold); }
-.catalog { padding:65px var(--gutter) 80px; border-top:1px solid var(--line); background:radial-gradient(ellipse at 100% 0%,#30332144,transparent 35%),#0d100d; scroll-margin-top:16px; }
+.catalog { padding:65px var(--gutter) 80px; border-top:1px solid var(--line); background:linear-gradient(180deg,#0d100ddd,#0d100de8 450px,#0d100d 850px),url('/french-corner/salon.webp') center top / 100% auto no-repeat,#0d100d; scroll-margin-top:16px; }
 .catalogHeading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:38px; }
 .catalogHeading .eyebrow { margin-bottom:10px; }
 .catalogHeading h2 { margin:0; font-size:clamp(30px,3.6vw,55px); font-weight:400; line-height:1.5; }
@@ -68,10 +68,19 @@
 .search button { display:grid; place-items:center; background:none; border:none; width:44px; min-height:44px; color:inherit; }
 .sort { display:flex; align-items:center; gap:12px; font-size:13px; }
 .sort select { min-height:48px; max-width:180px; border:1px solid var(--line); padding:8px 10px; color:inherit; background:var(--panel); font-size:14px; border-radius:12px; }
-.categories { display:flex; gap:10px; overflow-x:auto; padding:14px 4px; border-block:1px solid var(--line); position:sticky; top:0; background:#0d100df5; backdrop-filter:blur(12px); z-index:8; scrollbar-width:thin; scrollbar-color:#ddbf794f transparent; }
-.categories button { display:flex; align-items:center; gap:10px; flex-shrink:0; min-height:46px; padding:10px 20px; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:30px; font-size:15px; }
-.categories button[aria-pressed="true"] { background:var(--gold); color:#15170f; border-color:var(--gold); }
-.categories small { font-size:10px; opacity:.8; }
+.categoryPicker { margin-bottom:20px; }
+.categoryGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.categoryGrid button { display:flex; align-items:center; gap:9px; min-width:0; min-height:50px; padding:8px 12px; border:1px solid #ddbf7938; background:#20251bd9; color:var(--paper); border-radius:9px; text-align:start; font-size:14px; }
+.categoryGrid button > svg { flex:0 0 18px; width:18px; height:18px; color:var(--gold); stroke-width:1.4; }
+.categoryGrid button > span { flex:1; min-width:0; line-height:1.4; overflow-wrap:anywhere; }
+.categoryGrid small { display:grid; place-items:center; flex-shrink:0; min-width:21px; height:21px; padding:2px; border-radius:50%; font-size:9px; background:#08090855; color:var(--paper); }
+.categoryGrid button[aria-pressed="true"] { background:var(--gold); color:#15170f; border-color:var(--gold); font-weight:700; }
+.categoryGrid button[aria-pressed="true"] > svg { color:inherit; }
+.categoryGrid button[aria-pressed="true"] small { color:#15170f; background:#15170f18; }
+.categoryPicker .categoryToggle { display:flex; align-items:center; justify-content:center; gap:8px; margin:6px auto 0; min-height:44px; padding:6px 18px; border:0; border-radius:7px; background:transparent; color:var(--gold); font-size:12px; }
+.categoryToggle svg { width:15px; height:15px; }
+.categoryToggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+@media (max-width:700px) { .categoryPicker { margin-bottom:15px; } .categoryGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; } .categoryGrid button { gap:7px; min-height:48px; padding:7px 9px; font-size:12px; } .categoryGrid button > svg { flex-basis:16px; width:16px; height:16px; } .categoryGrid small { min-width:19px; height:19px; font-size:8px; } }
 .results { padding-top:14px; font-size:14px; color:var(--muted); }
 .menuSection { padding-top:48px; scroll-margin-top:100px; }
 .sectionHeading { display:flex; gap:16px; align-items:baseline; margin-bottom:24px; }
@@ -128,13 +137,12 @@
 .footer > div { display:flex; align-items:center; justify-content:space-between; gap:18px; border-top:1px solid var(--line); padding-top:20px; font-size:13px; color:var(--muted); }
 .footer > div a { min-height:44px; display:inline-flex; align-items:center; gap:8px; }
 .footer svg { width:16px; }
-.toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); z-index:70; display:flex; gap:10px; align-items:center; padding:14px 22px; max-width:90vw; border:1px solid var(--gold); border-radius:12px; background:var(--panel); color:var(--paper); font-size:14px; }
-.mobileDock { display:none; }
+.toast { position:fixed; bottom:max(20px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); z-index:70; display:flex; gap:10px; align-items:center; padding:14px 22px; max-width:90vw; border:1px solid var(--gold); border-radius:12px; background:var(--panel); color:var(--paper); font-size:14px; }
 @keyframes arrive { from { opacity:0; translate:0 20px; } to { opacity:1; translate:0 0; } }
 @media (hover:hover) { .product:hover { border-color:#ddbf7988; transform:translateY(-4px); } .productButton:hover .productPhoto > img,.discoveryCard:hover > img,.heroScene:hover > img { transform:scale(1.05); } .explore:hover { box-shadow:0 8px 40px #b3923b44; } .headerNav a:hover,.footer a:hover { color:var(--gold); } }
 @media (max-width:1050px) { .hero { gap:3%; grid-template-columns:.8fr 1.4fr .8fr; } .heroScene { aspect-ratio:.55; } .heroScene > span { font-size:20px; inset-inline:16px; } .heroScene small { font-size:15px; } .heroScene svg { display:none; } .productGrid { grid-template-columns:repeat(3,minmax(0,1fr)); } .productCopy { padding:16px; } .sort > span { display:none; } .memberCard { padding:20px; } }
 @media (max-width:700px) {
- .page.page { --gutter:20px; padding-bottom:calc(86px + env(safe-area-inset-bottom)); }
+ .page.page { --gutter:20px; padding-bottom:env(safe-area-inset-bottom); }
  .header { min-height:80px; gap:10px; padding-block:8px; } .brand { gap:9px; } .brand > img { width:50px; height:50px; } .brand > span { font-size:15px; } .brand small { font-size:7px; letter-spacing:1px; } .headerNav { display:none; } .actions { gap:1px; } .actions > button { width:40px; min-height:44px; padding:10px; border:0; }
  .hero { padding-top:22px; grid-template-columns:1fr 1fr; gap:22px 18px; } .heroCopy { grid-row:1; grid-column:1/-1; padding:0; } .heroCopy .eyebrow { margin-bottom:6px; font-size:12px; } .heroLogo { max-width:290px; width:85%; margin-bottom:8px; } .hero h1 { font-size:clamp(28px,7.5vw,40px); } .heroDescription { font-size:15px; margin:7px 0 19px; } .explore { min-height:50px; font-size:16px; padding:10px 23px; gap:35px; }
  .heroScene { grid-row:2; aspect-ratio:1.05; max-height:230px; border-radius:80px 80px 14px 14px; } .sweetScene { transform:rotate(3deg); margin-top:18px; } .salonScene { transform:rotate(-3deg); margin-bottom:18px; } .heroScene > span { font-size:17px; bottom:18px; gap:5px; } .heroScene small { font-size:13px; }
@@ -144,7 +152,6 @@
  .menuSection { padding-top:30px; } .sectionHeading { gap:10px; margin-bottom:18px; } .sectionHeading h3 { font-size:27px; } .sectionHeading > span { font-size:11px; } .productGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 12px; } .product { border-radius:14px; } .productPhoto { aspect-ratio:.95; } .productCopy { padding:13px 12px 16px; } .productCategory { font-size:10px; } .productCopy h4 { font-size:18px; margin:6px 0 12px; } .productCopy > p { font-size:12px; } .price b { font-size:24px; } .price small { font-size:10px; } .productBottom > span:last-child:not(.price) { font-size:9px; } .productBottom { gap:6px; padding-top:10px; } .productArrow { width:30px; height:30px; inset:auto auto 8px 8px; } .productArrow svg { width:15px; } .photoFallback > span { font-size:13px; }
  .membership { padding:62px 30px 48px; grid-template-columns:1fr; gap:45px; } .memberCard { max-width:360px; } .memberCopy { text-align:center; } .memberCopy h2 { font-size:36px; } .memberCopy > p:last-of-type { font-size:15px; } .membershipLink { margin:auto; font-size:16px; } .memberCard > img { max-height:120px; } .memberCard > small { font-size:7px; letter-spacing:2px; }
  .visit { padding-block:46px; grid-template-columns:1fr; gap:28px; text-align:center; } .visit > img { max-height:310px; width:80%; margin:auto; aspect-ratio:1.2; } .visit h2 { font-size:32px; } .visit a { margin-inline:auto; font-size:14px; } .footer { padding-top:32px; } .footerBrand { font-size:clamp(40px,10vw,65px); letter-spacing:-2px; padding-bottom:24px; } .footer > div { flex-wrap:wrap; justify-content:center; font-size:12px; gap:8px 20px; } .footer > div > span { width:100%; text-align:center; }
- .mobileDock { position:fixed; z-index:20; bottom:max(12px,env(safe-area-inset-bottom)); inset-inline:16px; display:flex; justify-content:space-around; gap:4px; padding:10px 7px; border:1px solid #ddbf7955; border-radius:22px; background:#11160ff5; backdrop-filter:blur(18px); box-shadow:0 8px 40px #000b; } .mobileDock a,.mobileDock button { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:48px; color:var(--paper); font:12px FrenchTajawal,sans-serif; border:0; border-radius:12px; background:transparent; } .mobileDock svg { width:20px; height:20px; color:var(--gold); }
 }
 @media (max-width:360px) { .brand > span { font-size:13px; } .brand > img { width:40px; } .catalogHeading > span { font-size:23px; } .catalogHeading h2 { font-size:26px; } .productBottom > span:last-child:not(.price) { width:100%; } .productCopy h4 { font-size:16px; } .heroScene > span { font-size:15px; } }
 .hero { grid-template-columns:1fr 1fr; gap:28px 7%; padding-top:30px; }
@@ -220,7 +227,6 @@
  .membership { margin:22px var(--gutter) 0; border-radius:16px; } .membershipWholeLink { grid-template-columns:1fr; gap:28px; padding:26px 22px; border-radius:16px; } .memberCard { max-width:330px; padding:18px; transform:rotate(-3deg); } .cardIdentity > img { width:65px; height:65px; } .cardIdentity > span { font-size:20px; } .memberCard .stampRow { gap:9px; margin:14px 0; } .stampRow > span { width:32px; height:32px; } .memberCard p { font-size:21px; } .memberCopy { text-align:start; } .memberCopy .eyebrow { font-size:12px; } .memberCopy h2 { font-size:31px; } .memberCopy h2 br { display:none; } .memberCopy > p:last-of-type { font-size:16px; margin:12px 0 8px; } .rewardHighlight { font-size:30px; margin:9px 0 16px; } .membershipLink { margin:0; width:100%; justify-content:space-between; font-size:17px; }
  .discovery { padding-block:34px; } .discoveryCard { flex-basis:145px; height:175px; border-radius:12px; } .discoveryName { font-size:16px; inset-inline:12px; } .discoveryNumber { top:12px; left:12px; }
  .sectionHeading .sectionNumber { font-size:25px; } .sectionHeading h3 { font-size:24px; } .sectionHeading { gap:10px; } .productCopy h4 { font-size:18px; } .productPhoto { aspect-ratio:.95; } .product[data-no-photo] { grid-column:1/-1; } .product[data-no-photo] .productButton { gap:16px; } .product[data-no-photo] .productCopy h4 { margin:0 0 8px; font-size:20px; } .product[data-no-photo] .productBottom { flex-wrap:nowrap; }
- .mobileDock a:nth-child(3) { background:#ddbf7920; color:var(--gold); }
 }
 @media (max-width:360px) { .hero h1 { font-size:28px; } .heroLogo { width:80px; } .stageSignature { font-size:11px; } .heroDescription { font-size:12px; } .explore { font-size:13px; padding:9px 11px; gap:8px; } .featureCaption strong { font-size:15px; } .memberCopy h2 { font-size:27px; } .stampRow > span { width:27px; height:27px; } .memberCard .stampRow { gap:6px; } }
 @media (prefers-reduced-motion:reduce) { .page *,.page *::before,.page *::after { scroll-behavior:auto !important; animation:none !important; transition:none !important; } .product:hover,.productButton:hover .productPhoto > img,.discoveryCard:hover > img,.heroScene:hover > img,.heroFeature:hover > img,.membershipWholeLink:hover .memberCard { transform:none; } }
