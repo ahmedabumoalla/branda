@@ -1,3 +1,5 @@
+import type { SubscriptionUpgradeCredit } from "@/lib/platform/subscription-bank";
+
 export type SubscriptionPaymentRequest = {
   id: string;
   cafeId: string;
@@ -11,6 +13,9 @@ export type SubscriptionPaymentRequest = {
   baseAmount: number;
   couponCode?: string;
   amount: number;
+  upgradeCreditAmount?: number;
+  upgradeCredits?: SubscriptionUpgradeCredit[];
+  extendedDays?: number;
   durationUnit: "day" | "month" | "year";
   durationCount: number;
   paymentMethod: "bank_transfer" | "card" | "cash" | "paypal" | "mada" | string;

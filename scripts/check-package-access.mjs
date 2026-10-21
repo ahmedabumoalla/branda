@@ -24,7 +24,7 @@ function serviceFixture(subscription, overrides = [], error = null) {
   const client = { from(table) {
     calls.push(table);
     const query = { select() { return query; }, eq(key, value) { if (key === "cafe_id") assert.equal(value, "brand"); return query; }, in() { return query; }, order() { return query; }, limit() { return query; },
-      maybeSingle: async () => ({ data: subscription, error }), then: resolve => resolve({ data: overrides, error: null }) };
+      then: resolve => resolve(table === "subscriptions" ? { data: subscription == null ? [] : Array.isArray(subscription) ? subscription : [subscription], error } : { data: overrides, error: null }) };
     return query;
   } };
   const accessModule = load("lib/data/feature-entitlements.ts", {
@@ -42,7 +42,7 @@ for (const subscription of [null, { ...current, status: "expired" }, { ...curren
 }
 for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["pager"], ["settings"], ["all"], ["orders", "branches", "standalone_menu"]]) {
   const { module, calls } = serviceFixture({ ...current, platform_plans: { active: true, features } });
-  const expected = features.includes("all") ? ["menu", "offers", "loyalty", "pager", "settings"] : features.filter(f => ["menu", "offers", "loyalty", "pager", "settings"].includes(f));
+  const expected = features.includes("all") ? ["menu", "offers", "loyalty", "marketing_campaigns", "pager", "settings"] : features.filter(f => ["menu", "offers", "loyalty", "pager", "settings"].includes(f));
   assert.deepEqual(await module.getOwnerFeatureCodes(), expected);
   assert.deepEqual(calls, ["subscriptions", "brand_feature_overrides"]); checks++;
 }
@@ -56,3 +56,35 @@ assert.equal(featureCodesAllow(["loyalty"], "cashier"), true);
 assert.equal(featureCodesAllow(["menu"], "cashier"), false);
 checks += 4;
 console.log(`PASS package access: ${checks} actual subscription, expiry, package, override and error checks.`);
+
+const loyalty = { ...current, plan_id: "loyalty", expires_at: new Date(now + 120_000).toISOString(), platform_plans: { active: true, features: ["loyalty"] } };
+const campaigns = { ...current, plan_id: "campaigns", platform_plans: { active: true, features: ["marketing_campaigns"] } };
+const multiple = serviceFixture([campaigns, loyalty, current]);
+const combined = await multiple.module.getCafeServiceAccess("brand");
+assert.deepEqual(new Set(combined.features), new Set(["menu", "loyalty", "marketing_campaigns"]));
+assert.equal(combined.subscriptions.length, 3);
+const expiredNewest = await serviceFixture([{ ...campaigns, expires_at: new Date(now - 1).toISOString() }, loyalty, current]).module.getCafeServiceAccess("brand");
+assert.deepEqual(new Set(expiredNewest.features), new Set(["menu", "loyalty"]));
+assert.equal(expiredNewest.planId, "loyalty");
+const futureNewest = await serviceFixture([{ ...campaigns, started_at: new Date(now + 60_000).toISOString() }, loyalty, current]).module.getCafeServiceAccess("brand");
+assert.deepEqual(new Set(futureNewest.features), new Set(["menu", "loyalty"]));
+const disabled = await serviceFixture([campaigns, loyalty, current], [{ feature_id: "loyalty", enabled: false }]).module.getCafeServiceAccess("brand");
+assert.deepEqual(new Set(disabled.features), new Set(["menu", "marketing_campaigns"]));
+const trialAndPaid = await serviceFixture([{ ...current, status: "trialing" }, loyalty]).module.getCafeServiceAccess("brand");
+assert.equal(trialAndPaid.planId, "loyalty");
+assert.equal(trialAndPaid.subscription.status, "active");
+assert.deepEqual(new Set(trialAndPaid.features), new Set(["menu", "loyalty"]));
+const { getServiceSubscriptionAccess } = load("lib/platform/service-subscriptions.ts");
+const beforeExpiry = getServiceSubscriptionAccess(combined.serviceSubscriptions, now);
+assert.equal(beforeExpiry.nextChangeAt, current.expires_at);
+const afterExpiry = getServiceSubscriptionAccess(combined.serviceSubscriptions, now + 60_000);
+assert.equal(afterExpiry.planId, "loyalty");
+assert.deepEqual(afterExpiry.features, ["loyalty"]);
+assert.equal(afterExpiry.nextChangeAt, loyalty.expires_at);
+assert.equal(getServiceSubscriptionAccess(combined.serviceSubscriptions, now + 120_000).planId, "");
+const scheduledRenewal = await serviceFixture([
+  { ...current, started_at: current.expires_at, expires_at: loyalty.expires_at }, loyalty, current,
+]).module.getCafeServiceAccess("brand");
+assert.deepEqual(new Set(scheduledRenewal.features), new Set(["menu", "loyalty"]));
+assert.deepEqual(new Set(getServiceSubscriptionAccess(scheduledRenewal.serviceSubscriptions, now + 60_000).features), new Set(["menu", "loyalty"]), "queued renewal starts exactly when its previous term expires");
+console.log("PASS concurrent packages: union, expired/future newest row, overrides, trial precedence and independent expiry");

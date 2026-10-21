@@ -16,6 +16,7 @@ import {
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import { cafeHasFeature } from "@/lib/platform/permissions";
+import { getServiceSubscriptionAccess } from "@/lib/platform/service-subscriptions";
 
 type GuardState = {
   snapshot?: DashboardShellSnapshot;
@@ -35,6 +36,22 @@ type MaintenanceBannerSession = {
 };
 
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "barndaksa-dashboard-sidebar-collapsed";
+
+function guardForSnapshot(snapshot: DashboardShellSnapshot): GuardState {
+  if (snapshot.unauthenticated) return { loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] };
+  const access = getServiceSubscriptionAccess(snapshot.serviceSubscriptions);
+  const plans = snapshot.plans.map(plan => plan.id === access.planId
+    ? { ...plan, features: access.features as PlatformPlan["features"] } : plan);
+  return {
+    snapshot: { ...snapshot, planId: access.planId, plans, subscription: access.subscription ?? snapshot.subscription },
+    loading: false,
+    expiresAt: access.nextChangeAt,
+    cafeSlug: snapshot.settings.cafeSlug,
+    activePlanId: access.planId,
+    plans,
+    featureOverrides: snapshot.featureOverrides ?? [],
+  };
+}
 
 export function DashboardAppLayout({
   children,
@@ -63,15 +80,7 @@ export function DashboardAppLayout({
           setGuard({ loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
           return;
         }
-        setGuard({
-          snapshot,
-          loading: false,
-          expiresAt: snapshot.subscription?.expiresAt,
-          cafeSlug: snapshot.settings.cafeSlug,
-          activePlanId: snapshot.subscription?.expiresAt && Date.parse(snapshot.subscription.expiresAt) <= Date.now() ? "" : snapshot.planId,
-          plans: snapshot.plans,
-          featureOverrides: snapshot.featureOverrides ?? [],
-        });
+        setGuard(guardForSnapshot(snapshot));
       })
       .catch((error) => {
         if (!(error instanceof Error && error.message.toLowerCase().includes("unauthorized"))) {
@@ -92,13 +101,15 @@ export function DashboardAppLayout({
   }, [pathname, retry]);
 
   useEffect(() => {
-    if (!guard.activePlanId || !guard.expiresAt) return;
+    if (!guard.expiresAt) return;
     const remaining = Date.parse(guard.expiresAt) - Date.now();
     if (!Number.isFinite(remaining)) return;
     const timer = window.setTimeout(() => {
       if (remaining > 2147483647) { setRetry(value => value + 1); return; }
       clearDashboardShellSnapshot();
-      setGuard(state => ({ ...state, activePlanId: "" }));
+      // Expire only the affected package immediately, then refresh server permissions.
+      setGuard(state => state.snapshot ? guardForSnapshot(state.snapshot) : state);
+      setRetry(value => value + 1);
       router.refresh();
     }, Math.max(0, Math.min(remaining, 2147483647)));
     return () => window.clearTimeout(timer);

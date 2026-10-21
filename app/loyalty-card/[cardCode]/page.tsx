@@ -11,6 +11,8 @@ type Props = {
   searchParams?: Promise<{ back?: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function LoyaltyCardPage({ params, searchParams }: Props) {
   const { cardCode } = await params;
   const query = searchParams ? await searchParams : {};

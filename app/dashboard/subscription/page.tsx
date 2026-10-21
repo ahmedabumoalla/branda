@@ -6,18 +6,18 @@ import { SubscriptionPageClient } from "@/components/dashboard/pages/subscriptio
 import Link from "next/link";
 import type { ComponentProps } from "react";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
-import { getCafeFeatureOverrides, getOwnerActivePlanId } from "@/lib/data/admin";
+import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
 import { getOwnerCafeContext } from "@/lib/data/cafes";
 import {
   getAvailablePlans,
   getOwnerPendingSubscription,
   getOwnerSubscriptionHistory,
-  getCurrentOwnerSubscription,
+  getCurrentOwnerSubscriptions,
   getBankTransferDetails,
   getOwnerSubscriptionRequests,
   getSubscriptionReferenceTime,
 } from "@/lib/data/subscription";
-import { getEffectiveBrandFeatureAccess, getPlanIncludedFeatures } from "@/lib/platform/feature-access";
+import { getEffectiveBrandFeatureAccess } from "@/lib/platform/feature-access";
 
 function ServiceUnavailable() {
   return (
@@ -36,28 +36,25 @@ export default async function SubscriptionPage() {
 
   let pageProps: ComponentProps<typeof SubscriptionPageClient>;
   try {
-    const [plans, activePlanId, history, pending, currentSubscription, bankDetails, requests] = await Promise.all([
+    const [plans, serviceAccess, history, pending, currentSubscriptions, bankDetails, requests] = await Promise.all([
       getAvailablePlans(),
-      getOwnerActivePlanId(),
+      getCafeServiceAccess(cafe.id),
       getOwnerSubscriptionHistory(),
       getOwnerPendingSubscription(),
-      getCurrentOwnerSubscription(),
+      getCurrentOwnerSubscriptions(),
       getBankTransferDetails(),
       getOwnerSubscriptionRequests(),
     ]);
-    const featureOverrides = await getCafeFeatureOverrides(cafe.id).catch(() => []);
-    const initialFeatureAccess = getEffectiveBrandFeatureAccess(
-      getPlanIncludedFeatures(activePlanId, plans),
-      featureOverrides,
-    );
+    const initialFeatureAccess = getEffectiveBrandFeatureAccess(serviceAccess.features, []);
 
     pageProps = {
       initialPlans: plans,
-      initialActivePlanId: activePlanId,
+      initialActivePlanId: serviceAccess.planId,
       initialHistory: history,
       initialPending: pending,
       initialFeatureAccess,
-      currentSubscription,
+      currentSubscription: currentSubscriptions.find(item => item.planId === serviceAccess.planId) ?? currentSubscriptions[0] ?? null,
+      currentSubscriptions,
       bankDetails,
       initialRequests: requests,
       customerName: cafe.name,

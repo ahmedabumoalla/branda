@@ -236,7 +236,7 @@ await test(async () => {
     [null, [{ feature_id: "menu", enabled: true }], []],
   ]) {
     const admin = { from(table) {
-      const result = { data: table === "subscriptions" ? row : overrides, error: null };
+      const result = { data: table === "subscriptions" ? (row ? [row] : []) : overrides, error: null };
       const builder = { select() { return builder; }, eq() { return builder; }, in() { return builder; }, order() { return builder; }, limit() { return builder; }, maybeSingle() { return Promise.resolve(result); }, then(resolve, reject) { return Promise.resolve(result).then(resolve, reject); } };
       return builder;
     } };

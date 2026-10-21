@@ -60,6 +60,35 @@ for (const status of ['approved','rejected','cancelled']) {
 const whatsapp = harness({ initialData: { ...page, requests: [{ ...request, receiptUrl: undefined, receiptChannel: 'whatsapp' }] } });
 assert.ok(html(whatsapp).includes('أرسل العميل الإيصال عبر واتساب'));
 assert.equal(button(whatsapp, 'اعتماد وتفعيل الباقة').props.disabled, false);
+const credit = { subscriptionId: 'source-subscription', planName: 'المنيو', paidAmount: 125, totalDays: 30, usedDays: 10, remainingDays: 20, creditAmount: 83.33 };
+const fundedRequest = { ...request, amount: 0, baseAmount: 80, upgradeCreditAmount: 80, upgradeCredits: [credit], extendedDays: 1.25, receiptUrl: undefined, receiptStoragePath: undefined, receiptChannel: 'upload' };
+const funded = harness({ initialData: { ...page, requests: [fundedRequest] } });
+assert.equal(button(funded, 'اعتماد وتفعيل الباقة').props.disabled, false, 'credit-funded pending review needs no receipt');
+for (const value of ['رصيد الترقية المحتسب', 'المنيو', '٢٠', '٨٣٫٣٣', 'مدة إضافية من الرصيد المتبقي', '١٫٢٥', 'لا يتطلب تحويلًا أو إيصالًا']) assert.ok(html(funded).includes(value), value);
+assert.ok(!html(funded).includes('لم يرفق العميل إيصالًا'));
+assert.ok(!html(funded).includes('إجمالي الخصم'), 'used credit is not presented as a discount');
+button(funded, 'اعتماد وتفعيل الباقة').props.onClick();
+assert.ok(html(funded).includes('باستخدام رصيد الترقية دون تحويل جديد'));
+assert.ok(!html(funded).includes('تأكد من مطابقة الإيصال واستلام التحويل'));
+await button(funded, 'تأكيد الاعتماد والتفعيل').props.onClick();
+assert.equal(funded.calls[0][1].decision, 'approve');
+const notReady = harness({ initialData: { ...page, requests: [{ ...fundedRequest, status: 'awaiting_receipt' }] } });
+assert.equal(button(notReady, 'اعتماد وتفعيل الباقة').props.disabled, true, 'credit cannot bypass request status');
+for (const receiptUrl of [undefined, request.receiptUrl]) {
+ const uncredited = harness({ initialData: { ...page, requests: [{ ...fundedRequest, upgradeCreditAmount: 0, receiptUrl }] } });
+ assert.equal(button(uncredited, 'اعتماد وتفعيل الباقة').props.disabled, false, 'server-approved full discount also needs no transfer');
+ assert.ok(html(uncredited).includes('لا يوجد مبلغ تحويل'));
+ assert.ok(!html(uncredited).includes('الدفع من رصيد الترقية'));
+ button(uncredited, 'اعتماد وتفعيل الباقة').props.onClick();
+ assert.ok(html(uncredited).includes('دون تحويل جديد'));
+ assert.ok(!html(uncredited).includes('باستخدام رصيد الترقية'));
+}
+const partial = harness({ initialData: { ...page, requests: [{ ...fundedRequest, amount: 20, baseAmount: 110, receiptUrl: request.receiptUrl }] } });
+assert.ok(html(partial).includes('إجمالي الخصم') && html(partial).includes('١٠'), 'discount excludes applied upgrade credit');
+assert.ok(html(partial).includes('عرض الإيصال'));
+assert.equal(button(partial, 'اعتماد وتفعيل الباقة').props.disabled, false);
+const partialMissingReceipt = harness({ initialData: { ...page, requests: [{ ...fundedRequest, amount: 20, baseAmount: 100 }] } });
+assert.equal(button(partialMissingReceipt, 'اعتماد وتفعيل الباقة').props.disabled, true, 'partial credit still needs transfer evidence');
 const pagination = harness();
 await button(pagination, 'التالي').props.onClick();
 assert.deepEqual(pagination.calls[0], ['fetch', { page: 1, filter: 'pending_review' }]);
@@ -94,6 +123,13 @@ const stubs = { '@/lib/supabase/server': { createClient: async () => supabase },
 const data = load('lib/data/admin.ts', stubs);
 const fetched = await data.getAdminSubscriptionRequestPage({ page: 1, filter: 'closed' });
 assert.equal(fetched.total, 42); assert.equal(fetched.requests[0].ownerName, request.ownerName);
+assert.equal(fetched.requests[0].upgradeCreditAmount, 0);
+assert.deepEqual(fetched.requests[0].upgradeCredits, []);
+row.upgrade_credit_amount_sar = 80; row.upgrade_credit_snapshot = [credit]; row.upgrade_extension_seconds = 108000;
+const creditMapped = (await data.getAdminSubscriptionRequestPage()).requests[0];
+assert.equal(creditMapped.upgradeCreditAmount, 80);
+assert.deepEqual(creditMapped.upgradeCredits, [credit]);
+assert.equal(creditMapped.extendedDays, 1.25);
 assert.ok(queryCalls.some(call => call[0] === 'range' && call[1] === 20 && call[2] === 39));
 assert.ok(queryCalls.some(call => call[0] === 'in' && call[1] === 'status' && call[2].includes('rejected')));
 await assert.rejects(data.getAdminSubscriptionRequestPage({ page: -1 }));
@@ -124,4 +160,4 @@ const css = fs.readFileSync('components/admin/pages/admin-subscription-requests-
 const compiledCss = transform({ filename: 'admin-subscription-requests-page.module.css', code: Buffer.from(css), cssModules: true });
 for (const [,name] of fs.readFileSync(sourcePath,'utf8').matchAll(/\bs\.(\w+)/g)) assert.ok(compiledCss.exports[name], name);
 assert.ok(css.includes('max-width:640px') && css.includes(':focus-visible') && css.includes('prefers-reduced-motion'));
-console.log('PASS subscription request review: SSR/details, receipt states, approval/rejection, duplicate/failure recovery, pagination, admin authorization, private receipt scope and CSS');
+console.log('PASS subscription request review: SSR/details, credit-funded and partial-credit approval, extension/discount mapping, receipt states, approval/rejection, duplicate/failure recovery, pagination, admin authorization, private receipt scope and CSS');

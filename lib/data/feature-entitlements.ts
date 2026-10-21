@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cache } from "react";
 import { isCurrentSubscription } from "@/lib/platform/active-subscription";
+import { getServiceSubscriptionAccess, type ServiceSubscription } from "@/lib/platform/service-subscriptions";
 import { getPublicCafeBySlugAdmin, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import {
@@ -33,9 +34,7 @@ export const getCafeServiceAccess = cache(async (cafeId: string) => {
       .select("plan_id, status, started_at, expires_at, platform_plans(name, features, active)")
       .eq("cafe_id", cafeId)
       .in("status", ["active", "trialing"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .order("created_at", { ascending: false }),
     admin
       .from("brand_feature_overrides")
       .select("feature_id, enabled")
@@ -46,21 +45,35 @@ export const getCafeServiceAccess = cache(async (cafeId: string) => {
   if (error) throw error;
   if (overridesResult.error) throw overridesResult.error;
 
-  const plan = data?.platform_plans as { name?: string; features?: unknown; active?: boolean } | null | undefined;
-  const subscription = data ? {
-    status: String(data.status),
-    startedAt: data.started_at ? String(data.started_at) : null,
-    expiresAt: data.expires_at ? String(data.expires_at) : null,
-    planName: plan?.name ?? "",
-  } : null;
-  if (!isCurrentSubscription(data ? { ...data, platform_plans: plan } : null)) return { planId: "", features: [] as string[], subscription };
-  const features = normalizeFeatures(plan?.features);
   const overrides = ((overridesResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
     featureId: String(row.feature_id) as PlatformFeatureId,
     enabled: Boolean(row.enabled),
   })) satisfies BrandFeatureOverride[];
-  const effectiveFeatures = getEffectiveBrandFeatureCodes(features, overrides);
-  return { planId: String(data?.plan_id ?? ""), features: effectiveFeatures as string[], subscription };
+  const now = Date.now();
+  const rows = data ?? [];
+  const serviceSubscriptions: ServiceSubscription[] = rows.flatMap((row) => {
+    const plan = row.platform_plans as { name?: string; features?: unknown; active?: boolean } | null;
+    // Keep future starts in the clock, but never expose them as current access.
+    if (!isCurrentSubscription({ ...row, started_at: null, platform_plans: plan }, now)) return [];
+    return [{
+      planId: String(row.plan_id ?? ""),
+      status: String(row.status),
+      startedAt: row.started_at ? String(row.started_at) : null,
+      expiresAt: row.expires_at ? String(row.expires_at) : null,
+      planName: plan?.name ?? "",
+      features: getEffectiveBrandFeatureCodes(normalizeFeatures(plan?.features), overrides),
+    }];
+  });
+  const access = getServiceSubscriptionAccess(serviceSubscriptions, now);
+  const latest = rows[0];
+  const latestPlan = latest?.platform_plans as { name?: string } | null | undefined;
+  const subscription = access.subscription ?? (latest ? {
+    status: String(latest.status),
+    startedAt: latest.started_at ? String(latest.started_at) : null,
+    expiresAt: latest.expires_at ? String(latest.expires_at) : null,
+    planName: latestPlan?.name ?? "",
+  } : null);
+  return { ...access, subscription, serviceSubscriptions };
 });
 
 export async function getCafeFeatureCodes(cafeId: string): Promise<string[]> {

@@ -13,7 +13,7 @@ function readSessionSnapshot(): DashboardShellSnapshot | null {
     const raw = sessionStorage.getItem("barndaksa_dashboard_shell_snapshot");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { at: number; value: DashboardShellSnapshot };
-    if (Date.now() - parsed.at > DASHBOARD_SHELL_TTL_MS) {
+    if (Date.now() - parsed.at > DASHBOARD_SHELL_TTL_MS || !Array.isArray(parsed.value?.serviceSubscriptions)) {
       sessionStorage.removeItem("barndaksa_dashboard_shell_snapshot");
       return null;
     }
@@ -43,7 +43,7 @@ function redirectUnauthenticatedDashboard(value: DashboardShellSnapshot) {
 }
 
 export function getCachedDashboardShellSnapshot() {
-  if (cachedSnapshot && Date.now() - cachedSnapshot.at < DASHBOARD_SHELL_TTL_MS) {
+  if (cachedSnapshot && Array.isArray(cachedSnapshot.value.serviceSubscriptions) && Date.now() - cachedSnapshot.at < DASHBOARD_SHELL_TTL_MS) {
     return Promise.resolve(cachedSnapshot.value);
   }
 

@@ -5,7 +5,8 @@ import { getPlatformPlans } from "@/lib/data/admin";
 import { roundMoney } from "@/lib/finance/barndaksa-finance";
 import { calculateSubscriptionAmount, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
-import type { BankSubscriptionRequest, BankTransferDetails, CurrentSubscription } from "@/lib/platform/subscription-bank";
+import type { BankSubscriptionRequest, BankTransferDetails, CurrentSubscription, SubscriptionUpgradeCredit } from "@/lib/platform/subscription-bank";
+import { isCurrentSubscription } from "@/lib/platform/active-subscription";
 
 /** Snapshot time accompanies server subscription data for stable hydration. */
 export function getSubscriptionReferenceTime() { return Date.now(); }
@@ -285,12 +286,14 @@ export async function getOwnerSubscriptionRequests() {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
   const { data, error } = await supabase.from("subscription_payment_requests")
-    .select("id,plan_id,plan_name,amount_sar,duration_count,status,receipt_channel,receipt_storage_path,created_at,admin_response,coupon_code_snapshot,annual_discount_amount_sar,coupon_discount_amount_sar,base_amount_sar")
+    .select("id,plan_id,plan_name,amount_sar,duration_count,status,receipt_channel,receipt_storage_path,created_at,admin_response,coupon_code_snapshot,annual_discount_amount_sar,coupon_discount_amount_sar,base_amount_sar,upgrade_credit_amount_sar,upgrade_credit_snapshot,upgrade_extension_seconds")
     .eq("cafe_id", cafe.id).order("created_at", { ascending: false }).limit(30);
   if (error) throw error;
   return (data ?? []).map((row): BankSubscriptionRequest => ({
     id: String(row.id), planId: String(row.plan_id), planName: String(row.plan_name), amount: Number(row.amount_sar),
     couponCode: row.coupon_code_snapshot ? String(row.coupon_code_snapshot) : undefined,
+    upgradeCreditAmount: Number(row.upgrade_credit_amount_sar ?? 0), upgradeCredits: (row.upgrade_credit_snapshot ?? []) as SubscriptionUpgradeCredit[],
+    extendedDays: Number(row.upgrade_extension_seconds ?? 0) / 86400,
     annualDiscountAmount: Number(row.annual_discount_amount_sar ?? 0), couponDiscountAmount: Number(row.coupon_discount_amount_sar ?? 0), baseAmount: Number(row.base_amount_sar),
     durationMonths: Number(row.duration_count), status: String(row.status), receiptChannel: row.receipt_channel === "whatsapp" ? "whatsapp" : "upload",
     receiptStoragePath: row.receipt_storage_path ? String(row.receipt_storage_path) : undefined,
@@ -299,12 +302,20 @@ export async function getOwnerSubscriptionRequests() {
 }
 
 export async function getCurrentOwnerSubscription(): Promise<CurrentSubscription | null> {
+  return (await getCurrentOwnerSubscriptions())[0] ?? null;
+}
+
+export async function getCurrentOwnerSubscriptions(): Promise<CurrentSubscription[]> {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
-  const { data, error } = await supabase.from("subscriptions").select("id,plan_id,status,started_at,expires_at,activation_source")
-    .eq("cafe_id", cafe.id).in("status", ["active", "trialing"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data, error } = await supabase.from("subscriptions").select("id,plan_id,status,started_at,expires_at,activation_source,platform_plans(name,active)")
+    .eq("cafe_id", cafe.id).in("status", ["active", "trialing"]).order("created_at", { ascending: false });
   if (error) throw error;
-  return data ? { id: String(data.id), planId: String(data.plan_id), status: String(data.status), startedAt: data.activation_source === "admin_prepared_trial" ? null : data.started_at ? String(data.started_at) : null, expiresAt: data.expires_at ? String(data.expires_at) : null, awaitingOwnerDelivery: data.activation_source === "admin_prepared_trial" && data.status === "trialing" } : null;
+  return (data ?? []).flatMap(row => {
+    const plan = row.platform_plans as unknown as { name: string; active: boolean } | null;
+    if (!isCurrentSubscription({ ...row, platform_plans: plan })) return [];
+    return [{ id: String(row.id), planId: String(row.plan_id), planName: plan?.name, status: String(row.status), startedAt: row.activation_source === "admin_prepared_trial" ? null : row.started_at ? String(row.started_at) : null, expiresAt: row.expires_at ? String(row.expires_at) : null, awaitingOwnerDelivery: row.activation_source === "admin_prepared_trial" && row.status === "trialing" }];
+  });
 }
 
 export async function getBankTransferDetails(): Promise<BankTransferDetails | null> {
@@ -327,26 +338,27 @@ const bankQuoteErrors: Record<string, string> = {
   "Plan unavailable": "الباقة غير متاحة اختر باقة أخرى",
   "Invalid duration": "اختر مدة اشتراك صحيحة",
 };
-export type BankSubscriptionQuote = { baseAmount: number; annualDiscountAmount: number; couponDiscountAmount: number; totalAmount: number; couponCode: string | null };
+export type BankSubscriptionQuote = { baseAmount: number; annualDiscountAmount: number; couponDiscountAmount: number; totalAmount: number; couponCode: string | null; upgradeCreditAmount?: number; upgradeCredits?: SubscriptionUpgradeCredit[]; extendedDays?: number; extendedSeconds?: number; upgradeExtraCreditAmount?: number };
 export async function previewOwnerBankSubscription(planId: string, durationMonths: number, couponCode?: string): Promise<BankSubscriptionQuote> {
   const cafe = await requireOwnerCafeContext();
   if (cafe.role !== "owner") throw new Error("معاينة طلب الاشتراك متاحة من حساب المالك");
   sanitizeDurationMonths(durationMonths);
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("quote_bank_subscription", { p_plan_id: planId, p_duration_months: durationMonths, p_coupon_code: normalizeCoupon(couponCode) });
-  if (error) throw new Error(bankQuoteErrors[error.message] ?? "تعذر التحقق من الكوبون حاول مجددًا");
+  if (error) throw new Error(bankQuoteErrors[error.message] ?? "تعذر احتساب السعر حاول مجددًا");
   return data as BankSubscriptionQuote;
 }
 
-export async function createOwnerBankRequest(planId: string, durationMonths: number, couponCode?: string): Promise<BankSubscriptionRequest[]> {
+export async function createOwnerBankRequest(planId: string, durationMonths: number, couponCode?: string, expectedTotalAmount?: number, expectedUpgradeCreditAmount?: number, expectedExtensionSeconds?: number): Promise<BankSubscriptionRequest[]> {
   const cafe = await requireOwnerCafeContext();
   if (cafe.role !== "owner") throw new Error("طلب الاشتراك متاح من حساب المالك أنهِ وضع الصيانة وسجّل بحساب المالك لإنشاء الطلب");
   if (!planId || ![1, 3, 6, 12].includes(durationMonths)) throw new Error("اختر باقة ومدة صحيحة");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths, p_coupon_code: normalizeCoupon(couponCode) });
+  const { error } = await supabase.rpc("create_bank_subscription_request", { p_plan_id: planId, p_duration_months: durationMonths, p_coupon_code: normalizeCoupon(couponCode), p_expected_total_amount: expectedTotalAmount ?? null, p_expected_upgrade_credit_amount: expectedUpgradeCreditAmount ?? null, p_expected_extension_seconds: expectedExtensionSeconds ?? null });
   if (error) {
     const reasons: Record<string, string> = {
       ...bankQuoteErrors,
+      "Quote changed": "تغير مبلغ الاشتراك حدّث احتساب السعر ثم تابع",
       "An open request already exists": "لديك طلب اشتراك مفتوح بالفعل حدّث الصفحة لمتابعة الطلب وإرسال الإيصال",
       "Plan unavailable": "هذه الباقة غير متاحة للاشتراك حاليًا اختر باقة أخرى أو حدّث الصفحة",
       "Duration unavailable": "المدة المختارة غير متاحة لهذه الباقة اختر مدة أخرى",

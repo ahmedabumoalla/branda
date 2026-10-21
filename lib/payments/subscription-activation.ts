@@ -18,12 +18,6 @@ export async function activatePaidSubscription(input: {
   const paidAt = new Date().toISOString();
   const provider = input.provider ?? "paypal";
 
-  await admin
-    .from("subscriptions")
-    .update({ status: "cancelled", cancelled_at: paidAt })
-    .eq("cafe_id", input.cafeId)
-    .in("status", ["active", "trialing"]);
-
   const updatePayload: Record<string, unknown> = {
     status: "active",
     started_at: paidAt,
@@ -50,11 +44,21 @@ export async function activatePaidSubscription(input: {
     .eq("id", input.subscriptionId)
     .eq("cafe_id", input.cafeId)
     .eq("status", "past_due")
-    .select("id,platform_coupon_id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,created_at,cafes(name,owner_email,tax_number,commercial_register)")
+    .select("id,plan_id,platform_coupon_id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,created_at,cafes(name,owner_email,tax_number,commercial_register)")
     .maybeSingle();
 
   if (error) throw error;
   if (!data) return false;
+
+  // A validated payment replaces only its own package; independent services remain active.
+  const { error: cancellationError } = await admin
+    .from("subscriptions")
+    .update({ status: "cancelled", cancelled_at: paidAt })
+    .eq("cafe_id", input.cafeId)
+    .eq("plan_id", data.plan_id)
+    .neq("id", input.subscriptionId)
+    .in("status", ["active", "trialing"]);
+  if (cancellationError) throw cancellationError;
 
   await admin.rpc("record_subscription_finance_distribution", { p_subscription_id: input.subscriptionId });
 

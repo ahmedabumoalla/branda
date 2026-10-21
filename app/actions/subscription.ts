@@ -38,12 +38,12 @@ export async function failPlanPaymentAction() {
   await failOwnerPlanPayment();
 }
 
-export async function createBankSubscriptionRequestAction(planId: string, durationMonths: number, couponCode?: string) {
-  return actionResult(() => createOwnerBankRequest(planId, durationMonths, couponCode), "تعذر إنشاء طلب الاشتراك حاول مجددًا");
+export async function createBankSubscriptionRequestAction(planId: string, durationMonths: number, couponCode?: string, expectedTotalAmount?: number, expectedUpgradeCreditAmount?: number, expectedExtensionSeconds?: number) {
+  return actionResult(() => createOwnerBankRequest(planId, durationMonths, couponCode, expectedTotalAmount, expectedUpgradeCreditAmount, expectedExtensionSeconds), "تعذر إنشاء طلب الاشتراك حاول مجددًا");
 }
 
 export async function previewBankSubscriptionAction(planId: string, durationMonths: number, couponCode?: string) {
-  return actionResult(() => previewOwnerBankSubscription(planId, durationMonths, couponCode), "تعذر التحقق من الكوبون حاول مجددًا");
+  return actionResult(() => previewOwnerBankSubscription(planId, durationMonths, couponCode), "تعذر احتساب السعر حاول مجددًا");
 }
 
 export async function uploadSubscriptionReceiptAction(requestId: string, formData: FormData) {

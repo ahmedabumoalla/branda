@@ -25,6 +25,7 @@ export type PlatformPlan = {
   description: string;
   active: boolean;
   isDefault: boolean;
+  isUpgradeBundle?: boolean;
   features: PlatformFeature[];
   categoryId?: string;
   maxOrdersMonthly?: number | null;

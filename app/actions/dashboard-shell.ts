@@ -51,6 +51,7 @@ export async function fetchOwnerDashboardShellAction() {
       unauthenticated: true as const,
       planId: "",
       subscription: null,
+      serviceSubscriptions: [],
       plans: await getPlatformPlans().catch(() => []),
       featureOverrides: [],
       settings: fallbackSettings({ slug: "", name: "" }),
@@ -100,6 +101,7 @@ export async function fetchOwnerDashboardShellAction() {
   return {
     planId: serviceAccess.planId,
     subscription: serviceAccess.subscription,
+    serviceSubscriptions: serviceAccess.serviceSubscriptions,
     plans: plans.map(plan => plan.id === serviceAccess.planId ? { ...plan, features: serviceAccess.features as PlatformFeature[] } : plan),
     featureOverrides: [],
     settings,
