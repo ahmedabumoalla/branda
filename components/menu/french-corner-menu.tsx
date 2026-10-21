@@ -72,7 +72,7 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu }) {
     shareTimer.current = setTimeout(() => setMessage(""), 4000);
   }
   const trackLoyalty = () => trackBrandEngagement(menu.slug, "menu_loyalty_click");
-  return <main className={`${base.menu} ${s.page}`} dir="rtl" data-french-corner="salon-v1">
+  return <main className={`${base.menu} ${s.page}`} dir="rtl" data-french-corner="noir-v2">
     <a href="#french-catalog" className={base.skipLink}>انتقل إلى الأصناف</a>
     <header className={s.header}>
       <a className={s.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="" eager /><span>الركن الفرنسي<small lang="fr" dir="ltr">LE COIN FRANÇAIS</small></span></a>
@@ -80,28 +80,21 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu }) {
       <div className={s.actions}><button type="button" aria-label="البحث في المنيو" onClick={focusSearch}><Search aria-hidden="true" /></button><button type="button" aria-label="مشاركة المنيو" onClick={share}><Share2 aria-hidden="true" /></button><MenuServices menu={menu} compact /></div>
     </header>
     <section className={s.hero} id="french-top" aria-labelledby="french-title">
+      <div className={s.heroBackdrop} aria-hidden="true"><FrenchImage src="/french-corner/salon.webp" alt="" eager /></div>
+      <a href="#french-catalog" className={`${s.heroScene} ${s.sweetScene}`}><FrenchImage src="/french-corner/dessert.webp" alt="بانكيك الركن الفرنسي بتشكيلة من الصوصات" /><span><small lang="fr">La douceur</small>للحلا حكاية<ArrowDownLeft aria-hidden="true" /></span></a>
       <div className={s.heroCopy}>
-        <p className={s.eyebrow}><span /> قهوة وحلويات وأكثر</p>
-        <h1 id="french-title">ركنٌ للمذاق<br /><em>ومساحةٌ للمزاج</em></h1>
-        <p className={s.heroDescription}>من أول رشفة قهوة إلى آخر لقمة حلا<br />خذ وقتك واستمتع بتفاصيل الركن الفرنسي</p>
-        <a className={s.explore} href="#french-catalog">على ذوقك نبدأ<ArrowDownLeft aria-hidden="true" /></a>
-        <div className={s.heroSignature}><span lang="fr" dir="ltr">Un coin à vous</span><small>مكانك للحظة تستاهل</small></div>
+        <p className={s.eyebrow}>أهلًا بك في ركنك</p>
+        <FrenchImage src={menu.logoUrl} alt="مقهى الركن الفرنسي" className={s.heroLogo} eager />
+        <h1 id="french-title">للمزاج <em>ركن فرنسي</em></h1>
+        <p className={s.heroDescription}>قهوة على مهل وحلا يستحق اللحظة</p>
+        <a className={s.explore} href="#french-catalog">اكتشف مذاقك<ArrowDownLeft aria-hidden="true" /></a>
       </div>
-      <div className={s.heroArt}>
-        <div className={s.arch}><FrenchImage src="/french-corner/salon.webp" alt="جلسات الركن الفرنسي بإضاءتها الدافئة وتفاصيلها الخشبية" eager /><span className={s.photoLabel} lang="fr" dir="ltr">LE SALON</span></div>
-        <figure className={s.dessertFrame}><FrenchImage src="/french-corner/dessert.webp" alt="بانكيك من الركن الفرنسي بتشكيلة من الصوصات" eager /><figcaption><span>تفاصيل تُذاق</span><ArrowUpLeft aria-hidden="true" /></figcaption></figure>
-        <span className={s.artCaption} lang="fr" dir="ltr">CAFÉ · DESSERTS · BON TEMPS</span>
-        <span className={s.seal} aria-hidden="true">Le Coin<br /><i>Français</i></span>
-      </div>
-      <div className={s.heroBottom}><span>أهلًا بك في الركن الفرنسي</span><a href="#french-catalog">اكتشف القائمة<ArrowDownLeft aria-hidden="true" /></a><span lang="fr" dir="ltr">L’ART DE PRENDRE SON TEMPS</span></div>
+      <a href="https://maps.app.goo.gl/aYZppeoyQbPAGBh19" target="_blank" rel="noopener noreferrer" className={`${s.heroScene} ${s.salonScene}`}><FrenchImage src="/french-corner/salon.webp" alt="جلسات الركن الفرنسي بإضاءتها الدافئة" /><span><small lang="fr">Le rendez-vous</small>وهنا يحلو اللقاء<ArrowUpLeft aria-hidden="true" /></span></a>
+      <div className={s.heroBottom}><span lang="fr" dir="ltr">FRENCH CORNER CAFE</span><span>قهوة وحلويات وأكثر</span><a href="#french-catalog">القائمة بين يديك<ArrowDownLeft aria-hidden="true" /></a></div>
     </section>
-    {menu.loyaltyEnabled && <section className={s.membership} aria-labelledby="french-membership-title">
-      <div className={s.membershipMark} aria-hidden="true"><WalletCards /><span lang="fr">Le Cercle</span></div>
-      <div><p className={s.eyebrow}>لأنك من أهل الركن</p><h2 id="french-membership-title">كل زيارة تترك أثرًا</h2><p>بطاقتك تجمع زياراتك وتقرّبك من مكافأتك</p></div>
-      <Link className={s.membershipLink} href={loyaltyHref} onClick={trackLoyalty}>افتح بطاقة الولاء<ArrowUpLeft aria-hidden="true" /></Link>
-    </section>}
+    {categories.length > 0 && <section className={s.discovery} aria-labelledby="french-discovery-title"><div className={s.discoveryHeading}><p className={s.eyebrow}>كل مزاج له اختيار</p><h2 id="french-discovery-title">من وين نبدأ؟</h2><span lang="fr">À votre goût</span></div><div className={s.discoveryRail}>{categories.map((c, index) => { const photo = menu.products.find(p => (p.categoryId || "uncategorized") === c.id && p.images.length)?.images[0]?.url; return <button type="button" className={s.discoveryCard} key={c.id} onClick={() => selectCategory(c.id)} aria-label={`تصفح ${menuDisplayText(c.name)}`}><FrenchImage src={photo} alt="" /><span className={s.discoveryNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span><span className={s.discoveryName}>{menuDisplayText(c.name)}<ArrowDownLeft aria-hidden="true" /></span></button>; })}</div></section>}
     <section className={s.catalog} id="french-catalog" aria-labelledby="french-catalog-title">
-      <div className={s.catalogHeading}><div><p className={s.eyebrow}>اختيارات الركن الفرنسي</p><h2 id="french-catalog-title">وش يكمّل <em>مزاجك؟</em></h2></div><span lang="fr" dir="ltr">La Carte<small>COFFEE & SWEET PLEASURES</small></span></div>
+      <div className={s.catalogHeading}><div><p className={s.eyebrow}>قائمة الركن الفرنسي</p><h2 id="french-catalog-title">تفاصيل تُذاق <em>وتنحب</em></h2></div><span lang="fr" dir="ltr">La Carte<small>COFFEE & SWEET PLEASURES</small></span></div>
       <div className={s.catalogTools}>
         <label className={s.search}><Search aria-hidden="true" /><input ref={search} type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="قهوة؟ حلا؟ ابحث عن اللي في بالك" aria-label="ابحث في الأصناف والمكونات" />{query && <button type="button" aria-label="مسح البحث" onClick={() => { setQuery(""); search.current?.focus(); }}><X aria-hidden="true" /></button>}</label>
         <label className={s.sort}><span>ترتيب الأصناف</span><select value={order} onChange={e => setOrder(e.target.value)}><option value="original">اختيارات المنيو</option><option value="low">السعر الأقل أولًا</option><option value="high">السعر الأعلى أولًا</option></select></label>
@@ -118,9 +111,14 @@ export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu }) {
       </div></section>)}
       {!visible.length && <div className={s.empty}><Coffee aria-hidden="true" /><h3>{menu.products.length ? "خلّنا نجرّب اختيارًا ثانيًا" : "قائمتنا قيد التحضير"}</h3><p>{menu.products.length ? "غيّر كلمة البحث أو ارجع لتصفح القائمة كاملة" : "ننتظرك قريبًا مع أصنافنا"}</p>{menu.products.length > 0 && <button type="button" onClick={() => { setQuery(""); setCategory("all"); setOrder("original"); }}>عرض كل الأصناف</button>}</div>}
     </section>
-    <section className={s.visit}><FrenchImage src="/french-corner/drink.webp" alt="موهيتو الركن الفرنسي" /><div><p className={s.eyebrow}>نفس الركن مزاج جديد</p><h2>للمرّة الجاية<br /><em>مكانك محفوظ بقلوبنا</em></h2><a href="https://maps.app.goo.gl/aYZppeoyQbPAGBh19" target="_blank" rel="noopener noreferrer"><MapPin aria-hidden="true" />تفضّل على ركنك<ArrowUpLeft aria-hidden="true" /></a></div></section>
+    {menu.loyaltyEnabled && <section className={s.membership} aria-labelledby="french-membership-title">
+      <div className={s.memberCard} aria-hidden="true"><div><span lang="fr">LE CERCLE PRIVÉ</span><WalletCards /></div><FrenchImage src={menu.logoUrl} alt="" /><p>لك مكان ولك تقدير</p><small>FRENCH CORNER MEMBERSHIP</small></div>
+      <div className={s.memberCopy}><p className={s.eyebrow}>لأنك من أهل الركن</p><h2 id="french-membership-title">زياراتك حكاية<br /><em>ومكافأتك أجمل</em></h2><p>خلّ بطاقتك معك واجمع أختامك<br />كل زيارة تقرّبك من مكافأتك</p><Link className={s.membershipLink} href={loyaltyHref} onClick={trackLoyalty}>افتح بطاقة الولاء<ArrowUpLeft aria-hidden="true" /></Link></div>
+    </section>}
+    <section className={s.visit}><FrenchImage src="/french-corner/drink.webp" alt="موهيتو الركن الفرنسي" /><div><p className={s.eyebrow}>نفس الركن مزاج جديد</p><h2>بعض الأماكن نزورها<br /><em>وبعضها يصير ركننا</em></h2><a href="https://maps.app.goo.gl/aYZppeoyQbPAGBh19" target="_blank" rel="noopener noreferrer"><MapPin aria-hidden="true" />ننتظرك في الركن الفرنسي<ArrowUpLeft aria-hidden="true" /></a></div></section>
     <footer className={s.footer}><a href="#french-top" className={s.footerBrand} lang="fr" dir="ltr">Le Coin <i>Français</i></a><div><span>قهوة وحلويات وأكثر</span><a href="https://barndaksa.com" aria-label="بواسطة برندة">بواسطة برندة<ArrowUpLeft aria-hidden="true" /></a><a href="#french-catalog">العودة للقائمة ↑</a></div></footer>
     {message && <div className={s.toast} role="status"><Check aria-hidden="true" />{message}</div>}
+    <nav className={s.mobileDock} aria-label="اختصارات المنيو"><a href="#french-catalog"><Coffee aria-hidden="true" />القائمة</a><button type="button" onClick={focusSearch}><Search aria-hidden="true" />البحث</button>{menu.loyaltyEnabled && <Link href={loyaltyHref} onClick={trackLoyalty}><WalletCards aria-hidden="true" />بطاقتي</Link>}<button type="button" onClick={share}><Share2 aria-hidden="true" />مشاركة</button></nav>
     <AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} brandSlug={menu.slug} product={selected} products={menu.products} close={() => setSelectedId(null)} browse={browse} position={browseProducts.findIndex(p => p.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main>;
 }
