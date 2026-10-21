@@ -8,6 +8,7 @@ import { matchesMenuSearch, menuDisplayText, type StandaloneMenu, type Standalon
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
+import { menuEntryUrl, startMenuAtTop } from "@/lib/menu/menu-entry-scroll";
 import { ProductDetails } from "./bistro-menu";
 import { ProductOfferBadge, ProductOfferDetails } from "./product-offer-details";
 import { MenuServices } from "./menu-services";
@@ -36,7 +37,9 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
   const [message, setMessage] = useState("");
   const [now, setNow] = useState(source.highlights?.asOf ?? 0);
   const search = useRef<HTMLInputElement>(null);
+  const root = useRef<HTMLElement>(null);
   const shareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => startMenuAtTop(root.current), []);
   useEffect(() => () => { if (shareTimer.current) clearTimeout(shareTimer.current); }, []);
   useEffect(() => {
     if (!source.highlights?.items.length) return;
@@ -68,14 +71,15 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
   }
   async function share() {
     try {
-      if (navigator.share) await navigator.share({ title: `${menu.name} | المنيو`, url: window.location.href });
-      else { await navigator.clipboard.writeText(window.location.href); setMessage("تم نسخ رابط المنيو"); }
+      const url = menuEntryUrl(window.location.origin, menu.slug);
+      if (navigator.share) await navigator.share({ title: `${menu.name} | المنيو`, url });
+      else { await navigator.clipboard.writeText(url); setMessage("تم نسخ رابط المنيو"); }
     } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) setMessage("يمكنك نسخ الرابط من شريط العنوان"); }
     if (shareTimer.current) clearTimeout(shareTimer.current);
     shareTimer.current = setTimeout(() => setMessage(""), 4000);
   }
   const trackLoyalty = () => trackBrandEngagement(menu.slug, "menu_loyalty_click");
-  return <main className={`${base.menu} ${s.page}`} dir="rtl" data-french-corner="atelier-v3">
+  return <main ref={root} className={`${base.menu} ${s.page}`} dir="rtl" data-french-corner="atelier-v3">
     <a href="#french-catalog" className={base.skipLink}>انتقل إلى الأصناف</a>
     <header className={s.header}>
       <a className={s.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="" eager /><span>الركن الفرنسي<small lang="fr" dir="ltr">LE COIN FRANÇAIS</small></span></a>
