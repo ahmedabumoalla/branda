@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import ts from 'typescript';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+const require=createRequire(import.meta.url),root=process.cwd();
+const target='components/menu/french-corner-menu.tsx';
+let state=[],cursor=0;
+const hooks={...React,useState(initial){const i=cursor++;if(!(i in state))state[i]=typeof initial==='function'?initial():initial;return [state[i],v=>{state[i]=typeof v==='function'?v(state[i]):v;}];},useEffect(){},useRef(){return {current:null};}};
+const stubs={
+ 'next/link':{__esModule:true,default:'a'},
+ './bistro-menu':{ProductDetails:props=>React.createElement('div',{'data-selected':props.product.id,'data-price':props.product.price})},
+ './menu-services':{MenuServices:()=>React.createElement('button',{'aria-label':'خدمات المقهى'},'خدمات')},
+ '@/lib/analytics/public-tracking':{trackBrandEngagement:()=>{}},
+ 'motion/react':{AnimatePresence:({children})=>children},
+};
+function load(file,cache=new Map()){
+ if(cache.has(file))return cache.get(file);
+ const exports={};cache.set(file,exports);
+ const output=ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+ new Function('require','exports',output)(name=>{
+  if(file===target&&name==='react')return hooks;
+  if(name in stubs)return stubs[name];
+  if(name.endsWith('.module.css'))return {__esModule:true,default:new Proxy({},{get:(_,key)=>String(key)})};
+  if(name.startsWith('.')||name.startsWith('@/')){const p=name.startsWith('@/')?name.slice(2):path.join(path.dirname(file),name);return load(p+(fs.existsSync(p+'.tsx')?'.tsx':'.ts'),cache);}
+  return require(name);
+ },exports);return exports;
+}
+const {FrenchCornerMenu}=load(target);
+const p=(id,name,price,categoryId='coffee')=>({id,name,price,categoryId,category:categoryId==='coffee'?'قهوة':'حلا',description:'',available:true,calories:null,ingredients:[],images:[],videos:[],promo:null});
+const source={name:'مقهى الركن الفرنسي',slug:'brand-10620d3a586c',logoUrl:'/own-logo.webp',description:'قهوة وحلويات',loyaltyEnabled:true,categories:[{id:'coffee',name:'قهوة'},{id:'sweet',name:'حلا'}],products:[p('a','لاتيه',18),p('b','إسبريسو',12),p('c','كيك',25,'sweet')],contacts:{location:null,instagramUrl:null,feedbackEnabled:false}};
+global.document={getElementById:()=>({scrollIntoView(){}})};
+function render(menu=source){cursor=0;const tree=FrenchCornerMenu({menu});return {tree,html:renderToStaticMarkup(tree)};}
+function nodes(tree,predicate){const found=[];function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n)){n.forEach(walk);return;}if(predicate(n))found.push(n);walk(n.props?.children);}walk(tree);return found;}
+const cards=tree=>nodes(tree,n=>Boolean(n.props?.['data-product-id'])).map(n=>n.props['data-product-id']);
+let checks=0;function check(name,fn){fn();checks++;console.log('PASS '+name);}
+check('French identity, direct loyalty and complete catalog SSR',()=>{const {tree,html}=render();assert.deepEqual(cards(tree),['a','b','c']);assert(html.includes('salon-v1'));assert(html.includes('/loyalty/brand-10620d3a586c?source=menu'));assert(!html.includes('GOOD FOOD'));assert(!html.includes('double-b'));assert(!html.includes('الكواكب'));});
+check('Search and empty state use actual customer input',()=>{let r=render();nodes(r.tree,n=>n.type==='input'&&n.props.type==='search')[0].props.onChange({target:{value:'لاتيه'}});assert.deepEqual(cards(render().tree),['a']);r=render();nodes(r.tree,n=>n.type==='input')[0].props.onChange({target:{value:'غير موجود'}});assert.deepEqual(cards(render().tree),[]);assert(render().html.includes('خلّنا نجرّب'));state=[];});
+check('Category filter and price ordering retain catalog links',()=>{let r=render();nodes(r.tree,n=>n.type==='button'&&n.key==='coffee')[0].props.onClick();assert.deepEqual(cards(render().tree),['a','b']);r=render();nodes(r.tree,n=>n.type==='select')[0].props.onChange({target:{value:'low'}});assert.deepEqual(cards(render().tree),['b','a']);state=[];});
+check('Details follow live product edits and close when product is removed',()=>{const r=render();nodes(r.tree,n=>n.type==='button'&&n.props['aria-label']==='عرض تفاصيل لاتيه')[0].props.onClick();assert(render().html.includes('data-selected="a"'));assert(render({...source,products:source.products.map(x=>({...x,price:x.id==='a'?19:x.price}))}).html.includes('data-price="19"'));assert(!render({...source,products:source.products.slice(1)}).html.includes('data-selected'));state=[];});
+check('No loyalty link without entitlement; no fabricated product photos',()=>{const {html}=render({...source,loyaltyEnabled:false});assert(!html.includes('/loyalty/'));assert(html.includes('data-no-photo="true"'));assert(html.includes('role="img"'));state=[];});
+check('Uncategorized and empty catalogs remain usable',()=>{assert.deepEqual(cards(render({...source,products:[p('u','منتج',14,null)]}).tree),['u']);assert(render({...source,products:[]}).html.includes('قائمتنا قيد التحضير'));state=[];});
+check('Active offers use discounted price and preserve original price',()=>{const {html}=render({...source,highlights:{asOf:Date.now(),items:[{id:'offer',kind:'general',title:'خصم',discountPercent:10,expiresAt:null}]}});assert(html.includes('16.2'));assert(html.includes('<del>18</del>'));});
+const route=fs.readFileSync('app/menu/[slug]/page.tsx','utf8');assert(route.includes('menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu'));assert(route.includes('if (showcase) return <div inert>{presentation}</div>'));
+console.log(`${checks} French Corner behavior groups and tenant/preview routing passed`);

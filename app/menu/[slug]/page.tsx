@@ -3,6 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { getStandaloneMenu } from "@/lib/data/standalone-menu";
 import { BistroMenu } from "@/components/menu/bistro-menu";
+import { FrenchCornerMenu } from "@/components/menu/french-corner-menu";
 import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
 import { MenuAutoRefresh } from "@/components/menu/menu-auto-refresh";
 import { isPublicHomeMenuSlug } from "@/lib/data/public-home-catalog";
@@ -37,6 +38,7 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const menu = await getStandaloneMenu(slug, showcase);
   if (!menu) notFound();
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
-  if (showcase) return <div inert><BistroMenu menu={menu} /></div>;
-  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} /><BistroMenu menu={menu} /></>;
+  const presentation = menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} /> : <BistroMenu menu={menu} />;
+  if (showcase) return <div inert>{presentation}</div>;
+  return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }

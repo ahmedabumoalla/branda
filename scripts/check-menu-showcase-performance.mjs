@@ -138,8 +138,9 @@ await test(async () => {
   const page = load("app/menu/[slug]/page.tsx", {
     "next/navigation": { notFound() { throw new Error("NOT_FOUND"); } },
     "@/lib/data/public-home-catalog": { isPublicHomeMenuSlug: async () => true },
-    "@/lib/data/standalone-menu": { getStandaloneMenu: async (...values) => { args.push(values); return { slug: "rast", name: "Rast" }; } },
+    "@/lib/data/standalone-menu": { getStandaloneMenu: async (...values) => { args.push(values); return { slug: values[0], name: "Menu fixture" }; } },
     "@/components/menu/bistro-menu": { BistroMenu: () => React.createElement("main", null, "menu") },
+    "@/components/menu/french-corner-menu": { FrenchCornerMenu: () => React.createElement("main", null, "FRENCH_SALON") },
     "@/components/analytics/public-page-analytics": { PublicPageAnalytics: () => React.createElement("i", null, "ANALYTICS") },
     "@/components/menu/menu-auto-refresh": { MenuAutoRefresh: () => React.createElement("i", null, "POLLING") },
   });
@@ -152,5 +153,11 @@ await test(async () => {
   assert(regular.includes("ANALYTICS"));
   assert(regular.includes("POLLING"));
   assert.deepEqual(args, [["rast", true], ["rast", false]]);
+  const frenchParams = Promise.resolve({ slug: "brand-10620d3a586c" });
+  const frenchPreview = renderToStaticMarkup(await page.default({ params: frenchParams, searchParams: Promise.resolve({ showcase: "1" }) }));
+  assert(frenchPreview.includes("FRENCH_SALON") && frenchPreview.includes("inert"));
+  assert(!frenchPreview.includes("ANALYTICS") && !frenchPreview.includes("POLLING"));
+  const frenchRegular = renderToStaticMarkup(await page.default({ params: frenchParams }));
+  assert(frenchRegular.includes("FRENCH_SALON") && frenchRegular.includes("ANALYTICS") && frenchRegular.includes("POLLING"));
 });
 console.log(`Menu showcase performance: ${checks} grouped concurrency, payload, visibility and preview checks passed`);

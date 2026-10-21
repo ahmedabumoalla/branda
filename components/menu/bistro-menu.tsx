@@ -128,7 +128,7 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-function ProductDetails({ product, products, close, browse, position, total, brandSlug }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string }) {
+export function ProductDetails({ product, products, close, browse, position, total, brandSlug }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [mediaIndex, setMediaIndex] = useState(!product.primaryMediaType && brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
