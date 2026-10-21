@@ -96,6 +96,13 @@
 .statIcon { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; }
 .summary strong { display: block; font-size: clamp(32px, 3vw, 42px); line-height: 1.15; margin: 16px 0 9px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
 .summary .statHint { display: block; font-size: 13px; color: var(--muted); }
+.campaignOverview { padding-bottom: 18px; border-top: 2px solid #637254; }
+.campaignOverview .heading { margin-bottom: 16px; }
+.campaignSummary { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: var(--line); margin: 0; }
+.campaignSummary > div { padding: 18px; background: var(--surface-raised); min-width: 0; }
+.campaignSummary dt { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.campaignSummary dd { margin: 10px 0 0; color: var(--accent); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.campaignNote { margin: 14px 0 0; font-size: 12px; color: var(--muted); line-height: 1.9; }
 .results { padding: 0; overflow: hidden; }
 .results > .heading { padding: 24px 24px 0; margin-bottom: 20px; }
 .resultCount { font-size: 13px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--accent); white-space: nowrap; }
@@ -113,7 +120,9 @@
 .tableWrap::-webkit-scrollbar { display: block !important; width: 8px !important; height: 8px !important; }
 .tableWrap::-webkit-scrollbar-thumb { background: #65715f; border-radius: 8px; }
 .tableWrap::-webkit-scrollbar-track { background: var(--surface); }
-.tableWrap table { width: 100%; min-width: 1370px; border-collapse: separate; border-spacing: 0; font-size: 14px; text-align: right; }
+.tableWrap table { width: 100%; min-width: 1920px; border-collapse: separate; border-spacing: 0; font-size: 14px; text-align: right; }
+.tableWrap .columnGroups .campaignGroup { color: var(--accent); background: #2d3124; }
+.tableWrap .campaignCell { border-inline-start: 1px solid #637254; }
 .tableWrap :is(th,td) { padding: 18px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .tableWrap thead th { background: var(--surface-raised); font-weight: 700; font-size: 14px; white-space: nowrap; }
 .tableWrap .columnGroups th { background: #222923; color: #d0dccb; font-size: 12px; padding-block: 10px; border-inline-start: 1px solid var(--line); }
@@ -194,6 +203,8 @@
   .updated { display: block; margin-inline-start: 0; }
 }
 @media (max-width: 760px) {
+  .campaignSummary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .campaignSummary > div:last-child { grid-column: 1 / -1; }
   .page > div { padding: 20px 14px; }
   .page > div > header { align-items: stretch; gap: 20px; }
   .page { --space: 18px; }

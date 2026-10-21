@@ -115,9 +115,9 @@ try {
   const client = {
     auth: { getUser: async () => ({ data: { user: auth.user }, error: null }) },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: auth.profile, error: null }) }) }) }),
-    rpc: async () => { rpcCalls++; return { data: auth.result, error: null }; },
+    rpc: async (name, args) => { rpcCalls++; return { data: name === "get_admin_marketing_campaign_report" ? { from: args.p_from, to: args.p_to, metrics: [], history: null } : auth.result, error: null }; },
   };
-  for (const file of ["lib/platform/feature-registry.ts", "lib/platform/feature-access.ts", "lib/analytics/operations-report.ts", "lib/data/operations-report.ts", "app/actions/operations-report.ts"]) {
+  for (const file of ["lib/platform/feature-registry.ts", "lib/platform/feature-access.ts", "lib/analytics/marketing-report.ts", "lib/analytics/operations-report.ts", "lib/data/marketing-report.ts", "lib/data/operations-report.ts", "app/actions/operations-report.ts"]) {
     const exports = {};
     const requireMock = name => name === "server-only" ? {} : name === "@/lib/supabase/server" ? { createClient: async () => client }
       : name.startsWith("@/") ? modules.get(name.slice(2)) : realRequire(name);
@@ -127,13 +127,13 @@ try {
   const { getAdminOperationsReport } = modules.get("lib/data/operations-report");
   auth.result = { ...auth.result, promotionTrackingSince: new Date().toISOString(), brands: auth.result.brands.map(b => ({ ...b, metrics: { ...b.metrics, pagerUses: 0, promotionCustomers: 0, promotionSends: 0 } })) };
   const actual = await getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-05" });
-  check(actual.brands.length === 3 && rpcCalls === 1, "real TypeScript loader uses one aggregate RPC and parses actual PostgreSQL DTO");
+  check(actual.brands.length === 3 && rpcCalls === 2 && actual.brands.every(b => b.metrics.campaignSent === 0), "real TypeScript loader combines aggregate RPCs and preserves brands without campaigns");
   const actualAlpha = actual.brands.find(b => b.id === id(10));
   check(!actualAlpha.features.includes("menu") && actualAlpha.features.includes("loyalty") && actualAlpha.features.includes("standalone_menu"), "actual entitlement helper applies disabled override and independent menu publication");
   check(!actual.brands.find(b => b.id === id(11)).features.includes("loyalty"), "expired plan does not appear as currently subscribed feature");
   auth.user = null;
   await rejects(() => getAdminOperationsReport({ from: "", to: "" }));
-  check(rpcCalls === 1, "anonymous loader cannot call aggregate RPC");
+  check(rpcCalls === 2, "anonymous loader cannot call aggregate RPC");
   auth.user = { id: id(1) }; auth.profile = { role: "cafe_owner", status: "active" };
   await rejects(() => getAdminOperationsReport({ from: "", to: "" }));
   auth.profile = { role: "platform_admin", status: "suspended" };

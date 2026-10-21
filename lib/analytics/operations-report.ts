@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { campaignMetricSchema, marketingMetricLabels } from "@/lib/analytics/marketing-report";
 
 export const reportMetricLabels = {
+  ...marketingMetricLabels,
   pagerUses: "استخدامات البيجر",
   promotionCustomers: "عملاء رسائل الولاء الترويجية",
   promotionSends: "مرات إرسال الترويج للعملاء",
@@ -27,7 +29,7 @@ export const reportBrandSchema = z.object({
   periodLastMenuVisit: z.string().nullable(),
   metrics: z.object({ pagerUses: count, promotionCustomers: count, promotionSends: count,
     menuVisitors: count, menuVisits: count, loyaltyCards: count, loyaltyCustomers: count,
-    appleCards: count, googleCards: count, stampOperations: count, rewardOperations: count }),
+    appleCards: count, googleCards: count, stampOperations: count, rewardOperations: count }).extend(campaignMetricSchema.shape),
 });
 export const operationsReportSchema = z.object({
   generatedAt: z.string(), from: z.string().nullable(), to: z.string().nullable(),

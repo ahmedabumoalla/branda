@@ -102,5 +102,5 @@ try {
   if (originalSave) jsPDF.API.save = originalSave;
   else delete jsPDF.API.save;
 }
-console.log(`PASS operations PDF: 13 metrics, filters, totals, Saudi dates, fonts, inert input, empty/long content, download/errors; 31 brands across ${many.getNumberOfPages()} pages.`);
+console.log(`PASS operations PDF: ${reportMetrics.length} metrics, filters, totals, Saudi dates, fonts, inert input, empty/long content, download/errors; 31 brands across ${many.getNumberOfPages()} pages.`);
 console.log(`Review artifact: ${artifact}`);

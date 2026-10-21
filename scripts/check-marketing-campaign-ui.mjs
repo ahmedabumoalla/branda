@@ -271,6 +271,65 @@ try {
       finishUpload({ error: null }); await flush(); assert.equal(finalized, 0);
     } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow; uploadFile = async () => ({ error: null }); }
   });
+  await check("upload indicator follows actual prepare transfer and verification with a quiet elapsed clock", async () => {
+    const saved = { fetch: globalThis.fetch, window: globalThis.window, now: Date.now };
+    const intervals = new Map(); let now = 100000, timerId = 0, prepare, transfer, verify;
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    const response = data => ({ ok: true, json: async () => ({ ok: true, data }) });
+    const h = harness(connected);
+    try {
+      Date.now = () => now;
+      globalThis.window = { ...saved.window, setInterval(fn, delay) { assert.equal(delay, 1000); intervals.set(++timerId, fn); return timerId; }, clearInterval(id) { intervals.delete(id); } };
+      globalThis.fetch = (_url, options) => new Promise(resolve => { if (JSON.parse(options.body).action === "prepare") prepare = resolve; else verify = resolve; });
+      uploadFile = () => new Promise(resolve => { transfer = resolve; });
+      let tree = h.render(); h.effects[0]();
+      field(tree, "campaign-media").props.onChange({ target: { files: [new File(["image"], "progress.png", { type: "image/png" })], value: "" } });
+      const render = () => { tree = h.render(); h.flushEffects(); return tree; };
+      render();
+      const progress = () => all(tree, node => node.props?.role === "progressbar")[0];
+      assert.equal(progress().props["aria-label"], "جارٍ تجهيز رفع المرفق"); assert.equal(progress().props["aria-valuenow"], undefined);
+      assert.match(text(tree), /الوقت المنقضي 00:00/); assert.equal(intervals.size, 1);
+      now += 65000; [...intervals.values()].forEach(fn => fn()); render();
+      assert.match(text(tree), /الوقت المنقضي 01:05/);
+      const live = all(tree, node => node.props?.role === "status").map(text).join(""); assert.doesNotMatch(live, /01:05|الوقت المنقضي/);
+      assert.equal(all(tree, node => node.props?.className === "uploadElapsed")[0].props["aria-live"], "off");
+      prepare(response({ mediaId: "progress", bucket: "marketing-media", upload: { path: "scoped", token: "token" } })); await flush(); render();
+      assert.equal(progress().props["aria-label"], "جارٍ رفع المرفق"); assert.equal(intervals.size, 1);
+      transfer({ error: null }); await flush(); render();
+      assert.equal(progress().props["aria-label"], "جارٍ التحقق من المرفق"); assert.equal(button(tree, "مراجعة الحملة").props.disabled, true);
+      assert.doesNotMatch(text(tree), /100%|المرفق جاهز للإرسال/);
+      verify(response({ media: { id: "progress", kind: "image", mimeType: "image/png", fileName: "progress.png", size: 5 } })); await flush(); render();
+      assert.equal(progress(), undefined); assert.equal(intervals.size, 0); assert.match(text(tree), /المرفق جاهز للإرسال/);
+      assert.equal(button(tree, "مراجعة الحملة").props.disabled, false);
+      assert.match(fs.readFileSync(path.join(folder, "campaigns.module.css"), "utf8"), /prefers-reduced-motion:reduce[^}]+animation:none/);
+    } finally { h.unmount(); globalThis.fetch = saved.fetch; globalThis.window = saved.window; Date.now = saved.now; uploadFile = async () => ({ error: null }); }
+  });
+  await check("elapsed timers reset on replacement and release on removal timeout failure and unmount", async () => {
+    const saved = { fetch: globalThis.fetch, window: globalThis.window, now: Date.now };
+    const intervals = new Map(), timeouts = new Map(); let nextId = 0, now = 100000, transfers = [];
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      Date.now = () => now;
+      globalThis.window = { setInterval(fn) { intervals.set(++nextId, fn); return nextId; }, clearInterval(id) { intervals.delete(id); }, setTimeout(fn) { timeouts.set(++nextId, fn); return nextId; }, clearTimeout(id) { timeouts.delete(id); } };
+      globalThis.fetch = async () => ({ ok: true, json: async () => ({ ok: true, data: { mediaId: "lifecycle", bucket: "marketing-media", upload: { path: "scoped", token: "token" } } }) });
+      uploadFile = () => new Promise(resolve => { transfers.push(resolve); });
+      for (const end of ["remove", "timeout", "failure", "unmount"]) {
+        const h = harness(connected); let tree = h.render(); h.effects[0]();
+        const render = () => { tree = h.render(); h.flushEffects(); };
+        const choose = async () => { field(tree, "campaign-media").props.onChange({ target: { files: [new File(["image"], "lifecycle.png", { type: "image/png" })], value: "" } }); await flush(); render(); };
+        await choose(); const staleTick = [...intervals.values()][0]; now += 2000; staleTick(); render(); assert.match(text(tree), /00:02/);
+        await choose(); assert.equal(intervals.size, 1); assert.match(text(tree), /00:00/);
+        staleTick(); render(); assert.match(text(tree), /00:00/, "replaced timer cannot update new upload");
+        if (end === "remove") button(tree, "إزالة المرفق").props.onClick();
+        if (end === "timeout") [...timeouts.values()][0]();
+        if (end === "failure") { transfers.at(-1)({ error: { message: "failure" } }); await flush(); }
+        if (end === "unmount") h.unmount(); else render();
+        assert.equal(intervals.size, 0, end);
+        transfers.forEach(resolve => resolve({ error: null })); transfers = []; await flush();
+        h.unmount(); assert.equal(timeouts.size, 0, end);
+      }
+    } finally { globalThis.fetch = saved.fetch; globalThis.window = saved.window; Date.now = saved.now; uploadFile = async () => ({ error: null }); }
+  });
   await check("campaign history separates accepted delivered read and uncertain", () => {
     const h = harness({ ...connected, campaigns: [{ id: "id1", title: "حملة محفوظة", body: "النص الفعلي", status: "completed", createdAt: "2026-10-19T10:00:00Z", scheduledAt: "", total: 15, queued: 1, accepted: 5, delivered: 3, read: 2, failed: 1, uncertain: 1, cancelled: 1, suppressed: 1 }] });
     const markup = renderToStaticMarkup(h.render());

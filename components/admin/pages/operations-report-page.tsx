@@ -1,10 +1,11 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, BadgeCheck, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Users, Info } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, BadgeCheck, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, Megaphone, RotateCcw, Search, SlidersHorizontal, Users, Info } from "lucide-react";
 import { loadOperationsReportAction } from "@/app/actions/operations-report";
 import { AdminPageShell } from "@/components/ui/design-system";
 import { WalletMessageHistory } from "@/components/loyalty/wallet-message-history";
+import { MarketingCampaignHistory } from "@/components/admin/marketing-campaign-history";
 import { defaultReportFilters, filterReportBrands, reportMetricLabels, reportMetrics, reportPeriodSchema, saudiDate, totalReportMetrics, type OperationsReport, type ReportFilters, type ReportMetric, type ReportPeriod } from "@/lib/analytics/operations-report";
 import { getPlatformFeatureDefinition } from "@/lib/platform/feature-registry";
 import styles from "./operations-report-page.module.css";
@@ -33,6 +34,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [messageBrand, setMessageBrand] = useState<{ id: string; name: string } | null>(null);
+  const [campaignBrand, setCampaignBrand] = useState<{ id: string; name: string } | null>(null);
   const request = useRef(0);
   const brands = filterReportBrands(report?.brands || [], filters);
   const totals = totalReportMetrics(brands);
@@ -75,6 +77,11 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
         { label: "زوار المنيو عبر العلامات", value: totals.menuVisitors, hint: `${number(totals.menuVisits)} زيارة خلال الفترة`, icon: Users, tone: styles.blue },
         { label: "بطاقات الولاء الصادرة", value: totals.loyaltyCards, hint: `${number(totals.loyaltyCustomers)} عميل خلال الفترة`, icon: CreditCard, tone: styles.purple },
       ].map(({ label, value, hint, icon: Icon, tone }) => <div key={label}><div className={styles.statTop}><span>{label}</span><span className={`${styles.statIcon} ${tone}`}><Icon size={20} aria-hidden="true" /></span></div><strong>{number(value)}</strong><span className={styles.statHint}>{hint}</span></div>)}</div>}
+      {report && <section className={`${styles.panel} ${styles.campaignOverview}`} aria-label="ملخص الحملات التسويقية">
+        <div className={styles.heading}><div><h2><Megaphone size={20} aria-hidden="true" />الحملات التسويقية</h2><p>العلامات المطابقة خلال الفترة المحمّلة والحالات حسب آخر تحديث</p></div></div>
+        <dl className={styles.campaignSummary}>{(["campaignLaunched", "campaignTargets", "campaignSent", "campaignPending", "campaignFailed"] as const).map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(totals[metric])}</dd></div>)}</dl>
+        <p className={styles.campaignNote}>العملاء دون تكرار داخل العلامة وقد يتكرر العميل بين العلامات الإرسال المقبول لا يؤكد الوصول أو القراءة</p>
+      </section>}
       <section className={styles.panel} aria-label="فلاتر التقرير">
         <div className={styles.heading}><h2><SlidersHorizontal size={19} aria-hidden="true" />خصّص تقريرك</h2><span>التوقيت المحلي للسعودية · يشمل يوم النهاية</span></div>
         <form className={styles.period} onSubmit={event => { event.preventDefault(); void load(); }}>
@@ -110,7 +117,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           <p className={styles.hint}><ArrowLeftRight size={16} aria-hidden="true" />مرّر للمقارنة · اضغط على العلامة لعرض التفاصيل</p></div>
           <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول مقارنة العلامات قابل للتمرير أفقيًا"><table>
             <caption className={styles.srOnly}>مؤشرات العلامات خلال الفترة المحمّلة وآخر الزيارات عبر كامل السجل</caption>
-            <thead><tr className={styles.columnGroups}><th scope="col" rowSpan={2}>العلامة التجارية<small>الاشتراك والمميزات</small></th><th scope="col">الوصول الرقمي</th><th scope="colgroup" colSpan={3}>الولاء والتفاعل</th><th scope="colgroup" colSpan={2}>البيجر والترويج</th><th scope="col">آخر نشاط مسجّل</th></tr><tr><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">المحافظ<small>آيفون / أندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">استخدامات البيجر<small>طلبات مسجلة</small></th><th scope="col">عملاء رسائل الترويج<small>ومرات الإرسال لهم</small></th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
+            <thead><tr className={styles.columnGroups}><th scope="col" rowSpan={2}>العلامة التجارية<small>الاشتراك والمميزات</small></th><th scope="col">الوصول الرقمي</th><th scope="colgroup" colSpan={3}>الولاء والتفاعل</th><th scope="colgroup" colSpan={2}>البيجر والترويج</th><th scope="colgroup" colSpan={4} className={styles.campaignGroup}>الحملات التسويقية</th><th scope="col">آخر نشاط مسجّل</th></tr><tr><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">المحافظ<small>آيفون / أندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">استخدامات البيجر<small>طلبات مسجلة</small></th><th scope="col">عملاء رسائل الترويج<small>ومرات الإرسال لهم</small></th><th scope="col">حملات انطلقت<small>والعملاء المستهدفون</small></th><th scope="col">إرسال مقبول<small>من مزوّد الخدمة</small></th><th scope="col">بانتظار الإرسال<small>يشمل الجدولة</small></th><th scope="col">تعذر الإرسال<small>فشل مسجّل</small></th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
             <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <Fragment key={brand.id}><tr className={expanded === brand.id ? styles.selectedRow : undefined}>
               <th scope="row"><button className={styles.brandButton} aria-expanded={expanded === brand.id} aria-controls={`brand-${brand.id}`} onClick={() => setExpanded(expanded === brand.id ? null : brand.id)}><span className={`${styles.avatar} ${brand.subscribed ? styles.green : styles.gold}`} aria-hidden="true">{brand.name.trim().slice(0, 1)}</span><span className={styles.brandName}>{brand.name}<span className={styles.brandSlug} dir="ltr">{brand.slug}</span></span><ChevronDown size={16} className={styles.expandIcon} aria-hidden="true" /><span className={styles.srOnly}>{expanded === brand.id ? "إغلاق التفاصيل" : "عرض التفاصيل"}</span></button><div className={styles.brandMeta}><span className={`${styles.status} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span><span className={styles.planName}>{brand.planName || "بدون باقة"}</span></div><div className={styles.chips}>{brand.features.filter(feature => ["loyalty", "standalone_menu", "pager", "menu"].includes(feature)).map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div></th>
               <td><strong>{number(brand.metrics.menuVisitors)}</strong><small>{number(brand.metrics.menuVisits)} زيارة</small></td>
@@ -119,19 +126,24 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
               <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.stampOperations)}</strong><small>ختم</small></span><span><strong>{number(brand.metrics.rewardOperations)}</strong><small>مكافأة</small></span></div></td>
               <td><strong>{number(brand.metrics.pagerUses)}</strong><small>طلب بيجر</small></td>
               <td><strong>{number(brand.metrics.promotionCustomers)}</strong><small>{number(brand.metrics.promotionSends)} إرسال للعميل</small><button type="button" className={styles.historyButton} aria-label={`سجل رسائل ${brand.name}`} aria-haspopup="dialog" onClick={() => setMessageBrand({ id: brand.id, name: brand.name })}>سجل الرسائل</button></td>
+              <td className={styles.campaignCell}><strong>{number(brand.metrics.campaignLaunched)}</strong><small>{number(brand.metrics.campaignTargets)} عميل مستهدف</small><button type="button" className={styles.historyButton} aria-label={`سجل حملات ${brand.name}`} aria-haspopup="dialog" onClick={() => setCampaignBrand({ id: brand.id, name: brand.name })}>سجل الحملات</button></td>
+              <td><strong>{number(brand.metrics.campaignSent)}</strong><small>إرسال مقبول</small></td>
+              <td><strong>{number(brand.metrics.campaignPending)}</strong><small>رسالة منتظرة</small></td>
+              <td><strong>{number(brand.metrics.campaignFailed)}</strong><small>تعذر إرسالها</small></td>
               <td className={styles.date}><LastVisit value={brand.lastMenuVisit} /></td>
-            </tr><tr id={`brand-${brand.id}`} hidden={expanded !== brand.id}><td colSpan={8}><div className={styles.detail}>
+            </tr><tr id={`brand-${brand.id}`} hidden={expanded !== brand.id}><td colSpan={12}><div className={styles.detail}>
               <p>حالة العلامة: {statusName[brand.status] || brand.status} · حالة الاشتراك المسجلة: {subscriptionName[brand.subscriptionStatus] || brand.subscriptionStatus} · انتهاء الاشتراك: {brand.expiresAt ? saudiDate(brand.expiresAt) : "غير محدد"}</p>
               <h3>المميزات المفعّلة حاليًا · {number(brand.features.length)}</h3><div className={styles.chips}>{brand.features.map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div>
               <dl>{reportMetrics.map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(brand.metrics[metric])}</dd></div>)}</dl>
               <p>آخر زيارة للمنيو ضمن الفترة: {saudiDate(brand.periodLastMenuVisit)}</p>
             </div></td></tr></Fragment>)}</tbody>
-            {brands.length > 0 && <tfoot><tr><th scope="row">إجمالي النتائج</th><td>{number(totals.menuVisitors)}<small>{number(totals.menuVisits)} زيارة</small></td><td>{number(totals.loyaltyCards)}<small>{number(totals.loyaltyCustomers)} عميل</small></td><td>{number(totals.appleCards)} آيفون<small>{number(totals.googleCards)} أندرويد</small></td><td>{number(totals.stampOperations)} ختم<small>{number(totals.rewardOperations)} مكافأة</small></td><td>{number(totals.pagerUses)} طلب بيجر</td><td>{number(totals.promotionCustomers)} عميل<small>{number(totals.promotionSends)} إرسال للعميل</small></td><td>جميع العلامات المطابقة</td></tr></tfoot>}
+            {brands.length > 0 && <tfoot><tr><th scope="row">إجمالي النتائج</th><td>{number(totals.menuVisitors)}<small>{number(totals.menuVisits)} زيارة</small></td><td>{number(totals.loyaltyCards)}<small>{number(totals.loyaltyCustomers)} عميل</small></td><td>{number(totals.appleCards)} آيفون<small>{number(totals.googleCards)} أندرويد</small></td><td>{number(totals.stampOperations)} ختم<small>{number(totals.rewardOperations)} مكافأة</small></td><td>{number(totals.pagerUses)} طلب بيجر</td><td>{number(totals.promotionCustomers)} عميل<small>{number(totals.promotionSends)} إرسال للعميل</small></td><td>{number(totals.campaignLaunched)} حملة<small>{number(totals.campaignTargets)} عميل مستهدف</small></td><td>{number(totals.campaignSent)}<small>إرسال مقبول</small></td><td>{number(totals.campaignPending)}<small>بانتظار الإرسال</small></td><td>{number(totals.campaignFailed)}<small>تعذر الإرسال</small></td><td>جميع العلامات المطابقة</td></tr></tfoot>}
           </table></div>
           {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر غيّر الشروط أو امسح فلاتر العلامات</p>}
           <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
         {messageBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setMessageBrand(null)} aria-label={`سجل رسائل ${messageBrand.name}`}><div className={styles.historyClose}><button type="button" onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق السجل</button></div><WalletMessageHistory key={messageBrand.id} brandId={messageBrand.id} brandName={messageBrand.name} dark /></dialog>}
+        {campaignBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setCampaignBrand(null)} aria-label={`سجل حملات ${campaignBrand.name}`}><div className={styles.historyClose}><button type="button" autoFocus onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق سجل الحملات</button></div><MarketingCampaignHistory key={JSON.stringify([campaignBrand.id, report.from, report.to])} brandId={campaignBrand.id} brandName={campaignBrand.name} from={report.from} to={report.to} /></dialog>}
         <section className={`${styles.panel} ${styles.explainer}`} aria-label="تعريف المؤشرات وتغطية البيانات"><h2><Info size={19} aria-hidden="true" />كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
           <li>زوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة</li>
           <li>البطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة</li>
@@ -141,6 +153,10 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           <li>استخدامات البيجر هي عدد الطلبات المسجلة خلال الفترة بما فيها الملغاة إعادة النداء للطلب نفسه لا تزيد العدد</li>
           <li>عملاء الترويج يُحسبون مرة واحدة لكل علامة خلال الفترة ومرات الإرسال تحسب كل إعلان لكل عميل مرة واحدة عبر المحفظتين</li>
           <li>تتبّع مستلمي الترويج متاح منذ {saudiDate(report.promotionTrackingSince)} ويشمل الإرسال المقبول من مزوّد المحفظة دون المحاولات الفاشلة أو المعلقة لا يثبت وصول إشعار أو قراءته على الجهاز ولا يعيد بناء مستلمي الإعلانات القديمة</li>
+          <li>مؤشرات الحملات وسجلها يشملان الحملات المنشأة داخل الفترة بتوقيت السعودية وحالات الرسائل تعرض الوضع الحالي حتى لو تغير بعد نهاية الفترة</li>
+          <li>الحملات المنطلقة بدأ موعدها ولم تُلغ قبل بدء المحاولة الحملات المجدولة للمستقبل تظهر في السجل والانتظار ولا تُحسب ضمن المنطلقة</li>
+          <li>عملاء الحملات دون تكرار لكل علامة داخل الفترة وعدد الإرسال يُحسب لكل حملة حتى لو تكرر العميل ويعني قبول مزوّد الخدمة دون تأكيد الوصول أو القراءة</li>
+          <li>غير المؤكدة والملغاة والمستبعدة تظهر مستقلة في التفاصيل والسجل ولا تُضاف إلى تعذر الإرسال</li>
         </ul></section>
       </>}
     </div>

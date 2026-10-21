@@ -16,7 +16,8 @@ const formatNumber = (value: number) => value.toLocaleString("ar-SA");
 const formatDate = (value: string) => new Date(value).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" });
 type ApiResult = { ok: boolean; message?: string; data?: { dashboard: MarketingDashboard; qr?: string; qrStatus?: string } };
 type Draft = { title: string; body: string; customerIds: string[]; consent: boolean; scheduledAt: string };
-type Attachment = { file: File; previewUrl: string | null; kind: "image" | "video"; status: "uploading" | "ready" | "failed"; media: MarketingCampaignMedia | null; error: string };
+type Attachment = { file: File; previewUrl: string | null; kind: "image" | "video"; status: "uploading" | "ready" | "failed"; media: MarketingCampaignMedia | null; error: string; uploadStartedAt?: number; uploadAttempt?: number; uploadPhase?: "preparing" | "transferring" | "verifying" };
+const uploadPhaseLabels = { preparing: "جارٍ تجهيز رفع المرفق", transferring: "جارٍ رفع المرفق", verifying: "جارٍ التحقق من المرفق" };
 const emptyDraft: Draft = { title: "", body: "", customerIds: [], consent: false, scheduledAt: "" };
 
 function CampaignMediaPreview({ attachment }: { attachment: Attachment }) {
@@ -38,6 +39,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [uploadElapsedSeconds, setUploadElapsedSeconds] = useState(0);
   const [review, setReview] = useState(false);
   const [reviewedAudience, setReviewedAudience] = useState("");
   const [disconnectReview, setDisconnectReview] = useState(false);
@@ -160,6 +162,16 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     return () => { window.clearInterval(timer); window.removeEventListener("online", foreground); document.removeEventListener("visibilitychange", foreground); };
   }, [connectionStatus, dashboard?.eligible, request]);
   useEffect(() => { if (review) reviewRef.current?.focus(); }, [review]);
+  const uploadStartedAt = attachment?.status === "uploading" ? attachment.uploadStartedAt : undefined;
+  const uploadAttempt = attachment?.uploadAttempt;
+  useEffect(() => {
+    if (uploadStartedAt === undefined) return;
+    const current = uploadSequence.current;
+    const timer = window.setInterval(() => {
+      if (mounted.current && uploadSequence.current === current) setUploadElapsedSeconds(Math.max(0, Math.floor((Date.now() - uploadStartedAt) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [uploadStartedAt, uploadAttempt]);
 
   function edit(field: keyof Draft, value: string | boolean | string[]) {
     setDraft((previous) => ({ ...previous, [field]: value }));
@@ -170,7 +182,7 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     if (uploadTimer.current !== null) { window.clearTimeout(uploadTimer.current); uploadTimer.current = null; }
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = null;
-    setAttachment(null); setReview(false);
+    setAttachment(null); setUploadElapsedSeconds(0); setReview(false);
   }
   async function uploadAttachment(file: File) {
     removeAttachment();
@@ -179,8 +191,8 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
     if (invalid) { setAttachment({ file, kind, previewUrl: null, status: "failed", media: null, error: invalid }); return; }
     const previewUrl = URL.createObjectURL(file);
     previewUrlRef.current = previewUrl;
-    setAttachment({ file, kind, previewUrl, status: "uploading", media: null, error: "" });
     const current = ++uploadSequence.current;
+    setAttachment({ file, kind, previewUrl, status: "uploading", media: null, error: "", uploadStartedAt: Date.now(), uploadAttempt: current, uploadPhase: "preparing" });
     const controller = new AbortController(); uploadRef.current = controller;
     const isCurrent = () => mounted.current && uploadSequence.current === current;
     const timeout = window.setTimeout(() => {
@@ -196,9 +208,11 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
       if (!isCurrent()) return;
       if (!prepared.ok || !preparation.ok || !preparation.data?.upload) throw new Error(preparation.message || "تعذر تجهيز رفع المرفق حاول مجددًا");
       const target = preparation.data;
+      setAttachment(previous => previous ? { ...previous, uploadPhase: "transferring" } : null);
       const { error: uploadError } = await createClient().storage.from(target.bucket).uploadToSignedUrl(target.upload.path, target.upload.token, file, { contentType: file.type });
       if (!isCurrent()) return;
       if (uploadError) throw new Error("تعذر رفع المرفق احتفظنا برسالتك ويمكنك المحاولة مجددًا");
+      setAttachment(previous => previous ? { ...previous, uploadPhase: "verifying" } : null);
       const verified = await fetch("/api/marketing/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "finalize", mediaId: target.mediaId }), cache: "no-store", signal: controller.signal });
       const verification = await verified.json() as { ok: boolean; message?: string; data?: { media: MarketingCampaignMedia } };
       if (!isCurrent()) return;
@@ -290,9 +304,13 @@ export function CampaignConsole({ initialDashboard }: { initialDashboard: Market
                   <label className={`${styles.secondary} ${styles.fileChoice}`} data-disabled={busy || !dashboard.eligible || !dashboard.configured}><ImagePlus size={18} aria-hidden="true" /><span>{attachment ? "استبدال المرفق" : "إضافة صورة أو فيديو"}</span><input id="campaign-media" className={styles.fileInput} type="file" accept="image/jpeg,image/png,image/webp,video/mp4" disabled={busy || !dashboard.eligible || !dashboard.configured} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadAttachment(file); }} /></label>
                   {attachment && <button type="button" className={styles.secondary} disabled={busy} onClick={removeAttachment}><Trash2 size={16} aria-hidden="true" />إزالة المرفق</button>}
                 </div>
-                {attachment && <div className={styles.attachment} data-state={attachment.status} aria-busy={attachment.status === "uploading"}>
+                {attachment && <div className={styles.attachment} data-state={attachment.status}>
                   <div className={styles.attachmentInfo}><strong>{attachment.file.name}</strong><span>{attachment.kind === "video" ? "فيديو" : "صورة"} · {formatNumber(Math.max(0.01, attachment.file.size / (1024 * 1024)))} ميجابايت</span></div>
-                  {attachment.status === "uploading" ? <p className={styles.mediaStatus} role="status">جارٍ رفع المرفق والتحقق منه يمكنك متابعة كتابة الرسالة</p> : attachment.status === "failed" ? <><p className={styles.mediaError} role="alert">{attachment.error}</p><button type="button" className={styles.secondary} disabled={busy} onClick={() => void uploadAttachment(attachment.file)}>إعادة رفع المرفق</button></> : <p className={styles.mediaStatus} role="status"><CheckCheck size={16} aria-hidden="true" />المرفق جاهز للإرسال</p>}
+                  {attachment.status === "uploading" ? <div className={styles.uploadProgress}>
+                    <div className={styles.uploadProgressHeading}><p className={styles.mediaStatus} role="status">{uploadPhaseLabels[attachment.uploadPhase ?? "preparing"]}</p><span className={styles.uploadElapsed} aria-live="off">الوقت المنقضي <bdi>{Math.floor(uploadElapsedSeconds / 60).toString().padStart(2, "0")}:{(uploadElapsedSeconds % 60).toString().padStart(2, "0")}</bdi></span></div>
+                    <div className={styles.uploadProgressTrack} role="progressbar" aria-busy="true" aria-label={uploadPhaseLabels[attachment.uploadPhase ?? "preparing"]}><span /></div>
+                    <span className={styles.uploadHint}>يمكنك متابعة كتابة الرسالة حتى يجهز المرفق</span>
+                  </div> : attachment.status === "failed" ? <><p className={styles.mediaError} role="alert">{attachment.error}</p><button type="button" className={styles.secondary} disabled={busy} onClick={() => void uploadAttachment(attachment.file)}>إعادة رفع المرفق</button></> : <p className={styles.mediaStatus} role="status"><CheckCheck size={16} aria-hidden="true" />المرفق جاهز للإرسال</p>}
                 </div>}
               </fieldset>
               <fieldset className={styles.audience} aria-describedby="recipient-help">

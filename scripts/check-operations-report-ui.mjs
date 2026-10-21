@@ -7,18 +7,19 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 const require = createRequire(import.meta.url);
 const cache = new Map();
-function load(file) {
-  if (cache.has(file)) return cache.get(file);
-  const loadedModule = { exports: {} }; cache.set(file, loadedModule.exports);
+function load(file, stubs = {}, modules = cache) {
+  if (modules.has(file)) return modules.get(file);
+  const loadedModule = { exports: {} }; modules.set(file, loadedModule.exports);
   const localRequire = id => {
+    if (Object.hasOwn(stubs, id)) return stubs[id];
     if (id.endsWith(".css")) return new Proxy({}, { get: (_, key) => key });
     if (id === "@/app/actions/operations-report") return { loadOperationsReportAction: async () => ({ ok: false, message: "Unavailable" }) };
-    if (id.startsWith("@/")) { const base = path.resolve(id.slice(2)); return load(fs.existsSync(`${base}.tsx`) ? `${base}.tsx` : `${base}.ts`); }
+    if (id.startsWith("@/")) { const base = path.resolve(id.slice(2)); return load(fs.existsSync(`${base}.tsx`) ? `${base}.tsx` : `${base}.ts`, stubs, modules); }
     return require(id);
   };
   const output = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function("require", "module", "exports", output)(localRequire, loadedModule, loadedModule.exports);
-  cache.set(file, loadedModule.exports); return loadedModule.exports;
+  modules.set(file, loadedModule.exports); return loadedModule.exports;
 }
 const api = load(path.resolve("lib/analytics/operations-report.ts"));
 const { OperationsReportPage } = load(path.resolve("components/admin/pages/operations-report-page.tsx"));
@@ -41,6 +42,10 @@ const html = renderToStaticMarkup(React.createElement(OperationsReportPage, { in
 assert.equal((html.match(/scope="row"/g) || []).length, 26, "25 brands plus total, independent of export scope");
 assert.ok(html.includes("٣١ علامة"), "export includes all matching brands");
 for (const label of ["استخدامات البيجر", "عملاء رسائل الترويج", "أندرويد", "بدون اشتراك ساري", "تصدير تقرير PDF", "قراءات ناجحة", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
+for (const label of ["ملخص الحملات التسويقية", "حملات انطلقت", "إرسال مقبول", "بانتظار الإرسال", "تعذر الإرسال", "سجل الحملات"]) assert.ok(html.includes(label), label);
+assert.ok(html.includes('colSpan="12"') && html.includes('colSpan="4"'), "campaign group preserves full detail-row column span");
+assert.equal((html.match(/aria-label="سجل حملات /g) || []).length, 25);
+assert.ok(html.includes("الحملات المجدولة للمستقبل") && html.includes("ولا تُضاف إلى تعذر الإرسال"));
 assert.ok(!/زوار الفرع|حسابات الفرع|آخر زيارة للفرع/.test(html));
 assert.ok(html.includes('tabindex="0"') && html.includes('aria-expanded="false"'));
 const missing = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: null }));
@@ -48,4 +53,49 @@ assert.ok(missing.includes('role="alert"'));
 assert.ok(!missing.includes("إجمالي النتائج"), "unavailable data is not rendered as zero totals");
 const empty = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: { ...report, brands: [] } }));
 assert.ok(empty.includes("لا توجد علامات تطابق"));
+
+function nodes(tree) { if (!tree || typeof tree !== "object") return []; if (Array.isArray(tree)) return tree.flatMap(nodes); return [tree, ...nodes(tree.props?.action), ...nodes(tree.props?.children)]; }
+function text(tree) { if (tree == null || typeof tree === "boolean") return ""; if (Array.isArray(tree)) return tree.map(text).join(""); return typeof tree === "object" ? text(tree.props?.children) : String(tree); }
+function harness(initial = report) {
+  const values = []; let cursor = 0;
+  const hooks = { ...React, useState(initialValue) { const slot = cursor++; if (!(slot in values)) values[slot] = initialValue; return [values[slot], next => { values[slot] = typeof next === "function" ? next(values[slot]) : next; }]; }, useRef(initialValue) { const slot = cursor++; if (!(slot in values)) values[slot] = { current: initialValue }; return values[slot]; } };
+  const { OperationsReportPage: Page } = load(path.resolve("components/admin/pages/operations-report-page.tsx"), { react: hooks, "@/app/actions/operations-report": { loadOperationsReportAction: async period => ({ ok: true, data: { ...report, from: period.from || null, to: period.to || null } }) } }, new Map());
+  return { render() { cursor = 0; return Page({ initialReport: initial }); } };
+}
+const interactive = harness();
+let tree = interactive.render();
+nodes(tree).find(node => node.props?.["aria-label"] === `سجل حملات ${brands[1].name}`).props.onClick();
+tree = interactive.render();
+let dialog = nodes(tree).find(node => node.type === "dialog");
+assert.equal(dialog.props["aria-label"], `سجل حملات ${brands[1].name}`);
+let history = nodes(dialog).find(node => node.props?.brandId === brands[1].id);
+assert.deepEqual([history.props.from, history.props.to], [null, null]);
+let opened = 0, closed = 0;
+dialog.props.ref({ open: false, showModal() { opened++; } });
+assert.equal(opened, 1);
+const closeButton = nodes(dialog).find(node => node.type === "button");
+assert.equal(closeButton.props.autoFocus, true);
+closeButton.props.onClick({ currentTarget: { closest: () => ({ close() { closed++; } }) } });
+assert.equal(closed, 1);
+const dates = nodes(tree).filter(node => node.type === "input" && node.props.type === "date");
+dates[0].props.onChange({ target: { value: "2026-10-01" } }); tree = interactive.render();
+nodes(tree).filter(node => node.type === "input" && node.props.type === "date")[1].props.onChange({ target: { value: "2026-10-21" } }); tree = interactive.render();
+history = nodes(tree).find(node => node.props?.brandId === brands[1].id);
+assert.deepEqual([history.props.from, history.props.to], [null, null], "dirty period inputs never replace loaded report history period");
+const oldKey = history.key;
+nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+await Promise.resolve(); await Promise.resolve(); tree = interactive.render();
+history = nodes(tree).find(node => node.props?.brandId === brands[1].id);
+assert.deepEqual([history.props.from, history.props.to], ["2026-10-01", "2026-10-21"]);
+assert.notEqual(history.key, oldKey, "loaded period changes remount history and drop old data");
+nodes(tree).find(node => node.type === "dialog").props.onClose(); tree = interactive.render();
+assert.ok(!nodes(tree).some(node => node.type === "dialog"));
+nodes(tree).find(node => node.type === "input" && node.props.type === "search").props.onChange({ target: { value: "Brand 03" } }); tree = interactive.render();
+const summary = nodes(tree).find(node => node.props?.["aria-label"] === "ملخص الحملات التسويقية");
+assert.equal(nodes(summary).filter(node => node.type === "dd").length, 5);
+assert(nodes(summary).filter(node => node.type === "dd").every(node => text(node) === "٣"), "summary follows actual filtered brands for all five metrics");
+const footerRow = nodes(nodes(tree).find(node => node.type === "tfoot")).find(node => node.type === "tr");
+assert.equal(footerRow.props.children.length, 12);
+assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "campaignFailed", operator: "gte", value: 29 }] }).length, 2);
+assert.equal(filter(brands, { ...defaults, sort: "campaignSent", direction: "desc" })[0].metrics.campaignSent, 30);
 console.log("Operations report filters, validation, aggregation and actual React SSR checks passed.");
