@@ -727,7 +727,7 @@ export async function getAdminCafeSubscriptionSummary(cafeId: string) {
   await requirePlatformAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase.from("subscriptions")
-    .select("plan_id,plan_name_snapshot,status,started_at,expires_at,created_at,platform_plans(active)")
+    .select("id,updated_at,activation_source,plan_id,plan_name_snapshot,status,started_at,expires_at,created_at,platform_plans(active)")
     .eq("cafe_id", cafeId).order("created_at", { ascending: false });
   if (error) throw error;
   return adminSubscriptionSummary((data ?? []) as Record<string, unknown>[]);

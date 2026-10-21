@@ -60,6 +60,10 @@ export type PlatformCafe = {
   planId: string;
   planName?: string;
   planExpiresAt?: string | null;
+  planExpiresAtExact?: string | null;
+  subscriptionId?: string | null;
+  subscriptionUpdatedAt?: string | null;
+  subscriptionExpiryEditable?: boolean;
   planStartedAt?: string | null;
   planRemainingDays?: number | null;
   hasActivePlan?: boolean;

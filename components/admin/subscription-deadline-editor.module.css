@@ -1,0 +1,17 @@
+.editor { margin-top:24px; padding:22px; border:1px solid #b59b613d; border-radius:14px; background:#b59b6108; }
+.editor h3 { display:flex; align-items:center; gap:10px; margin:0 0 10px; font-size:17px; }
+.editor h3 svg { width:20px; height:20px; color:var(--accent); }
+.editor p { font-size:13px; line-height:1.9; margin:8px 0 14px; color:var(--muted); }
+.editor label { display:block; margin:18px 0 9px; font-size:14px; }
+.controls { display:flex; align-items:stretch; flex-wrap:wrap; gap:12px; }
+.controls input { flex:1; min-width:190px; max-width:100%; min-height:46px; padding:10px 12px; border:1px solid #ffffff30; border-radius:9px; background:var(--surface); color:var(--ink); font:inherit; color-scheme:dark; }
+.controls button { background:var(--accent); color:#241c11; border:0; border-radius:9px; padding:10px 18px; min-height:46px; font:inherit; font-size:14px; cursor:pointer; }
+.editor :is(input,button):focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.editor button:disabled { opacity:.5; cursor:default; }
+.editor small { display:block; margin-top:8px; color:var(--muted); font-size:12px; }
+.editor .preview { color:var(--ink); }
+.editor .warning { color:#edcc87; }
+.editor .error { color:#f4b8aa; }
+.editor .message { color:#9addba; margin-bottom:0; }
+.refresh { border:0; padding:8px 0; min-height:44px; color:var(--accent); background:none; font:inherit; font-size:13px; cursor:pointer; }
+@media(max-width:600px) { .editor { padding:17px; } .controls { flex-direction:column; } .controls input { min-width:0; width:100%; font-size:16px; box-sizing:border-box; } }

@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {tmpdir} from 'node:os';
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE??path.join(tmpdir(),'branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js')).href);
+const db=new PGlite(),id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+let checks=0;
+const q=(sql,args=[])=>db.query(sql,args);
+const one=async(sql,args=[])=>Object.values((await q(sql,args)).rows[0])[0];
+const ok=(value,label)=>{assert(value,label);checks++;};
+const denied=async(fn,pattern)=>{await assert.rejects(fn,pattern);checks++;};
+try{
+ await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth;
+ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('test.uid',true),'')::uuid$$;
+ CREATE TABLE profiles(id uuid PRIMARY KEY,role text,status text);
+ CREATE TABLE cafes(id uuid PRIMARY KEY,deleted_at timestamptz);
+ CREATE TABLE subscriptions(id uuid PRIMARY KEY,cafe_id uuid,plan_id text,status text,started_at timestamptz,expires_at timestamptz,updated_at timestamptz DEFAULT now(),created_at timestamptz DEFAULT now(),activation_source text,amount_sar numeric,duration_count int,paid_at timestamptz);
+ CREATE TABLE audit_logs(actor_id uuid,cafe_id uuid,action text,entity_table text,entity_id uuid,old_data jsonb,new_data jsonb);
+ CREATE TABLE finance_effects(id int);
+ CREATE FUNCTION finance_trigger() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO finance_effects VALUES(1);RETURN NEW;END $$;
+ CREATE TRIGGER finance_guard AFTER UPDATE OF status,amount_sar,started_at,paid_at ON subscriptions FOR EACH ROW EXECUTE FUNCTION finance_trigger();
+ GRANT USAGE ON SCHEMA public,auth TO anon,authenticated;
+ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ INSERT INTO profiles VALUES('${id(1)}','platform_admin','active'),('${id(2)}','owner','active'),('${id(3)}','platform_admin','suspended');
+ INSERT INTO cafes VALUES('${id(10)}',null),('${id(11)}',null),('${id(12)}',now());
+ INSERT INTO subscriptions(id,cafe_id,plan_id,status,started_at,expires_at,updated_at,created_at,activation_source,amount_sar,duration_count) VALUES
+ ('${id(20)}','${id(10)}','paid','active',now()-interval '10days',now()+interval '10days','2026-01-01',now(),'bank',125,1),
+ ('${id(21)}','${id(10)}','loyalty','active',now()-interval '12days',now()+interval '5days','2026-01-01',now()-interval '1day','bank',170,1),
+ ('${id(22)}','${id(10)}','paid','cancelled',now()-interval '50days',now()-interval '20days','2026-01-01',now()-interval '30days','bank',125,1),
+ ('${id(23)}','${id(11)}','trial','trialing',now()-interval '1day',now()+interval '6days','2026-01-01',now(),'admin_prepared_trial',0,1);`);
+ await db.exec(await fs.readFile('supabase/migrations/20261021210000_admin_subscription_deadline.sql','utf8'));
+ const call=(cafe=id(10),sub=id(20),stamp='2026-01-01',end=new Date(Date.now()+86400000*20).toISOString())=>q('select public.admin_update_subscription_deadline($1,$2,$3,$4)',[cafe,sub,stamp,end]);
+ const login=async user=>{await db.exec('RESET ROLE');await q("select set_config('test.uid',$1,false)",[user]);await db.exec('SET ROLE authenticated');};
+ await db.exec('SET ROLE anon');await denied(()=>call(),/permission denied/);
+ await login('');await denied(()=>call(),/expiry_forbidden/);
+ await login(id(2));await denied(()=>call(),/expiry_forbidden/);
+ await login(id(3));await denied(()=>call(),/expiry_forbidden/);
+ await login(id(1));
+ await denied(()=>call(id(11)),/expiry_conflict/);
+ await denied(()=>call(id(10),id(21)),/expiry_conflict/);
+ await denied(()=>call(id(10),id(22)),/expiry_conflict/);
+ await denied(()=>call(id(10),id(20),'2026-01-02'),/expiry_conflict/);
+ await denied(()=>call(id(10),id(20),'2026-01-01','2000-01-01'),/expiry_invalid/);
+ await denied(()=>call(id(10),id(20),'2026-01-01','infinity'),/expiry_invalid/);
+ await denied(()=>call(id(11),id(23)),/expiry_unavailable/);
+ await denied(()=>call(id(12)),/expiry_unavailable/);
+ await db.exec('RESET ROLE');
+ const before=(await q('select * from subscriptions order by id')).rows;
+ await login(id(1));await call();await db.exec('RESET ROLE');
+ const after=(await q('select * from subscriptions order by id')).rows;
+ const strip=x=>{const y={...x};delete y.expires_at;delete y.updated_at;return y;};
+ assert.deepEqual(after.map(strip),before.map(strip));checks++;
+ assert.deepEqual(after.slice(1),before.slice(1));checks++;
+ ok(await one('select count(*) from subscriptions')===4,'no new assignment');
+ ok(await one('select count(*) from finance_effects')===0,'no finance trigger');
+ ok(await one('select count(*) from audit_logs')===1,'one explicit audit');
+ const audit=(await q('select * from audit_logs')).rows[0];ok(audit.actor_id===id(1)&&audit.new_data.timezone==='Asia/Riyadh','actor and timezone audited');
+ const stamp=after[0].updated_at.toISOString(),expiry=after[0].expires_at.toISOString();
+ await login(id(1));await denied(()=>call(),/expiry_conflict/);
+ await call(id(10),id(20),stamp,expiry);await db.exec('RESET ROLE');ok(await one('select count(*) from audit_logs')===1,'no-op no duplicate audit');
+ await login(id(1));await call(id(10),id(20),stamp,new Date(Date.now()-86400000).toISOString());await db.exec('RESET ROLE');
+ ok(await one(`select expires_at<now() and status='active' from subscriptions where id='${id(20)}'`),'shortening can expire access without changing stored status');
+ await db.exec(`UPDATE subscriptions SET activation_source='bank',started_at=now()+interval '1day' WHERE id='${id(23)}'`);
+ await login(id(1));await denied(()=>call(id(11),id(23)),/expiry_unavailable/);
+ await db.exec('RESET ROLE');
+ const rollbackBefore=await one(`select to_jsonb(s) from subscriptions s where id='${id(20)}'`);
+ await db.exec("ALTER TABLE audit_logs ADD CONSTRAINT reject_audit CHECK(false) NOT VALID");
+ await login(id(1));await denied(()=>call(id(10),id(20),rollbackBefore.updated_at),/reject_audit/);await db.exec('RESET ROLE');
+ assert.deepEqual(await one(`select to_jsonb(s) from subscriptions s where id='${id(20)}'`),rollbackBefore);checks++;
+ ok(await one("select relrowsecurity from pg_class where oid='subscriptions'::regclass"),'RLS unchanged');
+ console.log(`PASS ${checks} admin deadline SQL authorization,scope,dates,concurrency,audit,finance and rollback checks`);
+}finally{await db.close();}

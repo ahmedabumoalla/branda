@@ -1,7 +1,7 @@
 import { isCurrentSubscription } from "@/lib/platform/active-subscription";
 
 export function adminSubscriptionSummary(rows: Record<string, unknown>[], now = Date.now()) {
-  const ordered = [...rows].sort((a, b) => (Date.parse(String(b.created_at ?? "")) || 0) - (Date.parse(String(a.created_at ?? "")) || 0));
+  const ordered = [...rows].sort((a, b) => (Date.parse(String(b.created_at ?? "")) || 0) - (Date.parse(String(a.created_at ?? "")) || 0) || String(b.id ?? "").localeCompare(String(a.id ?? "")));
   // Match the service gate: newest active/trialing assignment, even if expired.
   const row = ordered.find(item => ["active", "trialing"].includes(String(item.status))) ?? ordered[0];
   const awaitingDelivery = row?.activation_source === "admin_prepared_trial" && row.status === "trialing";
@@ -18,6 +18,10 @@ export function adminSubscriptionSummary(rows: Record<string, unknown>[], now = 
     : startedAt && Date.parse(startedAt) > now ? "لم يبدأ بعد"
     : ["past_due", "pending"].includes(String(row.status)) ? "بانتظار التفعيل" : "غير فعال";
   return {
+    subscriptionId: row?.id ? String(row.id) : null,
+    subscriptionUpdatedAt: row?.updated_at ? String(row.updated_at) : null,
+    planExpiresAtExact: expiresAt && Number.isFinite(Date.parse(expiresAt)) ? expiresAt : null,
+    subscriptionExpiryEditable: Boolean(row && ["active", "trialing"].includes(String(row.status)) && !awaitingDelivery && startedAt && Date.parse(startedAt) <= now),
     planId: row ? String(row.plan_id ?? "") : "",
     planName: row ? String(row.plan_name_snapshot ?? row.plan_id ?? "") : "",
     trialAwaitingDelivery: awaitingDelivery,

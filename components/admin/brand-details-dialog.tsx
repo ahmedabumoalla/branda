@@ -19,6 +19,8 @@ import { BrandDeletionControl } from "./brand-deletion-control";
 import type { BrandDeletionResult } from "@/lib/data/brand-deletion";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { BrandOwnerWelcome } from "./brand-owner-welcome";
+import { SubscriptionDeadlineEditor } from "./subscription-deadline-editor";
+import { formatSaudiDeadline } from "@/lib/platform/subscription-deadline";
 
 type Section = "account" | "plan" | "services" | "menu" | "analytics" | "support" | "operations" | "pager";
 const sections = [
@@ -92,6 +94,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
   const [statusPending, setStatusPending] = useState(false);
   const [deletionPending, setDeletionPending] = useState(false);
   const [welcomePending, setWelcomePending] = useState(false);
+  const [deadlinePending, setDeadlinePending] = useState(false);
   const [section, setSection] = useState<Section | null>(null);
   const [nextPlan, setNextPlan] = useState(cafe.planId || "");
   const [copyMessage, setCopyMessage] = useState("");
@@ -136,7 +139,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
     { label: "المكافآت", value: cafe.experienceRewardsCount ?? 0, icon: TicketCheck },
   ];
   return <>
-    <BrandDialog title="ملف العلامة التجارية" close={close} busy={welcomePending}>
+    <BrandDialog title="ملف العلامة التجارية" close={close} busy={welcomePending || deadlinePending}>
       <div className={s.overview}>
         <div className={s.identity}>
           <div className={s.avatar}>{cafe.logoUrl
@@ -171,7 +174,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         <p className={s.liveMessage} role="status">{copyMessage}</p>
       </div>
     </BrandDialog>
-    {section && selectedSection && <BrandDialog key={section} title={`${selectedSection.title} · ${cafe.name}`} close={() => setSection(null)} detail busy={deletionPending}>
+    {section && selectedSection && <BrandDialog key={section} title={`${selectedSection.title} · ${cafe.name}`} close={() => setSection(null)} detail busy={deletionPending || deadlinePending}>
       <div className={s.panelBody}>
         <div className={s.panelIntro}><span className={s.tileIcon}><selectedSection.icon aria-hidden="true" /></span><div><h2>{selectedSection.title}</h2><p>{selectedSection.description}</p></div></div>
         {section === "account" && <>
@@ -182,10 +185,11 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         </>}
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقة الحالية<strong>{planName}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>
-          <DataList items={[["تاريخ البداية", cafe.trialAwaitingDelivery ? "بعد إرسال تفاصيل الدخول" : cafe.planStartedAt], ["تاريخ الانتهاء", cafe.trialAwaitingDelivery ? "٧ أيام من وقت الإرسال" : cafe.planExpiresAt], ["المدة المتبقية", cafe.trialAwaitingDelivery ? "العداد لم يبدأ" : cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
+          <DataList items={[["تاريخ البداية", cafe.trialAwaitingDelivery ? "بعد إرسال تفاصيل الدخول" : cafe.planStartedAt], ["موعد الانتهاء بتوقيت السعودية", cafe.trialAwaitingDelivery ? "٧ أيام من وقت الإرسال" : formatSaudiDeadline(cafe.planExpiresAtExact)], ["المدة المتبقية", cafe.trialAwaitingDelivery ? "العداد لم يبدأ" : cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
+          <SubscriptionDeadlineEditor key={`${cafe.id}:${cafe.subscriptionId}`} cafe={cafe} disabled={planPending} onUpdated={onUpdated} onBusyChange={setDeadlinePending} />
           <div className={s.planEditor}><label htmlFor="brand-next-plan">تغيير الباقة</label><p>تطبيق التغيير ينهي الاشتراك الحالي وينشئ اشتراكًا إداريًا جديدًا</p>
-            <div><select id="brand-next-plan" value={nextPlan} disabled={planPending} onChange={event => setNextPlan(event.target.value)}><option value="" disabled>اختر الباقة</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
-              <button type="button" className={s.primaryButton} disabled={planPending || !nextPlan || nextPlan === cafe.planId} onClick={() => updatePlan(cafe.id, nextPlan)}>{planPending ? "جارٍ تطبيق الباقة…" : "تطبيق الباقة"}</button></div>
+            <div><select id="brand-next-plan" value={nextPlan} disabled={planPending || deadlinePending} onChange={event => setNextPlan(event.target.value)}><option value="" disabled>اختر الباقة</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}</option>)}</select>
+              <button type="button" className={s.primaryButton} disabled={planPending || deadlinePending || !nextPlan || nextPlan === cafe.planId} onClick={() => updatePlan(cafe.id, nextPlan)}>{planPending ? "جار تطبيق الباقة" : "تطبيق الباقة"}</button></div>
           </div>
         </>}
         {section === "services" && services}
