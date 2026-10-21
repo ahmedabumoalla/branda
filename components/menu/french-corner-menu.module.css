@@ -147,4 +147,80 @@
  .mobileDock { position:fixed; z-index:20; bottom:max(12px,env(safe-area-inset-bottom)); inset-inline:16px; display:flex; justify-content:space-around; gap:4px; padding:10px 7px; border:1px solid #ddbf7955; border-radius:22px; background:#11160ff5; backdrop-filter:blur(18px); box-shadow:0 8px 40px #000b; } .mobileDock a,.mobileDock button { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:48px; color:var(--paper); font:12px FrenchTajawal,sans-serif; border:0; border-radius:12px; background:transparent; } .mobileDock svg { width:20px; height:20px; color:var(--gold); }
 }
 @media (max-width:360px) { .brand > span { font-size:13px; } .brand > img { width:40px; } .catalogHeading > span { font-size:23px; } .catalogHeading h2 { font-size:26px; } .productBottom > span:last-child:not(.price) { width:100%; } .productCopy h4 { font-size:16px; } .heroScene > span { font-size:15px; } }
-@media (prefers-reduced-motion:reduce) { .page *,.page *::before,.page *::after { scroll-behavior:auto !important; animation:none !important; transition:none !important; } .product:hover,.productButton:hover .productPhoto > img,.discoveryCard:hover > img,.heroScene:hover > img { transform:none; } }
+.hero { grid-template-columns:1fr 1fr; gap:28px 7%; padding-top:30px; }
+.heroCopy { text-align:start; padding:0 0 16px; }
+.heroLogo { width:120px; margin:0 0 18px; }
+.heroCopy .eyebrow { margin-bottom:10px; }
+.hero h1 { font-size:clamp(48px,6vw,86px); line-height:1.24; letter-spacing:-2px; }
+.heroDescription { margin:20px 0 24px; font-size:18px; }
+.heroCtas { display:flex; align-items:center; flex-wrap:wrap; gap:18px 24px; }
+.explore { margin:0; border-radius:8px; }
+.heroLoyalty { display:flex; align-items:center; gap:9px; min-height:48px; font-size:15px; color:var(--gold) !important; border-bottom:1px solid var(--line); }
+.heroLoyalty svg { width:20px; }
+.tastingStage { position:relative; padding:36px 0 26px; min-width:0; }
+.stageSignature { display:block; font:italic clamp(18px,2vw,28px) Georgia,serif; color:var(--gold); margin-bottom:24px; text-align:center; }
+.heroFeature { position:relative; display:block; width:100%; padding:0; border:1px solid #ddbf7955; border-radius:180px 180px 16px 16px; overflow:hidden; background:var(--panel); color:var(--paper); text-align:start; box-shadow:0 28px 65px #0007; }
+.heroFeature > img { width:100%; aspect-ratio:1.05; object-fit:cover; display:block; transition:transform .6s; }
+.featureCaption { display:flex; align-items:center; gap:18px; padding:20px 24px; background:#171b15; border-top:1px solid var(--line); }
+.featureCaption > span:first-child { flex:1; min-width:0; display:grid; gap:7px; }
+.featureCaption small { font-size:12px; color:var(--muted); }
+.featureCaption strong { font-size:23px; font-weight:400; }
+.featureCaption > svg { width:22px; color:var(--gold); flex-shrink:0; }
+.stageSeal { position:absolute; right:-28px; top:22%; width:100px; aspect-ratio:1; border-radius:50%; border:1px solid var(--gold); outline:1px solid var(--line); outline-offset:5px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--ink); font-size:20px; line-height:1.4; color:var(--gold); transform:rotate(12deg); pointer-events:none; }
+.stageSeal small { font:7px Georgia,serif; letter-spacing:1px; margin-top:6px; }
+.stageFallback { width:100%; aspect-ratio:1; object-fit:cover; border-radius:150px 150px 12px 12px; }
+.heroBottom { margin-top:0; }
+.membership { display:block; padding:0; margin:38px var(--gutter) 0; border:1px solid #ddbf7966; border-radius:22px; background:radial-gradient(ellipse at 10% 30%,#c0a25a1c,transparent 65%),#151a13; scroll-margin-top:24px; }
+.membershipWholeLink { display:grid; grid-template-columns:1fr 1.1fr; align-items:center; gap:7%; padding:40px 6%; border-radius:22px; }
+.memberCard { max-width:400px; transform:rotate(-5deg); padding:22px 24px; aspect-ratio:auto; background:linear-gradient(115deg,#333120,#0b0d09 65%); box-shadow:0 20px 45px #0008; }
+.memberCard > div:first-child { font:9px Georgia,serif; letter-spacing:2px; }
+.memberCard .cardIdentity { display:flex; justify-content:start; gap:14px; margin:12px 0; letter-spacing:0; font-family:FrenchTajawal,sans-serif; }
+.cardIdentity > img { width:80px; height:80px; object-fit:contain; }
+.cardIdentity > span { display:grid; gap:7px; text-align:start; font-size:22px; color:var(--paper); }
+.cardIdentity small { font-size:12px; color:var(--muted); }
+.memberCard .stampRow { display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin:18px 0; }
+.stampRow > span { width:36px; height:36px; border:1px dashed #ddbf7988; border-radius:50%; display:grid; place-items:center; color:#ddbf7999; }
+.stampRow > span:last-child { border-style:solid; color:var(--gold); background:#ddbf7914; }
+.stampRow svg { width:17px; height:17px; stroke-width:1.3; }
+.memberCard p { border-top:1px solid var(--line); padding-top:12px; margin-bottom:8px; font-size:23px; }
+.memberCopy .eyebrow { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; }
+.memberCopy .eyebrow svg { width:17px; }
+.memberCopy h2 { font-size:clamp(27px,3.2vw,44px); line-height:1.4; }
+.memberCopy > p:last-of-type { margin:14px 0 8px; font-size:17px; }
+.memberCopy > p strong { color:var(--paper); font-weight:700; }
+.rewardHighlight { display:block; font-size:33px; font-weight:700; color:var(--gold); margin:10px 0 16px; }
+.membershipLink { display:flex; width:fit-content; min-height:50px; padding:11px 22px; border:1px solid var(--gold); border-radius:8px; background:var(--gold); color:#12170f; font-size:17px; gap:25px; }
+.membershipLink svg { color:inherit; }
+.membershipLink[data-pending] { opacity:.8; }
+.discovery { padding-block:48px; }
+.discoveryCard { flex-basis:180px; height:215px; border-radius:16px; }
+.discoveryNumber { top:14px; left:18px; transform:none; width:27px; height:27px; }
+.discoveryName { font-size:18px; }
+.sectionHeading .sectionNumber { color:var(--gold); font:italic 32px Georgia,serif; }
+.productGrid { align-items:start; }
+.product { border-radius:8px; background:#131811; }
+.productPhoto { aspect-ratio:1; }
+.productCopy h4 { font-weight:400; font-size:23px; }
+.product[data-no-photo] { align-self:stretch; border:0; border-bottom:1px solid var(--line); border-radius:0; background:transparent; }
+.product[data-no-photo] .productButton { display:flex; align-items:center; gap:16px; height:100%; padding:12px 0; }
+.product[data-no-photo] .productPhoto { flex:0 0 54px; height:54px; aspect-ratio:1; border:1px solid var(--line); border-radius:50%; overflow:visible; }
+.product[data-no-photo] .photoFallback { min-height:0; border-radius:50%; background:transparent; }
+.product[data-no-photo] .photoFallback > svg { width:24px; height:24px; }
+.product[data-no-photo] .photoFallback > span,.product[data-no-photo] .productArrow { display:none; }
+.product[data-no-photo] .productPhoto > :last-child:not(.photoFallback):not(.productArrow) { display:none; }
+.product[data-no-photo] .productCopy { flex:1; min-width:0; padding:12px 0; }
+.product[data-no-photo] .productCategory { display:none; }
+.product[data-no-photo] .productBottom { border:0; padding-top:0; }
+@media (min-width:701px) { .product[data-no-photo] { grid-column:span 2; } }
+@media (hover:hover) { .membershipWholeLink:hover .membershipLink { background:#f1d89d; } .membershipWholeLink:hover .memberCard { transform:rotate(-2deg); } .heroFeature:hover > img { transform:scale(1.035); } }
+@media (max-width:1050px) and (min-width:701px) { .hero { grid-template-columns:1fr 1fr; } .hero h1 { font-size:56px; } .memberCard { padding:18px; } .stampRow > span { width:29px; height:29px; } .memberCard .stampRow { gap:7px; } }
+@media (max-width:700px) {
+ .hero { grid-template-columns:1.05fr 1fr; gap:20px 16px; padding-top:20px; } .heroCopy { grid-row:auto; grid-column:auto; padding:0; } .heroLogo { width:96px; margin:0 0 10px; } .heroCopy .eyebrow { display:none; } .hero h1 { font-size:clamp(30px,8vw,45px); letter-spacing:-1px; line-height:1.35; } .heroDescription { font-size:13px; line-height:1.9; margin:12px 0; } .heroCtas { gap:4px; } .explore { font-size:14px; padding:10px 14px; gap:15px; min-height:46px; } .heroLoyalty { font-size:13px; min-height:44px; } .heroLoyalty svg { width:17px; }
+ .tastingStage { padding:14px 0; } .stageSignature { font-size:13px; line-height:1.5; margin-bottom:12px; } .heroFeature { border-radius:100px 100px 10px 10px; } .heroFeature > img { aspect-ratio:.68; } .featureCaption { display:grid; grid-template-columns:1fr; padding:13px 12px; gap:9px; } .featureCaption strong { font-size:17px; line-height:1.5; } .featureCaption > span:first-child { gap:5px; } .featureCaption small { font-size:9px; } .featureCaption > svg { display:none; } .featureCaption .price b { font-size:23px; } .stageSeal { width:59px; font-size:13px; right:-12px; top:18%; outline-offset:3px; } .stageSeal small { display:none; } .heroBottom { margin:0; font-size:10px; padding:16px 0; }
+ .membership { margin:22px var(--gutter) 0; border-radius:16px; } .membershipWholeLink { grid-template-columns:1fr; gap:28px; padding:26px 22px; border-radius:16px; } .memberCard { max-width:330px; padding:18px; transform:rotate(-3deg); } .cardIdentity > img { width:65px; height:65px; } .cardIdentity > span { font-size:20px; } .memberCard .stampRow { gap:9px; margin:14px 0; } .stampRow > span { width:32px; height:32px; } .memberCard p { font-size:21px; } .memberCopy { text-align:start; } .memberCopy .eyebrow { font-size:12px; } .memberCopy h2 { font-size:31px; } .memberCopy h2 br { display:none; } .memberCopy > p:last-of-type { font-size:16px; margin:12px 0 8px; } .rewardHighlight { font-size:30px; margin:9px 0 16px; } .membershipLink { margin:0; width:100%; justify-content:space-between; font-size:17px; }
+ .discovery { padding-block:34px; } .discoveryCard { flex-basis:145px; height:175px; border-radius:12px; } .discoveryName { font-size:16px; inset-inline:12px; } .discoveryNumber { top:12px; left:12px; }
+ .sectionHeading .sectionNumber { font-size:25px; } .sectionHeading h3 { font-size:24px; } .sectionHeading { gap:10px; } .productCopy h4 { font-size:18px; } .productPhoto { aspect-ratio:.95; } .product[data-no-photo] { grid-column:1/-1; } .product[data-no-photo] .productButton { gap:16px; } .product[data-no-photo] .productCopy h4 { margin:0 0 8px; font-size:20px; } .product[data-no-photo] .productBottom { flex-wrap:nowrap; }
+ .mobileDock a:nth-child(3) { background:#ddbf7920; color:var(--gold); }
+}
+@media (max-width:360px) { .hero h1 { font-size:28px; } .heroLogo { width:80px; } .stageSignature { font-size:11px; } .heroDescription { font-size:12px; } .explore { font-size:13px; padding:9px 11px; gap:8px; } .featureCaption strong { font-size:15px; } .memberCopy h2 { font-size:27px; } .stampRow > span { width:27px; height:27px; } .memberCard .stampRow { gap:6px; } }
+@media (prefers-reduced-motion:reduce) { .page *,.page *::before,.page *::after { scroll-behavior:auto !important; animation:none !important; transition:none !important; } .product:hover,.productButton:hover .productPhoto > img,.discoveryCard:hover > img,.heroScene:hover > img,.heroFeature:hover > img,.membershipWholeLink:hover .memberCard { transform:none; } }

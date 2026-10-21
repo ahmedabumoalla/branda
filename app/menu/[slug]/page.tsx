@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { getStandaloneMenu } from "@/lib/data/standalone-menu";
+import { getPublicLoyaltyProgramBySlug } from "@/lib/data/loyalty-cards";
 import { BistroMenu } from "@/components/menu/bistro-menu";
 import { FrenchCornerMenu } from "@/components/menu/french-corner-menu";
 import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
@@ -37,8 +38,11 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (showcase && !await isPublicShowcase(slug)) notFound();
   const menu = await getStandaloneMenu(slug, showcase);
   if (!menu) notFound();
+  const program = menu.slug === "brand-10620d3a586c" && menu.loyaltyEnabled
+    ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
+  const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
-  const presentation = menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} /> : <BistroMenu menu={menu} />;
+  const presentation = menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }
