@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { ArrowDownLeft, ArrowUpLeft, CakeSlice, Check, ChevronDown, Coffee, CupSoda, Flame, Gift, Grid2X2, IceCreamBowl, Search, Share2, Utensils, WalletCards, X } from "lucide-react";
-import { matchesMenuSearch, menuDisplayText, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
+import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
@@ -63,6 +63,15 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
     const product = menu.products.find(product => product.name === name && product.images.length > 0);
     return product ? [product] : [];
   });
+  const experienceProducts = menu.products.filter(product => product.available && product.categoryId !== "983f681e-c2c3-466a-9199-d99a6f37a042");
+  const experienceOffers = (menu.highlights?.items ?? []).filter(offer => offer.showInSpotlight !== false
+    && (offer.expiresAt == null || offer.expiresAt >= now)
+    && [offer.productId, offer.buyProductId, offer.freeProductId].every(id => !id || experienceProducts.some(product => product.id === id)));
+  const discovery = featured.find(product => product.available) ?? experienceProducts.find(product => product.images.length > 0);
+  const experienceItems: StandaloneHighlight[] = experienceOffers.length ? experienceOffers : discovery ? [{
+    id: `discover-${discovery.id}`, title: discovery.name, description: discovery.description,
+    imageUrl: discovery.images[0]?.url ?? null, productId: discovery.id, discountPercent: null, code: null, expiresAt: null,
+  }] : [];
   const categories = [...menu.categories];
   if (menu.products.some(p => !p.categoryId)) categories.push({ id: "uncategorized", name: "أصناف أخرى", description: null });
   const categoryOptions = [{ id: "all", name: "كل الأصناف" }, ...categories];
@@ -128,6 +137,26 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
         <div className={s.memberCard} aria-hidden="true"><div><span lang="fr">FRENCH CORNER</span><WalletCards /></div><div className={s.cardIdentity}><FrenchImage src={menu.logoUrl} alt="" /><span>بطاقة الولاء<small>لك مكان ولك تقدير</small></span></div>{stampTarget && stampTarget <= 12 && <div className={s.stampRow}>{Array.from({ length: stampTarget }, (_, index) => <span key={index}>{index === stampTarget - 1 ? <Gift /> : <Coffee />}</span>)}</div>}<p>{loyalty?.rewardName || "مكافآت تستاهلها"}</p><small>كل زيارة تقرّبك</small></div>
         <div className={s.memberCopy}><p className={s.eyebrow}><Gift aria-hidden="true" />بطاقة الولاء والمكافآت</p><h2 id="french-membership-title">لك في كل زيارة<br /><em>شي يستاهل الرجعة</em></h2><p>{stampTarget ? <>اجمع <strong>{stampTarget.toLocaleString("ar-SA")} أختام</strong> واستمتع بمكافأتك</> : "بطاقتك وزياراتك ومكافآتك في مكان واحد"}</p>{loyalty?.rewardName && <strong className={s.rewardHighlight}>{loyalty.rewardName}</strong>}<LoyaltyLinkContent className={s.membershipLink} label="افتح بطاقة الولاء" /></div>
       </Link>
+    </section>}
+    {experienceItems.length > 0 && <section className={h.experience} id="french-offers" aria-labelledby="french-offers-title">
+      <div className={h.experienceHeading}><div><p>اختيارات من الركن الفرنسي</p><h2 id="french-offers-title">تستاهل <em>التجربة</em></h2></div><span lang="fr" dir="ltr">À découvrir</span></div>
+      <div className={h.offerList}>{experienceItems.map(offer => {
+        const product = experienceProducts.find(product => product.id === offer.productId);
+        return <article key={offer.id} className={h.offerCard} data-french-offer={offer.id}>
+          <div className={h.offerCopy}>
+            <span className={h.offerLabel}>{!experienceOffers.length ? "اختيار من قائمتنا" : offer.discountPercent ? `خصم ${offer.discountPercent}٪` : offer.kind === "event" ? "موعدنا في الركن الفرنسي" : "عرض من الركن الفرنسي"}</span>
+            <h3>{menuDisplayText(offer.title)}</h3>
+            {offer.description && <p>{menuDisplayText(offer.description)}</p>}
+            {offer.productName && offer.productName !== offer.title && <p>{menuDisplayText(offer.productName)}</p>}
+            {offer.code && <p>كود العرض <bdi>{offer.code}</bdi></p>}
+            {offer.eventDate && <p>الموعد <bdi>{offer.eventDate}</bdi>{offer.eventTime && <> <bdi>{offer.eventTime}</bdi> بتوقيت السعودية</>}</p>}
+            {offer.eventLocation && <p>{menuDisplayText(offer.eventLocation)}</p>}
+            {product && <FrenchPrice product={product} />}
+            {product ? <button type="button" onClick={() => setSelectedId(product.id)}>اكتشف الصنف<ArrowUpLeft aria-hidden="true" /></button> : <a href="#french-catalog">تصفح القائمة<ArrowDownLeft aria-hidden="true" /></a>}
+          </div>
+          <div className={h.offerPhoto}>{offer.imageUrl ? <FrenchImage src={offer.imageUrl} alt="" /> : <div className={h.offerArt}><span lang="en" dir="ltr">FRENCH CORNER</span><strong>{offer.discountPercent ? <>{offer.discountPercent}<small>٪</small></> : <Gift aria-hidden="true" />}</strong><span>لحظتك تستاهل</span></div>}</div>
+        </article>;
+      })}</div>
     </section>}
     <section className={s.catalog} id="french-catalog" aria-labelledby="french-catalog-title">
       <div className={s.catalogHeading}><div><p className={s.eyebrow}>قائمة الركن الفرنسي</p><h2 id="french-catalog-title">تفاصيل تُذاق <em>وتنحب</em></h2></div><span lang="fr" dir="ltr">La Carte<small>COFFEE & SWEET PLEASURES</small></span></div>

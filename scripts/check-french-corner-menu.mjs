@@ -67,5 +67,21 @@ check('Owner supplied Snapchat and map destinations are active accessible links'
  assert(html.includes('href="https://maps.app.goo.gl/ZA1JH1LjR72skeEo7"'));
  assert(html.includes('rel="noopener noreferrer"'));assert(!html.includes('غير مضاف بعد'));
 });
+check('Experience card uses published offers, current prices and product details',()=>{
+ state=[];const menu={...source,highlights:{asOf:Date.now(),items:[{id:'live-offer',kind:'products',productId:'a',title:'عرض لاتيه',description:'لحظة قهوة',imageUrl:'/offer.webp',discountPercent:20,code:'CAFE',showInSpotlight:true,expiresAt:Date.now()+60000}]}};
+ const r=render(menu);assert(r.html.includes('id="french-offers-title"'));assert(r.html.includes('data-french-offer="live-offer"'));assert(r.html.includes('خصم 20'));assert(r.html.includes('14.4'));assert(r.html.includes('CAFE'));
+ const article=nodes(r.tree,n=>n.props['data-french-offer']==='live-offer')[0];nodes(article,n=>n.type==='button')[0].props.onClick();assert(render(menu).html.includes('data-selected="a"'));
+ assert(render({...menu,products:source.products.filter(p=>p.id!=='a')}).html.includes('data-french-offer="live-offer"')===false);state=[];
+});
+check('Experience excludes expired, hidden and unavailable linked offers without inventing discounts',()=>{
+ state=[];const product={...p('photo','دلوتشي بيكان',22,'sweet'),images:[{url:'/cake.webp',alt:''}]};
+ const menu={...source,products:[product],highlights:{asOf:100,items:[{id:'expired',title:'منتهي',productId:'photo',expiresAt:99},{id:'hidden',title:'مخفي',productId:'photo',showInSpotlight:false},{id:'gone',title:'محذوف',productId:'missing'},{id:'missing-reward',title:'هدية محذوفة',productId:'photo',freeProductId:'missing'}]}};
+ const r=render(menu);assert(r.html.includes('data-french-offer="discover-photo"'));assert(r.html.includes('اختيار من قائمتنا'));assert(!r.html.includes('خصم 20'));for(const id of ['expired','hidden','gone','missing-reward'])assert(!r.html.includes(`data-french-offer="${id}"`));
+ assert(!render({...menu,products:[]}).html.includes('id="french-offers"'));state=[];
+});
+check('Experience supports general campaigns and events using the French catalog anchor',()=>{
+ state=[];const r=render({...source,highlights:{asOf:100,items:[{id:'general',kind:'general',title:'عرض القهوة',discountPercent:10},{id:'event',kind:'event',title:'لقاء القهوة',eventDate:'2026-10-24',eventTime:'18:00',eventLocation:'الركن الفرنسي'}]}});
+ assert(r.html.includes('data-french-offer="general"'));assert(r.html.includes('data-french-offer="event"'));assert(r.html.includes('2026-10-24'));assert(r.html.includes('18:00'));assert(!r.html.includes('#rast-menu-items'));assert(!r.html.includes('RAST'));state=[];
+});
 const route=fs.readFileSync('app/menu/[slug]/page.tsx','utf8');assert(route.includes('menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu'));assert(route.includes('if (showcase) return <div inert>{presentation}</div>'));
 console.log(`${checks} French Corner behavior groups and tenant/preview routing passed`);
