@@ -54,7 +54,15 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, [source.highlights]);
-  const menu = { ...source, contacts: { ...source.contacts, location: null, instagramUrl: null }, products: source.products.map(product => ({ ...product, promo: getPublishedOfferPromo(product, source.highlights, now), offers: getProductOffers(product, source.highlights, now) })) };
+  const menu = { ...source, contacts: { ...source.contacts, instagramUrl: null, location: {
+    label: "مقهى الركن الفرنسي",
+    googleUrl: "https://maps.app.goo.gl/ZA1JH1LjR72skeEo7",
+    appleUrl: "https://maps.apple.com/?daddr=18.2040338,42.515748&dirflg=d",
+  } }, products: source.products.map(product => ({ ...product, promo: getPublishedOfferPromo(product, source.highlights, now), offers: getProductOffers(product, source.highlights, now) })) };
+  const featured = ["دلوتشي بيكان", "ايس اسبانش لاتيه", "بلو اوشن", "كيك دبي"].flatMap(name => {
+    const product = menu.products.find(product => product.name === name && product.images.length > 0);
+    return product ? [product] : [];
+  });
   const categories = [...menu.categories];
   if (menu.products.some(p => !p.categoryId)) categories.push({ id: "uncategorized", name: "أصناف أخرى", description: null });
   const categoryOptions = [{ id: "all", name: "كل الأصناف" }, ...categories];
@@ -98,12 +106,20 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
         <a className={h.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="مقهى الركن الفرنسي" eager /></a>
         <div className={h.actions}><button type="button" aria-label="البحث في المنيو" onClick={focusSearch}><Search aria-hidden="true" /></button><button type="button" aria-label="مشاركة المنيو" onClick={share}><Share2 aria-hidden="true" /></button><MenuServices menu={menu} compact /></div>
       </header>
+      <div className={h.scene}>
       <div className={h.introduction}>
         <p className={h.kicker}><span aria-hidden="true" />من ركننا إلى لحظتك</p>
         <h1 id="french-title">للحظات الأجمل<br /><em>ركنك الفرنسي</em></h1>
         <p className={h.description}>قهوتك المفضّلة وحلوى على ذوقك<br />هنا يحلو الوقت وتكتمل اللحظة</p>
         <FrenchSocialIcons />
         <div className={h.links}><a className={h.explore} href="#french-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && <a className={h.loyalty} href="#french-membership"><WalletCards aria-hidden="true" />بطاقتك في الركن الفرنسي</a>}</div>
+      </div>
+      {featured.length > 0 && <div className={h.collection} role="group" aria-label="من حلى وقهوة الركن الفرنسي">
+        {featured.map((product, index) => <button key={product.id} type="button" className={h.feature} data-french-feature={product.id} onClick={() => setSelectedId(product.id)} aria-label={`اكتشف ${menuDisplayText(product.name)}`}>
+          <FrenchImage src={product.images[0].url} alt="" eager={index < 2} />
+          <span className={h.featureCaption}><strong>{menuDisplayText(product.name)}</strong><FrenchPrice product={product} /><ArrowUpLeft aria-hidden="true" /></span>
+        </button>)}
+      </div>}
       </div>
       <p className={h.signature} lang="fr" dir="ltr">Le plaisir de prendre son temps</p>
     </section>

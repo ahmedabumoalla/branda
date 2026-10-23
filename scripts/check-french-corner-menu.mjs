@@ -47,5 +47,25 @@ check('Uncategorized and empty catalogs remain usable',()=>{assert.deepEqual(car
 check('Loyalty card precedes catalog and follows live program settings',()=>{const {html}=render();assert(html.indexOf('id="french-membership"')<html.indexOf('id="french-catalog"'));assert(html.includes('٦ أختام'));assert(html.includes('خصم 10%'));const updated=render(source,{purchasesRequired:8,rewardName:'خصم 15%'}).html;assert(updated.includes('٨ أختام'));assert(updated.includes('خصم 15%'));assert(!updated.includes('خصم 10%'));const fallback=render(source,null).html;assert(!fallback.includes('٦ أختام'));assert(!fallback.includes('خصم 10%'));assert(fallback.includes('افتح بطاقة الولاء'));});
 check('Salon opening retains utility controls and catalog/loyalty access without a bottom dock',()=>{const {tree,html}=render();assert(html.includes('data-french-opening="salon"'));assert(html.includes('/french-corner/salon.webp'));assert(!html.includes('اختصارات المنيو'));assert(!html.includes('french-discovery-title'));assert.equal(nodes(tree,n=>n.type==='button'&&n.props['aria-label']==='البحث في المنيو').length,1);assert.equal(nodes(tree,n=>n.type==='button'&&n.props['aria-label']==='مشاركة المنيو').length,1);assert(html.includes('href="#french-catalog"'));assert(html.includes('href="#french-membership"'));state=[];});
 check('Active offers use discounted price and preserve original price',()=>{const {html}=render({...source,highlights:{asOf:Date.now(),items:[{id:'offer',kind:'general',title:'خصم',discountPercent:10,expiresAt:null}]}});assert(html.includes('16.2'));assert(html.includes('<del>18</del>'));});
+check('Featured dessert and drink photos open live details and follow removal',()=>{
+ state=[];
+ const products=['دلوتشي بيكان','ايس اسبانش لاتيه','بلو اوشن','كيك دبي'].map((name,i)=>({...p('feature'+i,name,20+i,i%2?'coffee':'sweet'),images:[{url:'/photo'+i+'.webp',alt:name}]}));
+ const menu={...source,products};
+ const r=render(menu);const features=nodes(r.tree,n=>n.type==='button'&&n.props['data-french-feature']);
+ assert.equal(features.length,4);features[0].props.onClick();
+ assert(render(menu).html.includes('data-selected="feature0"'));
+ assert(render({...menu,products:products.map((p,i)=>i===0?{...p,price:27}:p)}).html.includes('data-price="27"'));
+ const removed=render({...menu,products:products.slice(1)});
+ assert(!removed.html.includes('data-selected'));
+ assert.equal(nodes(removed.tree,n=>n.type==='button'&&n.props['data-french-feature']).length,3);
+ assert.equal(nodes(render({...menu,products:products.map(p=>({...p,images:[]}))}).tree,n=>n.props?.['data-french-feature']).length,0);
+ state=[];
+});
+check('Owner supplied Snapchat and map destinations are active accessible links',()=>{
+ const {html}=render();
+ assert(html.includes('href="https://www.snapchat.com/add/frenchcorner26"'));
+ assert(html.includes('href="https://maps.app.goo.gl/ZA1JH1LjR72skeEo7"'));
+ assert(html.includes('rel="noopener noreferrer"'));assert(!html.includes('غير مضاف بعد'));
+});
 const route=fs.readFileSync('app/menu/[slug]/page.tsx','utf8');assert(route.includes('menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu'));assert(route.includes('if (showcase) return <div inert>{presentation}</div>'));
 console.log(`${checks} French Corner behavior groups and tenant/preview routing passed`);

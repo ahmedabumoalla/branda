@@ -1,0 +1,283 @@
+{
+  "mode": "built-in image_gen",
+  "packagedBranding": "Original manufacturer packaging only; no cafe logo or sticker",
+  "manufacturerReference": "https://alesayibeverage.com/code-red-energy-drink/",
+  "items": [
+    {
+      "key": "cappuccino",
+      "asset": "public/french-corner/catalog-20261023/cappuccino.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. Produce one premium square cafe menu photograph of A hot cappuccino, thick microfoam with a light cocoa dusting, black ceramic cup and saucer. Supporting image is the official French Corner Cafe logo, reproduce it faithfully in gold printed naturally on the front of each cup or glass; for mini pancakes print logo on a small black card beside plate. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, beautiful natural textures, crisp product detail, centered complete vessel with comfortable margin, 85mm food photography. No other products, no people, no text outside physical branding, no prices, no added tobacco objects."
+    },
+    {
+      "key": "latte",
+      "asset": "public/french-corner/catalog-20261023/latte.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of A hot latte with delicate rosetta latte art in a generous black ceramic cup and saucer. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "espresso",
+      "asset": "public/french-corner/catalog-20261023/espresso.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of A single espresso with golden crema in a tiny black demitasse cup and saucer. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "turkish",
+      "asset": "public/french-corner/catalog-20261023/turkish.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Turkish coffee with rich foam in a small black porcelain cup and saucer, copper cezve beside it. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "spanish",
+      "asset": "public/french-corner/catalog-20261023/spanish.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of A hot Spanish latte in a glass with subtle condensed milk and espresso layers, light foam. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "hot-chocolate",
+      "asset": "public/french-corner/catalog-20261023/hot-chocolate.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Rich hot chocolate in a black ceramic cup, glossy chocolate surface with delicate chocolate shavings. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "cortado",
+      "asset": "public/french-corner/catalog-20261023/cortado.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of A small cortado in a short clear glass, equal espresso and steamed milk, fine microfoam. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "macchiato",
+      "asset": "public/french-corner/catalog-20261023/macchiato.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Espresso macchiato in a tiny black demitasse cup, dark espresso with a small central dollop of white foam. The supporting reference is the official French Corner Cafe logo. Reproduce it faithfully, including readable Arabic name مقهى الركن الفرنسي, as a restrained gold print on the front of every cup or glass, following its curvature, not a floating overlay. Warm dark walnut tabletop, softly blurred charcoal cafe interior, subtle golden side lighting, realistic drink texture and steam. Center complete vessel and saucer with generous margins, close 85mm food photograph. No extra drinks, people, prices, captions or added tobacco objects. Preserve the official emblem."
+    },
+    {
+      "key": "americano",
+      "asset": "public/french-corner/catalog-20261023/americano.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Hot black americano in a black ceramic mug and saucer, no milk. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. Subtle steam, no ice. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "v60-hot",
+      "asset": "public/french-corner/catalog-20261023/v60-hot.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Hot V60 filter coffee in a clear glass server with a black ceramic coffee cup, subtle steam, no ice. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. Subtle steam, no ice. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "italian",
+      "asset": "public/french-corner/catalog-20261023/italian.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Italian coffee in a small black ceramic espresso cup with rich hazelnut brown crema, elegant saucer. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. Subtle steam, no ice. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "v60-iced",
+      "asset": "public/french-corner/catalog-20261023/v60-iced.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-cold-v60.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original Iced V60 black filter coffee with clear ice cubes in a tall clear glass product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "iced-spanish",
+      "asset": "public/french-corner/catalog-20261023/iced-spanish.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced Spanish latte with condensed milk base, espresso and milk layers and ice in a tall clear glass. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "iced-latte",
+      "asset": "public/french-corner/catalog-20261023/iced-latte.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced latte with espresso and milk gently blending around clear ice cubes in a tall glass. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "iced-caramel",
+      "asset": "public/french-corner/catalog-20261023/iced-caramel.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced caramel macchiato with caramel drizzle, milk espresso layers and clear ice cubes in tall glass. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "iced-americano",
+      "asset": "public/french-corner/catalog-20261023/iced-americano.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced black americano, dark coffee and clear ice cubes in a tall clear glass, no milk. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "iced-white-mocha",
+      "asset": "public/french-corner/catalog-20261023/iced-white-mocha.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced white chocolate mocha, creamy pale coffee and ice in a tall glass. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "iced-mocha",
+      "asset": "public/french-corner/catalog-20261023/iced-mocha.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Iced chocolate mocha, brown milk coffee and chocolate drizzle with ice in a tall glass. Supporting image is the official French Corner Cafe logo. Reproduce it faithfully with Arabic name مقهى الركن الفرنسي, printed in restrained gold on the front of every cup or glass, realistic curvature. Warm dark walnut tabletop, softly blurred charcoal cafe interior, golden side lighting, natural beverage colors, crisp textures and realistic condensation for iced drinks. Center complete vessel with generous margins, close 85mm food photograph. No steam, obviously iced drink. No extra drinks, people, prices, captions or added tobacco objects."
+    },
+    {
+      "key": "classic-mojito",
+      "asset": "public/french-corner/catalog-20261023/classic-mojito.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-classic-mojito.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original Nonalcoholic classic mojito, clear sparkling drink with lime wedges mint and crushed ice in tall glass product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "blue-ocean",
+      "asset": "public/french-corner/catalog-20261023/blue-ocean.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-blue-ocean-mojito.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original Nonalcoholic vivid blue ocean cooler with lime mint and ice in a tall glass product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "mixed-berry",
+      "asset": "public/french-corner/catalog-20261023/mixed-berry.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Nonalcoholic mixed berry cooler with red and dark berries, mint and ice, deep berry purple drink in tall glass. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "mexican",
+      "asset": "public/french-corner/catalog-20261023/mexican.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-mexican-mojito.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original Nonalcoholic Mexican lime cooler with a lightly salted rim and ice in a tall glass, pale citrus gold product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "red-berry",
+      "asset": "public/french-corner/catalog-20261023/red-berry.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Nonalcoholic red berry cooler, ruby red with ice and red berries in a tall glass. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "redbull-mix",
+      "asset": "public/french-corner/catalog-20261023/redbull-mix.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Nonalcoholic energy drink fruit mocktail with ice, amber and red fruit layers in a tall glass. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "codered-small",
+      "asset": "public/french-corner/catalog-20261023/codered-small.webp",
+      "reference": null,
+      "prompt": "Photographic product placement edit: preserve the EXACT original Alesayi Code Red energy drink 185ml can in this reference, including its genuine vertical black Code Red typography, silver outlines, red background, black top band, gold dot emblem, proportions and manufacturer packaging. Place ONE chilled can upright on a dark walnut cafe table, subtle condensation, warm gold side lighting, dark charcoal blurred cafe background, square framing, premium photorealistic menu photo. No additional logo or sticker on the can, no cafe branding on the package, no Mountain Dew branding, no text overlay, no tobacco objects. Product fills about 75 percent frame height."
+    },
+    {
+      "key": "codered-large",
+      "asset": "public/french-corner/catalog-20261023/codered-large.webp",
+      "reference": null,
+      "prompt": "Photographic product placement edit: preserve the EXACT original Alesayi Code Red energy drink 250ml can in this reference, including its genuine vertical black Code Red typography, silver outlines, red background, black top band, gold dot emblem, proportions and manufacturer packaging. Place ONE chilled can upright on a dark walnut cafe table, subtle condensation, warm gold side lighting, dark charcoal blurred cafe background, square framing, premium photorealistic menu photo. No additional logo or sticker on the can, no cafe branding on the package, no Mountain Dew branding, no text overlay, no tobacco objects. Product fills about 75 percent frame height."
+    },
+    {
+      "key": "seven-up",
+      "asset": "public/french-corner/catalog-20261023/seven-up.webp",
+      "reference": null,
+      "prompt": "Precise object edit. Remove the black and gold French Corner Cafe sticker from the beverage container completely. Restore only its authentic original manufacturer packaging underneath (7UP, Red Bull or Moussy as shown). Preserve the original manufacturer logo, can or bottle shape, condensation, photographic framing, warm walnut cafe atmosphere and lighting. No cafe logo, custom label, sticker or other additional branding anywhere on the can or bottle. No tobacco objects. Square premium product photo."
+    },
+    {
+      "key": "redbull",
+      "asset": "public/french-corner/catalog-20261023/redbull.webp",
+      "reference": null,
+      "prompt": "Precise object edit. Remove the black and gold French Corner Cafe sticker from the beverage container completely. Restore only its authentic original manufacturer packaging underneath (7UP, Red Bull or Moussy as shown). Preserve the original manufacturer logo, can or bottle shape, condensation, photographic framing, warm walnut cafe atmosphere and lighting. No cafe logo, custom label, sticker or other additional branding anywhere on the can or bottle. No tobacco objects. Square premium product photo."
+    },
+    {
+      "key": "moussy",
+      "asset": "public/french-corner/catalog-20261023/moussy.webp",
+      "reference": null,
+      "prompt": "Precise object edit. Remove the black and gold French Corner Cafe sticker from the beverage container completely. Restore only its authentic original manufacturer packaging underneath (7UP, Red Bull or Moussy as shown). Preserve the original manufacturer logo, can or bottle shape, condensation, photographic framing, warm walnut cafe atmosphere and lighting. No cafe logo, custom label, sticker or other additional branding anywhere on the can or bottle. No tobacco objects. Square premium product photo."
+    },
+    {
+      "key": "moussy-flavor",
+      "asset": "public/french-corner/catalog-20261023/moussy-flavor.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Nonalcoholic fruit flavored malt cooler, golden pink with ice in a tall clear glass, no alcohol bottle. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "moussy-special",
+      "asset": "public/french-corner/catalog-20261023/moussy-special.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Nonalcoholic special fruit malt mocktail, amber with red fruit swirl and clear ice in a tall glass, small citrus garnish. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "orange",
+      "asset": "public/french-corner/catalog-20261023/orange.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-orange-juice.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original Fresh orange juice in a tall clear glass with orange slice product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "lemon-mint",
+      "asset": "public/french-corner/catalog-20261023/lemon-mint.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Fresh lemon mint juice, pale green finely blended mint and lemon in a tall clear glass. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "watermelon",
+      "asset": "public/french-corner/catalog-20261023/watermelon.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Fresh watermelon juice, natural bright pink red in a tall clear glass, small watermelon wedge. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "mango",
+      "asset": "public/french-corner/catalog-20261023/mango.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Fresh thick mango juice, rich golden yellow in a tall clear glass, mango slice. Supporting reference image is official French Corner Cafe logo. Print that exact logo naturally in restrained gold on the front of the glass, curved to match surface, Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, blurred charcoal cafe interior, restrained golden side lighting, realistic refreshing vibrant beverage color, crisp condensation and ingredients. Center the entire glass with generous margins, close 85mm photographic lens. One beverage only, no alcohol, no people, no floating text, no prices, no added tobacco objects."
+    },
+    {
+      "key": "mini-pancakes",
+      "asset": "public/french-corner/catalog-20261023/mini-pancakes.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. Produce one premium square cafe menu photograph of A ceramic plate of small mini pancakes drizzled with milk chocolate sauce, no exaggerated toppings, gold French Corner Cafe logo on a small black paper liner beside plate. Supporting image is the official French Corner Cafe logo, reproduce it faithfully in gold printed naturally on the front of each cup or glass; for mini pancakes print logo on a small black card beside plate. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, beautiful natural textures, crisp product detail, centered complete vessel with comfortable margin, 85mm food photography. No other products, no people, no text outside physical branding, no prices, no added tobacco objects."
+    },
+    {
+      "key": "dolce-pecan",
+      "asset": "public/french-corner/catalog-20261023/dolce-pecan.webp",
+      "reference": "C:/Users/pc/Downloads/WhatsApp Image 2026-10-22 at 4.27.25 PM (2).jpeg",
+      "prompt": "Use case: precise-object-edit. Edit image 1, a pecan caramel chocolate cake on a ceramic plate at a cafe. Preserve the exact cake, layers, nuts, plate, table, lighting and framing. Remove turquoise outer border and extend photograph to full square frame. Replace ONLY the background coffee cup lettering COFFEE HOUSE with the supplied official French Corner Cafe logo from image 2, printed naturally in gold on the cup following its curvature. Also replace text on background chalkboard with small French Corner Cafe lettering, no unrelated branding. Keep the dessert hero sharp and true to source. Premium real photographic result for the cafe dessert menu. No added tobacco objects."
+    },
+    {
+      "key": "dolce-chocolate",
+      "asset": "public/french-corner/catalog-20261023/dolce-chocolate.webp",
+      "reference": "C:/Users/pc/Downloads/WhatsApp Image 2026-10-22 at 4.27.24 PM (1).jpeg",
+      "prompt": "Use case: precise-object-edit. Image 1 is the supplied Chocolate and caramel layered cake photograph to edit. Image 2 is the official cafe logo. Preserve the exact dessert shape, layers, ingredients, plate, scene and lighting. Remove turquoise outer frame, extend photograph cleanly to square. Replace unrelated signage text with French Corner Cafe. Add the official logo naturally printed in gold to every coffee cup or glass visible, following curvature and perspective. If no cup exists, add a discreet small black cafe card beside plate with official gold logo. Do not change the cake. Premium photo, no prices, no overlay text, no added tobacco objects."
+    },
+    {
+      "key": "honey-cake",
+      "asset": "public/french-corner/catalog-20261023/honey-cake.webp",
+      "reference": "C:/Users/pc/Downloads/WhatsApp Image 2026-10-22 at 4.27.24 PM.jpeg",
+      "prompt": "Use case: precise-object-edit. Image 1 is the supplied Honey layered cake photograph to edit. Image 2 is the official cafe logo. Preserve the exact dessert shape, layers, ingredients, plate, scene and lighting. Remove turquoise outer frame, extend photograph cleanly to square. Replace unrelated signage text with French Corner Cafe. Add the official logo naturally printed in gold to every coffee cup or glass visible, following curvature and perspective. If no cup exists, add a discreet small black cafe card beside plate with official gold logo. Do not change the cake. Premium photo, no prices, no overlay text, no added tobacco objects."
+    },
+    {
+      "key": "coconut-mango",
+      "asset": "public/french-corner/catalog-20261023/coconut-mango.webp",
+      "reference": "C:/Users/pc/Downloads/WhatsApp Image 2026-10-22 at 4.27.25 PM (1).jpeg",
+      "prompt": "Use case: precise-object-edit. Image 1 is the supplied Coconut mango layered cake photograph to edit. Image 2 is the official cafe logo. Preserve the exact dessert shape, layers, ingredients, plate, scene and lighting. Remove turquoise outer frame, extend photograph cleanly to square. Replace unrelated signage text with French Corner Cafe. Add the official logo naturally printed in gold to every coffee cup or glass visible, following curvature and perspective. If no cup exists, add a discreet small black cafe card beside plate with official gold logo. Do not change the cake. Premium photo, no prices, no overlay text, no added tobacco objects."
+    },
+    {
+      "key": "dubai-cake",
+      "asset": "public/french-corner/catalog-20261023/dubai-cake.webp",
+      "reference": "C:/Users/pc/Downloads/WhatsApp Image 2026-10-22 at 4.27.25 PM.jpeg",
+      "prompt": "Use case: precise-object-edit. Image 1 is the supplied Dubai pistachio chocolate cake photograph to edit. Image 2 is the official cafe logo. Preserve the exact dessert shape, layers, ingredients, plate, scene and lighting. Remove turquoise outer frame, extend photograph cleanly to square. Replace unrelated signage text with French Corner Cafe. Add the official logo naturally printed in gold to every coffee cup or glass visible, following curvature and perspective. If no cup exists, add a discreet small black cafe card beside plate with official gold logo. Do not change the cake. Premium photo, no prices, no overlay text, no added tobacco objects."
+    },
+    {
+      "key": "red-tea",
+      "asset": "public/french-corner/catalog-20261023/red-tea.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Hot red black tea, transparent amber in a small clear tea glass on saucer. Supporting reference is official French Corner Cafe logo. Apply the exact official logo naturally in gold to each cup or glass, and etch a small emblem onto teapot if present, following the surface curvature. Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, realistic product details, premium restaurant menu photography, centered entire vessel with generous margins. Subtle steam, no ice. No people, captions or prices, no extra products, no added tobacco objects."
+    },
+    {
+      "key": "red-teapot",
+      "asset": "public/french-corner/catalog-20261023/red-teapot.webp",
+      "reference": "C:/Projects/branda-platform/.git/french-assets/product-red-tea-pot.webp",
+      "prompt": "Use case: precise-object-edit. Edit target image 1, existing cafe product photograph. Supporting image 2 is official French Corner Cafe logo. Keep the original A polished stainless steel teapot of red black tea with a small filled amber tea glass, cafe serving set product and its vessel, volume, garnish and ingredients faithfully. Remove ALL overlaid captions, old price text, nutrition tables and existing old logos. Print the supplied official gold cafe logo naturally on the front of the cup or glass or teapot, with correct curved perspective and readable Arabic مقهى الركن الفرنسي. Clean premium square photographic composition, complete vessel centered with margins. Upgrade backdrop to a warm dark walnut table and blurred charcoal cafe with restrained gold lighting, matching the black and gold brand. Keep real product shape, beverage color, no new ingredients, no prices, no people, no extra drinks, no added tobacco objects."
+    },
+    {
+      "key": "green-tea",
+      "asset": "public/french-corner/catalog-20261023/green-tea.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Hot green tea, pale yellow green transparent liquid in a small clear tea glass and saucer. Supporting reference is official French Corner Cafe logo. Apply the exact official logo naturally in gold to each cup or glass, and etch a small emblem onto teapot if present, following the surface curvature. Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, realistic product details, premium restaurant menu photography, centered entire vessel with generous margins. Subtle steam, no ice. No people, captions or prices, no extra products, no added tobacco objects."
+    },
+    {
+      "key": "green-teapot",
+      "asset": "public/french-corner/catalog-20261023/green-teapot.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of A polished stainless steel teapot of green tea beside a small filled light golden green tea glass. Supporting reference is official French Corner Cafe logo. Apply the exact official logo naturally in gold to each cup or glass, and etch a small emblem onto teapot if present, following the surface curvature. Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, realistic product details, premium restaurant menu photography, centered entire vessel with generous margins. Subtle steam, no ice. No people, captions or prices, no extra products, no added tobacco objects."
+    },
+    {
+      "key": "hibiscus",
+      "asset": "public/french-corner/catalog-20261023/hibiscus.webp",
+      "reference": null,
+      "prompt": "Use case: product-mockup. One premium square cafe menu photograph of Hot hibiscus infusion, deep clear ruby red tea in a clear tea glass with a few dried hibiscus petals beside it. Supporting reference is official French Corner Cafe logo. Apply the exact official logo naturally in gold to each cup or glass, and etch a small emblem onto teapot if present, following the surface curvature. Arabic name مقهى الركن الفرنسي. Warm dark walnut tabletop, softly blurred charcoal cafe interior, restrained golden side lighting, realistic product details, premium restaurant menu photography, centered entire vessel with generous margins. Subtle steam, no ice. No people, captions or prices, no extra products, no added tobacco objects."
+    }
+  ]
+}
