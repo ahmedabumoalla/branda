@@ -112,30 +112,28 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
     <section className={h.opening} id="french-top" aria-labelledby="french-title" data-french-opening="salon">
       <div className={h.backdrop} aria-hidden="true"><FrenchImage src="/french-corner/salon.webp" alt="" eager /></div>
       <header className={h.header}>
-        <a className={h.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="مقهى الركن الفرنسي" eager /></a>
+        <span className={h.wordmark} lang="en" dir="ltr">FRENCH<br /><span>CORNER CAFÉ</span></span>
         <div className={h.actions}><button type="button" aria-label="البحث في المنيو" onClick={focusSearch}><Search aria-hidden="true" /></button><button type="button" aria-label="مشاركة المنيو" onClick={share}><Share2 aria-hidden="true" /></button><MenuServices menu={menu} compact /></div>
       </header>
       <div className={h.scene}>
       <div className={h.introduction}>
-        <p className={h.kicker}><span aria-hidden="true" />من ركننا إلى لحظتك</p>
-        <h1 id="french-title">للحظات الأجمل<br /><em>ركنك الفرنسي</em></h1>
-        <p className={h.description}>قهوتك المفضّلة وحلوى على ذوقك<br />هنا يحلو الوقت وتكتمل اللحظة</p>
-        <FrenchSocialIcons />
-        <div className={h.links}><a className={h.explore} href="#french-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && <a className={h.loyalty} href="#french-membership"><WalletCards aria-hidden="true" />بطاقتك في الركن الفرنسي</a>}</div>
+        <a className={h.brand} href="#french-top" aria-label={menu.name}><FrenchImage src={menu.logoUrl} alt="مقهى الركن الفرنسي" eager /></a>
+        <p className={h.kicker}>أهلًا بك في الركن الفرنسي</p>
+        <h1 id="french-title">هنا يحلو<br /><em>الوقت</em></h1>
+        <p className={h.description}>قهوة تُرتشف على مهل<br />وحلوى تجعل للحظة مذاقًا آخر</p>
+        <div className={h.links}><a className={h.explore} href="#french-catalog"><span>اكتشف المنيو<small lang="fr" dir="ltr">À votre goût</small></span><ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && <a className={h.loyalty} href="#french-membership"><WalletCards aria-hidden="true" />بطاقتك في الركن الفرنسي</a>}</div>
       </div>
-      {featured.length > 0 && <div className={h.collection} role="group" aria-label="من حلى وقهوة الركن الفرنسي">
-        {featured.map((product, index) => <button key={product.id} type="button" className={h.feature} data-french-feature={product.id} onClick={() => setSelectedId(product.id)} aria-label={`اكتشف ${menuDisplayText(product.name)}`}>
-          <FrenchImage src={product.images[0].url} alt="" eager={index < 2} />
-          <span className={h.featureCaption}><strong>{menuDisplayText(product.name)}</strong><FrenchPrice product={product} /><ArrowUpLeft aria-hidden="true" /></span>
-        </button>)}
-      </div>}
       </div>
-      <p className={h.signature} lang="fr" dir="ltr">Le plaisir de prendre son temps</p>
+      <footer className={h.openingFooter}><FrenchSocialIcons /><span className={h.footerNote}>لك ركن وللحظة مذاق</span></footer>
     </section>
-    {menu.loyaltyEnabled && <section className={s.membership} id="french-membership" aria-labelledby="french-membership-title">
-      <Link className={s.membershipWholeLink} href={loyaltyHref} onClick={trackLoyalty} onAuxClick={event => { if (event.button === 1) trackLoyalty(); }}>
-        <div className={s.memberCard} aria-hidden="true"><div><span lang="fr">FRENCH CORNER</span><WalletCards /></div><div className={s.cardIdentity}><FrenchImage src={menu.logoUrl} alt="" /><span>بطاقة الولاء<small>لك مكان ولك تقدير</small></span></div>{stampTarget && stampTarget <= 12 && <div className={s.stampRow}>{Array.from({ length: stampTarget }, (_, index) => <span key={index}>{index === stampTarget - 1 ? <Gift /> : <Coffee />}</span>)}</div>}<p>{loyalty?.rewardName || "مكافآت تستاهلها"}</p><small>كل زيارة تقرّبك</small></div>
-        <div className={s.memberCopy}><p className={s.eyebrow}><Gift aria-hidden="true" />بطاقة الولاء والمكافآت</p><h2 id="french-membership-title">لك في كل زيارة<br /><em>شي يستاهل الرجعة</em></h2><p>{stampTarget ? <>اجمع <strong>{stampTarget.toLocaleString("ar-SA")} أختام</strong> واستمتع بمكافأتك</> : "بطاقتك وزياراتك ومكافآتك في مكان واحد"}</p>{loyalty?.rewardName && <strong className={s.rewardHighlight}>{loyalty.rewardName}</strong>}<LoyaltyLinkContent className={s.membershipLink} label="افتح بطاقة الولاء" /></div>
+    {menu.loyaltyEnabled && <section className={s.compactMembership} id="french-membership" aria-labelledby="french-membership-title">
+      <Link className={s.compactMemberLink} href={loyaltyHref} onClick={trackLoyalty} onAuxClick={event => { if (event.button === 1) trackLoyalty(); }}>
+        <div className={s.compactMemberCopy}>
+          <h2 id="french-membership-title"><WalletCards aria-hidden="true" />بطاقة الولاء</h2>
+          <p>{stampTarget ? <>اجمع <strong>{stampTarget.toLocaleString("ar-SA")} أختام</strong><br />ومكافأتك علينا</> : "كل زيارة تقرّبك من مكافأتك"}</p>
+        </div>
+        <span className={s.compactMemberReward}><small>مكافأتك</small><strong>{loyalty?.rewardName || "لحظة أحلى"}</strong></span>
+        <LoyaltyLinkContent className={s.compactMemberAction} label="افتح بطاقة الولاء" />
       </Link>
     </section>}
     {experienceItems.length > 0 && <section className={h.experience} id="french-offers" aria-labelledby="french-offers-title">

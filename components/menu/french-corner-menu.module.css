@@ -230,3 +230,22 @@
 }
 @media (max-width:360px) { .hero h1 { font-size:28px; } .heroLogo { width:80px; } .stageSignature { font-size:11px; } .heroDescription { font-size:12px; } .explore { font-size:13px; padding:9px 11px; gap:8px; } .featureCaption strong { font-size:15px; } .memberCopy h2 { font-size:27px; } .stampRow > span { width:27px; height:27px; } .memberCard .stampRow { gap:6px; } }
 @media (prefers-reduced-motion:reduce) { .page *,.page *::before,.page *::after { scroll-behavior:auto !important; animation:none !important; transition:none !important; } .product:hover,.productButton:hover .productPhoto > img,.discoveryCard:hover > img,.heroScene:hover > img,.heroFeature:hover > img,.membershipWholeLink:hover .memberCard { transform:none; } }
+
+/* Compact loyalty invitation; program values come from the live public settings. */
+.compactMembership { margin:18px var(--gutter) 0; border:1px solid #ddbf7955; border-radius:18px 6px 18px 6px; background:linear-gradient(120deg,#ddbf7912,transparent 65%),var(--panel); scroll-margin-top:20px; }
+.compactMemberLink { position:relative; isolation:isolate; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px 20px; padding:20px 22px 12px; border-radius:inherit; }
+.compactMemberLink::before { content:''; position:absolute; top:-1px; inset-inline:20%; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); pointer-events:none; }
+.compactMemberCopy { min-width:0; }
+.compactMemberCopy h2 { display:flex; align-items:center; gap:9px; margin:0; font-size:19px; font-weight:700; line-height:1.5; }
+.compactMemberCopy h2 svg { width:20px; height:20px; flex-shrink:0; color:var(--gold); stroke-width:1.4; }
+.compactMemberCopy p { margin:7px 0 0; color:var(--muted); font-size:13px; line-height:1.65; overflow-wrap:anywhere; }
+.compactMemberCopy p strong { color:var(--paper); font-weight:400; }
+.compactMemberReward { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-width:86px; max-width:130px; min-height:74px; padding:10px 12px; border:1px solid #ddbf7944; border-radius:12px 4px 12px 4px; color:var(--gold); background:#ddbf7909; text-align:center; }
+.compactMemberReward small { font-size:11px; color:var(--muted); }
+.compactMemberReward strong { font-size:21px; font-weight:700; line-height:1.25; overflow-wrap:anywhere; max-width:100%; }
+.compactMemberAction { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:18px; min-height:44px; padding-top:9px; border-top:1px solid var(--line); color:var(--gold); font-size:14px; }
+.compactMemberAction > svg { box-sizing:content-box; width:17px; height:17px; padding:7px; border-radius:50%; background:var(--gold); color:var(--ink); flex-shrink:0; transition:transform .2s ease; }
+.compactMemberAction[data-pending] { opacity:.8; }
+@media (hover:hover) { .compactMemberLink:hover { background:#ddbf7906; }.compactMemberLink:hover .compactMemberAction { color:var(--paper); }.compactMemberLink:hover .compactMemberAction > svg { transform:translateX(-2px); } }
+@media (max-width:700px) { .compactMemberLink { padding:18px 18px 10px; gap:12px; }.compactMemberCopy h2 { font-size:17px; }.compactMemberReward { min-width:78px; max-width:100px; padding:9px; }.compactMemberReward strong { font-size:19px; } }
+@media (prefers-reduced-motion:reduce) { .compactMemberAction > svg { transition:none; }.compactMemberLink:hover .compactMemberAction > svg { transform:none; } }
