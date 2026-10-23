@@ -67,6 +67,10 @@ check('Owner supplied Snapchat and map destinations are active accessible links'
  assert(html.includes('href="https://maps.app.goo.gl/ZA1JH1LjR72skeEo7"'));
  assert(html.includes('rel="noopener noreferrer"'));assert(!html.includes('غير مضاف بعد'));
 });
+check('Quiet catalog keeps accessible categories and search without decorative headings or counts',()=>{
+ state=[];const r=render();assert(!r.html.includes('La Carte'));assert(!r.html.includes('تفاصيل تُذاق'));assert(!r.html.includes('class="sectionNumber"'));assert(!r.html.includes(' اختيارات'));
+ const nav=nodes(r.tree,n=>n.type==='nav'&&n.props['aria-label']==='أقسام المنيو')[0];assert.equal(nodes(nav,n=>n.type==='small').length,0);assert.equal(nodes(r.tree,n=>n.type==='input'&&n.props.type==='search').length,1);assert(r.html.includes('id="french-catalog-title" class="screenReaderOnly"'));state=[];
+});
 check('Experience card uses published offers, current prices and product details',()=>{
  state=[];const menu={...source,highlights:{asOf:Date.now(),items:[{id:'live-offer',kind:'products',productId:'a',title:'عرض لاتيه',description:'لحظة قهوة',imageUrl:'/offer.webp',discountPercent:20,code:'CAFE',showInSpotlight:true,expiresAt:Date.now()+60000}]}};
  const r=render(menu);assert(r.html.includes('id="french-offers-title"'));assert(r.html.includes('data-french-offer="live-offer"'));assert(r.html.includes('خصم 20'));assert(r.html.includes('14.4'));assert(r.html.includes('CAFE'));
