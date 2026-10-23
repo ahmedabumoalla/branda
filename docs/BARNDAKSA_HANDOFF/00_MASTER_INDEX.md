@@ -1,10 +1,19 @@
 # Branda — current handoff
 
-Updated 2026-10-23T19:02:36.090Z - UTC
+Updated 2026-10-23T19:16:24.729Z - UTC
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Current published state
+
+- PUBLISHED 2026-10-23T19:16:24.729Z: Product-image downloads + editable product copies; application 1b365f5f6813f9ed548789701f2b2bb3481d909b, branda-2 dpl_Ce7KcuXzs8S1g61aAmz6JbzaUDSb, exact barndaksa.com alias/SHA verified. Eleven scoped application/test/catalog/asset files; unrelated drafts preserved
+- EDITOR: Download selected image returns stored original bytes without resizing/recompression, refreshes private owner signatures, and retains original local File before upload. Pending/error/double-click handling and blob cleanup included. Duplicate opens a deep copied draft with new UUID and unique copy name; image/video/price/details retained, cancel writes nothing, normal owner-authorized save creates the new product. Two-column card actions preserve44px targets. No schema/auth/policy change
+- FRENCH DATA:53active photographed products. Moroccan tea small15 and large25 (restored existing entry), green tea5 already correct, water1; existing Moroccan photo and unbranded water reused. No images generated.46previous food/drink names/prices, other products/settings and6stamps10% preserved. Existing tobacco catalog/images unchanged. Guarded atomic data/audit + private image byte checks PASS; do not replay output/french-additions-apply.mjs
+- FRENCH LINKS: TikTok alrkn.2 added alongside existing Snapchat frenchcorner26 and Maps. User share tracking removed. Live menu confirms53cards/all4requested drink prices/46previous prices/photos/social links/loyalty; water byte hash matches; anonymous private media denied401
+- RUN 2026-10-23T19:16:24.729Z Node24.21.0: check-menu-editor.cjs (real editor copy/cancel/download/error/byte-preservation regressions), check-owner-menu-media.cjs (tenant/auth/service/signature guards), check-french-corner-menu.mjs16groups, check-text-integrity.mjs, scoped ESLint and isolated webpack build including TypeScript PASS. Build/current/published hashes matched. Browser/authenticated device file-save NOT RUN per browser policy; external legacy image downloads depend on source CORS
+- EVIDENCE: output/menu-tools-release-inputs.json, output/menu-tools-build-result.json, output/menu-tools-production.json, output/french-additions-result.json; catalog delta docs/french-corner-additions-20261023.json. Final documentation commit/alias verified separately in output/menu-tools-handoff-production.json, with identical application inputs reusing checks. No pending implementation
+
+## Previous navigation release
 
 - PUBLISHED 2026-10-23T19:02:36.090Z: Platform navigation performance release 6981d477df1c9c32a8ef3d3167f9c0e0d34073ca; branda-2 dpl_7Z5NWhRasw3EbSFhi5WYeWny7r5q, exact barndaksa.com alias/SHA verified. Seven scoped application/test files; unrelated drafts preserved
 - CHANGES: removed global eager prefetch of up to60 arbitrary links; native Next Link scheduling retained. Request-scoped React cache shares owner/admin/public-tenant lookups only within one request, with existing auth/tenant/publication checks intact. Dashboard entry analytics runs through Next after with the request client captured before render; event permissions/deduplication unchanged. Root loading boundary streams immediate feedback on routes without a narrower boundary
