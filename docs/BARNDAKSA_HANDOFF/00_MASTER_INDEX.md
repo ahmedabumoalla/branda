@@ -1,11 +1,18 @@
 # Branda — current handoff
 
-Updated 2026-10-23T18:46:26.289Z - UTC
+Updated 2026-10-23T19:02:36.090Z - UTC
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Current published state
 
+- PUBLISHED 2026-10-23T19:02:36.090Z: Platform navigation performance release 6981d477df1c9c32a8ef3d3167f9c0e0d34073ca; branda-2 dpl_7Z5NWhRasw3EbSFhi5WYeWny7r5q, exact barndaksa.com alias/SHA verified. Seven scoped application/test files; unrelated drafts preserved
+- CHANGES: removed global eager prefetch of up to60 arbitrary links; native Next Link scheduling retained. Request-scoped React cache shares owner/admin/public-tenant lookups only within one request, with existing auth/tenant/publication checks intact. Dashboard entry analytics runs through Next after with the request client captured before render; event permissions/deduplication unchanged. Root loading boundary streams immediate feedback on routes without a narrower boundary
+- RUN Node24.21.0: navigation9groups,admin UI11groups,menu preview7groups,text integrity,scoped ESLint,isolated webpack build including TypeScript PASS. Tests model per-request memoization: admin6calls->1,owner3->1; concurrent-account separation/anonymous denial/maintenance/deferred analytics verified. Local production runtime4routes200 and no runtime errors. No database/schema/auth policy/cache-TTL changes
+- LIVE: home/admin/dashboard/French menu200; anonymous admin data remains withheld. Homepage initial response sample 2652ms before -> 1445ms after; full response 2992ms -> 2794ms. Single anonymous HTTP samples include network/cold-start variance, not a browser/user-interaction benchmark. Authenticated live timing and browser inspection NOT RUN
+- EVIDENCE: output/navigation-release-inputs.json, output/navigation-build-result.json, output/navigation-http-before.json, output/navigation-http-local.json, output/navigation-http-after.json and output/navigation-production.json. Final documentation commit/alias verified separately in output/navigation-handoff-production.json; identical application inputs reuse passing evidence. No pending performance implementation; further tuning should use a specific slow route and real session trace
+
+## Previous published menu release
 - PUBLISHED 2026-10-23T18:46:26.289Z: User approved publication of all completed French menu revisions. Application bed4c24a5603ea6c02e31033b8d3719cf3295bfa; branda-2 dpl_GYMAbfzHWyEdWr2GHDvLdBZdvfXU; exact barndaksa.com alias/SHA verified. Four scoped application/test files only; unrelated local drafts preserved
 - CURRENT UI: centered official logo/champagne arch over original salon photo, large Arabic opening, catalog CTA/social links. Four featured opening tiles and old signature removed. Compact loyalty invitation with live reward badge and tracked navigation; compact horizontal experience card retains real photo/title/price/details and full offer conditions. Search/categories/sort remain functional
 - DATA UNCHANGED: 50 active photographed products, including 46 food/drink products from the approved refresh; 6 stamps for 10% loyalty reward preserved. No database/storage/account changes. Requested promotional hookah image redesign was not implemented; existing four images remain unchanged
@@ -125,7 +132,7 @@ Vercel project ID: prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow
 Supabase project: kpguwjfkkylrdlvzeezz
 Node: 24.21.0; Next: 16.3.8
 Node executable: C:/Users/pc/AppData/Local/npm-cache/_npx/538786c08bcb9442/node_modules/node/bin/node.exe
-Latest isolated application build: C:/Projects/branda-french-menu-polish-release-20261023
+Latest isolated application build: C:/Projects/branda-navigation-release-20261023
 ```
 
 - Local `.vercel/project.json` points at the old project. Deploy through the correct GitHub branch and verify exact production SHA and live alias; a push alone is not deployment proof
