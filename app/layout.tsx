@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { RoutePrefetcher } from "@/components/performance/route-prefetcher";
 import "./globals.css";
 
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
@@ -69,7 +68,6 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: PWA_INSTALL_CAPTURE_SCRIPT }}
         />
-        <RoutePrefetcher />
         {children}
       </body>
     </html>

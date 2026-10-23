@@ -170,9 +170,12 @@ export async function recordPublicAppInstallClick(input: {
   }
 }
 
-export async function recordCurrentBrandDashboardEntry(path = "/dashboard") {
+export async function recordCurrentBrandDashboardEntry(
+  path = "/dashboard",
+  requestClient?: Awaited<ReturnType<typeof createClient>>,
+) {
   try {
-    const supabase = await createClient();
+    const supabase = requestClient ?? await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

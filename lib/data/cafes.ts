@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 
@@ -38,7 +39,7 @@ export async function getCafeBySlug(slug: string) {
   return publicCafeRows ?? null;
 }
 
-export async function getPublicCafeBySlugAdmin(slug: string) {
+export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {
   const supabase = createAdminClient();
   const normalizedSlug = slug.trim().toLowerCase();
 
@@ -53,9 +54,10 @@ export async function getPublicCafeBySlugAdmin(slug: string) {
   if (!data) return null;
   if (data.status && !["active", "published"].includes(String(data.status))) return null;
   return data;
-}
+});
 
-export async function getOwnerCafeContext(): Promise<CafeContext | null> {
+// React cache is request-scoped: parallel loaders share a check, never another user's session.
+export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -150,7 +152,7 @@ export async function getOwnerCafeContext(): Promise<CafeContext | null> {
   }
 
   return null;
-}
+});
 
 export async function requireOwnerCafeContext(): Promise<CafeContext> {
   const ctx = await getOwnerCafeContext();
@@ -161,7 +163,7 @@ export async function requireOwnerCafeContext(): Promise<CafeContext> {
 }
 
 /** Admin-only operations (audit, cross-cafe) */
-export async function requirePlatformAdmin() {
+export const requirePlatformAdmin = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -178,4 +180,4 @@ export async function requirePlatformAdmin() {
     throw new Error("Forbidden: platform admin required");
   }
   return user;
-}
+});

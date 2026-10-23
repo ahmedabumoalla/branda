@@ -2,6 +2,8 @@ import { DashboardAppLayout } from "@/components/dashboard/dashboard-app-layout"
 import { recordCurrentBrandDashboardEntry } from "@/lib/data/operation-events";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { after } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 const dashboardFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -15,10 +17,12 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [maintenanceSession] = await Promise.all([
+  const [maintenanceSession, entryClient] = await Promise.all([
     getCurrentMaintenanceSession(),
-    recordCurrentBrandDashboardEntry(),
+    createClient().catch(() => null),
   ]);
+  // Capture request cookies before after(); analytics must not delay page navigation.
+  if (entryClient) after(() => recordCurrentBrandDashboardEntry("/dashboard", entryClient));
 
   return (
     <main dir="rtl" className={`${dashboardFont.className} min-h-screen overflow-x-hidden bg-[#FCF8F3] text-[#311912]`}>
