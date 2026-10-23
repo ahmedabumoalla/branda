@@ -119,6 +119,8 @@ await check('Dashboard layout renders before slow analytics and passes captured 
   const slow = new Promise(resolve => { finish = resolve; });
   const module = load(fs.readFileSync('app/dashboard/layout.tsx', 'utf8'), {
     '@/components/dashboard/dashboard-app-layout': { DashboardAppLayout: () => null },
+    '@/lib/data/cafes': { getOwnerCafeContext: async () => ({ id: 'tenant' }) },
+    'next/navigation': { redirect: () => { throw Error('Unexpected redirect'); } },
     '@/lib/data/operation-events': { recordCurrentBrandDashboardEntry: (...args) => { calls.push(args); return slow; } },
     '@/lib/platform/maintenance': { getCurrentMaintenanceSession: async () => null },
     '@/lib/supabase/server': { createClient: async () => captured },

@@ -41,7 +41,7 @@ const base = {
   staff: [{ user_id: 'cashier', name: 'موظف', role: 'cashier', active: true }], documents: [], journal: [], movements: [], trialBalance: [], summary: { sales: 0, purchases: 0, expenses: 0, profit: 0, receivables: 0, payables: 0, inventoryValue: 15 }, truncated: false,
 };
 const ImageMock = function Image() {};
-const shared = { 'next/link': { __esModule: true, default: function Link() {} }, 'next/image': { __esModule: true, default: ImageMock }, 'next/navigation': { useRouter: () => ({ replace() {} }) }, '@/app/actions/finance-access': { createFinanceStaffAccountAction: async () => ({ ok: true }), logoutFinanceAction: async () => {} } };
+const shared = { 'next/link': { __esModule: true, default: function Link() {} }, 'next/image': { __esModule: true, default: ImageMock }, 'next/navigation': { useSearchParams: () => new URLSearchParams(), useRouter: () => ({ replace() {} }) }, '@/app/actions/finance-access': { createFinanceStaffAccountAction: async () => ({ ok: true }), logoutFinanceAction: async () => {} } };
 
 async function main() {
   let groups = 0;
@@ -123,10 +123,21 @@ async function main() {
   fetchFails = false; await hook.refresh(); hook = renderHook(); assert.equal(hook.stale, false); groups++;
 
   const workspaceHooks = hooks(); const { FinanceWorkspace } = load('components/finance/finance-workspace.tsx', { ...shared, react: workspaceHooks.api, './use-finance': { useFinance: () => ({ ...uiState, snapshot: { ...base, documents: [receiptDoc] }, historyMore: {} }) } });
-  const workspaceRender = () => workspaceHooks.render(FinanceWorkspace, { initialSnapshot: base }); let workspaceTree = workspaceRender();
+  const workspaceRender = () => workspaceHooks.render(FinanceWorkspace, { initialSnapshot: base, slug: 'test-brand' }); let workspaceTree = workspaceRender();
   button(workspaceTree, 'المبيعات').props.onClick(); workspaceTree = workspaceRender();
   button(workspaceTree, 'تسجيل دفعة').props.onClick(); workspaceTree = workspaceRender();
   assert.equal(find(workspaceTree, node => node.type?.name === 'FinanceOperationForm').props.form.values.remaining, 25, 'Settlement form uses authoritative outstanding'); groups++;
+
+  let dashboardQuery = 'section=sales';
+  const dashboardHooks = hooks();
+  const DashboardFinance = load('components/finance/finance-workspace.tsx', { ...shared, react: dashboardHooks.api, 'next/navigation': { useSearchParams: () => new URLSearchParams(dashboardQuery) }, './use-finance': { useFinance: () => ({ ...uiState, snapshot: base, historyMore: {} }) } }).FinanceWorkspace;
+  const dashboardRender = () => dashboardHooks.render(DashboardFinance, { initialSnapshot: base });
+  let dashboardTree = dashboardRender();
+  assert(!nodes(dashboardTree).some(node => node.type === 'nav'), 'Dashboard sections belong only to sidebar');
+  assert(nodes(dashboardTree).some(node => node.props.href === '/finance/test-brand/pos'), 'Dashboard opens independent POS');
+  assert(nodes(dashboardTree).some(node => node.type === 'input' && node.props.type === 'date'), 'Deep-linked sales section is selected');
+  dashboardQuery = 'section=overview'; dashboardTree = dashboardRender();
+  assert(!nodes(dashboardTree).some(node => node.type === 'input' && node.props.type === 'date'), 'URL changes and browser history select section'); groups++;
 
   const paginationHooks = hooks(); const offsets = [];
   const initialHistory = { ...base, documents: Array.from({ length: 500 }, (_, index) => ({ ...receiptDoc, id: `doc-${index}` })) };

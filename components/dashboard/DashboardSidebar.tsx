@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { FinanceSidebarMenu } from "./finance-sidebar-menu";
 import { usePathname, useRouter } from "next/navigation";
-import { BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards, Monitor } from "lucide-react";
+import { BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -100,11 +101,12 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
 
     <nav aria-label="قائمة العلامة" className={`flex-1 space-y-1 ${collapsed ? "px-2 py-3" : "px-2.5 py-3"}`}>
       {links.map(({ feature, access }) => {
+        if (feature.id === "finance" && access?.effectiveEnabled) return <FinanceSidebarMenu key={feature.id} slug={settings.cafeSlug} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} />;
         const Icon = feature.id === "menu" ? Package : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : feature.id === "marketing_campaigns" ? Megaphone : feature.id === "finance" ? WalletCards : Settings;
         const title = feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;
         const href = feature.route;
-        const active = !locked && (pathname === href || (pathname.startsWith(`${href}/`) && !(feature.id === "finance" && pathname.startsWith("/dashboard/finance/pos"))));
+        const active = !locked && (pathname === href || pathname.startsWith(`${href}/`));
         const label = locked ? `${title} — غير مفعلة في الباقة` : title;
         return <Link key={feature.id} href={href} onClick={() => onNavigate?.()} aria-label={label} title={collapsed || locked ? label : undefined} aria-current={active ? "page" : undefined}
           className={`group relative flex min-h-10 w-full items-center overflow-hidden rounded-lg text-[13px] leading-5 transition ${collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"} ${active
@@ -120,13 +122,6 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
           </span>}
         </Link>;
       })}
-      {links.some(({ feature, access }) => feature.id === "finance" && access?.effectiveEnabled) && <Link
-        href="/dashboard/finance/pos" onClick={() => onNavigate?.()} aria-label="كاشير المالية" title={collapsed ? "كاشير المالية" : undefined}
-        aria-current={pathname.startsWith("/dashboard/finance/pos") ? "page" : undefined}
-        className={`flex min-h-11 items-center rounded-lg text-[13px] font-medium transition hover:bg-white/[0.065] hover:text-white ${collapsed ? "justify-center" : "gap-2 px-3"} ${pathname.startsWith("/dashboard/finance/pos") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}>
-        <Monitor className="h-4 w-4 shrink-0" aria-hidden="true" />
-        {!collapsed && <span>كاشير المالية</span>}
-      </Link>}
       {settings.cafeSlug && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}
         aria-label="الباقات والاشتراكات" title={collapsed ? "الباقات والاشتراكات" : undefined}
         aria-current={pathname.startsWith("/dashboard/subscription") ? "page" : undefined}

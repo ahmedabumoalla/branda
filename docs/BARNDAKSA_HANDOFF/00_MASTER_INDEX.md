@@ -1,10 +1,15 @@
 # Branda — current handoff
 
-Updated 2026-10-23T20:43:53.277Z - UTC
+Updated 2026-10-23T20:56:11Z - UTC
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Current published state
+
+- RELEASE 2026-10-23T20:56:11Z: Financial cashier now opens only at /finance/[slug]/pos, outside the brand dashboard; old /dashboard/finance/pos is an authorized server redirect. Dashboard layout rejects missing brand context before rendering shell/analytics; finance-only cashier/manager membership never grants brand dashboard authority. Owner/platform-admin and existing explicit brand memberships retained; authenticated RPC/data-layer gates remain enforced independently of layout
+- NAVIGATION: Finance sections are an accessible collapsible submenu under Branda Finance; 44px targets, compact-sidebar expansion, mobile close, active section and direct query/history navigation. Dashboard horizontal tabs removed; standalone financial managers retain their own navigation. Native history switches loaded sections without fetching another snapshot; section prefetch disabled. POS link uses actual tenant slug
+- VERIFIED Node24.21.0: separation/route/DAL/disclosure/history tests, finance access/media, finance UI17groups, navigation9groups, SQL88assertions, scoped ESLint, UTF8 and isolated webpack build including TypeScript. Final prefetch-only adjustment retested for separation/lint/build; unchanged financial/access tests reused after input comparison. No migration, staff grant, financial data change or browser inspection; authenticated live browser session not tested
+- EVIDENCE: output/finance-isolation-release-inputs.json,finance-isolation-first-build.json,finance-isolation-build-result.json,finance-isolation-commit.json,finance-isolation-deploy.json,finance-isolation-live.json. Exact production SHA/alias is recorded by deploy verification; unrelated local drafts excluded
 
 - FIX LIVE 2026-10-23T20:43:53.277Z: Finance maintenance access now recognizes active platform administrators as finance managers after active-brand/subscription checks. New migration20261023204056 registered exact SQL; owner-only settings/staff remain owner-only and real actor attribution retained. Actual test-cafe context/snapshot/history/141products verified under authenticated role after reproducing prior denial; no financial records changed. SQL88/text/TypeScript PASS, relevant security advisors0findings. No application UI/source changes or browser inspection. Evidence output/finance-maintenance-{rehearsal,applied,production,advisors,deploy}.json; full record in task-state
 - PUBLISHED 2026-10-23T20:17:39.983Z: Independent Branda Finance package, operational accounting workspace and separate financial POS; application c283bbd429e38356a43f6d5862058bc021736913, branda-2 dpl_Fomtkva14Af6mP12Twi3vRtAXNY9, exact barndaksa.com alias/SHA verified. 52 scoped application/test/migration/guide files; unrelated drafts preserved

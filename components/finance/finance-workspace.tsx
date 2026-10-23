@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { financeSections as sections, resolveFinanceSection, type FinanceSection as Section } from "./finance-navigation";
 import { useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeft, BookOpen, Boxes, CircleDollarSign, Clock3, Landmark, LayoutDashboard, Plus, Printer, ReceiptText, RefreshCw, Search, Settings2, ShoppingBag, Users, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, CircleDollarSign, Plus, Printer, RefreshCw, Search, Wallet } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form";
@@ -10,19 +12,12 @@ import { accountKindNames, documentKindNames, downloadFinanceCsv, Empty, finance
 import { useFinance } from "./use-finance";
 import styles from "./finance.module.css";
 
-const sections = [
-  { id: "overview", label: "نظرة مالية", icon: LayoutDashboard }, { id: "sales", label: "المبيعات", icon: ReceiptText },
-  { id: "purchases", label: "المشتريات", icon: ShoppingBag }, { id: "parties", label: "العملاء والموردون", icon: Users },
-  { id: "inventory", label: "الأصناف والمخزون", icon: Boxes }, { id: "treasury", label: "الخزينة والأرصدة", icon: Landmark },
-  { id: "shifts", label: "الورديات", icon: Clock3 }, { id: "reports", label: "الدفاتر والتقارير", icon: BookOpen },
-  { id: "settings", label: "الإعدادات والفريق", icon: Settings2 },
-] as const;
-type Section = typeof sections[number]["id"];
-
 export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: FinanceSnapshot; slug?: string }) {
   const state = useFinance(initialSnapshot, slug);
   const { snapshot: data, pending, error, message, stale } = state;
-  const [section, setSection] = useState<Section>("overview");
+  const params = useSearchParams();
+  const [localSection, setSection] = useState<Section>("overview");
+  const section = slug ? localSection : resolveFinanceSection(params.get("section"), data.canAdminister);
   const [query, setQuery] = useState("");
   const [partyKind, setPartyKind] = useState("all");
   const [warehouseId, setWarehouseId] = useState("");
@@ -33,7 +28,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
   const receiptRef = useRef<HTMLDivElement>(null);
   const receipt = data.documents.find((item) => item.id === receiptId);
   const disabled = pending || stale;
-  const posHref = slug ? `/finance/${slug}/pos` : "/dashboard/finance/pos";
+  const posHref = `/finance/${encodeURIComponent(slug ?? data.cafe.slug)}/pos`;
   const match = (value: string) => value.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar"));
   const dateMatch = (value: string) => { const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)); return (!from || date >= from) && (!to || date <= to); };
   const accountName = (id: string | null) => data.accounts.find((account) => account.id === id)?.name ?? "—";
@@ -62,7 +57,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
 
   return <div className={styles.page} dir="rtl">
     <header className={styles.header}><div><p className={styles.eyebrow}><CircleDollarSign size={16} aria-hidden="true" />برندة المالية · {data.cafe.name}</p><h1 className={styles.title}>حركة علامتك بالأرقام</h1><p className={styles.subtitle}>المبيعات والمخزون والخزينة في دفتر واحد</p></div><div className={styles.actions}><button className={styles.secondary} onClick={state.refresh} disabled={pending}><RefreshCw size={16} aria-hidden="true" />{pending ? "جار التحديث" : "تحديث الأرصدة"}</button><Link className={styles.primary} href={posHref}>فتح الكاشير المالي<ArrowLeft size={17} aria-hidden="true" /></Link></div></header>
-    <nav className={styles.navigation} aria-label="أقسام المالية">{sections.filter((item) => item.id !== "settings" || data.canAdminister).map(({ id, label, icon: Icon }) => <button type="button" aria-current={section === id ? "page" : undefined} key={id} className={`${styles.navItem} ${section === id ? styles.navActive : ""}`} onClick={() => { setSection(id); setQuery(""); }}><Icon size={16} aria-hidden="true" />{label}</button>)}</nav>
+    {slug && <nav className={styles.navigation} aria-label="أقسام المالية">{sections.filter((item) => item.id !== "settings" || data.canAdminister).map(({ id, label, icon: Icon }) => <button type="button" aria-current={section === id ? "page" : undefined} key={id} className={`${styles.navItem} ${section === id ? styles.navActive : ""}`} onClick={() => { setSection(id); setQuery(""); }}><Icon size={16} aria-hidden="true" />{label}</button>)}</nav>}
     {message && <div className={styles.success} role="status">{message}</div>}
     {error && !form && <div className={styles.error} role="alert">{error}</div>}
     {stale && <div className={styles.notice}>البيانات المعروضة قديمة مؤقتًا حدّث الأرصدة لاستئناف العمليات</div>}

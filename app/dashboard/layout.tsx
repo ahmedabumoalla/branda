@@ -4,6 +4,8 @@ import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getOwnerCafeContext } from "@/lib/data/cafes";
+import { redirect } from "next/navigation";
 
 const dashboardFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -17,6 +19,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Finance staff membership never grants access to the brand dashboard.
+  if (!await getOwnerCafeContext()) redirect("/login");
   const [maintenanceSession, entryClient] = await Promise.all([
     getCurrentMaintenanceSession(),
     createClient().catch(() => null),
