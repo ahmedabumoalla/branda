@@ -1,11 +1,12 @@
 # Branda — current handoff
 
-Updated 2026-10-23T20:17:39.983Z - UTC
+Updated 2026-10-23T20:43:53.277Z - UTC
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail
 
 ## Current published state
 
+- FIX LIVE 2026-10-23T20:43:53.277Z: Finance maintenance access now recognizes active platform administrators as finance managers after active-brand/subscription checks. New migration20261023204056 registered exact SQL; owner-only settings/staff remain owner-only and real actor attribution retained. Actual test-cafe context/snapshot/history/141products verified under authenticated role after reproducing prior denial; no financial records changed. SQL88/text/TypeScript PASS, relevant security advisors0findings. No application UI/source changes or browser inspection. Evidence output/finance-maintenance-{rehearsal,applied,production,advisors,deploy}.json; full record in task-state
 - PUBLISHED 2026-10-23T20:17:39.983Z: Independent Branda Finance package, operational accounting workspace and separate financial POS; application c283bbd429e38356a43f6d5862058bc021736913, branda-2 dpl_Fomtkva14Af6mP12Twi3vRtAXNY9, exact barndaksa.com alias/SHA verified. 52 scoped application/test/migration/guide files; unrelated drafts preserved
 - PRICE: SAR1099/1month or SAR2637.60/3months (20% off3297), no annual finance term. UI/server/DB enforce1or3months; legacy plans and loyalty cashier remain independent. Package available through existing subscription approval flow; no existing brand received an unsolicited subscription
 - OPERATIONS: menu-image POS, authoritative prices/quantities/discount/VAT, cash/bank/POS/credit sales, purchases/full refunds/settlements, customers/suppliers/employees, stock/items/warehouses/counts/transfers with weighted cost and cent-balanced value, treasury/custody, shifts/count variances/handover/acceptance, immutable balanced journals, all-history balances/trial balance, paged histories/CSV/receipts
