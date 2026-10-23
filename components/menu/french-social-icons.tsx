@@ -8,6 +8,7 @@ function SnapchatMark() {
 export function FrenchSocialIcons() {
   return <div className={s.social} role="group" aria-label="التواصل الاجتماعي والموقع">
     <a href="https://www.snapchat.com/add/frenchcorner26" target="_blank" rel="noopener noreferrer" aria-label="سناب شات الركن الفرنسي يفتح في نافذة جديدة"><SnapchatMark /><span>سناب شات</span></a>
+    <a href="https://www.tiktok.com/@alrkn.2" target="_blank" rel="noopener noreferrer" aria-label="تيك توك الركن الفرنسي يفتح في نافذة جديدة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3v12.5a5.5 5.5 0 1 1-5-5.48V14a2 2 0 1 0 1.5 1.94V3H14c.5 3 2.5 5 6 5v3a9 9 0 0 1-6-2" /></svg><span>تيك توك</span></a>
     <a href="https://maps.app.goo.gl/ZA1JH1LjR72skeEo7" target="_blank" rel="noopener noreferrer" aria-label="موقع الركن الفرنسي يفتح في نافذة جديدة"><MapPin aria-hidden="true" /><span>موقعنا</span></a>
   </div>;
 }

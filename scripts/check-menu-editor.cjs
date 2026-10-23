@@ -94,7 +94,11 @@ async function main() {
   // Exercise the real editor event handlers without touching customer data.
   const h = hooks(); let closed = 0, saved, settle, saveCalls = 0;
   const alerts = []; global.alert = message => alerts.push(message);
+  let downloadRequests = [], downloadReject = false, downloadedFiles = 0;
   const mocks = { react: h.api, '@/app/actions/upload': {}, '@/lib/cafe/local-asset-store': { revokeObjectUrl() {} },
+    '@/lib/menu/download-product-image': { getProductImageDownload: async image => {
+      downloadRequests.push(image); if (downloadReject) throw Error('offline'); return new Blob(['image']);
+    }, saveProductImageDownload() { downloadedFiles++; } },
     '@/components/dashboard/ui/modal': { Modal: 'modal' },
     '@/components/cafe/product-image': { ProductImage: 'image', ProductMediaDisplay: 'media', getProductImageSources: p => p.imageGallery ?? [] },
   };
@@ -108,6 +112,16 @@ async function main() {
   assert(!label(tree).includes('متاح للاستلام'));
   let choices = nodes(tree).filter(n => n.type === 'button' && 'aria-pressed' in n.props);
   assert.equal(choices.length, 3); choices[1].props.onClick(); tree = render();
+  let downloadButton = nodes(tree).find(n => n.type === 'button' && label(n) === 'تنزيل الصورة');
+  downloadButton.props.onClick(); downloadButton.props.onClick();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(downloadRequests.length, 1, 'Repeated click starts only one download');
+  assert.equal(downloadRequests[0].imageAssetId, 'tenant/second.webp'); assert.equal(downloadedFiles, 1);
+  downloadReject = true; tree = render();
+  nodes(tree).find(n => n.type === 'button' && label(n) === 'تنزيل الصورة').props.onClick();
+  await new Promise(resolve => setImmediate(resolve)); tree = render();
+  assert(nodes(tree).some(n => n.props?.role === 'alert' && label(n).includes('تعذر تنزيل الصورة')));
+  assert.equal(closed, 0, 'Download failure preserves the editor'); downloadReject = false;
   let form = nodes(tree).find(n => n.type === 'form');
   const saving = form.props.onSubmit({ preventDefault() {} });
   await new Promise(resolve => setImmediate(resolve));
@@ -149,10 +163,70 @@ async function main() {
   pageTree = page(); card = nodes(pageTree).find(n => n.type === 'card'); assert.equal(card.props.product.available, false);
   card.props.onDelete(); await new Promise(resolve => setImmediate(resolve)); assert.equal(nodes(page()).filter(n => n.type === 'card').length, 1);
   fail = false; card.props.onEdit(); pageTree = page();
+  // Duplicate opens a detached draft; cancel writes nothing and save uses a new identity.
+  const mutationsBeforeCopy = mutations;
+  card.props.onDuplicate(); pageTree = page();
+  let copyEditor = nodes(pageTree).find(n => n.type === 'editor' && n.props.onSave);
+  assert.equal(copyEditor.props.mode, 'duplicate');
+  const copiedProduct = copyEditor.props.editingProduct;
+  assert.notEqual(copiedProduct.id, product.id);
+  assert.equal(copiedProduct.imageAssetId, product.imageAssetId);
+  assert.equal(copiedProduct.price, product.price);
+  assert.equal(mutations, mutationsBeforeCopy, 'Opening copy does not publish it');
+  copyEditor.props.onClose(); pageTree = page();
+  assert.equal(nodes(pageTree).filter(n => n.type === 'card').length, 1, 'Cancel leaves catalog unchanged');
+  card.props.onDuplicate(); pageTree = page();
+  copyEditor = nodes(pageTree).find(n => n.type === 'editor' && n.props.onSave);
+  assert.notEqual(copyEditor.props.editingProduct.id, copiedProduct.id);
+  // The unchanged authenticated save action handles the fresh draft.
+  card.props.onEdit(); pageTree = page();
   const editor = nodes(pageTree).find(n => n.type === 'editor' && n.props.onSave);
   assert(await editor.props.onSave({ ...product, id: '44444444-4444-4444-8444-444444444444' }));
   assert.equal(nodes(page()).filter(n => n.type === 'card').length, 2, 'New UUID product appears immediately');
   card.props.onDelete(); await new Promise(resolve => setImmediate(resolve)); assert.equal(nodes(page()).filter(n => n.type === 'card').length, 1);
+
+  const { createProductCopy } = load('lib/menu/product-copy.ts');
+  const original = { ...product, ingredients: ['coffee'], promo: livePromo,
+    eventTicketSettings: { venueName: 'Venue', capacity: 20 } };
+  const copy = createProductCopy(original, [original, { ...original, name: `${original.name} - نسخة` }]);
+  assert.equal(copy.name, `${original.name} - نسخة 2`);
+  assert.deepEqual(copy.media, original.media); assert.deepEqual(copy.imageGallery, original.imageGallery);
+  copy.ingredients.push('milk'); copy.imageGallery[0].alt = 'copy'; copy.promo.discountPercent = 40;
+  copy.eventTicketSettings.venueName = 'Copy';
+  assert.equal(original.ingredients.length, 1); assert.equal(original.imageGallery[0].alt, undefined);
+  assert.equal(original.promo.discountPercent, 25); assert.equal(original.eventTicketSettings.venueName, 'Venue');
+
+  // Original image bytes survive download; stale signatures are bypassed for stored media.
+  const fullImage = new Blob([new Uint8Array([137, 80, 78, 71, 0, 255])], { type: 'image/png' });
+  const { getProductImageDownload, saveProductImageDownload } = load('lib/menu/download-product-image.ts', {
+    '@/lib/cafe/local-asset-store': { getLocalAssetBlob: async id => id === 'local-id' ? fullImage : null },
+  });
+  let fetched = [];
+  global.fetch = async url => { fetched.push(url); return new Response(fullImage); };
+  const downloaded = await getProductImageDownload({ imageAssetId: 'tenant/first.png', imageDataUrl: 'https://example.test/expired-thumbnail' });
+  assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()), Buffer.from(await fullImage.arrayBuffer()));
+  assert.equal(fetched[0], '/api/owner/menu-media?path=tenant%2Ffirst.png');
+  assert.equal(await getProductImageDownload({ imageAssetId: 'local-id' }), fullImage);
+  const pendingOriginal = new File([fullImage], 'original.png', { type: fullImage.type });
+  assert.equal(await getProductImageDownload({ imageDataUrl: 'blob:optimized' }, pendingOriginal), pendingOriginal);
+  assert.equal(fetched.length, 1);
+  global.fetch = async () => new Response('Denied', { status: 403 });
+  await assert.rejects(getProductImageDownload({ imageAssetId: 'tenant/first.png' }));
+  global.fetch = async () => new Response('<html>Login</html>', { headers: { 'content-type': 'text/html' } });
+  await assert.rejects(getProductImageDownload({ imageDataUrl: 'https://example.test/image' }));
+  await assert.rejects(getProductImageDownload({ imageDataUrl: 'javascript:alert(1)' }));
+  let clicked = 0, removed = 0, released = '', scheduled;
+  const realCreate = URL.createObjectURL, realRevoke = URL.revokeObjectURL, realTimeout = global.setTimeout;
+  URL.createObjectURL = blob => { assert.equal(blob, fullImage); return 'blob:original'; };
+  URL.revokeObjectURL = url => { released = url; };
+  global.setTimeout = fn => { scheduled = fn; return 1; };
+  const link = { click() { clicked++; }, remove() { removed++; } };
+  global.document = { createElement: () => link, body: { appendChild(node) { assert.equal(node, link); } } };
+  saveProductImageDownload(fullImage, 'قهوة/صورة');
+  assert.equal(link.download, 'قهوة-صورة.png'); assert.equal(link.href, 'blob:original');
+  assert.equal(clicked, 1); assert.equal(removed, 1); assert.equal(released, ''); scheduled();
+  assert.equal(released, 'blob:original');
+  URL.createObjectURL = realCreate; URL.revokeObjectURL = realRevoke; global.setTimeout = realTimeout;
 
   // Viewport anchor survives edits and falls back to next card on deletion.
   const scroller = { scrollTop: 900, parentElement: null };
@@ -164,6 +238,6 @@ async function main() {
   const { captureProductPosition } = load('lib/menu/product-position.ts');
   let restore = captureProductPosition('a'); top = 160; restore(); assert.equal(scroller.scrollTop, 940);
   restore = captureProductPosition('a'); anchor.isConnected = false; nextTop = 120; restore(); assert.equal(scroller.scrollTop, 640);
-  console.log('PASS: primary image/video round-trip, optional description, Saudi offer boundaries/prices, awaited save/failure/double-submit, category draft preservation, immediate add/toggle/delete and viewport anchors');
+  console.log('PASS: editor/media/promo regressions; detached copy and cancel; original-byte downloads, selected image, double-click/error states and safe file cleanup; viewport anchors');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

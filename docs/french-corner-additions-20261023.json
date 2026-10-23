@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-23T19:10:22.886Z",
+  "cafeId": "f91cbe65-1921-412b-98cc-451cccf2a86a",
+  "slug": "brand-10620d3a586c",
+  "generatedImages": false,
+  "items": [
+    {
+      "id": "b6bf0e0e-7603-412f-a383-1db67bc3fd0e",
+      "name": "شاهي مغربي صغير",
+      "price": 15,
+      "categoryId": "801bf9eb-ca82-422a-b0dd-2df57b9b6569",
+      "storagePath": "f91cbe65-1921-412b-98cc-451cccf2a86a/15d0010e-4486-4a9c-a2c4-a3156603b04d/product-moroccan-tea-pot-2ed190c93e1b.webp",
+      "operation": "insert"
+    },
+    {
+      "id": "15d0010e-4486-4a9c-a2c4-a3156603b04d",
+      "name": "شاهي مغربي كبير",
+      "price": 25,
+      "categoryId": "801bf9eb-ca82-422a-b0dd-2df57b9b6569",
+      "storagePath": "f91cbe65-1921-412b-98cc-451cccf2a86a/15d0010e-4486-4a9c-a2c4-a3156603b04d/product-moroccan-tea-pot-2ed190c93e1b.webp",
+      "operation": "restore"
+    },
+    {
+      "id": "81c064a1-39cd-4b50-887e-c87f9a9afe40",
+      "name": "شاهي اخضر",
+      "price": 5,
+      "operation": "unchanged"
+    },
+    {
+      "id": "750ea226-8e1e-44be-a4f0-6cc43a633f51",
+      "name": "ماء",
+      "price": 1,
+      "categoryId": "a2aef4b7-0e30-494a-ba09-d9cc64257032",
+      "storagePath": "f91cbe65-1921-412b-98cc-451cccf2a86a/750ea226-8e1e-44be-a4f0-6cc43a633f51/water-68218dded356.webp",
+      "operation": "insert"
+    }
+  ]
+}

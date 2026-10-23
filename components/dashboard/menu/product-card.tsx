@@ -2,6 +2,7 @@
 
 import {
   Coffee,
+  Copy,
   Flame,
   Gift,
   MoreHorizontal,
@@ -37,6 +38,7 @@ type Props = {
   categoryLabel?: string;
   freeProductLabel?: string;
   onEdit: () => void;
+  onDuplicate: () => void;
   onToggleAvailability: () => void;
   onDelete: () => void;
   businessCategory?: string;
@@ -49,6 +51,7 @@ export function MenuProductCard({
   categoryLabel,
   freeProductLabel,
   onEdit,
+  onDuplicate,
   onToggleAvailability,
   onDelete,
   businessCategory,
@@ -202,6 +205,12 @@ export function MenuProductCard({
           >
             <Pencil className="h-4 w-4" />
             تعديل
+          </button>
+
+          <button type="button" disabled={busy} onClick={onDuplicate}
+            className={`${styles.cardButton} ${styles.editButton}`}>
+            <Copy className="h-4 w-4" aria-hidden="true" />
+            تكرار
           </button>
 
           <button

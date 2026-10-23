@@ -64,9 +64,10 @@ check('Opening omits featured tiles while their products remain in the catalog',
  assert.equal(nodes(render({...menu,products:products.map(p=>({...p,images:[]}))}).tree,n=>n.props?.['data-french-feature']).length,0);
  state=[];
 });
-check('Owner supplied Snapchat and map destinations are active accessible links',()=>{
+check('Owner supplied Snapchat, TikTok and map destinations are active accessible links',()=>{
  const {html}=render();
  assert(html.includes('href="https://www.snapchat.com/add/frenchcorner26"'));
+ assert(html.includes('href="https://www.tiktok.com/@alrkn.2"'));
  assert(html.includes('href="https://maps.app.goo.gl/ZA1JH1LjR72skeEo7"'));
  assert(html.includes('rel="noopener noreferrer"'));assert(!html.includes('غير مضاف بعد'));
 });

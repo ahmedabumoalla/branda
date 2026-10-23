@@ -2,6 +2,7 @@
 
 import {
   Coffee,
+  Download,
   Flame,
   Gift,
   ImagePlus,
@@ -40,10 +41,11 @@ import {
   type MenuCategoryRecord,
 } from "@/lib/mock/menu-categories";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { getProductImageDownload, saveProductImageDownload } from "@/lib/menu/download-product-image";
 
 type Props = {
   open: boolean;
-  mode: "add" | "edit";
+  mode: "add" | "edit" | "duplicate";
   editingProduct: MenuProduct | null;
   productList: MenuProduct[];
   categories: MenuCategoryRecord[];
@@ -69,6 +71,7 @@ const ACCEPTED_VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov"];
 
 type PendingProductImage = {
   id: string;
+  original: File;
   optimized: OptimizedImageResult;
   previewUrl: string;
 };
@@ -187,6 +190,9 @@ function MenuProductEditor({
   const [pendingImages, setPendingImages] = useState<PendingProductImage[]>([]);
 
   const [optimizingImage, setOptimizingImage] = useState(false);
+  const [downloadingImage, setDownloadingImage] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+  const downloadLock = useRef(false);
   const [videoAssetId, setVideoAssetId] = useState<string | undefined>(editingProduct?.videoAssetId);
   const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | undefined>(editingProduct?.media?.find((item) => item.type === "video")?.url ?? undefined);
@@ -298,6 +304,7 @@ function MenuProductEditor({
         previewUrls.current.add(previewUrl);
         nextImages.push({
           id: crypto.randomUUID(),
+          original: file,
           optimized,
           previewUrl,
         });
@@ -334,6 +341,23 @@ function MenuProductEditor({
     ...pendingImages.map((item) => ({ key: item.id, image: { imageDataUrl: item.previewUrl, alt: name } })),
   ];
   const cover = imageChoices.find((item) => item.key === primaryKey)?.image ?? imageChoices[0]?.image;
+  async function downloadSelectedImage() {
+    const selected = imageChoices.find((item) => item.key === primaryKey) ?? imageChoices[0];
+    if (!selected || downloadLock.current) return;
+    downloadLock.current = true;
+    setDownloadingImage(true);
+    setDownloadError("");
+    try {
+      const original = pendingImages.find((item) => item.id === selected.key)?.original;
+      const blob = await getProductImageDownload(selected.image, original);
+      saveProductImageDownload(blob, name || "صورة المنتج");
+    } catch {
+      setDownloadError("تعذر تنزيل الصورة حاول مرة أخرى");
+    } finally {
+      downloadLock.current = false;
+      setDownloadingImage(false);
+    }
+  }
   const previewProduct: MenuProduct = (() => {
     const promo = buildPromoFromForm(
       promoLinked,
@@ -597,7 +621,7 @@ function MenuProductEditor({
     <Modal
       open={open}
       panelClassName={styles.editorPanel}
-      title={mode === "add" ? `إضافة ${productNoun}` : `تعديل ${productNoun}`}
+      title={mode === "duplicate" ? `تكرار ${productNoun}` : mode === "add" ? `إضافة ${productNoun}` : `تعديل ${productNoun}`}
       onClose={() => { if (!submitLock.current) onClose(); }}
       footer={
         <>
@@ -616,7 +640,7 @@ function MenuProductEditor({
             disabled={submitting || optimizingImage}
             className="rounded-2xl bg-[#3A2117] px-6 py-3 text-sm font-black text-[#F8E8D2]"
           >
-            {submitting ? "جاري الحفظ" : mode === "add" ? `حفظ ${productNoun}` : `تحديث ${productNoun}`}
+            {submitting ? "جاري الحفظ" : mode !== "edit" ? `حفظ ${productNoun}` : `تحديث ${productNoun}`}
           </button>
         </>
       }
@@ -716,6 +740,14 @@ function MenuProductEditor({
                 {optimizingImage ? "جاري تجهيز الوسائط" : "إضافة صور أو فيديو"}
               </button>
 
+              {imageChoices.length > 0 && <button type="button" onClick={() => { void downloadSelectedImage(); }}
+                disabled={downloadingImage || submitting || optimizingImage}
+                aria-busy={downloadingImage}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#F8F4EF] px-4 py-3 text-sm font-black text-[#3A2117] disabled:opacity-60">
+                <Download className="h-5 w-5" aria-hidden="true" />
+                {downloadingImage ? "جاري تنزيل الصورة" : "تنزيل الصورة"}
+              </button>}
+
               {imagePreviewUrl || imageAssetId || imageGallery?.length || pendingImages.length || videoAssetId || pendingVideoFile ? (
                 <button
                   type="button"
@@ -741,6 +773,9 @@ function MenuProductEditor({
                 </button>
               ) : null}
             </div>
+
+            {imageChoices.length > 0 && <p className="mt-3 text-xs text-[#7A6255]">تنزيل الصورة المحددة بأعلى جودة محفوظة</p>}
+            {downloadError && <p role="alert" className="mt-2 text-sm font-bold text-red-700">{downloadError}</p>}
 
             {imageChoices.length || videoPreviewUrl || videoAssetId ? (
               <fieldset className="mt-4">

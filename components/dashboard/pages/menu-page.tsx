@@ -24,6 +24,7 @@ import { type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { captureProductPosition } from "@/lib/menu/product-position";
 import { notifyMenuChanged } from "@/lib/menu/menu-change";
+import { createProductCopy } from "@/lib/menu/product-copy";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 function ModalLoadingPlaceholder() {
@@ -398,6 +399,12 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
                     onToggleAvailability={() => {
                       void saveProduct({ ...product, available: !product.available });
                     }}
+                    onDuplicate={() => {
+                      restorePosition.current = captureProductPosition(product.id);
+                      setEditing(createProductCopy(product, products));
+                      setProductModalRequested(true);
+                      setOpen(true);
+                    }}
                     onDelete={() => { void deleteProduct(product.id); }}
                     businessCategory={businessCategory}
                   />
@@ -409,14 +416,14 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         {productModalRequested ? (
           <MenuProductFormModal
             open={open}
-            mode={editing ? "edit" : "add"}
+            mode={editing ? products.some((product) => product.id === editing.id) ? "edit" : "duplicate" : "add"}
             editingProduct={editing}
             productList={products}
             categories={categories}
             businessCategory={businessCategory}
             onCategoriesChange={handleCategoriesChange}
             onClose={() => {
-              if (editing) restorePosition.current = captureProductPosition(editing.id);
+              if (editing && products.some((product) => product.id === editing.id)) restorePosition.current = captureProductPosition(editing.id);
               setOpen(false);
             }}
             onSave={saveProduct}
