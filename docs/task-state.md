@@ -1,8 +1,21 @@
 # Current task state
 
-Updated 2026-10-23T19:16:24.729Z - UTC
+Updated 2026-10-23T20:17:39.983Z - UTC
 
 ## Resume here
+
+- PUBLISHED 2026-10-23T20:17:39.983Z: Independent Branda Finance package, operational accounting workspace and separate financial POS; application c283bbd429e38356a43f6d5862058bc021736913, branda-2 dpl_Fomtkva14Af6mP12Twi3vRtAXNY9, exact barndaksa.com alias/SHA verified. 52 scoped application/test/migration/guide files; unrelated drafts preserved
+- PRICE: SAR1099/1month or SAR2637.60/3months (20% off3297), no annual finance term. UI/server/DB enforce1or3months; legacy plans and loyalty cashier remain independent. Package available through existing subscription approval flow; no existing brand received an unsolicited subscription
+- OPERATIONS: menu-image POS, authoritative prices/quantities/discount/VAT, cash/bank/POS/credit sales, purchases/full refunds/settlements, customers/suppliers/employees, stock/items/warehouses/counts/transfers with weighted cost and cent-balanced value, treasury/custody, shifts/count variances/handover/acceptance, immutable balanced journals, all-history balances/trial balance, paged histories/CSV/receipts
+- ACCESS: owner-only settings/staff provisioning, independent finance manager/cashier roles and login, private tenant media refresh. Live subscription and tenant authorization in all RPCs;13RLS tables deny direct reads/writes,4authenticated RPCs; request idempotency, expected price/total and counted-stock preconditions, tenant posting lock, finite amounts, peremployee custody balances, pending drawer freeze
+- DATABASE: package20261023195320,pricing20261023195901,operations20261023195232 applied atomically and registered exact SQL. Actual hosted25case transaction rehearsal rolled back; no fixture financial rows persisted. Never replay applied migrations or delete posted records to roll back
+- RUN Node24.21.0: finance SQL66, packageSQL22, concurrent billingSQL75 (PGlite isolated PostgreSQL); finance UI16 groups, access/media/auth tests, pricing, package access29, admin/subscription UI, publiccatalog18/home22, UTF8 text, TypeScript and isolated webpack build PASS. Scoped ESLint0errors/1preexisting unused-parameter warning. Initial harness failed to write evidence into worktree .gitfile; fixed by resolving actualgitdir and reran successfully. Two preexisting admin any types replaced with inferred query types without behavior change
+- LIVE: finance login200, anonymous workspace/POS redirect to own login, media403, anonymous DB/RPC denied, homepage finance/month+quarter only, authenticated rollback quote1099/2637.60. Existing nonfinance plan fingerprints verified separately. Browser/device printing/payment-terminal and real parallel-connection race tests NOT RUN; SQL serializes tenant mutations and sequential race guards tested
+- LIMITS: POS records confirmed external card/bank payments; no terminal charge integration. Printable internal receipts, no electronic tax-invoice certification/integration. VAT defaults0 for owner configuration. Menu products track stock only when linked to financial items. CSV exports loaded rows; aggregate balances cover full history
+- ROUTES: /dashboard/finance, /dashboard/finance/pos and /finance/[slug]/login. Operating guide [BRANDA_FINANCE.md](BARNDAKSA_HANDOFF/BRANDA_FINANCE.md)
+- EVIDENCE: output/finance-release-inputs.json,finance-build-result.json,finance-rehearsal.json,finance-db-result.json,finance-production.json,finance-live-check.json,finance-package-evidence.json,brand-finance-core-evidence.json. Final documentation-only commit/alias verified separately with unchanged application hashes. No pending finance implementation or migration
+
+## Previous completed release
 
 - PUBLISHED 2026-10-23T19:16:24.729Z: Product-image downloads + editable product copies; application 1b365f5f6813f9ed548789701f2b2bb3481d909b, branda-2 dpl_Ce7KcuXzs8S1g61aAmz6JbzaUDSb, exact barndaksa.com alias/SHA verified. Eleven scoped application/test/catalog/asset files; unrelated drafts preserved
 - EDITOR: Download selected image returns stored original bytes without resizing/recompression, refreshes private owner signatures, and retains original local File before upload. Pending/error/double-click handling and blob cleanup included. Duplicate opens a deep copied draft with new UUID and unique copy name; image/video/price/details retained, cancel writes nothing, normal owner-authorized save creates the new product. Two-column card actions preserve44px targets. No schema/auth/policy change
