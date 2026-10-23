@@ -77,6 +77,21 @@ function text(tree) { if (tree == null || typeof tree === "boolean") return ""; 
 function button(tree, label) { return nodes(tree).find(node => node.type === "button" && text(node) === label); }
 
 const view = harness();
+const financePlan = { ...plans[1], id: "finance", name: "برندة المالية", features: ["finance"], priceMonthly: 1099, durationOptions: [1, 3] };
+const financeView = harness({ initialPlans: [financePlan] });
+let financeTree = financeView.render();
+assert.ok(!text(financeTree).includes("الاشتراك السنوي") && text(financeTree).includes("ثلاثة أشهر بخصم ٢٠٪"));
+button(financeTree, "اختيار اشتراك ثلاثة أشهر").props.onClick();
+financeTree = await financeView.flush();
+const financeDuration = nodes(financeTree).find(node => node.type === "select" && node.props.value === 3);
+assert.deepEqual(nodes(financeDuration).filter(node => node.type === "option").map(node => node.props.value), [1, 3]);
+await button(financeTree, "متابعة وإرسال إيصال التحويل").props.onClick();
+assert.deepEqual(financeView.calls[0], ["create", "finance", 3, undefined, 2637.6, 0, 0]);
+financeView.unmount();
+const wildcardFinance = harness({ initialPlans: plans.map(plan => ({ ...plan, features: ["all"] })) });
+const wildcardFinanceRows = nodes(wildcardFinance.render()).filter(node => node.type === "li" && text(node).includes("برندة المالية"));
+assert.ok(wildcardFinanceRows.length > 0 && wildcardFinanceRows.every(row => row.props.className === "excluded"), "legacy all-package comparison never advertises paid finance as included");
+wildcardFinance.unmount();
 let tree = view.render();
 let html = renderToStaticMarkup(tree);
 assert.ok(html.includes("أنت الآن في الفترة التجريبية") && html.includes("Trial"));

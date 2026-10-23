@@ -32,14 +32,18 @@ function categoryLabel(category: unknown) {
   return BUSINESS_CATEGORIES.find((item) => item.id === id)?.label ?? id;
 }
 
+function cafeCountQuery(supabase: Awaited<ReturnType<typeof createClient>>, table: string, cafeId: string) {
+  return supabase.from(table).select("id", { count: "exact", head: true }).eq("cafe_id", cafeId);
+}
+
 async function safeCount(
   supabase: Awaited<ReturnType<typeof createClient>>,
   table: string,
   cafeId: string,
-  extra?: (query: any) => any
+  extra?: (query: ReturnType<typeof cafeCountQuery>) => ReturnType<typeof cafeCountQuery>
 ) {
   try {
-    let query = supabase.from(table).select("id", { count: "exact", head: true }).eq("cafe_id", cafeId);
+    let query = cafeCountQuery(supabase, table, cafeId);
     if (extra) query = extra(query);
     const { count, error } = await query;
     if (error) return 0;
@@ -333,10 +337,14 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     freeAfterTrial: false,
     durationUnit: plan.priceMonthly > 0 ? "month" as const : (plan.trialDays ?? 0) > 0 ? "day" as const : plan.durationUnit,
     durationCount: plan.priceMonthly > 0 ? 1 : (plan.trialDays ?? 0) > 0 ? plan.trialDays! : plan.durationCount,
-    durationOptions: [1, 3, 6, 12],
+    durationOptions: plan.id === "finance" ? [1, 3] : [1, 3, 6, 12],
+    annualDiscountPercent: plan.id === "finance" ? 0 : plan.annualDiscountPercent,
     features: normalizeAdminPlanFeatures(plan.features),
   }));
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);
+  if (parsed.some((plan) => plan.id === "finance" && plan.active && plan.priceMonthly <= 0)) {
+    throw new Error("حدد سعر باقة برندة المالية قبل تفعيل الاشتراك فيها");
+  }
   if (defaults.length < 1) {
     throw new Error("حدد باقة أساسية مفعلة واحدة على الأقل");
   }

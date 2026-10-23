@@ -190,7 +190,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
               {visiblePlans.map((item) => <button key={item.id} type="button" className={styles.planChoice} aria-pressed={plan?.id === item.id} onClick={() => setSelectedId(item.id)}>
                 <span className={styles.choiceTop}><span className={item.active ? styles.enabled : styles.disabled}>{item.active ? "مفعلة" : "متوقفة"}</span>{item.isDefault ? <span className={styles.defaultBadge}>الأساسية</span> : null}</span>
                 <strong>{item.name || "باقة دون اسم"}</strong>
-                <span className={styles.price}>{numberFormat.format(item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></span>
+                <span className={styles.price}>{item.id === "finance" && item.priceMonthly <= 0 ? "بانتظار تحديد السعر" : <>{numberFormat.format(item.priceMonthly)} <small>ر.س / {item.durationCount} {durationLabels[item.durationUnit]}</small></>}</span>
                 <span className={styles.choiceBottom}>{numberFormat.format(features.filter((feature) => isIncluded(item, feature.id)).length)} خدمات مفعلة<ChevronLeft size={17} aria-hidden="true" /></span>
               </button>)}
               {!visiblePlans.length ? <p className={styles.empty}>لا توجد باقات أضف أول باقة لتحديد خدماتها</p> : null}
@@ -199,7 +199,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
             {plan ? <fieldset disabled={plan.id === "owner_trial_7d"} className={styles.editor} aria-label={`تحرير ${plan.name}`}>
               <header className={styles.editorHeader}>
                 <div><span className={styles.eyebrow}>إعداد الباقة</span><h2>{plan.name || "باقة دون اسم"}</h2><p>{plan.id === "owner_trial_7d" ? "باقة تجربة سابقة محفوظة للاشتراكات القديمة التسجيل الجديد يتبع الباقة الأساسية المحددة" : "التغييرات لا تطبق إلا بعد الحفظ"}</p></div>
-                <label className={styles.toggle}><input type="checkbox" checked={plan.active} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
+                <label className={styles.toggle}><input type="checkbox" checked={plan.active} disabled={plan.id === "finance" && plan.priceMonthly <= 0} onChange={(event) => updatePlan(plan.id, { active: event.target.checked })} />الباقة مفعلة</label>
               </header>
 
               <section className={styles.section} aria-labelledby="plan-services-title">
@@ -225,10 +225,10 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <h3 id="plan-price-title">السعر ومدة الاشتراك</h3>
                 <div className={styles.fields}>
                   <label>سعر الشهر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
-                  <label>الخصم السنوي %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك السنة فقط</small></label>
+                  {plan.id === "finance" ? <label>خصم ثلاثة أشهر<input type="text" readOnly value="٢٠٪" /><small>باقة المالية متاحة لشهر أو ثلاثة أشهر</small></label> : <label>الخصم السنوي %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك السنة فقط</small></label>}
                 </div>
-                <p className={styles.policy}>السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو 3 أشهر أو 6 أشهر أو سنة</p>
-                {plan.priceMonthly > 0 ? <p className={styles.policy}>سعر السنة بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 12 * (1 - (plan.annualDiscountPercent ?? 0) / 100) * 100) / 100)} ر.س</p> : <p className={styles.policy}>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</p>}
+                <p className={styles.policy}>{plan.id === "finance" ? "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر" : "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو 3 أشهر أو 6 أشهر أو سنة"}</p>
+                {plan.priceMonthly > 0 ? <p className={styles.policy}>{plan.id === "finance" ? <>سعر ثلاثة أشهر بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 3 * 0.8 * 100) / 100)}</> : <>سعر السنة بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 12 * (1 - (plan.annualDiscountPercent ?? 0) / 100) * 100) / 100)}</>} ر.س</p> : <p className={styles.policy}>{plan.id === "finance" ? "حدد سعر الاشتراك قبل تفعيل الباقة وإتاحتها للعلامات" : <>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</>}</p>}
               </section>
 
               <section className={styles.section} aria-labelledby="plan-limits-title">

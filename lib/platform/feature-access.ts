@@ -53,7 +53,7 @@ export function getAdminPackageFeatures() {
 
 export function normalizeAdminPlanFeatures(features: readonly string[]): PlatformFeatureId[] {
   return getAdminPackageFeatures().filter((feature) =>
-    features.includes(feature.id) || (features.includes("all") && !feature.adminPackageOnly))
+    features.includes(feature.id) || (features.includes("all") && !feature.adminPackageOnly && !feature.explicitPackageOnly))
     .map((feature) => feature.id);
 }
 
@@ -74,7 +74,7 @@ export function getPlanIncludedFeatures(
   const planFeatures = normalizeFeatureCodes(plan?.features);
 
   if (planFeatures.includes("all")) {
-    return getPackageAssignableFeatures().map((feature) => feature.id);
+    return getPackageAssignableFeatures().filter((feature) => !feature.explicitPackageOnly || planFeatures.includes(feature.id)).map((feature) => feature.id);
   }
 
   return getBrandNavigationFeatures().filter(feature => planFeatures.includes(feature.id)).map(feature => feature.id);
@@ -106,7 +106,7 @@ export function getEffectiveBrandFeatureAccess(
 
   return getPackageAssignableFeatures().map((feature) => {
     const planIncluded =
-      planHasAll ||
+      (planHasAll && !feature.explicitPackageOnly) ||
       normalizedPlanFeatures.includes(feature.id);
     const overrideValue = overrideMap.get(feature.id);
     const override =

@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getPlatformPlans } from "@/lib/data/admin";
 import { roundMoney } from "@/lib/finance/barndaksa-finance";
-import { calculateSubscriptionAmount, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
+import { calculateSubscriptionAmount, calculateSubscriptionPricing, sanitizeDurationMonths } from "@/lib/platform/subscription-durations";
 import type { PendingSubscription, SubscriptionRecord } from "@/lib/platform/subscription";
 import type { BankSubscriptionRequest, BankTransferDetails, CurrentSubscription, SubscriptionUpgradeCredit } from "@/lib/platform/subscription-bank";
 import { isCurrentSubscription } from "@/lib/platform/active-subscription";
@@ -174,7 +174,8 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
   if (!plan) throw new Error("الباقة غير موجودة");
 
   const selectedDurationMonths = sanitizeDurationMonths(durationMonths);
-  const baseAmount = calculateSubscriptionAmount(plan, selectedDurationMonths);
+  const pricing = calculateSubscriptionPricing(plan, selectedDurationMonths);
+  const baseAmount = pricing.totalAmount;
   const coupon = await previewCouponForPlan(plan.id, baseAmount, couponCode, selectedDurationMonths);
   if (!coupon.ok) throw new Error(coupon.message);
 
@@ -230,8 +231,8 @@ export async function startOwnerPlanCheckout(planId: string, couponCode?: string
       plan_id: planId,
       status: "past_due",
       amount_sar: coupon.totalAmount ?? baseAmount,
-      base_amount_sar: baseAmount,
-      discount_amount_sar: coupon.discountAmount ?? 0,
+      base_amount_sar: plan.id === "finance" ? pricing.baseAmount : baseAmount,
+      discount_amount_sar: (plan.id === "finance" ? pricing.discountAmount : 0) + (coupon.discountAmount ?? 0),
       coupon_code_snapshot: normalizedCoupon,
       platform_coupon_id: platformCouponRow?.id ?? null,
       representative_id: couponRow?.representative_id ?? null,

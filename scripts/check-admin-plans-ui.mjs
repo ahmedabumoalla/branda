@@ -87,12 +87,12 @@ assert.ok(renderToStaticMarkup(view.render()).includes("تم حفظ الباقا
 
 const wildcard = harness([fixture("all", ["all"])]);
 tree = wildcard.render();
-assert.ok(catalog.every(feature => featureButton(tree, feature.id).props["aria-pressed"] === !feature.adminPackageOnly));
+assert.ok(catalog.every(feature => featureButton(tree, feature.id).props["aria-pressed"] === (!feature.adminPackageOnly && !feature.explicitPackageOnly)));
 featureButton(tree, "loyalty").props.onClick();
 tree = wildcard.render();
 assert.equal(featureButton(tree, "loyalty").props["aria-pressed"], false);
 await nodes(tree).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
-assert.deepEqual(wildcard.calls[0][1][0].features, catalog.filter(feature => feature.id !== "loyalty" && !feature.adminPackageOnly).map(feature => feature.id), "wildcard never silently includes prepared services");
+assert.deepEqual(wildcard.calls[0][1][0].features, catalog.filter(feature => feature.id !== "loyalty" && !feature.adminPackageOnly && !feature.explicitPackageOnly).map(feature => feature.id), "wildcard never silently includes prepared or separately sold services");
 
 const prepared = harness([fixture("prepared", ["menu"])]);
 tree = prepared.render();

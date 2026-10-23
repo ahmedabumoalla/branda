@@ -10,5 +10,6 @@ export function featureCodesAllow(features: FeatureCode[] | null | undefined, fe
   if (ALWAYS_ENABLED_FEATURES.has(feature)) return true;
   const list = Array.isArray(features) ? features.map(String) : [];
   if (feature === "cashier") return list.includes("loyalty") || list.includes("pager");
+  if (feature === "finance_pos") return list.includes("finance");
   return list.includes(feature);
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 const { PGlite } = await import(pathToFileURL(process.env.PGLITE_MODULE ?? path.join(tmpdir(), "branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js")).href);
 const db = new PGlite();
@@ -212,13 +213,43 @@ try {
   await db.exec('DROP TRIGGER reject_new_subscription ON subscriptions');
   await admin();await query('SELECT public.admin_reject_subscription_request($1,$2)',[rollback,'Declined']);await owner();
   check(Number((await quote()).upgradeCreditAmount)===83.33,'rejected request releases reservation and preserves paid credit');
+
+  // Finance is independently sold with monthly/quarterly-only commercial terms.
+  await reset();
+  await db.exec(`RESET ROLE; ALTER TABLE public.platform_plans ADD COLUMN description text, ADD COLUMN sort_order integer, ADD COLUMN is_default boolean DEFAULT false, ADD COLUMN category_id text;`);
+  await db.exec(await fs.readFile('supabase/migrations/20261023195320_brand_finance_package.sql','utf8'));
+  await db.exec(await fs.readFile('supabase/migrations/20261023195901_brand_finance_pricing.sql','utf8'));
+  await owner();
+  check(Number((await quote('finance',1)).totalAmount)===1099,'finance month is exactly 1099 SAR');
+  const financeQuote=await quote('finance',3);
+  check(Number(financeQuote.baseAmount)===3297 && Number(financeQuote.annualDiscountAmount)===659.4 && Number(financeQuote.totalAmount)===2637.6,'finance quarter applies 20 percent before coupon');
+  await denied(()=>quote('finance',6)); await denied(()=>quote('finance',12));
+  await denied(()=>create('finance',3,null,1));
+  const financeRequest=await create('finance',3,null,2637.6,0,0);
+  await query('SELECT public.submit_subscription_whatsapp_receipt($1)',[financeRequest]);
+  const financeSubscription=await approve(financeRequest); await db.exec('RESET ROLE');
+  check(Number(await value('SELECT amount_sar FROM subscriptions WHERE id=$1',[financeSubscription]))===2637.6,'approved finance subscription retains exact authoritative amount');
+  check(await value("SELECT duration_unit='month' AND duration_count=3 AND expires_at=public.calculate_subscription_expiry(started_at,'month',3) FROM subscriptions WHERE id=$1",[financeSubscription]),'finance quarter grants exactly three months');
+  check(Number(await value('SELECT amount FROM platform_finance_entries WHERE subscription_request_id=$1',[financeRequest]))===2637.6,'finance package cash collection is exact');
+  await denied(()=>query("UPDATE subscriptions SET duration_count=12 WHERE id=$1",[financeSubscription]));
+  await denied(()=>db.exec("UPDATE platform_plans SET duration_options='{1,3,6,12}' WHERE id='finance'"));
+  await db.exec("UPDATE platform_plans SET features='[\"all\"]' WHERE id='plan-e544dced'");
+  await owner();
+  check((await quote('plan-e544dced',1)).upgradeCredits.every(item=>item.subscriptionId!==financeSubscription),'legacy all upgrade does not consume separate financial subscription');
+  await reset(); await db.exec("RESET ROLE; INSERT INTO platform_discount_coupons(code,discount_percent,eligible_duration_months) VALUES('FIN10',10,'{3}')"); await owner();
+  const discountedFinance=await quote('finance',3,'FIN10');
+  check(Number(discountedFinance.couponDiscountAmount)===263.76 && Number(discountedFinance.totalAmount)===2373.84,'coupon applies after finance quarterly discount');
+  await denied(()=>quote('finance',1,'FIN10'));
+  await admin(); await query('SELECT public.admin_assign_plan_without_payment($1,$2)',[id(1),'finance']); await db.exec('RESET ROLE');
+  check(await value("SELECT count(*)=1 FROM subscriptions WHERE cafe_id=$1 AND plan_id='finance' AND status='active' AND duration_unit='month' AND duration_count=1",[id(1)]),'manual finance assignment uses supported monthly term');
   const {createHash}=await import('node:crypto');
   const inputFiles=[migrationPath,'supabase/migrations/20261021084337_mark_plus_upgrade_bundle.sql',
     'supabase/migrations/20261009171539_subscription_bank_review.sql','supabase/migrations/20261009232838_annual_subscription_pricing.sql',
     'supabase/migrations/006_barndaksa_subscription_checkout_upgrade.sql','supabase/migrations/032_barndaksa_finance_inclusive_vat_coupons_profit_distribution.sql',
-    'supabase/migrations/20261010004458_platform_finance.sql','scripts/check-concurrent-subscriptions-db.mjs'];
+    'supabase/migrations/20261010004458_platform_finance.sql','supabase/migrations/20261023195320_brand_finance_package.sql','supabase/migrations/20261023195901_brand_finance_pricing.sql','scripts/check-concurrent-subscriptions-db.mjs'];
   const inputs=Object.fromEntries(await Promise.all(inputFiles.map(async file=>[file,createHash('sha256').update(await fs.readFile(file)).digest('hex')])));
   const pgliteVersion=JSON.parse(await fs.readFile(path.join(path.dirname(process.env.PGLITE_MODULE ?? path.join(tmpdir(),'branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js')),'../package.json'),'utf8')).version;
-  await fs.writeFile('.git/concurrent-subscriptions-db-checks.json',JSON.stringify({executedAt:new Date().toISOString(),node:process.version,checks,inputs,pgliteVersion,migrationSha256:createHash('sha256').update(migration).digest('hex'),testSha256:createHash('sha256').update(await fs.readFile(import.meta.filename)).digest('hex'),engine:'PGlite isolated PostgreSQL',concurrency:'one connection, controlled interleavings plus row lock and unique-index review',liveDatabaseWrites:0},null,2));
+  const gitDirectory=execFileSync('git',['rev-parse','--absolute-git-dir'],{encoding:'utf8',windowsHide:true}).trim();
+  await fs.writeFile(path.join(gitDirectory,'concurrent-subscriptions-db-checks.json'),JSON.stringify({executedAt:new Date().toISOString(),node:process.version,checks,inputs,pgliteVersion,migrationSha256:createHash('sha256').update(migration).digest('hex'),testSha256:createHash('sha256').update(await fs.readFile(import.meta.filename)).digest('hex'),engine:'PGlite isolated PostgreSQL',concurrency:'one connection, controlled interleavings plus row lock and unique-index review',liveDatabaseWrites:0},null,2));
   console.log(`PASS concurrent subscriptions SQL: ${checks} authorization, quotes, coexistence, renewals, credit, excess duration, snapshot, rollback and service gates checks`);
 } finally {await db.close();}

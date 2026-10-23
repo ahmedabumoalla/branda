@@ -5,6 +5,7 @@ import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } 
 
 const AUTH_REFRESH_PREFIXES = [
   "/dashboard",
+  "/finance",
   "/admin",
   "/representative",
   "/login",

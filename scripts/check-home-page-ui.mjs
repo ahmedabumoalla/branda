@@ -371,4 +371,17 @@ await test(async () => {
     dispose(); assert.equal(events.size, 0); assert.equal(timers.size, 0);
   } finally { for (const [key, descriptor] of Object.entries(original)) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } }
 });
+await test(() => {
+  const plan = { id: "finance", name: "برندة المالية", description: "إدارة مالية", priceMonthly: 1099, durationUnit: "month", durationCount: 1, trialDays: null, freeAfterTrial: false, maxProductsMonthly: null, maxBranches: null, features: [{ id: "finance", label: "برندة المالية" }], durations: [{ months: 1, label: "شهر واحد", totalAmount: 1099, baseAmount: 1099, discountAmount: 0, discountPercent: 0 }, { months: 3, label: "ثلاثة أشهر", totalAmount: 2637.6, baseAmount: 3297, discountAmount: 659.4, discountPercent: 20 }] };
+  const h = harness("HomePlanCard", { plan, preferredMonths: 12 });
+  let tree = h.render();
+  assert.equal(byId(tree, "duration-finance").props.value, 1, "global annual selector cannot create an unavailable finance term");
+  assert.ok(!text(tree).includes("سنوي"));
+  nodes(tree).find(node => node.type === "button" && text(node).includes("ثلاثة أشهر بخصم ٢٠٪")).props.onClick();
+  tree = h.render();
+  assert.equal(byId(tree, "duration-finance").props.value, 3);
+  assert.ok(text(tree).includes(new Intl.NumberFormat("ar-SA").format(2637.6)));
+  assert.ok(text(tree).includes(new Intl.NumberFormat("ar-SA").format(659.4)));
+  assert.deepEqual(nodes(byId(tree, "duration-finance")).filter(node => node.type === "option").map(node => node.props.value), [1, 3]);
+});
 console.log(`PASS homepage: ${checks} isolated SSR, account routing, CMS, services, live pricing/catalog, menu showcase, navigation, contact, video, timer, CSS and contrast checks; no live messages`);

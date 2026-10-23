@@ -61,6 +61,17 @@ let checks = 0;
 async function test(run) { await run(); checks++; }
 
 await test(async () => {
+  const db = database({ plans: [{ ...basePlan, id: "finance", price_sar: 1099, annual_discount_percent: 0, features: ["finance", "settings"] }] });
+  const plan = (await db.getPublicHomeCatalog()).plans[0];
+  assert.deepEqual(plan.durations.map(item => item.months), [1, 3]);
+  assert.equal(plan.durations[0].totalAmount, 1099);
+  assert.equal(plan.durations[1].totalAmount, 2637.6);
+  assert.equal(plan.durations[1].discountAmount, 659.4);
+  assert.equal(plan.durations[1].discountPercent, 20);
+  assert.ok(plan.features.some(feature => feature.id === "finance"));
+});
+
+await test(async () => {
   const db = database({ plans: [basePlan, { ...basePlan, id: "hidden", active: false }] });
   const catalog = await db.getPublicHomeCatalog();
   assert.equal(catalog.plans.length, 1);
@@ -253,8 +264,10 @@ await test(async () => {
   const page = load("app/menu/[slug]/page.tsx", {
     "next/navigation": { notFound() { throw new Error("NOT_FOUND"); } },
     "@/lib/data/standalone-menu": { getStandaloneMenu: async () => { menuCalls++; return menu; } },
+    "@/lib/data/loyalty-cards": { getPublicLoyaltyProgramBySlug: async () => null },
     "@/lib/data/public-home-catalog": { isPublicHomeMenuSlug: async () => allowed },
     "@/components/menu/bistro-menu": { BistroMenu: () => React.createElement("main", null, "real-menu") },
+    "@/components/menu/french-corner-menu": { FrenchCornerMenu: () => React.createElement("main", null, "french-menu") },
     "@/components/analytics/public-page-analytics": { PublicPageAnalytics: () => React.createElement("i", null, "ANALYTICS") },
     "@/components/menu/menu-auto-refresh": { MenuAutoRefresh: () => React.createElement("i", null, "REFRESH") },
   });

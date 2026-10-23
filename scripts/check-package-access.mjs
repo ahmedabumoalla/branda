@@ -88,3 +88,20 @@ const scheduledRenewal = await serviceFixture([
 assert.deepEqual(new Set(scheduledRenewal.features), new Set(["menu", "loyalty"]));
 assert.deepEqual(new Set(getServiceSubscriptionAccess(scheduledRenewal.serviceSubscriptions, now + 60_000).features), new Set(["menu", "loyalty"]), "queued renewal starts exactly when its previous term expires");
 console.log("PASS concurrent packages: union, expired/future newest row, overrides, trial precedence and independent expiry");
+
+const access = load("lib/platform/feature-access.ts");
+assert.ok(!access.getEffectiveBrandFeatureCodes(["all"]).includes("finance"), "legacy wildcard packages do not grant finance");
+assert.ok(!access.normalizeAdminPlanFeatures(["all"]).includes("finance"), "saving a legacy wildcard plan does not add paid finance");
+assert.ok(access.normalizeAdminPlanFeatures(["all", "finance"]).includes("finance"), "finance is explicitly assignable");
+assert.ok(!access.getPlanIncludedFeatures("legacy", [{ id: "legacy", features: ["all"] }]).includes("finance"));
+assert.ok(access.getPlanIncludedFeatures("finance", [{ id: "finance", features: ["finance"] }]).includes("finance"));
+assert.deepEqual(access.getEffectiveBrandFeatureCodes(["finance"], [{ featureId: "finance", enabled: false }]), []);
+assert.ok(!access.getEffectiveBrandFeatureCodes(["all"], [{ featureId: "finance", enabled: true }]).includes("finance"), "override cannot bypass purchase");
+assert.equal(featureCodesAllow(["finance"], "finance_pos"), true);
+assert.equal(featureCodesAllow(["finance"], "cashier"), false, "financial cashier does not grant loyalty cashier");
+assert.equal(featureCodesAllow(["loyalty", "pager"], "finance_pos"), false, "loyalty and pager do not grant financial cashier");
+const finance = { ...current, plan_id: "finance", platform_plans: { active: true, features: ["finance", "settings"] } };
+assert.deepEqual(new Set((await serviceFixture([finance, loyalty]).module.getCafeServiceAccess("brand")).features), new Set(["finance", "settings", "loyalty"]));
+assert.deepEqual((await serviceFixture({ ...finance, expires_at: new Date(now - 1).toISOString() }).module.getCafeServiceAccess("brand")).features, []);
+assert.deepEqual((await serviceFixture(finance, [{ feature_id: "finance", enabled: false }]).module.getCafeServiceAccess("brand")).features, ["settings"]);
+console.log("PASS finance package isolation: explicit purchase, administrator configuration, independent expiry, disabling and separate POS access");

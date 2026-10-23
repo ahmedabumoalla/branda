@@ -28,6 +28,7 @@ export type PlatformFeatureDefinition = {
     | "marketing_campaigns"
     | "loyalty"
     | "cashier"
+    | "finance"
     | "pager"
     | "customers"
     | "reports"
@@ -56,6 +57,8 @@ export type PlatformFeatureDefinition = {
   packageAssignable: boolean;
   /** Configuration in the admin plan editor only; never grants customer access. */
   adminPackageOnly?: boolean;
+  /** Separately sold services require explicit inclusion, even in legacy all packages. */
+  explicitPackageOnly?: boolean;
   defaultEnabled: boolean;
   requiredPlanLevel?: PlatformFeaturePlanLevel;
   iconKey?: string;
@@ -69,6 +72,23 @@ export type PlatformFeatureId = PlatformFeatureDefinition["id"];
 export type PlatformFeatureCode = "all" | PlatformFeatureId;
 
 export const platformFeatureRegistry: readonly PlatformFeatureDefinition[] = [
+  {
+    id: "finance",
+    titleAr: "برندة المالية",
+    titleEn: "Branda Finance",
+    descriptionAr: "المبيعات وكاشير مستقل بالصور والمشتريات والموردون والعملاء والأصناف والمخزون والخزينة والورديات والعهد وأرصدة البنوك والنقدية ونقاط البيع والموظفين والتقارير المحاسبية",
+    category: "finance",
+    route: "/dashboard/finance",
+    sidebarVisible: true,
+    brandNavigation: true,
+    packageAssignable: true,
+    explicitPackageOnly: true,
+    defaultEnabled: false,
+    iconKey: "WalletCards",
+    riskLevel: "financial",
+    status: "active",
+    sortOrder: 95,
+  },
   {
     id: "marketing_campaigns",
     titleAr: "الحملات التسويقية",

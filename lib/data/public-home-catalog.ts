@@ -53,10 +53,10 @@ function mapPlan(row: Row): PublicHomePlan {
     features: getBrandNavigationFeatures()
       .filter(feature => included.has(feature.id) && feature.status === "active")
       .map(feature => ({ id: feature.id, label: feature.titleAr })),
-    durations: priceMonthly > 0 ? getPlanDurationOptions().map(option => ({
+    durations: priceMonthly > 0 ? getPlanDurationOptions({ id }).map(option => ({
       months: option.months,
       label: option.label,
-      ...calculateSubscriptionPricing({ priceMonthly, annualDiscountPercent }, option.months),
+      ...calculateSubscriptionPricing({ id, priceMonthly, annualDiscountPercent }, option.months),
     })) : [],
   };
 }
