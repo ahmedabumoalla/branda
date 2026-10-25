@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/auth/otp-jobs",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/pager/jobs",
       "schedule": "* * * * *"
     },

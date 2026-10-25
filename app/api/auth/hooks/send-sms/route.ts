@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { after } from "next/server";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { verifySupabaseHookSignature } from "@/lib/auth/supabase-hook-signature";
-import { greenApiProviderInstanceKey, sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { enqueueOtpDelivery, deliverQueuedOtp } from "@/lib/auth/otp-delivery";
 import { isAllowedCustomerOtpPhone, isPhoneOtpRequiredForBrand } from "@/lib/auth/phone-otp";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const MAX_BODY_BYTES = 32 * 1024;
 const sendSmsHookSchema = z.object({
@@ -63,26 +64,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    // A valid Supabase signature alone must not bypass the application send limits.
-    // Consume one recent, server-authorized request before contacting WhatsApp.
-    const { data: cafeSlug, error } = await createAdminClient().rpc("claim_customer_phone_otp_dispatch", {
-      p_phone_normalized: phoneNormalized,
-      p_provider_instance: greenApiProviderInstanceKey(),
-    });
-    // Dispatch admission validates a current loyalty package and enabled program in SQL
-    if (error || typeof cafeSlug !== "string" || !isPhoneOtpRequiredForBrand(cafeSlug, "loyalty")
-      || !isAllowedCustomerOtpPhone(phoneNormalized, cafeSlug, "loyalty")) return errorResponse(403);
-    await sendGreenApiSupabaseOtp({
+    // SQL atomically consumes an authorized admission and persists the encrypted
+    // job. A signature alone cannot bypass quotas or active membership checks.
+    if (!isPhoneOtpRequiredForBrand("", "loyalty")
+      || !isAllowedCustomerOtpPhone(phoneNormalized, "", "loyalty")) return errorResponse(403);
+    const id = await enqueueOtpDelivery({
       phoneNormalized,
       code: parsed.data.sms.otp,
+      webhookId: request.headers.get("webhook-id") ?? "",
+    });
+    after(async () => {
+      try { await deliverQueuedOtp(id); }
+      catch { console.error("[otpDelivery]", { status: "worker_unavailable", jobId: id }); }
     });
     return Response.json({}, { status: 200 });
   } catch (error) {
-    console.error("[sendSmsHook]", {
-      name: error instanceof Error ? error.name : "UnknownError",
-      message: error instanceof Error ? error.message : "Send failed",
-      phone: `${phoneNormalized.slice(0, 4)}****${phoneNormalized.slice(-4)}`,
-    });
+    if (error instanceof Error && error.message === "OTP_ADMISSION_DENIED") return errorResponse(403);
+    console.error("[sendSmsHook]", { status: "queue_unavailable" });
     return errorResponse(502);
   }
 }

@@ -1,5 +1,7 @@
 # Branda — current handoff
 
+- 2026-10-25: Approved narrow Auth transport hotfix: signed SMS hook durably queues encrypted OTP before acknowledging Auth; provider dispatch runs after response with cron recovery, provider-scoped claims and no ambiguous automatic resend. Additive migration20261025154156 already applied and verified. Local cashier password self-service and all finance drafts remain unpublished. Tests: OTP worker12, SQL71, signed-hook41, TypeScript/text/scoped lint and production-baseline webpack build PASS. See root workspace output/otp-hook-release-* for exact build/deployment provenance
+
 Updated 2026-10-23T20:56:11Z - UTC
 
 Read [current task state](../task-state.md), then repository `AGENTS.md` and actual `git status`. Use historical records only for a relevant unresolved detail

@@ -161,7 +161,7 @@ export async function sendGreenApiOtp(input: {
 export async function sendGreenApiSupabaseOtp(input: {
   phoneNormalized: string;
   code: string;
-}): Promise<{ providerMessageId: string }> {
+}, options?: { timeoutMs: number }): Promise<{ providerMessageId: string }> {
   const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
   const endpoint = `${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
   const response = await fetch(endpoint, {
@@ -174,7 +174,7 @@ export async function sendGreenApiSupabaseOtp(input: {
       message: `رمز التحقق في برندة: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة`,
     }),
     cache: "no-store",
-    signal: AbortSignal.timeout(greenApiTimeoutMs()),
+    signal: AbortSignal.timeout(options ? Math.max(1000, Math.min(25_000, options.timeoutMs)) : greenApiTimeoutMs()),
   });
 
   if (!response.ok) {

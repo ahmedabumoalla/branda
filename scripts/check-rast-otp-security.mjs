@@ -14,15 +14,24 @@ const dependency=createRequire(import.meta.url);
 let adminCalls=0;
 let admittedSlug=null;
 const deliveries=[];
+const queued=[];
+const afterTasks=[];
 const mocks={
+  "next/server": {after:task=>afterTasks.push(task)},
+  "@/lib/barndaksa/env": {getSupabaseServiceRoleKey:()=>"isolated-hook-encryption-key"},
   "@/app/actions/loyalty-experience": {},
   "@/lib/supabase/admin": {createAdminClient:()=>({rpc:async(name,args)=>{
     adminCalls++;
-    assert.equal(name,"claim_customer_phone_otp_dispatch");
+    if(name==="claim_customer_phone_otp_delivery") return {data:queued.splice(0,1),error:null};
+    if(name==="finish_customer_phone_otp_delivery") return {data:true,error:null};
+    assert.equal(name,"enqueue_customer_phone_otp_delivery");
     assert.equal(args.p_provider_instance,"isolated-provider");
     assert.match(args.p_phone_normalized,/^9665\d{8}$/);
     const data=admittedSlug; admittedSlug=null;
-    return {data,error:null};
+    if(!data) return {data:null,error:{code:"42501"}};
+    const id="16b4c203-44a2-4a18-98c5-c63403800a01";
+    queued.push({id,payload:args.p_payload,lease_token:"16b4c203-44a2-4a18-98c5-c63403800a02"});
+    return {data:id,error:null};
   }})},
   "@/lib/supabase/server": {createClient:()=>{throw new Error("unexpected real auth access");}},
   "@/lib/data/cafes": {},
@@ -62,7 +71,8 @@ Object.assign(process.env,{
 let checks=0;
 const expect=(actual,expected,message)=>{assert.equal(actual,expected,message);checks++;};
 try {
-  const {POST}=load("app/api/auth/hooks/send-sms/route.ts");
+  const {POST:hookPost}=load("app/api/auth/hooks/send-sms/route.ts");
+  const POST=async request=>{const response=await hookPost(request);while(afterTasks.length)await afterTasks.shift()();return response;};
   const {isPhoneOtpRequiredForBrand,isAllowedCustomerOtpPhone}=load("lib/auth/phone-otp.ts");
   const body=(phone="+966500000099")=>JSON.stringify({user:{phone},sms:{otp:"123456"}});
   function request(raw=body(),options={}) {
@@ -100,6 +110,10 @@ try {
   admittedSlug="unlisted-brand";
   expect((await POST(request(body("+966500000001")))).status,200,"SQL-admitted package brand uses the same OTP flow");
   expect(deliveries.length,4,"only admitted customer requests were sent");
+  admittedSlug="finance-only-brand";
+  expect((await POST(request())).status,200,"SQL-admitted sales cashier can use the existing signed hook");
+  expect((await POST(request())).status,403,"sales cashier dispatch cannot replay without fresh admission");
+  expect(deliveries.length,5,"one message for one finance admission");
   expect(isPhoneOtpRequiredForBrand("unlisted-brand","loyalty"),true,"loyalty scope supports entitled new brands");
   expect(isAllowedCustomerOtpPhone("966500000099","unlisted-brand","loyalty"),true,"loyalty customers can verify their own phones");
   expect(isPhoneOtpRequiredForBrand("rast"),true,"Rast enabled in test mode");
