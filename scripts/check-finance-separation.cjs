@@ -14,19 +14,24 @@ async function main(){
  for(const who of ['cashier','finance-manager','anonymous']){identity=who;await assert.rejects(layout({children:'private'}),/REDIRECT \/login/);}assert.equal(analytics,0);
  for(const who of ['owner','admin']){identity=who;assert(await layout({children:'authorized'}));}assert.equal(analytics,2);
  identity='cashier';
- const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true}});
+ const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-shift-alerts':{dispatchShiftAlerts:()=>{throw Error('Unexpected alert');}},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}} });
  await assert.rejects(finance.getBrandFinanceSnapshot(),/Unauthorized/);assert.equal(rpcCalls,0);
  await assert.rejects(finance.getBrandFinanceSnapshot('other-brand'));assert.equal(rpcCalls,1,'Explicit slug must still pass authenticated RPC authorization');
  let features=['finance'];
  const legacy=load('app/dashboard/finance/pos/page.tsx',{'@/lib/data/cafes':cafes,'next/navigation':{redirect},'@/lib/data/feature-entitlements':{getOwnerFeatureCodes:async()=>features},'@/components/dashboard/feature-blocked-state':{DashboardFeatureBlockedState:()=>null}}).default;
  identity='owner';await assert.rejects(legacy(),/REDIRECT \/finance\/brand-test\/pos/);features=[];assert(await legacy());
- let user=null,canManage=false,allowed=true;
- const standaloneMocks={'next/navigation':{redirect,notFound:()=>{throw Error('404');}},'@/lib/data/auth':{getSessionUser:async()=>user},'@/lib/data/brand-finance':{getBrandFinanceSnapshot:async()=>{if(!allowed)throw Error('Denied');return{canManage};}},'@/components/finance/finance-pos':{FinancePOS:function POS(){}},'@/components/finance/finance-workspace':{FinanceWorkspace:function Workspace(){}},'@/components/finance/finance-access-denied':{FinanceAccessDenied:function Denied(){}}};
+ let user=null,canManage=false,allowed=true,dashboardCafe=null;
+ const standaloneMocks={'@/lib/data/cafes':{getOwnerCafeContext:async()=>dashboardCafe},'next/navigation':{redirect,notFound:()=>{throw Error('404');}},'@/lib/data/auth':{getSessionUser:async()=>user},'@/lib/data/brand-finance':{getBrandFinanceSnapshot:async()=>{if(!allowed)throw Error('Denied');return{canManage,cafe:{id:"brand"}};}},'@/components/finance/finance-pos':{FinancePOS:function POS(){}},'@/components/finance/finance-workspace':{FinanceWorkspace:function Workspace(){}},'@/components/finance/finance-access-denied':{FinanceAccessDenied:function Denied(){}}};
  // Use the actual route's session module, without performing real authentication.
  const posSource=fs.readFileSync('app/finance/[slug]/pos/page.tsx','utf8');const authModule=posSource.match(/import\s*\{\s*getSessionUser\s*\}\s*from\s*"([^"]+)"/)[1];standaloneMocks[authModule]={getSessionUser:async()=>user};
  const pos=load('app/finance/[slug]/pos/page.tsx',standaloneMocks).default;
  const params={params:Promise.resolve({slug:'brand-test'})};await assert.rejects(pos(params),/REDIRECT \/finance\/brand-test\/login/);user={id:'cashier'};assert.equal((await pos(params)).type.name,'POS');allowed=false;assert.equal((await pos(params)).type.name,'Denied');allowed=true;
  const workspace=load('app/finance/[slug]/page.tsx',standaloneMocks).default;await assert.rejects(workspace(params),/REDIRECT \/finance\/brand-test\/pos/);canManage=true;assert.equal((await workspace(params)).type.name,'Workspace');
+ dashboardCafe={id:'brand'};assert.equal((await pos(params)).props.dashboardHref,'/dashboard/finance','Authorized same-brand owner/admin returns to dashboard');
+ dashboardCafe={id:'other-brand'};assert.equal((await pos(params)).props.dashboardHref,undefined,'Different dashboard tenant must not be used');
+ dashboardCafe=null;assert.equal((await pos(params)).props.dashboardHref,undefined,'Financial manager retains standalone workspace');
+ dashboardCafe={id:'brand'};canManage=false;assert.equal((await pos(params)).props.dashboardHref,undefined,'Cashier never gets dashboard return');
+
  let states=[],cursor=0,pathname='/dashboard/finance',search='section=sales',expandedSidebar=0,navigated=0,history=[];
  const menu=load('components/dashboard/finance-sidebar-menu.tsx',{react:{...React,useState:initial=>{const i=cursor++;if(!(i in states))states[i]=initial;return[states[i],v=>states[i]=typeof v==='function'?v(states[i]):v];}},'next/navigation':{usePathname:()=>pathname,useSearchParams:()=>new URLSearchParams(search)},'next/link':{__esModule:true,default:function Link(){}}}).FinanceSidebarMenu;
  let collapsed=false;const render=()=>{cursor=0;return menu({slug:'brand-test',collapsed,onExpand:()=>expandedSidebar++,onNavigate:()=>navigated++});};

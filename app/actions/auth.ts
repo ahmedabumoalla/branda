@@ -157,6 +157,15 @@ export async function loginOwnerAction(
       phoneLogin ? { phone: `+${phoneLogin}`, password } : { email: normalizedEmail, password },
     );
 
+    // Infrastructure failures must not be reported as an incorrect password or
+    // trigger additional identity-provider requests while service is restricted.
+    if (authError?.status === 402 || (authError?.status ?? 0) >= 500 || authError?.name === "AuthRetryableFetchError") {
+      return { ok: false as const, message: "خدمة تسجيل الدخول غير متاحة مؤقتًا يرجى المحاولة لاحقًا أو التواصل مع دعم برندة", redirectTo: null };
+    }
+    if (authError?.status === 429) {
+      return { ok: false as const, message: "محاولات الدخول كثيرة يرجى الانتظار قليلًا ثم المحاولة مجددًا", redirectTo: null };
+    }
+
     // The contact email is only a login alias for new phone-primary owners.
     // It is never an Auth recovery address or a claim of verified email ownership.
     if (!phoneLogin && ["email_not_confirmed", "invalid_credentials"].includes(authError?.code ?? "")) {

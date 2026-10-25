@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { FinanceLogin } from "@/components/finance/finance-login";
-export default async function FinanceLoginPage({ params }: { params: Promise<{ slug: string }> }) {
+import { SalesCashierLogin } from "@/components/finance/sales-cashier-login";
+export default async function FinanceLoginPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ access?: string }> }) {
   const { slug } = await params;
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) notFound();
-  return <FinanceLogin slug={slug} />;
+  const { access } = await searchParams;
+  if (access === "management") return <FinanceLogin slug={slug} />;
+  return <SalesCashierLogin slug={slug} />;
 }

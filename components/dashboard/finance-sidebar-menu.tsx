@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardNavigationLink as Link } from "./dashboard-navigation-link";
 import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Monitor, WalletCards } from "lucide-react";
@@ -28,7 +28,7 @@ export function FinanceSidebarMenu({ slug, collapsed, onExpand, onNavigate }: {
       {!collapsed && <><span className="flex-1 text-right">برندة المالية</span><ChevronDown className={`h-4 w-4 ${expanded ? "rotate-180" : ""}`} aria-hidden="true" /></>}
     </button>
     <div id="dashboard-finance-sections" hidden={!visible} className="mr-5 mt-1 space-y-0.5 border-r border-[#E5B85C]/20 pr-2">
-      {financeSections.map(({ id, label, icon: Icon }) => <Link key={id} href={`/dashboard/finance?section=${id}`} scroll={false} prefetch={false}
+      {financeSections.map(({ id, label, icon: Icon }) => <Link key={id} href={`/dashboard/finance?section=${id}`} scroll={false} prefetch={active ? false : undefined}
         onClick={event => {
           // Native history keeps the loaded workspace and its pending operation intact.
           if (active && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {

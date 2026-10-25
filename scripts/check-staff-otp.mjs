@@ -52,6 +52,7 @@ const ui=load('components/cashier/cashier-login-form.tsx',{
  react:{...React,useState:initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return [state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];},useEffect:()=>{}},
  'next/link':({children,...props})=>React.createElement('a',props,children),
  '@/app/actions/cashier':{}, '@/components/ui/barndaksa-logo':{BarndaksaLogo:()=>null},
+ './cashier-system-switch':{CashierSystemSwitch:()=>null},
  './cashier-language':{CashierLanguageSwitch:()=>null,useCashierLanguage:()=>({locale,dir:locale==='ar'?'rtl':'ltr',t:m=>typeof m==='string'?(locale==='ar'?m:dictionary[m]??m):m.text,errorText:m=>m})},
 });
 function render(){cursor=0;return renderToStaticMarkup(ui.CashierLoginForm({}));}

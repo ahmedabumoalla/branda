@@ -1,0 +1,9 @@
+{
+  "name": "branda-finance-printer",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=22.12.0" },
+  "main": "main.cjs",
+  "scripts": { "setup": "node node_modules/electron/install.js", "start": "node launch.cjs", "test": "node --test bridge.test.cjs", "test:native": "node launch.cjs --native-smoke" },
+  "devDependencies": { "electron": "45.0.0" }
+}

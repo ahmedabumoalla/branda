@@ -1,0 +1,29 @@
+.root { composes: root from "./finance-cash-differences.module.css"; }
+.header { composes: header from "./finance-cash-differences.module.css"; }
+.actions { composes: actions from "./finance-cash-differences.module.css"; }
+.primary { composes: primary from "./finance-cash-differences.module.css"; }
+.secondary { composes: secondary from "./finance-cash-differences.module.css"; }
+.body { composes: body from "./finance-cash-differences.module.css"; }
+.tableWrap { composes: tableWrap from "./finance-cash-differences.module.css"; }
+.table { composes: table from "./finance-cash-differences.module.css"; }
+.badge { composes: badge from "./finance-cash-differences.module.css"; }
+.pagination { composes: pagination from "./finance-cash-differences.module.css"; }
+.empty { composes: empty from "./finance-cash-differences.module.css"; }
+.error { composes: error from "./finance-cash-differences.module.css"; }
+.success { composes: success from "./finance-cash-differences.module.css"; }
+.note { composes: note from "./finance-cash-differences.module.css"; }
+.dialog { composes: dialog from "./finance-cash-differences.module.css"; }
+.form { composes: form from "./finance-cash-differences.module.css"; --ink: #39251b; --muted: #756357; --paper: #fffdf9; --cream: #f7f2ea; --line: #e6dacb; --accent: #82551d; color: var(--ink); }
+.summary { composes: summary from "./finance-cash-differences.module.css"; }
+.field { composes: field from "./finance-cash-differences.module.css"; }
+.footer { composes: footer from "./finance-cash-differences.module.css"; }
+.fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 18px; min-width: 0; }
+.fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.field input { width: 100%; min-width: 0; padding: 11px 12px; min-height: 46px; font: inherit; font-weight: 400; font-size: 16px; border: 1px solid #9f8d7c; border-radius: 10px; background: white; color: var(--ink); font-variant-numeric: tabular-nums; }
+.field input:read-only { background: var(--cream); border-style: dashed; }
+.identity { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 17px 19px; background: var(--cream); border: 1px solid var(--line); border-radius: 13px; }
+.identity span { color: var(--muted); font-size: 12px; }
+.identity strong { font-size: 16px; }
+.form :is(input,select,textarea,button):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.form button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 640px) { .fields { grid-template-columns: 1fr; } }

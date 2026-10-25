@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardNavigationLink as Link } from "./dashboard-navigation-link";
 import { FinanceSidebarMenu } from "./finance-sidebar-menu";
 import { usePathname, useRouter } from "next/navigation";
 import { BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards } from "lucide-react";
@@ -108,7 +108,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
         const href = feature.route;
         const active = !locked && (pathname === href || pathname.startsWith(`${href}/`));
         const label = locked ? `${title} — غير مفعلة في الباقة` : title;
-        return <Link key={feature.id} href={href} onClick={() => onNavigate?.()} aria-label={label} title={collapsed || locked ? label : undefined} aria-current={active ? "page" : undefined}
+        return <Link key={feature.id} href={href} prefetch={locked ? false : undefined} onClick={() => onNavigate?.()} aria-label={label} title={collapsed || locked ? label : undefined} aria-current={active ? "page" : undefined}
           className={`group relative flex min-h-10 w-full items-center overflow-hidden rounded-lg text-[13px] leading-5 transition ${collapsed ? "justify-center px-0" : "justify-between gap-2 px-3"} ${active
             ? "border border-[#E5B85C]/28 bg-[#E5B85C]/10 font-semibold text-white shadow-[0_0_30px_rgba(229,184,92,0.10)] before:absolute before:right-0 before:top-1.5 before:h-7 before:w-0.5 before:bg-[#FFD77E]"
             : locked ? "border border-white/[0.08] bg-white/[0.035] font-normal text-[#8F8176] hover:bg-white/[0.065]"

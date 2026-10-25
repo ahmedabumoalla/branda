@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { FinanceOfflineSessionGuard } from "@/components/finance/finance-offline-session-guard";
 import "./globals.css";
 
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
@@ -69,6 +70,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: PWA_INSTALL_CAPTURE_SCRIPT }}
         />
         {children}
+        <FinanceOfflineSessionGuard />
       </body>
     </html>
   );

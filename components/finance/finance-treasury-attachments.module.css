@@ -1,0 +1,23 @@
+.root { min-width: 0; border: 1px dashed var(--line, #e8d8c6); border-radius: 15px; padding: 20px; background: var(--paper, #fffdfa); color: var(--ink, #39251b); }
+.heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.heading strong { font-size: 15px; }
+.heading > span { margin-inline-start: auto; border: 1px solid var(--line, #e8d8c6); border-radius: 7px; padding: 3px 8px; }
+.heading span, .hint, .status, .list small { color: var(--muted, #796c60); font-size: .8rem; }
+.hint { margin: 10px 0 14px; line-height: 1.8; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.root button, .list a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; font: inherit; font-size: .85rem; color: inherit; }
+.root button { border: 1px solid var(--line, #e8d8c6); border-radius: 10px; background: var(--surface, #fffdfa); cursor: pointer; }
+.root button:disabled { opacity: .55; cursor: default; }
+.root button:focus-visible, .list a:focus-visible { outline: 2px solid var(--accent, #a56d45); outline-offset: 3px; }
+.status:empty { display: none; }
+.list, .pending { list-style: none; margin: 12px 0 0; padding: 0; }
+.list li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--line, #e8d8c6); }
+.list a { min-width: 0; padding-inline: 0; justify-content: space-between; overflow-wrap: anywhere; }
+.list a svg { flex-shrink: 0; }
+.pending li, .error { display: grid; gap: 8px; background: #fff3f1; color: #9e3025; padding: 12px; border-radius: 10px; margin-top: 8px; overflow-wrap: anywhere; }
+.pending small { line-height: 1.8; }
+.draftList { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.draftList li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line, #e8d8c6); border-radius: 10px; background: var(--cream, #f7f2ea); font-size: 13px; }
+.draftList li > span { min-width: 0; overflow-wrap: anywhere; }
+.draftList .actions { flex-shrink: 0; }
+@media (max-width: 480px) { .root { padding: 16px; } .actions button { flex: 1 1 140px; } .list li { grid-template-columns: 18px minmax(0, 1fr); } .list small { grid-column: 2; margin-bottom: 8px; } }

@@ -162,6 +162,21 @@ await check('Global speculative request burst is removed; native links and loadi
   const root = fs.readFileSync('app/layout.tsx', 'utf8');
   assert(!root.includes('RoutePrefetcher')); assert(!fs.existsSync('components/performance/route-prefetcher.tsx'));
   for (const file of ['app/loading.tsx', 'app/admin/loading.tsx', 'app/dashboard/loading.tsx', 'app/menu/[slug]/loading.tsx']) assert(fs.readFileSync(file, 'utf8').includes('role="status"'));
-  for (const file of ['components/admin/AdminSidebar.tsx', 'components/dashboard/DashboardSidebar.tsx']) assert(fs.readFileSync(file, 'utf8').includes('import Link from "next/link"'));
+  for (const file of ['components/admin/AdminSidebar.tsx', 'components/dashboard/dashboard-navigation-link.tsx']) assert(fs.readFileSync(file, 'utf8').includes('import Link from "next/link"'));
+});
+await check('Dashboard intent prefetch prepares one complete page without an eager sidebar burst', async () => {
+  let prepared = null, events = 0;
+  const module = load(fs.readFileSync('components/dashboard/dashboard-navigation-link.tsx','utf8'), {
+    react: { useState: () => [prepared, value => { prepared = value; }] },
+    'next/link': { __esModule: true, default: () => null },
+  });
+  const props = { href: '/dashboard/menu', onFocus: () => events++ };
+  const render = extra => module.DashboardNavigationLink({ ...props, ...extra });
+  assert.equal(render().props.prefetch, false);
+  render().props.onPointerEnter({}); assert.equal(render().props.prefetch,true);
+  prepared = null; render().props.onFocus({}); assert.equal(render().props.prefetch,true); assert.equal(events,1);
+  prepared = null; render().props.onTouchStart({}); assert.equal(render().props.prefetch,true);
+  assert.equal(render({ href: '/dashboard/offers' }).props.prefetch,false,'Another destination stays cold');
+  prepared = null; render({ prefetch:false }).props.onPointerEnter({}); assert.equal(prepared,null,'Locked services never prefetch');
 });
 console.log(JSON.stringify({ groups, measurement: 'deterministic loader calls, not production latency', adminAuthCalls: { before: beforeAdmin.auth, after: afterAdmin.auth }, ownerAuthCalls: { before: beforeOwner.auth, after: afterOwner.auth } }));

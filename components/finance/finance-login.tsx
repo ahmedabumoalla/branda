@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LockKeyhole, ArrowUpLeft } from "lucide-react";
@@ -35,6 +36,7 @@ export function FinanceLogin({ slug }: { slug: string }) {
         {error && <p className={styles.error} role="alert">{error}</p>}
         <button className={styles.submit} disabled={busy} type="submit">{busy ? "جار تسجيل الدخول" : "الدخول إلى كاشير المالية"}<ArrowUpLeft aria-hidden="true" /></button>
       </form>
+      <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login`}>دخول الكاشير بكلمة المرور أو رمز واتساب</Link>
       <p className={styles.note}>تحتاج صلاحية دخول؟ تواصل مع مسؤول العلامة</p>
     </section>
   </main>;

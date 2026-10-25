@@ -32,6 +32,23 @@ export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }
 
+/** A provider acknowledgement means queued only. Ambiguous outcomes must not be retried automatically */
+export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  try {
+    const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+      method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+      signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+      body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
+    });
+    if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "unknown" };
+    const payload = await response.json() as GreenApiSendResponse;
+    return typeof payload.idMessage === "string" && payload.idMessage.length > 0 && payload.idMessage.length <= 200
+      ? { status: "queued", providerMessageId: payload.idMessage } : { status: "unknown" };
+  } catch { return { status: "unknown" }; }
+}
+
 /** A provider ID means queued by GREEN-API, not delivered or read */
 export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");
@@ -47,7 +64,56 @@ export async function sendGreenApiPagerMessage(input: { phone: string; message: 
   return { providerMessageId: payload.idMessage };
 }
 
-/** New staff use phone OTP; the welcome message contains no credentials. */
+/** Sales cashier credentials are sent only after the owner's account provisioning succeeds. */
+export async function sendGreenApiSalesCashierWelcome(input: {
+  phone: string; fullName: string; brandName: string; slug: string; password: string;
+}) {
+  if (!/^9665\d{8}$/.test(input.phone) || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+    body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
+      `مرحبًا ${input.fullName}`,
+      `حساب كاشير المبيعات لدى ${input.brandName} جاهز`,
+      `رقم الجوال: ${input.phone}`,
+      `كلمة المرور: ${input.password}`,
+      "رابط الدخول إلى نقطة البيع:",
+      `https://barndaksa.com/finance/${input.slug}/login`,
+      "هذا الحساب مخصص للمبيعات والورديات وليس لكاشير الولاء",
+      "احتفظ ببيانات الدخول ولا تشاركها مع أي شخص",
+    ].join("\n") }),
+  });
+  if (!response.ok) throw new Error("SALES_CASHIER_WELCOME_UNCONFIRMED");
+  const data = await response.json() as GreenApiSendResponse;
+  if (typeof data.idMessage !== "string" || !data.idMessage) throw new Error("SALES_CASHIER_WELCOME_UNCONFIRMED");
+  return { providerMessageId: data.idMessage };
+}
+
+/** Linking a customer never reveals or replaces their existing password. */
+export async function sendGreenApiLinkedSalesCashierWelcome(input: { phone: string; fullName: string; brandName: string }) {
+  if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_SALES_CASHIER_RECIPIENT");
+  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+    body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
+      `مرحبًا ${input.fullName}`,
+      `أضافتك علامة ${input.brandName} إلى فريق كاشير المبيعات`,
+      `رقم الدخول: ${input.phone}`,
+      "https://barndaksa.com/cashier/login?type=sales",
+      "اختر الدخول برمز واتساب أو استخدم كلمة مرور حسابك الحالية",
+      "حساب العميل ومزاياه وكلمة مروره لم تتغير",
+      "هذا الوصول للمبيعات والورديات ولا يمنح صلاحية لوحة العلامة أو كاشير الولاء",
+    ].join("\n") }),
+  });
+  if (!response.ok) throw new Error("SALES_CASHIER_WELCOME_UNCONFIRMED");
+  const data = await response.json() as GreenApiSendResponse;
+  if (typeof data.idMessage !== "string" || !data.idMessage) throw new Error("SALES_CASHIER_WELCOME_UNCONFIRMED");
+  return { providerMessageId: data.idMessage };
+}
+
+/** New loyalty staff use phone OTP; the welcome message contains no credentials. */
 export async function sendGreenApiCashierWelcome(input: {
   phone: string;
   fullName: string;

@@ -6,6 +6,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/finance/jobs",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/pager/jobs",
       "schedule": "* * * * *"
     },

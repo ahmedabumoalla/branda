@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { loginCashierAction, requestCashierOtpAction, verifyCashierOtpAction } from "@/app/actions/cashier";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { CashierLanguageSwitch, useCashierLanguage } from "./cashier-language";
+import { CashierSystemSwitch } from "./cashier-system-switch";
 
 export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: string }) {
   const { t, errorText, dir, locale } = useCashierLanguage();
@@ -74,7 +75,8 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
             <ShieldCheck className="h-4 w-4" />{t("دخول مخصص لموظفي الفرع")} </div>
         </div>
         <form onSubmit={submit} className="p-6 sm:p-8">
-          <h1 className="text-2xl font-black">{t("دخول نقطة التشغيل")} </h1>
+          <CashierSystemSwitch active="loyalty" />
+          <h1 className="text-2xl font-black">{t("دخول كاشير الولاء")} </h1>
           <p className="mt-2 text-sm font-bold leading-7 text-[#806A5E]">{mode === "whatsapp" ? t("للحسابات الجديدة أدخل رقم واتساب المسجل لدى الفرع") : t("الحسابات السابقة تدخل بالبريد وكلمة المرور المعتادة")}</p>
           <div className="mt-5 grid grid-cols-2 gap-2" role="group" aria-label={t("طريقة الدخول")}>
             {(["whatsapp", "password"] as const).map(value => <button key={value} type="button" disabled={loading} aria-pressed={mode === value}
@@ -148,7 +150,8 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
             {loading ? t("جارٍ التحقق") : mode === "whatsapp" && !codeSent ? t("أرسل رمز واتساب") : t("دخول")}
           </button>
-          <Link href="/login" className="mt-5 block text-center text-sm font-black text-[#6B3A25] underline underline-offset-4">{t("العودة إلى تسجيل الدخول العام")} </Link>
+          <Link href="/cashier/login" className="mt-5 flex min-h-11 items-center justify-center text-sm font-black text-[#6B3A25] underline underline-offset-4">{t("اختيار نوع الكاشير")}</Link>
+          <Link href="/login" className="mt-2 block text-center text-sm font-black text-[#6B3A25] underline underline-offset-4">{t("العودة إلى تسجيل الدخول العام")} </Link>
         </form>
       </section>
     </main>

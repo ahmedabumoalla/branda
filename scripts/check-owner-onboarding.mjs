@@ -60,7 +60,7 @@ function loginContext(options={}) {
   Object.assign(stubs,{
     "next/headers":{},"next/navigation":{},
     "@/lib/auth/phone-otp":{normalizeSaudiPhone:raw=>raw.replace(/\D/g,"").replace(/^05/,"9665")},
-    "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{calls.push(input);return input.phone&&!options.badPassword?{data:{user:{...user,id:options.foreignUser?"foreign":"owner"},session:{}},error:null}:{data:{user:null,session:null},error:{code:"invalid_credentials"}};},signOut:async()=>{calls.push("signOut");}},from:table=>chain(table==="profiles"?{id:"owner",full_name:"Owner",email:valid.email,role:"cafe_owner",status:"active"}:{cafe_id:"cafe",cafes:{id:"cafe",business_category:"cafes_coffee"}})})},
+    "@/lib/supabase/server":{createClient:async()=>({auth:{signInWithPassword:async input=>{calls.push(input);if(options.serviceError)return {data:{user:null,session:null},error:options.serviceError};return input.phone&&!options.badPassword?{data:{user:{...user,id:options.foreignUser?"foreign":"owner"},session:{}},error:null}:{data:{user:null,session:null},error:{code:"invalid_credentials"}};},signOut:async()=>{calls.push("signOut");}},from:table=>chain(table==="profiles"?{id:"owner",full_name:"Owner",email:valid.email,role:"cafe_owner",status:"active"}:{cafe_id:"cafe",cafes:{id:"cafe",business_category:"cafes_coffee"}})})},
     "@/lib/supabase/admin":{createAdminClient:()=>({from:()=>chain({id:"owner",phone:options.phoneMismatch?"966522222222":"966511111111"}),auth:{admin:{getUserById:async()=>({data:{user}})}}})},
     "@/lib/platform/business-categories":{getDashboardPathForCategory:()=>"/dashboard"},
     "@/lib/data/operation-events":{operationEventTypes:{brandLogin:"brand_login"},recordOperationEvent:async()=>{}},
@@ -72,6 +72,8 @@ function loginContext(options={}) {
 await test(async()=>{const c=loginContext();const result=await c.api.loginOwnerAction(valid.email,"password");assert(result.ok);assert.equal(c.calls.length,2);assert.equal(c.calls[1].phone,"+966511111111");});
 await test(async()=>{const c=loginContext();const result=await c.api.loginOwnerAction("0511111111","password");assert(result.ok);assert.equal(c.calls.length,1);assert.equal(c.calls[0].phone,"+966511111111");});
 for(const options of [{noMarker:true},{unconfirmed:true},{phoneMismatch:true},{attachedEmail:true},{badPassword:true},{foreignUser:true}])await test(async()=>{const c=loginContext(options);const result=await c.api.loginOwnerAction(valid.email,"password");assert(!result.ok);assert.equal(result.message,"بيانات الدخول غير صحيحة");if(options.foreignUser)assert(c.calls.includes("signOut"));});
+
+for(const serviceError of [{status:402},{status:503},{name:"AuthRetryableFetchError"},{status:429}])await test(async()=>{const c=loginContext({serviceError});const result=await c.api.loginOwnerAction(valid.email,"password");assert(!result.ok);assert.equal(result.redirectTo,null);assert.equal(c.calls.length,1,"Service failure must not retry other login identities");assert.notEqual(result.message,"invalid_credentials");assert(result.message.includes(serviceError.status===429?String.fromCodePoint(1603,1579,1610,1585,1577):String.fromCodePoint(1594,1610,1585,32,1605,1578,1575,1581,1577)));});
 
 function changePasswordContext(options={}) {
   const calls=[]; const user={id:"owner",phone:options.noIdentity?undefined:"+966511111111",email:options.email?valid.email:undefined};

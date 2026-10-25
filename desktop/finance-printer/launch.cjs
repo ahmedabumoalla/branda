@@ -1,0 +1,11 @@
+const { spawn } = require('node:child_process');
+const path = require('node:path');
+const electron = require('electron');
+const environment = { ...process.env };
+delete environment.ELECTRON_RUN_AS_NODE;
+const arguments_ = process.argv.slice(2);
+const smoke = arguments_[0] === '--native-smoke';
+const entry = path.join(__dirname, smoke ? 'native-smoke.cjs' : 'main.cjs');
+const child = spawn(electron, [entry, ...(smoke ? [] : arguments_)], { cwd: __dirname, env: environment, windowsHide: true, stdio: 'inherit', shell: false });
+child.on('error', error => { console.error(error.message); process.exitCode = 1; });
+child.on('exit', code => { process.exitCode = code ?? 1; });

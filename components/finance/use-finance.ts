@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { executeBrandFinanceAction, fetchBrandFinanceAction, fetchBrandFinanceHistoryAction } from "@/app/actions/brand-finance";
-import { createFinanceStaffAccountAction } from "@/app/actions/finance-access";
+import { createFinanceStaffAccountAction, createSalesCashierAccountAction } from "@/app/actions/finance-access";
 import type { FinanceCommand, FinanceCommandResult, FinanceDocument, FinanceJournalLine, FinanceMovement, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import type { FinanceFormOperation } from "./finance-operation-form";
 
@@ -36,7 +36,13 @@ export function useFinance(initialSnapshot: FinanceSnapshot, slug?: string) {
     busy.current = true; setPending(true); setError(""); setMessage("");
     try {
       let saved: FinanceCommandResult;
-      if (operation === "staff_create") {
+      let successMessage = "";
+      if (operation === "sales_cashier_create") {
+        const result = await createSalesCashierAccountAction({ name: String(payload.name), phone: String(payload.phone), password: String(payload.password) });
+        if (!result.ok) { setError(result.message); return null; }
+        successMessage = result.message;
+        saved = { id: "staff" };
+      } else if (operation === "staff_create") {
         const result = await createFinanceStaffAccountAction({ email: String(payload.email), name: String(payload.name), password: String(payload.password), role: payload.role === "manager" ? "manager" : "cashier" });
         if (!result.ok) { setError(result.message); return null; }
         saved = { id: "staff" };
@@ -47,7 +53,7 @@ export function useFinance(initialSnapshot: FinanceSnapshot, slug?: string) {
         if (!result.ok) { setError(result.message); return null; }
         saved = result.data; retry.current = null;
       }
-      setMessage(saved.number ? `تم حفظ العملية رقم ${saved.number}` : "تم حفظ العملية بنجاح");
+      setMessage(successMessage || (saved.status === "pending" ? "تم إرسال المرتجع لاعتماد مالك العلامة لم يتم صرف أي مبلغ" : saved.number ? `تم حفظ العملية رقم ${saved.number}` : "تم حفظ العملية بنجاح"));
       try { await load(); }
       catch { setStale(true); setError("تم الحفظ لكن تعذر تحديث الأرصدة أعد التحديث ولا تكرر العملية المحفوظة"); }
       return saved;
