@@ -5,7 +5,7 @@ import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TreasuryFeeHistory, TreasuryHistory, TreasuryResult, TreasurySnapshot, TreasuryStatement, TreasuryStatementOptions } from "@/lib/finance/treasury";
 
-const operations = z.enum(["account_save", "account_archive", "account_primary", "opening", "voucher", "transfer", "pos_settle", "pos_fee_pay", "reconcile"]);
+const operations = z.enum(["account_save", "account_delete", "account_archive", "account_primary", "opening", "voucher", "transfer", "pos_settle", "pos_fee_pay", "reconcile"]);
 const corrections = z.enum(["reverse", "reset", "reconcile_adjust"]);
 const payloadSchema = z.record(z.string(), z.unknown());
 const dateSchema = z.iso.date().optional();

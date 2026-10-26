@@ -72,7 +72,7 @@ async function main(){let checks=0;
  {
   let release;const h=harness('list',{wait:new Promise(resolve=>release=resolve)});h.state.data.rows=[{...row,amount:0}];let tree=await ready(h);button(tree,'استلام بسند قبض').props.onClick();tree=h.render();assert.equal(field(tree,'handoverAmount').props.value,'0.00');const work=submit(tree);await submit(tree);assert.equal(h.saves.length,1);release();await work;checks++;
  }
- const treasury=fs.readFileSync('components/finance/finance-treasury.tsx','utf8');assert.match(treasury,/account.kind === group.kind && !account.is_cashier_drawer/);assert.match(treasury,/!account.is_primary && !account.is_cashier_drawer/);assert.match(treasury,/صندوق الكاشير مخصص للورديات ولا يمكن أرشفته/);checks++;
+ const treasury=fs.readFileSync('components/finance/finance-treasury.tsx','utf8');assert.match(treasury,/!account.is_primary && !account.is_cashier_drawer/);assert.match(treasury,/صندوق الكاشير مخصص للورديات ولا يمكن أرشفته/);checks++;
  console.log(`PASS cash handovers UI ${checks} groups: blind auto drawer, required count/recipient, zero, legacy transfer hint, exact receipt without income, permissions, retry idempotency, pagination, double submit`);
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

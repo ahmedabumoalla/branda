@@ -1,6 +1,7 @@
 import type { FinanceAccount } from "./brand-finance";
 
 export type TreasuryAccount = FinanceAccount & {
+  can_delete?: boolean;
   linked_bank_id: string | null;
   opening_recorded_at: string | null;
   opening_amount: number | null;
@@ -44,7 +45,7 @@ export type TreasuryStatement = {
   opening: number; debit: number; credit: number; closing: number;
   total: number; rows: TreasuryStatementRow[];
 };
-export type TreasuryOperation = "account_save" | "account_archive" | "account_primary" | "opening" | "voucher" | "transfer" | "pos_settle" | "pos_fee_pay" | "reconcile";
+export type TreasuryOperation = "account_save" | "account_delete" | "account_archive" | "account_primary" | "opening" | "voucher" | "transfer" | "pos_settle" | "pos_fee_pay" | "reconcile";
 export type TreasuryCorrection = "reverse" | "reset" | "reconcile_adjust";
 export type TreasuryResult = { id: string; number?: number; document_id?: string | null; duplicate?: boolean };
 export type TreasuryStatementOptions = { offset?: number; from?: string; to?: string };

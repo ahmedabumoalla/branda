@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Archive, ArrowDownLeft, ArrowLeft, ArrowLeftRight, ArrowUpRight, Banknote, Building2, CalendarDays, Check, ChevronLeft, CreditCard, Download, History, Plus, RefreshCw, Search, Settings2, ShieldCheck, Wallet } from "lucide-react";
+import { Archive, ArrowDownLeft, ArrowLeft, ArrowLeftRight, ArrowUpRight, Banknote, Building2, CalendarDays, Check, ChevronLeft, CreditCard, Download, History, MessageCircle, Plus, Trash2, RefreshCw, Search, Settings2, ShieldCheck, Wallet } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { executeFinanceTreasuryAction, executeFinanceTreasuryCorrectionAction, fetchFinanceAccountStatementAction, fetchFinanceTreasuryAction, fetchFinanceTreasuryHistoryAction } from "@/app/actions/finance-treasury";
 import { getPrimaryFinanceAccount, type FinanceSnapshot } from "@/lib/finance/brand-finance";
@@ -24,7 +24,7 @@ const groups = [
   { kind: "bank" as const, label: "الحسابات البنكية", single: "حساب بنكي", limit: 5, icon: Building2, hint: "المبالغ المستلمة والمسجلة في البنك" },
   { kind: "pos" as const, label: "نقاط الشبكة", single: "نقطة شبكة", limit: 3, icon: CreditCard, hint: "تحصيلات الشبكة بانتظار التسوية البنكية" },
 ];
-const operationLabels: Record<string, string> = { account_save: "تحديث الحساب", account_primary: "تعيين الحساب الرئيسي", account_archive: "تغيير حالة الحساب", opening: "رصيد افتتاحي", voucher: "سند مالي", transfer: "تحويل داخلي", pos_settle: "تسوية شبكة", pos_fee_pay: "سداد رسوم الشبكة", reconcile: "مطابقة رصيد", reversal: "قيد عكسي", reset: "تصفير موثق" };
+const operationLabels: Record<string, string> = { account_save: "تحديث الحساب", account_delete: "حذف خزينة فارغة", account_primary: "تعيين الحساب الرئيسي", account_archive: "تغيير حالة الحساب", opening: "رصيد افتتاحي", voucher: "سند مالي", transfer: "تحويل داخلي", pos_settle: "تسوية شبكة", pos_fee_pay: "سداد رسوم الشبكة", reconcile: "مطابقة رصيد", reversal: "قيد عكسي", reset: "تصفير موثق" };
 const documentLabels: Record<string, string> = { sale: "مبيعات", purchase: "مشتريات", refund: "مرتجع", receipt: "سند قبض", expense: "سند صرف", transfer: "تحويل", opening: "رصيد افتتاحي", pos_settle: "تسوية شبكة", pos_fee_pay: "سداد رسوم الشبكة", settlement: "سداد", journal: "قيد محاسبي", reversal: "قيد عكسي" };
 const message = (error: unknown) => error instanceof Error ? error.message : "تعذر إتمام الطلب أعد المحاولة";
 const amount = (value: string | undefined) => Number(value || 0);
@@ -74,6 +74,8 @@ export function FinanceTreasury({ snapshot, slug, onRefresh, initialAccountId, o
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [handoverReceiptOpen, setHandoverReceiptOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [increaseOpen, setIncreaseOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const busy = useRef(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const statementSequence = useRef(0);
@@ -161,9 +163,10 @@ export function FinanceTreasury({ snapshot, slug, onRefresh, initialAccountId, o
         if (result.data.document_id) setDocument({ id: result.data.document_id, number: result.data.number, kind: "opening", note: String(payload.note ?? ""), canReverse: false });
       }
       if (operation === "reverse") setDocument(null);
+      if (operation === "account_delete") { setDeleteConfirm(false); setSelected(null); onCloseAccount?.(); setNotice("تم حذف الخزينة الفارغة وتسجيل الإجراء"); }
       try {
         const updated = await fetchFinanceTreasuryAction(slug); if (!updated.ok) throw new Error(updated.message); setData(updated.data);
-        if (selected) await loadStatement(selected, offset, appliedPeriod);
+        if (selected && operation !== "account_delete") await loadStatement(selected, offset, appliedPeriod);
         onRefresh();
       } catch { setStale(true); setError("تم حفظ العملية لكن تعذر تحديث الأرصدة حدّث البيانات قبل تسجيل عملية أخرى"); }
       return true;
@@ -226,19 +229,19 @@ export function FinanceTreasury({ snapshot, slug, onRefresh, initialAccountId, o
     <label className={styles.checkbox}><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />إظهار الحسابات المؤرشفة</label>
     <div className={styles.groups} aria-busy={loading}>
       {groups.map((group) => {
-        const count = active.filter((account) => account.kind === group.kind && !account.is_cashier_drawer).length;
+        const count = (group.kind === "cash" ? accounts : active).filter((account) => account.kind === group.kind).length;
         const rows = accounts.filter((account) => account.kind === group.kind && (showArchived || account.active) && `${account.name} ${account.code}`.includes(query.trim()));
         return <section className={styles.group} key={group.kind}><header><div className={styles.groupName}><group.icon size={20} aria-hidden="true" /><h3>{group.label}</h3><span>{count} / {group.limit}</span></div><p>{group.hint}</p></header>
           <div className={styles.accounts}>{rows.map((account) => <div className={styles.accountCard} key={account.id}><button className={styles.account} onClick={() => openAccount(account.id)} aria-label={`عرض حساب ${account.name}`}><div><div className={styles.accountName}><strong>{account.name}</strong>{account.is_cashier_drawer && <span className={styles.primaryBadge}>صندوق الكاشير</span>}{account.active && account.is_primary && <span className={styles.primaryBadge}><Check size={12} aria-hidden="true" />رئيسي</span>}</div><small>{account.kind === "pos" ? accountLabel(accounts.find((bank) => bank.id === account.linked_bank_id)) || "يحتاج ربطًا بحساب بنكي" : account.bank_name || accountCaption(account)}</small></div><div className={styles.accountAmount}><strong><Numeric value={account.balance} money /></strong><small>{!account.active ? "مؤرشف" : account.opening_recorded_at ? "الرصيد الحالي" : "الرصيد الافتتاحي غير مسجل"}</small></div><ChevronLeft size={18} aria-hidden="true" /></button>{account.active && !account.is_primary && !account.is_cashier_drawer && <div className={styles.accountCardActions}><button className={styles.setPrimary} type="button" disabled={!editable} aria-label={`تعيين ${account.name} كرئيسي`} onClick={() => void execute("account_primary", { accountId: account.id })}>تعيين كرئيسي</button></div>}</div>)}{rows.length === 0 && <div className={styles.empty}>{loading ? "جارٍ تحميل الحسابات" : "لا توجد حسابات مطابقة"}</div>}</div>
-          <footer><button className={styles.add} disabled={!editable || count >= group.limit} onClick={() => openForm("account_save", `إضافة ${group.single}`, { kind: group.kind, name: "", openingAmount: "0", ...(group.kind === "pos" ? { linkedBankId: preferredAccount("bank")?.id ?? "" } : {}) })}><Plus size={16} aria-hidden="true" />إضافة {group.single}</button><small>{count >= group.limit ? "وصلت للعدد المتاح" : `الأساسي واحد ويمكن إضافة حتى ${group.limit}`}</small></footer>
-          {group.kind === "cash" && <footer><button className={styles.add} disabled={!editable} onClick={() => openForm("account_save", "إضافة صندوق كاشير", { kind: "cash", cashierDrawer: "true", name: "", openingAmount: "0" })}><Plus size={16} aria-hidden="true" />إضافة صندوق كاشير</button><small>صندوق مستقل لكل جهاز كاشير</small></footer>}
+          <footer><div className={styles.actions}><button className={styles.add} disabled={!editable || count >= group.limit} onClick={() => openForm("account_save", `إضافة ${group.single}`, { kind: group.kind, name: "", openingAmount: "0", ...(group.kind === "pos" ? { linkedBankId: preferredAccount("bank")?.id ?? "" } : {}) })}><Plus size={16} aria-hidden="true" />إضافة {group.single}</button>{group.kind === "cash" && <button type="button" className={styles.secondary} disabled={!editable} onClick={() => setIncreaseOpen(true)}><MessageCircle size={16} aria-hidden="true" />طلب زيادة خزينة</button>}</div><small>{count >= group.limit ? "وصلت للعدد المتاح" : group.kind === "cash" ? "٣ خزائن تشمل صناديق الكاشير" : `الأساسي واحد ويمكن إضافة حتى ${group.limit}`}</small></footer>
+          {group.kind === "cash" && <footer><button className={styles.add} disabled={!editable || count >= group.limit} onClick={() => openForm("account_save", "إضافة صندوق كاشير", { kind: "cash", cashierDrawer: "true", name: "", openingAmount: "0" })}><Plus size={16} aria-hidden="true" />إضافة صندوق كاشير</button><small>صندوق مستقل لكل جهاز كاشير</small></footer>}
         </section>;
       })}
     </div>
     <div className={styles.note}><ShieldCheck size={19} aria-hidden="true" /><p>الأرصدة تتغير بالمستندات المسجلة فقط وتبقى الحركات محفوظة بعد أرشفة الحساب التصحيح والتصفير من صلاحيات أدمن برندة عبر الدخول بالنيابة</p></div>
     </>}
 
-    <Modal open={!receiptOpen && !handoverReceiptOpen && (!!selected || !!form || !!document)} title={form?.title ?? (document ? `مستند ${document.number ? `#${document.number}` : "الخزينة"}` : selectedAccount?.name ?? "كشف الحساب")} onClose={close} panelClassName={`${styles.dialog} ${form ? styles.formDialog : ""}`}>
+    <Modal open={!increaseOpen && !deleteConfirm && !receiptOpen && !handoverReceiptOpen && (!!selected || !!form || !!document)} title={form?.title ?? (document ? `مستند ${document.number ? `#${document.number}` : "الخزينة"}` : selectedAccount?.name ?? "كشف الحساب")} onClose={close} panelClassName={`${styles.dialog} ${form ? styles.formDialog : ""}`}>
       <div className={styles.root}>
         {form ? <form className={styles.form} onSubmit={submit}>
           {error && <div className={styles.error} role="alert">{error}</div>}
@@ -328,6 +331,7 @@ export function FinanceTreasury({ snapshot, slug, onRefresh, initialAccountId, o
           {tab === "settings" && <div className={styles.settings}>
             <div className={styles.settingRow}><div><h3>بيانات الحساب</h3><p>{selectedAccount.name}{selectedAccount.iban && <><br /><bdi>{selectedAccount.iban}</bdi></>}</p></div><button className={styles.secondary} disabled={!editable} onClick={() => openForm("account_save", "تعديل بيانات الحساب", { id: selectedAccount.id, kind: selectedAccount.kind, name: selectedAccount.name, bankName: selectedAccount.bank_name, iban: selectedAccount.iban, terminalId: selectedAccount.terminal_id, linkedBankId: selectedAccount.linked_bank_id ?? "", ...(selectedAccount.kind === "pos" ? { transactionFeePercent: String(selectedAccount.transaction_fee_percent ?? 0), monthlySubscription: String(selectedAccount.monthly_subscription ?? 0), monthlyDueDay: String(selectedAccount.monthly_due_day ?? 1), feeVatRate: String(selectedAccount.fee_vat_rate ?? 0) } : {}) })}>تعديل البيانات</button></div>
             <div className={styles.settingRow}><div><h3>الرصيد الافتتاحي</h3><p>{selectedAccount.opening_recorded_at ? <>مسجل بتاريخ {financeDate(selectedAccount.opening_recorded_at)}<br /><Numeric value={selectedAccount.opening_amount ?? 0} money /></> : "يسجل مرة واحدة قبل بدء الحركات على الحساب"}</p></div><button className={styles.secondary} disabled={!editable || !!selectedAccount.opening_recorded_at || !selectedAccount.active} onClick={() => openForm("opening", "تسجيل الرصيد الافتتاحي", { amount: "0" })}>{selectedAccount.opening_recorded_at ? "تم التسجيل" : "تسجيل الرصيد الافتتاحي"}</button></div>
+            {selectedAccount.kind === "cash" && <div className={styles.settingRow}><div><h3>حذف الخزينة</h3><p>{selectedAccount.can_delete ? "يمكن حذف الخزينة الفارغة مع الاحتفاظ بسجل إجراء الحذف" : "الحذف متاح للخزائن الإضافية غير الرئيسية التي لم تسجل حركات أو ورديات أو ارتباطات"}</p></div><button type="button" className={styles.secondary} disabled={!editable || !selectedAccount.can_delete} onClick={() => { setError(""); setDeleteConfirm(true); }}><Trash2 size={16} aria-hidden="true" />حذف الخزينة</button></div>}
             <div className={styles.settingRow}><div><h3>{selectedAccount.active ? "أرشفة الحساب" : "إعادة تفعيل الحساب"}</h3><p>توقف الأرشفة استخدام الحساب وتبقى جميع حركاته محفوظة</p>{archiveReasons.length > 0 && <ul id="treasury-archive-reasons" className={styles.archiveReasons}>{archiveReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}</div><button className={styles.secondary} aria-describedby={archiveReasons.length ? "treasury-archive-reasons" : undefined} disabled={!editable || archiveReasons.length > 0} onClick={() => void execute("account_archive", { accountId: selectedAccount.id, active: !selectedAccount.active, note: selectedAccount.active ? "أرشفة الحساب من إدارة الخزينة" : "إعادة تفعيل الحساب من إدارة الخزينة" })}><Archive size={16} />{selectedAccount.active ? "أرشفة الحساب" : "إعادة التفعيل"}</button></div>
             <div className={styles.note}><ShieldCheck size={18} /><p>{data?.canCorrect ? "جلسة أدمن برندة بالنيابة مفعلة وتتوفر صلاحية التصحيحات الموثقة" : "التصفير وتصحيح القيود يتطلبان أدمن برندة من خلال الدخول بالنيابة"}</p></div>
             {data?.canCorrect && <div className={styles.settingRow}><div><h3>تصفير موثق لرصيد الحساب</h3><p>صلاحية أدمن برندة فقط مع حفظ جميع القيود السابقة وسبب التصحيح</p></div><button className={styles.secondary} disabled={!editable || Math.abs(selectedAccount.balance) < .01} onClick={() => openForm("reset", "تصفير رصيد الحساب", { accountId: selectedAccount.id })}>تصفير الرصيد</button></div>}
@@ -337,6 +341,8 @@ export function FinanceTreasury({ snapshot, slug, onRefresh, initialAccountId, o
         <span hidden data-treasury-brand={effectiveSlug} />
       </div>
     </Modal>
+    {increaseOpen && <Modal open title="طلب زيادة خزينة" onClose={() => setIncreaseOpen(false)} panelClassName={`${styles.dialog} ${styles.smallDialog}`}><div className={styles.requestBody}><span className={styles.requestIcon}><MessageCircle size={28} aria-hidden="true" /></span><h3>تحتاج خزينة إضافية لعلامتك</h3><p>الباقة تشمل ٣ خزائن بما فيها صناديق الكاشير تواصل معنا على واتساب لطلب زيادة العدد</p><bdi dir="ltr">0508424401</bdi><a className={styles.primary} href={`https://wa.me/966508424401?text=${encodeURIComponent(`مرحبًا أود طلب زيادة خزينة لعلامة ${snapshot.cafe.name}`)}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} aria-hidden="true" />تواصل معنا على واتساب</a><small>يفتح واتساب لإرسال طلبك ولا تتم زيادة العدد تلقائيًا</small></div></Modal>}
+    {deleteConfirm && selectedAccount && <Modal open title="حذف الخزينة" onClose={() => { if (!pending) setDeleteConfirm(false); }} panelClassName={`${styles.dialog} ${styles.smallDialog}`}><div className={styles.requestBody}><span className={styles.requestIcon}><Trash2 size={28} aria-hidden="true" /></span><h3>{selectedAccount.name}</h3><p>سيتم حذف هذه الخزينة من الحسابات المتاحة وإفراغ مكانها ضمن العدد المسموح</p><small>يتحقق النظام من عدم وجود حركات أو ورديات قبل الحذف ويحتفظ بسجل الإجراء</small>{error && <div className={styles.error} role="alert">{error}</div>}<div className={styles.actions}><button type="button" className={styles.secondary} disabled={pending} onClick={() => setDeleteConfirm(false)}>إلغاء</button><button type="button" className={styles.primary} disabled={pending || !editable} onClick={() => void execute("account_delete", { accountId: selectedAccount.id, note: "حذف خزينة فارغة من إدارة الخزينة" })}>{pending ? "جارٍ الحذف" : "تأكيد حذف الخزينة"}</button></div></div></Modal>}
     {receiptOpen && invoiceDocument && <FinanceReceiptDialog document={invoiceDocument} snapshot={snapshot} onClose={() => setReceiptOpen(false)} />}
     {handoverReceiptOpen && <FinanceCashHandovers receiptOnly snapshot={{ ...snapshot, accounts }} slug={effectiveSlug} onClose={() => setHandoverReceiptOpen(false)} onReceived={() => { setHandoverReceiptOpen(false); setForm(null); setDraftFiles([]); void refresh(); onRefresh(); }} />}
   </div>;

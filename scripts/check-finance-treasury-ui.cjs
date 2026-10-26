@@ -68,7 +68,13 @@ async function main() {
   {
     const data = fixture(); data.accounts.push(account('cash2', 'cash'), account('drawer', 'cash', 0, { is_cashier_drawer: true }));
     const h = harness({ data }); let tree = await ready(h);
-    assert.equal(button(tree, 'إضافة خزينة').props.disabled, false, 'Cashier drawer does not consume ordinary treasury quota');
+    assert.equal(button(tree, 'إضافة خزينة').props.disabled, true, 'Cashier drawer consumes shared treasury quota');
+    assert.equal(button(tree, 'إضافة صندوق كاشير').props.disabled, true, 'Cashier drawer cannot bypass quota');
+    button(tree, 'طلب زيادة خزينة').props.onClick(); tree = h.render();
+    const contact = find(tree, node => node.type === 'a' && node.props.href?.startsWith('https://wa.me/'));
+    assert.equal(new URL(contact.props.href).pathname, '/966508424401');
+    assert.match(decodeURIComponent(contact.props.href), /طلب زيادة خزينة/);
+    find(tree, node => node.type?.name === 'Modal' && node.props.title === 'طلب زيادة خزينة').props.onClose(); tree = h.render();
     assert.match(text(tree), /صندوق الكاشير/);
     assert.ok(!nodes(tree).some(node => node.type === 'button' && node.props['aria-label'] === 'تعيين drawer كرئيسي'));
     button(tree, 'سند قبض').props.onClick(); tree = h.render(); button(tree, 'استيراد تسليم وردية').props.onClick(); tree = h.render();
@@ -76,6 +82,20 @@ async function main() {
     const picker = find(tree, node => node.type?.name === 'FinanceCashHandovers'); assert.equal(picker.props.receiptOnly, true);
     picker.props.onReceived({ id: 'receipt', number: 1 }); tree = h.render(); assert.ok(!nodes(tree).some(node => node.type === 'form'));
     assert.equal(h.saved.length, 0, 'Dedicated handover receipt never posts generic income voucher'); checks++;
+  }
+  {
+    const data = fixture(); data.accounts.push(account('empty-safe','cash',0,{can_delete:true}));
+    const h=harness({data});let tree=await ready(h);
+    find(tree,n=>n.type==='button'&&n.props['aria-label']==='عرض حساب empty-safe').props.onClick();tree=h.render();
+    button(tree,'إعدادات الحساب').props.onClick();tree=h.render();
+    assert.equal(button(tree,'حذف الخزينة').props.disabled,false);
+    button(tree,'حذف الخزينة').props.onClick();tree=h.render();
+    assert.equal(h.saved.length,0,'Delete requires explicit confirmation');
+    button(tree,'إلغاء').props.onClick();tree=h.render();assert.equal(h.saved.length,0);
+    button(tree,'حذف الخزينة').props.onClick();tree=h.render();
+    await button(tree,'تأكيد حذف الخزينة').props.onClick();await settled();tree=h.render();
+    assert.equal(h.saved[0][0],'account_delete');assert.equal(h.saved[0][1].accountId,'empty-safe');
+    assert.match(text(tree),/تم حذف الخزينة الفارغة/);checks++;
   }
   for (const [label, kind] of [['إضافة خزينة', 'cash'], ['إضافة حساب بنكي', 'bank']]) {
     const h = harness(); let tree = await ready(h);

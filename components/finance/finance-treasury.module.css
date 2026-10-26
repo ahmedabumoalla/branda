@@ -60,6 +60,14 @@
 .dialog > :first-child button { border: 1px solid var(--line); background: var(--cream); border-radius: 12px; min-width: 44px; min-height: 44px; }
 .dialog > :nth-child(2) { padding: 24px 28px; background: var(--cream); scrollbar-gutter: stable; scroll-padding-block: 20px 110px; }
 .dialog :is(button,input,select,textarea,a,[tabindex="0"]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.smallDialog { max-width: 520px; }
+.requestBody { display: grid; justify-items: center; gap: 16px; text-align: center; padding-block: 8px; }
+.requestBody h3 { margin: 0; font-size: 20px; }
+.requestBody p { margin: 0; line-height: 1.9; color: var(--muted); font-size: 14px; }
+.requestBody small { color: var(--muted); line-height: 1.8; font-size: 12px; }
+.requestBody bdi { font-size: 23px; font-weight: 800; letter-spacing: 1px; }
+.requestBody a { text-decoration: none; width: 100%; }
+.requestIcon { display: grid; place-items: center; width: 60px; height: 60px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--accent); }
 .formDialog { max-width: 940px; }
 .formDialog > :nth-child(2) { padding-bottom: 0; }
 .accountHeading { margin-bottom: 20px; padding: 20px 24px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
