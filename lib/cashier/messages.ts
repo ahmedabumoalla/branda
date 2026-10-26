@@ -1,5 +1,7 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "بحث جديد": "New search",
+  "تفاصيل وشروط المكافأة": "Reward details and terms",
   "أدخل رقم جوال سعودي صحيح يبدأ بـ 05": "Enter a valid Saudi mobile number starting with 05",
   "طريقة البحث عن العميل": "Customer lookup method",
   "البطاقة أو الباركود": "Card or barcode",

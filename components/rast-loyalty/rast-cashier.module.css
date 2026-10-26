@@ -36,6 +36,20 @@
 .scanForm { display: grid; gap: 8px; margin-block: 14px 10px; }
 .scanForm input { font-size: 16px; }
 .scanForm button { font-size: 14px; }
+.preview { min-width: 0; border-radius: 12px; }
+.preview:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 4px; }
+.previewTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.previewTop button { min-height: 44px; padding: 6px 10px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); border-radius: 10px; font-weight: 600; }
+.previewTop button:focus-visible, .confirmButton:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 3px; }
+.previewStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-block: 10px; font-size: 12px; }
+.previewStats > div { padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--cashier-ink) 5%, transparent); }
+.previewStats dd { text-align: start; direction: ltr; unicode-bidi: isolate; }
+.confirmButton { display: block; width: 100%; min-height: 44px; margin-top: 12px; padding: 10px; border-radius: 12px; background: var(--cashier-ink); color: var(--cashier-button-text); font-size: 14px; font-weight: 700; }
+.confirmButton:disabled, .previewTop button:disabled { opacity: .5; }
+.rewardTerms { font-size: 13px; line-height: 1.65; }
+.rewardTerms summary { min-height: 44px; padding-block: 10px; cursor: pointer; font-weight: 600; }
+.rewardTerms summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; }
+.rewardTerms p { margin-block: 6px; }
 .guide { border: 1px solid color-mix(in srgb, var(--cashier-ink) 16%, transparent); border-radius: 14px; padding-inline: 12px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .guide summary { min-height: 44px; padding-block: 10px; font-weight: 700; cursor: pointer; }
 .guide summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; border-radius: 6px; }
