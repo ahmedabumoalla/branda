@@ -28,6 +28,7 @@ export type CashHandoversPage = {
   hasMore: boolean;
   canReceive: boolean;
   cashierDrawerId: string;
+  cashierDrawers?: { id: string; name: string; busy: boolean }[];
   accountants: { user_id: string; name: string }[];
 };
 

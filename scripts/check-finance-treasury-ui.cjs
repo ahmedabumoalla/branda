@@ -329,6 +329,15 @@ async function main() {
     h.state.nextError = null; target(tree).props.onClick(); await settled(); h.render();
     assert.equal(h.saved[0][2], h.saved[1][2], 'Retry preserves primary command identity'); checks++;
   }
+  {
+    const h = harness(); let tree = await ready(h);
+    button(tree, 'إضافة صندوق كاشير').props.onClick(); tree = h.render();
+    input(tree, 'name').props.onChange({ target: { value: 'Cashier 2' } }); tree = h.render();
+    input(tree, 'openingAmount').props.onChange({ target: { value: '100' } }); tree = h.render();
+    await form(tree).props.onSubmit({ preventDefault() {} });
+    assert.equal(h.saved[0][0], 'account_save'); assert.equal(h.saved[0][1].cashierDrawer, true); assert.equal(h.saved[0][1].kind, 'cash'); assert.equal(h.saved[0][1].openingAmount, 100);
+    const readonly = harness({ snapshot: { canManage: false } }); assert.equal(button(await ready(readonly), 'إضافة صندوق كاشير').props.disabled, true); checks++;
+  }
   const css = fs.readFileSync('components/finance/finance-treasury.module.css', 'utf8');
   assert.match(css, /prefers-reduced-motion/); assert.match(css, /focus-visible/); assert.match(css, /100dvh/); assert.match(css, /\.tableWrap \{ overflow: auto/); checks++;
   process.stdout.write(`Treasury UI: ${checks} behavior groups passed\n`);
