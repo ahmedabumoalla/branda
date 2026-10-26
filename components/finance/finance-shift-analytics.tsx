@@ -61,7 +61,13 @@ export function ShiftAnalyticsView({ report }: { report: ShiftAnalytics }) {
     const link = document.createElement("a"); link.href = url; link.download = `shift-${report.shiftId}-products.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <>
-    <div className={s.duration}><div><span><Clock3 size={16} />مدة الوردية {report.closedAt ? "النهائية" : "حتى الآن"}</span><strong>{d.days > 0 && `${number(d.days, 0)} يوم و`}{d.hours > 0 && `${number(d.hours, 0)} ساعة و`}{d.totalMinutes < 1 ? "أقل من دقيقة" : `${number(d.minutes, 0)} دقيقة`}</strong><small>من {date(report.openedAt)}{report.closedAt ? ` إلى ${date(report.closedAt)}` : " وحتى وقت التقرير"}</small></div><div className={s.durationUnits}><span><b>{number(d.totalMinutes)}</b>دقيقة</span><span><b>{number(d.totalHours)}</b>ساعة</span><span><b>{number(d.totalDays)}</b>يوم</span></div></div>
+    <div className={s.duration}>
+      <div><span><Clock3 size={16} />مدة الوردية {report.closedAt ? "النهائية" : "حتى الآن"}</span><strong>{d.days > 0 && `${number(d.days, 0)} يوم و`}{d.hours > 0 && `${number(d.hours, 0)} ساعة و`}{d.totalMinutes < 1 ? "أقل من دقيقة" : `${number(d.minutes, 0)} دقيقة`}</strong><small>من {date(report.openedAt)}{report.closedAt ? ` إلى ${date(report.closedAt)}` : " وحتى وقت التقرير"}</small></div>
+      <div className={s.durationReading}>
+        <div className={s.durationUnits} aria-label="تفصيل المدة بالأيام والساعات والدقائق"><span><b>{number(d.days, 0)}</b>يوم</span><span><b>{number(d.hours, 0)}</b>ساعة</span><span><b>{number(d.minutes, 0)}</b>دقيقة</span></div>
+        <small className={s.durationTotal}>{d.totalMinutes < 1 ? "الإجمالي أقل من دقيقة" : `الإجمالي ${number(Math.floor(d.totalHours), 0)} ساعة و${number(d.minutes, 0)} دقيقة`}</small>
+      </div>
+    </div>
     <div className={s.metrics}>
       <Metric title="صافي المبيعات" value={<Numeric value={t.netSales} money />} hint="بعد المرتجعات شامل الضريبة" icon={<TrendingUp size={18} />} />
       <Metric title="فواتير البيع" value={number(t.salesCount, 0)} hint={`${number(t.netQuantity, 3)} صافي الوحدات المباعة`} icon={<ShoppingBag size={18} />} />
