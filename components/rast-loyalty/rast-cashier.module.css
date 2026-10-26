@@ -1,13 +1,32 @@
+/* The cashier may also run in a narrow embedded panel. Size to its container. */
+.page { min-height: 100dvh; min-width: 0; width: 100%; padding: 12px; background: var(--cashier-paper); color: var(--cashier-ink); }
+.page, .page * { box-sizing: border-box; }
 .frame { width: 100%; max-width: 56rem; min-width: 0; margin-inline: auto; container-type: inline-size; }
-.header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
+.header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
 .identity { min-width: 0; overflow-wrap: anywhere; }
-.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-width: 0; }
-.tools > * { flex-shrink: 0; max-width: 100%; }
-.tools a, .tools button { white-space: nowrap; }
-.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.identity img { width: 88px; height: 40px; }
+.title { margin-top: 6px; font-size: 22px; font-weight: 700; line-height: 1.4; }
+.greeting { margin-top: 4px; font-size: 13px; line-height: 1.65; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.tools > * { min-width: 0; max-width: 100%; }
+.tools a, .tools button { min-height: 44px; padding-inline: 12px; font-size: 13px; white-space: normal; }
+.tools svg, .tabs svg { flex-shrink: 0; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
 .body > * { min-width: 0; }
+.scanPanel { min-width: 0; padding: 14px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); border-radius: 20px; background: rgb(255 255 255 / 60%); overflow-wrap: anywhere; }
+.tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.scanTitle { font-size: 18px; font-weight: 700; line-height: 1.5; }
+.scanHelp { margin-top: 6px; font-size: 13px; line-height: 1.7; }
+.scanForm { display: grid; gap: 8px; margin-block: 14px 10px; }
+.scanForm input { font-size: 16px; }
+.scanForm button { font-size: 14px; }
+.guide { border: 1px solid color-mix(in srgb, var(--cashier-ink) 16%, transparent); border-radius: 14px; padding-inline: 12px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.guide summary { min-height: 44px; padding-block: 10px; font-weight: 700; cursor: pointer; }
+.guide summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; border-radius: 6px; }
+.guideContent { display: grid; gap: 10px; padding-bottom: 6px; }
 @container (min-width: 48rem) {
-  .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 48px; }
+  .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 20px; }
   .tools { max-width: 28rem; justify-content: flex-end; }
-  .body { grid-template-columns: minmax(0, 1fr) 240px; }
+  .body { grid-template-columns: minmax(0, 1fr) 220px; gap: 20px; }
+  .scanPanel { padding: 20px; }
 }
