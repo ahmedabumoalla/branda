@@ -48,7 +48,6 @@ export function invoicePayload(data: FinanceSnapshot, invoice: Invoice) {
   const lines = invoice.lines.map(line => {
     const product = data.products.find(item => item.id === line.productId && item.available);
     if (!product || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > 9999) throw new Error("راجع الأصناف والكميات قبل الحفظ");
-    if (product.stockTracked && line.quantity > (data.stock.find(item => item.item_id === product.itemId && item.warehouse_id === invoice.warehouseId)?.quantity ?? 0)) throw new Error(`الكمية المتاحة من ${product.name} أقل من المطلوب`);
     return { productId: product.id, quantity: line.quantity, expectedUnitPrice: product.price };
   });
   const totals = invoicePreview(data, invoice);

@@ -61,6 +61,7 @@ async function main() {
 
   const uiHooks = hooks(); const saved = [];
   let current = structuredClone(base);
+  current.stock[0].quantity = -1;
   const uiState = { get snapshot() { return current; }, pending: false, stale: false, error: '', message: '', historyMore: {}, clearFeedback() {}, refresh: async () => {}, execute: async (operation, payload) => { saved.push({ operation, payload }); return { id: 'saved', number: 1 }; } };
   const { FinancePOS, financeDiscount, financeCartLines } = load('components/finance/finance-pos.tsx', { ...shared, react: uiHooks.api, './use-finance': { useFinance: () => uiState } });
   const render = () => uiHooks.render(FinancePOS, { initialSnapshot: current, slug: 'test-brand' });
@@ -74,7 +75,9 @@ async function main() {
   assert.equal(find(dashboardReturnTree, node => node.type?.name === 'Link' && text(node) === 'الإدارة المالية').props.href, '/dashboard/finance'); groups++;
   const image = find(tree, node => node.type === ImageMock);
   assert.equal(image.props.src, current.products[0].imageUrl); assert.equal(image.props.unoptimized, true, 'Private images retain authenticated source request');
-  find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); tree = render();
+  const negativeStockProduct = find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة'));
+  assert.equal(negativeStockProduct.props.disabled, false, 'Negative inventory must not disable selling');
+  negativeStockProduct.props.onClick(); tree = render();
   find(tree, node => node.type === 'button' && node.props['aria-label'] === 'زيادة كمية قهوة').props.onClick(); tree = render();
   field(tree, 'الخصم').props.onChange({ target: { value: '10' } }); tree = render();
   field(tree, 'نوع الخصم').props.onChange({ target: { value: 'percent' } }); tree = render();
@@ -171,7 +174,8 @@ async function main() {
   const posted = invoices.invoicePayload(base, draft);
   assert.equal(posted.expectedTotal, 41.4); assert.equal(posted.discount, 4.6); assert.equal(posted.shiftId, 'shift'); assert.equal(posted.lines[0].expectedUnitPrice, 23); assert.equal(posted.note, 'invoice');
   assert.equal(invoices.invoicePayload({ ...base, settings: { ...base.settings, tax_inclusive: false } }, draft).expectedTotal, 47.61);
-  for (const change of [{ lines: [] }, { lines: [draft.lines[0], draft.lines[0]] }, { lines: [{ ...draft.lines[0], quantity: NaN }] }, { lines: [{ ...draft.lines[0], quantity: 6 }] }, { lines: [{ ...draft.lines[0], productId: 'missing' }] }, { warehouseId: 'other' }, { discountValue: Infinity }, { discountValue: 101 }, { paymentKind: 'credit' }, { accountId: 'bank' }, { partyId: 'other' }]) assert.throws(() => invoices.invoicePayload(base, { ...draft, ...change }));
+  assert.equal(invoices.invoicePayload({...base,stock:[{...base.stock[0],quantity:-5}]}, {...draft,lines:[{...draft.lines[0],quantity:6}]}).lines[0].quantity,6,'Invoice entry permits negative inventory sales');
+  for (const change of [{ lines: [] }, { lines: [draft.lines[0], draft.lines[0]] }, { lines: [{ ...draft.lines[0], quantity: NaN }] }, { lines: [{ ...draft.lines[0], quantity: 10000 }] }, { lines: [{ ...draft.lines[0], productId: 'missing' }] }, { warehouseId: 'other' }, { discountValue: Infinity }, { discountValue: 101 }, { paymentKind: 'credit' }, { accountId: 'bank' }, { partyId: 'other' }]) assert.throws(() => invoices.invoicePayload(base, { ...draft, ...change }));
   for (const change of [{ canManage: false }, { shifts: [] }, { shifts: [{ ...base.shifts[0], user_id: 'other' }] }, { products: [{ ...base.products[0], available: false }] }]) assert.throws(() => invoices.invoicePayload({ ...base, ...change }, draft));
   const credit = invoices.invoicePayload(base, { ...draft, paymentKind: 'credit', partyId: 'customer' }); assert(!('accountId' in credit)); assert.equal(credit.partyId, 'customer'); groups++;
   const exclusiveInvoice = { ...draft, vatRate: 10, taxInclusive: false };

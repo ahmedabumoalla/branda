@@ -1,5 +1,5 @@
 import type { FinanceDocument, FinanceSnapshot } from "./brand-finance";
-import { posScope, projectOfflineSales, type OfflineSale, type OfflineSession, type PosSyncResponse } from "./pos-offline";
+import { posScope, type OfflineSale, type OfflineSession, type PosSyncResponse } from "./pos-offline";
 
 const DB = "branda-pos-v1";
 let database: Promise<IDBDatabase> | undefined;
@@ -54,14 +54,7 @@ export async function storeOfflineSale(scope: string, payload: Record<string, un
   if (existing) { await done; if (existing.scope !== scope) throw new Error("الفاتورة مرتبطة بحساب آخر"); return existing; }
   const session = await read<OfflineSession | undefined>(tx.objectStore("sessions").get(scope));
   const active = await read<string | undefined>(meta.get("active"));
-  const pending = await read<OfflineSale[]>(sales.index("scope").getAll(scope));
   if (!session || active !== scope) { await done; throw new Error("سجل الدخول بنفس حساب الكاشير لحفظ الفاتورة"); }
-  const latest = projectOfflineSales(session.snapshot, pending);
-  for (const line of document.lines) {
-    const product = latest.products.find(item => item.itemId === line.item_id);
-    const requested = document.lines.filter(item => item.item_id === line.item_id).reduce((sum, item) => sum + item.quantity, 0);
-    if (product?.stockTracked && requested > (latest.stock.find(item => item.item_id === line.item_id && item.warehouse_id === document.warehouse_id)?.quantity ?? 0)) { await done; throw new Error("تغيرت الكمية المتاحة حدّث السلة ثم أعد المحاولة"); }
-  }
   const device = await read<string | undefined>(meta.get("device")) ?? crypto.randomUUID().slice(0, 8).toUpperCase();
   const counter = (await read<number | undefined>(meta.get("counter")) ?? 0) + 1;
   const localReference = `L-${device}-${String(counter).padStart(6, "0")}`;

@@ -120,8 +120,15 @@ async function main() {
     assert.equal((await storage.listOfflineSales(posScope(snapshot))).length, 1);
     assert.equal((await storage.listOfflineSales('brand-b:employee-a')).length, 0);
     assert.equal((await storage.activeOfflineSession()).scope, posScope(snapshot));
+    const emptyStock = {...snapshot,products:[{id:'product',itemId:'item',stockTracked:true}],stock:[{...snapshot.stock[0],quantity:0},snapshot.stock[1]]};
+    await storage.saveOfflineSnapshot(emptyStock,true);
+    const shortage = sale('negative-stock');
+    await storage.storeOfflineSale(posScope(snapshot), shortage.command.payload, shortage.document, shortage.id);
+    await storage.storeOfflineSale(posScope(snapshot), shortage.command.payload, shortage.document, shortage.id);
     const reopened = load('lib/finance/pos-offline-storage.ts');
-    assert.equal((await reopened.listOfflineSales(posScope(snapshot))).length, 1, 'A new connection reads committed rows');
+    const persisted = await reopened.listOfflineSales(posScope(snapshot));
+    assert.equal(persisted.length, 2, 'Negative stock sale persists and retry deduplicates across connections');
+    assert.equal(projectOfflineSales(emptyStock,persisted).stock[0].quantity,-4,'Pending sales show a negative inventory balance');
     await storage.lockOfflineSession(); assert.equal(await storage.activeOfflineSession(), undefined);
     console.log('PASS IndexedDB adapter transactions using fake-indexeddb (not physical browser persistence)');
   } else console.log('NOT RUN IndexedDB adapter persistence: fake-indexeddb is not installed; memory boundary tests cannot verify transaction lifetime, quota, browser eviction or multi-tab locks');

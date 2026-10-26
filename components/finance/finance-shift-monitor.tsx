@@ -7,6 +7,7 @@ import { executeBrandFinanceAction } from "@/app/actions/brand-finance";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
 import type { MonitoredShift, ShiftMonitorPage } from "@/lib/finance/shift-monitor";
 import { FinanceCashHandoverForm } from "./finance-cash-handover-form";
+import { FinanceShiftAnalytics } from "./finance-shift-analytics";
 import { Empty, financeDate, Numeric, Panel } from "./finance-ui";
 import styles from "./finance.module.css";
 import css from "./finance-shift-monitor.module.css";
@@ -20,6 +21,7 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
   const [page, setPage] = useState<ShiftMonitorPage | null>(null);
   const [detail, setDetail] = useState<ShiftMonitorPage | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [detailView, setDetailView] = useState<"analytics" | "operations">("analytics");
   const [query, setQuery] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -58,6 +60,7 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
   }, [slug, offset, query, from, to, selected, revision]);
   const shift = detail?.rows.find(row => row.id === selected);
   function open(row: MonitoredShift) {
+    setDetailView("analytics");
     setSelected(row.id); setDetail(null); setAction(null); setReason(""); setAcknowledged(false); setActionError(""); setSuccess("");
   }
   async function execute(payload: Record<string, unknown> = {}) {
@@ -96,6 +99,8 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
     {selected && <Modal open title={`الوردية رقم ${shift?.shift_number ?? "…"}`} onClose={() => { if (!saving) setSelected(null); }}>
       {!shift ? <p role="status">{error || "جار تحميل تفاصيل الوردية"}</p> : <div className={css.detail}>
         <div className={css.identity}><div><strong>{shift.employee_name}</strong><p>{shift.drawer_name}</p></div><Status shift={shift} /></div>
+        <div className={css.detailTabs} role="group" aria-label="عرض تفاصيل الوردية"><button type="button" disabled={saving} aria-pressed={detailView === "analytics"} onClick={() => setDetailView("analytics")}>تحليل الوردية</button><button type="button" disabled={saving} aria-pressed={detailView === "operations"} onClick={() => setDetailView("operations")}>الصندوق والإجراءات</button></div>
+        {detailView === "analytics" ? <FinanceShiftAnalytics key={shift.id} shiftId={shift.id} slug={slug} /> : <>
         <div className={css.facts}><div>البداية<strong>{financeDate(shift.opened_at)}</strong></div><div>الإقفال<strong>{financeDate(shift.closed_at)}</strong></div><div>النقدية المتوقعة<strong><Numeric value={shift.current_expected} money /></strong></div><div>النقدية المعدودة<strong>{shift.counted_cash == null ? "لم تسجل" : <Numeric value={shift.counted_cash} money />}</strong></div><div>فرق الإقفال<strong>{shift.variance == null ? "—" : <Numeric value={shift.variance} money />}</strong></div><div>آخر اتصال<strong>{shift.last_seen_at ? financeDate(shift.last_seen_at) : "لم يصل تحديث"}</strong></div></div>
         {shift.note && <p className={styles.notice}>{shift.note}</p>}
         <p className={styles.muted}>الفواتير المعلقة حسب آخر تحديث: {shift.pending_count} · تحتاج مراجعة: {shift.conflict_count}</p>
@@ -112,6 +117,7 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
           {action === "close" ? <><label className={css.confirm}><input type="checkbox" checked={acknowledged} disabled={saving} onChange={event => setAcknowledged(event.target.checked)} />راجعت حالة الجهاز والفواتير المحلية وأتحمل مسؤولية الإقفال الإداري</label><FinanceCashHandoverForm form={{ operation: "shift_close", title: "إقفال إداري", values: { shiftId: shift.id } }} snapshot={{ ...snapshot, shifts: [shift] }} pending={saving} error="" onCancel={() => setAction(null)} onSubmit={(_operation, payload) => execute(payload)} /></> : <div className={styles.actions}><button className={styles.primary} disabled={saving || reason.trim().length < 3} onClick={() => void execute()}>{saving ? "جار الحفظ" : "تأكيد الإجراء"}</button><button className={styles.secondary} disabled={saving} onClick={() => setAction(null)}>إلغاء</button></div>}
         </section>}
         <section><h3>سجل الإجراءات الرقابية</h3>{!detail?.actions.length ? <p className={styles.muted}>لا توجد إجراءات رقابية مسجلة</p> : detail.actions.map(item => <div key={item.id} className={css.audit}><strong>{actionNames[item.action]} · {item.actor_name}</strong><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh", dateStyle: "short", timeStyle: "medium" })}</time><p>{item.reason}</p></div>)}</section>
+        </>}
       </div>}
     </Modal>}
   </>;
