@@ -64,6 +64,15 @@ const tests = String.raw`
  const legacyDone=(await monitor(cafe,0,'',legacyPending)).rows[0];eq([legacyDone.expected_cash,legacyDone.variance],[10,-10],'finalizing legacy handover preserves original closing figures');
  const olderOpen=await scalar("INSERT INTO bf_shifts(cafe_id,user_id,account_id,opening_cash,expected_cash,opened_at) VALUES($1,$2,$3,$4,$4,now()-interval '20 days') RETURNING id",[cafe,owner,drawer,await balance(drawer)]);
  eq((await monitor()).rows[0].id,olderOpen,'older live shifts remain ahead of closed history');
+ await db.exec(await readFile('supabase/migrations/20261026234500_brand_finance_empty_shift_close.sql','utf8'));
+ const beforeEmptyHandover=await scalar('SELECT count(*) FROM bf_cash_handovers'),beforeEmptyDocs=await documentCount();
+ await fail(()=>run('shift_close',{...closePayload,shiftId:olderOpen,countedCash:5,handoverType:'no_cash'}),'nonzero cash cannot bypass handover');
+ eq(await documentCount(),beforeEmptyDocs,'failed no-cash close rolls back all variance posting');
+ const emptyRequest=crypto.randomUUID(),emptyPayload={...closePayload,shiftId:olderOpen,countedCash:0,handoverType:'no_cash'};
+ await run('shift_close',emptyPayload,emptyRequest);await run('shift_close',emptyPayload,emptyRequest);
+ eq((await monitor(cafe,0,'',olderOpen)).rows[0].status,'closed','empty shift closes');
+ eq(await scalar('SELECT count(*) FROM bf_cash_handovers'),beforeEmptyHandover,'empty close creates no fictitious handover and preserves existing ones');
+ eq(await documentCount(),beforeEmptyDocs,'zero balance closure creates no financial documents');
  console.log('Shift supervision and custody SQL: '+checks+' checks passed');
 `;
 const source = baseline.replace(' console.log(`Cash handover SQL: ${checks} checks passed`);', tests);

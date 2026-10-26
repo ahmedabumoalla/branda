@@ -40,6 +40,7 @@ export function FinanceCashHandoverForm({ form, snapshot, pending, error, onCanc
   const selectedDrawer = drawers.find(drawer => drawer.id === drawerId);
   const drawerName = snapshot.accounts.find(account => account.id === (opening ? drawerId : shift?.account_id))?.name ?? selectedDrawer?.name ?? "صندوق الكاشير";
   const busy = pending || saving;
+  const emptyDrawer = !opening && count !== "" && Number(count) === 0;
   useEffect(() => {
     let active = true;
     void fetchFinanceCashHandoversAction(0, slug).then(result => {
@@ -60,10 +61,10 @@ export function FinanceCashHandoverForm({ form, snapshot, pending, error, onCanc
     setLocalError("");
     if (count === "" || !Number.isFinite(Number(count)) || Number(count) < 0) { setLocalError("أدخل النقدية التي عددتها فعليًا حتى لو كانت صفرًا"); return; }
     if (opening && (!selectedDrawer || selectedDrawer.busy)) { setLocalError("اختر صندوق كاشير متاحًا لهذا الجهاز"); return; }
-    if (!opening && (!shift || !handoverType)) { setLocalError("اختر جهة تسليم النقدية قبل إقفال الوردية"); return; }
-    if (!opening && handoverType === "accountant" && !data.accountants.some(item => item.user_id === recipientUserId)) { setLocalError("اختر المحاسب المستلم من القائمة"); return; }
-    if (!opening && handoverType === "other" && (!recipientName.trim() || !recipientPhone.trim())) { setLocalError("أدخل اسم المستلم ورقم جواله"); return; }
-    const payload = opening ? { accountId: drawerId, openingCash: Number(count), note: note.trim() } : { shiftId: shift!.id, countedCash: Number(count), handoverType, ...(handoverType === "accountant" ? { recipientUserId } : handoverType === "other" ? { recipientName: recipientName.trim(), recipientPhone: recipientPhone.trim() } : {}), note: note.trim() };
+    if (!opening && (!shift || (!emptyDrawer && !handoverType))) { setLocalError("اختر جهة تسليم النقدية قبل إقفال الوردية"); return; }
+    if (!opening && !emptyDrawer && handoverType === "accountant" && !data.accountants.some(item => item.user_id === recipientUserId)) { setLocalError("اختر المحاسب المستلم من القائمة"); return; }
+    if (!opening && !emptyDrawer && handoverType === "other" && (!recipientName.trim() || !recipientPhone.trim())) { setLocalError("أدخل اسم المستلم ورقم جواله"); return; }
+    const payload = opening ? { accountId: drawerId, openingCash: Number(count), note: note.trim() } : { shiftId: shift!.id, countedCash: Number(count), handoverType: emptyDrawer ? "no_cash" : handoverType, ...(!emptyDrawer && handoverType === "accountant" ? { recipientUserId } : !emptyDrawer && handoverType === "other" ? { recipientName: recipientName.trim(), recipientPhone: recipientPhone.trim() } : {}), note: note.trim() };
     sending.current = true; setSaving(true);
     try {
       const saved = await onSubmit(opening ? "shift_open" : "shift_close", payload);
@@ -79,7 +80,8 @@ export function FinanceCashHandoverForm({ form, snapshot, pending, error, onCanc
       {opening && <><label className={styles.field}>صندوق هذا الجهاز<select name="accountId" required value={drawerId} onChange={event => { setDrawerId(event.target.value); setCount(""); setLocalError(""); }}><option value="">اختر صندوق الكاشير</option>{drawers.map(drawer => <option key={drawer.id} value={drawer.id} disabled={drawer.busy}>{drawer.name}{drawer.busy ? " — مشغول بوردية أخرى" : ""}</option>)}</select></label>{selectedDrawer?.busy && <p className={styles.error} role="alert">الصندوق المحفوظ لهذا الجهاز مشغول اختر صندوقًا آخر أو حدّث البيانات بعد إقفال ورديته</p>}</>}
       {opening ? <p className={styles.note}>يُحفظ اختيار الصندوق على هذا الجهاز بعد بدء الوردية عد نقدية هذا الصندوق فقط ثم سجّل المبلغ</p> : <><div className={styles.summary}><div><span>النقدية المتوقعة عند الإقفال</span><strong><Numeric value={shift?.expected_cash ?? 0} money /></strong></div>{([["cash", "المبيعات النقدية المحصلة"], ["pos", "مبيعات الشبكة المحصلة"], ["bank", "المبيعات المحصلة بتحويل بنكي"]] as const).map(([kind, label]) => <div key={kind}><span>{label}</span><strong>{salesTotal(kind) == null ? "غير متاح في الملخص الحالي" : <Numeric value={salesTotal(kind)!} money />}</strong></div>)}</div><p className={styles.note}>مبالغ المبيعات المحصلة قبل المرتجعات والمصروفات رصيد الإقفال المتوقع يشمل حركات الصندوق</p></>}
       <label className={styles.field}>{opening ? "النقدية المعدودة عند البداية" : "النقدية الموجودة في الصندوق"}<input name={opening ? "openingCash" : "countedCash"} required type="number" min="0" max="999999999" step="0.01" inputMode="decimal" dir="ltr" value={count} onChange={event => setCount(event.target.value)} /><small>عد النقد فقط وأدخل صفرًا إذا كان الصندوق فارغًا</small></label>
-      {!opening && <>
+      {emptyDrawer && <p className={styles.note}>الصندوق فارغ ستُقفل الوردية دون تسليم نقدي أو تحديد مستلم</p>}
+      {!opening && !emptyDrawer && <>
         <label className={styles.field}>تسليم نقدية الوردية<select name="handoverType" required value={handoverType} onChange={event => { setHandoverType(event.target.value as typeof handoverType); setRecipientUserId(""); setRecipientName(""); setRecipientPhone(""); }}><option value="">اختر جهة التسليم</option><option value="next_shift">للموظف في الوردية التالية</option><option value="accountant">للمحاسب</option><option value="other">لمستلم آخر</option></select></label>
         {handoverType === "next_shift" && <p className={styles.note}>{shift?.account_id !== data?.cashierDrawerId ? "يُحوّل المبلغ بقيد موثق من صندوق الوردية الحالي إلى صندوق كاشير الفرع للوردية التالية" : "يُسلّم المبلغ إلى صندوق كاشير الفرع حتى يعدّه موظف الوردية التالية ويبدأ ورديته"}</p>}
         {handoverType === "accountant" && <label className={styles.field}>المحاسب المستلم<select name="recipientUserId" required value={recipientUserId} onChange={event => setRecipientUserId(event.target.value)}><option value="">اختر المحاسب</option>{data?.accountants.map(item => <option key={item.user_id} value={item.user_id}>{item.name}</option>)}</select>{data?.accountants.length === 0 && <small>لا يوجد محاسب نشط في قائمة الفريق</small>}</label>}
@@ -88,6 +90,6 @@ export function FinanceCashHandoverForm({ form, snapshot, pending, error, onCanc
       </>}
       <label className={styles.field}>ملاحظة اختيارية<textarea name="note" maxLength={500} rows={2} value={note} onChange={event => setNote(event.target.value)} /></label>
     </fieldset>
-    <div className={styles.footer}><button type="submit" className={styles.primary} disabled={busy || !data || count === "" || (opening ? !selectedDrawer || selectedDrawer.busy : !handoverType || !shift)}>{busy ? "جارٍ الحفظ" : opening ? "بدء الوردية" : "إقفال الوردية وتسجيل التسليم"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={onCancel}>إلغاء</button></div>
+    <div className={styles.footer}><button type="submit" className={styles.primary} disabled={busy || !data || count === "" || (opening ? !selectedDrawer || selectedDrawer.busy : (!emptyDrawer && !handoverType) || !shift)}>{busy ? "جارٍ الحفظ" : opening ? "بدء الوردية" : emptyDrawer ? "إقفال الوردية دون نقدية" : "إقفال الوردية وتسجيل التسليم"}</button><button type="button" className={styles.secondary} disabled={busy} onClick={onCancel}>إلغاء</button></div>
   </form>;
 }

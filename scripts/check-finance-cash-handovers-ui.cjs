@@ -50,8 +50,8 @@ async function main(){let checks=0;
   await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'openingCash','0');await submit(tree);assert.deepEqual(h.saves[0],['shift_open',{accountId:'drawer',openingCash:0,note:''}]);checks++;
  }
  {
-  const h=harness('form');h.props.form={operation:'shift_close',values:{shiftId:'shift',expectedCash:9999}};let tree=await ready(h);assert.equal(field(tree,'handoverType').props.value,'');tree=change(h,tree,'countedCash','0');await submit(tree);assert.equal(h.saves.length,0);
-  tree=change(h,h.render(),'handoverType','other');await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'recipientName',' Person ');tree=change(h,tree,'recipientPhone',' 0500000000 ');await submit(tree);assert.deepEqual(h.saves[0],['shift_close',{shiftId:'shift',countedCash:0,handoverType:'other',recipientName:'Person',recipientPhone:'0500000000',note:''}]);checks++;
+  const h=harness('form');h.props.form={operation:'shift_close',values:{shiftId:'shift',expectedCash:9999}};let tree=await ready(h);assert.equal(field(tree,'handoverType').props.value,'');tree=change(h,tree,'countedCash','10');await submit(tree);assert.equal(h.saves.length,0);
+  tree=change(h,h.render(),'handoverType','other');await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'recipientName',' Person ');tree=change(h,tree,'recipientPhone',' 0500000000 ');await submit(tree);assert.deepEqual(h.saves[0],['shift_close',{shiftId:'shift',countedCash:10,handoverType:'other',recipientName:'Person',recipientPhone:'0500000000',note:''}]);checks++;
  }
  {
   const h=harness('form');h.props.form={operation:'shift_close',values:{shiftId:'shift'}};h.props.snapshot.shifts[0].account_id='old-cash';let tree=await ready(h);tree=change(h,tree,'countedCash','125');tree=change(h,tree,'handoverType','accountant');tree=change(h,tree,'recipientUserId','invalid');await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'recipientUserId','accountant');await submit(tree);assert.equal(h.saves[0][1].recipientUserId,'accountant');tree=change(h,h.render(),'handoverType','next_shift');assert.match(text(tree),/بقيد موثق/);await submit(tree);assert.ok(!('recipientUserId' in h.saves[1][1]));checks++;
@@ -71,6 +71,13 @@ async function main(){let checks=0;
  }
  {
   let release;const h=harness('list',{wait:new Promise(resolve=>release=resolve)});h.state.data.rows=[{...row,amount:0}];let tree=await ready(h);button(tree,'استلام بسند قبض').props.onClick();tree=h.render();assert.equal(field(tree,'handoverAmount').props.value,'0.00');const work=submit(tree);await submit(tree);assert.equal(h.saves.length,1);release();await work;checks++;
+ }
+ {
+  const h=harness('form');h.props.form={operation:'shift_close',values:{shiftId:'shift'}};let tree=await ready(h);
+  await submit(tree);assert.equal(h.saves.length,0,'blank count never becomes zero');
+  tree=change(h,tree,'countedCash','0');assert.ok(!nodes(tree).some(n=>n.props?.name==='handoverType'));await submit(tree);
+  assert.deepEqual(h.saves[0],['shift_close',{shiftId:'shift',countedCash:0,handoverType:'no_cash',note:''}]);
+  tree=change(h,h.render(),'countedCash','1');await submit(tree);assert.equal(h.saves.length,1,'positive cash still requires recipient');checks++;
  }
  const treasury=fs.readFileSync('components/finance/finance-treasury.tsx','utf8');assert.match(treasury,/!account.is_primary && !account.is_cashier_drawer/);assert.match(treasury,/صندوق الكاشير مخصص للورديات ولا يمكن أرشفته/);checks++;
  console.log(`PASS cash handovers UI ${checks} groups: blind auto drawer, required count/recipient, zero, legacy transfer hint, exact receipt without income, permissions, retry idempotency, pagination, double submit`);
