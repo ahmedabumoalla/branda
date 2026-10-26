@@ -1,5 +1,5 @@
 "use client";
-import { Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { CloudCheck, CloudOff, CloudUpload, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { usePosFinance } from "./use-pos-finance";
@@ -11,7 +11,8 @@ export function FinancePosOfflineStatus({ state }: { state: ReturnType<typeof us
   const label = `${state.connected ? "متصل" : "العمل دون اتصال"}${state.syncing ? " — جار المزامنة" : ""}${state.pending.length ? ` — ${state.pending.length} فاتورة بانتظار المزامنة` : ""}${conflicts.length ? " — توجد فواتير تحتاج مراجعة" : ""}`;
   return <>
     <button type="button" className={styles.connectionIcon} data-state={state.connected ? "online" : "offline"} data-conflict={conflicts.length > 0 || undefined} title={label} aria-label={`${label} — عرض تفاصيل المزامنة`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
-      {state.connected ? <Cloud size={25} aria-hidden="true" /> : <CloudOff size={25} aria-hidden="true" />}
+      {state.connected ? state.syncing ? <CloudUpload size={22} strokeWidth={1.8} aria-hidden="true" /> : <CloudCheck size={22} strokeWidth={1.8} aria-hidden="true" /> : <CloudOff size={22} strokeWidth={1.8} aria-hidden="true" />}
+      <span className={styles.connectionDot} aria-hidden="true" />
       {(state.pending.length > 0 || state.syncing) && <span className={styles.connectionCount} aria-hidden="true">{state.syncing ? "↻" : state.pending.length}</span>}
     </button>
     <span className={styles.visuallyHidden} role="status">{label}</span>
