@@ -8,6 +8,7 @@ import { Field, Numeric, accountKindNames } from "./finance-ui";
 import styles from "./finance.module.css";
 import { FinanceRefundForm } from "./finance-refund-form";
 import { SalesCashierForm } from "./sales-cashier-form";
+import { FinanceSupplierPayoutForm } from "./finance-supplier-payout-form";
 import { FinanceCashHandoverForm } from "./finance-cash-handover-form";
 
 export type FinanceFormOperation = FinanceOperation | "staff_create" | "sales_cashier_create";
@@ -36,6 +37,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const amount = (name: string, label: string, defaultValue = 0, min = 0) => <Field label={label}><input name={name} type="number" inputMode="decimal" step="0.01" min={min} max="999999999" required defaultValue={name === "openingCash" ? "" : Number(values[name] ?? defaultValue)} /></Field>;
   const note = <Field label="البيان"><textarea name="note" maxLength={500} required={["refund", "stock_adjust", "stock_transfer", "journal", "treasury"].includes(operation)} defaultValue={String(values.note ?? "")} placeholder="سبب العملية أو مرجعها" /></Field>;
 
+  if (operation === "supplier_payout") return <FinanceSupplierPayoutForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "shift_open" || operation === "shift_close") return <FinanceCashHandoverForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "sales_cashier_create") return snapshot.canAdminister ? <SalesCashierForm pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
   if (operation === "refund") return <FinanceRefundForm document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;

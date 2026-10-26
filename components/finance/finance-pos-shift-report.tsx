@@ -24,7 +24,7 @@ export function FinancePosShiftReport({ shiftId, slug, onClose }: { shiftId: str
   }, [shiftId, slug, retry]);
   const shift = report?.shift;
   const duration = shift ? Math.max(0, Math.floor((Date.parse(shift.closed_at ?? shift.opened_at) - Date.parse(shift.opened_at)) / 60000)) : 0;
-  const rows: [string, number | null][] = report ? [["عدد فواتير البيع", report.invoiceCount], ["إجمالي المبيعات شامل الضريبة", report.salesTotal], ["مرتجعات فواتير الوردية", report.refundsTotal], ["صافي المبيعات", report.netSales], ["نقدية بداية الوردية", report.shift.opening_cash], ["النقدية المتوقعة عند الإقفال", report.shift.expected_cash], ["النقدية المعدودة عند الإقفال", report.shift.counted_cash], ["فرق الإقفال", report.shift.variance]] : [];
+  const rows: [string, number | null][] = report ? [["عدد فواتير البيع", report.invoiceCount], ["إجمالي المبيعات شامل الضريبة", report.salesTotal], ["مرتجعات فواتير الوردية", report.refundsTotal], ["صافي المبيعات", report.netSales], ["سداد الموردين من الصندوق", report.supplierPayoutTotal ?? 0], ["نقدية بداية الوردية", report.shift.opening_cash], ["النقدية المتوقعة عند الإقفال", report.shift.expected_cash], ["النقدية المعدودة عند الإقفال", report.shift.counted_cash], ["فرق الإقفال", report.shift.variance]] : [];
   return <Modal open title={`تقرير آخر وردية${shift?.shift_number ? ` #${shift.shift_number}` : ""}`} onClose={onClose} panelClassName="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
     <div className={styles.form}>
       {loading && <p role="status">جارٍ تحميل تقرير الوردية</p>}
@@ -37,6 +37,7 @@ export function FinancePosShiftReport({ shiftId, slug, onClose }: { shiftId: str
           {rows.map(([label, value], index) => <div key={label} data-receipt-row className={styles.balanceLine}><span>{label}</span><strong>{value === null ? "—" : <Numeric value={value} money={index !== 0} />}</strong></div>)}
           <p data-receipt-title>تحصيل فواتير الوردية</p>
           {report.payments.map(payment => <div key={payment.kind} data-receipt-row className={styles.balanceLine}><span>{payment.kind === "cash" ? "نقدي" : payment.kind === "pos" ? "شبكة" : payment.kind === "bank" ? "تحويل بنكي" : "تحصيل آخر"}</span><strong><Numeric value={payment.collected - payment.refunded} money /></strong></div>)}
+          {!!report.supplierPayouts?.length && <section aria-label="سداد الموردين"><p data-receipt-title>سندات سداد الموردين</p>{report.supplierPayouts.map(payout => <div key={payout.id} className="border-t py-3"><div data-receipt-row><strong>#{payout.number} {payout.supplierName}</strong><Numeric value={payout.amount} money /></div><p>{financeDate(payout.createdAt)}</p>{payout.note && <p>{payout.note}</p>}{payout.attachments.map(file => <p key={file.id}><a download href={`/api/finance/${encodeURIComponent(slug ?? "")}/shift-attachments/${file.id}`}>{file.name}</a></p>)}</div>)}</section>}
           <footer data-receipt-footer><p>المبيعات والتحصيل بعد المرتجعات والتسويات المسجلة حتى استخراج التقرير</p><p>أرقام الإقفال ثابتة كما سُجلت عند إقفال الوردية</p><p>{financeDate(report.generatedAt)}</p></footer>
         </article>
       </>}

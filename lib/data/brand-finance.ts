@@ -10,7 +10,7 @@ import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
 import type { FinanceCommandResult, FinanceHistory, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
 
 const commandSchema = z.object({
-  operation: z.enum(["sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
+  operation: z.enum(["supplier_payout", "sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
   requestId: z.uuid(), payload: z.record(z.string(), z.unknown()),
 });
 

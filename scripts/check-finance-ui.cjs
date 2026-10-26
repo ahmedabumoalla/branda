@@ -457,6 +457,24 @@ async function main() {
   await find(otpRender(), node => node.type === 'form').props.onSubmit(loginEvent);assert.deepEqual(otpDestinations,['/finance/brand/pos']);
   global.FormData = nativeFormData;groups++;
 
+  {
+    const payoutHooks=hooks(),payoutCalls=[];let finishPayout;
+    const {FinanceSupplierPayoutForm}=load('components/finance/finance-supplier-payout-form.tsx',{...shared,react:payoutHooks.api});
+    const payoutSnapshot=structuredClone(base),values=new Map([['supplierName',' Supplier '],['supplierPhone','0500000000'],['amount','10'],['note',' invoice ']]);
+    const props={form:{operation:'supplier_payout',values:{shiftId:'shift'}},snapshot:payoutSnapshot,pending:false,error:'',onCancel(){},onSubmit(...args){payoutCalls.push(args);return new Promise(resolve=>{finishPayout=resolve})}};
+    const draw=()=>payoutHooks.render(FinanceSupplierPayoutForm,props),event={preventDefault(){},currentTarget:values};
+    global.FormData=class {constructor(v){this.v=v}get(key){return this.v.get(key)}};
+    try {
+      let view=draw();values.set('amount','0');await view.props.onSubmit(event);assert.equal(payoutCalls.length,0);
+      values.set('amount','10');view=draw();const first=view.props.onSubmit(event);await view.props.onSubmit(event);assert.equal(payoutCalls.length,1,'double click cannot post twice');
+      assert.deepEqual(payoutCalls[0],['supplier_payout',{shiftId:'shift',supplierName:'Supplier',supplierPhone:'0500000000',amount:10,note:'invoice',attachmentIds:[]}]);
+      assert.equal(button(draw(),'جارٍ تسجيل السداد').props.disabled,true);finishPayout(false);await first;
+      const upload=find(draw(),n=>typeof n.props?.onBusyChange==='function');upload.props.onBusyChange(true);assert.equal(button(draw(),'جارٍ رفع المرفقات').props.disabled,true);await draw().props.onSubmit(event);assert.equal(payoutCalls.length,1);upload.props.onBusyChange(false);
+      payoutSnapshot.shifts[0].supervisor_paused=true;await draw().props.onSubmit(event);assert.equal(payoutCalls.length,1,'paused shift cannot submit');
+      payoutSnapshot.shifts[0].supervisor_paused=false;payoutSnapshot.shifts[0].user_id='foreign';await draw().props.onSubmit(event);assert.equal(payoutCalls.length,1,'foreign shift cannot submit');
+    } finally {global.FormData=nativeFormData}
+    groups++;
+  }
   console.log(`Finance UI: ${groups} behavior groups passed`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

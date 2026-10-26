@@ -29,7 +29,7 @@ export type FinanceSnapshot = {
   trialBalance: { account_id: string; name: string; kind: FinanceAccountKind; debit: number; credit: number; balance: number }[];
   truncated: boolean;
 };
-export type FinanceOperation = "sale" | "purchase" | "refund" | "refund_approve" | "refund_reject" | "party" | "account" | "item" | "warehouse" | "stock_adjust" | "stock_transfer" | "treasury" | "settlement" | "shift_open" | "shift_close" | "shift_handover" | "shift_accept" | "settings" | "staff" | "journal";
+export type FinanceOperation = "supplier_payout" | "sale" | "purchase" | "refund" | "refund_approve" | "refund_reject" | "party" | "account" | "item" | "warehouse" | "stock_adjust" | "stock_transfer" | "treasury" | "settlement" | "shift_open" | "shift_close" | "shift_handover" | "shift_accept" | "settings" | "staff" | "journal";
 export type FinanceCommand = { operation: FinanceOperation; requestId: string; payload: Record<string, unknown> };
 export type FinanceCommandResult = { localReference?: string; offline?: boolean; customer?: import("./pos-customer").FinancePosCustomerResult; id: string; number?: number; status?: "pending" | "approved" | "rejected"; duplicate?: boolean };
 export type FinanceHistoryKind = "documents" | "journal" | "movements";
