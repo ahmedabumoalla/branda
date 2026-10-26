@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpLeft, Eye, EyeOff, ReceiptText } from "lucide-react";
+import { ArrowUpLeft, Eye, EyeOff } from "lucide-react";
 import { loginSalesCashierAction, requestSalesCashierOtpAction, verifySalesCashierOtpAction, resetSalesCashierPasswordAction } from "@/app/actions/finance-access";
 import { BarndaksaLogo } from "@/components/ui/barndaksa-logo";
 import { CashierSystemSwitch } from "@/components/cashier/cashier-system-switch";
 import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/cashier-language";
 import { isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT, SALES_CASHIER_PASSWORD_PATTERN } from "@/lib/finance/sales-cashier-password";
-import styles from "./finance-login.module.css";
+import styles from "@/components/cashier/cashier-login.module.css";
 
 export function salesCashierBrandDestination(slug: string, result: { redirectTo?: string; brands?: { slug: string; name: string }[] }) {
   const target = `/finance/${encodeURIComponent(slug)}/pos`;
@@ -74,17 +74,15 @@ export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
     finally { busyRef.current = false; setBusy(false); }
   }
   return <main className={styles.page} dir={dir} lang={locale}>
-    <section className={styles.story}><BarndaksaLogo /><span>{t("كاشير المبيعات")}</span><h1>{t("نقطة بيعك")}<br /><em>{t("جاهزة لورديتك")}</em></h1><p>{t("أصناف علامتك وفواتيرها والتحصيل في مكان واحد")}</p><div className={styles.rule} /><small>{t("دخول مستقل للمبيعات والورديات")}</small></section>
     <section className={styles.panel} aria-labelledby="sales-login-title">
-      <div className={styles.loginToolbar}><CashierLanguageSwitch /></div>
-      <CashierSystemSwitch active="sales" />
-      <div className={styles.mark}><ReceiptText aria-hidden="true" /></div><p className={styles.kicker}>{t("برندة المالية")}</p>
-      <h2 id="sales-login-title">{t(mode === "reset" ? "تعيين كلمة مرور الكاشير" : "دخول كاشير المبيعات")}</h2><p className={styles.hint}>{t(mode === "reset" ? "تحقق برمز واتساب ثم اختر كلمة مرور جديدة لحسابك" : "ادخل بكلمة مرورك أو برمز واتساب إلى رقمك المسجل لدى العلامة")}</p>
+      <header className={styles.header}><BarndaksaLogo variant="dark" width={112} height={45} className={styles.logo} priority /><CashierLanguageSwitch dark /></header>
+      <div className={styles.body}>
+      <CashierSystemSwitch active="sales" compact />
+      <h1 id="sales-login-title" className={styles.heading}>{t(mode === "reset" ? "تعيين كلمة مرور الكاشير" : "دخول كاشير المبيعات")}</h1>
       {!brands.length && <div className={styles.loginModes} role="group" aria-label={t("طريقة دخول كاشير المبيعات")}>{([['password', 'كلمة المرور'], ['otp', 'رمز واتساب']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={mode === value} disabled={busy} onClick={() => { setMode(value); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t(label)}</button>)}</div>}
-      {brands.length ? <div className={styles.accessChoices}><p className={styles.hint}>{t("اختر العلامة لبدء العمل")}</p>{brands.map(brand => <Link className={styles.accessChoice} key={brand.slug} href={`/finance/${encodeURIComponent(brand.slug)}/pos`}><strong>{brand.name}</strong><ArrowUpLeft aria-hidden="true" /></Link>)}</div> : <form onSubmit={submit} aria-busy={busy}>
+      {brands.length ? <div className={styles.accessChoices}><p className={styles.hint}>{t("اختر العلامة لبدء العمل")}</p>{brands.map(brand => <Link className={styles.accessChoice} key={brand.slug} href={`/finance/${encodeURIComponent(brand.slug)}/pos`}><strong>{brand.name}</strong><ArrowUpLeft aria-hidden="true" /></Link>)}</div> : <form className={styles.form} onSubmit={submit} aria-busy={busy}>
         <label>{t("رقم الجوال")}<input name="phone" type="tel" inputMode="tel" autoComplete="username" required maxLength={30} dir="ltr" placeholder="05xxxxxxxx" disabled={busy} readOnly={Boolean(otpPhone)} /></label>
         {mode === "password" && <label>{t("كلمة المرور")}<div className={styles.password}><input name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={128} dir="ltr" disabled={busy} /><button type="button" disabled={busy} aria-label={t(visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور")} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></label>}
-        {mode === "password" && <p className={styles.hint}>{t("إذا كان حسابك مسجلًا كعميل استخدم كلمة مروره الحالية أو رمز واتساب كلمة المرور المحددة عند إضافتك ككاشير لا تغيّر كلمة حسابك السابق")}</p>}
         {mode === "password" && <button type="button" className={styles.switchLink} disabled={busy} onClick={() => { setMode("reset"); setOtpPhone(""); setVisible(false); setNotice(""); setError(""); }}>{t("نسيت كلمة المرور أو تريد تعيينها؟")}</button>}
         {mode !== "password" && otpPhone && <label>{t("رمز الدخول")}<input name="code" inputMode="numeric" autoComplete="one-time-code" dir="ltr" required minLength={6} maxLength={6} pattern="[0-9٠-٩۰-۹]{6}" disabled={busy} /></label>}
         {mode === "reset" && otpPhone && <>
@@ -92,13 +90,18 @@ export function SalesCashierLogin({ slug }: { slug?: string } = {}) {
           <p id="sales-password-policy" className={styles.hint}>{t(SALES_CASHIER_PASSWORD_HINT)}</p>
           <label>{t("تأكيد كلمة المرور الجديدة")}<input name="confirmation" type={visible ? "text" : "password"} autoComplete="new-password" required minLength={8} maxLength={128} dir="ltr" disabled={busy} /></label>
         </>}
-        {notice && <p className={styles.hint} role="status">{t(notice)}</p>}
+        {notice && <p className={styles.notice} role="status">{t(notice)}</p>}
         {error && <p className={styles.error} role="alert">{errorText(error)}</p>}
         {error && mode === "password" && <button type="button" className={styles.switchLink} disabled={busy} onClick={() => { setMode("otp"); setOtpPhone(""); setNotice(""); setError(""); }}>{t("الدخول برمز واتساب بدل كلمة المرور")}</button>}
         <button type="submit" className={styles.submit} disabled={busy}>{t(busy ? "جار التحقق" : mode !== "password" && !otpPhone ? "أرسل رمز واتساب" : mode === "reset" ? "حفظ كلمة المرور والدخول" : "الدخول إلى نقطة البيع")}<ArrowUpLeft aria-hidden="true" /></button>
         {mode !== "password" && otpPhone && <button type="button" className={styles.switchLink} disabled={busy} onClick={resend}>{t("إعادة إرسال الرمز بعد دقيقة")}</button>}
       </form>}
-      {slug && <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login?access=management`}>{t("دخول الإدارة المالية")}</Link>}
+      <details className={styles.help}><summary>{t("مساعدة الدخول")}</summary>
+        <p className={styles.hint}>{t(mode === "reset" ? "تحقق برمز واتساب ثم اختر كلمة مرور جديدة لحسابك" : "ادخل بكلمة مرورك أو برمز واتساب إلى رقمك المسجل لدى العلامة")}</p>
+        {mode === "password" && <p className={styles.hint}>{t("إذا كان حسابك مسجلًا كعميل استخدم كلمة مروره الحالية أو رمز واتساب كلمة المرور المحددة عند إضافتك ككاشير لا تغيّر كلمة حسابك السابق")}</p>}
+        <div className={styles.helpLinks}>{slug && <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login?access=management`}>{t("دخول الإدارة المالية")}</Link>}<Link href="/login" className={styles.switchLink}>{t("العودة إلى تسجيل الدخول العام")}</Link></div>
+      </details>
+      </div>
     </section>
   </main>;
 }

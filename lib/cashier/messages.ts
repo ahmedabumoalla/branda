@@ -1,5 +1,6 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "مساعدة الدخول": "Sign-in help",
   "بحث جديد": "New search",
   "تفاصيل وشروط المكافأة": "Reward details and terms",
   "أدخل رقم جوال سعودي صحيح يبدأ بـ 05": "Enter a valid Saudi mobile number starting with 05",

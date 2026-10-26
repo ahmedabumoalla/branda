@@ -39,6 +39,13 @@
 .system:hover { border-color: var(--system-accent); }
 .system:focus-visible { outline: 3px solid var(--system-accent); outline-offset: 3px; }
 
+.systems.compact { gap: 4px; margin: 0 0 16px; padding: 4px; border: 1px solid var(--system-line); border-radius: 12px; background: #f7f2eb; }
+.compact .system { flex-direction: row; gap: 7px; min-height: 44px; padding: 8px 6px; border: 0; border-radius: 8px; background: transparent; font-size: 12px; line-height: 1.4; }
+.compact .system svg { width: 19px; height: 19px; }
+.compact .system[aria-current="page"] { background: var(--system-ink); color: #fffaf3; box-shadow: 0 2px 5px #38241c14; }
+.compact .system[aria-current="page"] svg { color: #f1cb83; }
+@media(max-height:600px){.systems.compact{margin-bottom:10px}}
+
 @media (max-width: 380px) {
   .systems { gap: 8px; }
   .system { padding: 14px 8px; font-size: 13px; }
