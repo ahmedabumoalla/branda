@@ -178,7 +178,6 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         <div className={styles.cartFooter}>
           <button type="button" className={`${styles.secondary} ${styles.payButton}`} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={19} aria-hidden="true" />معاينة الإيصال</button>
           <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift} onClick={checkout}>{pending ? "جار تسجيل العملية" : paymentKind === "credit" ? "تسجيل المبيعات الآجلة" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
-          {!shift && <p className={styles.muted}>ابدأ الوردية أو استلمها لتفعيل البيع</p>}
           {cart.length > 0 && <button className={styles.secondary} style={{ width: "100%", marginTop: 8 }} disabled={disabled} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}>إفراغ السلة</button>}
         </div>
       </aside>
