@@ -68,7 +68,7 @@ export function ShiftAnalyticsView({ report }: { report: ShiftAnalytics }) {
       <Metric title={estimated(t) ? "الربح الإجمالي التقديري" : "الربح الإجمالي"} value={t.profit == null ? "غير مكتمل" : <Numeric value={t.profit} money />} hint={t.profit == null ? `${number(t.unknownCostLineCount, 0)} بند بلا تكلفة موثقة` : "قبل المصاريف التشغيلية والرسوم"} icon={<BarChart3 size={18} />} />
       <Metric title="متوسط فاتورة البيع" value={<Numeric value={t.averageBasket} money />} hint="قبل طرح المرتجعات شامل الضريبة" icon={<Package size={18} />} />
     </div>
-    <div className={s.tabs} role="group" aria-label="أقسام تحليل الوردية">{([{ key: "overview", name: "نظرة تحليلية" }, { key: "products", name: `الأصناف · ${number(report.products.length, 0)}` }, { key: "stock", name: `المخزون${negatives.length ? ` · ${number(negatives.length, 0)} بالسالب` : ""}` }] as const).map(item => <button key={item.key} type="button" aria-pressed={tab === item.key} onClick={() => setTab(item.key)}>{item.name}</button>)}</div>
+    <div className={s.tabs} role="group" aria-label="أقسام تحليل الوردية">{([{ key: "overview", name: "نظرة تحليلية" }, { key: "products", name: `الأصناف (${number(report.products.length, 0)})` }, { key: "stock", name: `المخزون${negatives.length ? ` · ${number(negatives.length, 0)} بالسالب` : ""}` }] as const).map(item => <button key={item.key} type="button" aria-pressed={tab === item.key} onClick={() => setTab(item.key)}>{item.name}</button>)}</div>
     {tab === "overview" && <>
       <div className={s.highlights}>
         <article><span>الأكثر بيعًا بالصافي</span><strong>{sold?.name ?? "لا توجد مبيعات صافية"}</strong>{sold && <small>{number(sold.netQuantity, 3)} وحدة بعد المرتجعات</small>}</article>
