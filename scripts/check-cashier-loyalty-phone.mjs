@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -100,5 +100,3 @@ input('0501234567'); submit(); resolvePhone({ ok: false, message: 'لا توجد
 assert(all().some(n => n.props?.role === 'alert')); assert(!all().some(n => n.props?.id === 'rast-scan-preview'));
 button('البطاقة أو الباركود').props.onClick(); render(); assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '');
 console.log('PASS: phone normalization, tenant/permission gates, inactive/ambiguous/error rejection, read-only lookup, phone UI, duplicate lock, uncertain request retry, exact reward and barcode switching');
-
-
