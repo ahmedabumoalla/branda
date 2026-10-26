@@ -27,6 +27,12 @@
 .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 .scanTitle { font-size: 18px; font-weight: 700; line-height: 1.5; }
 .scanHelp { margin-top: 6px; font-size: 13px; line-height: 1.7; }
+.lookupMethods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 10px; padding: 3px; border-radius: 12px; background: color-mix(in srgb, var(--cashier-ink) 5%, transparent); }
+.lookupMethods button { display: flex; min-width: 0; min-height: 44px; align-items: center; justify-content: center; gap: 6px; padding: 6px; border: 1px solid transparent; border-radius: 9px; font-size: 12px; font-weight: 600; }
+.lookupMethods button[aria-pressed="true"] { background: white; border-color: color-mix(in srgb, var(--cashier-ink) 18%, transparent); box-shadow: 0 1px 3px rgb(0 0 0 / 4%); }
+.lookupMethods button:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; }
+.lookupMethods button:disabled { opacity: .5; }
+.lookupMethods svg { flex-shrink: 0; }
 .scanForm { display: grid; gap: 8px; margin-block: 14px 10px; }
 .scanForm input { font-size: 16px; }
 .scanForm button { font-size: 14px; }

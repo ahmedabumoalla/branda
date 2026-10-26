@@ -205,6 +205,7 @@ function cameraFixture() {
 }
 
 const { RastCashier, RastCashierRewardDetails, RastCashierEmptyRewards } = load("components/rast-loyalty/rast-cashier.tsx", {
+  "@/app/actions/cashier-loyalty-phone": { lookupCashierLoyaltyPhoneAction: async () => ({ ok: true, cardCode: "CARD123" }) },
   "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async () => card, lookupRastCashierRewardAction: async () => reward, scanLoyaltyExperienceAction: async () => ({}) },
   "@/app/actions/cashier": { cashierLookupRewardAction: async () => reward, logoutCashierAction: async () => {} },
 });

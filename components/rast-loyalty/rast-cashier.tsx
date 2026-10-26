@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { BadgeCheck, Gift, LogOut, ScanLine } from "lucide-react";
+import { BadgeCheck, Gift, LogOut, ScanLine, Search, Phone } from "lucide-react";
+import { lookupCashierLoyaltyPhoneAction } from "@/app/actions/cashier-loyalty-phone";
 import { lookupRastCashierCardAction, lookupRastCashierRewardAction, scanLoyaltyExperienceAction } from "@/app/actions/loyalty-experience";
 import { logoutCashierAction } from "@/app/actions/cashier";
 import type { CashierConsole } from "@/lib/data/cashier";
@@ -42,6 +43,9 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const identity = suppliedIdentity ?? { name: initialData.cafe.name, slug: initialData.cafe.slug, logoUrl: null };
   const [kind, setKind] = useState<"stamp" | "redeem">("stamp");
   const [value, setValue] = useState("");
+  const [lookupMethod, setLookupMethod] = useState<"code" | "phone">("code");
+  const resolvedCode = useRef("");
+  const processing = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [noRewards, setNoRewards] = useState(false);
@@ -56,14 +60,26 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   useEffect(() => { if (preview) previewElement.current?.focus(); }, [preview]);
   useEffect(() => { if (error) errorElement.current?.focus(); }, [error]);
   useEffect(() => { if (!pending && focusInputAfterScan.current) { focusInputAfterScan.current = false; input.current?.focus(); } }, [pending]);
-  function updateCode(code: string) { if (session.busy) return; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); }
+  function updateCode(code: string) { if (processing.current || session.busy) return; resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); }
   function detectCode(code: string) { if (session.busy) return; updateCode(code); setMessage("تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
   async function processScan(confirm = false) {
-    if (session.busy || !value.trim()) return;
+    if (processing.current || session.busy || !value.trim()) return;
+    processing.current = true;
     setPending(true); setError(""); setMessage(""); setNoRewards(false);
     try {
-      if (!confirm) { setPreview(null); const next = await session.inspect(kind, value); setPreview(next); setNoRewards(kind === "redeem" && next === null); return; }
-      const result = await session.confirm(kind, value);
+      if (!confirm) {
+        setPreview(null);
+        let code = value;
+        if (lookupMethod === "phone") {
+          const found = await lookupCashierLoyaltyPhoneAction(value);
+          if (!found.ok) throw new Error(found.message);
+          code = found.cardCode;
+        }
+        resolvedCode.current = code;
+        const next = await session.inspect(kind, code);
+        setPreview(next); setNoRewards(kind === "redeem" && next === null); return;
+      }
+      const result = await session.confirm(kind, lookupMethod === "phone" ? resolvedCode.current : value);
       if (!result) return;
       setPreview(session.preview);
       const status = String(result.status ?? "");
@@ -80,7 +96,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
         setError(errors[status] ?? "لم تسجل العملية تحقق من البطاقة وصلاحية البرنامج");
       }
     } catch (cause) { if (confirm) setPreview(session.preview); setError(cause instanceof Error && /[\u0600-\u06ff]/.test(cause.message) ? cause.message : "تعذر إتمام العملية يمكنك إعادة المحاولة بأمان"); }
-    finally { setCheckedAt(Date.now()); setPending(false); }
+    finally { processing.current = false; setCheckedAt(Date.now()); setPending(false); }
   }
   const reward = preview?.kind === "redeem" ? preview.reward : null;
   const expiry = reward?.expiresAt ? new Date(reward.expiresAt) : null;
@@ -102,16 +118,19 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
       <div className={layout.body}>
         <section aria-labelledby="scan-heading" className={layout.scanPanel}>
           <div className={layout.tabs} role="group" aria-label={t("نوع العملية")}>
-            {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
+            {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (processing.current || session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
           </div>
           <h2 id="scan-heading" className={layout.scanTitle}>{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
-          <p id="rast-scan-help" className={layout.scanHelp}>{kind === "stamp" ? t("افحص البطاقة وراجع اسم العميل ورصيده بعد التأكد من الشراء أكّد تسجيل ختم واحد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
+          <p id="rast-scan-help" className={layout.scanHelp}>{lookupMethod === "phone" ? t("ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد") : kind === "stamp" ? t("افحص البطاقة وراجع اسم العميل ورصيده بعد التأكد من الشراء أكّد تسجيل ختم واحد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
+          <div className={layout.lookupMethods} role="group" aria-label={t("طريقة البحث عن العميل")}>
+            {([{ id: "code", label: t("البطاقة أو الباركود"), icon: ScanLine }, { id: "phone", label: t("رقم الجوال"), icon: Phone }] as const).map(method => <button key={method.id} type="button" disabled={pending} aria-pressed={lookupMethod === method.id} onClick={() => { if (processing.current || session.busy) return; updateCode(""); setLookupMethod(method.id); }}><method.icon size={16} aria-hidden="true" />{method.label}</button>)}
+          </div>
           <form onSubmit={(event) => { event.preventDefault(); void processScan(); }} className={layout.scanForm} aria-busy={pending}>
-            <label htmlFor="rast-scan-code" className="block text-sm font-bold">{kind === "stamp" ? t("رمز بطاقة الولاء") : t("رمز البطاقة أو المكافأة")}</label>
-            <input id="rast-scan-code" ref={input} dir="ltr" value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={500} placeholder={t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
-            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4"><ScanLine size={19} aria-hidden="true" />{pending ? t("جاري التحقق") : kind === "stamp" ? t("فحص بطاقة العميل") : t("فحص المكافأة")}</button>
+            <label htmlFor="rast-scan-code" className="block text-sm font-bold">{lookupMethod === "phone" ? t("رقم جوال العميل") : kind === "stamp" ? t("رمز بطاقة الولاء") : t("رمز البطاقة أو المكافأة")}</label>
+            <input id="rast-scan-code" ref={input} dir="ltr" type={lookupMethod === "phone" ? "tel" : "text"} inputMode={lookupMethod === "phone" ? "tel" : "text"} value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={lookupMethod === "phone" ? 30 : 500} placeholder={lookupMethod === "phone" ? "05xxxxxxxx" : t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
+            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : kind === "stamp" ? t("فحص بطاقة العميل") : t("فحص المكافأة")}</button>
           </form>
-          <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />
+          {lookupMethod === "code" && <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />}
           {preview && <section ref={previewElement} tabIndex={-1} className="mt-6 rounded-2xl border border-[var(--cashier-ink)]/25 p-5 focus-visible:outline-2 focus-visible:outline-offset-4" aria-labelledby="rast-scan-preview">
             {catalog && <p className="mb-3 text-xs leading-6 opacity-75" role={catalog.unavailable ? "status" : undefined}>{t(catalog.unavailable ? "تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا" : "ترجمة تلقائية لتفاصيل المكافأة")}</p>}
             {preview.retryPending && <p role="status" className="mb-4 text-sm leading-7">{t("لم يصل تأكيد العملية السابقة أعد التأكيد للتحقق من نتيجتها بأمان؛ لن يتم اختيار مكافأة أخرى أو تكرار الصرف لا تسلّم المكافأة مرة أخرى إذا سبق تسليمها")} </p>}

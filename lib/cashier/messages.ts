@@ -1,5 +1,12 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "أدخل رقم جوال سعودي صحيح يبدأ بـ 05": "Enter a valid Saudi mobile number starting with 05",
+  "طريقة البحث عن العميل": "Customer lookup method",
+  "البطاقة أو الباركود": "Card or barcode",
+  "البحث عن العميل": "Find customer",
+  "ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد": "Find the loyalty card by its registered mobile number and review the customer before confirming",
+  "تعذر البحث عن العميل حاول مرة أخرى": "Could not find the customer Try again",
+  "لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة": "No available loyalty card for this number at this brand",
   "تعيين كلمة مرور الكاشير": "Set your cashier password",
   "تحقق برمز واتساب ثم اختر كلمة مرور جديدة لحسابك": "Verify with a WhatsApp code, then choose a new password for your account",
   "نسيت كلمة المرور أو تريد تعيينها؟": "Forgot your password or need to set one?",
