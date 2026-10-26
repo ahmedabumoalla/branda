@@ -61,6 +61,7 @@ async function main() {
 
   const uiHooks = hooks(); const saved = [];
   let current = structuredClone(base);
+  current.accounts.unshift({ ...base.accounts[0], id: 'other-drawer', is_primary: true });
   current.stock[0].quantity = -1;
   const uiState = { get snapshot() { return current; }, pending: false, stale: false, error: '', message: '', historyMore: {}, clearFeedback() {}, refresh: async () => {}, execute: async (operation, payload) => { saved.push({ operation, payload }); return { id: 'saved', number: 1 }; } };
   const { FinancePOS, financeDiscount, financeCartLines } = load('components/finance/finance-pos.tsx', { ...shared, react: uiHooks.api, './use-finance': { useFinance: () => uiState } });
@@ -69,6 +70,8 @@ async function main() {
   assert.equal(financeDiscount(46, 4.6, 'amount'), 4.6);
   assert.equal(financeCartLines([{ productId: 'gone', quantity: 1 }], base.products).length, 0); groups++;
   let tree = render();
+  assert.ok(!nodes(tree).some(node => node.type?.name === 'Field' && ['حساب التحصيل', 'العميل اختياري', 'العميل مطلوب للبيع الآجل'].includes(node.props.label)));
+  assert.ok(!nodes(tree).some(node => node.type === 'button' && text(node) === 'آجل على العميل'));
   // Navigation is resolved by server authority, never a user-supplied return URL.
   assert.equal(find(tree, node => node.type?.name === 'Link' && text(node) === 'الإدارة المالية').props.href, '/finance/test-brand');
   const dashboardReturnTree = uiHooks.render(FinancePOS, { initialSnapshot: current, slug: 'test-brand', dashboardHref: '/dashboard/finance' });
@@ -86,12 +89,24 @@ async function main() {
   assert.equal(saved[0].payload.expectedTotal, 41.4); assert.equal(saved[0].payload.discount, 4.6); assert.equal(saved[0].payload.accountId, 'cash'); assert.equal(saved[0].payload.shiftId, 'shift');
   tree = render(); assert.ok(button(tree, 'تأكيد الاستلام وإصدار إيصال').props.disabled, 'Successful sale clears cart'); groups++;
 
-  find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); tree = render();
-  button(tree, 'آجل على العميل').props.onClick(); tree = render();
-  await button(tree, 'تسجيل المبيعات الآجلة').props.onClick(); tree = render();
-  assert.equal(saved.length, 1); assert.match(text(tree), /اختر العميل/);
-  field(tree, 'العميل مطلوب للبيع الآجل').props.onChange({ target: { value: 'customer' } }); tree = render();
-  await button(tree, 'تسجيل المبيعات الآجلة').props.onClick(); assert.equal(saved.length, 2); assert.equal(saved[1].payload.partyId, 'customer'); assert.equal('accountId' in saved[1].payload, false); groups++;
+  assert.ok(!('partyId' in saved[0].payload), 'Cash sale needs no customer selection');
+  current.accounts.push({ ...base.accounts[1], id: 'primary-card', is_primary: true });
+  for (const [label, accountId] of [['شبكة', 'primary-card'], ['تحويل بنكي', 'bank'], ['كاش', 'cash']]) {
+    tree = render(); button(tree, label).props.onClick(); tree = render();
+    find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); tree = render();
+    await button(tree, 'تأكيد الاستلام وإصدار إيصال').props.onClick();
+    assert.equal(saved.at(-1).payload.accountId, accountId);
+    assert.equal(saved.at(-1).payload.shiftId, 'shift');
+    assert.ok(!('partyId' in saved.at(-1).payload));
+  }
+  const accountBackup = current.accounts;
+  current = { ...current, accounts: current.accounts.filter(account => account.id !== 'cash') };
+  tree = render(); find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); tree = render();
+  const savedBeforeMissingDrawer = saved.length;
+  await button(tree, 'تأكيد الاستلام وإصدار إيصال').props.onClick(); tree = render();
+  assert.equal(saved.length, savedBeforeMissingDrawer, 'Never fall back to another cashier drawer');
+  assert.match(text(tree), /أضف حساب تحصيل/);
+  current = { ...current, accounts: accountBackup }; groups++;
 
   tree = render(); button(tree, 'شبكة').props.onClick(); tree = render(); assert.match(text(tree), /أكمل الدفع على جهاز الشبكة/);
   button(tree, 'تحويل بنكي').props.onClick(); tree = render(); assert.match(text(tree), /وصول التحويل البنكي/); groups++;

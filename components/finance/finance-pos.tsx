@@ -50,9 +50,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const [category, setCategory] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
   const [discountKind, setDiscountKind] = useState<"amount" | "percent">("amount");
-  const [paymentKind, setPaymentKind] = useState("cash");
-  const [accountId, setAccountId] = useState("");
-  const [partyId, setPartyId] = useState("");
+  const [paymentKind, setPaymentKind] = useState<"cash" | "pos" | "bank">("cash");
   const [warehouseId, setWarehouseId] = useState(data.warehouses.find((warehouse) => warehouse.active)?.id ?? "");
   const [note, setNote] = useState("");
   const [localError, setLocalError] = useState("");
@@ -75,7 +73,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const categories = [...new Set(data.products.filter((product) => product.available).map((product) => product.category))].filter(Boolean);
   const products = data.products.filter((product) => product.available && (!category || product.category === category) && product.name.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
   const accounts = data.accounts.filter((account) => account.active && account.kind === paymentKind && (paymentKind !== "cash" || account.id === shift?.account_id));
-  const paymentAccountId = accounts.some((account) => account.id === accountId) ? accountId : getPrimaryFinanceAccount(accounts)?.id;
+  const paymentAccountId = getPrimaryFinanceAccount(accounts)?.id;
   const receipt = data.documents.find((document) => document.id === receiptId || state.offline.sales.some((sale) => sale.id === receiptId && sale.document.id === document.id));
   const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
   const open = (next: FinanceForm) => { state.clearFeedback(); setLocalError(""); setForm(next); };
@@ -96,7 +94,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   function previewReceipt() {
     setLocalError("");
     try {
-      setReceiptPreview(createFinanceReceiptPreview({ lines, settings: data.settings, discount, paymentKind, accountId: paymentAccountId, partyId, customerPhone: customer.normalized, note, createdAt: new Date().toISOString() }));
+      setReceiptPreview(createFinanceReceiptPreview({ lines, settings: data.settings, discount, paymentKind, accountId: paymentAccountId, customerPhone: customer.normalized, note, createdAt: new Date().toISOString() }));
     } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "تعذر تجهيز معاينة الإيصال"); }
   }
   async function checkout() {
@@ -106,12 +104,11 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     if (!cart.length || lines.length !== cart.length || lines.some((line) => !line.product.available || !Number.isFinite(line.quantity) || line.quantity <= 0 || line.quantity > 9999)) { setLocalError("راجع أصناف السلة والكميات قبل التحصيل"); return; }
     if (!warehouseId) { setLocalError("اختر مستودع البيع"); return; }
     if (discount < 0 || discount > subtotal || (discountKind === "percent" && discountValue > 100)) { setLocalError("الخصم يجب ألا يتجاوز قيمة المبيعات"); return; }
-    if (paymentKind === "credit" && !partyId) { setLocalError("اختر العميل لتسجيل المبيعات الآجلة"); return; }
-    if (paymentKind !== "credit" && !paymentAccountId) { setLocalError("أضف حساب تحصيل لهذا النوع من المالية ثم حدّث الأرصدة"); return; }
+    if (!paymentAccountId) { setLocalError("أضف حساب تحصيل لهذا النوع من المالية ثم حدّث الأرصدة"); return; }
     let customerPayload: Record<string, unknown>;
     try { customerPayload = customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "راجع رقم العميل قبل حفظ الفاتورة"); return; }
-    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price })), expectedTotal: totals.total, discount, ...(paymentKind !== "credit" ? { accountId: paymentAccountId } : {}), ...(partyId ? { partyId } : {}), ...customerPayload, warehouseId, shiftId: shift.id, note });
-    if (saved) { setCart([]); setDiscountValue(0); setPartyId(""); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setReceiptId(saved.id); setAutoPrintId(saved.id); searchRef.current?.focus(); }
+    const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, shiftId: shift.id, note });
+    if (saved) { setCart([]); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setReceiptId(saved.id); setAutoPrintId(saved.id); searchRef.current?.focus(); }
   }
 
   return <div className={`${styles.page} ${styles.posPage}`} dir="rtl">
@@ -159,19 +156,16 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
           <div className={`${styles.form} ${styles.cartFields}`}><fieldset className={styles.paymentMethods} disabled={disabled}>
               <legend>طريقة السداد</legend>
               <div className={styles.paymentChoices}>
-                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "cash"} onClick={() => { if (paymentKind !== "cash") { setPaymentKind("cash"); setAccountId(""); } }}><Banknote size={27} aria-hidden="true" /><span>كاش</span>{paymentKind === "cash" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
-                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "pos"} onClick={() => { if (paymentKind !== "pos") { setPaymentKind("pos"); setAccountId(""); } }}><CreditCard size={27} aria-hidden="true" /><span>شبكة</span>{paymentKind === "pos" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
+                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "cash"} onClick={() => { if (paymentKind !== "cash") { setPaymentKind("cash"); } }}><Banknote size={27} aria-hidden="true" /><span>كاش</span>{paymentKind === "cash" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
+                <button type="button" className={styles.paymentChoice} aria-pressed={paymentKind === "pos"} onClick={() => { if (paymentKind !== "pos") { setPaymentKind("pos"); } }}><CreditCard size={27} aria-hidden="true" /><span>شبكة</span>{paymentKind === "pos" && <Check size={14} className={styles.paymentSelected} aria-hidden="true" />}</button>
               </div>
               <details className={styles.paymentOther}>
-                <summary>{paymentKind === "bank" ? "تحويل بنكي" : paymentKind === "credit" ? "آجل على العميل" : "طرق سداد أخرى"}</summary>
+                <summary>{paymentKind === "bank" ? "تحويل بنكي" : "طرق سداد أخرى"}</summary>
                 <div className={styles.paymentChoices}>
-                  <button type="button" aria-pressed={paymentKind === "bank"} onClick={() => { if (paymentKind !== "bank") { setPaymentKind("bank"); setAccountId(""); } }}>تحويل بنكي</button>
-                  <button type="button" aria-pressed={paymentKind === "credit"} onClick={() => { if (paymentKind !== "credit") { setPaymentKind("credit"); setAccountId(""); } }}>آجل على العميل</button>
+                  <button type="button" aria-pressed={paymentKind === "bank"} onClick={() => { if (paymentKind !== "bank") { setPaymentKind("bank"); } }}>تحويل بنكي</button>
                 </div>
               </details>
             </fieldset>
-            {paymentKind !== "credit" && <Field label="حساب التحصيل"><select disabled={disabled} value={paymentAccountId ?? ""} onChange={(event) => setAccountId(event.target.value)}><option value="">اختر الحساب</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>}
-            <Field label={paymentKind === "credit" ? "العميل مطلوب للبيع الآجل" : "العميل اختياري"}><select value={partyId} disabled={disabled} onChange={(event) => setPartyId(event.target.value)}><option value="">عميل نقدي</option>{data.parties.filter((party) => party.kind === "customer" && party.active).map((party) => <option key={party.id} value={party.id}>{party.name}</option>)}</select></Field>
             <FinancePosCustomerField state={customer} disabled={disabled} />
             <Field label="ملاحظة الطلب"><input maxLength={500} value={note} disabled={disabled} onChange={(event) => setNote(event.target.value)} /></Field>
           </div>
@@ -181,7 +175,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         </div>
         <div className={styles.cartFooter}>
           <button type="button" className={`${styles.secondary} ${styles.payButton}`} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={19} aria-hidden="true" />معاينة الإيصال</button>
-          <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift || shift.supervisor_paused} onClick={checkout}>{pending ? "جار تسجيل العملية" : paymentKind === "credit" ? "تسجيل المبيعات الآجلة" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
+          <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift || shift.supervisor_paused} onClick={checkout}>{pending ? "جار تسجيل العملية" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
           {cart.length > 0 && <button className={styles.secondary} style={{ width: "100%", marginTop: 8 }} disabled={disabled} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}>إفراغ السلة</button>}
         </div>
         <div className={styles.cartConnection}><FinancePosOfflineStatus state={state.offline} /></div>
