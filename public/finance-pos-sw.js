@@ -2,6 +2,28 @@
 const STATIC = "branda-pos-static-v1";
 const SHELL = "/finance/offline";
 const publicAsset = url => url.origin === self.location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/fonts/"));
+const localDevelopment = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
+async function staticAsset(request) {
+  const cache = await caches.open(STATIC);
+  // Development chunk URLs are reused after edits, unlike production content hashes.
+  // Refresh them online while keeping the existing offline fallback and sales data.
+  if (localDevelopment && new URL(request.url).pathname.startsWith("/_next/static/")) {
+    try {
+      const response = await fetch(request, { cache: "no-store" });
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    } catch (error) {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      throw error;
+    }
+  }
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
 async function currentSession() {
   return new Promise(resolve => {
     const request = indexedDB.open("branda-pos-v1");
@@ -41,7 +63,7 @@ self.addEventListener("fetch", event => {
   const request = event.request, url = new URL(request.url);
   if (request.method !== "GET") return;
   if (publicAsset(url)) {
-    event.respondWith((async () => { const cache = await caches.open(STATIC), old = await cache.match(request); if (old) return old; const response = await fetch(request); if (response.ok) await cache.put(request, response.clone()); return response; })());
+    event.respondWith(staticAsset(request));
     return;
   }
   const isPos = /^\/finance\/[^/]+\/pos\/?$/.test(url.pathname) || url.pathname === SHELL;
