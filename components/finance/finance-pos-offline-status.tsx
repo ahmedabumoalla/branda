@@ -10,7 +10,7 @@ export function FinancePosOfflineStatus({ state }: { state: ReturnType<typeof us
   const conflicts = state.pending.filter(sale => sale.status === "conflict");
   const label = `${state.connected ? "متصل" : "العمل دون اتصال"}${state.syncing ? " — جار المزامنة" : ""}${state.pending.length ? ` — ${state.pending.length} فاتورة بانتظار المزامنة` : ""}${conflicts.length ? " — توجد فواتير تحتاج مراجعة" : ""}`;
   return <>
-    <button type="button" className={styles.connectionIcon} data-state={conflicts.length ? "conflict" : state.connected ? "online" : "offline"} title={label} aria-label={`${label} — عرض تفاصيل المزامنة`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+    <button type="button" className={styles.connectionIcon} data-state={state.connected ? "online" : "offline"} data-conflict={conflicts.length > 0 || undefined} title={label} aria-label={`${label} — عرض تفاصيل المزامنة`} aria-haspopup="dialog" onClick={() => setOpen(true)}>
       {state.connected ? <Cloud size={25} aria-hidden="true" /> : <CloudOff size={25} aria-hidden="true" />}
       {(state.pending.length > 0 || state.syncing) && <span className={styles.connectionCount} aria-hidden="true">{state.syncing ? "↻" : state.pending.length}</span>}
     </button>
