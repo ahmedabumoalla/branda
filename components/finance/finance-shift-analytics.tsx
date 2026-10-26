@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BarChart3, Clock3, Download, Package, RefreshCw, Search, ShoppingBag, TrendingUp } from "lucide-react";
 import { fetchFinanceShiftAnalyticsAction } from "@/app/actions/finance-shift-analytics";
 import { durationParts, shiftHighlights, shiftProductsCsv, type ShiftAnalytics, type ShiftProductAnalytics } from "@/lib/finance/shift-analytics";
@@ -13,27 +13,29 @@ const hour = (value: number) => `${String(value).padStart(2, "0")}:00`;
 const estimated = (value: { estimatedCostLineCount: number; legacyCostLineCount: number }) => value.estimatedCostLineCount > 0 || value.legacyCostLineCount > 0;
 const paymentNames: Record<string, string> = { cash: "كاش", pos: "شبكة", bank: "بنك", receivable: "آجل" };
 
-export function FinanceShiftAnalytics({ shiftId, slug }: { shiftId: string; slug?: string }) {
+export function FinanceShiftAnalytics({ shiftId, slug, visible = true, refreshKey = 0 }: { shiftId: string; slug?: string; visible?: boolean; refreshKey?: number }) {
   const [report, setReport] = useState<ShiftAnalytics | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const visibleRef = useRef(visible);
+  useEffect(() => { visibleRef.current = visible; }, [visible]);
   useEffect(() => {
-    let active = true, busy = false;
+    let active = true, busy = false, closed = false;
     async function load() {
       if (busy) return;
       busy = true;
       try {
         const result = await fetchFinanceShiftAnalyticsAction(shiftId, slug);
         if (!active) return;
-        if (result.ok) { setReport(result.data); setError(""); } else setError(result.message);
+        if (result.ok) { closed = !!result.data.closedAt; setReport(result.data); setError(""); } else setError(result.message);
       } catch { if (active) setError("تعذر تحديث التحليل أعد المحاولة"); }
       finally { busy = false; if (active) setLoading(false); }
     }
     void load();
-    const timer = setInterval(() => void load(), 30_000);
+    const timer = setInterval(() => { if (visibleRef.current && !closed && document.visibilityState !== "hidden") void load(); }, 30_000);
     return () => { active = false; clearInterval(timer); };
-  }, [shiftId, slug, revision]);
+  }, [shiftId, slug, revision, refreshKey]);
   const current = report?.shiftId === shiftId ? report : null;
   return <section className={s.report} aria-label="تحليل أداء الوردية">
     <div className={s.heading}><div><span className={s.eyebrow}><BarChart3 size={15} />قراءة أداء الوردية</span><h3>أرقام تساعدك على القرار</h3></div><button type="button" className={s.button} onClick={() => setRevision(v => v + 1)}><RefreshCw size={15} />تحديث التحليل</button></div>

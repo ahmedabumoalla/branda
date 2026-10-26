@@ -100,7 +100,8 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
       {!shift ? <p role="status">{error || "جار تحميل تفاصيل الوردية"}</p> : <div className={css.detail}>
         <div className={css.identity}><div><strong>{shift.employee_name}</strong><p>{shift.drawer_name}</p></div><Status shift={shift} /></div>
         <div className={css.detailTabs} role="group" aria-label="عرض تفاصيل الوردية"><button type="button" disabled={saving} aria-pressed={detailView === "analytics"} onClick={() => setDetailView("analytics")}>تحليل الوردية</button><button type="button" disabled={saving} aria-pressed={detailView === "operations"} onClick={() => setDetailView("operations")}>الصندوق والإجراءات</button></div>
-        {detailView === "analytics" ? <FinanceShiftAnalytics key={shift.id} shiftId={shift.id} slug={slug} /> : <>
+        <div hidden={detailView !== "analytics"}><FinanceShiftAnalytics key={`${slug ?? snapshot.cafe.id}:${shift.id}`} shiftId={shift.id} slug={slug} visible={detailView === "analytics"} refreshKey={revision} /></div>
+        {detailView === "operations" && <>
         <div className={css.facts}><div>البداية<strong>{financeDate(shift.opened_at)}</strong></div><div>الإقفال<strong>{financeDate(shift.closed_at)}</strong></div><div>النقدية المتوقعة<strong><Numeric value={shift.current_expected} money /></strong></div><div>النقدية المعدودة<strong>{shift.counted_cash == null ? "لم تسجل" : <Numeric value={shift.counted_cash} money />}</strong></div><div>فرق الإقفال<strong>{shift.variance == null ? "—" : <Numeric value={shift.variance} money />}</strong></div><div>آخر اتصال<strong>{shift.last_seen_at ? financeDate(shift.last_seen_at) : "لم يصل تحديث"}</strong></div></div>
         {shift.note && <p className={styles.notice}>{shift.note}</p>}
         <p className={styles.muted}>الفواتير المعلقة حسب آخر تحديث: {shift.pending_count} · تحتاج مراجعة: {shift.conflict_count}</p>
