@@ -27,6 +27,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   const snapshot = useMemo(() => projectOfflineSales(serverSnapshot, sales), [serverSnapshot, sales]);
   const current = useRef({ snapshot, sales, ready, blocked });
   useLayoutEffect(() => { current.current = { snapshot, sales, ready, blocked }; }, [snapshot, sales, ready, blocked]);
+  const deviceId = useRef<string | null>(null);
   const busy = useRef(false), syncBusy = useRef(false), alive = useRef(true);
   const checkoutRetry = useRef<{ fingerprint: string; requestId: string } | null>(null);
   const channel = useRef<BroadcastChannel | null>(null);
@@ -67,6 +68,21 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
           conflict: flagOfflineConflict,
           authRequired: message => { setBlocked(true); setError(message); void lockOfflineSession(); },
         });
+        // Telemetry is advisory and never controls durable sale acknowledgement.
+        // Report closed shifts too when this device still has unresolved local sales.
+        try {
+          if (!deviceId.current) {
+            const key = "branda-pos-monitor-device";
+            deviceId.current = localStorage.getItem(key) || crypto.randomUUID();
+            localStorage.setItem(key, deviceId.current);
+          }
+          const local = pendingSales(await listOfflineSales(scope));
+          const shifts = new Set<string>([...body.snapshot.shifts.filter((s: { user_id: string; status: string }) => s.user_id === initialSnapshot.userId && s.status !== "closed").map((s: { id: string }) => s.id), ...local.map(s => String(s.command.payload.shiftId))]);
+          await Promise.all([...shifts].map(shiftId => {
+            const rows = local.filter(s => s.command.payload.shiftId === shiftId);
+            return fetch(endpoint.replace("pos-sync", "shift-heartbeat"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shiftId, deviceId: deviceId.current, pending: rows.length, conflicts: rows.filter(s => s.status === "conflict").length }), signal: AbortSignal.timeout(8000) });
+          }));
+        } catch { /* Missing heartbeat turns yellow without blocking offline storage or retries. */ }
         await reload(); notify();
       });
     } catch { if (alive.current) setConnected(false); }
@@ -114,6 +130,9 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
     busy.current = true; setSaving(true); setError(""); setMessage("");
     try {
       const data = current.current.snapshot;
+      const shift = data.shifts.find(row => row.id === payload.shiftId && row.user_id === data.userId);
+      if (!shift || shift.status !== "open") throw new Error("الوردية مقفلة أو غير متاحة حدث الكاشير قبل متابعة البيع");
+      if (shift.supervisor_paused) throw new Error("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع");
       if (payload.redeemRewardId && !connected) throw new Error("صرف المكافأة يحتاج اتصالًا للتحقق من عدم استخدامها يمكنك حفظ البيع دون صرفها");
       const lines = (payload.lines as { productId: string; quantity: number }[]).map(line => {
         const product = data.products.find(product => product.id === line.productId);

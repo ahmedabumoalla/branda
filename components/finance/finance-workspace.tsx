@@ -1,4 +1,5 @@
 "use client";
+import { FinanceShiftMonitor } from "./finance-shift-monitor";
 import { FinancePrinterSettings } from "./finance-printer-settings";
 
 import Link from "next/link";
@@ -104,8 +105,8 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
       {section === "shifts" && <>
         <FinanceCashDifferences slug={slug} onSettled={() => { void state.refresh(); }} />
         <FinanceCashHandovers snapshot={data} slug={slug} onReceived={() => { void state.refresh(); }} />
-        <div className={styles.toolbar}><p className={styles.muted}>بداية الوردية وإقفالها وتسليمها من الكاشير المالي</p><Link href={posHref} className={styles.primary}>إدارة ورديتي<ArrowLeft size={16} /></Link></div>{searches}
-        <Panel title="سجل الورديات">{!data.shifts.length ? <Empty title="لم تبدأ وردية مالية بعد">افتح الكاشير المالي واختر صندوق الوردية والنقدية الافتتاحية</Empty> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>الوردية</th><th>الموظف</th><th>الصندوق</th><th>بداية الوردية</th><th>الإقفال</th><th>الحالة</th><th>المتوقع</th><th>المعدود</th><th>الفارق</th></tr></thead><tbody>{data.shifts.filter((shift) => dateMatch(shift.opened_at) && match(`${staffName(shift.user_id)} ${accountName(shift.account_id)}`)).map((shift) => <tr key={shift.id}><td>{shift.shift_number ? <span className={styles.badge} aria-label={`رقم الوردية ${shift.shift_number}`}><bdi dir="ltr">#{shift.shift_number}</bdi></span> : "—"}</td><td>{staffName(shift.user_id)}</td><td>{accountName(shift.account_id)}</td><td>{financeDate(shift.opened_at)}</td><td>{financeDate(shift.closed_at)}</td><td><span className={styles.badge}>{shift.status === "open" ? "مفتوحة" : shift.status === "closed" ? "مقفلة" : "بانتظار الاستلام"}</span>{shift.handover_to && <div className={styles.muted}>إلى {staffName(shift.handover_to)}</div>}</td><td><Numeric value={shift.expected_cash} money /></td><td>{shift.counted_cash === null ? "—" : <Numeric value={shift.counted_cash} money />}</td><td className={shift.variance ? styles.negative : styles.positive}>{shift.variance === null ? "—" : <Numeric value={shift.variance} money />}</td></tr>)}</tbody></table></div>}</Panel>
+        <div className={styles.toolbar}><p className={styles.muted}>بداية الوردية وإقفالها وتسليمها من الكاشير المالي</p><Link href={posHref} className={styles.primary}>إدارة ورديتي<ArrowLeft size={16} /></Link></div>
+        {data.canManage && <FinanceShiftMonitor snapshot={data} slug={slug} onChanged={() => { void state.refresh(); }} />}
       </>}
       {section === "reports" && <>
         <div className={styles.metrics}><Metric label="صافي المبيعات" value={data.summary.sales} /><Metric label="المشتريات" value={data.summary.purchases} /><Metric label="المصروفات" value={data.summary.expenses} /><Metric label="الربح التشغيلي" value={data.summary.profit} /></div>

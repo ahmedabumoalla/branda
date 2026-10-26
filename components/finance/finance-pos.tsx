@@ -121,7 +121,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     <div className={styles.posControls}>
     <header className={`${styles.header} ${styles.posHeader}`}>
       <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />برندة المالية · {data.cafe.name}</p><h1 className={styles.title}>الكاشير المالي</h1>
-        <div className={styles.posShiftMeta} aria-label="الوردية الحالية"><Clock3 size={15} aria-hidden="true" /><span>{shift ? "ورديتك مفتوحة" : outgoing ? "ورديتك بانتظار الاستلام" : "ابدأ ورديتك"}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}{shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"} · {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}</div>
+        <div className={styles.posShiftMeta} aria-label="الوردية الحالية"><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? "ورديتك موقوفة إداريًا" : "ورديتك مفتوحة" : outgoing ? "ورديتك بانتظار الاستلام" : "ابدأ ورديتك"}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}{shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"} · {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}</div>
       </div>
       <div className={styles.actions} aria-label="أدوات الكاشير والوردية">
         {shift ? <><button className={styles.secondary} disabled={disabled || cart.length > 0} onClick={() => open({ operation: "shift_handover", title: "تسليم الوردية", values: { shiftId: shift.id, expectedCash: shift.expected_cash } })}>تسليم الوردية</button><button className={styles.primary} disabled={disabled || cart.length > 0} onClick={() => open({ operation: "shift_close", title: "إقفال الوردية", values: { shiftId: shift.id, expectedCash: shift.expected_cash } })}>نهاية الوردية</button></> : !outgoing && <button className={styles.primary} disabled={disabled || incoming.length > 0} onClick={() => open({ operation: "shift_open", title: "بداية وردية مالية" })}><Plus size={16} />بداية وردية</button>}
@@ -182,7 +182,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         </div>
         <div className={styles.cartFooter}>
           <button type="button" className={`${styles.secondary} ${styles.payButton}`} disabled={pending || !lines.length} onClick={previewReceipt}><Eye size={19} aria-hidden="true" />معاينة الإيصال</button>
-          <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift} onClick={checkout}>{pending ? "جار تسجيل العملية" : paymentKind === "credit" ? "تسجيل المبيعات الآجلة" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
+          <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift || shift.supervisor_paused} onClick={checkout}>{pending ? "جار تسجيل العملية" : paymentKind === "credit" ? "تسجيل المبيعات الآجلة" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
           {cart.length > 0 && <button className={styles.secondary} style={{ width: "100%", marginTop: 8 }} disabled={disabled} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}>إفراغ السلة</button>}
         </div>
         <div className={styles.cartConnection}><FinancePosOfflineStatus state={state.offline} /></div>

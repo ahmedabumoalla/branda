@@ -42,6 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   } catch (error) {
     if (error instanceof Error && error.name === "FinanceUnavailable") return fail(error.message, "retry", 503);
     const message = error instanceof Error && /[\u0600-\u06ff]/.test(error.message) && error.message.length < 400 ? error.message : "تعذر مزامنة الفاتورة راجع البيانات ثم أعد المحاولة";
-    return fail(message, "conflict", 409);
+    // Administrative pause is reversible; keep queued invoices retryable on resume.
+    return fail(message, message.includes("الوردية موقوفة إداريًا") ? "retry" : "conflict", 409);
   }
 }
