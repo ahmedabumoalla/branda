@@ -70,6 +70,17 @@ async function main() {
   assert.equal(financeDiscount(46, 4.6, 'amount'), 4.6);
   assert.equal(financeCartLines([{ productId: 'gone', quantity: 1 }], base.products).length, 0); groups++;
   let tree = render();
+  assert.ok(!nodes(tree).some(node => node.type === 'button' && text(node).startsWith('تقرير آخر وردية')));
+  current.shifts.push(
+    { ...base.shifts[0], id: 'recent-open-old-close', status: 'closed', opened_at: '2026-10-26T08:00:00Z', closed_at: '2026-10-26T09:00:00Z', shift_number: 8 },
+    { ...base.shifts[0], id: 'latest-close', status: 'closed', opened_at: '2026-10-25T08:00:00Z', closed_at: '2026-10-26T10:00:00Z', shift_number: 9 },
+    { ...base.shifts[0], id: 'foreign-latest', user_id: 'another-user', status: 'closed', closed_at: '2026-10-27T10:00:00Z', shift_number: 10 }
+  );
+  tree = render();
+  find(tree, node => node.type === 'button' && text(node).startsWith('تقرير آخر وردية')).props.onClick(); tree = render();
+  const shiftReport = find(tree, node => node.props?.shiftId === 'latest-close' && typeof node.props.onClose === 'function');
+  assert.equal(shiftReport.props.slug, 'test-brand'); shiftReport.props.onClose();
+  current.shifts = structuredClone(base.shifts); tree = render(); groups++;
   assert.ok(!nodes(tree).some(node => node.type?.name === 'Field' && ['حساب التحصيل', 'العميل اختياري', 'العميل مطلوب للبيع الآجل'].includes(node.props.label)));
   assert.ok(!nodes(tree).some(node => node.type === 'button' && text(node) === 'آجل على العميل'));
   // Navigation is resolved by server authority, never a user-supplied return URL.
