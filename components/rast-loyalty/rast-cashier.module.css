@@ -2,14 +2,24 @@
 .page { min-height: 100dvh; min-width: 0; width: 100%; padding: 12px; background: var(--cashier-paper); color: var(--cashier-ink); }
 .page, .page * { box-sizing: border-box; }
 .frame { width: 100%; max-width: 56rem; min-width: 0; margin-inline: auto; container-type: inline-size; }
-.header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
+.header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); }
 .identity { min-width: 0; overflow-wrap: anywhere; }
 .identity img { width: 88px; height: 40px; }
 .title { margin-top: 6px; font-size: 22px; font-weight: 700; line-height: 1.4; }
-.greeting { margin-top: 4px; font-size: 13px; line-height: 1.65; }
-.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.greeting { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .tools > * { min-width: 0; max-width: 100%; }
 .tools a, .tools button { min-height: 44px; padding-inline: 12px; font-size: 13px; white-space: normal; }
+.logout { display: inline-flex; min-width: 44px; align-items: center; justify-content: center; gap: 8px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 22%, transparent); border-radius: 12px; }
+.logout:disabled { opacity: .5; }
+.logout:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 3px; }
+@container (max-width: 28rem) {
+  .identity > div { gap: 0; }
+  .identity > div > span, .logoutLabel { display: none; }
+  .identity img { width: 80px; height: 36px; }
+  .tools { justify-content: flex-end; max-width: 208px; }
+  .tools a, .tools button { padding-inline: 8px; }
+}
 .tools svg, .tabs svg { flex-shrink: 0; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
 .body > * { min-width: 0; }
@@ -25,7 +35,7 @@
 .guide summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; border-radius: 6px; }
 .guideContent { display: grid; gap: 10px; padding-bottom: 6px; }
 @container (min-width: 48rem) {
-  .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 20px; }
+  .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 14px; }
   .tools { max-width: 28rem; justify-content: flex-end; }
   .body { grid-template-columns: minmax(0, 1fr) 220px; gap: 20px; }
   .scanPanel { padding: 20px; }
