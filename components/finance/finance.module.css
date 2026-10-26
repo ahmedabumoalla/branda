@@ -145,6 +145,7 @@
 .balanceLine strong { font-variant-numeric: tabular-nums; }
 .posLayout { display: grid; grid-template-columns: minmax(0, 1fr) 365px; align-items: start; gap: 20px; }
 .posMain { min-width: 0; }
+.posPage { padding: 8px 12px; }
 .posHeader { flex-direction: column; align-items: stretch; gap: 18px; }
 .posShiftMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; line-height: 1.8; color: var(--finance-muted); }
 .posHeader .connectionIcon { flex: 0 0 44px; }
@@ -164,8 +165,28 @@
 .productPrice { font-size: 16px; font-weight: 800; color: var(--finance-accent); }
 .productPrice small { font-size: 10px; font-weight: 500; }
 .productQuantity { position: absolute; top: 8px; inset-inline-start: 8px; min-width: 28px; height: 28px; border-radius: 8px; background: var(--finance-ink); color: white; font-size: 12px; display: grid; place-items: center; }
-.cart { position: sticky; top: 16px; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
-.cart > .panelHeader { position: sticky; top: 0; z-index: 1; background: var(--finance-paper); }
+.cart { position: sticky; top: 8px; max-height: calc(100dvh - 16px); display: flex; flex-direction: column; overflow: hidden; }
+.cart > .panelHeader { flex-shrink: 0; padding: 12px 16px; background: var(--finance-paper); }
+.cartBody { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.cart .empty { padding: 14px 12px; gap: 5px; }
+.cart .empty > svg { width: 24px; height: 24px; }
+.cart .empty strong { font-size: 14px; }
+.cart .empty p { font-size: 11px; line-height: 1.6; }
+.cart .cartSummary { padding: 12px 16px; }
+.cart .fields, .cart .form { gap: 9px; }
+.cart .field { gap: 4px; }
+.cart .field :is(input,select) { min-height: 44px; padding: 7px 10px; }
+.cart .balanceLine { padding: 6px 0; font-size: 12px; }
+.cart .total { padding: 10px 0; font-size: 19px; }
+.cart .total .numeric { font-size: 32px; }
+.cartFields { margin-top: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cartFields > :first-child, .cartFields > :nth-last-child(-n+2) { grid-column: 1 / -1; }
+.cart .paymentMethods legend { margin-bottom: 6px; }
+.cart .paymentChoice { flex-direction: row; min-height: 54px; gap: 8px; padding: 9px; font-size: 15px; }
+.cart .paymentOther { margin-top: 0; }
+.cartFooter { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1.5fr; align-items: stretch; gap: 6px; padding: 10px 16px; border-top: 1px solid var(--finance-line); background: var(--finance-paper); }
+.cartFooter .payButton { margin-top: 0; min-height: 46px; padding: 8px; font-size: 12px; line-height: 1.6; }
+.cartFooter > p, .cartFooter > button:last-child:not(.payButton) { grid-column: 1 / -1; margin: 0; }
 .cartLines { max-height: 390px; overflow-y: auto; padding: 0 18px; }
 .cartLine { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 10px; border-bottom: 1px solid var(--finance-line); padding: 17px 0; }
 .cartLine strong { font-size: 13px; display: block; margin-bottom: 7px; }
