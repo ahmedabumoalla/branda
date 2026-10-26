@@ -1,5 +1,7 @@
 # Branda current handoff
 
+- POS FIXED CONTROLS 2026-10-26T20:12:48.202Z: compact wrapped title/shift actions, full-width search with inline warehouse, and categories remain above independent scrolling catalog. Cart retains separate scroll/actions. Narrow screens retain stacked cart with sticky catalog controls. Root/release TypeScript/text, UI37, scoped lint and webpack build PASS on Node24.21.0; source responsive review, no browser per policy. Evidence root output/pos-fixed-controls-verification.json; marker pos-fixed-controls-20261026 identifies final publication after verification
+
 - CASH DRAWERS AND LIMITS 2026-10-26T20:02:27.064Z: migrations 20261026194000 and 20261026201000 applied to production Supabase via authenticated SQL Editor; exact history hashes verified. Concurrent shifts use separate device-selected cash drawers. Cash allowance is THREE total undeleted cash accounts INCLUDING cashier drawers and archived cash; existing excess retained, further creation blocked. Treasury offers WhatsApp increase request to 0508424401 and confirmed empty-account deletion (audit tombstone, zero-only opening allowed, real movements/shifts/reconciliation/attachments/links prohibited, primary/system safes protected). SQL146/UI34/handoverUI10/access, root+release TypeScript/text, scoped lint and webpack build PASS on Node24.21.0. Production release marker cash-lifecycle-20261026 will identify exact deployed SHA/aliases after verification. Evidence original workspace output/cash-lifecycle-verification.json
 
 

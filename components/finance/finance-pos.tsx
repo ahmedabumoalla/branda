@@ -117,7 +117,8 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
 
   return <div className={`${styles.page} ${styles.posPage}`} dir="rtl">
     <div className={styles.posLayout}>
-    <div className={styles.posMain} role="region" aria-label="المنتجات وأدوات الكاشير" tabIndex={0}>
+    <div className={styles.posMain} role="region" aria-label="المنتجات وأدوات الكاشير">
+    <div className={styles.posControls}>
     <header className={`${styles.header} ${styles.posHeader}`}>
       <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />برندة المالية · {data.cafe.name}</p><h1 className={styles.title}>الكاشير المالي</h1>
         <div className={styles.posShiftMeta} aria-label="الوردية الحالية"><Clock3 size={15} aria-hidden="true" /><span>{shift ? "ورديتك مفتوحة" : outgoing ? "ورديتك بانتظار الاستلام" : "ابدأ ورديتك"}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}{shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"} · {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}</div>
@@ -130,12 +131,15 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}<button className={styles.iconButton} disabled={pending} aria-label="تحديث الأسعار والأرصدة" onClick={state.refresh}><RefreshCw size={18} /></button>{slug && <button className={styles.secondary} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل الخروج" : undefined} onClick={async () => { setLoggingOut(true); try { await state.offline.logout(); await logoutFinanceAction(); router.replace(data.role === "cashier" ? "/cashier/login?type=sales" : `/finance/${slug}/login`); } catch { setLocalError("تعذر تسجيل الخروج حاول مرة أخرى"); setLoggingOut(false); } }}><LogOut size={16} />خروج</button>}
       </div>
     </header>
+      <div className={`${styles.toolbar} ${styles.posToolbar}`}><label className={styles.searchBox}><Search size={18} aria-hidden="true" /><input ref={searchRef} className={styles.search} placeholder="ابحث عن صنف" aria-label="البحث عن صنف" value={query} onChange={(event) => setQuery(event.target.value)} /></label><Field label="مستودع البيع"><select value={warehouseId} disabled={disabled} onChange={(event) => setWarehouseId(event.target.value)}>{data.warehouses.filter((warehouse) => warehouse.active).map((warehouse) => <option value={warehouse.id} key={warehouse.id}>{warehouse.name}</option>)}</select></Field></div>
+        <div className={styles.categories} aria-label="فئات الأصناف"><button className={styles.category} aria-pressed={!category} onClick={() => setCategory("")}>جميع الأصناف</button>{categories.map((name) => <button key={name} className={styles.category} aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div>
+    </div>
+    <div className={styles.posCatalog} role="region" aria-label="قائمة الأصناف القابلة للتمرير" tabIndex={0}>
     {message && <div className={styles.success} role="status"><Check size={16} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />{message}</div>}
     {customerNotice && <div className={styles.notice} role="status">{customerNotice}</div>}
     {(localError || error) && !form && <div className={styles.error} role="alert">{localError || error}</div>}
     {stale && <div className={styles.notice}>توقف تسجيل العمليات حتى تحديث الأرصدة العملية المحفوظة لا تحتاج إلى تكرار</div>}
-      <section aria-label="منتجات المنيو"><div className={styles.toolbar}><label className={styles.searchBox}><Search size={18} aria-hidden="true" /><input ref={searchRef} className={styles.search} placeholder="ابحث عن صنف" aria-label="البحث عن صنف" value={query} onChange={(event) => setQuery(event.target.value)} /></label><Field label="مستودع البيع"><select value={warehouseId} disabled={disabled} onChange={(event) => setWarehouseId(event.target.value)}>{data.warehouses.filter((warehouse) => warehouse.active).map((warehouse) => <option value={warehouse.id} key={warehouse.id}>{warehouse.name}</option>)}</select></Field></div>
-        <div className={styles.categories} aria-label="فئات الأصناف"><button className={styles.category} aria-pressed={!category} onClick={() => setCategory("")}>جميع الأصناف</button>{categories.map((name) => <button key={name} className={styles.category} aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div>
+      <section aria-label="منتجات المنيو">
         {!products.length ? <div className={styles.panel}><Empty title={data.products.length ? "لا توجد أصناف مطابقة" : "المنيو خالٍ من الأصناف"}>{data.products.length ? "جرّب اسمًا آخر أو اختر جميع الأصناف" : "أضف منتجات العلامة وصورها وأسعارها من إدارة المنيو"}</Empty></div> : <div className={styles.products}>{products.map((product) => {
           const quantity = cart.find((line) => line.productId === product.id)?.quantity ?? 0;
           const stock = quantityAvailable(product);
@@ -146,6 +150,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         })}</div>}
       </section>
       <FinanceRefundRequests snapshot={data} pending={disabled} error={error} onExecute={state.execute} onReceipt={setReceiptId} />
+    </div>
     </div>
       <aside className={`${styles.panel} ${styles.cart}`} aria-label="سلة المبيعات"><div className={styles.panelHeader}><h2 className={styles.panelTitle}><ShoppingBag size={18} style={{ display: "inline", marginInlineEnd: 7 }} aria-hidden="true" />طلب جديد</h2><span className={styles.badge}>{cart.reduce((sum, line) => sum + line.quantity, 0)} قطعة</span></div>
         <div className={styles.cartBody} role="region" aria-label="محتويات الطلب والمبلغ" tabIndex={0}>
