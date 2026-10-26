@@ -148,7 +148,7 @@
 .posPage { padding: 8px 12px; }
 .posHeader { flex-direction: column; align-items: stretch; gap: 18px; }
 .posShiftMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; line-height: 1.8; color: var(--finance-muted); }
-.posHeader .connectionIcon { flex: 0 0 44px; }
+.cartConnection { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; padding: 0 16px 6px; background: var(--finance-paper); }
 .connectionIcon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: var(--finance-good); cursor: pointer; }
 .connectionIcon:hover { background: var(--finance-line); }
 .connectionIcon[data-state="offline"] { color: var(--finance-muted); }

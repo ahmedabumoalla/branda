@@ -127,7 +127,6 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
       <button className={styles.secondary} onClick={() => setShowHistory(true)}>سجل المبيعات</button>
       <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />
       {incoming.map((item) => <button key={item.id} disabled={disabled || !!shift} className={styles.primary} title={`وردية ${item.shift_number ?? ""} — ${data.accounts.find((account) => account.id === item.account_id)?.name ?? "الصندوق"} — النقدية المسلمة ${financeMoney(item.counted_cash ?? 0)}`} onClick={() => open({ operation: "shift_accept", title: "استلام الوردية", values: { shiftId: item.id, expectedCash: item.counted_cash ?? item.expected_cash } })}>عد النقدية واستلم</button>)}
-        <FinancePosOfflineStatus state={state.offline} />
         {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}<button className={styles.iconButton} disabled={pending} aria-label="تحديث الأسعار والأرصدة" onClick={state.refresh}><RefreshCw size={18} /></button>{slug && <button className={styles.secondary} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل الخروج" : undefined} onClick={async () => { setLoggingOut(true); try { await state.offline.logout(); await logoutFinanceAction(); router.replace(data.role === "cashier" ? "/cashier/login?type=sales" : `/finance/${slug}/login`); } catch { setLocalError("تعذر تسجيل الخروج حاول مرة أخرى"); setLoggingOut(false); } }}><LogOut size={16} />خروج</button>}
       </div>
     </header>
@@ -180,6 +179,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
           <button className={`${styles.primary} ${styles.payButton}`} disabled={disabled || !cart.length || !shift} onClick={checkout}>{pending ? "جار تسجيل العملية" : paymentKind === "credit" ? "تسجيل المبيعات الآجلة" : "تأكيد الاستلام وإصدار إيصال"}<Check size={17} /></button>
           {cart.length > 0 && <button className={styles.secondary} style={{ width: "100%", marginTop: 8 }} disabled={disabled} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}>إفراغ السلة</button>}
         </div>
+        <div className={styles.cartConnection}><FinancePosOfflineStatus state={state.offline} /></div>
       </aside>
     </div>
     <FinanceRefundRequests snapshot={data} pending={disabled} error={error} onExecute={state.execute} onReceipt={setReceiptId} />
