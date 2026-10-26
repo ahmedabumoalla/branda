@@ -56,7 +56,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const [localError, setLocalError] = useState("");
   const [form, setForm] = useState<FinanceForm | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(null);
-  const [autoPrintId, setAutoPrintId] = useState<string | null>(null);
+  const [printQueue, setPrintQueue] = useState<string[]>([]);
   const [receiptPreview, setReceiptPreview] = useState<FinanceDocument | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -75,6 +75,8 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const accounts = data.accounts.filter((account) => account.active && account.kind === paymentKind && (paymentKind !== "cash" || account.id === shift?.account_id));
   const paymentAccountId = getPrimaryFinanceAccount(accounts)?.id;
   const receipt = data.documents.find((document) => document.id === receiptId || state.offline.sales.some((sale) => sale.id === receiptId && sale.document.id === document.id));
+  const printId = printQueue[0];
+  const printDocument = printId ? data.documents.find((document) => document.id === printId || state.offline.sales.some((sale) => sale.id === printId && sale.document.id === document.id)) : undefined;
   const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
   const open = (next: FinanceForm) => { state.clearFeedback(); setLocalError(""); setForm(next); };
   function quantityAvailable(product: FinanceProduct) { return product.stockTracked ? data.stock.find((stock) => stock.item_id === product.itemId && stock.warehouse_id === warehouseId)?.quantity ?? 0 : Infinity; }
@@ -108,7 +110,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     let customerPayload: Record<string, unknown>;
     try { customerPayload = customer.payload(); } catch (cause) { setLocalError(cause instanceof Error ? cause.message : "راجع رقم العميل قبل حفظ الفاتورة"); return; }
     const saved = await state.execute("sale", { lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity, expectedUnitPrice: line.product.price })), expectedTotal: totals.total, discount, accountId: paymentAccountId, ...customerPayload, warehouseId, shiftId: shift.id, note });
-    if (saved) { setCart([]); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setReceiptId(saved.id); setAutoPrintId(saved.id); searchRef.current?.focus(); }
+    if (saved) { setCart([]); setDiscountValue(0); setNote(""); customer.reset(); setCustomerNotice(financePosCustomerNotice(saved.customer)); setPagerRefreshKey((value) => value + 1); setPrintQueue((queue) => queue.includes(saved.id) ? queue : [...queue, saved.id]); searchRef.current?.focus(); }
   }
 
   return <div className={`${styles.page} ${styles.posPage}`} dir="rtl">
@@ -184,6 +186,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending) setForm(null); }} panelClassName={form?.operation === "refund" ? styles.invoicePanel : "flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
     <Modal open={showHistory} title="سجل المبيعات" onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{data.truncated && <p className={styles.notice}>يعرض السجل أحدث العمليات المتاحة</p>}{!history.length ? <Empty title="لا توجد مبيعات مسجلة" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>المستند</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}> بانتظار المزامنة</small>}</td><td>{financeDate(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{financeDocumentStatus(document)}</td><td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>الإيصال</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: `مرتجع مبيعات #${document.number}`, values: { documentId: document.id } }); }}>إرجاع</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
-    {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} autoPrint={autoPrintId === receiptId && printer.ready && printer.autoEnabled} autoPrintKey={autoPrintId ?? undefined} onPrint={printer.handler(receiptId ?? receipt.id, autoPrintId === receiptId)} onClose={() => { setReceiptId(null); setAutoPrintId(null); }} />}
+    {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}
+    {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} onPrint={printer.handler(receiptId ?? receipt.id, false)} onClose={() => setReceiptId(null)} />}
   </div>;
 }

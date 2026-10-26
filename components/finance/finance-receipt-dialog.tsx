@@ -9,7 +9,7 @@ import { claimAutomaticReceiptPrint, printThermalReceipt, type ReceiptBrand, typ
 import styles from "./finance-receipt.module.css";
 
 /** Both the dashboard and the standalone financial cashier use this exact dialog. */
-export function FinanceReceiptDialog({ document, snapshot, onClose, preview = false, autoPrint = false, autoPrintKey, receiptBrand, onPrint }: { document: FinanceDocument; snapshot: FinanceSnapshot; onClose: () => void; preview?: boolean; autoPrint?: boolean; autoPrintKey?: string; receiptBrand?: ReceiptBrand | null; onPrint?: ReceiptPrintHandler }) {
+export function FinanceReceiptDialog({ document, snapshot, onClose, preview = false, autoPrint = false, backgroundAutoPrint = false, autoPrintKey, receiptBrand, onPrint }: { document: FinanceDocument; snapshot: FinanceSnapshot; onClose: () => void; preview?: boolean; autoPrint?: boolean; backgroundAutoPrint?: boolean; autoPrintKey?: string; receiptBrand?: ReceiptBrand | null; onPrint?: ReceiptPrintHandler }) {
   const [paper, setPaper] = useState<ReceiptPaper>("auto");
   const [copy, setCopy] = useState<ReceiptCopy>("customer");
   const [brand, setBrand] = useState<ReceiptBrand | null>(null);
@@ -19,6 +19,7 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
   const [printing, setPrinting] = useState(false);
   const [printStatus, setPrintStatus] = useState("");
   const [brandWarning, setBrandWarning] = useState("");
+  const [automaticFailed, setAutomaticFailed] = useState(false);
   const busy = useRef(false);
   const receipt = useRef<HTMLDivElement>(null);
   const pairedReceipt = useRef<HTMLDivElement>(null);
@@ -42,11 +43,12 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
     busy.current = true; setPrinting(true); setError(""); setPrintStatus("");
     try {
       const result = await (onPrint ?? printThermalReceipt)(both ? pairedReceipt.current : receipt.current, paper, { allCopies: both, newCopy: !automatic });
+      if (automatic && backgroundAutoPrint) { onClose(); return; }
       setPrintStatus(`${result.submittedToDevice ? "أُرسلت مهمة الطباعة إلى خدمة الطابعة" : both ? "فُتحت طباعة إيصال العميل ونسخة المطبخ معًا" : "فُتحت نافذة الطباعة"} تأكد من خروج النسخ من الطابعة${result.usedAssetFallback ? " استُخدم خط بديل أو أُخفي شعار غير متاح" : ""}`);
     }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "تعذر فتح الطباعة حاول مجددًا"); }
+    catch (reason) { setAutomaticFailed(true); setError(reason instanceof Error ? reason.message : "تعذر فتح الطباعة حاول مجددًا"); }
     finally { busy.current = false; setPrinting(false); }
-  }, [ready, paper, onPrint]);
+  }, [ready, paper, onPrint, backgroundAutoPrint, onClose]);
   useEffect(() => {
     if (!autoPrint || preview || document.kind !== "sale" || !ready) return;
     const frame = requestAnimationFrame(() => {
@@ -54,6 +56,9 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
     });
     return () => cancelAnimationFrame(frame);
   }, [autoPrint, preview, document.kind, document.id, ready, snapshot.cafe.slug, autoPrintKey, print]);
+  if (backgroundAutoPrint && autoPrint && !preview && document.kind === "sale" && !automaticFailed) {
+    return <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" /><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" /></div>;
+  }
   return <Modal open title={preview ? "معاينة الإيصال" : document.kind === "refund" ? `فاتورة مرتجع #${document.number}` : `طباعة الفاتورة ${document.number ? `#${document.number}` : document.local_reference ?? ""}`} onClose={onClose}
     panelClassName="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
     footer={<div className={styles.tabs}>{document.kind === "sale" && !preview && <button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print(true)}><Printer size={18} aria-hidden="true" />{printing ? "جارٍ تجهيز الطباعة" : "طباعة الإيصال والمطبخ"}</button>}<button type="button" className={styles.print} disabled={printing || !ready} onClick={() => void print()}><Printer size={18} aria-hidden="true" />{printing ? "جارٍ تجهيز الطباعة" : preview ? "طباعة المعاينة" : selectedCopy === "preparation" ? "طباعة نسخة التحضير" : "طباعة إيصال العميل"}</button></div>}>

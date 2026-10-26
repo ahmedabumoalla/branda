@@ -113,6 +113,22 @@ async function main() {
   current = { ...current, shifts: [] }; tree = render(); assert.ok(button(tree, 'تأكيد الاستلام وإصدار إيصال').props.disabled);
   button(tree, 'بداية وردية').props.onClick(); tree = render(); assert.equal(find(tree, node => node.type?.name === 'FinanceOperationForm').props.form.operation, 'shift_open'); groups++;
 
+  {
+    const queueHooks = hooks(), queueData = structuredClone(base); let sequence = 0, printerReady = false;
+    const QueuePOS = load('components/finance/finance-pos.tsx', { ...shared, react: queueHooks.api, './use-finance-printer': { useFinancePrinter: () => ({ ready: printerReady, autoEnabled: true, handler: () => async () => {} }) }, './use-finance': { useFinance: () => ({ ...uiState, snapshot: queueData, execute: async () => { const id = `queued-${++sequence}`; queueData.documents.push({ id, kind: 'sale', shift_id: 'shift' }); return { id }; } }) } }).FinancePOS;
+    const renderQueue = () => queueHooks.render(QueuePOS, { initialSnapshot: queueData });
+    for (let sale = 0; sale < 2; sale++) { let view = renderQueue(); find(view, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); view = renderQueue(); await button(view, 'تأكيد الاستلام وإصدار إيصال').props.onClick(); }
+    assert.ok(!nodes(renderQueue()).some(node => node.type?.name === 'FinanceReceiptDialog'), 'Wait for device preferences without flashing a modal');
+    printerReady = true;
+    const first = find(renderQueue(), node => node.type?.name === 'FinanceReceiptDialog');
+    assert.equal(first.props.document.id, 'queued-1'); assert.equal(first.props.backgroundAutoPrint, true); assert.equal(first.props.autoPrint, true);
+    first.props.onClose();
+    assert.equal(find(renderQueue(), node => node.type?.name === 'FinanceReceiptDialog').props.document.id, 'queued-2', 'Next sale does not replace the in-flight print');
+    first.props.onClose();
+    const second = find(renderQueue(), node => node.type?.name === 'FinanceReceiptDialog');
+    assert.equal(second.props.document.id, 'queued-2', 'Stale completion never closes a newer sale');
+    second.props.onClose(); assert.ok(!nodes(renderQueue()).some(node => node.type?.name === 'FinanceReceiptDialog')); groups++;
+  }
   const receiptDoc = { id: 'doc', number: 1, kind: 'sale', party_id: 'customer', shift_id: 'shift', account_id: 'cash', warehouse_id: 'warehouse', subtotal: 100, discount: 0, tax: 0, total: 100, paid: 10, outstanding: 25, refunded: false, reference_id: null, note: '', created_at: '2026-10-23T10:00:00Z', lines: [] };
   const receiptTree = FinanceReceipt({ document: receiptDoc, snapshot: base });
   assert.ok(nodes(receiptTree).some(node => node.type?.name === 'Numeric' && node.props.value === 75), 'Receipt shows cumulative paid after settlements'); groups++;

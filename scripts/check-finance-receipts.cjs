@@ -197,6 +197,34 @@ async function main() {
     const deviceCalls = [];
     runDialog({ document: { ...document, id: 'bridge-sale' }, autoPrint: true, onPrint: async (...args) => { deviceCalls.push(args); return { usedAssetFallback: false, submittedToDevice: true }; } });
     await Promise.resolve(); assert.equal(deviceCalls.length, 1); assert.equal(deviceCalls[0][2].allCopies, true); assert.equal(calls.length, 2, 'Configured device transport replaces browser printing');
+    // Background checkout renders receipt DOM without opening or trapping focus in a modal.
+    let states = [], stateIndex = 0, closed = 0;
+    const ModalMock = function Modal() {};
+    const backgroundReact = { ...mockedReact, useState: initial => { const i = stateIndex++; if (!(i in states)) states[i] = initial; return [states[i], value => { states[i] = typeof value === 'function' ? value(states[i]) : value; }]; } };
+    const BackgroundDialog = load('components/finance/finance-receipt-dialog.tsx', { react: backgroundReact, './finance-ui': { FinanceReceipt }, './finance-receipt-print': { claimAutomaticReceiptPrint, printThermalReceipt: async () => ({ usedAssetFallback: false }) }, '@/components/dashboard/ui/modal': { Modal: ModalMock } }).FinanceReceiptDialog;
+    function background(props) { effects.length = 0; refIndex = 0; stateIndex = 0; return BackgroundDialog({ document: { ...document, id: 'background-success' }, snapshot, receiptBrand: brand, autoPrint: true, backgroundAutoPrint: true, onClose: () => closed++, ...props }); }
+    let finish;
+    const transport = () => new Promise(resolve => { finish = resolve; });
+    let backgroundTree = background({ onPrint: transport });
+    assert.equal(backgroundTree.type, 'div'); assert.equal(backgroundTree.props.hidden, true);
+    for (const effect of effects) effect(); await Promise.resolve();
+    assert.equal(closed, 0, 'Wait for transport acceptance before consuming the queue');
+    finish({ usedAssetFallback: false, submittedToDevice: true }); await Promise.resolve(); await Promise.resolve();
+    assert.equal(closed, 1, 'Accepted job closes without an invoice modal');
+    states = [];
+    const failing = { document: { ...document, id: 'background-error' }, onPrint: async () => { throw Error('Printer disconnected'); } };
+    background(failing); for (const effect of effects) effect(); await Promise.resolve(); await Promise.resolve();
+    backgroundTree = background(failing);
+    assert.equal(backgroundTree.type, ModalMock, 'A failed or uncertain transport exposes manual recovery');
+    assert.equal(closed, 1, 'Failed job is retained');
+    assert.match(JSON.stringify(backgroundTree), /Printer disconnected/);
+    const recoverable = { ...failing, onPrint: async () => ({ usedAssetFallback: false, submittedToDevice: true }) };
+    backgroundTree = background(recoverable);
+    backgroundTree.props.footer.props.children[0].props.onClick(); await Promise.resolve(); await Promise.resolve();
+    assert.equal(background(recoverable).type, ModalMock, 'Manual retry keeps the recovery window available until explicitly closed');
+    states = [];
+    assert.equal(background({ autoPrint: false }).type, ModalMock, 'History and disabled automatic printing remain explicit');
+    assert.equal(background({ preview: true }).type, ModalMock, 'Explicit preview is still visible');
   } finally { global.document = originalDocument; global.window = originalWindow; global.setTimeout = originalSetTimeout; global.requestAnimationFrame = originalAnimationFrame; global.cancelAnimationFrame = originalCancelAnimationFrame; }
   console.log('PASS thermal receipts: branded escaped receipt, preparation privacy, refunds, tenant authorization, preview/VAT, paired one-job printing, page breaks, once-per-sale auto effects, offline asset fallback, history/preview guards and print cleanup');
 }
