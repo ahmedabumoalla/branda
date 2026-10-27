@@ -93,6 +93,18 @@ async function main() {
   assert.equal(negativeStockProduct.props.disabled, false, 'Negative inventory must not disable selling');
   negativeStockProduct.props.onClick(); tree = render();
   find(tree, node => node.type === 'button' && node.props['aria-label'] === 'زيادة كمية قهوة').props.onClick(); tree = render();
+  const checkoutModal = view => find(view, node => node.type?.name === 'Modal' && node.props.title === 'الدفع وإصدار الإيصال');
+  const selectedRegion = find(tree, node => node.props?.['aria-label'] === 'الأصناف المختارة القابلة للتمرير');
+  const paymentDock = find(tree, node => node.props?.['aria-label'] === 'ملخص الدفع الثابت');
+  assert.ok(!nodes(selectedRegion).includes(paymentDock), 'Total and payment stay outside the scrolling items');
+  assert.ok(!nodes(selectedRegion).some(node => node.type?.name === 'Field'), 'No payment form within item scroll');
+  assert.equal(checkoutModal(tree).props.open, false);
+  button(tree, 'الدفع وإصدار الإيصال').props.onClick(); tree = render();
+  assert.equal(checkoutModal(tree).props.open, true);
+  checkoutModal(tree).props.onClose(); tree = render();
+  assert.equal(checkoutModal(tree).props.open, false);
+  assert.equal(find(tree, node => node.props?.['aria-label'] === 'كمية قهوة').props.value, 2, 'Closing payment preserves the cart');
+  button(tree, 'الدفع وإصدار الإيصال').props.onClick(); tree = render(); groups++;
   field(tree, 'الخصم').props.onChange({ target: { value: '10' } }); tree = render();
   field(tree, 'نوع الخصم').props.onChange({ target: { value: 'percent' } }); tree = render();
   await button(tree, 'تأكيد الاستلام وإصدار إيصال').props.onClick();
@@ -113,9 +125,12 @@ async function main() {
   const accountBackup = current.accounts;
   current = { ...current, accounts: current.accounts.filter(account => account.id !== 'cash') };
   tree = render(); find(tree, node => node.type === 'button' && node.props['aria-label']?.startsWith('إضافة قهوة')).props.onClick(); tree = render();
+  button(tree, 'الدفع وإصدار الإيصال').props.onClick(); tree = render();
   const savedBeforeMissingDrawer = saved.length;
   await button(tree, 'تأكيد الاستلام وإصدار إيصال').props.onClick(); tree = render();
   assert.equal(saved.length, savedBeforeMissingDrawer, 'Never fall back to another cashier drawer');
+  assert.equal(checkoutModal(tree).props.open, true, 'Failed payment keeps the form open');
+  assert.ok(nodes(checkoutModal(tree)).some(node => node.props?.role === 'alert'), 'Show failure inside the payment dialog');
   assert.match(text(tree), /أضف حساب تحصيل/);
   current = { ...current, accounts: accountBackup }; groups++;
 

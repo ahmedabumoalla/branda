@@ -1,0 +1,47 @@
+.dock { flex: 0 0 auto; padding: 12px; border-top: 1px solid var(--finance-line); background: var(--finance-paper); }
+.amountCard { display: grid; gap: 5px; padding: 14px 16px; border-radius: 16px; background: var(--finance-ink); color: var(--finance-paper); }
+.amountCaption { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; }
+.amountCaption small { font-size: 10px; font-weight: 400; opacity: .8; }
+.amount { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-weight: 800; }
+.amount bdi { font-size: clamp(32px, 3.4vw, 44px); line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -.8px; overflow-wrap: anywhere; }
+.amount small { flex-shrink: 0; font-size: 13px; font-weight: 500; }
+.dock > button { width: 100%; min-height: 48px; margin-top: 10px; }
+.utilities { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.utilities > button { min-height: 44px; padding: 8px 12px; font-size: 11px; }
+.dialog { display: flex; flex-direction: column; width: min(820px, 100%); max-height: calc(100dvh - 24px); overflow: hidden; border: 1px solid var(--finance-line); border-radius: 22px; background: var(--finance-paper); color: var(--finance-ink); box-shadow: 0 24px 80px #39231830; }
+.dialog > div:first-child { padding: 12px 18px; }
+.dialog > div:first-child h2 { font-size: 20px; }
+.dialog > div:nth-child(2) { padding: 16px; }
+.dialog > div:last-child { padding: 12px 16px; background: var(--finance-paper); }
+.body { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: start; gap: 16px; padding: 0; background: transparent; }
+.breakdown, .payment { display: grid; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--finance-line); border-radius: 16px; background: var(--finance-cream); }
+.sectionTitle { margin: 0; font-size: 13px; font-weight: 800; }
+.body input, .body select { min-height: 44px; }
+.payment > div { margin-top: 0; grid-template-columns: minmax(0, 1fr); }
+.payment fieldset button { min-height: 48px; flex-direction: row; padding: 8px; font-size: 14px; }
+.payment fieldset button > svg { width: 21px; height: 21px; }
+.payment legend { margin-bottom: 8px; }
+.payment summary { min-height: 44px; }
+.footer { display: grid; grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 14px; width: 100%; }
+.footer .amountCard { padding: 10px 14px; }
+.footer .amount bdi { font-size: 34px; }
+.footerActions { display: grid; gap: 8px; }
+.footerActions button { width: 100%; min-height: 44px; }
+.feedback { margin-bottom: 12px; }
+@media (max-width: 600px) {
+ .body { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+ .dialog > div:nth-child(2) { padding: 12px; }
+ .breakdown, .payment { padding: 12px; }
+ .footer { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+ .footer .amountCard { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+ .footer .amount bdi { font-size: 28px; }
+ .footerActions { grid-template-columns: 1.5fr 1fr; }
+ .footerActions button { font-size: 11px; padding: 8px; }
+}
+@media (max-height: 600px) and (min-width: 601px) {
+ .dialog > div:first-child { padding-block: 8px; }
+ .dialog > div:nth-child(2) { padding-block: 10px; }
+ .dock { padding: 8px 10px; }
+ .amountCard { padding: 10px 14px; }
+ .utilities { margin-top: 4px; }
+}

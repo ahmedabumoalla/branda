@@ -296,5 +296,17 @@
  .cartLine { padding-block: 10px; }
  .cartConnection { padding: 0 10px 4px; }
 }
+@media (min-width: 700px) and (max-width: 780px) {
+ .posPage { box-sizing: border-box; height: 100dvh; min-height: 0; overflow: hidden; padding: 6px 8px; }
+ .posLayout { height: 100%; min-height: 0; grid-template-columns: minmax(0, 1fr) 250px; grid-template-rows: minmax(0, 1fr); align-items: stretch; gap: 10px; }
+ .posMain { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+ .posCatalog { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
+ .posCatalog .products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+ .posCatalog .productImage, .posCatalog .productPlaceholder { height: 112px; aspect-ratio: auto; object-fit: contain; }
+ .posLayout > .cart { position: relative; top: auto; height: 100%; min-height: 0; max-height: 100%; }
+ .cartBody { flex: 1 1 0; }
+ .cart > .panelHeader { padding: 10px 12px; }
+ .posHeader .posShiftMeta { display: flex; margin-inline-start: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .page *, .page *::before, .page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media print { .page { background: white; padding: 0; } .noPrint { display: none !important; } .printOnly { display: block; } .receipt { padding: 0; width: 80mm; } }
