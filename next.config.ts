@@ -3,6 +3,7 @@
 import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH } from "./lib/menu/kath-images";
 
 const nextConfig = {
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: { "/*": ["./public/fonts/tajawal-regular.ttf", "./public/fonts/tajawal-bold.ttf"] },
   images: {
     remotePatterns: [KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH].map(path => ({ protocol: "https" as const, hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${path}**` })),

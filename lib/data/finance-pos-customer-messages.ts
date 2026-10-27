@@ -34,7 +34,8 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
   if (cafeId) z.uuid().parse(cafeId);
   if (!isGreenApiFinanceReceiptConfigured()) return { configured: false, claimed: 0, queued: 0, needsReview: 0 };
   const client = createAdminClient();
-  const { data, error } = await client.rpc("brand_finance_claim_customer_messages", { p_cafe_id: cafeId ?? null, p_limit: 5 });
+  // A cold thermal renderer must finish before the two-minute database lease expires.
+  const { data, error } = await client.rpc("brand_finance_claim_customer_messages", { p_cafe_id: cafeId ?? null, p_limit: 1 });
   if (error || !Array.isArray(data)) throw new Error("FINANCE_CUSTOMER_QUEUE_UNAVAILABLE");
   let queued = 0; let needsReview = 0;
   const walletCodes = new Set<string>();

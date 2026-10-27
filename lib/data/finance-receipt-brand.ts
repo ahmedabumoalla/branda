@@ -14,6 +14,11 @@ function safeLogoUrl(value: unknown): string | null {
 /** Finance authorization precedes every privileged, tenant-scoped identity read. */
 export async function getFinanceReceiptBrand(slug: string) {
   const { cafe } = await getBrandFinanceContext(slug);
+  return getFinanceReceiptBrandForCafe(cafe);
+}
+
+/** Internal worker entry: cafe identity must come from the service-only claimed receipt. */
+export async function getFinanceReceiptBrandForCafe(cafe: { id: string; name: string }) {
   const admin = createAdminClient();
   const [settings, identity] = await Promise.all([
     admin.from("cafe_settings").select("logo_storage_path,logo_url").eq("cafe_id", cafe.id).maybeSingle(),

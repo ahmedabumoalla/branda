@@ -1,0 +1,101 @@
+import { readFile } from 'node:fs/promises';
+const baseline=await readFile('scripts/check-finance-pos-customer-db.mjs','utf8');
+const tests=String.raw`
+ {
+ await db.exec(await readFile('supabase/migrations/20261025223826_brand_finance_offline_sale_contract.sql','utf8'));
+ const ledgerFingerprint=()=>scalar("SELECT md5(jsonb_build_object('documents',(SELECT jsonb_agg(to_jsonb(d) ORDER BY id) FROM bf_documents d),'lines',(SELECT jsonb_agg(to_jsonb(l) ORDER BY id) FROM bf_document_lines l),'journal',(SELECT jsonb_agg(to_jsonb(j) ORDER BY id) FROM bf_journal j),'customers',(SELECT jsonb_agg(to_jsonb(s) ORDER BY document_id) FROM bf_sale_customers s),'jobs',(SELECT jsonb_agg(to_jsonb(j) ORDER BY id) FROM bf_customer_message_jobs j),'cards',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM loyalty_cards c))::text)");
+ const before=await ledgerFingerprint();
+ const oldClaim=await scalar("SELECT pg_get_functiondef('public.brand_finance_claim_customer_messages(uuid,integer)'::regprocedure)");
+ const oldFinish=await scalar("SELECT pg_get_functiondef('public.brand_finance_finish_customer_message(uuid,uuid,text,text,text)'::regprocedure)");
+ await db.exec(await readFile('supabase/migrations/20261027050000_brand_finance_customer_message_receipt.sql','utf8'));
+ eq(await ledgerFingerprint(),before,'migration preserves financial records, customer data, cards and queue state');
+ eq(await scalar("SELECT pg_get_functiondef('public.brand_finance_finish_customer_message(uuid,uuid,text,text,text)'::regprocedure)"),oldFinish,'lease completion function unchanged');
+ eq(await scalar("SELECT pg_get_functiondef('public.brand_finance_claim_customer_messages(uuid,integer)'::regprocedure)"),oldClaim.replace("'cardCode',lc.card_code)","'cardCode',lc.card_code,'receipt',brand_finance_private.customer_message_receipt(j.cafe_id,j.document_id))"),'only claim projection enriched; lease cancellation and selection unchanged');
+ // Existing queued, unknown and in-flight jobs must not be replayed with a new attachment
+ const oldJobs=await scalar('SELECT jsonb_agg(id) FROM bf_customer_message_jobs');
+ eq((await claim()).length,0,'migration does not requeue old messages');
+ await sql('UPDATE brand_feature_overrides SET enabled=true WHERE cafe_id=$1 AND feature_id IN(\'loyalty\',\'pager\')',[cafe]);
+ await login(owner);await run('settings',{vatRate:15,taxInclusive:true,closedThrough:null});await login(staff);
+ const receiptRequest=crypto.randomUUID();
+ const manyLines=Array.from({length:100},()=>({productId:product,quantity:1,expectedUnitPrice:20}));
+ const salePayload={lines:manyLines,discount:100,expectedTotal:1900,customerPhone:phone,pagerFeedbackHash:'d1'.repeat(32),note:'INTERNAL NOTE DO NOT EXPOSE',localReceiptReference:'L-RECEIPT-TEST-1',localCreatedAt:new Date().toISOString(),offlineExpectedVatRate:15,offlineExpectedTaxInclusive:true};
+ const target=await sale(salePayload,receiptRequest);
+ const bankSale=await sale({customerPhone:phone,pagerFeedbackHash:'d2'.repeat(32),accountId:bank});
+ const posAccount=snap.accounts.find(a=>a.kind==='pos').id;
+ const posSale=await sale({customerPhone:phone,pagerFeedbackHash:'d3'.repeat(32),accountId:posAccount});
+ const originalNames=await scalar('SELECT jsonb_agg(name ORDER BY id) FROM bf_document_lines WHERE document_id=$1',[target.id]);
+ await sql("UPDATE menu_products SET name='Updated catalog name' WHERE id=$1",[product]);
+ await db.exec('SET ROLE service_role');
+ eq(await scalar('SELECT brand_finance_claim_customer_messages($1,20)',[otherCafe]),[],'tenant-filtered worker cannot claim other brand pending receipts');
+ const firstBatch=await scalar('SELECT brand_finance_claim_customer_messages($1,1)',[cafe]);
+ eq(firstBatch.length,1,'receipt enrichment preserves requested batch limit');
+ const receiptJobs=[...firstBatch,...await claim()];
+ await db.exec('RESET ROLE');
+ eq(receiptJobs.length,3,'one enriched job per newly posted sale');
+ check(receiptJobs.every(j=>!oldJobs.includes(j.id)),'no old job reclaimed');
+ const job=receiptJobs.find(j=>j.invoiceNumber===target.number),receipt=job.receipt;
+ check(Boolean(receipt),'receipt attached to exact invoice job');
+ const persisted=await scalar('SELECT to_jsonb(d) FROM bf_documents d WHERE id=$1',[target.id]);
+ eq([receipt.brandName,receipt.number,receipt.createdAt,receipt.localReference],[await scalar('SELECT name FROM cafes WHERE id=$1',[cafe]),persisted.number,persisted.created_at,'L-RECEIPT-TEST-1'],'brand and immutable invoice identity');
+ eq([receipt.subtotal,receipt.discount,receipt.tax,receipt.total,receipt.paid,receipt.vatRate,receipt.taxInclusive],[persisted.subtotal,persisted.discount,persisted.tax,persisted.total,persisted.paid,15,true],'financial header from authoritative sale');
+ eq(receipt.lines.length,100,'all maximum allowed sale lines included without truncation');
+ eq(receipt.lines.map(l=>l.name),originalNames,'line order deterministic and sold names preserved after catalog change');
+ eq(receipt.lines,await scalar("SELECT jsonb_agg(jsonb_build_object('name',name,'quantity',quantity,'unitPrice',unit_price,'net',net,'tax',tax) ORDER BY id) FROM bf_document_lines WHERE document_id=$1 AND cafe_id=$2",[target.id,cafe]),'all line amounts copied from posted snapshot');
+ const cents=value=>Math.round(value*100);
+ eq(receipt.lines.reduce((n,l)=>n+cents(l.net)+cents(l.tax),0),cents(receipt.total),'discount allocation and tax lines reconcile to total');
+ eq(receipt.lines.reduce((n,l)=>n+cents(l.tax),0),cents(receipt.tax),'VAT rounding reconciles');
+ eq(receipt.lines.reduce((n,l)=>n+cents(l.quantity*l.unitPrice),0),cents(receipt.subtotal),'sold quantities and unit prices reconcile gross subtotal');
+ eq(receipt.paymentMethod,'cash','cash safe method');
+ eq(receiptJobs.find(j=>j.invoiceNumber===bankSale.number).receipt.paymentMethod,'bank','bank safe method');
+ eq(receiptJobs.find(j=>j.invoiceNumber===posSale.number).receipt.paymentMethod,'pos','card safe method');
+ eq(receiptJobs.find(j=>j.invoiceNumber===bankSale.number).receipt.localReference,null,'online invoice has null offline reference');
+ eq(Object.keys(receipt).sort(),['brandName','number','createdAt','localReference','subtotal','discount','tax','total','paid','vatRate','taxInclusive','paymentMethod','lines'].sort(),'receipt exact allowlist excludes private identifiers');
+ eq(Object.keys(receipt.lines[0]).sort(),['name','quantity','unitPrice','net','tax'].sort(),'line exact allowlist excludes cost and product ids');
+ check(!JSON.stringify(receipt).includes(phone)&&!JSON.stringify(receipt).includes('INTERNAL NOTE')&&!JSON.stringify(receipt).includes(privateCardCode),'PDF data contains no phone internal note or card bearer');
+ eq(await scalar('SELECT brand_finance_private.customer_message_receipt($1,$2)',[otherCafe,target.id]),null,'receipt helper tenant mismatch returns no document');
+ const nonSale=await scalar("INSERT INTO bf_documents(cafe_id,kind,created_by) VALUES($1,'journal',$2) RETURNING id",[cafe,owner]);
+ eq(await scalar('SELECT brand_finance_private.customer_message_receipt($1,$2)',[cafe,nonSale]),null,'non-sale has no receipt');
+ const receivable=snap.accounts.find(a=>a.kind==='receivable').id;
+ const nonTender=await scalar("INSERT INTO bf_documents(cafe_id,kind,account_id,created_by) VALUES($1,'sale',$2,$3) RETURNING id",[cafe,receivable,owner]);
+ eq((await scalar('SELECT brand_finance_private.customer_message_receipt($1,$2)',[cafe,nonTender])).paymentMethod,'','internal account kind never exposed as tender');
+ eq((await claim()).length,0,'in-flight enriched jobs cannot be claimed twice');
+ eq((await sale(salePayload,receiptRequest)).duplicate,true,'original sale retry remains idempotent');
+ eq((await claim()).length,0,'sale retry does not create attachment resend');
+ eq(await scalar('SELECT brand_finance_finish_customer_message($1,$2,$3,$4)',[job.id,crypto.randomUUID(),'queued','provider-receipt']),false,'wrong receipt lease denied');
+ eq(await scalar('SELECT brand_finance_finish_customer_message($1,$2,$3,$4)',[job.id,job.leaseToken,'queued','provider-receipt']),true,'receipt message provider acceptance recorded once');
+ eq(await scalar('SELECT brand_finance_finish_customer_message($1,$2,$3,$4)',[job.id,job.leaseToken,'queued','provider-receipt']),false,'receipt finish cannot replay');
+ await sql("UPDATE bf_customer_message_jobs SET lease_until=now()-interval '1 minute' WHERE id=ANY($1::uuid[]) AND state='dispatching'",[receiptJobs.map(j=>j.id)]);
+ eq((await claim()).length,0,'expired enriched jobs become unknown without replay');
+ eq(await scalar("SELECT count(*) FROM bf_customer_message_jobs WHERE id=ANY($1::uuid[]) AND state='unknown'",[receiptJobs.map(j=>j.id)]),2,'expired attachment outcomes remain truthful unknown');
+ // Cancellation uses the existing pending/refunded status before receipt hydration
+ const refundPhone='966500000014';const cancellable=await sale({customerPhone:refundPhone,pagerFeedbackHash:'d4'.repeat(32)});
+ await sql("UPDATE bf_sale_customers SET loyalty_status='refunded' WHERE document_id=$1",[cancellable.id]);
+ eq((await claim()).length,0,'refunded pending sale still skipped');
+ eq(await scalar('SELECT state FROM bf_customer_message_jobs WHERE document_id=$1',[cancellable.id]),'cancelled','refunded job cancelled without sending receipt');
+ for(const role of ['anon','authenticated']){
+  await db.exec('SET ROLE '+role);await rejects(()=>claim(),role+' cannot claim private receipt data');await rejects(()=>sql('SELECT brand_finance_private.customer_message_receipt($1,$2)',[cafe,target.id]),role+' cannot call receipt helper');await db.exec('RESET ROLE');
+ }
+ await db.exec('SET ROLE service_role');await rejects(()=>sql('SELECT brand_finance_private.customer_message_receipt($1,$2)',[cafe,target.id]),'service cannot call private helper directly');eq((await claim()).length,0,'service-only claim still permitted');await db.exec('RESET ROLE');
+ for(const role of ['anon','authenticated'])eq(await scalar("SELECT has_function_privilege($1,'public.brand_finance_claim_customer_messages(uuid,integer)','EXECUTE')",[role]),false,'claim grant unchanged '+role);
+ eq(await scalar("SELECT has_function_privilege('service_role','public.brand_finance_claim_customer_messages(uuid,integer)','EXECUTE')"),true,'service claim grant retained');
+ eq(await scalar('SELECT count(*) FROM (SELECT document_id FROM bf_journal GROUP BY document_id HAVING sum(debit)<>sum(credit)) q'),0,'receipt dispatch preserves balanced ledger');
+
+ const beforeThermal=await ledgerFingerprint();
+ await db.exec(await readFile('supabase/migrations/20261027163901_finance_customer_thermal_receipt.sql','utf8'));
+ eq(await ledgerFingerprint(),beforeThermal,'thermal projection never changes sale, ledger, loyalty or message state');
+ const thermal=await scalar('SELECT brand_finance_private.customer_message_receipt($1,$2)',[cafe,target.id]);
+ eq(thermal.cafeId,cafe,'logo identity is tenant scoped');eq(thermal.note,persisted.note,'same note as customer printed copy');eq(thermal.customerPhone,persisted.customer_phone,'same receipt phone');
+ const state=await scalar('SELECT brand_finance_private.document_state($1,$2)',[cafe,target.id]);
+ eq([thermal.outstanding,thermal.refunded,thermal.refundedTotal],[state.outstanding,state.refunded,state.refunded_total],'same payment and refund state as order receipt');
+ eq(Object.keys(thermal).sort(),['brandName','cafeId','number','createdAt','localReference','subtotal','discount','tax','total','paid','vatRate','taxInclusive','paymentMethod','lines','customerPhone','customerName','customerTaxNumber','note','outstanding','refunded','refundedTotal'].sort(),'thermal projection retains explicit customer-copy allowlist');
+ check(!JSON.stringify(thermal).includes(privateCardCode),'no loyalty bearer capability');
+ eq(await scalar('SELECT brand_finance_private.customer_message_receipt($1,$2)',[otherCafe,target.id]),null,'thermal receipt cannot cross tenants');
+ for(const role of ['anon','authenticated','service_role'])eq(await scalar("SELECT has_function_privilege($1,'brand_finance_private.customer_message_receipt(uuid,uuid)','EXECUTE')",[role]),false,'private thermal helper not exposed '+role);
+ eq((await claim()).length,0,'thermal rollout never resends completed or ambiguous attempts');
+ console.log(JSON.stringify({ok:true,checks,engine:'PGlite',scope:'private thermal receipt matches order and preserves dispatch authorization'}));
+
+ }
+`;
+const anchor=" console.log(JSON.stringify({ok:true,checks,engine:'PGlite',scope:'atomic POS sale customer, loyalty, enrollment, shared pager and dispatch'}));";
+if(!baseline.includes(anchor))throw Error('Customer baseline anchor missing');
+await import('data:text/javascript;base64,'+Buffer.from(baseline.replace(anchor,()=>tests)).toString('base64'));

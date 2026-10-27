@@ -14,6 +14,7 @@
     "verify:source": "node scripts/barndaksa-source-verify.mjs"
   },
   "dependencies": {
+    "@sparticuz/chromium": "153.0.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@zxing/browser": "0.2.1",
@@ -25,6 +26,7 @@
     "motion": "12.42.2",
     "next": "16.3.8",
     "passkit-generator": "3.6.1",
+    "puppeteer-core": "25.16.0",
     "qrcode-generator": "^1.4.4",
     "react": "latest",
     "react-dom": "latest",

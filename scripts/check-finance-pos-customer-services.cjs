@@ -72,7 +72,7 @@ const lease = '33333333-3333-4333-8333-333333333333';
   assert.deepEqual(walletCalls, ['PRIVATE_CARD_CODE']); assert(!JSON.stringify(sent).includes('PRIVATE_CARD_CODE'));
   assert.deepEqual(deliveryOrder, ['send', 'finish', 'wallet']);
   assert(sent[0].message.includes('https://barndaksa.com/loyalty/brand')); assert(!sent[0].message.includes(phone)); assert(!sent[0].message.includes('localhost'));
-  assert.deepEqual(workerCalls[0], { name: 'brand_finance_claim_customer_messages', args: { p_cafe_id: id, p_limit: 5 } });
+  assert.deepEqual(workerCalls[0], { name: 'brand_finance_claim_customer_messages', args: { p_cafe_id: id, p_limit: 1 } });
   assert.equal(workerCalls.at(-1).args.p_status, 'queued'); assert.equal(workerCalls.at(-1).args.p_lease_token, lease);
   deliveryOrder = []; const walletBeforeBatch = walletCalls.length;
   jobs = [job, { ...job, id: orderId }]; assert.equal((await worker.dispatchFinancePosCustomerMessages()).queued, 2);
