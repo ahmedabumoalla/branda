@@ -1,4 +1,5 @@
 import "server-only";
+import { financeStaffRoles } from "@/lib/finance/permissions";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -19,7 +20,7 @@ const staffSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   name: z.string().trim().min(2).max(100),
   password: z.string().min(12).max(128),
-  role: z.enum(["manager", "cashier"]),
+  role: z.enum(financeStaffRoles),
 });
 
 const salesPhoneSchema = z.string().trim().max(30)
@@ -230,8 +231,8 @@ export async function signInFinance(slug: string, identity: string, password: st
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error || !data.user) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
   try {
-    await getBrandFinanceSnapshot(safeSlug);
-    return { ok: true as const, redirectTo: `/finance/${safeSlug}/pos`, message: "تم تسجيل الدخول" };
+    const snapshot = await getBrandFinanceSnapshot(safeSlug);
+    return { ok: true as const, redirectTo: `/finance/${safeSlug}${["accountant", "warehouse", "auditor"].includes(snapshot.role) ? "" : "/pos"}`, message: "تم تسجيل الدخول" };
   } catch {
     await supabase.auth.signOut({ scope: "local" });
     return { ok: false as const, message: "لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة" };

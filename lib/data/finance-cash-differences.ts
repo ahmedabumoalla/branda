@@ -1,4 +1,5 @@
 import "server-only";
+import { canFinance } from "@/lib/finance/permissions";
 import { z } from "zod";
 import { getBrandFinanceContext } from "./brand-finance";
 import type { CashDifferenceRow, CashDifferencesPage, CashDifferenceSettlementResult } from "@/lib/finance/cash-differences";
@@ -26,7 +27,7 @@ function databaseError(error: { code?: string; message?: string }): never {
 
 async function managementContext(slug?: string) {
   const context = await getBrandFinanceContext(slug);
-  if (context.cafe.role !== "owner" && context.cafe.role !== "manager") throw new Error("سجل فروقات الورديات متاح لإدارة العلامة فقط");
+  if (!canFinance(context.cafe.role, "reports")) throw new Error("سجل فروقات الورديات متاح لإدارة العلامة فقط");
   return context;
 }
 

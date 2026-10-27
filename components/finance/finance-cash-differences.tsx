@@ -5,6 +5,7 @@ import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import { fetchFinanceCashDifferencesAction, settleFinanceCashDifferenceAction } from "@/app/actions/finance-cash-differences";
 import type { CashDifferenceRow, CashDifferencesPage } from "@/lib/finance/cash-differences";
+import { canFinance, type FinanceRole } from "@/lib/finance/permissions";
 import { Numeric } from "./finance-ui";
 import styles from "./finance-cash-differences.module.css";
 
@@ -23,7 +24,7 @@ export function cashDifferenceTime(value: string) {
 }
 const differenceLabel = (value: number) => value < 0 ? "عجز" : value > 0 ? "زيادة" : "مطابق";
 
-export function FinanceCashDifferences({ slug, onSettled }: { slug?: string; onSettled?: () => void }) {
+export function FinanceCashDifferences({ role, slug, onSettled }: { role: FinanceRole; slug?: string; onSettled?: () => void }) {
   const [offset, setOffset] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [response, setResponse] = useState<{ slug?: string; offset: number; refresh: number; data?: CashDifferencesPage; error?: string } | null>(null);
@@ -40,6 +41,7 @@ export function FinanceCashDifferences({ slug, onSettled }: { slug?: string; onS
   const current = !!response && response.slug === slug && response.offset === offset && response.refresh === refresh;
   const loading = !current;
   const data = current ? response.data : undefined;
+  const canSettle = canFinance(role, "accounting_write") && !!data?.canSettle;
   const error = current ? response.error : undefined;
   const rows = data?.rows ?? [];
   useEffect(() => {
@@ -51,12 +53,13 @@ export function FinanceCashDifferences({ slug, onSettled }: { slug?: string; onS
     return () => { active = false; };
   }, [slug, offset, refresh]);
   const open = (row: CashDifferenceRow) => {
+    if (!canSettle || row.status !== "pending") return;
     setSelected(row); setSelectedSlug(slug); setResolution(""); setEmployeeId(""); setNote(""); setFormError(""); setSuccess(""); request.current = null;
   };
   const close = () => { if (!busy.current) { setSelected(null); setFormError(""); } };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (busy.current || !selected || selectedSlug !== slug || !data?.canSettle || selected.status !== "pending") return;
+    if (busy.current || !selected || selectedSlug !== slug || !canSettle || !data || selected.status !== "pending") return;
     if (!resolution || !note.trim()) { setFormError("اختر طريقة المعالجة واكتب سببها"); return; }
     if (resolution === "charge_employee" && selected.difference >= 0) { setFormError("تحميل الفرق على الموظف متاح للعجز النقدي فقط"); return; }
     if (resolution === "charge_employee" && !data.employees.some(employee => employee.user_id === employeeId)) { setFormError("اختر الموظف المسؤول عن الفرق بعد المراجعة"); return; }
@@ -84,19 +87,19 @@ export function FinanceCashDifferences({ slug, onSettled }: { slug?: string; onS
         <td><small>المسجل <Numeric value={row.expected_cash} money /></small><small>المعدود <Numeric value={row.counted_cash} money /></small></td>
         <td><span className={`${styles.difference} ${row.difference < 0 ? styles.shortage : styles.excess}`}><Numeric value={Math.abs(row.difference)} money /></span><small>{differenceLabel(row.difference)}</small></td>
         <td className={styles.notification}><span className={styles.badge}>{notificationLabels[row.notification_status] ?? "حالة الإرسال غير متاحة"}</span>{row.notification_status === "queued" && <p>قبول الإرسال لا يؤكد وصول الرسالة</p>}</td>
-        <td>{row.status === "pending" ? data?.canSettle ? <button type="button" className={styles.secondary} disabled={pending} onClick={() => open(row)}>معالجة الفرق</button> : <span className={styles.badge}>بانتظار قرار المالك</span> : <><span className={styles.badge}>{row.status === "charge_employee" ? "محمّل على موظف" : "مسوّى دون تحميل"}</span>{row.resolution_employee_name && <small>{row.resolution_employee_name}</small>}{row.settled_at && <small><time dateTime={row.settled_at}>{cashDifferenceTime(row.settled_at)}</time></small>}{row.resolution_document_number != null && <small>قيد التسوية <bdi dir="ltr">#{row.resolution_document_number}</bdi></small>}{row.settlement_note && <small className={styles.resolutionNote}>{row.settlement_note}</small>}</>}</td>
+        <td>{row.status === "pending" ? canSettle ? <button type="button" className={styles.secondary} disabled={pending} onClick={() => open(row)}>معالجة الفرق</button> : <span className={styles.badge}>بانتظار قرار المالك</span> : <><span className={styles.badge}>{row.status === "charge_employee" ? "محمّل على موظف" : "مسوّى دون تحميل"}</span>{row.resolution_employee_name && <small>{row.resolution_employee_name}</small>}{row.settled_at && <small><time dateTime={row.settled_at}>{cashDifferenceTime(row.settled_at)}</time></small>}{row.resolution_document_number != null && <small>قيد التسوية <bdi dir="ltr">#{row.resolution_document_number}</bdi></small>}{row.settlement_note && <small className={styles.resolutionNote}>{row.settlement_note}</small>}</>}</td>
       </tr>)}</tbody></table>{rows.length === 0 && <div className={styles.empty}>لا توجد فروقات نقدية مسجلة</div>}</div>
       <footer className={styles.pagination}><span>{data?.total ?? 0} فرق مسجل · الأوقات بتوقيت الرياض</span><div className={styles.actions}><button type="button" className={styles.secondary} disabled={offset === 0 || pending} onClick={() => setOffset(value => Math.max(0, value - pageSize))}>السابق</button><button type="button" className={styles.secondary} disabled={!data?.hasMore || pending} onClick={() => setOffset(value => value + pageSize)}>التالي<ArrowLeft size={15} aria-hidden="true" /></button></div></footer>
     </>}
-    <Modal open={!!selected && selectedSlug === slug} title="معالجة فرق النقدية" onClose={close} panelClassName={styles.dialog}>
-      {selected && selectedSlug === slug && <form className={styles.form} onSubmit={submit}>
+    <Modal open={canSettle && !!selected && selectedSlug === slug} title="معالجة فرق النقدية" onClose={close} panelClassName={styles.dialog}>
+      {canSettle && selected && selectedSlug === slug && <form className={styles.form} onSubmit={submit}>
         <div className={styles.summary}><div><span>الوردية</span><strong>{selected.shift_number ? <bdi dir="ltr">#{selected.shift_number}</bdi> : "—"}</strong></div><div><span>{differenceLabel(selected.difference)}</span><strong><Numeric value={Math.abs(selected.difference)} money /></strong></div></div>
         <div className={styles.note}>وجود الموظف في الوردية لا يحدد مسؤوليته عن الفرق اختر القرار بعد مراجعة الجرد والمستندات</div>
         {formError && <div className={styles.error} role="alert">{formError}</div>}
         <label className={styles.field}>طريقة المعالجة<select name="resolution" required disabled={pending} value={resolution} onChange={event => { setResolution(event.target.value as typeof resolution); setEmployeeId(""); }}><option value="">اختر طريقة المعالجة</option><option value="charge_employee" disabled={selected.difference >= 0}>تحميل العجز على موظف</option><option value="waive">تسوية الفرق دون تحميله على موظف</option></select></label>
         {resolution === "charge_employee" && <label className={styles.field}>الموظف المسؤول<select name="employeeId" required disabled={pending} value={employeeId} onChange={event => setEmployeeId(event.target.value)}><option value="">اختر الموظف بعد المراجعة</option>{data?.employees.map(employee => <option key={employee.user_id} value={employee.user_id}>{employee.name}</option>)}</select><small>لا يُختار الموظف السابق أو الحالي تلقائيًا</small></label>}
         <label className={styles.field}>سبب المعالجة<textarea name="note" required maxLength={1000} rows={3} disabled={pending} value={note} onChange={event => setNote(event.target.value)} /></label>
-        <div className={styles.footer}><button type="submit" className={styles.primary} disabled={pending || !data?.canSettle || !resolution || !note.trim() || (resolution === "charge_employee" && (!employeeId || selected.difference >= 0))}>{pending ? "جارٍ تسجيل المعالجة" : "تأكيد المعالجة"}</button><button type="button" className={styles.secondary} disabled={pending} onClick={close}>إلغاء</button></div>
+        <div className={styles.footer}><button type="submit" className={styles.primary} disabled={pending || !canSettle || !resolution || !note.trim() || (resolution === "charge_employee" && (!employeeId || selected.difference >= 0))}>{pending ? "جارٍ تسجيل المعالجة" : "تأكيد المعالجة"}</button><button type="button" className={styles.secondary} disabled={pending} onClick={close}>إلغاء</button></div>
       </form>}
     </Modal>
   </section>;

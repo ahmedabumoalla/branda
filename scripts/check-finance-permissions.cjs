@@ -1,0 +1,31 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const exportsObject = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/finance/permissions.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { exports: exportsObject });
+const { canFinance, canFinanceOperation, financeStaffRoles } = exportsObject;
+let checks = 0;
+const eq = (actual, expected) => { assert.equal(actual, expected); checks++; };
+for (const role of ['owner', ...financeStaffRoles]) {
+  eq(canFinanceOperation(role, 'unknown'), false);
+  eq(canFinanceOperation(role, 'toString'), false);
+  eq(canFinanceOperation(role, 'staff'), role === 'owner');
+  eq(canFinanceOperation(role, 'settings'), role === 'owner');
+  eq(canFinanceOperation(role, 'refund_approve'), role === 'owner');
+}
+for (const role of ['auditor', 'warehouse', 'accountant']) eq(canFinance(role, 'pos'), false);
+eq(canFinance('auditor', 'reports'), true);
+eq(canFinance('auditor', 'treasury_write'), false);
+eq(canFinance('warehouse', 'reports'), false);
+eq(canFinance('warehouse', 'inventory_write'), true);
+eq(canFinanceOperation('warehouse', 'stock_adjust'), true);
+eq(canFinanceOperation('warehouse', 'journal'), false);
+eq(canFinanceOperation('accountant', 'purchase'), true);
+eq(canFinanceOperation('accountant', 'stock_adjust'), false);
+eq(canFinanceOperation('cashier', 'sale'), true);
+eq(canFinanceOperation('cashier', 'refund'), true);
+eq(canFinanceOperation('cashier', 'supplier_payout'), true);
+eq(canFinance('toString', 'dashboard'), false);
+eq(canFinance('unknown', 'dashboard'), false);
+console.log(`Finance permissions: ${checks} checks passed`);

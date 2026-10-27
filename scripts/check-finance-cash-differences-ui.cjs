@@ -2,6 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const React = require('react');
+const permissions = {};
+new Function('exports', ts.transpileModule(fs.readFileSync('lib/finance/permissions.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(permissions);
+
 function hooks() {
   const slots = []; let cursor = 0, effects = [];
   return { api: { ...React,
@@ -21,9 +24,9 @@ const row = { id: 'variance-uuid', shift_id: 'shift-uuid', shift_number: 42, pha
 function harness(options = {}) {
   const hook = hooks(), calls = [], saves = [];
   const state = { data: { rows: [row], total: 1, hasMore: false, employees: [{ user_id: employee, name: 'موظف مختار' }], canSettle: true }, error: null, saveError: null, wait: null, ...options };
-  const props = { slug: 'brand', onSettled() { state.settled = (state.settled ?? 0) + 1; } };
+  const props = { role: 'owner', slug: 'brand', onSettled() { state.settled = (state.settled ?? 0) + 1; } };
   const mocks = {
-    react: hook.api,
+    react: hook.api, '@/lib/finance/permissions': permissions,
     '@/components/dashboard/ui/modal': { Modal: function Modal() {} },
     './finance-ui': { Numeric: function Numeric() {} },
     '@/app/actions/finance-cash-differences': {
@@ -39,6 +42,12 @@ function harness(options = {}) {
 async function ready(h) { h.render(); await tick(); return h.render(); }
 async function main() {
   let checks = 0;
+  {
+    const h = harness(); h.props.role = 'auditor'; let tree = await ready(h);
+    assert.ok(!nodes(tree).some(n => n.type === 'button' && text(n) === 'معالجة الفرق'), 'Auditor cannot settle even if stale RPC flags permit it');
+    h.props.role = 'owner'; tree = h.render(); button(tree, 'معالجة الفرق').props.onClick(); tree = h.render();
+    h.props.role = 'auditor'; tree = h.render(); assert.ok(!nodes(tree).some(n => n.type === 'form'), 'Role revocation hides open settlement form'); checks++;
+  }
   {
     const h = harness(); let tree = h.render(); assert.match(text(tree), /جارٍ تحميل/); tree = await ready(h);
     assert.deepEqual(h.calls[0], [0, 'brand']); assert.match(text(tree), /#42/); assert.match(text(tree), /#123/);

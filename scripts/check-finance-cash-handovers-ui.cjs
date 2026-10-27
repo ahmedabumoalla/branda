@@ -2,6 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const React = require('react');
+const permissions = {};
+new Function('exports', ts.transpileModule(fs.readFileSync('lib/finance/permissions.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(permissions);
+
 function hooks() {
  const slots=[]; let cursor=0,effects=[];
  return { api:{...React,
@@ -20,9 +23,9 @@ const row={id:'handover-private-id',shift_id:'shift',shift_number:42,drawer_id:'
 function harness(kind='list',options={}) {
  const hook=hooks(),calls=[],saves=[];
  const state={data:{rows:[row],total:1,hasMore:false,canReceive:true,cashierDrawerId:'drawer',accountants:[{user_id:'accountant',name:'المحاسب'}]},...options};
- const snapshot={cafe:{slug:'brand'},accounts:[{id:'drawer',name:'صندوق الكاشير',kind:'cash',active:true,is_cashier_drawer:true,balance:9999},{id:'cash',name:'الخزينة',kind:'cash',active:true,is_primary:true,balance:0},{id:'bank',name:'البنك',kind:'bank',active:true,balance:0},{id:'archived',name:'مؤرشف',kind:'cash',active:false}],shifts:[{id:'shift',shift_number:42,account_id:'drawer',expected_cash:125}],documents:[],truncated:false};
+ const snapshot={role:'owner',cafe:{slug:'brand'},accounts:[{id:'drawer',name:'صندوق الكاشير',kind:'cash',active:true,is_cashier_drawer:true,balance:9999},{id:'cash',name:'الخزينة',kind:'cash',active:true,is_primary:true,balance:0},{id:'bank',name:'البنك',kind:'bank',active:true,balance:0},{id:'archived',name:'مؤرشف',kind:'cash',active:false}],shifts:[{id:'shift',shift_number:42,account_id:'drawer',expected_cash:125}],documents:[],truncated:false};
  const props=kind==='form'?{snapshot,form:{operation:'shift_open'},pending:false,error:'',onCancel(){},onSubmit:async(...args)=>{saves.push(args);return true;}}:{snapshot,onReceived(){state.received=true;}};
- const mocks={react:hook.api,'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Numeric:function Numeric(){}},'@/app/actions/finance-cash-handovers':{fetchFinanceCashHandoversAction:async(...args)=>{calls.push(args);return state.error?{ok:false,message:state.error}:{ok:true,data:state.data};},receiveFinanceShiftCashAction:async(...args)=>{saves.push(args);if(state.wait)await state.wait;return state.saveError?{ok:false,message:state.saveError}:{ok:true,data:{id:'receipt',number:77}};}}};
+ const mocks={react:hook.api,'@/lib/finance/permissions':permissions,'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Numeric:function Numeric(){}},'@/app/actions/finance-cash-handovers':{fetchFinanceCashHandoversAction:async(...args)=>{calls.push(args);return state.error?{ok:false,message:state.error}:{ok:true,data:state.data};},receiveFinanceShiftCashAction:async(...args)=>{saves.push(args);if(state.wait)await state.wait;return state.saveError?{ok:false,message:state.saveError}:{ok:true,data:{id:'receipt',number:77}};}}};
  const exports={};const compiled=ts.transpileModule(fs.readFileSync(`components/finance/finance-cash-${kind==='form'?'handover-form':'handovers'}.tsx`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
  new Function('require','exports',compiled)(name=>name in mocks?mocks[name]:name.endsWith('.css')?{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}:require(name),exports);
  return {state,props,calls,saves,time:exports.cashHandoverTime,render:()=>hook.render(kind==='form'?exports.FinanceCashHandoverForm:exports.FinanceCashHandovers,props)};
@@ -31,6 +34,12 @@ async function ready(h){h.render();await tick();return h.render();}
 const submit=tree=>find(tree,n=>n.type==='form').props.onSubmit({preventDefault(){}});
 const change=(h,tree,name,value)=>{field(tree,name).props.onChange({target:{value}});return h.render();};
 async function main(){let checks=0;
+ {
+  const h=harness();h.props.snapshot.role='auditor';let tree=await ready(h);
+  assert.ok(!nodes(tree).some(n=>n.type==='button'&&text(n)==='استلام بسند قبض'),'Auditor cannot receive despite stale canReceive');
+  h.props.snapshot.role='accountant';tree=h.render();button(tree,'استلام بسند قبض').props.onClick();tree=h.render();assert.ok(nodes(tree).some(n=>n.type==='form'),'Accountant may receive treasury cash');
+  h.props.snapshot.role='auditor';tree=h.render();assert.ok(!nodes(tree).some(n=>n.type==='form'),'Role revocation hides receipt form');checks++;
+ }
  {
   const storage=new Map();global.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
   const h=harness('form');h.props.snapshot.cafe.id='brand-id';
@@ -67,7 +76,7 @@ async function main(){let checks=0;
   const h=harness('list',{data:{rows:[row],total:1,hasMore:false,canReceive:false,accountants:[]}});assert.ok(!nodes(await ready(h)).some(n=>n.type==='button'&&text(n)==='استلام بسند قبض'));checks++;
  }
  {
-  const h=harness('list',{error:'Unavailable'});let tree=await ready(h);assert.match(text(tree),/Unavailable/);h.state.error=null;h.state.data.hasMore=true;button(tree,'إعادة المحاولة').props.onClick();tree=await ready(h);button(tree,'التالي').props.onClick();tree=await ready(h);assert.equal(h.calls.at(-1)[0],50);button(tree,'استلام بسند قبض').props.onClick();tree=h.render();h.props.slug='other-brand';tree=h.render();assert.ok(!text(tree).includes('#42')||nodes(tree).filter(n=>n.type?.name==='Modal').every(n=>!n.props.open));await submit(tree);assert.equal(h.saves.length,0);checks++;
+  const h=harness('list',{error:'Unavailable'});let tree=await ready(h);assert.match(text(tree),/Unavailable/);h.state.error=null;h.state.data.hasMore=true;button(tree,'إعادة المحاولة').props.onClick();tree=await ready(h);button(tree,'التالي').props.onClick();tree=await ready(h);assert.equal(h.calls.at(-1)[0],50);button(tree,'استلام بسند قبض').props.onClick();tree=h.render();h.props.slug='other-brand';tree=h.render();assert.ok(!text(tree).includes('#42')||nodes(tree).filter(n=>n.type?.name==='Modal').every(n=>!n.props.open));assert.ok(!nodes(tree).some(n=>n.type==='form'),'Tenant change removes old editable form');assert.equal(h.saves.length,0);checks++;
  }
  {
   let release;const h=harness('list',{wait:new Promise(resolve=>release=resolve)});h.state.data.rows=[{...row,amount:0}];let tree=await ready(h);button(tree,'استلام بسند قبض').props.onClick();tree=h.render();assert.equal(field(tree,'handoverAmount').props.value,'0.00');const work=submit(tree);await submit(tree);assert.equal(h.saves.length,1);release();await work;checks++;

@@ -1,4 +1,5 @@
 import "server-only";
+import { canFinanceOperation, type FinanceRole } from "@/lib/finance/permissions";
 import { after } from "next/server";
 import { dispatchShiftAlerts } from "./finance-shift-alerts";
 import { prepareFinancePosCustomerPayload } from "@/lib/finance/pos-customer-server";
@@ -30,7 +31,7 @@ export async function getBrandFinanceContext(slug?: string) {
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
-  return { client, cafe: data as { id: string; name: string; slug: string; role: "owner" | "manager" | "cashier" } };
+  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole } };
 }
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
@@ -57,6 +58,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     command.payload.phone = phone;
   }
   const { client, cafe } = await getBrandFinanceContext(slug);
+  if (!canFinanceOperation(cafe.role, command.operation)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
   if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
   const customerDetails = command.operation === "party" && Object.hasOwn(command.payload, "details");
   const { data, error } = customerDetails

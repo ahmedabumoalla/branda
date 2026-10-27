@@ -1,4 +1,5 @@
 import "server-only";
+import { canFinance } from "@/lib/finance/permissions";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,7 +12,7 @@ const prepareSchema = z.object({ documentId: z.uuid(), id: z.uuid(), name: z.str
 async function context(slug: string, documentId: string) {
   z.uuid().parse(documentId);
   const result = await getBrandFinanceContext(slug);
-  if (result.cafe.role !== "owner" && result.cafe.role !== "manager") throw new Error("مرفقات الخزينة متاحة لإدارة المالية فقط");
+  if (!canFinance(result.cafe.role, "reports")) throw new Error("مرفقات الخزينة متاحة لإدارة المالية فقط");
   return result;
 }
 
@@ -25,6 +26,7 @@ export async function listTreasuryAttachments(slug: string, documentId: string) 
 export async function prepareTreasuryAttachment(slug: string, input: unknown) {
   const value = prepareSchema.parse(input);
   const { client, cafe } = await context(slug, value.documentId);
+  if (!canFinance(cafe.role, "treasury_write")) throw new Error("لا تملك صلاحية إضافة مرفقات الخزينة");
   const args = { p_cafe_id: cafe.id, p_document_id: value.documentId };
   // Cleanup is claimed atomically, only after signed upload tokens have expired
   const { data: stale, error: staleError } = await client.rpc("brand_finance_treasury_attachment", { ...args, p_action: "stale" });
@@ -51,6 +53,7 @@ export async function prepareTreasuryAttachment(slug: string, input: unknown) {
 export async function finalizeTreasuryAttachment(slug: string, documentId: string, id: string) {
   z.uuid().parse(id);
   const { client, cafe } = await context(slug, documentId);
+  if (!canFinance(cafe.role, "treasury_write")) throw new Error("لا تملك صلاحية إضافة مرفقات الخزينة");
   const { data, error } = await client.rpc("brand_finance_treasury_attachment", { p_cafe_id: cafe.id, p_document_id: documentId, p_action: "finalize", p_id: id });
   if (error || !data) throw new Error("لم يكتمل ربط المرفق أعد المحاولة دون إعادة حفظ السند");
   return publicAttachment(data as StoredAttachment);

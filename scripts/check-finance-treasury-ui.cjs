@@ -43,7 +43,7 @@ const fixture = () => ({ accounts: [account('cash', 'cash', 100), account('bank'
 function harness(options = {}) {
   const hook = hooks(); const saved = []; const corrections = []; const statements = []; const historyCalls = [];
   const state = { data: fixture(), nextError: null, refreshError: false, saveWait: null, ...options };
-  const snapshot = { cafe: { slug: 'brand', id: 'brand', name: 'Brand' }, accounts: state.data.accounts, documents: [], shifts: [], canManage: true, ...options.snapshot };
+  const snapshot = { cafe: { slug: 'brand', id: 'brand', name: 'Brand' }, accounts: state.data.accounts, documents: [], shifts: [], canManage: true, role: options.snapshot?.canManage === false ? 'auditor' : 'owner', ...options.snapshot };
   const props = { snapshot, slug: 'brand', onRefresh() {}, ...options.props };
   const actions = {
     fetchFinanceTreasuryAction: async () => state.refreshError ? { ok: false, message: 'تعذر تحديث الأرصدة' } : { ok: true, data: state.data },
@@ -65,6 +65,17 @@ function harness(options = {}) {
 async function ready(h) { h.render(); await settled(); return h.render(); }
 async function main() {
   let checks = 0;
+  {
+    const h = harness({ snapshot: { role: 'auditor', canManage: true } }); let tree = await ready(h);
+    for (const label of ['سند قبض','سند صرف','تحويل داخلي','إضافة خزينة','طلب زيادة خزينة']) assert.ok(!nodes(tree).some(n => n.type === 'button' && text(n).trim() === label), 'Auditor has no editable action: ' + label);
+    find(tree, n => n.type === 'button' && n.props['aria-label'] === 'عرض حساب cash').props.onClick(); tree = h.render(); await settled(); tree = h.render();
+    assert.ok(!nodes(tree).some(n => n.type === 'button' && text(n) === 'إعدادات الحساب'));
+    button(tree, 'مطابقة الرصيد').props.onClick(); tree = h.render(); assert.ok(!nodes(tree).some(n => n.type === 'button' && text(n) === 'مطابقة جديدة'));
+    const accountant = harness({ snapshot: { role: 'accountant', canManage: false } }); tree = await ready(accountant);
+    assert.equal(button(tree, 'سند قبض').props.disabled, false, 'Accountant treasury capability overrides old manager boolean');
+    button(tree, 'سند قبض').props.onClick(); tree = accountant.render(); assert.ok(nodes(tree).some(n => n.type === 'form'));
+    accountant.props.snapshot.role = 'auditor'; tree = accountant.render(); assert.ok(!nodes(tree).some(n => n.type === 'form'), 'Revocation hides open form'); checks++;
+  }
   {
     const data = fixture(); data.accounts.push(account('cash2', 'cash'), account('drawer', 'cash', 0, { is_cashier_drawer: true }));
     const h = harness({ data }); let tree = await ready(h);
@@ -337,7 +348,7 @@ async function main() {
     assert.equal(button(tree, 'أرشفة الحساب').props.disabled, true);
     assert.match(text(tree), /عيّن حسابًا آخر رئيسيًا من نفس النوع/);
     const readonly = harness({ data, snapshot: { canManage: false } }); tree = await ready(readonly);
-    assert.ok(nodes(tree).filter(node => node.type === 'button' && String(node.props['aria-label']).startsWith('تعيين ')).every(node => node.props.disabled), 'Read-only viewers cannot change primary'); checks++;
+    assert.ok(!nodes(tree).some(node => node.type === 'button' && String(node.props['aria-label']).startsWith('تعيين ')), 'Read-only viewers have no primary mutation controls'); checks++;
   }
   {
     let release; const saveWait = new Promise(resolve => { release = resolve; });
@@ -356,7 +367,7 @@ async function main() {
     input(tree, 'openingAmount').props.onChange({ target: { value: '100' } }); tree = h.render();
     await form(tree).props.onSubmit({ preventDefault() {} });
     assert.equal(h.saved[0][0], 'account_save'); assert.equal(h.saved[0][1].cashierDrawer, true); assert.equal(h.saved[0][1].kind, 'cash'); assert.equal(h.saved[0][1].openingAmount, 100);
-    const readonly = harness({ snapshot: { canManage: false } }); assert.equal(button(await ready(readonly), 'إضافة صندوق كاشير').props.disabled, true); checks++;
+    const readonly = harness({ snapshot: { canManage: false } }); assert.ok(!nodes(await ready(readonly)).some(node => node.type === 'button' && text(node) === 'إضافة صندوق كاشير')); checks++;
   }
   const css = fs.readFileSync('components/finance/finance-treasury.module.css', 'utf8');
   assert.match(css, /prefers-reduced-motion/); assert.match(css, /focus-visible/); assert.match(css, /100dvh/); assert.match(css, /\.tableWrap \{ overflow: auto/); checks++;

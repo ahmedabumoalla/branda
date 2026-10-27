@@ -327,7 +327,7 @@ async function main() {
   const customerRpcCalls = [];
   const customerCommands = load('lib/data/brand-finance.ts', {
     'server-only': {}, '@/lib/data/cafes': {}, '@/lib/menu/standalone-menu': {}, './finance-shift-alerts': {}, './finance-pos-customer-messages': {},
-    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) }, rpc: async (name, args) => { customerRpcCalls.push({ name, args }); return { data: name === 'brand_finance_context' ? { id: 'cafe' } : { id: 'saved' }, error: null }; } }) },
+    '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'owner' } } }) }, rpc: async (name, args) => { customerRpcCalls.push({ name, args }); return { data: name === 'brand_finance_context' ? { id: 'cafe', role: 'owner' } : { id: 'saved' }, error: null }; } }) },
   });
   const customerCommand = payload => customerCommands.executeBrandFinanceCommand({ operation: 'party', requestId: '00000000-0000-4000-8000-000000000001', payload }, 'test-brand');
   for (const phone of [undefined, null, '', '  ', 123, '0'.repeat(31)]) await assert.rejects(customerCommand({ kind: 'customer', name: 'Customer', phone }));
@@ -391,9 +391,9 @@ async function main() {
   const settingsHooks = hooks();
   const SettingsWorkspace = load('components/finance/finance-workspace.tsx', { ...shared, react: settingsHooks.api, 'next/navigation': { useSearchParams: () => new URLSearchParams('section=settings') }, './use-finance': { useFinance: () => ({ ...uiState, snapshot: { ...base, role: 'manager', canAdminister: false } }) } }).FinanceWorkspace;
   const settingsTree = settingsHooks.render(SettingsWorkspace, { initialSnapshot: base });
-  assert(nodes(settingsTree).some(node => node.props.title === 'إضافة الكاشير متاحة لمالك العلامة'), 'Settings shows explicit authority instead of silently switching overview'); groups++;
+  assert(!nodes(settingsTree).some(node => node.props.title === 'السياسة المحاسبية'), 'Manager cannot open owner settings even with a direct section URL'); groups++;
 
-  assert.equal(button(settingsTree, 'إضافة كاشير مبيعات').props.disabled, true);
+  assert.ok(!nodes(settingsTree).some(node => node.type === 'button' && text(node) === 'إضافة كاشير مبيعات'), 'Unauthorized staff action is hidden');
   button(workspaceTree, 'إضافة كاشير مبيعات').props.onClick(); workspaceTree = workspaceRender();
   assert.equal(find(workspaceTree, node => node.type?.name === 'FinanceOperationForm').props.form.operation, 'sales_cashier_create');
   formProps.form = { operation: 'sales_cashier_create' };

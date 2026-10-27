@@ -27,3 +27,5 @@
   .account { font-size: 13px; }
   .money { font-size: 15px; }
 }
+
+.table tfoot th,.table tfoot td { padding: 16px 24px; border-top: 2px solid var(--finance-line); background: var(--finance-cream); font-weight: 750; }

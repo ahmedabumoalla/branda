@@ -1,0 +1,86 @@
+import { readFile } from 'node:fs/promises';
+// Run the published supplier/custody posting regression, then the new owner-only gate
+const baseline = await readFile('scripts/check-finance-supplier-payout-db.mjs', 'utf8');
+const tests = String.raw`
+ {
+ await db.exec(await readFile('supabase/migrations/20261027040000_brand_finance_job_roles.sql','utf8'));
+ const untouched=await fingerprint();
+ const beforeCore=await scalar("SELECT pg_get_functiondef('brand_finance_private.execute_before_treasury(uuid,text,jsonb,uuid)'::regprocedure)");
+ await db.exec(await readFile('supabase/migrations/20261027040100_brand_finance_period_close_preflight.sql','utf8'));
+ eq(await fingerprint(),untouched,'period migration preserves all financial records');
+ eq(await scalar("SELECT pg_get_functiondef('brand_finance_private.execute_before_treasury(uuid,text,jsonb,uuid)'::regprocedure)"),beforeCore.replace("IF p_operation='settings' THEN","IF p_operation='settings' THEN\n  PERFORM brand_finance_private.assert_period_close(p_cafe_id,p_payload,p_request_id);"),'only settings integration point changed');
+ await login(owner);
+ const tenant=crypto.randomUUID();
+ await db.query("INSERT INTO cafes(id,slug,name,owner_user_id) VALUES($1,'period-test','Period test',$2)",[tenant,owner]);
+ const snap=await scalar('SELECT brand_finance_snapshot($1)',[tenant]);
+ const account=snap.accounts.find(a=>a.code==='1000').id;
+ const today=await scalar("SELECT to_char((now() AT TIME ZONE 'Asia/Riyadh')::date,'YYYY-MM-DD')");
+ const yesterday=await scalar("SELECT to_char((now() AT TIME ZONE 'Asia/Riyadh')::date-1,'YYYY-MM-DD')");
+ const older=await scalar("SELECT to_char((now() AT TIME ZONE 'Asia/Riyadh')::date-2,'YYYY-MM-DD')");
+ const future=await scalar("SELECT to_char((now() AT TIME ZONE 'Asia/Riyadh')::date+30,'YYYY-MM-DD')");
+ const policy=(closedThrough=null,extra={},request=crypto.randomUUID())=>run('settings',{vatRate:15,taxInclusive:true,closedThrough,...extra},request,tenant);
+ const history=()=>scalar('SELECT brand_finance_period_closures($1)',[tenant]);
+ const closureCount=()=>scalar('SELECT count(*) FROM bf_period_closures WHERE cafe_id=$1',[tenant]);
+ const denied=async(fn,pattern,label)=>{await assert.rejects(fn,pattern,label);checks++};
+ await policy();eq(await closureCount(),0,'ordinary tax settings need no closure reason');
+ await denied(()=>policy(today,{periodCloseReason:'Reviewed'}),/يوم مكتمل/,'current Riyadh day denied');
+ await denied(()=>policy(future,{periodCloseReason:'Reviewed'}),/يوم مكتمل/,'future period denied');
+ await denied(()=>policy(older),/سبب إقفال/,'advancing cutoff needs reason');
+ await denied(()=>policy(older,{periodCloseReason:'  '}),/سبب إقفال/,'blank reason denied');
+ await denied(()=>policy(older,{periodCloseReason:'x'.repeat(1001)}),/سبب إقفال/,'overlong reason denied');
+ await denied(()=>policy(older,{periodCloseReason:'Reviewed',vatRate:101}),/check constraint/,'invalid settings rollback audit');
+ eq(await closureCount(),0,'failed validations create no closure event');
+ const shift=await scalar("INSERT INTO bf_shifts(cafe_id,user_id,account_id,status,opening_cash,opened_at) VALUES($1,$2,$3,'open',0,($4::date+1)::timestamp AT TIME ZONE 'Asia/Riyadh'-interval '1 second') RETURNING id",[tenant,owner,account,older]);
+ await denied(()=>policy(older,{periodCloseReason:'Reviewed'}),/إقفال الورديات/,'open shift in cutoff blocks closure');
+ await db.query("UPDATE bf_shifts SET status='handover' WHERE id=$1",[shift]);
+ await denied(()=>policy(older,{periodCloseReason:'Reviewed'}),/إقفال الورديات/,'handover shift in cutoff blocks closure');
+ await db.query("UPDATE bf_shifts SET status='closed',closed_at=now() WHERE id=$1",[shift]);
+ const handover=await scalar("INSERT INTO bf_cash_handovers(cafe_id,shift_id,shift_number,drawer_id,drawer_name,receiving_drawer_id,receiving_drawer_name,amount,handover_type,from_user_id,from_name,recipient_name) VALUES($1,$2,1,$3,'Drawer',$3,'Drawer',0,'next_shift',$4,'Owner','Next cashier') RETURNING id",[tenant,shift,account,owner]);
+ await denied(()=>policy(older,{periodCloseReason:'Reviewed'}),/استلام جميع/,'unreceived cash handover blocks even after shift closed');
+ await db.query("INSERT INTO bf_cash_handover_receipts(handover_id,cafe_id,received_by,received_by_name,received_counted_cash,account_id) VALUES($1,$2,$3,'Owner',0,$4)",[handover,tenant,owner,account]);
+ const later=await scalar("INSERT INTO bf_shifts(cafe_id,user_id,account_id,status,opening_cash,opened_at) VALUES($1,$2,$3,'open',0,($4::date+1)::timestamp AT TIME ZONE 'Asia/Riyadh') RETURNING id",[tenant,owner,account,older]);
+ const request=crypto.randomUUID();const body={periodCloseReason:'  Books reviewed  '};
+ await policy(older,body,request);
+ eq(await closureCount(),1,'next-day boundary shift does not block prior completed day');
+ eq((await history()).rows[0].reason,'Books reviewed','audit stores trimmed reason');
+ eq((await history()).rows[0].actor_id,owner,'audit real authenticated actor');
+ eq((await policy(older,body,request)).duplicate,true,'uncertain closure retry idempotent');
+ eq(await closureCount(),1,'retry no second event');
+ await policy(older,{vatRate:5});eq(await closureCount(),1,'same cutoff policy edit needs no reason or new event');
+ await denied(()=>policy(null),/reopened|إعادة فتح/,'cannot reopen');
+ const earlier=await scalar("SELECT to_char($1::date-1,'YYYY-MM-DD')",[older]);
+ await denied(()=>policy(earlier,{periodCloseReason:'Reviewed'}),/reopened|إعادة فتح/,'cannot move backward');
+ await denied(()=>policy(yesterday,{periodCloseReason:'Reviewed'}),/إقفال الورديات/,'later advance rechecks still-open boundary shift');
+ await db.query("UPDATE bf_shifts SET status='closed',closed_at=now() WHERE id=$1",[later]);
+ await policy(yesterday,{periodCloseReason:'Next completed period'});
+ eq((await history()).rows[0].previous_closed_through,older,'audit preserves previous cutoff');
+ eq(await closureCount(),2,'valid later closure records second event');
+ for(const job of ['manager','accountant','auditor','warehouse','cashier']){
+  await login(owner);await run('staff',{email:'staff@example.test',name:'Role test',role:job,active:true},crypto.randomUUID(),tenant);
+  await login(staff);await fail(()=>policy(yesterday),'only owner edits policy '+job);
+  if(['manager','accountant','auditor'].includes(job))eq((await history()).total,2,job+' reads closures');
+  else await fail(()=>history(),job+' cannot read accounting closure history');
+ }
+ await login(outsider);await fail(()=>history(),'cross-tenant history denied');await fail(()=>policy(yesterday),'cross-tenant settings denied');
+ await login(null);await fail(()=>history(),'anonymous history denied');
+ await login(owner);await db.exec('SET ROLE authenticated');
+ eq((await history()).total,2,'authorized RPC reads with actual authenticated database role');
+ await fail(()=>db.query('SELECT * FROM bf_period_closures'),'no direct table access');
+ await fail(()=>db.query('SELECT brand_finance_private.assert_period_close($1,$2,$3)',[tenant,{},crypto.randomUUID()]),'private preflight not callable');
+ await db.exec('RESET ROLE');
+ await fail(()=>db.query("UPDATE bf_period_closures SET reason='Changed' WHERE cafe_id=$1",[tenant]),'closure evidence immutable update');
+ await fail(()=>db.query('DELETE FROM bf_period_closures WHERE cafe_id=$1',[tenant]),'closure evidence immutable delete');
+ const ledger=await fingerprint();await history();eq(await fingerprint(),ledger,'history read does not change ledger');
+ eq(await scalar('SELECT count(*) FROM (SELECT document_id FROM bf_journal GROUP BY document_id HAVING sum(debit)<>sum(credit)) x'),0,'existing journals remain balanced');
+ await db.query("INSERT INTO bf_period_closures(cafe_id,closed_through,reason,actor_id,request_id) SELECT $1,$2::date-n,'Historic test',$3,gen_random_uuid() FROM generate_series(1,51) n",[tenant,older,owner]);
+ const bounded=await history();eq([bounded.rows.length,bounded.total,bounded.hasMore],[50,53,true],'history explicitly bounded with total and hasMore');
+ for(const role of ['anon','service_role'])eq(await scalar("SELECT has_function_privilege($1,'public.brand_finance_period_closures(uuid)','EXECUTE')",[role]),false,role+' history grant denied');
+ eq(await scalar("SELECT relrowsecurity FROM pg_class WHERE oid='public.bf_period_closures'::regclass"),true,'closure table RLS enabled');
+ console.log('Period closing SQL: '+checks+' checks passed including supplier/custody baseline');
+ }
+`;
+const anchor="console.log('Supplier payout SQL: '+checks+' checks passed');";
+if (!baseline.includes(anchor)) throw Error('Supplier fixture anchor missing');
+// Substitute the String.raw test body safely without interpreting dollar sequences
+const nested = baseline.replace(anchor, () => tests);
+await import('data:text/javascript;base64,' + Buffer.from(nested).toString('base64'));

@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { FinanceOperation, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
 import { Field, Numeric, accountKindNames } from "./finance-ui";
+import { financeStaffRoles, financeRoleLabels } from "@/lib/finance/permissions";
 import styles from "./finance.module.css";
 import { FinanceRefundForm } from "./finance-refund-form";
 import { SalesCashierForm } from "./sales-cashier-form";
@@ -23,6 +24,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const [treasuryKind, setTreasuryKind] = useState(String(values.kind ?? "receipt"));
   const [staffMode, setStaffMode] = useState(operation === "staff_create" ? "new" : "existing");
   const [localError, setLocalError] = useState("");
+  const [lastCompletedDay] = useState(() => new Date(Date.now()-86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Riyadh"}));
   const [receivedCount, setReceivedCount] = useState("");
   const [received, setReceived] = useState(false);
   const [stockMode, setStockMode] = useState("adjust");
@@ -112,12 +114,13 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
         <div className={styles.fields}>{amount("countedCash", operation === "shift_accept" ? "النقدية المستلمة فعليًا" : "النقدية المعدودة فعليًا")}{operation === "shift_handover" && <Field label="تسليم إلى"><select name="toUserId" required defaultValue=""><option value="">اختر المستلم</option>{snapshot.staff.filter((staff) => staff.active && staff.user_id !== snapshot.userId).map((staff) => <option key={staff.user_id} value={staff.user_id}>{staff.name}</option>)}</select></Field>}</div>{note}
       </>}
       {operation === "settings" && <><div className={styles.fields}>{amount("vatRate", "نسبة ضريبة القيمة المضافة")}
-        <Field label="إقفال الفترة حتى" hint="يمنع الترحيل في الأيام المقفلة حسب تاريخ العملية"><input name="closedThrough" type="date" defaultValue={snapshot.settings.closed_through?.slice(0, 10) ?? ""} /></Field></div>
+        <Field label="إقفال الفترة حتى" hint="يمنع الترحيل في الأيام المقفلة حسب تاريخ العملية"><input name="closedThrough" type="date" max={lastCompletedDay} defaultValue={snapshot.settings.closed_through?.slice(0, 10) ?? ""} /></Field></div>
+        <Field label="سبب إقفال الفترة" hint="مطلوب عند تقديم تاريخ الإقفال بعد مراجعة الورديات والتسليمات"><textarea name="periodCloseReason" minLength={3} maxLength={1000} rows={2} /></Field>
         <label className={styles.check}><input name="taxInclusive" type="checkbox" defaultChecked={snapshot.settings.tax_inclusive} />أسعار الأصناف شاملة الضريبة</label>
       </>}
       {(operation === "staff" || operation === "staff_create") && <>
         {!values.userId && <Field label="طريقة إضافة الموظف"><select value={staffMode} onChange={(event) => setStaffMode(event.target.value)}><option value="existing">ربط حساب مسجل</option><option value="new">إنشاء حساب مالي جديد</option></select></Field>}
-        <div className={styles.fields}><Field label="اسم الموظف"><input name="name" required maxLength={100} defaultValue={String(values.name ?? "")} /></Field>{!values.userId && <Field label="البريد الإلكتروني"><input name="email" type="email" required maxLength={180} defaultValue={String(values.email ?? "")} /></Field>}<Field label="الصلاحية"><select name="role" defaultValue={String(values.role ?? "cashier")}><option value="cashier">كاشير مالي</option><option value="manager">مدير مالي</option></select></Field>{staffMode === "new" && <Field label="كلمة المرور المؤقتة"><input name="password" type="password" required minLength={12} autoComplete="new-password" /></Field>}</div>
+        <div className={styles.fields}><Field label="اسم الموظف"><input name="name" required maxLength={100} defaultValue={String(values.name ?? "")} /></Field>{!values.userId && <Field label="البريد الإلكتروني"><input name="email" type="email" required maxLength={180} defaultValue={String(values.email ?? "")} /></Field>}<Field label="الصلاحية"><select name="role" defaultValue={String(values.role ?? "cashier")}>{financeStaffRoles.map(role=><option key={role} value={role}>{financeRoleLabels[role]}</option>)}</select></Field>{staffMode === "new" && <Field label="كلمة المرور المؤقتة"><input name="password" type="password" required minLength={12} autoComplete="new-password" /></Field>}</div>
         {staffMode === "existing" && <label className={styles.check}><input type="checkbox" name="active" defaultChecked={values.active !== false} />موظف نشط</label>}
       </>}
       {operation === "journal" && <>

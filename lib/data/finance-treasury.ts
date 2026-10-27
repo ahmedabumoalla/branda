@@ -1,4 +1,5 @@
 import "server-only";
+import { canFinance } from "@/lib/finance/permissions";
 import { z } from "zod";
 import { getBrandFinanceContext } from "./brand-finance";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
@@ -24,7 +25,7 @@ function safeDatabaseError(error: { code?: string; message?: string }): never {
 }
 async function treasuryContext(slug?: string) {
   const context = await getBrandFinanceContext(slug);
-  if (context.cafe.role === "cashier") throw new Error("إدارة الخزينة متاحة لمالك العلامة والمدير المالي");
+  if (!canFinance(context.cafe.role, "reports")) throw new Error("لا تملك صلاحية الاطلاع على الخزينة");
   return context;
 }
 async function maintenanceContext(cafeId: string) {
@@ -62,6 +63,7 @@ export async function executeFinanceTreasury(operation: unknown, payload: unknow
   const request = validate(z.uuid(), requestId);
   if (JSON.stringify(values).length > 30_000) throw invalidInput();
   const { client, cafe } = await treasuryContext(slug);
+  if (!canFinance(cafe.role, "treasury_write")) throw new Error("لا تملك صلاحية تعديل الخزينة");
   const { data, error } = await client.rpc("brand_finance_treasury_execute", {
     p_cafe_id: cafe.id, p_operation: command, p_payload: values, p_request_id: request,
   });

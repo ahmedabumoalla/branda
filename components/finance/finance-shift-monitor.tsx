@@ -5,6 +5,7 @@ import { Modal } from "@/components/dashboard/ui/modal";
 import { fetchFinanceShiftMonitorAction, superviseFinanceShiftAction } from "@/app/actions/finance-shift-monitor";
 import { executeBrandFinanceAction } from "@/app/actions/brand-finance";
 import type { FinanceSnapshot } from "@/lib/finance/brand-finance";
+import { canFinance } from "@/lib/finance/permissions";
 import type { MonitoredShift, ShiftMonitorPage } from "@/lib/finance/shift-monitor";
 import { FinanceCashHandoverForm } from "./finance-cash-handover-form";
 import { FinanceShiftAnalytics } from "./finance-shift-analytics";
@@ -18,6 +19,7 @@ function Status({ shift }: { shift: MonitoredShift }) {
   return <span className={`${css.status} ${css[shift.monitor_status]}`}><span aria-hidden="true" />{statusNames[shift.monitor_status]}</span>;
 }
 export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: FinanceSnapshot; slug?: string; onChanged: () => void }) {
+  const canSupervise = canFinance(snapshot.role, "shifts_manage");
   const [page, setPage] = useState<ShiftMonitorPage | null>(null);
   const [detail, setDetail] = useState<ShiftMonitorPage | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
     setSelected(row.id); setDetail(null); setAction(null); setReason(""); setAcknowledged(false); setActionError(""); setSuccess("");
   }
   async function execute(payload: Record<string, unknown> = {}) {
-    if (lock.current || !shift || !action) return false;
+    if (lock.current || !canSupervise || !shift || !action) return false;
     if (reason.trim().length < 3) { setActionError("اكتب سبب الإجراء بثلاثة أحرف على الأقل"); return false; }
     if (action === "close" && !acknowledged) { setActionError("أكد مراجعة حالة الجهاز والفواتير المحلية قبل الإقفال"); return false; }
     lock.current = true; setSaving(true); setActionError("");
@@ -106,11 +108,11 @@ export function FinanceShiftMonitor({ snapshot, slug, onChanged }: { snapshot: F
         {shift.note && <p className={styles.notice}>{shift.note}</p>}
         <p className={styles.muted}>الفواتير المعلقة حسب آخر تحديث: {shift.pending_count} · تحتاج مراجعة: {shift.conflict_count}</p>
         {success && <div className={styles.success} role="status">{success}</div>}
-        {shift.status !== "closed" && !action && <div className={styles.actions}>
+        {canSupervise && shift.status !== "closed" && !action && <div className={styles.actions}>
           {shift.status === "open" && <button className={styles.secondary} onClick={() => { setAction(shift.supervisor_paused ? "resume" : "pause"); setActionError(""); }}>{shift.supervisor_paused ? <Play size={16} /> : <Pause size={16} />}{shift.supervisor_paused ? "استئناف البيع" : "إيقاف البيع مؤقتًا"}</button>}
           <button className={styles.danger} onClick={() => { setAction("close"); setActionError(""); }}><Square size={16} />إقفال إداري</button>
         </div>}
-        {action && <section className={css.procedure}>
+        {canSupervise && action && <section className={css.procedure}>
           <h3>{actionNames[action]}</h3>
           <p className={styles.notice}>{action === "close" ? "الإقفال نهائي ويتطلب عد النقدية وتحديد جهة تسليمها الفواتير غير المتزامنة تبقى على جهاز الموظف للمراجعة ولا تدخل تلقائيًا في وردية مقفلة" : "يصل الإجراء إلى جهاز الكاشير عند اتصاله الجهاز المنقطع لا يستقبل التغيير فورًا والفواتير المحفوظة تبقى على الجهاز"}</p>
           <label className={styles.field}>سبب الإجراء<textarea required minLength={3} maxLength={1000} value={reason} disabled={saving} onChange={event => setReason(event.target.value)} /></label>

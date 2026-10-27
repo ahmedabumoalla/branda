@@ -1,3 +1,4 @@
+import { canFinance } from "@/lib/finance/permissions";
 import { BookOpen, Boxes, Clock3, Landmark, LayoutDashboard, Printer, ReceiptText, Settings2, ShoppingBag, Users } from "lucide-react";
 
 export const financeSections = [
@@ -17,4 +18,12 @@ export type FinanceSection = typeof financeSections[number]["id"];
 
 export function resolveFinanceSection(value: string | null, canAdminister: boolean): FinanceSection {
   return financeSections.find(item => item.id === value && (item.id !== "settings" || canAdminister))?.id ?? "overview";
+}
+
+export function financeSectionAllowed(section: FinanceSection, role: string) {
+  if (section === "inventory") return canFinance(role,"inventory_read");
+  if (section === "settings") return canFinance(role,"settings_manage");
+  if (section === "shifts") return canFinance(role,"shifts_read");
+  if (section === "printer") return canFinance(role,"pos");
+  return canFinance(role,"reports");
 }

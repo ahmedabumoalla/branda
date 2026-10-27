@@ -11,10 +11,13 @@ export function FinanceTrialBalance({ lines, onSelectAccount }: {
   lines: FinanceSnapshot["trialBalance"];
   onSelectAccount: (accountId: string) => void;
 }) {
+  const debit=lines.reduce((sum,line)=>sum+Math.round(line.debit*100),0)/100;
+  const credit=lines.reduce((sum,line)=>sum+Math.round(line.credit*100),0)/100;
+  const difference=Math.round((debit-credit)*100)/100;
   return <div className={styles.ledger}>
     <div className={styles.guide}>
       <span>اختر الحساب لعرض كشف الحركة</span>
-      <span>جميع المبالغ بالريال السعودي</span>
+      <span>جميع المبالغ بالريال السعودي</span><strong>{difference === 0 ? "إجمالي المدين يساوي الدائن" : `فرق ميزان المراجعة ${amount.format(difference)} ر س`}</strong>
     </div>
     <div className={styles.scroll} role="region" aria-label="ميزان المراجعة" tabIndex={0}>
       <table className={styles.table}>
@@ -32,6 +35,7 @@ export function FinanceTrialBalance({ lines, onSelectAccount }: {
             <bdi dir="ltr">{amount.format(value)}</bdi>
           </td>)}
         </tr>)}</tbody>
+        <tfoot><tr><th scope="row" colSpan={2}>الإجمالي</th><td className={styles.money}><bdi dir="ltr">{amount.format(debit)}</bdi></td><td className={styles.money}><bdi dir="ltr">{amount.format(credit)}</bdi></td><td className={styles.money}><bdi dir="ltr">{amount.format(difference)}</bdi></td></tr></tfoot>
       </table>
       {lines.length === 0 && <p className={styles.empty}>لا توجد أرصدة حسابات لعرضها</p>}
     </div>

@@ -2,19 +2,22 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const React = require('react');
+const permissions = {};
+new Function('exports', ts.transpileModule(fs.readFileSync('lib/finance/permissions.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(permissions);
+
 const slots = []; let cursor=0, effects=[], timers=[], calls=[], saves=[];
 const hooks={...React,useState(initial){const i=cursor++;if(!(i in slots))slots[i]=initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial});},useEffect(fn,deps){const i=cursor++;if(!slots[i]||deps.some((v,n)=>v!==slots[i].deps[n])){const old=slots[i];slots[i]={deps};effects.push(()=>{old?.cleanup?.();slots[i].cleanup=fn();});}}};
 const row={id:'s1',shift_number:7,user_id:'cashier',employee_name:'Cashier',drawer_name:'Drawer',status:'open',supervisor_paused:false,monitor_status:'active',opened_at:'2026-10-26T12:00:00Z',closed_at:null,last_seen_at:'2026-10-26T12:00:00Z',pending_count:0,conflict_count:0,current_expected:100,counted_cash:null,variance:null};
 let data={rows:[row,{...row,id:'s2',shift_number:8,monitor_status:'stalled'},{...row,id:'s3',shift_number:9,status:'closed',monitor_status:'closed'}],total:80,checkedAt:'now',actions:[]};
 const exportsObject={};
-const mocks={react:hooks,'./finance-shift-analytics':{FinanceShiftAnalytics:function FinanceShiftAnalytics(){}},'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Empty:function Empty(){},Panel:function Panel(){},Numeric:function Numeric(){},financeDate:v=>v||'—'},'./finance-cash-handover-form':{FinanceCashHandoverForm:function FinanceCashHandoverForm(){}},'@/app/actions/finance-shift-monitor':{fetchFinanceShiftMonitorAction:async f=>{calls.push(f);return{ok:true,data:f.shiftId?{...data,rows:data.rows.filter(r=>r.id===f.shiftId)}:data};},superviseFinanceShiftAction:async command=>{saves.push(command);return{ok:true,data:{id:row.id}};}},'@/app/actions/brand-finance':{executeBrandFinanceAction:async command=>{saves.push(command);return{ok:true,data:{id:row.id}};}}};
+const mocks={react:hooks,'@/lib/finance/permissions':permissions,'./finance-shift-analytics':{FinanceShiftAnalytics:function FinanceShiftAnalytics(){}},'@/components/dashboard/ui/modal':{Modal:function Modal(){}},'./finance-ui':{Empty:function Empty(){},Panel:function Panel(){},Numeric:function Numeric(){},financeDate:v=>v||'—'},'./finance-cash-handover-form':{FinanceCashHandoverForm:function FinanceCashHandoverForm(){}},'@/app/actions/finance-shift-monitor':{fetchFinanceShiftMonitorAction:async f=>{calls.push(f);return{ok:true,data:f.shiftId?{...data,rows:data.rows.filter(r=>r.id===f.shiftId)}:data};},superviseFinanceShiftAction:async command=>{saves.push(command);return{ok:true,data:{id:row.id}};}},'@/app/actions/brand-finance':{executeBrandFinanceAction:async command=>{saves.push(command);return{ok:true,data:{id:row.id}};}}};
 const compiled=ts.transpileModule(fs.readFileSync('components/finance/finance-shift-monitor.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
 new Function('require','exports','setTimeout','clearTimeout','setInterval','clearInterval',compiled)(n=>n in mocks?mocks[n]:n.endsWith('.css')?{__esModule:true,default:new Proxy({},{get:(_,k)=>k})}:require(n),exportsObject,fn=>{timers.push(fn);return timers.length;},()=>{},()=>1,()=>{});
 const nodes=t=>Array.isArray(t)?t.flatMap(nodes):t&&typeof t==='object'?[t,...nodes(t.props?.children)]:[];
 const text=t=>Array.isArray(t)?t.map(text).join(''):t&&typeof t==='object'?text(t.props?.children):t==null||typeof t==='boolean'?'':String(t);
 const find=(t,p)=>{const n=nodes(t).find(p);assert(n,'control missing');return n;};
 const button=(t,label)=>find(t,n=>n.type==='button'&&text(n)===label);
-const props={snapshot:{cafe:{id:'brand',slug:'test'},shifts:[],accounts:[],documents:[]},onChanged(){}};
+const props={snapshot:{role:'owner',cafe:{id:'brand',slug:'test'},shifts:[],accounts:[],documents:[]},onChanged(){}};
 function render(){cursor=0;const t=exportsObject.FinanceShiftMonitor(props);const e=effects;effects=[];e.forEach(f=>f());return t;}
 async function tick(){const t=timers;timers=[];t.forEach(f=>f());await new Promise(r=>setImmediate(r));}
 (async()=>{
@@ -26,6 +29,8 @@ async function tick(){const t=timers;timers=[];t.forEach(f=>f());await new Promi
  button(tree,'#7').props.onClick({stopPropagation(){}});render();await tick();tree=render();assert(find(tree,n=>n.type?.name==='Modal').props.open);assert(find(tree,n=>n.type?.name==='FinanceShiftAnalytics'));button(tree,'الصندوق والإجراءات').props.onClick();tree=render();
  const retained=find(tree,n=>n.type?.name==='FinanceShiftAnalytics');assert.equal(retained.props.visible,false);assert(find(tree,n=>n.type==='div'&&n.props.hidden===true&&nodes(n).includes(retained)));
  const beforeSwitch=calls.length;button(tree,'تحليل الوردية').props.onClick();tree=render();await tick();const returned=find(tree,n=>n.type?.name==='FinanceShiftAnalytics');assert.equal(returned.key,retained.key);assert.equal(returned.props.visible,true);assert.equal(calls.length,beforeSwitch,'Tab switching does not refetch monitor data');button(tree,'الصندوق والإجراءات').props.onClick();tree=render();
+ for(const role of ['auditor','accountant']){props.snapshot.role=role;tree=render();assert(!nodes(tree).some(n=>n.type==='button'&&['إيقاف البيع مؤقتًا','إقفال إداري'].includes(text(n))),'Read-only shift role has no supervision actions');assert(nodes(tree).some(n=>n.type?.name==='FinanceShiftAnalytics'));}
+ props.snapshot.role='manager';tree=render();
  button(tree,'إيقاف البيع مؤقتًا').props.onClick();tree=render();assert(button(tree,'تأكيد الإجراء').props.disabled);
  find(tree,n=>n.type==='textarea').props.onChange({target:{value:'Power failure'}});tree=render();await button(tree,'تأكيد الإجراء').props.onClick();await tick();tree=render();assert.equal(saves[0].action,'pause');assert.equal(saves[0].shiftId,'s1');assert.equal(saves[0].reason,'Power failure');
  button(tree,'إقفال إداري').props.onClick();tree=render();let form=find(tree,n=>n.type?.name==='FinanceCashHandoverForm');await form.props.onSubmit('shift_close',{countedCash:95,handoverType:'next_shift'});assert.equal(saves.length,1,'cannot close without explicit acknowledgement');

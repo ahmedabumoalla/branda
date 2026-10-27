@@ -1,4 +1,5 @@
 import "server-only";
+import { canFinance } from "@/lib/finance/permissions";
 import { z } from "zod";
 import { getBrandFinanceContext } from "./brand-finance";
 import type { CashHandoversPage, CashHandoverReceiptResult } from "@/lib/finance/cash-handovers";
@@ -20,7 +21,7 @@ export async function getFinanceCashHandovers(offset: unknown = 0, slug?: string
   return {
     ...result, total: Number(result.total),
     hasMore: parsed.data + result.rows.length < Number(result.total),
-    canReceive: (cafe.role === "owner" || cafe.role === "manager") && result.canReceive === true,
+    canReceive: canFinance(cafe.role, "treasury_write") && result.canReceive === true,
   };
 }
 
@@ -28,7 +29,7 @@ export async function receiveFinanceShiftCash(input: unknown, slug?: string): Pr
   const parsed = receiptSchema.safeParse(input);
   if (!parsed.success) throw new Error("اختر تسليم الوردية وحساب الاستلام وراجع بيانات السند");
   const { client, cafe } = await getBrandFinanceContext(slug);
-  if (cafe.role !== "owner" && cafe.role !== "manager") throw new Error("استلام نقدية الورديات متاح لإدارة المالية فقط");
+  if (!canFinance(cafe.role, "treasury_write")) throw new Error("استلام نقدية الورديات متاح لإدارة المالية فقط");
   const value = parsed.data;
   // The database locks the handover and reads its exact amount; no client amount is accepted
   const { data, error } = await client.rpc("brand_finance_receive_shift_cash", {
