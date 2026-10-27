@@ -14,4 +14,4 @@
 .fullscreenButton { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--finance-line); border-radius: 12px; background: var(--finance-paper); color: var(--finance-ink); cursor: pointer; }
 .fullscreenButton[aria-pressed="true"] { background: var(--finance-ink); color: var(--finance-paper); }
 .fullscreenError { position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 6; width: min(280px, calc(100vw - 48px)); padding: 12px; background: var(--finance-paper); border: 1px solid var(--finance-bad); border-radius: 12px; color: var(--finance-bad); font-size: 12px; line-height: 1.7; }
-@media (max-width: 480px) { .trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
+@media (max-width: 900px) { .trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }

@@ -155,6 +155,7 @@
 .posHeader .posShiftMeta { display: inline-flex; margin: 0; margin-inline-start: 10px; gap: 5px; font-size: 11px; line-height: 1.5; }
 .posHeader .actions { margin: 0; }
 .posHeaderTools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.posHeaderTools > .secondary { padding-inline: 10px; gap: 6px; font-size: 12px; white-space: nowrap; }
 .posControls .posToolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(115px,30%); align-items: center; gap: 8px; margin: 0; }
 .posToolbar .searchBox { width: 100%; max-width: none; min-width: 0; }
 .posToolbar .field { min-width: 0; position: relative; gap: 0; }

@@ -1,5 +1,7 @@
 # Branda current handoff
 
+- VISIBLE POS PAGER 2026-10-27T00:50:38.160Z: Existing pager button moved directly to header beside cashier actions/fullscreen; one instance, existing behavior/refresh preserved. UI41, root/release text/types, scoped lint, webpack and diff PASS. No browser run for this control relocation. Evidence output/pos-pager-verification.json; tag pos-pager-20261027
+
 - POS CHECKOUT 2026-10-27T00:41:17.065Z: Selected-item scrolling separated from fixed dark total/payment dock. Payment, discount, customer phone and note in one modal with pinned total and confirm footer. Closing preserves draft; failed payment keeps error inside dialog; successful sale closes it. UI41, root/release types/text, scoped lint and webpack PASS. Source/security review: existing financial calculations and guards retained. Targeted deployed geometry check pending; evidence output/pos-checkout-verification.json; tag pos-checkout-20261027
 
 - POS TABLET / FULLSCREEN 2026-10-27T00:26:47.084Z: Visible fullscreen toggle, standard/prefixed API, real browser state and rejected-request feedback. Physical-device photos revealed oversized product images: tablet three columns, images capped at 136px and scaled to viewport height; compact cart spacing. Fullscreen/actions tests, UI40, root/release types/text, scoped lint and final webpack PASS. No physical-device/browser verification; no data/auth changes. Evidence output/pos-fullscreen-verification.json; tag pos-tablet-fullscreen-20261027
