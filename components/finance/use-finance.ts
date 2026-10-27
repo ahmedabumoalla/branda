@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import { executeBrandFinanceAction, fetchBrandFinanceAction, fetchBrandFinanceHistoryAction } from "@/app/actions/brand-finance";
 import { createFinanceStaffAccountAction, createSalesCashierAccountAction } from "@/app/actions/finance-access";
-import type { FinanceCommand, FinanceCommandResult, FinanceDocument, FinanceJournalLine, FinanceMovement, FinanceSnapshot } from "@/lib/finance/brand-finance";
+import type { FinanceCommand, FinanceCommandResult, FinanceDocument, FinanceItem, FinanceJournalLine, FinanceMovement, FinanceSnapshot } from "@/lib/finance/brand-finance";
+import { inventoryProductsAfterSave, type FinanceInventoryUnit } from "@/lib/finance/inventory-catalog";
 import type { FinanceFormOperation } from "./finance-operation-form";
 
 export function useFinance(initialSnapshot: FinanceSnapshot, slug?: string) {
@@ -80,5 +81,9 @@ export function useFinance(initialSnapshot: FinanceSnapshot, slug?: string) {
     } catch { setError("تعذر تحميل العمليات الأقدم حاول مرة أخرى"); }
     finally { busy.current = false; setPending(false); }
   }
-  return { snapshot, pending, stale, error, message, execute, refresh, loadMore, historyMore, clearFeedback: () => { setError(""); setMessage(""); } };
+  function applyInventoryCatalog(item:FinanceItem,units:FinanceInventoryUnit[]) {
+    setSnapshot(current=>{const items=current.items.some(row=>row.id===item.id)?current.items.map(row=>row.id===item.id?item:row):[...current.items,item];return {...current,units,items,products:inventoryProductsAfterSave(current.products,items,current.stock)};});
+  }
+  function applyInventoryUnits(units:FinanceInventoryUnit[]) { setSnapshot(current=>({...current,units})); }
+  return { snapshot, pending, stale, error, message, execute, refresh, loadMore, historyMore, applyInventoryCatalog, applyInventoryUnits, clearFeedback: () => { setError(""); setMessage(""); } };
 }

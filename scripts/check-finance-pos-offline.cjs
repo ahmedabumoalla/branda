@@ -14,7 +14,7 @@ function load(file) {
   return exports;
 }
 
-const { drainOfflineSales, pendingSales, posScope, projectOfflineSales } = load('lib/finance/pos-offline.ts');
+const { drainOfflineSales, getProductStockQuantity, offlineStockDeductions, pendingSales, posScope, projectOfflineSales } = load('lib/finance/pos-offline.ts');
 const { createFinanceReceiptPreview } = load('lib/finance/receipt-preview.ts');
 const clone = value => structuredClone(value);
 const snapshot = {
@@ -74,6 +74,38 @@ async function main() {
   assert.equal(projectOfflineSales({ ...authoritative, documents: [] }, [synced]).accounts[0].balance, 148, 'Paginated documents do not reapply acknowledged balance');
   assert.equal(pendingSales([first, conflict, synced]).length, 2);
 
+  const recipe = { id: 'product', itemId: 'item', stockTracked: true, stock_components: [{ item_id: 'item', quantity: 0.25 }, { item_id: 'cup', quantity: 1 }] };
+  const componentSnapshot = { ...snapshot, products: [recipe], stock: [...snapshot.stock, { item_id: 'cup', warehouse_id: 'warehouse', quantity: 1, average_cost: 0.5 }] };
+  const componentSource = JSON.stringify(componentSnapshot);
+  const componentSale = { ...first, stockDeductions: offlineStockDeductions(componentSnapshot, first.document) };
+  assert.deepEqual(componentSale.stockDeductions, [{ item_id: 'item', warehouse_id: 'warehouse', quantity: 0.5 }, { item_id: 'cup', warehouse_id: 'warehouse', quantity: 2 }]);
+  const componentProjection = projectOfflineSales(componentSnapshot, [componentSale]);
+  assert.equal(componentProjection.stock.find(row => row.item_id === 'item' && row.warehouse_id === 'warehouse').quantity, 9.5);
+  assert.equal(componentProjection.stock.find(row => row.item_id === 'cup').quantity, -1, 'Short component balances may become negative');
+  assert.equal(componentProjection.stock.find(row => row.warehouse_id === 'another').quantity, 7, 'Components never deduct from another warehouse');
+  assert.deepEqual(projectOfflineSales(componentProjection, [componentSale]), componentProjection, 'Each component is applied only once');
+  assert.equal(JSON.stringify(componentSnapshot), componentSource, 'Recipe projection preserves original snapshot');
+  const changedRecipe = { ...componentSnapshot, products: [{ ...recipe, stock_components: [{ item_id: 'item', quantity: 7 }] }] };
+  assert.deepEqual(projectOfflineSales(changedRecipe, [componentSale]).stock, componentProjection.stock, 'Persisted consumption does not change when the cached recipe changes');
+  assert.deepEqual(projectOfflineSales(componentSnapshot, [first]).stock, componentProjection.stock, 'Old queue rows derive available component metadata');
+  assert.deepEqual(offlineStockDeductions({ ...componentSnapshot, products: [{ ...recipe, stock_components: [] }] }, first.document), [], 'Explicit untracked recipe does not fall back to the legacy link');
+  const missingStock = projectOfflineSales({ ...componentSnapshot, stock: snapshot.stock }, [componentSale]);
+  assert.deepEqual(missingStock.stock.find(row => row.item_id === 'cup'), { item_id: 'cup', warehouse_id: 'warehouse', quantity: -2, average_cost: 0, cost_known: false }, 'Missing stock row creates an unknown-cost deficit rather than silently skipping consumption');
+  const repeatedLines = { ...first.document, lines: [{ ...first.document.lines[0], quantity: 0.333 }, { ...first.document.lines[0], quantity: 0.333 }] };
+  assert.equal(offlineStockDeductions(componentSnapshot, repeatedLines)[0].quantity, 0.166, 'Round consumption per line to database scale before aggregation');
+  assert.deepEqual(offlineStockDeductions(snapshot, first.document), [{ item_id: 'item', warehouse_id: 'warehouse', quantity: 2 }], 'Legacy cached receipts preserve one-to-one deductions');
+  assert.deepEqual(offlineStockDeductions({ ...snapshot, products: [{ id: 'product', itemId: 'item' }] }, { ...first.document, lines: first.document.lines.map(line => ({ ...line, item_id: null })) }), [{ item_id: 'item', warehouse_id: 'warehouse', quantity: 2 }], 'Legacy product metadata supplies the missing receipt item reference');
+  assert.equal(getProductStockQuantity(recipe, componentSnapshot.stock, 'warehouse'), 1, 'Product availability uses the limiting component');
+  assert.equal(getProductStockQuantity(recipe, componentProjection.stock, 'warehouse'), -1, 'Negative availability remains visible');
+  assert.equal(getProductStockQuantity(recipe, componentSnapshot.stock, 'another'), 0, 'Availability is scoped to the selected warehouse');
+  assert.equal(getProductStockQuantity({ ...recipe, stock_components: [{ item_id: 'item', quantity: 3 }] }, componentSnapshot.stock, 'warehouse'), 3.333, 'Availability supports three decimal units');
+  assert.equal(getProductStockQuantity({ ...recipe, stock_components: [{ item_id: 'cup', quantity: 0.3 }] }, componentProjection.stock, 'warehouse'), -3.333, 'Negative fractional units match database truncation');
+  assert.equal(getProductStockQuantity({ ...recipe, stock_components: [{ item_id: 'item', quantity: 0.1 }] }, [{ item_id: 'item', warehouse_id: 'warehouse', quantity: 0.3 }], 'warehouse'), 3, 'Floating point representation cannot lose a thousandth of an exact unit');
+  assert.equal(getProductStockQuantity({ id: 'product', itemId: 'item', stockTracked: true }, snapshot.stock, 'warehouse'), 10, 'Legacy availability remains unchanged');
+  assert.equal(getProductStockQuantity({ ...recipe, stock_components: [] }, componentSnapshot.stock, 'warehouse'), Infinity, 'Untracked products are not stock-limited');
+  const refundedSnapshot = { ...componentSnapshot, documents: [{ ...componentSale.document, refunded: true, local_reference: first.localReference }] };
+  assert.deepEqual(projectOfflineSales(refundedSnapshot, [componentSale]).stock, componentSnapshot.stock, 'Authoritative refunded sale cannot be locally deducted again');
+
   // The following queue tests use a deterministic in-memory durable-store boundary, not a real browser DB.
   const fifo = queueHarness([second, first]); await drainOfflineSales(fifo.api);
   assert.deepEqual(fifo.attempted, [first.id, second.id]); assert.equal(pendingSales([...fifo.store.values()]).length, 0);
@@ -129,6 +161,15 @@ async function main() {
     const persisted = await reopened.listOfflineSales(posScope(snapshot));
     assert.equal(persisted.length, 2, 'Negative stock sale persists and retry deduplicates across connections');
     assert.equal(projectOfflineSales(emptyStock,persisted).stock[0].quantity,-4,'Pending sales show a negative inventory balance');
+    await storage.saveOfflineSnapshot(componentSnapshot, true);
+    const recipeRow = sale('recipe-queued');
+    await storage.storeOfflineSale(posScope(snapshot), recipeRow.command.payload, recipeRow.document, recipeRow.id);
+    await storage.saveOfflineSnapshot(changedRecipe, true);
+    const durableRecipe = (await reopened.listOfflineSales(posScope(snapshot))).find(row => row.id === recipeRow.id);
+    assert.deepEqual(durableRecipe.stockDeductions, componentSale.stockDeductions, 'IndexedDB stores all component quantities atomically with the original sale');
+    assert.equal(durableRecipe.command.payload.stockDeductions, undefined, 'Local projection metadata never alters the server posting contract');
+    const retryRecipe = await storage.storeOfflineSale(posScope(snapshot), recipeRow.command.payload, recipeRow.document, recipeRow.id);
+    assert.deepEqual(retryRecipe.stockDeductions, durableRecipe.stockDeductions, 'Retry identity retains originally captured components');
     await storage.lockOfflineSession(); assert.equal(await storage.activeOfflineSession(), undefined);
     console.log('PASS IndexedDB adapter transactions using fake-indexeddb (not physical browser persistence)');
   } else console.log('NOT RUN IndexedDB adapter persistence: fake-indexeddb is not installed; memory boundary tests cannot verify transaction lifetime, quota, browser eviction or multi-tab locks');

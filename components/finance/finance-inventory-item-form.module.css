@@ -1,0 +1,38 @@
+.editor { display: grid; gap: 18px; min-width: 0; color: var(--finance-ink, #39251b); }
+.hero { display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 16px; background: var(--finance-cream, #f7f2ea); }
+.hero > svg { flex: 0 0 auto; color: var(--finance-accent, #82551d); }
+.hero h3, .section h3 { margin: 0; font-size: 16px; }
+.hero p, .section > p, .hint { margin: 5px 0 0; color: var(--finance-muted, #78675c); font-size: 12px; line-height: 1.8; }
+.fieldset { display: grid; gap: 18px; padding: 0; margin: 0; border: 0; min-width: 0; }
+.section { padding: 16px; border: 1px solid var(--finance-line, #e6dacb); border-radius: 16px; min-width: 0; }
+.section h3 { margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.wide { grid-column: 1 / -1; }
+.inline { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.inline input, .inline select { flex: 1; min-width: 0; }
+.inline button { flex: 0 0 auto; }
+.unit { display: grid; gap: 8px; }
+.imageRow { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
+.image { width: 78px; height: 78px; border: 1px solid var(--finance-line, #e6dacb); border-radius: 14px; object-fit: contain; background: white; }
+.imagePlaceholder { width: 78px; height: 78px; display: grid; place-items: center; border: 1px dashed var(--finance-line, #e6dacb); border-radius: 14px; }
+.upload { display: grid; gap: 5px; flex: 1; min-width: 150px; font-size: 13px; font-weight: 700; }
+.upload input { max-width: 100%; font-size: 12px; }
+.linkRows { display: grid; gap: 10px; margin-top: 12px; }
+.linkRow { display: grid; grid-template-columns: minmax(0,1fr) minmax(100px,.45fr) 44px; align-items: end; gap: 10px; }
+.linkRow button { min-height: 44px; }
+.choice { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.choice label { display: flex; align-items: center; gap: 7px; padding: 10px; border: 1px solid var(--finance-line, #e6dacb); border-radius: 10px; min-height: 44px; font-size: 13px; cursor: pointer; }
+.choice input { accent-color: #82551d; }
+.footer { display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: 0; background: var(--finance-paper, #fffdf9); border-top: 1px solid var(--finance-line, #e6dacb); padding-block: 12px; z-index: 2; }
+.camera { border: 1px solid var(--finance-line, #e6dacb); border-radius: 14px; padding: 12px; background: var(--finance-cream, #f7f2ea); }
+.camera header { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.camera button { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--finance-line, #e6dacb); }
+.camera video { width: 100%; max-height: 240px; object-fit: cover; border-radius: 10px; background: #17130f; }
+.camera p { font-size: 12px; line-height: 1.8; }
+.editor :is(button,input,select):focus-visible { outline: 3px solid #a87837; outline-offset: 3px; }
+.editor button { min-height: 44px; }
+.barcode { margin-top: 14px; display: grid; gap: 8px; font-size: 12px; min-width: 0; }
+.barcodeScroll { overflow-x: auto; max-width: 100%; background: white; border: 1px solid var(--finance-line, #e6dacb); border-radius: 12px; }
+.barcodeScroll svg { display: block; }
+.barcode > button { justify-self: start; }
+@media(max-width:540px) { .grid { grid-template-columns: minmax(0,1fr); } .section { padding: 12px; } .linkRow { grid-template-columns: minmax(0,1fr) 44px; } .linkRow > :first-child { grid-column: 1 / -1; } .footer > button { flex: 1; } }

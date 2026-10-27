@@ -53,6 +53,10 @@ assert.equal(lib.buildInventoryReport(snapshot, { status: 'negative' }).rows.len
 assert.equal(lib.buildInventoryReport(snapshot, { status: 'missing_cost' }).rows.length, 1);
 assert.equal(lib.buildInventoryReport(snapshot, { status: 'unlinked' }).rows.length, 4);
 assert.equal(lib.buildInventoryReport(snapshot, { search: 'قهوة' }).rows.length, 2, 'Search matches linked menu product');
+const linkedSnapshot = { ...snapshot, items: [{ ...item, menu_product_id: null, barcode: '123456', product_links: [{ product_id: 'coffee', quantity: .25 }] }] };
+assert.ok(lib.buildInventoryReport(linkedSnapshot, { search: '123456' }).rows.length, 'Barcode search finds the stored item');
+assert.ok(lib.buildInventoryReport(linkedSnapshot, { search: 'قهوة' }).rows.length, 'Component product names remain searchable');
+assert.equal(lib.buildInventoryReport(linkedSnapshot, { status: 'unlinked' }).rows.length, 0, 'Multiple-product link is not classified as independent');
 assert.equal(lib.buildInventoryReport(snapshot, { warehouseId: 'b', search: ' B-1 ' }).rows.length, 2, 'Search trims query and matches SKU');
 assert.equal(lib.buildInventoryReport(snapshot, { warehouseId: 'not-a-warehouse' }).rows.length, 0);
 assert.equal(lib.buildInventoryReport(snapshot, { includeInactive: true }).rows.length, 8, 'Archived balances visible only when requested');
@@ -76,6 +80,7 @@ assert.ok(exported.some(row => row[7] === 'غير مكتملة'), 'Unknown valua
 
 const component = load('components/finance/finance-inventory-report.tsx', {
   'lucide-react': icons, '@/lib/finance/inventory-report': lib, './finance-ui': ui,
+  'next/image': { default: () => null }, '@/lib/finance/inventory-catalog': { inventoryImageUrl: () => '/image' },
 });
 const readonly = renderToStaticMarkup(React.createElement(component.FinanceInventoryReport, { snapshot }));
 assert.ok(!readonly.includes('تعديل الصنف'), 'No mutation controls without parent capability callbacks');

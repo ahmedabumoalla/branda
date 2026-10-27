@@ -49,10 +49,11 @@ export function buildInventoryReport(snapshot: Pick<FinanceSnapshot, "items" | "
       // A genuine zero-cost receipt is known; a positive number alone cannot prove the basis.
       const averageCost = stock?.cost_known === true && Number.isFinite(stock.average_cost) && stock.average_cost >= 0 ? stock.average_cost : null;
       const missingCost = quantity !== 0 && averageCost === null;
-      const productName = item.menu_product_id ? products.get(item.menu_product_id) ?? null : null;
-      if (query && ![item.name, item.sku, warehouse.name, productName ?? ""].some(value => value.toLocaleLowerCase("ar").includes(query))) continue;
+      const linkedIds = item.product_links?.map(link => link.product_id) ?? (item.menu_product_id ? [item.menu_product_id] : []);
+      const productName = linkedIds.length ? linkedIds.map(id => products.get(id) ?? "منتج مرتبط غير ظاهر").join("، ") : null;
+      if (query && ![item.name, item.sku, item.barcode ?? "", warehouse.name, productName ?? ""].some(value => value.toLocaleLowerCase("ar").includes(query))) continue;
       if (filters.status && filters.status !== "all") {
-        if (filters.status === "missing_cost" ? !missingCost : filters.status === "unlinked" ? !!item.menu_product_id : status !== filters.status) continue;
+        if (filters.status === "missing_cost" ? !missingCost : filters.status === "unlinked" ? linkedIds.length > 0 : status !== filters.status) continue;
       }
       rows.push({ key, item, warehouseId: warehouse.id, warehouseName: warehouse.name, active, quantity, averageCost,
         estimatedValue: quantity === 0 ? 0 : averageCost === null ? null : quantity * averageCost,

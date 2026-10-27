@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
+import { inventoryImageUrl } from "@/lib/finance/inventory-catalog";
 import { ArrowDownToLine, CircleAlert, Package, Search, Warehouse } from "lucide-react";
 import type { FinanceItem, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { buildInventoryReport, inventoryReportCsvRows, inventoryStatusNames, type InventoryFilter, type InventoryReportRow } from "@/lib/finance/inventory-report";
@@ -36,7 +38,7 @@ export function FinanceInventoryReport({ snapshot, disabled = false, onAdjust, o
 
   return <section className={styles.report} aria-label="رقابة المخزون حسب المستودع">
     <header className={styles.heading}>
-      <div><p className={shared.eyebrow}><Warehouse size={16} aria-hidden="true" />المخزون تحت الرقابة</p><h2>كل مستودع برصيده وتكلفته</h2><p>أرصدة حالية حسب آخر تحديث مع إبراز النواقص قبل أن تختفي داخل إجمالي العلامة</p></div>
+      <div><p className={shared.eyebrow}><Warehouse size={16} aria-hidden="true" />المخزون تحت الرقابة</p><h2>أصنافك وأرصدتها في مكان واحد</h2><p>الباركود ووحدات القياس واستهلاك المنيو مع أرصدة حالية حسب آخر تحديث</p></div>
       <button type="button" className={shared.secondary} disabled={!rows.length} onClick={() => downloadFinanceCsv("branda-inventory-by-warehouse.csv", inventoryReportCsvRows(rows))}><ArrowDownToLine size={16} aria-hidden="true" />تصدير النتائج</button>
     </header>
 
@@ -48,8 +50,8 @@ export function FinanceInventoryReport({ snapshot, disabled = false, onAdjust, o
     </div>
 
     <div className={styles.controls}>
-      <label className={styles.search}><span>البحث في الأرصدة</span><div><Search size={17} aria-hidden="true" /><input type="search" value={search} placeholder="الصنف أو الرمز أو المستودع" onChange={event => { setSearch(event.target.value); setPage(0); }} /></div></label>
-      <label><span>المستودع</span><select value={warehouseId} onChange={event => { setWarehouseId(event.target.value); setPage(0); }}><option value="">كل المستودعات</option>{snapshot.warehouses.filter(warehouse => includeInactive || warehouse.active).map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}{!warehouse.active ? " — مؤرشف" : ""}</option>)}</select></label>
+      <label className={styles.search}><span>البحث في الأرصدة</span><div><Search size={17} aria-hidden="true" /><input type="search" value={search} placeholder="اسم الصنف أو الباركود أو منتج المنيو" onChange={event => { setSearch(event.target.value); setPage(0); }} /></div></label>
+      {snapshot.warehouses.filter(warehouse => includeInactive || warehouse.active).length > 1 && <label><span>المستودع</span><select value={warehouseId} onChange={event => { setWarehouseId(event.target.value); setPage(0); }}><option value="">كل المستودعات</option>{snapshot.warehouses.filter(warehouse => includeInactive || warehouse.active).map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}{!warehouse.active ? " — مؤرشف" : ""}</option>)}</select></label>}
       <label><span>حالة الرصيد</span><select value={status} onChange={event => { setStatus(event.target.value as InventoryFilter); setPage(0); }}>{filterOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <label className={styles.checkbox}><input type="checkbox" checked={includeInactive} onChange={event => { setIncludeInactive(event.target.checked); setWarehouseId(""); setPage(0); }} /><span>إظهار المؤرشف</span></label>
     </div>
@@ -60,12 +62,12 @@ export function FinanceInventoryReport({ snapshot, disabled = false, onAdjust, o
       {!!summary.negative && <p className={styles.warning}>البيع بالسالب متاح وهذه الأرصدة تحتاج مراجعة الجرد أو تسجيل الاستلام الفعلي</p>}
     </div>
 
-    {!rows.length ? <Empty title={snapshot.items.length ? "لا توجد أرصدة مطابقة للتصفية" : "لا توجد أصناف مخزنية بعد"}>أضف الأصناف والمستودعات أو غيّر عوامل التصفية لعرض الرصيد</Empty> : <>
+    {!rows.length ? <Empty title={snapshot.items.length ? "لا توجد أرصدة مطابقة للتصفية" : "لا توجد أصناف مخزنية بعد"}>أضف صنفًا مخزنيًا أو غيّر عوامل التصفية لعرض الرصيد</Empty> : <>
       <div className={styles.tableWrap} role="region" aria-label="جدول أرصدة الأصناف حسب المستودع" tabIndex={0}>
         <table className={styles.table}><caption>النتائج حسب التصفية الحالية وتظهر الأرصدة السالبة أولًا</caption><thead><tr>
           <th scope="col">الصنف والمستودع</th><th scope="col">الرصيد الحالي</th><th scope="col">الحالة</th><th scope="col">متوسط تكلفة المستودع</th><th scope="col">القيمة التقديرية</th><th scope="col">حد التنبيه</th><th scope="col">للوصول إلى الحد</th>{actions && <th scope="col">الإجراء</th>}
         </tr></thead><tbody>{visible.map(row => <tr key={row.key}>
-          <th scope="row" className={styles.item}><strong>{row.item.name}</strong><span>{row.warehouseName}{!row.active && " — مؤرشف"}</span><small><bdi>{row.item.sku || "بدون رمز"}</bdi> · {row.productName ?? (row.item.menu_product_id ? "منتج مرتبط غير ظاهر" : "صنف مستقل")}</small></th>
+          <th scope="row" className={styles.item}>{(row.item.imageUrl || row.item.image_path) && <Image unoptimized src={row.item.imageUrl || inventoryImageUrl(row.item.image_path!, snapshot.cafe.slug)} width={42} height={42} className={styles.thumbnail} alt="" />}<strong>{row.item.name}</strong><span>{row.warehouseName}{!row.active && " — مؤرشف"}</span>{row.item.barcode && <small>باركود <bdi dir="ltr">{row.item.barcode}</bdi></small>}<small><bdi>{row.item.sku || "بدون رمز"}</bdi> · {row.productName ?? "صنف مستقل"}</small></th>
           <td><strong className={row.quantity < 0 ? styles.negative : styles.quantity}><bdi dir="ltr">{new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(row.quantity)}</bdi></strong><small>{row.item.unit}</small></td>
           <td><span className={styles.status} data-status={row.status}>{inventoryStatusNames[row.status]}</span></td>
           <td>{row.averageCost === null ? <span className={styles.muted}>غير متاحة</span> : <Numeric value={row.averageCost} money />}</td>

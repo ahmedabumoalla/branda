@@ -1,24 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { FinanceOperation, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
 import { Field, Numeric, accountKindNames } from "./finance-ui";
-import { financeStaffRoles, financeRoleLabels } from "@/lib/finance/permissions";
+import { canFinance, financeStaffRoles, financeRoleLabels } from "@/lib/finance/permissions";
 import styles from "./finance.module.css";
 import { FinanceRefundForm } from "./finance-refund-form";
 import { SalesCashierForm } from "./sales-cashier-form";
 import { FinanceSupplierPayoutForm } from "./finance-supplier-payout-form";
 import { FinanceCashHandoverForm } from "./finance-cash-handover-form";
+import { FinanceInventoryItemForm, type InventorySaved } from "./finance-inventory-item-form";
 
 export type FinanceFormOperation = FinanceOperation | "staff_create" | "sales_cashier_create";
 export type FinanceForm = { operation: FinanceFormOperation; title: string; values?: Record<string, unknown> };
-type Props = { form: FinanceForm; snapshot: FinanceSnapshot; pending: boolean; error: string; onCancel: () => void; onSubmit: (operation: FinanceFormOperation, payload: Record<string, unknown>) => Promise<boolean> };
+type Props = { form: FinanceForm; snapshot: FinanceSnapshot; pending: boolean; error: string; onCancel: () => void; onInventorySaved?: InventorySaved; onInventoryUnitsChanged?: (units: NonNullable<FinanceSnapshot["units"]>) => void; onInventoryBusyChange?: (busy: boolean) => void; onSubmit: (operation: FinanceFormOperation, payload: Record<string, unknown>) => Promise<boolean> };
 
-export function FinanceOperationForm({ form, snapshot, pending, error, onCancel, onSubmit }: Props) {
+export function FinanceOperationForm({ form, snapshot, pending, error, onCancel, onSubmit, onInventorySaved, onInventoryBusyChange, onInventoryUnitsChanged }: Props) {
   const { operation, values = {} } = form;
   const [lines, setLines] = useState([{ key: 1, itemId: "", quantity: 1, unitPrice: 0 }]);
+  const [catalog, setCatalog] = useState({ items: snapshot.items, units: snapshot.units ?? [] });
+  const returnFocus = useRef<HTMLButtonElement | null>(null);
+  function closeItemEditor() { setEditingItem(null); requestAnimationFrame(() => returnFocus.current?.focus()); }
+  const [editingItem, setEditingItem] = useState<{ row: number; id?: string } | null>(null);
   const [journalLines, setJournalLines] = useState([{ key: 1, accountId: "", debit: 0, credit: 0 }, { key: 2, accountId: "", debit: 0, credit: 0 }]);
   const [discount, setDiscount] = useState(0);
   const [treasuryKind, setTreasuryKind] = useState(String(values.kind ?? "receipt"));
@@ -32,7 +37,7 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   const [stockWarehouse, setStockWarehouse] = useState(String(values.warehouseId ?? snapshot.warehouses.find((warehouse) => warehouse.active)?.id ?? ""));
   const activeAccounts = snapshot.accounts.filter((account) => account.active);
   const liquidAccounts = activeAccounts.filter((account) => ["cash", "bank", "pos", "employee"].includes(account.kind));
-  const activeItems = snapshot.items.filter((item) => item.active);
+  const activeItems = catalog.items.filter((item) => item.active);
   const activeWarehouses = snapshot.warehouses.filter((warehouse) => warehouse.active);
   const purchaseTotals = previewFinanceTotals(lines.map((line) => ({ quantity: line.quantity, price: line.unitPrice })), discount, snapshot.settings.vat_rate, snapshot.settings.tax_inclusive);
   const selectAccounts = (name: string, list = liquidAccounts, required = true, label = "الحساب") => <Field label={label}><select name={name} required={required} defaultValue={String(values[name] ?? (required && list.length && list.every(account => account.kind === list[0].kind) ? getPrimaryFinanceAccount(list)?.id : "") ?? "")}><option value="">اختر الحساب</option>{list.map((account) => <option value={account.id} key={account.id}>{account.name} · {accountKindNames[account.kind]}</option>)}</select></Field>;
@@ -45,9 +50,11 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
   if (operation === "shift_open" || operation === "shift_close") return <FinanceCashHandoverForm form={form} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
   if (operation === "sales_cashier_create") return snapshot.canAdminister ? <SalesCashierForm pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} /> : <p className={styles.notice}>إضافة الكاشيرات متاحة لمالك العلامة</p>;
   if (operation === "refund") return <FinanceRefundForm document={snapshot.documents.find(document => document.id === values.documentId)} snapshot={snapshot} pending={pending} error={error} onCancel={onCancel} onSubmit={onSubmit} />;
+  if (operation === "item") return <FinanceInventoryItemForm snapshot={snapshot} item={snapshot.items.find(item => item.id === values.id)} onBusyChange={onInventoryBusyChange} onUnitsChanged={onInventoryUnitsChanged} onCancel={onCancel} onSaved={(item, units) => { onInventorySaved?.(item, units); onCancel(); }} />;
 
-  return <form className={styles.form} onSubmit={async (event) => {
-    event.preventDefault(); if (pending) return;
+  return <>{editingItem && canFinance(snapshot.role, "inventory_write") && <FinanceInventoryItemForm snapshot={{ ...snapshot, ...catalog }} item={catalog.items.find(item => item.id === editingItem.id)} onBusyChange={onInventoryBusyChange} onUnitsChanged={units => { setCatalog(previous => ({ ...previous, units })); onInventoryUnitsChanged?.(units); }} onCancel={closeItemEditor} onSaved={(item, units) => { setCatalog(previous => ({ items: [...previous.items.filter(row => row.id !== item.id), item], units })); setLines(previous => previous.map(line => line.key === editingItem.row ? { ...line, itemId: item.id } : line)); onInventorySaved?.(item, units); closeItemEditor(); }} />}
+  <div hidden={!!editingItem}><form className={styles.form} onSubmit={async (event) => {
+    event.preventDefault(); if (pending || editingItem) return;
     setLocalError("");
     if (operation === "shift_accept" && (!received || receivedCount === "")) { setLocalError("عد النقدية وأكد استلامها قبل بدء الوردية"); return; }
     const data = new FormData(event.currentTarget);
@@ -83,18 +90,16 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
     await onSubmit(operation === "staff" && staffMode === "new" ? "staff_create" : operation, payload);
   }}>
     {(error || localError) && <div role="alert" className={styles.error}>{error || localError}</div>}
-    <fieldset disabled={pending} className={styles.form} style={{ border: 0, padding: 0, margin: 0 }}>
+    <fieldset disabled={pending || !!editingItem} className={styles.form} style={{ border: 0, padding: 0, margin: 0 }}>
       {operation === "party" && <>
         <div className={styles.fields}><Field label="الاسم"><input name="name" required maxLength={150} defaultValue={String(values.name ?? "")} /></Field><Field label="النوع"><select name="kind" defaultValue={String(values.kind ?? "customer")}><option value="customer">عميل</option><option value="supplier">مورد</option><option value="employee">موظف</option></select></Field><Field label="رقم الجوال"><input name="phone" type="tel" maxLength={30} defaultValue={String(values.phone ?? "")} /></Field><Field label="البريد الإلكتروني"><input name="email" type="email" maxLength={180} defaultValue={String(values.email ?? "")} /></Field><Field label="الرقم الضريبي"><input name="taxNumber" maxLength={30} defaultValue={String(values.taxNumber ?? "")} /></Field></div>
         <label className={styles.check}><input type="checkbox" name="active" defaultChecked={values.active !== false} />طرف نشط</label>
       </>}
       {operation === "account" && <div className={styles.fields}><Field label="اسم الحساب"><input name="name" required maxLength={100} /></Field><Field label="نوع الحساب"><select name="kind" defaultValue={String(values.kind ?? "cash")}>{(["cash", "bank", "pos", "employee"] as const).map((kind) => <option key={kind} value={kind}>{accountKindNames[kind]}</option>)}</select></Field></div>}
       {operation === "warehouse" && <Field label="اسم المستودع"><input name="name" required maxLength={100} /></Field>}
-      {operation === "item" && <div className={styles.fields}><Field label="اسم الصنف"><input name="name" required maxLength={150} defaultValue={String(values.name ?? "")} /></Field><Field label="رمز الصنف"><input name="sku" required maxLength={60} dir="ltr" defaultValue={String(values.sku ?? "")} /></Field><Field label="وحدة القياس"><input name="unit" required maxLength={30} defaultValue={String(values.unit ?? "قطعة")} /></Field>{amount("minQuantity", "حد التنبيه للكمية")}
-        <Field label="ربط بمنتج المنيو" hint="يخصم البيع من المخزون عند ربط المنتج"><select name="menuProductId" defaultValue={String(values.menuProductId ?? "")}><option value="">صنف مستقل</option>{snapshot.products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></Field></div>}
       {operation === "purchase" && <>
         <div className={styles.fields}>{selectParty("supplier", true)}{selectWarehouse()}</div>
-        {lines.map((line, index) => <div className={styles.rowFields} key={line.key}><Field label={`الصنف ${index + 1}`}><select required aria-label={`الصنف ${index + 1}`} value={line.itemId} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, itemId: event.target.value } : item))}><option value="">اختر الصنف</option>{activeItems.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</select></Field><Field label="الكمية"><input type="number" required min="0.001" step="0.001" value={line.quantity} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, quantity: Number(event.target.value) } : item))} /></Field><Field label="سعر الوحدة"><input type="number" required min="0" step="0.01" value={line.unitPrice} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, unitPrice: Number(event.target.value) } : item))} /></Field><button type="button" className={styles.iconButton} disabled={lines.length === 1} aria-label={`حذف الصنف ${index + 1}`} onClick={() => setLines(lines.filter((item) => item.key !== line.key))}><Trash2 size={16} /></button></div>)}
+        {lines.map((line, index) => <div key={line.key}><div className={styles.rowFields}><Field label={`الصنف ${index + 1}`}><select required aria-label={`الصنف ${index + 1}`} value={line.itemId} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, itemId: event.target.value } : item))}><option value="">اختر الصنف</option>{activeItems.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unit}</option>)}</select></Field><Field label="الكمية"><input type="number" required min="0.001" step="0.001" value={line.quantity} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, quantity: Number(event.target.value) } : item))} /></Field><Field label="سعر الوحدة"><input type="number" required min="0" step="0.01" value={line.unitPrice} onChange={(event) => setLines(lines.map((item) => item.key === line.key ? { ...item, unitPrice: Number(event.target.value) } : item))} /></Field><button type="button" className={styles.iconButton} disabled={lines.length === 1} aria-label={`حذف الصنف ${index + 1}`} onClick={() => setLines(lines.filter((item) => item.key !== line.key))}><Trash2 size={16} /></button></div>{canFinance(snapshot.role, "inventory_write") && <div className={styles.actions}><button type="button" className={styles.secondary} onClick={event => { returnFocus.current = event.currentTarget; setEditingItem({ row: line.key }); }}>إنشاء صنف جديد</button>{line.itemId && <button type="button" className={styles.secondary} onClick={event => { returnFocus.current = event.currentTarget; setEditingItem({ row: line.key, id: line.itemId }); }}>تعديل بيانات الصنف</button>}</div>}</div>)}
         <button type="button" className={styles.secondary} onClick={() => setLines([...lines, { key: Math.max(...lines.map((line) => line.key)) + 1, itemId: "", quantity: 1, unitPrice: 0 }])}><Plus size={16} />إضافة صنف للمشتريات</button>
         <div className={styles.fields}><Field label="خصم على الفاتورة"><input type="number" min="0" max={purchaseTotals.subtotal} step="0.01" value={discount} onChange={(event) => setDiscount(Number(event.target.value))} /></Field>{amount("paid", "المبلغ المدفوع")}{selectAccounts("accountId", liquidAccounts, false, "حساب الدفع")}</div>
         <div className={styles.notice}>إجمالي المشتريات بعد الخصم والضريبة <strong><Numeric value={purchaseTotals.total} money /></strong></div>{note}
@@ -129,5 +134,5 @@ export function FinanceOperationForm({ form, snapshot, pending, error, onCancel,
       </>}
       <div className={styles.formFooter}><button type="button" className={styles.secondary} onClick={onCancel}>إلغاء</button><button type="submit" className={styles.primary}>{pending ? "جار حفظ العملية" : "حفظ العملية"}</button></div>
     </fieldset>
-  </form>;
+  </form></div></>;
 }

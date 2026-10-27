@@ -62,7 +62,7 @@ async function main() {
     const h = harness(role, 'inventory'); let tree = h.render();
     const writable = role === 'owner' || role === 'warehouse';
     assert.equal(!!button(tree, 'جرد وتسوية كمية'), writable, role + ' inventory adjustment control');
-    assert.equal(!!button(tree, 'تحويل مخزون'), writable, role + ' inventory transfer control');
+    assert.equal(!!button(tree, 'تحويل مخزون'), false, role + ' no transfer without two active warehouses');
     assert.equal(!!button(tree, 'إضافة صنف مخزني'), writable);
     assert.equal(typeof byName(tree, 'FinanceInventoryReport').props.onAdjust === 'function', writable);
     assert.equal(typeof byName(tree, 'FinanceInventoryReport').props.onItemEdit === 'function', writable);

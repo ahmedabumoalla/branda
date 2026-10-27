@@ -9,6 +9,7 @@ import { logoutFinanceAction } from "@/app/actions/finance-access";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { financeMoney, getPrimaryFinanceAccount, previewFinanceTotals } from "@/lib/finance/brand-finance";
+import { getProductStockQuantity } from "@/lib/finance/pos-offline";
 import { FinanceOperationForm, type FinanceForm } from "./finance-operation-form";
 import { Empty, Field, financeDate, financeDocumentStatus, Numeric } from "./finance-ui";
 import { FinanceRefundRequests } from "./finance-refund-requests";
@@ -96,7 +97,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
       setLoggingOut(false);
     }
   }
-  function quantityAvailable(product: FinanceProduct) { return product.stockTracked ? data.stock.find((stock) => stock.item_id === product.itemId && stock.warehouse_id === warehouseId)?.quantity ?? 0 : Infinity; }
+  function quantityAvailable(product: FinanceProduct) { return getProductStockQuantity(product, data.stock, warehouseId); }
   function setQuantity(productId: string, quantity: number) {
     if (disabled) return;
     const product = data.products.find((item) => item.id === productId);

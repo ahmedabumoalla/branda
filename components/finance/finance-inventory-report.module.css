@@ -41,6 +41,7 @@
 .status[data-status="available"] { color: var(--finance-good); background: #f0f8f3; }
 .footer { display: flex; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: var(--finance-muted); flex-wrap: wrap; }
 .footnote { margin: 0; color: var(--finance-muted); font-size: 11px; line-height: 1.9; }
+.thumbnail { border: 1px solid var(--finance-line); border-radius: 9px; object-fit: contain; float: inline-start; margin-inline-end: 9px; background: white; }
 .report :is(input, select, button, .tableWrap):focus-visible { outline: 3px solid var(--finance-accent); outline-offset: 3px; }
 @media (max-width: 1050px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .metrics { gap: 8px; } .valuation { grid-column: 1 / -1; } .metric { padding: 14px; } .controls { grid-template-columns: 1fr; } .heading button { width: 100%; } }

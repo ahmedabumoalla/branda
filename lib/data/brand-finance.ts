@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { isOwnedMenuAsset } from "@/lib/menu/standalone-menu";
 import type { FinanceCommandResult, FinanceHistory, FinanceProduct, FinanceSnapshot } from "@/lib/finance/brand-finance";
+import { inventoryImageUrl, isInventoryImagePath } from "@/lib/finance/inventory-catalog";
 
 const commandSchema = z.object({
   operation: z.enum(["supplier_payout", "sale", "purchase", "refund", "refund_approve", "refund_reject", "party", "account", "item", "warehouse", "stock_adjust", "stock_transfer", "treasury", "settlement", "shift_open", "shift_close", "shift_handover", "shift_accept", "settings", "staff", "journal"]),
@@ -39,6 +40,7 @@ export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSna
   const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
+  snapshot.items = snapshot.items.map(item => ({ ...item, imageUrl: isInventoryImagePath(item.image_path, cafe.id) ? inventoryImageUrl(item.image_path, cafe.slug) : null }));
   const products = snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[];
   // The authenticated media endpoint refreshes signatures throughout long shifts.
   snapshot.products = products.map(({ imageStoragePath, ...product }) => ({ ...product,

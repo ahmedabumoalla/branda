@@ -180,7 +180,7 @@ async function main() {
   field(formTree, 'الصنف').props.onChange({ target: { value: 'item' } }); formTree = renderForm();
   const nativeFormData = global.FormData;
   global.FormData = class { constructor(values) { this.values = values; } [Symbol.iterator]() { return this.values[Symbol.iterator](); } get(key) { return this.values.get(key); } };
-  await formTree.props.onSubmit({ preventDefault() {}, currentTarget: new Map([['itemId', 'item'], ['warehouseId', 'warehouse'], ['countedQuantity', '3'], ['unitCost', '3'], ['note', 'جرد فعلي']]) });
+  await find(formTree, node => node.type === 'form').props.onSubmit({ preventDefault() {}, currentTarget: new Map([['itemId', 'item'], ['warehouseId', 'warehouse'], ['countedQuantity', '3'], ['unitCost', '3'], ['note', 'جرد فعلي']]) });
   assert.equal(formCalls[0][1].countedQuantity, 3); assert.equal(formCalls[0][1].expectedQuantity, 5); assert.equal('quantity' in formCalls[0][1], false); groups++;
   {
     const receiptHooks=hooks(),calls=[];
@@ -190,7 +190,7 @@ async function main() {
     let receiptTree=renderReceipt();assert.ok(!text(receiptTree).includes('النقدية المتوقعة'));
     const input=()=>find(renderReceipt(),node=>node.type==='input'&&node.props.name==='countedCash');
     assert.equal(input().props.defaultValue,'');input().props.onChange({target:{value:'50'}});
-    const submitReceipt=()=>renderReceipt().props.onSubmit({preventDefault(){},currentTarget:new Map([['countedCash','50']])});
+    const submitReceipt=()=>find(renderReceipt(), node => node.type === 'form').props.onSubmit({preventDefault(){},currentTarget:new Map([['countedCash','50']])});
     await submitReceipt();assert.equal(calls.length,0);
     find(renderReceipt(),node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});
     await submitReceipt();assert.equal(calls[0][1].countedCash,50);

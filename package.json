@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@zxing/browser": "0.2.1",
+    "jsbarcode": "3.12.1",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.8",
     "jsqr": "1.4.0",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
+    "@types/jsbarcode": "3.11.4",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
