@@ -154,6 +154,7 @@
 .posHeader .title { display: inline; font-size: 19px; line-height: 1.5; }
 .posHeader .posShiftMeta { display: inline-flex; margin: 0; margin-inline-start: 10px; gap: 5px; font-size: 11px; line-height: 1.5; }
 .posHeader .actions { margin: 0; }
+.posHeaderTools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .posControls .posToolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(115px,30%); align-items: center; gap: 8px; margin: 0; }
 .posToolbar .searchBox { width: 100%; max-width: none; min-width: 0; }
 .posToolbar .field { min-width: 0; position: relative; gap: 0; }
@@ -183,7 +184,7 @@
 .products { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .product { text-align: start; background: var(--finance-paper); border: 1px solid var(--finance-line); border-radius: 14px; padding: 0; overflow: hidden; cursor: pointer; position: relative; }
 .product:hover { border-color: var(--finance-accent); }
-.productImage { width: 100%; aspect-ratio: 1.2; object-fit: cover; background: #eee4d5; display: block; }
+.productImage { width: 100%; height: auto; aspect-ratio: 1.2; object-fit: cover; background: #eee4d5; display: block; }
 .productPlaceholder { width: 100%; aspect-ratio: 1.2; display: grid; place-items: center; color: #8c7866; background: #eee4d5; }
 .productBody { padding: 12px; display: grid; gap: 7px; }
 .productName { font-size: 13px; font-weight: 750; line-height: 1.6; }
@@ -268,5 +269,32 @@
 @media (max-width: 1150px) { .posLayout { grid-template-columns: minmax(0, 1fr) 320px; } .products { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 780px) { .header { align-items: flex-start; flex-direction: column; gap: 16px; } .twoColumns, .posLayout { grid-template-columns: minmax(0, 1fr); } .cart { position: static; } .products { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cartLines { max-height: none; } .metric { padding: 16px; } .panelHeader, .panelBody { padding: 16px; } }
 @media (max-width: 480px) { .products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .fields { grid-template-columns: minmax(0, 1fr); } .rowFields { grid-template-columns: minmax(0, 1fr) 76px; } .rowFields > :first-child { grid-column: 1 / -1; } .metricValue { font-size: 23px; } .metrics { gap: 8px; } .actions { width: 100%; } .actions > :is(a,button) { flex: 1; } }
+
+/* Tablet landscape: reserve height for product names, prices and checkout. */
+@media (min-width: 781px) and (max-width: 1366px) {
+ .posPage { padding: 6px 8px; }
+ .posLayout { grid-template-columns: minmax(0, 1fr) clamp(260px, 27vw, 300px); gap: 12px; }
+ .posControls { gap: 8px; padding-top: 0; padding-bottom: 6px; }
+ .posCatalog { padding-top: 8px; }
+ .posCatalog .products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+ .posCatalog .productImage, .posCatalog .productPlaceholder { height: clamp(88px, 18dvh, 136px); aspect-ratio: auto; }
+ .posCatalog .productImage { object-fit: contain; background: var(--finance-paper); }
+ .posCatalog .productBody { padding: 8px 10px; gap: 4px; }
+ .posCatalog .productName { font-size: 12px; line-height: 1.5; min-height: 36px; }
+ .posCatalog .productPrice { font-size: 15px; line-height: 1.5; }
+ .cart > .panelHeader { padding: 8px 12px; }
+ .cart .empty { grid-template-columns: 24px minmax(0,1fr); text-align: start; justify-items: start; padding: 10px 12px; gap: 2px 8px; }
+ .cart .empty > svg { grid-row: 1 / 3; align-self: center; }
+ .cart .empty p { grid-column: 2; }
+ .cart .cartSummary { padding: 8px 12px; }
+ .cart .total { padding: 7px 0; }
+ .cart .total .numeric { font-size: 27px; }
+ .cart .paymentChoice { min-height: 44px; padding: 7px; font-size: 13px; }
+ .cart .paymentChoice > svg:not(.paymentSelected) { width: 21px; height: 21px; }
+ .cartFooter { padding: 8px 10px; }
+ .cartLines { padding-inline: 12px; }
+ .cartLine { padding-block: 10px; }
+ .cartConnection { padding: 0 10px 4px; }
+}
 @media (prefers-reduced-motion: reduce) { .page *, .page *::before, .page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media print { .page { background: white; padding: 0; } .noPrint { display: none !important; } .printOnly { display: block; } .receipt { padding: 0; width: 80mm; } }
