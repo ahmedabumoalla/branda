@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isGreenApiConfigured, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
+import { isGreenApiFinanceReceiptConfigured, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
 import { syncWalletCardByCode } from "@/lib/wallet";
 import { financeCustomerReceiptSchema } from "@/lib/finance/customer-receipt";
 import { createFinanceCustomerReceiptPdf } from "./finance-customer-receipt";
@@ -32,7 +32,7 @@ export function financePosCustomerMessage(job: CustomerMessageJob) {
 /** SQL claims are single-use; ambiguous sends and expired leases require review, never automatic resend */
 export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
   if (cafeId) z.uuid().parse(cafeId);
-  if (!isGreenApiConfigured()) return { configured: false, claimed: 0, queued: 0, needsReview: 0 };
+  if (!isGreenApiFinanceReceiptConfigured()) return { configured: false, claimed: 0, queued: 0, needsReview: 0 };
   const client = createAdminClient();
   const { data, error } = await client.rpc("brand_finance_claim_customer_messages", { p_cafe_id: cafeId ?? null, p_limit: 5 });
   if (error || !Array.isArray(data)) throw new Error("FINANCE_CUSTOMER_QUEUE_UNAVAILABLE");
