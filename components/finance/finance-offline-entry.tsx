@@ -17,8 +17,12 @@ export function FinanceOfflineEntry() {
       if (navigator.onLine) {
         try {
           const response = await fetch(`/api/finance/${encodeURIComponent(session.snapshot.cafe.slug)}/pos-sync`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
-          if (response.status === 401 || response.status === 403) { await lockOfflineSession(); setError("سجل الدخول مجددًا للوصول إلى الكاشير"); return; }
-          if (response.ok) { const body = await response.json(); if (posScope(body.snapshot) !== session.scope) { await lockOfflineSession(); setError("سجل الدخول بنفس حساب الموظف للوصول إلى بياناته"); return; } }
+          const requireLogin = async () => {
+            await lockOfflineSession().catch(() => {});
+            if (active) window.location.replace(`/finance/${encodeURIComponent(session.snapshot.cafe.slug)}/login`);
+          };
+          if (response.status === 401 || response.status === 403) { await requireLogin(); return; }
+          if (response.ok) { const body = await response.json(); if (posScope(body.snapshot) !== session.scope) { await requireLogin(); return; } }
         } catch { /* A validated local session remains available during transport outages. */ }
       }
       if (active) setSnapshot(session.snapshot);

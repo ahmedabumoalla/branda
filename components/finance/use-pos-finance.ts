@@ -19,11 +19,18 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const loginRedirected = useRef(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [assetsStatus, setAssetsStatus] = useState("جار تجهيز المنتجات والطباعة للعمل دون اتصال");
   const [brand, setBrand] = useState<ReceiptBrand | null>(null);
   const scope = posScope(initialSnapshot), targetSlug = initialSnapshot.cafe.slug;
+  useEffect(() => {
+    if (!blocked || loginRedirected.current) return;
+    loginRedirected.current = true;
+    // Replace the stale POS document without clearing durable invoices or closing the shift.
+    window.location.replace(`/finance/${encodeURIComponent(targetSlug)}/login`);
+  }, [blocked, targetSlug]);
   const snapshot = useMemo(() => projectOfflineSales(serverSnapshot, sales), [serverSnapshot, sales]);
   const current = useRef({ snapshot, sales, ready, blocked });
   useLayoutEffect(() => { current.current = { snapshot, sales, ready, blocked }; }, [snapshot, sales, ready, blocked]);

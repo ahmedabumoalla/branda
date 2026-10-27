@@ -30,7 +30,8 @@ export function RastStampCard({ identity, customerName, stamps, required, reward
     <div className={s.stampHeading}><span>رصيد الزيارات</span><strong><b>{collected}</b><span> / {goal}</span></strong></div>
     <ol className={`${s.stamps} ${goal > 10 ? s.manyStamps : ""}`} aria-label={`${collected} من ${goal} أختام مكتملة`}>
       {Array.from({ length: goal }, (_, index) => <li key={index} className={index < collected ? s.collected : ""} aria-label={`الختم ${index + 1}${index < collected ? " مكتمل" : " لم يكتمل"}`}>
-        {index < collected ? <><StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} /><Check className={s.stampCheck} aria-hidden="true" /></> : index === goal - 1 ? <Gift aria-hidden="true" /> : <StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} />}
+        <StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} />
+        {index < collected && <Check className={s.stampCheck} aria-hidden="true" />}
       </li>)}
     </ol>
     <div className={s.cardReward}><Gift aria-hidden="true" /><div><span>عند اكتمال الأختام</span><strong>{rewardName}</strong></div></div>

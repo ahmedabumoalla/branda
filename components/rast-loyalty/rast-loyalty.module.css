@@ -79,6 +79,8 @@
 .stamps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
 .stamps li { display: grid; place-items: center; position: relative; aspect-ratio: 1; border: 1px solid #f8f2e82b; border-radius: 50%; color: var(--card-muted, #c8a8ae); background: #f8f2e807; }
 .stamps li > svg { width: 25px; height: 25px; stroke-width: 1.25; }
+.stamps li > img { filter: var(--card-logo-filter, brightness(0) invert(1)); }
+.stamps .collected > img { filter: var(--card-stamp-logo-filter, brightness(0)); }
 .stamps .collected { background: var(--card-stamp-background, var(--cream)); color: var(--card-stamp-foreground, var(--wine)); border-color: #ffedde; box-shadow: 0 0 0 4px #f8f2e80a, 0 0 21px #f5d8b72e, inset 0 0 10px #ffffff; }
 .stamps li > .stampCheck { position: absolute; inset-inline-end: 0; bottom: 0; width: 17px; height: 17px; padding: 2px; border-radius: 50%; background: var(--card-check, #a13b50); color: #fff; stroke-width: 3; }
 .manyStamps { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 9px; }

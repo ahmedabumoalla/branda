@@ -33,6 +33,29 @@ assert.equal(pixels[3], 0); assert.equal(pixels[(2 * 7 + 2) * 4 + 3], 255); asse
 const alpha = Uint8Array.from(pixels); clearLogoBackdrop(pixels, 7, 7); assert.deepEqual(pixels, alpha, 'Transparent marks are not recolored or erased');
 
 const uiStubs = { 'next/link': { __esModule: true, default: 'a' }, 'next/image': { __esModule: true, default: ({ unoptimized, ...props }) => React.createElement('img', props) } };
+const { RastStampCard } = load('components/rast-loyalty/rast-stamp-card.tsx', uiStubs);
+const { loyaltyTheme } = load('components/rast-loyalty/loyalty-theme.ts');
+for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand']) for (const stamps of [0, 2, 3]) {
+  const markup = renderToStaticMarkup(React.createElement(RastStampCard, { identity: { slug: 'test-cafe', name: 'Brand', logoUrl: '/original.png', logoDisplayUrl: '/transparent.png', cardBackground: '#0a1f43' }, stampStyle, stamps, required: 3, rewardName: 'Reward', preview: true }));
+  const stampRow = markup.match(/<ol[^>]*>([\s\S]*?)<\/ol>/)[1];
+  assert(!stampRow.includes('lucide-gift'), 'The last visit is a stamp, never a gift');
+  assert.equal((stampRow.match(/<li /g) || []).length, 3);
+  assert.equal((stampRow.match(/stampCheck/g) || []).length, stamps);
+  if (stampStyle === 'brand') assert.equal((stampRow.match(/src="\/transparent.png"/g) || []).length, 3);
+  assert(markup.includes('lucide-gift'), 'Reward keeps its separate gift icon');
+}
+for (const [background, foreground, emptyFilter, filledFilter] of [
+  ['#0a1f43', '#ffffff', 'brightness(0) invert(1)', 'brightness(0)'],
+  ['#ffffff', '#000000', 'brightness(0)', 'brightness(0) invert(1)'],
+  ['#000000', '#aaaaaa', 'brightness(0) invert(1)', 'brightness(0)'],
+]) {
+  const theme = loyaltyTheme({ slug: 'brand', name: 'Brand', cardBackground: background, cardForeground: foreground });
+  assert.equal(theme['--card-logo-filter'], emptyFilter);
+  assert.equal(theme['--card-stamp-logo-filter'], filledFilter);
+}
+const stampCss = fs.readFileSync(path.join(root, 'components/rast-loyalty/rast-loyalty.module.css'), 'utf8');
+assert.match(stampCss, /\.stamps li > img\s*\{\s*filter: var\(--card-logo-filter, brightness\(0\) invert\(1\)\)/);
+assert.match(stampCss, /\.stamps \.collected > img\s*\{\s*filter: var\(--card-stamp-logo-filter, brightness\(0\)\)/);
 const { SharedLoyaltyCard } = load('components/loyalty/shared-loyalty-card.tsx', uiStubs);
 const card = { brandSlug: 'kat-coffe', brandName: 'كاث', cardBackground: '#733b27', cardForeground: '#fcf8f3', cardAccent: '#e6b576', logoPreviewUrl: '/own-logo.png', sampleCode: 'REAL_CARD', stampsRequired: 7, completedStamps: 3, rewardTitle: 'مكافأة كاث' };
 let html = renderToStaticMarkup(React.createElement(SharedLoyaltyCard, { card, pointsBalance: 12, pointValueSar: .25, pointsEnabled: true }));
