@@ -147,24 +147,26 @@
 .posMain { min-width: 0; }
 .posPage { padding: 8px 12px; }
 .posControls { position: sticky; top: 0; z-index: 2; flex: 0 0 auto; display: grid; gap: 10px; min-width: 0; padding: 4px 0 8px; background: var(--finance-cream); border-bottom: 1px solid var(--finance-line); }
-.posHeader { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 0; }
-.posHeader > :first-child { flex: 1 1 210px; min-width: 0; }
-.posHeader .eyebrow { margin-bottom: 4px; font-size: 11px; }
-.posHeader .title { font-size: clamp(23px,2vw,30px); }
-.posHeader .actions { flex: 1 1 510px; justify-content: flex-end; gap: 6px; }
-.posHeader .actions :is(.primary,.secondary) { padding-inline: 12px; white-space: nowrap; }
-.posHeader .posShiftMeta { margin-top: 4px; gap: 5px 10px; font-size: 11px; }
-.posControls .posToolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(150px,210px); align-items: end; gap: 10px; margin: 0; }
+.posControls .posHeader { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; margin-bottom: 0; }
+.posHeader > :first-child { flex: 1 1 0; min-width: 0; }
+.posHeader .eyebrow { margin-bottom: 2px; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+.posHeader .eyebrow svg { display: none; }
+.posHeader .title { display: inline; font-size: 19px; line-height: 1.5; }
+.posHeader .posShiftMeta { display: inline-flex; margin: 0; margin-inline-start: 10px; gap: 5px; font-size: 11px; line-height: 1.5; }
+.posHeader .actions { margin: 0; }
+.posControls .posToolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(115px,30%); align-items: center; gap: 8px; margin: 0; }
 .posToolbar .searchBox { width: 100%; max-width: none; min-width: 0; }
-.posToolbar .field { grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; }
-.posToolbar .field select { min-width: 0; }
-.posControls .categories { padding-bottom: 2px; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.posToolbar .field { min-width: 0; position: relative; gap: 0; }
+.posToolbar .field > span { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.posToolbar .field select { min-width: 0; min-height: 44px; padding-block: 9px; }
+.posControls .categories { padding-bottom: 2px; margin: 0; gap: 8px; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.posControls .category { min-height: 44px; padding: 8px 12px; }
 .posCatalog { min-width: 0; padding-top: 10px; }
-@media (max-width: 780px) {
- .posControls .posHeader { flex-direction: row; align-items: center; gap: 8px; }
- .posHeader .actions { justify-content: flex-start; }
- .posControls .posToolbar { grid-template-columns: minmax(0,1fr) minmax(115px,35%); }
- .posToolbar .field { grid-template-columns: minmax(0,1fr); }
+@media (max-width: 480px) {
+ .posHeader .title { font-size: 17px; }
+ .posHeader .posShiftMeta { display: flex; margin-inline-start: 0; margin-top: 2px; }
+ .posHeader .posShiftMeta svg { display: none; }
+ .posControls .posToolbar { grid-template-columns: minmax(0,1fr) minmax(105px,34%); }
 }
 .posShiftMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12px; line-height: 1.8; color: var(--finance-muted); }
 .cartConnection { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; padding: 0 16px 6px; background: var(--finance-paper); }
