@@ -24,7 +24,7 @@ export function FinancePosShiftReport({ shiftId, slug, onClose }: { shiftId: str
   }, [shiftId, slug, retry]);
   const shift = report?.shift;
   const duration = shift ? Math.max(0, Math.floor((Date.parse(shift.closed_at ?? shift.opened_at) - Date.parse(shift.opened_at)) / 60000)) : 0;
-  const rows: [string, number | null][] = report ? [["عدد فواتير البيع", report.invoiceCount], ["إجمالي المبيعات شامل الضريبة", report.salesTotal], ["مرتجعات فواتير الوردية", report.refundsTotal], ["صافي المبيعات", report.netSales], ["سداد الموردين من الصندوق", report.supplierPayoutTotal ?? 0], ["نقدية بداية الوردية", report.shift.opening_cash], ["النقدية المتوقعة عند الإقفال", report.shift.expected_cash], ["النقدية المعدودة عند الإقفال", report.shift.counted_cash], ["فرق الإقفال", report.shift.variance]] : [];
+  const rows: [string, number | null][] = report ? [["عدد فواتير البيع", report.invoiceCount], ["إجمالي المبيعات شامل الضريبة", report.salesTotal], ["مرتجعات فواتير الوردية", report.refundsTotal], ["صافي المبيعات", report.netSales], ["إجمالي المدفوع للموردين من الصندوق", report.supplierPayoutTotal ?? 0], ["منها فواتير مشتريات نقدية", report.purchaseTotal ?? 0], ["نقدية بداية الوردية", report.shift.opening_cash], ["النقدية المتوقعة عند الإقفال", report.shift.expected_cash], ["النقدية المعدودة عند الإقفال", report.shift.counted_cash], ["فرق الإقفال", report.shift.variance]] : [];
   return <Modal open title={`تقرير آخر وردية${shift?.shift_number ? ` #${shift.shift_number}` : ""}`} onClose={onClose} panelClassName="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
     <div className={styles.form}>
       {loading && <p role="status">جارٍ تحميل تقرير الوردية</p>}

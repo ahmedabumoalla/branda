@@ -8,6 +8,7 @@ function load(file, mocks = {}) {
   const compiled = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
   new Function('require', 'exports', compiled)(name => {
     if (name in mocks) return mocks[name];
+    if (name === './use-finance-invoice-messages') return { useFinanceInvoiceMessages: () => ({entries:{},refresh:async()=>{},loading:false}) };
     if (name === './use-pos-finance') return { usePosFinance: (...args) => ({ ...mocks['./use-finance'].useFinance(...args), offline: { sales: [], ready: true, online: true, logout: async () => {} } }) };
     if (name === './use-finance-printer') return { useFinancePrinter: () => ({ ready: true, autoEnabled: true, handler: () => async () => {} }) };
     if (name === '@/app/actions/finance-pos-customer') return {};

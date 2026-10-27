@@ -23,7 +23,7 @@ const operations: Record<string, FinanceCapability> = {
   item: "inventory_write", warehouse: "inventory_write", stock_adjust: "inventory_write", stock_transfer: "inventory_write",
   purchase: "accounting_write", party: "accounting_write", account: "treasury_write", journal: "accounting_write", treasury: "treasury_write", settlement: "accounting_write",
   refund_approve: "settings_manage", refund_reject: "settings_manage",
-  sale: "pos", shift_open: "pos", shift_close: "pos", shift_handover: "pos", shift_accept: "pos", supplier_payout: "pos",
+  sale: "pos", shift_open: "pos", shift_close: "pos", shift_handover: "pos", shift_accept: "pos", supplier_payout: "pos", shift_purchase: "pos",
 };
 export function canFinanceOperation(role: string, operation: string): boolean {
   if (operation === "refund") return canFinance(role, "accounting_write") || canFinance(role, "pos");

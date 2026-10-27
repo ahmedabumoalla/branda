@@ -1,0 +1,3 @@
+export type FinanceInvoiceMessageState = "not_requested" | "queued" | "sending" | "sent" | "delivered" | "read" | "failed" | "review" | "unknown" | "cancelled";
+export type FinanceInvoiceMessageReason = "no_phone" | "loyalty_unavailable" | "not_queued" | "provider_rejected" | "delivery_uncertain" | "dispatch_expired" | "provider_failed" | "provider_suspended" | "status_unavailable" | "cancelled";
+export type FinanceInvoiceMessageStatus = { documentId: string; status: FinanceInvoiceMessageState; reason?: FinanceInvoiceMessageReason | null; updatedAt?: string | null; checkedAt?: string | null };

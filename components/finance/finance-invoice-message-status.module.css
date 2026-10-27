@@ -1,0 +1,11 @@
+.cell { display: grid; justify-items: start; gap: 4px; min-width: 115px; max-width: 190px; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; line-height: 1.7; padding: 5px 8px; border-radius: 8px; white-space: nowrap; }
+.status svg { flex-shrink: 0; }
+.status[data-tone="muted"] { color: #71685f; background: #f2eee8; }
+.status[data-tone="pending"] { color: #80510f; background: #fff2ce; }
+.status[data-tone="sent"] { color: #295d82; background: #edf4fa; }
+.status[data-tone="success"] { color: #246044; background: #eaf5ed; }
+.status[data-tone="read"] { color: #066a78; background: #e6f5f7; }
+.status[data-tone="danger"] { color: #a12b32; background: #fff0f1; }
+.cell small { color: var(--finance-muted, #78675c); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

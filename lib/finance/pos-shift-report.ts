@@ -10,6 +10,7 @@ export type PosShiftReport = {
   refundsTotal: number;
   netSales: number;
   supplierPayoutTotal?: number;
+  purchaseTotal?: number;
   supplierPayouts?: { id: string; number: number; supplierName: string; amount: number; note: string; createdAt: string; attachments: { id: string; name: string }[] }[];
   payments: { kind: string; collected: number; refunded: number }[];
 };

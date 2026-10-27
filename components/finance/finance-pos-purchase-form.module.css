@@ -1,0 +1,12 @@
+.fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 16px; }
+.lines { display: grid; gap: 12px; }
+.line { display: grid; grid-template-columns: minmax(0,2fr) minmax(90px,1fr) minmax(100px,1fr) 44px; gap: 10px; align-items: end; padding: 14px; border: 1px solid var(--finance-line,#e6dacb); border-radius: 14px; }
+.line input, .line select { width: 100%; min-width: 0; }
+.line > button { min-height: 44px; margin-bottom: 2px; }
+.item { display: grid; gap: 8px; min-width: 0; }
+.item > button { justify-self: start; }
+.totals { display: grid; gap: 10px; padding: 18px; border-radius: 16px; background: var(--finance-cream,#f7f2ea); }
+.totals > * { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.totals strong { font-size: 22px; color: var(--finance-ink,#39251b); border-top: 1px solid var(--finance-line,#e6dacb); padding-top: 12px; }
+.totals small { color: var(--finance-muted,#78675c); }
+@media(max-width:640px) { .line { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 44px; padding: 10px; } .item { grid-column: 1 / -1; } }
