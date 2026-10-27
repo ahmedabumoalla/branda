@@ -49,6 +49,28 @@ const product = { id: '22222222-2222-4222-8222-222222222222', name: 'Product', c
   imageAssetId: 'tenant/first.webp', imageGallery: [{ imageAssetId: 'tenant/first.webp' }, { imageAssetId: 'tenant/second.webp' }],
   videoAssetId: 'tenant/video.mp4', media: [{ type: 'video', assetId: 'tenant/video.mp4' }], promo: null };
 async function main() {
+  // Compact cards retain every existing mutation callback and price semantics.
+  const { MenuProductCard } = load('components/dashboard/menu/product-card.tsx', {
+    '@/components/cafe/product-image': { ProductMediaDisplay: 'media' },
+    './menu-dashboard.module.css': {},
+  });
+  const calls = [];
+  const cardProps = { product, onEdit: () => calls.push('edit'), onDuplicate: () => calls.push('duplicate'), onToggleAvailability: () => calls.push('toggle'), onDelete: () => calls.push('delete') };
+  for (const busy of [false, true]) {
+    const card = MenuProductCard({ ...cardProps, busy });
+    const actions = nodes(card).filter(node => node.type === 'button');
+    assert.equal(actions.length, 4);
+    assert(actions.every(node => node.props.disabled === busy && node.props['aria-label'].includes(product.name)));
+    if (!busy) actions.forEach(node => node.props.onClick());
+    assert.equal(nodes(card).filter(node => node.type === 'media').length, 1);
+  }
+  assert.deepEqual(calls, ['edit', 'toggle', 'duplicate', 'delete']);
+  const detailCard = MenuProductCard({ ...cardProps, product: { ...product, available: false, description: 'Description', ingredients: ['Milk'], promo: { kind: 'خصم', startDate: '2020-01-01', endDate: '2099-01-01', discountPercent: 25 } } });
+  assert(label(detailCard).includes('مخفي من المنيو'));
+  assert(nodes(detailCard).some(node => node.type === 'del'));
+  const details = nodes(detailCard).find(node => node.type === 'details');
+  assert.equal(details.props.open, undefined);
+  assert(label(details).includes('Description') && label(details).includes('Milk'));
   global.requestAnimationFrame = fn => { fn(); return 1; };
   global.cancelAnimationFrame = () => {};
   const { orderedProductMedia, primaryMediaType } = load('lib/menu/product-media.ts');

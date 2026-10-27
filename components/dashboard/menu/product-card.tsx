@@ -1,239 +1,58 @@
 "use client";
-
-import {
-  Coffee,
-  Copy,
-  Flame,
-  Gift,
-  MoreHorizontal,
-  Pencil,
-  Power,
-  Trash2,
-} from "lucide-react";
-import type { CSSProperties } from "react";
+import { ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
-import {
-  isPromoActive,
-  promoBadgeText,
-  productFinalPrice,
-  type MenuImageVariant,
-  type MenuProduct,
-} from "@/lib/mock/menu";
+import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
-import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
-
-const variantGradient: Record<MenuImageVariant, string> = {
-  latte: "from-[#3b2416] via-[#5c3d2e] to-[#c78a45]",
-  cold: "from-[#1e3a4a] via-[#496b4a] to-[#7eb8b8]",
-  cake: "from-[#4a2c3d] via-[#8b5a6b] to-[#d4a59a]",
-  bakery: "from-[#5c4a3a] via-[#8b7355] to-[#e8dcc8]",
-  tea: "from-[#3d4f3f] via-[#496b4a] to-[#a8c4a9]",
-};
+import styles from "./menu-dashboard.module.css";
 
 type Props = {
-  product: MenuProduct;
-  index?: number;
-  busy?: boolean;
-  categoryLabel?: string;
-  freeProductLabel?: string;
-  onEdit: () => void;
-  onDuplicate: () => void;
-  onToggleAvailability: () => void;
-  onDelete: () => void;
-  businessCategory?: string;
+  product: MenuProduct; index?: number; busy?: boolean; categoryLabel?: string;
+  freeProductLabel?: string; businessCategory?: string;
+  onEdit: () => void; onDuplicate: () => void; onToggleAvailability: () => void; onDelete: () => void;
 };
-
-export function MenuProductCard({
-  product,
-  index = 0,
-  busy = false,
-  categoryLabel,
-  freeProductLabel,
-  onEdit,
-  onDuplicate,
-  onToggleAvailability,
-  onDelete,
-  businessCategory,
-}: Props) {
-  const copy = getBusinessCopy(businessCategory);
-  const isEvents = copy.kind === "events";
+export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
+  const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
-  const hasDiscountedPrice = promoOn && finalPrice < product.price;
-
-  return (
-    <article
-      data-menu-product-id={product.id}
-      aria-busy={busy}
-      className={styles.productCard}
-      style={{ "--card-order": index % 8 } as CSSProperties}
-    >
+  const discounted = promoOn && finalPrice < product.price;
+  const hasDetails = !!(product.description || product.ingredients.length || product.promo);
+  return <article data-menu-product-id={product.id} aria-busy={busy} className={styles.productCard}>
+    <div className={styles.productOverview}>
       <div className={styles.media}>
-        <ProductMediaDisplay
-          ownerMenu
-          product={product}
-          alt=""
-          className={styles.mediaAsset}
-          fallback={
-            <div
-              className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${variantGradient[product.imageVariant]}`}
-            >
-              <Coffee className={styles.fallbackIcon} />
-            </div>
-          }
-        />
-
-        <div className={styles.mediaOverlay} />
-
-        {product.promo ? (
-          <span className={styles.badge}>
-            <Gift className="h-3.5 w-3.5 text-[#8B5E3C]" />
-            <span className="truncate">
-              {promoOn ? promoBadgeText(product.promo) : "عرض غير نشط"}
-            </span>
-          </span>
-        ) : null}
-
-        <span
-          className={`${styles.availability} ${
-            product.available
-              ? styles.availabilityOn
-              : ""
-          }`}
-        >
+        <ProductMediaDisplay ownerMenu product={product} alt="" className={styles.mediaAsset}
+          fallback={<div className={styles.mediaFallback}><Coffee aria-hidden="true" /><span>بدون صورة</span></div>} />
+      </div>
+      <div className={styles.productIdentity}>
+        <p className={styles.categoryLabel}>{categoryLabel ?? product.category}</p>
+        <h3 className={styles.productName}>{product.name}</h3>
+        <span className={`${styles.availability} ${product.available ? styles.availabilityOn : ""}`}>
+          {product.available ? <Eye size={13} aria-hidden="true" /> : <EyeOff size={13} aria-hidden="true" />}
           {product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
         </span>
       </div>
-
-      <div className={styles.productBody}>
-        <div className={styles.cardHeading}>
-          <div className="min-w-0">
-            <p className={styles.categoryLabel}>
-              {categoryLabel ?? product.category}
-            </p>
-
-            <h3 className={styles.productName}>
-              {product.name}
-            </h3>
-          </div>
-
-          <span className={styles.moreIcon}>
-            <MoreHorizontal className="h-5 w-5" />
-          </span>
-        </div>
-
-        <p className={styles.description}>
-          {product.description}
-        </p>
-
-        <div className={styles.ingredientList}>
-          {product.ingredients.slice(0, 4).map((ing) => (
-            <span
-              key={ing}
-              className={styles.ingredient}
-            >
-              {ing}
-            </span>
-          ))}
-        </div>
-
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <p className={styles.statLabel}>
-              {isEvents ? "رسوم الدخول" : "السعر"}
-            </p>
-            <p className={styles.statValue}>
-              {hasDiscountedPrice ? formatSar(finalPrice) : formatSar(product.price)}
-            </p>
-            {hasDiscountedPrice ? (
-              <p className="text-[10px] font-black text-[#9B8B7B] line-through">
-                {formatSar(product.price)}
-              </p>
-            ) : null}
-          </div>
-
-          <div className={styles.stat}>
-            <p className={styles.statLabel}>
-              <Flame className="h-3 w-3 text-[#8B5E3C]" />
-              {isEvents ? "السعة" : "سعرات"}
-            </p>
-
-            <p className={styles.statValue}>
-              {isEvents
-                ? product.eventTicketSettings?.capacity == null
-                  ? "غير محدد"
-                  : product.eventTicketSettings.capacity.toLocaleString("ar-SA")
-                : product.calories === undefined
-                  ? "غير محدد"
-                  : product.calories.toLocaleString("ar-SA")}
-            </p>
-          </div>
-
-          <div className={styles.stat}>
-            <p className={styles.statLabel}>
-              {isEvents ? "الدخول" : "المنيو"}
-            </p>
-            <p className={`${styles.statValue} ${styles.statAccent}`}>
-              {isEvents
-                ? product.eventTicketSettings?.checkinPolicy === "multi_use"
-                  ? "متعدد"
-                  : "مرة"
-                : product.available ? "ظاهر" : "مخفي"}
-            </p>
-          </div>
-        </div>
-
-        {product.promo ? (
-          <p className={styles.notice}>
-            فترة العرض {product.promo.startDate} إلى {product.promo.endDate}
-          </p>
-        ) : null}
-
-        {product.promo?.kind === "منتج مجاني مع الطلب" && freeProductLabel ? (
-          <p className={styles.freeNotice}>
-            يشمل: <span className="font-black">{freeProductLabel}</span>
-          </p>
-        ) : null}
-
-        <div className={styles.cardActions}>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onEdit}
-            className={`${styles.cardButton} ${styles.editButton}`}
-          >
-            <Pencil className="h-4 w-4" />
-            تعديل
-          </button>
-
-          <button type="button" disabled={busy} onClick={onDuplicate}
-            className={`${styles.cardButton} ${styles.editButton}`}>
-            <Copy className="h-4 w-4" aria-hidden="true" />
-            تكرار
-          </button>
-
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onToggleAvailability}
-            className={`${styles.cardButton} ${styles.toggleButton}`}
-          >
-            <Power className="h-4 w-4" />
-            {product.available ? "إيقاف" : "تفعيل"}
-          </button>
-
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onDelete}
-            className={`${styles.cardButton} ${styles.deleteButton}`}
-          >
-            <Trash2 className="h-4 w-4" />
-            حذف
-          </button>
-        </div>
-      </div>
-    </article>
-  );
+    </div>
+    <div className={styles.priceRow}>
+      <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : "السعر"}</span><div className={styles.priceValues}>
+        <strong className={styles.price}>{formatSar(discounted ? finalPrice : product.price)}</strong>
+        {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
+      </div></div>
+      {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
+        : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
+    </div>
+    {promoOn && product.promo && <p className={styles.activePromo}><Gift size={14} aria-hidden="true" />{promoBadgeText(product.promo)}</p>}
+    {hasDetails && <details className={styles.productDetails}>
+      <summary>تفاصيل {isEvents ? "التذكرة" : "الصنف"}{product.promo && !promoOn ? " والعرض غير النشط" : ""}<ChevronDown size={14} aria-hidden="true" /></summary>
+      {product.description && <p className={styles.description}>{product.description}</p>}
+      {product.ingredients.length > 0 && <div className={styles.ingredientList}>{product.ingredients.map(ingredient => <span key={ingredient} className={styles.ingredient}>{ingredient}</span>)}</div>}
+      {product.promo && <p className={styles.notice}>فترة العرض <bdi>{product.promo.startDate}</bdi> إلى <bdi>{product.promo.endDate}</bdi></p>}
+      {product.promo?.kind === "منتج مجاني مع الطلب" && freeProductLabel && <p className={styles.freeNotice}>يشمل {freeProductLabel}</p>}
+    </details>}
+    <div className={styles.cardActions}>
+      <button type="button" disabled={busy} onClick={onEdit} className={`${styles.cardButton} ${styles.editButton}`} aria-label={`تعديل ${product.name}`}><Pencil size={15} aria-hidden="true" />تعديل</button>
+      <button type="button" disabled={busy} onClick={onToggleAvailability} className={`${styles.cardButton} ${styles.toggleButton}`} aria-label={`${product.available ? "إخفاء" : "إظهار"} ${product.name}`}>{product.available ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{product.available ? "إخفاء" : "إظهار"}</button>
+      <button type="button" disabled={busy} onClick={onDuplicate} className={styles.iconButton} aria-label={`تكرار ${product.name}`} title="تكرار الصنف"><Copy size={17} aria-hidden="true" /></button>
+      <button type="button" disabled={busy} onClick={onDelete} className={`${styles.iconButton} ${styles.deleteButton}`} aria-label={`حذف ${product.name}`} title="حذف الصنف"><Trash2 size={17} aria-hidden="true" /></button>
+    </div>
+  </article>;
 }

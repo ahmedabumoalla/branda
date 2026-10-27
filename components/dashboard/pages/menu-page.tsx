@@ -239,7 +239,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
-        subtitle="إدارة الأصناف والتصنيفات والأسعار التي تظهر في المنيو المستقل لعلامتك"
+        subtitle="منتجاتك وأسعارك كما يراها العميل"
         action={
           <div className={styles.headerActions}>
             {cafeSlug && <a href={`/menu/${encodeURIComponent(cafeSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
@@ -278,10 +278,9 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             [copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
             [copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
             ["التصنيفات", categories.length],
-            ["نتائج البحث", filtered.length],
-          ].map(([label, value], index) => (
+            ["مخفي من المنيو", products.length - availableCount],
+          ].map(([label, value]) => (
             <div key={String(label)} className={styles.metricCard}>
-              <span className={styles.metricIndex}>{String(index + 1).padStart(2, "0")}</span>
               <p className={styles.metricLabel}>{label}</p>
               <p className={styles.metricValue}>{value}</p>
             </div>
@@ -295,13 +294,18 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               <NeumoInput
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={`ابحث باسم ${copy.itemSingular} أو ${copy.itemPlural} أو تصنيف`}
+                placeholder="ابحث باسم المنتج أو التصنيف"
+                aria-label="البحث في المنتجات والتصنيفات"
                 className={styles.searchInput}
               />
             </div>
-            <p className={styles.resultCounter}>
-              {filtered.length} نتيجة
-            </p>
+            <label className={styles.categorySelect}>
+              <span className="sr-only">تصفية حسب التصنيف</span>
+              <select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)}>
+                <option value="الكل">كل التصنيفات</option>
+                {sortedCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => setCategoriesOpen((current) => !current)}
@@ -314,34 +318,6 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             </button>
           </div>
 
-          <div className={styles.categoryRail}>
-            <button
-              type="button"
-              onClick={() => setCategoryFilter("الكل")}
-              className={`${styles.filterChip} ${
-                categoryFilter === "الكل"
-                  ? styles.filterChipActive
-                  : ""
-              }`}
-            >
-              الكل
-            </button>
-            {sortedCategories.map((c) => (
-              <button
-                type="button"
-                key={c.id}
-                onClick={() => setCategoryFilter(c.id)}
-                className={`${styles.filterChip} max-w-[14rem] truncate ${
-                  categoryFilter === c.id
-                    ? styles.filterChipActive
-                    : ""
-                }`}
-                title={c.name}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
         </section>
 
         {categoriesOpen ? (
@@ -359,18 +335,18 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         <section className="min-w-0">
           <div className={styles.catalogHeader}>
             <div>
-              <h2 className={styles.catalogTitle}>المنتجات</h2>
+              <h2 className={styles.catalogTitle}>{copy.kind === "events" ? "التذاكر والباقات" : "المنتجات"}</h2>
               <p className={styles.catalogMeta}>
                 {filtered.length} نتيجة
                 {categoryFilter === "الكل"
-                  ? " · كل التصنيفات"
-                  : ` · ${sortedCategories.find((category) => category.id === categoryFilter)?.name ?? categoryFilter}`}
+                  ? " في كل التصنيفات"
+                  : ` في ${sortedCategories.find((category) => category.id === categoryFilter)?.name ?? categoryFilter}`}
               </p>
             </div>
           </div>
           {filtered.length === 0 ? (
             <div className={styles.emptyState}>
-              {copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
             <div className={styles.productGrid}>

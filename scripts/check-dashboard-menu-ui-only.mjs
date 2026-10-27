@@ -3,10 +3,11 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const [menuPage, categoryManager, productCard] = await Promise.all([
+const [menuPage, categoryManager, productCard, css] = await Promise.all([
   read("components/dashboard/pages/menu-page.tsx"),
   read("components/dashboard/menu/category-manager.tsx"),
   read("components/dashboard/menu/product-card.tsx"),
+  read("components/dashboard/menu/menu-dashboard.module.css"),
 ]);
 
 for (const action of [
@@ -30,17 +31,19 @@ assert.match(menuPage, /const MenuProductFormModal = dynamic/);
 assert.match(menuPage, /const MenuImportModal = dynamic/);
 assert.match(menuPage, /const \[categoriesOpen, setCategoriesOpen\] = useState\(false\)/);
 assert.match(menuPage, /categoriesOpen \? \(/);
-assert.match(menuPage, /overflow-x-auto/);
-assert.match(menuPage, /sticky top-2/);
-assert.match(menuPage, /grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3/);
+assert.match(menuPage, /<select value=\{categoryFilter\}/);
+assert.match(css, /position: sticky/);
+for (const source of [menuPage, productCard]) {
+  for (const [, name] of source.matchAll(/styles\.([a-zA-Z]+)/g)) assert(css.includes(`.${name}`), `Missing style ${name}`);
+}
 
 assert.match(productCard, /ProductMediaDisplay/);
 assert.match(productCard, /product=\{product\}/);
-assert.match(productCard, /className="h-full w-full object-contain bg-\[#F8F4EF\]"/);
+assert.match(css, /object-fit: contain/);
 assert.match(productCard, /onClick=\{onEdit\}/);
 assert.match(productCard, /onClick=\{onToggleAvailability\}/);
 assert.match(productCard, /onClick=\{onDelete\}/);
-assert.match(productCard, /flex h-full min-w-0 flex-col/);
+assert.match(productCard, /onClick=\{onDuplicate\}/);
 
 for (const handler of [
   "onChange",
