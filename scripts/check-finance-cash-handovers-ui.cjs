@@ -38,7 +38,7 @@ async function main(){let checks=0;
   let tree=await ready(h);assert.equal(field(tree,'accountId').props.value,'');assert.equal(nodes(field(tree,'accountId')).find(n=>n.type==='option'&&n.props.value==='drawer').props.disabled,true);
   tree=change(h,tree,'openingCash','50');await submit(tree);assert.equal(h.saves.length,0);
   tree=change(h,h.render(),'accountId','drawer-two');assert.equal(field(tree,'openingCash').props.value,'');
-  tree=change(h,tree,'openingCash','50');await submit(tree);assert.equal(h.saves[0][1].accountId,'drawer-two');assert.equal(storage.get('branda-pos-drawer:brand-id'),'drawer-two');
+  tree=change(h,tree,'openingCash','50');field(tree,'receivedCash').props.onChange({target:{checked:true}});tree=h.render();await submit(tree);assert.equal(h.saves[0][1].accountId,'drawer-two');assert.equal(storage.get('branda-pos-drawer:brand-id'),'drawer-two');
   const remembered=harness('form');remembered.props.snapshot.cafe.id='brand-id';remembered.state.data.cashierDrawers=h.state.data.cashierDrawers;assert.equal(field(await ready(remembered),'accountId').props.value,'drawer-two');
   const busy=harness('form');busy.props.snapshot.cafe.id='brand-id';busy.state.data.cashierDrawers=h.state.data.cashierDrawers.map(x=>({...x,busy:true}));tree=await ready(busy);tree=change(busy,tree,'openingCash','50');await submit(tree);assert.equal(busy.saves.length,0);
   const other=harness('form');other.props.snapshot.cafe.id='other-brand';other.state.data.cashierDrawers=h.state.data.cashierDrawers;assert.equal(field(await ready(other),'accountId').props.value,'');
@@ -47,7 +47,7 @@ async function main(){let checks=0;
  {
   const h=harness('form');let tree=h.render();assert.equal(find(tree,n=>n.type==='fieldset').props.disabled,true);tree=await ready(h);
   assert.equal(field(tree,'openingCash').props.value,'');assert.equal(field(tree,'openingCash').props.required,true);assert.equal(field(tree,'accountId').props.value,'drawer');assert.ok(!text(tree).includes('9999'));assert.ok(!nodes(tree).some(n=>n.type?.name==='Numeric'));
-  await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'openingCash','0');await submit(tree);assert.deepEqual(h.saves[0],['shift_open',{accountId:'drawer',openingCash:0,note:''}]);checks++;
+  await submit(tree);assert.equal(h.saves.length,0);tree=change(h,h.render(),'openingCash','0');await submit(tree);assert.equal(h.saves.length,0,'receipt must be confirmed');field(h.render(),'receivedCash').props.onChange({target:{checked:true}});tree=h.render();await submit(tree);assert.deepEqual(h.saves[0],['shift_open',{accountId:'drawer',openingCash:0,note:''}]);tree=change(h,h.render(),'openingCash','5');assert.equal(field(tree,'receivedCash').props.checked,false,'changing the count requires confirmation again');checks++;
  }
  {
   const h=harness('form');h.props.form={operation:'shift_close',values:{shiftId:'shift',expectedCash:9999}};let tree=await ready(h);assert.equal(field(tree,'handoverType').props.value,'');tree=change(h,tree,'countedCash','10');await submit(tree);assert.equal(h.saves.length,0);

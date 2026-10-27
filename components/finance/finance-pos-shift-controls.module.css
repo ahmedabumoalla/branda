@@ -1,0 +1,14 @@
+.controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.controls button { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid transparent; border-radius: 12px; font: inherit; font-size: 12px; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.start { background: #146c46; color: #fff; }
+.end { background: #a52c32; color: #fff; }
+.exit { background: var(--finance-paper); color: var(--finance-ink); border-color: var(--finance-line) !important; }
+.controls button:disabled { opacity: .45; cursor: not-allowed; }
+.controls button:focus-visible { outline: 3px solid var(--finance-gold, #b88435); outline-offset: 3px; }
+.syncTools { display: flex; align-items: center; gap: 4px; }
+.syncTools > button { min-width: 44px; min-height: 44px; }
+@media (max-width: 900px) { .controls button { padding-inline: 8px; font-size: 11px; } }
+
+.header.header { flex-wrap: wrap; }
+.header > div:first-child { flex-basis: 160px; }
+.headerTools.headerTools { flex-wrap: wrap; max-width: 100%; justify-content: flex-end; }

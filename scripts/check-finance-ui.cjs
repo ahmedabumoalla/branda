@@ -59,6 +59,17 @@ async function main() {
   assert.match(financeCsv([['=SUM(A1)', '+cmd', '-formula', '@test', 'قهوة', -2]]), /"'=SUM\(A1\)"/);
   assert.match(financeCsv([[1, 'quote"cell']]), /"quote""cell"/); groups++;
 
+  {
+    const events=[], closeHooks=hooks();let succeeds=false;
+    const state={snapshot:structuredClone(base),pending:false,stale:false,error:'',message:'',clearFeedback(){},refresh:async()=>{},execute:async()=>{events.push('close');return succeeds?{id:'closed'}:null;},offline:{sales:[],logout:async()=>events.push('offline')}};
+    const {FinancePOS: ClosePOS}=load('components/finance/finance-pos.tsx',{...shared,react:closeHooks.api,'./use-pos-finance':{usePosFinance:()=>state},'@/app/actions/finance-access':{logoutFinanceAction:async()=>events.push('logout')},'next/navigation':{useRouter:()=>({replace:()=>events.push('redirect')})}});
+    const view=()=>closeHooks.render(ClosePOS,{initialSnapshot:base,slug:'test-brand'});
+    let closeTree=view();button(closeTree,'إنهاء الوردية').props.onClick();closeTree=view();
+    let operation=find(closeTree,node=>node.type?.name==='FinanceOperationForm');operation.props.onCancel();assert.deepEqual(events,[]);
+    button(view(),'إنهاء الوردية').props.onClick();operation=find(view(),node=>node.type?.name==='FinanceOperationForm');
+    await operation.props.onSubmit('shift_close',{shiftId:'shift'});assert.deepEqual(events,['close']);
+    succeeds=true;await operation.props.onSubmit('shift_close',{shiftId:'shift'});assert.deepEqual(events,['close','close','offline','logout','redirect']);groups++;
+  }
   const uiHooks = hooks(); const saved = [];
   let current = structuredClone(base);
   current.accounts.unshift({ ...base.accounts[0], id: 'other-drawer', is_primary: true });
@@ -77,9 +88,11 @@ async function main() {
     { ...base.shifts[0], id: 'foreign-latest', user_id: 'another-user', status: 'closed', closed_at: '2026-10-27T10:00:00Z', shift_number: 10 }
   );
   tree = render();
-  find(tree, node => node.type === 'button' && text(node).startsWith('تقرير آخر وردية')).props.onClick(); tree = render();
-  const shiftReport = find(tree, node => node.props?.shiftId === 'latest-close' && typeof node.props.onClose === 'function');
-  assert.equal(shiftReport.props.slug, 'test-brand'); shiftReport.props.onClose();
+  assert.ok(!nodes(tree).some(node => node.type === 'button' && text(node).startsWith('تقرير آخر وردية')));
+  const shiftMenu=find(tree,node=>node.type?.name==='FinancePosActions');
+  assert.ok(!nodes(shiftMenu).includes(button(tree,'إنهاء الوردية')),'Close shift is directly visible');
+  assert.ok(!nodes(shiftMenu).some(node=>node.props?.['aria-label']==='تحديث ومزامنة الكاشير'));
+  assert.ok(nodes(find(tree,node=>node.props?.['aria-label']==='ملخص الدفع الثابت')).some(node=>node.props?.['aria-label']==='تحديث ومزامنة الكاشير'));
   current.shifts = structuredClone(base.shifts); tree = render(); groups++;
   assert.ok(!nodes(tree).some(node => node.type?.name === 'Field' && ['حساب التحصيل', 'العميل اختياري', 'العميل مطلوب للبيع الآجل'].includes(node.props.label)));
   assert.ok(!nodes(tree).some(node => node.type === 'button' && text(node) === 'آجل على العميل'));
@@ -137,7 +150,7 @@ async function main() {
   tree = render(); button(tree, 'شبكة').props.onClick(); tree = render(); assert.match(text(tree), /أكمل الدفع على جهاز الشبكة/);
   button(tree, 'تحويل بنكي').props.onClick(); tree = render(); assert.match(text(tree), /وصول التحويل البنكي/); groups++;
   current = { ...current, shifts: [] }; tree = render(); assert.ok(button(tree, 'تأكيد الاستلام وإصدار إيصال').props.disabled);
-  button(tree, 'بداية وردية').props.onClick(); tree = render(); assert.equal(find(tree, node => node.type?.name === 'FinanceOperationForm').props.form.operation, 'shift_open'); groups++;
+  button(tree, 'بدء وردية جديدة').props.onClick(); tree = render(); assert.equal(find(tree, node => node.type?.name === 'FinanceOperationForm').props.form.operation, 'shift_open'); groups++;
 
   {
     const queueHooks = hooks(), queueData = structuredClone(base); let sequence = 0, printerReady = false;
@@ -169,6 +182,20 @@ async function main() {
   global.FormData = class { constructor(values) { this.values = values; } [Symbol.iterator]() { return this.values[Symbol.iterator](); } get(key) { return this.values.get(key); } };
   await formTree.props.onSubmit({ preventDefault() {}, currentTarget: new Map([['itemId', 'item'], ['warehouseId', 'warehouse'], ['countedQuantity', '3'], ['unitCost', '3'], ['note', 'جرد فعلي']]) });
   assert.equal(formCalls[0][1].countedQuantity, 3); assert.equal(formCalls[0][1].expectedQuantity, 5); assert.equal('quantity' in formCalls[0][1], false); groups++;
+  {
+    const receiptHooks=hooks(),calls=[];
+    const ReceiptForm=load('components/finance/finance-operation-form.tsx',{react:receiptHooks.api}).FinanceOperationForm;
+    const props={...formProps,form:{operation:'shift_accept',values:{shiftId:'shift',expectedCash:98765}},onSubmit:async(...args)=>{calls.push(args);return true;}};
+    const renderReceipt=()=>receiptHooks.render(ReceiptForm,props);
+    let receiptTree=renderReceipt();assert.ok(!text(receiptTree).includes('النقدية المتوقعة'));
+    const input=()=>find(renderReceipt(),node=>node.type==='input'&&node.props.name==='countedCash');
+    assert.equal(input().props.defaultValue,'');input().props.onChange({target:{value:'50'}});
+    const submitReceipt=()=>renderReceipt().props.onSubmit({preventDefault(){},currentTarget:new Map([['countedCash','50']])});
+    await submitReceipt();assert.equal(calls.length,0);
+    find(renderReceipt(),node=>node.type==='input'&&node.props.type==='checkbox').props.onChange({target:{checked:true}});
+    await submitReceipt();assert.equal(calls[0][1].countedCash,50);
+    input().props.onChange({target:{value:'55'}});assert.equal(find(renderReceipt(),node=>node.type==='input'&&node.props.type==='checkbox').props.checked,false);groups++;
+  }
   global.FormData = nativeFormData;
 
   const staffHooks = hooks(); const staffForm = load('components/finance/finance-operation-form.tsx', { react: staffHooks.api }).FinanceOperationForm;

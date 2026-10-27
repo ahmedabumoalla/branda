@@ -15,7 +15,7 @@ import { FinanceRefundRequests } from "./finance-refund-requests";
 import { FinanceReceiptDialog } from "./finance-receipt-dialog";
 import { FinancePosFullscreen } from "./finance-pos-fullscreen";
 import { FinancePosActions } from "./finance-pos-actions";
-import { FinancePosShiftReport } from "./finance-pos-shift-report";
+import shiftStyles from "./finance-pos-shift-controls.module.css";
 import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
 import { FinancePosCustomerField, FinancePosPager, financePosCustomerNotice, usePosCustomer } from "./finance-pos-customer";
 import { usePosFinance } from "./use-pos-finance";
@@ -64,13 +64,11 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const [receiptPreview, setReceiptPreview] = useState<FinanceDocument | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [shiftReportId, setShiftReportId] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const shift = data.shifts.find((item) => item.user_id === data.userId && item.status === "open");
   const outgoing = data.shifts.find((item) => item.user_id === data.userId && item.status === "handover");
   const currentShiftNumber = (shift ?? outgoing)?.shift_number;
-  const lastClosedShift = data.shifts.filter((item) => item.user_id === data.userId && item.status === "closed").sort((a, b) => (b.closed_at ?? b.opened_at).localeCompare(a.closed_at ?? a.opened_at))[0];
   const incoming = data.shifts.filter((item) => item.handover_to === data.userId && item.status === "handover");
   const disabled = pending || stale;
   const lines = useMemo(() => financeCartLines(cart, data.products), [cart, data.products]);
@@ -86,6 +84,18 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const printDocument = printId ? data.documents.find((document) => document.id === printId || state.offline.sales.some((sale) => sale.id === printId && sale.document.id === document.id)) : undefined;
   const history = data.documents.filter((document) => document.kind === "sale" && (data.canManage || data.shifts.some((item) => item.id === document.shift_id && item.user_id === data.userId)));
   const open = (next: FinanceForm) => { state.clearFeedback(); setLocalError(""); setForm(next); };
+  async function finishLogout() {
+    if (!slug || loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await state.offline.logout();
+      await logoutFinanceAction();
+      router.replace(data.role === "cashier" ? "/cashier/login?type=sales" : `/finance/${slug}/login`);
+    } catch (cause) {
+      setLocalError(cause instanceof Error ? cause.message : "تعذر تسجيل الخروج حاول مرة أخرى");
+      setLoggingOut(false);
+    }
+  }
   function quantityAvailable(product: FinanceProduct) { return product.stockTracked ? data.stock.find((stock) => stock.item_id === product.itemId && stock.warehouse_id === warehouseId)?.quantity ?? 0 : Infinity; }
   function setQuantity(productId: string, quantity: number) {
     if (disabled) return;
@@ -125,19 +135,21 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
     <div className={styles.posLayout}>
     <div className={styles.posMain} role="region" aria-label="المنتجات وأدوات الكاشير">
     <div className={styles.posControls}>
-    <header className={`${styles.header} ${styles.posHeader}`}>
+    <header className={`${styles.header} ${styles.posHeader} ${shiftStyles.header}`}>
       <div><p className={styles.eyebrow}><ReceiptText size={16} aria-hidden="true" />برندة المالية · {data.cafe.name}</p><h1 className={styles.title}>الكاشير المالي</h1>
         <div className={styles.posShiftMeta} aria-label="الوردية الحالية"><Clock3 size={15} aria-hidden="true" /><span>{shift ? shift.supervisor_paused ? "ورديتك موقوفة إداريًا" : "ورديتك مفتوحة" : outgoing ? "ورديتك بانتظار الاستلام" : "ابدأ ورديتك"}</span>{!!currentShiftNumber && <bdi dir="ltr">#{currentShiftNumber}</bdi>}</div>
       </div>
-      <div className={styles.posHeaderTools}>
+      <div className={`${styles.posHeaderTools} ${shiftStyles.headerTools}`}>
+      <div className={shiftStyles.controls} aria-label="إدارة الوردية">
+        {!shift && !outgoing && (incoming.length ? incoming.map(item => <button key={item.id} type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} title={data.accounts.find(account => account.id === item.account_id)?.name ?? "صندوق الكاشير"} onClick={() => open({ operation: "shift_accept", title: "عد النقدية وتأكيد الاستلام", values: { shiftId: item.id } })}><Plus size={16} aria-hidden="true" />استلام وبدء وردية</button>) : <button type="button" className={shiftStyles.start} disabled={disabled || !!shift || !!outgoing || loggingOut} onClick={() => open({ operation: "shift_open", title: "بدء وردية جديدة" })}><Plus size={16} aria-hidden="true" />بدء وردية جديدة</button>)}
+        {shift ? <button type="button" className={shiftStyles.end} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل إنهاء الوردية" : "عد النقدية وحدد جهة التسليم لإقفال الوردية"} onClick={() => open({ operation: "shift_close", title: slug ? "إنهاء الوردية وتسجيل الخروج" : "إنهاء الوردية", values: { shiftId: shift.id } })}><LogOut size={16} aria-hidden="true" />إنهاء الوردية</button> : slug && <button type="button" className={shiftStyles.exit} disabled={pending || loggingOut || !!outgoing || cart.length > 0} onClick={finishLogout}><LogOut size={16} aria-hidden="true" />خروج</button>}
+      </div>
       <FinancePosPager slug={slug ?? data.cafe.slug} refreshKey={pagerRefreshKey} />
       <FinancePosActions details={shift && <><span>{data.accounts.find((account) => account.id === shift.account_id)?.name ?? "الصندوق"}</span><span>بداية الوردية {financeDate(shift.opened_at)}</span><span>نقدية متوقعة <Numeric value={shift.expected_cash} money /></span></>}>
       <div className={styles.actions} aria-label="أدوات الكاشير والوردية">
-        {shift ? <><button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: "سداد مورد من الصندوق", values: { shiftId: shift.id } })}>سداد الموردين</button><button className={styles.secondary} disabled={disabled || cart.length > 0} onClick={() => open({ operation: "shift_handover", title: "تسليم الوردية", values: { shiftId: shift.id, expectedCash: shift.expected_cash } })}>تسليم الوردية</button><button className={styles.primary} disabled={disabled || cart.length > 0} onClick={() => open({ operation: "shift_close", title: "إقفال الوردية", values: { shiftId: shift.id, expectedCash: shift.expected_cash } })}>نهاية الوردية</button></> : !outgoing && <button className={styles.primary} disabled={disabled || incoming.length > 0} onClick={() => open({ operation: "shift_open", title: "بداية وردية مالية" })}><Plus size={16} />بداية وردية</button>}
-      <button className={styles.secondary} onClick={() => setShowHistory(true)}>سجل المبيعات</button>
-      {lastClosedShift && <button type="button" className={styles.secondary} onClick={() => setShiftReportId(lastClosedShift.id)}>تقرير آخر وردية{!!lastClosedShift.shift_number && <bdi dir="ltr">#{lastClosedShift.shift_number}</bdi>}</button>}
-      {incoming.map((item) => <button key={item.id} disabled={disabled || !!shift} className={styles.primary} title={`وردية ${item.shift_number ?? ""} — ${data.accounts.find((account) => account.id === item.account_id)?.name ?? "الصندوق"} — النقدية المسلمة ${financeMoney(item.counted_cash ?? 0)}`} onClick={() => open({ operation: "shift_accept", title: "استلام الوردية", values: { shiftId: item.id, expectedCash: item.counted_cash ?? item.expected_cash } })}>عد النقدية واستلم</button>)}
-        {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}<button className={styles.iconButton} disabled={pending} aria-label="تحديث الأسعار والأرصدة" onClick={state.refresh}><RefreshCw size={18} /></button>{slug && <button className={styles.secondary} disabled={disabled || loggingOut || cart.length > 0} title={cart.length ? "احفظ السلة أو أفرغها قبل الخروج" : undefined} onClick={async () => { setLoggingOut(true); try { await state.offline.logout(); await logoutFinanceAction(); router.replace(data.role === "cashier" ? "/cashier/login?type=sales" : `/finance/${slug}/login`); } catch { setLocalError("تعذر تسجيل الخروج حاول مرة أخرى"); setLoggingOut(false); } }}><LogOut size={16} />خروج</button>}
+        {shift && <button type="button" className={styles.secondary} disabled={disabled || shift.supervisor_paused} onClick={() => open({ operation: "supplier_payout", title: "سداد مورد من الصندوق", values: { shiftId: shift.id } })}>سداد الموردين</button>}
+        <button className={styles.secondary} onClick={() => setShowHistory(true)}>سجل المبيعات</button>
+        {data.canManage && <Link href={dashboardHref ?? (slug ? `/finance/${slug}` : "/dashboard/finance")} className={styles.secondary}><ArrowRight size={16} />الإدارة المالية</Link>}
       </div>
       </FinancePosActions>
       <FinancePosFullscreen />
@@ -173,7 +185,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
           <button type="button" className={styles.primary} disabled={disabled || !cart.length || !shift || shift.supervisor_paused} onClick={() => { setLocalError(""); setShowCheckout(true); }}>الدفع وإصدار الإيصال<ArrowRight size={18} aria-hidden="true" /></button>
           <div className={checkoutStyles.utilities}>
             <button type="button" className={styles.secondary} disabled={disabled || !cart.length} onClick={() => { setCart([]); setDiscountValue(0); setLocalError(""); }}><Trash2 size={15} aria-hidden="true" />إفراغ السلة</button>
-            <FinancePosOfflineStatus state={state.offline} />
+            <div className={shiftStyles.syncTools}><button type="button" className={styles.iconButton} disabled={pending || state.offline.syncing || loggingOut} aria-label="تحديث ومزامنة الكاشير" title="تحديث ومزامنة الكاشير" onClick={state.refresh}><RefreshCw size={18} aria-hidden="true" /></button><FinancePosOfflineStatus state={state.offline} /></div>
           </div>
         </section>
       </aside>
@@ -209,9 +221,8 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
           {paymentKind === "bank" && <p className={styles.notice} style={{ marginTop: 14 }}>تحقق من وصول التحويل البنكي قبل تسجيل البيع</p>}
         </section></div>
     </Modal>
-    <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending) setForm(null); }} panelClassName={form?.operation === "refund" ? styles.invoicePanel : "flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
+    <Modal open={!!form} title={form?.title ?? "الوردية"} onClose={() => { if (!pending) setForm(null); }} panelClassName={form?.operation === "refund" ? styles.invoicePanel : "flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"}>{form && <FinanceOperationForm key={form.operation} form={form} snapshot={data} pending={pending} error={error} onCancel={() => setForm(null)} onSubmit={async (operation, payload) => { const saved = await state.execute(operation, payload); if (saved) { setForm(null); if (operation === "shift_close" && slug) await finishLogout(); if (operation === "refund" && saved.status !== "pending") setReceiptId(saved.id); } return !!saved; }} />}</Modal>
     <Modal open={showHistory} title="سجل المبيعات" onClose={() => setShowHistory(false)} panelClassName="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">{data.truncated && <p className={styles.notice}>يعرض السجل أحدث العمليات المتاحة</p>}{!history.length ? <Empty title="لا توجد مبيعات مسجلة" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>المستند</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>{history.map((document) => <tr key={document.id}><td>{document.number ? `#${document.number}` : document.local_reference}{document.sync_status && document.sync_status !== "synced" && <small className={styles.muted}> بانتظار المزامنة</small>}</td><td>{financeDate(document.created_at)}</td><td><Numeric value={document.total} money /></td><td>{financeDocumentStatus(document)}</td><td><div className={styles.actions}><button className={styles.secondary} onClick={() => { setShowHistory(false); setReceiptId(document.id); }}>الإيصال</button>{!document.refunded && (!document.sync_status || document.sync_status === "synced") && <button className={styles.danger} disabled={disabled} onClick={() => { setShowHistory(false); open({ operation: "refund", title: `مرتجع مبيعات #${document.number}`, values: { documentId: document.id } }); }}>إرجاع</button>}</div></td></tr>)}</tbody></table></div>}</Modal>
-    {shiftReportId && <FinancePosShiftReport key={shiftReportId} shiftId={shiftReportId} slug={slug ?? data.cafe.slug} onClose={() => setShiftReportId(null)} />}
     {receiptPreview && <FinanceReceiptDialog preview receiptBrand={state.offline.brand} document={receiptPreview} snapshot={data} onClose={() => setReceiptPreview(null)} />}
     {printDocument && printer.ready && <FinanceReceiptDialog key={`${data.cafe.id}:automatic:${printId}`} document={printDocument} snapshot={data} receiptBrand={state.offline.brand} autoPrint={printer.autoEnabled} backgroundAutoPrint autoPrintKey={printId} onPrint={printer.handler(printId, true)} onClose={() => setPrintQueue((queue) => queue.filter((id) => id !== printId))} />}
     {receipt && <FinanceReceiptDialog key={`${data.cafe.id}:${receiptId}`} document={receipt} snapshot={data} receiptBrand={state.offline.brand} onPrint={printer.handler(receiptId ?? receipt.id, false)} onClose={() => setReceiptId(null)} />}
