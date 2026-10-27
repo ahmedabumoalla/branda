@@ -1,5 +1,7 @@
 # تشغيل برندة المالية
 
+- CUSTOMER INVOICE WITH LOYALTY 2026-10-27T02:13:11.131Z: Successful eligible POS sale with optional customer phone now sends one private PDF attachment with the loyalty caption through the existing leased queue. Authoritative saved invoice lines/discount/tax/totals, embedded Arabic fonts and multipage support; no POS UI change, no replay of completed jobs, ambiguous sends remain review-only. SQL159, worker/transport/PDF, root/release types/text, scoped lint, webpack and deployment font traces PASS. Migration 050000 live MD5 c4d655e966caa694a2ca63d9e061d3aa; service-only queue, private receipt and saved totals verified read-only. No real customer test message. Evidence output/customer-receipt-verification.json; tag customer-invoice-loyalty-20261027 identifies release
+
 ## رقابة المالية والأدوار — ٢٧ أكتوبر ٢٠٢٦
 
 - المالك يدير الصلاحيات والإقفال والموافقات الحساسة، ومدير التشغيل يدير العمليات، والمحاسب القيود والخزينة، وأمين المستودع المخزون، والمراجع يقرأ فقط

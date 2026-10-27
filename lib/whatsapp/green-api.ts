@@ -49,6 +49,26 @@ export async function sendGreenApiFinanceShiftAlert(input: { phone: string; mess
   } catch { return { status: "unknown" }; }
 }
 
+/** One provider message carries the PDF and loyalty caption, sharing one durable delivery outcome. */
+export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+  if (!/^9665\d{8}$/.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
+  const { idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const mediaUrl = new URL(process.env.GREEN_API_MEDIA_URL?.trim() || "https://media.green-api.com");
+  if (mediaUrl.protocol !== "https:" || mediaUrl.username || mediaUrl.password || !/(^|\.)(green-api\.com|greenapi\.com)$/.test(mediaUrl.hostname)) throw new Error("INVALID_GREEN_MEDIA_HOST");
+  const body = new FormData();
+  const fileName = `invoice-${input.invoiceNumber}.pdf`;
+  body.set("chatId", `${input.phone}@c.us`);
+  body.set("caption", input.message);
+  body.set("fileName", fileName);
+  body.set("file", new Blob([new Uint8Array(input.pdf)], { type: "application/pdf" }), fileName);
+  try {
+    const response = await fetch(`${mediaUrl.origin}/waInstance${idInstance}/sendFileByUpload/${apiTokenInstance}`, { method: "POST", body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(Math.min(15_000, greenApiTimeoutMs())) });
+    if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "unknown" };
+    const payload = await response.json() as GreenApiSendResponse;
+    return typeof payload.idMessage === "string" && payload.idMessage.length > 0 && payload.idMessage.length <= 200 ? { status: "queued", providerMessageId: payload.idMessage } : { status: "unknown" };
+  } catch { return { status: "unknown" }; }
+}
+
 /** A provider ID means queued by GREEN-API, not delivered or read */
 export async function sendGreenApiPagerMessage(input: { phone: string; message: string }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_PAGER_RECIPIENT");

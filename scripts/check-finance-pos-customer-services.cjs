@@ -61,11 +61,14 @@ const lease = '33333333-3333-4333-8333-333333333333';
   data = { ...row, cafe_id: orderId }; await assert.rejects(() => dal.transitionFinancePosPager(orderId, 'ready'));
 
   let configured = true, sent = [], workerCalls = [], finishThrows = false, providerStatus = 'queued', walletCalls = [], walletFailure = false, deliveryOrder = [];
-  const job = { id, leaseToken: lease, phone, brandName: 'Brand', slug: 'brand', invoiceNumber: 19, loyaltyStatus: 'stamped', cardCode: 'PRIVATE_CARD_CODE' };
+  const receipt = {brandName:'Brand',number:19,createdAt:'2026-10-27T01:00:00Z',localReference:null,subtotal:11.5,discount:0,tax:1.5,total:11.5,paid:11.5,vatRate:15,taxInclusive:true,paymentMethod:'cash',lines:[{name:'Coffee',quantity:1,unitPrice:11.5,net:10,tax:1.5}]};
+  let pdfFailure=false; const pdf=new TextEncoder().encode('%PDF-test');
+  const job = { receipt, id, leaseToken: lease, phone, brandName: 'Brand', slug: 'brand', invoiceNumber: 19, loyaltyStatus: 'stamped', cardCode: 'PRIVATE_CARD_CODE' };
   let jobs = [job];
-  const worker = load('lib/data/finance-pos-customer-messages.ts', { '@/lib/wallet': { syncWalletCardByCode: async code => { deliveryOrder.push('wallet'); walletCalls.push(code); if (walletFailure) throw Error('wallet unavailable'); } }, '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => { workerCalls.push({ name, args }); if (name.includes('_claim_')) return { data: jobs, error: null }; deliveryOrder.push('finish'); if (finishThrows) throw Error('persist failed'); return { data: true, error: null }; } }) }, '@/lib/whatsapp/green-api': { isGreenApiConfigured: () => configured, sendGreenApiFinanceShiftAlert: async input => { deliveryOrder.push('send'); sent.push(input); if (providerStatus === 'throw') throw Error('timeout'); return { status: providerStatus, ...(providerStatus === 'queued' ? { providerMessageId: 'provider-id' } : {}) }; } } });
+  const worker = load('lib/data/finance-pos-customer-messages.ts', { '@/lib/finance/customer-receipt':load('lib/finance/customer-receipt.ts'), './finance-customer-receipt':{createFinanceCustomerReceiptPdf:async input=>{assert.deepEqual(input,receipt);if(pdfFailure)throw Error('PDF unavailable');return pdf;}}, '@/lib/wallet': { syncWalletCardByCode: async code => { deliveryOrder.push('wallet'); walletCalls.push(code); if (walletFailure) throw Error('wallet unavailable'); } }, '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => { workerCalls.push({ name, args }); if (name.includes('_claim_')) return { data: jobs, error: null }; deliveryOrder.push('finish'); if (finishThrows) throw Error('persist failed'); return { data: true, error: null }; } }) }, '@/lib/whatsapp/green-api': { isGreenApiConfigured: () => configured, sendGreenApiFinanceReceipt: async input => { deliveryOrder.push('send'); sent.push(input); if (providerStatus === 'throw') throw Error('timeout'); return { status: providerStatus, ...(providerStatus === 'queued' ? { providerMessageId: 'provider-id' } : {}) }; } } });
   configured = false; assert.equal((await worker.dispatchFinancePosCustomerMessages(id)).claimed, 0); assert.equal(workerCalls.length, 0); configured = true;
   const result = await worker.dispatchFinancePosCustomerMessages(id); assert.equal(result.queued, 1); assert.equal(sent.length, 1);
+  assert.equal(sent[0].pdf,pdf); assert.equal(sent[0].invoiceNumber,19); assert(sent[0].message.includes('نسخة فاتورتك مرفقة'));
   assert.deepEqual(walletCalls, ['PRIVATE_CARD_CODE']); assert(!JSON.stringify(sent).includes('PRIVATE_CARD_CODE'));
   assert.deepEqual(deliveryOrder, ['send', 'finish', 'wallet']);
   assert(sent[0].message.includes('https://barndaksa.com/loyalty/brand')); assert(!sent[0].message.includes(phone)); assert(!sent[0].message.includes('localhost'));
@@ -81,9 +84,12 @@ const lease = '33333333-3333-4333-8333-333333333333';
   providerStatus = 'throw'; assert.equal((await worker.dispatchFinancePosCustomerMessages()).needsReview, 1); assert.equal(workerCalls.at(-1).args.p_status, 'unknown');
   jobs = [{ ...job, slug: '../evil' }]; const sentBefore = sent.length; assert.equal((await worker.dispatchFinancePosCustomerMessages()).needsReview, 1); assert.equal(sent.length, sentBefore); assert.equal(workerCalls.at(-1).args.p_status, 'rejected');
   assert.throws(() => worker.financePosCustomerMessage({ ...job, slug: 'https://evil' }));
+  jobs=[{...job,receipt:{...receipt,number:20}}]; const beforeMismatch=sent.length; await worker.dispatchFinancePosCustomerMessages(); assert.equal(sent.length,beforeMismatch,'Mismatched invoice cannot be sent');
+  jobs=[job]; pdfFailure=true; await worker.dispatchFinancePosCustomerMessages(); assert.equal(sent.length,beforeMismatch,'Failed PDF cannot be marked sent'); pdfFailure=false;
+  assert(worker.financePosCustomerMessage({...job,brandName:'B'.repeat(300),receipt:{...receipt,brandName:'B'.repeat(300)},slug:'s'.repeat(120)}).length<=1024,'Provider caption limit even for maximum brand/slug');
 
   let saleError = null, customerDispatches = 0, financeRpcCalls = [], deferred = [];
-  const finance = load('lib/data/brand-finance.ts', {
+  const finance = load('lib/data/brand-finance.ts', { '@/lib/finance/permissions':load('lib/finance/permissions.ts'),
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id } } }) }, rpc: async (name, args) => {
       financeRpcCalls.push({ name, args });
       return name === 'brand_finance_context' ? { data: { id, slug: 'brand', role: 'cashier' }, error: null } : { data: { id: orderId, number: 19 }, error: saleError };

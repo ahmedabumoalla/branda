@@ -1,8 +1,10 @@
 import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isGreenApiConfigured, sendGreenApiFinanceShiftAlert } from "@/lib/whatsapp/green-api";
+import { isGreenApiConfigured, sendGreenApiFinanceReceipt } from "@/lib/whatsapp/green-api";
 import { syncWalletCardByCode } from "@/lib/wallet";
+import { financeCustomerReceiptSchema } from "@/lib/finance/customer-receipt";
+import { createFinanceCustomerReceiptPdf } from "./finance-customer-receipt";
 
 const jobSchema = z.object({
   id: z.uuid(), leaseToken: z.uuid(), phone: z.string().regex(/^9665\d{8}$/),
@@ -10,18 +12,20 @@ const jobSchema = z.object({
   invoiceNumber: z.union([z.number().int().positive(), z.string().min(1).max(120)]),
   loyaltyStatus: z.enum(["stamped", "pending_enrollment"]),
   cardCode: z.string().regex(/^[A-Z0-9_-]{4,100}$/).nullish(),
-});
+  receipt: financeCustomerReceiptSchema,
+}).refine(row=>String(row.receipt.number)===String(row.invoiceNumber)&&row.receipt.brandName===row.brandName,"Invoice identity mismatch");
 type CustomerMessageJob = z.infer<typeof jobSchema>;
 
 export function financePosCustomerMessage(job: CustomerMessageJob) {
   const row = jobSchema.parse(job);
   return [
-    `شكرًا لزيارتك ${row.brandName}`,
+    `شكرًا لزيارتك ${row.brandName.slice(0,100)}`,
     `فاتورتك رقم ${row.invoiceNumber}`,
+    "نسخة فاتورتك مرفقة مع الرسالة",
     row.loyaltyStatus === "stamped" ? "تم تسجيل ختم مشترياتك على بطاقة الولاء" : "ختم مشترياتك محفوظ ويُضاف إلى بطاقتك بعد تسجيل اسمك ورقم جوالك",
     "افتح بطاقة الولاء وأضفها إلى محفظة جوالك",
     `https://barndaksa.com/loyalty/${encodeURIComponent(row.slug)}`,
-    `أُرسلت عبر برندة نيابة عن ${row.brandName}`,
+    `أُرسلت عبر برندة نيابة عن ${row.brandName.slice(0,100)}`,
   ].join("\n");
 }
 
@@ -41,7 +45,8 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
     if (parsed.success) {
       if (parsed.data.loyaltyStatus === "stamped" && parsed.data.cardCode) walletCodes.add(parsed.data.cardCode);
       try {
-        const result = await sendGreenApiFinanceShiftAlert({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data) });
+        const pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt);
+        const result = await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf, invoiceNumber: parsed.data.receipt.number });
         status = result.status; messageId = result.providerMessageId;
       } catch { status = "unknown"; }
     }
