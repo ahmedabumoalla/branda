@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Camera, ImagePlus, PackagePlus, Plus, Trash2 } from "lucide-react";
+import { Camera, Check, ImagePlus, PackagePlus, Plus, Trash2, Upload } from "lucide-react";
+import { uploadInventoryImage, type InventoryUploadProgress } from "@/lib/finance/inventory-image-upload";
 import { saveFinanceInventoryItemAction, saveFinanceInventoryUnitAction } from "@/app/actions/finance-inventory-catalog";
 import type { FinanceItem, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { INVENTORY_IMAGE_MAX_BYTES, inventoryImageUrl, inventoryItemInputSchema, type FinanceInventoryUnit } from "@/lib/finance/inventory-catalog";
@@ -37,6 +38,10 @@ export function FinanceInventoryItemForm({ snapshot, item, onSaved, onCancel, on
   const active = useRef(true);
   const lock = useRef(false);
   const upload = useRef<AbortController | null>(null);
+  const imageInput = useRef<HTMLInputElement | null>(null);
+  const [imageProgress, setImageProgress] = useState<InventoryUploadProgress | null>(null);
+  const [imageState, setImageState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [imageName, setImageName] = useState("");
   useEffect(() => { active.current = true; return () => { active.current = false; upload.current?.abort(); }; }, []);
   function markBusy(value: boolean) { lock.current = value; setBusy(value); onBusyChange?.(value); }
   async function addUnit() {
@@ -56,16 +61,14 @@ export function FinanceInventoryItemForm({ snapshot, item, onSaved, onCancel, on
   }
   async function uploadImage(file?: File) {
     if (!file || lock.current) return;
-    setError("");
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > INVENTORY_IMAGE_MAX_BYTES) { setError("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 3 ميجابايت"); return; }
+    setError(""); setStatus("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > INVENTORY_IMAGE_MAX_BYTES) { setImageState("error"); setError("اختر صورة JPG أو PNG أو WebP بحجم لا يتجاوز 3 ميجابايت"); return; }
+    setImageState("uploading"); setImageName(file.name); setImageProgress({ percent: 0, processing: false });
     const controller = new AbortController(); upload.current = controller; markBusy(true);
     try {
-      const body = new FormData(); body.append("file", file);
-      const response = await fetch(`/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/inventory-image`, { method: "POST", body, signal: controller.signal });
-      const result = await response.json();
-      if (!response.ok || typeof result.path !== "string" || typeof result.url !== "string") throw new Error("upload");
-      if (active.current) { setImagePath(result.path); setImageUrl(result.url); setStatus("تم رفع الصورة احفظ الصنف لاعتمادها"); }
-    } catch { if (active.current && !controller.signal.aborted) setError("تعذر رفع الصورة حاول مرة أخرى"); }
+      const result = await uploadInventoryImage(`/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/inventory-image`, file, controller.signal, progress => { if (active.current) setImageProgress(progress); });
+      if (active.current) { setImagePath(result.path); setImageUrl(result.url); setImageState("success"); setImageProgress(null); }
+    } catch { if (active.current && !controller.signal.aborted) { setImageState("error"); setImageProgress(null); setError("تعذر رفع الصورة حاول مرة أخرى"); } }
     finally { if (active.current) markBusy(false); }
   }
   if (!canFinance(snapshot.role, "inventory_write")) return <p className={shared.notice}>تعديل الأصناف يحتاج صلاحية إدارة المخزون</p>;
@@ -102,7 +105,23 @@ export function FinanceInventoryItemForm({ snapshot, item, onSaved, onCancel, on
       </div>
       {camera && <FinanceInventoryBarcodeScanner onClose={() => setCamera(false)} onDetected={value => { setBarcode(value); setCamera(false); setStatus("تمت قراءة الباركود"); }} />}
       {item?.barcode && <FinanceInventoryBarcode value={item.barcode} name={item.name} />}
-      <div className={styles.imageRow}>{imageUrl ? <Image unoptimized src={imageUrl} className={styles.image} alt="صورة الصنف" width={78} height={78} /> : <span className={styles.imagePlaceholder}><ImagePlus size={25} aria-hidden="true" /></span>}<label className={styles.upload}>صورة الصنف اختياري<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void uploadImage(file); }} /><small className={styles.hint}>JPG أو PNG أو WebP حتى 3 ميجابايت</small></label>{imagePath && <button type="button" className={shared.secondary} onClick={() => { setImagePath(null); setImageUrl(""); }}>إزالة الصورة</button>}</div>
+      <div className={styles.imageRow} data-state={imageState} aria-busy={imageState === "uploading"}>
+        <div className={styles.imagePreview}>
+          {imageState === "uploading" ? <div className={styles.uploadMeter} role="progressbar" aria-label="رفع صورة الصنف" aria-valuemin={0} aria-valuemax={100} aria-valuenow={imageProgress?.percent ?? undefined} aria-valuetext={imageProgress?.processing ? "اكتمل نقل الصورة وجارٍ تجهيزها" : undefined}>
+            <svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" className={styles.meterTrack} /><circle cx="40" cy="40" r="34" pathLength="100" className={styles.meterFill} strokeDasharray="100" strokeDashoffset={100 - (imageProgress?.percent ?? 0)} /></svg>
+            <bdi dir="ltr">{imageProgress?.percent == null ? "…" : `${imageProgress.percent}%`}</bdi>
+          </div> : imageUrl ? <Image unoptimized src={imageUrl} className={styles.image} alt="صورة الصنف" width={78} height={78} /> : <span className={styles.imagePlaceholder}><ImagePlus size={25} aria-hidden="true" /></span>}
+          {imageState === "success" && <span className={styles.imageSuccess} aria-hidden="true"><Check size={14} /></span>}
+        </div>
+        <div className={styles.upload}>
+          <div className={styles.uploadHeading}>صورة الصنف <span>اختياري</span></div>
+          <input ref={imageInput} hidden type="file" aria-label="اختيار صورة الصنف" accept="image/jpeg,image/png,image/webp" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; void uploadImage(file); }} />
+          <div className={styles.uploadActions}><button type="button" className={styles.uploadButton} disabled={busy} onClick={() => imageInput.current?.click()}><Upload size={17} aria-hidden="true" />{imageState === "uploading" ? "جارٍ رفع الصورة" : imageState === "error" ? "إعادة اختيار الصورة" : imagePath ? "تغيير الصورة" : "رفع صورة الصنف"}</button>
+          {imagePath && <button type="button" className={styles.removeImage} aria-label="إزالة صورة الصنف" onClick={() => { setImagePath(null); setImageUrl(""); setImageState("idle"); setImageName(""); }}><Trash2 size={17} aria-hidden="true" /></button>}</div>
+          <small className={styles.uploadStatus} role="status">{imageState === "uploading" ? imageProgress?.processing ? "جارٍ تجهيز الصورة وحفظها" : "جارٍ نقل الصورة" : imageState === "success" ? "تم الرفع بنجاح احفظ الصنف لاعتماد الصورة" : imageState === "error" ? "لم ترفع الصورة اختر صورة سليمة وحاول مجددًا" : "JPG أو PNG أو WebP حتى 3 ميجابايت"}</small>
+          {imageName && <span className={styles.imageName} dir="auto" title={imageName}>{imageName}</span>}
+        </div>
+      </div>
       </section>
       <section className={styles.section}><h3>استهلاك منتجات المنيو</h3><p>كل وحدة مباعة من المنتج تخصم الكمية المحددة من هذا الصنف بوحدته المخزنية</p>
         <div className={styles.linkRows}>{links.map((link, index) => <div className={styles.linkRow} key={link.key}><Field label={`المنتج ${index + 1}`}><select required value={link.productId} onChange={event => setLinks(links.map(row => row.key === link.key ? { ...row, productId: event.target.value } : row))}><option value="">اختر المنتج</option>{snapshot.products.filter(product => product.id === link.productId || !links.some(row => row.productId === product.id)).map(product => <option key={product.id} value={product.id}>{product.name}</option>)}{link.productId && !snapshot.products.some(product => product.id === link.productId) && <option value={link.productId}>منتج مرتبط غير متاح حاليًا</option>}</select></Field><Field label={`الاستهلاك ${units.find(unit => unit.id === unitId)?.name ?? ""}`}><input aria-label={`كمية استهلاك المنتج ${index + 1}`} type="number" min="0.001" max="1000000" step="0.001" required value={link.quantity} onChange={event => setLinks(links.map(row => row.key === link.key ? { ...row, quantity: event.target.value } : row))} /></Field><button type="button" className={shared.iconButton} aria-label={`إزالة ربط المنتج ${index + 1}`} onClick={() => setLinks(links.filter(row => row.key !== link.key))}><Trash2 size={16} /></button></div>)}</div>

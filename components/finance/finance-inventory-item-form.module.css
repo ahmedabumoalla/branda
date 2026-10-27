@@ -12,11 +12,31 @@
 .inline input, .inline select { flex: 1; min-width: 0; }
 .inline button { flex: 0 0 auto; }
 .unit { display: grid; gap: 8px; }
-.imageRow { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
+.imageRow { --upload-ink: var(--finance-ink,#39251b); --upload-gold: #a87837; --upload-success: #247349; --upload-error: #a33a2b; display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 16px; border: 1px solid var(--finance-line,#e6dacb); border-radius: 16px; background: var(--finance-cream,#f7f2ea); min-width: 0; }
 .image { width: 78px; height: 78px; border: 1px solid var(--finance-line, #e6dacb); border-radius: 14px; object-fit: contain; background: white; }
 .imagePlaceholder { width: 78px; height: 78px; display: grid; place-items: center; border: 1px dashed var(--finance-line, #e6dacb); border-radius: 14px; }
-.upload { display: grid; gap: 5px; flex: 1; min-width: 150px; font-size: 13px; font-weight: 700; }
-.upload input { max-width: 100%; font-size: 12px; }
+.upload { display: grid; gap: 7px; flex: 1; min-width: 0; font-size: 13px; }
+.upload input[hidden] { display: none; }
+.uploadHeading { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 800; }
+.uploadHeading span { color: var(--finance-muted,#78675c); font-size: 11px; font-weight: 400; }
+.uploadActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.uploadButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border: 1px solid var(--upload-ink); border-radius: 11px; background: var(--upload-ink); color: #fff; font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 3px 8px #39251b12; }
+.uploadButton:hover:not(:disabled) { background: #533a2a; }
+.uploadButton:disabled { opacity: .65; cursor: wait; }
+.removeImage { display: grid; place-items: center; width: 44px; padding: 0; border-radius: 11px; border: 1px solid var(--finance-line,#e6dacb); background: #fff; color: var(--upload-ink); cursor: pointer; }
+.uploadStatus { color: var(--finance-muted,#78675c); font-size: 11px; line-height: 1.7; }
+.imageRow[data-state="success"] .uploadStatus { color: var(--upload-success); }
+.imageRow[data-state="error"] .uploadStatus { color: var(--upload-error); }
+.imagePreview { position: relative; flex: 0 0 78px; width: 78px; height: 78px; }
+.imageSuccess { position: absolute; inset-inline-end: -5px; bottom: -5px; width: 24px; height: 24px; border-radius: 50%; border: 3px solid var(--finance-cream,#f7f2ea); background: var(--upload-success); color: #fff; display: grid; place-items: center; }
+.uploadMeter { position: relative; width: 78px; height: 78px; display: grid; place-items: center; }
+.uploadMeter svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); fill: none; stroke-width: 5; }
+.meterTrack { stroke: var(--finance-line,#e6dacb); }
+.meterFill { stroke: var(--upload-gold); stroke-linecap: round; transition: stroke-dashoffset .2s ease; }
+.uploadMeter bdi { color: var(--upload-ink); font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.imageName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--finance-muted,#78675c); }
+@media(max-width:380px) { .imageRow { padding: 12px; gap: 10px; flex-wrap: wrap; } .upload { flex-basis: 160px; } }
+@media(prefers-reduced-motion:reduce) { .meterFill { transition: none; } }
 .linkRows { display: grid; gap: 10px; margin-top: 12px; }
 .linkRow { display: grid; grid-template-columns: minmax(0,1fr) minmax(100px,.45fr) 44px; align-items: end; gap: 10px; }
 .linkRow button { min-height: 44px; }
