@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import path from 'node:path';import {tmpdir} from 'node:os';import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE??path.join(tmpdir(),'branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js')).href);
+const db=new PGlite(),id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;let checks=0;
+const q=(sql,args=[])=>db.query(sql,args),v=async(sql,args=[])=>Object.values((await q(sql,args)).rows[0])[0],ok=(a,label)=>{assert(a,label);checks++},denied=async(fn,pattern)=>{await assert.rejects(fn,pattern);checks++};
+const customer={name:'عميل الاختبار',cr:'',vatNumber:'',nationalAddress:'',buildingNumber:'',additionalNumber:'',district:'',city:'',postalCode:'',country:'المملكة العربية السعودية'};
+const draft={customer,taxInclusive:true,dueDate:'2099-12-31',lines:[{planId:'menu',months:3,amountCents:27600},{planId:'loyalty',months:3,amountCents:44700}]};
+const issue=(n,input=draft)=>v('SELECT public.admin_issue_subscription_invoice($1,$2::jsonb)',[id(n),JSON.stringify(input)]);
+const login=async(user,role='authenticated')=>{await db.exec('RESET ROLE');await q("SELECT set_config('test.uid',$1,false)",[user]);await db.exec('SET ROLE '+role);};
+try{
+ await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('test.uid',true),'')::uuid$$;
+ CREATE TABLE profiles(id uuid PRIMARY KEY,role text,status text);CREATE TABLE platform_plans(id text PRIMARY KEY,name text,active boolean);CREATE TABLE subscriptions(id uuid);
+ GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role;GRANT SELECT ON profiles TO authenticated;
+ INSERT INTO profiles VALUES('${id(1)}','platform_admin','active'),('${id(2)}','owner','active'),('${id(3)}','platform_admin','suspended'),('${id(4)}','platform_admin','active');
+ INSERT INTO platform_plans VALUES('menu','باقة منيو برندة',true),('loyalty','باقة ولاء برندة',true),('inactive','Inactive',false);`);
+ await db.exec(await readFile('supabase/migrations/20261028075742_platform_subscription_invoices.sql','utf8'));
+ await login('','anon');await denied(()=>issue(10),/permission denied/);
+ await login(id(2));await denied(()=>issue(10),/INVOICE_ADMIN_REQUIRED/);
+ await login(id(3));await denied(()=>issue(10),/INVOICE_ADMIN_REQUIRED/);
+ await login(id(1));const first=await issue(10);ok(first===id(10),'issued id');ok(await issue(10)===first,'retry idempotent');
+ const invoice=await v('SELECT data FROM platform_subscription_invoices WHERE id=$1',[first]);
+ ok(invoice.netCents===62870&&invoice.taxCents===9430&&invoice.totalCents===72300,'exact supplied sample amounts');
+ ok(invoice.lines[0].description==='اشتراك باقة منيو برندة لمدة 3 أشهر','plan description');
+ ok(invoice.seller.vatNumber==='312872746700003'&&invoice.seller.cr==='5850157983','source seller identity');
+ await denied(()=>issue(10,{...draft,taxInclusive:false}),/INVOICE_REQUEST_CHANGED/);
+ await login(id(4));await denied(()=>issue(10),/INVOICE_REQUEST_CHANGED/);await login(id(1));
+ await denied(()=>q("UPDATE platform_subscription_invoices SET customer_name='changed'"),/permission denied/);await denied(()=>q('DELETE FROM platform_subscription_invoices'),/permission denied/);
+ await denied(()=>q('INSERT INTO platform_subscription_invoices SELECT * FROM platform_subscription_invoices'),/permission denied/);
+ for(const input of [null,{}, {...draft,seller:{}},{...draft,taxInclusive:'true'},{...draft,lines:[]},{...draft,lines:Array(9).fill(draft.lines[0])},{...draft,customer:{...customer,vatNumber:'123'}},{...draft,customer:{...customer,name:''}},{...draft,dueDate:'2000-01-01'},...[-1,0,1.5,1e12].map(amountCents=>({...draft,lines:[{...draft.lines[0],amountCents}]})),...[2,0,13].map(months=>({...draft,lines:[{...draft.lines[0],months}]})),{...draft,lines:[{...draft.lines[0],planId:'inactive'}]},{...draft,lines:[{...draft.lines[0],planId:'missing'}]},{...draft,lines:[{...draft.lines[0],planName:'forged'}]}])await denied(()=>issue(11,input));
+ await issue(11,{...draft,taxInclusive:false,lines:[{planId:'menu',months:9,amountCents:10000}]});
+ const exclusive=await v('SELECT data FROM platform_subscription_invoices WHERE id=$1',[id(11)]);ok(exclusive.totalCents===11500&&exclusive.taxCents===1500&&exclusive.netCents===10000,'exclusive calculation');
+ ok(exclusive.issuedAt!==invoice.issuedAt&&exclusive.number!==invoice.number,'distinct timestamps and numbers');
+ for(const months of [1,3,6,9,12]){await issue(100+months,{...draft,lines:[{planId:'menu',months,amountCents:1}]});checks++;}
+ await login(id(2));ok(await v('SELECT count(*)::int FROM platform_subscription_invoices')===0,'owner cannot read any invoices');await login(id(3));ok(await v('SELECT count(*)::int FROM platform_subscription_invoices')===0,'suspended admin cannot read invoices');
+ await db.exec('RESET ROLE');await denied(()=>q('UPDATE platform_subscription_invoices SET total_cents=1'),/cannot be changed/);await denied(()=>q('DELETE FROM platform_subscription_invoices'),/cannot be changed/);
+ await q("UPDATE platform_plans SET name='Changed',active=false WHERE id='menu'");await login(id(1));ok(await issue(10)===first,'existing invoice survives plan removal');ok((await v('SELECT data FROM platform_subscription_invoices WHERE id=$1',[first])).lines[0].planName==='باقة منيو برندة','plan snapshot immutable');
+ await db.exec('RESET ROLE');ok(await v('SELECT count(*)::int FROM subscriptions')===0,'issuing invoices never activates subscriptions');
+ const before=await v('SELECT last_number FROM subscription_invoice_private.counter');await db.exec('BEGIN');await login(id(1));await issue(99,{...draft,lines:[{planId:'loyalty',months:12,amountCents:9999999999}]});await db.exec('ROLLBACK');await db.exec('RESET ROLE');ok(String(await v('SELECT last_number FROM subscription_invoice_private.counter'))===String(before),'rollback restores counter');
+ console.log(`PASS ${checks} subscription invoice SQL checks`);
+}finally{await db.close()}

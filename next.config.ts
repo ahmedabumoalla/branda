@@ -11,6 +11,8 @@ const nextConfig = {
     "/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],
     "/dashboard/finance": ["./node_modules/@sparticuz/chromium/bin/*.br"],
     "/dashboard/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],
+    "/admin/subscription-invoices": ["./node_modules/@sparticuz/chromium/bin/*.br", "./assets/subscription-invoices/*"],
+    "/api/admin/subscription-invoices/**": ["./node_modules/@sparticuz/chromium/bin/*.br", "./assets/subscription-invoices/*"],
   },
   images: {
     remotePatterns: [KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH].map(path => ({ protocol: "https" as const, hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${path}**` })),
