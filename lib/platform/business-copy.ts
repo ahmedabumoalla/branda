@@ -1,10 +1,11 @@
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 
-export type BusinessKind = "cafe" | "restaurant" | "events";
+export type BusinessKind = "cafe" | "restaurant" | "barbershop" | "events";
 
 export function resolveBusinessKind(
   category?: string | null
 ): BusinessKind {
+  if (category === "hair_salons") return "barbershop";
   if (category === "restaurants" || category === "restaurant") {
     return "restaurant";
   }
@@ -69,6 +70,21 @@ const restaurantCopy: BusinessCopy = {
   loyaltyUnitLit: "أطباق مضيئة",
 };
 
+const barbershopCopy: BusinessCopy = {
+  kind: "barbershop",
+  categoryId: "hair_salons",
+  brandNoun: "صالون حلاقة",
+  casualNoun: "صالون",
+  pageNoun: "صفحة الصالون",
+  itemSingular: "خدمة",
+  itemPlural: "خدمات",
+  menuSearchPlaceholder: "ابحث عن خدمة أو منتج",
+  freeRewardName: "خدمة مجانية",
+  loyaltyUnitSingular: "زيارة",
+  loyaltyUnitPlural: "زيارات",
+  loyaltyUnitLit: "زيارات مضيئة",
+};
+
 const eventsCopy: BusinessCopy = {
   kind: "events",
   categoryId: "events_conferences",
@@ -87,6 +103,7 @@ const eventsCopy: BusinessCopy = {
 export function getBusinessCopy(category?: string | null): BusinessCopy {
   const kind = resolveBusinessKind(category);
   if (kind === "restaurant") return restaurantCopy;
+  if (kind === "barbershop") return barbershopCopy;
   if (kind === "events") return eventsCopy;
   return cafeCopy;
 }

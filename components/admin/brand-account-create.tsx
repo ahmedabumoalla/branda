@@ -4,6 +4,8 @@ import { Eye, EyeOff, LoaderCircle, UserPlus } from "lucide-react";
 import { BrandDialog } from "./brand-details-dialog";
 import { createAdminBrandAccountAction } from "@/app/actions/admin-brand-onboarding";
 import type { PlatformCafe } from "@/lib/platform/admin-data";
+import { AVAILABLE_BUSINESS_CATEGORY_IDS, BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
+import type { AdminBrandAccountInput } from "@/lib/platform/brand-onboarding";
 import s from "./brand-onboarding.module.css";
 
 export function BrandAccountCreate({ close, onCreated }: { close: () => void; onCreated: (cafe: PlatformCafe) => void }) {
@@ -23,7 +25,7 @@ export function BrandAccountCreate({ close, onCreated }: { close: () => void; on
     try {
       const result = await createAdminBrandAccountAction({ requestId: requestId.current,
         brandName: String(data.get("brandName") ?? ""), brandNameEn: String(data.get("brandNameEn") ?? ""),
-        slug, category: String(data.get("category")) as "cafes_coffee" | "restaurants" | "events_conferences",
+        slug, category: String(data.get("category")) as AdminBrandAccountInput["category"],
         ownerName: String(data.get("ownerName") ?? ""), phone: String(data.get("phone") ?? ""),
         email: String(data.get("email") ?? ""), password: String(data.get("password") ?? ""),
       });
@@ -40,7 +42,7 @@ export function BrandAccountCreate({ close, onCreated }: { close: () => void; on
         <label><span className={s.fieldTitle}>اسم العلامة</span><input name="brandName" required minLength={2} maxLength={120} autoFocus autoComplete="organization" /></label>
         <label><span className={s.fieldTitle}>الاسم بالإنجليزية <small>اختياري</small></span><input name="brandNameEn" dir="ltr" maxLength={120} onChange={event => { if (!slugEdited.current) setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)); }} /></label>
         <label><span className={s.fieldTitle}>الرابط المختصر <small>اختياري</small></span><input name="slug" dir="ltr" minLength={3} maxLength={60} pattern="[a-z0-9]+(-[a-z0-9]+)*" value={slug} onChange={event => { slugEdited.current = true; setSlug(event.target.value.toLowerCase()); }} aria-describedby="new-brand-slug-hint" /><small id="new-brand-slug-hint" className={s.fieldHint}>نجهّز رابطًا تلقائيًا إذا تركته فارغًا أو اكتب مثل <bdi>my-brand</bdi></small></label>
-        <label><span className={s.fieldTitle}>نوع النشاط</span><select name="category" defaultValue="cafes_coffee"><option value="cafes_coffee">مقاهي وكوفيهات</option><option value="restaurants">مطاعم</option><option value="events_conferences">فعاليات ومؤتمرات</option></select></label>
+        <label><span className={s.fieldTitle}>نوع النشاط</span><select name="category" defaultValue="cafes_coffee">{AVAILABLE_BUSINESS_CATEGORY_IDS.map(id => <option key={id} value={id}>{BUSINESS_CATEGORIES.find(category => category.id === id)!.label}</option>)}</select></label>
       </fieldset>
       <fieldset disabled={pending} className={s.fields}>
         <legend>بيانات المالك والدخول</legend>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { AVAILABLE_BUSINESS_CATEGORY_IDS } from "@/lib/platform/business-categories";
 
 const optionalName = z.union([z.literal(""), z.string().trim().min(2).max(120)]);
 const optionalPhone = z.string().trim().max(24).transform(value => value ? normalizeSaudiPhone(value) : "").refine((value): value is string => value !== null);
@@ -10,7 +11,7 @@ export const adminBrandAccountSchema = z.object({
   brandName: z.string().trim().min(2).max(120),
   brandNameEn: z.string().trim().max(120),
   slug: z.union([z.literal(""), z.string().trim().toLowerCase().min(3).max(60).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)]),
-  category: z.enum(["cafes_coffee", "restaurants", "events_conferences"]),
+  category: z.enum(AVAILABLE_BUSINESS_CATEGORY_IDS),
   ownerName: optionalName,
   phone: optionalPhone,
   email: optionalEmail,
