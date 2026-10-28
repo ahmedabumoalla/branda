@@ -81,7 +81,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
     <div className={styles.opening}>
       <header className={styles.header}>
-        <a href={`/salon/${menu.slug}`} className={styles.brand}>
+        <a href={`/salon/${menu.slug}`} className={styles.brand} aria-label={menu.name}>
           {menu.logoUrl ? <Image unoptimized width={64} height={64} src={menu.logoUrl} alt={barber55 ? menu.name : ""} className={styles.logo} /> : <span className={styles.brandMark}><Scissors aria-hidden="true" /></span>}
           <span><strong>{menu.name}</strong><small>{barber55 ? "حلاقة رجالية بطابعك" : "العناية بالرجل"}</small></span>
         </a>
@@ -92,6 +92,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}><span />{barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
           <h1 id="salon-heading">{barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
+          {barber55 && menu.logoUrl && <div className={styles.heroIdentity}><Image unoptimized src={menu.logoUrl} width={360} height={128} alt={menu.name} /></div>}
           <p className={styles.heroDescription}>{menu.description || "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها"}</p>
           <div className={styles.heroActions}><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز وقتك <ArrowUpLeft aria-hidden="true" /></button><a className={styles.textLink} href="#services">اكتشف الخدمات <ArrowDown aria-hidden="true" /></a></div>
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
