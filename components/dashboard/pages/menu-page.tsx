@@ -94,9 +94,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     }
   }, [products, open]);
   const { toast, showToast } = useAppToast();
-  const menuTitle = copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
-  const importLabel = copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
-  const addLabel = copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
+  const isSalon = copy.kind === "barbershop";
+  const menuTitle = isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
+  const importLabel = isSalon ? "استيراد الخدمات والمنتجات" : copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
+  const addLabel = isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -239,12 +240,12 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={menuTitle}
-        subtitle="منتجاتك وأسعارك كما يراها العميل"
+        subtitle={isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
         action={
           <div className={styles.headerActions}>
-            {cafeSlug && <a href={`/menu/${encodeURIComponent(cafeSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
+            {cafeSlug && <a href={`/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
               <ExternalLink className="h-5 w-5" aria-hidden="true" />
-              فتح المنيو المستقل
+              {isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
             </a>}
             <button
               type="button"
@@ -275,10 +276,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       >
         <section className={styles.summaryGrid} aria-label="ملخص المنيو">
           {[
-            [copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
-            [copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
+            [isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
+            [isSalon ? "ظاهر في صفحة الصالون" : copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
             ["التصنيفات", categories.length],
-            ["مخفي من المنيو", products.length - availableCount],
+            [isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو", products.length - availableCount],
           ].map(([label, value]) => (
             <div key={String(label)} className={styles.metricCard}>
               <p className={styles.metricLabel}>{label}</p>
@@ -294,7 +295,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               <NeumoInput
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ابحث باسم المنتج أو التصنيف"
+                placeholder={isSalon ? "ابحث باسم الخدمة أو المنتج" : "ابحث باسم المنتج أو التصنيف"}
                 aria-label="البحث في المنتجات والتصنيفات"
                 className={styles.searchInput}
               />
@@ -335,7 +336,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         <section className="min-w-0">
           <div className={styles.catalogHeader}>
             <div>
-              <h2 className={styles.catalogTitle}>{copy.kind === "events" ? "التذاكر والباقات" : "المنتجات"}</h2>
+              <h2 className={styles.catalogTitle}>{isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنتجات"}</h2>
               <p className={styles.catalogMeta}>
                 {filtered.length} نتيجة
                 {categoryFilter === "الكل"
@@ -346,7 +347,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
           {filtered.length === 0 ? (
             <div className={styles.emptyState}>
-              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
             <div className={styles.productGrid}>

@@ -305,6 +305,7 @@ const productSchema = z.object({
   price: z.number().min(0),
   calories: z.number().optional().nullable(),
   loyaltyPoints: z.number().int().min(0),
+  catalogKind: z.enum(["product", "service"]).optional(),
   preparationTimeMinutes: z.number().optional().nullable(),
   redeemableWithPoints: z.boolean(),
   redemptionPoints: z.number().optional().nullable(),
@@ -367,6 +368,7 @@ type MenuProductPayload = {
   price: number;
   calories: number | null;
   loyalty_points: number;
+  catalog_kind: "product" | "service";
   preparation_time_minutes: number | null;
   redeemable_with_points: boolean;
   redemption_points: number | null;
@@ -535,6 +537,7 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     price: parsed.price,
     calories: parsed.calories ?? null,
     loyalty_points: 0,
+    catalog_kind: cafe.businessCategory === "hair_salons" ? (parsed.catalogKind ?? "service") : "product",
     preparation_time_minutes: parsed.preparationTimeMinutes ?? null,
     redeemable_with_points: false,
     redemption_points: null,

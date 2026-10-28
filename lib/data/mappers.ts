@@ -44,6 +44,7 @@ export type DbMenuProduct = {
   price: number;
   calories: number | null;
   loyalty_points: number;
+  catalog_kind?: "product" | "service";
   preparation_time_minutes: number | null;
   redeemable_with_points: boolean;
   redemption_points: number | null;
@@ -253,6 +254,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     price: Number(row.price),
     calories: row.calories ?? undefined,
     loyaltyPoints: 0,
+    catalogKind: row.catalog_kind ?? "product",
     preparationTimeMinutes: row.preparation_time_minutes ?? undefined,
     redeemableWithPoints: false,
     redemptionPoints: undefined,

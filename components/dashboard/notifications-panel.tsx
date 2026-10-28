@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell, Check, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -10,35 +11,26 @@ import {
 import type { AppNotification } from "@/lib/mock/notifications";
 
 type Props = {
+  live?: boolean;
   className?: string;
   initialNotifications?: AppNotification[];
 };
 
-export function NotificationsPanel({ className = "", initialNotifications = [] }: Props) {
+export function NotificationsPanel({ className = "", initialNotifications = [], live = false }: Props) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [loaded, setLoaded] = useState<{ source: AppNotification[]; items: AppNotification[] } | null>(null);
+  const notifications = loaded?.source === initialNotifications ? loaded.items : initialNotifications;
 
   const refresh = useCallback(async () => {
     try {
       const list = await fetchOwnerNotificationsAction();
-      setNotifications(list);
+      setLoaded({ source: initialNotifications, items: list });
     } catch {
-      setNotifications([]);
+      // Retain the last known notifications when the connection is unavailable.
     }
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setNotifications(initialNotifications);
   }, [initialNotifications]);
 
-  useEffect(() => {
-    if (open && notifications.length === 0) void refresh();
-  }, [open, notifications.length, refresh]);
+  useEffect(() => { if (!live) return; const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 30000); return () => clearInterval(timer); }, [refresh, live]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read).length,
@@ -56,7 +48,7 @@ export function NotificationsPanel({ className = "", initialNotifications = [] }
     await refresh();
   }
 
-  const panel = open && mounted ? createPortal(
+  const panel = open ? createPortal(
     <>
       <button
         type="button"
@@ -96,6 +88,7 @@ export function NotificationsPanel({ className = "", initialNotifications = [] }
                   <div>
                     <p className="font-black text-[#3A2117]">{notification.title}</p>
                     <p className="mt-1 text-xs font-bold text-[#7A6255]">{notification.body}</p>
+                    {notification.type === "salon_booking" && /^[0-9a-f-]{36}$/i.test(notification.meta?.bookingId ?? "") && <Link className="mt-2 inline-block py-2 text-sm font-bold underline" href={`/dashboard/bookings?booking=${notification.meta!.bookingId}`} onClick={() => { setOpen(false); void handleMarkRead(notification.id); }}>فتح الحجز</Link>}
                     <p className="mt-1 text-[10px] text-[#7A6255]">
                       {new Date(notification.createdAt).toLocaleString("ar-SA")}
                     </p>
@@ -133,7 +126,7 @@ export function NotificationsPanel({ className = "", initialNotifications = [] }
     <div className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => { if (!open && (live || notifications.length === 0)) void refresh(); setOpen(value => !value); }}
         className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-[#F6C35B] transition hover:bg-white/10"
         aria-label="الإشعارات"
       >

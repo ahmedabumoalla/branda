@@ -153,9 +153,12 @@ function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
 }
 
 async function mapProgram(row: Record<string, unknown> | null | undefined, cafeId: string, slug: string): Promise<LoyaltyCardProgram> {
-  const { colors } = await getLoyaltyBrandAppearance(cafeId, slug);
+  const { colors, businessCategory } = await getLoyaltyBrandAppearance(cafeId, slug);
+  const isSalon = businessCategory === "hair_salons";
+  const defaults = isSalon ? { ...defaultProgram, rewardName: "خدمة مجانية عند اكتمال البطاقة", stampStyle: "scissors" as const } : defaultProgram;
+  const savedStyle = loyaltyStampStyle((row?.card_design as Record<string, unknown> | null)?.stampStyle);
   const brandColors = { brandSlug: slug, logoUrl: `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1`, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent };
-  if (!row) return { ...defaultProgram, ...brandColors };
+  if (!row) return { ...defaults, ...brandColors };
   const product = Array.isArray(row.menu_products) ? row.menu_products[0] : row.menu_products;
   return {
     enabled: Boolean(row.enabled ?? true),
@@ -167,8 +170,8 @@ async function mapProgram(row: Record<string, unknown> | null | undefined, cafeI
       product && typeof product === "object" && "name" in product
         ? String((product as { name?: string }).name ?? "")
         : "",
-    rewardName: String(row.reward_name ?? defaultProgram.rewardName),
-    stampStyle: loyaltyStampStyle((row.card_design as Record<string, unknown> | null)?.stampStyle),
+    rewardName: String(isSalon && (!row.reward_name || row.reward_name === defaultProgram.rewardName) ? defaults.rewardName : row.reward_name ?? defaults.rewardName),
+    stampStyle: isSalon && !["brand", "scissors", "comb"].includes(savedStyle) ? "scissors" : savedStyle,
     stampLabel: String(row.stamp_label ?? defaultProgram.stampLabel),
     terms: String(row.terms ?? defaultProgram.terms),
     ...brandColors,

@@ -19,6 +19,7 @@ export const defaultLoyaltyExperience: LoyaltyExperienceSettings = {
 };
 
 export type LoyaltyIdentity = {
+  businessCategory?: string;
   name: string;
   nameEn?: string;
   slug: string;

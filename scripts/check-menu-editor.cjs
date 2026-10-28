@@ -162,6 +162,22 @@ async function main() {
   props.categories = [...props.categories, { ...category, id: '33333333-3333-4333-8333-333333333333' }];
   tree = render(); assert.equal(nodes(tree).find(n => n.type === 'media').props.product.imageAssetId, 'tenant/second.webp');
 
+  // Salon authoring must not leak coffee examples or background presets.
+  const sh = hooks();
+  const { MenuProductFormModal: SalonModal } = load('components/dashboard/menu/product-modal.tsx', { ...mocks, react: sh.api });
+  const salonProps = { ...props, businessCategory: 'hair_salons', mode: 'add', editingProduct: undefined, categories: [], productList: [] };
+  const renderSalon = () => sh.render(SalonModal(salonProps).type, salonProps);
+  let salonTree = renderSalon();
+  assert(nodes(salonTree).some(n => n.props?.placeholder === 'مثال: قص الشعر وتحديد اللحية'));
+  assert(!nodes(salonTree).some(n => /لاتيه|قهوة|حلويات|مخبوزات|شاي/.test(n.props?.placeholder ?? '')));
+  assert(!nodes(salonTree).some(n => n.type === 'option' && /قهوة|حلويات|مخبوزات|شاي/.test(label(n))));
+  const salonCategory = nodes(salonTree).find(n => n.type === 'select' && nodes(n).some(c => c.type === 'optgroup'));
+  assert(salonCategory && nodes(salonCategory).some(n => n.type === 'option' && label(n) === 'اللحية والشارب'));
+  salonCategory.props.onChange({ target: { value: '__salon__خدمات الشعر' } }); salonTree = renderSalon();
+  assert(nodes(salonTree).some(n => n.type === 'input' && n.props.value === 'خدمات الشعر'));
+  nodes(salonTree).find(n => n.type === 'select' && n.props.value === 'service').props.onChange({ target: { value: 'product' } });
+  salonTree = renderSalon(); assert(nodes(salonTree).some(n => n.props?.placeholder === 'مثال: زيت العناية باللحية'));
+
   // Dashboard mutations update local cards only after success, including new UUID products.
   const ph = hooks(); let fail = false, mutations = 0, notifications = 0, restores = 0;
   const pageMocks = { react: ph.api, 'next/dynamic': () => 'editor',

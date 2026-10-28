@@ -59,6 +59,7 @@ export function CategoryManager({
 }: Props) {
   const copy = getBusinessCopy(businessCategory);
   const isEvents = copy.kind === "events";
+  const isSalon = copy.kind === "barbershop";
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>();
@@ -203,7 +204,7 @@ export function CategoryManager({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-[#3A2117]">
-            {isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
+            {isSalon ? "أقسام الخدمات ومنتجات العناية" : isEvents ? "فئات التذاكر والباقات" : "تصنيفات المنيو"}
           </h2>
           <p className="mt-1 text-sm font-bold text-[#7A6255]">
             رتّب التصنيفات وتحكم في ظهورها للعميل
@@ -215,6 +216,7 @@ export function CategoryManager({
         </PrimaryButton>
       </div>
 
+      {isSalon && <div className="mb-4 flex flex-wrap gap-2">{["خدمات الشعر", "اللحية والشارب", "العناية بالبشرة", "باقات العناية", "منتجات العناية"].filter(name => !categories.some(c => c.name === name)).map(name => <button key={name} type="button" className="min-h-10 rounded-xl border border-[#E5D8CD] px-3 text-xs font-bold text-[#3A2117]" onClick={() => { openAdd(); setForm({ ...emptyForm, name }); }}>+ {name}</button>)}</div>}
       {formOpen ? (
         <SoftCard className="mb-4 p-4">
           <div className="mb-4 flex items-center justify-between">
@@ -237,6 +239,7 @@ export function CategoryManager({
             <label className="block sm:col-span-2">
               <span className="text-xs font-black text-[#7A6255]">اسم التصنيف</span>
               <input
+                placeholder={isSalon ? "مثال: خدمات الشعر" : undefined}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#CBB29C]"

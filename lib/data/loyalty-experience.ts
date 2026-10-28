@@ -23,8 +23,10 @@ export async function getLoyaltyExperience(cafeId: string) {
   const { data, error } = await createAdminClient().from("cafe_loyalty_experience")
     .select("reward_validity_days,reward_kind,reward_discount_percent,nearby_message,branch_latitude,branch_longitude,offer_title,offer_body,offer_updated_at,updated_at").eq("cafe_id", cafeId).maybeSingle();
   if (error) throw new Error("إعدادات تجربة الولاء تحتاج إكمال تهيئة قاعدة البيانات");
+  const { data: category } = await createAdminClient().from("cafes").select("business_category").eq("id", cafeId).maybeSingle();
+  const nearbyDefault = category?.business_category === "hair_salons" ? "قريب منّا؟ حان وقت العناية بإطلالتك يسعدنا نشوفك" : defaultLoyaltyExperience.nearbyMessage;
   return data ? {
-    rewardValidityDays: Number(data.reward_validity_days), nearbyMessage: String(data.nearby_message),
+    rewardValidityDays: Number(data.reward_validity_days), nearbyMessage: String(data.nearby_message === defaultLoyaltyExperience.nearbyMessage ? nearbyDefault : data.nearby_message),
     rewardKind: data.reward_kind as "product" | "discount" | "custom",
     rewardDiscountPercent: data.reward_discount_percent == null ? null : Number(data.reward_discount_percent),
     latitude: data.branch_latitude == null ? null : Number(data.branch_latitude),
@@ -32,7 +34,7 @@ export async function getLoyaltyExperience(cafeId: string) {
     offerTitle: String(data.offer_title ?? ""), offerBody: String(data.offer_body ?? ""),
     offerUpdatedAt: data.offer_updated_at ? String(data.offer_updated_at) : null,
     updatedAt: String(data.updated_at),
-  } : { ...defaultLoyaltyExperience };
+  } : { ...defaultLoyaltyExperience, nearbyMessage: nearbyDefault };
 }
 
 export async function getLoyaltyBrand(slug: string) {
@@ -48,7 +50,7 @@ export async function getLoyaltyBrand(slug: string) {
     || settings?.logoDataUrl
     || (appearance.logoPath ? await resolvePublishedStoragePathToUrl(storageBucketForLogo(), appearance.logoPath) : appearance.logoUrl)
     || (slug === "rast" ? "/menu-logos/kawakib-transparent-20261008.png" : null);
-  return { cafeId: String(cafe.id), identity: { slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
+  return { cafeId: String(cafe.id), identity: { businessCategory: appearance.businessCategory, slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
 }
 
 export async function getLoyaltyMembership(slug: string) {
@@ -117,7 +119,7 @@ export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) 
 }
 
 const programSchema = z.object({
-  stampStyle: z.enum(["ceramic", "paper", "meal", "brand"]).optional(),
+  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb"]).optional(),
   enabled: z.boolean(), cardTitle: z.string().trim().min(2).max(80), cardSubtitle: z.string().trim().min(2).max(140),
   purchasesRequired: z.number().int().min(1).max(100), rewardProductId: z.string().uuid().nullable(),
   rewardName: z.string().trim().min(2).max(80), stampLabel: z.string().min(1).max(40), terms: z.string().max(1000),

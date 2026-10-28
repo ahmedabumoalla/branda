@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
+import { SalonAnnouncementsEditor } from "@/components/salon/announcements-editor";
+import { getSalonAnnouncements } from "@/lib/data/salon";
 import { OffersPageClient } from "@/components/dashboard/pages/offers-page";
 import { RastOffersPage } from "@/components/dashboard/pages/rast-offers-page";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
@@ -32,6 +34,6 @@ export default async function OffersPage() {
     const { data: images } = paths.length ? await supabase.storage.from("menu-products").createSignedUrls([...new Set(paths)], 3600) : { data: [] };
     const signed = new Map((images ?? []).filter((image) => !image.error).map((image) => [image.path, image.signedUrl]));
     const products = menu.products.map((product) => ({ ...product, imageDataUrl: signed.get(product.imageAssetId ?? "") || product.imageDataUrl }));
-    return <RastOffersPage initialOffers={offers} products={products} brandName={cafe.name} slug={cafe.slug} />;
+    return <>{cafe.businessCategory === "hair_salons" && <SalonAnnouncementsEditor initial={await getSalonAnnouncements()} services={products.filter(p => p.catalogKind === "service")} />}<RastOffersPage salon={cafe.businessCategory === "hair_salons"} initialOffers={offers} products={products} brandName={cafe.name} slug={cafe.slug} /></>;
   }
 }

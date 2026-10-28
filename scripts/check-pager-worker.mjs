@@ -94,7 +94,7 @@ try {
   equal((await h.worker.runPagerMessageJobs()).failed,1,"malformed feedback job fails safely");equal(h.sent,[],"invalid feedback token never sent");
 
   let routeCalls=0,routeError=false;
-  const route=await load("app/api/pager/jobs/route.ts",{"@/lib/pager/worker":{runPagerMessageJobs:async()=>{routeCalls++;if(routeError)throw new Error("private credentials");return{claimed:0,queued:0,skipped:0,failed:0};}}});
+  const route=await load("app/api/pager/jobs/route.ts",{ "@/lib/salon/worker":{runSalonMessageJobs:async()=>({claimed:0})},"@/lib/pager/worker":{runPagerMessageJobs:async()=>{routeCalls++;if(routeError)throw new Error("private credentials");return{claimed:0,queued:0,skipped:0,failed:0};}}});
   const request=authorization=>new Request("https://barndaksa.com/api/pager/jobs",{headers:authorization?{authorization}:{}});
   delete process.env.CRON_SECRET;
   let response=await route.GET(request());equal(response.status,401,"unconfigured scheduler denied");equal(response.headers.get("cache-control"),"no-store","denied response uncacheable");

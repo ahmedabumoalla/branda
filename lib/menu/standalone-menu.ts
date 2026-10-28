@@ -11,6 +11,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo"
 > & {
+  catalogKind?: "service" | "product";
   primaryMediaType?: "image" | "video";
   offers?: StandaloneHighlight[];
   images: { url: string; alt: string }[];
@@ -18,6 +19,8 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
 };
 
 export type StandaloneMenu = {
+  businessCategory?: string;
+  cafeId?: string;
   loyaltyEnabled?: boolean;
   name: string;
   slug: string;

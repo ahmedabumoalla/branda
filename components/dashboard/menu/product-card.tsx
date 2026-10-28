@@ -1,5 +1,5 @@
 "use client";
-import { ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
+import { Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
@@ -13,6 +13,7 @@ type Props = {
 };
 export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
+  const isSalon = businessCategory === "hair_salons";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
   const discounted = promoOn && finalPrice < product.price;
@@ -21,14 +22,14 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     <div className={styles.productOverview}>
       <div className={styles.media}>
         <ProductMediaDisplay ownerMenu product={product} alt="" className={styles.mediaAsset}
-          fallback={<div className={styles.mediaFallback}><Coffee aria-hidden="true" /><span>بدون صورة</span></div>} />
+          fallback={<div className={styles.mediaFallback}>{isSalon ? <Scissors aria-hidden="true" /> : <Coffee aria-hidden="true" />}<span>بدون صورة</span></div>} />
       </div>
       <div className={styles.productIdentity}>
         <p className={styles.categoryLabel}>{categoryLabel ?? product.category}</p>
         <h3 className={styles.productName}>{product.name}</h3>
         <span className={`${styles.availability} ${product.available ? styles.availabilityOn : ""}`}>
           {product.available ? <Eye size={13} aria-hidden="true" /> : <EyeOff size={13} aria-hidden="true" />}
-          {product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
+          {isSalon ? (product.available ? "ظاهر في صفحة الصالون" : "مخفي من صفحة الصالون") : product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
         </span>
       </div>
     </div>
@@ -38,7 +39,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
         {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
       </div></div>
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
-        : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
+        : isSalon ? <span className={styles.secondaryInfo}>{product.catalogKind === "service" ? "خدمة" : "منتج"}{product.catalogKind === "service" && product.preparationTimeMinutes ? <><Clock3 size={14} aria-hidden="true" />{product.preparationTimeMinutes} دقيقة</> : null}</span> : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
     </div>
     {promoOn && product.promo && <p className={styles.activePromo}><Gift size={14} aria-hidden="true" />{promoBadgeText(product.promo)}</p>}
     {hasDetails && <details className={styles.productDetails}>

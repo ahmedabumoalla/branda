@@ -107,7 +107,7 @@ delete global.window;delete global.document;
 (async()=>{
   let enabled=true, queried=[];
   const cafe={id:'own-tenant',slug:'kat-coffe',name:'كاث'};
-  const admin={from(table){ const q={select(){return q},eq(key,value){assert.equal(key,'cafe_id');assert.equal(value,cafe.id);return q},async maybeSingle(){queried.push(table);return {error:null,data:table==='cafe_custom_identity'?{palette:{primary:'#733b27',secondary:'#e6b576',text:'#fcf8f3'}}:{enabled:true,card_background:'#F6BE18',card_design:{cardBackground:'#F6BE18'},purchases_required:7}}}};return q;}};
+  const admin={from(table){ const q={select(){return q},eq(key,value){assert.equal(key,table==='cafes'?'id':'cafe_id');assert.equal(value,cafe.id);return q},async maybeSingle(){queried.push(table);return {error:null,data:table==='cafes'?{business_category:'cafes_coffee'}:table==='cafe_custom_identity'?{palette:{primary:'#733b27',secondary:'#e6b576',text:'#fcf8f3'}}:{enabled:true,card_background:'#F6BE18',card_design:{cardBackground:'#F6BE18'},purchases_required:7}}}};return q;}};
   const stubs={'@/lib/supabase/admin':{createAdminClient:()=>admin},'@/lib/data/cafes':{getCafeBySlug:async slug=>{assert.equal(slug,cafe.slug);return cafe;}},'@/lib/data/feature-entitlements':{getCafeFeatureCodes:async()=>enabled?['loyalty']:[]}};
   const {getPublicLoyaltyProgramBySlug}=load('lib/data/loyalty-cards.ts',stubs);
   const program=await getPublicLoyaltyProgramBySlug(cafe.slug);assert.equal(program.cardBackground,'#733b27');assert.equal(program.cardDesign.cardBackground,'#733b27');assert.equal(program.purchasesRequired,7);

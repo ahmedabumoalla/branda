@@ -8,6 +8,7 @@ export type AppNotification = {
   title: string;
   body: string;
   type:
+    | "salon_booking"
     | "order_accepted"
     | "order_rejected"
     | "loyalty_points"

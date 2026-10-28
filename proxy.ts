@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { updateSession } from "@/lib/supabase/middleware";
 import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const AUTH_REFRESH_PREFIXES = [
   "/dashboard",
@@ -30,6 +31,18 @@ export async function proxy(request: NextRequest) {
   // Saved storefront links are aliases only; menu authorization stays at /menu.
   // Never replay an archived mutation or API request against the menu route.
   if (request.method === "GET" || request.method === "HEAD") {
+    // Resolve salon aliases before the cafe route can stream its loading screen.
+    // The destination still enforces status and package access before serving data.
+    const menuSlug = pathname.match(/^\/menu\/([a-z0-9-]{1,100})\/?$/)?.[1];
+    if (menuSlug) {
+      try {
+        const { data } = await createAdminClient().from("cafes").select("business_category").eq("slug", menuSlug).is("deleted_at", null).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
+        if (data?.business_category === "hair_salons") {
+          const target = request.nextUrl.clone(); target.pathname = `/salon/${menuSlug}`;
+          return NextResponse.redirect(target, 307);
+        }
+      } catch { /* Existing menu route remains the authorized fallback */ }
+    }
     const legacy = pathname.match(/^\/(?:c|app)\/([a-z0-9][a-z0-9_-]{0,99})(?:\/|$)/i);
     const pageRequest = !pathname.startsWith("/api/") && !pathname.startsWith("/_next/") && !/\.[a-z0-9]+$/i.test(pathname);
     const slug = pageRequest ? legacy?.[1].toLowerCase() || (brandSubdomain ? subdomain : "") : "";

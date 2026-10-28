@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getStandaloneMenu } from "@/lib/data/standalone-menu";
 import { getPublicLoyaltyProgramBySlug } from "@/lib/data/loyalty-cards";
 import { BistroMenu } from "@/components/menu/bistro-menu";
@@ -38,6 +38,7 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (showcase && !await isPublicShowcase(slug)) notFound();
   const menu = await getStandaloneMenu(slug, showcase);
   if (!menu) notFound();
+  if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const program = menu.slug === "brand-10620d3a586c" && menu.loyaltyEnabled
     ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;

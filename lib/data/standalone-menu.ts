@@ -16,7 +16,7 @@ import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mapper
 import { primaryMediaType } from "@/lib/menu/product-media";
 import { isOwnedMenuAsset, isStandaloneProductVisible, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
-const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
+const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,catalog_kind,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
 const PAGE_SIZE = 500;
 const SHOWCASE_LOGO_WINDOW_MS = 20 * 60_000;
 
@@ -53,7 +53,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false): P
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) return null;
   const admin = createAdminClient();
   const { data: cafe, error: cafeError } = await admin.from("cafes")
-    .select("id,slug,name,status").eq("slug", slug).is("deleted_at", null).maybeSingle();
+    .select("id,slug,name,status,business_category").eq("slug", slug).is("deleted_at", null).maybeSingle();
   if (cafeError) throw cafeError;
   if (!cafe || !["active", "published"].includes(String(cafe.status))) return null;
   const features = await getCafeFeatureCodes(String(cafe.id));
@@ -120,6 +120,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false): P
     return {
       id: product.id, name: product.name, category: product.category, categoryId: product.categoryId,
       description: product.description, price: product.price, calories: product.calories,
+      catalogKind: product.catalogKind,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,
       available: product.available, promo: product.promo,
       primaryMediaType: product.media?.some((item) => item.primary) ? primaryMediaType(product) : undefined,
@@ -135,6 +136,6 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false): P
     console.error("Standalone highlights unavailable");
     return { asOf: Date.now(), items: [] };
   });
-  return { name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
+  return { businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

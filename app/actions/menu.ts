@@ -35,6 +35,7 @@ export async function saveMenuProductAction(product: MenuProduct) {
     price: product.price,
     calories: product.calories ?? null,
     loyaltyPoints: 0,
+    catalogKind: product.catalogKind,
     preparationTimeMinutes: product.preparationTimeMinutes ?? null,
     redeemableWithPoints: false,
     redemptionPoints: null,

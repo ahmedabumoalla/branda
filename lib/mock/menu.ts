@@ -69,6 +69,7 @@ export type MenuProduct = {
   price: number;
   calories?: number;
   loyaltyPoints: number;
+  catalogKind?: "product" | "service";
   preparationTimeMinutes?: number;
   redeemableWithPoints?: boolean;
   redemptionPoints?: number;
