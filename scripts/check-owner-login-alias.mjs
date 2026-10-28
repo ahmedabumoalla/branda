@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import ts from 'typescript';
+import {createRequire} from 'node:module';
+const loadModule=createRequire(import.meta.url);
+function load(file,mocks={}){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new Function('require','exports',code)(name=>name in mocks?mocks[name]:name==='server-only'?{}:name.startsWith('@/')?{}:loadModule(name),exports);return exports;}
+const alias=load('lib/auth/owner-login-alias.ts');
+const name='صالونات الحلاقة الرجالية',identity=alias.ownerLoginAliasEmail(name);
+assert(identity.endsWith('@accounts.barndaksa.invalid'));assert.equal(alias.ownerLoginAliasEmail('  صالونات  الحلاقة الرجالية '),identity);assert.notEqual(alias.ownerLoginAliasEmail('صالون آخر'),identity);
+for(const invalid of ['','a','123456','name@example.com','<script>','x'.repeat(121)])assert.equal(alias.ownerLoginAliasEmail(invalid),null);
+let credentials,signedOut=0,error=null,status='active',role='cafe_owner';
+const supabase={auth:{signInWithPassword:async(input)=>{credentials=input;return {data:{user:error?null:{id:'owner',user_metadata:{}},session:null},error}},signOut:async()=>{signedOut++;}},from(table){const query={select:()=>query,eq:()=>query,limit:()=>query,maybeSingle:async()=>({data:table==='profiles'?{id:'owner',role,status}:{cafe_id:'brand',cafes:{id:'brand',name:'Salon',business_category:'hair_salons'}},error:null})};return query;}};
+const actions=load('app/actions/auth.ts',{'@/lib/auth/owner-login-alias':alias,'@/lib/supabase/server':{createClient:async()=>supabase},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({eq:()=>({eq:()=>({eq:()=>({maybeSingle:async()=>({data:null})})})})})})})},'@/lib/auth/phone-otp':{normalizeSaudiPhone:input=>/^05\d{8}$/.test(input)?'966'+input.slice(1):null},'@/lib/platform/business-categories':{getDashboardPathForCategory:()=>'/dashboard'},'@/lib/data/operation-events':{operationEventTypes:{brandLogin:'brand_login'},recordOperationEvent:async()=>{}},'@/lib/data/representatives':{loginRepresentativeWithPassword:async()=>null},'@/lib/data/cashier':{loginCashierWithPassword:async()=>null}});
+assert.equal((await actions.loginOwnerAction(name,'test-password')).redirectTo,'/dashboard');assert.deepEqual(credentials,{email:identity,password:'test-password'});
+await actions.loginOwnerAction('TEST@example.com','test-password');assert.equal(credentials.email,'test@example.com');
+await actions.loginOwnerAction('0500000000','test-password');assert.equal(credentials.phone,'+966500000000');
+error={code:'invalid_credentials',status:400};assert.equal((await actions.loginOwnerAction(name,'wrong-password')).ok,false);
+error={status:429};assert.equal((await actions.loginOwnerAction(name,'test-password')).ok,false);
+error=null;status='suspended';assert.equal((await actions.loginOwnerAction(name,'test-password')).ok,false);assert.equal(signedOut,1);
+status='active';role='customer';assert.equal((await actions.loginOwnerAction(name,'test-password')).ok,false);assert.equal(signedOut,2);
+console.log('PASS username normalization, distinct identities, real password authentication, email/phone regression, bad password, throttle, suspension and role guards');

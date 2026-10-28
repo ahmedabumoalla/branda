@@ -104,10 +104,10 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} aria-busy={loading}>
             <fieldset disabled={loading} className={styles.fields}>
               <div className={styles.field}>
-                <label htmlFor="login-identity">البريد الإلكتروني أو رقم الجوال</label>
+                <label htmlFor="login-identity">البريد الإلكتروني أو الجوال أو اسم الدخول</label>
                 <div className={styles.inputWrap}>
                   <Mail size={20} strokeWidth={1.6} aria-hidden="true" />
-                  <input id="login-identity" name="username" type="text" dir="ltr" required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="name@example.com / 05xxxxxxxx" value={email} onChange={event => setEmail(event.target.value)} aria-describedby={loginMessage ? "login-message" : undefined} />
+                  <input id="login-identity" name="username" type="text" dir="auto" required maxLength={254} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="أدخل البريد أو الجوال أو اسم الدخول" value={email} onChange={event => setEmail(event.target.value)} aria-describedby={loginMessage ? "login-message" : undefined} />
                 </div>
               </div>
               <div className={styles.field}>

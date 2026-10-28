@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ownerLoginAliasEmail } from "@/lib/auth/owner-login-alias";
 import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 import {
   changeCustomerPassword,
@@ -153,8 +154,11 @@ export async function loginOwnerAction(
     const supabase = await createClient();
     const normalizedEmail = email.trim().toLowerCase();
     const phoneLogin = normalizedEmail.includes("@") ? null : normalizeSaudiPhone(normalizedEmail);
+    const authEmail = !phoneLogin && !normalizedEmail.includes("@")
+      ? ownerLoginAliasEmail(normalizedEmail) ?? normalizedEmail
+      : normalizedEmail;
     let { data: authData, error: authError } = await supabase.auth.signInWithPassword(
-      phoneLogin ? { phone: `+${phoneLogin}`, password } : { email: normalizedEmail, password },
+      phoneLogin ? { phone: `+${phoneLogin}`, password } : { email: authEmail, password },
     );
 
     // Infrastructure failures must not be reported as an incorrect password or
