@@ -105,7 +105,9 @@
 @media(max-width:720px){
   .barber55{--gutter:24px}
   .barber55 .opening{background:var(--surface);padding-bottom:calc(82px + env(safe-area-inset-bottom))}
-  .barber55 .opening::after{background:linear-gradient(180deg,#0b1220b8 0%,#0b122050 30%,#0b122000 43%,#0b122030 60%,#0b1220f5 84%,#0b1220 100%)}
+  /* A cool overhead softbox falls into a quiet edge vignette and deep lower shadow. */
+  .barber55 .opening::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 68% 92% at 52% -12%,#d1e4ff4d 0%,#a4c2ec24 32%,#8cadd00a 54%,transparent 76%);mix-blend-mode:screen}
+  .barber55 .opening::after{background:linear-gradient(90deg,#03091366 0%,transparent 24%,transparent 76%,#03091366 100%),linear-gradient(180deg,#0b122038 0%,#0b12203d 24%,#0b12200d 43%,#07101d4d 60%,#07101deb 84%,#0b1220 100%)}
   .barber55 .opening .header{min-height:90px;border-color:var(--line)}
   .barber55 .logo{width:150px;height:54px}
   .barber55 .headerBooking{border-radius:12px;border-color:#c7d8ee60;background:#10172755}

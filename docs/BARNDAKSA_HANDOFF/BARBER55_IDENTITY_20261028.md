@@ -38,3 +38,7 @@ Final hero prompt:
 - Evidence: `output/barber55-browser.json`, `output/barber55-verification.json`, `output/barber55-publication.json`; release build log `barber55-build.log`
 - Release only these scoped source/assets/docs from the clean release worktree; never publish the dirty root wholesale
 - Production completion requires exact GitHub main/Vercel project `branda-2`/apex/www match and public salon/image HTTP 200; final deployment evidence records the exact commit and deployment
+
+## Cinematic light refinement — 2026-10-28T17:48:50.696Z
+
+Barber55 mobile opening receives a static cool overhead soft light, subtle side vignette and a deeper lower shadow. Existing image and text remain intact; overlay cannot capture taps. No animation, layout, booking logic or database changes. Root/release types/text, diff and Node24 production build passed. Source-only visual review for this bounded edit; no additional browser inspection. Evidence output/barber55-lighting-verification.json and output/barber55-lighting-publication.json
