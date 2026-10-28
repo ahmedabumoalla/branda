@@ -12,6 +12,8 @@ import styles from "./public-salon.module.css";
 const money = (amount: number) => amount.toLocaleString("ar-SA", { maximumFractionDigits: 2 });
 
 export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneMenu; announcements: SalonAnnouncement[]; colors: { background: string; foreground: string; accent: string } }) {
+  // This commissioned identity belongs to this tenant, even if its slug changes.
+  const barber55 = menu.cafeId === "ac27c25a-79f3-40f7-ade2-70df8f715551";
   const [bookingOpen, setBookingOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const [serviceId, setServiceId] = useState("");
@@ -75,27 +77,27 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </div>
     </article>;
   }
-  return <main className={styles.page} style={brandStyle} dir="rtl">
+  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ""}`} style={brandStyle} dir="rtl">
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
     <div className={styles.opening}>
       <header className={styles.header}>
         <a href={`/salon/${menu.slug}`} className={styles.brand}>
-          {menu.logoUrl ? <Image unoptimized width={64} height={64} src={menu.logoUrl} alt="" className={styles.logo} /> : <span className={styles.brandMark}><Scissors aria-hidden="true" /></span>}
-          <span><strong>{menu.name}</strong><small>العناية بالرجل</small></span>
+          {menu.logoUrl ? <Image unoptimized width={64} height={64} src={menu.logoUrl} alt={barber55 ? menu.name : ""} className={styles.logo} /> : <span className={styles.brandMark}><Scissors aria-hidden="true" /></span>}
+          <span><strong>{menu.name}</strong><small>{barber55 ? "حلاقة رجالية بطابعك" : "العناية بالرجل"}</small></span>
         </a>
         <nav className={styles.nav} aria-label="أقسام الصالون"><a href="#services">الخدمات والأسعار</a>{hasOffers && <a href="#offers">العروض والجديد</a>}{menu.loyaltyEnabled && <a href="#loyalty">بطاقة الولاء</a>}</nav>
         <button className={styles.headerBooking} onClick={() => setBookingOpen(true)}><CalendarDays aria-hidden="true" /><span>احجز موعدك</span><ArrowUpLeft aria-hidden="true" /></button>
       </header>
       <section className={styles.hero} aria-labelledby="salon-heading">
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}><span />تفاصيل صغيرة تصنع الفرق</p>
-          <h1 id="salon-heading">أناقتك تبدأ<br /><em>من التفاصيل</em></h1>
+          <p className={styles.eyebrow}><span />{barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
+          <h1 id="salon-heading">{barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
           <p className={styles.heroDescription}>{menu.description || "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها"}</p>
           <div className={styles.heroActions}><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز وقتك <ArrowUpLeft aria-hidden="true" /></button><a className={styles.textLink} href="#services">اكتشف الخدمات <ArrowDown aria-hidden="true" /></a></div>
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
-          <div className={styles.artFrame}><Image src="/salon/grooming-editorial.webp" width={1400} height={933} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 150vh, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">THE ART OF GROOMING</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          <div className={styles.artFrame}><Image src={barber55 ? "/salon/barber-55/grooming-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 ? 1024 : 1400} height={barber55 ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>
