@@ -39,6 +39,10 @@ Final hero prompt:
 - Release only these scoped source/assets/docs from the clean release worktree; never publish the dirty root wholesale
 - Production completion requires exact GitHub main/Vercel project `branda-2`/apex/www match and public salon/image HTTP 200; final deployment evidence records the exact commit and deployment
 
+Published 2026-10-28T17:37:18.789Z: commit 0ad830193d43b061071c43abaa59b566856c86b6, Vercel dpl_2CLcfu3fDDcBadRgMVyqc1H5pESw; correct project and both exact aliases verified; salon and both assets HTTP200 with exact asset bytes
+
 ## Cinematic light refinement — 2026-10-28T17:48:50.696Z
 
 Barber55 mobile opening receives a static cool overhead soft light, subtle side vignette and a deeper lower shadow. Existing image and text remain intact; overlay cannot capture taps. No animation, layout, booking logic or database changes. Root/release types/text, diff and Node24 production build passed. Source-only visual review for this bounded edit; no additional browser inspection. Evidence output/barber55-lighting-verification.json and output/barber55-lighting-publication.json
+
+Lighting published 2026-10-28T17:51:14.355Z: 0e2acbb0d4bfb8f706fc3d59cd90a4c54a8f8710, dpl_Cjz5auSgTYEjhhmRoMDAHgd3rJHG; exact main/apex/www and live CSS checked

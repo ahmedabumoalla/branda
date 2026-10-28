@@ -1,0 +1,60 @@
+{
+  "at": "2026-10-28T18:06:55.016Z",
+  "rootCause": "Local publishing flag remained false while production runtime was already true",
+  "runtime": {
+    "at": "2026-10-28T18:03:45.859Z",
+    "runtimes": [
+      {
+        "origin": "http://127.0.0.1:3000",
+        "http": 200,
+        "googleReady": true,
+        "googlePending": false,
+        "authenticatedOwner": true
+      },
+      {
+        "origin": "https://barndaksa.com",
+        "http": 200,
+        "googleReady": true,
+        "googlePending": false,
+        "authenticatedOwner": true
+      }
+    ]
+  },
+  "activation": {
+    "at": "2026-10-28T18:05:51.967Z",
+    "slug": "barber-55",
+    "programEnabled": true,
+    "googleEnabled": true,
+    "appleEnabled": true,
+    "googleAuth": 200,
+    "classCreated": false,
+    "classReadStatus": 200,
+    "reviewStatus": "approved",
+    "logoHttp": 200,
+    "customerPassesCreated": 0,
+    "messagesSent": 0
+  },
+  "pages": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "http": 200,
+      "programAndBothWalletsEnabled": true
+    },
+    {
+      "origin": "https://barndaksa.com",
+      "http": 200,
+      "programAndBothWalletsEnabled": true
+    }
+  ],
+  "sourceChanges": false,
+  "productionEnvironmentChanges": false,
+  "customerPassesCreated": 0,
+  "messagesSent": 0,
+  "checks": {
+    "typescript": "run/pass",
+    "textIntegrity": "run/pass",
+    "provider": "OAuth200 / class approved / logo200",
+    "database": "guarded salon-only program activation, other program hash unchanged"
+  },
+  "limits": "No customer enrolled or handset installation tested"
+}
