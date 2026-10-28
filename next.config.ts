@@ -4,7 +4,14 @@ import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, 
 
 const nextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
-  outputFileTracingIncludes: { "/*": ["./public/fonts/tajawal-regular.ttf", "./public/fonts/tajawal-bold.ttf"] },
+  outputFileTracingIncludes: {
+    "/*": ["./public/fonts/tajawal-regular.ttf", "./public/fonts/tajawal-bold.ttf"],
+    // Turbopack cannot infer Chromium's dynamically resolved binary directory.
+    "/api/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],
+    "/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],
+    "/dashboard/finance": ["./node_modules/@sparticuz/chromium/bin/*.br"],
+    "/dashboard/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],
+  },
   images: {
     remotePatterns: [KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH].map(path => ({ protocol: "https" as const, hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${path}**` })),
     formats: ["image/webp"],
