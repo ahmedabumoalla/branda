@@ -108,7 +108,12 @@ const lease = '33333333-3333-4333-8333-333333333333';
   await finance.executeBrandFinanceCommand({ operation: 'sale', requestId: id, payload: {} }, 'brand'); assert.equal(deferred.length, 0, 'Cash sale without phone has no customer side effects');
 
   let shiftCalls = 0, customerCalls = 0; process.env.CRON_SECRET = 'x'.repeat(32);
-  const route = load('app/api/finance/jobs/route.ts', { '@/lib/data/finance-shift-alerts': { dispatchShiftAlerts: async () => { shiftCalls++; throw Error('down'); } }, '@/lib/data/finance-pos-customer-messages': { dispatchFinancePosCustomerMessages: async () => { customerCalls++; return { queued: 0 }; } } });
+  let renderCalls=0, renderFailure=false;
+  const route = load('app/api/finance/jobs/route.ts', { '@/lib/data/finance-customer-receipt': { createFinanceCustomerReceiptPdf: async receipt => { renderCalls++; assert.equal(receipt.cafeId,undefined); assert.equal(receipt.customerPhone,undefined); if(renderFailure)throw Error('private failure'); return Buffer.from('%PDF-synthetic'); } }, '@/lib/data/finance-shift-alerts': { dispatchShiftAlerts: async () => { shiftCalls++; throw Error('down'); } }, '@/lib/data/finance-pos-customer-messages': { dispatchFinancePosCustomerMessages: async () => { customerCalls++; return { queued: 0 }; } } });
+  const probe=()=>new Request('https://local/api/finance/jobs?check=receipt', {headers:{authorization:`Bearer ${process.env.CRON_SECRET}`}});
+  assert.equal((await route.GET(new Request('https://local/api/finance/jobs?check=receipt'))).status,401); assert.equal(renderCalls,0);
+  const checked=await route.GET(probe()); assert.equal(checked.status,200); assert.equal(checked.headers.get('content-type'),'application/pdf'); assert.equal(checked.headers.get('cache-control'),'no-store'); assert.equal(await checked.text(),'%PDF-synthetic'); assert.equal(customerCalls,0); assert.equal(shiftCalls,0);
+  renderFailure=true; const failed=await route.GET(probe()); assert.equal(failed.status,503); assert.deepEqual(await failed.json(),{error:'finance_receipt_renderer_unavailable'}); assert.equal(customerCalls,0); renderFailure=false;
   assert.equal((await route.GET(new Request('https://local/api/finance/jobs'))).status, 401); assert.equal(customerCalls, 0);
   const cron = await route.GET(new Request('https://local/api/finance/jobs', { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } })); assert.equal(cron.status, 503); assert.equal(customerCalls, 1); assert.equal(shiftCalls, 1); assert.deepEqual((await cron.json()).posCustomer, { queued: 0 });
   console.log('PASS POS customer services: phone normalization, scoped RPCs, no public card capability, shared pager postcommit, HMAC retry, private validation, durable message outcomes and isolated cron failures');
