@@ -32,11 +32,13 @@ export async function getCafeBySlug(slug: string) {
 
   if (publicCafeError) throw publicCafeError;
 
-  if (Array.isArray(publicCafeRows)) {
-    return publicCafeRows[0] ?? null;
-  }
+  const publicCafe = Array.isArray(publicCafeRows) ? publicCafeRows[0] : publicCafeRows;
+  if (publicCafe) return publicCafe;
 
-  return publicCafeRows ?? null;
+  // Salon direct links share the standalone salon's active-brand visibility.
+  // Directory listing privacy and all non-salon lookup rules stay unchanged.
+  const salon = await getPublicCafeBySlugAdmin(normalizedSlug);
+  return salon?.business_category === "hair_salons" ? salon : null;
 }
 
 export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {

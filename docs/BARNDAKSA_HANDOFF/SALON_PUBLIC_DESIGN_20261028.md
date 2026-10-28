@@ -20,6 +20,8 @@ Date: 2026-10-28
 
 ## Pending separate loyalty activation
 
+Update: the authentication blocker and activation work described below are resolved in [SALON_BOOKING_LOYALTY_20261028.md](SALON_BOOKING_LOYALTY_20261028.md). The remaining paragraphs preserve the earlier design-release boundary
+
 Automatic enrollment and one WhatsApp card link after booking is implemented but NOT included in this design release, because current Supabase CLI account cannot access project kpguwjfkkylrdlvzeezz (403). User login challenge is pending; no login secrets belong in this handoff
 
 Work is preserved in C:/Projects/branda-public-finance-20261026 on feat/salon-public-design-20261028:

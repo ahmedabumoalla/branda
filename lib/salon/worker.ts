@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { salonPortalToken } from "@/lib/data/salon";
+import { salonLoyaltyToken } from "./loyalty-link";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { isGreenApiConfigured, sendGreenApiPagerMessage } from "@/lib/whatsapp/green-api";
 import { salonTime } from "./types";
@@ -9,7 +10,7 @@ export async function runSalonMessageJobs(limit = 10) {
   const result = { configured: isGreenApiConfigured(), claimed: 0, sent: 0, skipped: 0, uncertain: 0 };
   if (!result.configured) return result;
   const db = createAdminClient();
-  const { data, error } = await db.rpc("salon_claim_messages", { p_limit: Math.min(20, Math.max(1, limit)) });
+  const { data, error } = await db.rpc("salon_claim_messages_v2", { p_limit: Math.min(20, Math.max(1, limit)) });
   if (error) throw error;
   const jobs = (data ?? []) as { id: string; booking_id: string; cafe_id: string; kind: string; phone: string; lease_token: string }[];
   result.claimed = jobs.length;
@@ -26,6 +27,7 @@ export async function runSalonMessageJobs(limit = 10) {
         let content: string;
         if (job.kind === "owner_new") content = `عندك حجز جديد باسم ${b.customer_name}\nالموعد المطلوب: ${salonTime(b.requested_start)}\nتأكيد الحجز أو اقتراح موعد آخر\nhttps://barndaksa.com/dashboard/bookings?booking=${job.booking_id}`;
         else if (job.kind === "owner_response") content = `${b.customer_name}\n${b.status === "confirmed" ? "وافق العميل على الموعد المقترح" : "رفض العميل الموعد المقترح"}\nhttps://barndaksa.com/dashboard/bookings?booking=${job.booking_id}`;
+        else if (job.kind === "loyalty_welcome") content = `أهلًا ${b.customer_name}\nبطاقة ولائك جاهزة\nافتح بطاقتك وأضفها إلى محفظة جوالك\nhttps://barndaksa.com/salon/card/${salonLoyaltyToken(job.booking_id)}\n\nمتابعة طلب الحجز\n${portal}\nالموعد ينتظر تأكيد الصالون`;
         else if (job.kind === "call") content = `${b.customer_name} دورك جاء\nتفضل إلى الصالون لبدء خدمتك`;
         else if (job.kind === "completed") content = `شكرًا لزيارتك ${b.customer_name}\nيسعدنا تقييمك للخدمة\n${portal}${features.includes("loyalty") ? `\n\nبطاقة الولاء والمكافآت\nhttps://barndaksa.com/loyalty/${brand.slug}` : ""}`;
         else if (job.kind === "proposed") content = `اقترح الصالون موعدًا بديلًا\n${salonTime(b.proposed_start)}\nوافق على الموعد أو ارفضه من رابط حجزك\n${portal}`;

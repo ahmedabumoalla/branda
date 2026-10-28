@@ -25,6 +25,22 @@ async function load(file, stubs = {}) {
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new Error("Real network disabled in salon tests"); };
 try {
+  let publicBrand = null, directBrand = { id: "salon", status: "active", business_category: "hair_salons" }, adminReads = 0;
+  const brandQuery = admin => { const query = { select: () => query, eq: () => query, is: () => query, maybeSingle: async () => { if (admin) adminReads++; return { data: admin ? directBrand : null, error: null }; } }; return query; };
+  const cafeLookup = await load("lib/data/cafes.ts", {
+    "@/lib/supabase/server": { createClient: async () => ({ from: () => brandQuery(false), rpc: async () => ({ data: publicBrand ? [publicBrand] : [], error: null }) }) },
+    "@/lib/supabase/admin": { createAdminClient: () => ({ from: () => brandQuery(true) }) },
+    "@/lib/platform/maintenance": {},
+  });
+  ok((await cafeLookup.getCafeBySlug("salon-test"))?.id === "salon", "unlisted active salon direct loyalty link shares public salon visibility");
+  directBrand = { ...directBrand, business_category: "cafes_coffee" };
+  ok(await cafeLookup.getCafeBySlug("private-cafe") === null, "private cafe remains inaccessible");
+  directBrand = { ...directBrand, business_category: "hair_salons", status: "suspended" };
+  ok(await cafeLookup.getCafeBySlug("inactive-salon") === null, "inactive salon cannot use direct lookup");
+  directBrand = null;
+  ok(await cafeLookup.getCafeBySlug("missing-salon") === null, "missing or deleted salon remains unavailable");
+  publicBrand = { id: "public-cafe" }; const priorReads = adminReads;
+  ok((await cafeLookup.getCafeBySlug("public-cafe"))?.id === "public-cafe" && adminReads === priorReads, "existing public cafe resolution remains unchanged");
   const types = await load("lib/salon/types.ts");
   const loyaltyTheme = await load("components/rast-loyalty/loyalty-theme.ts");
   const salonTheme = await load("components/salon/salon-theme.ts", { "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
@@ -44,7 +60,15 @@ try {
     for (const method of ["select", "eq", "is", "gte", "maybeSingle", "single", "order", "limit"]) b[method] = () => b;
     return b;
   }
+  const signing = { "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "test-secret-only-never-production" } };
+  const loyaltySessions = await load("lib/auth/loyalty-session-token.ts", signing);
+  let linkContext = [{ cafe_id: cafeId, profile_id: id, slug: "salon-test", phone: "966500000001" }];
+  const loyaltyLink = await load("lib/salon/loyalty-link.ts", { ...signing,
+    "@/lib/auth/loyalty-session-token": loyaltySessions,
+    "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name,args) => { assert.equal(name,"salon_loyalty_link_context"); assert.match(args.p_hash,/^[a-f0-9]{64}$/); return {data:linkContext,error:null}; } }) },
+  });
   const data = await load("lib/data/salon.ts", {
+    "@/lib/salon/loyalty-link": loyaltyLink,
     "next/headers": { headers: async () => new Headers({ "x-vercel-forwarded-for": "127.0.0.1" }) },
     "@/lib/supabase/admin": { createAdminClient: () => ({ from: builder, rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: true, error: null }; } }) },
     "@/lib/data/loyalty-identity": { getLoyaltyBrandAppearance: async () => ({ colors: { background: "#4a281d", foreground: "#ffffff", accent: "#d9a33f" } }) },
@@ -58,6 +82,16 @@ try {
   const token = data.salonPortalToken(id);
   ok(/^[a-f0-9]{64}$/.test(token) && token === data.salonPortalToken(id), "retry-stable opaque capability");
   ok(token !== data.salonPortalToken(cafeId), "different bookings have different capabilities");
+  ok(loyaltyLink.salonLoyaltyToken(id) !== token, "WhatsApp card capability differs from customer booking portal");
+  const cardSession = await loyaltyLink.salonLoyaltySession(loyaltyLink.salonLoyaltyToken(id));
+  ok(loyaltySessions.readLoyaltySessionToken(cardSession.token,"salon-test")?.profileId === id, "private link creates existing brand-scoped loyalty session");
+  ok(await loyaltyLink.salonLoyaltySession("bad") === null, "malformed card capability rejected");
+  const linkRoute = await load("app/salon/card/[token]/route.ts", { "next/server": require("next/server"), "@/lib/salon/loyalty-link": loyaltyLink });
+  let linked = await linkRoute.GET(new Request("https://barndaksa.com/salon/card/test"), { params: Promise.resolve({token:loyaltyLink.salonLoyaltyToken(id)}) });
+  ok(linked.status === 303 && linked.headers.get("location") === "https://barndaksa.com/loyalty/salon-test" && linked.headers.get("set-cookie").includes("HttpOnly"), "card link redirects to original loyalty page with HttpOnly session");
+  ok(linked.headers.get("cache-control").includes("no-store") && linked.headers.get("referrer-policy") === "no-referrer", "capability response cannot be cached or leaked as referrer");
+  linkContext = []; linked = await linkRoute.GET(new Request("https://barndaksa.com/salon/card/test"), { params: Promise.resolve({token:loyaltyLink.salonLoyaltyToken(id)}) });
+  ok(linked.status === 404 && !linked.headers.get("set-cookie"), "expired or revoked link cannot mint cookie");
   const portal = await data.getSalonPortal(token);
   ok(portal.booking.phone === "" && !JSON.stringify(portal).includes("private") && !JSON.stringify(portal).includes("secret"), "public projection excludes phone and private hashes");
   ok(await data.getSalonPortal("wrong") === null, "invalid capabilities rejected before lookup");
@@ -72,18 +106,19 @@ try {
   ok(rpcCalls[0].args.p_actor === id && rpcCalls[0].args.p_cafe === cafeId && rpcCalls[0].args.p_actor_kind === "staff", "actor and tenant derive from verified staff context");
   rpcCalls = [];
   await data.createSalonBooking({ id, slug: "salon-test", name: "عميل اختبار", phone: "٠٥٠٠٠٠٠٠٠١", serviceId: null, start: "2030-05-10T11:30:00.000Z" });
+  ok(rpcCalls[0].name === "salon_create_booking_with_loyalty" && rpcCalls[0].args.p_loyalty_hash !== rpcCalls[0].args.p_portal_hash, "booking enrollment is atomic with independent hashed card capability");
   ok(rpcCalls[0].args.p_phone === "966500000001", "Arabic phone digits normalized");
   ok(!rpcCalls[0].args.p_client_key.includes("127.0.0.1") && rpcCalls[0].args.p_portal_hash !== token, "IP and capabilities hashed before storage");
 
   async function workerHarness(options = {}) {
     let queue = options.kinds ?? ["call"], sent = [], finished = [], claims = 0, authorizations = 0;
     const db = { from: builder, rpc: async (name, args) => {
-      if (name === "salon_claim_messages") { claims++; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
+      if (name === "salon_claim_messages_v2") { claims++; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
       if (name === "salon_authorize_dispatch") { authorizations++; return { data: options.authorized ?? true, error: null }; }
       if (name === "salon_finish_message") { finished.push(args); if (options.finishError) throw new Error("private db error"); return { data: true, error: null }; }
       throw new Error(name);
     } };
-    const worker = await load("lib/salon/worker.ts", {
+    const worker = await load("lib/salon/worker.ts", { "./loyalty-link": loyaltyLink,
       "@/lib/supabase/admin": { createAdminClient: () => db }, "@/lib/data/salon": { salonPortalToken: () => token },
       "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => options.features ?? ["menu", "pager", "loyalty"] },
       "@/lib/whatsapp/green-api": { isGreenApiConfigured: () => options.configured ?? true, sendGreenApiPagerMessage: async input => { sent.push(input); if (options.sendError) throw new Error("secret-provider-error"); return { providerMessageId: "provider-id" }; } }, "./types": types,
@@ -100,6 +135,8 @@ try {
   h = await workerHarness({ kinds: ["completed"], features: ["pager"] }); await h.worker.runSalonMessageJobs(); ok(!h.sent[0].message.includes("/loyalty/"), "no unavailable loyalty link");
   h = await workerHarness({ kinds: ["owner_new", "owner_response", "proposed", "confirmed", "rejected"] }); await h.worker.runSalonMessageJobs(); ok(h.sent.length === 5 && h.sent.every(x => !x.message.includes("undefined")), "all notification kinds render");
   ok(h.sent.find(x => x.message.includes("عندك حجز جديد")).message.includes(`/dashboard/bookings?booking=${id}`), "owner deep link opens exact appointment");
+  h = await workerHarness({ kinds: ["loyalty_welcome"] }); await h.worker.runSalonMessageJobs(); await h.worker.runSalonMessageJobs();
+  ok(h.sent.length === 1 && h.sent[0].message.includes(`/salon/card/${loyaltyLink.salonLoyaltyToken(id)}`) && h.sent[0].message.includes("ينتظر تأكيد الصالون"), "welcome sends one direct card link without falsely confirming appointment");
   const publicUi = await load("components/salon/public-salon.tsx", { "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme });
   const html = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { name: "صالون الاختبار", slug: "salon-test", products: [{ id, name: "حلاقة شعر", catalogKind: "service", price: 40, preparationTimeMinutes: 30, images: [] }, { id: cafeId, name: "زيت عناية", catalogKind: "product", price: 25, images: [] }], contacts: {}, loyaltyEnabled: true }, announcements: [{ id: "ad", title: "خدمة جديدة", description: "عناية باللحية" }], colors: { background: "#112211", foreground: "#ffffff", accent: "#aabbcc" } }));
   ok(html.includes("الخدمات والأسعار") && html.includes("منتجات العناية") && html.includes("حلاقة شعر") && html.includes("زيت عناية"), "services and retail products separated on public page");

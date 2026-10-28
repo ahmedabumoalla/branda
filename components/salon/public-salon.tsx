@@ -95,7 +95,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
-          <div className={styles.artFrame}><Image src="/salon/grooming-editorial.webp" width={1400} height={933} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 100vw, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">THE ART OF GROOMING</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          <div className={styles.artFrame}><Image src="/salon/grooming-editorial.webp" width={1400} height={933} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 150vh, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">THE ART OF GROOMING</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>
@@ -120,7 +120,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
         <div className={styles.booking}>
         <div className={styles.bookingIntro}><p className={styles.eyebrow}>حان وقتك</p><h2 id="booking-heading"><span>موعدك القادم</span>{" "}<em>يبدأ هنا</em></h2><p>خذ وقتًا لنفسك وحدد الموعد الذي يناسب يومك</p><ol className={styles.steps}><li><span>١</span><div><strong>اختر خدمتك ووقتك</strong><p>طلب واحد بكل تفاصيل موعدك</p></div></li><li><span>٢</span><div><strong>يصلك رد الصالون</strong><p>تأكيد الموعد أو اقتراح وقت آخر عبر واتساب</p></div></li><li><Check aria-hidden="true" /><div><strong>ننتظرك في موعدك</strong><p>اعتماد الموعد بعد تأكيد الصالون</p></div></li></ol><p className={styles.timezone}><Clock3 aria-hidden="true" />جميع الأوقات بتوقيت السعودية</p></div>
         <form className={styles.form} onSubmit={submit} onChange={() => { if (!pending) requestId.current = null; }} aria-busy={pending}>
-          <div className={styles.formHeading}><CalendarDays aria-hidden="true" /><div><h3>احجز موعدك</h3><p>خطوة بسيطة لعناية تستحقها</p></div></div>
+          <div className={styles.formHeading}><CalendarDays aria-hidden="true" /><div><h3>احجز موعدك</h3><p>{menu.loyaltyEnabled ? "حجزك وبطاقة ولائك في خطوة واحدة" : "خطوة بسيطة لعناية تستحقها"}</p></div></div>
           <label className={styles.field}>اسمك<input name="name" autoComplete="name" placeholder="كيف نناديك" minLength={2} maxLength={120} required disabled={pending} /></label>
           <label className={styles.field}>جوال واتساب<input name="phone" autoComplete="tel" inputMode="tel" dir="ltr" placeholder="05xxxxxxxx" maxLength={30} required disabled={pending} /></label>
           <label className={`${styles.field} ${styles.full}`}>الخدمة<select value={serviceId} onChange={e => setServiceId(e.target.value)} disabled={pending}><option value="">أحدد الخدمة مع الصالون</option>{services.map(p => <option key={p.id} value={p.id}>{p.name} — {money(p.price)} ر س</option>)}</select></label>
@@ -128,7 +128,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <label className={styles.field}>التاريخ<input ref={dateInput} type="date" name="date" dir="ltr" lang="en" min={salonToday()} required disabled={pending} /></label><label className={styles.field}>الوقت<input type="time" name="time" dir="ltr" lang="en" required disabled={pending} /></label>
           {error && <p role="alert" className={`${styles.error} ${styles.full}`}>{error}</p>}
           <button className={`${styles.submit} ${styles.full}`} disabled={pending}>{pending ? "جارٍ إرسال طلبك" : "إرسال طلب الحجز"}<ArrowUpLeft aria-hidden="true" /></button>
-          <p className={`${styles.consent} ${styles.full}`}>بإرسال الطلب توافق على تلقي رسائل هذا الحجز والنداء والتقييم عبر واتساب</p>
+          <p className={`${styles.consent} ${styles.full}`}>{menu.loyaltyEnabled ? "بإرسال الطلب توافق على التسجيل في الولاء وتلقي بطاقة الولاء ورسائل الحجز والنداء والتقييم عبر واتساب" : "بإرسال الطلب توافق على تلقي رسائل هذا الحجز والنداء والتقييم عبر واتساب"}</p>
         </form>
         </div>
       </dialog>

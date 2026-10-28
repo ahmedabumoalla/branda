@@ -78,5 +78,52 @@ await q("UPDATE feature_access SET enabled=false WHERE cafe_id=$1 AND feature='p
 await db.exec('RESET ROLE;SET ROLE authenticated');await denied(()=>q('SELECT * FROM salon_bookings'),/permission denied/);await denied(()=>create(500),/permission denied/);await denied(()=>q('SELECT * FROM salon_message_jobs'),/permission denied/);
 await db.exec('RESET ROLE;SET ROLE anon');await denied(()=>create(501),/permission denied/);await denied(()=>q('SELECT * FROM salon_announcements'),/permission denied/);
 await db.exec('RESET ROLE');ok(await v("SELECT catalog_kind FROM menu_products WHERE id=$1",[id(21)])==='product','cafe catalog preserved');
+// Exercise the real name/phone enrollment function behind the new booking transaction.
+await db.exec(`
+ CREATE FUNCTION public.normalize_customer_phone(text) RETURNS text LANGUAGE sql IMMUTABLE AS $$SELECT CASE WHEN $1 ~ '^9665[0-9]{8}$' THEN $1 ELSE NULL END$$;
+ CREATE TABLE customer_profiles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),cafe_id uuid REFERENCES cafes(id),full_name text,phone text,email text,
+ phone_normalized text GENERATED ALWAYS AS (public.normalize_customer_phone(phone)) STORED,status text DEFAULT 'active',blocked_at timestamptz,phone_auth_conflict boolean DEFAULT false,phone_verification_required boolean,user_id uuid,phone_verified_at timestamptz);
+ CREATE TABLE cafe_loyalty_programs(cafe_id uuid PRIMARY KEY REFERENCES cafes(id),enabled boolean DEFAULT true);
+ CREATE TABLE loyalty_cards(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),cafe_id uuid REFERENCES cafes(id),customer_profile_id uuid REFERENCES customer_profiles(id),customer_name text,customer_phone text,customer_email text,status text DEFAULT 'active',card_code text DEFAULT gen_random_uuid()::text,stamps_in_cycle integer DEFAULT 0,UNIQUE(cafe_id,customer_profile_id));
+ CREATE FUNCTION public.record_customer_registration_source(uuid,text) RETURNS void LANGUAGE sql AS $$SELECT$$;
+ INSERT INTO cafe_loyalty_programs VALUES('${id(10)}',true);
+ INSERT INTO feature_access VALUES('${id(10)}','loyalty',true);
+ GRANT SELECT ON customer_profiles,cafe_loyalty_programs,loyalty_cards TO service_role;
+`);
+await db.exec(await readFile('supabase/migrations/20261014121634_loyalty_direct_enrollment.sql','utf8'));
+await db.exec(await readFile('supabase/migrations/20261028112316_salon_booking_loyalty_welcome.sql','utf8'));
+await db.exec('SET ROLE service_role');
+const enrollBooking=(n,phone='966500000600',name='عميل الولاء')=>v('SELECT to_jsonb(salon_create_booking_with_loyalty($1,$2,$3,$4,$5,$6,$7,$8,$9))',[id(n),id(10),name,phone,null,tomorrow,hash(n),hash(8000+n),hash(10000+n)]);
+const enrolled=await enrollBooking(600);
+ok(Boolean(enrolled.loyalty_profile_id)&&enrolled.loyalty_enrollment_attempted,'booking atomically enrolls customer');
+ok(await v('SELECT count(*) FROM loyalty_cards WHERE customer_profile_id=$1',[enrolled.loyalty_profile_id])===1,'one loyalty card issued');
+ok(await v('SELECT stamps_in_cycle FROM loyalty_cards WHERE customer_profile_id=$1',[enrolled.loyalty_profile_id])===0,'booking does not invent a visit stamp');
+ok(await v("SELECT count(*) FROM salon_message_jobs WHERE booking_id=$1 AND kind='loyalty_welcome'",[id(600)])===1,'welcome queued once');
+await enrollBooking(600);
+ok(await v("SELECT count(*) FROM salon_message_jobs WHERE booking_id=$1 AND kind='loyalty_welcome'",[id(600)])===1,'request retry cannot duplicate welcome');
+ok((await enrollBooking(601)).loyalty_profile_id===enrolled.loyalty_profile_id,'returning customer reuses card');
+const mismatched=await enrollBooking(602,'966500000600','اسم آخر');
+ok(!mismatched.loyalty_profile_id&&mismatched.status==='pending','name conflict preserves booking without overwriting identity');
+ok(await v('SELECT full_name FROM customer_profiles WHERE id=$1',[enrolled.loyalty_profile_id])==='عميل الولاء','stored customer name preserved');
+const oldClaims=await q('SELECT * FROM salon_claim_messages(20)');ok(oldClaims.rows.every(r=>r.kind!=='loyalty_welcome'),'old deployed workers cannot misinterpret welcome');
+const newClaims=(await q('SELECT * FROM salon_claim_messages_v2(20)')).rows;
+const welcome=newClaims.find(r=>r.booking_id===id(600)&&r.kind==='loyalty_welcome');ok(Boolean(welcome),'new worker claims welcome');
+ok(await v('SELECT salon_authorize_dispatch($1,$2)',[welcome.id,welcome.lease_token])===true,'one welcome dispatch authorized');
+ok(await v('SELECT salon_authorize_dispatch($1,$2)',[welcome.id,welcome.lease_token])===false,'welcome authorization not replayable');
+ok((await q('SELECT * FROM salon_loyalty_link_context($1)',[hash(10600)])).rows[0]?.profile_id===enrolled.loyalty_profile_id,'valid link resolves own card');
+ok((await q('SELECT * FROM salon_loyalty_link_context($1)',[hash(600)])).rows.length===0,'booking portal token is not a card token');
+await db.exec('RESET ROLE');
+await q('UPDATE customer_profiles SET blocked_at=now() WHERE id=$1',[enrolled.loyalty_profile_id]);
+await db.exec('SET ROLE service_role');
+ok((await q('SELECT * FROM salon_loyalty_link_context($1)',[hash(10600)])).rows.length===0,'blocked customer cannot use card link');
+const anotherWelcome=newClaims.find(r=>r.booking_id===id(601)&&r.kind==='loyalty_welcome');ok(await v('SELECT salon_authorize_dispatch($1,$2)',[anotherWelcome.id,anotherWelcome.lease_token])===false,'block revokes queued welcome');
+await db.exec('RESET ROLE');await q('UPDATE customer_profiles SET blocked_at=null WHERE id=$1',[enrolled.loyalty_profile_id]);
+await q("UPDATE salon_bookings SET created_at=now()-interval '31 days' WHERE id=$1",[id(600)]);
+await db.exec('SET ROLE service_role');ok((await q('SELECT * FROM salon_loyalty_link_context($1)',[hash(10600)])).rows.length===0,'old card link expires');
+await db.exec('RESET ROLE');await q("UPDATE feature_access SET enabled=false WHERE cafe_id=$1 AND feature='loyalty'",[id(10)]);
+await db.exec('SET ROLE service_role');ok(!(await enrollBooking(603,'966500000603')).loyalty_profile_id,'disabled loyalty never enrolls');
+await db.exec('RESET ROLE;SET ROLE anon');await denied(()=>q('SELECT * FROM salon_loyalty_link_context($1)',[hash(10601)]),/permission denied/);await denied(()=>enrollBooking(604),/permission denied/);
+await db.exec('RESET ROLE;SET ROLE authenticated');await denied(()=>q('SELECT * FROM salon_claim_messages_v2(1)'),/permission denied/);
+await db.exec('RESET ROLE');
 console.log(`PASS ${checks} salon SQL checks: category and actor isolation, lifecycle, single dispatch, reviews, rate limits, announcements and cafe preservation`);
 }finally{await db.close();}

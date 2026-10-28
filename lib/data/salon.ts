@@ -10,6 +10,7 @@ import { requireCashierPermission } from "@/lib/data/cashier";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { salonLoyaltyToken } from "@/lib/salon/loyalty-link";
 import { bookingStatuses, type SalonBooking, type SalonCommand, type SalonFilter, type SalonMode, type SalonPage, type SalonAnnouncement } from "@/lib/salon/types";
 
 const uuid = z.string().uuid();
@@ -70,8 +71,8 @@ export async function createSalonBooking(input: unknown) {
   const h = await headers();
   const address = (h.get("x-vercel-forwarded-for") ?? h.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
   const token = salonPortalToken(draft.id);
-  const { error } = await createAdminClient().rpc("salon_create_booking", { p_id: draft.id, p_cafe: brand.id, p_name: draft.name, p_phone: phone, p_service: draft.serviceId, p_start: draft.start,
-    p_portal_hash: hash(token), p_client_key: createHmac("sha256", getSupabaseServiceRoleKey()).update(`salon-client:${address}`).digest("hex") });
+  const { error } = await createAdminClient().rpc("salon_create_booking_with_loyalty", { p_id: draft.id, p_cafe: brand.id, p_name: draft.name, p_phone: phone, p_service: draft.serviceId, p_start: draft.start,
+    p_portal_hash: hash(token), p_loyalty_hash: hash(salonLoyaltyToken(draft.id)), p_client_key: createHmac("sha256", getSupabaseServiceRoleKey()).update(`salon-client:${address}`).digest("hex") });
   rpcError(error);
   return { url: `/salon/booking/${token}` };
 }

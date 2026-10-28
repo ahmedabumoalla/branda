@@ -35,3 +35,26 @@
 .dock>button{display:flex;align-items:center;justify-content:center;min-height:48px;border:0}
 @media(max-width:720px){.bookingTeaser{align-items:start;padding:24px 0 34px;flex-direction:column;gap:18px}.bookingTeaser .primary{width:100%}.bookingDialog{width:calc(100% - 20px);max-height:calc(100dvh - 20px);border-radius:16px}.modalHeader{padding:8px 16px}.modalHeader>span{font-size:11px;max-width:calc(100% - 55px)}.bookingDialog .booking{grid-template-columns:1fr;padding:22px 18px 26px;gap:20px}.bookingDialog .bookingIntro h2{font-size:29px;line-height:1.5}.bookingDialog .bookingIntro h2>span{display:inline;margin-inline-end:8px}.bookingDialog .bookingIntro h2>em{display:inline}.bookingDialog .bookingIntro>.eyebrow,.bookingDialog .steps{display:none}.bookingDialog .bookingIntro>p{font-size:12px;margin-top:8px}.bookingDialog .bookingIntro .timezone{font-size:10px}.bookingDialog .form{padding:18px 14px;gap:13px}.bookingDialog .field{grid-column:auto}.bookingDialog .field.full{grid-column:1/-1}.bookingDialog .field input,.bookingDialog .field select{min-height:48px}.bookingDialog .formHeading{margin-bottom:4px}.bookingDialog .formHeading h3{font-size:16px}.bookingDialog .consent{font-size:10px}}
 @media(max-width:370px){.bookingDialog .field{grid-column:1/-1}.bookingDialog .bookingIntro h2{font-size:26px}}
+
+/* On phones the grooming photograph becomes the entire opening screen. */
+@media(max-width:720px){
+  .opening{min-height:100svh;display:flex;flex-direction:column;isolation:isolate;background:var(--surface);padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  .opening::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,#100c08b8 0%,#100c0838 28%,#100c081f 43%,#100c089e 65%,#100c08ef 100%)}
+  .opening .header{position:relative;z-index:2;border-color:#dec19a35;min-height:88px}
+  .opening .hero{position:static;display:flex;flex:1;align-items:flex-end;padding:clamp(150px,28svh,280px) 0 24px;min-height:0}
+  .opening .heroVisual{position:absolute;inset:0;z-index:-1;padding:0;margin:0;pointer-events:none}
+  .opening .artFrame{position:absolute;inset:0;aspect-ratio:auto;overflow:hidden}
+  .opening .heroImage{width:100%;height:100%;object-fit:cover;object-position:48% center;mask-image:none;-webkit-mask-image:none}
+  .opening .artCaption,.opening .visualNote,.opening .seal{display:none}
+  .opening .heroCopy{z-index:1;width:100%;text-shadow:0 2px 24px #0007}
+  .opening .hero h1{font-size:clamp(40px,11.5vw,60px);line-height:1.3;margin:12px 0 14px}
+  .opening .heroDescription{color:#eee5d7;font-size:12px;max-width:320px;line-height:1.9}
+  .opening .heroActions{margin-top:20px;gap:18px;text-shadow:none}
+  .opening .heroActions .primary{padding-inline:16px;gap:20px}
+  .opening .heroActions .textLink{gap:8px;font-size:11px}
+  .opening .heroNote{margin-top:18px;color:#e5d7c2}
+  .opening .heroNote small{color:#d9cdbd}
+  .opening .openingFooter{position:relative;z-index:1;min-height:42px;padding:0;border-top:0}
+  .opening .openingFooter>div:empty{display:none}
+  .opening .openingFooter .scrollLink{font-size:10px}
+}
