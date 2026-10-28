@@ -64,7 +64,7 @@ function financeReceiptMediaOrigin() {
   return url.origin;
 }
 
-export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
   const { idInstance, apiTokenInstance } = requireGreenApiConfig();
   const mediaOrigin = financeReceiptMediaOrigin();
@@ -75,11 +75,14 @@ export async function sendGreenApiFinanceReceipt(input: { phone: string; message
   body.set("fileName", fileName);
   body.set("file", new Blob([new Uint8Array(input.pdf)], { type: "application/pdf" }), fileName);
   try {
-    const response = await fetch(`${mediaOrigin}/waInstance${idInstance}/sendFileByUpload/${apiTokenInstance}`, { method: "POST", body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(Math.min(15_000, greenApiTimeoutMs())) });
-    if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "unknown" };
+    // Give multipart uploads a bounded budget independent of short text messages.
+    const response = await fetch(`${mediaOrigin}/waInstance${idInstance}/sendFileByUpload/${apiTokenInstance}`, { method: "POST", body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(45_000) });
+    if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "unknown", errorCode: `customer_media_http_${response.status}` };
     const payload = await response.json() as GreenApiSendResponse;
-    return typeof payload.idMessage === "string" && payload.idMessage.length > 0 && payload.idMessage.length <= 200 ? { status: "queued", providerMessageId: payload.idMessage } : { status: "unknown" };
-  } catch { return { status: "unknown" }; }
+    return typeof payload.idMessage === "string" && payload.idMessage.length > 0 && payload.idMessage.length <= 200 ? { status: "queued", providerMessageId: payload.idMessage } : { status: "unknown", errorCode: "customer_media_missing_ack" };
+  } catch (error) {
+    return { status: "unknown", errorCode: error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name) ? "customer_media_timeout" : "customer_media_transport_failed" };
+  }
 }
 
 /** A provider ID means queued by GREEN-API, not delivered or read */

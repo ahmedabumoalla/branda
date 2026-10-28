@@ -43,21 +43,36 @@ export async function dispatchFinancePosCustomerMessages(cafeId?: string) {
     const parsed = jobSchema.safeParse(value);
     let status: "queued" | "rejected" | "unknown" = "rejected";
     let messageId: string | undefined;
+    let errorCode = "customer_receipt_invalid";
     if (parsed.success) {
       if (parsed.data.loyaltyStatus === "stamped" && parsed.data.cardCode) walletCodes.add(parsed.data.cardCode);
+      let pdf: Uint8Array | undefined;
+      const renderStarted = Date.now();
       try {
-        const pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt);
-        const result = await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf, invoiceNumber: parsed.data.receipt.number });
-        status = result.status; messageId = result.providerMessageId;
-      } catch { status = "unknown"; }
+        pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt);
+      } catch {
+        // Only quick pre-send renderer failures can safely retry within this lease.
+        if (Date.now() - renderStarted < 5000) {
+          try { pdf = await createFinanceCustomerReceiptPdf(parsed.data.receipt); } catch { /* No provider request occurred */ }
+        }
+      }
+      errorCode = "customer_receipt_render_failed";
+      if (pdf) {
+        try {
+          const result = await sendGreenApiFinanceReceipt({ phone: parsed.data.phone, message: financePosCustomerMessage(parsed.data), pdf, invoiceNumber: parsed.data.receipt.number });
+          status = result.status; messageId = result.providerMessageId;
+          errorCode = result.errorCode ?? `customer_message_${status}`;
+        } catch { status = "unknown"; errorCode = "customer_media_exception"; }
+      }
     }
     // Invalid queue rows never reach the provider; persist a safe rejection if their lease identity is valid
     const identity = z.object({ id: z.uuid(), leaseToken: z.uuid() }).safeParse(value);
     if (!identity.success) { needsReview++; continue; }
+    if (status !== "queued") console.warn("FINANCE_CUSTOMER_MESSAGE_FAILED", { jobId: identity.data.id, code: errorCode });
     try {
       const { data: completed, error: finishError } = await client.rpc("brand_finance_finish_customer_message", {
         p_job_id: identity.data.id, p_lease_token: identity.data.leaseToken, p_status: status,
-        p_provider_message_id: messageId ?? null, p_error_code: status === "queued" ? null : `customer_message_${status}`,
+        p_provider_message_id: messageId ?? null, p_error_code: status === "queued" ? null : errorCode,
       });
       if (finishError || completed !== true || status !== "queued") needsReview++;
       else queued++;
