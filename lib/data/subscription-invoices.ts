@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import { createClient } from "@/lib/supabase/server";
-import { subscriptionInvoiceSchema, invoiceLocalDate, previewSubscriptionInvoice, type SubscriptionInvoice, type InvoiceList, type InvoicePlan } from "@/lib/platform/subscription-invoices";
+import { subscriptionInvoiceSchema, previewSubscriptionInvoice, type SubscriptionInvoice, type InvoiceList, type InvoicePlan } from "@/lib/platform/subscription-invoices";
 
 export async function getSubscriptionInvoicePlans():Promise<InvoicePlan[]> {
   await requirePlatformAdmin();const db=await createClient();
@@ -16,7 +16,7 @@ export async function listSubscriptionInvoices(input:unknown={page:0,search:''})
   const result=await query.order('issued_at',{ascending:false}).order('id').range(page*20,page*20+19);
   if(result.error)throw Error('تعذر تحميل فواتير الاشتراكات');return {rows:result.data??[],total:result.count??0,page,search};
 }
-function parsedInvoice(input:unknown){const parsed=subscriptionInvoiceSchema.safeParse(input);if(!parsed.success)throw Error('راجع بيانات العميل والرقم الضريبي والباقات والمبالغ');if(parsed.data.dueDate<invoiceLocalDate())throw Error('تاريخ الاستحقاق يجب أن يكون اليوم أو بعده');return parsed.data;}
+function parsedInvoice(input:unknown){const parsed=subscriptionInvoiceSchema.safeParse(input);if(!parsed.success)throw Error('راجع بيانات العميل والرقم الضريبي والباقات والمبالغ');return parsed.data;}
 export async function prepareSubscriptionInvoicePreview(input:unknown){await requirePlatformAdmin();return previewSubscriptionInvoice(parsedInvoice(input),await getSubscriptionInvoicePlans());}
 export async function issueSubscriptionInvoice(input:unknown):Promise<SubscriptionInvoice>{
   await requirePlatformAdmin();const {requestId,...draft}=parsedInvoice(input);const db=await createClient();

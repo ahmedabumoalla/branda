@@ -12,7 +12,7 @@ export const subscriptionInvoiceSchema = z.object({
   requestId: z.uuid(), customer: invoiceCustomerSchema,
   taxInclusive: z.boolean(),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0,10) === v),
-  lines: z.array(z.object({ planId: text(120).min(1), months: z.union([z.literal(1),z.literal(3),z.literal(6),z.literal(9),z.literal(12)]), amountCents: z.number().int().min(1).max(9_999_999_999) }).strict()).min(1).max(8),
+  lines: z.array(z.object({ planId: text(120).min(1), months: z.union([z.literal(1),z.literal(3),z.literal(6),z.literal(9),z.literal(12)]), amountCents: z.number().int().min(0).max(9_999_999_999) }).strict()).min(1).max(8),
 }).strict();
 export type InvoiceCustomer = z.infer<typeof invoiceCustomerSchema>;
 export type SubscriptionInvoiceDraft = z.infer<typeof subscriptionInvoiceSchema>;
@@ -26,7 +26,7 @@ export function parseInvoiceMoney(value: string): number | null {
   const normalized=value.trim().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace('٫','.');
   if(!/^\d{1,8}(?:\.\d{1,2})?$/.test(normalized))return null;
   const [whole,fraction='']=normalized.split('.');const cents=Number(whole)*100+Number(fraction.padEnd(2,'0'));
-  return cents>0&&cents<=9_999_999_999?cents:null;
+  return cents>=0&&cents<=9_999_999_999?cents:null;
 }
 export function invoiceLineAmounts(amountCents: number, taxInclusive: boolean) {
   const netCents=taxInclusive?Math.round(amountCents*100/115):amountCents;
