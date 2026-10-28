@@ -21,7 +21,8 @@ export async function GET(request: Request) {
         lines: [{ name: "قهوة عربية", quantity: 1, unitPrice: 11.5, net: 10, tax: 1.5 }],
       });
       return new Response(new Uint8Array(pdf), { headers: { ...headers, "Content-Type": "application/pdf", "Content-Disposition": "attachment; filename=receipt-check.pdf" } });
-    } catch {
+    } catch (error) {
+      console.error("FINANCE_RECEIPT_RENDER_PROBE_FAILED", error instanceof Error ? error.message : "unknown");
       return Response.json({ error: "finance_receipt_renderer_unavailable" }, { status: 503, headers });
     }
   }
