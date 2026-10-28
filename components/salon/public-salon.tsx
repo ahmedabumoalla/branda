@@ -97,7 +97,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
-          <div className={styles.artFrame}><Image src={barber55 ? "/salon/barber-55/grooming-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 ? 1024 : 1400} height={barber55 ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          <div className={styles.artFrame}><Image src={barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 ? 1024 : 1400} height={barber55 ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>

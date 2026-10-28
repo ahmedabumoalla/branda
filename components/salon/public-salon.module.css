@@ -76,7 +76,7 @@
 .barber55 .primary,.barber55 .dock .dockBooking{background:var(--signature);border-color:var(--signature);color:#fff!important;box-shadow:0 6px 30px #d5143d18}
 .barber55 .primary{border-radius:4px 4px 15px 4px}
 .barber55 .artFrame{aspect-ratio:.9}
-.barber55 .heroImage{object-position:center 64%;mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 82%,transparent);-webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 82%,transparent)}
+.barber55 .heroImage{object-position:center 78%;mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 82%,transparent);-webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent),linear-gradient(to bottom,transparent,#000 10%,#000 82%,transparent)}
 .barber55 .artCaption{inset:auto 40px 15px}
 .barber55 .artCaption span{font-family:Georgia,serif;letter-spacing:.2em;color:var(--copy)}
 .barber55 .seal{background:var(--surface);border-color:#c7d8ee80;color:var(--paper);width:76px;height:76px;right:4px;top:55%;box-shadow:0 0 0 7px #0b122080}
@@ -120,7 +120,7 @@
   .barber55 .opening .heroActions .primary{padding-inline:20px;gap:18px;min-height:52px}
   .barber55 .opening .heroNote{margin-top:16px;color:var(--paper)}
   .barber55 .opening .heroNote small{color:var(--copy)}
-  .barber55 .opening .heroImage{object-position:50% 56%;mask-image:none;-webkit-mask-image:none}
+  .barber55 .opening .heroImage{position:absolute;inset:96px 0 52px;height:calc(100% - 148px);object-position:50% 56%;mask-image:none;-webkit-mask-image:none}
   .barber55 .opening .artFrame{aspect-ratio:auto}
   .barber55 .sectionHead h2{font-size:29px}
   .barber55 .emptyServices{border-radius:6px 6px 20px 6px}
