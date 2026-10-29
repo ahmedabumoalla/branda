@@ -91,7 +91,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </header>
       <section className={styles.hero} aria-labelledby="salon-heading">
         <div className={styles.heroCopy}>
-          {fineCut && menu.logoUrl && <div className={styles.fineCutIdentity}><Image unoptimized src={menu.logoUrl} width={240} height={240} alt="Fine Cut — Men's Grooming" /></div>}
+          {fineCut && <div className={styles.fineCutIdentity} dir="ltr"><span className={styles.fineCutWordmark}>FINE <em>CUT</em></span><span className={styles.fineCutSignature}><span />MEN’S GROOMING<span /></span></div>}
           <p className={styles.eyebrow}><span />{fineCut ? "عناية تحمل توقيعك" : barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
           <h1 id="salon-heading">{fineCut ? "حضور يُتقن" : barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{fineCut ? "بالتفاصيل" : barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
           {barber55 && menu.logoUrl && <div className={styles.heroIdentity}><Image unoptimized src={menu.logoUrl} width={360} height={128} alt={menu.name} /></div>}
@@ -100,6 +100,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
+          {fineCut && <span className={styles.fineCutEditorial} aria-hidden="true" dir="ltr">THE FINER DETAILS</span>}
           <div className={styles.artFrame}><Image src={fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 || fineCut ? 1024 : 1400} height={barber55 || fineCut ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 || fineCut ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
