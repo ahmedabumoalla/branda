@@ -107,7 +107,7 @@ export async function getSalonBookings(input: SalonFilter = {}, mode: SalonMode 
   const filter = z.object({ status: z.enum(["all", "active", "reviews", ...bookingStatuses]).default("all"), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), page: z.number().int().min(0).max(100000).default(0), booking: uuid.optional() }).parse(input);
   if (mode === "staff" && (filter.status !== "active" || filter.booking)) throw new Error("الكاشير يعرض المواعيد المؤكدة والاستدعاء فقط");
   let query = createAdminClient().from("salon_bookings").select(columns, { count: "exact" }).eq("cafe_id", ctx.cafeId);
-  if (filter.status === "active") query = query.in("status", ["confirmed", "in_service"]);
+  if (filter.status === "active") query = query.or("status.in.(confirmed,in_service),and(status.eq.proposed,scheduled_start.not.is.null)");
   else if (filter.status === "reviews") query = query.not("rating", "is", null);
   else if (filter.status !== "all") query = query.eq("status", filter.status);
   if (filter.booking) query = query.eq("id", filter.booking);
@@ -125,7 +125,7 @@ export async function getSalonBookings(input: SalonFilter = {}, mode: SalonMode 
 export async function commandSalonBooking(id: string, version: number, action: SalonCommand, start: string | null, mode: SalonMode) {
   uuid.parse(id); z.number().int().min(0).parse(version); z.enum(["confirm", "reject", "propose", "call", "complete"]).parse(action);
   if (start !== null) z.string().datetime().parse(start);
-  const ctx = await actor(mode, action === "call" || action === "complete");
+  const ctx = await actor(mode, action === "call" || action === "complete" || (mode === "staff" && action === "propose"));
   const { error } = await createAdminClient().rpc("salon_owner_booking_command", { p_cafe: ctx.cafeId, p_id: id, p_actor: ctx.actorId, p_actor_kind: ctx.kind, p_action: action, p_version: version, p_start: start });
   rpcError(error);
 }

@@ -14,6 +14,7 @@ const money = (amount: number) => amount.toLocaleString("ar-SA", { maximumFracti
 export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneMenu; announcements: SalonAnnouncement[]; colors: { background: string; foreground: string; accent: string } }) {
   // This commissioned identity belongs to this tenant, even if its slug changes.
   const barber55 = menu.cafeId === "ac27c25a-79f3-40f7-ade2-70df8f715551";
+  const fineCut = menu.cafeId === "b21a113d-918c-4934-ad47-7c60fa0f4aa9";
   const [bookingOpen, setBookingOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const [serviceId, setServiceId] = useState("");
@@ -77,7 +78,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </div>
     </article>;
   }
-  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ""}`} style={brandStyle} dir="rtl">
+  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ""}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl">
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
     <div className={styles.opening}>
       <header className={styles.header}>
@@ -90,15 +91,16 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </header>
       <section className={styles.hero} aria-labelledby="salon-heading">
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}><span />{barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
-          <h1 id="salon-heading">{barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
+          {fineCut && menu.logoUrl && <div className={styles.fineCutIdentity}><Image unoptimized src={menu.logoUrl} width={240} height={240} alt="Fine Cut — Men's Grooming" /></div>}
+          <p className={styles.eyebrow}><span />{fineCut ? "عناية تحمل توقيعك" : barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
+          <h1 id="salon-heading">{fineCut ? "حضور يُتقن" : barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{fineCut ? "بالتفاصيل" : barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
           {barber55 && menu.logoUrl && <div className={styles.heroIdentity}><Image unoptimized src={menu.logoUrl} width={360} height={128} alt={menu.name} /></div>}
-          <p className={styles.heroDescription}>{menu.description || "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها"}</p>
+          <p className={styles.heroDescription}>{menu.description || (fineCut ? "لحظة لك وإطلالة تليق بك اختر عنايتك واترك لنا التفاصيل" : "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها")}</p>
           <div className={styles.heroActions}><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز وقتك <ArrowUpLeft aria-hidden="true" /></button><a className={styles.textLink} href="#services">اكتشف الخدمات <ArrowDown aria-hidden="true" /></a></div>
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
-          <div className={styles.artFrame}><Image src={barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 ? 1024 : 1400} height={barber55 ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          <div className={styles.artFrame}><Image src={fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 || fineCut ? 1024 : 1400} height={barber55 || fineCut ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 || fineCut ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>

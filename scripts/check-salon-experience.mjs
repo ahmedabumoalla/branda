@@ -104,6 +104,8 @@ try {
   featureList = ["menu", "pager"];
   await data.commandSalonBooking(id, 1, "call", null, "staff");
   ok(rpcCalls[0].args.p_actor === id && rpcCalls[0].args.p_cafe === cafeId && rpcCalls[0].args.p_actor_kind === "staff", "actor and tenant derive from verified staff context");
+  await data.commandSalonBooking(id, 1, "propose", "2030-05-11T11:30:00.000Z", "staff");
+  ok(rpcCalls[1].args.p_action === "propose" && rpcCalls[1].args.p_actor_kind === "staff", "staff rescheduling uses verified pager actor");
   rpcCalls = [];
   await data.createSalonBooking({ id, slug: "salon-test", name: "عميل اختبار", phone: "٠٥٠٠٠٠٠٠٠١", serviceId: null, start: "2030-05-10T11:30:00.000Z" });
   ok(rpcCalls[0].name === "salon_create_booking_with_loyalty" && rpcCalls[0].args.p_loyalty_hash !== rpcCalls[0].args.p_portal_hash, "booking enrollment is atomic with independent hashed card capability");
@@ -113,7 +115,7 @@ try {
   async function workerHarness(options = {}) {
     let queue = options.kinds ?? ["call"], sent = [], finished = [], claims = 0, authorizations = 0;
     const db = { from: builder, rpc: async (name, args) => {
-      if (name === "salon_claim_messages_v2") { claims++; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
+      if (name === "salon_claim_messages_v3") { claims++; const jobs = queue.map(kind => ({ id: kind, kind, cafe_id: cafeId, booking_id: id, phone: "966500000001", lease_token: "lease" })); queue = []; return { data: jobs, error: null }; }
       if (name === "salon_authorize_dispatch") { authorizations++; return { data: options.authorized ?? true, error: null }; }
       if (name === "salon_finish_message") { finished.push(args); if (options.finishError) throw new Error("private db error"); return { data: true, error: null }; }
       throw new Error(name);
@@ -135,6 +137,8 @@ try {
   h = await workerHarness({ kinds: ["completed"], features: ["pager"] }); await h.worker.runSalonMessageJobs(); ok(!h.sent[0].message.includes("/loyalty/"), "no unavailable loyalty link");
   h = await workerHarness({ kinds: ["owner_new", "owner_response", "proposed", "confirmed", "rejected"] }); await h.worker.runSalonMessageJobs(); ok(h.sent.length === 5 && h.sent.every(x => !x.message.includes("undefined")), "all notification kinds render");
   ok(h.sent.find(x => x.message.includes("عندك حجز جديد")).message.includes(`/dashboard/bookings?booking=${id}`), "owner deep link opens exact appointment");
+  h = await workerHarness({ kinds: ["owner_declined"] }); await h.worker.runSalonMessageJobs();
+  ok(h.sent.length === 1 && h.sent[0].message.includes("رفض العميل") && h.sent[0].message.includes(rows.salon_bookings.phone) && h.sent[0].message.includes("/dashboard/bookings?booking="), "decline notification explains rejection and includes customer phone for owner");
   h = await workerHarness({ kinds: ["loyalty_welcome"] }); await h.worker.runSalonMessageJobs(); await h.worker.runSalonMessageJobs();
   ok(h.sent.length === 1 && h.sent[0].message.includes(`/salon/card/${loyaltyLink.salonLoyaltyToken(id)}`) && h.sent[0].message.includes("ينتظر تأكيد الصالون"), "welcome sends one direct card link without falsely confirming appointment");
   const publicUi = await load("components/salon/public-salon.tsx", { "@/app/actions/salon": {}, "@/lib/salon/types": types, "./salon-theme": salonTheme });
@@ -158,11 +162,17 @@ try {
   ok(text(rendered.find(n=>n.props?.id==='booking-heading')).includes('القادم يبدأ'),"booking heading preserves word separation across responsive layout");
   const consoleUi = await load("components/salon/booking-console.tsx", { "@/components/ui/design-system": { DashboardPageShell: ({ title, children }) => React.createElement("section", null, React.createElement("h1", null, title), children) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
   const baseBooking = { ...portal.booking, phone: "966500000001", proposedStart: null, calledAt: null, completedAt: null, rating: null, review: "" };
+  const fineCutHtml = renderToStaticMarkup(React.createElement(publicUi.PublicSalon, { menu: { cafeId: "b21a113d-918c-4934-ad47-7c60fa0f4aa9", name: "Fine Cut", slug: "fine-cut", products: [], contacts: {}, loyaltyEnabled: false }, announcements: [], colors: { background: "#10120f", foreground: "#f5f1e7", accent: "#d4b780" } }));
+  ok(fineCutHtml.includes("fineCut") && fineCutHtml.includes("/salon/fine-cut/portrait-gold.webp") && fineCutHtml.includes("حضور يُتقن"), "commissioned Fine Cut identity renders only for its immutable tenant");
+  ok(!html.includes("/salon/fine-cut/portrait-gold.webp"), "other salons retain their existing hero");
   const ownerHtml = renderToStaticMarkup(React.createElement(consoleUi.BookingConsole, { initial: { bookings: [{ ...baseBooking, status: "pending" }], total: 1, page: 0 } }));
   ok(ownerHtml.includes("تأكيد الموعد") && ownerHtml.includes("إرسال الموعد للعميل") && ownerHtml.includes("الحجوزات المرفوضة"), "owner supports confirmation, alternative proposal and rejected archive");
   const cashierUi = await load("components/salon/salon-cashier.tsx", { "@/app/actions/salon": {}, "@/app/actions/cashier": { logoutCashierAction: async () => {} }, "@/lib/salon/types": types, "@/components/rast-loyalty/loyalty-theme": loyaltyTheme });
   const pagerHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [baseBooking, { ...baseBooking, id: cafeId, status: "in_service" }], total: 2, page: 0 } }));
   ok(pagerHtml.includes("استدعاء العميل") && pagerHtml.includes("إنهاء الخدمة") && !pagerHtml.includes("تقييمات العملاء") && !pagerHtml.includes("الخدمات المكتملة") && !pagerHtml.includes("تأكيد الموعد") && !pagerHtml.includes("رقم الفاتورة"), "cashier has call/completion only and no reviews or archive");
+  ok(pagerHtml.includes("تغيير الموعد") && pagerHtml.includes('aria-labelledby="reschedule-title"'), "cashier exposes accessible date proposal dialog");
+  const awaitingHtml = renderToStaticMarkup(React.createElement(cashierUi.SalonCashier, { identity: { name: "صالون الاختبار", slug: "salon-test" }, initial: { bookings: [{ ...baseBooking, status: "proposed", proposedStart: "2030-05-11T11:30:00Z" }], total: 1, page: 0 } }));
+  ok(awaitingHtml.includes("بانتظار موافقة العميل") && !awaitingHtml.includes("استدعاء العميل") && !awaitingHtml.includes("إنهاء الخدمة"), "pending confirmed-time proposal cannot be called or completed");
   await reject(() => data.getSalonBookings({ status: "reviews" }, "staff", true), /الكاشير/);
   await reject(() => data.getSalonBookings({ status: "completed" }, "staff", true), /الكاشير/);
   const portalUi = await load("components/salon/booking-portal.tsx", { "./salon-theme": salonTheme, "next/navigation": { useRouter: () => ({ refresh() {} }) }, "@/app/actions/salon": {}, "@/lib/salon/types": types });
