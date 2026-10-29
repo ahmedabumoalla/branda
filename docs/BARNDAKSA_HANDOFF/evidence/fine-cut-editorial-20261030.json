@@ -1,0 +1,24 @@
+{
+  "at": "2026-10-29T23:14:10.796Z",
+  "sha": "d9803ee4c2dc46e5955327f27d6c48f636a4d2bc",
+  "id": "dpl_CSxMu42Sy3wBW573KYGyme4DWWih",
+  "project": "prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow",
+  "state": "READY",
+  "url": "branda-2-gu7oy0pd4-ahmedabumoallas-projects.vercel.app",
+  "aliasVerified": true,
+  "barndaksa.com": {
+    "exactDeployment": true,
+    "page200": true,
+    "portrait": true,
+    "transparentLogo": true
+  },
+  "www.barndaksa.com": {
+    "exactDeployment": true,
+    "page200": true,
+    "portrait": true,
+    "transparentLogo": true
+  },
+  "verifiedAt": "2026-10-29T23:14:33.116Z",
+  "assetsExact": true,
+  "barber55Preserved": true
+}
