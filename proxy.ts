@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { isStorefrontEnabled, isStorefrontPath, storefrontUnavailableResponse } from "@/lib/platform/storefront-availability";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recoverExpiredCashierAction } from "@/lib/cashier/session-recovery";
 
 const AUTH_REFRESH_PREFIXES = [
   "/dashboard",
@@ -21,6 +22,8 @@ function shouldRefreshSupabaseSession(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  const recovery = await recoverExpiredCashierAction(request);
+  if (recovery) return recovery;
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host")?.split(":")[0]?.toLowerCase() ?? "";
   const rootDomain = (process.env.NEXT_PUBLIC_BARNDAKSA_PUBLIC_DOMAIN || "barndaksa.com").replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();

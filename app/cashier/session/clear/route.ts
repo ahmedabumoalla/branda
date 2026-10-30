@@ -4,6 +4,7 @@ import { cashierSessionCookie } from "@/lib/data/cashier";
 export async function GET(request: NextRequest) {
   const redirectUrl = new URL("/cashier/login?reason=session", request.url);
   const response = NextResponse.redirect(redirectUrl);
+  response.headers.set("Cache-Control", "private, no-store");
   response.cookies.set(cashierSessionCookie, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
