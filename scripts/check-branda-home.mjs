@@ -66,8 +66,10 @@ try {
 
   for (const width of [768, 390, 320]) {
     await page.setViewport({ width, height: 844, isMobile: width < 500, hasTouch: width < 500 });
+    await page.waitForFunction(() => document.readyState === "complete");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Arabic overflow at ${width}`);
   }
+  await page.waitForSelector('button[aria-controls="home-mobile-nav"]', { visible: true });
   await page.click('button[aria-controls="home-mobile-nav"]');
   assert.equal(await page.$eval('button[aria-controls="home-mobile-nav"]', el => el.getAttribute("aria-expanded")), "true");
   await page.keyboard.press("Escape");

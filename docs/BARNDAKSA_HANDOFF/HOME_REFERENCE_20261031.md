@@ -1,6 +1,10 @@
 # Branda marketing homepage
 
-Status: implementation verified; production publication pending
+Status: published and verified on apex and www
+
+Code: 3455f010a04e5f80e9c459278a13c9c0a1706c3a
+Deployment: dpl_6P16k1wnGWfKtAgKb6ySmfeZdYvq (branda-2 READY)
+Verified: 2026-10-31T20:13:51.406Z
 
 - Recreated the requested twlm.solutions homepage composition using Branda brown/gold branding, local assets and the IBM Plex Sans Arabic font
 - Preserved 16 features, bundle comparison, 20 industries, eight outcomes, branded-app presentation, two pricing cards, 27 comparison rows, seven customer logos, ten FAQs, contact form and footer
@@ -32,4 +36,4 @@ node node_modules/next/dist/bin/next build
 node scripts/check-branda-home.mjs
 ```
 
-Next: verify exact GitHub main commit and READY deployment on branda-2, apex and www, then record publication
+Live production browser verification also passed. The first live test raced a viewport-triggered reload; the test now waits for document completion and a visible menu. No pending product work. Actual app download/terms URLs may be supplied later; current approved WhatsApp flow is active.
