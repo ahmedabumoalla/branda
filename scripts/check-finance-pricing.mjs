@@ -9,10 +9,13 @@ function load(file,stubs={}) {
  new Function('require','exports',source)(name=>Object.hasOwn(stubs,name)?stubs[name]:name.startsWith('@/')?load(path.resolve(`${name.slice(2)}.ts`),stubs):dependency(name),exports);return exports;
 }
 const duration=load('lib/platform/subscription-durations.ts');
-const finance={id:'finance',name:'Finance',priceMonthly:1099,active:true,annualDiscountPercent:0,durationOptions:[1,3]};
+const finance={id:'finance',name:'Finance',priceMonthly:1099,active:true,annualDiscountPercent:20,durationOptions:[1,3]};
 assert.deepEqual(duration.getPlanDurationOptions(finance).map(item=>item.months),[1,3]);
 assert.deepEqual(duration.calculateSubscriptionPricing(finance,3),{baseAmount:3297,discountPercent:20,discountAmount:659.4,totalAmount:2637.6});
 assert.equal(duration.calculateSubscriptionAmount(finance,1),1099);
+assert.equal(duration.calculateSubscriptionAmount({...finance,annualDiscountPercent:12.5},3),2884.87);
+assert.equal(duration.calculateSubscriptionAmount({...finance,annualDiscountPercent:0},3),3297);
+assert.equal(duration.calculateSubscriptionAmount({...finance,annualDiscountPercent:100},3),0);
 for(const months of [2,6,12,24,0,-1,1.5,null,NaN]) assert.throws(()=>duration.calculateSubscriptionAmount(finance,months));
 assert.equal(duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},3),270);
 assert.equal(duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},1),100);

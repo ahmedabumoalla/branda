@@ -87,6 +87,13 @@ assert.equal(view.calls[0][1][0].maxBranches, 3);
 assert.deepEqual(view.calls[0][1][1], initial[1], "editing one plan preserves another plan");
 assert.ok(renderToStaticMarkup(view.render()).includes("تم حفظ الباقات"));
 
+const financeView = harness([{ ...fixture("finance", ["finance"]), annualDiscountPercent: 20 }]);
+const discountInput = nodes(financeView.render()).find(node => node.type === "input" && node.props.max === 100 && node.props.step === "0.01");
+assert(discountInput && !discountInput.props.readOnly && !discountInput.props.disabled, "finance discount is editable");
+discountInput.props.onChange({ target: { value: "12.5" } });
+await nodes(financeView.render()).find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
+assert.equal(financeView.calls[0][1][0].annualDiscountPercent, 12.5);
+
 const wildcard = harness([fixture("all", ["all"])]);
 tree = wildcard.render();
 assert.ok(catalog.every(feature => featureButton(tree, feature.id).props["aria-pressed"] === (!feature.adminPackageOnly && !feature.explicitPackageOnly)));

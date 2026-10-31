@@ -226,7 +226,7 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <h3 id="plan-price-title">السعر ومدة الاشتراك</h3>
                 <div className={styles.fields}>
                   <label>سعر الشهر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
-                  {plan.id === "finance" ? <label>خصم ثلاثة أشهر<input type="text" readOnly value="٢٠٪" /><small>باقة المالية متاحة لشهر أو ثلاثة أشهر</small></label> : <label>خصم ثلاثة أشهر %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك ثلاثة أشهر فقط</small></label>}
+                  <label>خصم ثلاثة أشهر %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك ثلاثة أشهر فقط</small></label>
                 </div>
                 <p className={styles.policy}>{plan.id === "finance" ? "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر" : "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر فقط"}</p>
                 {plan.priceMonthly > 0 ? <p className={styles.policy}>سعر ثلاثة أشهر بعد الخصم {numberFormat.format(calculateSubscriptionPricing(plan, 3).totalAmount)} ر.س</p> : <p className={styles.policy}>{plan.id === "finance" ? "حدد سعر الاشتراك قبل تفعيل الباقة وإتاحتها للعلامات" : <>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</>}</p>}

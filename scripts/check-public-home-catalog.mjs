@@ -61,7 +61,7 @@ let checks = 0;
 async function test(run) { await run(); checks++; }
 
 await test(async () => {
-  const db = database({ plans: [{ ...basePlan, id: "finance", price_sar: 1099, annual_discount_percent: 0, features: ["finance", "settings"] }] });
+  const db = database({ plans: [{ ...basePlan, id: "finance", price_sar: 1099, annual_discount_percent: 20, features: ["finance", "settings"] }] });
   const plan = (await db.getPublicHomeCatalog()).plans[0];
   assert.deepEqual(plan.durations.map(item => item.months), [1, 3]);
   assert.equal(plan.durations[0].totalAmount, 1099);

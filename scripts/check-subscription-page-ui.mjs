@@ -77,7 +77,7 @@ function text(tree) { if (tree == null || typeof tree === "boolean") return ""; 
 function button(tree, label) { return nodes(tree).find(node => node.type === "button" && text(node) === label); }
 
 const view = harness();
-const financePlan = { ...plans[1], id: "finance", name: "برندة المالية", features: ["finance"], priceMonthly: 1099, durationOptions: [1, 3] };
+const financePlan = { ...plans[1], id: "finance", name: "برندة المالية", features: ["finance"], priceMonthly: 1099, annualDiscountPercent: 20, durationOptions: [1, 3] };
 const financeView = harness({ initialPlans: [financePlan] });
 let financeTree = financeView.render();
 assert.ok(!text(financeTree).includes("الاشتراك السنوي") && text(financeTree).includes("ثلاثة أشهر بتوفير أكبر"));

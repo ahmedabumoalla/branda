@@ -339,7 +339,7 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     durationUnit: plan.priceMonthly > 0 ? "month" as const : (plan.trialDays ?? 0) > 0 ? "day" as const : plan.durationUnit,
     durationCount: plan.priceMonthly > 0 ? 1 : (plan.trialDays ?? 0) > 0 ? plan.trialDays! : plan.durationCount,
     durationOptions: [1, 3],
-    annualDiscountPercent: plan.id === "finance" ? 0 : plan.annualDiscountPercent,
+    annualDiscountPercent: plan.annualDiscountPercent,
     features: normalizeAdminPlanFeatures(plan.features),
   }));
   const defaults = parsed.filter((plan) => plan.isDefault && plan.active);

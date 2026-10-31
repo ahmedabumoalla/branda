@@ -71,7 +71,7 @@ export function AdminFinancePage({ initialData, configError }: { initialData: Fi
     if (request) edit({ ...patch, planId: request.plan_id, months: request.duration_count, amount: Number(request.amount_sar), description: `تحصيل اشتراك ${request.plan_name}`, party: options?.cafes.find(row => row.id === next.cafeId)?.name ?? "" });
     else {
       const base = Math.round(Number(plan?.price_sar ?? 0) * next.months * 100) / 100;
-      const annual = next.months === 3 ? Math.round(base * (plan?.id === "finance" ? 20 : Number(plan?.annual_discount_percent ?? 0))) / 100 : 0;
+      const annual = next.months === 3 ? Math.round(base * Number(plan?.annual_discount_percent ?? 0)) / 100 : 0;
       edit({ ...patch, amount: Math.round((base - annual) * 100) / 100, description: plan ? `تحصيل اشتراك ${plan.name}` : "", party: options?.cafes.find(row => row.id === next.cafeId)?.name ?? "" });
     }
   }

@@ -27,7 +27,8 @@ const {savePlatformPlans,updateCafePlan}=load('lib/data/admin.ts');
 const trial={id:'configured',name:'Configured trial',priceMonthly:0,offerEnabled:false,durationUnit:'day',durationCount:15,description:'',active:true,isDefault:true,features:['menu','offers','loyalty','pager','settings'],trialDays:7,categoryId:'cafes_coffee'};
 const paid={...trial,id:'paid',priceMonthly:100,isDefault:false,trialDays:0,durationCount:12,durationUnit:'month',maxProductsMonthly:20,durationOptions:[1,3,6,12],annualDiscountPercent:15.59};
 for(const fallback of [false,true]){
- rpcError=fallback;writes.length=0;await savePlatformPlans([trial,paid]);
+ rpcError=fallback;writes.length=0;await savePlatformPlans([trial,paid,{...paid,id:'finance',annualDiscountPercent:12.5}]);
+ assert(writes.some(w=>w.table==='platform_plans'&&w.value.annual_discount_percent===12.5),'finance discount survives save and fallback');
  const rpc=writes.find(w=>w.args?.p_id==='configured').args;
  assert.equal(rpc.p_duration_count,7);assert.equal(rpc.p_duration_unit,'day');assert.equal(rpc.p_trial_days,7);
  assert.equal(rpc.p_free_after_trial,false);

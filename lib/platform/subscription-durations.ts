@@ -26,7 +26,7 @@ export function isPurchasablePlan(plan: Pick<PlatformPlan, "id" | "priceMonthly"
 export function calculateSubscriptionPricing(plan: PricingPlan, months: number) {
   const baseCents = Math.round(plan.priceMonthly * 100) * validatePlanDurationMonths(plan, months);
   // Keep the legacy field name for stored payment snapshots and API compatibility
-  const discountPercent = months === 3 ? plan.id === "finance" ? 20 : Math.min(100, Math.max(0, plan.annualDiscountPercent ?? 0)) : 0;
+  const discountPercent = months === 3 ? Math.min(100, Math.max(0, plan.annualDiscountPercent ?? 0)) : 0;
   const discountCents = Math.round(baseCents * Math.round(discountPercent * 100) / 10000);
   return { baseAmount: baseCents / 100, discountPercent, discountAmount: discountCents / 100, totalAmount: (baseCents - discountCents) / 100 };
 }
