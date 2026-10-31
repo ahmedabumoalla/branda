@@ -9,6 +9,7 @@ import { getAdminPackageFeatures, normalizeAdminPlanFeatures } from "@/lib/platf
 import type { PlatformFeature, PlatformPlan, PlanDurationUnit } from "@/lib/platform/admin-data";
 import type { SubscriptionPaymentRequest } from "@/lib/platform/subscription";
 import { normalizeTrialDuration } from "@/lib/platform/plan-trial";
+import { calculateSubscriptionPricing } from "@/lib/platform/subscription-durations";
 import styles from "./admin-plans-page.module.css";
 
 type Props = { initialPlans: PlatformPlan[]; initialRequests: SubscriptionPaymentRequest[]; configError?: string };
@@ -16,14 +17,14 @@ const durationLabels: Record<PlanDurationUnit, string> = { day: "يوم", month:
 const requestStatusLabels: Record<SubscriptionPaymentRequest["status"], string> = {
   awaiting_receipt: "بانتظار الإيصال", pending_review: "بانتظار المراجعة", approved: "مقبول", rejected: "ملغي بعد الرفض", cancelled: "ملغي",
 };
-const monthOptions = [1, 3, 6, 12];
+const monthOptions = [1, 3];
 const numberFormat = new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 2 });
 
 function createPlan(categoryId: BusinessCategoryId): PlatformPlan {
   return {
     id: `plan-${crypto.randomUUID().slice(0, 8)}`, name: "باقة جديدة", priceMonthly: 0,
     offerEnabled: false, durationUnit: "month", durationCount: 1, description: "", active: true,
-    isDefault: false, features: [], categoryId, maxOrdersMonthly: null, maxProductsMonthly: 20,
+    isDefault: false, features: [], categoryId, maxOrdersMonthly: null, maxProductsMonthly: null,
     maxBranches: null, trialDays: 0, freeAfterTrial: false, offerLabel: null, offerEndsAt: null,
     durationOptions: [...monthOptions],
   };
@@ -225,16 +226,16 @@ export function AdminPlansPage({ initialPlans, initialRequests, configError }: P
                 <h3 id="plan-price-title">السعر ومدة الاشتراك</h3>
                 <div className={styles.fields}>
                   <label>سعر الشهر شامل الضريبة (ر.س)<input type="number" min={0} max={1000000} step="0.01" required value={plan.priceMonthly} onChange={(event) => updatePlan(plan.id, { priceMonthly: Number(event.target.value) })} /></label>
-                  {plan.id === "finance" ? <label>خصم ثلاثة أشهر<input type="text" readOnly value="٢٠٪" /><small>باقة المالية متاحة لشهر أو ثلاثة أشهر</small></label> : <label>الخصم السنوي %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك السنة فقط</small></label>}
+                  {plan.id === "finance" ? <label>خصم ثلاثة أشهر<input type="text" readOnly value="٢٠٪" /><small>باقة المالية متاحة لشهر أو ثلاثة أشهر</small></label> : <label>خصم ثلاثة أشهر %<input type="number" min={0} max={100} step="0.01" value={plan.annualDiscountPercent ?? 0} onChange={(event) => updatePlan(plan.id, { annualDiscountPercent: Number(event.target.value) })} /><small>يطبق على اشتراك ثلاثة أشهر فقط</small></label>}
                 </div>
-                <p className={styles.policy}>{plan.id === "finance" ? "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر" : "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو 3 أشهر أو 6 أشهر أو سنة"}</p>
-                {plan.priceMonthly > 0 ? <p className={styles.policy}>{plan.id === "finance" ? <>سعر ثلاثة أشهر بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 3 * 0.8 * 100) / 100)}</> : <>سعر السنة بعد الخصم {numberFormat.format(Math.round(plan.priceMonthly * 12 * (1 - (plan.annualDiscountPercent ?? 0) / 100) * 100) / 100)}</>} ر.س</p> : <p className={styles.policy}>{plan.id === "finance" ? "حدد سعر الاشتراك قبل تفعيل الباقة وإتاحتها للعلامات" : <>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</>}</p>}
+                <p className={styles.policy}>{plan.id === "finance" ? "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر" : "السعر الحالي هو سعر شهر واحد والاشتراك متاح لشهر أو ثلاثة أشهر فقط"}</p>
+                {plan.priceMonthly > 0 ? <p className={styles.policy}>سعر ثلاثة أشهر بعد الخصم {numberFormat.format(calculateSubscriptionPricing(plan, 3).totalAmount)} ر.س</p> : <p className={styles.policy}>{plan.id === "finance" ? "حدد سعر الاشتراك قبل تفعيل الباقة وإتاحتها للعلامات" : <>مدة هذه الباقة {plan.durationCount} {durationLabels[plan.durationUnit]}</>}</p>}
               </section>
 
               <section className={styles.section} aria-labelledby="plan-limits-title">
-                <h3 id="plan-limits-title">حدود المنتجات والتجربة</h3>
+                <h3 id="plan-limits-title">فترة التجربة</h3>
+                <p className={styles.policy}>عدد المنتجات غير محدود في جميع الباقات</p>
                 <div className={styles.fields}>
-                  <label>عدد المنتجات شهريًا<input type="number" min={0} value={plan.maxProductsMonthly ?? ""} placeholder="غير محدود" onChange={(event) => updatePlan(plan.id, { maxProductsMonthly: event.target.value === "" ? null : Number(event.target.value) })} /><small>اتركه فارغًا للسماح بعدد غير محدود</small></label>
                   <label>أيام التجربة<input type="number" min={plan.isDefault ? 1 : 0} max={365} required={plan.isDefault} value={plan.trialDays ?? ""} placeholder="بدون تجربة" onChange={(event) => updatePlan(plan.id, { trialDays: event.target.value === "" ? null : Number(event.target.value) })} />{plan.isDefault ? <small>تُفعّل هذه الباقة تلقائيًا للحساب الجديد مرة واحدة بهذه المدة من وقت التسجيل</small> : null}</label>
                 </div>
                 <p className={styles.policy}>عند انتهاء الاشتراك تتوقف الخدمات حتى تفعيل اشتراك جديد دون الانتقال إلى باقة بديلة</p>

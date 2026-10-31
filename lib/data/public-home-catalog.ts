@@ -47,7 +47,7 @@ function mapPlan(row: Row): PublicHomePlan {
     durationCount,
     trialDays,
     freeAfterTrial: Boolean(row.free_after_trial),
-    maxProductsMonthly: nullableNumber(row.max_products_monthly),
+    maxProductsMonthly: null,
     maxOrdersMonthly: nullableNumber(row.max_orders_monthly),
     maxBranches: nullableNumber(row.max_branches),
     features: getBrandNavigationFeatures()
@@ -74,6 +74,11 @@ async function readPlans(admin: Admin): Promise<PublicHomePlan[]> {
       .filter(isPurchasablePlan));
     if (!data || data.length < PAGE_SIZE) return plans;
   }
+}
+
+export async function getPublicHomePlans() {
+  try { return { plans: await readPlans(createAdminClient()), error: false }; }
+  catch { return { plans: [] as PublicHomePlan[], error: true }; }
 }
 
 function brandSettings(row: Row): Row | null {

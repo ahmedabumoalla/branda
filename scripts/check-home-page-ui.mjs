@@ -239,10 +239,16 @@ await test(async () => {
     "server-only": {},
     "@/lib/supabase/server": { createClient: async () => ({
       auth: { getUser: async () => { if (failure) throw new Error("Unavailable"); return { data: { user }, error: null }; } },
-      from: table => { assert.equal(table, "profiles"); return { select: fields => { assert.equal(fields, "role,status"); return { eq: (field, value) => { assert.equal(field, "id"); assert.equal(value, "current-user"); return { maybeSingle: async () => ({ data: { role, status }, error: null }) }; } }; } }; },
+      from: table => { assert.equal(table, "profiles"); return { select: fields => { assert.equal(fields, "role,status,full_name"); return { eq: (field, value) => { assert.equal(field, "id"); assert.equal(value, "current-user"); return { maybeSingle: async () => ({ data: { role, status, full_name: "Account Name" }, error: null }) }; } }; } }; },
     }) },
   });
   assert.equal(await account.getHomeAccountHref(), "/admin");
+  user.user_metadata = { avatar_url: "https://example.com/avatar.png" };
+  assert.deepEqual(await account.getHomeAccount(), { href: "/admin", name: "Account Name", avatarUrl: "https://example.com/avatar.png" });
+  user.user_metadata.avatar_url = "javascript:alert(1)";
+  assert.equal((await account.getHomeAccount()).avatarUrl, null);
+  user.user_metadata.avatar_url = "//untrusted.example/avatar.png";
+  assert.equal((await account.getHomeAccount()).avatarUrl, null);
   for (role of ["cafe_owner", "cafe_manager", "cafe_staff"]) assert.equal(await account.getHomeAccountHref(), "/dashboard");
   role = "customer"; assert.equal(await account.getHomeAccountHref(), null);
   role = "platform_admin"; status = "suspended"; assert.equal(await account.getHomeAccountHref(), null);

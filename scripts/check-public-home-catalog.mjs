@@ -78,13 +78,12 @@ await test(async () => {
   assert.deepEqual(catalog.errors, { plans: false, partners: false, menus: false });
   const plan = catalog.plans[0];
   assert.equal(plan.priceMonthly, 99.99);
-  assert.equal(plan.maxProductsMonthly, 30);
+  assert.equal(plan.maxProductsMonthly, null);
   assert.equal(plan.maxOrdersMonthly, null);
-  assert.deepEqual(plan.durations.map(item => item.months), [1, 3, 6, 12]);
+  assert.deepEqual(plan.durations.map(item => item.months), [1, 3]);
   assert.equal(plan.durations[0].totalAmount, 99.99);
-  assert.equal(plan.durations[2].totalAmount, 599.94);
-  assert.equal(plan.durations[2].discountAmount, 0);
-  assert.equal(plan.durations[3].totalAmount, 1049.89);
+  assert.equal(plan.durations[1].totalAmount, 262.47);
+  assert.equal(plan.durations[1].discountAmount, 37.5);
   assert.deepEqual(plan.features.map(item => item.id), ["menu", "loyalty"]);
   assert(db.queries.every(query => !query.columns.includes("*")));
 });
@@ -174,7 +173,7 @@ await test(async () => {
   mutable.annual_discount_percent = 20;
   const refreshed = (await db.getPublicHomeCatalog()).plans[0];
   assert.equal(refreshed.priceMonthly, 150);
-  assert.equal(refreshed.durations[3].totalAmount, 1440);
+  assert.equal(refreshed.durations[1].totalAmount, 360);
   rows.push({ ...basePlan, id: "new-admin-plan", name: "New plan", price_sar: 250, features: ["pager"] });
   const added = (await db.getPublicHomeCatalog()).plans.find(plan => plan.id === "new-admin-plan");
   assert.equal(added.name, "New plan");

@@ -25,13 +25,15 @@ function load(file,cache=new Map()){
 }
 const {savePlatformPlans,updateCafePlan}=load('lib/data/admin.ts');
 const trial={id:'configured',name:'Configured trial',priceMonthly:0,offerEnabled:false,durationUnit:'day',durationCount:15,description:'',active:true,isDefault:true,features:['menu','offers','loyalty','pager','settings'],trialDays:7,categoryId:'cafes_coffee'};
-const paid={...trial,id:'paid',priceMonthly:100,isDefault:false,trialDays:0,durationCount:12,durationUnit:'month'};
+const paid={...trial,id:'paid',priceMonthly:100,isDefault:false,trialDays:0,durationCount:12,durationUnit:'month',maxProductsMonthly:20,durationOptions:[1,3,6,12],annualDiscountPercent:15.59};
 for(const fallback of [false,true]){
  rpcError=fallback;writes.length=0;await savePlatformPlans([trial,paid]);
  const rpc=writes.find(w=>w.args?.p_id==='configured').args;
  assert.equal(rpc.p_duration_count,7);assert.equal(rpc.p_duration_unit,'day');assert.equal(rpc.p_trial_days,7);
  assert.equal(rpc.p_free_after_trial,false);
  assert.equal(writes.find(w=>w.args?.p_id==='paid').args.p_duration_count,1);
+ assert.equal(writes.find(w=>w.args?.p_id==='paid').args.p_max_products_monthly,null);
+ for(const row of writes.filter(w=>w.table==='platform_plans'&&w.value.duration_options)) assert.deepEqual(row.value.duration_options,[1,3]);
  if(fallback){const row=writes.find(w=>w.table==='platform_plans'&&w.value.id==='configured').value;assert.equal(row.duration_count,7);}
 }
 for(const trialDays of [0,null,-1,366]){writes.length=0;await assert.rejects(()=>savePlatformPlans([{...trial,trialDays}]));assert.equal(writes.length,0,'invalid default rejected before any write');}

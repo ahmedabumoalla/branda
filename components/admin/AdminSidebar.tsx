@@ -34,6 +34,7 @@ const links = [
   ["المالية", "/admin/finance", CircleDollarSign],
   ["كوبونات خصم المنصة", "/admin/platform-coupons", BadgePercent],
   ["المحتوى ورسائل التواصل", "/admin/content", Megaphone],
+  ["طلبات التواصل", "/admin/contact-requests", ClipboardList],
   ["طلبات التوظيف", "/admin/jobs", BriefcaseBusiness],
   ["إدارة المناديب", "/admin/representatives", UserRoundCog],
   ["خيارات المنصة", "/admin/options", Settings2],

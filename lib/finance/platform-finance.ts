@@ -32,7 +32,7 @@ export const financeDraftSchema = z.object({
   planId: z.string().max(120), months: z.number().int(),
 }).superRefine((value, ctx) => {
   if (value.currency === "SAR" && value.exchangeRate !== 1) ctx.addIssue({ code: "custom", message: "Invalid rate" });
-  if (value.kind === "collection" && (!value.cafeId || value.currency !== "SAR" || (!value.requestId && (!value.planId || ![1, 3, 6, 12].includes(value.months))))) ctx.addIssue({ code: "custom", message: "Missing subscription" });
+  if (value.kind === "collection" && (!value.cafeId || value.currency !== "SAR" || (!value.requestId && (!value.planId || ![1, 3].includes(value.months))))) ctx.addIssue({ code: "custom", message: "Missing subscription" });
   if (value.kind === "payment" && (!value.party || value.category === "subscription")) ctx.addIssue({ code: "custom", message: "Missing payment details" });
 });
 export type FinanceDraft = z.infer<typeof financeDraftSchema>;

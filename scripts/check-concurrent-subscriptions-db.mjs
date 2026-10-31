@@ -242,8 +242,10 @@ try {
   await denied(()=>quote('finance',1,'FIN10'));
   await admin(); await query('SELECT public.admin_assign_plan_without_payment($1,$2)',[id(1),'finance']); await db.exec('RESET ROLE');
   check(await value("SELECT count(*)=1 FROM subscriptions WHERE cafe_id=$1 AND plan_id='finance' AND status='active' AND duration_unit='month' AND duration_count=1",[id(1)]),'manual finance assignment uses supported monthly term');
+  const {checkQuarterlyPolicy,quarterlyMigrations}=await import('./quarterly-policy-db-cases.mjs');
+  await checkQuarterlyPolicy({db,query,value,id,check,denied,owner,admin,reset,seed,quote,create,approve});
   const {createHash}=await import('node:crypto');
-  const inputFiles=[migrationPath,'supabase/migrations/20261021084337_mark_plus_upgrade_bundle.sql',
+  const inputFiles=[...quarterlyMigrations,'scripts/quarterly-policy-db-cases.mjs',migrationPath,'supabase/migrations/20261021084337_mark_plus_upgrade_bundle.sql',
     'supabase/migrations/20261009171539_subscription_bank_review.sql','supabase/migrations/20261009232838_annual_subscription_pricing.sql',
     'supabase/migrations/006_barndaksa_subscription_checkout_upgrade.sql','supabase/migrations/032_barndaksa_finance_inclusive_vat_coupons_profit_distribution.sql',
     'supabase/migrations/20261010004458_platform_finance.sql','supabase/migrations/20261023195320_brand_finance_package.sql','supabase/migrations/20261023195901_brand_finance_pricing.sql','scripts/check-concurrent-subscriptions-db.mjs'];

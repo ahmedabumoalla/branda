@@ -75,6 +75,8 @@ for (const feature of catalog) assert.ok(html.includes(feature.sidebarLabel ?? f
 assert.equal(featureButton(tree, "menu").props["aria-pressed"], true);
 assert.equal(featureButton(tree, "loyalty").props["aria-pressed"], false);
 assert.ok(!html.includes("عدد الفروع") && !html.includes("عدد الطلبات"), "archived commerce controls are absent");
+assert.ok(!html.includes("عدد المنتجات شهريًا") && !html.includes("الخصم السنوي"));
+assert.ok(html.includes("خصم ثلاثة أشهر") && html.includes("عدد المنتجات غير محدود") && html.includes("أيام التجربة"));
 featureButton(tree, "offers").props.onClick();
 tree = view.render();
 assert.equal(featureButton(tree, "offers").props["aria-pressed"], true);

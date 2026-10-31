@@ -226,7 +226,7 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
     offerPrice: row.offer_price_sar == null ? undefined : Number(row.offer_price_sar),
     offerLabel: row.offer_label ? String(row.offer_label) : null,
     offerEndsAt: row.offer_ends_at ? String(row.offer_ends_at).slice(0, 10) : null,
-    durationOptions: Array.isArray(row.duration_options) ? (row.duration_options as number[]).map(Number).filter((item) => [1, 3, 6, 12].includes(item)) : [1, 3, 6, 12],
+    durationOptions: Array.isArray(row.duration_options) ? (row.duration_options as number[]).map(Number).filter((item) => [1, 3].includes(item)) : [1, 3],
     durationUnit: String(row.duration_unit ?? "month") as PlanDurationUnit,
     durationCount: Number(row.duration_count ?? 1),
     description: String(row.description ?? ""),
@@ -236,7 +236,7 @@ function mapDbPlan(row: Record<string, unknown>, defaultPlanIds?: Set<string>): 
     features: Array.isArray(row.features) ? (row.features as PlatformPlan["features"]) : [],
     categoryId: normalizePlanCategoryId(row.category_id),
     maxOrdersMonthly: row.max_orders_monthly == null ? null : Number(row.max_orders_monthly),
-    maxProductsMonthly: row.max_products_monthly == null ? null : Number(row.max_products_monthly),
+    maxProductsMonthly: null,
     maxBranches: row.max_branches == null ? null : Number(row.max_branches),
     trialDays: row.trial_days == null ? null : Number(row.trial_days),
     freeAfterTrial: Boolean(row.free_after_trial),
@@ -333,11 +333,12 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
 
   const parsed = z.array(planSchema).min(1).max(30).parse(plans).map(plan => ({
     ...plan,
+    maxProductsMonthly: null,
     offerEnabled: false,
     freeAfterTrial: false,
     durationUnit: plan.priceMonthly > 0 ? "month" as const : (plan.trialDays ?? 0) > 0 ? "day" as const : plan.durationUnit,
     durationCount: plan.priceMonthly > 0 ? 1 : (plan.trialDays ?? 0) > 0 ? plan.trialDays! : plan.durationCount,
-    durationOptions: plan.id === "finance" ? [1, 3] : [1, 3, 6, 12],
+    durationOptions: [1, 3],
     annualDiscountPercent: plan.id === "finance" ? 0 : plan.annualDiscountPercent,
     features: normalizeAdminPlanFeatures(plan.features),
   }));
@@ -385,12 +386,12 @@ export async function savePlatformPlans(plans: PlatformPlan[]) {
     });
 
     const admin = createAdminClient();
-    const normalizedDurationOptions = Array.from(new Set((plan.durationOptions?.length ? plan.durationOptions : [1, 3, 6, 12]).map(Number))).filter((item) => [1, 3, 6, 12].includes(item));
+    const normalizedDurationOptions = Array.from(new Set((plan.durationOptions?.length ? plan.durationOptions : [1, 3]).map(Number))).filter((item) => [1, 3].includes(item));
     const extraPayload = {
       annual_discount_percent: plan.annualDiscountPercent ?? 0,
       offer_label: plan.offerLabel || null,
       offer_ends_at: plan.offerEndsAt || null,
-      duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 3, 6, 12],
+      duration_options: normalizedDurationOptions.length ? normalizedDurationOptions : [1, 3],
     };
 
     if (error) {

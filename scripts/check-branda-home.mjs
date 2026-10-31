@@ -77,11 +77,11 @@ try {
   await page.click('button[aria-label="Switch to English"]');
   assert(await page.evaluate(() => document.querySelector("main").parentElement.dir === "ltr" && document.documentElement.scrollWidth <= innerWidth));
   await page.click('button[aria-label="التبديل إلى العربية"]');
-  await page.evaluate(() => [...document.querySelectorAll("#pricing a")].find(a => a.textContent.includes("اختر المتقدمة")).click());
+  await page.evaluate(() => document.querySelector("[data-plan-id] a").click());
   await pause(1100);
   const form = await page.evaluate(async () => {
     const form = document.querySelector("#contact form");
-    const selected = form.textContent.includes("الباقة المختارة: المتقدمة");
+    const selected = form.textContent.includes("الباقة المختارة:");
     form.elements.fullName.value = "اختبار الواجهة";
     form.elements.business.value = "نشاط تجريبي";
     form.elements.type.value = "مقهى";
@@ -89,13 +89,7 @@ try {
     form.requestSubmit();
     await new Promise(resolve => setTimeout(resolve, 50));
     const invalid = form.textContent.includes("أدخل رقم جوال سعودي");
-    let captured = "";
-    const original = window.open;
-    window.open = value => { captured = value; return null; };
-    try { form.elements.phone.value = "٠٥٠١٢٣٤٥٦٧"; form.requestSubmit(); }
-    finally { window.open = original; }
-    const url = new URL(captured);
-    return { selected, invalid, whatsapp: url.hostname === "wa.me", phone: url.searchParams.get("text").includes("0501234567"), plan: url.searchParams.get("text").includes("المتقدمة") };
+    return { selected, invalid };
   });
   assert(Object.values(form).every(Boolean));
   await page.evaluate(() => { const details = document.querySelectorAll("#faq details"); details[0].querySelector("summary").click(); details[1].querySelector("summary").click(); });
@@ -104,7 +98,7 @@ try {
   await page.evaluate(() => scrollTo(0, 0));
   await pause(300);
   await page.screenshot({ path: path.join(output, "mobile-hero.png") });
-  checks.push("Arabic/English responsive 320/390/768/1440, menu/Escape, exclusive FAQ, plan selection and Saudi phone validation; WhatsApp intercepted, no sends");
+  checks.push("Arabic/English responsive 320/390/768/1440, menu/Escape, exclusive FAQ, plan selection and Saudi phone validation; local invalid-input rejection only, no requests or sends");
 
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   await pause(100);

@@ -14,7 +14,9 @@ assert.deepEqual(duration.getPlanDurationOptions(finance).map(item=>item.months)
 assert.deepEqual(duration.calculateSubscriptionPricing(finance,3),{baseAmount:3297,discountPercent:20,discountAmount:659.4,totalAmount:2637.6});
 assert.equal(duration.calculateSubscriptionAmount(finance,1),1099);
 for(const months of [2,6,12,24,0,-1,1.5,null,NaN]) assert.throws(()=>duration.calculateSubscriptionAmount(finance,months));
-assert.equal(duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},12),1080);
+assert.equal(duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},3),270);
+assert.equal(duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},1),100);
+for (const months of [6,12,24]) assert.throws(()=>duration.calculateSubscriptionAmount({id:'menu',priceMonthly:100,annualDiscountPercent:10},months));
 const writes=[];
 const admin={from(table){assert.equal(table,'subscriptions');const q={update(payload){writes.push({kind:'update',payload});return q},eq(){return q},insert(payload){writes.push({kind:'insert',payload});return q},select(){return q},single:async()=>({data:{id:'subscription'},error:null}),then(resolve){resolve({data:[],error:null})}};return q}};
 const checkout=load('lib/data/subscription.ts',{
@@ -32,4 +34,4 @@ for(const months of [6,12,24]) {await assert.rejects(checkout.startOwnerPlanChec
 assert.equal(writes.length,0,'unsupported terms cause no pending cancellation or payment writes');
 await checkout.startOwnerPlanCheckout('finance',undefined,1);
 assert.equal(writes.find(row=>row.kind==='insert').payload.amount_sar,1099);
-console.log('PASS finance pricing: monthly/quarterly, exact cent discount, unsupported durations before mutations, card checkout authoritative persisted amount and invoice breakdown, legacy annual unchanged');
+console.log('PASS finance pricing: monthly/quarterly, exact cent discount, unsupported durations before mutations, card checkout authoritative persisted amount and invoice breakdown, all plans limited to monthly/quarterly');

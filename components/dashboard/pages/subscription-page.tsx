@@ -144,19 +144,18 @@ export function SubscriptionPageClient({ initialPlans: plans, initialActivePlanI
 
     <section id="available-plans" className={styles.plansSection} aria-labelledby="available-plans-title"><div className={styles.sectionHeading}><div><span className={styles.eyebrow}>اختر ما يناسب علامتك</span><h2 id="available-plans-title">باقات واضحة خدمات تختارها</h2><p>اجمع الباقات التي تحتاجها وكل باقة تحتفظ بمدتها المستقلة</p><p>جميع الأسعار شاملة ضريبة القيمة المضافة</p></div><span className={styles.bankBadge}><ShieldCheck size={17} aria-hidden="true" />تحويل بنكي ومراجعة يدوية</span></div>
       <div className={styles.plans}>{purchasablePlans.map(plan => {
-        const quarterly = plan.id === "finance";
-        const offerMonths = quarterly ? 3 : 12;
+        const offerMonths = 3;
         const annual = calculateSubscriptionPricing(plan, offerMonths);
         const hasAnnualOffer = annual.discountAmount > 0;
         return <article key={plan.id} className={`${styles.plan} ${selectedId === plan.id ? styles.selectedPlan : ""}`}>
         <div className={styles.planTop}><Layers3 size={22} aria-hidden="true" />{activePlanIds.has(plan.id) ? <span>باقتك الحالية</span> : selectedId === plan.id ? <span>الباقة المختارة</span> : null}</div><h3>{plan.name}</h3><p>{plan.description || "خدمات واضحة لإدارة علامتك"}</p><div className={styles.price}>{money.format(getPlanMonthlyAmount(plan))}<span>ر.س / شهر</span></div>
-        {hasAnnualOffer ? <div className={styles.annualOffer} role="group" aria-label={`عرض الاشتراك ${quarterly ? "لثلاثة أشهر" : "السنوي"} لباقة ${plan.name}`}>
-          <div className={styles.annualOfferHeading}><span>{quarterly ? "ثلاثة أشهر بخصم ٢٠٪" : "سنة كاملة بتوفير أكبر"}</span><strong className={styles.annualBadge}>خصم {money.format(annual.discountPercent)}٪</strong></div>
+        {hasAnnualOffer ? <div className={styles.annualOffer} role="group" aria-label={`عرض الاشتراك لثلاثة أشهر لباقة ${plan.name}`}>
+          <div className={styles.annualOfferHeading}><span>ثلاثة أشهر بتوفير أكبر</span><strong className={styles.annualBadge}>خصم {money.format(annual.discountPercent)}٪</strong></div>
           <div className={styles.annualOriginal}><span>بدلًا من</span><del>{money.format(annual.baseAmount)} ر.س</del></div>
-          <div className={styles.annualPrice}><strong>{money.format(annual.totalAmount)}</strong><span>{quarterly ? "ر.س / ثلاثة أشهر" : "ر.س / سنة"}</span></div>
-          <p className={styles.annualSaving}>توفر <strong>{money.format(annual.discountAmount)} ر.س</strong> {quarterly ? "مع اشتراك ثلاثة أشهر" : "مع الاشتراك السنوي"}</p>
-          <span className={styles.annualPayment}>{quarterly ? "دفعة واحدة مقابل ثلاثة أشهر شامل الضريبة" : "دفعة واحدة مقابل ١٢ شهرًا شامل الضريبة"}</span>
-          <button className={styles.annualButton} type="button" disabled={busy || Boolean(configError)} onClick={() => selectPlan(plan, offerMonths)} aria-label={`اختيار الاشتراك ${quarterly ? "لثلاثة أشهر" : "السنوي"} لباقة ${plan.name}`}>{quarterly ? "اختيار اشتراك ثلاثة أشهر" : "اختيار الاشتراك السنوي"}<ArrowUpLeft size={18} aria-hidden="true" /></button>
+          <div className={styles.annualPrice}><strong>{money.format(annual.totalAmount)}</strong><span>ر.س / ثلاثة أشهر</span></div>
+          <p className={styles.annualSaving}>توفر <strong>{money.format(annual.discountAmount)} ر.س</strong> مع اشتراك ثلاثة أشهر</p>
+          <span className={styles.annualPayment}>دفعة واحدة مقابل ثلاثة أشهر شامل الضريبة</span>
+          <button className={styles.annualButton} type="button" disabled={busy || Boolean(configError)} onClick={() => selectPlan(plan, offerMonths)} aria-label={`اختيار الاشتراك لثلاثة أشهر لباقة ${plan.name}`}>اختيار اشتراك ثلاثة أشهر<ArrowUpLeft size={18} aria-hidden="true" /></button>
         </div> : null}
         <ul>{catalog.map(feature => { const included = (plan.features.includes("all") && !feature.explicitPackageOnly) || plan.features.includes(feature.id); return <li key={feature.id} className={included ? styles.included : styles.excluded}><span aria-hidden="true">{included ? "✓" : "—"}</span>{feature.sidebarLabel ?? feature.titleAr}<span className={styles.srOnly}>{included ? "مشمولة" : "غير مشمولة"}</span></li>; })}</ul>
         <button className={selectedId === plan.id && !hasAnnualOffer ? styles.primary : styles.secondary} type="button" onClick={() => selectPlan(plan)} disabled={busy || Boolean(configError)}>{hasAnnualOffer ? "اختيار الاشتراك الشهري" : activePlanIds.has(plan.id) ? "تجديد الباقة" : "اختيار الباقة"}</button>

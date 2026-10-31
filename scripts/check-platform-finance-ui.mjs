@@ -45,8 +45,8 @@ button(h,'سند تحصيل').props.onClick();await flush();
 let selects=nodes(h.render()).filter(n=>n.type==='select');
 selects[0].props.onChange({target:{value:id}});
 selects=nodes(h.render()).filter(n=>n.type==='select');selects[2].props.onChange({target:{value:'paid'}});
-selects=nodes(h.render()).filter(n=>n.type==='select');selects[3].props.onChange({target:{value:'12'}});
-assert.equal(nodes(h.render()).find(n=>n.type==='input'&&n.props.type==='number').props.value,1104,'annual quote preview matches DB rounding');
+selects=nodes(h.render()).filter(n=>n.type==='select');selects[3].props.onChange({target:{value:'3'}});
+assert.equal(nodes(h.render()).find(n=>n.type==='input'&&n.props.type==='number').props.value,276,'quarterly quote preview matches DB rounding');
 assert.ok(html(h).includes('تحل محل الاشتراك الحالي'));
 const file=new File(['%PDF-test'],'receipt.pdf',{type:'application/pdf'});
 const ready=client=>{
@@ -55,7 +55,7 @@ const ready=client=>{
 };
 ready(h);await nodes(h.render()).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});
 assert.ok(html(h).includes('تم تسجيل التحصيل وتفعيل الباقة للعميل'));
-assert.equal(h.calls.find(([kind])=>kind==='post')[1].amount,1104);
+assert.equal(h.calls.find(([kind])=>kind==='post')[1].amount,276);
 let resolveSave;const duplicate=harness({postFinanceAction:(input)=>{duplicate.calls.push(['post',input]);return new Promise(resolve=>resolveSave=()=>resolve({ok:true,data:{id:input.id,kind:input.kind}}))}});
 button(duplicate,'تسجيل مدفوعات').props.onClick();await flush();ready(duplicate);
 const submit=nodes(duplicate.render()).find(n=>n.type==='form').props.onSubmit;

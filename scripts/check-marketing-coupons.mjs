@@ -60,7 +60,7 @@ assert.equal(endInput.props.dir,'ltr');
 assert.equal(endInput.props.placeholder,'YYYY-MM-DD');
 assert.equal(dateInputs.find(node=>node.props.type==='date').props.value,endInput.props.value,'calendar and fixed-format field share the same date');
 const durationLabels=nodes(tree).filter(node=>node.type==='label' && ['شهر واحد','ثلاثة أشهر','ستة أشهر','سنة'].includes(text(node)));
-assert.equal(durationLabels.length,4);
+assert.equal(durationLabels.length,2);
 for(const label of durationLabels) assert.equal(nodes(label).find(node=>node.type==='input').props.checked,text(label)==='شهر واحد');
 const form=nodes(tree).find(node=>node.type==='form');
 form.props.onSubmit({preventDefault(){}});form.props.onSubmit({preventDefault(){}});
