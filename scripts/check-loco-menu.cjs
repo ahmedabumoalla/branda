@@ -9,9 +9,32 @@ let html=render();for(const token of ['12 / 13','خصم 10%','branch=murooj','br
 html=render({loyalty:null});assert(!html.includes('id="loco-loyalty"'));html=render({menu:{...menu,loyaltyEnabled:false}});assert(!html.includes('id="loco-loyalty"'));html=render({menu:{...menu,products:[],highlights:{asOf:100,items:[]}}});assert(html.includes('المنيو يتجهّز لك'));
 // Execute actual search, category reset, offer navigation and product selection callbacks.
 let slots=[],cursor=0;const hookReact={...React,useEffect(){},useRef:value=>({current:value}),useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v]}};
-const Interactive=load('components/menu/loco-menu.tsx',{...mocks,react:hookReact,'motion/react':{useReducedMotion:()=>true,motion:{button:'button'},AnimatePresence:React.Fragment}}).LocoMenu;
+const Interactive=load('components/menu/loco-menu.tsx',{...mocks,react:hookReact,'motion/react':{useReducedMotion:()=>true,motion:{button:'button',article:'article'},AnimatePresence:React.Fragment}}).LocoMenu;
 const nodes=t=>!t||typeof t!=='object'?[]:Array.isArray(t)?t.flatMap(nodes):[t,...nodes(t.props?.children)],draw=()=>{cursor=0;return Interactive({menu,loyalty:{purchasesRequired:6,rewardName:'خصم 10%'}})};
 let tree=draw();nodes(tree).find(n=>n.type==='input'&&n.props.type==='search').props.onChange({target:{value:'كوكيز'}});tree=draw();assert.equal(nodes(tree).filter(n=>n.type==='article'&&n.props.className==='product').length,1);
 nodes(tree).find(n=>n.type==='input').props.onChange({target:{value:'غير موجود'}});tree=draw();assert.equal(nodes(tree).filter(n=>n.type==='article'&&n.props.className==='product').length,0);const reset=nodes(tree).find(n=>n.type==='button'&&n.props.children==='عرض كل الأصناف');assert(reset);reset.props.onClick();tree=draw();assert.equal(nodes(tree).filter(n=>n.type==='article'&&n.props.className==='product').length,2);
 nodes(tree).find(n=>n.type==='button'&&n.props['aria-label']==='تفاصيل أمريكانو').props.onClick();tree=draw();assert(nodes(tree).some(n=>n.props?.product?.id==='one'&&typeof n.props.close==='function'));
-console.log('PASS LOCO SSR and interactions: original identity, branch links, both prices, search/reset/details, offer expiry/placement and conditional six-stamp loyalty');
+// Experiences and promotions belong above the catalog, never inside its product grid.
+const experience={...product,id:'art',categoryId:'experiences',category:'تجارب لوكو',name:'تجربة الرسم',price:45,priceOptions:[]};
+html=render({menu:{...menu,products:[...menu.products,experience],categories:[...menu.categories,{id:'experiences',name:'تجارب لوكو',description:null}]}});
+assert(html.indexOf('id="loco-offers"')<html.indexOf('id="loco-catalog"'));
+const catalog=html.slice(html.indexOf('<section class="catalog"'),html.indexOf('<section class="membership"'));
+assert(!catalog.includes('تجربة الرسم')&&!catalog.includes('CURRENT OFFER')&&!catalog.includes('عرض مخصص'));
+assert(html.includes('تجربة الرسم'));assert.equal((catalog.match(/class="product"/g)||[]).length,2);
+assert(html.includes('غيّر طريقك')&&html.includes('على لوكو'));
+assert(render({menu:{...menu,branch:menu.branches[0]}}).includes('خذ وقتك'));
+// Real spotlight callbacks: next/back, direct selection, detail opening and automatic rotation guards.
+let effectFns=[],interval,cleared=0,observeCallback,disconnected=0,reduced=false,selectedOffer;
+const carouselReact={...hookReact,useRef:()=>({current:{}}),useEffect(fn){effectFns.push(fn)}};
+const Spotlight=load('components/menu/loco-menu.tsx',{...mocks,react:carouselReact,'motion/react':{useReducedMotion:()=>reduced,motion:{article:'article'},AnimatePresence:React.Fragment}}).LocoSpotlight;
+const spotlightOffers=[{id:'a',title:'الأول',productId:'one'},{id:'b',title:'الثاني',productId:'two'}];
+global.IntersectionObserver=class{constructor(cb){observeCallback=cb}observe(){}disconnect(){disconnected++}};
+global.window={setInterval(fn,ms){assert.equal(ms,7000);interval=fn;return 1},clearInterval(){cleared++}};global.document={hidden:false};
+slots=[];const drawSpotlight=()=>{cursor=0;effectFns=[];return Spotlight({offers:spotlightOffers,menu,onSelect:id=>selectedOffer=id})};
+tree=drawSpotlight();const disconnect=effectFns[0]();observeCallback([{isIntersecting:true}]);tree=drawSpotlight();const stop=effectFns[1]();assert.equal(typeof interval,'function');interval();tree=drawSpotlight();assert(nodes(tree).some(n=>n.props?.children==='الثاني'));
+nodes(tree).find(n=>n.type==='button'&&n.props['aria-label']==='العرض السابق').props.onClick();tree=drawSpotlight();assert(nodes(tree).some(n=>n.props?.children==='الأول'));assert.equal(effectFns[1](),undefined,'manual navigation pauses rotation');
+nodes(tree).find(n=>n.type==='button'&&n.props.className==='offerAction').props.onClick();assert.equal(selectedOffer,'one');
+nodes(tree).find(n=>n.type==='button'&&n.props['aria-label']==='تشغيل تبديل العروض').props.onClick();tree=drawSpotlight();tree.props.onFocusCapture();tree=drawSpotlight();assert.equal(effectFns[1](),undefined,'focus pauses rotation');
+slots=[];tree=drawSpotlight();effectFns[0]();observeCallback([{isIntersecting:true}]);reduced=true;tree=drawSpotlight();assert.equal(effectFns[1](),undefined,'reduced motion disables automatic changes');assert(!nodes(tree).some(n=>n.props?.['aria-label']==='إيقاف تبديل العروض'));
+stop();disconnect();assert(cleared&&disconnected);delete global.window;delete global.document;delete global.IntersectionObserver;
+console.log('PASS LOCO branches, search/details, six-stamp loyalty, standalone experience placement, carousel navigation/pause/focus/reduced motion and timer cleanup');

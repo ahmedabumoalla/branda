@@ -1,0 +1,8 @@
+const fs=require('node:fs'),ts=require('typescript'),assert=require('node:assert/strict'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+const result={};const compiled=ts.transpileModule(fs.readFileSync('components/dashboard/menu/branch-switcher.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
+new Function('require','exports',compiled)(name=>name==='@/components/dashboard/dashboard-navigation-link'?{DashboardNavigationLink:({prefetch,...props})=>React.createElement('a',props)}:require(name),result);
+const {MenuBranchSwitcher}=result,branches=[{id:'main-id',name:'فرع المروج',slug:'murooj'},{id:'drive-id',name:'الدرايف ثرو',slug:'drive-thru'}];
+for(const currentId of branches.map(b=>b.id)){const html=renderToStaticMarkup(React.createElement(MenuBranchSwitcher,{branches,currentId}));assert(html.includes('lucide-store')&&html.includes('lucide-car-front'));assert(html.includes('href="/dashboard/menu?branch=main-id"')&&html.includes('href="/dashboard/menu?branch=drive-id"'));assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert(html.includes('min-h-12'));}
+assert.equal(MenuBranchSwitcher({branches:[],currentId:null}),null);assert.equal(MenuBranchSwitcher({branches:[branches[0]],currentId:'main-id'}),null);
+const tree=MenuBranchSwitcher({branches,currentId:'main-id',busy:true});for(const item of tree.props.children){let stopped=false;item.props.onClick({preventDefault(){stopped=true}});assert(stopped);assert.equal(item.props['aria-disabled'],true);assert.equal(item.props.prefetch,false)}
+console.log('PASS branch switcher: direct scoped links, distinct icons, active state, busy guard, single/empty branch compatibility');

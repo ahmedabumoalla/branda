@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/menu";
 import { CategoryManager } from "@/components/dashboard/menu/category-manager";
 import { MenuProductCard } from "@/components/dashboard/menu/product-card";
+import { MenuBranchSwitcher } from "@/components/dashboard/menu/branch-switcher";
 import {
   BentoCard,
   DashboardPageShell,
@@ -69,10 +70,11 @@ type Props = {
   branchId?: string | null;
   branchName?: string;
   branchSlug?: string;
+  branches?: { id: string; name: string; slug: string }[];
   configError?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, configError }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, branches = [], configError }: Props) {
   const copy = getBusinessCopy(businessCategory);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
@@ -277,6 +279,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
         }
       >
+        <MenuBranchSwitcher branches={branches} currentId={branchId} busy={saving} />
         <section className={styles.summaryGrid} aria-label="ملخص المنيو">
           {[
             [isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],

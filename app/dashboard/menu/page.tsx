@@ -11,7 +11,7 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
 
 type MenuLoadResult =
-  | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>>; branch: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"][number] | null }
+  | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>>; branches: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"]; branch: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"][number] | null }
   | { status: "blocked" }
   | { status: "error" };
 
@@ -25,7 +25,7 @@ async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
     const { branches } = await getOwnerMenuBranches();
     const branch = branchId ? branches.find(item => item.id === branchId) : branches.find(item => item.primary) ?? branches[0];
     if (branchId && !branch) return { status: "error" };
-    return { status: "ready", menu: await getOwnerMenu(branch?.id ?? null), branch: branch ?? null };
+    return { status: "ready", menu: await getOwnerMenu(branch?.id ?? null), branches, branch: branch ?? null };
   } catch {
     return { status: "error" };
   }
@@ -75,6 +75,7 @@ export default async function DashboardMenuPage({ searchParams }: { searchParams
       branchId={result.branch?.id ?? null}
       branchName={result.branch?.name}
       branchSlug={result.branch?.slug}
+      branches={result.branches}
     />
   );
 }

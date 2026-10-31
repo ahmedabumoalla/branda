@@ -332,7 +332,8 @@
             },
             {
               "name": "دونات كندر",
-              "price": 11
+              "price": 11,
+              "photo": 24
             },
             {
               "name": "دونات كندر بايتس",
@@ -342,7 +343,7 @@
               "name": "دونات كورن فليكس بايتس",
               "price": 13,
               "spotlight": true,
-              "art": "drive-55"
+              "art": "cornflakes"
             },
             {
               "name": "كوكيز",
