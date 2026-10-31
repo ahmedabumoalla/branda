@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-import { PlatformHomePage } from "@/components/marketing/platform-home-page";
+import { BrandaHome } from "@/components/marketing/branda-home";
+import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import {
   defaultPlatformContactSettings,
   defaultPlatformHomeSettings,
@@ -12,7 +13,7 @@ import {
 } from "@/lib/data/platform-content";
 import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getHomeAccountHref } from "@/lib/data/home-account";
-import { getPublicHomeCatalog } from "@/lib/data/public-home-catalog";
+const homeFont = IBM_Plex_Sans_Arabic({ subsets: ["arabic", "latin"], weight: ["300", "400", "500", "600", "700"], variable: "--font-branda-home", display: "swap" });
 
 const emptyData: PublicPlatformHomeData = {
   settings: defaultPlatformHomeSettings,
@@ -27,13 +28,12 @@ const emptyData: PublicPlatformHomeData = {
 
 export default async function HomePage() {
   if (!isSupabaseConfigured()) {
-    return <PlatformHomePage data={emptyData} />;
+    return <div className={homeFont.variable}><BrandaHome contacts={emptyData.contacts} /></div>;
   }
 
-  const [data, accountHref, initialCatalog] = await Promise.all([
+  const [data, accountHref] = await Promise.all([
     getPublicPlatformHomeData().catch(error => { console.error("[HomePage]", error); return emptyData; }),
     getHomeAccountHref(),
-    getPublicHomeCatalog(),
   ]);
-  return <PlatformHomePage data={data} accountHref={accountHref} initialCatalog={initialCatalog} />;
+  return <div className={homeFont.variable}><BrandaHome contacts={data.contacts} accountHref={accountHref ?? "/login"} /></div>;
 }
