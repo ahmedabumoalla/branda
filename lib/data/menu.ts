@@ -138,16 +138,25 @@ function publicPromoSummary(value: unknown): PublicPromoSummary | null {
   };
 }
 
+async function publicPrimaryBranchFilter(supabase: ReturnType<typeof createAdminClient>, cafeId: string) {
+  const { data, error } = await supabase.from("branches").select("id,is_primary").eq("cafe_id", cafeId)
+    .eq("active", true).not("menu_slug", "is", null).is("deleted_at", null).order("sort_order").order("id");
+  if (error) throw error;
+  const branch = data?.find(row => row.is_primary) ?? data?.[0];
+  return branch ? `branch_id.eq.${branch.id}` : "branch_id.is.null";
+}
+
 export async function getPublicProductCatalogSummaryBySlug(slug: string) {
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return null;
   const supabase = createAdminClient();
+  const branchFilter = await publicPrimaryBranchFilter(supabase, cafe.id);
   const [{ data: categories, error: categoryError }, { data: products, error: productError }] =
     await Promise.all([
       supabase
         .from("menu_categories")
         .select("id,name,sort_order,visible")
-        .eq("cafe_id", cafe.id)
+        .eq("cafe_id", cafe.id).or(branchFilter)
         .eq("visible", true)
         .is("deleted_at", null)
         .order("sort_order"),
@@ -156,7 +165,7 @@ export async function getPublicProductCatalogSummaryBySlug(slug: string) {
         .select(
           "id,category_id,legacy_category,name,image_url,image_storage_path,price,available,promo",
         )
-        .eq("cafe_id", cafe.id)
+        .eq("cafe_id", cafe.id).or(branchFilter)
         .eq("available", true)
         .is("deleted_at", null)
         .order("sort_order"),
@@ -207,19 +216,20 @@ export async function getPublicMenuBySlug(slug: string) {
   if (!cafe) return { categories: [] as MenuCategoryRecord[], products: [] as MenuProduct[] };
 
   const supabase = createAdminClient();
+  const branchFilter = await publicPrimaryBranchFilter(supabase, cafe.id);
 
   const [{ data: categories }, { data: products }] = await Promise.all([
     supabase
       .from("menu_categories")
       .select("*")
-      .eq("cafe_id", cafe.id)
+      .eq("cafe_id", cafe.id).or(branchFilter)
       .eq("visible", true)
       .is("deleted_at", null)
       .order("sort_order"),
     supabase
       .from("menu_products")
       .select("*")
-      .eq("cafe_id", cafe.id)
+      .eq("cafe_id", cafe.id).or(branchFilter)
       .eq("available", true)
       .is("deleted_at", null)
       .order("sort_order"),
@@ -238,24 +248,23 @@ export async function getPublicMenuBySlug(slug: string) {
   };
 }
 
-export async function getOwnerMenu() {
+export async function getOwnerMenu(branchId?: string | null) {
   const cafe = await requireOwnerCafeContext();
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: products }] = await Promise.all([
-    supabase
-      .from("menu_categories")
-      .select("*")
-      .eq("cafe_id", cafe.id)
-      .is("deleted_at", null)
-      .order("sort_order"),
-    supabase
-      .from("menu_products")
-      .select("*")
-      .eq("cafe_id", cafe.id)
-      .is("deleted_at", null)
-      .order("sort_order"),
+  if (branchId) {
+    z.string().uuid().parse(branchId);
+    const { data, error } = await supabase.from("branches").select("id").eq("id", branchId).eq("cafe_id", cafe.id).is("deleted_at", null).maybeSingle();
+    if (error || !data) throw new Error("الفرع غير متاح");
+  }
+  const categoryQuery = supabase.from("menu_categories").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
+  const productQuery = supabase.from("menu_products").select("*").eq("cafe_id", cafe.id).is("deleted_at", null).order("sort_order");
+  const [{ data: categories, error: categoryError }, { data: products, error: productError }] = await Promise.all([
+    branchId === undefined ? categoryQuery : branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
+    branchId === undefined ? productQuery : branchId ? productQuery.eq("branch_id", branchId) : productQuery.is("branch_id", null),
   ]);
+  if (categoryError) throw categoryError;
+  if (productError) throw productError;
 
   const categoryRows = (categories ?? []) as DbMenuCategory[];
   const categoryMap = new Map(categoryRows.map((c) => [c.id, c.name]));
@@ -297,12 +306,14 @@ const productGalleryItemSchema = z.object({
 });
 
 const productSchema = z.object({
+  branchId: z.string().uuid().optional().nullable(),
   id: z.string().uuid().optional(),
   name: z.string().min(1),
   categoryId: z.string().uuid().optional().nullable(),
   category: z.string().optional(),
   description: z.string().optional().default(""),
-  price: z.number().min(0),
+  price: z.number().finite().min(0),
+  priceOptions: z.array(z.number().finite().min(0)).max(10).optional(),
   calories: z.number().optional().nullable(),
   loyaltyPoints: z.number().int().min(0),
   catalogKind: z.enum(["product", "service"]).optional(),
@@ -349,6 +360,7 @@ const productSchema = z.object({
     checkinPolicy: z.enum(["single_use", "multi_use"]).optional().default("single_use"),
   }).optional().nullable(),
 }).superRefine((product, context) => {
+  if (product.priceOptions?.length && new Set([product.price, ...product.priceOptions]).size > 10) context.addIssue({ code: "custom", path: ["priceOptions"], message: "الحد الأقصى عشرة أسعار للصنف" });
   const promo = product.promo;
   if (!promo) return;
   const invalid = Date.parse(promo.endDate) < Date.parse(promo.startDate)
@@ -360,6 +372,8 @@ const productSchema = z.object({
 });
 
 type MenuProductPayload = {
+  price_options?: number[];
+  branch_id?: string | null;
   cafe_id: string;
   category_id: string | null;
   legacy_category: string | null;
@@ -529,12 +543,14 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   ]);
 
   const payload: MenuProductPayload = {
+    ...(parsed.branchId !== undefined ? { branch_id: parsed.branchId } : {}),
     cafe_id: cafe.id,
     category_id: parsed.categoryId ?? null,
     legacy_category: parsed.category ?? null,
     name: parsed.name,
     description: parsed.description,
     price: parsed.price,
+    ...(parsed.priceOptions !== undefined ? { price_options: parsed.priceOptions.length ? [...new Set([parsed.price, ...parsed.priceOptions])].sort((a,b) => a-b) : [] } : {}),
     calories: parsed.calories ?? null,
     loyalty_points: 0,
     catalog_kind: cafe.businessCategory === "hair_salons" ? (parsed.catalogKind ?? "service") : "product",
@@ -614,6 +630,7 @@ export async function softDeleteMenuProduct(productId: string) {
 }
 
 const categorySchema = z.object({
+  branchId: z.string().uuid().optional().nullable(),
   id: z.string().uuid().optional(),
   name: z.string().min(1),
   description: z.string().optional(),
@@ -626,6 +643,7 @@ const categorySchema = z.object({
 });
 
 type MenuCategoryPayload = {
+  branch_id?: string | null;
   cafe_id: string;
   name: string;
   description: string | null;
@@ -643,6 +661,7 @@ export async function upsertMenuCategory(input: z.infer<typeof categorySchema>) 
   const supabase = await createClient();
 
   const payload: MenuCategoryPayload = {
+    ...(parsed.branchId !== undefined ? { branch_id: parsed.branchId } : {}),
     cafe_id: cafe.id,
     name: parsed.name,
     description: parsed.description ?? null,
@@ -686,6 +705,7 @@ export async function getPublicMenuPageBySlug(
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return null;
   const supabase = createAdminClient();
+  const branchFilter = await publicPrimaryBranchFilter(supabase, cafe.id);
   const cursor = Math.max(options.cursor ?? 0, 0);
   const limit = Math.min(Math.max(options.limit ?? 16, 1), 20);
 
@@ -697,14 +717,14 @@ export async function getPublicMenuPageBySlug(
       supabase
         .from("menu_categories")
         .select("*")
-        .eq("cafe_id", cafe.id)
+        .eq("cafe_id", cafe.id).or(branchFilter)
         .eq("visible", true)
         .is("deleted_at", null)
         .order("sort_order"),
       supabase
         .from("menu_products")
         .select("*", { count: "exact" })
-        .eq("cafe_id", cafe.id)
+        .eq("cafe_id", cafe.id).or(branchFilter)
         .eq("available", true)
         .is("deleted_at", null)
         .order("sort_order")
@@ -736,11 +756,12 @@ export async function getPublicProductBySlug(slug: string, productId: string) {
   const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe) return null;
   const supabase = createAdminClient();
+  const branchFilter = await publicPrimaryBranchFilter(supabase, cafe.id);
   const { data: product, error } = await supabase
     .from("menu_products")
     .select("*")
     .eq("id", productId)
-    .eq("cafe_id", cafe.id)
+    .eq("cafe_id", cafe.id).or(branchFilter)
     .eq("available", true)
     .is("deleted_at", null)
     .maybeSingle();
@@ -753,7 +774,7 @@ export async function getPublicProductBySlug(slug: string, productId: string) {
       .from("menu_categories")
       .select("name")
       .eq("id", product.category_id)
-      .eq("cafe_id", cafe.id)
+      .eq("cafe_id", cafe.id).or(branchFilter)
       .maybeSingle();
     categoryName = category?.name;
   }
@@ -807,6 +828,7 @@ export async function saveAllMenuCategories(categories: MenuCategoryRecord[]) {
   for (const cat of categories) {
     const isUuid = /^[0-9a-f-]{36}$/i.test(cat.id);
     const saved = await upsertMenuCategory({
+      branchId: cat.branchId,
       id: isUuid ? cat.id : undefined,
       name: cat.name,
       description: cat.description,

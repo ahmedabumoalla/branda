@@ -202,6 +202,7 @@ function MenuProductEditor({
   const [imageVariant, setImageVariant] = useState<MenuImageVariant>(() => editingProduct?.imageVariant ?? "latte");
 
   const [calories, setCalories] = useState(() => editingProduct?.calories == null ? "" : String(editingProduct.calories));
+  const [priceOptions, setPriceOptions] = useState(() => (editingProduct?.priceOptions ?? []).join(" / "));
   const [price, setPrice] = useState(() => String(editingProduct?.price ?? 18));
   const [preparationTimeMinutes, setPreparationTimeMinutes] = useState(() => editingProduct?.preparationTimeMinutes == null ? "" : String(editingProduct.preparationTimeMinutes));
   const [availableForPickup, setAvailableForPickup] = useState(() => editingProduct?.availableForPickup !== false);
@@ -454,6 +455,12 @@ function MenuProductEditor({
       return;
     }
 
+    const parsedPriceOptions = priceOptions.trim() ? priceOptions.split(/[\/,،]/).map(value => value.trim()) : [];
+    if (parsedPriceOptions.some(value => !value || !Number.isFinite(Number(value)) || Number(value) < 0) || new Set([Number(price), ...parsedPriceOptions.map(Number)]).size > 10) {
+      alert("أدخل أسعارًا صحيحة وافصل بينها بشرطة مائلة بحد أقصى عشرة أسعار");
+      return;
+    }
+
     if (creatingCategory && !newCategoryName.trim()) {
       alert("اكتب اسم التصنيف الجديد");
       return;
@@ -567,6 +574,7 @@ function MenuProductEditor({
       } : undefined, primaryKey === "video" ? "video" : "image"),
       imageVariant,
       price: Number(price),
+      priceOptions: priceOptions.trim() ? priceOptions.split(/[/,،]/).map(value => Number(value.trim())) : [],
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
@@ -859,6 +867,8 @@ function MenuProductEditor({
 
 
           </div>
+
+          {!isSalon && !isEvents && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">

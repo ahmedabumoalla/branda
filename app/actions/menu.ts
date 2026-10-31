@@ -12,9 +12,9 @@ import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
 import { assertOwnerServiceEnabled } from "@/lib/data/owner-service-access";
 
-export async function fetchOwnerMenuAction() {
+export async function fetchOwnerMenuAction(branchId?: string | null) {
   await assertOwnerServiceEnabled("menu");
-  return getOwnerMenu();
+  return getOwnerMenu(branchId);
 }
 
 export async function saveMenuProductAction(product: MenuProduct) {
@@ -27,12 +27,14 @@ export async function saveMenuProductAction(product: MenuProduct) {
     : null;
 
   const row = await upsertMenuProduct({
+    branchId: product.branchId,
     id: /^[0-9a-f-]{36}$/i.test(product.id) ? product.id : undefined,
     name: product.name,
     categoryId: product.categoryId ?? null,
     category: product.category,
     description: product.description,
     price: product.price,
+    priceOptions: product.priceOptions,
     calories: product.calories ?? null,
     loyaltyPoints: 0,
     catalogKind: product.catalogKind,
@@ -86,6 +88,7 @@ export async function deleteMenuCategoryAction(categoryId: string) {
 export async function saveMenuCategoryAction(category: MenuCategoryRecord) {
   await assertOwnerServiceEnabled("menu");
   return upsertMenuCategory({
+    branchId: category.branchId,
     id: /^[0-9a-f-]{36}$/i.test(category.id) ? category.id : undefined,
     name: category.name,
     description: category.description,

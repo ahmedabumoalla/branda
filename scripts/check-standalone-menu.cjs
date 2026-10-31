@@ -30,12 +30,13 @@ const fixtureProduct = {
   promo: null, deleted_at: null, sort_order: 1,
 };
 
-function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false, slug = "double-b-bistro" } = {}) {
+function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false, slug = "double-b-bistro", branches = [], categories } = {}) {
   const queries = [], signedPaths = [];
   const tables = {
+    branches,
     cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, is_public: false, deleted_at: deleted ? "deleted" : null }],
     brand_feature_overrides: published === null ? [] : [{ cafe_id: cafeId, feature_id: "standalone_menu", enabled: published }],
-    menu_categories: [
+    menu_categories: categories ?? [
       { id: "category", cafe_id: cafeId, name: "Category", visible: true, deleted_at: null },
       { id: "hidden", cafe_id: cafeId, name: "Hidden", visible: false, deleted_at: null },
     ],
@@ -49,7 +50,8 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
       const builder = {
         select() { return builder; },
         eq(key, value) { rows = rows.filter((row) => row[key] === value); return builder; },
-        is(key, value) { rows = rows.filter((row) => row[key] === value); return builder; },
+        is(key, value) { rows = rows.filter((row) => (row[key] ?? null) === value); return builder; },
+        not(key, operator, value) { rows = rows.filter((row) => (row[key] ?? null) !== value); return builder; },
         order() { return builder; },
         range(start, end) { rows = rows.slice(start, end + 1); return builder; },
         maybeSingle() { return Promise.resolve({ data: rows[0] ?? null, error: null }); },
@@ -76,6 +78,15 @@ function loader(client, features = ["menu"]) {
 }
 
 async function run() {
+  const branches=[{id:'main',cafe_id:cafeId,name:'Main',menu_slug:'murooj',active:true,is_primary:true,deleted_at:null},{id:'drive',cafe_id:cafeId,name:'Drive',menu_slug:'drive-thru',active:true,deleted_at:null},{id:'hidden-branch',cafe_id:cafeId,name:'Hidden branch',menu_slug:'hidden',active:false,deleted_at:null},{id:'foreign-branch',cafe_id:'foreign',name:'Foreign branch',menu_slug:'foreign',active:true,deleted_at:null}];
+  const categories=['main','drive','hidden-branch'].map(branch_id=>({id:branch_id+'-category',cafe_id:cafeId,branch_id,name:'Coffee',visible:true,deleted_at:null}));
+  const branchProducts=categories.map((c,i)=>({...fixtureProduct,id:c.branch_id+'-product',category_id:c.id,branch_id:c.branch_id,price:13-i,price_options:i===1?[12,13]:[],image_storage_path:`${cafeId}/${c.branch_id}/photo.webp`,media:[]}));
+  const branched=fakeClient({branches,categories,products:branchProducts});
+  const branchLoad=loader(branched.client);
+  const mainMenu=await branchLoad('double-b-bistro');assert.equal(mainMenu.branch.slug,'murooj');assert.deepEqual(mainMenu.products.map(p=>p.id),['main-product']);assert.equal(mainMenu.branches.length,2);
+  const driveMenu=await branchLoad('double-b-bistro',false,'drive-thru');assert.deepEqual(driveMenu.products.map(p=>p.id),['drive-product']);assert.deepEqual(driveMenu.products[0].priceOptions,[12,13]);
+  for(const branch of ['hidden','foreign','missing',"bad' OR true"])assert.equal(await branchLoad('double-b-bistro',false,branch),null);
+  assert(!branched.signedPaths.some(p=>p.includes('hidden-branch')),'Hidden branch media never signed');
   const availableDeliProduct = { ...fixtureProduct, id: "latte", available: true };
   const deli = fakeClient({slug:'delicake',products:[availableDeliProduct]});
   assert.equal(await loader(deli.client,[])('delicake'),null);

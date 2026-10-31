@@ -8,7 +8,7 @@ export function menuDisplayText(value: string) {
 }
 
 export type StandaloneMenuProduct = Pick<MenuProduct,
-  "id" | "name" | "category" | "categoryId" | "description" | "price" |
+  "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo"
 > & {
   catalogKind?: "service" | "product";
@@ -19,6 +19,8 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
 };
 
 export type StandaloneMenu = {
+  branches?: { id: string; name: string; slug: string }[];
+  branch?: { id: string; name: string; slug: string } | null;
   businessCategory?: string;
   cafeId?: string;
   loyaltyEnabled?: boolean;

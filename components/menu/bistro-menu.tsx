@@ -96,7 +96,7 @@ function Price({ product }: { product: StandaloneMenuProduct }) {
   const final = productFinalPrice(product.price, product.promo);
   return <span className={s.price}>
     {final !== product.price && <del>{product.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</del>}
-    <b dir="ltr">{final.toLocaleString("en-US", { maximumFractionDigits: 2 })}</b><span>ريال</span>
+    <b dir="ltr">{(product.priceOptions?.length ? product.priceOptions.map(value => productFinalPrice(value, product.promo)) : [final]).map(value => value.toLocaleString("en-US", { maximumFractionDigits: 2 })).join(" / ")}</b><span>ريال</span>
   </span>;
 }
 
@@ -234,7 +234,6 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
   const [offerTime, setOfferTime] = useState(sourceMenu.highlights?.asOf ?? 0);
   useEffect(() => {
     if (!sourceMenu.highlights) return;
-    setOfferTime(Date.now());
     const timer = window.setInterval(() => setOfferTime(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, [sourceMenu.highlights]);

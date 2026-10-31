@@ -5,6 +5,8 @@ import { getStandaloneMenu } from "@/lib/data/standalone-menu";
 import { getPublicLoyaltyProgramBySlug } from "@/lib/data/loyalty-cards";
 import { BistroMenu } from "@/components/menu/bistro-menu";
 import { FrenchCornerMenu } from "@/components/menu/french-corner-menu";
+import { LocoMenu } from "@/components/menu/loco-menu";
+import { isLocoMenu } from "@/lib/menu/loco-brand";
 import { PublicPageAnalytics } from "@/components/analytics/public-page-analytics";
 import { MenuAutoRefresh } from "@/components/menu/menu-auto-refresh";
 import { isPublicHomeMenuSlug } from "@/lib/data/public-home-catalog";
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
 const isPublicShowcase = cache(isPublicHomeMenuSlug);
 
-type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ showcase?: string | string[] }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ showcase?: string | string[]; branch?: string | string[] }> };
 
 export function generateViewport(): Viewport {
   return { themeColor: "#102019", width: "device-width", initialScale: 1 };
@@ -21,12 +23,14 @@ export function generateViewport(): Viewport {
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const showcase = (await searchParams)?.showcase === "1";
+  const query = await searchParams;
+  const showcase = query?.showcase === "1";
+  const branch = typeof query?.branch === "string" ? query.branch : undefined;
   if (showcase && !await isPublicShowcase(slug)) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
-  const menu = await getStandaloneMenu(slug, showcase);
+  const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   return {
-    title: `${menu.name} | المنيو`,
+    title: `${menu.name}${menu.branch ? ` | ${menu.branch.name}` : ""} | المنيو`,
     description: `اكتشف منيو ${menu.name} الأصناف والأسعار والمكونات والتفاصيل`,
     ...(showcase ? { robots: { index: false, follow: false }, alternates: { canonical: `/menu/${slug}` } } : {}),
   };
@@ -34,16 +38,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function StandaloneMenuPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const showcase = (await searchParams)?.showcase === "1";
+  const query = await searchParams;
+  const showcase = query?.showcase === "1";
+  const branch = typeof query?.branch === "string" ? query.branch : undefined;
   if (showcase && !await isPublicShowcase(slug)) notFound();
-  const menu = await getStandaloneMenu(slug, showcase);
+  const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
-  const program = menu.slug === "brand-10620d3a586c" && menu.loyaltyEnabled
+  const program = (menu.slug === "brand-10620d3a586c" || isLocoMenu(menu.slug)) && menu.loyaltyEnabled
     ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
-  const presentation = menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
+  const presentation = isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }

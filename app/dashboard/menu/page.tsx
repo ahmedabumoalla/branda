@@ -8,26 +8,30 @@ import { isSupabaseConfigured } from "@/lib/barndaksa/env";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { getOwnerMenu } from "@/lib/data/menu";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
+import { getOwnerMenuBranches } from "@/lib/data/menu-branches";
 
 type MenuLoadResult =
-  | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>> }
+  | { status: "ready"; menu: Awaited<ReturnType<typeof getOwnerMenu>>; branch: Awaited<ReturnType<typeof getOwnerMenuBranches>>["branches"][number] | null }
   | { status: "blocked" }
   | { status: "error" };
 
-async function loadDashboardMenu(): Promise<MenuLoadResult> {
+async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
   try {
     const features = await getOwnerFeatureCodes();
     if (!featureCodesAllow(features, "menu")) {
       return { status: "blocked" };
     }
 
-    return { status: "ready", menu: await getOwnerMenu() };
+    const { branches } = await getOwnerMenuBranches();
+    const branch = branchId ? branches.find(item => item.id === branchId) : branches.find(item => item.primary) ?? branches[0];
+    if (branchId && !branch) return { status: "error" };
+    return { status: "ready", menu: await getOwnerMenu(branch?.id ?? null), branch: branch ?? null };
   } catch {
     return { status: "error" };
   }
 }
 
-export default async function DashboardMenuPage() {
+export default async function DashboardMenuPage({ searchParams }: { searchParams: Promise<{ branch?: string }> }) {
   if (!isSupabaseConfigured()) {
     return (
       <MenuPageClient
@@ -38,7 +42,7 @@ export default async function DashboardMenuPage() {
     );
   }
 
-  const result = await loadDashboardMenu();
+  const result = await loadDashboardMenu((await searchParams).branch);
 
   if (result.status === "blocked") {
     return <DashboardFeatureBlockedState title="المنيو والمنتجات" />;
@@ -55,6 +59,7 @@ export default async function DashboardMenuPage() {
   }
 
   const menuDataKey = [
+    result.branch?.id ?? "unbranched",
     ...result.menu.products.map((product) => product.id).sort(),
     "categories",
     ...result.menu.categories.map((category) => category.id).sort(),
@@ -67,6 +72,9 @@ export default async function DashboardMenuPage() {
       initialCategories={result.menu.categories}
       businessCategory={result.menu.cafe.businessCategory}
       cafeSlug={result.menu.cafe.slug}
+      branchId={result.branch?.id ?? null}
+      branchName={result.branch?.name}
+      branchSlug={result.branch?.slug}
     />
   );
 }

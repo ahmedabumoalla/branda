@@ -28,6 +28,7 @@ export type DbCafeSettings = {
 };
 
 export type DbMenuProduct = {
+  branch_id?: string | null;
   id: string;
   cafe_id: string;
   category_id: string | null;
@@ -42,6 +43,7 @@ export type DbMenuProduct = {
   media?: unknown;
   image_variant: string;
   price: number;
+  price_options?: number[] | null;
   calories: number | null;
   loyalty_points: number;
   catalog_kind?: "product" | "service";
@@ -137,6 +139,7 @@ function pushUniqueMedia(
 }
 
 export type DbMenuCategory = {
+  branch_id?: string | null;
   id: string;
   cafe_id: string;
   name: string;
@@ -204,6 +207,7 @@ export function mapDbSettingsToCafeSettings(
 
 export function mapDbCategoryToRecord(slug: string, row: DbMenuCategory): MenuCategoryRecord {
   return {
+    branchId: row.branch_id ?? null,
     id: row.id,
     cafeSlug: slug,
     name: row.name,
@@ -240,6 +244,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
   const videoAssetId = media.find((item) => item.type === "video" && item.assetId)?.assetId;
 
   return {
+    branchId: row.branch_id ?? null,
     id: row.id,
     name: row.name,
     category: categoryName ?? row.legacy_category ?? "أخرى",
@@ -252,6 +257,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     media,
     imageVariant: row.image_variant as MenuProduct["imageVariant"],
     price: Number(row.price),
+    priceOptions: row.price_options?.map(Number) ?? [],
     calories: row.calories ?? undefined,
     loyaltyPoints: 0,
     catalogKind: row.catalog_kind ?? "product",

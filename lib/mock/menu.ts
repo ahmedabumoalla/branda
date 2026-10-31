@@ -54,6 +54,7 @@ export type EventTicketSettings = {
 };
 
 export type MenuProduct = {
+  branchId?: string | null;
   id: string;
   name: string;
   category: MenuCategory;
@@ -67,6 +68,7 @@ export type MenuProduct = {
   media?: MenuProductMedia[];
   imageVariant: MenuImageVariant;
   price: number;
+  priceOptions?: number[];
   calories?: number;
   loyaltyPoints: number;
   catalogKind?: "product" | "service";

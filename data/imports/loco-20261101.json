@@ -1,0 +1,473 @@
+{
+  "cafeId": "321fd305-1883-48df-ab69-829cf7d1bc48",
+  "slug": "brand-9a8c97305195",
+  "sourceFolder": "1NBq5gfXf9WXdqU16YbPtR2W6iyG2P84A",
+  "loyalty": {
+    "stamps": 6,
+    "reward": "خصم 10%"
+  },
+  "branches": [
+    {
+      "slug": "murooj",
+      "name": "فرع المروج",
+      "primary": true,
+      "sources": [
+        "1VVr_eoVMNx4JnIy4xy7qx4W3_8J45Do9",
+        "1PoJHspyvlP3dGBH9rbW7v7cZPzgxRFu6",
+        "11hZxT0dXkwonvk1oHuVdLu-YodEIAQQJ",
+        "1CDA1VFfStwChIffKHHc4oMJQ7Xm1KFoI",
+        "1ELQVn0lIGlBfJG9E2njKd1FyDrs5Aidc",
+        "1HGmRk1JWKAIGk9kis0vYH-I0RZvGbs91"
+      ],
+      "categories": [
+        {
+          "name": "الفطور",
+          "products": [
+            {
+              "name": "بريوش دجاج",
+              "price": 29,
+              "art": "chicken"
+            },
+            {
+              "name": "ساندويش تونة إسبايسي",
+              "price": 32,
+              "art": "tuna"
+            },
+            {
+              "name": "بندكت بيض أفوكادو",
+              "price": 29,
+              "photo": 38
+            },
+            {
+              "name": "شوفان تمر",
+              "price": 21,
+              "photo": 37
+            },
+            {
+              "name": "بريوش ترافل بيض",
+              "price": 23,
+              "photo": 34
+            },
+            {
+              "name": "ساندويش حلوم بالزعتر",
+              "price": 32,
+              "photo": 35
+            },
+            {
+              "name": "بريوش شكشوكة",
+              "price": 23,
+              "photo": 36
+            }
+          ]
+        },
+        {
+          "name": "الحلويات",
+          "products": [
+            {
+              "name": "بنانا بريد شوكولاتة وبندق",
+              "price": 24,
+              "photo": 30
+            },
+            {
+              "name": "تيراميسو كلاسيك",
+              "price": 30,
+              "photo": 31
+            },
+            {
+              "name": "لوكو بيكان",
+              "price": 27,
+              "photo": 32
+            },
+            {
+              "name": "ترافل مانجو",
+              "price": 23,
+              "art": "mango"
+            },
+            {
+              "name": "ماتيلدا كيك",
+              "price": 19,
+              "photo": 26
+            },
+            {
+              "name": "دونات الزعتر",
+              "price": 14,
+              "photo": 28
+            },
+            {
+              "name": "كوكيز",
+              "price": 12,
+              "photo": 4
+            },
+            {
+              "name": "دونات سينابون شوكلت",
+              "price": 14,
+              "photo": 25
+            },
+            {
+              "name": "دونات جاكراندا",
+              "price": 11,
+              "photo": 29
+            },
+            {
+              "name": "فرنش توست تمر وكرك",
+              "price": 22,
+              "photo": 9
+            },
+            {
+              "name": "فرنش توست شوكلت",
+              "price": 23,
+              "photo": 11
+            },
+            {
+              "name": "فرنش توست كريم تشيز",
+              "price": 24,
+              "photo": 10
+            }
+          ]
+        },
+        {
+          "name": "القهوة",
+          "products": [
+            {
+              "name": "إسبريسو",
+              "price": 11,
+              "photo": 19
+            },
+            {
+              "name": "أمريكانو",
+              "price": 13,
+              "photo": 18
+            },
+            {
+              "name": "قهوة اليوم",
+              "price": 11,
+              "photo": 17
+            },
+            {
+              "name": "فلات وايت",
+              "price": 13,
+              "photo": 16
+            },
+            {
+              "name": "سبانش لاتيه حار",
+              "price": 16,
+              "photo": 15
+            },
+            {
+              "name": "كورتادو",
+              "price": 13,
+              "photo": 14
+            },
+            {
+              "name": "كابتشينو",
+              "price": 13,
+              "photo": 13
+            },
+            {
+              "name": "لاتيه",
+              "price": 15,
+              "photo": 15
+            },
+            {
+              "name": "سبانش لاتيه بارد",
+              "price": 19,
+              "photo": 7
+            },
+            {
+              "name": "الفريدو",
+              "price": 14,
+              "photo": 12
+            }
+          ]
+        },
+        {
+          "name": "القهوة المقطرة",
+          "products": [
+            {
+              "name": "V60 إثيوبي أدادو",
+              "price": 18,
+              "photo": 8
+            },
+            {
+              "name": "V60 صيني فاخر",
+              "price": 23,
+              "photo": 8
+            },
+            {
+              "name": "V60 كولومبيا آل بادور",
+              "price": 18,
+              "photo": 8
+            },
+            {
+              "name": "V60 كولومبيا هويلا باشن فروت",
+              "price": 27,
+              "photo": 8
+            }
+          ]
+        },
+        {
+          "name": "المشروبات الأخرى",
+          "products": [
+            {
+              "name": "شاي إنجليزي",
+              "price": 7,
+              "photo": 1
+            },
+            {
+              "name": "عصير برتقال طازج",
+              "price": 12,
+              "photo": 6
+            },
+            {
+              "name": "موهيتو توت",
+              "price": 18,
+              "photo": 5
+            },
+            {
+              "name": "كركديه",
+              "price": 16,
+              "photo": 3
+            },
+            {
+              "name": "آيس تي خوخ",
+              "price": 16,
+              "photo": 2
+            }
+          ]
+        },
+        {
+          "name": "تجارب لوكو",
+          "products": [
+            {
+              "name": "تجربة التلوين",
+              "price": 49,
+              "description": "لوحة جاهزة للتلوين مع الأدوات",
+              "spotlight": true,
+              "art": "experiences"
+            },
+            {
+              "name": "تجربة الرسم",
+              "price": 45,
+              "description": "لوحة فاضية للرسم على كيفك مع الأدوات",
+              "spotlight": true,
+              "art": "experiences"
+            },
+            {
+              "name": "جلسة فنان",
+              "price": 78,
+              "description": "لوحة وأدوات رسم مع قهوة وحلا من اختيارك",
+              "spotlight": true,
+              "art": "experiences"
+            }
+          ]
+        },
+        {
+          "name": "مناسبات لوكو",
+          "products": [
+            {
+              "name": "باقة المناسبات الأولى",
+              "price": 230,
+              "description": "كيكة وورد وتجهيز طاولة مع ملحقات تصوير",
+              "art": "occasions"
+            },
+            {
+              "name": "باقة المناسبات الثانية",
+              "price": 170,
+              "description": "مشروبين وحلا مع ملحقات تصوير",
+              "art": "occasions"
+            },
+            {
+              "name": "باقة المناسبات الثالثة",
+              "price": 90,
+              "description": "احتفال لوكو مع حلا من اختيارك",
+              "art": "occasions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "drive-thru",
+      "name": "الدرايف ثرو",
+      "primary": false,
+      "sources": [
+        "1wfdmlU6e68M272xvHyayUAFHI6ovKLhP"
+      ],
+      "sourceNote": "Named drive-through menu is authoritative over the adjacent screen assets; paired prices are retained without inventing unspecified size labels",
+      "categories": [
+        {
+          "name": "الحلويات",
+          "products": [
+            {
+              "name": "دونات أولد ستايل قليز",
+              "price": 8
+            },
+            {
+              "name": "دونات الزعتر بالشوكلت",
+              "price": 11
+            },
+            {
+              "name": "دونات شوكولاتة محشوة",
+              "price": 10,
+              "photo": 25
+            },
+            {
+              "name": "دونات كرنش بنش بستاشيو",
+              "price": 12
+            },
+            {
+              "name": "دونات كلاسيك",
+              "price": 8,
+              "photo": 20
+            },
+            {
+              "name": "دونات كلاسيك شوكولاتة",
+              "price": 10,
+              "photo": 21
+            },
+            {
+              "name": "دونات الجاكراندا",
+              "price": 10,
+              "photo": 29
+            },
+            {
+              "name": "دونات كندر",
+              "price": 11
+            },
+            {
+              "name": "دونات كندر بايتس",
+              "price": 15
+            },
+            {
+              "name": "دونات كورن فليكس بايتس",
+              "price": 13,
+              "spotlight": true,
+              "art": "drive-55"
+            },
+            {
+              "name": "كوكيز",
+              "price": 12,
+              "photo": 4
+            },
+            {
+              "name": "براونيز",
+              "price": 8
+            },
+            {
+              "name": "إنقلش كيك",
+              "price": 9
+            }
+          ]
+        },
+        {
+          "name": "المشروبات",
+          "products": [
+            {
+              "name": "إسبريسو",
+              "price": 11,
+              "photo": 19
+            },
+            {
+              "name": "أمريكانو",
+              "price": 12,
+              "photo": 18,
+              "priceOptions": [
+                12,
+                13
+              ],
+              "description": "خيارات السعر في منيو الفرع: 12 / 13 ريال"
+            },
+            {
+              "name": "سبانش لاتيه",
+              "price": 16,
+              "photo": 7,
+              "priceOptions": [
+                16,
+                19
+              ],
+              "description": "خيارات السعر في منيو الفرع: 16 / 19 ريال"
+            },
+            {
+              "name": "لاتيه",
+              "price": 15,
+              "photo": 15,
+              "priceOptions": [
+                15,
+                17
+              ],
+              "description": "خيارات السعر في منيو الفرع: 15 / 17 ريال"
+            },
+            {
+              "name": "كابتشينو",
+              "price": 13,
+              "photo": 13
+            },
+            {
+              "name": "فلات وايت",
+              "price": 13,
+              "photo": 16
+            },
+            {
+              "name": "كورتادو",
+              "price": 13,
+              "photo": 14
+            },
+            {
+              "name": "قهوة اليوم",
+              "price": 9,
+              "photo": 17,
+              "priceOptions": [
+                9,
+                11
+              ],
+              "description": "خيارات السعر في منيو الفرع: 9 / 11 ريال"
+            },
+            {
+              "name": "V60",
+              "price": 18,
+              "photo": 8
+            },
+            {
+              "name": "موكا لاتيه",
+              "price": 13
+            },
+            {
+              "name": "ماتشا",
+              "price": 20
+            }
+          ]
+        },
+        {
+          "name": "المشروبات الأخرى",
+          "products": [
+            {
+              "name": "كركديه",
+              "price": 16,
+              "photo": 3
+            },
+            {
+              "name": "شاي إنجليزي",
+              "price": 6,
+              "photo": 1
+            }
+          ]
+        },
+        {
+          "name": "بوكس الجمعات",
+          "products": [
+            {
+              "name": "بوكس قهوة",
+              "price": 65
+            },
+            {
+              "name": "بوكس ميني دونات",
+              "price": 34,
+              "photo": 27,
+              "spotlight": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

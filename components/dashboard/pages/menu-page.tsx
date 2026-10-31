@@ -66,10 +66,13 @@ type Props = {
   initialCategories: MenuCategoryRecord[];
   businessCategory?: string;
   cafeSlug?: string;
+  branchId?: string | null;
+  branchName?: string;
+  branchSlug?: string;
   configError?: string;
 };
 
-export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, configError }: Props) {
+export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, configError }: Props) {
   const copy = getBusinessCopy(businessCategory);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
@@ -131,7 +134,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     setSaving(true);
     try {
       const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
-      const normalized = { ...product, category: categoryName };
+      const normalized = { ...product, category: categoryName, ...(branchId !== undefined ? { branchId } : {}) };
       const id = await saveMenuProductAction(normalized);
       const saved = { ...normalized, id: id || normalized.id };
 
@@ -170,7 +173,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   async function handleCategoriesChange(next: MenuCategoryRecord[]) {
     setSaving(true);
     try {
-      const saved = await saveMenuCategoriesAction(next);
+      const saved = await saveMenuCategoriesAction(next.map(item => ({ ...item, ...(branchId !== undefined ? { branchId } : {}) })));
       setCategories(saved);
       notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ فئات التذاكر" : "تم حفظ تصنيفات المنيو" });
@@ -239,15 +242,15 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   return (
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
-        title={menuTitle}
+        title={branchName ? `${menuTitle} — ${branchName}` : menuTitle}
         subtitle={isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
         action={
           <div className={styles.headerActions}>
-            {cafeSlug && <a href={`/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
+            {cafeSlug && <a href={`/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}${branchSlug ? `?branch=${encodeURIComponent(branchSlug)}` : ""}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
               <ExternalLink className="h-5 w-5" aria-hidden="true" />
               {isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
             </a>}
-            <button
+            {!branchId && <button
               type="button"
               onClick={() => {
                 setImportModalRequested(true);
@@ -258,7 +261,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
             >
               <Upload className="h-5 w-5" />
               {importLabel}
-            </button>
+            </button>}
             <PrimaryButton
             onClick={() => {
               setEditing(null);
@@ -414,7 +417,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               setImportOpen(false);
               notifyMenuChanged(cafeSlug);
               try {
-                const menu = await fetchOwnerMenuAction();
+                const menu = await fetchOwnerMenuAction(branchId);
                 setProducts(menu.products);
                 setCategories(menu.categories);
               } catch {

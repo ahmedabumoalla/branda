@@ -1,4 +1,5 @@
 export type MenuCategoryRecord = {
+  branchId?: string | null;
   id: string;
   cafeSlug: string;
   name: string;

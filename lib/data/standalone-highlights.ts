@@ -5,7 +5,7 @@ import { isOwnedMenuAsset, type StandaloneHighlight, type StandaloneMenuProduct 
 import { matchesLegacyOfferPromo } from "@/lib/offers/published-offers";
 
 /** Called only after the standalone menu publication gate, with its resolved tenant. */
-export async function getStandaloneHighlights(cafeId: string, products: StandaloneMenuProduct[], enabled = true) {
+export async function getStandaloneHighlights(cafeId: string, products: StandaloneMenuProduct[], enabled = true, branchId: string | null = null) {
   const asOf = Date.now();
   const today = new Date(asOf + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const admin = createAdminClient();
@@ -28,12 +28,15 @@ export async function getStandaloneHighlights(cafeId: string, products: Standalo
     }
   }
   if (!enabled) return { asOf, items: [] as StandaloneHighlight[], managedProductIds: [...managedProductIds] };
-  const query = () => admin.from("offers")
+  const query = () => {
+    const scoped = admin.from("offers")
     .select("id,title,description,offer_type,target_type,offer_rules,discount_percent,code,linked_product_id,banner_storage_path,card_storage_path,end_date,placement")
     .eq("cafe_id", cafeId).eq("visible_in_cafe", true).eq("is_archived", false).is("deleted_at", null)
     .in("status", ["active", "scheduled", "published"])
     .or(`start_date.is.null,start_date.lte.${today}`).or(`end_date.is.null,end_date.gte.${today}`)
     .order("created_at", { ascending: false }).order("id");
+    return branchId ? scoped.or(`branch_id.is.null,branch_id.eq.${branchId}`) : scoped.is("branch_id", null);
+  };
   const first = await query().range(0, 499);
   if (first.error) throw first.error;
   const data = [...(first.data ?? [])];
