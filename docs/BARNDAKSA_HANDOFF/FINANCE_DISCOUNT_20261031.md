@@ -16,3 +16,7 @@ Migration 20261031205340 converts the previously implicit 20% into stored plan c
 Publication pending exact deployment verification. Evidence: output/finance-discount-verification.json and output/finance-discount-publication.json
 
 This supersedes the fixed finance 20% rule in HOME_CATALOG_CONTACT_20261031.md
+
+## Follow-up homepage requests
+
+Six active cards now follow the requested order: loyalty, menu, menu+loyalty, marketing campaigns, finance, Plus. Presentation ordering leaves saved catalog order/data untouched; any additional purchasable plan follows these entries. Finance card lists ten real sections confirmed against components/finance/finance-navigation.ts. Removed the complete own-app promotion and phone illustration. Current user-edited prices (including finance189) and configured percentages stay live; no migration rerun or catalog writes. SSR confirms order, finance details, section removal and no input-array mutation. Final Node24 build and root/release TypeScript/text passed; no new browser inspection

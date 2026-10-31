@@ -25,6 +25,13 @@ assert(guest.includes('tel:+966508333556')&&guest.includes('https://wa.me/966508
 assert(guest.includes('/deli-cake/logo.webp')&&guest.includes('+650')&&!guest.includes('Chuck E. Cheese')&&!guest.includes('+6000'));
 assert(!guest.includes('⃁'),'Currency must use SVG rather than a font-dependent glyph');
 assert(guest.includes('lucide-saudi-riyal'));
+assert(!guest.includes('id="ownapp"')&&!guest.includes('تطبيق باسمك'),'Custom app promotion removed');
+const requestedOrder=['pro','starter','plan-b523d348','plan-2690ddc7','finance','plan-e544dced'];
+const orderedFixture=requestedOrder.slice().reverse().map((id,index)=>({...plans[index],id,features:id==='finance'?[{id:'finance',label:'Branda Finance'}]:plans[index].features}));
+const orderedHtml=renderToStaticMarkup(React.createElement(BrandaHome,{...props,plans:orderedFixture}));
+assert.deepEqual([...orderedHtml.matchAll(/data-plan-id="([^"]+)"/g)].map(match=>match[1]),requestedOrder);
+for(const detail of ['المبيعات وكاشير نقطة البيع','المشتريات وفواتير الموردين','الخزينة وأرصدة البنوك والنقدية','الورديات والعهد','الدفاتر والتقارير المحاسبية','إدارة الفريق والصلاحيات']) assert(orderedHtml.includes(detail));
+assert.equal(orderedFixture[0].id,'plan-e544dced','Presentation ordering does not mutate the catalog');
 const signed=renderToStaticMarkup(React.createElement(BrandaHome,{...props,account:{href:'/admin',name:'My Name',avatarUrl:'https://example.com/profile.png'},accountHref:'/admin'}));
 assert(signed.includes('https://example.com/profile.png')&&signed.includes('accountAvatar'));
 assert(!signed.includes('تسجيل الدخول'),'Signed-in account replaces login copy');

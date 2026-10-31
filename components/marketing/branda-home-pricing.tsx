@@ -10,8 +10,23 @@ type Translate = (ar: string, en: string) => string;
 const labels = new Map(platformFeatureRegistry.map(feature => [feature.id as string, feature.titleEn]));
 const visible = (plan: PublicHomePlan) => plan.features.filter(feature => !["home", "subscription", "settings", "theme"].includes(feature.id));
 const money = (amount: number) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount);
+const planOrder = ["pro", "starter", "plan-b523d348", "plan-2690ddc7", "finance", "plan-e544dced"];
+const financeOptions = [
+  ["نظرة مالية على أداء النشاط", "Financial overview"],
+  ["المبيعات وكاشير نقطة البيع", "Sales and point of sale"],
+  ["المشتريات وفواتير الموردين", "Purchases and supplier invoices"],
+  ["العملاء والموردون", "Customers and suppliers"],
+  ["الأصناف والمخزون", "Products and inventory"],
+  ["الخزينة وأرصدة البنوك والنقدية", "Treasury, bank and cash balances"],
+  ["الورديات والعهد", "Shifts and cash custody"],
+  ["الدفاتر والتقارير المحاسبية", "Ledgers and accounting reports"],
+  ["إعداد الطابعة والفواتير", "Printer and invoice settings"],
+  ["إدارة الفريق والصلاحيات", "Team and permissions"],
+] as const;
 
-export function BrandaHomePricing({ plans, error, t, choosePlan }: { plans: PublicHomePlan[]; error: boolean; t: Translate; choosePlan: (name: string) => void }) {
+export function BrandaHomePricing({ plans: catalog, error, t, choosePlan }: { plans: PublicHomePlan[]; error: boolean; t: Translate; choosePlan: (name: string) => void }) {
+  const priority = (id: string) => { const index = planOrder.indexOf(id); return index < 0 ? planOrder.length : index; };
+  const plans = [...catalog].sort((a, b) => priority(a.id) - priority(b.id));
   const features = [...new Map(plans.flatMap(plan => visible(plan).map(feature => [feature.id, feature] as const))).values()];
   return <section id="pricing" className={`${s.section} ${s.pricing}`}><div className={`${s.container} ${s.pricingContainer}`}>
     <header className={s.sectionHeading}><span className={s.eyebrow}>{t("الباقات والأسعار", "Plans and pricing")}</span><h2>{t("اختر الباقة المناسبة لطريقة عملك", "Choose the plan that works for you")}</h2><p>{t("باقات برندة تجمع أدوات الإدارة والتشغيل وفق احتياجات نشاطك وطريقة عملك", "Branda plans bring together the tools your business needs")}</p></header>
@@ -23,7 +38,7 @@ export function BrandaHomePricing({ plans, error, t, choosePlan }: { plans: Publ
           <div className={s.price}><strong dir="ltr">{money(plan.priceMonthly)}</strong><SaudiRiyal className={s.riyal} aria-label={t("ريال سعودي", "Saudi riyal")} /><span>{t("/ شهر", "/ month")}</span></div>
           <p className={s.annual}>{quarter && quarter.discountPercent > 0 ? t(`خصم ${quarter.discountPercent}% لثلاثة أشهر`, `${quarter.discountPercent}% off three months`) : t("اشتراك شهر أو ثلاثة أشهر", "One or three months")}{quarter && <span className={s.quarterTotal}>{t("إجمالي ثلاثة أشهر", "Three-month total")} <bdi>{money(quarter.totalAmount)}</bdi> <SaudiRiyal className={s.riyal} aria-label={t("ريال سعودي", "Saudi riyal")} /></span>}</p>
           <a href="#contact" onClick={() => choosePlan(plan.name)} className={s.primary}>{t("اختر", "Choose")} {plan.name}</a>
-          <div className={s.planList}><b>{t("تشمل:", "Includes:")}</b><ul>{visible(plan).map(feature => <li key={feature.id}><Check size={15} aria-hidden="true" />{t(feature.label, labels.get(feature.id) ?? feature.label)}</li>)}<li><Check size={15} aria-hidden="true" />{t("منتجات غير محدودة", "Unlimited products")}</li>{Boolean(plan.trialDays) && <li><Check size={15} aria-hidden="true" />{t(`تجربة ${plan.trialDays} أيام`, `${plan.trialDays}-day trial`)}</li>}</ul></div>
+          <div className={s.planList}><b>{t("تشمل:", "Includes:")}</b><ul>{visible(plan).flatMap(feature => feature.id === "finance" ? financeOptions.map(([ar, en]) => <li key={en}><Check size={15} aria-hidden="true" />{t(ar, en)}</li>) : [<li key={feature.id}><Check size={15} aria-hidden="true" />{t(feature.label, labels.get(feature.id) ?? feature.label)}</li>])}<li><Check size={15} aria-hidden="true" />{t("منتجات غير محدودة", "Unlimited products")}</li>{Boolean(plan.trialDays) && <li><Check size={15} aria-hidden="true" />{t(`تجربة ${plan.trialDays} أيام`, `${plan.trialDays}-day trial`)}</li>}</ul></div>
         </article>;
       })}</div>
       <div className={s.comparison}><h3>{t("قارن بين الباقات", "Compare plans")}</h3><div className={s.tableScroll} tabIndex={0} role="region" aria-label={t("مقارنة مزايا الباقات", "Plan features comparison")}><table><thead><tr><th scope="col">{t("الميزة", "Feature")}</th>{plans.map(plan => <th scope="col" key={plan.id}><b>{plan.name}</b><small>{money(plan.priceMonthly)} <SaudiRiyal className={s.riyal} aria-label={t("ريال سعودي", "Saudi riyal")} /> {t("/ شهر", "/ month")}</small></th>)}</tr></thead><tbody>{features.map(feature => <tr key={feature.id}><th scope="row">{t(feature.label, labels.get(feature.id) ?? feature.label)}</th>{plans.map(plan => <td key={plan.id}>{plan.features.some(item => item.id === feature.id) ? <><Check aria-hidden="true" size={17} /><span className={s.srOnly}>{t("مشمول", "Included")}</span></> : <><span aria-hidden="true">—</span><span className={s.srOnly}>{t("غير مشمول", "Not included")}</span></>}</td>)}</tr>)}<tr><th scope="row">{t("المنتجات", "Products")}</th>{plans.map(plan => <td key={plan.id}>{t("بلا حد", "Unlimited")}</td>)}</tr></tbody><tfoot><tr><td />{plans.map(plan => <td key={plan.id}><a href="#contact" onClick={() => choosePlan(plan.name)} className={s.primary}>{t("اختر", "Choose")}</a></td>)}</tr></tfoot></table></div><p>{t("راجع تفاصيل الأدوات في كل باقة، واختر ما يناسب احتياجات نشاطك اليوم", "Compare the tools in each plan and choose what your business needs today")}</p></div>
