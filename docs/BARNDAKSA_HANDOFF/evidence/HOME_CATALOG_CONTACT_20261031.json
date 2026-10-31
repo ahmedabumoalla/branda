@@ -1,0 +1,55 @@
+{
+  "at": "2026-10-31T20:41:20.782Z",
+  "sha": "cff2853ec6b69630db24d4e92880bdb1f9d5b08c",
+  "id": "dpl_E2QkhGR1fXXVtzVXe15Z7DnBgwnt",
+  "state": "READY",
+  "project": "branda-2",
+  "aliases": [
+    {
+      "host": "barndaksa.com",
+      "deployment": "dpl_E2QkhGR1fXXVtzVXe15Z7DnBgwnt",
+      "http": 200,
+      "plans": 7,
+      "contact": true,
+      "deli": true,
+      "count": true,
+      "currency": true
+    },
+    {
+      "host": "www.barndaksa.com",
+      "deployment": "dpl_E2QkhGR1fXXVtzVXe15Z7DnBgwnt",
+      "http": 200,
+      "plans": 7,
+      "contact": true,
+      "deli": true,
+      "count": true,
+      "currency": true
+    }
+  ],
+  "liveBrowser": {
+    "at": "2026-10-31T20:43:26.440Z",
+    "url": "https://barndaksa.com",
+    "names": [
+      "نداء برندة",
+      "الحملات التسويقية",
+      "منيو + ولاء برندة",
+      "برندة بلس",
+      "منيو برندة",
+      "ولاء برندة",
+      "برندة المالية"
+    ],
+    "results": [
+      "Seven live plans fit one desktop row",
+      "320/390/768 responsive pricing with real SVG currency and no page overflow",
+      "Plan selection, local phone validation, Deli logo, 650 count and no runtime errors"
+    ],
+    "noMessagesOrRequestsSent": true
+  },
+  "browserTestSha256": "94d2a66a6a07fe074268a4189c86a2f440c013d642871df0113ef579e9f1b14e",
+  "privateInbox": {
+    "rls": true,
+    "selectPolicy": "is_platform_admin()",
+    "anonymousAndAuthenticatedRpcExecute": false,
+    "submissionRpcSecurityInvoker": true
+  }
+}

@@ -1,6 +1,6 @@
 # Homepage catalog, contact inbox and quarterly subscriptions
 
-Implementation ready; production database migrations applied and independently verified on 2026-10-31. Application publication pending exact commit verification
+Published 2026-10-31T20:41:20.782Z: code cff2853ec6b69630db24d4e92880bdb1f9d5b08c, deployment dpl_E2QkhGR1fXXVtzVXe15Z7DnBgwnt, branda-2 READY. GitHub main and both production aliases verified. Database migrations applied and exact source checksums verified. No pending implementation
 
 - Actual subscriptions allow one or three months; the configured legacy annual discount now applies to three months. Finance retains its established fixed 20% quarterly discount. Monthly prices, trial days, historical subscriptions/payment requests and expiry dates are preserved
 - Products are unlimited in every plan. Admin retains optional trial-day configuration. Legacy `annual_*` field names remain for API/history compatibility
@@ -20,7 +20,7 @@ Windows, Node 20.20.2 for TypeScript/UI tests and Node 24 for production build/P
 - `node scripts/check-contact-inbox-db.mjs`: contact storage, idempotency, throttle, validation, role grants/RLS and historical requests
 - Both migration sets passed live rollback checks before application. Exact three migration source MD5s verified; all 14 plans normalized and RLS retained. No permanent test requests or outgoing test messages
 - Scoped ESLint has no errors; legacy unused compatibility parameters in subscription helpers yield two warnings. Root and release TypeScript/text integrity passed. Final Node24 production build passed
-- Scoped local browser 1440/768/390/320 passed for pricing, currency, plan selection, invalid phone, Deli logo and count. Initial comparison accessibility text escaped its scrolling container on mobile; `position:relative` fixed the measured viewport expansion and the check passed again
+- Scoped local and LIVE browser 1440/768/390/320 passed for pricing, currency, plan selection, invalid phone, Deli logo and count. Initial comparison accessibility text escaped its scrolling container on mobile; `position:relative` fixed the measured viewport expansion and the check passed again
 - Supabase security advisors: 159 existing findings before and after, zero introduced findings. Existing unrelated findings were not modified
 
 Evidence: `output/home-catalog/browser-results.json`, screenshots in `output/home-catalog`, `output/quarterly-contact-verification.json`, migration version/source matches
@@ -28,3 +28,5 @@ Evidence: `output/home-catalog/browser-results.json`, screenshots in `output/hom
 Operations: Supabase CLI authentication was renewed. Run CLI from outside these workspaces (for example the user home) with explicit linked project and absolute SQL paths; project `.env.local` still contains an obsolete management token that overrides stored CLI authentication. Never print tokens
 
 No browser authenticated account session or physical mobile device was used; avatar/account authorization was covered through SSR/service tests. Public responsive check used isolated Chromium emulation
+
+Live browser harness initially raced Chromium navigation after changing mobile emulation; awaiting a fresh page load per viewport resolved the harness failure. Plan selection and validation passed on production. Anonymous admin requests return the generic loading/error shell without inbox data; application and database authorization tests passed

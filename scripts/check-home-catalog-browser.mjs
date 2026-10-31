@@ -23,6 +23,7 @@ try {
   results.push('Seven live plans fit one desktop row');
   for(const width of [390,320,768]) {
     await page.setViewport({width,height:844,isMobile:width<500,hasTouch:width<500});
+    await page.goto(url,{waitUntil:'networkidle0',timeout:60000});
     await page.$eval('#pricing',element=>element.scrollIntoView());
     await page.waitForFunction(expected=>document.documentElement.scrollWidth<=expected && innerWidth<=expected,width===768 ? {timeout:10000} : {timeout:10000},width);
     const currency=await page.$$eval('[data-plan-id] svg.lucide-saudi-riyal',elements=>elements.map(element=>({width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,paths:element.querySelectorAll('path').length})));
@@ -31,8 +32,9 @@ try {
   }
   results.push('320/390/768 responsive pricing with real SVG currency and no page overflow');
   await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
+  await page.goto(url,{waitUntil:'networkidle0',timeout:60000});
   await page.$eval('[data-plan-id] a',element=>element.click());
-  assert(await page.$eval('#contact form',form=>form.textContent.includes('الباقة المختارة')));
+  await page.waitForFunction(()=>document.querySelector('#contact form')?.textContent.includes('الباقة المختارة'));
   // Invalid phone is rejected locally and never sends an action or writes an inbox row
   await page.$eval('#contact form',form=>{
     form.elements.fullName.value='Local QA';form.elements.business.value='Local QA';
