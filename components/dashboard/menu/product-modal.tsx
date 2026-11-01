@@ -2,6 +2,7 @@
 
 import {
   Coffee,
+  Flower2,
   Scissors,
   Download,
   Flame,
@@ -43,6 +44,8 @@ import {
 } from "@/lib/mock/menu-categories";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { getProductImageDownload, saveProductImageDownload } from "@/lib/menu/download-product-image";
+import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
+import { GiftProductFields } from "@/components/dashboard/menu/gift-product-fields";
 
 type Props = {
   open: boolean;
@@ -164,15 +167,17 @@ function MenuProductEditor({
   const copy = getBusinessCopy(businessCategory);
   const isEvents = copy.kind === "events";
   const isSalon = copy.kind === "barbershop";
+  const isGifts = copy.kind === "gifts";
   const [catalogKind, setCatalogKind] = useState<"service" | "product">(editingProduct?.catalogKind ?? (isSalon ? "service" : "product"));
-  const productNoun = isSalon ? "الخدمة أو المنتج" : isEvents ? "التذكرة أو الباقة" : "المنتج";
-  const productNameLabel = isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const [commerceDetails, setCommerceDetails] = useState<CommerceDetails>(() => editingProduct?.commerceDetails ?? {});
+  const productNoun = isGifts ? "المنتج أو الخدمة" : isSalon ? "الخدمة أو المنتج" : isEvents ? "التذكرة أو الباقة" : "المنتج";
+  const productNameLabel = isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
   const categoryLabel = isEvents ? "نوع التذكرة أو الفئة" : "التصنيف";
-  const descriptionLabel = isSalon ? "وصف الخدمة أو المنتج" : isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
+  const descriptionLabel = isGifts ? "وصف المنتج أو الخدمة" : isSalon ? "وصف الخدمة أو المنتج" : isEvents ? "وصف التذكرة أو الباقة" : "وصف المنتج";
   const priceLabel = isEvents ? "رسوم الدخول ر.س *" : "السعر ر.س *";
-  const detailsLabel = isSalon ? "تفاصيل الخدمة أو المنتج" : isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
-  const detailsPlaceholder = isSalon ? "مثال: حلاقة الشعر وتحديد اللحية" : isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
-  const defaultProductName = isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
+  const detailsLabel = isGifts ? "تفاصيل إضافية" : isSalon ? "تفاصيل الخدمة أو المنتج" : isEvents ? "ما تشمله التذكرة أو الباقة" : "مكونات المنتج";
+  const detailsPlaceholder = isGifts ? "مثال: تغليف هدية، بطاقة إهداء" : isSalon ? "مثال: حلاقة الشعر وتحديد اللحية" : isEvents ? "مثال: حضور ورشة، شهادة" : "مثال: حليب، قهوة";
+  const defaultProductName = isGifts ? "اسم المنتج أو الخدمة" : isSalon ? "اسم الخدمة أو المنتج" : isEvents ? "اسم التذكرة أو الباقة" : "اسم المنتج";
 
 
   const [submitting, setSubmitting] = useState(false);
@@ -203,7 +208,7 @@ function MenuProductEditor({
 
   const [calories, setCalories] = useState(() => editingProduct?.calories == null ? "" : String(editingProduct.calories));
   const [priceOptions, setPriceOptions] = useState(() => (editingProduct?.priceOptions ?? []).join(" / "));
-  const [price, setPrice] = useState(() => String(editingProduct?.price ?? 18));
+  const [price, setPrice] = useState(() => editingProduct?.price == null ? (isGifts ? "" : "18") : String(editingProduct.price));
   const [preparationTimeMinutes, setPreparationTimeMinutes] = useState(() => editingProduct?.preparationTimeMinutes == null ? "" : String(editingProduct.preparationTimeMinutes));
   const [availableForPickup, setAvailableForPickup] = useState(() => editingProduct?.availableForPickup !== false);
   const [pickupLeadTimeMinutes, setPickupLeadTimeMinutes] = useState(() => editingProduct?.pickupLeadTimeMinutes == null ? "" : String(editingProduct.pickupLeadTimeMinutes));
@@ -408,6 +413,7 @@ function MenuProductEditor({
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
+      ...(isGifts ? { commerceDetails } : {}),
       preparationTimeMinutes: preparationTimeMinutes.trim()
         ? Number(preparationTimeMinutes) || undefined
         : undefined,
@@ -453,6 +459,11 @@ function MenuProductEditor({
         if (!price || !Number.isFinite(Number(price)) || Number(price) < 0) {
       alert("السعر مطلوب");
       return;
+    }
+
+    if (isGifts) {
+      const details = commerceDetailsSchema.safeParse(commerceDetails);
+      if (!details.success) { alert(details.error.issues[0]?.message || "تحقق من مواصفات المنتج وخياراته"); return; }
     }
 
     const parsedPriceOptions = priceOptions.trim() ? priceOptions.split(/[\/,،]/).map(value => value.trim()) : [];
@@ -578,6 +589,7 @@ function MenuProductEditor({
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
+      ...(isGifts ? { commerceDetails, commerceSnapshot: mode === "edit" ? editingProduct?.commerceSnapshot : undefined } : {}),
       preparationTimeMinutes: preparationTimeMinutes.trim()
         ? Number(preparationTimeMinutes) || undefined
         : undefined,
@@ -674,7 +686,7 @@ function MenuProductEditor({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
+              placeholder={isGifts ? (catalogKind === "service" ? "مثال: تصميم مساحة خضراء" : "مثال: نبتة مونستيرا") : isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             />
           </label>
@@ -816,7 +828,7 @@ function MenuProductEditor({
               </fieldset>
             ) : null}
 
-            {!isSalon && <label className="mt-4 block">
+            {!isSalon && !isGifts && <label className="mt-4 block">
               <span className="text-xs font-black text-[#7A6255]">
                 خلفية احتياطية عند عدم رفع صورة
               </span>
@@ -836,9 +848,11 @@ function MenuProductEditor({
             </label>}
           </div>
 
+          {isGifts && <label className="block text-sm font-bold text-[#3A2117]">نوع العنصر<select className="mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white p-3" value={catalogKind} onChange={e => { const next = e.target.value as "product" | "service"; setCatalogKind(next); if (next === "product") setCommerceDetails(current => ({ ...current, quoteOnly: false })); }}><option value="product">منتج</option><option value="service">خدمة أو ورشة</option></select></label>}
+          {isGifts && <GiftProductFields value={commerceDetails} onChange={setCommerceDetails} service={catalogKind === "service"} />}
           {isSalon && <label className="block text-sm font-bold">نوع العنصر<select className="mt-2 w-full rounded-xl border p-3" value={catalogKind} onChange={e => setCatalogKind(e.target.value as "service" | "product")}><option value="service">خدمة حلاقة وعناية</option><option value="product">منتج للعناية</option></select></label>}
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className={isSalon ? "hidden" : "block"}>
+            <label className={isSalon || isGifts ? "hidden" : "block"}>
               <span className="text-xs font-black text-[#7A6255]">
                 {isEvents ? "السعة التقريبية اختياري" : "السعرات الحرارية اختياري"}
               </span>
@@ -868,12 +882,12 @@ function MenuProductEditor({
 
           </div>
 
-          {!isSalon && !isEvents && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
+          {!isSalon && !isGifts && !isEvents && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
-                {isSalon ? "مدة الخدمة (دقيقة) اختياري" : isEvents ? "مدة الدخول أو الجلسة (دقيقة) اختياري" : "وقت التحضير (دقيقة) اختياري"}
+                {isGifts ? "مدة تجهيز المنتج أو تنفيذ الخدمة بالدقائق اختياري" : isSalon ? "مدة الخدمة (دقيقة) اختياري" : isEvents ? "مدة الدخول أو الجلسة (دقيقة) اختياري" : "وقت التحضير (دقيقة) اختياري"}
               </span>
               <input
                 inputMode="numeric"
@@ -1085,7 +1099,7 @@ function MenuProductEditor({
 
           <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
-              {isSalon ? "الظهور في صفحة الصالون" : isEvents ? "حالة التذكرة أو الباقة" : "الظهور في المنيو"}
+              {isGifts ? "إمكانية الطلب" : isSalon ? "الظهور في صفحة الصالون" : isEvents ? "حالة التذكرة أو الباقة" : "الظهور في المنيو"}
             </legend>
 
             <div className="mt-3 flex gap-5">
@@ -1095,7 +1109,7 @@ function MenuProductEditor({
                   checked={available}
                   onChange={() => setAvailable(true)}
                 />
-                {isSalon ? "ظاهر في صفحة الصالون" : "ظاهر في المنيو"}
+                {isGifts ? "متاح للطلب" : isSalon ? "ظاهر في صفحة الصالون" : "ظاهر في المنيو"}
               </label>
 
               <label className="flex items-center gap-2 text-sm font-black text-[#3A2117]">
@@ -1104,7 +1118,7 @@ function MenuProductEditor({
                   checked={!available}
                   onChange={() => setAvailable(false)}
                 />
-                {isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو"}
+                {isGifts ? "غير متاح للطلب" : isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو"}
               </label>
             </div>
           </fieldset>
@@ -1265,7 +1279,7 @@ function MenuProductEditor({
                   <div
                     className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${isSalon ? "from-[#4A281D] to-[#311912]" : variantGradient[previewProduct.imageVariant]}`}
                   >
-                    {isSalon ? <Scissors className="h-12 w-12 text-white/85" /> : <Coffee className="h-12 w-12 text-white/85" />}
+                    {isGifts ? <Flower2 className="h-12 w-12 text-white/85" /> : isSalon ? <Scissors className="h-12 w-12 text-white/85" /> : <Coffee className="h-12 w-12 text-white/85" />}
                   </div>
                 }
               />
@@ -1286,7 +1300,7 @@ function MenuProductEditor({
                     : "bg-white text-[#3A2117]"
                 }`}
               >
-                {isSalon ? (previewProduct.available ? "ظاهر في صفحة الصالون" : "مخفي من صفحة الصالون") : previewProduct.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
+                {isGifts ? (previewProduct.available ? "متاح للطلب" : "غير متاح للطلب") : isSalon ? (previewProduct.available ? "ظاهر في صفحة الصالون" : "مخفي من صفحة الصالون") : previewProduct.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
               </span>
             </div>
 

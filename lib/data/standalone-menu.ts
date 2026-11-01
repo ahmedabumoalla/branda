@@ -14,6 +14,7 @@ import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mappers";
 import { primaryMediaType } from "@/lib/menu/product-media";
+import { giftProductAvailable } from "@/lib/commerce/storefront-cart";
 import { isOwnedMenuAsset, isStandaloneProductVisible, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
 const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,price_options,catalog_kind,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
@@ -27,11 +28,11 @@ const cachedShowcaseLogo = unstable_cache(async (cafeId: string, source: string,
   return publishedMenuLogo(createAdminClient(), cafeId, source);
 }, ["public-menu-showcase-logo-v1"], { revalidate: 1200 });
 
-async function readMenuProducts(admin: ReturnType<typeof createAdminClient>, cafeId: string, branchId: string | null) {
+async function readMenuProducts(admin: ReturnType<typeof createAdminClient>, cafeId: string, branchId: string | null, commerce = false) {
   const rows: DbMenuProduct[] = [];
   // Keep explicit pagination: a large published menu must never be truncated.
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    const query = admin.from("menu_products").select(PRODUCT_COLUMNS)
+    const query = admin.from("menu_products").select(commerce ? `${PRODUCT_COLUMNS},commerce_details` : PRODUCT_COLUMNS)
       .eq("cafe_id", cafeId).is("deleted_at", null).order("sort_order").order("id")
       .range(offset, offset + PAGE_SIZE - 1);
     const { data, error } = await (branchId ? query.eq("branch_id", branchId) : query.is("branch_id", null));
@@ -74,15 +75,15 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   const [categoryResult, settingsResult, rawRows] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
-    readMenuProducts(admin, String(cafe.id), branchId),
+    readMenuProducts(admin, String(cafe.id), branchId, cafe.business_category === "gifts_flowers"),
   ]);
   if (categoryResult.error) throw categoryResult.error;
   if (settingsResult.error) throw settingsResult.error;
   const categories = categoryResult.data ?? [];
   const categoryNames = new Map(categories.map((category) => [String(category.id), String(category.name)]));
   const categoryIds = new Set(categoryNames.keys());
-  // Unavailable products and hidden categories remain excluded before signing any media.
-  const rows = rawRows.filter(row => isStandaloneProductVisible(row, categoryIds));
+  // Gifts retain sold-out listings; deleted products and hidden categories never expose media.
+  const rows = rawRows.filter(row => isStandaloneProductVisible(row, categoryIds, cafe.business_category === "gifts_flowers"));
   const mapped = rows.map((row) => mapDbProductToMenuProduct(row, categoryNames.get(row.category_id ?? "")));
   const paths = new Set<string>();
   for (const product of mapped) {
@@ -132,8 +133,9 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
       id: product.id, name: product.name, category: product.category, categoryId: product.categoryId,
       description: product.description, price: product.price, priceOptions: product.priceOptions, calories: product.calories,
       catalogKind: product.catalogKind,
+      commerceDetails: product.commerceDetails,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,
-      available: product.available, promo: product.promo,
+      available: cafe.business_category === "gifts_flowers" ? giftProductAvailable(product) : product.available, promo: product.promo,
       primaryMediaType: product.media?.some((item) => item.primary) ? primaryMediaType(product) : undefined,
       images: images.filter((item, index) => images.findIndex((other) => other.url === item.url) === index), videos,
     };

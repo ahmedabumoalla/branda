@@ -8,5 +8,5 @@ export function createProductCopy(product: MenuProduct, products: MenuProduct[])
   let suffix = 2;
   const names = new Set(products.map((item) => item.name));
   while (names.has(name)) name = `${base} ${suffix++}`;
-  return { ...copy, id: crypto.randomUUID(), name };
+  return { ...copy, id: crypto.randomUUID(), name, commerceSnapshot: undefined };
 }

@@ -22,6 +22,13 @@ async function loadDashboardMenu(branchId?: string): Promise<MenuLoadResult> {
       return { status: "blocked" };
     }
 
+    // An explicit branch is independently tenant-validated by getOwnerMenu
+    // Fetch its catalogue alongside the selector instead of waiting another round trip
+    if (branchId) {
+      const [{ branches }, menu] = await Promise.all([getOwnerMenuBranches(), getOwnerMenu(branchId)]);
+      const branch = branches.find(item => item.id === branchId);
+      return branch ? { status: "ready", menu, branches, branch } : { status: "error" };
+    }
     const { branches } = await getOwnerMenuBranches();
     const branch = branchId ? branches.find(item => item.id === branchId) : branches.find(item => item.primary) ?? branches[0];
     if (branchId && !branch) return { status: "error" };

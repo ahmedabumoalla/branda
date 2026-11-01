@@ -1,5 +1,5 @@
 "use client";
-import { Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
+import { Flower2, Scissors, Clock3, ChevronDown, Coffee, Copy, Eye, EyeOff, Flame, Gift, Pencil, Trash2 } from "lucide-react";
 import { ProductMediaDisplay } from "@/components/cafe/product-image";
 import { formatSar } from "@/lib/format";
 import { isPromoActive, promoBadgeText, productFinalPrice, type MenuProduct } from "@/lib/mock/menu";
@@ -14,6 +14,7 @@ type Props = {
 export function MenuProductCard({ product, busy = false, categoryLabel, freeProductLabel, onEdit, onDuplicate, onToggleAvailability, onDelete, businessCategory }: Props) {
   const isEvents = getBusinessCopy(businessCategory).kind === "events";
   const isSalon = businessCategory === "hair_salons";
+  const isGifts = businessCategory === "gifts_flowers";
   const promoOn = product.promo != null && isPromoActive(product.promo);
   const finalPrice = productFinalPrice(product.price, product.promo);
   const discounted = promoOn && finalPrice < product.price;
@@ -22,24 +23,24 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     <div className={styles.productOverview}>
       <div className={styles.media}>
         <ProductMediaDisplay ownerMenu product={product} alt="" className={styles.mediaAsset}
-          fallback={<div className={styles.mediaFallback}>{isSalon ? <Scissors aria-hidden="true" /> : <Coffee aria-hidden="true" />}<span>بدون صورة</span></div>} />
+          fallback={<div className={styles.mediaFallback}>{isGifts ? <Flower2 aria-hidden="true" /> : isSalon ? <Scissors aria-hidden="true" /> : <Coffee aria-hidden="true" />}<span>بدون صورة</span></div>} />
       </div>
       <div className={styles.productIdentity}>
         <p className={styles.categoryLabel}>{categoryLabel ?? product.category}</p>
         <h3 className={styles.productName}>{product.name}</h3>
         <span className={`${styles.availability} ${product.available ? styles.availabilityOn : ""}`}>
           {product.available ? <Eye size={13} aria-hidden="true" /> : <EyeOff size={13} aria-hidden="true" />}
-          {isSalon ? (product.available ? "ظاهر في صفحة الصالون" : "مخفي من صفحة الصالون") : product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
+          {isGifts ? (product.available ? "متاح للطلب" : "غير متاح للطلب") : isSalon ? (product.available ? "ظاهر في صفحة الصالون" : "مخفي من صفحة الصالون") : product.available ? "ظاهر في المنيو" : "مخفي من المنيو"}
         </span>
       </div>
     </div>
     <div className={styles.priceRow}>
-      <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : "السعر"}</span><div className={styles.priceValues}>
-        <strong className={styles.price}>{formatSar(discounted ? finalPrice : product.price)}</strong>
+      <div><span className={styles.priceLabel}>{isEvents ? "رسوم الدخول" : isGifts && product.commerceDetails?.optionGroups?.length ? "السعر الأساسي" : "السعر"}</span><div className={styles.priceValues}>
+        <strong className={styles.price}>{isGifts && product.commerceDetails?.quoteOnly ? "حسب الطلب" : formatSar(discounted ? finalPrice : product.price)}</strong>
         {discounted && <del className={styles.originalPrice}>{formatSar(product.price)}</del>}
       </div></div>
       {isEvents ? <span className={styles.secondaryInfo}>السعة {product.eventTicketSettings?.capacity?.toLocaleString("ar-SA") ?? "غير محددة"}<br />{product.eventTicketSettings?.checkinPolicy === "multi_use" ? "دخول متعدد" : "دخول مرة واحدة"}</span>
-        : isSalon ? <span className={styles.secondaryInfo}>{product.catalogKind === "service" ? "خدمة" : "منتج"}{product.catalogKind === "service" && product.preparationTimeMinutes ? <><Clock3 size={14} aria-hidden="true" />{product.preparationTimeMinutes} دقيقة</> : null}</span> : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
+        : isSalon || isGifts ? <span className={styles.secondaryInfo}>{product.catalogKind === "service" ? "خدمة" : "منتج"}{product.catalogKind === "service" && product.preparationTimeMinutes ? <><Clock3 size={14} aria-hidden="true" />{product.preparationTimeMinutes} دقيقة</> : null}</span> : product.calories !== undefined && <span className={styles.secondaryInfo}><Flame size={14} aria-hidden="true" />{product.calories.toLocaleString("ar-SA")} سعرة</span>}
     </div>
     {promoOn && product.promo && <p className={styles.activePromo}><Gift size={14} aria-hidden="true" />{promoBadgeText(product.promo)}</p>}
     {hasDetails && <details className={styles.productDetails}>
@@ -51,7 +52,7 @@ export function MenuProductCard({ product, busy = false, categoryLabel, freeProd
     </details>}
     <div className={styles.cardActions}>
       <button type="button" disabled={busy} onClick={onEdit} className={`${styles.cardButton} ${styles.editButton}`} aria-label={`تعديل ${product.name}`}><Pencil size={15} aria-hidden="true" />تعديل</button>
-      <button type="button" disabled={busy} onClick={onToggleAvailability} className={`${styles.cardButton} ${styles.toggleButton}`} aria-label={`${product.available ? "إخفاء" : "إظهار"} ${product.name}`}>{product.available ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{product.available ? "إخفاء" : "إظهار"}</button>
+      <button type="button" disabled={busy} onClick={onToggleAvailability} className={`${styles.cardButton} ${styles.toggleButton}`} aria-label={`${isGifts ? (product.available ? "إيقاف الطلب" : "إتاحة الطلب") : product.available ? "إخفاء" : "إظهار"} ${product.name}`}>{product.available ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}{isGifts ? (product.available ? "إيقاف الطلب" : "إتاحة الطلب") : product.available ? "إخفاء" : "إظهار"}</button>
       <button type="button" disabled={busy} onClick={onDuplicate} className={styles.iconButton} aria-label={`تكرار ${product.name}`} title="تكرار الصنف"><Copy size={17} aria-hidden="true" /></button>
       <button type="button" disabled={busy} onClick={onDelete} className={`${styles.iconButton} ${styles.deleteButton}`} aria-label={`حذف ${product.name}`} title="حذف الصنف"><Trash2 size={17} aria-hidden="true" /></button>
     </div>

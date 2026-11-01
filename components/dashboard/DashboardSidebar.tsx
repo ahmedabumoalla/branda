@@ -3,7 +3,7 @@
 import { DashboardNavigationLink as Link } from "./dashboard-navigation-link";
 import { FinanceSidebarMenu } from "./finance-sidebar-menu";
 import { usePathname, useRouter } from "next/navigation";
-import { MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards } from "lucide-react";
+import { ShoppingBag, MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -51,6 +51,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
   const cafeLogoUrl = useResolvedCafeLogoUrl(settings);
   const cafeName = settings.cafeName || "العلامة";
   const isSalon = settings.businessCategory === "hair_salons";
+  const isGifts = settings.businessCategory === "gifts_flowers";
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
 
@@ -104,7 +105,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
       {links.map(({ feature, access }) => {
         if (feature.id === "finance" && access?.effectiveEnabled) return <FinanceSidebarMenu key={feature.id} slug={settings.cafeSlug} collapsed={collapsed} onExpand={() => onCollapsedChange?.(false)} onNavigate={onNavigate} />;
         const Icon = feature.id === "menu" ? (isSalon ? Scissors : Package) : feature.id === "loyalty" ? Star : feature.id === "offers" ? Gift : feature.id === "pager" ? BellRing : feature.id === "marketing_campaigns" ? Megaphone : feature.id === "finance" ? WalletCards : Settings;
-        const title = isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
+        const title = isGifts && feature.id === "menu" ? "المنتجات والخدمات" : isGifts && feature.id === "settings" ? "إعدادات المتجر" : isSalon && feature.id === "menu" ? "الخدمات والمنتجات" : isSalon && feature.id === "settings" ? "إعدادات الصالون" : feature.sidebarLabel ?? feature.titleAr;
         const locked = !access?.effectiveEnabled;
         const href = feature.route;
         const active = !locked && (pathname === href || pathname.startsWith(`${href}/`));
@@ -123,6 +124,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
           </span>}
         </Link>;
       })}
+      {isGifts && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/orders" onClick={() => onNavigate?.()} aria-label="الطلبات" title={collapsed ? "الطلبات" : undefined} aria-current={pathname.startsWith("/dashboard/orders") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/orders") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الطلبات</span>}</Link>}
       {links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/branches" onClick={() => onNavigate?.()} aria-label="الفروع" title={collapsed ? "الفروع" : undefined} aria-current={pathname === "/dashboard/branches" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/branches" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الفروع</span>}</Link>}
       {isSalon && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/bookings" onClick={() => onNavigate?.()} aria-label="متابعة الحجوزات" title={collapsed ? "متابعة الحجوزات" : undefined} aria-current={pathname.startsWith("/dashboard/bookings") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/bookings") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>متابعة الحجوزات</span>}</Link>}
       {settings.cafeSlug && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}

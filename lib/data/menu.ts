@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -317,6 +318,8 @@ const productSchema = z.object({
   calories: z.number().optional().nullable(),
   loyaltyPoints: z.number().int().min(0),
   catalogKind: z.enum(["product", "service"]).optional(),
+  commerceDetails: commerceDetailsSchema.optional(),
+  expectedCommerceDetails: z.record(z.string(), z.unknown()).refine(value => JSON.stringify(value).length <= 200_000).optional(),
   preparationTimeMinutes: z.number().optional().nullable(),
   redeemableWithPoints: z.boolean(),
   redemptionPoints: z.number().optional().nullable(),
@@ -383,6 +386,7 @@ type MenuProductPayload = {
   calories: number | null;
   loyalty_points: number;
   catalog_kind: "product" | "service";
+  commerce_details?: CommerceDetails;
   preparation_time_minutes: number | null;
   redeemable_with_points: boolean;
   redemption_points: number | null;
@@ -553,7 +557,8 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     ...(parsed.priceOptions !== undefined ? { price_options: parsed.priceOptions.length ? [...new Set([parsed.price, ...parsed.priceOptions])].sort((a,b) => a-b) : [] } : {}),
     calories: parsed.calories ?? null,
     loyalty_points: 0,
-    catalog_kind: cafe.businessCategory === "hair_salons" ? (parsed.catalogKind ?? "service") : "product",
+    catalog_kind: cafe.businessCategory === "gifts_flowers" ? (parsed.catalogKind ?? "product") : cafe.businessCategory === "hair_salons" ? (parsed.catalogKind ?? "service") : "product",
+    ...(cafe.businessCategory === "gifts_flowers" && parsed.commerceDetails !== undefined ? { commerce_details: parsed.commerceDetails } : {}),
     preparation_time_minutes: parsed.preparationTimeMinutes ?? null,
     redeemable_with_points: false,
     redemption_points: null,
@@ -572,13 +577,14 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   };
 
   if (parsed.id) {
-    const { data, error } = await supabase
+    let update = supabase
       .from("menu_products")
       .update(payload)
       .eq("id", parsed.id)
-      .eq("cafe_id", cafe.id)
-      .select("*")
-      .maybeSingle();
+      .eq("cafe_id", cafe.id);
+    const compareCommerce = cafe.businessCategory === "gifts_flowers" && parsed.expectedCommerceDetails !== undefined;
+    if (compareCommerce) update = update.eq("commerce_details", JSON.stringify(parsed.expectedCommerceDetails));
+    const { data, error } = await update.select("*").maybeSingle();
 
     if (error) throw error;
     if (data) {
@@ -588,6 +594,8 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
       invalidatePublicMenuSurfaces(cafe.slug);
       return data as DbMenuProduct;
     }
+
+    if (compareCommerce) throw new Error("تغيرت بيانات المنتج أو مخزونه حدث الصفحة وأعد التعديل");
 
     const { data: inserted, error: insertError } = await supabase
       .from("menu_products")

@@ -4,6 +4,7 @@ export type BusinessCategoryId =
   | "massage_centers"
   | "beauty_centers"
   | "hair_salons"
+  | "gifts_flowers"
   | "clinics_health_centers"
   | "gyms_fitness"
   | "retail_stores"
@@ -11,7 +12,7 @@ export type BusinessCategoryId =
   | "furniture"
   | "events_conferences";
 
-export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "hair_salons"] as const;
+export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "hair_salons", "gifts_flowers"] as const;
 
 export const BUSINESS_CATEGORIES: {
   id: BusinessCategoryId;
@@ -25,6 +26,7 @@ export const BUSINESS_CATEGORIES: {
   { id: "massage_centers", label: "مراكز مساج", available: false, dashboardPath: null, icon: "Sparkles" },
   { id: "beauty_centers", label: "مراكز تجميل", available: false, dashboardPath: null, icon: "Scissors" },
   { id: "hair_salons", label: "صالونات الحلاقة الرجالية", available: true, dashboardPath: "/dashboard", icon: "Scissors" },
+  { id: "gifts_flowers", label: "متاجر الهدايا والورود", available: true, dashboardPath: "/dashboard", icon: "Flower2" },
   { id: "clinics_health_centers", label: "العيادات والمراكز الصحية", available: false, dashboardPath: null, icon: "HeartPulse" },
   { id: "gyms_fitness", label: "صالات الرياضة واللياقة البدنية", available: false, dashboardPath: null, icon: "Dumbbell" },
   { id: "retail_stores", label: "متاجر البيع بالتجزئة", available: false, dashboardPath: null, icon: "ShoppingBag" },

@@ -9,7 +9,7 @@ export function menuDisplayText(value: string) {
 
 export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
-  "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo"
+  "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails"
 > & {
   catalogKind?: "service" | "product";
   primaryMediaType?: "image" | "video";
@@ -74,8 +74,9 @@ export function matchesMenuSearch(product: StandaloneMenuProduct, query: string)
 export function isStandaloneProductVisible(
   product: { available?: boolean; deleted_at?: string | null; category_id: string | null },
   visibleCategoryIds: ReadonlySet<string>,
+  includeUnavailable = false,
 ) {
-  return product.available !== false && !product.deleted_at && (!product.category_id || visibleCategoryIds.has(product.category_id));
+  return (includeUnavailable || product.available !== false) && !product.deleted_at && (!product.category_id || visibleCategoryIds.has(product.category_id));
 }
 
 export function isOwnedMenuAsset(path: string, cafeId: string) {

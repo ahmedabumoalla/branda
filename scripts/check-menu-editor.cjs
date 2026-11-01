@@ -93,9 +93,9 @@ async function main() {
   assert.equal(productFinalPrice(20, null), 20);
 
   // Run the actual authenticated data mutation, inspect stored JSON and cache invalidation.
-  let stored; const invalidations = [], filters = [];
+  let stored, commerceConflict = false; const invalidations = [], filters = [];
   const query = { update(value) { stored = value; return this; }, eq(key, value) { filters.push([key, value]); return this; },
-    select() { return this; }, async maybeSingle() { return { data: { ...stored, id: product.id }, error: null }; } };
+    select() { return this; }, async maybeSingle() { return { data: commerceConflict ? null : { ...stored, id: product.id }, error: null }; } };
   const { upsertMenuProduct } = load('lib/data/menu.ts', {
     'next/cache': { revalidatePath: path => invalidations.push(path) },
     '@/lib/supabase/server': { createClient: async () => ({ from: table => { assert.equal(table, 'menu_products'); return query; } }) },
@@ -112,6 +112,22 @@ async function main() {
   assert(invalidations.includes('/menu/delicake'));
   await assert.rejects(upsertMenuProduct({ ...input, promo: { ...livePromo, discountPercent: 101 } }));
   await assert.rejects(upsertMenuProduct({ ...input, promo: { ...livePromo, discountMode: 'fixed_price', discountedPrice: 21 } }));
+  // Gift authoring preserves required additive groups and service classification in the actual owner mutation.
+  const giftDetails={quoteOnly:false,stock:4,optionGroups:[{id:'pot',label:'الأصيص',type:'select',required:true,choices:[{id:'glass',label:'زجاج',priceDelta:15}]}]};
+  const giftMutation=load('lib/data/menu.ts',{
+    'next/cache':{revalidatePath(){}},'@/lib/supabase/server':{createClient:async()=>({from:()=>query})},
+    '@/lib/supabase/admin':{},'@/lib/data/cafes':{requireOwnerCafeContext:async()=>({id:'tenant',slug:'together',businessCategory:'gifts_flowers'})},
+    '@/lib/performance/server-memory-cache':{clearServerMemoryCache(){}},
+  }).upsertMenuProduct;
+  await giftMutation({...input,catalogKind:'service',commerceDetails:giftDetails});assert.equal(stored.catalog_kind,'service');assert.deepEqual(stored.commerce_details,giftDetails);
+  const rawSnapshot={...giftDetails,sourceType:'legacy'};
+  await giftMutation({...input,commerceDetails:giftDetails,expectedCommerceDetails:rawSnapshot});
+  assert(filters.some(([key,value])=>key==='commerce_details'&&value===JSON.stringify(rawSnapshot)),'Match original JSON including unknown source metadata');
+  commerceConflict=true;
+  await assert.rejects(giftMutation({...input,commerceDetails:giftDetails,expectedCommerceDetails:rawSnapshot}),/تغيرت بيانات المنتج أو مخزونه/,'A stale snapshot cannot overwrite stock or fall back to insert');
+  commerceConflict=false;
+  await assert.rejects(giftMutation({...input,commerceDetails:{optionGroups:[{id:'bad',label:'Bad',type:'select',required:true,choices:[]}]}}));
+  await upsertMenuProduct({...input,catalogKind:'service',commerceDetails:giftDetails});assert.equal(stored.catalog_kind,'product');assert.equal(stored.commerce_details,undefined,'Gift-only authoring cannot change another business product metadata');
 
   // Exercise the real editor event handlers without touching customer data.
   const h = hooks(); let closed = 0, saved, settle, saveCalls = 0;
@@ -180,7 +196,7 @@ async function main() {
 
   // Dashboard mutations update local cards only after success, including new UUID products.
   const ph = hooks(); let fail = false, mutations = 0, notifications = 0, restores = 0;
-  const pageMocks = { react: ph.api, 'next/dynamic': () => 'editor',
+  const pageMocks = { react: { ...ph.api, useTransition: () => [false, callback => callback()] }, 'next/dynamic': () => 'editor', 'next/navigation': { useRouter: () => ({ push() {} }) },
     '@/app/actions/menu': { saveMenuProductAction: async p => { mutations++; if (fail) throw Error('failed'); return p.id; },
       deleteMenuProductAction: async () => { if (fail) throw Error('failed'); } },
     '@/components/dashboard/menu/category-manager': { CategoryManager: 'categories' },

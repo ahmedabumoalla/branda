@@ -1,3 +1,5 @@
+import type { CommerceDetails } from "@/lib/commerce/product-details";
+
 export type MenuCategory = string;
 
 export type MenuImageVariant =
@@ -72,6 +74,9 @@ export type MenuProduct = {
   calories?: number;
   loyaltyPoints: number;
   catalogKind?: "product" | "service";
+  commerceDetails?: CommerceDetails;
+  /** Original JSON for optimistic owner edits, excluded from public menu DTOs. */
+  commerceSnapshot?: Record<string, unknown>;
   preparationTimeMinutes?: number;
   redeemableWithPoints?: boolean;
   redemptionPoints?: number;

@@ -5,6 +5,7 @@ import type { CafeOffer } from "@/lib/mock/offers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
 import type { CafeThemeId } from "@/lib/mock/cafe-theme";
+import { readCommerceDetails } from "@/lib/commerce/product-details";
 
 /** DB row shapes (snake_case) */
 export type DbCafeSettings = {
@@ -47,6 +48,7 @@ export type DbMenuProduct = {
   calories: number | null;
   loyalty_points: number;
   catalog_kind?: "product" | "service";
+  commerce_details?: unknown;
   preparation_time_minutes: number | null;
   redeemable_with_points: boolean;
   redemption_points: number | null;
@@ -261,6 +263,9 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     calories: row.calories ?? undefined,
     loyaltyPoints: 0,
     catalogKind: row.catalog_kind ?? "product",
+    commerceDetails: readCommerceDetails(row.commerce_details),
+    commerceSnapshot: row.commerce_details && typeof row.commerce_details === "object" && !Array.isArray(row.commerce_details)
+      ? row.commerce_details as Record<string, unknown> : undefined,
     preparationTimeMinutes: row.preparation_time_minutes ?? undefined,
     redeemableWithPoints: false,
     redemptionPoints: undefined,

@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, ExternalLink, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
+import { ChevronDown, ExternalLink, LoaderCircle, Plus, Search, SlidersHorizontal, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   fetchOwnerMenuAction,
   deleteMenuCategoryAction,
@@ -26,6 +27,7 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { captureProductPosition } from "@/lib/menu/product-position";
 import { notifyMenuChanged } from "@/lib/menu/menu-change";
 import { createProductCopy } from "@/lib/menu/product-copy";
+import { readCommerceDetails } from "@/lib/commerce/product-details";
 import styles from "@/components/dashboard/menu/menu-dashboard.module.css";
 
 function ModalLoadingPlaceholder() {
@@ -75,6 +77,9 @@ type Props = {
 };
 
 export function MenuPageClient({ initialProducts, initialCategories, businessCategory, cafeSlug, branchId, branchName, branchSlug, branches = [], configError }: Props) {
+  const router = useRouter();
+  const [branchPending, startBranchTransition] = useTransition();
+  const [requestedBranchName, setRequestedBranchName] = useState("");
   const copy = getBusinessCopy(businessCategory);
   const [products, setProducts] = useState<MenuProduct[]>(initialProducts);
   const [categories, setCategories] = useState<MenuCategoryRecord[]>(initialCategories);
@@ -100,9 +105,10 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
   }, [products, open]);
   const { toast, showToast } = useAppToast();
   const isSalon = copy.kind === "barbershop";
-  const menuTitle = isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
-  const importLabel = isSalon ? "استيراد الخدمات والمنتجات" : copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
-  const addLabel = isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
+  const isGifts = copy.kind === "gifts";
+  const menuTitle = isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنيو الرقمي";
+  const importLabel = isGifts ? "استيراد المنتجات والخدمات" : isSalon ? "استيراد الخدمات والمنتجات" : copy.kind === "events" ? "استيراد التذاكر" : "استيراد المنيو";
+  const addLabel = isGifts ? "إضافة منتج أو خدمة" : isSalon ? "إضافة خدمة أو منتج" : copy.kind === "events" ? "إضافة تذكرة أو باقة" : "إضافة منتج";
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -138,15 +144,19 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       const categoryName = getCategoryNameById(categories, product.categoryId, product.category);
       const normalized = { ...product, category: categoryName, ...(branchId !== undefined ? { branchId } : {}) };
       const id = await saveMenuProductAction(normalized);
-      const saved = { ...normalized, id: id || normalized.id };
+      const saved = { ...normalized, id: id || normalized.id,
+        ...(isGifts ? { commerceSnapshot: readCommerceDetails(normalized.commerceDetails) } : {}),
+      };
 
       setProducts((prev) => prev.some((item) => item.id === saved.id)
         ? prev.map((item) => item.id === saved.id ? saved : item) : [...prev, saved]);
       notifyMenuChanged(cafeSlug);
       showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ التذكرة أو الباقة" : "تم حفظ المنتج" });
       return true;
-    } catch {
-      showToast({ type: "error", message: copy.kind === "events" ? "تعذر حفظ التذكرة أو الباقة" : "تعذر حفظ المنتج" });
+    } catch (error) {
+      const conflict = "تغيرت بيانات المنتج أو مخزونه حدث الصفحة وأعد التعديل";
+      showToast({ type: "error", message: error instanceof Error && error.message === conflict
+        ? conflict : copy.kind === "events" ? "تعذر حفظ التذكرة أو الباقة" : "تعذر حفظ المنتج" });
       return false;
     } finally {
       actionLock.current = false;
@@ -178,7 +188,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
       const saved = await saveMenuCategoriesAction(next.map(item => ({ ...item, ...(branchId !== undefined ? { branchId } : {}) })));
       setCategories(saved);
       notifyMenuChanged(cafeSlug);
-      showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ فئات التذاكر" : "تم حفظ تصنيفات المنيو" });
+      showToast({ type: "success", message: copy.kind === "events" ? "تم حفظ فئات التذاكر" : copy.kind === "gifts" ? "تم حفظ تصنيفات المنتجات والخدمات" : "تم حفظ تصنيفات المنيو" });
       return saved;
     } catch {
       showToast({ type: "error", message: "تعذر حفظ التصنيفات" });
@@ -241,16 +251,28 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
     );
   }
 
+  if (branchPending) return <div dir="rtl" className={styles.page} aria-busy="true">
+    <DashboardPageShell title={menuTitle} subtitle={`جارٍ فتح ${requestedBranchName}`}>
+      <MenuBranchSwitcher branches={branches} currentId={branchId} busy />
+      <section role="status" aria-live="polite" className="rounded-3xl border border-[#E5D8CD] bg-white p-8 text-center text-[#4A281D]">
+        <LoaderCircle className="mx-auto mb-4 h-8 w-8 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        <h2 className="text-lg font-bold">جارٍ تحميل منيو {requestedBranchName}</h2>
+        <p className="mt-2 text-sm text-[#806A5E]">نجهز منتجات الفرع وصوره وأسعاره</p>
+        <div aria-hidden="true" className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">{[0, 1, 2, 3].map(item => <div key={item} className="h-40 rounded-2xl bg-[#F8F4EF] motion-safe:animate-pulse" />)}</div>
+      </section>
+    </DashboardPageShell>
+  </div>;
+
   return (
     <div dir="rtl" className={styles.page}>
       <DashboardPageShell
         title={branchName ? `${menuTitle} — ${branchName}` : menuTitle}
-        subtitle={isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
+        subtitle={isGifts ? "أدر منتجاتك وخدماتك وصورها وأسعارها وخيارات العملاء" : isSalon ? "خدمات الصالون وأسعاره ومنتجات العناية كما يراها العميل" : "منتجاتك وأسعارك كما يراها العميل"}
         action={
           <div className={styles.headerActions}>
             {cafeSlug && <a href={`/${isSalon ? "salon" : "menu"}/${encodeURIComponent(cafeSlug)}${branchSlug ? `?branch=${encodeURIComponent(branchSlug)}` : ""}`} target="_blank" rel="noopener noreferrer" className={styles.secondaryAction}>
               <ExternalLink className="h-5 w-5" aria-hidden="true" />
-              {isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
+              {isGifts ? "فتح صفحة المتجر" : isSalon ? "فتح صفحة الصالون" : "فتح المنيو المستقل"}
             </a>}
             {!branchId && <button
               type="button"
@@ -279,13 +301,16 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
         }
       >
-        <MenuBranchSwitcher branches={branches} currentId={branchId} busy={saving} />
-        <section className={styles.summaryGrid} aria-label="ملخص المنيو">
+        <MenuBranchSwitcher branches={branches} currentId={branchId} busy={saving} onSwitch={branch => {
+          setRequestedBranchName(branch.name);
+          startBranchTransition(() => router.push(`/dashboard/menu?branch=${encodeURIComponent(branch.id)}`, { scroll: false }));
+        }} />
+        <section className={styles.summaryGrid} aria-label={isGifts ? "ملخص المنتجات والخدمات" : "ملخص المنيو"}>
           {[
-            [isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
-            [isSalon ? "ظاهر في صفحة الصالون" : copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
+            [isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "إجمالي التذاكر والباقات" : "إجمالي المنتجات", products.length],
+            [isGifts ? "متاح للطلب" : isSalon ? "ظاهر في صفحة الصالون" : copy.kind === "events" ? "تذاكر متاحة" : "ظاهر في المنيو", availableCount],
             ["التصنيفات", categories.length],
-            [isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو", products.length - availableCount],
+            [isGifts ? "غير متاح للطلب" : isSalon ? "مخفي من صفحة الصالون" : "مخفي من المنيو", products.length - availableCount],
           ].map(([label, value]) => (
             <div key={String(label)} className={styles.metricCard}>
               <p className={styles.metricLabel}>{label}</p>
@@ -301,7 +326,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
               <NeumoInput
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={isSalon ? "ابحث باسم الخدمة أو المنتج" : "ابحث باسم المنتج أو التصنيف"}
+                placeholder={isGifts ? "ابحث باسم المنتج أو الخدمة" : isSalon ? "ابحث باسم الخدمة أو المنتج" : "ابحث باسم المنتج أو التصنيف"}
                 aria-label="البحث في المنتجات والتصنيفات"
                 className={styles.searchInput}
               />
@@ -342,7 +367,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
         <section className="min-w-0">
           <div className={styles.catalogHeader}>
             <div>
-              <h2 className={styles.catalogTitle}>{isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنتجات"}</h2>
+              <h2 className={styles.catalogTitle}>{isGifts ? "المنتجات والخدمات" : isSalon ? "الخدمات والمنتجات" : copy.kind === "events" ? "التذاكر والباقات" : "المنتجات"}</h2>
               <p className={styles.catalogMeta}>
                 {filtered.length} نتيجة
                 {categoryFilter === "الكل"
@@ -353,7 +378,7 @@ export function MenuPageClient({ initialProducts, initialCategories, businessCat
           </div>
           {filtered.length === 0 ? (
             <div className={styles.emptyState}>
-              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
+              {query || categoryFilter !== "الكل" ? "لا توجد نتائج مطابقة جرّب اسمًا أو تصنيفًا آخر" : isGifts ? "أضف أول منتج أو خدمة لمتجرك" : isSalon ? "أضف أول خدمة للصالون أو منتج للعناية" : copy.kind === "events" ? "لا توجد تذاكر أو باقات بعد" : "لا توجد منتجات بعد"}
             </div>
           ) : (
             <div className={styles.productGrid}>

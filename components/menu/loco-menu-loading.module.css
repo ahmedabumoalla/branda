@@ -1,0 +1,104 @@
+.screen {
+  --cream: #fff8e3;
+  --red: #ee2330;
+  --ink: #4c171c;
+  --line: #ee233026;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 56px 24px;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.frame {
+  position: absolute;
+  inset: clamp(16px, 4vw, 40px);
+  border: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.frame::before,
+.frame::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: var(--red);
+  border-style: solid;
+}
+
+.frame::before { top: -1px; right: -1px; border-width: 1px 1px 0 0; }
+.frame::after { bottom: -1px; left: -1px; border-width: 0 0 1px 1px; }
+
+.content { width: min(100%, 360px); text-align: center; }
+.mark { padding: 22px 8px; overflow: hidden; }
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  animation: loco-mark-enter 760ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.signature {
+  margin: 22px 0 36px;
+  font-size: clamp(20px, 4.8vw, 28px);
+  font-weight: 700;
+  line-height: 1.6;
+  word-spacing: .08em;
+}
+
+.track {
+  position: relative;
+  width: 116px;
+  height: 2px;
+  margin-inline: auto;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.sweep {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 44%;
+  background: var(--red);
+  animation: loco-loading-sweep 1500ms cubic-bezier(.45, 0, .55, 1) infinite;
+}
+
+.status { margin: 18px 0 0; font-size: 12px; line-height: 1.8; }
+.corner {
+  position: absolute;
+  bottom: clamp(30px, 6vw, 58px);
+  left: clamp(30px, 6vw, 58px);
+  color: var(--red);
+  font-size: 10px;
+  letter-spacing: .14em;
+  direction: ltr;
+}
+
+@keyframes loco-mark-enter {
+  from { opacity: 0; transform: translateY(35%) rotate(-4deg) scale(.92); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+@keyframes loco-loading-sweep {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(340%); }
+}
+
+@media (max-height: 420px) {
+  .screen { padding-block: 28px; }
+  .content { width: min(65%, 240px); }
+  .mark { padding-block: 8px; }
+  .signature { margin: 8px 0 18px; font-size: 18px; }
+  .corner { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo, .sweep { animation: none; transform: none; }
+  .sweep { left: 28%; }
+}

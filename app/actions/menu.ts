@@ -38,6 +38,8 @@ export async function saveMenuProductAction(product: MenuProduct) {
     calories: product.calories ?? null,
     loyaltyPoints: 0,
     catalogKind: product.catalogKind,
+    commerceDetails: product.commerceDetails,
+    expectedCommerceDetails: product.commerceSnapshot,
     preparationTimeMinutes: product.preparationTimeMinutes ?? null,
     redeemableWithPoints: false,
     redemptionPoints: null,

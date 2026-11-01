@@ -5,7 +5,13 @@ const {LocoMenu}=load('components/menu/loco-menu.tsx',mocks);
 const product={id:'one',name:'أمريكانو',description:'',categoryId:'coffee',category:'القهوة',price:12,priceOptions:[12,13],available:true,images:[{url:'https://example.test/loco.webp',alt:'قهوة'}],videos:[],ingredients:[]};
 const menu={name:'LOCO',slug:'brand-9a8c97305195',logoUrl:'/loco/logo.svg',description:null,loyaltyEnabled:true,products:[product,{...product,id:'two',name:'كوكيز',price:10,priceOptions:[]}],categories:[{id:'coffee',name:'القهوة',description:null}],contacts:{feedbackEnabled:false,instagramUrl:null,location:null},branch:{id:'drive',slug:'drive-thru',name:'الدرايف ثرو'},branches:[{id:'main',slug:'murooj',name:'فرع المروج'},{id:'drive',slug:'drive-thru',name:'الدرايف ثرو'}],highlights:{asOf:100,items:[{id:'expired',title:'EXPIRED OFFER',productId:'one',expiresAt:90},{id:'current',title:'CURRENT OFFER',productId:'one',expiresAt:200,imageUrl:'https://example.test/offer.webp'},{id:'hidden',title:'HIDDEN OFFER',productId:'one',showInSpotlight:false}]}};
 const render=(props={})=>renderToStaticMarkup(React.createElement(LocoMenu,{menu,loyalty:{purchasesRequired:6,rewardName:'خصم 10%'},...props}));
-let html=render();for(const token of ['12 / 13','خصم 10%','branch=murooj','branch=drive-thru','aria-current="page"','CURRENT OFFER','loco-catalog','loco-loyalty'])assert(html.includes(token),token);assert(!html.includes('EXPIRED OFFER')&&!html.includes('HIDDEN OFFER'));assert.equal((html.match(/class="stamps"/g)||[]).length,1);
+let html=render();for(const token of ['12 / 13','خصم 10%','CURRENT OFFER','loco-catalog','loco-loyalty','editorial-v3','heroIdentity','heroLogo'])assert(html.includes(token),token);assert(!html.includes('EXPIRED OFFER')&&!html.includes('HIDDEN OFFER'));assert.equal((html.match(/class="stamps"/g)||[]).length,1);
+assert(!html.includes('branch=murooj')&&!html.includes('branch=drive-thru')&&!html.includes('aria-label="الفروع"'),'Public menu has no branch navigation');
+assert(!html.includes('الدرايف ثرو')&&!html.includes('فرع المروج'),'Branch labels do not enter the public composition');
+assert(html.indexOf('id="loco-offers"')<html.indexOf('id="loco-loyalty"')&&html.indexOf('id="loco-loyalty"')<html.indexOf('id="loco-catalog"'),'Loyalty sits between spotlight and catalog');
+assert(/class="heroLogo"[^>]+src="\/loco\/logo.svg"|src="\/loco\/logo.svg"[^>]+class="heroLogo"/.test(html),'The original SVG is the central brand mark');
+const branchOfferHtml=render({menu:{...menu,highlights:{asOf:100,items:[{...menu.highlights.items[1],description:'اكتشف الدونات في الدرايف ثرو'}]}}});
+assert(branchOfferHtml.includes('اكتشف الدونات')&&!branchOfferHtml.includes('في الدرايف ثرو'),'Legacy promotional branch suffixes stay out of the public copy');
 html=render({loyalty:null});assert(!html.includes('id="loco-loyalty"'));html=render({menu:{...menu,loyaltyEnabled:false}});assert(!html.includes('id="loco-loyalty"'));html=render({menu:{...menu,products:[],highlights:{asOf:100,items:[]}}});assert(html.includes('المنيو يتجهّز لك'));
 // Execute actual search, category reset, offer navigation and product selection callbacks.
 let slots=[],cursor=0;const hookReact={...React,useEffect(){},useRef:value=>({current:value}),useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v]}};
@@ -18,11 +24,14 @@ nodes(tree).find(n=>n.type==='button'&&n.props['aria-label']==='تفاصيل أ�
 const experience={...product,id:'art',categoryId:'experiences',category:'تجارب لوكو',name:'تجربة الرسم',price:45,priceOptions:[]};
 html=render({menu:{...menu,products:[...menu.products,experience],categories:[...menu.categories,{id:'experiences',name:'تجارب لوكو',description:null}]}});
 assert(html.indexOf('id="loco-offers"')<html.indexOf('id="loco-catalog"'));
-const catalog=html.slice(html.indexOf('<section class="catalog"'),html.indexOf('<section class="membership"'));
+const catalog=html.slice(html.indexOf('<section class="catalog"'),html.indexOf('<footer class="footer"'));
 assert(!catalog.includes('تجربة الرسم')&&!catalog.includes('CURRENT OFFER')&&!catalog.includes('عرض مخصص'));
 assert(html.includes('تجربة الرسم'));assert.equal((catalog.match(/class="product"/g)||[]).length,2);
-assert(html.includes('غيّر طريقك')&&html.includes('على لوكو'));
-assert(render({menu:{...menu,branch:menu.branches[0]}}).includes('خذ وقتك'));
+assert(html.includes('خذ مزاجك')&&html.includes('معك'));
+const mainHtml=render({menu:{...menu,branch:menu.branches[0],products:[{...product,name:'صنف المروج فقط'}]}});
+assert(mainHtml.includes('خذ وقتك')&&!mainHtml.includes('فرع المروج'));
+assert(mainHtml.includes('صنف المروج فقط')&&!mainHtml.includes('كوكيز'),'Each public branch renders only its supplied products');
+assert(mainHtml.indexOf('id="loco-offers"')<mainHtml.indexOf('id="loco-loyalty"')&&mainHtml.indexOf('id="loco-loyalty"')<mainHtml.indexOf('id="loco-catalog"'));
 // Real spotlight callbacks: next/back, direct selection, detail opening and automatic rotation guards.
 let effectFns=[],interval,cleared=0,observeCallback,disconnected=0,reduced=false,selectedOffer;
 const carouselReact={...hookReact,useRef:()=>({current:{}}),useEffect(fn){effectFns.push(fn)}};
@@ -37,4 +46,11 @@ nodes(tree).find(n=>n.type==='button'&&n.props.className==='offerAction').props.
 nodes(tree).find(n=>n.type==='button'&&n.props['aria-label']==='تشغيل تبديل العروض').props.onClick();tree=drawSpotlight();tree.props.onFocusCapture();tree=drawSpotlight();assert.equal(effectFns[1](),undefined,'focus pauses rotation');
 slots=[];tree=drawSpotlight();effectFns[0]();observeCallback([{isIntersecting:true}]);reduced=true;tree=drawSpotlight();assert.equal(effectFns[1](),undefined,'reduced motion disables automatic changes');assert(!nodes(tree).some(n=>n.props?.['aria-label']==='إيقاف تبديل العروض'));
 stop();disconnect();assert(cleared&&disconnected);delete global.window;delete global.document;delete global.IntersectionObserver;
-console.log('PASS LOCO branches, search/details, six-stamp loyalty, standalone experience placement, carousel navigation/pause/focus/reduced motion and timer cleanup');
+async function checkBranchShare(){
+ const originalNavigator=Object.getOwnPropertyDescriptor(global,'navigator'),originalTimeout=global.setTimeout;let sharedUrl;
+ global.window={location:{origin:'https://barndaksa.com'}};Object.defineProperty(global,'navigator',{value:{clipboard:{writeText:async url=>{sharedUrl=url}}},configurable:true});global.setTimeout=()=>1;
+ try{slots=[];tree=draw();await nodes(tree).find(n=>n.props?.['aria-label']==='مشاركة المنيو').props.onClick();assert.equal(sharedUrl,`https://barndaksa.com/menu/${menu.slug}?branch=drive-thru`,'Share retains the independent branch destination');}
+ finally{global.setTimeout=originalTimeout;delete global.window;if(originalNavigator)Object.defineProperty(global,'navigator',originalNavigator);else delete global.navigator;}
+ console.log('PASS LOCO centered original logo, hidden public branch labels, branch-scoped sharing/products, loyalty between offers/catalog, search/details, carousel navigation/pause/focus/reduced motion and timer cleanup');
+}
+checkBranchShare().catch(error=>{console.error(error);process.exitCode=1});

@@ -24,24 +24,21 @@
 .page svg { flex-shrink: 0; width: 21px; height: 21px; }
 .opening { position: relative; background: var(--loco-cream); padding-top: env(safe-area-inset-top); isolation: isolate; }
 .header { max-width: 1360px; margin: auto; display: flex; align-items: center; justify-content: space-between; padding: 20px 4%; border-bottom: 1px solid #4c171c26; gap: 16px; }
-.smallMark { width: 100px; flex-shrink: 0; }
-.smallMark img { width: 100%; display: block; }
-.header p { font-size: 13px; font-weight: 600; }
-.header p span { margin-inline-start: 14px; font-weight: 400; }
+.headerMood { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 44px; font-size: 13px; font-weight: 700; }
+.headerMood span { font-weight: 400; }
+.headerMood svg { width: 16px; height: 16px; color: var(--loco-red); }
 .actions { display: flex; gap: 8px; }
 .actions button { width: 44px; height: 44px; border: 1px solid #4c171c30; border-radius: 50%; background: transparent; color: var(--loco-ink); display: grid; place-items: center; }
 .actions button:hover { background: var(--loco-pink); }
-.branchBar { display: flex; gap: 10px; justify-content: center; padding: 18px 15px 0; flex-wrap: wrap; }
-.branchBar a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 50px; border: 1px solid #4c171c30; font-size: 12px; }
-.branchBar a[aria-current="page"] { background: var(--loco-ink); color: var(--loco-paper); }
-.masthead { position: relative; max-width: 1100px; margin: 36px auto 0; padding: 0 18%; }
-.masthead > img { width: 100%; max-height: 205px; object-fit: contain; display: block; }
-.mastheadNote { position: absolute; left: 6%; top: 30%; font: 600 12px/1.5 "Bistro Arabic", sans-serif; letter-spacing: .18em; transform: rotate(-8deg); }
-.mastheadStar { position: absolute; right: 10%; top: 25%; width: 56px !important; height: 56px !important; color: var(--loco-red); transform: rotate(12deg); }
-.hero { max-width: 1360px; margin: auto; display: grid; grid-template-columns: .9fr 1.1fr; gap: 5%; align-items: center; padding: 76px 6% 80px; min-height: 640px; }
+.hero { max-width: 1360px; margin: auto; display: grid; grid-template-columns: .9fr 1.1fr; gap: 40px 7%; align-items: center; padding: 38px 8% 76px; }
+.heroIdentity { position: relative; grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; padding: 0 9% 30px; text-align: center; border-bottom: 1px solid #4c171c20; }
+.identityOverline { margin: 0; font-size: 16px; line-height: 1.7; font-weight: 700; word-spacing: .12em; }
+.heroLogo { display: block; width: min(100%, 650px); height: auto; aspect-ratio: 1109 / 401; object-fit: contain; }
+.identityNote { font-size: 10px; letter-spacing: .25em; line-height: 1.6; }
+.identitySpark { position: absolute; right: 4%; top: 42%; width: 38px !important; height: 38px !important; color: var(--loco-red); transform: rotate(12deg); }
 .heroCopy { position: relative; z-index: 1; padding-bottom: 25px; }
 .kicker { font-size: 12px; font-weight: 700; margin: 0 0 18px; }
-.heroCopy h1 { margin: 0; font-size: clamp(46px, 5.7vw, 80px); line-height: 1.5; font-weight: 800; letter-spacing: normal; word-spacing: .1em; }
+.heroCopy h1 { margin: 0; font-size: clamp(40px, 4.8vw, 64px); line-height: 1.5; font-weight: 800; letter-spacing: normal; word-spacing: .12em; text-wrap: balance; }
 .heroCopy h1 em { display: block; color: var(--loco-red); font-style: normal; }
 .description { margin: 20px 0 26px; font-size: 15px; line-height: 2; }
 .primary { display: inline-flex; align-items: center; justify-content: space-between; gap: 28px; min-height: 54px; padding: 10px 24px; border-radius: 50px; background: var(--loco-button); color: white !important; font-size: 14px; font-weight: 700; border: 0; }
@@ -131,7 +128,6 @@
 .footer p { font-size: 18px; font-weight: 700; }
 .footer a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; }
 .powered { flex-basis: 100%; justify-content: center; font-size: 10px !important; opacity: .7; }
-.heroWordmark { position: absolute; z-index: -1; top: -38px; left: 0; right: 0; color: var(--loco-red); opacity: .1; font: 900 clamp(110px, 15vw, 220px)/1 Georgia, serif; letter-spacing: -.08em; text-align: center; transform: rotate(-9deg); pointer-events: none; }
 .heroCopy h1 > span { display: block; animation: locoTitleIn .85s cubic-bezier(.22,1,.36,1) both; }
 .heroCopy h1 > em { animation: locoTitleIn .95s .12s cubic-bezier(.22,1,.36,1) both; }
 .heroCopy .description, .heroCopy > .primary { animation: locoTitleIn .9s .25s cubic-bezier(.22,1,.36,1) both; }
@@ -163,16 +159,17 @@
 @keyframes locoSealIn { from { opacity: 0; transform: scale(.7) rotate(-30deg); } to { opacity: 1; transform: scale(1) rotate(12deg); } }
 @media (max-width: 760px) {
   .header { padding: 14px 5%; }
-  .header p { display: none; }
-  .smallMark { width: 80px; }
+  .headerMood { font-size: 10px; gap: 5px; max-width: 140px; }
+  .headerMood svg { display: none; }
   .actions { gap: 5px; }
-  .masthead { padding: 0 20%; margin-top: 28px; }
-  .masthead > img { max-height: 110px; }
-  .mastheadNote { font-size: 7px; left: 4%; }
-  .mastheadStar { right: 5%; width: 32px !important; height: 32px !important; }
-  .hero { grid-template-columns: 1fr; gap: 24px; padding: 30px 7% 42px; min-height: 0; }
+  .hero { grid-template-columns: 1fr; gap: 28px; padding: 28px 7% 42px; }
+  .heroIdentity { gap: 12px; padding: 0 0 24px; }
+  .identityOverline { font-size: 12px; }
+  .heroLogo { width: min(100%, 420px); }
+  .identityNote { font-size: 8px; letter-spacing: .18em; }
+  .identitySpark { top: 5px; right: 1%; width: 20px !important; height: 20px !important; }
   .heroCopy { text-align: center; padding: 0; }
-  .heroCopy h1 { font-size: clamp(36px, 10vw, 48px); line-height: 1.5; }
+  .heroCopy h1 { font-size: clamp(32px, 9vw, 44px); line-height: 1.5; }
   .heroCopy h1 br { display: block; }
   .heroCopy h1 em { display: block; margin-inline-start: 0; }
   .heroCopy .kicker { font-size: 10px; margin-bottom: 12px; }
@@ -240,7 +237,6 @@
   .footer > a:not(.powered) { flex-basis: 100%; justify-content: center; font-size: 11px; }
 }
 @media (max-width: 760px) {
-  .heroWordmark { top: -10px; font-size: 130px; }
   .offerNavigation { flex-direction: column; align-items: stretch; gap: 12px; }
   .offerControls { justify-content: center; }
   .experienceArt { gap: 10px; }

@@ -125,12 +125,13 @@ export function DashboardAppLayout({
 
   const currentFeature = useMemo(() => {
     if (pathname === "/dashboard/branches") return dashboardPlatformFeatures.find(feature => feature.id === "menu");
+    if (guard.snapshot?.settings.businessCategory === "gifts_flowers" && (pathname === "/dashboard/orders" || pathname.startsWith("/dashboard/orders/"))) return dashboardPlatformFeatures.find(feature => feature.id === "menu");
     const sorted = [...dashboardPlatformFeatures].sort((a, b) => b.href.length - a.href.length);
     return sorted.find((feature) => {
       if (feature.href === "/dashboard") return pathname === "/dashboard";
       return pathname === feature.href || pathname.startsWith(`${feature.href}/`);
     });
-  }, [pathname]);
+  }, [pathname, guard.snapshot?.settings.businessCategory]);
 
   const allowed =
     pathname === "/dashboard" ||

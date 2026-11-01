@@ -30,11 +30,11 @@ const fixtureProduct = {
   promo: null, deleted_at: null, sort_order: 1,
 };
 
-function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false, slug = "double-b-bistro", branches = [], categories } = {}) {
+function fakeClient({ published = true, status = "active", products = [fixtureProduct], deleted = false, slug = "double-b-bistro", branches = [], categories, businessCategory = "cafes_coffee" } = {}) {
   const queries = [], signedPaths = [];
   const tables = {
     branches,
-    cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, is_public: false, deleted_at: deleted ? "deleted" : null }],
+    cafes: [{ id: cafeId, slug, name: "Double B Bistro", status, business_category: businessCategory, is_public: false, deleted_at: deleted ? "deleted" : null }],
     brand_feature_overrides: published === null ? [] : [{ cafe_id: cafeId, feature_id: "standalone_menu", enabled: published }],
     menu_categories: categories ?? [
       { id: "category", cafe_id: cafeId, name: "Category", visible: true, deleted_at: null },
@@ -78,6 +78,12 @@ function loader(client, features = ["menu"]) {
 }
 
 async function run() {
+  const giftDetails={quoteOnly:false,stock:0,optionGroups:[{id:'wrap',label:'Gift wrap',type:'select',required:true,choices:[{id:'paper',label:'Paper',priceDelta:10}]}]};
+  const gift=fakeClient({businessCategory:'gifts_flowers',products:[{...fixtureProduct,available:false,catalog_kind:'service',commerce_details:giftDetails},{...fixtureProduct,id:'hidden-gift',category_id:'hidden',image_storage_path:`${cafeId}/hidden.webp`,available:false}]});
+  const giftMenu=await loader(gift.client)('double-b-bistro');assert.equal(giftMenu.products.length,1);assert.equal(giftMenu.products[0].available,false);assert.equal(giftMenu.products[0].catalogKind,'service');assert.deepEqual(giftMenu.products[0].commerceDetails,giftDetails);assert(!gift.signedPaths.some(path=>path.includes('hidden.webp')),'Gift sold-out visibility does not expose hidden categories');
+  const zeroStock=await loader(fakeClient({businessCategory:'gifts_flowers',products:[{...fixtureProduct,available:true,commerce_details:{stock:0}},{...fixtureProduct,id:'manually-unavailable',available:false,commerce_details:{stock:3}},{...fixtureProduct,id:'in-stock',available:true,commerce_details:{stock:3}}]}).client)('double-b-bistro');
+  assert.equal(zeroStock.products.length,3,'Both owner-disabled and stock-exhausted listings remain visible');
+  assert.deepEqual(zeroStock.products.map(p=>[p.id,p.available]),[['product',false],['manually-unavailable',false],['in-stock',true]],'Stock and owner availability jointly determine orderability');
   const branches=[{id:'main',cafe_id:cafeId,name:'Main',menu_slug:'murooj',active:true,is_primary:true,deleted_at:null},{id:'drive',cafe_id:cafeId,name:'Drive',menu_slug:'drive-thru',active:true,deleted_at:null},{id:'hidden-branch',cafe_id:cafeId,name:'Hidden branch',menu_slug:'hidden',active:false,deleted_at:null},{id:'foreign-branch',cafe_id:'foreign',name:'Foreign branch',menu_slug:'foreign',active:true,deleted_at:null}];
   const categories=['main','drive','hidden-branch'].map(branch_id=>({id:branch_id+'-category',cafe_id:cafeId,branch_id,name:'Coffee',visible:true,deleted_at:null}));
   const branchProducts=categories.map((c,i)=>({...fixtureProduct,id:c.branch_id+'-product',category_id:c.id,branch_id:c.branch_id,price:13-i,price_options:i===1?[12,13]:[],image_storage_path:`${cafeId}/${c.branch_id}/photo.webp`,media:[]}));
