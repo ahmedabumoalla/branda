@@ -20,6 +20,10 @@
     {
       "path": "/api/marketing/jobs",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/admin/marketing-campaigns/jobs",
+      "schedule": "* * * * *"
     }
   ]
 }

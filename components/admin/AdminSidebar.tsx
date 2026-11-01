@@ -27,6 +27,7 @@ const links = [
   ["العلامات التجارية", "/admin/cafes", Building2],
   ["العملاء", "/admin/customers", Users],
   ["عملاء العلامات التجارية", "/admin/brand-customers", Users],
+  ["الحملات التسويقية", "/admin/marketing-campaigns", Megaphone],
   ["العمليات", "/admin/operations", ClipboardList],
   ["الباقات", "/admin/plans", Layers3],
   ["طلبات الاشتراك في الباقات", "/admin/subscription-requests", Receipt],
