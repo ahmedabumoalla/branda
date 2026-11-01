@@ -367,9 +367,9 @@
 .partnersFooter > div { display: flex; gap: 9px; }.partnersFooter button { width: 46px; height: 46px; border: 1px solid #b9c6a8; border-radius: 50%; background: transparent; color: var(--forest); display: grid; place-items: center; transition: background .2s; }.partnersFooter button:hover { background: #dce8a6; }
 .immersiveOpening { position: relative; isolation: isolate; height: 100svh; min-height: 620px; display: flex; flex-direction: column; overflow: hidden; background: #0e2c20; color: #f5f3e7; }
 .canopyBackdrop { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
-.canopyBackdrop picture, .canopyBackdrop img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 45%; }
+.canopyBackdrop picture, .canopyBackdrop img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
 .canopyBackdrop img { animation: canopy-reveal 1600ms cubic-bezier(.2,.7,.3,1) both; }
-.immersiveOpening::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at center,#061c1826,transparent 68%),linear-gradient(180deg,#08281de0 0%,#0b2b20a6 28%,#102f2452 62%,#102f241a 100%); }
+.immersiveOpening::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at center,#171c1759,transparent 72%),linear-gradient(180deg,#191815b3 0%,#1c1b1873 28%,#211d1833 64%,#171c171a 100%); }
 .canopyHeader { flex: 0 0 76px; height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 5%; border-bottom: 1px solid #f5f3e71a; }
 .canopyHeaderSignature { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; color: #f5f3e7; }
 .canopyHeaderSignature > svg { color: #e4edc4; }

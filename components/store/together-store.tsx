@@ -133,7 +133,7 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
   return <main className={s.store} dir="rtl" data-together-store="immersive-canopy-v6">
     <a className={s.skipLink} href="#together-products">انتقل إلى المنتجات والخدمات</a>
     <div className={s.immersiveOpening}>
-      <div className={s.canopyBackdrop} aria-hidden="true"><picture><source media="(max-width: 760px)" srcSet="/together/immersive-garden-mobile.webp" /><StorePhoto src="/together/immersive-garden.webp" alt="" eager /></picture></div>
+      <div className={s.canopyBackdrop} aria-hidden="true"><picture><source media="(max-width: 760px)" srcSet="/together/atelier-desk-mobile.webp" /><StorePhoto src="/together/atelier-desk.webp" alt="" eager /></picture></div>
       <header className={s.canopyHeader}>
         <a href="#together-top" className={s.canopyHeaderSignature}><Sprout aria-hidden="true" /><span>معًا نزرع حياة</span></a>
         <nav className={s.canopyNav} aria-label="أقسام المتجر"><a href="#together-products" onClick={() => browse()}>الغراس والهدايا</a><button onClick={() => browse("service")}>خدمات وتجارب</button>{loyalty && <a href="#together-loyalty">الولاء والمكافآت</a>}{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}</nav>
