@@ -369,7 +369,7 @@
 .canopyBackdrop { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
 .canopyBackdrop picture, .canopyBackdrop img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 45%; }
 .canopyBackdrop img { animation: canopy-reveal 1600ms cubic-bezier(.2,.7,.3,1) both; }
-.immersiveOpening::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at center,#061c1838,transparent 68%),linear-gradient(180deg,#041c2250,transparent 28%,#041b2228 65%,#041b2270); }
+.immersiveOpening::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at center,#061c1826,transparent 68%),linear-gradient(180deg,#08281de0 0%,#0b2b20a6 28%,#102f2452 62%,#102f241a 100%); }
 .canopyHeader { flex: 0 0 76px; height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 5%; border-bottom: 1px solid #f5f3e71a; }
 .canopyHeaderSignature { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 12px; color: #f5f3e7; }
 .canopyHeaderSignature > svg { color: #e4edc4; }
