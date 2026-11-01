@@ -140,13 +140,6 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
         <div className={s.canopyHeaderActions}><button aria-label="البحث في المنتجات" onClick={() => { search.current?.scrollIntoView({ block: "center" }); search.current?.focus({ preventScroll: true }); }}><Search /></button><button className={s.canopyCart} aria-label={`السلة ${count} أصناف`} onClick={() => setCheckout(true)}><ShoppingBag /><span>{count}</span></button></div>
       </header>
       <TogetherHero loyaltyEnabled={menu.loyaltyEnabled && Boolean(loyalty)} />
-      <div className={s.canopySeam} data-together-divider="living-contours" aria-hidden="true">
-        <svg viewBox="0 0 1440 120" preserveAspectRatio="none" focusable="false">
-          <path className={s.seamMist} d="M0 52C240 4 390 12 650 52S1150 94 1440 28V120H0Z" />
-          <path className={s.seamSage} d="M0 64C260 104 420 2 720 42S1190 95 1440 48V120H0Z" />
-          <path className={s.seamPaper} d="M0 80C270 24 440 92 720 70S1180 24 1440 76V120H0Z" />
-        </svg>
-      </div>
     </div>
     {menu.loyaltyEnabled && loyalty && <section className={s.loyalty} id="together-loyalty" aria-labelledby="together-loyalty-title" data-loyalty-design="signature-card">
       <div className={s.loyaltyInvitation}><p className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</p><h2 id="together-loyalty-title">غراس منك <em>ومكافآت لك</em></h2><p>اجمع <strong>{loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام</strong> واحصل على <strong>{loyalty.rewardName}</strong></p></div>
