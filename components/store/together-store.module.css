@@ -392,6 +392,18 @@
 .canopyLoyalty > svg { width: 18px; height: 18px; }
 .canopySignature { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 22px; color: #e2e9d2; font-size: 10px; }
 .canopySignature > span:first-child { font: 9px/1.5 Georgia,serif; letter-spacing: .15em; }
+.ribbon { position: relative; z-index: 1; display: flex; align-items: center; min-height: 76px; margin-top: -18px; padding: 15px 16px 17px; gap: 8px; overflow: hidden; color: #4d4838; background: linear-gradient(180deg,#714c3200 0%,#d8c6adc2 24%,#eee6d9 62%,var(--paper) 100%); }
+.ribbonDescription { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ribbonViewport { flex: 1; min-width: 0; overflow: hidden; mask-image: linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent); }
+.ribbonTrack { display: flex; width: max-content; direction: ltr; animation: ribbon-travel 28s linear infinite; }
+.ribbonGroup { display: flex; align-items: center; justify-content: space-around; flex-shrink: 0; min-width: calc(100vw - 76px); gap: 36px; padding-inline: 18px; }
+.ribbonGroup > span { display: inline-flex; align-items: center; gap: 14px; white-space: nowrap; font-size: 13px; line-height: 1.8; }
+.ribbonGroup svg { width: 17px; height: 17px; stroke-width: 1.25; color: #7c8159; }
+.ribbonControl { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #74674d30; border-radius: 50%; background: #fafbf64d; color: #4d4838; }
+.ribbonControl svg { width: 15px; height: 15px; }
+.ribbon[data-paused="true"] .ribbonTrack, .ribbon:hover .ribbonTrack, .ribbon:focus-within .ribbonTrack { animation-play-state: paused; }
+@keyframes ribbon-travel { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ribbonTrack { animation: none; width: 100%; }.ribbonGroup { min-width: 100%; padding: 0; }.ribbonGroup:nth-child(2), .ribbonGroup > span:not(:first-child), .ribbonControl { display: none; } }
 .immersiveOpening :is(a,button):focus-visible { outline-color: #f5f3e7; }
 @keyframes canopy-arrive { from { opacity: .65; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes canopy-reveal { from { transform: scale(1.04); } to { transform: scale(1); } }

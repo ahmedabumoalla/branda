@@ -91,6 +91,17 @@ export function TogetherPartners() {
   </section>;
 }
 
+export function TogetherRibbon() {
+  const reduce = useReducedMotion();
+  const [paused, setPaused] = useState(false);
+  const phrases = ["معًا نزرع حياة", "أهدِ حبًّا ينمو", "غراس وهدايا تنمو معها الحكايات"];
+  return <div className={s.ribbon} data-together-ribbon="wood-to-ivory" data-paused={paused}>
+    <p className={s.ribbonDescription}>{phrases.join(" — ")}</p>
+    <div className={s.ribbonViewport} aria-hidden="true"><div className={s.ribbonTrack}>{[0, 1].map(copy => <div className={s.ribbonGroup} key={copy}>{phrases.map(phrase => <span dir="rtl" key={phrase}><Leaf />{phrase}</span>)}</div>)}</div></div>
+    {!reduce && <button type="button" className={s.ribbonControl} aria-label={paused ? "تشغيل حركة العبارات" : "إيقاف حركة العبارات"} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}
+  </div>;
+}
+
 export function TogetherStore({ menu, settings, loyalty }: Props) {
   const reduce = useReducedMotion();
   const search = useRef<HTMLInputElement>(null);
@@ -141,6 +152,7 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
       </header>
       <TogetherHero loyaltyEnabled={menu.loyaltyEnabled && Boolean(loyalty)} />
     </div>
+    <TogetherRibbon />
     {menu.loyaltyEnabled && loyalty && <section className={s.loyalty} id="together-loyalty" aria-labelledby="together-loyalty-title" data-loyalty-design="signature-card">
       <div className={s.loyaltyInvitation}><p className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</p><h2 id="together-loyalty-title">غراس منك <em>ومكافآت لك</em></h2><p>اجمع <strong>{loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام</strong> واحصل على <strong>{loyalty.rewardName}</strong></p></div>
       <Link className={s.loyaltyCard} href={`/loyalty/${menu.slug}?source=menu`} aria-label="بطاقة ولاء Together Plants">

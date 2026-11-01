@@ -52,6 +52,15 @@ function hooks() { let slots = [], cursor = 0; return { api: { ...React, useEffe
 const nodes = t => !t || typeof t !== 'object' ? [] : Array.isArray(t) ? t.flatMap(nodes) : [t, ...nodes(t.props?.children)];
 const text = t => Array.isArray(t) ? t.map(text).join('') : t && typeof t === 'object' ? text(t.props?.children) : t == null || typeof t === 'boolean' ? '' : String(t);
 async function main() {
+  const ribbonHooks = hooks(); let reducedRibbon = false;
+  const { TogetherRibbon } = load('components/store/together-store.tsx', { ...mocks, react: ribbonHooks.api, 'motion/react': { useReducedMotion: () => reducedRibbon } });
+  const drawRibbon = () => ribbonHooks.draw(TogetherRibbon, {});
+  let ribbon = drawRibbon(); assert.equal(ribbon.props['data-paused'], false);
+  nodes(ribbon).find(n => n.type === 'button').props.onClick();
+  ribbon = drawRibbon(); assert.equal(ribbon.props['data-paused'], true);
+  nodes(ribbon).find(n => n.type === 'button').props.onClick();
+  assert.equal(drawRibbon().props['data-paused'], false);
+  reducedRibbon = true; assert(!nodes(drawRibbon()).some(n => n.type === 'button'));
   const partnerHooks = hooks(); let reducedGallery = false, moved, partnerTick, partnerObserve, partnerEffects = [], partnerCleared = 0, partnerDisconnected = 0;
   const savedGlobals = [global.window, global.document, global.IntersectionObserver];
   global.window = { setInterval(fn, ms) { assert.equal(ms, 4200); partnerTick = fn; return 1; }, clearInterval() { partnerCleared++; } };
