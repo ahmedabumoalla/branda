@@ -97,16 +97,43 @@ export function TogetherHero({ products, onSelect }: { products: StandaloneMenuP
 }
 
 export function TogetherPartners() {
+  const root = useRef<HTMLElement>(null);
   const gallery = useRef<HTMLUListElement>(null);
   const reduce = useReducedMotion();
+  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [inView, setInView] = useState(false);
+  const visible = useSyncExternalStore(subscribeVisibility, () => !document.hidden, () => true);
+  const playing = !reduce && !paused && !hovered && !focused && inView && visible;
+  useEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: .25 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      const element = gallery.current;
+      if (!element || document.hidden) return;
+      const end = element.scrollWidth - element.clientWidth;
+      if (end <= 1) return;
+      if (Math.abs(element.scrollLeft) >= end - 4) element.scrollTo({ left: 0, behavior: "smooth" });
+      else element.scrollBy({ left: -((element.firstElementChild?.getBoundingClientRect().width ?? element.clientWidth / 2) + 16), behavior: "smooth" });
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, [playing]);
   function move(direction: number) {
+    setPaused(true);
     const element = gallery.current;
     if (element) element.scrollBy({ left: direction * element.clientWidth * .8, behavior: reduce ? "instant" : "smooth" });
   }
-  return <section className={s.partners} id="together-partners" aria-labelledby="together-partners-title">
+  return <section ref={root} className={s.partners} id="together-partners" data-partners-motion="automatic" aria-labelledby="together-partners-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <div className={s.partnersHeading}><div><p className={s.eyebrow}><Sprout aria-hidden="true" />معًا نترك أثرًا أخضر</p><h2 id="together-partners-title">غراسنا <em>في أماكن نحبّها</em></h2></div><span dir="ltr" aria-hidden="true">ROOTED IN<br />GOOD COMPANY</span></div>
-    <ul ref={gallery} className={s.partnerGallery} tabIndex={0} aria-label="معرض شعارات غراسنا قابل للتمرير" dir="rtl">{partnerCollection.partners.map((partner, index) => <motion.li key={partner.id} initial={false} whileInView={reduce ? undefined : { opacity: [.5, 1], y: [18, 0] }} viewport={{ once: true, amount: .25 }} transition={{ duration: .65, delay: (index % 3) * .08 }}><div className={s.partnerFrame}><StorePhoto src={partner.path} alt={partner.alt} /></div><Leaf className={s.partnerLeaf} aria-hidden="true" /></motion.li>)}</ul>
-    <div className={s.partnersFooter}><p>غراس تجمعنا <span>وحكايات تكبر معنا</span></p><div><button type="button" aria-label="الشعارات السابقة" onClick={() => move(1)}><ArrowRight aria-hidden="true" /></button><button type="button" aria-label="الشعارات التالية" onClick={() => move(-1)}><ArrowLeft aria-hidden="true" /></button></div></div>
+    <ul ref={gallery} className={s.partnerGallery} tabIndex={0} aria-label="معرض شعارات غراسنا قابل للتمرير" dir="rtl" onPointerDown={() => setPaused(true)} onWheel={() => setPaused(true)}>{partnerCollection.partners.map((partner, index) => <motion.li key={partner.id} initial={false} whileInView={reduce ? undefined : { opacity: [.5, 1], y: [18, 0] }} viewport={{ once: true, amount: .25 }} transition={{ duration: .65, delay: (index % 3) * .08 }}><div className={s.partnerFrame}><StorePhoto src={partner.path} alt={partner.alt} /></div><Leaf className={s.partnerLeaf} aria-hidden="true" /></motion.li>)}</ul>
+    <div className={s.partnersFooter}><p>غراس تجمعنا <span>وحكايات تكبر معنا</span></p><div><button type="button" aria-label="الشعارات السابقة" onClick={() => move(1)}><ArrowRight aria-hidden="true" /></button>{!reduce && <button type="button" aria-label={paused ? "تشغيل حركة الشعارات" : "إيقاف حركة الشعارات"} aria-pressed={!paused} onClick={() => setPaused(value => !value)}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}<button type="button" aria-label="الشعارات التالية" onClick={() => move(-1)}><ArrowLeft aria-hidden="true" /></button></div></div>
   </section>;
 }
 

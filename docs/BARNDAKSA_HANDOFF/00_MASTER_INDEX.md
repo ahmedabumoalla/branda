@@ -1,5 +1,8 @@
 # Branda current handoff
 
+- TOGETHER PARTNER AUTOPLAY 2026-11-01T00:48:23.567Z: original six-logo gallery now advances automatically every 4.2 seconds in RTL and returns to the first logo. Pause/play controls; manual navigation/touch/wheel pauses; hover/focus/offscreen/hidden-tab/reduced-motion guards and timer/observer cleanup. Targeted SSR/handler tests, root/release types/text, scoped lint and Node24 build PASS. Final production verification follows. No DB/backend/other-brand changes
+
+
 - TOGETHER / LOCO REFINEMENT PUBLISHED 2026-11-01T00:44:31.219Z: source 9c927b8f00becb1798586f0483b222c78b4054a2, dpl_DA6vBq1457PW2t44y3qwZvVCG6PQ, branda-2 READY; exact GitHub main/apex/www verified. Botanical photographic opening with staged reveal/crossfade; original six-logo RTL «غراسنا» gallery and compact mobile loyalty in Together plus both LOCO menus. Targeted SSR/interaction suites, root/release TypeScript/text, scoped lint, Node24 build and local/live HTTP/CSS/original-image hashes PASS. No browser or DB/messages/orders mutations. Existing SQL408/security evidence reused only for unchanged backend. Handoff and evidence: TOGETHER_20261101.md, output/together/refinement-verification.json and live-refinement.json. Remaining: three requested LOCO donut photos require originals; owner must save Together delivery/payment settings to open ordering
 
 

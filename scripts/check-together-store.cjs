@@ -52,15 +52,31 @@ function hooks() { let slots = [], cursor = 0; return { api: { ...React, useEffe
 const nodes = t => !t || typeof t !== 'object' ? [] : Array.isArray(t) ? t.flatMap(nodes) : [t, ...nodes(t.props?.children)];
 const text = t => Array.isArray(t) ? t.map(text).join('') : t && typeof t === 'object' ? text(t.props?.children) : t == null || typeof t === 'boolean' ? '' : String(t);
 async function main() {
-  const partnerHooks = hooks(); let reducedGallery = false, moved;
-  const { TogetherPartners } = load('components/store/together-store.tsx', { ...mocks, react: partnerHooks.api, 'motion/react': { useReducedMotion: () => reducedGallery, motion: { li: 'li' } } });
-  let galleryTree = partnerHooks.draw(TogetherPartners, {});
-  nodes(galleryTree).find(n => n.type === 'ul').props.ref.current = { clientWidth: 400, scrollBy: options => moved = options };
-  nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات التالية').props.onClick();
-  assert.deepEqual(moved, { left: -320, behavior: 'smooth' }, 'Next moves forward in the RTL gallery');
-  reducedGallery = true; galleryTree = partnerHooks.draw(TogetherPartners, {});
-  nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات السابقة').props.onClick();
-  assert.deepEqual(moved, { left: 320, behavior: 'instant' }, 'Reduced motion disables smooth scrolling');
+  const partnerHooks = hooks(); let reducedGallery = false, moved, partnerTick, partnerObserve, partnerEffects = [], partnerCleared = 0, partnerDisconnected = 0;
+  const savedGlobals = [global.window, global.document, global.IntersectionObserver];
+  global.window = { setInterval(fn, ms) { assert.equal(ms, 4200); partnerTick = fn; return 1; }, clearInterval() { partnerCleared++; } };
+  global.document = { hidden: false };
+  global.IntersectionObserver = class { constructor(fn) { partnerObserve = fn; } observe() {} disconnect() { partnerDisconnected++; } };
+  const { TogetherPartners } = load('components/store/together-store.tsx', { ...mocks, react: { ...partnerHooks.api, useEffect(fn) { partnerEffects.push(fn); }, useSyncExternalStore: (_subscribe, read) => read() }, 'motion/react': { useReducedMotion: () => reducedGallery, motion: { li: 'li' } } });
+  const drawPartners = () => { partnerEffects = []; return partnerHooks.draw(TogetherPartners, {}); };
+  try {
+    let galleryTree = drawPartners(); galleryTree.props.ref.current = {};
+    const scroller = { clientWidth: 400, scrollWidth: 1000, scrollLeft: 0, firstElementChild: { getBoundingClientRect: () => ({ width: 210 }) }, scrollBy: options => moved = options, scrollTo: options => moved = options };
+    nodes(galleryTree).find(n => n.type === 'ul').props.ref.current = scroller;
+    const disconnectPartners = partnerEffects[0](); assert.equal(partnerEffects[1](), undefined, 'Offscreen gallery does not move');
+    partnerObserve([{ isIntersecting: true }]); galleryTree = drawPartners(); const stopPartners = partnerEffects[1](); partnerTick();
+    assert.deepEqual(moved, { left: -226, behavior: 'smooth' }, 'Autoplay advances one original logo in RTL');
+    scroller.scrollLeft = -600; partnerTick(); assert.equal(moved.left, 0, 'End of gallery returns to the first logo');
+    nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات التالية').props.onClick(); assert.deepEqual(moved, { left: -320, behavior: 'smooth' });
+    galleryTree = drawPartners(); assert.equal(partnerEffects[1](), undefined, 'Manual navigation pauses autoplay');
+    nodes(galleryTree).find(n => n.props?.['aria-label'] === 'تشغيل حركة الشعارات').props.onClick(); galleryTree = drawPartners();
+    galleryTree.props.onFocusCapture(); galleryTree = drawPartners(); assert.equal(partnerEffects[1](), undefined, 'Focus pauses autoplay');
+    galleryTree.props.onBlurCapture({ currentTarget: { contains: () => false }, relatedTarget: null });
+    global.document.hidden = true; galleryTree = drawPartners(); assert.equal(partnerEffects[1](), undefined, 'Background tabs stay still');
+    global.document.hidden = false; reducedGallery = true; galleryTree = drawPartners(); assert.equal(partnerEffects[1](), undefined);
+    nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات السابقة').props.onClick(); assert.deepEqual(moved, { left: 320, behavior: 'instant' }, 'Reduced motion disables smooth scrolling');
+    stopPartners(); disconnectPartners(); assert(partnerCleared && partnerDisconnected);
+  } finally { [global.window, global.document, global.IntersectionObserver] = savedGlobals; }
   const heroHooks = hooks(); let effects = [], interval, observe, selectedPlant, cleared = 0, disconnected = 0, reduced = false;
   const oldWindow = global.window, oldDocument = global.document, oldObserver = global.IntersectionObserver;
   global.window = { setInterval(fn, ms) { assert.equal(ms, 6000); interval = fn; return 1; }, clearInterval() { cleared++; } };
