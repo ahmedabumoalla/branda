@@ -119,7 +119,7 @@ export async function saveOwnerLoyaltyExperience(input: LoyaltyExperienceInput) 
 }
 
 const programSchema = z.object({
-  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb"]).optional(),
+  stampStyle: z.enum(["ceramic", "paper", "meal", "brand", "scissors", "comb", "plant"]).optional(),
   enabled: z.boolean(), cardTitle: z.string().trim().min(2).max(80), cardSubtitle: z.string().trim().min(2).max(140),
   purchasesRequired: z.number().int().min(1).max(100), rewardProductId: z.string().uuid().nullable(),
   rewardName: z.string().trim().min(2).max(80), stampLabel: z.string().min(1).max(40), terms: z.string().max(1000),

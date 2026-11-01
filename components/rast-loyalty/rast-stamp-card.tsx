@@ -7,6 +7,7 @@ import { RastBrand } from "./rast-brand";
 import { RastQrCode } from "./qr-code";
 import s from "./rast-loyalty.module.css";
 import { loyaltyCommunityName, loyaltyTheme } from "./loyalty-theme";
+import { brandStampArtwork, brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
 
 type Props = {
   identity: LoyaltyIdentity;
@@ -24,13 +25,15 @@ type Props = {
 export function RastStampCard({ identity, customerName, stamps, required, rewardName, cardCode, displayNumber, stampStyle, preview = false, details }: Props) {
   const goal = Math.max(1, Math.min(100, Math.trunc(required)));
   const collected = Math.max(0, Math.min(goal, Math.trunc(stamps)));
+  const selectedStyle = brandStampStyle(identity.slug, stampStyle);
+  const artworkUrl = selectedStyle === "plant" ? brandStampArtwork(identity.slug) : undefined;
   return <section className={s.stampCard} style={loyaltyTheme(identity)} aria-label={`${preview ? "معاينة بطاقة" : "بطاقة"} ${loyaltyCommunityName(identity)}`}>
     <div className={s.cardTop}><RastBrand identity={identity} light /><span className={s.cardCaption}>{preview ? "معاينة البطاقة" : identity.slug === "rast" ? "قهوة تجمعنا" : "زيارتك لها مكافأة"}</span></div>
     <div className={s.cardIdentity}><p>{customerName || `مكانك بين ${loyaltyCommunityName(identity)}`}</p><span>كل زيارة تقرّبك من هديتك</span></div>
     <div className={s.stampHeading}><span>رصيد الزيارات</span><strong><b>{collected}</b><span> / {goal}</span></strong></div>
-    <ol className={`${s.stamps} ${goal > 10 ? s.manyStamps : ""}`} aria-label={`${collected} من ${goal} أختام مكتملة`}>
+    <ol className={`${s.stamps} ${goal > 10 ? s.manyStamps : ""}`} data-plant-stamps={artworkUrl ? true : undefined} style={artworkUrl && goal <= 5 ? { gridTemplateColumns: `repeat(${goal}, minmax(0, 1fr))` } : undefined} aria-label={`${collected} من ${goal} أختام مكتملة`}>
       {Array.from({ length: goal }, (_, index) => <li key={index} className={index < collected ? s.collected : ""} aria-label={`الختم ${index + 1}${index < collected ? " مكتمل" : " لم يكتمل"}`}>
-        <StampGlyph style={stampStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} />
+        <StampGlyph style={selectedStyle} logoUrl={identity.logoDisplayUrl || identity.logoUrl} artworkUrl={artworkUrl} />
         {index < collected && <Check className={s.stampCheck} aria-hidden="true" />}
       </li>)}
     </ol>

@@ -12,6 +12,7 @@ import { MenuAutoRefresh } from "@/components/menu/menu-auto-refresh";
 import { isPublicHomeMenuSlug } from "@/lib/data/public-home-catalog";
 import { TogetherStore } from "@/components/store/together-store";
 import { getGiftStoreSettings } from "@/lib/data/gift-orders";
+import { getPublicLoyaltyLanding } from "@/lib/data/loyalty-landing";
 
 export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
@@ -29,6 +30,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const showcase = query?.showcase === "1";
   const branch = typeof query?.branch === "string" ? query.branch : undefined;
   if (showcase && !await isPublicShowcase(slug)) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
+  const loyaltyBrand = await getPublicLoyaltyLanding(slug);
+  if (loyaltyBrand) return { title: `${loyaltyBrand.identity.name} | الولاء والمكافآت`, description: `انضم إلى برنامج ولاء ${loyaltyBrand.identity.name} واجمع أختامك`, alternates: { canonical: `/loyalty/${loyaltyBrand.identity.slug}/qr` }, ...(showcase ? { robots: { index: false, follow: false } } : {}) };
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   return {
@@ -44,6 +47,8 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const showcase = query?.showcase === "1";
   const branch = typeof query?.branch === "string" ? query.branch : undefined;
   if (showcase && !await isPublicShowcase(slug)) notFound();
+  const loyaltyBrand = await getPublicLoyaltyLanding(slug);
+  if (loyaltyBrand) redirect(`/loyalty/${loyaltyBrand.identity.slug}/qr`);
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) notFound();
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);

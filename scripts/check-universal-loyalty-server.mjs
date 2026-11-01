@@ -35,6 +35,23 @@ assert.equal(await experience.resolveCashierCardNumber('10000','own-brand'),'100
 check(true,'Existing numeric secure codes remain usable');
 lookupResult={data:null,error:{message:'offline'}};
 await reject(()=>experience.resolveCashierCardNumber('10001','own-brand'));
+const savedPrograms=[];let plantEntitled=true;
+const plantService=load('lib/data/loyalty-experience.ts',{
+  ...isolatedStubs,
+  '@/lib/data/cafes':{requireOwnerCafeContext:async()=>({id:'plant-brand'})},
+  '@/lib/data/feature-entitlements':{getOwnerFeatureCodes:async()=>plantEntitled?['loyalty']:[]},
+  '@/lib/platform/feature-gates':{featureCodesAllow:(features,code)=>features.includes(code)},
+  '@/lib/supabase/server':{createClient:async()=>({rpc:async(name,args)=>{savedPrograms.push({name,args});return {error:null};}})},
+});
+const plantInput={program:{stampStyle:'plant',enabled:true,cardTitle:'Plant loyalty',cardSubtitle:'Grow together',purchasesRequired:4,rewardProductId:null,rewardName:'10% discount',stampLabel:'Stamp',terms:'',cardBackground:'#193b2b',cardForeground:'#ffffff',cardAccent:'#38571a',cardDesign:{layoutVersion:'brand-stamps-v1'}},experience:{rewardKind:'discount',rewardDiscountPercent:10,rewardValidityDays:30,nearbyMessage:'Welcome back',latitude:null,longitude:null}};
+await plantService.saveBrandLoyaltyProgram(plantInput);
+check(savedPrograms[0].name==='set_rast_loyalty_settings'&&savedPrograms[0].args.p_cafe_id==='plant-brand','Plant style save remains owner tenant scoped');
+check(savedPrograms[0].args.p_program.cardDesign.stampStyle==='plant'&&savedPrograms[0].args.p_program.cardDesign.layoutVersion==='brand-stamps-v1','Plant selection persists inside existing card design');
+await plantService.saveBrandLoyaltyProgram({...plantInput,program:{...plantInput.program,stampStyle:'brand'}});
+check(savedPrograms[1].args.p_program.cardDesign.stampStyle==='brand','Brand logo selection persists independently');
+await reject(()=>plantService.saveBrandLoyaltyProgram({...plantInput,program:{...plantInput.program,stampStyle:'unknown'}}));
+plantEntitled=false;await reject(()=>plantService.saveBrandLoyaltyProgram(plantInput));
+check(savedPrograms.length===2,'Invalid and unentitled saves never mutate settings');
 let role='owner', entitled=true, slug='other-cafe', enabled=true, sent=0, otp=0, mutations=0;
 const featureCalls=[],paths=[];
 const context={id:'10000000-0000-4000-8000-000000000001'};

@@ -1,5 +1,6 @@
 import "server-only";
-import { loyaltyStampStyle, stampPaths } from "@/lib/loyalty/stamp-style";
+import { stampPaths } from "@/lib/loyalty/stamp-style";
+import { brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
 import { walletBrandLogo } from "./logo";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import sharp from "sharp";
@@ -23,7 +24,7 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 }
 
 export function walletArtUrl(member: WalletMember) {
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${loyaltyStampStyle(member.program.stampStyle)}:${member.card.updatedAt}`)}`;
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}`)}`;
 }
 
 // The artwork supplements native, accessible balance fields. Never bake text or
@@ -38,7 +39,7 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
   const paper = dark ? colors.background : colors.foreground;
   const ink = dark ? colors.foreground : colors.background;
   const icon = (content: string, x: number, y: number, size: number, color: string) => `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${content}</g>`;
-  const selected = loyaltyStampStyle(member.program.stampStyle);
+  const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
   const stampIcon = `<path d="${stampPaths[selected === "brand" ? "ceramic" : selected]}"/>`;
   let stamps: string;
 

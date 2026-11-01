@@ -1,4 +1,5 @@
-import { loyaltyStampStyle, type LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
+import type { LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
+import { brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
 import { z } from "zod";
 import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
@@ -156,7 +157,7 @@ async function mapProgram(row: Record<string, unknown> | null | undefined, cafeI
   const { colors, businessCategory } = await getLoyaltyBrandAppearance(cafeId, slug);
   const isSalon = businessCategory === "hair_salons";
   const defaults = isSalon ? { ...defaultProgram, rewardName: "خدمة مجانية عند اكتمال البطاقة", stampStyle: "scissors" as const } : defaultProgram;
-  const savedStyle = loyaltyStampStyle((row?.card_design as Record<string, unknown> | null)?.stampStyle);
+  const savedStyle = brandStampStyle(slug, (row?.card_design as Record<string, unknown> | null)?.stampStyle);
   const brandColors = { brandSlug: slug, logoUrl: `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1`, cardBackground: colors.background, cardForeground: colors.foreground, cardAccent: colors.accent };
   if (!row) return { ...defaults, ...brandColors };
   const product = Array.isArray(row.menu_products) ? row.menu_products[0] : row.menu_products;

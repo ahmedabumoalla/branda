@@ -3,10 +3,12 @@
 import Link from "next/link";
 import {
   Activity,
+  ArrowUpLeft,
   CheckCircle2,
   ClipboardCopy,
   DoorOpen,
   HelpCircle,
+  MessageCircle,
   Plus,
   ShieldCheck,
   UserRoundPlus,
@@ -22,6 +24,7 @@ import {
 } from "@/app/actions/loyalty-cards";
 import { DashboardPageShell, SoftCard } from "@/components/ui/design-system";
 import type { CashierOperationsDashboard } from "@/lib/data/loyalty-cards";
+import styles from "./operational-cashier-page.module.css";
 
 type Props = {
   initialDashboard: CashierOperationsDashboard;
@@ -222,27 +225,11 @@ export function OperationalCashierPageClient({
   return (
     <DashboardPageShell
       title="نقطة التشغيل"
-      subtitle="إدارة فريق الكاشير ومتابعة جاهزية التشغيل من مكان واحد"
-      action={
-        dashboard.canOpenAsOwner ? (
-          <form action={openOwnerPortal}>
-            <button type="submit" disabled={ownerPending} className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-              <DoorOpen aria-hidden="true" className="h-4 w-4" />
-              {ownerPending ? "جارٍ فتح نقطة التشغيل" : "فتح نقطة التشغيل مباشرة"}
-            </button>
-          </form>
-        ) : <Link
-          href={loginPath}
-          target="_blank"
-          className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#6B3A25] px-5 py-3 text-sm font-black text-white"
-        >
-          <DoorOpen className="h-4 w-4" />
-          فتح نقطة التشغيل
-        </Link>
-      }
+      subtitle="جهّز فريقك وحدد مهامه وتابع كل عملية باسم صاحبها"
     >
+      <div className={styles.workspace} dir="rtl">
       {configError ? (
-        <SoftCard className="mb-5 p-4 font-bold text-amber-700">{configError}</SoftCard>
+        <SoftCard className="mb-5 p-4 font-bold text-amber-700"><p role="alert">{configError}</p></SoftCard>
       ) : null}
       {message ? (
         <p role="status" className="mb-5 rounded-2xl bg-white p-4 text-sm font-black text-[#6B3A25] shadow-sm">
@@ -251,63 +238,42 @@ export function OperationalCashierPageClient({
       ) : null}
       {ownerError ? <p role="alert" className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-800">{ownerError}</p> : null}
 
-      <section className="mb-6 overflow-hidden rounded-[2rem] bg-[#311912] p-5 text-white sm:p-7">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${ready ? "bg-emerald-400/20 text-emerald-200" : "bg-amber-300/20 text-amber-100"}`}>
-              {ready ? "جاهز للتشغيل" : "يحتاج إضافة موظف نشط"}
-            </span>
-            <h2 className="mt-4 text-2xl font-black sm:text-3xl">فريق واحد للولاء واستدعاء الطلبات</h2>
-            <p className="mt-2 text-sm font-bold leading-7 text-white/70">
-              لديك {activeCount} حساب تشغيل نشط {dashboard.canOpenAsOwner ? "افتح البوابة مباشرة وسجّل العمليات باسمك بصفتك مالك العلامة" : "العمليات الفعلية تتم من بوابة الكاشير المنفصلة"}
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            {dashboard.canOpenAsOwner ? (
-              <form action={openOwnerPortal}>
-                <button type="submit" disabled={ownerPending} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 font-black text-[#311912] disabled:opacity-60">
-                  <DoorOpen aria-hidden="true" className="h-5 w-5" /> {ownerPending ? "جارٍ الفتح" : "الدخول باسمي"}
-                </button>
-              </form>
-            ) : <Link href={loginPath} target="_blank" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-5 font-black text-[#311912]">
-              <DoorOpen className="h-5 w-5" /> فتح البوابة
-            </Link>}
-            <button type="button" onClick={openAddDialog} disabled={pendingId !== null} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 px-5 font-black disabled:opacity-60">
-              <UserRoundPlus className="h-5 w-5" /> إضافة موظف
-            </button>
-          </div>
+      <section className={styles.hero} aria-labelledby="operations-heading">
+        <div className={styles.heroCopy}>
+          <div className={styles.heroEyebrow}><span>{dashboard.cafeName}</span><span className={styles.readiness} data-ready={ready}>{ready ? "جاهز للتشغيل" : "بانتظار تجهيز الفريق"}</span></div>
+          <h2 id="operations-heading">كل مهمة واضحة<br /><span>وكل عملية باسم صاحبها</span></h2>
+          <p>من هنا تدير حسابات فريقك وصلاحياته ثم يفتح كل موظف نقطة التشغيل لينفذ مهامه حسب الخدمات المفعّلة لعلامتك</p>
+          <div className={styles.metrics} aria-label="ملخص فريق التشغيل"><div><strong>{activeCount}</strong><span>حساب نشط</span></div><div><strong>{dashboard.cashiers.length - activeCount}</strong><span>حساب معطّل</span></div><div><ShieldCheck aria-hidden="true" /><span>صلاحيات مستقلة<br />لكل موظف</span></div></div>
+        </div>
+        <div className={styles.ownerCard}>
+          <span className={styles.actionIcon}><DoorOpen aria-hidden="true" /></span>
+          <span className={styles.cardEyebrow}>{dashboard.canOpenAsOwner ? "لصاحب العلامة" : "لفريق التشغيل"}</span>
+          <h3>{dashboard.canOpenAsOwner ? "شغّل بنفسك" : "بوابة الموظفين"}</h3>
+          <p id="owner-entry-help">{dashboard.canOpenAsOwner ? "افتح نقطة التشغيل بجلسة المالك الحالية وتُسجّل العمليات باسمك من دون إنشاء حساب موظف جديد" : "يفتح الموظف البوابة ثم يدخل بحسابه لتنفيذ المهام التي سمحت له بها"}</p>
+          {dashboard.canOpenAsOwner ? <form action={openOwnerPortal}><button type="submit" disabled={ownerPending} aria-describedby="owner-entry-help" className={styles.primary}>{ownerPending ? "جارٍ فتح نقطة التشغيل" : "الدخول باسمي"}<ArrowUpLeft aria-hidden="true" /></button></form> : <Link href={loginPath} target="_blank" rel="noopener noreferrer" aria-describedby="owner-entry-help" className={styles.primary}>فتح نقطة التشغيل<ArrowUpLeft aria-hidden="true" /></Link>}
+          <small>{dashboard.canOpenAsOwner ? "دخولك بصفتك المالك لا يغيّر حسابات الفريق" : "يفتح رابط الدخول في نافذة جديدة"}</small>
         </div>
       </section>
 
-      <section className="mb-6 grid gap-3 md:grid-cols-3" aria-label="خطوات التشغيل">
-        {[
-          ["١", "أضف الموظف", "أنشئ حساب تشغيل محدود الصلاحية"],
-          ["٢", "بيانات الدخول عبر واتساب", "حدّد الجوال وكلمة المرور لتُرسل بيانات الدخول للموظف"],
-          ["٣", "ابدأ التشغيل", "يفتح الموظف البوابة وينفذ العمليات باسمه"],
-        ].map(([number, title, body]) => (
-          <SoftCard key={number} className="p-5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F2E7D9] font-black text-[#6B3A25]">{number}</span>
-            <h3 className="mt-4 font-black text-[#311912]">{title}</h3>
-            <p className="mt-1 text-sm font-bold leading-6 text-[#806A5E]">{body}</p>
-          </SoftCard>
-        ))}
+      <section className={styles.quickActions} aria-label="تجهيز الفريق والدخول">
+        <article className={styles.quickAction}><span className={styles.actionIcon}><UserRoundPlus aria-hidden="true" /></span><div><h3>أضف عضوًا لفريقك</h3><p id="add-staff-help">حدد اسمه وجواله ومهامه ليكون له حساب مستقل وتظهر عملياته باسمه</p></div><button type="button" onClick={openAddDialog} disabled={pendingId !== null} aria-describedby="add-staff-help" className={styles.secondary}>إضافة موظف<Plus aria-hidden="true" /></button></article>
+        <article className={styles.quickAction}><span className={styles.actionIcon}><ClipboardCopy aria-hidden="true" /></span><div><h3>شارك بوابة الدخول</h3><p id="copy-login-help">انسخ الرابط وأرسله للموظف المسجّل ليفتح بوابته الرابط وحده لا يمنح صلاحية الدخول</p></div><button type="button" onClick={() => void copyLoginLink()} aria-describedby="copy-login-help" className={styles.secondary}>نسخ رابط الدخول<ClipboardCopy aria-hidden="true" /></button></article>
+        <article className={`${styles.quickAction} ${styles.whatsappCard}`}><span className={styles.actionIcon}><MessageCircle aria-hidden="true" /></span><div><h3>دخول برمز واتساب</h3><p>بعد إنشاء حساب الموظف تُجدول رسالة ترحيب له يطلب رمز التحقق من صفحة الدخول ويستقبله على جواله المسجّل</p></div><span className={styles.infoLabel}>لا تحتاج تعيين كلمة مرور للحساب الجديد</span></article>
       </section>
 
-      <section className="mb-6 rounded-[2rem] bg-white p-4 shadow-sm sm:p-6">
+      <section className={`${styles.teamPanel} mb-6 rounded-[2rem] bg-white p-4 shadow-sm sm:p-6`} aria-labelledby="operations-team-title">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-black text-[#311912]"><UsersRound className="h-5 w-5" /> فريق التشغيل</h2>
-            <p className="mt-1 text-sm font-bold text-[#806A5E]">{dashboard.cashiers.length} حساب تشغيل</p>
+            <h2 id="operations-team-title" className="flex items-center gap-2 text-xl font-black text-[#311912]"><UsersRound aria-hidden="true" className="h-5 w-5" /> فريق التشغيل</h2>
+            <p className="mt-1 text-sm font-bold text-[#806A5E]">{dashboard.cashiers.length} حساب تشغيل راجع المهام والحالة وآخر دخول لكل عضو</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => void copyLoginLink()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#F8F4EF] px-3 text-xs font-black text-[#6B3A25]">
-              <ClipboardCopy className="h-4 w-4" /> نسخ رابط الدخول
-            </button>
             <button type="button" onClick={openAddDialog} disabled={pendingId !== null} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#6B3A25] px-3 text-xs font-black text-white disabled:opacity-60">
-              <Plus className="h-4 w-4" /> إضافة
+              <Plus aria-hidden="true" className="h-4 w-4" /> إضافة موظف
             </button>
           </div>
         </div>
+        <div className={styles.teamGuide}><p><strong>تعديل الصلاحيات</strong> يحدد مهام الموظف ومحطته ويحتاج بعدها لتسجيل الدخول مجددًا</p><p><strong>التعطيل والتفعيل</strong> يوقف استخدام حساب الموظف أو يعيده مع الاحتفاظ ببياناته</p></div>
 
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[760px] text-right text-sm">
@@ -352,12 +318,13 @@ export function OperationalCashierPageClient({
             </article>
           ))}
         </div>
-        {!dashboard.cashiers.length ? <p className="rounded-2xl bg-[#F8F4EF] p-6 text-center font-bold text-[#806A5E]">لم تتم إضافة موظفين بعد</p> : null}
+        {!dashboard.cashiers.length ? <div className={styles.emptyTeam}><UsersRound aria-hidden="true" /><h3>فريقك يبدأ من أول موظف</h3><p>أضف حسابًا مستقلًا لكل شخص حتى تعرف من نفّذ كل عملية وتمنحه المهام المناسبة</p><button type="button" onClick={openAddDialog} disabled={pendingId !== null} className={styles.primary}>إضافة أول موظف<Plus aria-hidden="true" /></button></div> : null}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section className="rounded-[2rem] bg-white p-5 shadow-sm">
-          <h2 className="flex items-center gap-2 text-lg font-black"><Activity className="h-5 w-5" /> أحدث النشاطات</h2>
+          <h2 className="flex items-center gap-2 text-lg font-black"><Activity aria-hidden="true" className="h-5 w-5" /> أحدث النشاطات</h2>
+          <p className={styles.sectionHint}>آخر خمس عمليات مسجلة مع اسم منفذها ووقتها لمتابعة عمل الفريق</p>
           <div className="mt-4 space-y-3">
             {dashboard.activities.slice(0, 5).map((item) => (
               <div key={item.id} className="flex items-start gap-3 rounded-2xl bg-[#F8F4EF] p-4">
@@ -365,13 +332,13 @@ export function OperationalCashierPageClient({
                 <div><p className="text-sm font-black">{item.cashierName} — {activityText(item.actionType)}</p><p className="mt-1 text-xs font-bold text-[#806A5E]">{formatDate(item.createdAt)}</p></div>
               </div>
             ))}
-            {!dashboard.activities.length ? <p className="text-sm font-bold text-[#806A5E]">لا توجد عمليات حديثة</p> : null}
+            {!dashboard.activities.length ? <p className={styles.emptyActivity}>عندما يبدأ الفريق التشغيل تظهر هنا نشاطات الدخول والولاء والعمليات المسجلة</p> : null}
           </div>
         </section>
         <SoftCard className="p-5">
-          <h2 className="flex items-center gap-2 text-lg font-black"><HelpCircle className="h-5 w-5" /> مساعدة سريعة</h2>
-          <p className="mt-3 text-sm font-bold leading-7 text-[#806A5E]">استخدم هذه الصفحة لإدارة الفريق فقط الطلبات ومسح بطاقات الولاء وصرف المكافآت متاحة داخل بوابة الكاشير وتُسجّل باسم الموظف الذي دخل إليها</p>
-          <div className="mt-4 flex items-center gap-2 text-xs font-black text-emerald-700"><ShieldCheck className="h-4 w-4" /> صلاحيات تشغيل معزولة لكل علامة</div>
+          <h2 className="flex items-center gap-2 text-lg font-black"><HelpCircle aria-hidden="true" className="h-5 w-5" /> ما الذي تتيحه الصلاحيات</h2>
+          <dl className={styles.permissionsGuide}><div><dt>الولاء والمكافآت</dt><dd>قراءة بطاقة العميل وتسجيل الأختام وصرف المكافآت وفق برنامج العلامة</dd></div><div><dt>استدعاء الطلبات</dt><dd>تشغيل البيجر وإدارة الاستدعاءات من المحطة المحددة للموظف</dd></div><div><dt>حساب المالك</dt><dd>مرتبط بحسابك الإداري وتدخل به مباشرة ولا يُعطّل من قائمة الموظفين</dd></div></dl>
+          <div className="mt-4 flex items-center gap-2 text-xs font-black text-emerald-700"><ShieldCheck aria-hidden="true" className="h-4 w-4" /> تتطلب الصلاحيات تفعيل الخدمة في باقة العلامة</div>
         </SoftCard>
       </div>
 
@@ -395,14 +362,15 @@ export function OperationalCashierPageClient({
               <label className="block text-sm font-black">الرقم الوظيفي <span className="text-[#806A5E]">(اختياري)</span><input maxLength={40} value={employeeNumber} onChange={(event) => setEmployeeNumber(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 outline-none focus:border-[#6B3A25] focus:ring-2 focus:ring-[#6B3A25]/25" /></label>
               </> : null}
               <label className="block text-sm font-black">صلاحيات الموظف<select value={permission} onChange={(event) => setPermission(event.target.value)} className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] bg-white px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]">
-                <option value="loyalty">قراءة الولاء فقط</option><option value="pager">استدعاء الطلبات فقط</option><option value="both">قراءة الولاء واستدعاء الطلبات</option>
-              </select></label>
+                <option value="loyalty">الولاء والمكافآت فقط</option><option value="pager">استدعاء الطلبات فقط</option><option value="both">الولاء والمكافآت واستدعاء الطلبات</option>
+              </select><span className={styles.fieldHint}>{permission === "loyalty" ? "يقرأ بطاقات العملاء ويسجل الأختام ويصرف المكافآت" : permission === "pager" ? "يشغّل استدعاء الطلبات من دون صلاحية الولاء" : "يجمع بين تشغيل الولاء والمكافآت واستدعاء الطلبات"}</span></label>
               <label className="block text-sm font-black">محطة الاستدعاء <span className="text-[#806A5E]">اختياري</span><input value={station} maxLength={80} onChange={(event) => setStation(event.target.value)} placeholder="الكاشير أو البار أو المطعم الداخلي" className="mt-2 min-h-12 w-full rounded-2xl border border-[#E8DED5] px-4 focus-visible:outline-2 focus-visible:outline-[#6B3A25]" /></label>
             </fieldset>
             <button type="submit" disabled={pendingId === "create"} className="mt-6 min-h-12 w-full rounded-2xl bg-[#6B3A25] px-4 font-black text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B3A25] disabled:opacity-60">{pendingId === "create" ? "جارٍ الحفظ" : editingId ? "حفظ الصلاحيات" : "إنشاء الحساب وإرسال رابط الدخول"}</button>
           </form>
         </dialog>
       ) : null}
+      </div>
     </DashboardPageShell>
   );
 }

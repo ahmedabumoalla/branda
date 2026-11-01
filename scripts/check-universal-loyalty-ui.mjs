@@ -51,7 +51,7 @@ check("Other brand uses its configured card colors", () => {
 });
 check("Invalid colors cannot enter generated theme styles", () => {
   const theme = loyaltyTheme({ ...identity, cardBackground: "url(https://invalid.test)", cardForeground: "red", cardAccent: "initial" });
-  assert(Object.entries(theme).every(([key, value]) => key === "--card-logo-filter"
+  assert(Object.entries(theme).every(([key, value]) => ["--card-logo-filter", "--card-stamp-logo-filter"].includes(key)
     ? ["brightness(0)", "brightness(0) invert(1)"].includes(value)
     : /^#[a-f0-9]{6}$/i.test(value)));
 });
@@ -84,6 +84,37 @@ check("Missing brand logo falls back to its name not another business", () => {
 check("Kawakib keeps its established logo fallback", () => assert(render(RastBrand, { identity: rast }).includes("kawakib-transparent-20261008.png")));
 
 const { RastStampCard } = load("components/rast-loyalty/rast-stamp-card.tsx");
+check("Together uses four photographic plant stamps with accessible earned states", () => {
+  const html = render(RastStampCard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, stampStyle: "ceramic", stamps: 2, required: 4, rewardName: "خصم 10%" });
+  assert.equal((html.match(/data-stamp-artwork="plant"/g) || []).length, 4);
+  assert.equal((html.match(/class="collected"/g) || []).length, 2);
+  assert(html.includes("repeat(4, minmax(0, 1fr))"));
+  assert(html.includes("2 من 4 أختام مكتملة"));
+  assert(html.includes("خصم 10%"));
+  assert(fs.existsSync(path.join(root, "public/together/loyalty-plant.webp")));
+  const other = render(RastStampCard, { identity, stampStyle: "ceramic", stamps: 0, required: 4, rewardName: "Reward" });
+  assert(!other.includes("data-stamp-artwork"));
+  const css = fs.readFileSync(path.join(root, "components/rast-loyalty/rast-loyalty.module.css"), "utf8");
+  assert(css.includes('.collected > img[data-stamp-artwork="plant"] { filter: none; opacity: 1; }'));
+  const logoChoice = render(RastStampCard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, stampStyle: "brand", stamps: 0, required: 4, rewardName: "خصم 10%" });
+  assert(!logoChoice.includes('data-stamp-artwork="plant"'));
+  assert.equal((logoChoice.match(/src="\/own-logo.png"/g) || []).length, 5);
+});
+const { RastLoyaltyDashboard } = load("components/rast-loyalty/rast-dashboard.tsx", {
+  "@/components/loyalty/customer-directory": { LoyaltyCustomerDirectory: () => null },
+  "@/components/loyalty/wallet-message-history": { WalletMessageHistory: () => null },
+});
+check("Together picker offers plant and logo only and retains a saved logo choice", () => {
+  for (const stampStyle of ["ceramic", "plant", "brand"]) {
+    const html = render(RastLoyaltyDashboard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, initialDashboard: { program: { ...program, stampStyle } }, initialExperience: { rewardKind: "discount", rewardDiscountPercent: 10, rewardValidityDays: 30, nearbyMessage: "Welcome", latitude: null, longitude: null }, signupUrl: "https://brand.test/loyalty/brand-871ec6e243c0", walletAvailability: { apple: true, google: true } });
+    assert(html.includes('<option value="plant"'));
+    assert(html.includes('<option value="brand"'));
+    assert(!html.includes('<option value="ceramic"'));
+    assert(!html.includes('<option value="meal"'));
+    assert(!html.includes('<option value="paper"'));
+    assert(html.includes(`<option value="${stampStyle === "brand" ? "brand" : "plant"}" selected="">`));
+  }
+});
 check("New short numbers are display only and old cards keep their original number", () => {
   const props = { identity, stamps: 0, required: 7, rewardName: program.rewardName, cardCode: "SECURE-ORIGINAL-CARD" };
   assert(render(RastStampCard, props).includes('<span dir="ltr">SECURE-ORIGINAL-CARD</span>'));
@@ -154,6 +185,10 @@ check("Member page retains wallet links card QR and reward details per brand", (
   assert(html.includes("خصم 20%"));
   assert(!html.includes("الكواكب"));
 });
+if (process.argv.includes("--cards-only")) {
+  console.log(`PASS ${checks} loyalty card/identity/enrollment checks with no browser or customer messages`);
+  process.exit(0);
+}
 const { RastCashier } = load("components/rast-loyalty/rast-cashier.tsx");
 check("Member greeting separates and isolates Arabic and Latin names for every brand", () => {
   for (const brand of [identity, rast, { ...identity, slug: "kat-coffe" }]) {

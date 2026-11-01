@@ -184,12 +184,16 @@ try {
   assert.equal(shortObject.barcode.alternateText, "10001");
   assert.equal(shortObject.barcode.value, payload.buildGoogleObject(member, env.GOOGLE_WALLET_ISSUER_ID).barcode.value);
   const { stampPaths } = load("lib/loyalty/stamp-style.ts");
-  for (const stampStyle of ["ceramic", "paper", "meal"]) {
+  for (const stampStyle of ["ceramic", "paper", "meal", "plant"]) {
     const example = { ...member, program: { ...member.program, stampStyle } };
     assert(art.walletStampSvg(example).includes(stampPaths[stampStyle]));
     assert((await art.walletStampArtwork(example)).length > 1000);
     assert(new URL(art.walletArtUrl(example)).searchParams.get("v").includes(`:${stampStyle}:`));
   }
+  const together = { ...member, cafeSlug: "brand-871ec6e243c0", program: { ...member.program, stampStyle: "ceramic" } };
+  assert(art.walletStampSvg(together).includes(stampPaths.plant));
+  assert(!art.walletStampSvg(together).includes(stampPaths.ceramic));
+  assert(new URL(art.walletArtUrl(together)).searchParams.get("v").includes(":plant:"));
   const fixtureLogo = `data:image/png;base64,${(await sharp({ create: { width: 20, height: 20, channels: 4, background: "#2457c1" } }).png().toBuffer()).toString("base64")}`;
   const branded = { ...member, logoUrl: fixtureLogo, program: { ...member.program, stampStyle: "brand" } };
   assert(art.walletStampSvg(branded, 2, false, fixtureLogo).includes('<image '));
@@ -208,6 +212,10 @@ try {
   assert.equal(otherPass.organizationName, "Other cafe");
   assert.equal(otherPass.backgroundColor, "rgb(17, 34, 51)");
   await assert.rejects(apple.issueApplePass({ ...otherMember, program: { ...otherMember.program, appleWalletEnabled: false } }), /wallet_disabled/);
+  if (process.argv.includes("--art-only")) {
+    console.log("PASS native wallet stamp styles, Together plant fallback, brand logos, artwork rasterization, pass signatures and disabled-wallet gate");
+    process.exit(0);
+  }
   const calls = [];
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), method: options.method, body: options.body && JSON.parse(options.body instanceof URLSearchParams ? "{}" : options.body) });
