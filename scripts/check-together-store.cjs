@@ -37,10 +37,14 @@ assert.equal(previewGiftOrderTotal(84, 'pickup', settings).total, 84);
 assert.deepEqual(previewGiftOrderTotal(115, 'pickup', { ...settings, vatRate: 15 }), { subtotal: 115, deliveryFee: 0, tax: 15, total: 115 });
 const noop = () => {};
 const mocks = { 'next/link': ({ children, ...props }) => React.createElement('a', props, children), 'next/navigation': { useRouter: () => ({ refresh: noop }) }, '@/app/actions/gift-orders': { submitGiftOrderAction: noop, trackGiftOrderAction: async () => ({ ok: false, error: 'غير موجود' }) }, '@/lib/analytics/public-tracking': { trackBrandEngagement: noop } };
-const { TogetherStore } = load('components/store/together-store.tsx', mocks);
+const { TogetherStore, selectHeroPlants } = load('components/store/together-store.tsx', mocks);
+const heroCandidates = ['غابات الانديز', 'نبتة مونستيرا', 'نبتة زنبق السلام', 'انتوريوم أحمر'].map((name, i) => ({ ...product, id: `hero-${i}`, name, images: [{ url: `https://example.test/hero-${i}.webp` }] }));
+assert.deepEqual(selectHeroPlants(heroCandidates).map(p => p.name), ['نبتة زنبق السلام', 'نبتة مونستيرا', 'انتوريوم أحمر']);
+assert.equal(heroCandidates.length, 4, 'Hero curation must not remove the terrarium from the catalog');
+assert(!selectHeroPlants(heroCandidates.filter(p => p.name !== 'نبتة زنبق السلام')).some(p => p.name === 'غابات الانديز'), 'Fallback curation must not restore the rejected glass plant');
 const menu = { name: 'Together Plants', slug: 'brand-871ec6e243c0', businessCategory: 'gifts_flowers', products: [product, { ...product, id: '22222222-2222-4222-8222-222222222222', name: 'ورشة الفخار', available: false, catalogKind: 'service' }], categories: [{ id: 'plants', name: 'أصدقاء الظل' }], contacts: {}, logoUrl: null, loyaltyEnabled: true };
 const html = renderToStaticMarkup(React.createElement(TogetherStore, { menu, settings, loyalty: { purchasesRequired: 4, rewardName: 'خصم 10%' } }));
-for (const token of ['botanical-atelier-v3', 'لأن بعض الهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'hero-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
+for (const token of ['signature-garden-v4', 'signature-card', 'headerEmblem', 'لأن بعض الهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'hero-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
 const partners = JSON.parse(fs.readFileSync('data/together-partners.json', 'utf8')).partners;
 assert.equal(partners.length, 6);
 for (const partner of partners) { assert(html.includes(partner.path)); assert(fs.existsSync('public' + partner.path)); }
