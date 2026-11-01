@@ -26,7 +26,16 @@ for (const branch of ['loco-murooj', 'loco-drive-thru']) {
   assert(!html.includes('aria-valuenow'));
   assert(!html.includes('نحضّر لك المنيو'));
 }
-for (const slug of ['brand-871ec6e243c0', 'brand-10620d3a586c', 'another-cafe']) {
+const together = render('/menu/brand-871ec6e243c0');
+for (const expected of ['/together/logo.webp', 'botanical-opening', 'نفتح لك عالم الغراس والهدايا', 'role="progressbar"', 'role="status"', 'aria-busy="true"']) assert(together.includes(expected));
+assert(!together.includes('المنيو'));
+assert(!together.includes('aria-valuenow'));
+const togetherCss = fs.readFileSync('components/store/together-store-loading.module.css', 'utf8');
+const compiled = require('lightningcss').transform({ filename: 'together-store-loading.module.css', code: Buffer.from(togetherCss), cssModules: true });
+for (const [, key] of fs.readFileSync('components/store/together-store-loading.tsx', 'utf8').matchAll(/styles\.(\w+)/g)) assert(compiled.exports[key]);
+assert.match(togetherCss, /prefers-reduced-motion:\s*reduce/);
+assert.doesNotMatch(fs.readFileSync('components/store/together-store-loading.tsx', 'utf8'), /setTimeout|setInterval|aria-valuenow/);
+for (const slug of ['brand-10620d3a586c', 'another-cafe']) {
   const html = render(`/menu/${slug}`);
   assert(html.includes('نحضّر لك المنيو'));
   assert(!html.includes('/loco/logo.svg'));
@@ -38,4 +47,4 @@ assert.match(css, /animation:\s*loco-mark-enter[^;]+both;/);
 assert.doesNotMatch(css.match(/animation:\s*loco-mark-enter[^;]+;/)[0], /infinite/);
 assert.doesNotMatch(fs.readFileSync('components/menu/loco-menu-loading.tsx', 'utf8'), /setTimeout|setInterval|aria-valuenow/);
 assert(fs.existsSync('public/loco/logo.svg'));
-console.log('PASS LOCO SSR loading for both branch URLs, unchanged other menus, indeterminate accessible status, finite logo entrance, reduced-motion fallback, no artificial wait');
+console.log('PASS Together store loading without menu copy, original logo/CSS/accessibility, both LOCO branches and other menus preserved, reduced motion and no artificial wait');

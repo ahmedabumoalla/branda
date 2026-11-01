@@ -1,5 +1,8 @@
 # Branda current handoff
 
+- TOGETHER OPENING / VISIBLE LOYALTY 2026-11-01T00:55:51.983Z: dedicated Together loading replaces generic menu copy with original logo, botanical entrance, store-specific Arabic status and indeterminate progress; no artificial wait, reduced-motion supported. Signature full-width mobile loyalty replaces the rejected tiny two-column Together card: original emblem, explicit loyalty heading, larger four stamps/reward and full-width CTA; configured rules unchanged. Both LOCO menus retain compact cards. Loading/other-brand isolation and Together interaction tests, root/release types/text, scoped lint, CSS compile and Node24 build PASS. Publication evidence: annotated Git tag together-opening-20261101 and output/together/opening-publication.json; no browser/DB/messages/orders changes
+
+
 - TOGETHER PARTNER AUTOPLAY 2026-11-01T00:48:23.567Z: original six-logo gallery now advances automatically every 4.2 seconds in RTL and returns to the first logo. Pause/play controls; manual navigation/touch/wheel pauses; hover/focus/offscreen/hidden-tab/reduced-motion guards and timer/observer cleanup. Targeted SSR/handler tests, root/release types/text, scoped lint and Node24 build PASS. Published 2026-11-01T00:49:55.052Z: 8ee6b9f4d36b3c533508876e2a16950b3219ff47, dpl_F175oG6adpDLV1YRXdN391rHqfFg, branda-2 READY; exact GitHub main/apex/www verified; live automatic-gallery marker and all six source logos present. Evidence output/together/autoplay-verification.json. No DB/backend/other-brand changes
 
 

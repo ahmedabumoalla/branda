@@ -1,0 +1,33 @@
+@font-face { font-family: "Together Loading"; src: url("/fonts/bistro-sans-regular-ar.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Together Loading"; src: url("/fonts/bistro-sans-semibold-ar.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+.screen { --forest: #143c2c; --cream: #f5f3e7; --leaf: #dce8a6; position: relative; isolation: isolate; display: grid; place-items: center; min-height: 100vh; min-height: 100svh; overflow: hidden; padding: 54px 24px 78px; background: var(--forest); color: var(--cream); font-family: "Together Loading", sans-serif; }
+.screen, .screen * { box-sizing: border-box; }
+.screen::before { content: ""; position: absolute; inset: 16px; border: 1px solid #dce8a623; border-radius: 160px 160px 4px 4px; pointer-events: none; z-index: -1; }
+.light { position: absolute; inset: -30%; z-index: -2; background: radial-gradient(ellipse at 65% 24%,#b6cc6a2e,transparent 48%),linear-gradient(125deg,transparent 25%,#e6efb412 35%,transparent 48%); animation: light-enter 1200ms ease-out both; pointer-events: none; }
+.botanical { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.botanical span { position: absolute; width: 230px; height: 480px; border: 1px solid #dce8a61c; border-radius: 100% 0 100% 0; left: -120px; bottom: -80px; transform: rotate(-22deg); }
+.botanical span:nth-child(2) { left: auto; right: -170px; bottom: auto; top: -70px; transform: rotate(30deg); width: 280px; }
+.botanical span:last-child { left: -150px; bottom: 30px; transform: rotate(-42deg); }
+.content { position: relative; width: min(100%,380px); text-align: center; }
+.emblem { position: relative; width: 200px; height: 200px; margin: 0 auto; animation: seed-open 850ms cubic-bezier(.16,1,.3,1) both; }
+.emblem::after { content: ""; position: absolute; inset: -12px; border: 1px solid #dce8a64a; border-radius: 50%; }
+.logoWindow { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; background: var(--cream); box-shadow: 0 20px 70px #051f1b40; }
+.logo { position: absolute; width: 480px; max-width: none; height: auto; top: -100px; left: 50%; transform: translateX(-50%); mix-blend-mode: multiply; }
+.leaf, .leafSmall { position: absolute; right: -8px; bottom: 16px; width: 42px; height: 24px; background: var(--leaf); border: 1px solid #143c2c55; border-radius: 100% 0 100% 0; transform: rotate(-25deg); transform-origin: left bottom; animation: leaf-open 900ms 150ms cubic-bezier(.16,1,.3,1) both; }
+.leafSmall { right: 24px; bottom: -4px; width: 31px; height: 18px; transform: rotate(25deg); animation-delay: 240ms; }
+.wordmark { font: 28px/1.4 Georgia,serif; margin: 30px 0 18px; animation: copy-enter 700ms 100ms both; }
+.wordmark em { font-weight: 400; color: var(--leaf); }
+.title { font-size: clamp(28px,6.5vw,38px); font-weight: 600; line-height: 1.55; letter-spacing: normal; margin: 0 0 26px; animation: copy-enter 800ms 160ms both; }
+.title span { color: var(--leaf); }
+.track { height: 2px; width: 96px; margin: 0 auto; position: relative; overflow: hidden; background: #dce8a62e; }
+.track > span { position: absolute; inset: 0 auto 0 0; width: 42%; background: var(--leaf); animation: loading-sweep 1700ms ease-in-out infinite; }
+.status { font-size: 11px; line-height: 1.8; color: #d5dfc4; margin: 15px 0 0; }
+.signature { position: absolute; bottom: 28px; inset-inline: 24px; display: flex; align-items: center; justify-content: center; gap: 13px; font-size: 10px; color: #d5dfc4; margin: 0; }
+.signature span { width: 28px; height: 1px; background: #dce8a64a; }
+@keyframes seed-open { from { opacity: 0; transform: translateY(18px) scale(.88); } to { opacity: 1; transform: none; } }
+@keyframes leaf-open { from { opacity: 0; scale: .15; } to { opacity: 1; scale: 1; } }
+@keyframes copy-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes light-enter { from { opacity: 0; transform: translateX(-6%); } to { opacity: 1; transform: none; } }
+@keyframes loading-sweep { from { transform: translateX(-110%); } to { transform: translateX(350%); } }
+@media (max-height: 580px) { .screen { padding-block: 30px 50px; }.emblem { width: 150px; height: 150px; }.logo { width: 360px; top: -75px; }.wordmark { font-size: 24px; margin-block: 22px 10px; }.title { font-size: 24px; margin-bottom: 16px; }.signature { bottom: 18px; } }
+@media (prefers-reduced-motion: reduce) { .screen *, .screen *::after { animation: none !important; }.track > span { left: 29%; } }
