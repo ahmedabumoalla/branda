@@ -1,6 +1,7 @@
 ﻿import type { NextConfig } from "next";
 
 import { KATH_IMAGE_ORIGIN, KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH } from "./lib/menu/kath-images";
+import { TOGETHER_IMAGE_PATH } from "./lib/menu/together-images";
 
 const nextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
@@ -15,7 +16,7 @@ const nextConfig = {
     "/api/admin/subscription-invoices/**": ["./node_modules/@sparticuz/chromium/bin/*.br", "./assets/subscription-invoices/*"],
   },
   images: {
-    remotePatterns: [KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH].map(path => ({ protocol: "https" as const, hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${path}**` })),
+    remotePatterns: [KATH_IMAGE_PATH, SHAHI_IMAGE_PATH, TAZA_IMAGE_PATH, DELI_IMAGE_PATH, TOGETHER_IMAGE_PATH].map(path => ({ protocol: "https" as const, hostname: new URL(KATH_IMAGE_ORIGIN).hostname, pathname: `${path}**` })),
     formats: ["image/webp"],
     minimumCacheTTL: 60,
   },

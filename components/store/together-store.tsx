@@ -111,7 +111,14 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
   const [sort, setSort] = useState("original");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [limit, setLimit] = useState(24);
-  const [selected, setSelected] = useState<StandaloneMenuProduct | null>(null);
+  const [selected, setSelectedProduct] = useState<StandaloneMenuProduct | null>(null);
+  const [productOpen, setProductOpen] = useState(false);
+  // Retain only the latest product/gallery DOM between opens, not the entire catalog.
+  function setSelected(product: StandaloneMenuProduct | null) {
+    if (product) setSelectedProduct(product);
+    setProductOpen(Boolean(product));
+  }
+  const currentProduct = selected ? menu.products.find(product => product.id === selected.id) : undefined;
   const [storedCart, setStoredCart] = useStoredString(`gift-cart:${menu.slug}`);
   const lines = readCart(storedCart);
   const setLines = (next: GiftCartLine[]) => setStoredCart(JSON.stringify(next));
@@ -178,9 +185,9 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
     {service && <motion.section initial={false} whileInView={reduce ? undefined : { opacity: [.55, 1], y: [28, 0] }} viewport={{ once: true, amount: .15 }} transition={{ duration: .8 }} className={s.designService} aria-labelledby="together-design-title"><div className={s.designVisual}><StorePhoto src={service.images[0]?.url || "/together/hero.webp"} alt="تصاميم لمساحاتكم الخاصة" /><span>مساحتك<br /><em>بروح خضراء</em></span></div><div className={s.designCopy}><p className={s.eyebrow}>خدمة | تصميم</p><h2 id="together-design-title">تصاميم لمساحاتكم الخاصة</h2><p>تطوير وتشغيل مزارع ذكية بمعايير مستدامة</p><p>تعليم وتجربة: رحلات مدرسية وبرامج تفاعلية</p><button className={s.primary} onClick={() => setSelected(service)}>خلّنا نعرف مساحتك<ArrowUpLeft /></button><button className={s.textLink} onClick={() => browse("service")}>استكشف الخدمات والورش<ArrowLeftIcon /></button></div></motion.section>}
     <TogetherPartners />
     <footer className={s.footer}><div><StorePhoto src={brandLogo} alt="شعار Together Plants" /><p>سياحة بيئية: وجهتكم الأولى للاستدامة في قلب عسير</p></div><nav aria-label="روابط المتجر"><a href="#together-products">المنتجات والخدمات</a><a href="#together-partners">غراسنا</a><a href="https://wa.me/966567874278" target="_blank" rel="noopener noreferrer">تواصل معنا</a>{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noopener noreferrer">إنستغرام</a>}<a href="https://linktr.ee/together2000" target="_blank" rel="noopener noreferrer">كل روابط Together<ArrowUpLeft aria-hidden="true" /></a><Link href="/">بواسطة برندة</Link></nav><span className={s.footerWord} dir="ltr">Together, we grow.</span></footer>
-    {count > 0 && !checkout && !selected && !tracking && <button className={s.floatingCart} onClick={() => setCheckout(true)}><ShoppingBag /><span>سلة اختياراتك</span><strong>{count}</strong><ArrowUpLeft /></button>}
+    {count > 0 && !checkout && !(productOpen && currentProduct) && !tracking && <button className={s.floatingCart} onClick={() => setCheckout(true)}><ShoppingBag /><span>سلة اختياراتك</span><strong>{count}</strong><ArrowUpLeft /></button>}
     {notice && <div className={s.toast} role="status"><Check /><span>{notice}</span><button onClick={() => setNotice("")} aria-label="إغلاق التنبيه"><X /></button></div>}
-    {selected && <GiftProductDialog key={selected.id} product={selected} close={() => setSelected(null)} add={add} orderingEnabled={Boolean(settings?.enabled)} />}
+    {currentProduct && <GiftProductDialog key={currentProduct.id} product={currentProduct} open={productOpen} close={() => setSelected(null)} add={add} orderingEnabled={Boolean(settings?.enabled)} />}
     {checkout && settings && <GiftCheckoutDialog slug={menu.slug} lines={lines} products={menu.products} settings={settings} setLines={setLines} close={() => setCheckout(false)} onReceipt={received} />}
     {checkout && !settings && <div className={s.toast} role="status"><span>المتجر يجهّز خيارات الطلب تواصل معنا للمساعدة</span><button onClick={() => setCheckout(false)} aria-label="إغلاق"><X /></button></div>}
     {tracking && <GiftTrackingDialog key={tracking} slug={menu.slug} token={tracking} receipt={receipt?.trackingToken === tracking ? receipt : null} close={() => setTracking("")} />}

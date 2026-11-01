@@ -130,6 +130,12 @@ async function run() {
   const kathMenu=await loader(kath.client)('kat-coffe');assert.equal(kathMenu.products.length,1);assert.ok(kath.signedPaths.includes(imagePath));
   const foreignKath=fakeClient({slug:'kat-coffe',products:[{...fixtureProduct,image_storage_path:'other/secret.webp',media:[]}]});
   await loader(foreignKath.client)('kat-coffe');assert.equal(foreignKath.signedPaths.length,0,'cache never signs another tenant asset');
+  const togetherSlug='brand-871ec6e243c0';
+  const blockedTogether=fakeClient({slug:togetherSlug,businessCategory:'gifts_flowers'});
+  assert.equal(await loader(blockedTogether.client,[])(togetherSlug),null);assert.equal(blockedTogether.signedPaths.length,0);
+  for(const product of [{...fixtureProduct,category_id:'hidden'},{...fixtureProduct,deleted_at:'deleted'},{...fixtureProduct,image_storage_path:'other/private.webp',media:[]}]) {
+    const guarded=fakeClient({slug:togetherSlug,businessCategory:'gifts_flowers',products:[product]});await loader(guarded.client)(togetherSlug);assert.equal(guarded.signedPaths.length,0,'Together stable image signing preserves current visibility, deletion and tenant gates');
+  }
   const empty = await loader(fakeClient({ products: [] }).client)("double-b-bistro");
   assert.deepEqual(empty.products, [], "New brands must never receive sample products");
   assert.equal(empty.logoUrl, "/brand/barndaksa-logo-brown.png", "Empty brand uses transparent platform mark");

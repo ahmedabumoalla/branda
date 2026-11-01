@@ -113,12 +113,47 @@ async function main() {
   nodes(tree).find(n => n.props?.['aria-label'] === 'الصورة التالية').props.onClick(); tree = h.draw(GiftProductDialog, props);
   assert(text(nodes(tree).find(n => n.props?.className === 'imageCounter')).includes('2 / 2'));
   assert(nodes(tree).some(n => n.props?.src === 'https://example.test/two.webp' && n.props?.eager));
+  tree = h.draw(GiftProductDialog, { ...props, open: false });
+  assert.equal(tree.props.open, false);
+  tree = h.draw(GiftProductDialog, { ...props, open: true });
+  assert(text(nodes(tree).find(n => n.props?.className === 'imageCounter')).includes('2 / 2'), 'Reopen retains the existing gallery image instead of remounting it');
+  const shrunkGallery = h.draw(GiftProductDialog, { ...props, product: { ...props.product, images: props.product.images.slice(0, 1) } });
+  assert(nodes(shrunkGallery).some(n => n.props?.src === product.images[0].url && n.props?.eager), 'Gallery shrink clamps the retained selection to a real image');
+  const storeHooks = hooks(); let storeReads = 0;
+  const retained = load('components/store/together-store.tsx', { ...mocks, react: { ...storeHooks.api, useSyncExternalStore: (_subscribe, _client, server) => storeReads++ === 0 ? JSON.stringify([{key:'cart',productId:product.id,quantity:1,selections:[]}]) : server() }, 'motion/react': { useReducedMotion: () => false, motion: { section: 'section', div: 'div' } } });
+  const drawStore = props => { storeReads = 0; return storeHooks.draw(retained.TogetherStore, props); };
+  const storeProps = { menu, settings, loyalty: null };
+  let storeTree = drawStore(storeProps);
+  assert(!nodes(storeTree).some(n => n.type?.name === 'GiftProductDialog'));
+  nodes(storeTree).find(n => n.props?.['aria-label'] === `تفاصيل ${product.name}`).props.onClick();
+  storeTree = drawStore(storeProps);
+  assert(!nodes(storeTree).some(n => n.props?.className === 'floatingCart'), 'Floating cart stays behind an open product');
+  nodes(storeTree).find(n => n.type?.name === 'GiftProductDialog').props.close();
+  storeTree = drawStore(storeProps);
+  assert.equal(nodes(storeTree).find(n => n.type?.name === 'GiftProductDialog').props.open, false, 'Only the last dialog is retained closed');
+  assert(nodes(storeTree).some(n => n.props?.className === 'floatingCart'), 'Closing the retained dialog restores the floating cart');
+  storeTree = drawStore({ ...storeProps, menu: { ...menu, products: [] } });
+  assert(!nodes(storeTree).some(n => n.type?.name === 'GiftProductDialog'), 'Removed products must not remain in retained dialogs');
+  let effect, opened = 0, closed = 0, locked = 0, unlocked = 0, focused = 0;
+  const dialogElement = { showModal() { opened++; }, close() { closed++; } };
+  const oldDocumentForDialog = global.document, oldHTMLElement = global.HTMLElement;
+  class FocusTarget { focus() { focused++; } }
+  global.HTMLElement = FocusTarget; global.document = { activeElement: new FocusTarget() };
+  try {
+    const { StoreDialog } = load('components/store/gift-store-dialogs.tsx', { ...mocks, react: { ...React, useRef: () => ({ current: dialogElement }), useEffect: callback => { effect = callback; } }, '@/lib/ui/page-scroll-lock': { lockPageScroll: () => { locked++; return () => { unlocked++; }; } } });
+    const drawDialog = open => StoreDialog({ title: 'Product', close: noop, open, children: null });
+    drawDialog(true); const closeFirst = effect(); closeFirst();
+    drawDialog(false); assert.equal(effect(), undefined); assert.equal(locked, 1); assert.equal(unlocked, 1); assert.equal(focused, 1);
+    drawDialog(true); const closeSecond = effect(); assert.equal(opened, 2); closeSecond(); assert.equal(closed, 2); assert.equal(unlocked, 2);
+  } finally { global.document = oldDocumentForDialog; global.HTMLElement = oldHTMLElement; }
   nodes(tree).find(n => n.type === 'form').props.onSubmit({ preventDefault: noop });
   assert.equal(additions, 0, 'Required choices block submission');
   tree = h.draw(GiftProductDialog, props);
   const choice = nodes(tree).find(n => n.type === 'input' && n.props.name === 'pot'); choice.props.onChange({ target: { checked: true } });
   tree = h.draw(GiftProductDialog, props); nodes(tree).find(n => n.type === 'form').props.onSubmit({ preventDefault: noop });
   assert.equal(additions, 1); assert(text(h.draw(GiftProductDialog, props)).includes('أكمل طلبك الحالي'), 'Cart errors stay inside the open dialog');
+  tree = h.draw(GiftProductDialog, { ...props, add: () => null }); nodes(tree).find(n => n.type === 'form').props.onSubmit({ preventDefault: noop });
+  tree = h.draw(GiftProductDialog, props); assert(!text(tree).includes('أكمل طلبك الحالي')); assert(!nodes(tree).find(n => n.type === 'input' && n.props.name === 'pot').props.checked, 'Successful addition resets purchasing choices but retains gallery');
   const c = hooks(), requests = []; let receipt, clears = 0;
   const { GiftCheckoutDialog } = load('components/store/gift-store-dialogs.tsx', { ...mocks, react: c.api, '@/app/actions/gift-orders': { submitGiftOrderAction: async input => { requests.push(input); return requests.length < 2 ? { ok: false, error: 'أعد المحاولة' } : { ok: true, order: { number: 7, trackingToken: 'token' } }; } } });
   const checkout = { slug: menu.slug, lines: [{ key: 'one', productId: product.id, quantity: 2, selections }], products: [product], settings, setLines: value => { assert.deepEqual(value, []); clears++; }, close: noop, onReceipt: value => receipt = value };

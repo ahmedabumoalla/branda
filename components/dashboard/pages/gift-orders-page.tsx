@@ -29,7 +29,7 @@ export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHa
   const [settings, setSettings] = useState(initialSettings);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialHasMore);
-  const [tab, setTab] = useState<"orders" | "settings">("orders");
+  const [tab, setTab] = useState<"orders" | "settings">(!initialSettings && !configError ? "settings" : "orders");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
@@ -86,6 +86,7 @@ export function GiftOrdersPage({ initialOrders, initialSettings, cafe, initialHa
     </header>
     <div className={styles.metrics} aria-label="ملخص طلبات الصفحة الحالية"><div><ShoppingBag aria-hidden="true" /><span>الطلبات المعروضة<strong>{orders.length}</strong></span></div><div><Gift aria-hidden="true" /><span>بانتظارك<strong>{pending}</strong></span></div><div><PackageCheck aria-hidden="true" /><span>قيد التنفيذ<strong>{preparing}</strong></span></div></div>
     <nav className={styles.tabs} aria-label="إدارة المتجر"><button type="button" aria-current={tab === "orders" ? "page" : undefined} onClick={() => setTab("orders")}><ShoppingBag size={18} aria-hidden="true" />الطلبات</button><button type="button" aria-current={tab === "settings" ? "page" : undefined} onClick={() => setTab("settings")}><Settings2 size={18} aria-hidden="true" />التوصيل والدفع</button></nav>
+    {!settings && !configError && <p className={styles.setupNotice}>لم تُحفظ إعدادات الطلبات بعد حدد التوصيل والدفع وفعّل استقبال الطلبات ثم احفظ الإعدادات لتظهر خيارات الطلب في المتجر</p>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {message && <p role="status" className={styles.success}><Check size={18} aria-hidden="true" />{message}</p>}
     {tab === "settings" ? <SettingsForm key={JSON.stringify(settings)} initial={settings ?? defaults} busy={busy} onSave={save} /> : <section className={styles.orders} aria-label="طلبات المتجر">

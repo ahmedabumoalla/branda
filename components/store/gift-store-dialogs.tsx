@@ -9,55 +9,62 @@ import { selectedProductPrice, selectionError, selectionSummary, type GiftCartLi
 import type { StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { lockPageScroll } from "@/lib/ui/page-scroll-lock";
 import { pendingGiftRequest, clearPendingGiftRequest } from "@/lib/commerce/checkout-request";
+import { togetherResponsiveImage, STORE_CARD_IMAGE_SIZES, STORE_DETAIL_IMAGE_SIZES } from "@/lib/menu/together-images";
+import { rememberStorePhoto, warmStorePhoto } from "@/lib/ui/store-image-cache";
 import s from "./together-store.module.css";
 
 export function StoreMoney({ amount }: { amount: number }) {
   return <span className={s.money}><bdi>{amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</bdi><small>ريال</small></span>;
 }
 
-export function StorePhoto({ src, alt, eager = false, className = "" }: { src?: string; alt: string; eager?: boolean; className?: string }) {
+export function StorePhoto({ src, alt, eager = false, className = "", sizes = STORE_CARD_IMAGE_SIZES }: { src?: string; alt: string; eager?: boolean; className?: string; sizes?: string }) {
   const [failed, setFailed] = useState("");
   if (!src || failed === src) return <span className={`${s.photoPlaceholder} ${className}`} role="img" aria-label={alt}><Leaf aria-hidden="true" /><span>{alt}</span></span>;
-  // Original store photography, including owner-managed uploads and signed private assets.
+  const responsive = togetherResponsiveImage(src, sizes);
+  // Reuse optimized widths and browser cache; preserve raw URLs for unrelated media.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className={className} src={src} alt={alt} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} decoding="async" onError={() => setFailed(src)} />;
+  return <img className={className} src={responsive?.src || src} srcSet={responsive?.srcSet} sizes={responsive?.sizes} alt={alt} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} decoding="async" onLoad={event => rememberStorePhoto(src, sizes, event.currentTarget)} onError={() => setFailed(src)} />;
 }
 
-export function StoreDialog({ title, close, children, wide = false }: { title: string; close: () => void; children: ReactNode; wide?: boolean }) {
+export function StoreDialog({ title, close, children, wide = false, open = true }: { title: string; close: () => void; children: ReactNode; wide?: boolean; open?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    if (!open) return;
     const node = ref.current;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     node?.showModal();
     const unlock = lockPageScroll();
     return () => { node?.close(); unlock(); previous?.focus({ preventScroll: true }); };
-  }, []);
+  }, [open]);
   return <dialog ref={ref} className={`${s.dialog} ${wide ? s.wideDialog : ""}`} dir="rtl" aria-label={title} onCancel={e => { e.preventDefault(); close(); }} onClick={e => { if (e.target === e.currentTarget) close(); }}>
     <div className={s.dialogHeader}><span>{title}</span><button type="button" className={s.iconButton} aria-label="إغلاق" onClick={close} autoFocus><X aria-hidden="true" /></button></div>{children}
   </dialog>;
 }
 
-export function GiftProductDialog({ product, close, add, orderingEnabled }: { product: StandaloneMenuProduct; close: () => void; add: (product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) => string | null; orderingEnabled: boolean }) {
+export function GiftProductDialog({ product, close, add, orderingEnabled, open = true }: { product: StandaloneMenuProduct; close: () => void; add: (product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) => string | null; orderingEnabled: boolean; open?: boolean }) {
   const [image, setImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [optionId, setOptionId] = useState("");
   const [selections, setSelections] = useState<GiftSelection[]>([]);
   const [error, setError] = useState("");
+  const imageIndex = Math.min(image, Math.max(0, product.images.length - 1));
+  const nextImage = product.images.length > 1 ? product.images[(imageIndex + 1) % product.images.length]?.url : undefined;
+  useEffect(() => { if (open) warmStorePhoto(nextImage, STORE_DETAIL_IMAGE_SIZES); }, [nextImage, open]);
   const details = product.commerceDetails ?? {};
   const quote = details.quoteOnly === true;
   const unitPrice = selectedProductPrice(product, selections, optionId);
   function choose(groupId: string, value: Partial<GiftSelection>) { setSelections(items => [...items.filter(i => i.groupId !== groupId), { groupId, ...value }]); setError(""); }
-  function submit(e: FormEvent) { e.preventDefault(); const invalid = selectionError(product, selections, optionId); if (invalid) { setError(invalid); return; } const message = add(product, { quantity: quote ? 1 : quantity, optionId: optionId || undefined, selections }); if (message) setError(message); }
-  return <StoreDialog title={product.catalogKind === "service" ? "خدمات وتجارب Together" : "تفاصيل غرسَتك"} close={close} wide>
+  function submit(e: FormEvent) { e.preventDefault(); const invalid = selectionError(product, selections, optionId); if (invalid) { setError(invalid); return; } const message = add(product, { quantity: quote ? 1 : quantity, optionId: optionId || undefined, selections }); if (message) setError(message); else { setError(""); setQuantity(1); setOptionId(""); setSelections([]); } }
+  return <StoreDialog title={product.catalogKind === "service" ? "خدمات وتجارب Together" : "تفاصيل غرسَتك"} close={close} open={open} wide>
     <div className={s.productDetail}>
       <div className={s.detailGallery}>
-        <div className={s.detailImage}><StorePhoto key={image} src={product.images[image]?.url} alt={product.images[image]?.alt || product.name} eager /></div>
+        <div className={s.detailImage}><StorePhoto src={product.images[imageIndex]?.url} alt={product.images[imageIndex]?.alt || product.name} sizes={STORE_DETAIL_IMAGE_SIZES} eager /></div>
         {product.images.length > 1 && <nav className={s.imageNavigation} aria-label="التنقل بين صور المنتج">
-          <button type="button" aria-label="الصورة السابقة" onClick={() => setImage(i => (i - 1 + product.images.length) % product.images.length)}><ChevronRight /></button>
-          <span className={s.imageCounter} aria-live="polite"><bdi>{image + 1} / {product.images.length}</bdi><small>صور المنتج</small></span>
-          <button type="button" aria-label="الصورة التالية" onClick={() => setImage(i => (i + 1) % product.images.length)}><ChevronLeft /></button>
+          <button type="button" aria-label="الصورة السابقة" onClick={() => setImage((imageIndex - 1 + product.images.length) % product.images.length)}><ChevronRight /></button>
+          <span className={s.imageCounter} aria-live="polite"><bdi>{imageIndex + 1} / {product.images.length}</bdi><small>صور المنتج</small></span>
+          <button type="button" aria-label="الصورة التالية" onClick={() => setImage((imageIndex + 1) % product.images.length)}><ChevronLeft /></button>
         </nav>}
-        {product.images.length > 1 && <nav className={s.thumbnails} aria-label="صور المنتج">{product.images.map((photo, i) => <button type="button" key={photo.url} aria-label={`الصورة ${i + 1}`} aria-pressed={image === i} onClick={() => setImage(i)}><StorePhoto src={photo.url} alt="" /></button>)}</nav>}
+        {product.images.length > 1 && <nav className={s.thumbnails} aria-label="صور المنتج">{product.images.map((photo, i) => <button type="button" key={photo.url} aria-label={`الصورة ${i + 1}`} aria-pressed={imageIndex === i} onClick={() => setImage(i)}><StorePhoto src={photo.url} alt="" sizes="60px" /></button>)}</nav>}
       </div>
       <form className={s.detailBody} onSubmit={submit}>
         <p className={s.eyebrow}>{product.category}</p><h2>{product.name}</h2>
@@ -108,7 +115,7 @@ export function GiftCheckoutDialog({ slug, lines, products, settings, setLines, 
   }
   return <StoreDialog title={quote ? "تصميم ينمو مع مساحتك" : "سلة الغراس"} close={() => { if (!busy) close(); }}>
     <div className={s.checkoutBody}>{!lines.length ? <div className={s.empty}><ShoppingBag /><h2>سلتك تنتظر غرسَتها الأولى</h2><button className={s.primary} onClick={close}>اكتشف المنتجات</button></div> : <>
-      <div className={s.cartLines}>{resolved.map(({ line, product }) => <article key={line.key}><div className={s.cartImage}><StorePhoto src={product?.images[0]?.url} alt={product?.name || "صنف غير متاح"} /></div><div><strong>{product?.name || "صنف غير متاح"}</strong>{product && <p>{selectionSummary(product, line.selections, line.optionId)}</p>}{!quote && <span>{line.quantity} × <StoreMoney amount={product ? selectedProductPrice(product, line.selections, line.optionId) : 0} /></span>}</div><button className={s.iconButton} type="button" disabled={busy} aria-label={`حذف ${product?.name || "الصنف"}`} onClick={() => setLines(lines.filter(i => i.key !== line.key))}><Trash2 /></button></article>)}</div>
+      <div className={s.cartLines}>{resolved.map(({ line, product }) => <article key={line.key}><div className={s.cartImage}><StorePhoto src={product?.images[0]?.url} alt={product?.name || "صنف غير متاح"} sizes="64px" /></div><div><strong>{product?.name || "صنف غير متاح"}</strong>{product && <p>{selectionSummary(product, line.selections, line.optionId)}</p>}{!quote && <span>{line.quantity} × <StoreMoney amount={product ? selectedProductPrice(product, line.selections, line.optionId) : 0} /></span>}</div><button className={s.iconButton} type="button" disabled={busy} aria-label={`حذف ${product?.name || "الصنف"}`} onClick={() => setLines(lines.filter(i => i.key !== line.key))}><Trash2 /></button></article>)}</div>
       <form onSubmit={submit} className={s.checkoutForm}>
         <h3>{quote ? "عرّفنا على مساحتك" : "لمن نجهّز هذا الجمال؟"}</h3>
         <div className={s.formRow}><label>الاسم<input name="name" autoComplete="name" required minLength={2} maxLength={120} disabled={busy} /></label><label>رقم الجوال<input name="phone" type="tel" inputMode="tel" dir="ltr" placeholder="05XXXXXXXX" autoComplete="tel" required pattern="(05|9665|\+9665|009665)[0-9]{8}" maxLength={16} disabled={busy} /></label></div>
