@@ -472,11 +472,16 @@ export async function requireCashierPermission(
   admin = createAdminClient(),
 ): Promise<CashierSessionContext> {
   const context = await requireCashierSessionContext(admin);
+  const features = await getCafeFeatureCodes(context.cafeId);
   const allowed = permission === "loyalty" ? context.canUseLoyalty : context.canUsePager;
-  if (!allowed || !featureCodesAllow(await getCafeFeatureCodes(context.cafeId), permission)) {
+  if (!allowed || !featureCodesAllow(features, permission)) {
     throw new Error("لا تملك صلاحية استخدام هذه الخدمة أو أن اشتراكها غير مفعّل");
   }
-  return context;
+  return {
+    ...context,
+    canUseLoyalty: context.canUseLoyalty && featureCodesAllow(features, "loyalty"),
+    canUsePager: context.canUsePager && featureCodesAllow(features, "pager"),
+  };
 }
 
 export async function getCashierLandingPath() {
