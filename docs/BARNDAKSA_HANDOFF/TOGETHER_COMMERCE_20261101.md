@@ -12,7 +12,8 @@
 ## Pending business configuration
 
 - User previously required owner-controlled delivery/payment choices. Do not silently invent delivery fees, pickup promises, bank details or merchant credentials
-- Asked which initial fulfillment/payment configuration to activate and which payment provider has an independent Together merchant account
+- User explicitly deferred both fulfillment/payment configuration and merchant gateway choice; requested an icon only for now
+- Added owner header delivery/payment shortcut and a read-only electronic-payment card marked unconnected; no gateway fields or automatic settings save
 - No gateway keys requested in chat. Branda subscription Paymob credentials and webhook are reserved for platform subscriptions
 
 ## Independent merchant checkout design
@@ -39,4 +40,5 @@ Official references checked during investigation:
 - Finance settings/accounts/warehouse are lazily initialized by the existing owner snapshot. Cash collection still requires a real owner shift; no shift or tax-registration assumption was created
 - Focused image/store/tenant-isolation/owner UI21 checks passed. Root/release TypeScript/text and scoped ESLint passed. Source/security review found no newly widened tenant access
 - Publication and production optimizer header evidence are recorded in `output/together/commerce-speed-publication.json` and `output/together/photo-performance-after.json`
-- Activation and online payment remain pending the user's business configuration/provider answer
+- Activation and online payment are deferred by explicit user instruction; owner will configure later
+- Follow-up owner UI23, CSS compilation, text integrity, TypeScript and scoped lint passed; publication tag together-payment-placeholder-20261101

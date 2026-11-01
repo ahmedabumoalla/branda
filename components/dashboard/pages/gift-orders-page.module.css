@@ -6,3 +6,12 @@
 @media(prefers-reduced-motion:reduce){.root *{animation:none!important;transition:none!important}}
 
 .root .setupNotice{padding:16px 20px;margin-bottom:20px;border:1px solid var(--g-line);border-radius:12px;background:var(--g-soft);color:var(--g-ink);font-size:13px;line-height:1.9}
+.root .settingsShortcut{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:10px 16px;border:1px solid #ffffff50;border-radius:12px;background:#ffffff12;color:#fff;font:inherit;font-size:13px;cursor:pointer}
+.root .settingsShortcut:hover{background:#ffffff24}
+.root .settingsShortcut:focus-visible{outline:2px solid #e1edb8;outline-offset:4px}
+.root .gatewayPlaceholder{display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:18px;margin:0 0 20px;border:1px solid var(--g-line);border-radius:16px;background:var(--g-soft);color:var(--g-ink)}
+.root .gatewayIcon{display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:14px;background:var(--g-white);color:var(--g-green)}
+.root .gatewayPlaceholder>div{flex:1;min-width:160px}
+.root .gatewayPlaceholder h3{margin:0;font-size:15px}
+.root .gatewayPlaceholder p{margin:5px 0 0;font-size:12px;line-height:1.8;color:var(--g-muted)}
+.root .gatewayStatus{padding:6px 12px;border:1px solid var(--g-line);border-radius:20px;font-size:12px;background:var(--g-white);white-space:nowrap}
