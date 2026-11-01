@@ -128,7 +128,7 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-export function ProductDetails({ product, products, close, browse, position, total, brandSlug }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string }) {
+export function ProductDetails({ product, products, close, browse, position, total, brandSlug, brandCaption }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string; brandCaption?: string }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [mediaIndex, setMediaIndex] = useState(!product.primaryMediaType && brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
@@ -184,7 +184,7 @@ export function ProductDetails({ product, products, close, browse, position, tot
         {product.ingredients.length > 0 && <div className={s.ingredients}>
           <h3>المكونات</h3><ul>{product.ingredients.map((ingredient, index) => <li key={`${index}-${ingredient}`}>{menuDisplayText(ingredient)}</li>)}</ul>
         </div>}
-        <p className={s.detailFooter}>{brandSlug === "delicake" ? <>Sweet moments <i>Deli details</i></> : <>Good food <i>Beautiful moments</i></>}</p>
+        <p className={s.detailFooter}>{brandCaption ?? (brandSlug === "delicake" ? <>Sweet moments <i>Deli details</i></> : <>Good food <i>Beautiful moments</i></>)}</p>
       </motion.div>
     </div>
     {total > 1 && <nav className={s.dishNavigation} aria-label="استكشف الأطباق">

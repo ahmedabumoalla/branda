@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "parentImport": "four-brands-20261102",
+  "products": [
+    {
+      "id": "f5125442-d30f-4032-8605-0cfdd6ed553d",
+      "cafeId": "318df308-e39f-4ef2-a0fd-05c126720d82",
+      "name": "تشيكن فرايز",
+      "available": false,
+      "price": 0,
+      "imageStoragePath": "318df308-e39f-4ef2-a0fd-05c126720d82/f5125442-d30f-4032-8605-0cfdd6ed553d/four-brands-20261102-draft-295af5e6cf35b697.webp",
+      "sha256": "295af5e6cf35b697c66a19c4347f0dcedbd021044f77e0709097fec9f89822c4",
+      "bytes": 237276,
+      "source": {
+        "localPath": "output/four-brands/box-bbq/generated/chicken-fries.png",
+        "sha256": "7b9fa965fbbe4a7c641927018e0eaa66963a1b7caf33feeeb7b587fcd9541cb0",
+        "tool": "builtin-imagegen",
+        "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one small serving of golden straight-cut fries with a few bite-size crispy breaded chicken pieces in a shallow plain stainless-steel dish with unbranded parchment. Clear distinction between fries and real crisp chicken. Keep portion believable. No beef, no mushrooms, no garnish, no visible sauces or invented toppings. Three-quarter tabletop closeup",
+        "illustrative": true
+      }
+    },
+    {
+      "id": "e3e401d8-679b-4420-81cd-edc7ac1a2804",
+      "cafeId": "318df308-e39f-4ef2-a0fd-05c126720d82",
+      "name": "صوص الجبن",
+      "available": false,
+      "price": 0,
+      "imageStoragePath": "318df308-e39f-4ef2-a0fd-05c126720d82/e3e401d8-679b-4420-81cd-edc7ac1a2804/four-brands-20261102-draft-9774814ee6452b19.webp",
+      "sha256": "9774814ee6452b192bce71d831364e572d521b583d2d3d4d6acf391d54932da5",
+      "bytes": 171930,
+      "source": {
+        "localPath": "output/four-brands/box-bbq/generated/cheese-sauce.png",
+        "sha256": "c34106410281608c64b819d3539f1a9d81b26cdd76cc7d246fbe8c653e810d8b",
+        "tool": "builtin-imagegen",
+        "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one small clear takeaway dipping ramekin holding smooth warm golden yellow cheese sauce. Thick creamy real cheese texture and a soft natural swirl. Closeup at three-quarter slightly overhead angle. No cheddar blocks, no herbs, no peppers, no visible toppings, no spoon or other food",
+        "illustrative": true
+      }
+    }
+  ]
+}

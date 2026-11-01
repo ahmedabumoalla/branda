@@ -4,9 +4,13 @@ import { useParams } from "next/navigation";
 import { LocoMenuLoading } from "@/components/menu/loco-menu-loading";
 import { TogetherStoreLoading } from "@/components/store/together-store-loading";
 import { isLocoMenu } from "@/lib/menu/loco-brand";
+import { signatureBrand } from "@/lib/menu/signature-brands";
+import { SignatureMenuLoading } from "@/components/menu/signature-menu-loading";
 
 export default function MenuLoading() {
   const { slug } = useParams<{ slug: string }>();
+  const signature = signatureBrand(slug);
+  if (signature) return <SignatureMenuLoading brand={signature} />;
   if (slug === "brand-871ec6e243c0") return <TogetherStoreLoading />;
   if (isLocoMenu(slug)) return <LocoMenuLoading />;
 

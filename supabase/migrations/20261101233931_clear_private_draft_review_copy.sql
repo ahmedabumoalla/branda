@@ -1,0 +1,15 @@
+-- Internal draft instructions must not become customer-facing product descriptions
+-- Keep the owner's pending review, prices, availability and all media untouched
+BEGIN;
+SET LOCAL lock_timeout='5s';
+CREATE TEMP TABLE draft_copy_before(snapshot) ON COMMIT DROP AS SELECT md5(coalesce(jsonb_agg(CASE WHEN id IN ('12e94ca0-2e6c-4e8a-8fde-0676e4c57c41','f5125442-d30f-4032-8605-0cfdd6ed553d','e3e401d8-679b-4420-81cd-edc7ac1a2804') THEN to_jsonb(p)-'description'-'updated_at' ELSE to_jsonb(p) END ORDER BY id)::text,'')) FROM public.menu_products p;
+DO $guard$ BEGIN
+IF NOT EXISTS(SELECT 1 FROM public.menu_products WHERE id='12e94ca0-2e6c-4e8a-8fde-0676e4c57c41' AND cafe_id='7f28312f-4df2-4a1d-bedd-34b73f415307' AND NOT available AND deleted_at IS NULL AND description IN ('غير متاح للعرض حتى يراجع مالك العلامة بيانات الصنف ويؤكدها','')) THEN RAISE EXCEPTION 'Draft review copy changed; preserve owner edits';END IF;
+IF NOT EXISTS(SELECT 1 FROM public.menu_products WHERE id='f5125442-d30f-4032-8605-0cfdd6ed553d' AND cafe_id='318df308-e39f-4ef2-a0fd-05c126720d82' AND NOT available AND deleted_at IS NULL AND description IN ('غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح','')) THEN RAISE EXCEPTION 'Draft review copy changed; preserve owner edits';END IF;
+IF NOT EXISTS(SELECT 1 FROM public.menu_products WHERE id='e3e401d8-679b-4420-81cd-edc7ac1a2804' AND cafe_id='318df308-e39f-4ef2-a0fd-05c126720d82' AND NOT available AND deleted_at IS NULL AND description IN ('غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح','')) THEN RAISE EXCEPTION 'Draft review copy changed; preserve owner edits';END IF;
+END $guard$;
+UPDATE public.menu_products SET description='',updated_at=now() WHERE id='12e94ca0-2e6c-4e8a-8fde-0676e4c57c41' AND cafe_id='7f28312f-4df2-4a1d-bedd-34b73f415307' AND NOT available AND description='غير متاح للعرض حتى يراجع مالك العلامة بيانات الصنف ويؤكدها';
+UPDATE public.menu_products SET description='',updated_at=now() WHERE id='f5125442-d30f-4032-8605-0cfdd6ed553d' AND cafe_id='318df308-e39f-4ef2-a0fd-05c126720d82' AND NOT available AND description='غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح';
+UPDATE public.menu_products SET description='',updated_at=now() WHERE id='e3e401d8-679b-4420-81cd-edc7ac1a2804' AND cafe_id='318df308-e39f-4ef2-a0fd-05c126720d82' AND NOT available AND description='غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح';
+DO $verify$ DECLARE actual text;BEGIN SELECT md5(coalesce(jsonb_agg(CASE WHEN id IN ('12e94ca0-2e6c-4e8a-8fde-0676e4c57c41','f5125442-d30f-4032-8605-0cfdd6ed553d','e3e401d8-679b-4420-81cd-edc7ac1a2804') THEN to_jsonb(p)-'description'-'updated_at' ELSE to_jsonb(p) END ORDER BY id)::text,'')) FROM public.menu_products p INTO actual;IF actual IS DISTINCT FROM (SELECT snapshot FROM draft_copy_before) THEN RAISE EXCEPTION 'Fields other than internal copy changed';END IF;IF (SELECT count(*) FROM public.menu_products WHERE id IN ('12e94ca0-2e6c-4e8a-8fde-0676e4c57c41','f5125442-d30f-4032-8605-0cfdd6ed553d','e3e401d8-679b-4420-81cd-edc7ac1a2804') AND description='' AND NOT available)<>3 THEN RAISE EXCEPTION 'Draft descriptions not cleared';END IF;END $verify$;
+COMMIT;

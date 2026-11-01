@@ -1,4 +1,5 @@
 import "server-only";
+import { signatureBrand } from "@/lib/menu/signature-brands";
 
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -99,7 +100,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
       // Preview navigation reuses stable signatures rather than re-downloading unchanged images.
       // Only referenced, visible, tenant-owned assets reach this shared signing cache.
       if (paths.size) {
-        const { data, error } = showcase || ["kat-coffe", "shahi-w-hail", "taza", "delicake", "brand-871ec6e243c0"].includes(slug)
+        const { data, error } = showcase || signatureBrand(slug) || ["kat-coffe", "shahi-w-hail", "taza", "delicake", "brand-871ec6e243c0"].includes(slug)
           ? { data: await getKathMenuAssets([...paths]), error: null }
           : await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
         if (error) throw error;

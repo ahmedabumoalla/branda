@@ -1,0 +1,3087 @@
+{
+  "version": 1,
+  "importKey": "four-brands-20261102",
+  "brands": [
+    {
+      "key": "rast",
+      "name": "RAST",
+      "cafeId": "7f28312f-4df2-4a1d-bedd-34b73f415307",
+      "slug": "brand-c138e578b03c",
+      "palette": {
+        "primary": "#590e1b",
+        "secondary": "#4e6f6b",
+        "accent": "#d9b98c",
+        "text": "#fff8ee",
+        "background": "#f8f3ed"
+      },
+      "featured": [
+        "35",
+        "36",
+        "20"
+      ],
+      "sourceUrl": "https://rast-coffee.com/",
+      "sourceRetrievedAt": "2026-11-01T23:13:22.527Z",
+      "description": null,
+      "logo": {
+        "localPath": "public/menu-art/four-brands/rast-logo-v1.webp",
+        "sourceUrl": "https://rast-coffee.com/storage/images/logo_colored.png",
+        "provenance": "optimized-original-logo",
+        "sha256": "fe48a01cafc3ab3e91b66fd405de4841a2d93616ef67d6205c83d979de1cc9c4"
+      },
+      "categories": [
+        {
+          "sourceId": "مشروبات ساخنة | Hot Drinks",
+          "name": "مشروبات ساخنة",
+          "description": null
+        },
+        {
+          "sourceId": "مشروبات باردة | Cold Drinks",
+          "name": "مشروبات باردة",
+          "description": null
+        },
+        {
+          "sourceId": "الحلويات | Desserts",
+          "name": "الحلويات",
+          "description": null
+        },
+        {
+          "sourceId": "المكسرات | Nuts",
+          "name": "المكسرات",
+          "description": null
+        },
+        {
+          "sourceId": "حفلة عيد ميلاد",
+          "name": "حفلة عيد ميلاد",
+          "description": null
+        },
+        {
+          "sourceId": "البكج",
+          "name": "البكج",
+          "description": null
+        }
+      ],
+      "products": [
+        {
+          "sourceId": "01",
+          "name": "قهوة تركي",
+          "nameEn": null,
+          "sourceName": "قهوة تركي  Turkish coffee",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-01.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_08_08_01_26_56_قهوة تركي  Turkish coffee.jpeg",
+              "provenance": "original-source",
+              "sha256": "606f557c58e631edbe85af0a05ce760310bd071a1842fbb4a597aeb97c8554b3"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "02",
+          "name": "اسبريسو",
+          "nameEn": null,
+          "sourceName": "اسبريسو  Espresso",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-02.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_08_08_01_27_35_اسبريسو  Espresso.jpeg",
+              "provenance": "original-source",
+              "sha256": "f03f639c93f27fa10986b7d1872600fce04122c9e8158a5c78d2261412b4db6c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "03",
+          "name": "امريكانو",
+          "nameEn": null,
+          "sourceName": "امريكانو  Americano",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-03.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_08_08_01_37_49_امريكانو  Americano.jpeg",
+              "provenance": "original-source",
+              "sha256": "451ebeef7e6c4ee3728cbe574bed67ec8d0cf300bb2cdfab8ca3d31eeda80c90"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "04",
+          "name": "V60(كولمبي ،أثيوبي)",
+          "nameEn": null,
+          "sourceName": "V60(كولمبي ،أثيوبي)",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-04.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_20_33_V60(كولمبي ،أثيوبي).jpeg",
+              "provenance": "original-source",
+              "sha256": "c592352ed57f05322d05bd17b0771f6af37d8712c136e3fcf83de003fa8329e6"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "05",
+          "name": "لاتيه",
+          "nameEn": null,
+          "sourceName": "لاتيه  Latte",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 18,
+          "sourcePrice": 18,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-05.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_32_05_لاتيه  Latte.jpeg",
+              "provenance": "original-source",
+              "sha256": "31538594a98fedf9d617ded7fa4ee25822d547b381565ad664bd67c16cbe9ee1"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "06",
+          "name": "كابتشينو",
+          "nameEn": null,
+          "sourceName": "كابتشينو Cappuccino",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 18,
+          "sourcePrice": 18,
+          "description": "",
+          "calories": 80,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-06.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_32_30_كابتشينو Cappuccino.jpeg",
+              "provenance": "original-source",
+              "sha256": "ca54518d8f0cc1a17d1b30d75235a9473a50051e5380e00897c459094e2ccb64"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "07",
+          "name": "فلات وايت",
+          "nameEn": null,
+          "sourceName": "فلات وايت  Flat white",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 18,
+          "sourcePrice": 18,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-07.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_39_36_فلات وايت  Flat white.jpeg",
+              "provenance": "original-source",
+              "sha256": "bf377c783e73db4b32d0713a129b8e167ad9630dbe9aebd791fd103a93b8835c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "08",
+          "name": "سبانيش لاتيه",
+          "nameEn": null,
+          "sourceName": "سبانيش لاتيه  Spanish latte",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-08.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_40_06_سبانيش لاتيه  Spanish latte.jpeg",
+              "provenance": "original-source",
+              "sha256": "e28ce515e3f693748e49b6b91e7ceda2fd96fb3939e136b4a5a87493d18920f3"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "09",
+          "name": "هوت شوكليت",
+          "nameEn": null,
+          "sourceName": "هوت شوكليت",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-09.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_40_35_هوت شوكليت.jpeg",
+              "provenance": "original-source",
+              "sha256": "a2bd5fb302b5060095e8c47071d4bd6cf4fe38f5ec77c11ddda9034ff15d184c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "10",
+          "name": "شاي أحمر",
+          "nameEn": null,
+          "sourceName": "شاي أحمر  English tea",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": 2,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-10.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_08_51_21_شاي أحمر  English tea.jpeg",
+              "provenance": "original-source",
+              "sha256": "66725ff563252fd5c8c22b30254f40b183b6ba317c66afa25dce4c7baf443ec7"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "11",
+          "name": "شاي اخضر",
+          "nameEn": null,
+          "sourceName": "شاي اخضر  Green tea",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": 2,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-11.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_08_51_49_شاي اخضر  Green tea.jpeg",
+              "provenance": "original-source",
+              "sha256": "1e95268b6023ff3e66916a2426a2ca4daf53d928faefc3e131355cea7fdb424f"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "12",
+          "name": "نعناع",
+          "nameEn": null,
+          "sourceName": "نعناع",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-12.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_08_52_18_نعناع.jpeg",
+              "provenance": "original-source",
+              "sha256": "9e4aab9edae757aa2eb0ee80204d9d6692ff9b229668e926c63fd2c12dd64564"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "13",
+          "name": "زنجبيل",
+          "nameEn": null,
+          "sourceName": "زنجبيل",
+          "categorySourceId": "مشروبات ساخنة | Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-13.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_08_52_40_زنجبيل.jpeg",
+              "provenance": "original-source",
+              "sha256": "52a035b8c3842807c2abdaba03cce4d0f1bc51b896b93d2f88a330079001cb1e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "14",
+          "name": "برتقال",
+          "nameEn": null,
+          "sourceName": "برتقال",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-14.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_41_13_برتقال.jpeg",
+              "provenance": "original-source",
+              "sha256": "94cc2ec990a2dae99cccf6d0f6c60c071481c6b9b9d66ab4d162b9752de5bed8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "15",
+          "name": "ليمون نعناع",
+          "nameEn": null,
+          "sourceName": "ليمون نعناع",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-15.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_42_04_ليمون نعناع.jpeg",
+              "provenance": "original-source",
+              "sha256": "c6a1886273cd51ec68789bc203dd43e5e31033b388221a1ba22c49a6b557323e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "16",
+          "name": "كركدية",
+          "nameEn": null,
+          "sourceName": "كركدية",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-16.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_08_46_كركدية.jpeg",
+              "provenance": "original-source",
+              "sha256": "779e7c374a91c754853b21aa780f7465480556ae8752c8ff8e1b8e67a43045c7"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "17",
+          "name": "ايس امريكانو",
+          "nameEn": null,
+          "sourceName": "ايس امريكانو  Iced americno",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-17.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_42_37_ايس امريكانو  Iced americno.jpeg",
+              "provenance": "original-source",
+              "sha256": "d3d89b0f2bfd1a64b369f133a10c47739c39be4460eae7868ff98f7ebd36a91e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "18",
+          "name": "V60 ( كولمبي ،أثيوبي)",
+          "nameEn": null,
+          "sourceName": "V60 ( كولمبي ،أثيوبي)",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 22,
+          "sourcePrice": 22,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-18.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_46_25_V60 ( كولمبي ،أثيوبي).jpeg",
+              "provenance": "original-source",
+              "sha256": "0a5a26ea67b93df9e7615cf3f69c0b6ce77972dbc9b466bd596dc2f5ecdfc6d6"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "19",
+          "name": "ايس لاتيه",
+          "nameEn": null,
+          "sourceName": "ايس لاتيه  Iced latte",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-19.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_11_44_00_ايس لاتيه  Iced latte.jpeg",
+              "provenance": "original-source",
+              "sha256": "f1e9dda7e005c1ad4b9f9f009738fcd03fa985158c533d4b962fd57a3cfd949f"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "20",
+          "name": "ايس سبانش لاتيه",
+          "nameEn": null,
+          "sourceName": "ايس سبانش لاتيه  Iced spanish",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 22,
+          "sourcePrice": 22,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-20.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_15_34_ايس سبانش لاتيه.jpeg",
+              "provenance": "original-source",
+              "sha256": "2042060a7f5e5ef73bd42491b4ad0633a8e7e53484ea06ad2e885f8f85f7ebcf"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "21",
+          "name": "ايس موكا",
+          "nameEn": null,
+          "sourceName": "ايس موكا",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 22,
+          "sourcePrice": 22,
+          "description": "",
+          "calories": 200,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-21.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_27_37_ايس موكا.webp",
+              "provenance": "original-source",
+              "sha256": "2ce20849bbf604af1941e2392062670f1f5c2f34e7f194a99efae2365290ef8b"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "22",
+          "name": "ماتشا",
+          "nameEn": null,
+          "sourceName": "ماتشا",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 22,
+          "sourcePrice": 22,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-22.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_25_22_ماتشا.jpeg",
+              "provenance": "original-source",
+              "sha256": "8d621e9fa657fed8e8ee31f38c5a554be0ca07aaa4965a274580028c16928003"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "23",
+          "name": "موهيتو كلاسيكي",
+          "nameEn": null,
+          "sourceName": "موهيتو كلاسيكي",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-23.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_19_23_موهيتو سفن.jpeg",
+              "provenance": "original-source",
+              "sha256": "20b018df91c3bd5215066f7a390df9b0a19ce0012a119a603e728bb444652ebb"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "24",
+          "name": "موهيتو كود رد",
+          "nameEn": null,
+          "sourceName": "موهيتو كود رد",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": 150,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-24.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_20_41_موهيتو كود رد.jpeg",
+              "provenance": "original-source",
+              "sha256": "f19b2fb86759b7c0cb63b6907afd1187d52a473f7b841f8967d3b6b84a0b7ef9"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "25",
+          "name": "موهيتو رد بول",
+          "nameEn": null,
+          "sourceName": "موهيتو رد بول",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "",
+          "calories": 150,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-25.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_21_36_موهيتو رد بول.jpeg",
+              "provenance": "original-source",
+              "sha256": "0f0e6593ae2ac90db9aac78050feb5396364959fbf0491e2a4a6bad7b2dba206"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "26",
+          "name": "مياه",
+          "nameEn": null,
+          "sourceName": "مياه",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 2,
+          "sourcePrice": 2,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-26.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_24_42_مياه.jpeg",
+              "provenance": "original-source",
+              "sha256": "2954f789d778a02b204caabe343d0dc93b6badfbe010457157a81f3a54f5b289"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "27",
+          "name": "مياه بيرين زجاج",
+          "nameEn": null,
+          "sourceName": "مياه بيرين زجاج Water",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 5,
+          "sourcePrice": 5,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-27.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_25_27_مياه بيرين زجاج.jpeg",
+              "provenance": "original-source",
+              "sha256": "b848f3b79c9a820757a2da8bc13b45981ec3cdedd30978f005014cc002f494cc"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28",
+          "name": "بيريه غازيه",
+          "nameEn": null,
+          "sourceName": "بيريه غازيه  Sparkling water",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-28.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_24_12_27_17_بيريه غازيه.jpeg",
+              "provenance": "original-source",
+              "sha256": "272912c003b1ba5f23689cdddc03c11c2068a7c7464022134d0c7542fc390c1d"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "29",
+          "name": "ايس كراميل لاتيه",
+          "nameEn": null,
+          "sourceName": "ايس كراميل لاتيه",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 24,
+          "sourcePrice": 24,
+          "description": "",
+          "calories": 250,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-29.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_06_26_02_13_09_ايس كراميل لاتيه.jpeg",
+              "provenance": "original-source",
+              "sha256": "1e002a789298c29d189de5544a97db5635a558a75b937777107bb5a17643a73c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "31",
+          "name": "عصير اناناس",
+          "nameEn": null,
+          "sourceName": "عصير اناناس",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "",
+          "calories": 150,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-31.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_08_08_01_46_40_عصير اناناس.jpeg",
+              "provenance": "original-source",
+              "sha256": "73cc9e6ce99bed899c692dcf030c42e464bb28576da3fc17bd010a8c9936addb"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "32",
+          "name": "مانجو",
+          "nameEn": null,
+          "sourceName": "مانجو",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "",
+          "calories": 240,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-32.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_08_48_52_مانجو.jpeg",
+              "provenance": "original-source",
+              "sha256": "a72a434f400e84a6b7ba3a8f02fd41fc93c3334ea8179e4c6866f030b2815d65"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "33",
+          "name": "كوكتيل فواكه",
+          "nameEn": null,
+          "sourceName": "كوكتيل فواكه",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 35,
+          "sourcePrice": 35,
+          "description": "",
+          "calories": 245,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-33.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_22_09_50_27_كوكتيل فواكه.jpeg",
+              "provenance": "original-source",
+              "sha256": "108a70738c84a4cc0e651a33a08fe346a09576aa54d3500030686cc7effff486"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "34",
+          "name": "كوكيز",
+          "nameEn": null,
+          "sourceName": "كوكيز",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": 150,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-34.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_18_11_11_26_كوكيز.jpeg",
+              "provenance": "original-source",
+              "sha256": "b245ed68e87f5b049d1cf243e8d3f0b5f6e514756b01a4e0c79fd9ceed2e27d9"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "35",
+          "name": "تشيز بيكان",
+          "nameEn": null,
+          "sourceName": "تشيز بيكان  Pecan cheese cake",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 350,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-35.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_19_12_32_49_تشيز بيكان  Pecan cheese cake.jpeg",
+              "provenance": "original-source",
+              "sha256": "38789465a6a7b415ab21ba8608247ebb99bc2d4936bd9521915defc1ce46cc23"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "36",
+          "name": "ترايفل مانجو",
+          "nameEn": null,
+          "sourceName": "ترايفل مانجو  Mango trifle",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 32,
+          "sourcePrice": 32,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-36.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_19_12_34_46_ترايفل مانجو  Mango trifle.jpeg",
+              "provenance": "original-source",
+              "sha256": "7f119da7139df4308b7fb9275f0dbc027bb060244cd724ff159ff474fac707bb"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "37",
+          "name": "تيراميسو كيك",
+          "nameEn": null,
+          "sourceName": "تيراميسو كيك  Tiramisu cake",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 350,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-37.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_19_12_36_17_تيراميسو كيك  Tiramisu cake.jpeg",
+              "provenance": "original-source",
+              "sha256": "92086fd9a0fd84b4f2ff51ff06c863565f8bf6a0677ec3eff55f1aa0ab2aa3a5"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "38",
+          "name": "سلطة فواكة",
+          "nameEn": null,
+          "sourceName": "سلطة فواكة  Fruit salad",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 150,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-38.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_33_47_سلطة فواكة  Fruit salad.jpeg",
+              "provenance": "original-source",
+              "sha256": "28f24fee92956192cfe21d5e0b242c969ea77f5ae2d466ed8f23ab7f543250ab"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "39",
+          "name": "فراولة بالشوكلت",
+          "nameEn": null,
+          "sourceName": "فراولة بالشوكلت  Chocalate strawberries",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-39.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_38_26_فراولة بالشوكلت  Chocalate strawberries.jpeg",
+              "provenance": "original-source",
+              "sha256": "e64e543d0e81a7da838a70a4695f6fe85421000903ebe1ce19d27ce6c35c0abc"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "40",
+          "name": "تشيز ليمون",
+          "nameEn": null,
+          "sourceName": "تشيز ليمون",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 350,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-40.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_24_04_05_23_تشيز ليمون.jpeg",
+              "provenance": "original-source",
+              "sha256": "7cebdd8c7cb8fd7ce895059491c345bad325b423bb3034638653243c83556b4c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "42",
+          "name": "كيكة دبي",
+          "nameEn": null,
+          "sourceName": "كيكة دبي",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 350,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-42.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_24_04_12_17_كيكة دبي.jpeg",
+              "provenance": "original-source",
+              "sha256": "02d0af24fea84ac1a860887ecf09202689408eed9368ae978661f39f13a3ca76"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "43",
+          "name": "تشيز مدريد",
+          "nameEn": null,
+          "sourceName": "تشيز مدريد",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": 170,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-43.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_09_06_11_45_10_تشيز مدريد.jpeg",
+              "provenance": "original-source",
+              "sha256": "6dfb41dcf8731844aa542dc1a3818ecb98477076c2c21b575797da8205d3d2d1"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "44",
+          "name": "دولتشي شوكلت",
+          "nameEn": null,
+          "sourceName": "دولتشي شوكلت",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-44.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_09_06_11_46_35_دولتشي شوكلت.jpeg",
+              "provenance": "original-source",
+              "sha256": "7687c9f0cbe491c995ce5a0112216040a757581e0526f5ae38cbdab30b424fa8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "45",
+          "name": "دولتشي بيكان",
+          "nameEn": null,
+          "sourceName": "دولتشي بيكان",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-45.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_09_06_11_48_01_دولتشي بيكان.jpeg",
+              "provenance": "original-source",
+              "sha256": "a050872518f9ca16dbfa4ab2a791da637c3f3416af19822e03c71ffed051f08d"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "46",
+          "name": "تشيز كيك فول سوداني",
+          "nameEn": null,
+          "sourceName": "تشيز كيك فول سوداني",
+          "categorySourceId": "الحلويات | Desserts",
+          "price": 30,
+          "sourcePrice": 30,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-46.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_09_06_11_48_52_تشيز كيك فول سوداني.jpeg",
+              "provenance": "original-source",
+              "sha256": "74bb44d8000eb569670df9de4ee5e2ec430710fa9feefeffe98778ad16089363"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "47",
+          "name": "مكسرات مدخنة",
+          "nameEn": null,
+          "sourceName": "مكسرات مدخنة  Nuts",
+          "categorySourceId": "المكسرات | Nuts",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-47.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_34_30_مكسرات مدخنة  Nuts.webp",
+              "provenance": "original-source",
+              "sha256": "54f5a9fecd30dd7038ba360fade3bf01169c066fd5b8a263025fd153c766ece9"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "48",
+          "name": "عيد ميلاد",
+          "nameEn": null,
+          "sourceName": "عيد ميلاد",
+          "categorySourceId": "حفلة عيد ميلاد",
+          "price": 100,
+          "sourcePrice": 100,
+          "description": "",
+          "calories": 100,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-48.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_20_12_34_57_عيد ميلاد.jpeg",
+              "provenance": "original-source",
+              "sha256": "4deea4226e273c3da8c95db29a9b78076ac3a6fd3c5d3b803878358366a9cce2"
+            }
+          ],
+          "catalogKind": "service",
+          "featured": false
+        },
+        {
+          "sourceId": "49",
+          "name": "تشيز بيكان | موهيتو",
+          "nameEn": null,
+          "sourceName": "تشيز بيكان | موهيتو",
+          "categorySourceId": "البكج",
+          "price": 50,
+          "sourcePrice": 50,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/rast/images/product-49.jpg",
+              "sourceUrl": "https://rast-coffee.com/storage/products/2026_07_21_09_00_35_تشيز بيكان | موهيتو.jpeg",
+              "provenance": "original-source",
+              "sha256": "6232e62cd7b7800afe2718375549f1fc8c2e9b7e0aeec08afdd25603270e8153"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "draft-بيره",
+          "name": "بيره",
+          "nameEn": null,
+          "sourceName": "بيره",
+          "categorySourceId": "مشروبات باردة | Cold Drinks",
+          "price": 25,
+          "sourcePrice": 25,
+          "description": "غير متاح للعرض حتى يراجع مالك العلامة بيانات الصنف ويؤكدها",
+          "calories": null,
+          "allergens": null,
+          "available": false,
+          "priceOptions": [],
+          "images": [],
+          "catalogKind": "product",
+          "featured": false,
+          "ownerReviewRequired": true,
+          "reviewReason": "Alcohol-free status and exact product identity not verified"
+        }
+      ],
+      "excludedDuplicateCount": 1,
+      "notes": [
+        "All47 executable products have source photo verified by HTTP and successful sharp image decoding",
+        "Source has duplicate pecan row; matching pecan photo45 kept, chocolate mismatch excluded",
+        "Ambiguous beverage بيره excluded from executable catalog pending owner confirmation",
+        "Source calories copied as evidence only; many source values repeat100 and should not be promoted as independently verified nutrition"
+      ]
+    },
+    {
+      "key": "black-drop",
+      "name": "BLACK DROP",
+      "cafeId": "6d01bd09-c7e0-4307-8cfb-93171d69d9db",
+      "slug": "brand-5e0a98e765d2",
+      "palette": {
+        "primary": "#292726",
+        "secondary": "#ac927a",
+        "accent": "#d4ba9e",
+        "text": "#fffaf1",
+        "background": "#f6f3ed"
+      },
+      "featured": [
+        "106618",
+        "194228",
+        "206350"
+      ],
+      "sourceUrl": "https://6lb.menu/BLACK_DROP?lang=ar",
+      "sourceRetrievedAt": "2026-11-01T23:13:10.082Z",
+      "description": null,
+      "logo": {
+        "localPath": "public/menu-art/four-brands/black-drop-logo-v1.webp",
+        "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/HeaderImage_v204.jpg",
+        "provenance": "optimized-original-logo",
+        "sha256": "f7606512419acfd9fd3bc8462d797a7a3a036e982017938013e602100a8dd5ff"
+      },
+      "categories": [
+        {
+          "sourceId": "14515",
+          "name": "المشروبات الساخنة",
+          "description": null
+        },
+        {
+          "sourceId": "14516",
+          "name": "المشروبات الباردة",
+          "description": null
+        },
+        {
+          "sourceId": "14518",
+          "name": "الحلويات والمخبوزات",
+          "description": null
+        }
+      ],
+      "products": [
+        {
+          "sourceId": "106612",
+          "name": "اسبريسو",
+          "nameEn": "Espresso",
+          "sourceName": "اسبريسو",
+          "categorySourceId": "14515",
+          "price": 12,
+          "sourcePrice": 12,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106612-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106612/ItemBigImage_v7.png",
+              "provenance": "original-source",
+              "sha256": "b38b0126673a350cec73f50eb3d24eccdcd5538e9f15dafa8f489ab4d1669b86"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106613",
+          "name": "امريكانو",
+          "nameEn": "Americano",
+          "sourceName": "امريكانو",
+          "categorySourceId": "14515",
+          "price": 14,
+          "sourcePrice": 14,
+          "description": "",
+          "calories": 10,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106613-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106613/ItemBigImage_v3.png",
+              "provenance": "original-source",
+              "sha256": "c11e2ebbcb155c9cf7d488b5634bc6a34aea538ed3d5efd4b35932b5d5f4ead5"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106614",
+          "name": "كورتادو",
+          "nameEn": "cortado",
+          "sourceName": "كورتادو",
+          "categorySourceId": "14515",
+          "price": 14,
+          "sourcePrice": 14,
+          "description": "",
+          "calories": 28,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106614-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106614/ItemBigImage_v8.png",
+              "provenance": "original-source",
+              "sha256": "83bb86eda00a23d75006d9c3cf71416fdd238fc20cf43f071926d043c833c6be"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106615",
+          "name": "فلات وايت",
+          "nameEn": "flat white",
+          "sourceName": "فلات وايت",
+          "categorySourceId": "14515",
+          "price": 15,
+          "sourcePrice": 15,
+          "description": "",
+          "calories": 120,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106615-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106615/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "c0cb11a628e7124877ebf10ede130dbb753b1884bc25aa41dda46383baac80dc"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106616",
+          "name": "كابتشينو",
+          "nameEn": "Cappuccino",
+          "sourceName": "كابتشينو",
+          "categorySourceId": "14515",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 30,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106616-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106616/ItemBigImage_v10.png",
+              "provenance": "original-source",
+              "sha256": "dc273585492e5109110420e4ce7d93d8471e3b79088fa07f5d1bd185d5827ff7"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106617",
+          "name": "لاتيه",
+          "nameEn": "latte",
+          "sourceName": "لاتيه",
+          "categorySourceId": "14515",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 30,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106617-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106617/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "02a997d9ee2d578490653c7b4ac24d098c5b2cdcd8243f980eb670452fd5e518"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "185342",
+          "name": "شوكلاته ساخنة",
+          "nameEn": "Hot chocolate",
+          "sourceName": "شوكلاته ساخنة",
+          "categorySourceId": "14515",
+          "price": 18,
+          "sourcePrice": 18,
+          "description": "",
+          "calories": 190,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/185342-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/185342/ItemBigImage_v14.png",
+              "provenance": "original-source",
+              "sha256": "a661ab70e0464ace94da70760b9ca14acbbbd8d0411301dcf7efc44662dbd78f"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106618",
+          "name": "سبانيش لاتيه",
+          "nameEn": "Spanish latte",
+          "sourceName": "سبانيش لاتيه",
+          "categorySourceId": "14515",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": 229,
+          "allergens": "البندق,الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106618-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106618/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "f0a2b570b33218c1e44271031a5ab395b560093967295a46b65350734ac4cdc0"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "106619",
+          "name": "حلاوة بقرة لاتيه",
+          "nameEn": "Halawat baqara latte",
+          "sourceName": "حلاوة بقرة لاتيه",
+          "categorySourceId": "14515",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 271,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106619-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106619/ItemBigImage_v8.png",
+              "provenance": "original-source",
+              "sha256": "dac9e4b0f26208150a548587207ef7378ebd525ac43ae8d2851dd040f858f415"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106622",
+          "name": "في٦٠",
+          "nameEn": "V60",
+          "sourceName": "في٦٠",
+          "categorySourceId": "14515",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106622-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106622/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "f1852de1cc8d61531a3f516eb9e5310b99cc159edd1ef3533aa3761726c465e8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "153461",
+          "name": "قهوة اليوم",
+          "nameEn": "Coffee day",
+          "sourceName": "قهوة اليوم",
+          "categorySourceId": "14515",
+          "price": 11,
+          "sourcePrice": 11,
+          "description": "",
+          "calories": 0,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/153461-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/153461/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "8cac61a9309c8871bb5bf7a42c7af8cadf60c5353db56167bf26ecd4b1d2c3ad"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "168487",
+          "name": "قهوة اليوم كبير",
+          "nameEn": "Coffee day L",
+          "sourceName": "قهوة اليوم كبير",
+          "categorySourceId": "14515",
+          "price": 14,
+          "sourcePrice": 14,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/168487-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/168487/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "7cb5baca406e17934b08af680cf9e0ba9cf185310f37dad69a0d8cdad57614db"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "181370",
+          "name": "في ٦٠ فاخر",
+          "nameEn": "V 60",
+          "sourceName": "في ٦٠ فاخر",
+          "categorySourceId": "14515",
+          "price": 24,
+          "sourcePrice": 24,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/181370-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/181370/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "e6dbe04749ff144913b10557540340b21890673a41c6c61294f5e3803351b865"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "181372",
+          "name": "بوكس قهوة ٢ لتر",
+          "nameEn": "Coffee box 2 l",
+          "sourceName": "بوكس قهوة ٢ لتر",
+          "categorySourceId": "14515",
+          "price": 69,
+          "sourcePrice": 69,
+          "description": "بوكس قهوة ٢ لتر مع ١٠ اكواب ",
+          "calories": 4,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/181372-0.jpg",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/181372/ItemBigImage_v1.jpg",
+              "provenance": "original-source",
+              "sha256": "a7ebe5bbf7abd31778286020071e8261c51e579c02b6c13260b327ef2e6d7590"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "217438",
+          "name": "الفريدو",
+          "nameEn": "Alfriedo",
+          "sourceName": "الفريدو",
+          "categorySourceId": "14516",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "public/menu-art/four-brands/black-freddo-v1.webp",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "generationSource": "output/four-brands/generated-root.json",
+              "sha256": "debdd0b32778173969bdec32447b484014bfbe7fac3391213ce80ce49e6b679c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "214975",
+          "name": "ايس تي ليمونيد",
+          "nameEn": "Ice tea",
+          "sourceName": "ايس تي ليمونيد",
+          "categorySourceId": "14516",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": 276,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/214975-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/214975/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "ec1a527bc4f1daea39a7eb3201ea7abac46e2f6e1b7706d0fe6b8a8d1597e7c8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "194228",
+          "name": "آيس ماتشا",
+          "nameEn": "Matcha",
+          "sourceName": "آيس ماتشا",
+          "categorySourceId": "14516",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 98,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/194228-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/194228/ItemBigImage_v8.png",
+              "provenance": "original-source",
+              "sha256": "44220f6a18a834c690fc2e0b9671f70bc0c0ac8bc05817ba479bdc86aa2ddd79"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "106623",
+          "name": "آيس كورتادو",
+          "nameEn": "ice cortado",
+          "sourceName": "آيس كورتادو",
+          "categorySourceId": "14516",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 30,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106623-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106623/ItemBigImage_v8.png",
+              "provenance": "original-source",
+              "sha256": "d434bc42212047823a54678abf1fd43c27939ab193c09885d1ce31df007cfca8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106624",
+          "name": "آيس لاتيه",
+          "nameEn": "ice latte",
+          "sourceName": "آيس لاتيه",
+          "categorySourceId": "14516",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": 33,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106624-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106624/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "e0a859e4009891c2e0dad68b14e0fa67ee5d12946836925ac885fd4fa52a0c98"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106625",
+          "name": "آيس امريكانو",
+          "nameEn": "ice Americano",
+          "sourceName": "آيس امريكانو",
+          "categorySourceId": "14516",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 10,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106625-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106625/ItemBigImage_v3.png",
+              "provenance": "original-source",
+              "sha256": "9447e3e484bf9f0db196bcdb5b76ecac62e315a17fc2e346df3d5279d6971447"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106626",
+          "name": "آيس سبانيش لاتيه",
+          "nameEn": "ice Spanish latte",
+          "sourceName": "آيس سبانيش لاتيه",
+          "categorySourceId": "14516",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 229,
+          "allergens": "البندق,الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106626-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106626/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "6638c6326934ab86bf8dd4fe2b488b49bd271f79b1e8a38b2c2e5ccb113a6599"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106627",
+          "name": "آيس لاتيه حلاوة بقرة",
+          "nameEn": "Ice halawat baqara latte",
+          "sourceName": "آيس لاتيه حلاوة بقرة",
+          "categorySourceId": "14516",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 290,
+          "allergens": "الحليب",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106627-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106627/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "3aeee8548709d906997a57bdb774fac6b58a841ffe04652880054e3520c4f74e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106630",
+          "name": "آيس دريب",
+          "nameEn": "ice drip",
+          "sourceName": "آيس دريب",
+          "categorySourceId": "14516",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106630-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106630/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "a010a04d53884e01b0bdc1ae32087be0e26afa21374149239259ca291f3b1495"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106633",
+          "name": "آيس كركديه",
+          "nameEn": "ice tea hibiscus",
+          "sourceName": "آيس كركديه",
+          "categorySourceId": "14516",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": 102,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106633-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106633/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "7deb2fe472196b3978967ba430fd79b3048de35ea72de709361f4ae45ac0124c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "153462",
+          "name": "ماء",
+          "nameEn": "Water",
+          "sourceName": "ماء",
+          "categorySourceId": "14516",
+          "price": 1,
+          "sourcePrice": 1,
+          "description": "",
+          "calories": 0,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/153462-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/153462/ItemBigImage_v3.png",
+              "provenance": "original-source",
+              "sha256": "623ff33d9ba703f1358406ffdc069c827ebcdfb8dbdd3bdb69c7102dff86bd52"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "181371",
+          "name": "آيس دريب فاخر",
+          "nameEn": "Ice drip v",
+          "sourceName": "آيس دريب فاخر",
+          "categorySourceId": "14516",
+          "price": 26,
+          "sourcePrice": 26,
+          "description": "",
+          "calories": 5,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/181371-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/181371/ItemBigImage_v4.png",
+              "provenance": "original-source",
+              "sha256": "9af03078ce2649d9e691cd8ca0c1eb5430e7f1f50a29f30174849ae23d906b32"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "220685",
+          "name": "شوكليت كيك",
+          "nameEn": "Chocolate cake",
+          "sourceName": "شوكليت كيك",
+          "categorySourceId": "14518",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 268,
+          "allergens": "القمح",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/220685-0.jpg",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/220685/ItemBigImage_v2.jpg",
+              "provenance": "original-source",
+              "sha256": "006b2a1d84466a0c7b989c49acc564da15c7e78f2ea653c7c5c74c62d52655ec"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "206350",
+          "name": "تيراميسو بيكان",
+          "nameEn": "Pecan tiramisu",
+          "sourceName": "تيراميسو بيكان",
+          "categorySourceId": "14518",
+          "price": 24,
+          "sourcePrice": 24,
+          "description": "",
+          "calories": 280,
+          "allergens": "القمح,الحليب,المكسرات",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/206350-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/206350/ItemBigImage_v6.png",
+              "provenance": "original-source",
+              "sha256": "d996d47367520d3268346b44134ab3b8dd561b03a14b2d9dfcab2926dbcca8c8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "155075",
+          "name": "كرانشي تشوكلت ( ٤ قطع )",
+          "nameEn": "Crunchy chocolate",
+          "sourceName": "كرانشي تشوكلت ( ٤ قطع )",
+          "categorySourceId": "14518",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": 170,
+          "allergens": "القمح",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/155075-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/155075/ItemBigImage_v14.png",
+              "provenance": "original-source",
+              "sha256": "389141c65146c18183bbfcbff2ec7a761c0960461aa323d04d21e0d9adcd8eec"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "168532",
+          "name": "بودينق  كوكيز",
+          "nameEn": "Cookie pudding",
+          "sourceName": "بودينق  كوكيز",
+          "categorySourceId": "14518",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "",
+          "calories": 280,
+          "allergens": "القمح,البيض",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/168532-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/168532/ItemBigImage_v11.png",
+              "provenance": "original-source",
+              "sha256": "471cad4dc6f2e0555c9a91b52d4ec30da0d3e1687c3ad7f1ce892fd806ce113b"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "106637",
+          "name": "كلاسيك كوكيز",
+          "nameEn": "Classic cookies",
+          "sourceName": "كلاسيك كوكيز",
+          "categorySourceId": "14518",
+          "price": 12,
+          "sourcePrice": 12,
+          "description": "",
+          "calories": 170,
+          "allergens": "القمح,البيض",
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/black-drop/images/106637-0.png",
+              "sourceUrl": "https://storage.6lb.menu/Menus/BLACK_DROP/Items/106637/ItemBigImage_v13.png",
+              "provenance": "original-source",
+              "sha256": "95e213cb2298e3276da62013488f7de1414c9eb58a33fbc698f901abdf42c109"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        }
+      ],
+      "excludedDuplicateCount": 0,
+      "notes": []
+    },
+    {
+      "key": "once",
+      "name": "ONCE",
+      "cafeId": "a3c65c66-d5de-41e2-a2c7-0cc451a92bf3",
+      "slug": "brand-f9e223695585",
+      "palette": {
+        "primary": "#22251f",
+        "secondary": "#858575",
+        "accent": "#d3d4bc",
+        "text": "#fffef4",
+        "background": "#f5f5ef"
+      },
+      "featured": [
+        "28454",
+        "28463",
+        "28469"
+      ],
+      "sourceUrl": "https://plumqr.com/cv?v=N9pnLguLMWQzqChJpbnwry",
+      "sourceRetrievedAt": "2026-11-01T23:13:10.083Z",
+      "description": "هُنا مساحتك لتصنع عظمة فكرك ونكون جزء من رحلة نجاحك",
+      "logo": {
+        "localPath": "public/menu-art/four-brands/once-logo-v1.webp",
+        "sourceUrl": "https://plumqr-items-images.s3.amazonaws.com/3c684745.jpeg",
+        "provenance": "optimized-original-logo",
+        "sha256": "179072107ecd2b346430c32d6c0735abca4d0f884cc84b64c02d3f7b601e3e67"
+      },
+      "categories": [
+        {
+          "sourceId": "Hot Drinks",
+          "name": "مشروبات ساخنه",
+          "description": null
+        },
+        {
+          "sourceId": "Brewed Coffee",
+          "name": "قهوة مقطرة",
+          "description": null
+        },
+        {
+          "sourceId": "Cold Drinks",
+          "name": "مشروبات بارده",
+          "description": null
+        },
+        {
+          "sourceId": "Dessert",
+          "name": "حلويات",
+          "description": null
+        }
+      ],
+      "products": [
+        {
+          "sourceId": "28450",
+          "name": "قهوة اليوم",
+          "nameEn": "coffee of the day",
+          "sourceName": "قهوة اليوم",
+          "categorySourceId": "Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28450.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product. Create a photorealistic illustrative image of HOT FILTER COFFEE OF THE DAY: dark brewed black coffee in a single white takeaway paper cup with a broad plain charcoal-gray sleeve, no lid, visible dark coffee surface, very subtle natural steam. ONCE visual family: quiet monochrome charcoal, chalk white, light gray stone desktop with a small warm pale-wood coaster and softly blurred corner of a blank notebook, Scandinavian Saudi specialty coffee editorial feel. Product centered and large, three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with entire cup visible. No text, no logos, no watermarks, no hands, no latte foam, no milk, no beans floating in liquid. This is an illustrative menu image rather than a documentary photo of a specific real serving.",
+              "generationSource": null,
+              "sha256": "05bf418de4d59c5cef09a4a69ab044e94c3adbdcbff37511a528a963c6bfb71e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28451",
+          "name": "لاتيه",
+          "nameEn": "latte",
+          "sourceName": "لاتيه",
+          "categorySourceId": "Hot Drinks",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28451.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: HOT LATTE: medium white paper takeaway cup with broad plain charcoal-gray sleeve, filled with creamy espresso and steamed milk, a delicate rosetta latte art on silky tan microfoam. No whipped cream, no syrups.",
+              "generationSource": null,
+              "sha256": "ecc16c966e11faa5edb3277951f3c7d399404cd86c8435faf03f0dec0491da81"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28452",
+          "name": "ماكياتو",
+          "nameEn": "macchiato",
+          "sourceName": "ماكياتو",
+          "categorySourceId": "Hot Drinks",
+          "price": 14,
+          "sourcePrice": 14,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28452.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: ESPRESSO MACCHIATO: very small white porcelain demitasse on charcoal ceramic saucer, a short rich dark espresso topped with a small single spoonful of white milk foam centered on crema, visibly mostly espresso, not a large latte.",
+              "generationSource": null,
+              "sha256": "3737b373cfbab430d37075dc0982037e98c9bb025ff98c2d26b86bdc235dcb07"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28453",
+          "name": "كابتشينو",
+          "nameEn": "cappuccino",
+          "sourceName": "كابتشينو",
+          "categorySourceId": "Hot Drinks",
+          "price": 16,
+          "sourcePrice": 16,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28453.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: CAPPUCCINO: rounded white porcelain cappuccino cup on charcoal saucer, thick airy milk foam and a broad golden espresso ring, subtle heart foam pattern. Natural fine foam bubbles and soft steam, no cocoa powder or garnish.",
+              "generationSource": null,
+              "sha256": "3cd415a07f6c9e5ffc06f14c831817e829c7b2ead2c2c315612e1b2ed8a54690"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28454",
+          "name": "فلات وايت",
+          "nameEn": "flat white",
+          "sourceName": "فلات وايت",
+          "categorySourceId": "Hot Drinks",
+          "price": 15,
+          "sourcePrice": 15,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28454-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/b13b70d5.jpeg",
+              "provenance": "original-source",
+              "sha256": "0a8860d62653212a1c57981bf126aac2fc2d7aa6254afaf27f4407c8d00af28b"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "28455",
+          "name": "كوتادو",
+          "nameEn": "cortado",
+          "sourceName": "كوتادو",
+          "categorySourceId": "Hot Drinks",
+          "price": 14,
+          "sourcePrice": 14,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28455-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/af18c78d.jpeg",
+              "provenance": "original-source",
+              "sha256": "ad4ee7b4cfba3ca17472406b69182398d8c6e550047981474e7fb69e36e68adc"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28456",
+          "name": "ايسبرسو",
+          "nameEn": "espresso",
+          "sourceName": "ايسبرسو",
+          "categorySourceId": "Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28456.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: ESPRESSO: a very small white porcelain demitasse on a charcoal saucer containing a short deep espresso shot with smooth thick golden-brown crema, no milk, no foam art. Low liquid volume clearly visible in the tiny cup.",
+              "generationSource": null,
+              "sha256": "d03b6e5cfff2eb40762aa11bac6cbbd43be908fdf91f6a3d0030d09c7db5bd0d"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28457",
+          "name": "اميركانو",
+          "nameEn": "american",
+          "sourceName": "اميركانو",
+          "categorySourceId": "Hot Drinks",
+          "price": 10,
+          "sourcePrice": 10,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28457.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: HOT AMERICANO: white straight-sided ceramic coffee cup with a slim charcoal saucer, dark diluted espresso coffee filled near the top with a delicate thin tan crema ring, no milk, no latte art, soft wisps of steam. A more generous size than a demitasse.",
+              "generationSource": null,
+              "sha256": "ce848b95e017fa0eb392421232290da4ba111b904c0d4b5b42e9ea329bc24dc1"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28458",
+          "name": "سبانش لاتيه",
+          "nameEn": "spanish latte",
+          "sourceName": "سبانش لاتيه",
+          "categorySourceId": "Hot Drinks",
+          "price": 17,
+          "sourcePrice": 17,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28458-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/a1499f8c.jpeg",
+              "provenance": "original-source",
+              "sha256": "e3c46419ae87d56f71314eedbde24b9307216f1801713ddcdedff1deab94c4ca"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28459",
+          "name": "هوت تتشوكلت",
+          "nameEn": "hot chocolate",
+          "sourceName": "هوت تتشوكلت",
+          "categorySourceId": "Hot Drinks",
+          "price": 17,
+          "sourcePrice": 17,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28459-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/e5ec883c.jpeg",
+              "provenance": "original-source",
+              "sha256": "af75c0566ebd2f0b3f279d11c00465dc4f386d96a5780591df4776d370587741"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28460",
+          "name": "فــي ٦٠",
+          "nameEn": "V60",
+          "sourceName": "فــي ٦٠",
+          "categorySourceId": "Brewed Coffee",
+          "price": 17,
+          "sourcePrice": 17,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28460-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/0cc5fdca.jpeg",
+              "provenance": "original-source",
+              "sha256": "37e87d180b5e501b5e8eaa4f3bd1ee767df52528a20d6642b421bc866e0f1ae5"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28461",
+          "name": "آيس تي (كركديه)",
+          "nameEn": "iced tea (Roselle)",
+          "sourceName": "آيس تي (كركديه)",
+          "categorySourceId": "Cold Drinks",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28461-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/9d4e6db3.jpeg",
+              "provenance": "original-source",
+              "sha256": "d03c8f5b95c28ca9128ecabecedef9925c892c88bec841ba380f1d3358311f15"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28463",
+          "name": "آيس سبانش لاتيه",
+          "nameEn": "Ice spanish latte",
+          "sourceName": "آيس سبانش لاتيه",
+          "categorySourceId": "Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28463-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/d3d197dc.jpeg",
+              "provenance": "original-source",
+              "sha256": "bbc2d982fecd90867d058b012ca87c90b81c268fe3adb015602335db13cabd7d"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "28464",
+          "name": "آيس لاتيه",
+          "nameEn": "Ice latte",
+          "sourceName": "آيس لاتيه",
+          "categorySourceId": "Cold Drinks",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28464.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: ICED LATTE: single straight clear glass tumbler holding pale caramel espresso mixed with cold milk, large clear ice cubes with condensation beads on the glass, silky tan-to-cream swirl at the lower third. Natural believable coffee-to-milk color, no whipped cream, no syrup, no toppings, no straw.",
+              "generationSource": null,
+              "sha256": "4a84d38a5e2e90191877a6a22cba1cb2d03f8c791696ba8364292ab22315062a"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28466",
+          "name": "آيس في ٦٠",
+          "nameEn": "Ice v60",
+          "sourceName": "آيس في ٦٠",
+          "categorySourceId": "Cold Drinks",
+          "price": 17,
+          "sourcePrice": 17,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28466.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: ICED V60 POUR-OVER COFFEE: elegant low clear glass tumbler of translucent amber-dark brewed filter coffee and three large clear ice cubes, beside a small clear glass coffee server softly out of focus in the rear; no milk, no espresso crema foam, no toppings. Brown coffee looks naturally transparent at the light edges.",
+              "generationSource": null,
+              "sha256": "89e6aa359ef796f1f44f44cd87b2e871e936c14ef28967e9c4c57bb89285cdf7"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28467",
+          "name": "آيس اميركانو",
+          "nameEn": "Ice Americano",
+          "sourceName": "آيس اميركانو",
+          "categorySourceId": "Cold Drinks",
+          "price": 11,
+          "sourcePrice": 11,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28467.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: ICED AMERICANO: tall straight clear tumbler with deep dark brown espresso diluted with water and large clear ice cubes, a delicate tan espresso ring along the surface, cold condensation beads; no milk, no foam cap, no garnish, no straw. Stronger dark coffee visual than light filter coffee.",
+              "generationSource": null,
+              "sha256": "cb864018671d705d2a053a849b2b4e619593f0e52540d63a9f6431eeefa38cb8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28468",
+          "name": "ماء",
+          "nameEn": "water",
+          "sourceName": "ماء",
+          "categorySourceId": "Cold Drinks",
+          "price": 1,
+          "sourcePrice": 1,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28468.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: PLAIN DRINKING WATER: one small clear unbranded plastic drinking-water bottle with a plain white cap and completely blank white label, fresh water droplets and realistic reflections, full bottle visible. No invented commercial brand, no colored bottle, no flavor or fruit, no sparkling bubbles. Product menu image for simple bottled water, exact size unspecified so no printed volume.",
+              "generationSource": null,
+              "sha256": "2ea9a7548ed0d1b7a5e3f57f6e86f64d56af1b0e8b399cf2f0cd70c19283a50c"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28469",
+          "name": "بوكس كوكيز",
+          "nameEn": "BOX cookies",
+          "sourceName": "بوكس كوكيز",
+          "categorySourceId": "Dessert",
+          "price": 55,
+          "sourcePrice": 55,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28469-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/5cccf705.jpeg",
+              "provenance": "original-source",
+              "sha256": "22e9d0798b7d30ee5c006693c18e11a8f630fef49e01305bbf551a95f9d94249"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "28470",
+          "name": "بوكس كوكيز مع الصوص",
+          "nameEn": "BOX cookies with sauce",
+          "sourceName": "بوكس كوكيز مع الصوص",
+          "categorySourceId": "Dessert",
+          "price": 60,
+          "sourcePrice": 60,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28470.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: BOX OF COOKIES WITH SAUCE: open matte charcoal rectangular pastry box lined with white paper holding a row of thick golden chocolate-chip cookies separated with white parchment, beside one small white cup of glossy chocolate dipping sauce. Natural cracked bakery cookie texture, chocolate chunks. Inspired by the monochrome ONCE cookie packaging style but absolutely no logo or writing. Do not suggest any quantity promise with text, no nuts, no sprinkles, no fruit.",
+              "generationSource": null,
+              "sha256": "1186286dad25a91d26a3d43b124e1854ec3ea0c4395b933c548dc75e87fe2aee"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28471",
+          "name": "كوكيز",
+          "nameEn": "cookie",
+          "sourceName": "كوكيز",
+          "categorySourceId": "Dessert",
+          "price": 12,
+          "sourcePrice": 12,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28471-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/e7d20e8e.jpeg",
+              "provenance": "original-source",
+              "sha256": "51f8bb377582fb4f33c9d446b9b0e5079fe44160a58a8ccc2c8b1dc5fb80dbd5"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28472",
+          "name": "كوكيز مكس",
+          "nameEn": "mix cookie",
+          "sourceName": "كوكيز مكس",
+          "categorySourceId": "Dessert",
+          "price": 20,
+          "sourcePrice": 20,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28472-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/9e74fb77.jpeg",
+              "provenance": "original-source",
+              "sha256": "1f66105d293645523e1302691c9c6c2559fb3d52904e284e3c08d851c9df0183"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28473",
+          "name": "كوكيز تشوكلت",
+          "nameEn": "chocolate cookie",
+          "sourceName": "كوكيز تشوكلت",
+          "categorySourceId": "Dessert",
+          "price": 15,
+          "sourcePrice": 15,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28473-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/508110e7.jpeg",
+              "provenance": "original-source",
+              "sha256": "b491fdd1c4af076006cb8791205061ef8d6bdbed02e61eeff0b0a87c91feefaf"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28474",
+          "name": "كوكيز كيندر",
+          "nameEn": "cookies kender",
+          "sourceName": "كوكيز كيندر",
+          "categorySourceId": "Dessert",
+          "price": 17,
+          "sourcePrice": 17,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/images/28474-1.jpeg",
+              "sourceUrl": "https://pqr-items-images-v2.plumqr.com/ec84b900.jpeg",
+              "provenance": "original-source",
+              "sha256": "bb14c6f1eab9ad4748207d5bea56e647ee3b342f7a7016208495c6d4b9b1b0e2"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28475",
+          "name": "بار تشوكلت",
+          "nameEn": "chocolate bar",
+          "sourceName": "بار تشوكلت",
+          "categorySourceId": "Dessert",
+          "price": 7,
+          "sourcePrice": 7,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28475.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: CHOCOLATE BAR DESSERT: one small rectangular artisan chocolate-coated dessert bar on white parchment on a charcoal ceramic plate, a neat cut edge showing a dense chocolate center. Rich brown cocoa color, satin chocolate surface and restrained clean composition. No nuts, no caramel, no marshmallow, no wrapper brand, no fruit, no gold decorations. Source only says chocolate bar so keep simple and generic.",
+              "generationSource": null,
+              "sha256": "abb7103f6f51b0918b1cf4ac80e049a4103178442d53eaca215ae43188b00d85"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "28476",
+          "name": "سولتد كرامل",
+          "nameEn": "salted caramel bar",
+          "sourceName": "سولتد كرامل",
+          "categorySourceId": "Dessert",
+          "price": 8,
+          "sourcePrice": 8,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/once/generated/28476.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Asset type: square premium coffee menu product photograph, one individual product, photorealistic illustrative food photography. ONCE visual family: monochrome charcoal, chalk white, light gray stone desktop, a small warm pale-wood coaster, softly blurred corner of a blank notebook. Quiet Scandinavian Saudi specialty coffee editorial feel. Three-quarter angle, soft directional window lighting, true food texture, realistic proportions, clean spacious framing with the entire vessel visible. No text, no logos, no watermarks, no hands, no unrelated foods. Illustrative product depiction, not a documentary real serving. Subject: SALTED CARAMEL BAR DESSERT: a single neat rectangular golden caramel dessert bar on white parchment on a charcoal ceramic plate, glossy amber caramel top with just a few fine sea-salt flakes, a simple pale baked biscuit base visible at cut side. Warm caramel tone, realistic handmade bakery edges. No nuts, no chocolate topping, no fruit, no wrapper, no gold decorations. Source only names salted caramel bar so simple illustrative presentation.",
+              "generationSource": null,
+              "sha256": "b2774fcf385ad6bcf04c2ab2a3ebb326c88de774e0a919d41ddb5cfc87c457c4"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        }
+      ],
+      "excludedDuplicateCount": 0,
+      "notes": []
+    },
+    {
+      "key": "box-bbq",
+      "name": "Box BBQ",
+      "cafeId": "318df308-e39f-4ef2-a0fd-05c126720d82",
+      "slug": "brand-bd0eeac9e747",
+      "palette": {
+        "primary": "#171412",
+        "secondary": "#ff761f",
+        "accent": "#ffad68",
+        "text": "#fff8ee",
+        "background": "#faf4ed"
+      },
+      "featured": [
+        "برجر لحم سقنتشر",
+        "تشيكن برجر سقنتشر",
+        "قنبلة بوكس لحم"
+      ],
+      "sourceUrl": "https://www.google.com/maps/place/Box+BBQ/@18.2071727,42.5155251,14z/data=!4m7!3m6!1s0x15e353007f7b8005:0x5c952d9df6659345!8m2!3d18.2097844!4d42.4941995!10e9!16s%2Fg%2F11yw5gg7bk",
+      "sourceRetrievedAt": "2026-11-01T23:17:19.815Z",
+      "description": null,
+      "logo": {
+        "localPath": "public/menu-art/four-brands/box-logo-v1.webp",
+        "sourceUrl": "https://www.google.com/maps/place/Box+BBQ/@18.2071727,42.5155251,14z/data=!4m7!3m6!1s0x15e353007f7b8005:0x5c952d9df6659345!8m2!3d18.2097844!4d42.4941995!10e9!16s%2Fg%2F11yw5gg7bk",
+        "provenance": "source-logo-extraction",
+        "sha256": "7a578641ce7ff301b4024ffe08bb4f9da64dcb056621c217978c7d02940599b5"
+      },
+      "categories": [
+        {
+          "sourceId": "برجر اللحم",
+          "name": "برجر اللحم",
+          "description": null
+        },
+        {
+          "sourceId": "برجر الدجاج",
+          "name": "برجر الدجاج",
+          "description": null
+        },
+        {
+          "sourceId": "المجموعة الفاخرة",
+          "name": "المجموعة الفاخرة",
+          "description": null
+        },
+        {
+          "sourceId": "أطباق جانبية",
+          "name": "أطباق جانبية",
+          "description": null
+        },
+        {
+          "sourceId": "الصوصات",
+          "name": "الصوصات",
+          "description": null
+        },
+        {
+          "sourceId": "المشروبات",
+          "name": "المشروبات",
+          "description": null
+        }
+      ],
+      "products": [
+        {
+          "sourceId": "برجر لحم كلاسيك",
+          "name": "برجر لحم كلاسيك",
+          "nameEn": null,
+          "sourceName": "برجر لحم كلاسيك",
+          "categorySourceId": "برجر اللحم",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "لحم وجبن شرائح وصوص ومخلل",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/beef-classic.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one classic beef smash burger: soft glossy lightly sesame golden bun, one thin well-seared beef patty, one melted yellow cheese slice, pickle slices and a restrained creamy burger sauce. No lettuce, no tomato, no onions, no mushrooms. Keep burger compact and realistic rather than impossibly tall",
+              "generationSource": null,
+              "sha256": "31040fafc410f2b2c7ac26a85d8bb201044c6aac096089b01a1352e063c34c4e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "برجر لحم سقنتشر",
+          "name": "برجر لحم سقنتشر",
+          "nameEn": null,
+          "sourceName": "برجر لحم سقنتشر",
+          "categorySourceId": "برجر اللحم",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "لحم وجبن وبصل مكرمل وقطع مشروم مع صوص",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/beef-signature.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one signature beef smash burger: soft glossy lightly sesame golden bun, one thin well-seared beef patty, melted cheese, browned caramelized onions and sautéed mushroom pieces with a restrained creamy burger sauce. No lettuce, no tomato, no pickles. Keep compact and realistic rather than impossibly tall",
+              "generationSource": null,
+              "sha256": "473f9bab945d34a3bc6b32f75ed35daa54ec701a0eac7654aba506c8eb07b45f"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "تشيكن برجر كلاسيك",
+          "name": "تشيكن برجر كلاسيك",
+          "nameEn": null,
+          "sourceName": "تشيكن برجر كلاسيك",
+          "categorySourceId": "برجر الدجاج",
+          "price": 19,
+          "sourcePrice": 19,
+          "description": "دجاج وجبن وصوص ومخلل",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/chicken-classic.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one classic crispy chicken burger: soft smooth golden bun, a single real-sized crispy golden breaded chicken breast fillet, one melted yellow cheese slice, pickle slices and a restrained creamy burger sauce. No lettuce, no tomato, no onions, no mushrooms. Keep burger compact and believable",
+              "generationSource": null,
+              "sha256": "040539622e94ef6bbe42bc4b630020f121c906601ff72d918110cf2e58bd693e"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "تشيكن برجر سقنتشر",
+          "name": "تشيكن برجر سقنتشر",
+          "nameEn": null,
+          "sourceName": "تشيكن برجر سقنتشر",
+          "categorySourceId": "برجر الدجاج",
+          "price": 21,
+          "sourcePrice": 21,
+          "description": "دجاج وجبن وبصل مكرمل وقطع مشروم مع صوص",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/chicken-signature.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one signature crispy chicken burger: soft smooth golden bun, single real-sized crispy golden breaded chicken breast fillet, melted yellow cheese, browned caramelized onions and sautéed mushroom pieces with restrained creamy burger sauce. No lettuce, no tomato, no pickles. Compact realistic burger with ingredients clearly distinct",
+              "generationSource": null,
+              "sha256": "9f4c5f0ce7177eb1efa49443287babd228c4f77583bb759d030aa86582f0c870"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "قنبلة بوكس دجاج",
+          "name": "قنبلة بوكس دجاج",
+          "nameEn": null,
+          "sourceName": "قنبلة بوكس دجاج",
+          "categorySourceId": "المجموعة الفاخرة",
+          "price": 27,
+          "sourcePrice": 27,
+          "description": "دجاج وجبن وصوص الكرز ومخلل وبطاطس مهروس وصوص مشروم",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/bomb-chicken.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one premium stuffed crispy chicken burger: soft golden lightly sesame bun holding a single crispy chicken breast fillet, melted cheese, a modest smooth mashed potato layer, pickle slices, a little deep burgundy cherry sauce and mushroom sauce with visible mushroom pieces. Delicious compact real food layers, not overloaded or excessively tall. No lettuce, no tomato, no onions",
+              "generationSource": null,
+              "sha256": "785b7c680d4767018c5e4304073ee8f09dc138d8925cb5ef52edf0eba6a95538"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "قنبلة بوكس لحم",
+          "name": "قنبلة بوكس لحم",
+          "nameEn": null,
+          "sourceName": "قنبلة بوكس لحم",
+          "categorySourceId": "المجموعة الفاخرة",
+          "price": 27,
+          "sourcePrice": 27,
+          "description": "لحم وجبن وصوص الكرز ومخلل وبطاطس مهروس وصوص مشروم",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/bomb-beef.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one premium beef smash burger: soft golden lightly sesame bun, one seared beef patty, melted yellow cheese, a modest creamy mashed potato layer, pickle slices, a little deep burgundy cherry sauce and mushroom sauce with visible mushroom pieces. Realistic compact appetizing proportion. No lettuce, no tomato, no onions",
+              "generationSource": null,
+              "sha256": "2ecde71185340a6b4aad43b319568fbe4087af480967c87da611b145cfde06a6"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": true
+        },
+        {
+          "sourceId": "فرايز ماشروم",
+          "name": "فرايز ماشروم",
+          "nameEn": null,
+          "sourceName": "فرايز ماشروم",
+          "categorySourceId": "أطباق جانبية",
+          "price": 15,
+          "sourcePrice": 15,
+          "description": "",
+          "calories": 400,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/mushroom-fries.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one small serving of golden straight-cut fries lightly coated with creamy mushroom sauce and real sautéed mushroom pieces, in a shallow plain stainless-steel dish with unbranded parchment. Keep the portion believable and the fries crisp, sauce restrained. No chicken, no beef, no herbs, no garnish, no melted cheese, no tomatoes. Three-quarter tabletop closeup",
+              "generationSource": null,
+              "sha256": "4755bf9e8eeeb94ddea461357c2331fbf8adf4d7dca264b10789488beebd2460"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "باور شيك",
+          "name": "باور شيك",
+          "nameEn": null,
+          "sourceName": "باور شيك",
+          "categorySourceId": "أطباق جانبية",
+          "price": 13,
+          "sourcePrice": 13,
+          "description": "",
+          "calories": 450,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/power-shake.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one elegant CLOSED takeaway food carton in matte charcoal-black cardboard, small warm orange edge accent and a neatly closed folded top. Food inside MUST NOT be visible because recipe is not verified. This is a neutral package image for a side dish, not a drink: no straw, no cup, no milkshake, no liquid. Clean modest premium packaging with no print whatsoever, on charcoal tabletop, three-quarter product photography. No visible ingredients, no other products",
+              "generationSource": null,
+              "sha256": "373bc92307b593f057957d8214b53fcab4fc6a74dc4aeaedd98128976d8bfe5a"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "صوص الكرز المدخن",
+          "name": "صوص الكرز المدخن",
+          "nameEn": null,
+          "sourceName": "صوص الكرز المدخن",
+          "categorySourceId": "الصوصات",
+          "price": 3,
+          "sourcePrice": 3,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/smoked-cherry-sauce.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one small clear takeaway dipping ramekin holding rich deep burgundy smoked cherry sauce, smooth glossy real sauce surface with a subtle natural ripple, on a dark charcoal tabletop. Closeup at three-quarter slightly overhead angle. No cherries or decorative ingredients nearby, no spoon, no herbs, no smoke or flames, no other food",
+              "generationSource": null,
+              "sha256": "70a2ebcc6868d37363400aadbda2885ff86f26ad220a53fc5b05414881851306"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "صوص Box",
+          "name": "صوص Box",
+          "nameEn": null,
+          "sourceName": "صوص Box",
+          "categorySourceId": "الصوصات",
+          "price": 2,
+          "sourcePrice": 2,
+          "description": "",
+          "calories": null,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/box-sauce.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one small clear takeaway dipping ramekin holding creamy pale peach-beige signature burger sauce, matching generic light orange burger dipping sauce seen in real burger shops. Smooth thick realistic surface with subtle swirl. Closeup at three-quarter slightly overhead angle. No visible toppings, no herbs, no labels or invented ingredients, no spoon or other food",
+              "generationSource": null,
+              "sha256": "25eee817b1d173a20afe54a344d1316dda7e1775e5e3262dc0a6d5115e759fb8"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "مشروبات غازية",
+          "name": "مشروبات غازية",
+          "nameEn": null,
+          "sourceName": "مشروبات غازية",
+          "categorySourceId": "المشروبات",
+          "price": 3,
+          "sourcePrice": 3,
+          "description": "",
+          "calories": 180,
+          "allergens": null,
+          "available": true,
+          "priceOptions": [],
+          "images": [
+            {
+              "localPath": "output/four-brands/box-bbq/generated/soft-drinks.png",
+              "sourceUrl": null,
+              "provenance": "generated-illustration",
+              "prompt": "Use case: product-mockup. Create one premium photorealistic food catalog photograph for Box BBQ in Abha, Saudi Arabia. Square 1024x1024 composition. Dark charcoal matte tabletop and seamless dark backdrop with very subtle warm amber gradient, studio side light, realistic food texture and natural tiny imperfections, no CGI or plastic shine. Hero food centered occupying about70% of frame with breathing room, shallow background only, whole food sharply focused, clean commercial food photography. No words, no logos, no letters, no watermark, no people, no flames, no other products or meal sides. Palette charcoal #171412 and warm amber #ff761f. Use plain unbranded parchment in a simple metal tray when appropriate. Subject: one chilled unbranded plain metallic charcoal beverage can, top silver pull-tab clearly visible, fine realistic condensation droplets, subtle amber rim-light reflected on the aluminum. Single standard-sized soft drink can, elegant eye-level product photo, no labels, no branding, no words or lettering, no fruit, no glass, no invented drink flavor, no other objects",
+              "generationSource": null,
+              "sha256": "7b25c907f43c3ef984c313fad1db7301ae8128b594523e88f5835d9d6570bc8a"
+            }
+          ],
+          "catalogKind": "product",
+          "featured": false
+        },
+        {
+          "sourceId": "draft-تشيكن فرايز",
+          "name": "تشيكن فرايز",
+          "nameEn": null,
+          "sourceName": "تشيكن فرايز",
+          "categorySourceId": "أطباق جانبية",
+          "price": 0,
+          "sourcePrice": null,
+          "description": "غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح",
+          "calories": null,
+          "allergens": null,
+          "available": false,
+          "priceOptions": [],
+          "images": [],
+          "catalogKind": "product",
+          "featured": false,
+          "ownerReviewRequired": true,
+          "reviewReason": "Price clipped off the left edge of the only visible menu photo. Do not publish guessed price"
+        },
+        {
+          "sourceId": "draft-صوص الجبن",
+          "name": "صوص الجبن",
+          "nameEn": null,
+          "sourceName": "صوص الجبن",
+          "categorySourceId": "الصوصات",
+          "price": 0,
+          "sourcePrice": null,
+          "description": "غير متاح للعرض حتى يحدد مالك العلامة السعر الصحيح",
+          "calories": null,
+          "allergens": null,
+          "available": false,
+          "priceOptions": [],
+          "images": [],
+          "catalogKind": "product",
+          "featured": false,
+          "ownerReviewRequired": true,
+          "reviewReason": "Price not visibly associated with this item in source image; do not assume it shares Box sauce price"
+        }
+      ],
+      "excludedDuplicateCount": 0,
+      "notes": [
+        "All prices in SAR as photographed at location",
+        "No delivery-service menu or independent complete official menu found",
+        "Do not use instagram.com/box.bbq because that account is in Jazan and not this Abha restaurant",
+        "Food photos are not reliably labeled by product variant; use as reference only, generate individual product images using verified ingredients",
+        "Menu spelling سقنتشر preserved from photograph",
+        "Photographed menu shows 13 items:11 verified prices and2 requiring source confirmation"
+      ]
+    }
+  ]
+}
