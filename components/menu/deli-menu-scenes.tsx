@@ -123,7 +123,8 @@ export function DeliProductImage({ product, priority = false, hero = false }: { 
 export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: StandaloneMenu; onShare: () => void; onSearch: () => void; onSelect: (product: StandaloneMenuProduct) => void }) {
   const offers = useVisibleOffers(menu);
   const photographed = menu.products.filter(product => product.available && product.images[0]);
-  const feature = photographed.find(product => /دولتشي|بيكان/.test(product.name)) || photographed.find(product => /حلو|كيك|تشيز|سويس|cake|dessert/i.test(`${product.category} ${product.name}`)) || photographed[0];
+  const turkishCoffee = menu.products.find(product => product.available && /(?:قهو[ةه].*ترك|turkish)/i.test(product.name.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "")));
+  const feature = turkishCoffee || photographed.find(product => /دولتشي|بيكان/.test(product.name)) || photographed.find(product => /حلو|كيك|تشيز|سويس|cake|dessert/i.test(`${product.category} ${product.name}`)) || photographed[0];
   return <section className={s.opening} aria-label={`مرحبًا في ${menu.name}`}>
     <header className={s.header}>
       <a href="#" className={s.brand} aria-label={menu.name}><DeliMark menu={menu} className={s.logo} /></a>
@@ -132,24 +133,27 @@ export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: Standalo
     </header>
     <div className={`${s.hero}${feature ? "" : ` ${s.withoutImage}`}`}>
       <div className={s.heroCopy}>
-        <p className={s.eyebrow}><span />من ديلي كيك إلى لحظتك</p>
-        <h1>للحظات الحلوة<br /><em>تفاصيل ديلي</em></h1>
-        <p className={s.heroDescription}>قطعة حلا وقهوتك المفضلة<br />اختر ما يشبه مزاجك</p>
-        <a href="#rast-menu-items" className={s.explore}>اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>
+        <p className={s.eyebrow}><span />{turkishCoffee ? "وصلت إلى ديلي كيك" : "من ديلي كيك إلى لحظتك"}</p>
+        <h1>{turkishCoffee ? <>قهوة تركية<br /><em>على أصولها</em></> : <>للحظات الحلوة<br /><em>تفاصيل ديلي</em></>}</h1>
+        <p className={s.heroDescription}>{turkishCoffee ? <>متوفرة الآن في ديلي كيك<br />فنجان يكمّل لحظتك</> : <>قطعة حلا وقهوتك المفضلة<br />اختر ما يشبه مزاجك</>}</p>
+        {turkishCoffee ? <button type="button" className={s.explore} onClick={() => onSelect(turkishCoffee)}>اكتشف القهوة التركية<ArrowDownLeft aria-hidden="true" /></button> : <a href="#rast-menu-items" className={s.explore}>اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>}
         <div className={s.heroLinks}>
           {menu.loyaltyEnabled && <a href="#deli-membership"><WalletCards aria-hidden="true" />بطاقتك لدى ديلي</a>}
           {!!offers.length && <a href="#deli-offers"><Tag aria-hidden="true" />العروض الحالية</a>}
         </div>
       </div>
       {feature && <div className={s.confection}>
-        <span className={s.handwritten} dir="ltr">More than delicious cake</span>
+        <span className={s.handwritten} dir="ltr">{turkishCoffee ? "Turkish coffee, Deli mood" : "More than delicious cake"}</span>
         <button type="button" className={s.feature} onClick={() => onSelect(feature)} aria-label={`اكتشف ${feature.name}`}>
           <span className={s.plate}>
-            <DeliProductImage product={feature} priority hero />
+            {turkishCoffee ? <span className={`${s.imageSurface} ${s.photograph}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/deli-cake/turkish-coffee-campaign.webp" srcSet="/deli-cake/turkish-coffee-campaign-small.webp 640w, /deli-cake/turkish-coffee-campaign.webp 1200w" sizes="(max-width: 700px) 76vw, 560px" alt="القهوة التركية متوفرة الآن في ديلي كيك" width={1200} height={1200} loading="eager" fetchPriority="high" decoding="async" />
+            </span> : <DeliProductImage product={feature} priority hero />}
           </span>
-          <span className={s.featureCaption}><span><small>من منيو ديلي</small><strong>{menuDisplayText(feature.name)}</strong></span><ArrowUpLeft aria-hidden="true" /></span>
+          <span className={s.featureCaption}><span><small>{turkishCoffee ? "جديد ديلي كيك" : "من منيو ديلي"}</small><strong>{turkishCoffee ? "اكتشف القهوة التركية" : menuDisplayText(feature.name)}</strong></span><ArrowUpLeft aria-hidden="true" /></span>
         </button>
-        <span className={s.seal} aria-hidden="true">حلاها<br /><b>في تفاصيلها</b><span>DELI CAKE</span></span>
+        <span className={s.seal} aria-hidden="true">{turkishCoffee ? <>متوفرة<b>الآن</b></> : <>حلاها<br /><b>في تفاصيلها</b></>}<span>DELI CAKE</span></span>
       </div>}
     </div>
     <div className={s.signature}><span>حلا يليق بلحظتك</span><span className={s.signatureEnglish} dir="ltr">SWEET MOMENTS, DELI DETAILS</span><a href="#rast-menu-items">على ذوقك<ArrowDownLeft aria-hidden="true" /></a></div>

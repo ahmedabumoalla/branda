@@ -111,6 +111,18 @@ if(process.env.TAZA_LIVE_FIXTURE) {
 }
 const deli={...base,slug:'delicake',name:'DeliCake',logoUrl:'/deli-cake/logo.webp',products:[{...product,price:0,name:'إسبريسو فريدو',images:[{url:'https://images.test/deli.webp',alt:'إسبريسو فريدو'}]}]};
 const {deliProductVisual}=load('components/menu/deli-menu-scenes.tsx');
+const {DeliHero}=load('components/menu/deli-menu-scenes.tsx');
+const coffee={...product,id:'turkish',name:'قَهْوَة تُرْكِي',price:14,images:[{url:'/original-coffee.webp',alt:'Coffee'}]};
+const pecan={...product,id:'pecan',name:'دولتشي بيكان',images:[{url:'/pecan.webp',alt:'Pecan'}]};
+const campaign=products=>renderToStaticMarkup(React.createElement(DeliHero,{menu:{...deli,products},onSearch(){},onShare(){},onSelect(){}}));
+const coffeeBefore=JSON.stringify(coffee);
+html=campaign([pecan,coffee]);
+assert(html.includes('turkish-coffee-campaign.webp')&&html.includes('متوفرة الآن في ديلي كيك'),'Available Turkish coffee leads the hero campaign');
+assert(html.includes('640w')&&html.includes('fetchPriority="high"'),'Campaign has responsive prioritized artwork');
+assert(!html.includes('src="/pecan.webp"'),'Pecan image is replaced only in the promotional hero');
+assert.equal(JSON.stringify(coffee),coffeeBefore,'Campaign preserves original product, price and catalog media');
+assert(!campaign([pecan,{...coffee,available:false}]).includes('turkish-coffee-campaign.webp'),'Unavailable coffee is not advertised');
+assert(campaign([pecan]).includes('src="/pecan.webp"'),'Existing hero fallback survives when coffee is absent');
 const studio={url:'/deli-cake/dishes/dish-04.webp',alt:'Studio'},gallery={url:'/deli-cake/photos/DSC_2747.webp',alt:'Gallery'},owner={url:'/owner-new-photo.webp',alt:'Owner'};
 assert.deepEqual(deliProductVisual({...product,images:[studio,gallery]}),{image:gallery,studio:false},'Use the supplied lifestyle photograph when present');
 assert.deepEqual(deliProductVisual({...product,primaryMediaType:'image',images:[studio,gallery]}),{image:studio,studio:true},'Explicit owner selection overrides legacy Deli cover presentation');
