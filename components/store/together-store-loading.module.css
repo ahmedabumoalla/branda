@@ -1,26 +1,30 @@
 @font-face { font-family: "Together Loading"; src: url("/fonts/bistro-sans-regular-ar.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Together Loading"; src: url("/fonts/bistro-sans-semibold-ar.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-.screen { --forest: #143c2c; --cream: #f5f3e7; --leaf: #dce8a6; position: relative; isolation: isolate; display: grid; place-items: center; min-height: 100vh; min-height: 100svh; overflow: hidden; padding: 54px 24px 78px; background: var(--forest); color: var(--cream); font-family: "Together Loading", sans-serif; }
+.screen { --forest: #09291e; --cream: #f5f3e7; --leaf: #dce8a6; position: relative; isolation: isolate; display: grid; place-items: center; min-height: 100vh; min-height: 100svh; overflow: hidden; padding: 72px 24px 82px; background: var(--forest); color: var(--cream); font-family: "Together Loading", sans-serif; }
 .screen, .screen * { box-sizing: border-box; }
-.screen::before { content: ""; position: absolute; inset: 16px; border: 1px solid #dce8a623; border-radius: 160px 160px 4px 4px; pointer-events: none; z-index: -1; }
-.light { position: absolute; inset: -30%; z-index: -2; background: radial-gradient(ellipse at 65% 24%,#b6cc6a2e,transparent 48%),linear-gradient(125deg,transparent 25%,#e6efb412 35%,transparent 48%); animation: light-enter 1200ms ease-out both; pointer-events: none; }
-.botanical { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
-.botanical span { position: absolute; width: 230px; height: 480px; border: 1px solid #dce8a61c; border-radius: 100% 0 100% 0; left: -120px; bottom: -80px; transform: rotate(-22deg); }
-.botanical span:nth-child(2) { left: auto; right: -170px; bottom: auto; top: -70px; transform: rotate(30deg); width: 280px; }
-.botanical span:last-child { left: -150px; bottom: 30px; transform: rotate(-42deg); }
+.screen::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 50% 38%,#133b29d9 8%,#09291eb3 45%,#061e1759 100%),linear-gradient(180deg,#061e17b3,transparent 36%,#061e17db); }
+.garden { position: absolute; inset: -3%; z-index: -3; background: url("/together/immersive-garden-mobile.webp") center / cover no-repeat; animation: forest-arrive 1800ms cubic-bezier(.2,.7,.3,1) both; pointer-events: none; }
+.light { position: absolute; inset: -40%; z-index: -1; pointer-events: none; background: conic-gradient(from 165deg at 50% 0%,transparent 0deg,#e4edc414 12deg,transparent 24deg),radial-gradient(ellipse at 50% 42%,#c8d99b17,transparent 48%); animation: light-enter 2400ms ease-out both; }
+.contours { position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+.contours span { position: absolute; width: 140%; height: 130%; left: -20%; top: -22%; border: 1px solid #dce8a61f; border-radius: 48%; transform: rotate(-24deg); }
+.contours span:last-child { width: 154%; height: 120%; left: -28%; top: -16%; transform: rotate(18deg); border-color: #dce8a612; }
+.prologue { position: absolute; top: 30px; inset-inline: 24px; display: flex; align-items: center; justify-content: center; gap: 14px; color: #d7e3bf; font-size: 10px; animation: copy-enter 900ms both; }
+.prologue > span { width: 22px; height: 1px; background: #dce8a64a; }
 .content { position: relative; width: min(100%,380px); text-align: center; }
-.completeMark { --together-mark-width: min(290px,75vw); margin: 0 auto 24px; }
-.title { font-size: clamp(28px,6.5vw,38px); font-weight: 600; line-height: 1.55; letter-spacing: normal; margin: 0 0 26px; animation: copy-enter 800ms 160ms both; }
-.title span { color: var(--leaf); }
-.track { height: 2px; width: 96px; margin: 0 auto; position: relative; overflow: hidden; background: #dce8a62e; }
-.track > span { position: absolute; inset: 0 auto 0 0; width: 42%; background: var(--leaf); animation: loading-sweep 1700ms ease-in-out infinite; }
-.status { font-size: 11px; line-height: 1.8; color: #d5dfc4; margin: 15px 0 0; }
-.signature { position: absolute; bottom: 28px; inset-inline: 24px; display: flex; align-items: center; justify-content: center; gap: 13px; font-size: 10px; color: #d5dfc4; margin: 0; }
+/* Keep mark ancestors free of opacity/filter/transform to preserve transparent screen blending. */
+.completeMark { --together-mark-width: clamp(220px,65vw,270px); margin: 0 auto 30px; }
+.title { font-size: clamp(29px,6.5vw,38px); font-weight: 600; line-height: 1.55; letter-spacing: normal; margin: 0 0 28px; }
+.titleLine, .titleBloom { display: block; animation: copy-enter 900ms 100ms both; }
+.titleBloom { color: var(--leaf); animation-delay: 240ms; }
+.track { height: 2px; width: 164px; margin: 0 auto; position: relative; overflow: hidden; background: #dce8a629; }
+.track > span { position: absolute; inset: 0 auto 0 0; width: 42%; background: linear-gradient(90deg,transparent,var(--leaf),var(--cream)); animation: loading-sweep 2100ms ease-in-out infinite; }
+.status { font-size: 11px; line-height: 1.8; color: #d5dfc4; margin: 17px 0 0; animation: copy-enter 900ms 350ms both; }
+.signature { position: absolute; bottom: 28px; inset-inline: 24px; display: flex; align-items: center; justify-content: center; gap: 13px; font-size: 11px; color: #d5dfc4; margin: 0; }
 .signature span { width: 28px; height: 1px; background: #dce8a64a; }
-@keyframes seed-open { from { opacity: 0; transform: translateY(18px) scale(.88); } to { opacity: 1; transform: none; } }
-@keyframes leaf-open { from { opacity: 0; scale: .15; } to { opacity: 1; scale: 1; } }
-@keyframes copy-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes light-enter { from { opacity: 0; transform: translateX(-6%); } to { opacity: 1; transform: none; } }
+@keyframes forest-arrive { from { transform: scale(1.08); opacity: .3; } to { transform: scale(1); opacity: 1; } }
+@keyframes copy-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes light-enter { from { opacity: 0; transform: rotate(-8deg); } to { opacity: 1; transform: rotate(0); } }
 @keyframes loading-sweep { from { transform: translateX(-110%); } to { transform: translateX(350%); } }
-@media (max-height: 580px) { .screen { padding-block: 30px 50px; }.completeMark { --together-mark-width: 200px; margin-bottom: 18px; }.title { font-size: 24px; margin-bottom: 16px; }.signature { bottom: 18px; } }
-@media (prefers-reduced-motion: reduce) { .screen *, .screen *::after { animation: none !important; }.track > span { left: 29%; } }
+@media (min-width: 761px) { .garden { background-image: url("/together/immersive-garden.webp"); }.screen { padding-block: 80px; }.prologue { top: 36px; } }
+@media (max-height: 580px) { .screen { padding-block: 54px 58px; }.completeMark { --together-mark-width: 190px; margin-bottom: 18px; }.title { font-size: 24px; margin-bottom: 18px; }.prologue { top: 19px; font-size: 9px; }.signature { bottom: 18px; }.status { margin-top: 13px; } }
+@media (prefers-reduced-motion: reduce) { .screen *, .screen *::before, .screen *::after { animation: none !important; }.track > span { left: 29%; } }
