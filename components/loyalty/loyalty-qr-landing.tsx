@@ -23,7 +23,7 @@ export function LoyaltyQrLanding({ identity, program, signupUrl }: Props) {
         <span className={s.eyebrow}><Gift size={17} aria-hidden="true" />مكانك معنا له مكافأة</span>
         <h1 id="loyalty-title">زياراتك تكبر<span>ومكافأتك تقرّب</span></h1>
         <p>اجمع <strong>{program.purchasesRequired} أختام</strong> واستمتع بمكافأتك</p>
-        <div className={s.reward}>{plant && <Image src={plant} alt="" width={64} height={64} sizes="64px" />}<div><span>مكافأتك القادمة</span><strong>{program.rewardName}</strong></div></div>
+        <div className={s.reward}>{logo && <Image src={plant ? "/together/logo.webp" : logo} alt={`شعار ${identity.name}`} width={48} height={48} unoptimized />}<div><span>مكافأتك القادمة</span><strong>{program.rewardName}</strong></div></div>
       </div>
       <div className={s.scan}>
         <div className={s.qrFrame}><RastQrCode value={signupUrl} label={`رمز التسجيل في ولاء ${identity.name}`} /></div>

@@ -27,9 +27,17 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
   const [error, setError] = useState("");
   const [returning, setReturning] = useState(false);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const previewRef = useRef<HTMLDetailsElement>(null);
   const pendingRef = useRef(false);
 
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 721px)");
+    const syncPreview = () => { if (previewRef.current) previewRef.current.open = media.matches; };
+    syncPreview();
+    media.addEventListener("change", syncPreview);
+    return () => media.removeEventListener("change", syncPreview);
+  }, []);
 
   async function enroll(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,7 +59,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
 
   if (authenticated) return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl"><RastHeader identity={identity} /><section className={s.memberIntro}><span className={s.eyebrow}>{loyaltyCommunityName(identity)}</span><h1>يا هلا برجعتك</h1><p className={s.intro}>تعذر فتح بطاقتك حاليًا جرّب تحديث الصفحة أو تواصل مع فريق {identity.name} لمراجعة حالة بطاقتك</p><button type="button" className={s.primary} disabled={opening} aria-busy={opening} onClick={openCard}>{opening ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : null}<span role="status">{opening ? "جار فتح بطاقتك" : "تحديث الصفحة"}</span></button></section></main>;
 
-  return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl">
+  return <main className={`${s.publicPage} ${s.enrollmentPage}`} style={loyaltyTheme(identity)} dir="rtl">
     <RastHeader identity={identity} />
     <div className={s.enrollmentLayout}>
       <div className={s.enrollmentCopy}>
@@ -67,7 +75,7 @@ export function RastEnrollment({ identity, program, authenticated = false }: { i
           <button type="submit" className={s.primary} disabled={pending}><span role="status">{pending ? "جار فتح بطاقتك" : "افتح بطاقتي"}</span>{pending ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <ArrowLeft aria-hidden="true" />}</button>
         </form>}
       </div>
-      <aside className={s.enrollmentPreview}><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></aside>
+      <details ref={previewRef} className={s.previewDisclosure}><summary>شاهد بطاقة الولاء ومكافأتك</summary><aside className={s.enrollmentPreview}><RastStampCard identity={identity} stamps={0} required={program.purchasesRequired} rewardName={program.rewardName} stampStyle={program.stampStyle} preview /><p>بطاقة واحدة زيارات أكثر لحظات أحلى</p></aside></details>
     </div>
     <footer className={s.publicFooter}><span>{loyaltyCommunityName(identity)}</span><span>{identity.slug === "rast" ? "القهوة تجمعنا والولاء يقرّبنا" : "زيارتك تسعدنا والولاء يقرّبنا"}</span></footer>
   </main>;

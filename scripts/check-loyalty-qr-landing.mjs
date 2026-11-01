@@ -10,7 +10,7 @@ const require=createRequire(import.meta.url);
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
 let features=['loyalty'],enabled=true,brandCalls=0;
 const brand={identity:{slug:'brand-871ec6e243c0',name:'Together Plants',logoUrl:'/together/logo.webp'},program:{enabled:true,purchasesRequired:4,rewardName:'خصم 10%',terms:'بعد أربع زيارات'}};
-const stubs={'server-only':{},react:{...React,cache:fn=>fn},'next/image':{__esModule:true,default:({unoptimized,...p})=>React.createElement('img',p)},'@/lib/data/feature-entitlements':{getPublicCafeFeatureCodesBySlug:async()=>features},'@/lib/data/loyalty-experience':{getLoyaltyBrand:async()=>{brandCalls++;return{...brand,program:{...brand.program,enabled}}}},'@/lib/platform/feature-gates':{featureCodesAllow:(f,key)=>f.includes(key)}};
+const stubs={'server-only':{},react:{...React,cache:fn=>fn},'next/image':{__esModule:true,default:({unoptimized,preload,...p})=>React.createElement('img',p)},'@/lib/data/feature-entitlements':{getPublicCafeFeatureCodesBySlug:async()=>features},'@/lib/data/loyalty-experience':{getLoyaltyBrand:async()=>{brandCalls++;return{...brand,program:{...brand.program,enabled}}}},'@/lib/platform/feature-gates':{featureCodesAllow:(f,key)=>f.includes(key)}};
 function load(file){const exports={};new Function('require','exports',compile(fs.readFileSync(file,'utf8')))(n=>{if(n in stubs)return stubs[n];if(n.endsWith('.module.css'))return{__esModule:true,default:new Proxy({},{get:(_,k)=>k})};if(n.startsWith('@/')||n.startsWith('.')){const base=n.startsWith('@/')?n.replace('@/',''):path.join(path.dirname(file),n);return load(base+(fs.existsSync(base+'.ts')?'.ts':'.tsx'))}return require(n)},exports);return exports}
 let checks=0;const check=fn=>{fn();checks++};
 const helper=load('lib/data/loyalty-landing.ts').getPublicLoyaltyLanding;
@@ -23,7 +23,7 @@ stubs['@/components/rast-loyalty/qr-code']=load('components/rast-loyalty/qr-code
 const component=load('components/loyalty/loyalty-qr-landing.tsx').LoyaltyQrLanding;
 const signup='https://barndaksa.com/loyalty/brand-871ec6e243c0?source=qr';
 const html=renderToStaticMarkup(React.createElement(component,{...brand,signupUrl:signup}));
-check(()=>{assert(html.includes(signup));assert(html.includes('خصم 10%'));assert(html.includes('4 أختام'));assert(html.includes('data-botanical="true"'));assert(html.includes('loyalty-plant.webp'));assert(html.includes('role="img"'));assert(html.includes('<details'));assert(!html.includes('customer_profile'))});
+check(()=>{assert(html.includes(signup));assert(html.includes('خصم 10%'));assert(html.includes('4 أختام'));assert(html.includes('data-botanical="true"'));assert(!html.includes('loyalty-plant.webp'));assert(html.includes('role="img"'));assert(html.includes('<details'));assert(!html.includes('customer_profile'))});
 check(()=>{const css=transform({filename:'loyalty-qr-landing.module.css',code:fs.readFileSync('components/loyalty/loyalty-qr-landing.module.css'),cssModules:true});for(const[,k]of fs.readFileSync('components/loyalty/loyalty-qr-landing.tsx','utf8').matchAll(/s\.(\w+)/g))assert(css.exports[k],k);assert(fs.readFileSync('components/loyalty/loyalty-qr-landing.module.css','utf8').includes('prefers-reduced-motion'))});
 stubs['@/components/loyalty/loyalty-qr-landing']={LoyaltyQrLanding:component};
 stubs['next/navigation']={notFound(){throw Error('not-found')}};

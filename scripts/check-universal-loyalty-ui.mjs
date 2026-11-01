@@ -84,20 +84,20 @@ check("Missing brand logo falls back to its name not another business", () => {
 check("Kawakib keeps its established logo fallback", () => assert(render(RastBrand, { identity: rast }).includes("kawakib-transparent-20261008.png")));
 
 const { RastStampCard } = load("components/rast-loyalty/rast-stamp-card.tsx");
-check("Together uses four photographic plant stamps with accessible earned states", () => {
+check("Together uses four drawn plant stamps with accessible earned states", () => {
   const html = render(RastStampCard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, stampStyle: "ceramic", stamps: 2, required: 4, rewardName: "خصم 10%" });
-  assert.equal((html.match(/data-stamp-artwork="plant"/g) || []).length, 4);
+  assert.equal((html.match(/data-stamp-icon="plant"/g) || []).length, 4);
   assert.equal((html.match(/class="collected"/g) || []).length, 2);
   assert(html.includes("repeat(4, minmax(0, 1fr))"));
   assert(html.includes("2 من 4 أختام مكتملة"));
   assert(html.includes("خصم 10%"));
-  assert(fs.existsSync(path.join(root, "public/together/loyalty-plant.webp")));
+  assert(!html.includes("loyalty-plant.webp"));
   const other = render(RastStampCard, { identity, stampStyle: "ceramic", stamps: 0, required: 4, rewardName: "Reward" });
-  assert(!other.includes("data-stamp-artwork"));
+  assert(!other.includes('data-stamp-icon="plant"'));
   const css = fs.readFileSync(path.join(root, "components/rast-loyalty/rast-loyalty.module.css"), "utf8");
-  assert(css.includes('.collected > img[data-stamp-artwork="plant"] { filter: none; opacity: 1; }'));
+  assert(css.includes('svg[data-stamp-icon="plant"]'));
   const logoChoice = render(RastStampCard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, stampStyle: "brand", stamps: 0, required: 4, rewardName: "خصم 10%" });
-  assert(!logoChoice.includes('data-stamp-artwork="plant"'));
+  assert(!logoChoice.includes('data-stamp-icon="plant"'));
   assert.equal((logoChoice.match(/src="\/own-logo.png"/g) || []).length, 5);
 });
 const { RastLoyaltyDashboard } = load("components/rast-loyalty/rast-dashboard.tsx", {
@@ -108,6 +108,8 @@ check("Together picker offers plant and logo only and retains a saved logo choic
   for (const stampStyle of ["ceramic", "plant", "brand"]) {
     const html = render(RastLoyaltyDashboard, { identity: { ...identity, slug: "brand-871ec6e243c0" }, initialDashboard: { program: { ...program, stampStyle } }, initialExperience: { rewardKind: "discount", rewardDiscountPercent: 10, rewardValidityDays: 30, nearbyMessage: "Welcome", latitude: null, longitude: null }, signupUrl: "https://brand.test/loyalty/brand-871ec6e243c0", walletAvailability: { apple: true, google: true } });
     assert(html.includes('<option value="plant"'));
+    assert(html.includes("أيقونة نبات"));
+    assert(!html.includes("صورة نبتة"));
     assert(html.includes('<option value="brand"'));
     assert(!html.includes('<option value="ceramic"'));
     assert(!html.includes('<option value="meal"'));
@@ -152,6 +154,13 @@ check("Enrollment asks only for name and phone with no OTP", () => {
   assert(html.includes('name="phone"'));
   assert(html.includes('name="name"') && html.includes("افتح بطاقتي"));
   assert(!html.includes("واتساب") && !html.includes("رمز التحقق") && !html.includes('name="code"'));
+  assert(html.includes("enrollmentPage"));
+  assert(html.includes('<details class="previewDisclosure">'));
+  assert(html.indexOf("</form>") < html.indexOf('<details class="previewDisclosure">'));
+  assert(!html.includes('<details open=""'));
+  const enrollmentCss = fs.readFileSync(path.join(root, "components/rast-loyalty/rast-loyalty.module.css"), "utf8");
+  assert(enrollmentCss.includes(".enrollmentPage .field input { min-height: 46px"));
+  assert(enrollmentCss.includes(".enrollmentPage .publicHeader .logo { width: 80px; height: 44px; }"));
 });
 check("Disabled enrollment has own menu link and no registration form", () => {
   const html = render(RastEnrollment, { identity, program: { ...program, enabled: false } });
