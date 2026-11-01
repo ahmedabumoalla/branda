@@ -392,12 +392,12 @@
 .canopyLoyalty > svg { width: 18px; height: 18px; }
 .canopySignature { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 22px; margin-bottom: 38px; color: #e2e9d2; font-size: 10px; }
 .canopySeam { position: absolute; inset: auto 0 -1px; height: clamp(48px,6vw,72px); overflow: hidden; pointer-events: none; }
-.canopySeam > svg { display: block; width: 112%; height: 100%; margin-left: -6%; overflow: visible; }
-.canopySeam path { transform-origin: center bottom; animation: canopy-contour 9s ease-in-out infinite alternate; }
+.canopySeam > svg { display: block; width: 140%; height: 100%; margin-inline: -20%; overflow: visible; }
+.canopySeam path { transform-box: view-box; transform-origin: center bottom; animation: canopy-contour 4.5s ease-in-out infinite alternate; }
 .seamMist { fill: var(--lime); opacity: .18; }
-.canopySeam .seamSage { fill: var(--sage); opacity: .5; animation-duration: 11s; animation-delay: -4s; animation-direction: alternate-reverse; }
-.canopySeam .seamPaper { fill: var(--paper); animation-duration: 13s; animation-delay: -7s; }
-@keyframes canopy-contour { from { transform: translateX(-2%) scaleY(.82); } to { transform: translateX(2%) scaleY(1.08); } }
+.canopySeam .seamSage { fill: var(--sage); opacity: .5; animation-duration: 6s; animation-delay: -2s; animation-direction: alternate-reverse; }
+.canopySeam .seamPaper { fill: var(--paper); animation-duration: 7s; animation-delay: -4s; }
+@keyframes canopy-contour { from { transform: translateX(-8%) scaleY(.72); } to { transform: translateX(8%) scaleY(1.18); } }
 .canopySignature > span:first-child { font: 9px/1.5 Georgia,serif; letter-spacing: .15em; }
 .immersiveOpening :is(a,button):focus-visible { outline-color: #f5f3e7; }
 @keyframes canopy-arrive { from { opacity: .65; transform: translateY(12px); } to { opacity: 1; transform: none; } }
