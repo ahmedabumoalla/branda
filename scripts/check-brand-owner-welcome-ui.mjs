@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+import React from 'react';
+import ts from 'typescript';
+const require=createRequire(import.meta.url);
+const code=ts.transpileModule(fs.readFileSync('components/admin/brand-owner-welcome.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+const exports={};
+const stubs={react:{...React,useState:v=>[v,()=>{}],useRef:v=>({current:v})},'./brand-onboarding.module.css':{__esModule:true,default:new Proxy({},{get:(_,k)=>k})},'./brand-owner-editor':{BrandOwnerEditor:()=>null},'@/app/actions/admin-brand-onboarding':{}};
+new Function('require','exports',code)(n=>stubs[n]??require(n),exports);
+const nodes=t=>!t||typeof t!=='object'?[]:Array.isArray(t)?t.flatMap(nodes):[t,...nodes(t.props?.children)];
+const text=t=>t==null||typeof t==='boolean'?'':Array.isArray(t)?t.map(text).join(''):typeof t==='object'?text(t.props?.children):String(t);
+const cafe={status:'نشط',hasActivePlan:true,trialAwaitingDelivery:false,ownerDelivery:{state:'ready',detailsReady:true}};
+function render(extra={},props={}){return exports.BrandOwnerWelcome({cafe:{...cafe,...extra},disabled:false,onBusyChange(){},onUpdated(){},...props})}
+const send=t=>nodes(t).find(n=>n.type==='button'&&text(n)==='إرسال تفاصيل الدخول للمالك');
+let checks=0;const check=fn=>{fn();checks++};
+check(()=>{const t=render();assert.equal(send(t).props.disabled,false);assert(text(t).includes('الحفاظ على الباقة الحالية'));assert(!text(t).includes('تم تغيير باقة'))});
+check(()=>{const t=render({hasActivePlan:false,trialAwaitingDelivery:true});assert.equal(send(t).props.disabled,false);assert(text(t).includes('٧ أيام'))});
+for(const extra of [{hasActivePlan:false},{status:'موقوف'},{ownerDelivery:{state:'ready',detailsReady:false}},{ownerDelivery:{state:'sending',detailsReady:true}},{ownerDelivery:{state:'editing',detailsReady:true}},{ownerDelivery:{state:'uncertain',detailsReady:true}}])check(()=>assert.equal(send(render(extra)).props.disabled,true));
+check(()=>assert.equal(send(render({},{disabled:true})).props.disabled,true));
+check(()=>{const t=render({ownerDelivery:{state:'sent',detailsReady:true}});assert(!send(t));assert(!text(t).includes('بدأت التجربة'));assert(text(t).includes('تم إرسال'))});
+check(()=>assert.equal(render({ownerDelivery:undefined}),null));
+console.log(`PASS ${checks} owner handoff current-plan, trial, delivery-state and duplicate-send UI checks`);

@@ -6,8 +6,8 @@ type GreenApiSendResponse = {
   idMessage?: string;
 };
 
-/** Provider acknowledgement starts the trial; this does not claim delivery/read receipt. */
-export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string }) {
+/** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
+export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
   const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
@@ -19,7 +19,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
       "الدخول: https://barndaksa.com/login",
       `الجوال: ${input.phone}`,
       `كلمة المرور: ${input.password}`,
-      "تجربتك المجانية ٧ أيام من اليوم",
+      input.startsTrial ? "تجربتك المجانية ٧ أيام من اليوم" : "بيانات الدخول تخص باقتك الحالية دون تغيير مدة الاشتراك",
     ].join("\n") }),
   });
   if (!response.ok) throw new Error(response.status < 500 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");

@@ -17,7 +17,7 @@ export async function createAdminBrandAccountAction(input: AdminBrandAccountInpu
   return actionResult(async () => updatedBrand(await createAdminBrandAccount(input)), "تعذر إنشاء حساب العلامة حاول مجددًا");
 }
 export async function sendBrandOwnerWelcomeAction(cafeId: string, retryUncertain: boolean) {
-  return actionResult(async () => { await sendBrandOwnerWelcome(cafeId, retryUncertain); return updatedBrand(cafeId); }, "تعذر إرسال تفاصيل الدخول لم يبدأ عداد التجربة");
+  return actionResult(async () => { await sendBrandOwnerWelcome(cafeId, retryUncertain); return updatedBrand(cafeId); }, "تعذر إرسال تفاصيل الدخول حدّث حالة الإرسال قبل إعادة المحاولة");
 }
 export async function refreshAdminBrandAction(cafeId: string) {
   return actionResult(async () => updatedBrand(cafeId), "تعذر تحديث حالة العلامة");

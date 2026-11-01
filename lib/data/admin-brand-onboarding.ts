@@ -15,7 +15,8 @@ function accountError(code: string): never {
     REQUEST_CHANGED: "تغيّرت بيانات المحاولة أغلق النموذج وافتحه مجددًا",
     SEND_IN_PROGRESS: "الإرسال قيد التنفيذ انتظر قليلًا ثم حدّث حالة العلامة",
     SEND_UNCERTAIN: "لم تتأكد نتيجة الإرسال السابق راجع التنبيه قبل إعادة المحاولة",
-    PREPARED_TRIAL_CHANGED: "تغيّرت باقة العلامة لا يمكن بدء التجربة من هذا الإشعار",
+    PREPARED_TRIAL_CHANGED: "لا توجد باقة سارية أو تجربة جاهزة لتسليم الحساب",
+    ACTIVE_SUBSCRIPTION_REQUIRED: "فعّل باقة سارية قبل إرسال بيانات الدخول للمالك",
     OWNER_PHONE_CHANGED: "تغيّر جوال الدخول بعد إنشاء الحساب راجع بيانات المالك",
     OWNER_PASSWORD_CHANGED: "تغيّرت كلمة المرور بعد إنشاء الحساب لن نرسل كلمة المرور القديمة",
     BRAND_UNAVAILABLE: "العلامة موقوفة أو غير متاحة للإرسال",
@@ -93,7 +94,7 @@ export async function updateAdminBrandOwner(input: AdminBrandOwnerInput) {
 export async function sendBrandOwnerWelcome(cafeId: string, retryUncertain = false) {
   const actor = await requirePlatformAdmin();
   if (!z.string().uuid().safeParse(cafeId).success) throw new Error("العلامة غير صالحة");
-  if (!isGreenApiConfigured()) throw new Error("خدمة الواتساب غير مهيأة لم يبدأ عداد التجربة");
+  if (!isGreenApiConfigured()) throw new Error("خدمة الواتساب غير مهيأة لم تُرسل بيانات الدخول");
   const admin = createAdminClient();
   const attemptId = randomUUID();
   const claim = await admin.rpc("admin_claim_brand_welcome", { p_actor: actor.id, p_cafe: cafeId, p_attempt: attemptId, p_retry_uncertain: retryUncertain === true });
@@ -102,12 +103,12 @@ export async function sendBrandOwnerWelcome(cafeId: string, retryUncertain = fal
   let messageId: string;
   try {
     const password = openWelcomePassword(String(claim.data.ciphertext), String(claim.data.requestId));
-    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName: String(claim.data.brandName), password });
+    const sent = await sendGreenApiOwnerWelcome({ phone: String(claim.data.phone), brandName: String(claim.data.brandName), password, startsTrial: claim.data.startsTrial === true });
     messageId = sent.providerMessageId;
   } catch (error) {
     const rejected = error instanceof Error && error.message === "OWNER_WELCOME_REJECTED";
     await admin.rpc("admin_fail_brand_welcome", { p_actor: actor.id, p_cafe: cafeId, p_attempt: attemptId, p_uncertain: !rejected });
-    throw new Error(rejected ? "رفض مزوّد الواتساب الرسالة لم يبدأ عداد التجربة ويمكنك المحاولة مجددًا" : "لم تتأكد نتيجة الإرسال لم يبدأ عداد التجربة حدّث الحالة قبل إعادة المحاولة");
+    throw new Error(rejected ? "رفض مزوّد الواتساب الرسالة لم تتغير الباقة ويمكنك المحاولة مجددًا" : "لم تتأكد نتيجة الإرسال حدّث الحالة قبل إعادة المحاولة");
   }
   const sentAt = new Date().toISOString();
   // Retry only recording acknowledgement, never sending a second WhatsApp message.
@@ -117,5 +118,5 @@ export async function sendBrandOwnerWelcome(cafeId: string, retryUncertain = fal
       if (!done.error) return;
     } catch { /* Retry the same acknowledgement, never the message. */ }
   }
-  throw new Error("قُبلت رسالة الواتساب لكن تعذر تأكيد بدء التجربة حدّث حالة العلامة قبل أي محاولة أخرى");
+  throw new Error("قُبلت رسالة الواتساب لكن تعذر تسجيل تأكيد الإرسال حدّث حالة العلامة قبل أي محاولة أخرى");
 }
