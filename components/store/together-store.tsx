@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowDownLeft, ArrowUpLeft, Check, Gift, Leaf, Pause, Play, Search, ShoppingBag, Sprout, X } from "lucide-react";
+import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpLeft, Check, Gift, Leaf, Pause, Play, Search, ShoppingBag, Sprout, X } from "lucide-react";
 import { giftOrderInputSchema, type GiftOrderReceipt, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import { productMinimumPrice, type GiftCartLine } from "@/lib/commerce/storefront-cart";
 import { matchesMenuSearch, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { GiftCheckoutDialog, GiftProductDialog, GiftTrackingDialog, StoreMoney, StorePhoto } from "./gift-store-dialogs";
 import s from "./together-store.module.css";
+import partnerCollection from "@/data/together-partners.json";
 
 type Props = { menu: StandaloneMenu; settings: GiftStoreSettings | null; loyalty: { purchasesRequired: number; rewardName: string } | null };
 
@@ -76,11 +77,12 @@ export function TogetherHero({ products, onSelect }: { products: StandaloneMenuP
     const timer = window.setInterval(() => { if (!document.hidden) setIndex(value => (value + 1) % products.length); }, 6000);
     return () => window.clearInterval(timer);
   }, [playing, products.length, identity]);
-  return <section ref={root} className={s.gardenHero} data-together-hero="living-garden-v2" id="together-top" aria-labelledby="together-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+  return <section ref={root} className={s.gardenHero} data-together-hero="botanical-atelier-v3" id="together-top" aria-labelledby="together-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <div className={s.gardenAtmosphere} aria-hidden="true"><picture><source media="(max-width: 700px)" srcSet="/together/hero-mobile.webp" /><StorePhoto src="/together/hero.webp" alt="" eager /></picture><span /><span /></div>
+    <span className={s.heroWord} dir="ltr" aria-hidden="true">Together</span>
     <div className={s.gardenCopy}><p className={s.eyebrow}><Sprout aria-hidden="true" />من عسير إلى قلبك</p><h1 id="together-title"><motion.span initial={false} whileInView={reduce ? undefined : { opacity: [.4, 1], y: [24, 0] }} viewport={{ once: true }} transition={{ duration: .8 }}>لأن بعض الهدايا</motion.span><motion.em initial={false} whileInView={reduce ? undefined : { opacity: [.4, 1], y: [30, 0] }} viewport={{ once: true }} transition={{ duration: .9, delay: .15 }}>تعيش</motion.em></h1><p className={s.gardenPromise}>أهدِ حبًّا ينمو</p><p className={s.gardenDescription}>غرسة تفتح لها مكانًا<br />وتفتح في يومك حياة</p><div className={s.gardenActions}><a className={s.lightButton} href="#together-products">اختر هديتك الحيّة<ArrowDownLeft aria-hidden="true" /></a><span dir="ltr">A LITTLE GREEN<br />A LOT OF LIFE</span></div></div>
-    <div className={s.plantStage}>
-      <span className={s.orbitLabel} dir="ltr" aria-hidden="true">GROW SOMETHING BEAUTIFUL</span><span className={s.plantOrbit} aria-hidden="true" />
+    <motion.div className={s.plantStage} initial={false} whileInView={reduce ? undefined : { opacity: [.45, 1], y: [28, 0], rotate: [-2, 0] }} viewport={{ once: true, amount: .15 }} transition={{ duration: 1.1, ease: [.22, 1, .36, 1] }}>
+      <span className={s.orbitLabel} dir="ltr" aria-hidden="true">LIVING GIFTS / TOGETHER PLANTS</span><span className={s.plantOrbit} aria-hidden="true" /><span className={s.botanicalNote} aria-hidden="true"><Leaf /><span>قليل من الأخضر<br /><strong>كثير من الحياة</strong></span></span>
       <div className={s.plantPortal}>
         <span className={s.portalEyebrow}>نباتات حقيقية لحياة أجمل</span>
         <AnimatePresence initial={false} mode="sync">{product && <motion.button key={product.id} className={s.portalProduct} type="button" aria-label={`اكتشف ${product.name}`} onClick={() => onSelect(product)} initial={reduce ? false : { opacity: 0, scale: .94, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, scale: 1.04 }} transition={{ duration: reduce ? 0 : .8, ease: [.22, 1, .36, 1] }}><StorePhoto src={product.images[0]?.url} alt={product.name} eager /><span className={s.portalOpen}><ArrowUpLeft aria-hidden="true" /></span></motion.button>}</AnimatePresence>
@@ -89,8 +91,22 @@ export function TogetherHero({ products, onSelect }: { products: StandaloneMenuP
       </div>
       {product && <div className={s.plantCaption} aria-live={playing ? "off" : "polite"}><div><small>اختيار ينمو معك</small><strong>{product.name}</strong></div><StoreMoney amount={productMinimumPrice(product)} /></div>}
       {products.length > 1 && <div className={s.gardenControls}><nav className={s.gardenThumbs} aria-label="اختر غرسة الافتتاحية">{products.map((item, itemIndex) => <button type="button" key={item.id} aria-label={`عرض ${item.name}`} aria-pressed={current === itemIndex} onClick={() => { setPaused(true); setIndex(itemIndex); }}><StorePhoto src={item.images[0]?.url} alt="" /><span>{String(itemIndex + 1).padStart(2, "0")}</span></button>)}</nav>{!reduce && <button className={s.gardenPause} type="button" aria-label={paused ? "تشغيل تبديل الغراس" : "إيقاف تبديل الغراس"} aria-pressed={!paused} onClick={() => setPaused(value => !value)}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}</div>}
-    </div>
+    </motion.div>
     <div className={s.gardenSignature}><Leaf aria-hidden="true" /><span>هدية تبقى وتكبر</span><span dir="ltr">TOGETHER WE GROW</span></div>
+  </section>;
+}
+
+export function TogetherPartners() {
+  const gallery = useRef<HTMLUListElement>(null);
+  const reduce = useReducedMotion();
+  function move(direction: number) {
+    const element = gallery.current;
+    if (element) element.scrollBy({ left: direction * element.clientWidth * .8, behavior: reduce ? "instant" : "smooth" });
+  }
+  return <section className={s.partners} id="together-partners" aria-labelledby="together-partners-title">
+    <div className={s.partnersHeading}><div><p className={s.eyebrow}><Sprout aria-hidden="true" />معًا نترك أثرًا أخضر</p><h2 id="together-partners-title">غراسنا <em>في أماكن نحبّها</em></h2></div><span dir="ltr" aria-hidden="true">ROOTED IN<br />GOOD COMPANY</span></div>
+    <ul ref={gallery} className={s.partnerGallery} tabIndex={0} aria-label="معرض شعارات غراسنا قابل للتمرير" dir="rtl">{partnerCollection.partners.map((partner, index) => <motion.li key={partner.id} initial={false} whileInView={reduce ? undefined : { opacity: [.5, 1], y: [18, 0] }} viewport={{ once: true, amount: .25 }} transition={{ duration: .65, delay: (index % 3) * .08 }}><div className={s.partnerFrame}><StorePhoto src={partner.path} alt={partner.alt} /></div><Leaf className={s.partnerLeaf} aria-hidden="true" /></motion.li>)}</ul>
+    <div className={s.partnersFooter}><p>غراس تجمعنا <span>وحكايات تكبر معنا</span></p><div><button type="button" aria-label="الشعارات السابقة" onClick={() => move(1)}><ArrowRight aria-hidden="true" /></button><button type="button" aria-label="الشعارات التالية" onClick={() => move(-1)}><ArrowLeft aria-hidden="true" /></button></div></div>
   </section>;
 }
 
@@ -158,7 +174,8 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
       {limit < filtered.length && <button className={s.loadMore} onClick={() => setLimit(n => n + 24)}>اكتشف المزيد <span>{Math.min(limit, filtered.length)} / {filtered.length}</span><ArrowDownLeft /></button>}
     </section>
     {service && <motion.section initial={false} whileInView={reduce ? undefined : { opacity: [.55, 1], y: [28, 0] }} viewport={{ once: true, amount: .15 }} transition={{ duration: .8 }} className={s.designService} aria-labelledby="together-design-title"><div className={s.designVisual}><StorePhoto src={service.images[0]?.url || "/together/hero.webp"} alt="تصاميم لمساحاتكم الخاصة" /><span>مساحتك<br /><em>بروح خضراء</em></span></div><div className={s.designCopy}><p className={s.eyebrow}>خدمة | تصميم</p><h2 id="together-design-title">تصاميم لمساحاتكم الخاصة</h2><p>تطوير وتشغيل مزارع ذكية بمعايير مستدامة</p><p>تعليم وتجربة: رحلات مدرسية وبرامج تفاعلية</p><button className={s.primary} onClick={() => setSelected(service)}>خلّنا نعرف مساحتك<ArrowUpLeft /></button><button className={s.textLink} onClick={() => browse("service")}>استكشف الخدمات والورش<ArrowLeftIcon /></button></div></motion.section>}
-    <footer className={s.footer}><div><StorePhoto src={brandLogo} alt="شعار Together Plants" /><p>سياحة بيئية: وجهتكم الأولى للاستدامة في قلب عسير</p></div><nav aria-label="روابط المتجر"><a href="#together-products">المنتجات والخدمات</a><a href="https://wa.me/966567874278" target="_blank" rel="noopener noreferrer">تواصل معنا</a>{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noopener noreferrer">إنستغرام</a>}<a href="https://linktr.ee/together2000" target="_blank" rel="noopener noreferrer">كل روابط Together<ArrowUpLeft aria-hidden="true" /></a><Link href="/">بواسطة برندة</Link></nav><span className={s.footerWord} dir="ltr">Together, we grow.</span></footer>
+    <TogetherPartners />
+    <footer className={s.footer}><div><StorePhoto src={brandLogo} alt="شعار Together Plants" /><p>سياحة بيئية: وجهتكم الأولى للاستدامة في قلب عسير</p></div><nav aria-label="روابط المتجر"><a href="#together-products">المنتجات والخدمات</a><a href="#together-partners">غراسنا</a><a href="https://wa.me/966567874278" target="_blank" rel="noopener noreferrer">تواصل معنا</a>{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}{menu.contacts.instagramUrl && <a href={menu.contacts.instagramUrl} target="_blank" rel="noopener noreferrer">إنستغرام</a>}<a href="https://linktr.ee/together2000" target="_blank" rel="noopener noreferrer">كل روابط Together<ArrowUpLeft aria-hidden="true" /></a><Link href="/">بواسطة برندة</Link></nav><span className={s.footerWord} dir="ltr">Together, we grow.</span></footer>
     {count > 0 && !checkout && !selected && !tracking && <button className={s.floatingCart} onClick={() => setCheckout(true)}><ShoppingBag /><span>سلة اختياراتك</span><strong>{count}</strong><ArrowUpLeft /></button>}
     {notice && <div className={s.toast} role="status"><Check /><span>{notice}</span><button onClick={() => setNotice("")} aria-label="إغلاق التنبيه"><X /></button></div>}
     {selected && <GiftProductDialog key={selected.id} product={selected} close={() => setSelected(null)} add={add} orderingEnabled={Boolean(settings?.enabled)} />}

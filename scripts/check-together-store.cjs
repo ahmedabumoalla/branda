@@ -8,7 +8,7 @@ function load(file, mocks = {}) {
   new Function('require', 'exports', code)(name => {
     if (name in mocks) return mocks[name];
     if (name.endsWith('.css')) return { __esModule: true, default: new Proxy({}, { get: (_, k) => String(k) }) };
-    if (name.startsWith('@/') || name.startsWith('./')) { const base = name.startsWith('@/') ? name.slice(2) : path.join(path.dirname(file), name); return load(base + (fs.existsSync(base + '.ts') ? '.ts' : '.tsx'), mocks); }
+    if (name.startsWith('@/') || name.startsWith('./')) { const base = name.startsWith('@/') ? name.slice(2) : path.join(path.dirname(file), name); if (base.endsWith('.json')) return JSON.parse(fs.readFileSync(base, 'utf8')); return load(base + (fs.existsSync(base + '.ts') ? '.ts' : '.tsx'), mocks); }
     return require(name);
   }, exports);
   return exports;
@@ -40,7 +40,10 @@ const mocks = { 'next/link': ({ children, ...props }) => React.createElement('a'
 const { TogetherStore } = load('components/store/together-store.tsx', mocks);
 const menu = { name: 'Together Plants', slug: 'brand-871ec6e243c0', businessCategory: 'gifts_flowers', products: [product, { ...product, id: '22222222-2222-4222-8222-222222222222', name: 'ورشة الفخار', available: false, catalogKind: 'service' }], categories: [{ id: 'plants', name: 'أصدقاء الظل' }], contacts: {}, logoUrl: null, loyaltyEnabled: true };
 const html = renderToStaticMarkup(React.createElement(TogetherStore, { menu, settings, loyalty: { purchasesRequired: 4, rewardName: 'خصم 10%' } }));
-for (const token of ['living-garden-v2', 'لأن بعض الهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'hero-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000']) assert(html.includes(token), token);
+for (const token of ['botanical-atelier-v3', 'لأن بعض الهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'hero-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
+const partners = JSON.parse(fs.readFileSync('data/together-partners.json', 'utf8')).partners;
+assert.equal(partners.length, 6);
+for (const partner of partners) { assert(html.includes(partner.path)); assert(fs.existsSync('public' + partner.path)); }
 assert(html.indexOf('id="together-top"') < html.indexOf('id="together-loyalty"'));
 assert(html.indexOf('id="together-loyalty"') < html.indexOf('id="together-products"'), 'Loyalty must follow the hero before the catalog');
 assert(!html.includes('6000'));
@@ -49,6 +52,15 @@ function hooks() { let slots = [], cursor = 0; return { api: { ...React, useEffe
 const nodes = t => !t || typeof t !== 'object' ? [] : Array.isArray(t) ? t.flatMap(nodes) : [t, ...nodes(t.props?.children)];
 const text = t => Array.isArray(t) ? t.map(text).join('') : t && typeof t === 'object' ? text(t.props?.children) : t == null || typeof t === 'boolean' ? '' : String(t);
 async function main() {
+  const partnerHooks = hooks(); let reducedGallery = false, moved;
+  const { TogetherPartners } = load('components/store/together-store.tsx', { ...mocks, react: partnerHooks.api, 'motion/react': { useReducedMotion: () => reducedGallery, motion: { li: 'li' } } });
+  let galleryTree = partnerHooks.draw(TogetherPartners, {});
+  nodes(galleryTree).find(n => n.type === 'ul').props.ref.current = { clientWidth: 400, scrollBy: options => moved = options };
+  nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات التالية').props.onClick();
+  assert.deepEqual(moved, { left: -320, behavior: 'smooth' }, 'Next moves forward in the RTL gallery');
+  reducedGallery = true; galleryTree = partnerHooks.draw(TogetherPartners, {});
+  nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات السابقة').props.onClick();
+  assert.deepEqual(moved, { left: 320, behavior: 'instant' }, 'Reduced motion disables smooth scrolling');
   const heroHooks = hooks(); let effects = [], interval, observe, selectedPlant, cleared = 0, disconnected = 0, reduced = false;
   const oldWindow = global.window, oldDocument = global.document, oldObserver = global.IntersectionObserver;
   global.window = { setInterval(fn, ms) { assert.equal(ms, 6000); interval = fn; return 1; }, clearInterval() { cleared++; } };

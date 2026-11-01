@@ -59,7 +59,7 @@
 .stageCaption { position: absolute; right: 15px; bottom: 13px; font-size: 9px; letter-spacing: .18em; }
 .ribbon { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 5vw, 80px); padding: 17px 20px; background: var(--loco-red); color: white; font-weight: 700; font-size: 14px; }
 .ribbon svg { color: var(--loco-yellow); width: 17px; height: 17px; }
-.membership { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 9%; max-width: 1180px; margin: auto; padding: 90px 5%; }
+.membership { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 9%; max-width: 1180px; margin: auto; padding: 42px 5%; }
 .membership h2 { font-size: clamp(26px, 3vw, 42px); font-weight: 800; line-height: 1.5; margin: 0; letter-spacing: normal; }
 .membership h2 span { color: var(--loco-red); }
 .membershipCopy > p:not(.kicker) { font-size: 13px; line-height: 2; margin: 18px 0 22px; }
@@ -189,17 +189,23 @@
   .stageCaption { font-size: 7px; right: 25px; bottom: 9px; }
   .ribbon { gap: 16px; font-size: 10px; padding: 14px 12px; }
   .ribbon > span:last-child, .ribbon > svg:last-of-type { display: none; }
-  .membership { padding: 48px 7% 60px; grid-template-columns: 1fr; gap: 35px; }
-  .membershipCopy { text-align: center; }
-  .membershipCopy .kicker { font-size: 10px; margin-bottom: 12px; }
-  .membership h2 { font-size: 28px; line-height: 1.45; }
-  .membershipCopy > p:not(.kicker) { font-size: 12px; }
-  .memberCard { max-width: 400px; width: 100%; margin: auto; padding: 22px; gap: 20px; transform: rotate(-3deg); }
-  .memberCard > img { width: 95px; }
-  .stamps { gap: 8px; }
-  .stamps > span { width: 34px; height: 34px; }
-  .stamps svg { width: 18px; height: 18px; }
-  .experience { padding: 40px 5%; }
+  .membership { padding: 18px 5%; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; }
+  .membershipCopy { text-align: start; min-width: 0; }
+  .membershipCopy .kicker { display: none; }
+  .membership h2 { font-size: clamp(14px,4vw,18px); line-height: 1.5; }
+  .membershipCopy > p:not(.kicker) { font-size: 10px; line-height: 1.8; margin: 7px 0 9px; }
+  .membershipCopy .primary { min-height: 44px; width: 100%; padding: 8px 10px; font-size: 10px; gap: 5px; justify-content: center; }
+  .membershipCopy .primary > svg:last-child { display: none; }
+  .memberCard { width: 100%; min-width: 0; margin: 0; padding: 12px; gap: 12px; border-radius: 13px; transform: none; box-shadow: 4px 5px 0 var(--loco-cream); }
+  .memberCard > img { grid-column: 1 / -1; width: 88px; max-width: 100%; justify-self: center; }
+  .memberCard > span { display: none; }
+  .stamps { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; }
+  .stamps > span { width: 100%; height: auto; aspect-ratio: 1; min-width: 0; }
+  .stamps svg { width: 11px; height: 11px; }
+  .cardBottom { padding-top: 8px; font-size: 8px; gap: 6px; }
+  .cardBottom strong { font-size: 13px; margin-top: 2px; }
+  .cardBottom > svg { width: 17px; height: 17px; }
+  .experience { padding: 30px 5% 16px; }
   .sectionHeading { margin-bottom: 24px; }
   .sectionHeading h2 { font-size: 28px; }
   .sectionHeading .kicker { font-size: 10px; }
@@ -211,7 +217,7 @@
   .offerPhoto { min-height: 0; height: 220px; }
   .offerPhoto > img { max-height: none; }
   .offerCopy .price { font-size: 28px; margin: 0; }
-  .catalog { padding: 45px 5% 65px; }
+  .catalog { padding: 22px 5% 65px; }
   .toolbar { padding: 7px 0 10px; }
   .categories { gap: 6px; }
   .categories button { font-size: 11px; padding: 7px 17px; }
