@@ -37,14 +37,10 @@ assert.equal(previewGiftOrderTotal(84, 'pickup', settings).total, 84);
 assert.deepEqual(previewGiftOrderTotal(115, 'pickup', { ...settings, vatRate: 15 }), { subtotal: 115, deliveryFee: 0, tax: 15, total: 115 });
 const noop = () => {};
 const mocks = { 'next/link': ({ children, ...props }) => React.createElement('a', props, children), 'next/navigation': { useRouter: () => ({ refresh: noop }) }, '@/app/actions/gift-orders': { submitGiftOrderAction: noop, trackGiftOrderAction: async () => ({ ok: false, error: 'غير موجود' }) }, '@/lib/analytics/public-tracking': { trackBrandEngagement: noop } };
-const { TogetherStore, selectHeroPlants } = load('components/store/together-store.tsx', mocks);
-const heroCandidates = ['غابات الانديز', 'نبتة مونستيرا', 'نبتة زنبق السلام', 'انتوريوم أحمر'].map((name, i) => ({ ...product, id: `hero-${i}`, name, images: [{ url: `https://example.test/hero-${i}.webp` }] }));
-assert.deepEqual(selectHeroPlants(heroCandidates).map(p => p.name), ['نبتة زنبق السلام', 'نبتة مونستيرا', 'انتوريوم أحمر']);
-assert.equal(heroCandidates.length, 4, 'Hero curation must not remove the terrarium from the catalog');
-assert(!selectHeroPlants(heroCandidates.filter(p => p.name !== 'نبتة زنبق السلام')).some(p => p.name === 'غابات الانديز'), 'Fallback curation must not restore the rejected glass plant');
+const { TogetherStore, TogetherHero } = load('components/store/together-store.tsx', mocks);
 const menu = { name: 'Together Plants', slug: 'brand-871ec6e243c0', businessCategory: 'gifts_flowers', products: [product, { ...product, id: '22222222-2222-4222-8222-222222222222', name: 'ورشة الفخار', available: false, catalogKind: 'service' }], categories: [{ id: 'plants', name: 'أصدقاء الظل' }], contacts: {}, logoUrl: null, loyaltyEnabled: true };
 const html = renderToStaticMarkup(React.createElement(TogetherStore, { menu, settings, loyalty: { purchasesRequired: 4, rewardName: 'خصم 10%' } }));
-for (const token of ['signature-garden-v4', 'signature-card', 'headerEmblem', 'لأن بعض الهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'hero-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
+for (const token of ['immersive-canopy-v6', 'signature-card', 'complete-original', 'غراس وهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'immersive-garden-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
 const partners = JSON.parse(fs.readFileSync('data/together-partners.json', 'utf8')).partners;
 assert.equal(partners.length, 6);
 for (const partner of partners) { assert(html.includes(partner.path)); assert(fs.existsSync('public' + partner.path)); }
@@ -81,23 +77,12 @@ async function main() {
     nodes(galleryTree).find(n => n.props?.['aria-label'] === 'الشعارات السابقة').props.onClick(); assert.deepEqual(moved, { left: 320, behavior: 'instant' }, 'Reduced motion disables smooth scrolling');
     stopPartners(); disconnectPartners(); assert(partnerCleared && partnerDisconnected);
   } finally { [global.window, global.document, global.IntersectionObserver] = savedGlobals; }
-  const heroHooks = hooks(); let effects = [], interval, observe, selectedPlant, cleared = 0, disconnected = 0, reduced = false;
-  const oldWindow = global.window, oldDocument = global.document, oldObserver = global.IntersectionObserver;
-  global.window = { setInterval(fn, ms) { assert.equal(ms, 6000); interval = fn; return 1; }, clearInterval() { cleared++; } };
-  global.document = { hidden: false };
-  global.IntersectionObserver = class { constructor(callback) { observe = callback; } observe() {} disconnect() { disconnected++; } };
-  const { TogetherHero } = load('components/store/together-store.tsx', { ...mocks, react: { ...heroHooks.api, useRef: () => ({ current: {} }), useEffect(fn) { effects.push(fn); }, useSyncExternalStore: (_subscribe, snapshot) => snapshot() }, 'motion/react': { useReducedMotion: () => reduced, AnimatePresence: React.Fragment, motion: { button: 'button', span: 'span', em: 'em' } } });
-  const plants = [product, { ...product, id: 'second', name: 'غابة مصغرة' }];
-  const drawHero = () => { effects = []; return heroHooks.draw(TogetherHero, { products: plants, onSelect: p => selectedPlant = p }); };
-  try {
-    let hero = drawHero(); const disconnect = effects[0](); observe([{ isIntersecting: true }]); hero = drawHero(); const stop = effects[1](); assert.equal(typeof interval, 'function'); interval(); hero = drawHero(); assert(text(hero).includes('غابة مصغرة'));
-    nodes(hero).find(n => n.props?.['aria-label'] === 'اكتشف غابة مصغرة').props.onClick(); assert.equal(selectedPlant.id, 'second');
-    nodes(hero).find(n => n.props?.['aria-label'] === 'عرض غرسة').props.onClick(); hero = drawHero(); assert.equal(effects[1](), undefined, 'Manual image selection pauses autoplay');
-    nodes(hero).find(n => n.props?.['aria-label'] === 'تشغيل تبديل الغراس').props.onClick(); hero = drawHero(); hero.props.onFocusCapture(); hero = drawHero(); assert.equal(effects[1](), undefined, 'Keyboard focus pauses autoplay');
-    hero.props.onBlurCapture({ currentTarget: { contains: () => false }, relatedTarget: null }); global.document.hidden = true; hero = drawHero(); assert.equal(effects[1](), undefined, 'Background tabs do not rotate');
-    global.document.hidden = false; reduced = true; hero = drawHero(); assert.equal(effects[1](), undefined); assert(!nodes(hero).some(n => n.props?.className === 'gardenPause'));
-    stop(); disconnect(); assert(cleared && disconnected);
-  } finally { global.window = oldWindow; global.document = oldDocument; global.IntersectionObserver = oldObserver; }
+  const opening = renderToStaticMarkup(React.createElement(TogetherHero, { loyaltyEnabled: true }));
+  assert(opening.includes('data-together-mark="complete-original"'));
+  assert(opening.includes('href="#together-products"'));
+  assert(opening.includes('href="#together-loyalty"'));
+  assert(!opening.includes('portalProduct') && !opening.includes('gardenThumbs'), 'The opening is an immersive brand scene, not a product carousel');
+  assert(!renderToStaticMarkup(React.createElement(TogetherHero)).includes('href="#together-loyalty"'), 'No loyalty teaser when the service is disabled');
   const persistence = new Map();
   const storage = { getItem: key => persistence.get(key) ?? null, setItem: (key, value) => persistence.set(key, value), removeItem: key => persistence.delete(key) };
   const firstClient = load('lib/commerce/checkout-request.ts');

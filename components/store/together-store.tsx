@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpLeft, Check, Gift, Leaf, Pause, Play, Search, ShoppingBag, Sprout, X } from "lucide-react";
 import { giftOrderInputSchema, type GiftOrderReceipt, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import { productMinimumPrice, type GiftCartLine } from "@/lib/commerce/storefront-cart";
@@ -10,6 +10,7 @@ import { matchesMenuSearch, type StandaloneMenu, type StandaloneMenuProduct } fr
 import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { GiftCheckoutDialog, GiftProductDialog, GiftTrackingDialog, StoreMoney, StorePhoto } from "./gift-store-dialogs";
 import s from "./together-store.module.css";
+import { TogetherBrandMark } from "@/components/store/together-brand-mark";
 import partnerCollection from "@/data/together-partners.json";
 
 type Props = { menu: StandaloneMenu; settings: GiftStoreSettings | null; loyalty: { purchasesRequired: number; rewardName: string } | null };
@@ -37,62 +38,15 @@ function readCart(value: string): GiftCartLine[] {
 
 function subscribeVisibility(listener: () => void) { document.addEventListener("visibilitychange", listener); return () => document.removeEventListener("visibilitychange", listener); }
 
-export function selectHeroPlants(products: StandaloneMenuProduct[]) {
-  const eligible = products.filter(product => product.available && product.catalogKind !== "service" && product.images.length && !/غابات|مصغرة|terrarium/i.test(`${product.category} ${product.name}`));
-  const chosen: StandaloneMenuProduct[] = [];
-  function pick(matches: (product: StandaloneMenuProduct) => boolean) {
-    const product = eligible.find(item => matches(item) && !chosen.some(selected => selected.id === item.id || selected.images[0].url === item.images[0].url));
-    if (product && chosen.length < 3) chosen.push(product);
-    return product;
-  }
-  if (!pick(product => /زنبق السلام/.test(product.name))) pick(product => /زاميا|دراسينا|فيكس/.test(product.name));
-  if (!pick(product => /مونستيرا/.test(product.name))) pick(() => true);
-  pick(product => /هدايا|أهدي|بونساي|انتوريوم|صبار/.test(`${product.category} ${product.name}`));
-  for (const candidate of eligible) { if (chosen.length === 3) break; pick(product => product.id === candidate.id); }
-  return chosen;
-}
-
-export function TogetherHero({ products, onSelect }: { products: StandaloneMenuProduct[]; onSelect: (product: StandaloneMenuProduct) => void }) {
-  const reduce = useReducedMotion();
-  const root = useRef<HTMLElement>(null);
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [inView, setInView] = useState(false);
-  const visible = useSyncExternalStore(subscribeVisibility, () => !document.hidden, () => true);
-  const current = index % Math.max(products.length, 1);
-  const product = products[current];
-  const identity = products.map(item => item.id).join("|");
-  const playing = !reduce && !paused && !hovered && !focused && inView && visible;
-  useEffect(() => {
-    const node = root.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: .2 });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!playing || products.length < 2) return;
-    const timer = window.setInterval(() => { if (!document.hidden) setIndex(value => (value + 1) % products.length); }, 6000);
-    return () => window.clearInterval(timer);
-  }, [playing, products.length, identity]);
-  return <section ref={root} className={s.gardenHero} data-together-hero="signature-garden-v4" id="together-top" aria-labelledby="together-title" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
-    <div className={s.gardenAtmosphere} aria-hidden="true"><picture><source media="(max-width: 700px)" srcSet="/together/hero-mobile.webp" /><StorePhoto src="/together/hero.webp" alt="" eager /></picture><span /><span /></div>
-    <span className={s.heroWord} dir="ltr" aria-hidden="true">Together</span>
-    <div className={s.gardenCopy}><p className={s.eyebrow}><Sprout aria-hidden="true" />من عسير إلى قلبك</p><h1 id="together-title"><motion.span initial={false} whileInView={reduce ? undefined : { opacity: [.4, 1], y: [24, 0] }} viewport={{ once: true }} transition={{ duration: .8 }}>أهدِ حبًّا</motion.span><motion.em initial={false} whileInView={reduce ? undefined : { opacity: [.4, 1], y: [30, 0] }} viewport={{ once: true }} transition={{ duration: .9, delay: .15 }}>ينمو</motion.em></h1><p className={s.gardenPromise}>مع كل يوم</p><p className={s.gardenDescription}>لأن بعض الهدايا تعيش<br />وتفتح في يومك حياة</p><div className={s.gardenActions}><a className={s.lightButton} href="#together-products">اختر هديتك الحيّة<ArrowDownLeft aria-hidden="true" /></a><span dir="ltr">A LITTLE GREEN<br />A LOT OF LIFE</span></div></div>
-    <motion.div className={s.plantStage} initial={false} whileInView={reduce ? undefined : { opacity: [.45, 1], y: [28, 0], rotate: [-2, 0] }} viewport={{ once: true, amount: .15 }} transition={{ duration: 1.1, ease: [.22, 1, .36, 1] }}>
-      <span className={s.orbitLabel} dir="ltr" aria-hidden="true">LIVING GIFTS / TOGETHER PLANTS</span><span className={s.plantOrbit} aria-hidden="true" /><span className={s.botanicalNote} aria-hidden="true"><Leaf /><span>قليل من الأخضر<br /><strong>كثير من الحياة</strong></span></span>
-      <div className={s.plantPortal}>
-        <span className={s.portalEyebrow}>نباتات حقيقية لحياة أجمل</span>
-        <AnimatePresence initial={false} mode="sync">{product && <motion.button key={product.id} className={s.portalProduct} type="button" aria-label={`اكتشف ${product.name}`} onClick={() => onSelect(product)} initial={reduce ? false : { opacity: 0, scale: .94, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, scale: 1.04 }} transition={{ duration: reduce ? 0 : .8, ease: [.22, 1, .36, 1] }}><StorePhoto src={product.images[0]?.url} alt={product.name} eager /><span className={s.portalOpen}><ArrowUpLeft aria-hidden="true" /></span></motion.button>}</AnimatePresence>
-        {!product && <div className={s.portalEmpty}><Sprout aria-hidden="true" /><span>كل غرسة بداية حلوة</span></div>}
-        <span className={s.portalFloor} aria-hidden="true" />
-      </div>
-      {product && <div className={s.plantCaption} aria-live={playing ? "off" : "polite"}><div><small>اختيار ينمو معك</small><strong>{product.name}</strong></div><StoreMoney amount={productMinimumPrice(product)} /></div>}
-      {products.length > 1 && <div className={s.gardenControls}><nav className={s.gardenThumbs} aria-label="اختر غرسة الافتتاحية">{products.map((item, itemIndex) => <button type="button" key={item.id} aria-label={`عرض ${item.name}`} aria-pressed={current === itemIndex} onClick={() => { setPaused(true); setIndex(itemIndex); }}><StorePhoto src={item.images[0]?.url} alt="" /><span>{String(itemIndex + 1).padStart(2, "0")}</span></button>)}</nav>{!reduce && <button className={s.gardenPause} type="button" aria-label={paused ? "تشغيل تبديل الغراس" : "إيقاف تبديل الغراس"} aria-pressed={!paused} onClick={() => setPaused(value => !value)}>{paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}</button>}</div>}
-    </motion.div>
-    <div className={s.gardenSignature}><Leaf aria-hidden="true" /><span>هدية تبقى وتكبر</span><span dir="ltr">TOGETHER WE GROW</span></div>
+export function TogetherHero({ loyaltyEnabled = false }: { loyaltyEnabled?: boolean }) {
+  return <section className={s.canopyHero} data-together-hero="immersive-canopy-v6" id="together-top" aria-labelledby="together-title">
+    <div className={s.canopyContent}>
+      <TogetherBrandMark className={s.canopyMark} />
+      <h1 id="together-title" className={s.canopyTitle}>أهدِ حبًّا <em>ينمو</em></h1>
+      <p className={s.canopyDescription}>غراس وهدايا تنمو معها الحكايات</p>
+      <div className={s.canopyActions}><a className={s.canopyCta} href="#together-products">اكتشف الغراس والهدايا<ArrowDownLeft aria-hidden="true" /></a>{loyaltyEnabled && <a className={s.canopyLoyalty} href="#together-loyalty"><Gift aria-hidden="true" />الولاء والمكافآت<ArrowDownLeft aria-hidden="true" /></a>}</div>
+    </div>
+    <div className={s.canopySignature}><span dir="ltr">PLANTS & PEOPLE THRIVE</span><span>من عسير إلى قلبك</span></div>
   </section>;
 }
 
@@ -165,7 +119,6 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
   const categories = menu.categories.filter(c => menu.products.some(p => p.categoryId === c.id && (kind === "all" || (p.catalogKind ?? "product") === kind)));
   const collections = ["أصدقاء الظل", "غابات", "أهد"].flatMap(text => { const c = menu.categories.find(item => item.name.includes(text)); const p = menu.products.find(item => item.categoryId === c?.id && item.images.length); return c && p ? [{ category: c, product: p }] : []; });
   const service = menu.products.find(p => p.commerceDetails?.quoteOnly);
-  const heroProducts = selectHeroPlants(menu.products);
   function browse(nextKind = "all", nextCategory = "all") { setKind(nextKind); setCategory(nextCategory); setQuery(""); setLimit(24); document.getElementById("together-products")?.scrollIntoView({ block: "start", behavior: reduce ? "instant" : "smooth" }); }
   function add(product: StandaloneMenuProduct, line: Omit<GiftCartLine, "key" | "productId">) {
     const existingQuote = lines.some(item => menu.products.find(p => p.id === item.productId)?.commerceDetails?.quoteOnly);
@@ -177,15 +130,17 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
   }
   function received(value: GiftOrderReceipt) { setReceipt(value); setTracking(value.trackingToken); setLastToken(value.trackingToken); setCheckout(false); }
   const brandLogo = menu.logoUrl || "/together/logo.webp";
-  return <main className={s.store} dir="rtl" data-together-store="signature-garden-v4">
+  return <main className={s.store} dir="rtl" data-together-store="immersive-canopy-v6">
     <a className={s.skipLink} href="#together-products">انتقل إلى المنتجات والخدمات</a>
-    <div className={s.topline}><Sprout aria-hidden="true" /><span>معًا نزرع حياة</span><span dir="ltr">PLANTS & PEOPLE THRIVE</span></div>
-    <header className={s.header}>
-      <a href="#together-top" className={s.wordmark} aria-label="Together Plants الرئيسية"><span className={s.headerEmblem}><StorePhoto src="/together/logo.webp" alt="شعار توقذر بلانتس" eager /></span><span className={s.brandName}><b dir="ltr">Together Plants</b><small>معًا للنباتات</small></span></a>
-      <nav className={s.desktopNav} aria-label="أقسام المتجر"><a href="#together-products" onClick={() => browse()}>غراسنا</a><button onClick={() => browse("service")}>خدمات وتجارب</button>{loyalty && <a href="#together-loyalty">رفاق الطبيعة</a>}{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}</nav>
-      <div className={s.headerActions}><button className={s.iconButton} aria-label="البحث في المنتجات" onClick={() => { search.current?.scrollIntoView({ block: "center" }); search.current?.focus({ preventScroll: true }); }}><Search /></button><button className={s.cartButton} aria-label={`السلة ${count} أصناف`} onClick={() => setCheckout(true)}><ShoppingBag /><span className={s.cartCount}>{count}</span></button></div>
-    </header>
-    <TogetherHero products={heroProducts} onSelect={setSelected} />
+    <div className={s.immersiveOpening}>
+      <div className={s.canopyBackdrop} aria-hidden="true"><picture><source media="(max-width: 760px)" srcSet="/together/immersive-garden-mobile.webp" /><StorePhoto src="/together/immersive-garden.webp" alt="" eager /></picture></div>
+      <header className={s.canopyHeader}>
+        <a href="#together-top" className={s.canopyHeaderSignature}><Sprout aria-hidden="true" /><span>معًا نزرع حياة</span></a>
+        <nav className={s.canopyNav} aria-label="أقسام المتجر"><a href="#together-products" onClick={() => browse()}>الغراس والهدايا</a><button onClick={() => browse("service")}>خدمات وتجارب</button>{loyalty && <a href="#together-loyalty">الولاء والمكافآت</a>}{lastToken && <button onClick={() => setTracking(lastToken)}>متابعة طلبي</button>}</nav>
+        <div className={s.canopyHeaderActions}><button aria-label="البحث في المنتجات" onClick={() => { search.current?.scrollIntoView({ block: "center" }); search.current?.focus({ preventScroll: true }); }}><Search /></button><button className={s.canopyCart} aria-label={`السلة ${count} أصناف`} onClick={() => setCheckout(true)}><ShoppingBag /><span>{count}</span></button></div>
+      </header>
+      <TogetherHero loyaltyEnabled={menu.loyaltyEnabled && Boolean(loyalty)} />
+    </div>
     {menu.loyaltyEnabled && loyalty && <section className={s.loyalty} id="together-loyalty" aria-labelledby="together-loyalty-title" data-loyalty-design="signature-card">
       <div className={s.loyaltyInvitation}><p className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</p><h2 id="together-loyalty-title">غراس منك <em>ومكافآت لك</em></h2><p>اجمع <strong>{loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام</strong> واحصل على <strong>{loyalty.rewardName}</strong></p></div>
       <Link className={s.loyaltyCard} href={`/loyalty/${menu.slug}?source=menu`} aria-label="بطاقة ولاء Together Plants">

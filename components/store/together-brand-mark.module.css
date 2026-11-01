@@ -1,0 +1,2 @@
+.mark { position: relative; display: block; width: var(--together-mark-width,min(270px,70vw)); aspect-ratio: 530 / 510; overflow: hidden; flex-shrink: 0; mix-blend-mode: screen; }
+.art { position: absolute; width: 188.679245%; max-width: none; height: auto; left: -49.056604%; top: -40.588235%; filter: grayscale(1) invert(1) brightness(1.8); }

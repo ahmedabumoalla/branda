@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { TogetherBrandMark } from "@/components/store/together-brand-mark";
 import styles from "./together-store-loading.module.css";
 
 /** The real storefront replaces this Suspense fallback as soon as it is ready. */
@@ -7,12 +7,7 @@ export function TogetherStoreLoading() {
     <div className={styles.light} aria-hidden="true" />
     <div className={styles.botanical} aria-hidden="true"><span /><span /><span /></div>
     <div className={styles.content}>
-      <div className={styles.emblem}>
-        <div className={styles.logoWindow}><Image src="/together/logo.webp" alt="شعار توقذر بلانتس" width={1000} height={983} preload unoptimized className={styles.logo} /></div>
-        <span className={styles.leaf} aria-hidden="true" />
-        <span className={styles.leafSmall} aria-hidden="true" />
-      </div>
-      <p className={styles.wordmark} dir="ltr">Together <em>Plants</em></p>
+      <TogetherBrandMark className={styles.completeMark} />
       <h1 className={styles.title}>كل بداية<br /><span>تنبت حكاية</span></h1>
       <div className={styles.track} role="progressbar" aria-label="تحميل متجر توقذر بلانتس"><span /></div>
       <p className={styles.status} role="status">نفتح لك عالم الغراس والهدايا</p>
