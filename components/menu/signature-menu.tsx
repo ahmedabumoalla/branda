@@ -20,7 +20,8 @@ import s from "./signature-menu.module.css";
 type Loyalty = { purchasesRequired: number; rewardName: string };
 
 export function SignatureMark({ brand, src, small = false }: { brand: SignatureBrand; src?: string | null; small?: boolean }) {
-  return <span className={s.mark} data-mark={brand.key} data-small={small}>
+  const cutout = (brand.key === "once" || brand.key === "black") && (!src || src === signatureAsset(brand.logo));
+  return <span className={s.mark} data-mark={brand.key} data-small={small} data-cutout={cutout}>
     <Image src={src || signatureAsset(brand.logo)} alt={brand.name} width={800} height={500} unoptimized loading="eager" />
   </span>;
 }

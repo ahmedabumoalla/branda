@@ -86,6 +86,25 @@ async function main() {
     check(html.includes(`/loyalty/${slug}?source=menu`), 'Loyalty destination remains tenant scoped');
     const loading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
     check(loading.includes(signatureAsset(brand.logo)) && loading.includes('aria-busy="true"') && loading.includes('role="status"'), 'Loading has correct logo and accessible status');
+    if (brand.key === 'once' || brand.key === 'black') {
+      check(loading.includes('data-cutout="true"') && html.includes('data-cutout="true"'), 'Transparent loading and fallback marks use uncropped normal compositing');
+      const actual = render({ menu: { ...menu, slug, name: brand.name, logoUrl: signatureAsset(brand.logo) }, brand });
+      check(actual.includes('data-cutout="true"'), 'Reviewed menu logo uses the same alpha layout');
+      const owner = render({ menu: { ...menu, slug, name: brand.name, logoUrl: '/new-owner-logo.webp' }, brand });
+      check(owner.includes('/new-owner-logo.webp') && !owner.includes('data-cutout="true"'), 'Future owner logo retains its own layout');
+      const sharp = require('sharp');
+      const { data, info } = await sharp(path.join(root, 'public', signatureAsset(brand.logo))).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      let transparent = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] < 10) transparent++;
+      check(transparent > info.width * info.height * .3, 'Deployed logo has genuine alpha, not a painted square');
+      const id = brand.key === 'once' ? 'a3c65c66-d5de-41e2-a2c7-0cc451a92bf3' : '6d01bd09-c7e0-4307-8cfb-93171d69d9db';
+      const sql = fs.readFileSync(path.join(root, 'supabase/migrations/20261101231912_four_brand_catalog_identity.sql'), 'utf8');
+      const originalPath = sql.match(new RegExp(id + '/identity/four-brands-20261102-logo-[a-f0-9]+\\.webp'))[0];
+      const { standaloneLogoVariant } = load('lib/menu/logo-variants.ts');
+      equal(standaloneLogoVariant(id, originalPath), signatureAsset(brand.logo), 'Exact reviewed owner source resolves to the alpha asset');
+      equal(standaloneLogoVariant(id, id + '/new-logo.webp'), null, 'New owner upload is never overridden');
+      equal(standaloneLogoVariant('another-brand', originalPath), null, 'Other brands cannot inherit this logo');
+    }
   }
   let html = render();
   const unchanged = JSON.stringify(menu);

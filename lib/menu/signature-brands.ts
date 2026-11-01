@@ -12,5 +12,6 @@ export function signatureBrand(slug: string): SignatureBrand | null {
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (name === "once-logo" || name === "black-drop-logo") return `/menu-art/four-brands/${name}-transparent-v1.webp`;
   return `/menu-art/four-brands/${name}${mobile ? "-mobile" : ""}-v1.webp`;
 }

@@ -41,6 +41,7 @@
 .mark[data-mark="once"] { height: 180px; width: 180px; }
 .mark[data-mark="box"] { width: clamp(255px, 29vw, 380px); height: 140px; }
 .mark[data-mark="box"] img { filter: none; mix-blend-mode: normal; }
+.mark[data-cutout="true"] img { width: 100%; height: 100%; position: static; transform: none; filter: brightness(0) invert(1); mix-blend-mode: normal; }
 .signature { color: var(--accent); font: 500 10px/1.6 "Bistro Sans", sans-serif; letter-spacing: .2em; margin: 14px 0 22px; }
 .heroCenter h1 { font: 700 clamp(32px,4vw,62px)/1.25 "Bistro Arabic",sans-serif; margin: 0; letter-spacing: -.025em; text-wrap: balance; }
 .heroCenter h1 em { font-style: normal; color: var(--accent); margin-inline-start: .25em; }

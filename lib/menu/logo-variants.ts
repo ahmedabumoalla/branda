@@ -13,5 +13,11 @@ export function standaloneLogoVariant(cafeId: string, source: string | null | un
   if (cafeId === "83b37bcd-353a-43e2-aa1a-735ba21d65ed" && sourceHash === "eb956eed75ca3171143ce1f8fc41001388f755b43f3c585593d913e21780e45c") {
     return "/menu-logos/shahi-transparent-v2.webp";
   }
+  if (cafeId === "6d01bd09-c7e0-4307-8cfb-93171d69d9db" && sourceHash === "0074baecad475041f15575dabcc9d4b91098fadde96dbeeaabcb8487de5b5e03") {
+    return "/menu-art/four-brands/black-drop-logo-transparent-v1.webp";
+  }
+  if (cafeId === "a3c65c66-d5de-41e2-a2c7-0cc451a92bf3" && sourceHash === "c650dbcf146aa2114bc95be03f601ca7f84bb83dd15df683b7e7c92eb590fbc7") {
+    return "/menu-art/four-brands/once-logo-transparent-v1.webp";
+  }
   return null;
 }
