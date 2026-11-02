@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Flame, Gift, Pause, Play, Search, Share2, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Flame, Gift, Pause, Play, Search, Share2, UtensilsCrossed, WalletCards } from "lucide-react";
 import { signatureAsset, type SignatureBrand } from "@/lib/menu/signature-brands";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
@@ -18,6 +18,10 @@ import base from "./bistro-menu.module.css";
 import s from "./signature-menu.module.css";
 
 type Loyalty = { purchasesRequired: number; rewardName: string };
+
+function photoDisclosure(brand: SignatureBrand, product: StandaloneMenuProduct) {
+  return brand.key === "hadiqa" && product.description?.includes("صورة توضيحية") && product.images.length > 0 ? "صورة توضيحية" : undefined;
+}
 
 export function SignatureMark({ brand, src, small = false }: { brand: SignatureBrand; src?: string | null; small?: boolean }) {
   const cutout = (brand.key === "once" || brand.key === "black") && (!src || src === signatureAsset(brand.logo));
@@ -97,7 +101,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const selected = menu.products.find(p => p.id === selectedId);
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
   const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const Stamp = brand.key === "box" ? Flame : Coffee;
+  const Stamp = brand.key === "box" ? Flame : brand.key === "hadiqa" ? UtensilsCrossed : Coffee;
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
   async function share() {
@@ -119,11 +123,11 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
     <section id="signature-catalog" className={s.catalog} aria-labelledby="signature-catalog-title"><div className={s.heading}><div><span className={s.eyebrow}>منيو {brand.arabic}</span><h2 id="signature-catalog-title">{brand.catalog}</h2></div><span className={s.catalogCount}>{menu.products.length}<small>اختيارًا</small></span></div>
       <div className={s.toolbar}><nav className={s.categories} aria-label="تصنيفات المنيو">{[{ id: "all", name: "الكل" }, ...categories].map(c => <button type="button" key={c.id} aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{menuDisplayText(c.name)}</button>)}</nav><div className={s.filters}><label className={s.search}><Search aria-hidden="true" /><input ref={search} type="search" aria-label={`ابحث في منيو ${brand.arabic}`} placeholder="وش خاطرك فيه؟" value={query} onChange={e => setQuery(e.target.value)} /></label><label className={s.order}><span className={base.screenReaderOnly}>ترتيب المنتجات</span><select value={order} onChange={e => setOrder(e.target.value)}><option value="original">ترتيب المنيو</option><option value="low">الأقل سعرًا</option><option value="high">الأعلى سعرًا</option></select></label></div></div>
       <p className={query ? s.results : base.screenReaderOnly} role="status">{visible.length} صنفًا{query && " يطابق بحثك"}</p>
-      {sections.map(section => <section key={section.id} className={s.category} aria-labelledby={`section-${section.id}`}><div className={s.categoryTitle}><h3 id={`section-${section.id}`}>{menuDisplayText(section.name)}</h3><span>{section.items.length} اختيارات</span></div><div className={s.grid}>{section.items.map(p => <motion.article className={s.product} key={p.id} initial={false} whileInView={reduce ? undefined : { y: [12, 0] }} viewport={{ once: true, amount: .1 }} transition={{ duration: .45 }}><button type="button" onClick={() => setSelectedId(p.id)} aria-label={`تفاصيل ${p.name}`}><span className={s.productPhoto}><Photo src={p.images[0]?.url} alt={p.name} /><span className={s.productArrow}><ArrowUpLeft aria-hidden="true" /></span></span><span className={s.productInfo}><strong dir="auto">{menuDisplayText(p.name)}</strong><Price product={p} /></span></button></motion.article>)}</div></section>)}
+      {sections.map(section => <section key={section.id} className={s.category} aria-labelledby={`section-${section.id}`}><div className={s.categoryTitle}><h3 id={`section-${section.id}`}>{menuDisplayText(section.name)}</h3><span>{section.items.length} اختيارات</span></div><div className={s.grid}>{section.items.map(p => <motion.article className={s.product} key={p.id} initial={false} whileInView={reduce ? undefined : { y: [12, 0] }} viewport={{ once: true, amount: .1 }} transition={{ duration: .45 }}><button type="button" onClick={() => setSelectedId(p.id)} aria-label={`تفاصيل ${p.name}`}><span className={s.productPhoto}><Photo src={p.images[0]?.url} alt={p.name} />{photoDisclosure(brand, p) && <span data-photo-disclosure>{photoDisclosure(brand, p)}</span>}<span className={s.productArrow}><ArrowUpLeft aria-hidden="true" /></span></span><span className={s.productInfo}><strong dir="auto">{menuDisplayText(p.name)}</strong><Price product={p} /></span></button></motion.article>)}</div></section>)}
       {!visible.length && <div className={s.empty}><Search aria-hidden="true" /><h3>{menu.products.length ? "ما لقينا هذا الاختيار" : "اختياراتنا تتجهّز لك"}</h3>{menu.products.length > 0 && <button type="button" className={s.loyaltyAction} onClick={() => { setQuery(""); setCategory("all"); }}>عرض كل المنتجات</button>}</div>}
     </section>
     <footer className={s.footer}><SignatureMark brand={brand} src={menu.logoUrl} small /><p>{brand.note}</p><a href="#signature-top">نرجع للبداية<ArrowUpLeft aria-hidden="true" /></a><Link href="/" className={s.powered}>بواسطة برندة</Link></footer>
     {message && <div className={base.toast} role="status"><Check aria-hidden="true" />{message}</div>}
-    <AnimatePresence>{selected && <ProductDetails brandCaption={brand.signature} key={selected.id} brandSlug={menu.slug} product={selected} products={menu.products} close={() => setSelectedId(null)} browse={browse} position={browsing.findIndex(p => p.id === selected.id)} total={browsing.length} />}</AnimatePresence>
+    <AnimatePresence>{selected && <ProductDetails imageDisclosure={photoDisclosure(brand, selected)} brandCaption={brand.signature} key={selected.id} brandSlug={menu.slug} product={selected} products={menu.products} close={() => setSelectedId(null)} browse={browse} position={browsing.findIndex(p => p.id === selected.id)} total={browsing.length} />}</AnimatePresence>
   </main>;
 }

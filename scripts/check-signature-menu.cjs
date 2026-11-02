@@ -76,7 +76,7 @@ function hooks() {
 }
 
 async function main() {
-  equal(Object.keys(signatureBrands).length, 5, 'Only the five requested identities receive this presentation');
+  equal(Object.keys(signatureBrands).length, 6, 'Only the six requested identities receive this presentation');
   for (const unknown of ['rast', 'black-drop', 'once', 'box-bbq', 'brand-871ec6e243c0', '__proto__', 'constructor']) equal(signatureBrand(unknown), null, 'Unrelated and inherited object names do not select a brand');
   for (const [slug, brand] of Object.entries(signatureBrands)) {
     const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: null }, brand });
@@ -107,6 +107,21 @@ async function main() {
     }
   }
   let html = render();
+  const garden = signatureBrand('brand-dcf7296f722c');
+  equal(garden.key, 'hadiqa', 'Alhadiqa identity is selected by its exact tenant slug');
+  equal(signatureAsset(garden.logo), '/menu-art/hadiqa/hadiqa-logo-v1.webp', 'Alhadiqa retains its separate original logo asset');
+  equal(signatureAsset(garden.hero, true), '/menu-art/hadiqa/hadiqa-hero-mobile-v1.webp', 'Alhadiqa supplies dedicated mobile art');
+  const gardenHtml = render({ brand: garden, menu: { ...menu, slug: 'brand-dcf7296f722c', name: garden.name, logoUrl: null } });
+  check(gardenHtml.includes('lucide-utensils-crossed') && !gardenHtml.includes('lucide-coffee'), 'Restaurant loyalty uses dining stamps instead of cafe cups');
+  check(gardenHtml.includes('من مطبخ الحديقة') && gardenHtml.includes('٦ أختام'), 'Restaurant catalog and actual configured loyalty are rendered together');
+  check(!render({ brand: garden, loyalty: null }).includes('id="signature-loyalty"'), 'Alhadiqa does not invent a program when server loyalty is disabled');
+  const illustratedProduct = { ...product, description: 'صورة توضيحية للصنف' };
+  const illustratedMenu = { ...menu, slug: 'brand-dcf7296f722c', products: [illustratedProduct, { ...product, id: 'original', name: 'صورة أصلية' }] };
+  const illustratedHtml = render({ brand: garden, menu: illustratedMenu });
+  equal((illustratedHtml.match(/data-photo-disclosure/g) || []).length, 1, 'Only the labelled generated Alhadiqa photo receives a disclosure badge');
+  check(!gardenHtml.includes('data-photo-disclosure'), 'Original Alhadiqa product photos stay unlabelled');
+  check(!render({ menu: illustratedMenu }).includes('data-photo-disclosure'), 'Disclosure handling does not alter other signature brands');
+  check(!render({ brand: garden, menu: { ...illustratedMenu, products: [{ ...illustratedProduct, images: [] }] } }).includes('data-photo-disclosure'), 'Missing images do not receive a photo badge');
   const unchanged = JSON.stringify(menu);
   check(html.includes('/original-rast.webp'), 'Uploaded owner logo is respected');
   check(!html.includes('UNAVAILABLE PRODUCT') && !html.includes('UNAVAILABLE CHOICE') && !html.includes('EXPIRED CHOICE') && !html.includes('CONCEALED CHOICE'), 'Unavailable and expired content stays out of public menu');
@@ -126,6 +141,14 @@ async function main() {
   const h = hooks();
   const Interactive = load('components/menu/signature-menu.tsx', { ...mocks, react: h.api }).SignatureMenu;
   const draw = input => h.draw(Interactive, { ...props, ...input });
+  let disclosureTree = draw({ brand: garden, menu: illustratedMenu });
+  nodes(disclosureTree).find(n => n.props?.['aria-label'] === 'تفاصيل أمريكانو').props.onClick();
+  disclosureTree = draw({ brand: garden, menu: illustratedMenu });
+  equal(nodes(disclosureTree).find(n => n.type === Details).props.imageDisclosure, 'صورة توضيحية', 'Generated image disclosure follows the selected product into its dialog');
+  nodes(disclosureTree).find(n => n.props?.['aria-label'] === 'تفاصيل صورة أصلية').props.onClick();
+  disclosureTree = draw({ brand: garden, menu: illustratedMenu });
+  equal(nodes(disclosureTree).find(n => n.type === Details).props.imageDisclosure, undefined, 'Switching to an original image clears the dialog disclosure');
+  h.reset();
   let tree = draw();
   const articles = tree => nodes(tree).filter(n => n.type === 'article' && n.props.className === 'product');
   equal(articles(tree).length, 2, 'Only available product cards rendered');

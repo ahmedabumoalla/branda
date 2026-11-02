@@ -180,4 +180,67 @@
 }
 @media (max-width: 360px) { .menu { --gutter: 16px; }.loyalty { padding: 20px 16px; gap: 12px; }.loyaltyCopy h2 { font-size: 16px; }.cardTop b { font-size: 11px; }.cardReward { flex-wrap: wrap; }.featureCopy { padding: 15px 10px; }.featureCopy h3 { font-size: 20px; }.featureCopy p { font-size: 10px; }.heroCenter h1 { font-size: 31px; }.heroCenter h1 em { font-size: 40px; } }
 @media (max-height: 700px) and (max-width: 640px) { .hero { min-height: 100svh; }.heroCenter { padding-block: 14px; }.heroCenter .mark[data-mark="black"] { height: 125px; }.heroCenter .mark[data-mark="once"] { height: 112px; width: 112px; }.heroCenter .mark[data-mark="rast"] { height: 75px; }.heroCenter .mark[data-mark="box"] { height: 85px; }.signature { margin: 7px 0 12px; }.heroCenter h1 { font-size: 29px; }.heroCenter h1 em { font-size: 38px; }.heroCenter > p { margin: 8px 0 14px; }.heroBottom { padding-block: 4px; } }
+/* Alhadiqa: a navy dining room with warm brass details and uncropped original identity */
+.menu[data-signature="hadiqa"] {
+  --brand: #101b2e; --tone: #d6ad63; --accent: #f0cc84; --surface: #101927;
+  --text: #fbf3e4; --muted: #c5bdad; --edge: #d6ad6336; --white: #fff8e9; --panel: #1c293c;
+  color-scheme: dark;
+  background: radial-gradient(ellipse at 90% 25%, #28334755, transparent 50%), var(--surface);
+}
+.menu[data-signature="hadiqa"] :is(button, a, input, select):focus-visible { outline-color: var(--accent); }
+.menu[data-signature="hadiqa"] .hero { min-height: min(680px, 91svh); }
+.menu[data-signature="hadiqa"] .hero::after { content: ""; position: absolute; inset: 88px 16px 14px; border: 1px solid #e4c78530; border-radius: 160px 160px 12px 12px; pointer-events: none; }
+.menu[data-signature="hadiqa"] .backdrop img { object-position: center 65%; }
+.menu[data-signature="hadiqa"] .heroShade { background: linear-gradient(180deg, #081322e8 0%, #0a1624c7 24%, #101b2e99 55%, #101927ed 100%); }
+.menu[data-signature="hadiqa"] .heroCenter { padding-block: 24px; }
+.mark[data-mark="hadiqa"] { width: clamp(260px, 32vw, 390px); height: clamp(135px, 15vw, 185px); }
+.mark[data-mark="hadiqa"] img { filter: none; mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="hadiqa"] .signature { margin: 5px 0 20px; letter-spacing: .3em; }
+.menu[data-signature="hadiqa"] .heroCenter h1 { font-size: clamp(32px, 3.8vw, 52px); }
+.menu[data-signature="hadiqa"] .heroCenter h1 em { display: block; margin: 4px 0 0; font-size: inherit; }
+.menu[data-signature="hadiqa"] .heroCenter > p { color: #efe5d2; margin: 12px 0 20px; }
+.menu[data-signature="hadiqa"] .primary { background: linear-gradient(115deg, #e9be70, #f4dca8); border: 1px solid #ffe5b7; }
+.menu[data-signature="hadiqa"] .heroLoyalty { background: #0a1428ab; }
+.menu[data-signature="hadiqa"] .heroBottom { color: #edddbd; padding-block: 12px; }
+.menu[data-signature="hadiqa"] .loyalty { padding-block: 24px; }
+.menu[data-signature="hadiqa"] .loyaltyCard { background: linear-gradient(130deg, #243652, #111d30 70%); border: 1px solid #d6ad6366; box-shadow: inset 0 1px #ffe3a12b, 0 14px 32px #0002; }
+.menu[data-signature="hadiqa"] .cardTop b { font-family: "Bistro Arabic", sans-serif; color: var(--accent); }
+.menu[data-signature="hadiqa"] .loyaltyAction { color: var(--brand); background: var(--accent); }
+.menu[data-signature="hadiqa"] .feature { border: 1px solid var(--edge); background: linear-gradient(125deg, #283850, #142137); border-radius: 16px; }
+.menu[data-signature="hadiqa"] .featurePhoto { background: #ebe4d8; }
+.menu[data-signature="hadiqa"] .dots button[aria-pressed="true"] span { background: var(--accent); }
+.menu[data-signature="hadiqa"] .categories button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--brand); }
+.menu[data-signature="hadiqa"] :is(.search, .order select) { background: #1b2739; }
+.menu[data-signature="hadiqa"] .product { background: #172336; border: 1px solid #d6ad632b; border-radius: 18px; padding: 8px 8px 18px; box-shadow: 0 8px 24px #00000010; }
+.menu[data-signature="hadiqa"] .productPhoto { background: #eee7dc; border-radius: 12px; }
+.menu[data-signature="hadiqa"] .productInfo { padding-inline: 8px; }
+.menu[data-signature="hadiqa"] .productInfo .price { color: var(--accent); }
+.menu[data-signature="hadiqa"] .productArrow { background: var(--accent); color: var(--brand); border: 0; }
+.menu[data-signature="hadiqa"] [data-photo-disclosure] { position: absolute; inset-block-start: 9px; inset-inline-start: 9px; max-width: calc(100% - 18px); padding: 5px 9px; border: 1px solid #eed4a255; border-radius: 20px; background: #101b2ef2; color: #fff8e9; font-size: 10px; line-height: 1.6; font-weight: 500; pointer-events: none; }
+.menu[data-signature="hadiqa"] .footer { border-top: 1px solid var(--edge); background: #0b1422; }
+.menu[data-signature="hadiqa"] .mark[data-small="true"] { width: 180px; height: 92px; }
+.menu[data-signature="hadiqa"].loading { background: radial-gradient(ellipse at 50% 30%, #324059, #101b2e 65%); }
+.menu[data-signature="hadiqa"].loading::before { inset: 20px; border: 1px solid #d6ad633b; border-radius: 180px 180px 12px 12px; background: none; }
+@media (max-width: 640px) {
+  .menu[data-signature="hadiqa"] .hero { min-height: min(640px, 91svh); }
+  .menu[data-signature="hadiqa"] .heroCenter { padding: 20px 22px; }
+  .menu[data-signature="hadiqa"] .mark { width: min(300px, 85vw); height: 142px; }
+  .menu[data-signature="hadiqa"] .signature { margin: 4px 0 16px; font-size: 8px; }
+  .menu[data-signature="hadiqa"] .heroCenter h1 { font-size: 33px; }
+  .menu[data-signature="hadiqa"] .heroCenter > p { font-size: 13px; }
+  .menu[data-signature="hadiqa"] .loyalty { gap: 14px; padding-block: 20px; }
+  .menu[data-signature="hadiqa"] .loyaltyCard { gap: 15px; }
+  .menu[data-signature="hadiqa"] .loyaltyCopy h2 { font-size: 18px; }
+  .menu[data-signature="hadiqa"] .product { padding: 5px 5px 14px; border-radius: 15px; }
+  .menu[data-signature="hadiqa"] .productInfo { padding-inline: 5px; }
+  .menu[data-signature="hadiqa"] .grid { gap: 14px 12px; }
+  .menu[data-signature="hadiqa"] .heading h2 { font-size: 27px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu[data-signature="hadiqa"] .heroCenter { padding-block: 10px; }
+  .menu[data-signature="hadiqa"] .heroCenter .mark { height: 110px; }
+  .menu[data-signature="hadiqa"] .heroCenter h1 { font-size: 28px; }
+  .menu[data-signature="hadiqa"] .heroCenter > p { margin: 8px 0 12px; }
+  .menu[data-signature="hadiqa"] .heroBottom { padding-block: 4px; }
+}
 @media (prefers-reduced-motion: reduce) { .menu *, .loading * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }.backdrop img { transform: none; }.lightSweep { display: none; }.loadingLine::after { width: 100%; transform: none; } }

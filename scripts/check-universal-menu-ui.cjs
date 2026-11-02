@@ -32,7 +32,12 @@ html=services(enabled,'offers');assert(html.includes('Active offer')&&html.inclu
 html=services({...enabled,highlights:{asOf:Date.now(),items:[{...active,expiresAt:1}]}},'offers');assert(!html.includes('Active offer'));assert(html.includes('لا توجد عروض سارية'));
 html=services({...enabled,highlights:{asOf:Date.now(),items:[{...active,kind:'event',discountPercent:null,eventDate:'2026-12-01',eventTime:'19:30',eventLocation:'Own branch'}]}},'offers');assert(html.includes('Own branch')&&html.includes('2026-12-01')&&html.includes('19:30'));
 forcedPanel=null;
-const {BistroMenu}=load('components/menu/bistro-menu.tsx');
+const {BistroMenu, ProductDetails}=load('components/menu/bistro-menu.tsx');
+const disclosureProduct = {...product, images:[{url:'https://images.test/illustrated.webp',alt:'Illustrated dish'}]};
+const detailProps = {product:disclosureProduct,products:[disclosureProduct],close(){},browse(){},position:0,total:1};
+assert(renderToStaticMarkup(React.createElement(ProductDetails,{...detailProps,imageDisclosure:'صورة توضيحية'})).includes('data-photo-disclosure'),'Photo disclosure is visible in the actual product dialog');
+assert(!renderToStaticMarkup(React.createElement(ProductDetails,detailProps)).includes('data-photo-disclosure'),'Existing dialogs remain unchanged without explicit photo disclosure');
+assert(!renderToStaticMarkup(React.createElement(ProductDetails,{...detailProps,imageDisclosure:'صورة توضيحية',product:{...disclosureProduct,primaryMediaType:'video',videos:[{url:'https://images.test/video.mp4',alt:'Video'}]}})).includes('data-photo-disclosure'),'Photo disclosure is not applied to video frames');
 const render=menu=>{hook=0;return renderToStaticMarkup(React.createElement(BistroMenu,{menu}));};
 const coverVideo = 'https://images.test/owner-selected-video.mp4';
 const mixedMedia = {...product, images:[{url:'https://images.test/owner-cover.webp',alt:'Cover'}], videos:[{url:coverVideo,alt:'Video'}]};

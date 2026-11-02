@@ -128,7 +128,7 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-export function ProductDetails({ product, products, close, browse, position, total, brandSlug, brandCaption }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string; brandCaption?: string }) {
+export function ProductDetails({ product, products, close, browse, position, total, brandSlug, brandCaption, imageDisclosure }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string; brandCaption?: string; imageDisclosure?: string }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [mediaIndex, setMediaIndex] = useState(!product.primaryMediaType && brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
@@ -163,6 +163,7 @@ export function ProductDetails({ product, products, close, browse, position, tot
           exit={{ opacity: 0 }} transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}>
         {current?.type === "video" ? <FoodVideo key={current.url} src={current.url} alt={current.alt} poster={product.images[0]?.url} />
           : <FoodImage key={current?.url ?? product.id} src={current?.url} alt={current?.alt || product.name} priority sizes="(max-width: 640px) 100vw, 60vw" />}
+        {imageDisclosure && current?.type === "image" && <span data-photo-disclosure>{imageDisclosure}</span>}
         </motion.div>
         </AnimatePresence>
         {media.length > 1 && <div className={s.galleryControls}>

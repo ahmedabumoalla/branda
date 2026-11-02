@@ -1,0 +1,386 @@
+{
+  "version": 1,
+  "importKey": "hadiqa-source-20261102",
+  "reviewedAt": "2026-11-02T10:10:19.718Z",
+  "brandName": "الحديقة",
+  "sourceDirectory": "C:/Projects/branda-platform",
+  "menuFile": "C:/Users/pc/Downloads/WhatsApp Image 2026-11-02 at 12.25.22 PM.jpeg",
+  "menuSha256": "dc1e7700f68a1f65d0e0065a80f5c4da7059c1606d2dbe4e5b3030ad00cb2ae1",
+  "sourceReview": "Printed menu visually transcribed; 18 original Google Maps images reviewed; only confirmed exact food matches used. Missing images generated with explicit user approval; labeled illustrative. No Drive used.",
+  "priceMethod": "Visual transcription from supplied printed menu",
+  "categoryNote": "Original printed category headings retained",
+  "loyalty": {
+    "stamps": 6,
+    "rewardPercent": 10,
+    "userApproved": true
+  },
+  "assets": {
+    "menuLogo": {
+      "localPath": "C:/Projects/branda-platform/public/menu-art/hadiqa/hadiqa-logo-v1.webp",
+      "provenance": "original-menu-logo-reconstructed-with-imagegen-transparent",
+      "sha256": "947b4dbd2bb22d61ef3f7fd3035a11d4ce8e9dca5b7a40de497e79703c695a3d"
+    },
+    "hero": {
+      "localPath": "C:/Projects/branda-platform/output/hadiqa/images/map-1.jpg",
+      "sourceUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLdW5_nsna0dCCZG93UCbwR041P0sxQ8gHuefPjUgS-cJ-b5OWKckwXtcwqxqLydUa_0I8ux0_fyvlrA34g75LBn5Xio_ma1Bbdsz90tgaER9VezVfc9-xTzfuhS2bs5a6kVQrJQ1WACQBsS=w1600",
+      "provenance": "original-google-maps-interior"
+    }
+  },
+  "products": [
+    {
+      "sourceId": "breakfast",
+      "name": "وجبة الفطور",
+      "category": "البوفيه المفتوح",
+      "sourcePage": 1,
+      "sourcePosition": 1,
+      "price": 38,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": null,
+      "calorieUnit": "item",
+      "description": "",
+      "image": {
+        "sourceFile": "map-3.jpg",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/images/map-3.jpg",
+        "sourceUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLd_lUZhdefOkHvHINa7MoY6_5CiduitQsQhrOAqRL8zOm0bBHd3K4YWt3lkYqxLnJIYqTlEQIzxUJUelg9QCpraOmj0XOCujChXOgUjQkV9x4wz4bkSavZngmruUSl-9XDE3k_X0JWWQsU=w1600",
+        "sha256": "a01f893f839b7382bb6f838e353d21ee8a06ca35536d151c8a5c4b69ed6d22b0",
+        "provenance": "original-google-maps-photo",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "mixed-grill",
+      "name": "مشاوي مشكل 3 سيخ",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 2,
+      "price": 35,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 865,
+      "calorieUnit": "item",
+      "description": "",
+      "image": {
+        "sourceFile": "map-0.jpg",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/images/map-0.jpg",
+        "sourceUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLf7hfFNnInQQyA0k150rXntwUH7FXT3fgVciuVAK6tD_5-0TQX_M2TRTLRT88vrFkjNEhzx9QRLFpmBRGQHi3Vep222IuhoWmjG4GRVa2OTVxtIHf0fch4hzZxmYQWIPTuxXhJF5EfGg6Km=w1600",
+        "sha256": "ed1ec5d348737d230de6b20b0632b059d0403f3be937d8d214430a38e885e9f2",
+        "provenance": "original-google-maps-photo",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "lamb-chops",
+      "name": "ريش لحم",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 3,
+      "price": 60,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 635,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية",
+      "image": {
+        "sourceFile": "lamb-chops.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/lamb-chops.png",
+        "sha256": "9711e74a6e95d8af96ef25430c92bc500a2e325ea3f239c70e4cf405cf8c37a9",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "charcoal-chicken-rice",
+      "name": "نصف دجاج فحم مع الرز",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 4,
+      "price": 32,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 720,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية",
+      "image": {
+        "sourceFile": "charcoal-chicken-rice.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/charcoal-chicken-rice.png",
+        "sha256": "5bfd51218728e624326827d73b646430d6a09a78b6c92c35a4b007cfb63ae60c",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "shish-tawook",
+      "name": "شيش طاووق 3 سيخ",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 5,
+      "price": 35,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 189,
+      "calorieUnit": "skewer",
+      "description": "189 سعرة حرارية لكل سيخ حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "shish-tawook.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/shish-tawook.png",
+        "sha256": "6eea256ce4c038400c03e4ade4c87486d2db26b5ced63ff63fd17c016010555d",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "mixed-meat",
+      "name": "مشكل لحم 3 سيخ",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 6,
+      "price": 39,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 327,
+      "calorieUnit": "skewer",
+      "description": "327 سعرة حرارية لكل سيخ حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "mixed-meat.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/mixed-meat.png",
+        "sha256": "5cab07ec7918893696d0c261eb551e40ef6d7585dda48f19ee68e6006349fd00",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "chicken-kebab",
+      "name": "كباب دجاج 3 سيخ",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 7,
+      "price": 35,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 100,
+      "calorieUnit": "skewer",
+      "description": "100 سعرة حرارية لكل سيخ حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "chicken-kebab.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/chicken-kebab.png",
+        "sha256": "f3149b33af337fa53198560a07f87bc263ebfcc472081812e3a8bd82d2feb066",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "garden-meal",
+      "name": "وجبة الحديقة",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 8,
+      "price": 50,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 635,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية\nللتعرف على مكونات وجبة الحديقة اسأل فريق المطعم",
+      "image": {
+        "sourceFile": "garden-meal.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/garden-meal.png",
+        "sha256": "a11578f2ed33b1089c713ab7609afe4e06070faf87438ad77de9a90fbda0b631",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "lamb-kebab",
+      "name": "كباب لحم",
+      "category": "الأطباق الرئيسية",
+      "sourcePage": 1,
+      "sourcePosition": 9,
+      "price": 39,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 327,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية",
+      "image": {
+        "sourceFile": "lamb-kebab.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/lamb-kebab.png",
+        "sha256": "d2a79f7c64c84724051745bbd1213be4c9757e90cc3f3f54f99838d62e1405a5",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "soup",
+      "name": "شوربة",
+      "category": "الأطباق الجانبية",
+      "sourcePage": 1,
+      "sourcePosition": 10,
+      "price": 5,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 100,
+      "calorieUnit": "item",
+      "description": "",
+      "image": {
+        "sourceFile": "map-11.jpg",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/images/map-11.jpg",
+        "sourceUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLdJPG2U8iVZjiTRv_5_qWVbyn-yAd7KUU67sV2W_d87zUXXnFwgGJ3YS7S5EXR2r8IjDS4fNae1mmqUT7Rm-j43GPcCgQVA4IBJ_r3GlXBBKbmpHTIzuvvgynQNIU9r5dmaDG5rzi8ZUdmQ=w1600",
+        "sha256": "56e9f1c3b7fe76c77898463ca6870d52dbd8e1571fb8fda6f8332b90c62bc495",
+        "provenance": "original-google-maps-photo",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "fries",
+      "name": "بطاطس محمرة",
+      "category": "الأطباق الجانبية",
+      "sourcePage": 1,
+      "sourcePosition": 11,
+      "price": 7,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 190,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية",
+      "image": {
+        "sourceFile": "fries.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/fries.png",
+        "sha256": "a857f07255c2f31eb293428b11ba5194ceedea2a85657ecf62657126c2178650",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "fresh-orange",
+      "name": "عصير برتقال فريش",
+      "category": "المشروبات",
+      "sourcePage": 1,
+      "sourcePosition": 12,
+      "price": 10,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 45,
+      "calorieUnit": "100ml",
+      "description": "45 سعرة حرارية لكل 100 مل حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "fresh-orange.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/fresh-orange.png",
+        "sha256": "05c0322e7589f2fbf4a664c37923cc4141a2c1fc4ab6afb51e8947ed2c84b728",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "pepsi",
+      "name": "بيبسي",
+      "category": "المشروبات",
+      "sourcePage": 1,
+      "sourcePosition": 13,
+      "price": 3,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 135,
+      "calorieUnit": "100ml",
+      "description": "135 سعرة حرارية لكل 100 مل حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "pepsi.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/pepsi.png",
+        "sha256": "dc1136863d0c080eb576b44aa88447c70396e7732ec5f99be0509147acccbea5",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "seven-up",
+      "name": "سفن اب",
+      "category": "المشروبات",
+      "sourcePage": 1,
+      "sourcePosition": 14,
+      "price": 3,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 135,
+      "calorieUnit": "100ml",
+      "description": "135 سعرة حرارية لكل 100 مل حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "seven-up.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/seven-up.png",
+        "sha256": "8a34da2a3e8d48334592a317d8fcd4ccdb0bbf2e5fdd6c966564175a0788cea7",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "diet-pepsi",
+      "name": "بيبسي دايت",
+      "category": "المشروبات",
+      "sourcePage": 1,
+      "sourcePosition": 15,
+      "price": 3,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": 1,
+      "calorieUnit": "100ml",
+      "description": "1 سعرة حرارية لكل 100 مل حسب المنيو\nصورة توضيحية",
+      "image": {
+        "sourceFile": "diet-pepsi.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/diet-pepsi.png",
+        "sha256": "648a0119165e15905ef175712c3ee80e2f6ef90ab64b890209c28af0f30487cf",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    },
+    {
+      "sourceId": "nova-water",
+      "name": "ماء نوفا زجاج",
+      "category": "المشروبات",
+      "sourcePage": 1,
+      "sourcePosition": 16,
+      "price": 3,
+      "currency": "SAR",
+      "variants": [],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "calories": null,
+      "calorieUnit": "item",
+      "description": "صورة توضيحية",
+      "image": {
+        "sourceFile": "nova-water.png",
+        "localPath": "C:/Projects/branda-platform/output/hadiqa/generated/nova-water.png",
+        "sha256": "e04156e7bf3a44c520181354f2c573dd9097b831cbbd1d65f72da548b282a5a8",
+        "provenance": "ai-generated-illustrative-product",
+        "matchStatus": "illustrative-not-original-restaurant-photo"
+      }
+    }
+  ]
+}
