@@ -48,6 +48,29 @@ async function main() {
   assert.equal((html.match(/capture="environment"/g) || []).length, 2);
   for (const field of ['brandName', 'managerPhone', 'ownerPhone', 'representativeName']) assert(html.includes(`name="${field}"`));
   const links = renderToStaticMarkup(React.createElement(ui.VisitShareLinks)); assert(links.includes('href="/visits"') && links.includes('target="_blank"'));
+  let modalBusy = false, shown = 0, closed = 0, unlocked = 0, focused = 0, cleanup;
+  const refs = [{ current: { showModal: () => shown++, close: () => closed++, querySelector: () => modalBusy ? {} : null } }, { current: { focus: () => focused++ } }, { current: null }];
+  const modal = load('components/representative/visit-dialog.tsx', {
+    react: { ...React, useRef: () => refs.shift(), useId: () => 'visit-title', useEffect: fn => { cleanup = fn(); } },
+    '@/lib/ui/page-scroll-lock': { lockPageScroll: () => () => unlocked++ },
+  }).VisitDialog({ title: 'Visit', label: 'Open', children: 'form' });
+  const [trigger, dialog] = modal.props.children;
+  assert(!dialog.props.open, 'Visit dialog starts closed');
+  trigger.props.onClick(); assert.equal(shown, 1);
+  modalBusy = true; dialog.props.onCancel({ preventDefault() {} }); assert.equal(closed, 0, 'Saving visit cannot be dismissed');
+  modalBusy = false; dialog.props.onCancel({ preventDefault() {} }); assert.equal(closed, 1);
+  dialog.props.onClose(); assert.equal(unlocked, 1); assert.equal(focused, 1, 'Focus returns to opener');
+  trigger.props.onClick(); cleanup(); assert.equal(unlocked, 2, 'Unmount releases scroll lock');
+  const page = load('app/admin/representatives/page.tsx', {
+    'next/navigation': { useRouter: () => ({ refresh() {} }), redirect: () => { throw Error('redirect'); } },
+    '@/lib/data/cafes': { requirePlatformAdmin: async () => {} },
+    '@/lib/data/representative-visits': { getRepresentativeVisits: async () => ({ count: 1, page: 1, visits: [{ id: 'test', brandName: 'Fixture Brand', representativeName: 'Fixture Rep', interest: 'interested', services: ['menu'], createdAt: '2026-11-02T12:00:00Z', mapsUrl: 'https://maps.google.com', photo: null, menuPhoto: null }] }) },
+  });
+  const tableHtml = renderToStaticMarkup(await page.default({ searchParams: Promise.resolve({}) }));
+  assert.equal((tableHtml.match(/scope="col"/g) || []).length, 7);
+  assert(tableHtml.includes('Fixture Brand') && tableHtml.includes('Fixture Rep'));
+  assert(/<dialog[^>]*>[\s\S]*?<form/.test(tableHtml), 'Admin form is inside a closed dialog');
   console.log('PASS visit validation, image transcoding, origin/body guards, idempotency/rate states, failure behavior, private admin access, public form and native camera/share controls');
+  console.log('PASS admin table SSR and dialog close, save guard, focus restoration and scroll cleanup');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

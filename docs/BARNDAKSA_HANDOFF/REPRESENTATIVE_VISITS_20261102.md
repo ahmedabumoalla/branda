@@ -13,3 +13,15 @@
 - Final Node24 production build PASS after local host/origin normalization fix; SSR and source responsive/state checks passed
 - No browser inspection or physical iPhone/Android camera test; camera UI is provided by the device browser/OS
 - Evidence: root output/representative-visits/live-verification.json and release representative-visits-build.log; publication proof saved separately after deployment
+
+Published 2026-11-02T13:07:28.411Z: GitHub main 1e28178c0ee513643996ce1193a591c75c94d004, Vercel dpl_5Dd4yHpjHNgMFJW4ztZoaybiNFAP READY, both production aliases verified; public form200 and invalid/cross-origin submission400/403 PASS
+
+## Admin layout refinement — 2026-11-02 16:54 +03:00
+- Full-width visit table with brand, representative, interest, requested services, Riyadh date/time, location and detail action
+- Registration form opens in a compact native dialog with internal scrolling; closing preserves unfinished fields, saving blocks dismissal, focus and scroll restore on close
+- Visit photos and contact numbers open in a separate detail dialog; public open/copy form controls remain visible
+- Dedicated scoped CSS preserves the public form; cream dialog overrides the admin shell dark input rules for legible fields
+- Run on updated root and release source: TypeScript, text integrity, scoped ESLint, visit regression suite including new table SSR and dialog save/focus/scroll checks
+- Release Node24 Next production build passed; evidence representative-visits-layout-build.log
+- No browser inspection or physical-device interaction check performed; source/SSR/handler tests used under repository browser policy
+- No database, public form or intake API changes
