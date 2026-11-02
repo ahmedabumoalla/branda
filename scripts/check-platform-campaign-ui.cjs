@@ -32,11 +32,11 @@ function nodes(node, predicate) {
 function text(node) { return node == null || typeof node === 'boolean' ? '' : typeof node !== 'object' ? String(node) : Array.isArray(node) ? node.map(text).join('') : text(node.props?.children); }
 function field(tree, id) { const found = nodes(tree, n => n.props?.id === id)[0]; assert(found, id); return found; }
 function button(tree, label) { const found = nodes(tree, n => n.type === 'button' && text(n) === label)[0]; assert(found, `Button ${label}`); return found; }
-function harness(initial = base) {
-  const states = [], effects = [], cleanups = new Map(); let cursor = 0;
-  const hooks = { ...React, useState(value) { const i = cursor++; if (!(i in states)) states[i] = value; return [states[i], v => { states[i] = typeof v === 'function' ? v(states[i]) : v; }]; }, useRef(value) { const i = cursor++; if (!(i in states)) states[i] = { current: value }; return states[i]; }, useEffect(fn, deps) { const i = cursor++; const before = states[i]; if (!before || !deps || before.length !== deps.length || deps.some((d, j) => !Object.is(d, before[j]))) { states[i] = deps; effects.push(() => { cleanups.get(i)?.(); cleanups.set(i, fn()); }); } } };
+function harness(initial = base, deferUpdaters = false) {
+  const states = [], effects = [], updates = [], cleanups = new Map(); let cursor = 0;
+  const hooks = { ...React, useState(value) { const i = cursor++; if (!(i in states)) states[i] = value; return [states[i], v => { const update = () => { states[i] = typeof v === 'function' ? v(states[i]) : v; }; if (deferUpdaters) updates.push(update); else update(); }]; }, useRef(value) { const i = cursor++; if (!(i in states)) states[i] = { current: value }; return states[i]; }, useEffect(fn, deps) { const i = cursor++; const before = states[i]; if (!before || !deps || before.length !== deps.length || deps.some((d, j) => !Object.is(d, before[j]))) { states[i] = deps; effects.push(() => { cleanups.get(i)?.(); cleanups.set(i, fn()); }); } } };
   const { PlatformCampaignConsole } = load(component, { react: hooks, '@/lib/supabase/client': storage });
-  return { render() { cursor = 0; return PlatformCampaignConsole({ initialDashboard: initial }); }, flush() { effects.splice(0).forEach(fn => fn()); }, cleanup() { cleanups.forEach(fn => fn?.()); } };
+  return { render() { updates.splice(0).forEach(fn => fn()); cursor = 0; return PlatformCampaignConsole({ initialDashboard: initial }); }, flush() { effects.splice(0).forEach(fn => fn()); }, cleanup() { cleanups.forEach(fn => fn?.()); } };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const actualFetch = globalThis.fetch, actualWindow = globalThis.window;
@@ -102,6 +102,7 @@ async function main() {
   assert(text(tree).includes('1 محدد'), 'Hidden selected customer remains counted');
   const checkbox = (view, name) => nodes(view, n => n.type === 'input' && n.props['aria-label']?.startsWith('اختيار ' + name))[0];
   assert(!checkbox(tree, 'عميل أول'), 'First selected customer is outside current results');
+  assert(text(nodes(tree, n => n.props?.['aria-label'] === 'العملاء المحددون للحملة')[0]).includes('عميل أول'), 'Selected name remains visible outside filtered results');
   checkbox(tree, 'عميل ثان').props.onChange({ target: { checked: true } });
   tree = selection.render(); checkbox(tree, 'عميل ثان').props.onChange({ target: { checked: true } });
   tree = selection.render(); assert(text(tree).includes('2 محدد'), 'Different searches accumulate unique phones');
@@ -144,6 +145,18 @@ async function main() {
   tree = retained.render(); assert(text(tree).includes('0 محدد'));
   assert.equal(checkbox(tree, 'عميل ثان').props.checked, false);
   retained.cleanup();
+  const deferred = harness(base, true); tree = deferred.render(); deferred.flush(); await tick(); tree = deferred.render();
+  const changingTarget = { checked: true };
+  checkbox(tree, 'عميل أول').props.onChange({ target: changingTarget });
+  changingTarget.checked = false;
+  tree = deferred.render();
+  assert(checkbox(tree, 'عميل أول').props.checked, 'Queued React updater captures checked value before DOM restoration');
+  field(tree, 'platform-campaign-search').props.onChange({ target: { value: 'بحث آخر' } });
+  tree = deferred.render(); field(tree, 'platform-campaign-search').props.onChange({ target: { value: '' } });
+  tree = deferred.render(); assert(checkbox(tree, 'عميل أول').props.checked, 'Clearing search keeps check with deferred React updates');
+  nodes(tree, n => n.props?.['aria-label'] === 'إلغاء اختيار عميل أول')[0].props.onClick();
+  tree = deferred.render(); assert(!checkbox(tree, 'عميل أول').props.checked, 'Pinned name remove button updates checkbox');
+  deferred.cleanup();
   console.log('PASS selection across search, brand filters, pages, modes, unique recipient payload and explicit clearing');
   const fixedNow = Date.parse('2026-11-02T10:00:00Z');
   const oldTimezone = process.env.TZ;

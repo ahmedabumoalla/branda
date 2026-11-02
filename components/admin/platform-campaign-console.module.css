@@ -78,6 +78,14 @@
 .audienceTools { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 24px 0 17px; }
 .selectionModes { display: flex; gap: 8px; flex-wrap: wrap; }
 .selectionModes button { font-size: 12px; min-height: 42px; }
+.selectedCustomers { border: 1px solid var(--campaign-line); border-radius: 12px; padding: 16px; margin: 16px 0; background: var(--campaign-raised); }
+.selectedCustomers h3 { font-size: 14px; margin: 0 0 12px; color: var(--campaign-gold); }
+.selectedCustomers > div { display: flex; flex-wrap: wrap; gap: 8px; max-height: 230px; overflow-y: auto; }
+.selectedCustomer { display: flex; align-items: center; gap: 12px; border: 1px solid var(--campaign-line); border-radius: 9px; padding: 5px 10px 5px 5px; min-width: 0; max-width: 100%; }
+.selectedCustomer > span { display: grid; gap: 3px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.selectedCustomer bdi { color: var(--campaign-muted); font-size: 11px; }
+.selectedCustomer button { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; color: var(--campaign-gold); background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
+.selectedCustomer button:hover { background: #f6c35b14; }
 .schedule { padding: 18px 0 0; margin: 24px 0 0; border: 0; border-top: 1px solid var(--campaign-line); min-width: 0; }
 .schedule legend { display: flex; align-items: center; gap: 8px; padding-inline-end: 12px; font-size: 13px; font-weight: 700; }
 .schedule legend svg { width: 17px; height: 17px; color: var(--campaign-gold); }

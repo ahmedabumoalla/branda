@@ -68,6 +68,7 @@ export function PlatformCampaignConsole({ initialDashboard }: { initialDashboard
   const [audienceError, setAudienceError] = useState("");
   const [audienceLoading, setAudienceLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedNames, setSelectedNames] = useState<Record<string, string>>({});
   const [allMatching, setAllMatching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -129,6 +130,17 @@ export function PlatformCampaignConsole({ initialDashboard }: { initialDashboard
   }
 
   function editContent() { if (!locked) { attempt.current = null; setReview(null); setError(""); setNotice(""); } }
+  function chooseCustomer(phone: string, name: string, checked: boolean) {
+    if (locked) return;
+    editContent();
+    setSelectedNames(previous => {
+      const next = { ...previous };
+      if (checked) next[phone] = name || "عميل العلامة";
+      else delete next[phone];
+      return next;
+    });
+    setSelected(previous => checked ? [...new Set([...previous, phone])] : previous.filter(value => value !== phone));
+  }
   function removeAttachment() {
     if (locked) return;
     uploadSequence.current++; uploadController.current?.abort(); uploadController.current = null;
@@ -196,7 +208,7 @@ export function PlatformCampaignConsole({ initialDashboard }: { initialDashboard
       if (!result?.campaignId) throw new RequestFailure("لم يتأكد إنشاء الحملة", true);
       if (!mounted.current) return;
       attempt.current = null; setAmbiguous(false); setReview(null);
-      setTitle(""); setBody(""); setSelected([]); setAllMatching(false); setSendMode("now"); setScheduledLocal("");
+      setTitle(""); setBody(""); setSelected([]); setSelectedNames({}); setAllMatching(false); setSendMode("now"); setScheduledLocal("");
       if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
       previewUrl.current = null; setAttachment(null);
       setNotice(snapshot.input.scheduledAt ? `تمت جدولة الحملة إلى ${number(result.total)} عميل وتبدأ المعالجة ${date(snapshot.input.scheduledAt)} بتوقيت السعودية` : `بدأت الحملة إلى ${number(result.total)} عميل ويمكنك متابعة الإرسال في السجل`);
@@ -235,11 +247,12 @@ export function PlatformCampaignConsole({ initialDashboard }: { initialDashboard
 
     <section className={`${s.panel} ${s.audience}`} aria-labelledby="campaign-audience-heading"><div className={s.panelHeading}><span className={s.step}>٢</span><div><h2 id="campaign-audience-heading">اختر العملاء</h2><p>استهدف كل العلامات أو صفِّ الجمهور حسب علامة محددة</p></div><span className={s.selectionCount} role="status"><Users aria-hidden="true" />{number(count)} محدد</span></div>
       <form className={s.filters} onSubmit={applyFilters}><label className={s.field} htmlFor="platform-campaign-brand">العلامة التجارية<select id="platform-campaign-brand" disabled={locked} value={brandId} onChange={event => { editContent(); setAllMatching(false); setBrandId(event.target.value); }}><option value="">كل العلامات التجارية</option>{dashboard?.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label><label className={s.field} htmlFor="platform-campaign-search">ابحث عن عميل<input id="platform-campaign-search" type="search" maxLength={80} disabled={locked} value={search} placeholder="الاسم أو رقم الجوال" onChange={event => { editContent(); setAllMatching(false); setSearch(event.target.value); }} /></label><button className={s.secondary} type="submit" disabled={locked}><Search aria-hidden="true" />عرض العملاء</button></form>
-      <div className={s.audienceTools}><div className={s.selectionModes}><button type="button" className={s.secondary} disabled={locked || audienceLoading || dirtyFilters || !audience?.total} aria-pressed={allMatching} onClick={() => { editContent(); setAllMatching(true); }}><CheckCheck aria-hidden="true" />تحديد كل نتائج الفلتر</button><button type="button" className={s.secondary} disabled={locked} aria-pressed={!allMatching} onClick={() => { editContent(); setAllMatching(false); }}>اختيار عملاء محددين</button><button type="button" className={s.secondary} disabled={locked || (!allMatching && !selected.length)} onClick={() => { editContent(); setAllMatching(false); setSelected([]); }}>إلغاء التحديد</button></div><span className={s.count}>{audienceLoading ? "جارٍ تحميل العملاء" : audience ? `${number(audience.total)} عميل مطابق` : ""}</span></div>
+      <div className={s.audienceTools}><div className={s.selectionModes}><button type="button" className={s.secondary} disabled={locked || audienceLoading || dirtyFilters || !audience?.total} aria-pressed={allMatching} onClick={() => { editContent(); setAllMatching(true); }}><CheckCheck aria-hidden="true" />تحديد كل نتائج الفلتر</button><button type="button" className={s.secondary} disabled={locked} aria-pressed={!allMatching} onClick={() => { editContent(); setAllMatching(false); }}>اختيار عملاء محددين</button><button type="button" className={s.secondary} disabled={locked || (!allMatching && !selected.length)} onClick={() => { editContent(); setAllMatching(false); setSelected([]); setSelectedNames({}); }}>إلغاء التحديد</button></div><span className={s.count}>{audienceLoading ? "جارٍ تحميل العملاء" : audience ? `${number(audience.total)} عميل مطابق` : ""}</span></div>
       {allMatching ? <p className={s.audienceNote}>سيشمل الإرسال كل العملاء المطابقين للفلتر في جميع الصفحات</p> : <p className={s.audienceNote}>اختياراتك محفوظة عند البحث وتغيير العلامة والتنقل بين الصفحات</p>}
+      {!allMatching && selected.length > 0 && <section className={s.selectedCustomers} aria-label="العملاء المحددون للحملة"><h3>العملاء المحددون للحملة <span>{number(selected.length)}</span></h3><div>{selected.map(phone => <div className={s.selectedCustomer} key={phone}><span><strong>{selectedNames[phone] || "عميل العلامة"}</strong><bdi dir="ltr">+{phone}</bdi></span><button type="button" disabled={locked} aria-label={`إلغاء اختيار ${selectedNames[phone] || phone}`} onClick={() => chooseCustomer(phone, "", false)}><X aria-hidden="true" /></button></div>)}</div></section>}
       {dirtyFilters && <p className={s.audienceNote}>اضغط عرض العملاء لتطبيق الفلتر الجديد</p>}
       {audienceError ? <div className={s.empty} role="alert"><CircleAlert aria-hidden="true" /><p>{audienceError}</p><button type="button" className={s.secondary} onClick={() => { setAudienceLoading(true); setAudienceReload(value => value + 1); }}>إعادة المحاولة</button></div> : audienceLoading ? <div className={s.empty} role="status"><LoaderCircle className={s.spin} aria-hidden="true" /><p>نجهّز قائمة العملاء</p></div> : !audience?.items.length ? <div className={s.empty}><Users aria-hidden="true" /><p>لا يوجد عملاء يطابقون هذا الفلتر</p></div> : <>
-        <div className={s.customerList}>{audience.items.map(customer => <label className={s.customer} key={customer.id}><input type="checkbox" aria-label={`اختيار ${customer.name} ${customer.phone}`} checked={allMatching || selected.includes(customer.phone)} disabled={locked || allMatching || dirtyFilters} onChange={event => { editContent(); setSelected(previous => event.target.checked ? [...new Set([...previous, customer.phone])] : previous.filter(phone => phone !== customer.phone)); }} /><span className={s.customerAvatar}>{customer.name.trim().slice(0, 1) || <Users aria-hidden="true" />}</span><span className={s.customerIdentity}><strong>{customer.name || "عميل العلامة"}</strong><bdi dir="ltr">+{customer.phone}</bdi></span><span className={s.customerBrands}>{customer.brands.map(brand => <span key={brand.id}>{brand.name}</span>)}</span></label>)}</div>
+        <div className={s.customerList}>{audience.items.map(customer => <label className={s.customer} key={customer.id}><input type="checkbox" aria-label={`اختيار ${customer.name} ${customer.phone}`} checked={allMatching || selected.includes(customer.phone)} disabled={locked || allMatching || dirtyFilters} onChange={event => chooseCustomer(customer.phone, customer.name, event.target.checked)} /><span className={s.customerAvatar}>{customer.name.trim().slice(0, 1) || <Users aria-hidden="true" />}</span><span className={s.customerIdentity}><strong>{customer.name || "عميل العلامة"}</strong><bdi dir="ltr">+{customer.phone}</bdi></span><span className={s.customerBrands}>{customer.brands.map(brand => <span key={brand.id}>{brand.name}</span>)}</span></label>)}</div>
         <nav className={s.pagination} aria-label="صفحات العملاء"><button type="button" className={s.iconButton} disabled={locked || page <= 1} onClick={() => changePage(page - 1)} aria-label="صفحة العملاء السابقة"><ChevronRight aria-hidden="true" /></button><span>صفحة {number(audience.page)} من {number(Math.max(1, Math.ceil(audience.total / audience.pageSize)))}</span><button type="button" className={s.iconButton} disabled={locked || page * audience.pageSize >= audience.total} onClick={() => changePage(page + 1)} aria-label="صفحة العملاء التالية"><ChevronLeft aria-hidden="true" /></button></nav>
       </>}
       <div className={s.launchBar}><div><strong>{number(count)} عميل في جمهور الحملة</strong><span>{allMatching ? "كل نتائج الفلتر في جميع الصفحات" : "العملاء الذين حددتهم من القائمة"}</span></div><button type="button" className={s.primary} disabled={locked || !dashboard?.sender.ready || audienceLoading || dirtyFilters || attachment?.status === "uploading"} onClick={beginReview}><Send aria-hidden="true" />مراجعة الحملة والإرسال</button></div>
