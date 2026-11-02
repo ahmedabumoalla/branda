@@ -126,11 +126,11 @@ await test(async () => {
 await test(async () => {
   const calls = [];
   const operational = load(path.resolve("lib/whatsapp/green-api.ts"), { env: { ...env,
-    GREEN_API_API_URL: "https://operational.invalid", GREEN_API_ID_INSTANCE: "111", GREEN_API_API_TOKEN_INSTANCE: "operational-only",
+    GREEN_API_API_URL: "https://1100.api.greenapi.com", GREEN_API_ID_INSTANCE: "111", GREEN_API_API_TOKEN_INSTANCE: "operational-only",
   }, fetcher: async (url, init) => { calls.push({ url, init }); return Response.json({ idMessage: "mock-message" }); } });
   await operational.sendGreenApiSupabaseOtp({ phoneNormalized: "966500000001", code: "123456" });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://operational.invalid/waInstance111/sendMessage/operational-only");
+  assert.equal(calls[0].url, "https://1100.api.greenapi.com/waInstance111/sendMessage/operational-only");
   assert.ok(!calls[0].url.includes(env.GREEN_API_PARTNER_TOKEN));
 });
 console.log(`PASS GREEN-API integration: ${checks} groups, provider requests mocked, no live paid operations`);

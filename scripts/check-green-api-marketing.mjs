@@ -100,6 +100,9 @@ await test(async () => {
   const operational = harness(() => { throw new Error("Must not fetch"); });
   await assert.rejects(() => operational.sendGreenApiMarketingMessage({ ...credentials, idInstance: "7103000000" }, { phone: "966500000001", message: "Example" }), errorIs(false, "OPERATIONAL_INSTANCE_FORBIDDEN"));
   assert.equal(operational.calls.length, 0);
+  const backup = harness(() => { throw new Error("Must not fetch"); }, { GREEN_API_OTP_BACKUP_ID_INSTANCE: credentials.idInstance });
+  await assert.rejects(() => backup.sendGreenApiMarketingMessage(credentials, { phone: "966500000001", message: "Example" }), errorIs(false, "OTP_BACKUP_INSTANCE_FORBIDDEN"));
+  assert.equal(backup.calls.length, 0, "OTP backup can never be used for marketing");
 });
 await test(async () => {
   for (const state of [null, "notAuthorized", "authorized", "blocked", "starting", "suspended"]) {

@@ -233,60 +233,92 @@ export async function sendGreenApiOtp(input: {
   brandName: string;
   code: string;
 }): Promise<{ providerMessageId: string }> {
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
-  const endpoint = `${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      chatId: `${input.phoneNormalized}@c.us`,
-      message: `رمز التحقق لعلامة ${input.brandName}: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة`,
-    }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(greenApiTimeoutMs()),
-  });
-
-  if (!response.ok) {
-    throw new Error(`GREEN_API_REQUEST_REJECTED_${response.status}`);
-  }
-
-  const payload = (await response.json()) as GreenApiSendResponse;
-  if (!payload.idMessage) {
-    throw new Error("GREEN_API_MESSAGE_ID_MISSING");
-  }
-
-  return { providerMessageId: payload.idMessage };
+  return sendVerificationCode(input.phoneNormalized, input.code,
+    `رمز التحقق لعلامة ${input.brandName}: ${input.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`, greenApiTimeoutMs());
 }
 
 export async function sendGreenApiSupabaseOtp(input: {
   phoneNormalized: string;
   code: string;
 }, options?: { timeoutMs: number }): Promise<{ providerMessageId: string }> {
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
-  const endpoint = `${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      chatId: `${input.phoneNormalized}@c.us`,
-      message: `رمز التحقق في برندة: ${input.code}\nصالح لمدة 5 دقائق.\nلا تشارك الرمز مع أي شخص.\nإذا لم تطلبه فتجاهل الرسالة`,
-    }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(options ? Math.max(1000, Math.min(25_000, options.timeoutMs)) : greenApiTimeoutMs()),
-  });
+  return sendVerificationCode(input.phoneNormalized, input.code,
+    `رمز التحقق في برندة: ${input.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`, options?.timeoutMs ?? greenApiTimeoutMs());
+}
 
-  if (!response.ok) {
-    throw new Error(`GREEN_API_REQUEST_REJECTED_${response.status}`);
+type OtpSender = ReturnType<typeof requireGreenApiConfig>;
+
+function validateOtpSender(sender: OtpSender): OtpSender {
+  let url: URL;
+  try { url = new URL(sender.apiUrl); } catch { throw new Error("OTP_SENDER_CONFIG_INVALID"); }
+  if (url.protocol !== "https:" || !/^(?:api|[0-9]{1,10}\.api)\.green-?api\.com$/.test(url.hostname) ||
+    url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash ||
+    !/^[1-9]\d{0,15}$/.test(sender.idInstance) || !/^[A-Za-z0-9._-]{8,512}$/.test(sender.apiTokenInstance)) {
+    throw new Error("OTP_SENDER_CONFIG_INVALID");
   }
+  return { ...sender, apiUrl: url.origin };
+}
 
-  const payload = (await response.json()) as GreenApiSendResponse;
-  if (!payload.idMessage) {
-    throw new Error("GREEN_API_MESSAGE_ID_MISSING");
+function backupOtpSender(primary: OtpSender): OtpSender | null {
+  const apiUrl = process.env.GREEN_API_OTP_BACKUP_API_URL?.trim();
+  const idInstance = process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE?.trim();
+  const apiTokenInstance = process.env.GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE?.trim();
+  if (!apiUrl && !idInstance && !apiTokenInstance) return null;
+  // A bad optional backup must not disable a healthy primary sender.
+  try {
+    if (!apiUrl || !idInstance || !apiTokenInstance || idInstance === primary.idInstance) return null;
+    return validateOtpSender({ apiUrl, idInstance, apiTokenInstance });
+  } catch { return null; }
+}
+
+function otpEndpoint(sender: OtpSender, method: "getStateInstance" | "sendMessage") {
+  return `${sender.apiUrl}/waInstance${sender.idInstance}/${method}/${sender.apiTokenInstance}`;
+}
+
+async function otpSenderReady(sender: OtpSender) {
+  try {
+    const response = await fetch(otpEndpoint(sender, "getStateInstance"), {
+      cache: "no-store", redirect: "error", signal: AbortSignal.timeout(2500),
+    });
+    return response.ok && (await response.json())?.stateInstance === "authorized";
+  } catch { return false; } // No message has been submitted, so choosing the backup is safe.
+}
+
+/** Only these two OTP entry points can use the backup. Queue admission remains bound
+ * to the primary logical provider; failover happens inside the already-claimed job.
+ * Never repeat a POST after timeout/5xx/malformed acknowledgement: it may be queued.
+ */
+async function sendVerificationCode(phone: string, code: string, message: string, timeoutMs: number) {
+  if (!/^9665\d{8}$/.test(phone) || !/^\d{6}$/.test(code)) throw new Error("OTP_INPUT_INVALID");
+  const primary = validateOtpSender(requireGreenApiConfig());
+  const backup = backupOtpSender(primary);
+  let sender = primary;
+  if (backup && !await otpSenderReady(primary)) {
+    if (!await otpSenderReady(backup)) throw new Error("OTP_SENDERS_UNAVAILABLE");
+    sender = backup;
   }
-
-  return { providerMessageId: payload.idMessage };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(otpEndpoint(sender, "sendMessage"), {
+        method: "POST", headers: { "content-type": "application/json" },
+        cache: "no-store", redirect: "error",
+        signal: AbortSignal.timeout(Math.max(1000, Math.min(25_000, timeoutMs))),
+        body: JSON.stringify({ chatId: `${phone}@c.us`, message, linkPreview: false }),
+      });
+    } catch { throw new Error("OTP_SEND_OUTCOME_UNKNOWN"); }
+    if (!response.ok) {
+      if (sender === primary && backup && [401, 403, 429, 466].includes(response.status) && await otpSenderReady(backup)) {
+        sender = backup;
+        continue;
+      }
+      throw new Error(`OTP_SEND_HTTP_${response.status}`);
+    }
+    let payload: GreenApiSendResponse;
+    try { payload = await response.json(); } catch { throw new Error("OTP_SEND_OUTCOME_UNKNOWN"); }
+    if (!payload || typeof payload.idMessage !== "string" || !payload.idMessage || payload.idMessage.length > 200) {
+      throw new Error("OTP_SEND_OUTCOME_UNKNOWN");
+    }
+    return { providerMessageId: payload.idMessage };
+  }
+  throw new Error("OTP_SENDERS_UNAVAILABLE");
 }

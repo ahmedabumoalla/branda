@@ -25,6 +25,7 @@ function providerOrigin(value: string) {
 function validateCredentials(value: GreenApiMarketingCredentials): GreenApiMarketingCredentials {
   if (!/^[1-9]\d{0,15}$/.test(value.idInstance) || !Number.isSafeInteger(Number(value.idInstance)) || !/^[A-Za-z0-9._-]{8,512}$/.test(value.apiTokenInstance)) fail("CREDENTIALS_INVALID");
   if (value.idInstance === process.env.GREEN_API_ID_INSTANCE?.trim()) fail("OPERATIONAL_INSTANCE_FORBIDDEN");
+  if (value.idInstance === process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE?.trim()) fail("OTP_BACKUP_INSTANCE_FORBIDDEN");
   return { ...value, apiUrl: providerOrigin(value.apiUrl) };
 }
 function credentialsFrom(value: JsonObject, uncertain = false): GreenApiMarketingCredentials {
