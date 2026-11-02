@@ -1,0 +1,29 @@
+{
+  "at": "2026-11-02T11:57:00.668Z",
+  "status": "PASS",
+  "productsPreserved": 16,
+  "pricesUnchanged": true,
+  "asset": {
+    "id": "ec56d0ea-0527-43be-81ec-77a55b589be4",
+    "oldImage": "26d964ab-7435-45e3-b721-536746dfcf12/ec56d0ea-0527-43be-81ec-77a55b589be4/hadiqa-refresh-bbd93c48394ee100.webp",
+    "oldDescription": "صورة توضيحية",
+    "path": "26d964ab-7435-45e3-b721-536746dfcf12/ec56d0ea-0527-43be-81ec-77a55b589be4/hadiqa-buffet-0e82a15c181d005a.webp",
+    "description": "بوفيه الفطور المفتوح في أجواء مطعم الحديقة",
+    "sha256": "0e82a15c181d005acffe5a09a55ff50b8ea7cfd665dd08fe33cc5564bdd60fa4",
+    "bytes": 315686,
+    "source": "output/hadiqa/images/map-3.jpg",
+    "sourceSha256": "a01f893f839b7382bb6f838e353d21ee8a06ca35536d151c8a5c4b69ed6d22b0",
+    "generatedSha256": "077abec49f96bff8a48eb4b632b3fdbbc2a1fb1b5bd40dec1e63299025162b86",
+    "edit": "Original buffet photograph reframed and relit in navy and brass; replaces invented individual breakfast plate"
+  },
+  "routes": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "status": 200
+    },
+    {
+      "origin": "https://barndaksa.com",
+      "status": 200
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-02T10:52:06.653Z",
+  "status": "PASS",
+  "cafeId": "26d964ab-7435-45e3-b721-536746dfcf12",
+  "productsPreserved": 16,
+  "imagesReplaced": 3,
+  "pricesUnchanged": true,
+  "storagePrivate": true,
+  "changes": [
+    {
+      "key": "breakfast",
+      "id": "ec56d0ea-0527-43be-81ec-77a55b589be4",
+      "name": "وجبة الفطور",
+      "price": 38,
+      "oldImage": "26d964ab-7435-45e3-b721-536746dfcf12/ec56d0ea-0527-43be-81ec-77a55b589be4/hadiqa-20261102-f20c41d09c1313bf.webp",
+      "oldDescription": "",
+      "newImage": "26d964ab-7435-45e3-b721-536746dfcf12/ec56d0ea-0527-43be-81ec-77a55b589be4/hadiqa-refresh-bbd93c48394ee100.webp",
+      "sha256": "bbd93c48394ee100045928ee5e06cbdc4542565febed9edb3ec293544ce44f96",
+      "bytes": 286832,
+      "prompt": "Create ONE premium photorealistic illustrative restaurant menu product photograph, square composition. First reference defines the food subject only: A generous breakfast selection inspired by the visible buffet: fresh bread, white cheese, black olives, cucumber and tomato slices, small bowls of spreads. Arrange as a close premium breakfast composition; show food clearly instead of the restaurant interior. Second reference defines the photography style only, do not copy its chicken dish. Alhadiqa identity: midnight navy matte tabletop and background, understated warm brass accents, refined soft golden side lighting, ivory ceramic dishes. Food dominates the frame, plate fully visible with safe margins for menu card cropping. Extremely sharp realistic food details, natural colors, premium editorial commercial photography. No people, no hands, no text, no prices, no logos, no collage.",
+      "sourceSha256": "a360a4b3f4a9c497e1b5953bc4f7ad6697255f9be0b44281de04c8cf09939647",
+      "localPath": "output/hadiqa/photo-refresh/breakfast.png"
+    },
+    {
+      "key": "mixed-grill",
+      "id": "774e4365-190b-4a6b-8079-af3eaf1d651e",
+      "name": "مشاوي مشكل 3 سيخ",
+      "price": 35,
+      "oldImage": "26d964ab-7435-45e3-b721-536746dfcf12/774e4365-190b-4a6b-8079-af3eaf1d651e/hadiqa-20261102-631d801d0dc3257d.webp",
+      "oldDescription": "",
+      "newImage": "26d964ab-7435-45e3-b721-536746dfcf12/774e4365-190b-4a6b-8079-af3eaf1d651e/hadiqa-refresh-51287d91d0f33a0d.webp",
+      "sha256": "51287d91d0f33a0d02bb92e2752cb2572803ce8b1253b6f8de8fa797f96dfcf3",
+      "bytes": 269836,
+      "prompt": "Create ONE premium photorealistic illustrative restaurant menu product photograph, square composition. First reference defines the food subject only: An elongated ivory platter of exactly three mixed grill skewers: one minced meat kofta kebab, one chicken shish tawook, one cubed grilled meat skewer. A small rice mound, potato wedges and three small sauce ramekins as visible in the reference. Beautiful realistic grilled textures. Second reference defines the photography style only, do not copy its chicken dish. Alhadiqa identity: midnight navy matte tabletop and background, understated warm brass accents, refined soft golden side lighting, ivory ceramic dishes. Food dominates the frame, plate fully visible with safe margins for menu card cropping. Extremely sharp realistic food details, natural colors, premium editorial commercial photography. No people, no hands, no text, no prices, no logos, no collage.",
+      "sourceSha256": "171e2e5f0d5d796edd768418544b92441a8e811a1f991c364fc8c6bff93c555a",
+      "localPath": "output/hadiqa/photo-refresh/mixed-grill.png"
+    },
+    {
+      "key": "soup",
+      "id": "dc4f1343-b7f9-4d53-86e3-3e1ae12f0d20",
+      "name": "شوربة",
+      "price": 5,
+      "oldImage": "26d964ab-7435-45e3-b721-536746dfcf12/dc4f1343-b7f9-4d53-86e3-3e1ae12f0d20/hadiqa-20261102-894b88719469a2b6.webp",
+      "oldDescription": "",
+      "newImage": "26d964ab-7435-45e3-b721-536746dfcf12/dc4f1343-b7f9-4d53-86e3-3e1ae12f0d20/hadiqa-refresh-d8e6b233c3cc49e9.webp",
+      "sha256": "d8e6b233c3cc49e96d091065b915b989eba77e9a67cac005ccc86263e0b6aa25",
+      "bytes": 250322,
+      "prompt": "Create ONE premium photorealistic illustrative restaurant menu product photograph, square composition. First reference defines the food subject only: A white ceramic bowl of smooth golden yellow-brown soup with a piece of flatbread alongside, as in the source. Close appetizing food photograph with realistic consistency, no invented meat chunks. Second reference defines the photography style only, do not copy its chicken dish. Alhadiqa identity: midnight navy matte tabletop and background, understated warm brass accents, refined soft golden side lighting, ivory ceramic dishes. Food dominates the frame, plate fully visible with safe margins for menu card cropping. Extremely sharp realistic food details, natural colors, premium editorial commercial photography. No people, no hands, no text, no prices, no logos, no collage.",
+      "sourceSha256": "cdad6e1500be8fde3b4f071551df4f19c864093f6534cb55abcb1afc3efd632f",
+      "localPath": "output/hadiqa/photo-refresh/soup.png"
+    }
+  ],
+  "routes": [
+    {
+      "origin": "http://127.0.0.1:3000",
+      "status": 200,
+      "images": 3,
+      "disclosures": 16
+    },
+    {
+      "origin": "https://barndaksa.com",
+      "status": 200,
+      "images": 3,
+      "disclosures": 16
+    }
+  ],
+  "migration": "20261102104921_hadiqa_premium_product_photos"
+}
