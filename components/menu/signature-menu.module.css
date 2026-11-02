@@ -7,6 +7,18 @@
 .menu[data-signature="black"] { --brand: #292726; --tone: #ac927a; --accent: #d4ba9e; --surface: #f6f3ed; --text: #292726; --muted: #6a615b; --edge: #ded7cf; --panel: #36312d; }
 .menu[data-signature="once"] { --brand: #22251f; --tone: #858575; --accent: #d3d4bc; --surface: #f5f5ef; --text: #22251f; --muted: #63645c; --edge: #d9dace; --panel: #30342c; }
 .menu[data-signature="box"] { --brand: #171412; --tone: #ff761f; --accent: #ffad68; --surface: #faf4ed; --text: #27180e; --muted: #776050; --edge: #e6d8cb; --panel: #312219; }
+.menu[data-signature="sadeem"] { --brand: #392014; --tone: #c85922; --accent: #f2b46d; --surface: #fff7ea; --text: #392014; --muted: #79604e; --edge: #e6d2bd; --white: #fff7ea; --panel: #392014; }
+.menu[data-signature="sadeem"] .hero { min-height: min(760px, 94svh); }
+.menu[data-signature="sadeem"] .heroShade { background: linear-gradient(180deg,#21150be8 0%,#21150bb8 28%,#21150b7a 58%,#21150b20 82%,#21150b96); }
+.menu[data-signature="sadeem"] .backdrop img { object-position: center 72%; }
+.menu[data-signature="sadeem"] .heroCenter { justify-content: flex-start; padding-top: clamp(26px,6vh,64px); }
+.mark[data-mark="sadeem"] { width: clamp(250px,32vw,390px); height: 118px; }
+.mark[data-mark="sadeem"] img { filter: brightness(0) invert(1); mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="sadeem"] .heroCenter h1 { font-size: clamp(30px,3.8vw,55px); }
+.menu[data-signature="sadeem"] .heroCenter h1 em { display: inline; font-size: inherit; }
+.menu[data-signature="sadeem"] .signature { letter-spacing: .3em; margin: 4px 0 20px; }
+.menu[data-signature="sadeem"] .productPhoto { border-radius: 90px 90px 14px 14px; background: #f1e5d7; }
+.menu[data-signature="sadeem"] .loyaltyCard { background: linear-gradient(125deg,#392014,#663718); }
 .menu *, .loading * { box-sizing: border-box; }
 .menu button, .menu input, .menu select { font: inherit; }
 .menu button, .menu a, .menu select { -webkit-tap-highlight-color: transparent; }

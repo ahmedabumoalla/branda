@@ -76,7 +76,7 @@ function hooks() {
 }
 
 async function main() {
-  equal(Object.keys(signatureBrands).length, 4, 'Only the four requested identities receive this presentation');
+  equal(Object.keys(signatureBrands).length, 5, 'Only the five requested identities receive this presentation');
   for (const unknown of ['rast', 'black-drop', 'once', 'box-bbq', 'brand-871ec6e243c0', '__proto__', 'constructor']) equal(signatureBrand(unknown), null, 'Unrelated and inherited object names do not select a brand');
   for (const [slug, brand] of Object.entries(signatureBrands)) {
     const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: null }, brand });

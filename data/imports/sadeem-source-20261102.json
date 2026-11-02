@@ -1,0 +1,846 @@
+{
+  "version": 1,
+  "importKey": "sadeem-source-20261102",
+  "reviewedAt": "2026-11-02T00:14:57.230895+00:00",
+  "brandName": "شاي سديم",
+  "socialHandle": "@sadeemtea",
+  "sourceDirectory": "C:/Users/pc/Downloads/New folder",
+  "menuFile": "منيو.pdf",
+  "menuSha256": "52ace706beee5bc13b724dae02be2a0ab1c17b67fcb3f756139b53885723454e",
+  "sourceReview": "All four rendered PDF pages, enlarged option/price sections, and all 36 original JPG photos visually reviewed",
+  "priceMethod": "Visual transcription; extracted PDF text reverses multi-digit Arabic prices",
+  "categoryNote": "Categories are editorial organization; original menu has no category headings",
+  "products": [
+    {
+      "sourceId": "vegetable-pizza",
+      "name": "بيتزا خضار",
+      "category": "البيتزا",
+      "sourcePage": 1,
+      "sourcePosition": 1,
+      "price": 21,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 21
+        },
+        {
+          "name": "وسط",
+          "price": 26
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0283.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0283.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "541bb7559d8ff5eeefd358c0a5ed5e741bfb07d2e55bbf045f1f4aa6983ceeb8",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "birds-nest",
+      "name": "عش البلبل",
+      "category": "الفطائر",
+      "sourcePage": 1,
+      "sourcePosition": 2,
+      "price": 20,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 20
+        },
+        {
+          "name": "وسط",
+          "price": 27
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0282.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0282.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "2cef7e504a4a27c70e8536ef5700c52fa3cafd3ca5ca6cee74c95b5eba25b3c5",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "napoli-pizza",
+      "name": "بيتزا نابولي",
+      "category": "البيتزا",
+      "sourcePage": 1,
+      "sourcePosition": 3,
+      "price": 10,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "عادي",
+          "price": 10
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0264.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0264.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "16e40e73af243eadd174af54c11f1d4023a1015b253d05c2c2416a6c94d53fea",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "labneh-honey-pie",
+      "name": "فطيرة لبنة وعسل",
+      "category": "الفطائر",
+      "sourcePage": 1,
+      "sourcePosition": 4,
+      "price": 8,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "جبن سائل عسل",
+          "price": 10
+        },
+        {
+          "name": "جبن سائل سادة",
+          "price": 8
+        },
+        {
+          "name": "لبنة",
+          "price": 8
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0281.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0281.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "66ba1ab3b8e0a485cffa90c7d129543fc6cc3373cbb9d30a97b6ab555a9f3ba5",
+        "matchStatus": "visually-verified-exact-product"
+      },
+      "sourceNote": "Retained printed card title; printed options are liquid cheese with honey, plain liquid cheese, and labneh"
+    },
+    {
+      "sourceId": "dynamite-pizza",
+      "name": "ديناميت بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 1,
+      "sourcePosition": 5,
+      "price": 22,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 22
+        },
+        {
+          "name": "وسط",
+          "price": 28
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0274.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0274.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "8efa894587158c6f31dc35d36d71e5f2cb3d736cc734a0a9c4b56f262dd9811c",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "halloumi-pie",
+      "name": "فطيرة حلوم",
+      "category": "الفطائر",
+      "sourcePage": 1,
+      "sourcePosition": 6,
+      "price": 10,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "حلوم",
+          "price": 10
+        },
+        {
+          "name": "عكاوي",
+          "price": 10
+        },
+        {
+          "name": "قشقوان",
+          "price": 10
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0254.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0254.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "3b9d1afbf05cdd99648f06fb126db09f61cc7badeb805f6bbc900a5f03261bb7",
+        "matchStatus": "visually-verified-exact-product"
+      },
+      "sourceNote": "Title is halloumi; Akkawi and Kashkaval are printed beneath with one shared price of 10 SAR"
+    },
+    {
+      "sourceId": "barbecue-pizza",
+      "name": "باربيكيو بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 1,
+      "sourcePosition": 7,
+      "price": 22,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 22
+        },
+        {
+          "name": "وسط",
+          "price": 28
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0270.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0270.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "a2dd25f152151401ff977bbc2ff1d022ad980375ad747d7513e523d87822d704",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "margherita-pizza",
+      "name": "مارجريتا بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 2,
+      "sourcePosition": 8,
+      "price": 20,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 20
+        },
+        {
+          "name": "وسط",
+          "price": 25
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0277.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0277.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "9581d70729b4660535ce57e3565bfa8957431ac923a219a6192195f7b4985f2c",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "ranch-pizza",
+      "name": "رانش بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 2,
+      "sourcePosition": 9,
+      "price": 22,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 22
+        },
+        {
+          "name": "وسط",
+          "price": 28
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0276.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0276.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "70dd7dc217e47462fb4824dba8b931e0df18958c5b4cef6494543d6aa8e6d70a",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "quattro-formaggi-pizza",
+      "name": "بيتزا كواتور فورماج",
+      "category": "البيتزا",
+      "sourcePage": 2,
+      "sourcePosition": 10,
+      "price": 23,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 23
+        },
+        {
+          "name": "وسط",
+          "price": 30
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0268.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0268.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "d4ba731bf307a113a2e8c62ef9d8d3e5503adc54ae59f8ff5580d1cb28174ba1",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "karak-tea",
+      "name": "شاي كرك",
+      "category": "المشروبات",
+      "sourcePage": 2,
+      "sourcePosition": 11,
+      "price": 5,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "زجاج",
+          "price": 8
+        },
+        {
+          "name": "براد",
+          "price": 25
+        },
+        {
+          "name": "ورق",
+          "price": 5
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0284.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0284.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "fb6690f43b8a4844ba84afda80ac80982144b2ef242e1db2f74bc9c2e13844e2",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "sadeem-special-pizza",
+      "name": "سديم سبيشل بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 2,
+      "sourcePosition": 12,
+      "price": 25,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 25
+        },
+        {
+          "name": "وسط",
+          "price": 35
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0286.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0286.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "b57dd24f68f774f5403b56d7846d7a7793585d8900cabefe272d079ac946f344",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "hibiscus",
+      "name": "كركديه",
+      "category": "المشروبات",
+      "sourcePage": 2,
+      "sourcePosition": 13,
+      "price": 8,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "عادي",
+          "price": 8
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0263.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0263.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "a583aaba73804641c3e19296b70be43c6cf7216ce46a2da4c2e0a91e3c85fd19",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "pepperoni-pizza",
+      "name": "بيروني بيتزا",
+      "category": "البيتزا",
+      "sourcePage": 2,
+      "sourcePosition": 14,
+      "price": 22,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "صغير",
+          "price": 22
+        },
+        {
+          "name": "وسط",
+          "price": 28
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0266.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0266.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "0c11df89e6818525b749cce861aaa58ccde1c5e4db5d9c7cd5d4947fb26215c1",
+        "matchStatus": "visually-verified-exact-product"
+      },
+      "sourceNameNote": "Printed visual title reads بيروني بيتزا; pepperoni confirmed by original photograph"
+    },
+    {
+      "sourceId": "umm-ali",
+      "name": "أم علي",
+      "category": "الحلويات",
+      "sourcePage": 3,
+      "sourcePosition": 15,
+      "price": 16,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "عادي",
+          "price": 16
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0265.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0265.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "3b26cacd4f17f38c11d8357fd7b3bcb4056ab63557cbe23559ce696942de6423",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "glass-tea",
+      "name": "كوب شاي",
+      "category": "المشروبات",
+      "sourcePage": 3,
+      "sourcePosition": 16,
+      "price": 8,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "زجاج",
+          "price": 8
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0275.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0275.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "ab89439b4fcf4742896ce34c1f4144ab2d0404e26abf8bce3cc51abecda853b8",
+        "matchStatus": "visually-verified-exact-product"
+      },
+      "listedHerbs": [
+        "حبق",
+        "نعناع",
+        "مرامية",
+        "إكليل الجبل",
+        "بردقوش"
+      ],
+      "herbPricingNote": "Herbs are listed together at one product price; no surcharge is printed"
+    },
+    {
+      "sourceId": "swiss-roll",
+      "name": "سويس روول",
+      "category": "الحلويات",
+      "sourcePage": 3,
+      "sourcePosition": 17,
+      "price": 16,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "القطعة",
+          "price": 16
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0272.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0272.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "714397e46e8967fcb95dfae8ca9cde55cc2bab6414eb91804cfe058bf573e7a2",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "tea-pot",
+      "name": "براد شاي",
+      "category": "المشروبات",
+      "sourcePage": 3,
+      "sourcePosition": 18,
+      "price": 15,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "براد",
+          "price": 15
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0261.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0261.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "3f28de37e72c923d326a34ba2141858a4506e5785fb9faaa49bc52e8be834767",
+        "matchStatus": "visually-verified-exact-product"
+      },
+      "listedHerbs": [
+        "حبق",
+        "نعناع",
+        "مرامية",
+        "إكليل الجبل",
+        "بردقوش"
+      ],
+      "herbPricingNote": "Herbs are listed together at one product price; no surcharge is printed"
+    },
+    {
+      "sourceId": "mixed-honeycomb",
+      "name": "خلية مكس",
+      "category": "الحلويات",
+      "sourcePage": 3,
+      "sourcePosition": 19,
+      "price": 22,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "بستاشيو",
+          "price": 22
+        },
+        {
+          "name": "قرفة",
+          "price": 22
+        },
+        {
+          "name": "شوكلت",
+          "price": 22
+        },
+        {
+          "name": "مكس",
+          "price": 25
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0253.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0253.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "769b957133e8a52eed7306c9602f694bfc0f94a9d0ffdf85ccde2eaa851ce152",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "tea-istikanah",
+      "name": "استكانة شاي",
+      "category": "المشروبات",
+      "sourcePage": 3,
+      "sourcePosition": 20,
+      "price": 2,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "استكانة",
+          "price": 2
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0273.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0273.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "f5456df05c0f9a87797e230242cd6c85e93c83f14924d65047356d17934c8fe1",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "honey-honeycomb",
+      "name": "خلية عسل",
+      "category": "الحلويات",
+      "sourcePage": 3,
+      "sourcePosition": 21,
+      "price": 20,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "نستلة",
+          "price": 21
+        },
+        {
+          "name": "جبن سادة",
+          "price": 20
+        },
+        {
+          "name": "عسل",
+          "price": 21
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0255.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0255.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "aeba63c199d125a920e30f2b18706bd929718dc1b7f677cf153039fb2bb27980",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "sausage-cheese-pie",
+      "name": "فطيرة نقانق بالجبن",
+      "category": "الفطائر",
+      "sourcePage": 4,
+      "sourcePosition": 22,
+      "price": 10,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "عادي",
+          "price": 10
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0267.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0267.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "3b3559b7ead88206d0dc3b2e153e4c715898ece544deaec8a2a0abfc1ee92ad2",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "ginger-lemon-tea",
+      "name": "شاي زنجبيل وليمون",
+      "category": "المشروبات",
+      "sourcePage": 4,
+      "sourcePosition": 23,
+      "price": 4,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "ورق",
+          "price": 4
+        },
+        {
+          "name": "زجاج",
+          "price": 7
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0257.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0257.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "66ae5f704dfbf8437514a9e71c397c0c7f9bd6bfd02b542ae228bf3c3169a592",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "zaatar-pie",
+      "name": "فطيرة زعتر",
+      "category": "الفطائر",
+      "sourcePage": 4,
+      "sourcePosition": 24,
+      "price": 7,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "زعتر",
+          "price": 7
+        },
+        {
+          "name": "لبنة وزعتر",
+          "price": 10
+        },
+        {
+          "name": "زعتر مكس",
+          "price": 12
+        },
+        {
+          "name": "زعتر بيروتي",
+          "price": 8
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0278.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0278.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "4d39b375b816ba224368ecd9b6dfdbe8db7ed2ce6cf58929b1289870ddc4e017",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "coffee-of-day",
+      "name": "قهوة اليوم سوداء",
+      "category": "المشروبات",
+      "sourcePage": 4,
+      "sourcePosition": 25,
+      "price": 5,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "حار",
+          "price": 5
+        },
+        {
+          "name": "بارد",
+          "price": 5
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0256.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0256.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "b756303a992da04705dd199a7824a37e813f7b3bbb4a633970af33bd1ee89f23",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "chicken-cheese-pie",
+      "name": "فطيرة دجاج بالجبن",
+      "category": "الفطائر",
+      "sourcePage": 4,
+      "sourcePosition": 26,
+      "price": 13,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "عادي",
+          "price": 13
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "IMG_0280.JPG.jpeg",
+        "localPath": "C:/Users/pc/Downloads/New folder/IMG_0280.JPG.jpeg",
+        "provenance": "original-source-photo",
+        "sha256": "1ae4a5e86ad1a8c3df852487bebf315657d33f41906b9bfdc2b543dd11da57b4",
+        "matchStatus": "visually-verified-exact-product"
+      }
+    },
+    {
+      "sourceId": "paper-tea",
+      "name": "شاي كوب ورق",
+      "category": "المشروبات",
+      "sourcePage": 4,
+      "sourcePosition": 27,
+      "price": 4,
+      "currency": "SAR",
+      "variants": [
+        {
+          "name": "ورق",
+          "price": 4
+        }
+      ],
+      "priceStatus": "visually-verified",
+      "available": true,
+      "image": {
+        "sourceFile": "paper-tea-original.jpeg",
+        "localPath": "C:/Projects/branda-salon-design-release-20261028/output/sadeem/paper-tea-original.jpeg",
+        "provenance": "original-embedded-pdf-photo",
+        "sha256": "9e2b41256fd30d66d5cb89fcb8f5e958f03b127084dc525c74478dc4aeba74b6",
+        "matchStatus": "visually-verified-exact-product",
+        "pdfXref": 648
+      }
+    }
+  ],
+  "missingPrices": [],
+  "missingImages": [],
+  "generatedImagesRequired": [],
+  "assets": {
+    "menuLogo": {
+      "localPath": "output/sadeem/menu-logo-original.png",
+      "provenance": "embedded-raster-logo-with-original-soft-mask",
+      "width": 675,
+      "height": 253,
+      "pdfXrefs": [
+        36,
+        37
+      ],
+      "note": "Original color is translucent red and appears orange over menu paper; do not recolor this source"
+    },
+    "whatsappLogo": {
+      "localPath": "output/sadeem/whatsapp-logo-original.jpeg",
+      "provenance": "unmodified-embedded-original",
+      "width": 500,
+      "height": 500,
+      "pdfXref": 5,
+      "note": "Black Sadeem wordmark and Arabic tea-and-more tagline on original gray-beige background"
+    },
+    "heroCandidates": [
+      "IMG_0269.JPG.jpeg",
+      "IMG_0285.JPG.jpeg",
+      "IMG_0259.JPG.jpeg",
+      "IMG_0261.JPG.jpeg"
+    ],
+    "alternateProductPhotos": {
+      "mixed-honeycomb": [
+        "IMG_0251.JPG.jpeg"
+      ],
+      "halloumi-pie": [
+        "IMG_0252.JPG.jpeg"
+      ],
+      "ginger-lemon-tea": [
+        "IMG_0258.JPG.jpeg"
+      ],
+      "tea-pot": [
+        "IMG_0259.JPG.jpeg"
+      ],
+      "swiss-roll": [
+        "IMG_0271.JPG.jpeg"
+      ],
+      "sausage-cheese-pie": [
+        "IMG_0279.JPG.jpeg"
+      ]
+    },
+    "teamPhotosExcludedFromCatalog": [
+      "IMG_0260.JPG.jpeg",
+      "IMG_0262.JPG.jpeg"
+    ],
+    "videoNotReviewed": "IMG_0287.MOV"
+  },
+  "notes": [
+    "All 27 printed product cards have explicit prices and confidently matched original images",
+    "Product images are originals; no synthetic or generative processing performed",
+    "Exact menu image for paper tea recovered from embedded PDF JPEG; no standalone source JPG existed",
+    "No brand ID, availability outside source menu, taxes, loyalty configuration, database state, or owner permissions inferred",
+    "Variant prices are absolute amounts, not deltas; publisher must derive modifier deltas from chosen base",
+    "Printed original text normalized only for spacing and tatweel; source names intentionally retained"
+  ]
+}
