@@ -48,10 +48,13 @@ await test('database errors are generic',async()=>{rpcFail='begin_staff_otp';ass
 const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 const dictionary=load('lib/cashier/messages.ts',{}).cashierEnglish;
 let state=[],cursor=0,locale='ar';
+let loginOutcome;
+const actions={loginCashierAction:async()=>loginOutcome(),verifyCashierOtpAction:async()=>loginOutcome()};
 const ui=load('components/cashier/cashier-login-form.tsx',{
  react:{...React,useState:initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return [state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];},useEffect:()=>{}},
  'next/link':({children,...props})=>React.createElement('a',props,children),
- '@/app/actions/cashier':{}, '@/components/ui/barndaksa-logo':{BarndaksaLogo:()=>null},
+ 'next/navigation':require('next/dist/client/components/unstable-rethrow.browser'),
+ '@/app/actions/cashier':actions, '@/components/ui/barndaksa-logo':{BarndaksaLogo:()=>null},
  './cashier-login.module.css':{default:new Proxy({}, {get:(_, key)=>String(key)}),__esModule:true},
  './cashier-system-switch':{CashierSystemSwitch:()=>null},
  './cashier-language':{CashierLanguageSwitch:()=>null,useCashierLanguage:()=>({locale,dir:locale==='ar'?'rtl':'ltr',t:m=>typeof m==='string'?(locale==='ar'?m:dictionary[m]??m):m.text,errorText:m=>m})},
@@ -61,4 +64,32 @@ await test('default login asks only phone',()=>{const html=render();assert(html.
 await test('legacy email/password form remains available',()=>{state[5]='password';const html=render();assert(html.includes('type="email"')&&html.includes('type="password"'));assert(!html.includes('one-time-code'));});
 await test('code form supports autofill and input limits',()=>{state[5]='whatsapp';state[8]=true;const html=render();assert(html.includes('one-time-code')&&html.includes('maxLength="6"')&&html.includes('readOnly=""'));});
 await test('English login labels translated',()=>{state[8]=false;locale='en';const html=render();assert(html.includes('WhatsApp number')&&html.includes('Email and password')&&html.includes('dir="ltr"'));});
+function findForm(node){
+ if(!node||typeof node!=='object')return null;
+ if(node.type==='form')return node;
+ for(const child of React.Children.toArray(node.props?.children)){const found=findForm(child);if(found)return found;}
+ return null;
+}
+async function submitLogin(mode){
+ state=[];state[5]=mode;state[8]=true;cursor=0;
+ const form=findForm(ui.CashierLoginForm({}));assert(form);
+ await form.props.onSubmit({preventDefault(){}});
+}
+const {getRedirectError}=require('next/dist/client/components/redirect');
+for(const mode of ['whatsapp','password']){
+ await test(`${mode} successful navigation never displays a session failure`,async()=>{
+  const redirect=getRedirectError('/cashier','push');
+  loginOutcome=()=>{throw redirect;};
+  await assert.rejects(()=>submitLogin(mode),error=>error===redirect);
+  assert.equal(state[3],'');assert.equal(state[4],false);
+ });
+ await test(`${mode} real request failure remains visible and permits retry`,async()=>{
+  loginOutcome=()=>{throw Error('private network detail');};
+  await submitLogin(mode);assert.equal(state[3],'تعذر بدء جلسة نقطة التشغيل حاول مجددًا');assert.equal(state[4],false);
+ });
+ await test(`${mode} rejected credentials preserve the server message`,async()=>{
+  loginOutcome=()=>({ok:false,message:'Invalid credentials'});
+  await submitLogin(mode);assert.equal(state[3],'Invalid credentials');assert.equal(state[4],false);
+ });
+}
 console.log(`PASS ${count} staff OTP server and login UI tests; no live messages or accounts`);

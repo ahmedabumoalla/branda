@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { loginCashierAction, requestCashierOtpAction, verifyCashierOtpAction } from "@/app/actions/cashier";
@@ -60,7 +61,8 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
         const result = mode === "password" ? await loginCashierAction(email, password) : await verifyCashierOtpAction(code);
         if (result && !result.ok) setMessage(result.message);
       }
-    } catch {
+    } catch (error) {
+      unstable_rethrow(error);
       setMessage("تعذر بدء جلسة نقطة التشغيل حاول مجددًا");
     } finally {
       setLoading(false);
