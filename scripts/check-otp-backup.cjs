@@ -28,12 +28,12 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
     return backup || status === 200 ? Response.json({ idMessage: 'ack' }) : new Response('', { status });
   });
   let error;
-  try { await api[method]({ phoneNormalized: '966500000001', code: '123456', brandName: 'Example' }); } catch (e) { error = e; }
+  try { await api[method]({ phoneNormalized: '966500000001', phone: '966500000001', code: '123456', brandName: 'Example', password: 'fixture-only', startsTrial: false }); } catch (e) { error = e; }
   return { calls, sends: calls.filter(c => c.method === 'POST'), error };
 }
 (async () => {
   let checks = 0;
-  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp']) {
+  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) {
     const normal = await scenario({ method });
     assert.equal(normal.error, undefined); assert.equal(normal.sends.length, 1); assert.match(normal.sends[0].url, /waInstance111/); checks++;
     for (const state of ['notAuthorized', 'blocked', 'sleepMode', 'starting', 'yellowCard', 'suspended', 'timeout']) {
@@ -53,6 +53,15 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   }
   const down = await scenario({ state: 'notAuthorized', backupState: 'notAuthorized' });
   assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
+  const ownerDown = await scenario({ method: 'sendGreenApiOwnerWelcome', state: 'notAuthorized', backupState: 'notAuthorized' });
+  assert.equal(ownerDown.error.message, 'OWNER_WELCOME_REJECTED'); assert.equal(ownerDown.sends.length, 0); checks++;
+  for (const options of [{ ambiguous: 'timeout' }, { ambiguous: 'json' }, { ambiguous: 'ack' }, { status: 500 }, { status: 403 }]) {
+    const x = await scenario({ method: 'sendGreenApiOwnerWelcome', ...options });
+    assert.ok(x.error); assert.equal(x.sends.length, 1, 'owner credentials must never be sent twice after submission'); checks++;
+  }
+  const ownerBackup = await scenario({ method: 'sendGreenApiOwnerWelcome', state: 'notAuthorized' });
+  const ownerBody = JSON.parse(ownerBackup.sends[0].body);
+  assert.equal(ownerBody.chatId, '966500000001@c.us'); assert.ok(ownerBody.message.includes('fixture-only')); checks++;
   const legacy = await scenario({ env: Object.fromEntries(Object.entries(base).filter(([k]) => !k.includes('BACKUP'))) });
   assert.equal(legacy.error, undefined); assert.equal(legacy.calls.length, 1); checks++;
   for (const value of ['http://7700.api.greenapi.com', 'https://evil.example', 'https://api.greenapi.com/steal']) {
@@ -65,10 +74,9 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   const operational = load('lib/whatsapp/green-api.ts', base, async url => { urls.push(url); return Response.json({ idMessage: 'ok' }); });
   await operational.sendGreenApiPagerMessage({ phone: '966500000001', message: 'test' });
   await operational.sendGreenApiFinanceShiftAlert({ phone: '966500000001', message: 'test' });
-  await operational.sendGreenApiOwnerWelcome({ phone: '966500000001', brandName: 'Test', password: 'mock', startsTrial: false });
-  assert.equal(urls.length, 3); assert.ok(urls.every(url => url.includes('waInstance111'))); checks++;
+  assert.equal(urls.length, 2); assert.ok(urls.every(url => url.includes('waInstance111'))); checks++;
   const marketing = fs.readFileSync('lib/whatsapp/green-api-marketing.ts', 'utf8');
   assert.match(marketing, /value.idInstance === process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE/);
   assert.ok(!fs.readFileSync('lib/whatsapp/green-api-platform-campaigns.ts', 'utf8').includes('OTP_BACKUP')); checks++;
-  console.log(`PASS ${checks} OTP failover scenarios; mocked only, no messages sent`);
+  console.log(`PASS ${checks} OTP and owner-welcome failover scenarios; mocked only, no messages sent`);
 })().catch(e => { console.error(e); process.exitCode = 1; });

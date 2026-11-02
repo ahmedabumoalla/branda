@@ -9,9 +9,18 @@ type GreenApiSendResponse = {
 /** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
 export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
-  const { apiUrl, idInstance, apiTokenInstance } = requireGreenApiConfig();
+  const primary = requireGreenApiConfig();
+  const backup = backupOtpSender(primary);
+  let sender = primary;
+  // Choose before submitting credentials so a disconnected primary cannot queue them.
+  // Never retry an ambiguous POST on another instance: it may already be accepted.
+  if (backup && !await otpSenderReady(validateOtpSender(primary))) {
+    if (!await otpSenderReady(backup)) throw new Error("OWNER_WELCOME_REJECTED");
+    sender = backup;
+  }
+  const { apiUrl, idInstance, apiTokenInstance } = sender;
   const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
-    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
     body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
       `حساب ${input.brandName} جاهز في برندة`,
@@ -283,7 +292,7 @@ async function otpSenderReady(sender: OtpSender) {
   } catch { return false; } // No message has been submitted, so choosing the backup is safe.
 }
 
-/** Only these two OTP entry points can use the backup. Queue admission remains bound
+/** OTP entry points and owner welcome can use the backup; campaigns cannot. OTP queue admission remains bound
  * to the primary logical provider; failover happens inside the already-claimed job.
  * Never repeat a POST after timeout/5xx/malformed acknowledgement: it may be queued.
  */
