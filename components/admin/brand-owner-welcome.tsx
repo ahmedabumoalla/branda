@@ -29,7 +29,7 @@ export function BrandOwnerWelcome({ cafe, disabled, onBusyChange, onUpdated }: {
     } catch { setError("انقطع الاتصال حدّث حالة الإرسال قبل المحاولة مجددًا"); }
     finally { inFlight.current = false; setPending(false); onBusyChange(false); setRetryConfirmed(false); }
   }
-  if (delivery.state === "sent") return <section className={s.welcome} role="status"><h3><Check size={19} aria-hidden="true" />تم إرسال تفاصيل الدخول للمالك</h3><p>تقدر تتابع الباقة ومدتها من اشتراكات العلامة</p>{delivery.sentAt && <time dateTime={delivery.sentAt}>{new Date(delivery.sentAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" })}</time>}</section>;
+  if (delivery.state === "sent") return <section className={s.welcome} role="status"><h3><Check size={19} aria-hidden="true" />تم قبول إرسال بيانات المالك</h3><p>قبول الرسالة لدى مزود واتساب لا يؤكد وصولها إلى جوال المالك</p>{delivery.sentAt && <time dateTime={delivery.sentAt}>{new Date(delivery.sentAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" })}</time>}</section>;
   return <section className={s.welcome} aria-busy={pending}>
     <h3>تسليم الحساب للمالك</h3>
     <p>{cafe.trialAwaitingDelivery ? "تقدر تجهّز العلامة الآن تبدأ التجربة لمدة ٧ أيام بعد قبول إرسال بيانات الدخول" : "أرسل بيانات الدخول للمالك مع الحفاظ على الباقة الحالية ومدة اشتراكها"}</p>

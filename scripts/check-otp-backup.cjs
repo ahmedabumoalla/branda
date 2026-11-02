@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const base = {
+  GREEN_API_ACCESS_SENDER: 'primary',
   GREEN_API_API_URL: 'https://1100.api.greenapi.com', GREEN_API_ID_INSTANCE: '111', GREEN_API_API_TOKEN_INSTANCE: 'primary-secret',
   GREEN_API_OTP_BACKUP_API_URL: 'https://7700.api.greenapi.com', GREEN_API_OTP_BACKUP_ID_INSTANCE: '222', GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE: 'backup-secret',
 };
@@ -33,6 +34,14 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
 }
 (async () => {
   let checks = 0;
+  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) {
+    const env = { ...base }; delete env.GREEN_API_ACCESS_SENDER;
+    const x = await scenario({ method, env });
+    assert.equal(x.error, undefined); assert.equal(x.sends.length, 1);
+    assert.ok(x.calls.every(c => c.url.includes('waInstance222')), 'restricted primary must never be contacted'); checks++;
+    const down = await scenario({ method, env, backupState: 'notAuthorized' });
+    assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
+  }
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) {
     const normal = await scenario({ method });
     assert.equal(normal.error, undefined); assert.equal(normal.sends.length, 1); assert.match(normal.sends[0].url, /waInstance111/); checks++;

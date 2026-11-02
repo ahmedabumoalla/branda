@@ -14,7 +14,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
   let sender = primary;
   // Choose before submitting credentials so a disconnected primary cannot queue them.
   // Never retry an ambiguous POST on another instance: it may already be accepted.
-  if (backup && !await otpSenderReady(validateOtpSender(primary))) {
+  if (backup && (preferBackupForAccess() || !await otpSenderReady(validateOtpSender(primary)))) {
     if (!await otpSenderReady(backup)) throw new Error("OWNER_WELCOME_REJECTED");
     sender = backup;
   }
@@ -256,6 +256,12 @@ export async function sendGreenApiSupabaseOtp(input: {
 
 type OtpSender = ReturnType<typeof requireGreenApiConfig>;
 
+// Access messages use the dedicated sender while the shared sender is restricted.
+// Campaigns and the durable queue's logical identity are intentionally unaffected.
+function preferBackupForAccess() {
+  return process.env.GREEN_API_ACCESS_SENDER?.trim() !== "primary";
+}
+
 function validateOtpSender(sender: OtpSender): OtpSender {
   let url: URL;
   try { url = new URL(sender.apiUrl); } catch { throw new Error("OTP_SENDER_CONFIG_INVALID"); }
@@ -301,7 +307,7 @@ async function sendVerificationCode(phone: string, code: string, message: string
   const primary = validateOtpSender(requireGreenApiConfig());
   const backup = backupOtpSender(primary);
   let sender = primary;
-  if (backup && !await otpSenderReady(primary)) {
+  if (backup && (preferBackupForAccess() || !await otpSenderReady(primary))) {
     if (!await otpSenderReady(backup)) throw new Error("OTP_SENDERS_UNAVAILABLE");
     sender = backup;
   }
