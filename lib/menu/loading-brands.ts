@@ -13,7 +13,7 @@ export type LoadingBrand = {
 // Loading identity only: never use this registry to select a brand's menu layout
 const brands: Record<string, LoadingBrand> = {
   delicake: { name: "Deli Cake", logo: "/deli-cake/logo-official-light-v2.svg", background: "#202619", accent: "#c7c4a5", foreground: "#f8ebdd", greeting: "لحظتك الحلوة تبدأ هنا", detail: "نجهّز لك اختيارات ديلي كيك" },
-  rast: { name: "مقهى الكواكب", logo: "/menu-logos/kawakib-transparent-20261008.png", background: "#272c26", accent: "#bdc8a4", foreground: "#ece9df", greeting: "لكل مزاج فلكه", detail: "نجهّز لك اختيارات الكواكب" },
+  rast: { name: "مقهى الكواكب", logo: "/menu-logos/kawakib-transparent-20261008.png", background: "#272c26", accent: "#bdc8a4", foreground: "#ece9df", greeting: "قهوتك على ذوقك", detail: "نجهّز لك اختيارات الكواكب" },
   "brand-10620d3a586c": { name: "الركن الفرنسي", logo: "/french-corner/official-logo.png", background: "#080908", accent: "#ddbf79", foreground: "#f8f1dd", greeting: "ذوق يستحق لحظتك", detail: "نجهّز لك اختيارات الركن الفرنسي", blend: true },
   "double-b-bistro": { name: "Double B", background: "#252a21", accent: "#c5b48b", foreground: "#f6efdf", greeting: "بداية على ذوقك", detail: "نجهّز لك اختيارات دبل بي" },
   basilico: { name: "Basilico", logo: "/menu-logos/basilico-transparent-v1.png", background: "#152e25", accent: "#d9bf86", foreground: "#fff6e7", greeting: "للنكهة حكاية", detail: "نجهّز لك اختيارات بازيليكو" },
