@@ -1,5 +1,6 @@
 /** Explicit identities: the legacy `rast` slug belongs to a different venue */
 export const signatureBrands = {
+  "brand-067febfb04db": { key: "damascus", name: "مطعم قلعة دمشق", arabic: "قلعة دمشق", logo: "damascus-logo", hero: "damascus-hero", headline: "للّمة طعم", emphasis: "شامي", note: "شاورما ومشاوي ومقبلات على أصولها", signature: "QALAT DIMASHQ", catalog: "سفرة من قلب الشام", loyalty: "كل زيارة تزيد المحبة", welcome: "أهلًا وسهلًا على سفرة القلعة", headerNote: "نكهة الشام في خميس مشيط", locationUrl: "https://maps.app.goo.gl/Pa3L9vDccaSvSf4j9?g_st=ic" },
   "brand-96f3dda4f1ea": { key: "hulm", name: "حلم", arabic: "حلم", logo: "hulm-logo", hero: "hulm-hero", headline: "خذ لحظة", emphasis: "وعيش حلم", note: "اختيارات تليق بذوقك وتكمّل لحظتك", signature: "HULM", catalog: "اختيارات من حلم", loyalty: "لحظاتك معنا تقرّب مكافأتك", welcome: "لحظتك الحلوة تبدأ من هنا" },
   "brand-6c954762020f": { key: "arabi", name: "عربي", arabic: "عربي", logo: "arabi-logo", hero: "arabi-hero", headline: "شاي يروّقك", emphasis: "وحلى يونسّك", note: "كرك وقهوة وحلويات تكمّل جلستك", signature: "ARABI", catalog: "وش يحلّي جلستك؟", loyalty: "كل جلسة تقرّب مكافأتك", welcome: "نجهّز لك رشفة وحلى على ذوقك" },
   "brand-4596b275e3d4": { key: "masala", name: "مسالا", arabic: "مسالا", logo: "masala-logo", hero: "masala-hero", headline: "رحلة نكهة", emphasis: "مع مسالا", note: "بهارات غنية وأطباق تستاهل التجربة", signature: "MASALA", catalog: "نكهات تستحق الاكتشاف", loyalty: "ارجع للنكهة واقترب من مكافأتك", welcome: "رحلتك إلى النكهة تبدأ الآن" },
@@ -27,6 +28,8 @@ export type SignatureBrand = {
   catalog: string;
   loyalty: string;
   welcome?: string;
+  headerNote?: string;
+  locationUrl?: string;
   cssVariables?: Record<string, string>;
 };
 
@@ -41,6 +44,7 @@ export function signatureBrand(slug: string): SignatureBrand | null {
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (name.startsWith("damascus-")) return `/menu-art/damascus/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (/^(hulm|arabi|masala|nineteen|rayhan)-(logo|hero)$/.test(name)) return `/menu-art/five-restaurants/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("korma-")) return `/menu-art/korma/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("hadiqa-")) return `/menu-art/hadiqa/${name}${mobile ? "-mobile" : ""}-v1.webp`;

@@ -372,6 +372,47 @@
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter .mark { height: 115px; }
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroBottom { padding-block: 4px; }
 }
+/* Damascus: the citadel crest, ablaq stone, red signage and a warm Syrian table. */
+.menu[data-signature="damascus"] { --brand: #211b17; --tone: #a51f2d; --accent: #d9b66f; --surface: #faf5ea; --text: #29221c; --muted: #6b5a46; --edge: #deceb3; --white: #fff8e9; --panel: #30231b; }
+.menu[data-signature="damascus"] .hero { min-height: 100svh; background: #15110e; }
+.menu[data-signature="damascus"] .heroShade { background: linear-gradient(180deg,#100c08b0 0%,#100c084a 40%,#100c0820 69%,#100c0870); }
+.menu[data-signature="damascus"] .backdrop img { object-position: center bottom; }
+.menu[data-signature="damascus"] .heroCenter { justify-content: flex-start; padding-top: clamp(22px,4svh,52px); padding-bottom: clamp(130px,22svh,240px); }
+.mark[data-mark="damascus"] { width: clamp(260px,30vw,390px); height: clamp(175px,22svh,250px); overflow: visible; }
+.mark[data-mark="damascus"] img { filter: none; mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="damascus"] .signature { margin: 8px 0 17px; letter-spacing: .26em; }
+.menu[data-signature="damascus"] .heroCenter h1 { font-size: clamp(32px,4.3vw,60px); }
+.menu[data-signature="damascus"] .heroCenter > p { margin-block: 12px 22px; }
+.menu[data-signature="damascus"] .primary { background: var(--tone); color: var(--white); border: 1px solid #e1bc755c; }
+.menu[data-signature="damascus"] .heroBottom { background: #15110eb8; padding-block: 12px; }
+.menu[data-signature="damascus"] .catalog { position: relative; padding-top: clamp(32px,5vw,64px); }
+.menu[data-signature="damascus"] .catalog::before { content: ""; position: absolute; inset: 0 0 auto; height: 7px; background: repeating-linear-gradient(90deg,var(--brand) 0 38px,var(--accent) 38px 76px); }
+.menu[data-signature="damascus"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 15px; }
+.menu[data-signature="damascus"] .categoryTitle h3 { border-inline-start: 3px solid var(--tone); padding-inline-start: 13px; }
+.menu[data-signature="damascus"] .productPhoto { border-radius: 70px 70px 12px 12px; background: #eaddc6; }
+.menu[data-signature="damascus"] .productPhoto > img { object-fit: cover; }
+.menu[data-signature="damascus"] .categories button[aria-pressed="true"] { background: var(--tone); border-color: var(--tone); }
+.menu[data-signature="damascus"] .productInfo .price { color: var(--tone); }
+.menu[data-signature="damascus"] :is(.hero,.footer) :focus-visible { outline-color: var(--accent); }
+.menu[data-signature="damascus"] .footer { border-top: 6px solid var(--accent); }
+.mark[data-mark="damascus"][data-small="true"] { width: 190px; height: 132px; }
+.menu[data-signature="damascus"].loading { background: #211b17; }
+@media (max-width: 640px) {
+  .menu[data-signature="damascus"] .header { padding-inline: 18px; gap: 12px; }
+  .menu[data-signature="damascus"] .headerNote { font-size: 14px; }
+  .menu[data-signature="damascus"] .headerNote > span { font-size: 10px; }
+  .menu[data-signature="damascus"] .heroCenter { padding: 24px 20px 150px; }
+  .mark[data-mark="damascus"] { width: min(300px,78vw); height: 195px; }
+  .menu[data-signature="damascus"] .heroCenter h1 { font-size: 36px; }
+  .menu[data-signature="damascus"] .heroCenter h1 em { display: inline; font-size: inherit; }
+  .menu[data-signature="damascus"] .heroCenter > p { font-size: 14px; }
+  .menu[data-signature="damascus"] .productPhoto { border-radius: 44px 44px 10px 10px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu[data-signature="damascus"] .heroCenter { padding-top: 14px; padding-bottom: 100px; }
+  .mark[data-mark="damascus"] { height: 140px; }
+  .menu[data-signature="damascus"] .signature { margin-bottom: 10px; }
+}
 /* The shared presentation for new cafes/restaurants uses each owner's safe color tokens. */
 .menu[data-signature="default"] { --hero-paper: #f7f3e9; --hero-ink: #252c25; --hero-detail: #354438; --space: clamp(28px,4vw,54px); }
 .menu[data-signature="default"] .hero { min-height: min(820px,100svh); color: var(--hero-ink); background: var(--hero-paper); }

@@ -1,0 +1,2245 @@
+{
+  "at": "2026-11-03T23:11:00.731Z",
+  "sourceUrl": "https://maps.app.goo.gl/Pa3L9vDccaSvSf4j9?g_st=ic",
+  "sourceDirectory": "output/damascus",
+  "sourcePhotos": [
+    {
+      "filename": "WhatsApp Image 2026-11-03 at 6.58.05 PM (1).jpeg",
+      "sha256": "250e611f1cc203f7c2a0132eb08634b0a459c1ff7a5d92928affdff9c58c0488"
+    },
+    {
+      "filename": "WhatsApp Image 2026-11-03 at 6.58.05 PM.jpeg",
+      "sha256": "2514ac274c2e477115572d2f8921197734778a37b935f678d494dd37bf260777"
+    }
+  ],
+  "sourceReview": "All 110 printed integer prices reviewed from supplied menu photo; duplicated soda rows retained without inventing sizes; calories withheld until portion units can be confirmed",
+  "palette": {
+    "primary": "#211B17",
+    "secondary": "#F4E7CF",
+    "accent": "#D9B66F",
+    "background": "#FAF5EA",
+    "text": "#29221C",
+    "button": "#A51F2D"
+  },
+  "categories": [
+    "المشاوي",
+    "المقبلات",
+    "ساندوتشات المشويات",
+    "المشروبات",
+    "الفول والفتات الشامية",
+    "ساندوتشات فلافل",
+    "الفروج",
+    "الشاورما دجاج",
+    "شاورما لحم"
+  ],
+  "assets": {
+    "menuLogo": {
+      "localPath": "public/menu-art/damascus/damascus-logo-v1.webp",
+      "sha256": "ac3320de7ce6825b1f070296f9ef2701f9ef7d8f02884edd7b77bda84e94d982",
+      "generatedSourceSha256": "4415b89d6243190f75995820bb7350e5c2cee7adcedabfea5c342254c84b4f17",
+      "provenance": "Restored citadel crest; user corrected exact Arabic phrase inside the lower ribbon, no external text"
+    }
+  },
+  "products": [
+    {
+      "sourceId": "damascus-1-1",
+      "name": "نفر كباب لحم 3 سيخ",
+      "category": "المشاوي",
+      "price": 35,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 223,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-kebab.webp",
+        "sha256": "17e754da4af530c20b512cd95294294e5dc8984d57e7269556b9be889c4c47d2",
+        "generatedSourceSha256": "bec01f55cc0fb033bc0b553ca59f9b8f3b4285064a4315f1d8a0c84783a07386",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-2",
+      "name": "نفر كباب دجاج 3 سيخ",
+      "category": "المشاوي",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 420,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-kebab.webp",
+        "sha256": "0672931f958f12c3a9ee194ccebc4f5efcbde37316131e7db9f40b4da515e387",
+        "generatedSourceSha256": "34bac0b0584af4ca2137ea57a27af45bcbd5a7b47e989c33f8a22556f7d6a44e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-3",
+      "name": "نفر أوصال لحم 3 سيخ",
+      "category": "المشاوي",
+      "price": 40,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-cubes",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-cubes.webp",
+        "sha256": "b76db80b398d19997ffabbe718bb13d5966582dd74db0250dfc0e8da29c26861",
+        "generatedSourceSha256": "93e6fb9f2c4350c7911a03a75584386526b0fb432ee4ec3f4a7aed083a447a0c",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-4",
+      "name": "نفر شيش طاووق 3 سيخ",
+      "category": "المشاوي",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "tawook",
+      "image": {
+        "localPath": "output/damascus/reviewed/tawook.webp",
+        "sha256": "1974432f226aa829824f09197228d8a18563df9b49a7f7ff9a035da37223833f",
+        "generatedSourceSha256": "3586bb6bb5a7d7a0023c748cc29b2fd9765a764567edb483b2ce95225cda003a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-5",
+      "name": "نفر مشاوي مشكل 4 سيخ",
+      "category": "المشاوي",
+      "price": 45,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 300,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-grill.webp",
+        "sha256": "e088b5fffb94b0c9e80900d2d598727440a904a2901dfb9ad4eeda96ceb9fd8d",
+        "generatedSourceSha256": "6fd717f3ee22c2f6f6d4150a654a2fd321ae4150e6744edfba20030a7e3dc53e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-6",
+      "name": "نفر مشاوي مشكل لحم 4 سيخ",
+      "category": "المشاوي",
+      "price": 50,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 523,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-meat-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-meat-grill.webp",
+        "sha256": "2d103ec9611c4c5b68ff0080807a228b0a311a7a80173a99b56698cf85cc39e8",
+        "generatedSourceSha256": "5df3506249eb378584834fe796347f4a698fc5ab5335467c991934ad3ced4272",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-7",
+      "name": "نفر مشاوي مشكل دجاج 4 سيخ",
+      "category": "المشاوي",
+      "price": 40,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 505,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-chicken-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-chicken-grill.webp",
+        "sha256": "f18eca73c807ba70e9adfd8c3328cebe6e9bff1de917389599b47864d90d255b",
+        "generatedSourceSha256": "56e191ebf9e236ac0ee4819ddae08afc73263d25f265179bc958c77df034c67b",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-8",
+      "name": "نفر دجاج بالعظم 2 سيخ",
+      "category": "المشاوي",
+      "price": 22,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 205,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-bone-skewers",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-bone-skewers.webp",
+        "sha256": "4c7be1d2425df7e004b595a135401c8e7804b4c6de0bf39341466ebd860182ca",
+        "generatedSourceSha256": "db8f4c346c099e3b1efd61b9684d5455479d873bcf205b07f0232477d8e7d029",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-9",
+      "name": "صحن مشاوي مشكل 8 سيخ",
+      "category": "المشاوي",
+      "price": 90,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 650,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-grill.webp",
+        "sha256": "e088b5fffb94b0c9e80900d2d598727440a904a2901dfb9ad4eeda96ceb9fd8d",
+        "generatedSourceSha256": "6fd717f3ee22c2f6f6d4150a654a2fd321ae4150e6744edfba20030a7e3dc53e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-10",
+      "name": "صحن مشاوي مشكل 16 سيخ",
+      "category": "المشاوي",
+      "price": 160,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1200,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-grill.webp",
+        "sha256": "e088b5fffb94b0c9e80900d2d598727440a904a2901dfb9ad4eeda96ceb9fd8d",
+        "generatedSourceSha256": "6fd717f3ee22c2f6f6d4150a654a2fd321ae4150e6744edfba20030a7e3dc53e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-11",
+      "name": "صحن كباب لحم 8 سيخ",
+      "category": "المشاوي",
+      "price": 85,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 420,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-kebab.webp",
+        "sha256": "17e754da4af530c20b512cd95294294e5dc8984d57e7269556b9be889c4c47d2",
+        "generatedSourceSha256": "bec01f55cc0fb033bc0b553ca59f9b8f3b4285064a4315f1d8a0c84783a07386",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-12",
+      "name": "صحن كباب دجاج 8 سيخ",
+      "category": "المشاوي",
+      "price": 70,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 640,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-kebab.webp",
+        "sha256": "0672931f958f12c3a9ee194ccebc4f5efcbde37316131e7db9f40b4da515e387",
+        "generatedSourceSha256": "34bac0b0584af4ca2137ea57a27af45bcbd5a7b47e989c33f8a22556f7d6a44e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-13",
+      "name": "صحن أوصال لحم 8 سيخ",
+      "category": "المشاوي",
+      "price": 100,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 730,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-cubes",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-cubes.webp",
+        "sha256": "b76db80b398d19997ffabbe718bb13d5966582dd74db0250dfc0e8da29c26861",
+        "generatedSourceSha256": "93e6fb9f2c4350c7911a03a75584386526b0fb432ee4ec3f4a7aed083a447a0c",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-14",
+      "name": "صحن كباب لحم 16 سيخ",
+      "category": "المشاوي",
+      "price": 160,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1300,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-kebab.webp",
+        "sha256": "17e754da4af530c20b512cd95294294e5dc8984d57e7269556b9be889c4c47d2",
+        "generatedSourceSha256": "bec01f55cc0fb033bc0b553ca59f9b8f3b4285064a4315f1d8a0c84783a07386",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-15",
+      "name": "صحن كباب دجاج 16 سيخ",
+      "category": "المشاوي",
+      "price": 140,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 740,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-kebab",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-kebab.webp",
+        "sha256": "0672931f958f12c3a9ee194ccebc4f5efcbde37316131e7db9f40b4da515e387",
+        "generatedSourceSha256": "34bac0b0584af4ca2137ea57a27af45bcbd5a7b47e989c33f8a22556f7d6a44e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-16",
+      "name": "صحن لحم أوصال 16 سيخ",
+      "category": "المشاوي",
+      "price": 180,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 720,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-cubes",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-cubes.webp",
+        "sha256": "b76db80b398d19997ffabbe718bb13d5966582dd74db0250dfc0e8da29c26861",
+        "generatedSourceSha256": "93e6fb9f2c4350c7911a03a75584386526b0fb432ee4ec3f4a7aed083a447a0c",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-17",
+      "name": "صحن شيش طاووق 16 سيخ",
+      "category": "المشاوي",
+      "price": 140,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 730,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "tawook",
+      "image": {
+        "localPath": "output/damascus/reviewed/tawook.webp",
+        "sha256": "1974432f226aa829824f09197228d8a18563df9b49a7f7ff9a035da37223833f",
+        "generatedSourceSha256": "3586bb6bb5a7d7a0023c748cc29b2fd9765a764567edb483b2ce95225cda003a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-18",
+      "name": "صحن شيش طاووق 8 سيخ",
+      "category": "المشاوي",
+      "price": 75,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 355,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "tawook",
+      "image": {
+        "localPath": "output/damascus/reviewed/tawook.webp",
+        "sha256": "1974432f226aa829824f09197228d8a18563df9b49a7f7ff9a035da37223833f",
+        "generatedSourceSha256": "3586bb6bb5a7d7a0023c748cc29b2fd9765a764567edb483b2ce95225cda003a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-19",
+      "name": "صحن مشاوي مشكل لحم 16 سيخ",
+      "category": "المشاوي",
+      "price": 180,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 2150,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-meat-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-meat-grill.webp",
+        "sha256": "2d103ec9611c4c5b68ff0080807a228b0a311a7a80173a99b56698cf85cc39e8",
+        "generatedSourceSha256": "5df3506249eb378584834fe796347f4a698fc5ab5335467c991934ad3ced4272",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-20",
+      "name": "صحن مشاوي مشكل لحم 8 سيخ",
+      "category": "المشاوي",
+      "price": 85,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1100,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-meat-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-meat-grill.webp",
+        "sha256": "2d103ec9611c4c5b68ff0080807a228b0a311a7a80173a99b56698cf85cc39e8",
+        "generatedSourceSha256": "5df3506249eb378584834fe796347f4a698fc5ab5335467c991934ad3ced4272",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-21",
+      "name": "صحن مشاوي مشكل دجاج 8 سيخ",
+      "category": "المشاوي",
+      "price": 75,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 730,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-chicken-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-chicken-grill.webp",
+        "sha256": "f18eca73c807ba70e9adfd8c3328cebe6e9bff1de917389599b47864d90d255b",
+        "generatedSourceSha256": "56e191ebf9e236ac0ee4819ddae08afc73263d25f265179bc958c77df034c67b",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-22",
+      "name": "صحن مشاوي مشكل دجاج 16 سيخ",
+      "category": "المشاوي",
+      "price": 140,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1400,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-chicken-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-chicken-grill.webp",
+        "sha256": "f18eca73c807ba70e9adfd8c3328cebe6e9bff1de917389599b47864d90d255b",
+        "generatedSourceSha256": "56e191ebf9e236ac0ee4819ddae08afc73263d25f265179bc958c77df034c67b",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-23",
+      "name": "حبة دجاج على الفحم سوري",
+      "category": "المشاوي",
+      "price": 46,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 362,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "grilled-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/grilled-chicken.webp",
+        "sha256": "05705af0380c62e013289b80d7f375d56dc48c6c746657b5ba44a1d9b822d582",
+        "generatedSourceSha256": "b02738a20a6501fae2c8e0bfcaef92214c72d9ac359760fb33a501b2b259b2bb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-24",
+      "name": "نصف حبة دجاج على الفحم سوري",
+      "category": "المشاوي",
+      "price": 23,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 181,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "grilled-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/grilled-chicken.webp",
+        "sha256": "05705af0380c62e013289b80d7f375d56dc48c6c746657b5ba44a1d9b822d582",
+        "generatedSourceSha256": "b02738a20a6501fae2c8e0bfcaef92214c72d9ac359760fb33a501b2b259b2bb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-25",
+      "name": "حبة دجاج على الفحم مع الرز",
+      "category": "المشاوي",
+      "price": 46,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 362,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-rice",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-rice.webp",
+        "sha256": "d486ef004a3cc8ddfea683c58e8706b7c6e0374b4a0319e8914d5d87c6cee46f",
+        "generatedSourceSha256": "d73cb94031da0b932b2626d0eae39f144ca0f4853813a493f34de6db4fdea55a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-26",
+      "name": "نصف حبة دجاج على الفحم مع الرز",
+      "category": "المشاوي",
+      "price": 23,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 181,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-rice",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-rice.webp",
+        "sha256": "d486ef004a3cc8ddfea683c58e8706b7c6e0374b4a0319e8914d5d87c6cee46f",
+        "generatedSourceSha256": "d73cb94031da0b932b2626d0eae39f144ca0f4853813a493f34de6db4fdea55a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-27",
+      "name": "نفر عرايس لحم",
+      "category": "المشاوي",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 423,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arais",
+      "image": {
+        "localPath": "output/damascus/reviewed/arais.webp",
+        "sha256": "2575e72c5b3a5efe09a34e58052de08325d5ac27741d781044d1c3b54c5fbf23",
+        "generatedSourceSha256": "f5fb8cf92491ad832ae5a29097d19f7f8b0a6c53d6e1dac0ee0879744a0758f4",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-1-28",
+      "name": "صحن سبيشل عائلي قلعة دمشق",
+      "category": "المشاوي",
+      "price": 185,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 2780,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-grill",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-grill.webp",
+        "sha256": "e088b5fffb94b0c9e80900d2d598727440a904a2901dfb9ad4eeda96ceb9fd8d",
+        "generatedSourceSha256": "6fd717f3ee22c2f6f6d4150a654a2fd321ae4150e6744edfba20030a7e3dc53e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-1",
+      "name": "صحن تبولة",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "tabbouleh",
+      "image": {
+        "localPath": "output/damascus/reviewed/tabbouleh.webp",
+        "sha256": "cd160b94314e86296b5965d5e2b87f0838a34e57281221ecfd91938a2b5acb53",
+        "generatedSourceSha256": "c451847069843ebe04fd9e85bbf2ec6afa5599b669e4b31e0eeff075cefcfb63",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-2",
+      "name": "صحن فتوش",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "fattoush",
+      "image": {
+        "localPath": "output/damascus/reviewed/fattoush.webp",
+        "sha256": "cd3cdac80d486a114c6386d99cb32eaafd9a75dc81a3eb5dc8b6b4a1245a5b6b",
+        "generatedSourceSha256": "8398a00105d87b3c9cf8af6a81370bf7b868d92bfac1cc50cd2551fbdbbc8bd7",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-3",
+      "name": "صحن سلطة خضار",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "vegetable-salad",
+      "image": {
+        "localPath": "output/damascus/reviewed/vegetable-salad.webp",
+        "sha256": "301d737a0a77b2b1307cbbd86b6219106b5f44b1600fd841ec22dd38898599bf",
+        "generatedSourceSha256": "0d7cd1dc3a1095a639840d1c21ac33240ca6000e890e2b81cbe3986ed8079de2",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-4",
+      "name": "صحن مقبلات مشكل",
+      "category": "المقبلات",
+      "price": 20,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mezze",
+      "image": {
+        "localPath": "output/damascus/reviewed/mezze.webp",
+        "sha256": "eb0d471b145267e31d4174cf38210f665d7a0afb5ca9afd68d2ce5c4f9cb9118",
+        "generatedSourceSha256": "67b7fd09c684fe31f76f6bf9cff15232e6f7b6b51b3d207da6f8669d1db3c305",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-5",
+      "name": "صحن ورق عنب",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": "اعتمد الاسم الأساسي دون الكلمة اللاحقة غير المؤكدة؛ تبدو يالنجي في المصدر",
+      "variants": [],
+      "imageKey": "grape-leaves",
+      "image": {
+        "localPath": "output/damascus/reviewed/grape-leaves.webp",
+        "sha256": "5a88b0be90df3e8584abe24ff47c970b82b4c2fcafed034a513359ac068cec6e",
+        "generatedSourceSha256": "1e7c03e980a7ccfe105e2345172ef5cbdc39bba1c536b8a30cbfd750d9fdf351",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-6",
+      "name": "صحن كبة مقلية لحم 5 حبة",
+      "category": "المقبلات",
+      "price": 20,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "kibbeh",
+      "image": {
+        "localPath": "output/damascus/reviewed/kibbeh.webp",
+        "sha256": "ab378f8d65a1a102d11b3f730ee844686508f6a45df28aa84bf64e5c10e2c6cd",
+        "generatedSourceSha256": "54d63c9c7a47ebfac7176c2163866fff4e04d7c8bc5e54aab10aade5d26795d6",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-7",
+      "name": "صحن كبة مقلية دجاج 5 حبة",
+      "category": "المقبلات",
+      "price": 15,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-kibbeh",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-kibbeh.webp",
+        "sha256": "f9d67415a270c5e95317858c82d8dfef20fcd44a140d125959447601e767ad80",
+        "generatedSourceSha256": "75842ca5a8eb0a07f0dfae058b3439852c75db519e87981e6e135a25eaf825f9",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-8",
+      "name": "صحن كبة مقلية مكس 6 حبة",
+      "category": "المقبلات",
+      "price": 21,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mixed-kibbeh",
+      "image": {
+        "localPath": "output/damascus/reviewed/mixed-kibbeh.webp",
+        "sha256": "db8843d742da42a9f64065535a3c1ad0acff127a36bdc0f2e703b9b92d43ebf5",
+        "generatedSourceSha256": "e17581f9b6d19402b674e56c758ae375da9be4dfb0072926b80f6689e60cb0b0",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-9",
+      "name": "صحن بطاطس شرائح",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "fries",
+      "image": {
+        "localPath": "output/damascus/reviewed/fries.webp",
+        "sha256": "5ff9df161d420d8bd50e84c5a9cf5cf586ae05152a8af2b3e79e90f0a6363b3f",
+        "generatedSourceSha256": "179abcdee211115bf7f304776551e4069ab6684b29031ade607ee8e687463e0c",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-10",
+      "name": "صحن محمرة",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "muhammara",
+      "image": {
+        "localPath": "output/damascus/reviewed/muhammara.webp",
+        "sha256": "470c6b6788017093f9b0e4bd267021e14da56f3316e04fe20365b53e1145ca97",
+        "generatedSourceSha256": "6a3da2d5ce4befbebc26e639ae499a9817970cce0527d5ec60e2503fde8dd053",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-11",
+      "name": "صحن حمص",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "hummus",
+      "image": {
+        "localPath": "output/damascus/reviewed/hummus.webp",
+        "sha256": "3c73b5c712f12ce35276a7677202d92b93099b1e61e069db9e303cc81400bc7d",
+        "generatedSourceSha256": "80ab2a71ef4e3581bb080ea0dc79a63328e60b2fa7932706ee8c621f4cb92a6d",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-12",
+      "name": "صحن متبل",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mutabbal",
+      "image": {
+        "localPath": "output/damascus/reviewed/mutabbal.webp",
+        "sha256": "beb982b87719c0b5ba840615871fe955417f8e6483d6aeee8fb38c682c2b8308",
+        "generatedSourceSha256": "0f6255429c0da81257db3b2e4eb6f3558e971ccbd4118a88dd0ef055f31a3d3e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-13",
+      "name": "صحن متبل شمندر",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "beet-mutabbal",
+      "image": {
+        "localPath": "output/damascus/reviewed/beet-mutabbal.webp",
+        "sha256": "28d9b742da827d4d172f1cceaf8866c490eca040eb70b52eca6f29bc2371dddd",
+        "generatedSourceSha256": "c9cce0111d34b60675b54d19e24135d1808fb528245470a61a0755852b375eab",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-14",
+      "name": "صحن بابا غنوج",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "baba-ghanouj",
+      "image": {
+        "localPath": "output/damascus/reviewed/baba-ghanouj.webp",
+        "sha256": "f0576a8e4aaa673e753a4400bfba97e899fbaaa37982872c0666ed036c75da61",
+        "generatedSourceSha256": "09a093b8931c6ec4ce2aed835a8bf45dda43b533c35a7a0a636408b4031d4b03",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-2-15",
+      "name": "صحن سلطة زيتون",
+      "category": "المقبلات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": null,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "olives",
+      "image": {
+        "localPath": "output/damascus/reviewed/olives.webp",
+        "sha256": "0b9691638d85870315deffd7ca50994c43d57c25028305e420aa33362b61a498",
+        "generatedSourceSha256": "2c344fa0adfebe179c7f1a0e41e90a80a83e872bfbeb4415d3c12cf3427a2167",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-3-1",
+      "name": "ساندوتش كباب لحم",
+      "category": "ساندوتشات المشويات",
+      "price": 13,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 205,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "kebab-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/kebab-sandwich.webp",
+        "sha256": "d17f4e9fabfb3c72ec2a0f4fcac36efe791320c47e8775403ca74ab42bf5cbd7",
+        "generatedSourceSha256": "ed39eb33b573e0fcdd294d3e69245aa97dcee6507bb0d620001350ddff48903a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-3-2",
+      "name": "ساندوتش كباب دجاج",
+      "category": "ساندوتشات المشويات",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 240,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-kebab-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-kebab-sandwich.webp",
+        "sha256": "f009fdcb5be818166fe384c61cc10fc9207463925e52588f9eb83a2d5acf21f6",
+        "generatedSourceSha256": "bcfb25cf6f73e5d88706357277e09f71e44a762224d748ce50d89df5bb019689",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-3-3",
+      "name": "ساندوتش شيش طاووق",
+      "category": "ساندوتشات المشويات",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 115,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "tawook-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/tawook-sandwich.webp",
+        "sha256": "f888b7970b42fe1d8d736814af9af1f63f9fb2efc3bebbdbaa9789803e15586a",
+        "generatedSourceSha256": "6bac140939b0844b027322a2f772b26b5dde3f281a190170cbfaefcbd1bf0372",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-3-4",
+      "name": "ساندوتش أوصال لحم",
+      "category": "ساندوتشات المشويات",
+      "price": 13,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 121,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "lamb-cubes-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/lamb-cubes-sandwich.webp",
+        "sha256": "e33a52cf0624400552091533a0dcf4d0607e40277bb824fdd5449aa07fc7de9a",
+        "generatedSourceSha256": "4e98765b375b8941725390aef26418603260d1ee875ae0d2f226d518252537df",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-3-5",
+      "name": "كبة مشوية لحم بالحبة",
+      "category": "ساندوتشات المشويات",
+      "price": 7,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 80,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "grilled-kibbeh",
+      "image": {
+        "localPath": "output/damascus/reviewed/grilled-kibbeh.webp",
+        "sha256": "2cbebd73c6a89e20a645f7194df69d0d67d8a53f91d25f32382888d8b921e891",
+        "generatedSourceSha256": "54014f21c1e92090f0cf9038a5b6a4d012e62597e26b97c73f4f253281620777",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-1",
+      "name": "مشروبات غازية",
+      "category": "المشروبات",
+      "price": 3,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 210,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": "الحجم غير مذكور في الصورة",
+      "variants": [],
+      "imageKey": "soda",
+      "image": {
+        "localPath": "output/damascus/reviewed/soda.webp",
+        "sha256": "dba7bd562369c31e53eb765a49e3a0edaf304a6f223adb85343790d4ff3f8504",
+        "generatedSourceSha256": "f902d46d0c884f9be6c9ff6dcd3e3a0b92ba5a49da5cf6ae86af107dde5e7aa9",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-2",
+      "name": "مشروبات غازية",
+      "category": "المشروبات",
+      "price": 2,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 210,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": "الحجم غير مذكور في الصورة — صف مستقل عن الصنف بسعر 3",
+      "variants": [],
+      "imageKey": "soda",
+      "image": {
+        "localPath": "output/damascus/reviewed/soda.webp",
+        "sha256": "dba7bd562369c31e53eb765a49e3a0edaf304a6f223adb85343790d4ff3f8504",
+        "generatedSourceSha256": "f902d46d0c884f9be6c9ff6dcd3e3a0b92ba5a49da5cf6ae86af107dde5e7aa9",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-3",
+      "name": "ماء",
+      "category": "المشروبات",
+      "price": 1,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 0,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "water",
+      "image": {
+        "localPath": "output/damascus/reviewed/water.webp",
+        "sha256": "12839087bd5703776fa7e61b4fc04677d00bfd538f1bc11c7bbbe0f1026a5d76",
+        "generatedSourceSha256": "46b3c564c131742897ee4cda4151749d6205f0f27210354a17df35116756af71",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-4",
+      "name": "لبن عيران",
+      "category": "المشروبات",
+      "price": 3,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 110,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "ayran",
+      "image": {
+        "localPath": "output/damascus/reviewed/ayran.webp",
+        "sha256": "bb5c37bf797e9fb74e7e31cff765953975f39335818cf02d12cad1d9f4957c69",
+        "generatedSourceSha256": "10138fdea9763995a0a1512984e8acb69885a835a19c223829e3a552ee3208d9",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-5",
+      "name": "كوكتيل",
+      "category": "المشروبات",
+      "price": 8,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 112,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "cocktail",
+      "image": {
+        "localPath": "output/damascus/reviewed/cocktail.webp",
+        "sha256": "99ecceeea3702f1850411612f1bb3c753b8157df56b4f87837e990196c693031",
+        "generatedSourceSha256": "884ddfc52c0bc3ebe396332d96db16174a6c049f3aa806af9921b6ab59336841",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-4-6",
+      "name": "برتقال طازج كبس",
+      "category": "المشروبات",
+      "price": 10,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 75,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "orange-juice",
+      "image": {
+        "localPath": "output/damascus/reviewed/orange-juice.webp",
+        "sha256": "abc3d08ca6ce4ff55be1d8824b7d131a3ed934f5babdb054f472ff29495697d2",
+        "generatedSourceSha256": "a57707d6ea6796169e7d2e4d565c40f2dc5a3e7d4482338efc01152f592a6eae",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-1",
+      "name": "فتة شامية بالسمن",
+      "category": "الفول والفتات الشامية",
+      "price": 16,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1343,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "fatteh",
+      "image": {
+        "localPath": "output/damascus/reviewed/fatteh.webp",
+        "sha256": "bbaea9673b2ab1f6c09fb3b3f812aa9f15c41e91724d2ee8f3435bc72caf9a37",
+        "generatedSourceSha256": "dabcc780605b1c97d18742e46ffd062b78c8a39bcd41bfacddd163c7c39afb9c",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-2",
+      "name": "فول باللبن بالطحينة",
+      "category": "الفول والفتات الشامية",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 305,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "ful-yogurt",
+      "image": {
+        "localPath": "output/damascus/reviewed/ful-yogurt.webp",
+        "sha256": "f717835166b19822957694646037584e892dc74b261affa3065b1d4c163b56f0",
+        "generatedSourceSha256": "8660eb898e81eacaf436a9491164f22a67bc0499b3eedbb41dc88f2d3fd186fc",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-3",
+      "name": "فول بالزيت بحمص",
+      "category": "الفول والفتات الشامية",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 415,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "ful",
+      "image": {
+        "localPath": "output/damascus/reviewed/ful.webp",
+        "sha256": "60ce01f13c10aafc5198a132c95030bd6e6399eb3e88803498c42b37b89b8619",
+        "generatedSourceSha256": "40c5a056d4f035709b44fd129e5cee9fc6d34e724369b2bcb63f6ab4531c9e1e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-4",
+      "name": "حمص حب لبن بطحينة",
+      "category": "الفول والفتات الشامية",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 487,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chickpeas-yogurt",
+      "image": {
+        "localPath": "output/damascus/reviewed/chickpeas-yogurt.webp",
+        "sha256": "7ead477aeb4a981d306a6fd31f2eba4e98b1c7d1b262520a1468a1382b09eb6e",
+        "generatedSourceSha256": "8c50275fceb163ceab19068100e0e6b816d5dabaf725835f76a0111480c07dd4",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-5",
+      "name": "حمص حب زيت بحمص",
+      "category": "الفول والفتات الشامية",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 886,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chickpeas-oil",
+      "image": {
+        "localPath": "output/damascus/reviewed/chickpeas-oil.webp",
+        "sha256": "686b26f8b19895e77f5ad90a823e3c4cd0867e9afb9413e79cef89e792cb8399",
+        "generatedSourceSha256": "0f590d8ae31156fc6955b4d0cc72cae29cae5754f118d6274e6fe7599969b7cb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-6",
+      "name": "صحن مشكل فلافل صغير",
+      "category": "الفول والفتات الشامية",
+      "price": 12,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 245,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel.webp",
+        "sha256": "b345182f360684c41d7d9d6379a47e5f603b7a6e8783ea8fb444baf58b110022",
+        "generatedSourceSha256": "20cd357be4ddd277d036a1e91fcfa5bd034fa7ba523317359082f6f8d48a6de6",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-7",
+      "name": "صحن مشكل فلافل كبير",
+      "category": "الفول والفتات الشامية",
+      "price": 18,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 340,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel.webp",
+        "sha256": "b345182f360684c41d7d9d6379a47e5f603b7a6e8783ea8fb444baf58b110022",
+        "generatedSourceSha256": "20cd357be4ddd277d036a1e91fcfa5bd034fa7ba523317359082f6f8d48a6de6",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-8",
+      "name": "حمص باللحمة",
+      "category": "الفول والفتات الشامية",
+      "price": 16,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "hummus-meat",
+      "image": {
+        "localPath": "output/damascus/reviewed/hummus-meat.webp",
+        "sha256": "ebf9bd4cb4411a0beaba45dca67906e4b4294021452ef8a3ef09b3261971d227",
+        "generatedSourceSha256": "fcd0786710b11f2d3cb0d6d8c995fe5cfe2f976b2c435ada0e47b9c494059f1f",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-9",
+      "name": "حمص بالدجاج",
+      "category": "الفول والفتات الشامية",
+      "price": 16,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "hummus-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/hummus-chicken.webp",
+        "sha256": "f6015359b9926ead10e7addde30d8a9864dcf135ea8ebb42656dc50dcdb80e33",
+        "generatedSourceSha256": "f4c0a1f858674eb8516764108a99c88cb22df9a99044876a2b3788c0dc45a258",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-10",
+      "name": "كيلو حمص ناعم",
+      "category": "الفول والفتات الشامية",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "hummus",
+      "image": {
+        "localPath": "output/damascus/reviewed/hummus.webp",
+        "sha256": "3c73b5c712f12ce35276a7677202d92b93099b1e61e069db9e303cc81400bc7d",
+        "generatedSourceSha256": "80ab2a71ef4e3581bb080ea0dc79a63328e60b2fa7932706ee8c621f4cb92a6d",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-11",
+      "name": "نصف كيلو حمص ناعم",
+      "category": "الفول والفتات الشامية",
+      "price": 15,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "hummus",
+      "image": {
+        "localPath": "output/damascus/reviewed/hummus.webp",
+        "sha256": "3c73b5c712f12ce35276a7677202d92b93099b1e61e069db9e303cc81400bc7d",
+        "generatedSourceSha256": "80ab2a71ef4e3581bb080ea0dc79a63328e60b2fa7932706ee8c621f4cb92a6d",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-12",
+      "name": "كيلو فول حب",
+      "category": "الفول والفتات الشامية",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "ful",
+      "image": {
+        "localPath": "output/damascus/reviewed/ful.webp",
+        "sha256": "60ce01f13c10aafc5198a132c95030bd6e6399eb3e88803498c42b37b89b8619",
+        "generatedSourceSha256": "40c5a056d4f035709b44fd129e5cee9fc6d34e724369b2bcb63f6ab4531c9e1e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-5-13",
+      "name": "نصف كيلو فول حب",
+      "category": "الفول والفتات الشامية",
+      "price": 15,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "ful",
+      "image": {
+        "localPath": "output/damascus/reviewed/ful.webp",
+        "sha256": "60ce01f13c10aafc5198a132c95030bd6e6399eb3e88803498c42b37b89b8619",
+        "generatedSourceSha256": "40c5a056d4f035709b44fd129e5cee9fc6d34e724369b2bcb63f6ab4531c9e1e",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-6-1",
+      "name": "ساندوتش فلافل شامي صغير",
+      "category": "ساندوتشات فلافل",
+      "price": 6,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 55,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel-sandwich.webp",
+        "sha256": "aae1926a0ee6728dc7e6d1024558c41a1114112a06f3e7214197ea933d1093e0",
+        "generatedSourceSha256": "0cbbfbeadc59a76f23d861a6784a18a4b205182d6aff7a668a7c87889322d7f4",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-6-2",
+      "name": "ساندوتش فلافل شامي كبير",
+      "category": "ساندوتشات فلافل",
+      "price": 7,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 75,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel-sandwich.webp",
+        "sha256": "aae1926a0ee6728dc7e6d1024558c41a1114112a06f3e7214197ea933d1093e0",
+        "generatedSourceSha256": "0cbbfbeadc59a76f23d861a6784a18a4b205182d6aff7a668a7c87889322d7f4",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-6-3",
+      "name": "ساندوتش فلافل خبز صاج",
+      "category": "ساندوتشات فلافل",
+      "price": 7,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 110,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel-sandwich.webp",
+        "sha256": "aae1926a0ee6728dc7e6d1024558c41a1114112a06f3e7214197ea933d1093e0",
+        "generatedSourceSha256": "0cbbfbeadc59a76f23d861a6784a18a4b205182d6aff7a668a7c87889322d7f4",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-6-4",
+      "name": "ساندوتش بطاطا",
+      "category": "ساندوتشات فلافل",
+      "price": 7,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 98,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "potato-sandwich",
+      "image": {
+        "localPath": "output/damascus/reviewed/potato-sandwich.webp",
+        "sha256": "0a32c29a250089f636b136a8c343179651c09897693895784ad72681d2766bc6",
+        "generatedSourceSha256": "33ac00303208290d7c9e646b490090b8fd3cba4b1b39eeb3afdf04f1c3db447f",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-6-5",
+      "name": "فلافل فرط ثلاث حبات",
+      "category": "ساندوتشات فلافل",
+      "price": 1,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 12,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "falafel",
+      "image": {
+        "localPath": "output/damascus/reviewed/falafel.webp",
+        "sha256": "b345182f360684c41d7d9d6379a47e5f603b7a6e8783ea8fb444baf58b110022",
+        "generatedSourceSha256": "20cd357be4ddd277d036a1e91fcfa5bd034fa7ba523317359082f6f8d48a6de6",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-1",
+      "name": "فروج مشوي سوري حبة",
+      "category": "الفروج",
+      "price": 48,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 412,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "grilled-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/grilled-chicken.webp",
+        "sha256": "05705af0380c62e013289b80d7f375d56dc48c6c746657b5ba44a1d9b822d582",
+        "generatedSourceSha256": "b02738a20a6501fae2c8e0bfcaef92214c72d9ac359760fb33a501b2b259b2bb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-2",
+      "name": "فروج مشوي سوري نصف حبة",
+      "category": "الفروج",
+      "price": 25,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 206,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "grilled-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/grilled-chicken.webp",
+        "sha256": "05705af0380c62e013289b80d7f375d56dc48c6c746657b5ba44a1d9b822d582",
+        "generatedSourceSha256": "b02738a20a6501fae2c8e0bfcaef92214c72d9ac359760fb33a501b2b259b2bb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-3",
+      "name": "فروج مشوي سوري حبة مع الرز",
+      "category": "الفروج",
+      "price": 48,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 230,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-rice",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-rice.webp",
+        "sha256": "d486ef004a3cc8ddfea683c58e8706b7c6e0374b4a0319e8914d5d87c6cee46f",
+        "generatedSourceSha256": "d73cb94031da0b932b2626d0eae39f144ca0f4853813a493f34de6db4fdea55a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-4",
+      "name": "فروج مشوي سوري نصف حبة مع الرز",
+      "category": "الفروج",
+      "price": 25,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 170,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-rice",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-rice.webp",
+        "sha256": "d486ef004a3cc8ddfea683c58e8706b7c6e0374b4a0319e8914d5d87c6cee46f",
+        "generatedSourceSha256": "d73cb94031da0b932b2626d0eae39f144ca0f4853813a493f34de6db4fdea55a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-5",
+      "name": "علبة ثوم",
+      "category": "الفروج",
+      "price": 3,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 35,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "toum",
+      "image": {
+        "localPath": "output/damascus/reviewed/toum.webp",
+        "sha256": "0d2e73d437917680e8b14b485a4db43d97ae2f0c74dfbd1a1a600eccc770a150",
+        "generatedSourceSha256": "1618544df0477e79fc9114f003c1e490c353e15dbb09ff5c0cbe77f82b726ce1",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-6",
+      "name": "علبة شطة سورية شامية",
+      "category": "الفروج",
+      "price": 3,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 12,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chili",
+      "image": {
+        "localPath": "output/damascus/reviewed/chili.webp",
+        "sha256": "bf5d0668c04d33251c594957e5c09849d3536ad2f9815d9b2fbf22b6ca53afcb",
+        "generatedSourceSha256": "cd0a913090f6e4ebffa8d650e0eb574cd9056edc466af4a4e0c479a6a912842f",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-7",
+      "name": "نفر رز",
+      "category": "الفروج",
+      "price": 7,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 28,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "rice",
+      "image": {
+        "localPath": "output/damascus/reviewed/rice.webp",
+        "sha256": "ee647ec7156e2332378aa09643a9bc82330197f9e360d2295aef50e66b60b654",
+        "generatedSourceSha256": "d8cf2e38638741c4f75b8d6919834dca46db1d5d6e38b389e77978178e9f3384",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-8",
+      "name": "سلطة روسية",
+      "category": "الفروج",
+      "price": 6,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 22,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "russian-salad",
+      "image": {
+        "localPath": "output/damascus/reviewed/russian-salad.webp",
+        "sha256": "dbd23954d7849fc6796320ed8ad28768f099c91d91296bc4c24341393f683aa4",
+        "generatedSourceSha256": "4d5ee185d6fae9f752fcd724197925a8005ed97e490189774f6327dad69cbbdb",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-7-9",
+      "name": "حبتين خبز صاج",
+      "category": "الفروج",
+      "price": 1,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 11,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "saj",
+      "image": {
+        "localPath": "output/damascus/reviewed/saj.webp",
+        "sha256": "bc9b55a3ea5f2b8b8c58aeb3ea1cdfe2f53688a3f19bc658ec59fb542b64914b",
+        "generatedSourceSha256": "29c361f7ab41523ca2de4521e5840fc65d9a696c7536e644dbed0fe9140da67a",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-1",
+      "name": "ساندوتش شاورما دجاج صغير",
+      "category": "الشاورما دجاج",
+      "price": 6,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 300,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-shawarma.webp",
+        "sha256": "92c8244284096aa50596ef0b4dc34905d1199347ae0f0edd9b8a85af57513389",
+        "generatedSourceSha256": "c639a6f139413290d285cf7d8912cd7a6f86af4cb644999cd6ddebec69ba6a99",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-2",
+      "name": "ساندوتش شاورما دجاج شامي وسط",
+      "category": "الشاورما دجاج",
+      "price": 8,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-shawarma.webp",
+        "sha256": "92c8244284096aa50596ef0b4dc34905d1199347ae0f0edd9b8a85af57513389",
+        "generatedSourceSha256": "c639a6f139413290d285cf7d8912cd7a6f86af4cb644999cd6ddebec69ba6a99",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-3",
+      "name": "ساندوتش شاورما دجاج شامي كبير",
+      "category": "الشاورما دجاج",
+      "price": 13,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 400,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-shawarma.webp",
+        "sha256": "92c8244284096aa50596ef0b4dc34905d1199347ae0f0edd9b8a85af57513389",
+        "generatedSourceSha256": "c639a6f139413290d285cf7d8912cd7a6f86af4cb644999cd6ddebec69ba6a99",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-4",
+      "name": "ساندوتش شاورما دجاج بالجبنة كبير",
+      "category": "الشاورما دجاج",
+      "price": 14,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 500,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-cheese-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-cheese-shawarma.webp",
+        "sha256": "ceec0aa1341bd798c26508818ca6d9232f8136f18608427dae9b373a642ed509",
+        "generatedSourceSha256": "7e97da0b49d728be11511ff5c1ba2d8c2cc74f91c93431a96aa8cf07efc980b3",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-5",
+      "name": "صحن شاورما عربي دجاج عادي",
+      "category": "الشاورما دجاج",
+      "price": 16,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-6",
+      "name": "صحن شاورما عربي دجاج بالجبنة",
+      "category": "الشاورما دجاج",
+      "price": 17,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 415,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-cheese-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-cheese-shawarma.webp",
+        "sha256": "3721bb318b700f2c902b0ae5ca5b63f902d0f0729b9585ba3013b1f7a8e39fc7",
+        "generatedSourceSha256": "3de15b51f0d0b39e7107e7d47af29babf29c9882cffa997f561f582d6a5fcf2d",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-7",
+      "name": "صحن شاورما عربي دجاج شامي",
+      "category": "الشاورما دجاج",
+      "price": 20,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 373,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-8",
+      "name": "صحن شاورما عربي دجاج دبل عادي",
+      "category": "الشاورما دجاج",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 400,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-9",
+      "name": "صحن شاورما عربي دجاج مع شرحات دبل",
+      "category": "الشاورما دجاج",
+      "price": 35,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 450,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-10",
+      "name": "صحن شاورما دجاج عادي فرط شرحات",
+      "category": "الشاورما دجاج",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-chicken-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-chicken-plate.webp",
+        "sha256": "e29194cb8863118596cebda2478eb81ccf0761f062ce97ad1bea8c4a8b974cf6",
+        "generatedSourceSha256": "a0d48fe044e50359f11a2418f31e2fdb4520e4ae29ac15be4653a85b4f3cc41b",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-11",
+      "name": "صحن شاورما دجاج دبل فرط شرحات",
+      "category": "الشاورما دجاج",
+      "price": 50,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 600,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-chicken-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-chicken-plate.webp",
+        "sha256": "e29194cb8863118596cebda2478eb81ccf0761f062ce97ad1bea8c4a8b974cf6",
+        "generatedSourceSha256": "a0d48fe044e50359f11a2418f31e2fdb4520e4ae29ac15be4653a85b4f3cc41b",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-12",
+      "name": "صحن شاورما عربي سبيشل",
+      "category": "الشاورما دجاج",
+      "price": 90,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 850,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-13",
+      "name": "صحن شاورما عربي دجاج سوبر عائلي",
+      "category": "الشاورما دجاج",
+      "price": 130,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 915,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-14",
+      "name": "صحن شاورما عربي مكس",
+      "category": "الشاورما دجاج",
+      "price": 40,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 440,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-mix-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-mix-shawarma.webp",
+        "sha256": "83b046e04e2bf3a88ea2840874fdcd63fe1cbeac035115efb2c437f0ed5ba375",
+        "generatedSourceSha256": "4c7c34326d95f47b95185cf37d25a5846b0a6b4e2a800432d72a760d8cdb1686",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-15",
+      "name": "صحن شاورما عربي وسط",
+      "category": "الشاورما دجاج",
+      "price": 50,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 510,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-shawarma.webp",
+        "sha256": "042efe66acc462145e68e0b622d42c6da66ea31086fb30c25ba875a8f2c08c29",
+        "generatedSourceSha256": "aed4a4545bf314505709b48c409b051685f312f9d28c999ab1b60fddf672cb11",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-16",
+      "name": "صحن شاورما فرط شرحات مكس",
+      "category": "الشاورما دجاج",
+      "price": 40,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 570,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-mix-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-mix-plate.webp",
+        "sha256": "cca1db50bbcea8dcb2f4fff6e1e3223e3a8efee9afd77bfa2e62987e0bc053af",
+        "generatedSourceSha256": "155682e26ed75d8f1b7d87ba918e2898de67aaf6a5c47ac8598885a4e95988a0",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-17",
+      "name": "صحن فتة شاورما دجاج",
+      "category": "الشاورما دجاج",
+      "price": 30,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 170,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "chicken-fatteh",
+      "image": {
+        "localPath": "output/damascus/reviewed/chicken-fatteh.webp",
+        "sha256": "0755797a23d35d1e77a9b544918ea8d4aa0c400a7111be12c0d0476d5699ec3a",
+        "generatedSourceSha256": "29a0f97f0d7aabf6f81d9f9cb93d05bb7039052d1d7086e8e2f8af8fecbd38f8",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-18",
+      "name": "صحن فتة شاورما مكس",
+      "category": "الشاورما دجاج",
+      "price": 35,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 200,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "mix-fatteh",
+      "image": {
+        "localPath": "output/damascus/reviewed/mix-fatteh.webp",
+        "sha256": "4e1b7c29e68bd5410194c5d8f3cab1ed7041403cf3e3295b6c5b59dbfa07e17e",
+        "generatedSourceSha256": "df5e400d150258a2050718c90b27e1d0546449cfaf67bcba217eb04608a9878d",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-19",
+      "name": "صحن شاورما سبيشل مكس",
+      "category": "الشاورما دجاج",
+      "price": 110,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 2200,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-mix-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-mix-shawarma.webp",
+        "sha256": "83b046e04e2bf3a88ea2840874fdcd63fe1cbeac035115efb2c437f0ed5ba375",
+        "generatedSourceSha256": "4c7c34326d95f47b95185cf37d25a5846b0a6b4e2a800432d72a760d8cdb1686",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-8-20",
+      "name": "مطوية دجاج",
+      "category": "الشاورما دجاج",
+      "price": 8,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 350,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "folded-chicken",
+      "image": {
+        "localPath": "output/damascus/reviewed/folded-chicken.webp",
+        "sha256": "721113d9926b2ee70bdcb38a27299cddd96840cf39549d6edc838d8977dd7e48",
+        "generatedSourceSha256": "a69dd2a47cd14fe80eb5542349e1b9d6535cd7b5ea068cb16091e039920d3aa3",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-1",
+      "name": "ساندوتش شاورما لحم شامي وسط",
+      "category": "شاورما لحم",
+      "price": 11,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 112,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "meat-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/meat-shawarma.webp",
+        "sha256": "5331b61e109d877fb4f9e5b02ebf9ce46f850ee8f8280446c875102b036a018a",
+        "generatedSourceSha256": "1180b9b4f3cafcd8b14f8f372c63bc6c14e327cf417798ad671276c5f5592ef7",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-2",
+      "name": "ساندوتش شاورما لحم شامي كبير",
+      "category": "شاورما لحم",
+      "price": 17,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 211,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "meat-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/meat-shawarma.webp",
+        "sha256": "5331b61e109d877fb4f9e5b02ebf9ce46f850ee8f8280446c875102b036a018a",
+        "generatedSourceSha256": "1180b9b4f3cafcd8b14f8f372c63bc6c14e327cf417798ad671276c5f5592ef7",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-3",
+      "name": "شاورما لحم عربي شامي عادي",
+      "category": "شاورما لحم",
+      "price": 25,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 301,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-meat-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-meat-shawarma.webp",
+        "sha256": "a7ce4ee84ccde14670fcab3caea534a940bec196442822e35155b7f3ecab4aec",
+        "generatedSourceSha256": "1452ecddc8befc1dc6f4a59888a8f91087b5e802f356dfb4f4c158de55bcb366",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-4",
+      "name": "شاورما لحم عربي شامي دبل",
+      "category": "شاورما لحم",
+      "price": 40,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 401,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "arabic-meat-shawarma",
+      "image": {
+        "localPath": "output/damascus/reviewed/arabic-meat-shawarma.webp",
+        "sha256": "a7ce4ee84ccde14670fcab3caea534a940bec196442822e35155b7f3ecab4aec",
+        "generatedSourceSha256": "1452ecddc8befc1dc6f4a59888a8f91087b5e802f356dfb4f4c158de55bcb366",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-5",
+      "name": "صحن شاورما لحم عادي فرط شرحات",
+      "category": "شاورما لحم",
+      "price": 35,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 463,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-meat-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-meat-plate.webp",
+        "sha256": "af4cc4e8fc71688626372126528dd28bbebdaba8b0d6aff978aa86b95774b4c1",
+        "generatedSourceSha256": "cf67fa593d77ef88fd4b4eb5181f1220f1a13e68557718f3d1075dab28646549",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-6",
+      "name": "نصف كيلو شاورما فرط مكس",
+      "category": "شاورما لحم",
+      "price": 60,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 307,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-mix-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-mix-plate.webp",
+        "sha256": "cca1db50bbcea8dcb2f4fff6e1e3223e3a8efee9afd77bfa2e62987e0bc053af",
+        "generatedSourceSha256": "155682e26ed75d8f1b7d87ba918e2898de67aaf6a5c47ac8598885a4e95988a0",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-7",
+      "name": "شاورما لحم نصف كيلو",
+      "category": "شاورما لحم",
+      "price": 70,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 614,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-meat-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-meat-plate.webp",
+        "sha256": "af4cc4e8fc71688626372126528dd28bbebdaba8b0d6aff978aa86b95774b4c1",
+        "generatedSourceSha256": "cf67fa593d77ef88fd4b4eb5181f1220f1a13e68557718f3d1075dab28646549",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-8",
+      "name": "شاورما لحم بالكيلو",
+      "category": "شاورما لحم",
+      "price": 140,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 1400,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "shawarma-meat-plate",
+      "image": {
+        "localPath": "output/damascus/reviewed/shawarma-meat-plate.webp",
+        "sha256": "af4cc4e8fc71688626372126528dd28bbebdaba8b0d6aff978aa86b95774b4c1",
+        "generatedSourceSha256": "cf67fa593d77ef88fd4b4eb5181f1220f1a13e68557718f3d1075dab28646549",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    },
+    {
+      "sourceId": "damascus-9-9",
+      "name": "صحن فتة شاورما لحم",
+      "category": "شاورما لحم",
+      "price": 45,
+      "priceStatus": "visually-verified",
+      "calories": null,
+      "calorieUnit": "unverified-source-portion",
+      "printedCalories": 250,
+      "description": "صورة توضيحية وقد يختلف التقديم الفعلي",
+      "sourceNote": null,
+      "variants": [],
+      "imageKey": "meat-fatteh",
+      "image": {
+        "localPath": "output/damascus/reviewed/meat-fatteh.webp",
+        "sha256": "069c5c27e8d29852364b0c442fa8108327a3e1bb83f05091a99bc0b6fdff0ad2",
+        "generatedSourceSha256": "0b08f538c2c20322de66f8d87c636291d41c18d4bb0d775a34c16d03e0bf1320",
+        "provenance": "Generated illustrative Syrian food/scene in the restaurant facade color identity; not an original restaurant photograph"
+      }
+    }
+  ]
+}

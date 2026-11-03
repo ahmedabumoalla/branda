@@ -79,7 +79,16 @@ function hooks() {
 
 async function main() {
   await checkDefaultPresentation();
-  equal(Object.keys(signatureBrands).length, 12, 'Only the twelve explicitly registered identities receive this presentation');
+  equal(Object.keys(signatureBrands).length, 13, 'Thirteen bespoke brand identities are registered alongside the automatic new-account default');
+  const damascus = signatureBrand('brand-067febfb04db');
+  equal(damascus.key, 'damascus', 'Qalat Damascus selects its user-requested bespoke identity');
+  equal(signatureAsset(damascus.logo), '/menu-art/damascus/damascus-logo-v1.webp', 'Corrected citadel and ribbon mark is used');
+  const damascusHtml = render({ menu: { ...menu, slug: 'brand-067febfb04db', logoUrl: null, loyaltyEnabled: false, products: [{ ...product, description: 'صورة توضيحية وقد يختلف التقديم الفعلي' }] }, brand: damascus, loyalty: null });
+  check(damascusHtml.includes('data-photo-disclosure') && damascusHtml.includes('صورة توضيحية'), 'Generated food images are explicitly disclosed');
+  check(damascusHtml.includes('maps.app.goo.gl/Pa3L9vDccaSvSf4j9') && damascusHtml.includes('موقع المطعم'), 'User-supplied restaurant location is visible');
+  check(!damascusHtml.includes('id="signature-loyalty"'), 'No loyalty program is invented for this account');
+  const damascusOwner = render({ menu: { ...menu, slug: 'brand-067febfb04db', logoUrl: '/later-damascus-logo.webp' }, brand: damascus });
+  check(damascusOwner.includes('/later-damascus-logo.webp') && !damascusOwner.includes(signatureAsset(damascus.logo)), 'Later owner logo upload is preserved');
   const newAccounts = { 'brand-96f3dda4f1ea': 'hulm', 'brand-6c954762020f': 'arabi', 'brand-4596b275e3d4': 'masala', 'brand-5afbbf87fa56': 'nineteen', 'brand-61c65e74315d': 'rayhan' };
   for (const [slug, key] of Object.entries(newAccounts)) {
     const brand = signatureBrand(slug);
