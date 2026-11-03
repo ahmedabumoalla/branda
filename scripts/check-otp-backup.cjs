@@ -38,8 +38,10 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
     const env = { ...base }; delete env.GREEN_API_ACCESS_SENDER;
     const x = await scenario({ method, env });
     assert.equal(x.error, undefined); assert.equal(x.sends.length, 1);
-    assert.ok(x.calls.every(c => c.url.includes('waInstance222')), 'restricted primary must never be contacted'); checks++;
-    const down = await scenario({ method, env, backupState: 'notAuthorized' });
+    assert.match(x.sends[0].url, /waInstance111/, 'default must prefer primary'); checks++;
+    const forced = await scenario({ method, env: { ...env, GREEN_API_ACCESS_SENDER: 'backup' } });
+    assert.equal(forced.error, undefined); assert.ok(forced.calls.every(c => c.url.includes('waInstance222'))); checks++;
+    const down = await scenario({ method, env: { ...env, GREEN_API_ACCESS_SENDER: 'backup' }, backupState: 'notAuthorized' });
     assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
   }
   for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) {
@@ -50,8 +52,8 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
       assert.equal(x.error, undefined); assert.equal(x.sends.length, 1); assert.match(x.sends[0].url, /waInstance222/); checks++;
     }
   }
-  for (const status of [401, 403, 429, 466]) {
-    const x = await scenario({ status }); assert.equal(x.error, undefined); assert.equal(x.sends.length, 2);
+  for (const method of ['sendGreenApiSupabaseOtp', 'sendGreenApiOtp', 'sendGreenApiOwnerWelcome']) for (const status of [401, 403, 429, 466]) {
+    const x = await scenario({ method, status }); assert.equal(x.error, undefined); assert.equal(x.sends.length, 2);
     assert.equal(x.sends[0].body, x.sends[1].body, 'same code and recipient'); checks++;
   }
   for (const status of [400, 408, 500, 502, 504]) {
@@ -64,7 +66,7 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   assert.ok(down.error); assert.equal(down.sends.length, 0); checks++;
   const ownerDown = await scenario({ method: 'sendGreenApiOwnerWelcome', state: 'notAuthorized', backupState: 'notAuthorized' });
   assert.equal(ownerDown.error.message, 'OWNER_WELCOME_REJECTED'); assert.equal(ownerDown.sends.length, 0); checks++;
-  for (const options of [{ ambiguous: 'timeout' }, { ambiguous: 'json' }, { ambiguous: 'ack' }, { status: 500 }, { status: 403 }]) {
+  for (const options of [{ ambiguous: 'timeout' }, { ambiguous: 'json' }, { ambiguous: 'ack' }, { status: 500 }, { status: 400 }, { status: 408 }]) {
     const x = await scenario({ method: 'sendGreenApiOwnerWelcome', ...options });
     assert.ok(x.error); assert.equal(x.sends.length, 1, 'owner credentials must never be sent twice after submission'); checks++;
   }

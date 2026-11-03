@@ -1,0 +1,20 @@
+.screen{position:relative;isolation:isolate;display:grid;place-items:center;min-height:100svh;overflow:hidden;padding:32px 24px;background:var(--loading-bg);color:var(--loading-ink)}
+.glow{position:absolute;z-index:-1;inset:-25%;pointer-events:none;background:radial-gradient(ellipse at 35% 25%,color-mix(in srgb,var(--loading-accent) 18%,transparent),transparent 55%),radial-gradient(ellipse at 80% 80%,color-mix(in srgb,var(--loading-accent) 8%,transparent),transparent 45%);animation:light-drift 8s ease-in-out infinite alternate}
+.frame{position:absolute;inset:20px;border:1px solid color-mix(in srgb,var(--loading-accent) 18%,transparent);border-radius:180px 180px 10px 10px;pointer-events:none}
+.frame::after{content:"";position:absolute;inset:10px;border:1px solid color-mix(in srgb,var(--loading-accent) 7%,transparent);border-radius:inherit}
+.content{width:min(100%,440px);text-align:center;animation:arrive .65s ease-out both}
+.eyebrow{font-size:11px;line-height:1.8;color:var(--loading-accent)}
+.identity{display:flex;align-items:center;justify-content:center;height:clamp(170px,33svh,280px);margin:14px 0 24px}
+.logo,.blendedLogo{display:block;width:100%;height:100%;max-width:310px;object-fit:contain}
+.blendedLogo{mix-blend-mode:screen}
+.wordmark{font-family:Georgia,"Times New Roman",serif;font-size:clamp(44px,12vw,76px);letter-spacing:-3px}.wordmark i{font-weight:400;color:var(--loading-accent)}
+.greeting{font-size:clamp(21px,5.5vw,30px);font-weight:600;line-height:1.7;margin:0 0 22px;text-wrap:balance}
+.progress{display:block;width:112px;height:2px;margin:0 auto 18px;background:color-mix(in srgb,var(--loading-accent) 18%,transparent);overflow:hidden;border-radius:2px}
+.progress span{display:block;height:100%;width:45%;background:var(--loading-accent);animation:loading-sweep 1.7s ease-in-out infinite}
+.status{font-size:12px;line-height:1.8;margin:0;color:var(--loading-accent)}
+.signature{position:absolute;bottom:35px;font-size:10px;letter-spacing:2px;opacity:.6}
+@keyframes arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes loading-sweep{0%{transform:translateX(120%)}100%{transform:translateX(-240%)}}
+@keyframes light-drift{from{transform:translate3d(-2%,-1%,0)}to{transform:translate3d(2%,2%,0)}}
+@media(max-height:560px){.identity{height:130px;margin:6px 0 10px}.greeting{margin-bottom:10px;font-size:20px}.signature{bottom:24px}.screen{padding-block:44px}.frame{inset:12px}}
+@media(prefers-reduced-motion:reduce){.content,.glow,.progress span{animation:none}.progress span{width:100%;opacity:.7}}

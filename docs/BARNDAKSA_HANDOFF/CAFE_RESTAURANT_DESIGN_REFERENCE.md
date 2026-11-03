@@ -1,6 +1,6 @@
 # Cafe and restaurant design reference
 
-User-approved direction on 2026-11-03: use Korma's design approach as the reference for future cafe and restaurant menus
+User-approved direction on 2026-11-03: use the approved Hadiqa, Loco, Once and Korma design approach as the reference for new cafe and restaurant accounts
 
 - Preserve each brand's original logo colors and transparent background; give the centered logo clear prominence
 - Use a coherent brand-specific photographic hero, restrained gradients and a complete first-screen composition

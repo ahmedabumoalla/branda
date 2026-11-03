@@ -107,11 +107,13 @@
 .sort label:first-of-type { max-width: 205px; }
 .sort select { min-height: 40px; padding: 7px 12px; font-size: 13px; background: transparent; }
 .hint { display: flex; align-items: center; gap: 8px; margin: 0; }
-.viewButtons { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 18px 14px; }
+.viewButtons { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px; }
 .viewButtons button { background: transparent; font-size: 13px; padding: 8px 12px; }
 .viewButtons button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.tableWrap { width: 100%; min-width: 0; border-block: 1px solid var(--line); }
-.tableWrap table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; text-align: right; }
+.tableWrap { width: 100%; min-width: 0; max-height: 72vh; max-height: 72dvh; overflow: auto; isolation: isolate; scrollbar-width: thin; scrollbar-color: #63705e var(--surface); border-block: 1px solid var(--line); }
+.tableWrap table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 14px; text-align: right; }
+.tableWrap thead { position: sticky; top: 0; z-index: 2; background: var(--surface); box-shadow: 0 5px 12px #0002; }
+.tableWrap .viewRow > td { padding: 0; background: var(--surface); }
 .tableWrap :is(th,td) { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
 .tableWrap thead th { background: var(--surface-raised); color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; }
 .tableWrap tr > th:first-child { width: 27%; text-align: right; }
@@ -230,11 +232,15 @@
 }
 @media (max-width: 700px) {
   .tableWrap table, .tableWrap tbody, .tableWrap tfoot { display: block; width: 100%; }
-  .tableWrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tableWrap thead { display: block; width: 100%; }
+  .tableWrap .columnHeadings { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
   .tableWrap tr { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 10px; border-bottom: 1px solid var(--line); }
   .tableWrap tr > th:first-child { grid-column: 1 / -1; width: auto; border: 0; padding: 4px 6px 10px; }
   .tableWrap td { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; padding: 8px 6px; border: 0; text-align: center; }
   .tableWrap td::before { content: attr(data-label); font-size: 11px; color: var(--muted); font-weight: 400; }
+  .tableWrap .viewRow { display: block; padding: 0; border: 0; }
+  .tableWrap .viewRow > td { display: block; padding: 0; }
+  .tableWrap .viewRow > td::before { content: none; }
   .detail dl { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .viewButtons { gap: 6px; }
   .viewButtons button { flex: 1 1 120px; }

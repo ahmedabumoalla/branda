@@ -18,8 +18,7 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
     if (!await otpSenderReady(backup)) throw new Error("OWNER_WELCOME_REJECTED");
     sender = backup;
   }
-  const { apiUrl, idInstance, apiTokenInstance } = sender;
-  const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+  const send = (target: OtpSender) => fetch(otpEndpoint(target, "sendMessage"), {
     method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
     signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
     body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: [
@@ -31,8 +30,15 @@ export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName
       input.startsTrial ? "تجربتك المجانية ٧ أيام من اليوم" : "بيانات الدخول تخص باقتك الحالية دون تغيير مدة الاشتراك",
     ].join("\n") }),
   });
+  let response: Response;
+  try { response = await send(sender); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
+  // Only an explicit refusal permits a second submission; never retry an unknown outcome
+  if (!response.ok && sender === primary && backup && [401, 403, 429, 466].includes(response.status) && await otpSenderReady(backup)) {
+    try { response = await send(backup); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
+  }
   if (!response.ok) throw new Error(response.status < 500 ? "OWNER_WELCOME_REJECTED" : "OWNER_WELCOME_UNCERTAIN");
-  const data = await response.json() as GreenApiSendResponse;
+  let data: GreenApiSendResponse;
+  try { data = await response.json(); } catch { throw new Error("OWNER_WELCOME_UNCERTAIN"); }
   if (typeof data.idMessage !== "string" || !data.idMessage) throw new Error("OWNER_WELCOME_UNCERTAIN");
   return { providerMessageId: data.idMessage };
 }
@@ -279,10 +285,10 @@ export async function sendGreenApiSupabaseOtp(input: {
 
 type OtpSender = ReturnType<typeof requireGreenApiConfig>;
 
-// Access messages use the dedicated sender while the shared sender is restricted.
+// Prefer the primary again; the explicit backup override remains available during incidents.
 // Campaigns and the durable queue's logical identity are intentionally unaffected.
 function preferBackupForAccess() {
-  return process.env.GREEN_API_ACCESS_SENDER?.trim() !== "primary";
+  return process.env.GREEN_API_ACCESS_SENDER?.trim() === "backup";
 }
 
 function validateOtpSender(sender: OtpSender): OtpSender {
