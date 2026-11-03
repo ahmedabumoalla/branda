@@ -41,6 +41,29 @@ export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }
 
+/** Customer welcomes stay on the primary sender; standby is reserved for access messages */
+export async function isGreenApiLoyaltyWelcomeReady() {
+  if (!isGreenApiConfigured()) return false;
+  try { return await otpSenderReady(validateOtpSender(requireGreenApiConfig())); }
+  catch { return false; }
+}
+
+export async function sendGreenApiLoyaltyWelcome(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+  if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_LOYALTY_WELCOME");
+  const { apiUrl, idInstance, apiTokenInstance } = validateOtpSender(requireGreenApiConfig());
+  try {
+    const response = await fetch(`${apiUrl}/waInstance${idInstance}/sendMessage/${apiTokenInstance}`, {
+      method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
+      signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+      body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
+    });
+    if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "unknown" };
+    const data = await response.json() as GreenApiSendResponse;
+    return typeof data.idMessage === "string" && data.idMessage.length > 0 && data.idMessage.length <= 200
+      ? { status: "queued", providerMessageId: data.idMessage } : { status: "unknown" };
+  } catch { return { status: "unknown" }; }
+}
+
 /** A provider acknowledgement means queued only. Ambiguous outcomes must not be retried automatically */
 export async function sendGreenApiFinanceShiftAlert(input: { phone: string; message: string }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_FINANCE_RECIPIENT");
