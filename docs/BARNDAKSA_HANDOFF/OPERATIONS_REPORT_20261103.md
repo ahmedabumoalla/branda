@@ -30,4 +30,5 @@
 
 ## Publication
 - Scoped release branch feat/barber55-identity-20261028 pushes HEAD:main
-- Exact commit, Vercel READY state, both production aliases and runtime authorization response will be verified in output/operations-report/publication.json
+- Published and verified 2026-11-03T11:03:20.551Z: GitHub main 10d9f4f0ca26c0790f91db465f063fa80cad11a1 matches Vercel dpl_BDADCiMVMkaes3RwsLpLMMHTG5xS READY on both production aliases; anonymous report remains null with access error.
+- Evidence: output/operations-report/publication.json; documentation-only follow-up does not change the tested implementation
