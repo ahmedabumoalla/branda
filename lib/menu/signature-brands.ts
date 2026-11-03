@@ -1,5 +1,10 @@
 /** Explicit identities: the legacy `rast` slug belongs to a different venue */
 export const signatureBrands = {
+  "brand-96f3dda4f1ea": { key: "hulm", name: "حلم", arabic: "حلم", logo: "hulm-logo", hero: "hulm-hero", headline: "خذ لحظة", emphasis: "وعيش حلم", note: "اختيارات تليق بذوقك وتكمّل لحظتك", signature: "HULM", catalog: "اختيارات من حلم", loyalty: "لحظاتك معنا تقرّب مكافأتك", welcome: "لحظتك الحلوة تبدأ من هنا" },
+  "brand-6c954762020f": { key: "arabi", name: "عربي", arabic: "عربي", logo: "arabi-logo", hero: "arabi-hero", headline: "شاي يروّقك", emphasis: "وحلى يونسّك", note: "كرك وقهوة وحلويات تكمّل جلستك", signature: "ARABI", catalog: "وش يحلّي جلستك؟", loyalty: "كل جلسة تقرّب مكافأتك", welcome: "نجهّز لك رشفة وحلى على ذوقك" },
+  "brand-4596b275e3d4": { key: "masala", name: "مسالا", arabic: "مسالا", logo: "masala-logo", hero: "masala-hero", headline: "رحلة نكهة", emphasis: "مع مسالا", note: "بهارات غنية وأطباق تستاهل التجربة", signature: "MASALA", catalog: "نكهات تستحق الاكتشاف", loyalty: "ارجع للنكهة واقترب من مكافأتك", welcome: "رحلتك إلى النكهة تبدأ الآن" },
+  "brand-5afbbf87fa56": { key: "nineteen", name: "19", arabic: "19", logo: "nineteen-logo", hero: "nineteen-hero", headline: "خذ وقتك", emphasis: "واختر مزاجك", note: "قهوة وتفاصيل تكمّل يومك", signature: "19 COFFEE EXPERTISE", catalog: "اختيارات على مزاجك", loyalty: "قهوة تحبها ومكافآت تنتظرك", welcome: "لحظة هادئة واختيار يليق بك" },
+  "brand-61c65e74315d": { key: "rayhan", name: "ريحان وجبنة", arabic: "ريحان وجبنة", logo: "rayhan-logo", hero: "rayhan-hero", headline: "من أول لقمة", emphasis: "تحبّها", note: "ريحان وجبنة وسفرة تفتح النفس", signature: "RAYHAN & JEBNA", catalog: "وش تشتهي اليوم؟", loyalty: "لقمتك الحلوة تقرّب مكافأتك", welcome: "نجهّز اختيارات تفتح النفس" },
   "brand-b042ca7f1a93": { key: "korma", name: "KORMA", arabic: "كورما", logo: "korma-logo", hero: "korma-hero", headline: "افتح باب", emphasis: "النكهة", note: "من دفء التندور إلى غنى البهارات الهندية", signature: "KORMA INDIAN KITCHEN", catalog: "سفرتك تبدأ هنا", loyalty: "نكهات ترجع لها ومكافآت تنتظرك" },
   "brand-dcf7296f722c": { key: "hadiqa", name: "الحديقة", arabic: "الحديقة", logo: "hadiqa-logo", hero: "hadiqa-hero", headline: "للمّة طعم", emphasis: "في الحديقة", note: "مشاوي وأطباق تجمعكم على الذوق", signature: "ALHADIQA RESTAURANT", catalog: "من مطبخ الحديقة", loyalty: "زياراتك تستاهل أكثر" },
   "brand-3f7b257437a6": { key: "sadeem", name: "شاي سديم", arabic: "سديم", logo: "sadeem-logo", hero: "sadeem-hero", headline: "لكل رشفة", emphasis: "حكاية", note: "شاي يروّق البال ومخبوزات تكمل الحكاية", signature: "SADEEM TEA", catalog: "وش يكمّل جلستك؟", loyalty: "حكايتك معنا لها مكافأة" },
@@ -22,6 +27,7 @@ export function signatureBrand(slug: string): SignatureBrand | null {
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (/^(hulm|arabi|masala|nineteen|rayhan)-(logo|hero)$/.test(name)) return `/menu-art/five-restaurants/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("korma-")) return `/menu-art/korma/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("hadiqa-")) return `/menu-art/hadiqa/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("sadeem-")) return `/menu-art/sadeem/${name}${mobile ? "-mobile" : ""}-v1.webp`;

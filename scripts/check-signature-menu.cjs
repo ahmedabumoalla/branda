@@ -76,7 +76,18 @@ function hooks() {
 }
 
 async function main() {
-  equal(Object.keys(signatureBrands).length, 7, 'Only the seven requested identities receive this presentation');
+  equal(Object.keys(signatureBrands).length, 12, 'Only the twelve explicitly registered identities receive this presentation');
+  const newAccounts = { 'brand-96f3dda4f1ea': 'hulm', 'brand-6c954762020f': 'arabi', 'brand-4596b275e3d4': 'masala', 'brand-5afbbf87fa56': 'nineteen', 'brand-61c65e74315d': 'rayhan' };
+  for (const [slug, key] of Object.entries(newAccounts)) {
+    const brand = signatureBrand(slug);
+    equal(brand.key, key, 'Each imported restaurant resolves only its verified tenant identity');
+    equal(signatureAsset(brand.logo), `/menu-art/five-restaurants/${key}-logo-v1.webp`, 'Original color logo uses the imported identity assets');
+    equal(signatureAsset(brand.hero, true), `/menu-art/five-restaurants/${key}-hero-mobile-v1.webp`, 'Mobile hero resolves to dedicated artwork');
+    const loading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
+    check(loading.includes(brand.welcome), 'New restaurant loading carries its own welcome');
+    const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: '/owner-updated-logo.webp' }, brand });
+    check(html.includes('/owner-updated-logo.webp') && !html.includes(signatureAsset(brand.logo)), 'Owner logo updates remain visible in the new menu');
+  }
   for (const unknown of ['rast', 'black-drop', 'once', 'box-bbq', 'brand-871ec6e243c0', '__proto__', 'constructor']) equal(signatureBrand(unknown), null, 'Unrelated and inherited object names do not select a brand');
   for (const [slug, brand] of Object.entries(signatureBrands)) {
     const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: null }, brand });
@@ -252,7 +263,7 @@ async function main() {
 }
 
 async function checkRouteIsolation() {
-  const Signature = noop, Bistro = () => null, Loco = () => null, Together = () => null, French = () => null;
+  const Signature = noop, Bistro = () => null, Loco = () => null, Together = () => null, French = () => null, Branded = () => null;
   let slug = menu.slug, program = { enabled: true, purchasesRequired: 6, rewardName: 'خصم 10%' }, gate = true, menuReads = 0;
   const route = load('app/menu/[slug]/page.tsx', {
     react: { ...React, cache: fn => fn },
@@ -277,7 +288,7 @@ async function checkRouteIsolation() {
   slug = menu.slug; program = { ...program, enabled: false }; tree = await route.default({ params: Promise.resolve({ slug }) }); equal(nodes(tree).find(n => n.type === Signature && n.props.menu).props.loyalty, null, 'Disabled public program does not render reward promise');
   gate = false; const before = menuReads; await assert.rejects(route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ showcase: '1' }) }), /NOT_FOUND/); equal(menuReads, before, 'Unpublished showcase denies before catalog data access');
   let currentSlug = slug;
-  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }) }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together } }).default;
+  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }) }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together }, '@/components/menu/branded-menu-loading': { BrandedMenuLoading: Branded } }).default;
   for (currentSlug of Object.keys(signatureBrands)) equal(Loading().props.brand.key, signatureBrand(currentSlug).key, 'Loading route follows exact same explicit identity');
   currentSlug = 'rast'; check(Loading().type !== Signature, 'Legacy RAST does not inherit new loading');
 }

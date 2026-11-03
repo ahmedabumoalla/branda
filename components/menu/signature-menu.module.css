@@ -304,4 +304,72 @@
   .menu[data-signature="korma"] .heroCenter > p { margin: 8px 0 12px; }
   .menu[data-signature="korma"] .heroBottom { padding-block: 6px; }
 }
+/* Five independent identities share the proven layout while retaining original logo colors */
+.menu[data-signature="hulm"] { --brand: #33261a; --tone: #a48246; --accent: #e6c98c; --surface: #fbf7ef; --text: #33261a; --muted: #74654f; --edge: #e5dac5; --white: #fffaf0; --panel: #33261a; }
+.menu[data-signature="arabi"] { --brand: #354321; --tone: #718348; --accent: #e5d8af; --surface: #f8f6ec; --text: #2e3a22; --muted: #657055; --edge: #dce0cc; --white: #fffbed; --panel: #354321; }
+.menu[data-signature="masala"] { --brand: #4d1724; --tone: #b37935; --accent: #edc789; --surface: #fff7eb; --text: #471b25; --muted: #84615a; --edge: #e7d5bd; --white: #fff7eb; --panel: #4d1724; }
+.menu[data-signature="nineteen"] { --brand: #1e1e1b; --tone: #877e6d; --accent: #e8dfcd; --surface: #f7f5ef; --text: #24241f; --muted: #6c6b60; --edge: #dedbd1; --white: #fffcf4; --panel: #292923; }
+.menu[data-signature="rayhan"] { --brand: #213f50; --tone: #647b38; --accent: #e6dda7; --surface: #f5f8f5; --text: #203e4a; --muted: #5f7377; --edge: #d5e1dc; --white: #fffdf2; --panel: #213f50; }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) { --space: clamp(28px,4vw,54px); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .hero { min-height: min(780px,100svh); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter { padding-block: 20px 28px; }
+.mark:is([data-mark="hulm"],[data-mark="arabi"],[data-mark="masala"],[data-mark="nineteen"],[data-mark="rayhan"]) { width: clamp(210px,26vw,340px); height: 200px; overflow: visible; }
+.mark:is([data-mark="hulm"],[data-mark="arabi"],[data-mark="masala"],[data-mark="nineteen"],[data-mark="rayhan"]) img { filter: none; mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="nineteen"] { --hero-paper: #e6dcc9; --hero-ink: #24241f; --hero-detail: #514a3d; }
+.menu[data-signature="rayhan"] { --hero-paper: #eee5cf; --hero-ink: #213f50; --hero-detail: #425531; }
+.mark:is([data-mark="nineteen"],[data-mark="rayhan"]) { background: none; }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .hero { background: var(--hero-paper); color: var(--hero-ink); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .header { border-bottom-color: color-mix(in srgb,var(--hero-ink) 16%,transparent); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .header nav > button { color: var(--hero-ink); border-color: color-mix(in srgb,var(--hero-ink) 28%,transparent); background: transparent; }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) :is(.signature,.heroCenter h1 em) { color: var(--hero-detail); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .primary { color: var(--hero-paper); background: var(--hero-ink); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .heroLoyalty { color: var(--hero-ink); background: var(--hero-paper); border-color: color-mix(in srgb,var(--hero-ink) 24%,transparent); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .heroBottom { color: var(--hero-ink); background: color-mix(in srgb,var(--hero-paper) 94%,transparent); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .lightSweep { display: none; }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .footer,
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]).loading { background: var(--hero-paper); color: var(--hero-ink); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) :is(.footer a,.loadingCenter p) { color: var(--hero-detail); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .loadingLine { background: color-mix(in srgb,var(--hero-ink) 16%,transparent); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .loadingLine::after { background: var(--hero-ink); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]).loading::before { border-color: color-mix(in srgb,var(--hero-ink) 20%,transparent); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .signature { letter-spacing: .25em; margin: 6px 0 16px; }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter h1 { font-size: clamp(32px,4vw,58px); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter > p { max-width: 360px; font-size: 15px; text-wrap: balance; }
+.menu[data-signature="hulm"] .heroShade { background: linear-gradient(180deg,#271b13b3,#271b1370 40%,#271b1333 76%,#271b13b3); }
+.menu[data-signature="arabi"] .heroShade { background: linear-gradient(180deg,#17220cd4,#17220c91 42%,#17220c24 78%,#17220ca6); }
+.menu[data-signature="masala"] .heroShade { background: linear-gradient(180deg,#310d18c4,#310d188a 44%,#310d1829 78%,#310d18ad); }
+.menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .heroShade { background: linear-gradient(180deg,var(--hero-paper) 0%,var(--hero-paper) 42%,color-mix(in srgb,var(--hero-paper) 96%,transparent) 58%,color-mix(in srgb,var(--hero-paper) 82%,transparent) 74%,color-mix(in srgb,var(--hero-paper) 36%,transparent) 100%); }
+.menu[data-signature="hulm"] .productPhoto { border-radius: 100px 100px 16px 16px; background: #f0e6d4; }
+.menu[data-signature="arabi"] .productPhoto { border-radius: 26px 5px 26px 5px; background: #e9eddd; }
+.menu[data-signature="masala"] .productPhoto { border-radius: 70px 70px 12px 12px; background: #f1e2ce; }
+.menu[data-signature="nineteen"] .productPhoto { border-radius: 5px; background: #eae7de; }
+.menu[data-signature="rayhan"] .productPhoto { border-radius: 22px; background: #e5eeea; }
+.menu[data-signature="masala"] .primary { border-radius: 8px 8px 26px 26px; }
+.menu[data-signature="nineteen"] :is(.primary,.loyaltyAction) { border-radius: 5px; }
+.menu[data-signature="rayhan"] .loyaltyCard { background: linear-gradient(125deg,#213f50,#3c5539); }
+.menu[data-signature="arabi"] .loyaltyCard { background: linear-gradient(125deg,#354321,#5b6e2f); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyalty { padding-block: 24px; }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .product { padding-bottom: 18px; border-bottom: 1px solid var(--edge); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .productArrow { background: var(--accent); color: var(--brand); border: 1px solid var(--white); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .footer { background: var(--brand); border-top: 1px solid var(--accent); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .mark[data-small="true"] { width: 140px; height: 100px; }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]).loading { background: radial-gradient(ellipse at 50% 24%,color-mix(in srgb,var(--brand) 70%,var(--tone)),var(--brand) 74%); }
+.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]).loading::before { inset: 20px; border: 1px solid color-mix(in srgb,var(--accent) 30%,transparent); border-radius: 120px 120px 12px 12px; background: none; }
+.menu[data-signature="nineteen"].loading::before { border-radius: 0; }
+@media (max-width: 640px) {
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .hero { min-height: min(700px,96svh); }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter { padding: 16px 20px 22px; }
+  .mark:is([data-mark="hulm"],[data-mark="arabi"],[data-mark="masala"],[data-mark="nineteen"],[data-mark="rayhan"]) { width: min(270px,74vw); height: 155px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .signature { font-size: 9px; margin: 6px 0 14px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter h1 { font-size: clamp(29px,8vw,36px); }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter h1 em { font-size: inherit; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter > p { font-size: 13px; margin: 10px 0 18px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyalty { gap: 14px; padding-block: 20px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyaltyCopy h2 { font-size: 19px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .grid { gap: 18px 14px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter .mark { height: 115px; }
+  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroBottom { padding-block: 4px; }
+}
 @media (prefers-reduced-motion: reduce) { .menu *, .loading * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }.backdrop img { transform: none; }.lightSweep { display: none; }.loadingLine::after { width: 100%; transform: none; } }

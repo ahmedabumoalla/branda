@@ -101,7 +101,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const selected = menu.products.find(p => p.id === selectedId);
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
   const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma"].includes(brand.key) ? UtensilsCrossed : Coffee;
+  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma", "masala", "rayhan"].includes(brand.key) ? UtensilsCrossed : Coffee;
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
   async function share() {
