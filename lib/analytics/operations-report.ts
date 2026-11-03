@@ -2,6 +2,13 @@ import { z } from "zod";
 import { campaignMetricSchema, marketingMetricLabels } from "@/lib/analytics/marketing-report";
 
 export const reportMetricLabels = {
+  dashboardLogins: "دخول لوحة العلامة",
+  cashierLogins: "دخول نقطة التشغيل",
+  appInstallClicks: "نقرات تحميل التطبيق",
+  ordersAccepted: "تأكيد الطلبات",
+  ordersRejected: "رفض الطلبات",
+  ordersCompleted: "إكمال الطلبات",
+  ordersNotCompleted: "عدم إكمال الطلبات",
   ...marketingMetricLabels,
   pagerUses: "استخدامات البيجر",
   promotionCustomers: "عملاء رسائل الولاء الترويجية",
@@ -18,6 +25,8 @@ export const reportMetricLabels = {
 export type ReportMetric = keyof typeof reportMetricLabels;
 export const reportMetrics = Object.keys(reportMetricLabels) as ReportMetric[];
 const count = z.number().int().nonnegative();
+export const accessMetricSchema = z.object({ dashboardLogins: count, cashierLogins: count, appInstallClicks: count, ordersAccepted: count, ordersRejected: count, ordersCompleted: count, ordersNotCompleted: count });
+export const accessReportSchema = z.object({ from: z.string().nullable(), to: z.string().nullable(), brands: z.array(z.object({ id: z.uuid(), metrics: accessMetricSchema })) });
 const date = z.string().refine(value => !value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value));
 export const reportPeriodSchema = z.object({ from: date.default(""), to: date.default("") }).strict()
   .refine(value => !value.from || !value.to || value.from <= value.to, { message: "تاريخ النهاية يجب ألا يسبق البداية" });
@@ -29,7 +38,7 @@ export const reportBrandSchema = z.object({
   periodLastMenuVisit: z.string().nullable(),
   metrics: z.object({ pagerUses: count, promotionCustomers: count, promotionSends: count,
     menuVisitors: count, menuVisits: count, loyaltyCards: count, loyaltyCustomers: count,
-    appleCards: count, googleCards: count, stampOperations: count, rewardOperations: count }).extend(campaignMetricSchema.shape),
+    appleCards: count, googleCards: count, stampOperations: count, rewardOperations: count }).extend(campaignMetricSchema.shape).extend(accessMetricSchema.shape),
 });
 export const operationsReportSchema = z.object({
   generatedAt: z.string(), from: z.string().nullable(), to: z.string().nullable(),

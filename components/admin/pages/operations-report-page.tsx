@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpDown, BadgeCheck, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, Megaphone, RotateCcw, Search, SlidersHorizontal, Users, Info } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowDownToLine, ArrowUpDown, LogIn, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Info } from "lucide-react";
 import { loadOperationsReportAction } from "@/app/actions/operations-report";
 import { AdminPageShell } from "@/components/ui/design-system";
 import { WalletMessageHistory } from "@/components/loyalty/wallet-message-history";
@@ -16,6 +16,13 @@ const featureTone = (id: string) => id === "loyalty" ? styles.purple : id === "s
 const subscriptionName: Record<string, string> = { active: "نشط", trial: "تجريبي", trialing: "تجريبي", expired: "منتهي", cancelled: "ملغي", canceled: "ملغي", suspended: "موقوف", none: "بدون اشتراك" };
 const statusName: Record<string, string> = { active: "نشطة", suspended: "موقوفة", inactive: "غير نشطة", draft: "مسودة", pending: "قيد الانتظار", archived: "مؤرشفة" };
 const pageSize = 25;
+const views: { id: string; label: string; metrics: ReportMetric[] }[] = [
+  { id: "overview", label: "نظرة عامة", metrics: ["dashboardLogins", "cashierLogins", "menuVisits", "loyaltyCards", "stampOperations"] },
+  { id: "access", label: "الدخول والوصول", metrics: ["dashboardLogins", "cashierLogins", "menuVisitors", "menuVisits", "appInstallClicks"] },
+  { id: "loyalty", label: "الولاء والمكافآت", metrics: ["loyaltyCards", "appleCards", "googleCards", "stampOperations", "rewardOperations"] },
+  { id: "campaigns", label: "الحملات والرسائل", metrics: ["campaignLaunched", "campaignTargets", "campaignSent", "campaignPending", "campaignFailed"] },
+  { id: "orders", label: "الطلبات والبيجر", metrics: ["pagerUses", "ordersAccepted", "ordersRejected", "ordersCompleted", "ordersNotCompleted"] },
+];
 function LastVisit({ value }: { value: string | null }) {
   if (!value) return <span className={styles.noVisit}><span aria-hidden="true">—</span><small>لا توجد زيارة مسجلة</small></span>;
   const date = new Date(value);
@@ -32,12 +39,15 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(initialReport ? "" : "تعذر تحميل البيانات أعد المحاولة بعد التحقق من صلاحية دخولك");
   const [page, setPage] = useState(0);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewId, setViewId] = useState("overview");
   const [messageBrand, setMessageBrand] = useState<{ id: string; name: string } | null>(null);
   const [campaignBrand, setCampaignBrand] = useState<{ id: string; name: string } | null>(null);
   const request = useRef(0);
   const brands = filterReportBrands(report?.brands || [], filters);
   const totals = totalReportMetrics(brands);
+  const selectedBrand = report?.brands.find(brand => brand.id === selectedId);
+  const view = views.find(item => item.id === viewId) || views[0];
   const features = Array.from(new Set(report?.brands.flatMap(brand => brand.features) || [])).sort((a, b) => featureName(a).localeCompare(featureName(b), "ar"));
   const pages = Math.max(1, Math.ceil(brands.length / pageSize));
   const currentPage = Math.min(page, pages - 1);
@@ -73,15 +83,10 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
     <div className={styles.root}>
       {report && <div className={styles.summary} aria-live="polite">{[
         { label: "العلامات المطابقة", value: brands.length, hint: `من أصل ${number(report.brands.length)} علامة`, icon: Building2, tone: styles.gold },
-        { label: "اشتراكات سارية", value: brands.filter(brand => brand.subscribed).length, hint: "حالة الاشتراكات الحالية", icon: BadgeCheck, tone: styles.green },
-        { label: "زوار المنيو عبر العلامات", value: totals.menuVisitors, hint: `${number(totals.menuVisits)} زيارة خلال الفترة`, icon: Users, tone: styles.blue },
+        { label: "دخول لوحة العلامة", value: totals.dashboardLogins, hint: "دخول مسجل خلال الفترة", icon: LogIn, tone: styles.green },
+        { label: "دخول الكاشير", value: totals.cashierLogins, hint: "جلسات نقطة التشغيل الناجحة", icon: LogIn, tone: styles.blue },
         { label: "بطاقات الولاء الصادرة", value: totals.loyaltyCards, hint: `${number(totals.loyaltyCustomers)} عميل خلال الفترة`, icon: CreditCard, tone: styles.purple },
       ].map(({ label, value, hint, icon: Icon, tone }) => <div key={label}><div className={styles.statTop}><span>{label}</span><span className={`${styles.statIcon} ${tone}`}><Icon size={20} aria-hidden="true" /></span></div><strong>{number(value)}</strong><span className={styles.statHint}>{hint}</span></div>)}</div>}
-      {report && <section className={`${styles.panel} ${styles.campaignOverview}`} aria-label="ملخص الحملات التسويقية">
-        <div className={styles.heading}><div><h2><Megaphone size={20} aria-hidden="true" />الحملات التسويقية</h2><p>العلامات المطابقة خلال الفترة المحمّلة والحالات حسب آخر تحديث</p></div></div>
-        <dl className={styles.campaignSummary}>{(["campaignLaunched", "campaignTargets", "campaignSent", "campaignPending", "campaignFailed"] as const).map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(totals[metric])}</dd></div>)}</dl>
-        <p className={styles.campaignNote}>العملاء دون تكرار داخل العلامة وقد يتكرر العميل بين العلامات الإرسال المقبول لا يؤكد الوصول أو القراءة</p>
-      </section>}
       <section className={styles.panel} aria-label="فلاتر التقرير">
         <div className={styles.heading}><h2><SlidersHorizontal size={19} aria-hidden="true" />خصّص تقريرك</h2><span>التوقيت المحلي للسعودية · يشمل يوم النهاية</span></div>
         <form className={styles.period} onSubmit={event => { event.preventDefault(); void load(); }}>
@@ -114,41 +119,42 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           <div className={styles.heading}><div><h2>مقارنة العلامات <span className={styles.resultCount}>{number(brands.length)} / {number(report.brands.length)}</span></h2><p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}<span className={styles.updated}>آخر تحديث: {saudiDate(report.generatedAt)}</span></p></div>
             <button className={styles.reset} onClick={() => updateFilters({ ...defaultReportFilters })}><RotateCcw size={15} aria-hidden="true" />مسح فلاتر العلامات</button></div>
           <div className={styles.tableToolbar}><div className={styles.sort}><ArrowUpDown size={17} aria-hidden="true" /><label><span className={styles.srOnly}>ترتيب حسب</span><select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label><label><span className={styles.srOnly}>الاتجاه</span><select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></div>
-          <p className={styles.hint}><ArrowLeftRight size={16} aria-hidden="true" />مرّر للمقارنة · اضغط على العلامة لعرض التفاصيل</p></div>
-          <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول مقارنة العلامات قابل للتمرير أفقيًا"><table>
-            <caption className={styles.srOnly}>مؤشرات العلامات خلال الفترة المحمّلة وآخر الزيارات عبر كامل السجل</caption>
-            <thead><tr className={styles.columnGroups}><th scope="col" rowSpan={2}>العلامة التجارية<small>الاشتراك والمميزات</small></th><th scope="col">الوصول الرقمي</th><th scope="colgroup" colSpan={3}>الولاء والتفاعل</th><th scope="colgroup" colSpan={2}>البيجر والترويج</th><th scope="colgroup" colSpan={4} className={styles.campaignGroup}>الحملات التسويقية</th><th scope="col">آخر نشاط مسجّل</th></tr><tr><th scope="col">زوار المنيو<small>والزيارات</small></th><th scope="col">بطاقات الولاء<small>والعملاء</small></th><th scope="col">المحافظ<small>آيفون / أندرويد</small></th><th scope="col">قراءات ناجحة<small>ختم / مكافأة</small></th><th scope="col">استخدامات البيجر<small>طلبات مسجلة</small></th><th scope="col">عملاء رسائل الترويج<small>ومرات الإرسال لهم</small></th><th scope="col">حملات انطلقت<small>والعملاء المستهدفون</small></th><th scope="col">إرسال مقبول<small>من مزوّد الخدمة</small></th><th scope="col">بانتظار الإرسال<small>يشمل الجدولة</small></th><th scope="col">تعذر الإرسال<small>فشل مسجّل</small></th><th scope="col">آخر زيارة للمنيو</th></tr></thead>
-            <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <Fragment key={brand.id}><tr className={expanded === brand.id ? styles.selectedRow : undefined}>
-              <th scope="row"><button className={styles.brandButton} aria-expanded={expanded === brand.id} aria-controls={`brand-${brand.id}`} onClick={() => setExpanded(expanded === brand.id ? null : brand.id)}><span className={`${styles.avatar} ${brand.subscribed ? styles.green : styles.gold}`} aria-hidden="true">{brand.name.trim().slice(0, 1)}</span><span className={styles.brandName}>{brand.name}<span className={styles.brandSlug} dir="ltr">{brand.slug}</span></span><ChevronDown size={16} className={styles.expandIcon} aria-hidden="true" /><span className={styles.srOnly}>{expanded === brand.id ? "إغلاق التفاصيل" : "عرض التفاصيل"}</span></button><div className={styles.brandMeta}><span className={`${styles.status} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span><span className={styles.planName}>{brand.planName || "بدون باقة"}</span></div><div className={styles.chips}>{brand.features.filter(feature => ["loyalty", "standalone_menu", "pager", "menu"].includes(feature)).map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div></th>
-              <td><strong>{number(brand.metrics.menuVisitors)}</strong><small>{number(brand.metrics.menuVisits)} زيارة</small></td>
-              <td><strong>{number(brand.metrics.loyaltyCards)}</strong><small>{number(brand.metrics.loyaltyCustomers)} عميل</small></td>
-              <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.appleCards)}</strong><small>آيفون</small></span><span><strong>{number(brand.metrics.googleCards)}</strong><small>أندرويد</small></span></div></td>
-              <td><div className={styles.metricPair}><span><strong>{number(brand.metrics.stampOperations)}</strong><small>ختم</small></span><span><strong>{number(brand.metrics.rewardOperations)}</strong><small>مكافأة</small></span></div></td>
-              <td><strong>{number(brand.metrics.pagerUses)}</strong><small>طلب بيجر</small></td>
-              <td><strong>{number(brand.metrics.promotionCustomers)}</strong><small>{number(brand.metrics.promotionSends)} إرسال للعميل</small><button type="button" className={styles.historyButton} aria-label={`سجل رسائل ${brand.name}`} aria-haspopup="dialog" onClick={() => setMessageBrand({ id: brand.id, name: brand.name })}>سجل الرسائل</button></td>
-              <td className={styles.campaignCell}><strong>{number(brand.metrics.campaignLaunched)}</strong><small>{number(brand.metrics.campaignTargets)} عميل مستهدف</small><button type="button" className={styles.historyButton} aria-label={`سجل حملات ${brand.name}`} aria-haspopup="dialog" onClick={() => setCampaignBrand({ id: brand.id, name: brand.name })}>سجل الحملات</button></td>
-              <td><strong>{number(brand.metrics.campaignSent)}</strong><small>إرسال مقبول</small></td>
-              <td><strong>{number(brand.metrics.campaignPending)}</strong><small>رسالة منتظرة</small></td>
-              <td><strong>{number(brand.metrics.campaignFailed)}</strong><small>تعذر إرسالها</small></td>
-              <td className={styles.date}><LastVisit value={brand.lastMenuVisit} /></td>
-            </tr><tr id={`brand-${brand.id}`} hidden={expanded !== brand.id}><td colSpan={12}><div className={styles.detail}>
-              <p>حالة العلامة: {statusName[brand.status] || brand.status} · حالة الاشتراك المسجلة: {subscriptionName[brand.subscriptionStatus] || brand.subscriptionStatus} · انتهاء الاشتراك: {brand.expiresAt ? saudiDate(brand.expiresAt) : "غير محدد"}</p>
-              <h3>المميزات المفعّلة حاليًا · {number(brand.features.length)}</h3><div className={styles.chips}>{brand.features.map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div>
-              <dl>{reportMetrics.map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(brand.metrics[metric])}</dd></div>)}</dl>
-              <p>آخر زيارة للمنيو ضمن الفترة: {saudiDate(brand.periodLastMenuVisit)}</p>
-            </div></td></tr></Fragment>)}</tbody>
-            {brands.length > 0 && <tfoot><tr><th scope="row">إجمالي النتائج</th><td>{number(totals.menuVisitors)}<small>{number(totals.menuVisits)} زيارة</small></td><td>{number(totals.loyaltyCards)}<small>{number(totals.loyaltyCustomers)} عميل</small></td><td>{number(totals.appleCards)} آيفون<small>{number(totals.googleCards)} أندرويد</small></td><td>{number(totals.stampOperations)} ختم<small>{number(totals.rewardOperations)} مكافأة</small></td><td>{number(totals.pagerUses)} طلب بيجر</td><td>{number(totals.promotionCustomers)} عميل<small>{number(totals.promotionSends)} إرسال للعميل</small></td><td>{number(totals.campaignLaunched)} حملة<small>{number(totals.campaignTargets)} عميل مستهدف</small></td><td>{number(totals.campaignSent)}<small>إرسال مقبول</small></td><td>{number(totals.campaignPending)}<small>بانتظار الإرسال</small></td><td>{number(totals.campaignFailed)}<small>تعذر الإرسال</small></td><td>جميع العلامات المطابقة</td></tr></tfoot>}
+          <p className={styles.hint}>اضغط على اسم العلامة لعرض جميع العمليات والسجلات</p></div>
+          <div className={styles.viewButtons} role="group" aria-label="نوع العمليات">{views.map(item => <button type="button" key={item.id} aria-pressed={viewId === item.id} onClick={() => setViewId(item.id)}>{item.label}</button>)}</div>
+          <div className={styles.tableWrap}><table role="table">
+            <caption className={styles.srOnly}>{view.label} خلال الفترة المحمّلة</caption>
+            <thead><tr role="row"><th scope="col">العلامة التجارية</th>{view.metrics.map(metric => <th scope="col" key={metric}>{reportMetricLabels[metric]}</th>)}</tr></thead>
+            <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <tr key={brand.id} role="row">
+              <th scope="row"><button className={styles.brandButton} aria-label={`تفاصيل ${brand.name}`} aria-haspopup="dialog" onClick={() => setSelectedId(brand.id)}><span className={`${styles.avatar} ${brand.subscribed ? styles.green : styles.gold}`} aria-hidden="true">{brand.name.trim().slice(0, 1)}</span><span className={styles.brandName}>{brand.name}<span className={styles.planName}>{brand.planName || "بدون باقة"}</span></span><ChevronLeft size={16} className={styles.expandIcon} aria-hidden="true" /></button><span className={`${styles.status} ${brand.subscribed ? styles.green : styles.muted}`}>{brand.subscribed ? "اشتراك ساري" : "بدون اشتراك ساري"}</span></th>
+              {view.metrics.map(metric => <td key={metric} data-label={reportMetricLabels[metric]} role="cell"><strong className={brand.metrics[metric] === 0 ? styles.zero : undefined}>{number(brand.metrics[metric])}</strong></td>)}
+            </tr>)}</tbody>
+            {brands.length > 0 && <tfoot><tr role="row"><th scope="row">إجمالي النتائج<small>{number(brands.length)} علامة</small></th>{view.metrics.map(metric => <td key={metric} data-label={reportMetricLabels[metric]} role="cell">{number(totals[metric])}</td>)}</tr></tfoot>}
           </table></div>
           {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر غيّر الشروط أو امسح فلاتر العلامات</p>}
           <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
+        {selectedBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setSelectedId(null)} aria-label={`تفاصيل ${selectedBrand.name}`}>
+          <div className={styles.heading}><div><h2>{selectedBrand.name}</h2><p dir="ltr">{selectedBrand.slug}</p></div><button type="button" autoFocus onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق التفاصيل</button></div>
+          <div className={styles.detail}>
+            <p>حالة العلامة: {statusName[selectedBrand.status] || selectedBrand.status} | الاشتراك: {subscriptionName[selectedBrand.subscriptionStatus] || selectedBrand.subscriptionStatus}</p>
+            <p>الباقة: {selectedBrand.planName || "بدون باقة"} | انتهاء الاشتراك: {selectedBrand.expiresAt ? saudiDate(selectedBrand.expiresAt) : "غير محدد"}</p>
+            <div className={styles.chips}>{selectedBrand.features.map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div>
+            <p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}</p>
+            <div className={styles.detailActions}><button type="button" aria-label={`سجل رسائل ${selectedBrand.name}`} aria-haspopup="dialog" onClick={() => { setSelectedId(null); setMessageBrand({ id: selectedBrand.id, name: selectedBrand.name }); }}>سجل رسائل الولاء</button><button type="button" aria-label={`سجل حملات ${selectedBrand.name}`} aria-haspopup="dialog" onClick={() => { setSelectedId(null); setCampaignBrand({ id: selectedBrand.id, name: selectedBrand.name }); }}>سجل الحملات التسويقية</button></div>
+            {views.filter(item => item.id !== "overview").map(group => <section key={group.id}><h3>{group.label}</h3><dl>{group.metrics.map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl></section>)}
+            <h3>تفاصيل إضافية للرسائل والعملاء</h3><dl>{reportMetrics.filter(metric => !views.some(item => item.metrics.includes(metric))).map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl>
+            <p>آخر زيارة للمنيو ضمن الفترة: {saudiDate(selectedBrand.periodLastMenuVisit)}</p><p>آخر زيارة عبر كامل السجل</p><LastVisit value={selectedBrand.lastMenuVisit} />
+          </div>
+        </dialog>}
         {messageBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setMessageBrand(null)} aria-label={`سجل رسائل ${messageBrand.name}`}><div className={styles.historyClose}><button type="button" onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق السجل</button></div><WalletMessageHistory key={messageBrand.id} brandId={messageBrand.id} brandName={messageBrand.name} dark /></dialog>}
         {campaignBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setCampaignBrand(null)} aria-label={`سجل حملات ${campaignBrand.name}`}><div className={styles.historyClose}><button type="button" autoFocus onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق سجل الحملات</button></div><MarketingCampaignHistory key={JSON.stringify([campaignBrand.id, report.from, report.to])} brandId={campaignBrand.id} brandName={campaignBrand.name} from={report.from} to={report.to} /></dialog>}
-        <section className={`${styles.panel} ${styles.explainer}`} aria-label="تعريف المؤشرات وتغطية البيانات"><h2><Info size={19} aria-hidden="true" />كيف تُقرأ هذه الأرقام؟</h2><ul className={styles.notes}>
+        <details className={`${styles.panel} ${styles.explainer}`}><summary><Info size={19} aria-hidden="true" />تعريف المؤشرات وتغطية البيانات</summary><ul className={styles.notes}>
+          <li>دخول لوحة العلامة يحسب مرات الدخول المسجلة مع دمج التكرار خلال دقيقة ولا يعني إدخال كلمة المرور في كل مرة دخول الكاشير يحسب تسجيل الدخول الناجح لنقطة التشغيل ويشمل المالك عند دخوله للتشغيل</li>
+          <li>تأكيد الطلبات ورفضها وإكمالها وعدم إكمالها تحسب إجراءات تغيير الحالة المسجلة وليست عدد مبيعات أو طلبات فريدة</li>
           <li>زوار المنيو معرّفات متصفح مميزة؛ ليست أعداد أشخاص موثّقين إجمالي العلامات قد يحسب الشخص نفسه لدى أكثر من علامة</li>
           <li>البطاقات والعملاء حسب تاريخ الإنشاء أو الإصدار داخل الفترة عملاء الولاء هم أصحاب البطاقات الصادرة في الفترة</li>
           <li>آيفون: بطاقات طُلب تنزيلها أندرويد: بطاقات أُنشئ لها رابط حفظ قد تستخدم البطاقة النظامين؛ هذه الأرقام لا تؤكد تثبيتها على الجهاز</li>
-          <li>قراءات الختم والمكافأة تشمل العمليات الناجحة المسجلة فقط الاشتراكات والمميزات تعرض الوضع الحالي وآخر زيارة في الجدول عبر كامل السجل</li>
+          <li>قراءات الختم والمكافأة تشمل العمليات الناجحة المسجلة فقط الاشتراكات والمميزات تعرض الوضع الحالي وآخر زيارة في التفاصيل عبر كامل السجل</li>
           <li>تتبّع المنيو متاح منذ {saudiDate(report.menuTrackingSince)} وتتبّع المحافظ منذ {saudiDate(report.walletTrackingSince)}؛ الصفر يعني عدم وجود سجل مطابق ضمن البيانات المتاحة</li>
           <li>استخدامات البيجر هي عدد الطلبات المسجلة خلال الفترة بما فيها الملغاة إعادة النداء للطلب نفسه لا تزيد العدد</li>
           <li>عملاء الترويج يُحسبون مرة واحدة لكل علامة خلال الفترة ومرات الإرسال تحسب كل إعلان لكل عميل مرة واحدة عبر المحفظتين</li>
@@ -157,7 +163,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           <li>الحملات المنطلقة بدأ موعدها ولم تُلغ قبل بدء المحاولة الحملات المجدولة للمستقبل تظهر في السجل والانتظار ولا تُحسب ضمن المنطلقة</li>
           <li>عملاء الحملات دون تكرار لكل علامة داخل الفترة وعدد الإرسال يُحسب لكل حملة حتى لو تكرر العميل ويعني قبول مزوّد الخدمة دون تأكيد الوصول أو القراءة</li>
           <li>غير المؤكدة والملغاة والمستبعدة تظهر مستقلة في التفاصيل والسجل ولا تُضاف إلى تعذر الإرسال</li>
-        </ul></section>
+        </ul></details>
       </>}
     </div>
   </AdminPageShell></div>;

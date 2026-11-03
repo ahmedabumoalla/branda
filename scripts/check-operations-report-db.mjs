@@ -49,6 +49,24 @@ try {
   await query("INSERT INTO cafes(id,name,slug) VALUES($1,'Alpha','alpha'),($2,'Beta','beta'),($3,'Empty','empty'),($4,'Deleted','deleted')", [10,11,12,13].map(id));
   await query("UPDATE cafes SET deleted_at=now() WHERE id=$1", [id(13)]);
   const asUser = async n => { await db.exec("RESET ROLE"); await query("SELECT set_config('request.jwt.claim.sub',$1,false)",[n ? id(n) : ""]); await db.exec("SET ROLE authenticated"); };
+  await db.exec(`CREATE TABLE public.cafe_operation_events(cafe_id uuid,event_type text,created_at timestamptz);
+    CREATE TABLE public.cafe_cashier_activity_logs(cafe_id uuid,action_type text,created_at timestamptz);`);
+  const accessMigration = await readFile("supabase/migrations/20261103101343_operations_access_metrics.sql", "utf8");
+  await db.exec(accessMigration); await db.exec(accessMigration);
+  const accessReport = (from = null, to = null) => value("SELECT public.get_admin_operations_access_report($1,$2)", [from,to]);
+  for (const user of [0,2,3,4]) { await asUser(user); await rejects(() => accessReport()); }
+  for (const role of ["anon", "service_role"]) { await db.exec(`RESET ROLE; SET ROLE ${role}`); await rejects(() => accessReport()); }
+  await db.exec("RESET ROLE");
+  for (const kind of ["brand_login","app_install_clicked","order_accepted","order_rejected","order_completed","order_not_completed"]) {
+    await query(`INSERT INTO cafe_operation_events VALUES($1,$2,'2026-10-04T20:59:59Z'),($1,$2,'2026-10-04T21:00:00Z'),($1,$2,'2026-10-05T20:59:59.999999Z'),($1,$2,'2026-10-05T21:00:00Z'),($3,$2,'2026-10-05T12:00:00Z'),($4,$2,'2026-10-05T12:00:00Z')`, [id(10),kind,id(11),id(13)]);
+  }
+  await query(`INSERT INTO cafe_cashier_activity_logs VALUES($1,'login','2026-10-04T20:59:59Z'),($1,'login','2026-10-04T21:00:00Z'),($1,'login','2026-10-05T20:59:59.999999Z'),($1,'login','2026-10-05T21:00:00Z'),($1,'login_failed','2026-10-05T12:00:00Z'),($2,'login','2026-10-05T12:00:00Z')`, [id(10),id(11)]);
+  await asUser(1);
+  const access = await accessReport('2026-10-05','2026-10-05');
+  check(access.brands.length === 3 && Object.values(access.brands.find(b=>b.id===id(10)).metrics).every(n=>n===2), "all seven access metrics respect Saudi bounds and exclude unsuccessful logins");
+  check(Object.values(access.brands.find(b=>b.id===id(11)).metrics).every(n=>n===1), "access metrics are tenant isolated without multiplicative joins");
+  check(Object.values(access.brands.find(b=>b.id===id(12)).metrics).every(n=>n===0), "empty brands have true zeros and deleted brands are excluded");
+  await rejects(() => accessReport('2026-10-06','2026-10-05'));
   const report = (from = null, to = null) => value("SELECT public.get_admin_operations_report($1,$2)", [from,to]);
   for (const user of [0,2,3,4]) { await asUser(user); await rejects(() => report()); }
   for (const role of ["anon","authenticated","service_role"]) {
@@ -115,7 +133,7 @@ try {
   const client = {
     auth: { getUser: async () => ({ data: { user: auth.user }, error: null }) },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: auth.profile, error: null }) }) }) }),
-    rpc: async (name, args) => { rpcCalls++; return { data: name === "get_admin_marketing_campaign_report" ? { from: args.p_from, to: args.p_to, metrics: [], history: null } : auth.result, error: null }; },
+    rpc: async (name, args) => { rpcCalls++; return { data: name === "get_admin_operations_access_report" ? await accessReport(args.p_from,args.p_to) : name === "get_admin_marketing_campaign_report" ? { from: args.p_from, to: args.p_to, metrics: [], history: null } : auth.result, error: null }; },
   };
   for (const file of ["lib/platform/feature-registry.ts", "lib/platform/feature-access.ts", "lib/analytics/marketing-report.ts", "lib/analytics/operations-report.ts", "lib/data/marketing-report.ts", "lib/data/operations-report.ts", "app/actions/operations-report.ts"]) {
     const exports = {};
@@ -127,13 +145,14 @@ try {
   const { getAdminOperationsReport } = modules.get("lib/data/operations-report");
   auth.result = { ...auth.result, promotionTrackingSince: new Date().toISOString(), brands: auth.result.brands.map(b => ({ ...b, metrics: { ...b.metrics, pagerUses: 0, promotionCustomers: 0, promotionSends: 0 } })) };
   const actual = await getAdminOperationsReport({ from: "2026-10-05", to: "2026-10-05" });
-  check(actual.brands.length === 3 && rpcCalls === 2 && actual.brands.every(b => b.metrics.campaignSent === 0), "real TypeScript loader combines aggregate RPCs and preserves brands without campaigns");
+  check(actual.brands.length === 3 && rpcCalls === 3 && actual.brands.every(b => b.metrics.campaignSent === 0), "real TypeScript loader combines aggregate RPCs and preserves brands without campaigns");
   const actualAlpha = actual.brands.find(b => b.id === id(10));
+  check(actualAlpha.metrics.cashierLogins === 2 && actualAlpha.metrics.dashboardLogins === 2, "real loader merges actual login counts");
   check(!actualAlpha.features.includes("menu") && actualAlpha.features.includes("loyalty") && actualAlpha.features.includes("standalone_menu"), "actual entitlement helper applies disabled override and independent menu publication");
   check(!actual.brands.find(b => b.id === id(11)).features.includes("loyalty"), "expired plan does not appear as currently subscribed feature");
   auth.user = null;
   await rejects(() => getAdminOperationsReport({ from: "", to: "" }));
-  check(rpcCalls === 2, "anonymous loader cannot call aggregate RPC");
+  check(rpcCalls === 3, "anonymous loader cannot call aggregate RPC");
   auth.user = { id: id(1) }; auth.profile = { role: "cafe_owner", status: "active" };
   await rejects(() => getAdminOperationsReport({ from: "", to: "" }));
   auth.profile = { role: "platform_admin", status: "suspended" };

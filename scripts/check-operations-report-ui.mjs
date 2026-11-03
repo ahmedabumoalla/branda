@@ -41,13 +41,13 @@ const report = { generatedAt: date, from: null, to: null, menuTrackingSince: dat
 const html = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: report }));
 assert.equal((html.match(/scope="row"/g) || []).length, 26, "25 brands plus total, independent of export scope");
 assert.ok(html.includes("٣١ علامة"), "export includes all matching brands");
-for (const label of ["استخدامات البيجر", "عملاء رسائل الترويج", "أندرويد", "بدون اشتراك ساري", "تصدير تقرير PDF", "قراءات ناجحة", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
-for (const label of ["ملخص الحملات التسويقية", "حملات انطلقت", "إرسال مقبول", "بانتظار الإرسال", "تعذر الإرسال", "سجل الحملات"]) assert.ok(html.includes(label), label);
-assert.ok(html.includes('colSpan="12"') && html.includes('colSpan="4"'), "campaign group preserves full detail-row column span");
-assert.equal((html.match(/aria-label="سجل حملات /g) || []).length, 25);
+for (const label of ["دخول لوحة العلامة", "دخول نقطة التشغيل", "بدون اشتراك ساري", "تصدير تقرير PDF", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
+assert.equal((html.match(/scope="col"/g) || []).length, 6, "brand and five metrics fit the table");
+assert.equal((html.match(/aria-label="تفاصيل /g) || []).length, 25);
+assert.equal((html.match(/aria-pressed=/g) || []).length, 5);
 assert.ok(html.includes("الحملات المجدولة للمستقبل") && html.includes("ولا تُضاف إلى تعذر الإرسال"));
 assert.ok(!/زوار الفرع|حسابات الفرع|آخر زيارة للفرع/.test(html));
-assert.ok(html.includes('tabindex="0"') && html.includes('aria-expanded="false"'));
+assert.ok(html.includes('aria-haspopup="dialog"'));
 const missing = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: null }));
 assert.ok(missing.includes('role="alert"'));
 assert.ok(!missing.includes("إجمالي النتائج"), "unavailable data is not rendered as zero totals");
@@ -64,6 +64,10 @@ function harness(initial = report) {
 }
 const interactive = harness();
 let tree = interactive.render();
+nodes(tree).find(node => node.props?.["aria-label"] === `تفاصيل ${brands[1].name}`).props.onClick();
+tree = interactive.render();
+const details = nodes(tree).find(node => node.type === "dialog");
+assert.equal(nodes(details).filter(node => node.type === "dt").length, reportMetrics.length, "all metrics appear in brand details");
 nodes(tree).find(node => node.props?.["aria-label"] === `سجل حملات ${brands[1].name}`).props.onClick();
 tree = interactive.render();
 let dialog = nodes(tree).find(node => node.type === "dialog");
@@ -91,11 +95,13 @@ assert.notEqual(history.key, oldKey, "loaded period changes remount history and 
 nodes(tree).find(node => node.type === "dialog").props.onClose(); tree = interactive.render();
 assert.ok(!nodes(tree).some(node => node.type === "dialog"));
 nodes(tree).find(node => node.type === "input" && node.props.type === "search").props.onChange({ target: { value: "Brand 03" } }); tree = interactive.render();
-const summary = nodes(tree).find(node => node.props?.["aria-label"] === "ملخص الحملات التسويقية");
-assert.equal(nodes(summary).filter(node => node.type === "dd").length, 5);
-assert(nodes(summary).filter(node => node.type === "dd").every(node => text(node) === "٣"), "summary follows actual filtered brands for all five metrics");
 const footerRow = nodes(nodes(tree).find(node => node.type === "tfoot")).find(node => node.type === "tr");
-assert.equal(footerRow.props.children.length, 12);
+assert.equal(nodes(footerRow).filter(node => node.type === "td").length, 5);
+assert(nodes(footerRow).filter(node => node.type === "td").every(node => text(node) === "٣"), "totals follow filtered brands");
+nodes(tree).find(node => node.type === "button" && text(node) === "الطلبات والبيجر").props.onClick();
+tree = interactive.render();
+assert(text(nodes(tree).find(node => node.type === "thead")).includes("تأكيد الطلبات"));
+assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "cashierLogins", operator: "gte", value: 29 }] }).length, 2);
 assert.equal(filter(brands, { ...defaults, conditions: [{ metric: "campaignFailed", operator: "gte", value: 29 }] }).length, 2);
 assert.equal(filter(brands, { ...defaults, sort: "campaignSent", direction: "desc" })[0].metrics.campaignSent, 30);
 console.log("Operations report filters, validation, aggregation and actual React SSR checks passed.");
