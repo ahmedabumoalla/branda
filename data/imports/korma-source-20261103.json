@@ -1,0 +1,619 @@
+{
+  "at": "2026-11-03T05:43:09.424Z",
+  "sourceUrl": "https://korma.yallaqrcodes.com",
+  "sourceDirectory": "output/korma",
+  "categories": [
+    "شوربة",
+    "مقبلات باردة",
+    "مقبلات الشارع الهندي",
+    "مقبلات ساخنة",
+    "كباب التندوري",
+    "أطباق هندية رئيسية",
+    "الأرز الهندي الفاخر",
+    "خبز تندوري",
+    "حلى بيت الهند",
+    "مشروبات باردة"
+  ],
+  "assets": {
+    "menuLogo": {
+      "localPath": "public/menu-art/korma/korma-logo-v1.webp",
+      "sha256": "f015b2c0a8d655ae18cabacce678eacc7544eb3a8e63a06e37809e6527e9667b",
+      "provenance": "Original Korma wordmark with background removed using imagegen"
+    }
+  },
+  "products": [
+    {
+      "sourceId": "korma-1",
+      "name": "شوربة الشيف",
+      "category": "شوربة",
+      "price": 16,
+      "priceStatus": "source-api-verified",
+      "description": "شوربة يتم إعدادها من قبل الشيف يومياً، إسأل النادل عن شوربة اليوم",
+      "calories": 325,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-1.webp",
+        "sha256": "315e8b3a8fb228d783ba9e3312bf1d2ba1c0e5f86d4061270092ba5c89e3ee3a",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B4%D9%88%D8%B1%D8%A8%D8%A9_%D8%A7%D9%84%D8%B4%D9%8A%D9%81_17911104235553050.webp"
+      }
+    },
+    {
+      "sourceId": "korma-2",
+      "name": "شوربة العدس",
+      "category": "شوربة",
+      "price": 12,
+      "priceStatus": "source-api-verified",
+      "description": "شوربة العدس التقليدية الرائعة",
+      "calories": 331,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-2.webp",
+        "sha256": "c28c5b341f009dc94b5c6b38a500c8c848fcdb3ab1f3b73c5bc3fec58b4f0213",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B4%D9%88%D8%B1%D8%A8%D8%A9_%D8%A7%D9%84%D8%B9%D8%AF%D8%B3_17911104696712882.webp"
+      }
+    },
+    {
+      "sourceId": "korma-3",
+      "name": "سلطة كورما تيكا",
+      "category": "مقبلات باردة",
+      "price": 19,
+      "priceStatus": "source-api-verified",
+      "description": "سلطة بالخضار الطازج مع قطع دجاج التيكا المتبل بالبهارات الهندية المميزة",
+      "calories": 410,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-3.webp",
+        "sha256": "e264ff9368421a94d634bfbc77d7df318a5a8d1a9f332fafdc2fdfb07d7983b7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B3%D9%84%D8%B7%D8%A9_%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%AA%D9%8A%D9%83%D8%A7_17911105166856294.webp"
+      }
+    },
+    {
+      "sourceId": "korma-4",
+      "name": "رايتا الخيار",
+      "category": "مقبلات باردة",
+      "price": 5,
+      "priceStatus": "source-api-verified",
+      "description": "صوص الزبادي مع الخيار والأعشاب الطازجة والبهارات المميزة.",
+      "calories": 126,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-4.webp",
+        "sha256": "d4b31da4b40df63bd952d3c3da889fcba94fd37a78fb9d45846732e8a0f04c15",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B1%D8%A7%D9%8A%D8%AA%D8%A7_%D8%A7%D9%84%D8%AE%D9%8A%D8%A7%D8%B1_17911105698213782.webp"
+      }
+    },
+    {
+      "sourceId": "korma-5",
+      "name": "رايتا أرض الهند",
+      "category": "مقبلات باردة",
+      "price": 6,
+      "priceStatus": "source-api-verified",
+      "description": "كرات العجين المقرمشة المغمسة في الزبادي المتبل بالبهارات الهندية الرائعة",
+      "calories": 132,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-5.webp",
+        "sha256": "4b2c2f42cf44a8e2874ec1afab5d9510195da2e04db8c8595d579dece2ac3864",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B1%D8%A7%D9%8A%D8%AA%D8%A7_%D8%A3%D8%B1%D8%B6_%D8%A7%D9%84%D9%87%D9%86%D8%AF_17911112050694604.webp"
+      }
+    },
+    {
+      "sourceId": "korma-6",
+      "name": "كورما داهي بوري",
+      "category": "مقبلات الشارع الهندي",
+      "price": 14,
+      "priceStatus": "source-api-verified",
+      "description": "طبق تجده في كل شارع من شوارع الهند وهو عبارة عن كرات العجين المقرمشة المحشوة بالبطاطس المتبلة، الحمص، البصل والزبادي الحلو مع البهارات الهندية.",
+      "calories": 347,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-6.webp",
+        "sha256": "cc710ba668e52f435218b431f31bbe85939230bc94970949250dff84576a327f",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%AF%D8%A7%D9%87%D9%8A_%D8%A8%D9%88%D8%B1%D9%8A_%D9%82%D8%B1%D9%8A%D8%A8%D8%A7_17911208969788348.webp"
+      }
+    },
+    {
+      "sourceId": "korma-8",
+      "name": "رويال سمبوسة بنجابي",
+      "category": "مقبلات ساخنة",
+      "price": 12,
+      "priceStatus": "source-api-verified",
+      "description": "سمبوسة مقرمشة محشوة بالبطاطس المتبلة، الكاجو، الزبيب والبازيلاء الخضراء.",
+      "calories": 720,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-8.webp",
+        "sha256": "f92913f8aa68351c09fb4fd241bbbbfc335559fb5a7a040c99b5088c68be7275",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B1%D9%88%D9%8A%D8%A7%D9%84_%D8%B3%D9%85%D8%A8%D9%88%D8%B3%D8%A9_%D8%A8%D9%86%D8%AC%D8%A7%D8%A8%D9%8A_17911112868688812.webp"
+      }
+    },
+    {
+      "sourceId": "korma-9",
+      "name": "دجاج 65",
+      "category": "مقبلات ساخنة",
+      "price": 38,
+      "priceStatus": "source-api-verified",
+      "description": "قطع دجاج مقرمشة بدون عظم متبلة بالبهارات وأوراق الكاري.",
+      "calories": 425,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-9.webp",
+        "sha256": "d2783f44e4cf4ae6e9ae5768f942f2081aebbf84fcf7071b712f6a35cd0b9524",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_65_17911113175858020.webp"
+      }
+    },
+    {
+      "sourceId": "korma-10",
+      "name": "كورما روبيان السمسم",
+      "category": "مقبلات ساخنة",
+      "price": 29,
+      "priceStatus": "source-api-verified",
+      "description": "روبيان مقلي ومتبل بالبهارات الهندية اللذيذة وعصير الليمون والسمسم.",
+      "calories": 351,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-10.webp",
+        "sha256": "4b2a115d7843b41fdfcfb53370d4c0ac337fd38d588669668fb2bd1762c7e613",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%B1%D9%88%D8%A8%D9%8A%D8%A7%D9%86_%D8%A7%D9%84%D8%B3%D9%85%D8%B3%D9%85_17911113409718196.webp"
+      }
+    },
+    {
+      "sourceId": "korma-11",
+      "name": "بطاطس بومباي",
+      "category": "مقبلات ساخنة",
+      "price": 11,
+      "priceStatus": "source-api-verified",
+      "description": "ودجز بطاطس مع الزبدة وأوراق الكزبرة والبهارات الخفيفة.",
+      "calories": 312,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-11.webp",
+        "sha256": "b9a55426c96b2361302a384c067543d5a5c64dcd9104cb902a21c5f95c2d6b16",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A8%D8%B7%D8%A7%D8%B7%D8%B3_%D8%A8%D9%88%D9%85%D8%A8%D8%A7%D9%8A_17911114327768170.webp"
+      }
+    },
+    {
+      "sourceId": "korma-12",
+      "name": "بطاطس مقلية",
+      "category": "مقبلات ساخنة",
+      "price": 8,
+      "priceStatus": "source-api-verified",
+      "description": "أصابع البطاطس المقلية المقرمشة.",
+      "calories": 495,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-12.webp",
+        "sha256": "ca3a277db4ec347c3903b7f27167bbb9f49dfeb76d4f7d8eaf36a65ac18d13b8",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A8%D8%B7%D8%A7%D8%B7%D8%B3_%D9%85%D9%82%D9%84%D9%8A%D8%A9_17911114605583264.webp"
+      }
+    },
+    {
+      "sourceId": "korma-13",
+      "name": "دجاج تيكا المشوي",
+      "category": "كباب التندوري",
+      "price": 33,
+      "priceStatus": "source-api-verified",
+      "description": "قطع دجاج بدون عظم متبلة بالزنجبيل، الثوم، الزبادي والبهارات ومطهو في التندور.",
+      "calories": 415,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-13.webp",
+        "sha256": "7210dd8c154bd2f9877cfec332ec1e5249b825ad74b0aca757372744aab1feb3",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_%D8%AA%D9%8A%D9%83%D8%A7_%D8%A7%D9%84%D9%85%D8%B4%D9%88%D9%8A_17911116544501322.webp"
+      }
+    },
+    {
+      "sourceId": "korma-14",
+      "name": "دجاج كورما تيكا",
+      "category": "كباب التندوري",
+      "price": 36,
+      "priceStatus": "source-api-verified",
+      "description": "طبقنا المميز من قطع دجاج التيكا بنكهة الزبادي وجبن الكريمة مشوية في فرن التندور الهندي",
+      "calories": 525,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-14.webp",
+        "sha256": "8f04ea2ea09ce9d49898f042dddcbcb72ae4af33f2979903929f54f5119bb0cf",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%AA%D9%8A%D9%83%D8%A7_17911115642506314.webp"
+      }
+    },
+    {
+      "sourceId": "korma-15",
+      "name": "كباب اللحم المشوي",
+      "category": "كباب التندوري",
+      "price": 42,
+      "priceStatus": "source-api-verified",
+      "description": "لحم مفروم مع البصل المحمر، الأعشاب الخضراء، المكسرات وبهارات الشيف المشوية في التندور",
+      "calories": 530,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-15.webp",
+        "sha256": "22987bdf61d5e6bf27e39a4b658e250baf715345a4cfa72a7e60d52aa5231969",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%83%D8%A8%D8%A7%D8%A8_%D8%A7%D9%84%D9%84%D8%AD%D9%85_%D8%A7%D9%84%D9%85%D8%B4%D9%88%D9%8A_17911115900143096.webp"
+      }
+    },
+    {
+      "sourceId": "korma-16",
+      "name": "كباب كيرلا باللحم",
+      "category": "كباب التندوري",
+      "price": 41,
+      "priceStatus": "source-api-verified",
+      "description": "قطع لحم طرية بدون عظم منقوعة في الزبادي المتبل طوال الليل ومطهوة على نار هادئة بالتندور",
+      "calories": 541,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-16.webp",
+        "sha256": "64e4459b01585580a79aef5ce63bbc192dbd255ddaf8c13321e1612f9cc4f6a5",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%83%D8%A8%D8%A7%D8%A8_%D9%83%D9%8A%D8%B1%D9%84%D8%A7_%D8%A8%D8%A7%D9%84%D9%84%D8%AD%D9%85_17911116288616136.webp"
+      }
+    },
+    {
+      "sourceId": "korma-17",
+      "name": "دجاج الزبدة المميز",
+      "category": "أطباق هندية رئيسية",
+      "price": 39,
+      "priceStatus": "source-api-verified",
+      "description": "طبق الدجاج بالزبدة المميز والشهير عالمياً في صلصة الطماطم الكريمة والغنية بالزبدة",
+      "calories": 540,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-17.webp",
+        "sha256": "3e6705f6a0d3bedd46786a10850c671a36137704a50a8538e037bde4c073d27d",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_%D8%A7%D9%84%D8%B2%D8%A8%D8%AF%D8%A9_%D8%A7%D9%84%D9%85%D9%85%D9%8A%D8%B2_17911117028853248.webp"
+      }
+    },
+    {
+      "sourceId": "korma-18",
+      "name": "دجاج كورما الملكي",
+      "category": "أطباق هندية رئيسية",
+      "price": 42,
+      "priceStatus": "source-api-verified",
+      "description": "طبق كورما المميز من قطع الدجاج المطهو بصلصة الكاجو والبصل والغنية بالبهارات الهادئة",
+      "calories": 545,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-18.webp",
+        "sha256": "e490c2d750985f2e8e359bbdecab8c5e46d9f3be3f01cd437fa77e92458d3999",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%A7%D9%84%D9%85%D9%84%D9%83%D9%8A_17911117388595392.webp"
+      }
+    },
+    {
+      "sourceId": "korma-19",
+      "name": "دجاج تيكا ماسالا",
+      "category": "أطباق هندية رئيسية",
+      "price": 39,
+      "priceStatus": "source-api-verified",
+      "description": "قطع دجاج التندور المطهوة مع الزبادي وصلصة الطماطم والبصل المتبلة",
+      "calories": 520,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-19.webp",
+        "sha256": "58cd900e6c957efcdc7bb74990c677d308862436f2840fe5085f9308d4ee7726",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AF%D8%AC%D8%A7%D8%AC_%D8%AA%D9%8A%D9%83%D8%A7_%D9%85%D8%A7%D8%B3%D8%A7%D9%84%D8%A7_17911117659355376.webp"
+      }
+    },
+    {
+      "sourceId": "korma-20",
+      "name": "لحم روغان جوش",
+      "category": "أطباق هندية رئيسية",
+      "price": 49,
+      "priceStatus": "source-api-verified",
+      "description": "موزات لحم مطهوة بطريقة هادئة ومتبلة بالأعشاب الكشميرية",
+      "calories": 610,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-20.webp",
+        "sha256": "728cb6a73769e8785603562443f7b84b252edb0022e242c4163bda9b8544a9a7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%84%D8%AD%D9%85_%D8%B1%D9%88%D8%BA%D8%A7%D9%86_%D8%AC%D9%88%D8%B4_17911118143653386.webp"
+      }
+    },
+    {
+      "sourceId": "korma-21",
+      "name": "روبيان جالفريزي",
+      "category": "أطباق هندية رئيسية",
+      "price": 46,
+      "priceStatus": "source-api-verified",
+      "description": "طبق الروبيان بالصلصة الغنية مع شرائح الفلفل الرومي والبصل والبهارات العطرية المميزة",
+      "calories": 570,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-21.webp",
+        "sha256": "728cb6a73769e8785603562443f7b84b252edb0022e242c4163bda9b8544a9a7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B1%D9%88%D8%A8%D9%8A%D8%A7%D9%86_%D8%AC%D8%A7%D9%84%D9%81%D8%B1%D9%8A%D8%B2%D9%8A_17911119291124148.webp"
+      }
+    },
+    {
+      "sourceId": "korma-22",
+      "name": "برياني الدجاج الخاص",
+      "category": "الأرز الهندي الفاخر",
+      "price": 26,
+      "priceStatus": "source-api-verified",
+      "description": "أرز برياني بسمتي مطهو على نار هادئة مع قطع الدجاج والبهارات الغنية",
+      "calories": 890,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-22.webp",
+        "sha256": "529a955016a9e612a164054c9b89786342b0ec443064d66db79d522ea2e29229",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A8%D8%B1%D9%8A%D8%A7%D9%86%D9%8A_%D8%A7%D9%84%D8%AF%D8%AC%D8%A7%D8%AC_%D8%A7%D9%84%D8%AE%D8%A7%D8%B5_17911119877667850.webp"
+      }
+    },
+    {
+      "sourceId": "korma-23",
+      "name": "أرز برياني ماسالا",
+      "category": "الأرز الهندي الفاخر",
+      "price": 19,
+      "priceStatus": "source-api-verified",
+      "description": "أرز بسمتي بنكهة الأعشاب التوابل الهندية المميزة مع صوص المسالا الخاص",
+      "calories": 478,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-23.webp",
+        "sha256": "c638753f21bd738f7b85f91866e57a73a01fcd984fc1985cf020ffda5fc3e1d7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A3%D8%B1%D8%B2_%D8%A8%D8%B1%D9%8A%D8%A7%D9%86%D9%8A_%D9%85%D8%A7%D8%B3%D8%A7%D9%84%D8%A7_17911120101354856.webp"
+      }
+    },
+    {
+      "sourceId": "korma-24",
+      "name": "أرز برياني سادة",
+      "category": "الأرز الهندي الفاخر",
+      "price": 16,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 415,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-24.webp",
+        "sha256": "c638753f21bd738f7b85f91866e57a73a01fcd984fc1985cf020ffda5fc3e1d7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A3%D8%B1%D8%B2_%D8%A8%D8%B1%D9%8A%D8%A7%D9%86%D9%8A_%D8%B3%D8%A7%D8%AF%D8%A9_17911120372900694.webp"
+      }
+    },
+    {
+      "sourceId": "korma-25",
+      "name": "أرز أبيض على البخار",
+      "category": "الأرز الهندي الفاخر",
+      "price": 11,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 415,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-25.webp",
+        "sha256": "8fc8e818cad71a59dfa71370d2c5b79844467605cb5028b48378c06a1db53fa3",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A3%D8%B1%D8%B2_%D8%A3%D8%A8%D9%8A%D8%B6_%D8%B9%D9%84%D9%89_%D8%A7%D9%84%D8%A8%D8%AE%D8%A7%D8%B1_17911120571178274.webp"
+      }
+    },
+    {
+      "sourceId": "korma-26",
+      "name": "خبز روتي تندوري",
+      "category": "خبز تندوري",
+      "price": 1,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 185,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-26.webp",
+        "sha256": "e943e377ac782b0314873baffef7ee7a98ce2c8eba9f54fe61530b0895e24a49",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AE%D8%A8%D8%B2_%D8%B1%D9%88%D8%AA%D9%8A_%D8%AA%D9%86%D8%AF%D9%88%D8%B1%D9%8A_17911120806601924.webp"
+      }
+    },
+    {
+      "sourceId": "korma-27",
+      "name": "خبز نان",
+      "category": "خبز تندوري",
+      "price": 1,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 210,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-27.webp",
+        "sha256": "324e2a423eb470a378797892b5aa2dae572b961cc1ac354abcaf2c5f7668172c",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AE%D8%A8%D8%B2_%D9%86%D8%A7%D9%86_17911121074703944.webp"
+      }
+    },
+    {
+      "sourceId": "korma-29",
+      "name": "خبز نان بالزبادي الزبدة",
+      "category": "خبز تندوري",
+      "price": 1,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 245,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-29.webp",
+        "sha256": "324e2a423eb470a378797892b5aa2dae572b961cc1ac354abcaf2c5f7668172c",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AE%D8%A8%D8%B2_%D9%86%D8%A7%D9%86_%D8%A8%D8%A7%D9%84%D8%B2%D8%A8%D8%A7%D8%AF%D9%8A_%D8%A7%D9%84%D8%B2%D8%A8%D8%AF%D8%A9_17911122135432148.webp"
+      }
+    },
+    {
+      "sourceId": "korma-30",
+      "name": "خبز نان بالثوم",
+      "category": "خبز تندوري",
+      "price": 3,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 260,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-30.webp",
+        "sha256": "8d61445622a1c7e5a789ca01c2f418a0ea26d9011bb26cb874dc0e0e6aec57e7",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AE%D8%A8%D8%B2_%D9%86%D8%A7%D9%86_%D8%A8%D8%A7%D9%84%D8%AB%D9%88%D9%85_17911122475201338.webp"
+      }
+    },
+    {
+      "sourceId": "korma-31",
+      "name": "سلة خبز مشكلة",
+      "category": "خبز تندوري",
+      "price": 6,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 1035,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-31.webp",
+        "sha256": "a93adf2ecb3338983a8b7a835280f9b0b4c1d76583f929e94fdb7ee97f3b7839",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B3%D9%84%D8%A9_%D8%AE%D8%A8%D8%B2_%D9%85%D8%B4%D9%83%D9%84%D8%A9_17911123553016388.webp"
+      }
+    },
+    {
+      "sourceId": "korma-32",
+      "name": "جولاب جامون",
+      "category": "حلى بيت الهند",
+      "price": 14,
+      "priceStatus": "source-api-verified",
+      "description": "كرات الحليب المقلية والمغمورة بشيرة الزعفران يقدم مع الآيسكريم",
+      "calories": 285,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-32.webp",
+        "sha256": "5372fb6988e154b3747f059cfed5b28bd04419d99dd8e1cd10922c7537b09e20",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%AC%D9%88%D9%84%D8%A7%D8%A8_%D8%AC%D8%A7%D9%85%D9%88%D9%86_17911111131981470.webp"
+      }
+    },
+    {
+      "sourceId": "korma-33",
+      "name": "كورما الجزر",
+      "category": "حلى بيت الهند",
+      "price": 21,
+      "priceStatus": "source-api-verified",
+      "description": "طبق الحلى المشهور من الهند والمميز لدى كورما، عبارة عن جزر طازج مبشور ومحمص بالسمن ومطهو مع الحليب المعطر بالهيل",
+      "calories": 250,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-33.webp",
+        "sha256": "6a72440b4f0294baee1fb3fdb5d2fa9e017d4f212a3639cdab933f0310dc3429",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%83%D9%88%D8%B1%D9%85%D8%A7_%D8%A7%D9%84%D8%AC%D8%B2%D8%B1_17911111401846428.webp"
+      }
+    },
+    {
+      "sourceId": "korma-38",
+      "name": "عصير برتقال طازج🍊",
+      "category": "مشروبات باردة",
+      "price": 12,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": 670,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-38.webp",
+        "sha256": "6cd8c143bba1466bdc4c557c5c3623f525d284de8439be70ab5b7d8c386d716c",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%B9%D8%B5%D9%8A%D8%B1_%D8%A8%D8%B1%D8%AA%D9%82%D8%A7%D9%84_%D8%B7%D8%A7%D8%B2%D8%AC_17911167892174944.webp"
+      }
+    },
+    {
+      "sourceId": "korma-45",
+      "name": "بيبسي",
+      "category": "مشروبات باردة",
+      "price": 4,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": null,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-45.webp",
+        "sha256": "627ffda74c68453342581d7f03161ae07aedc4764989f813b4a39cfff63b4b96",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D8%A8%D9%8A%D8%A8%D8%B3%D9%8A_17911429618974108.webp"
+      }
+    },
+    {
+      "sourceId": "korma-46",
+      "name": "مريندا برتقال",
+      "category": "مشروبات باردة",
+      "price": 4,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": null,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-46.webp",
+        "sha256": "442819a944916f6a7f0dcf2ea150cb3eed89b113faaf62ecfc393f5a8ca14734",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%85%D8%B1%D9%8A%D9%86%D8%AF%D8%A7_%D8%A8%D8%B1%D8%AA%D9%82%D8%A7%D9%84_17917139023576054.webp"
+      }
+    },
+    {
+      "sourceId": "korma-41",
+      "name": "شركةكينزا - كولا - دايت - ليمون - حمضيات",
+      "category": "مشروبات باردة",
+      "price": 3,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": null,
+      "calorieUnit": "item",
+      "variants": [
+        {
+          "name": "كينزا",
+          "price": 3
+        },
+        {
+          "name": "دايت",
+          "price": 3
+        },
+        {
+          "name": "ليمون",
+          "price": 3
+        },
+        {
+          "name": "برتقال",
+          "price": 3
+        }
+      ],
+      "image": {
+        "localPath": "output/korma/originals/product-41.webp",
+        "sha256": "4bc14d96dd5b4b7ef07a521b5a37ea571d873565833aac31f06575aeea0d700c",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%85%D8%B4%D8%B1%D9%88%D8%A8%D8%A7%D8%AA_%D8%BA%D8%A7%D8%B2%D9%8A%D8%A9_%D9%83%D9%8A%D9%86%D8%B2%D8%A7_-_%D8%AF%D8%A7%D9%8A%D8%AA_-_%D9%84%D9%8A%D9%85%D9%88%D9%86_-_%D8%A8%D8%B1%D8%AA%D9%82%D8%A7%D9%84_17911168503917534.webp"
+      }
+    },
+    {
+      "sourceId": "korma-43",
+      "name": "مياة صغير",
+      "category": "مشروبات باردة",
+      "price": 1,
+      "priceStatus": "source-api-verified",
+      "description": "",
+      "calories": null,
+      "calorieUnit": "item",
+      "variants": [],
+      "image": {
+        "localPath": "output/korma/originals/product-43.webp",
+        "sha256": "cb6404905910e78c7e5c1514a4a35c2cde830371b1db65fb59a564e534541f6d",
+        "provenance": "https://d8aaen7rph5y9.cloudfront.net/app/mediafiles/t_1791059869_hpaogm/items/%D9%85%D8%A7%D8%A1_17911170086279790.webp"
+      }
+    }
+  ]
+}

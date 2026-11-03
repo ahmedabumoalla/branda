@@ -76,7 +76,7 @@ function hooks() {
 }
 
 async function main() {
-  equal(Object.keys(signatureBrands).length, 6, 'Only the six requested identities receive this presentation');
+  equal(Object.keys(signatureBrands).length, 7, 'Only the seven requested identities receive this presentation');
   for (const unknown of ['rast', 'black-drop', 'once', 'box-bbq', 'brand-871ec6e243c0', '__proto__', 'constructor']) equal(signatureBrand(unknown), null, 'Unrelated and inherited object names do not select a brand');
   for (const [slug, brand] of Object.entries(signatureBrands)) {
     const html = render({ menu: { ...menu, slug, name: brand.name, logoUrl: null }, brand });
@@ -106,6 +106,14 @@ async function main() {
       equal(standaloneLogoVariant('another-brand', originalPath), null, 'Other brands cannot inherit this logo');
     }
   }
+  const korma = signatureBrand('brand-b042ca7f1a93');
+  equal(korma.key, 'korma', 'Korma presentation is scoped to the exact brand');
+  const kormaHtml = render({ brand: korma, menu: { ...menu, slug: 'brand-b042ca7f1a93', name: korma.name, logoUrl: null } });
+  check(kormaHtml.includes('lucide-utensils-crossed') && !kormaHtml.includes('lucide-coffee'), 'Korma uses restaurant stamps');
+  check(kormaHtml.includes('نكهات من قلب الهند') && kormaHtml.includes('سفرتك تبدأ هنا'), 'Korma has restaurant-specific introduction and catalog');
+  equal(signatureAsset(korma.hero, true), '/menu-art/korma/korma-hero-mobile-v1.webp', 'Korma mobile artwork is independent');
+  const alpha = await require('sharp')(path.join(root, 'public', signatureAsset(korma.logo))).metadata();
+  check(alpha.hasAlpha, 'Korma logo retains transparency');
   let html = render();
   const garden = signatureBrand('brand-dcf7296f722c');
   equal(garden.key, 'hadiqa', 'Alhadiqa identity is selected by its exact tenant slug');

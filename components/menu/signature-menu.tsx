@@ -101,7 +101,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const selected = menu.products.find(p => p.id === selectedId);
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
   const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const Stamp = brand.key === "box" ? Flame : brand.key === "hadiqa" ? UtensilsCrossed : Coffee;
+  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma"].includes(brand.key) ? UtensilsCrossed : Coffee;
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
   async function share() {
@@ -114,7 +114,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
     <section className={s.hero} id="signature-top" aria-labelledby="signature-title">
       <picture className={s.backdrop}><source media="(max-width: 700px)" srcSet={signatureAsset(brand.hero, true)} /><Image src={signatureAsset(brand.hero)} alt="" fill unoptimized fetchPriority="high" loading="eager" sizes="100vw" /></picture>
       <div className={s.heroShade} aria-hidden="true" /><div className={s.lightSweep} aria-hidden="true" />
-      <header className={s.header}><span className={s.headerNote}>{brand.arabic}<span>لحظتك على ذوقك</span></span><nav aria-label="خدمات المنيو"><MenuServices menu={menu} compact /><button type="button" className={s.round} onClick={share} aria-label="شارك المنيو"><Share2 aria-hidden="true" /></button><button type="button" className={s.round} onClick={focusSearch} aria-label="ابحث في المنيو"><Search aria-hidden="true" /></button></nav></header>
+      <header className={s.header}><span className={s.headerNote}>{brand.arabic}<span>{brand.key === "korma" ? "نكهات من قلب الهند" : "لحظتك على ذوقك"}</span></span><nav aria-label="خدمات المنيو"><MenuServices menu={menu} compact /><button type="button" className={s.round} onClick={share} aria-label="شارك المنيو"><Share2 aria-hidden="true" /></button><button type="button" className={s.round} onClick={focusSearch} aria-label="ابحث في المنيو"><Search aria-hidden="true" /></button></nav></header>
       <div className={s.heroCenter}><SignatureMark brand={brand} src={menu.logoUrl} /><span className={s.signature} dir="ltr">{brand.signature}</span><h1 id="signature-title">{brand.headline}<em>{brand.emphasis}</em></h1><p>{brand.note}</p><a className={s.primary} href="#signature-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && loyalty && <a className={s.heroLoyalty} href="#signature-loyalty"><Gift aria-hidden="true" />كل زيارة تقرّب مكافأتك<ArrowDownLeft aria-hidden="true" /></a>}</div>
       <div className={s.heroBottom}><span>{menu.products.length} اختيارًا على ذوقك</span>{offers.length > 0 && <a href="#signature-offers">تستاهل التجربة<ArrowDownLeft aria-hidden="true" /></a>}</div>
     </section>

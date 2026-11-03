@@ -248,4 +248,54 @@
   .menu[data-signature="hadiqa"] .heroCenter > p { margin: 8px 0 12px; }
   .menu[data-signature="hadiqa"] .heroBottom { padding-block: 4px; }
 }
+.menu[data-signature="korma"] {
+  --brand: #123d32; --tone: #a54b21; --accent: #f49b49; --surface: #fff6e6; --text: #173b31; --muted: #6e6050; --edge: #dfcfb7; --white: #fff6e6; --panel: #123d32;
+}
+.menu[data-signature="korma"] .hero { min-height: min(760px, 96svh); }
+.menu[data-signature="korma"] .backdrop img { object-position: center 64%; }
+.menu[data-signature="korma"] .heroShade { background: linear-gradient(180deg, #061e19ad, #061e194d 28%, #061e1980 63%, #061e191a 84%, #061e199e); }
+.menu[data-signature="korma"] .heroCenter { padding-block: 20px 34px; }
+.mark[data-mark="korma"] { width: clamp(250px, 30vw, 390px); height: 180px; }
+.mark[data-mark="korma"] img { object-fit: contain; filter: brightness(0) invert(1); mix-blend-mode: normal; }
+.menu[data-signature="korma"] .signature { margin: 6px 0 22px; letter-spacing: .32em; }
+.menu[data-signature="korma"] .heroCenter h1 { font-size: clamp(34px, 4.8vw, 66px); }
+.menu[data-signature="korma"] .heroCenter > p { max-width: 360px; text-wrap: balance; }
+.menu[data-signature="korma"] .primary { border-radius: 12px 12px 30px 12px; }
+.menu[data-signature="korma"] .loyaltyCard { background: radial-gradient(ellipse at 100% 0, #32634c, #123d32 75%); border: 1px solid #bc885a70; box-shadow: 0 12px 30px #123d3214; }
+.menu[data-signature="korma"] .cardTop b { letter-spacing: .12em; color: #fff6e6; }
+.menu[data-signature="korma"] .stamps > span { border-color: #f6d6ac80; }
+.menu[data-signature="korma"] .catalog { padding-top: clamp(24px, 4vw, 50px); }
+.menu[data-signature="korma"] .heading h2 { letter-spacing: -.02em; }
+.menu[data-signature="korma"] .categories button[aria-pressed="true"] { color: #fff6e6; background: #123d32; border-color: #123d32; }
+.menu[data-signature="korma"] :is(.search, .order select) { background: #fffdf8; }
+.menu[data-signature="korma"] .product { background: #fffdf8; padding: 8px 8px 18px; border: 1px solid #dfcfb780; border-radius: 20px; box-shadow: 0 6px 20px #4b391306; }
+.menu[data-signature="korma"] .productPhoto { background: #f5eddf; border-radius: 14px; }
+.menu[data-signature="korma"] .productInfo { padding-inline: 8px; }
+.menu[data-signature="korma"] .productInfo .price { color: #9b401e; }
+.menu[data-signature="korma"] .productArrow { color: #fff6e6; background: #123d32; border-color: #fff6e6; }
+.menu[data-signature="korma"] .footer { color: #fff6e6; background: #123d32; border-top: 3px solid #f49b49; }
+.menu[data-signature="korma"] .mark[data-small="true"] { width: 150px; height: 86px; }
+.menu[data-signature="korma"].loading { background: radial-gradient(ellipse at 45% 25%, #32634c, #102c25 75%); }
+.menu[data-signature="korma"].loading::before { inset: 18px; border: 1px solid #f49b4950; border-radius: 180px 180px 16px 16px; background: none; }
+@media (max-width: 640px) {
+  .menu[data-signature="korma"] .hero { min-height: min(700px, 94svh); }
+  .menu[data-signature="korma"] .heroCenter { padding: 18px 22px 24px; }
+  .menu[data-signature="korma"] .mark { width: min(290px, 79vw); height: 150px; }
+  .menu[data-signature="korma"] .signature { font-size: 8px; margin: 6px 0 18px; }
+  .menu[data-signature="korma"] .heroCenter h1 { font-size: 36px; }
+  .menu[data-signature="korma"] .heroCenter h1 em { font-size: inherit; }
+  .menu[data-signature="korma"] .heroCenter > p { font-size: 14px; margin: 12px 0 20px; }
+  .menu[data-signature="korma"] .loyalty { gap: 14px; padding-block: 22px; }
+  .menu[data-signature="korma"] .loyaltyCopy h2 { font-size: 19px; }
+  .menu[data-signature="korma"] .product { padding: 5px 5px 14px; border-radius: 17px; }
+  .menu[data-signature="korma"] .productInfo { padding-inline: 5px; }
+  .menu[data-signature="korma"] .grid { gap: 14px 12px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu[data-signature="korma"] .heroCenter { padding-block: 8px; }
+  .menu[data-signature="korma"] .heroCenter .mark { height: 110px; }
+  .menu[data-signature="korma"] .heroCenter h1 { font-size: 30px; }
+  .menu[data-signature="korma"] .heroCenter > p { margin: 8px 0 12px; }
+  .menu[data-signature="korma"] .heroBottom { padding-block: 6px; }
+}
 @media (prefers-reduced-motion: reduce) { .menu *, .loading * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }.backdrop img { transform: none; }.lightSweep { display: none; }.loadingLine::after { width: 100%; transform: none; } }
