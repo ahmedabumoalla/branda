@@ -10,6 +10,13 @@ export const signatureBrands = {
 } as const;
 
 export type SignatureBrand = typeof signatureBrands[keyof typeof signatureBrands];
+
+/** Accounts and branch location published by Korma's original menu */
+export const kormaContacts = {
+  instagram: "https://www.instagram.com/korma.sa/",
+  tiktok: "https://www.tiktok.com/@korma.sa",
+  maps: "https://maps.app.goo.gl/pPpn69Udneypa52r6",
+} as const;
 export function signatureBrand(slug: string): SignatureBrand | null {
   return Object.prototype.hasOwnProperty.call(signatureBrands, slug) ? signatureBrands[slug as keyof typeof signatureBrands] : null;
 }
