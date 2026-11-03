@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Flame, Gift, Camera, MapPin, Music2, Pause, Play, Search, Share2, UtensilsCrossed, WalletCards } from "lucide-react";
 import { kormaContacts, signatureAsset, type SignatureBrand } from "@/lib/menu/signature-brands";
+import { DEFAULT_SIGNATURE_HERO } from "@/lib/menu/default-signature";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
@@ -25,6 +26,7 @@ function photoDisclosure(brand: SignatureBrand, product: StandaloneMenuProduct) 
 
 export function SignatureMark({ brand, src, small = false }: { brand: SignatureBrand; src?: string | null; small?: boolean }) {
   const cutout = (brand.key === "once" || brand.key === "black") && (!src || src === signatureAsset(brand.logo));
+  if (brand.key === "default" && !src) return <span className={s.wordmark} data-small={small}>{brand.name}</span>;
   return <span className={s.mark} data-mark={brand.key} data-small={small} data-cutout={cutout}>
     <Image src={src || signatureAsset(brand.logo)} alt={brand.name} width={800} height={500} unoptimized loading="eager" />
   </span>;
@@ -87,6 +89,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const [order, setOrder] = useState("original");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [failedHero, setFailedHero] = useState<string | null>(null);
   const [asOf, setAsOf] = useState(source.highlights?.asOf ?? 0);
   useEffect(() => startMenuAtTop(root.current), [source.slug]);
   useEffect(() => { const timer = window.setInterval(() => setAsOf(Date.now()), 30000); return () => { window.clearInterval(timer); if (toastTimer.current) clearTimeout(toastTimer.current); }; }, []);
@@ -101,21 +104,24 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const selected = menu.products.find(p => p.id === selectedId);
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
   const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma", "masala", "rayhan"].includes(brand.key) ? UtensilsCrossed : Coffee;
+  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma", "masala", "rayhan"].includes(brand.key) || (brand.key === "default" && menu.businessCategory === "restaurants") ? UtensilsCrossed : Coffee;
+  const hero = brand.key === "default" ? (failedHero === brand.hero ? DEFAULT_SIGNATURE_HERO : brand.hero) : signatureAsset(brand.hero);
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
   async function share() {
-    const url = menuEntryUrl(window.location.origin, menu.slug);
+    const entry = new URL(menuEntryUrl(window.location.origin, menu.slug));
+    if (menu.branch) entry.searchParams.set("branch", menu.branch.slug);
+    const url = entry.href;
     try { if (navigator.share) { await navigator.share({ title: menu.name, url }); return; } await navigator.clipboard.writeText(url); setMessage("تم نسخ رابط المنيو"); } catch (error) { if (error instanceof Error && error.name === "AbortError") return; setMessage("يمكنك مشاركة رابط المنيو من شريط العنوان"); }
     if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setMessage(""), 3200);
   }
-  return <main ref={root} className={`${base.menu} ${s.menu}`} data-signature={brand.key} dir="rtl">
+  return <main ref={root} className={`${base.menu} ${s.menu}`} style={brand.cssVariables as CSSProperties} data-signature={brand.key} dir="rtl">
     <a href="#signature-catalog" className={base.skipLink}>انتقل إلى المنتجات</a>
     <section className={s.hero} id="signature-top" aria-labelledby="signature-title">
-      <picture className={s.backdrop}><source media="(max-width: 700px)" srcSet={signatureAsset(brand.hero, true)} /><Image src={signatureAsset(brand.hero)} alt="" fill unoptimized fetchPriority="high" loading="eager" sizes="100vw" /></picture>
+      <picture className={s.backdrop}>{brand.key !== "default" && <source media="(max-width: 700px)" srcSet={signatureAsset(brand.hero, true)} />}<Image src={hero} alt="" fill unoptimized fetchPriority="high" loading="eager" sizes="100vw" onError={brand.key === "default" ? () => setFailedHero(brand.hero) : undefined} /></picture>
       <div className={s.heroShade} aria-hidden="true" /><div className={s.lightSweep} aria-hidden="true" />
       <header className={s.header}><span className={s.headerNote}>{brand.arabic}<span>{brand.key === "korma" ? "نكهات من قلب الهند" : "لحظتك على ذوقك"}</span></span><nav aria-label="خدمات المنيو"><MenuServices menu={menu} compact /><button type="button" className={s.round} onClick={share} aria-label="شارك المنيو"><Share2 aria-hidden="true" /></button><button type="button" className={s.round} onClick={focusSearch} aria-label="ابحث في المنيو"><Search aria-hidden="true" /></button></nav></header>
-      <div className={s.heroCenter}><SignatureMark brand={brand} src={menu.logoUrl} /><span className={s.signature} dir="ltr">{brand.signature}</span><h1 id="signature-title">{brand.headline}<em>{brand.emphasis}</em></h1><p>{brand.note}</p><a className={s.primary} href="#signature-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && loyalty && <a className={s.heroLoyalty} href="#signature-loyalty"><Gift aria-hidden="true" />كل زيارة تقرّب مكافأتك<ArrowDownLeft aria-hidden="true" /></a>}</div>
+      <div className={s.heroCenter}><SignatureMark brand={brand} src={menu.logoUrl} /><span className={s.signature} dir={brand.key === "default" ? "auto" : "ltr"}>{brand.signature}</span><h1 id="signature-title">{brand.headline}<em>{brand.emphasis}</em></h1><p>{brand.note}</p><a className={s.primary} href="#signature-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && loyalty && <a className={s.heroLoyalty} href="#signature-loyalty"><Gift aria-hidden="true" />كل زيارة تقرّب مكافأتك<ArrowDownLeft aria-hidden="true" /></a>}</div>
       <div className={s.heroBottom}><span>{menu.products.length} اختيارًا على ذوقك</span>{brand.key === "korma" && <nav className={s.brandContacts} aria-label="حسابات كورما وموقع المطعم"><a href={kormaContacts.instagram} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على إنستغرام"><Camera aria-hidden="true" />إنستغرام</a><a href={kormaContacts.tiktok} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على تيك توك"><Music2 aria-hidden="true" />تيك توك</a><a href={kormaContacts.maps} target="_blank" rel="noopener noreferrer" aria-label="موقع مطعم كورما على خرائط قوقل"><MapPin aria-hidden="true" />موقعنا</a></nav>}{offers.length > 0 && <a href="#signature-offers">تستاهل التجربة<ArrowDownLeft aria-hidden="true" /></a>}</div>
     </section>
     {menu.loyaltyEnabled && loyalty && <section id="signature-loyalty" className={s.loyalty} aria-labelledby="signature-loyalty-title"><Link href={loyaltyHref} className={s.loyaltyCard} aria-label={`بطاقة ولاء ${menu.name}`} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}><span className={s.cardTop}><b dir="ltr">{brand.name}</b><WalletCards aria-hidden="true" /></span><div className={s.stamps} aria-hidden="true">{Array.from({ length: Math.min(10, loyalty.purchasesRequired) }, (_, i) => <span key={i}>{i === loyalty.purchasesRequired - 1 ? <Gift /> : <Stamp />}</span>)}</div><span className={s.cardReward}><span>مكافأتك القادمة</span><strong>{loyalty.rewardName}</strong></span></Link><div className={s.loyaltyCopy}><span className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</span><h2 id="signature-loyalty-title">{brand.loyalty}</h2><p>اجمع {loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام واحصل على {loyalty.rewardName}</p><Link href={loyaltyHref} className={s.loyaltyAction} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}><LoyaltyLinkContent label="افتح بطاقة الولاء" /></Link></div></section>}

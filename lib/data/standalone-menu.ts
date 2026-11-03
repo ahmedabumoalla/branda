@@ -1,5 +1,6 @@
 import "server-only";
 import { signatureBrand } from "@/lib/menu/signature-brands";
+import { usesDefaultSignatureMenu } from "@/lib/menu/default-signature";
 
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -56,11 +57,12 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) return null;
   const admin = createAdminClient();
   const { data: cafe, error: cafeError } = await admin.from("cafes")
-    .select("id,slug,name,status,business_category").eq("slug", slug).is("deleted_at", null).maybeSingle();
+    .select("id,slug,name,status,business_category,created_at").eq("slug", slug).is("deleted_at", null).maybeSingle();
   if (cafeError) throw cafeError;
   if (!cafe || !["active", "published"].includes(String(cafe.status))) return null;
   const features = await getCafeFeatureCodes(String(cafe.id));
   if (!featureCodesAllow(features, "menu")) return null;
+  const defaultPresentation = usesDefaultSignatureMenu(cafe.business_category, cafe.created_at) && !signatureBrand(slug);
 
   if (branchSlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(branchSlug)) return null;
   const { data: branchRows, error: branchError } = await admin.from("branches").select("id,name,menu_slug,is_primary")
@@ -73,13 +75,16 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   const categoryQuery = admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
     .eq("visible", true).is("deleted_at", null).order("sort_order").order("id");
 
-  const [categoryResult, settingsResult, rawRows] = await Promise.all([
+  const [categoryResult, settingsResult, rawRows, identityResult] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
     readMenuProducts(admin, String(cafe.id), branchId, cafe.business_category === "gifts_flowers"),
+    defaultPresentation ? admin.from("cafe_custom_identity").select("palette,logo_storage_path,logo_url,background_storage_path,background_url").eq("cafe_id", cafe.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (categoryResult.error) throw categoryResult.error;
   if (settingsResult.error) throw settingsResult.error;
+  if (identityResult.error) throw identityResult.error;
+  const identity = identityResult.data;
   const categories = categoryResult.data ?? [];
   const categoryNames = new Map(categories.map((category) => [String(category.id), String(category.name)]));
   const categoryIds = new Set(categoryNames.keys());
@@ -94,13 +99,13 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   }
   const settings = settingsResult.data;
   // Logo processing and product media are independent after the publication gate.
-  const [signed, logoUrl] = await Promise.all([
+  const [signed, logoUrl, heroUrl] = await Promise.all([
     (async () => {
       const urls = new Map<string, string>();
       // Preview navigation reuses stable signatures rather than re-downloading unchanged images.
       // Only referenced, visible, tenant-owned assets reach this shared signing cache.
       if (paths.size) {
-        const { data, error } = showcase || signatureBrand(slug) || ["kat-coffe", "shahi-w-hail", "taza", "delicake", "brand-871ec6e243c0"].includes(slug)
+        const { data, error } = showcase || defaultPresentation || signatureBrand(slug) || ["kat-coffe", "shahi-w-hail", "taza", "delicake", "brand-871ec6e243c0"].includes(slug)
           ? { data: await getKathMenuAssets([...paths]), error: null }
           : await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
         if (error) throw error;
@@ -111,13 +116,23 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
     (async () => {
       const variant = standaloneLogoVariant(cafe.id, settings?.logo_storage_path || settings?.logo_url);
       if (variant) return variant;
-      let url = safeMediaUrl(settings?.logo_url);
-      if (settings?.logo_storage_path && isOwnedMenuAsset(settings.logo_storage_path, cafe.id)) {
+      let url = safeMediaUrl(identity?.logo_url) || safeMediaUrl(settings?.logo_url);
+      const logoPath = identity?.logo_storage_path || settings?.logo_storage_path;
+      if (logoPath && isOwnedMenuAsset(logoPath, cafe.id)) {
         url = (showcase
-          ? await cachedShowcaseLogo(String(cafe.id), settings.logo_storage_path, Math.floor(Date.now() / SHOWCASE_LOGO_WINDOW_MS))
-          : await publishedMenuLogo(admin, String(cafe.id), settings.logo_storage_path)) || url;
+          ? await cachedShowcaseLogo(String(cafe.id), logoPath, Math.floor(Date.now() / SHOWCASE_LOGO_WINDOW_MS))
+          : await publishedMenuLogo(admin, String(cafe.id), logoPath)) || url;
       }
-      return url || "/brand/barndaksa-logo-brown.png";
+      return url || (defaultPresentation ? null : "/brand/barndaksa-logo-brown.png");
+    })(),
+    (async () => {
+      const path = identity?.background_storage_path;
+      if (path && isOwnedMenuAsset(path, cafe.id)) {
+        const { data, error } = await admin.storage.from("cafe-backgrounds").createSignedUrl(path, 3600);
+        if (error) return null;
+        return data?.signedUrl || null;
+      }
+      return safeMediaUrl(identity?.background_url);
     })(),
   ]);
   const resolve = (path?: string, url?: string | null) => (path ? signed.get(path) : null) || safeMediaUrl(url);
@@ -150,6 +165,8 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
     console.error("Standalone highlights unavailable");
     return { asOf: Date.now(), items: [] };
   });
-  return { branch: chosenBranch ? branchDto(chosenBranch) : null, branches: (branchRows ?? []).map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
+  const rawPalette = identity?.palette;
+  const palette = rawPalette && typeof rawPalette === "object" && !Array.isArray(rawPalette) ? Object.fromEntries(Object.entries(rawPalette).filter((entry): entry is [string, string] => typeof entry[1] === "string" && /^#[a-f\d]{6}$/i.test(entry[1]))) : {};
+  return { ...(defaultPresentation ? { presentation: "signature" as const, appearance: { palette, heroUrl } } : {}), branch: chosenBranch ? branchDto(chosenBranch) : null, branches: (branchRows ?? []).map(branchDto), businessCategory: cafe.business_category, cafeId: cafe.id, name: cafe.name, slug: cafe.slug, logoUrl, description: settings?.description ?? null, categories, products, highlights, loyaltyEnabled: featureCodesAllow(features, "loyalty"),
     contacts: { ...menuContacts(cafe.id, settings?.instagram), feedbackEnabled: Boolean(normalizeSaudiPhone(settings?.whatsapp ?? "") && isGreenApiConfigured()) } };
 });

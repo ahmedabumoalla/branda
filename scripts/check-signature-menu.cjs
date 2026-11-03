@@ -38,6 +38,8 @@ const mocks = {
   '@/lib/menu/menu-entry-scroll': { startMenuAtTop: noop, menuEntryUrl: (origin, slug) => `${origin}/menu/${slug}` },
 };
 const { signatureBrands, signatureBrand, signatureAsset } = load('lib/menu/signature-brands.ts');
+const { defaultSignatureBrand, usesDefaultSignatureMenu, DEFAULT_SIGNATURE_HERO } = load('lib/menu/default-signature.ts');
+const { getContrastRatio } = load('lib/cafe/color-contrast.ts');
 const { SignatureMenu } = load('components/menu/signature-menu.tsx', mocks);
 const { SignatureMenuLoading } = load('components/menu/signature-menu-loading.tsx', mocks);
 const now = Date.now();
@@ -76,6 +78,7 @@ function hooks() {
 }
 
 async function main() {
+  await checkDefaultPresentation();
   equal(Object.keys(signatureBrands).length, 12, 'Only the twelve explicitly registered identities receive this presentation');
   const newAccounts = { 'brand-96f3dda4f1ea': 'hulm', 'brand-6c954762020f': 'arabi', 'brand-4596b275e3d4': 'masala', 'brand-5afbbf87fa56': 'nineteen', 'brand-61c65e74315d': 'rayhan' };
   for (const [slug, key] of Object.entries(newAccounts)) {
@@ -220,6 +223,9 @@ async function main() {
     global.navigator.share = async payload => { shared = payload; };
     await nodes(draw()).find(n => n.props?.['aria-label'] === 'شارك المنيو').props.onClick();
     equal(shared.url, copied, 'Native sharing has the same canonical brand destination');
+    const branchTree = draw({ menu: { ...menu, branch: { id: 'branch-2', name: 'Second branch', slug: 'second-branch' } } });
+    await nodes(branchTree).find(n => n.props?.['aria-label'] === 'شارك المنيو').props.onClick();
+    equal(shared.url, `https://barndaksa.com/menu/${menu.slug}?branch=second-branch`, 'Signature sharing retains the selected branch');
     const oldToasts = toasts; global.navigator.share = async () => { const e = new Error('cancelled'); e.name = 'AbortError'; throw e; };
     await nodes(draw()).find(n => n.props?.['aria-label'] === 'شارك المنيو').props.onClick(); equal(toasts, oldToasts, 'Cancelled native share is not shown as a failure');
     global.navigator.share = async () => { throw Error('unavailable'); };
@@ -262,13 +268,43 @@ async function main() {
   console.log(`PASS ${checks} signature menu identity, SSR, interactions, motion, routing and cache authorization checks`);
 }
 
+async function checkDefaultPresentation() {
+  for (const category of ['cafes_coffee', 'restaurants']) {
+    check(usesDefaultSignatureMenu(category, '2026-11-03T22:29:23Z'), 'Account created after approval automatically gets the new menu');
+    check(usesDefaultSignatureMenu(category, '2030-01-01T00:00:00Z'), 'Future account needs no slug registration');
+    check(!usesDefaultSignatureMenu(category, '2026-11-02T20:59:59Z'), 'Earlier accounts retain their established presentation');
+    for (const bad of [undefined, '', 'invalid']) check(!usesDefaultSignatureMenu(category, bad), 'Missing or malformed creation time does not silently restyle an existing account');
+  }
+  for (const category of ['hair_salons', 'gifts_flowers', 'retail_stores', undefined]) check(!usesDefaultSignatureMenu(category, '2030-01-01'), 'Other business experiences remain separate');
+  const fresh = { ...menu, slug: 'new-unregistered-brand', businessCategory: 'restaurants', presentation: 'signature', name: 'اختبار العلامة الجديدة', logoUrl: null, products: [], highlights: undefined };
+  for (const palette of [{}, { primary: '#ffffff', background: '#111111', accent: '#111111', button: '#ffffff' }, { primary: '#ffff00', background: '#ffffff', accent: '#ffff00', button: '#ffff00' }, { primary: 'url(https://evil.test)', background: 'red;display:none' }]) {
+    const brand = defaultSignatureBrand({ ...fresh, appearance: { palette, heroUrl: null } });
+    equal(brand.hero, DEFAULT_SIGNATURE_HERO, 'Empty new account gets its own shared hospitality art, never another tenant artwork');
+    const html = render({ menu: fresh, brand, loyalty: null });
+    check(html.includes('data-signature="default"') && html.includes(fresh.name) && html.includes('اختياراتنا تتجهّز لك'), 'Empty account renders approved layout and its actual brand name');
+    check(!html.includes('barndaksa-logo') && !html.includes('four-brands/') && !html.includes('url(https://evil.test)'), 'Empty identity never leaks a platform logo, another brand or CSS injection');
+    const v = brand.cssVariables;
+    for (const [fg,bg] of [['--text','--surface'],['--muted','--surface'],['--hero-detail','--hero-paper'],['--button-fg','--button-bg'],['--white','--brand']]) check(getContrastRatio(v[fg],v[bg]) >= 4.5, 'Dynamic light/dark brand palette remains readable');
+  }
+  const owned = { ...fresh, logoUrl: '/owner-new-logo.webp', appearance: { palette: { primary: '#123456' }, heroUrl: 'https://example.test/owner-hero.webp' }, products: [product] };
+  const brand = defaultSignatureBrand(owned), html = render({ menu: owned, brand });
+  check(html.includes(owned.logoUrl) && html.includes(owned.appearance.heroUrl) && html.includes('lucide-utensils-crossed'), 'Owner media and restaurant identity reach shared layout');
+  equal(defaultSignatureBrand({ ...fresh, presentation: undefined }), null, 'Legacy DTO cannot opt into new layout accidentally');
+  equal(defaultSignatureBrand({ ...fresh, businessCategory: 'gifts_flowers' }), null, 'Gift stores do not inherit food menus');
+  const h = hooks(), Dynamic = load('components/menu/signature-menu.tsx', { ...mocks, react: h.api }).SignatureMenu;
+  let tree = h.draw(Dynamic, { menu: owned, brand, loyalty: null });
+  nodes(tree).find(n => n.props?.src === owned.appearance.heroUrl).props.onError();
+  tree = h.draw(Dynamic, { menu: owned, brand, loyalty: null });
+  check(nodes(tree).some(n => n.props?.src === DEFAULT_SIGNATURE_HERO), 'Failed owner background falls back to valid decorative art');
+}
+
 async function checkRouteIsolation() {
   const Signature = noop, Bistro = () => null, Loco = () => null, Together = () => null, French = () => null, Branded = () => null;
-  let slug = menu.slug, program = { enabled: true, purchasesRequired: 6, rewardName: 'خصم 10%' }, gate = true, menuReads = 0;
+  let slug = menu.slug, program = { enabled: true, purchasesRequired: 6, rewardName: 'خصم 10%' }, gate = true, menuReads = 0, extraMenu = {};
   const route = load('app/menu/[slug]/page.tsx', {
     react: { ...React, cache: fn => fn },
     'next/navigation': { notFound() { throw Error('NOT_FOUND'); }, redirect(url) { throw Error('REDIRECT:' + url); } },
-    '@/lib/data/standalone-menu': { getStandaloneMenu: async () => { menuReads++; return { ...menu, slug }; } },
+    '@/lib/data/standalone-menu': { getStandaloneMenu: async () => { menuReads++; return { ...menu, slug, ...extraMenu }; } },
     '@/lib/data/loyalty-cards': { getPublicLoyaltyProgramBySlug: async () => program },
     '@/lib/data/loyalty-landing': { getPublicLoyaltyLanding: async () => null },
     '@/lib/data/public-home-catalog': { isPublicHomeMenuSlug: async () => gate },
@@ -285,6 +321,11 @@ async function checkRouteIsolation() {
     equal(view.props.loyalty, { purchasesRequired: 6, rewardName: 'خصم 10%' }, 'Route forwards enabled server program');
   }
   slug = 'rast'; let tree = await route.default({ params: Promise.resolve({ slug }) }); check(nodes(tree).some(n => n.type === Bistro), 'Legacy RAST route retains original presentation');
+  slug = 'brand-not-in-any-registry'; extraMenu = { presentation: 'signature', businessCategory: 'cafes_coffee' }; tree = await route.default({ params: Promise.resolve({ slug }) });
+  const defaultView = nodes(tree).find(n => n.type === Signature && n.props.menu);
+  equal(defaultView.props.brand.key, 'default', 'New account routes to the approved layout without hardcoded registration');
+  equal(defaultView.props.loyalty, { purchasesRequired: 6, rewardName: 'خصم 10%' }, 'Automatic presentation receives the actual enabled loyalty program');
+  extraMenu = {};
   slug = menu.slug; program = { ...program, enabled: false }; tree = await route.default({ params: Promise.resolve({ slug }) }); equal(nodes(tree).find(n => n.type === Signature && n.props.menu).props.loyalty, null, 'Disabled public program does not render reward promise');
   gate = false; const before = menuReads; await assert.rejects(route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ showcase: '1' }) }), /NOT_FOUND/); equal(menuReads, before, 'Unpublished showcase denies before catalog data access');
   let currentSlug = slug;
@@ -296,30 +337,40 @@ async function checkRouteIsolation() {
 async function checkMediaCacheBoundary() {
   const cafeId = 'tenant-current', imagePath = `${cafeId}/product/photo.webp`;
   const fixture = { id: 'product', cafe_id: cafeId, category_id: 'category', name: 'Dish', description: '', price: 18, price_options: [], ingredients: [], available: true, image_storage_path: imagePath, image_url: null, image_gallery: [], gallery_storage_paths: [], media: [], promo: null, deleted_at: null };
-  for (const slug of Object.keys(signatureBrands)) {
-    for (const test of ['allowed', 'no-feature', 'paused-brand', 'hidden-category', 'unavailable', 'foreign-image']) {
-      const signed = [], queries = [];
+  for (const slug of [...Object.keys(signatureBrands), 'brand-not-in-any-registry']) {
+    for (const test of ['allowed', 'no-feature', 'paused-brand', 'hidden-category', 'unavailable', 'foreign-image', ...(slug === 'brand-not-in-any-registry' ? ['owned-identity', 'foreign-identity', 'background-error'] : [])]) {
+      const signed = [], queries = [], identityMedia = [];
+      const identityOwner = test === 'foreign-identity' ? 'another-tenant' : cafeId;
       const tables = {
-        cafes: [{ id: cafeId, slug, name: 'Brand', status: test === 'paused-brand' ? 'paused' : 'active', business_category: 'cafes_coffee', deleted_at: null }],
+        cafes: [{ id: cafeId, slug, name: 'Brand', status: test === 'paused-brand' ? 'paused' : 'active', business_category: 'cafes_coffee', created_at: '2026-11-04T00:00:00Z', deleted_at: null }],
+        cafe_custom_identity: test.endsWith('-identity') || test === 'background-error' ? [{ cafe_id: cafeId, palette: { primary: '#123456', background: 'url(https://evil.test)' }, logo_storage_path: `${identityOwner}/logo.webp`, background_storage_path: `${identityOwner}/hero.webp` }] : [],
         branches: [], cafe_settings: [{ cafe_id: cafeId, logo_url: null }],
         menu_categories: [{ id: 'category', cafe_id: cafeId, visible: test !== 'hidden-category', deleted_at: null, name: 'Food' }],
         menu_products: [{ ...fixture, available: test !== 'unavailable', image_storage_path: test === 'foreign-image' ? 'other-tenant/private.webp' : imagePath }],
       };
       const client = { from(table) { queries.push(table); let rows = [...tables[table]]; const q = { select() { return q; }, eq(key, value) { rows = rows.filter(r => r[key] === value); return q; }, is(key, value) { rows = rows.filter(r => (r[key] ?? null) === value); return q; }, not(key, _op, value) { rows = rows.filter(r => (r[key] ?? null) !== value); return q; }, order() { return q; }, range(start, end) { rows = rows.slice(start, end + 1); return q; }, maybeSingle() { return Promise.resolve({ data: rows[0] ?? null, error: null }); }, then(resolve, reject) { return Promise.resolve({ data: rows, error: null }).then(resolve, reject); } }; return q; } };
+      client.storage = { from(bucket) { return { async createSignedUrl(path) { identityMedia.push({bucket,path}); return test === 'background-error' ? {data:null,error:{message:'Missing object'}} : {data:{signedUrl:'https://test.example/'+path},error:null}; } }; } };
       const read = load('lib/data/standalone-menu.ts', {
         'server-only': {}, react: { cache: fn => fn }, 'next/cache': { unstable_cache: fn => fn },
         '@/lib/supabase/admin': { createAdminClient: () => client },
         '@/lib/data/feature-entitlements': { getCafeFeatureCodes: async () => test === 'no-feature' ? [] : ['menu'] },
         '@/lib/data/kath-menu-assets': { getKathMenuAssets: async paths => { signed.push(...paths); return paths.map(path => ({ path, signedUrl: `https://test.example/${path}` })); } },
         '@/lib/data/standalone-highlights': { getStandaloneHighlights: async () => ({ asOf: now, items: [] }) },
-        '@/lib/cafe/published-logo': { publishedMenuLogo: async () => null },
+        '@/lib/cafe/published-logo': { publishedMenuLogo: async (_admin, _cafeId, path) => { identityMedia.push({bucket:'cafe-logos',path}); return 'https://test.example/'+path; } },
         '@/lib/menu/contacts': { menuContacts: () => ({ instagramUrl: null, location: null }) },
         '@/lib/whatsapp/green-api': { isGreenApiConfigured: () => false },
       }).getStandaloneMenu;
       const result = await read(slug);
-      if (test === 'allowed') equal(signed, [imagePath], 'Authorized published tenant uses stable signing');
+      if (test === 'allowed' && slug === 'brand-not-in-any-registry') { equal(result.presentation, 'signature', 'Server marks a newly created generic account automatically'); equal(result.logoUrl, null, 'No uploaded logo produces the account name, not Branda logo'); }
+      if (test === 'allowed' || test.endsWith('-identity') || test === 'background-error') equal(signed, [imagePath], 'Authorized published tenant uses stable signing');
       else equal(signed, [], `${test} never reaches cached private media signing`);
-      if (test === 'no-feature' || test === 'paused-brand') { equal(result, null, 'Current package/status gate denies catalog'); check(!queries.includes('menu_products'), 'Denied brand never reads products'); }
+      if (test.endsWith('-identity')) {
+        equal(result.appearance.palette, {primary:'#123456'}, 'Only valid hex colors leave the server identity reader');
+        equal(identityMedia.map(m=>m.path).sort(), test === 'owned-identity' ? [`${cafeId}/hero.webp`,`${cafeId}/logo.webp`] : [], 'Logo and background signing enforce tenant ownership independently');
+        equal(result.appearance.heroUrl, test === 'owned-identity' ? `https://test.example/${cafeId}/hero.webp` : null, 'Foreign background paths never become public URLs');
+      }
+      if (test === 'background-error') { equal(result.appearance.heroUrl, null, 'Missing optional background falls back without breaking the menu'); equal(result.products.length, 1, 'Catalog remains available after background signing error'); }
+      if (test === 'no-feature' || test === 'paused-brand') { equal(result, null, 'Current package/status gate denies catalog'); check(!queries.includes('menu_products') && !queries.includes('cafe_custom_identity'), 'Denied brand never reads products or custom identity'); }
     }
   }
 }

@@ -372,4 +372,53 @@
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter .mark { height: 115px; }
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroBottom { padding-block: 4px; }
 }
+/* The shared presentation for new cafes/restaurants uses each owner's safe color tokens. */
+.menu[data-signature="default"] { --hero-paper: #f7f3e9; --hero-ink: #252c25; --hero-detail: #354438; --space: clamp(28px,4vw,54px); }
+.menu[data-signature="default"] .hero { min-height: min(820px,100svh); color: var(--hero-ink); background: var(--hero-paper); }
+.menu[data-signature="default"] .heroShade { background: linear-gradient(180deg,color-mix(in srgb,var(--hero-paper) 94%,transparent),color-mix(in srgb,var(--hero-paper) 94%,transparent) 66%,color-mix(in srgb,var(--hero-paper) 72%,transparent) 85%,color-mix(in srgb,var(--hero-paper) 35%,transparent)); }
+.menu[data-signature="default"] .backdrop img { object-position: center; }
+.menu[data-signature="default"] .lightSweep { display: none; }
+.menu[data-signature="default"] .heroCenter { padding-block: 28px 36px; }
+.menu[data-signature="default"] .header { border-color: color-mix(in srgb,var(--hero-ink) 18%,transparent); }
+.menu[data-signature="default"] .headerNote { min-width: 0; overflow-wrap: anywhere; }
+.menu[data-signature="default"] .header nav > button { color: var(--hero-ink); border-color: color-mix(in srgb,var(--hero-ink) 28%,transparent); }
+.mark[data-mark="default"] { width: clamp(220px,28vw,340px); max-width: 80vw; height: 190px; overflow: visible; }
+.mark[data-mark="default"] img { object-fit: contain; filter: none; mix-blend-mode: normal; }
+.wordmark { display: block; max-width: min(100%,700px); font: 700 clamp(40px,7vw,84px)/1.4 "Bistro Arabic",sans-serif; color: var(--hero-ink); text-wrap: balance; overflow-wrap: anywhere; }
+.menu[data-signature="default"] .signature { font-family: "Bistro Arabic",sans-serif; letter-spacing: .02em; font-size: 12px; color: var(--hero-detail); margin: 12px 0 24px; }
+.menu[data-signature="default"] .heroCenter h1 { font-size: clamp(30px,4vw,52px); }
+.menu[data-signature="default"] .heroCenter h1 em { color: var(--hero-detail); }
+.menu[data-signature="default"] .heroCenter > p { max-width: 540px; text-wrap: balance; overflow-wrap: anywhere; }
+.menu[data-signature="default"] .primary { background: var(--button-bg); color: var(--button-fg); }
+.menu[data-signature="default"] .heroLoyalty { color: var(--hero-ink); background: var(--hero-paper); border-color: color-mix(in srgb,var(--hero-ink) 24%,transparent); }
+.menu[data-signature="default"] .heroBottom { color: var(--hero-ink); background: color-mix(in srgb,var(--hero-paper) 94%,transparent); }
+.menu[data-signature="default"] .loyaltyCard { background: var(--brand); }
+.menu[data-signature="default"] :is(.cardReward strong,.featureTag,.featureBottom .price) { color: var(--white); }
+.menu[data-signature="default"] .stamps > span:last-child,
+.menu[data-signature="default"] .featureBottom .round { color: var(--accent-ink); }
+.menu[data-signature="default"] :is(.search,.order select) { background: var(--surface-raised); color: var(--surface-raised-fg); }
+.menu[data-signature="default"] .search input { color: var(--surface-raised-fg); }
+.menu[data-signature="default"] .search input::placeholder { color: inherit; }
+.menu[data-signature="default"] .footer,
+.menu[data-signature="default"].loading { background: var(--hero-paper); color: var(--hero-ink); }
+.menu[data-signature="default"] :is(.footer a,.loadingCenter p) { color: var(--hero-detail); }
+.menu[data-signature="default"] .footer :is(.mark,.wordmark) { width: auto; max-width: 240px; height: auto; font-size: 28px; }
+.menu[data-signature="default"] .footer .mark img { max-height: 90px; }
+.menu[data-signature="default"] .loadingLine { background: color-mix(in srgb,var(--hero-ink) 20%,transparent); }
+.menu[data-signature="default"] .loadingLine::after { background: var(--hero-ink); }
+.menu[data-signature="default"] :is(.hero,.footer) :focus-visible { outline-color: var(--hero-ink); }
+@media (max-width: 640px) {
+  .menu[data-signature="default"] .hero { min-height: 94svh; }
+  .menu[data-signature="default"] .header { padding-inline: 20px; gap: 12px; }
+  .menu[data-signature="default"] .headerNote { font-size: 14px; }
+  .menu[data-signature="default"] .heroCenter { padding: 24px 20px 30px; }
+  .mark[data-mark="default"] { width: min(270px,74vw); height: 150px; }
+  .menu[data-signature="default"] .heroCenter h1 em { font-size: inherit; }
+  .menu[data-signature="default"] .loyalty { padding-block: 20px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu[data-signature="default"] .heroCenter { padding-block: 16px; }
+  .mark[data-mark="default"] { height: 105px; }
+  .menu[data-signature="default"] .signature { margin-block: 8px 14px; }
+}
 @media (prefers-reduced-motion: reduce) { .menu *, .loading * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }.backdrop img { transform: none; }.lightSweep { display: none; }.loadingLine::after { width: 100%; transform: none; } }

@@ -12,4 +12,6 @@ User-approved direction on 2026-11-03: use the approved Hadiqa, Loco, Once and K
 - For print: individual menu and loyalty A4 posters, original brand identity, large high-contrast QR with quiet zone, vector PDF and 300dpi PNG; decode final image and rendered PDF against the exact live destination
 - Apply this direction to new work; do not automatically restyle existing brands or change their products, subscriptions or loyalty terms
 
+Implemented default rollout on 2026-11-04: cafes/restaurants created from the approval day (2026-11-03 00:00 Asia/Riyadh) automatically use SignatureMenu, with their own name/logo/colors/background and a shared empty-account decorative hero. Future accounts require no slug registration. Explicit brand identities and older menus retain their existing design. See DEFAULT_MENU_PRESENTATION_20261104.md
+
 Implementation reference: components/menu/signature-menu.tsx, components/menu/signature-menu.module.css and lib/menu/signature-brands.ts

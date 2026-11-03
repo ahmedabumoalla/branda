@@ -14,7 +14,21 @@ export const signatureBrands = {
   "brand-bd0eeac9e747": { key: "box", name: "BOX BBQ", arabic: "بوكس", logo: "box-logo", hero: "box-hero", headline: "نكهة تحكي", emphasis: "عن نفسها", note: "اختر برجر مزاجك وكمّلها على ذوقك", signature: "OPEN THE BOX. FEEL THE FLAVOUR.", catalog: "خلّها على ذوقك", loyalty: "زيارتك الجاية ألذ" },
 } as const;
 
-export type SignatureBrand = typeof signatureBrands[keyof typeof signatureBrands];
+export type SignatureBrand = {
+  key: string;
+  name: string;
+  arabic: string;
+  logo: string;
+  hero: string;
+  headline: string;
+  emphasis: string;
+  note: string;
+  signature: string;
+  catalog: string;
+  loyalty: string;
+  welcome?: string;
+  cssVariables?: Record<string, string>;
+};
 
 /** Accounts and branch location published by Korma's original menu */
 export const kormaContacts = {

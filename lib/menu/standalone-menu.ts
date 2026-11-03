@@ -19,6 +19,8 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
 };
 
 export type StandaloneMenu = {
+  presentation?: "signature";
+  appearance?: { palette: Record<string, string>; heroUrl: string | null };
   branches?: { id: string; name: string; slug: string }[];
   branch?: { id: string; name: string; slug: string } | null;
   businessCategory?: string;
