@@ -4,6 +4,39 @@
   --gutter: clamp(20px, 4.5vw, 72px); --space: clamp(32px, 5vw, 72px);
   background: var(--surface); color: var(--text); font-family: "Bistro Arabic", sans-serif; min-height: 100svh; isolation: isolate; overflow: clip;
 }
+.menu[data-signature="dabab"] { --brand: #134b3d; --tone: #376958; --accent: #e5ebd8; --surface: #f6f7f1; --text: #153e34; --muted: #52675d; --edge: #d5dfd6; --white: #ffffff; --panel: #103d33; }
+.menu[data-signature="dabab"] .hero { min-height: 100svh; }
+.menu[data-signature="dabab"] .heroShade { background: linear-gradient(180deg,#082f29e8 0%,#082f29b8 42%,#082f2940 78%,#082f2990); }
+.menu[data-signature="dabab"] .backdrop img { object-position: center bottom; }
+.menu[data-signature="dabab"] .heroCenter { justify-content: flex-start; padding-top: clamp(24px,5svh,58px); padding-bottom: clamp(150px,24svh,240px); }
+.mark[data-mark="dabab"] { width: clamp(200px,24vw,290px); max-width: 72vw; height: 160px; }
+.mark[data-mark="dabab"] img { filter: none; mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="dabab"] .signature { margin: 10px 0 22px; letter-spacing: .22em; }
+.menu[data-signature="dabab"] .heroCenter h1 { font-size: clamp(30px,4vw,54px); }
+.menu[data-signature="dabab"] .heroCenter > p { max-width: 430px; text-wrap: balance; }
+.menu[data-signature="dabab"] .loyaltyCard { background: var(--brand); border-radius: 18px; }
+.menu[data-signature="dabab"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 14px; }
+.menu[data-signature="dabab"] .productPhoto { background: var(--white); border-radius: 24px 24px 8px 8px; }
+.menu[data-signature="dabab"] .productPhoto > img { object-fit: contain; }
+.menu[data-signature="dabab"] .productArrow { background: var(--white); color: var(--brand); }
+.brandPlaceholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--white); background: var(--brand); }
+.brandPlaceholder strong { font: 700 clamp(30px,4vw,48px)/1.25 "Bistro Arabic",sans-serif; }
+.brandPlaceholder > span { font: 600 11px/1.6 "Bistro Sans",sans-serif; letter-spacing: .24em; opacity: .8; }
+.menu[data-signature="dabab"] .footer { background: var(--brand); }
+.mark[data-mark="dabab"][data-small="true"] { width: 160px; height: 110px; }
+.menu[data-signature="dabab"].loading { background: var(--brand); }
+@media (max-width: 700px) {
+  .menu[data-signature="dabab"] .header { gap: 12px; padding-inline: 18px; }
+  .menu[data-signature="dabab"] .heroCenter { padding: 24px 20px 160px; }
+  .mark[data-mark="dabab"] { width: 210px; height: 130px; }
+  .menu[data-signature="dabab"] .heroCenter h1 { font-size: clamp(28px,8vw,36px); }
+  .menu[data-signature="dabab"] .heroCenter > p { font-size: 14px; }
+  .menu[data-signature="dabab"] .productPhoto { border-radius: 18px 18px 6px 6px; }
+}
+@media (max-height: 740px) and (max-width: 700px) {
+  .menu[data-signature="dabab"] .heroCenter { padding-top: 14px; padding-bottom: 100px; }
+  .mark[data-mark="dabab"] { height: 105px; }
+}
 .menu[data-signature="black"] { --brand: #292726; --tone: #ac927a; --accent: #d4ba9e; --surface: #f6f3ed; --text: #292726; --muted: #6a615b; --edge: #ded7cf; --panel: #36312d; }
 .menu[data-signature="once"] { --brand: #22251f; --tone: #858575; --accent: #d3d4bc; --surface: #f5f5ef; --text: #22251f; --muted: #63645c; --edge: #d9dace; --panel: #30342c; }
 .menu[data-signature="box"] { --brand: #171412; --tone: #ff761f; --accent: #ffad68; --surface: #faf4ed; --text: #27180e; --muted: #776050; --edge: #e6d8cb; --panel: #312219; }
@@ -55,7 +88,7 @@
 .mark[data-mark="box"] img { filter: none; mix-blend-mode: normal; }
 .mark[data-cutout="true"] img { width: 100%; height: 100%; position: static; transform: none; filter: brightness(0) invert(1); mix-blend-mode: normal; }
 .signature { color: var(--accent); font: 500 10px/1.6 "Bistro Sans", sans-serif; letter-spacing: .2em; margin: 14px 0 22px; }
-.heroCenter h1 { font: 700 clamp(32px,4vw,62px)/1.25 "Bistro Arabic",sans-serif; margin: 0; letter-spacing: -.025em; text-wrap: balance; }
+.heroCenter h1 { font: 700 clamp(32px,4vw,62px)/1.25 "Bistro Arabic",sans-serif; margin: 0; letter-spacing: normal; text-wrap: balance; }
 .heroCenter h1 em { font-style: normal; color: var(--accent); margin-inline-start: .25em; }
 .heroCenter > p { margin: 14px 0 24px; font-size: 16px; line-height: 1.6; }
 .primary { display: inline-flex; gap: 22px; align-items: center; justify-content: center; min-height: 50px; padding: 13px 30px; color: var(--brand); background: var(--accent); border: 0; border-radius: 40px; font-weight: 700; box-shadow: 0 10px 35px #0002; transition: box-shadow .2s, transform .2s; }
@@ -412,6 +445,61 @@
   .menu[data-signature="damascus"] .heroCenter { padding-top: 14px; padding-bottom: 100px; }
   .mark[data-mark="damascus"] { height: 140px; }
   .menu[data-signature="damascus"] .signature { margin-bottom: 10px; }
+}
+/* ET1: original blue monogram, ivory linen and a clear cafe-to-dining menu. */
+.menu[data-signature="et1"] {
+  --brand: #215085; --tone: #215085; --accent: #d6e5f1; --surface: #fbfaf7; --text: #18324b;
+  --muted: #526479; --edge: #d3dde5; --white: #fffdf7; --panel: #153d68; --hero-paper: #f8f5ed;
+}
+.menu[data-signature="et1"] .hero { min-height: 100svh; background: var(--hero-paper); color: var(--text); }
+.menu[data-signature="et1"] .heroShade { background: linear-gradient(180deg,#f8f5edf5 0%,#f8f5edeb 43%,#f8f5edb8 63%,#f8f5ed10 84%,#f8f5ed38); }
+.menu[data-signature="et1"] .backdrop img { object-position: center bottom; }
+.menu[data-signature="et1"] .lightSweep { display: none; }
+.menu[data-signature="et1"] .header { border-color: var(--edge); }
+.menu[data-signature="et1"] .headerNote { min-width: 0; overflow-wrap: anywhere; }
+.menu[data-signature="et1"] .header nav > button { color: var(--brand); border-color: #21508540; background: #fffdf770; }
+.menu[data-signature="et1"] .heroCenter { justify-content: flex-start; padding: clamp(20px,3svh,38px) 20px clamp(150px,23svh,240px); }
+.mark[data-mark="et1"] { width: clamp(250px,29vw,350px); max-width: 78vw; height: clamp(175px,24svh,240px); overflow: visible; }
+.mark[data-mark="et1"] img { filter: none; mix-blend-mode: normal; object-fit: contain; }
+.menu[data-signature="et1"] .signature { color: var(--brand); margin: 8px 0 20px; letter-spacing: .22em; }
+.menu[data-signature="et1"] .heroCenter h1 { font-size: clamp(32px,4vw,54px); }
+.menu[data-signature="et1"] .heroCenter h1 em { color: var(--brand); }
+.menu[data-signature="et1"] .heroCenter > p { max-width: 480px; text-wrap: balance; color: var(--text); }
+.menu[data-signature="et1"] .primary { color: var(--white); background: var(--brand); box-shadow: 0 9px 24px #21508520; }
+.menu[data-signature="et1"] .heroLoyalty { color: var(--brand); background: var(--hero-paper); border-color: #21508540; }
+.menu[data-signature="et1"] .heroBottom { color: var(--text); background: #f8f5edf2; padding-block: 12px; border-top: 1px solid var(--edge); }
+.menu[data-signature="et1"] .loyalty { padding-block: 24px; }
+.menu[data-signature="et1"] .loyaltyCard { background: var(--brand); border-radius: 18px; }
+.menu[data-signature="et1"] .catalog { padding-top: clamp(28px,4vw,52px); }
+.menu[data-signature="et1"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 14px; }
+.menu[data-signature="et1"] .categoryTitle h3 { color: var(--brand); }
+.menu[data-signature="et1"] .productPhoto { border-radius: 18px; background: #f0eee8; }
+.menu[data-signature="et1"] .productPhoto > img { object-fit: cover; }
+.menu[data-signature="et1"] .productArrow { color: var(--brand); background: var(--white); }
+.menu[data-signature="et1"] .productInfo .price { color: var(--brand); }
+.menu[data-signature="et1"] .footer { background: var(--hero-paper); color: var(--text); border-top: 1px solid var(--edge); }
+.menu[data-signature="et1"] .footer a { color: var(--brand); }
+.mark[data-mark="et1"][data-small="true"] { width: 190px; height: 145px; }
+.menu[data-signature="et1"].loading { background: var(--hero-paper); color: var(--text); }
+.menu[data-signature="et1"].loading::before { background: none; }
+.menu[data-signature="et1"] .loadingCenter p { color: var(--muted); }
+.menu[data-signature="et1"] .loadingLine { background: var(--edge); }
+.menu[data-signature="et1"] .loadingLine::after { background: var(--brand); }
+@media (max-width: 640px) {
+  .menu[data-signature="et1"] .header { padding-inline: 18px; gap: 12px; }
+  .menu[data-signature="et1"] .heroCenter { padding: 20px 20px 150px; }
+  .mark[data-mark="et1"] { width: min(285px,76vw); height: 180px; }
+  .menu[data-signature="et1"] .signature { margin: 8px 0 16px; font-size: 9px; }
+  .menu[data-signature="et1"] .heroCenter h1 { font-size: clamp(30px,8.2vw,36px); }
+  .menu[data-signature="et1"] .heroCenter h1 em { font-size: inherit; }
+  .menu[data-signature="et1"] .heroCenter > p { font-size: 14px; }
+  .menu[data-signature="et1"] .grid { gap: 24px 14px; }
+  .menu[data-signature="et1"] .productPhoto { border-radius: 14px; }
+}
+@media (max-height: 700px) and (max-width: 640px) {
+  .menu[data-signature="et1"] .heroCenter { padding-top: 14px; padding-bottom: 90px; }
+  .mark[data-mark="et1"] { height: 120px; }
+  .menu[data-signature="et1"] .signature { margin-bottom: 10px; }
 }
 /* The shared presentation for new cafes/restaurants uses each owner's safe color tokens. */
 .menu[data-signature="default"] { --hero-paper: #f7f3e9; --hero-ink: #252c25; --hero-detail: #354438; --space: clamp(28px,4vw,54px); }

@@ -79,7 +79,37 @@ function hooks() {
 
 async function main() {
   await checkDefaultPresentation();
-  equal(Object.keys(signatureBrands).length, 13, 'Thirteen bespoke brand identities are registered alongside the automatic new-account default');
+  equal(Object.keys(signatureBrands).length, 15, 'Fifteen bespoke brand identities are registered alongside the automatic new-account default');
+  const dabab = signatureBrand('brand-8ad185ee82e3');
+  equal(dabab.key, 'dabab', 'Dabab selects its own confirmed account');
+  equal(signatureAsset(dabab.hero, true), '/menu-art/dabab/dabab-hero-mobile-v1.webp', 'Dabab has its own mobile hero');
+  const dababMenu = { ...menu, slug: 'brand-8ad185ee82e3', name: 'ضباب', logoUrl: null, highlights: undefined, products: [product, { ...product, id: 'no-photo', name: 'اختيار بلا صورة', images: [] }] };
+  const dababHtml = render({ menu: dababMenu, brand: dabab, loyalty });
+  check(dababHtml.includes('data-brand-placeholder="dabab" aria-hidden="true"') && !dababHtml.includes('الصورة غير متاحة'), 'Intentionally absent Dabab photographs get a decorative branded placeholder');
+  check(dababHtml.includes(product.images[0].url) && !dababHtml.includes('data-photo-disclosure'), 'Original Dabab photographs remain original and are not labeled generated');
+  check(dababHtml.includes('٦ أختام') && dababHtml.includes('خصم 10%') && dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab renders the actual reward and its own enrollment URL');
+  check(dababHtml.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86') && dababHtml.includes('موقع ضباب'), 'Dabab links only its verified official location');
+  check(!render({ menu: dababMenu, brand: dabab, loyalty: null }).includes('id="signature-loyalty"'), 'Dabab never invents a server loyalty program');
+  check(render({ menu: { ...dababMenu, logoUrl: '/owner-dabab.webp' }, brand: dabab }).includes('/owner-dabab.webp'), 'Dabab respects future owner logo uploads');
+  const et1 = signatureBrand('brand-01a9154f01bc');
+  equal(et1.key, 'et1', 'ET1 selects only its existing account identity');
+  equal(signatureAsset(et1.logo), '/menu-art/et1/et1-logo-v1.webp', 'ET1 uses the supplied original vector logo rendition');
+  equal(signatureAsset(et1.hero, true), '/menu-art/et1/et1-hero-mobile-v1.webp', 'ET1 has its own mobile hero');
+  const et1Menu = { ...menu, slug: 'brand-01a9154f01bc', name: 'ET1', logoUrl: null, products: [{ ...product, description: 'صورة توضيحية وقد يختلف التقديم الفعلي' }, { ...product, id: 'original-et1', name: 'صورة أصلية' }] };
+  const et1Html = render({ menu: et1Menu, brand: et1, loyalty });
+  for (const slug of ['brand-01a9154f01bc', 'brand-067febfb04db']) {
+    const brand = signatureBrand(slug);
+    const heading = render({ brand }).match(/<h1[^>]*>([\s\S]*?)<\/h1>/)[1].replace(/<[^>]+>/g, '');
+    equal(heading, `${brand.headline} ${brand.emphasis}`, 'Arabic headline parts retain a readable word boundary');
+  }
+  equal((et1Html.match(/data-photo-disclosure/g) || []).length, 1, 'ET1 discloses generated images while preserving original-photo labeling');
+  check(et1Html.includes('٦ أختام') && et1Html.includes('خصم 10%') && et1Html.includes('/loyalty/brand-01a9154f01bc?source=menu'), 'ET1 displays the actual six-stamp reward and its own enrollment link');
+  check(!et1Html.includes('maps.app.goo.gl') && !et1Html.includes('موقع المطعم'), 'ET1 does not borrow another brand location');
+  check(!render({ menu: et1Menu, brand: et1, loyalty: null }).includes('id="signature-loyalty"'), 'ET1 does not invent a loyalty program when the server returns none');
+  check(!render({ menu: { ...et1Menu, loyaltyEnabled: false }, brand: et1, loyalty }).includes('id="signature-loyalty"'), 'ET1 hides loyalty when the package service is disabled');
+  const et1Owner = render({ menu: { ...et1Menu, logoUrl: '/later-et1-logo.webp' }, brand: et1, loyalty: { purchasesRequired: 4, rewardName: 'مكافأة معدلة' } });
+  check(et1Owner.includes('/later-et1-logo.webp') && !et1Owner.includes(signatureAsset(et1.logo)), 'ET1 preserves a later owner logo upload');
+  check(et1Owner.includes('٤ أختام') && et1Owner.includes('مكافأة معدلة') && !et1Owner.includes('خصم 10%'), 'ET1 renders future real loyalty changes without hardcoding six or ten');
   const damascus = signatureBrand('brand-067febfb04db');
   equal(damascus.key, 'damascus', 'Qalat Damascus selects its user-requested bespoke identity');
   equal(signatureAsset(damascus.logo), '/menu-art/damascus/damascus-logo-v1.webp', 'Corrected citadel and ribbon mark is used');
@@ -271,6 +301,14 @@ async function main() {
   await checkMediaCacheBoundary();
   const css = fs.readFileSync(path.join(root, 'components/menu/signature-menu.module.css'), 'utf8');
   require('lightningcss').transform({ filename: 'signature-menu.module.css', code: Buffer.from(css), cssModules: true });
+  const et1Tokens = Object.fromEntries([...css.match(/\.menu\[data-signature="et1"\] \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
+  const dababTokens = Object.fromEntries([...css.match(/\.menu\[data-signature="dabab"\] \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
+  for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['white', 'brand'], ['accent', 'brand']]) {
+    check(getContrastRatio(dababTokens[foreground], dababTokens[background]) >= 4.5, `Dabab ${foreground} on ${background} meets readable text contrast`);
+  }
+  for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['brand', 'hero-paper'], ['white', 'brand'], ['accent', 'brand']]) {
+    check(getContrastRatio(et1Tokens[foreground], et1Tokens[background]) >= 4.5, `ET1 ${foreground} on ${background} meets readable text contrast`);
+  }
   check(css.includes('prefers-reduced-motion: reduce') && css.includes('animation: none !important'), 'CSS has complete reduced-motion opt out');
   check(css.includes('repeat(2,minmax(0,1fr))') && css.includes('max-width: 360px') && css.includes('max-height: 700px'), 'Compact and short mobile layouts have explicit rules');
   check(css.includes(':focus-visible') && css.includes('min-height: 44px'), 'Keyboard focus and touch target styles are present');

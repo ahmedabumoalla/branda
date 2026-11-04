@@ -1,5 +1,7 @@
 /** Explicit identities: the legacy `rast` slug belongs to a different venue */
 export const signatureBrands = {
+  "brand-8ad185ee82e3": { key: "dabab", name: "DABAB", arabic: "ضباب", logo: "dabab-logo", hero: "dabab-hero", headline: "بين ضباب أبها", emphasis: "ودفء القهوة", note: "قهوة مختصة ومخبوزات وحلوى تكمل لحظتك", signature: "DABAB COFFEE & BAKERY", catalog: "على مهل وعلى ذوقك", loyalty: "كل زيارة تقرّب لحظتك الحلوة", welcome: "نجهّز لك قهوة ولحظة من ضباب", headerNote: "قهوة ومخبوزات في أبها", locationUrl: "https://maps.app.goo.gl/zC8ws49ka6KNMzY86?g_st=ac" },
+  "brand-01a9154f01bc": { key: "et1", name: "ET1", arabic: "إي تي ون", logo: "et1-logo", hero: "et1-hero", headline: "قهوة ومذاق", emphasis: "على ذوقك", note: "فطور وقهوة وأطباق تكمّل جلستك", signature: "COFFEE AND RESTAURANT", catalog: "كل وقت وله اختياره", loyalty: "لك في كل زيارة مكافأة أقرب", welcome: "نجهّز لك فنجان ولقمة على ذوقك", headerNote: "قهوة ومطعم" },
   "brand-067febfb04db": { key: "damascus", name: "مطعم قلعة دمشق", arabic: "قلعة دمشق", logo: "damascus-logo", hero: "damascus-hero", headline: "للّمة طعم", emphasis: "شامي", note: "شاورما ومشاوي ومقبلات على أصولها", signature: "QALAT DIMASHQ", catalog: "سفرة من قلب الشام", loyalty: "كل زيارة تزيد المحبة", welcome: "أهلًا وسهلًا على سفرة القلعة", headerNote: "نكهة الشام في خميس مشيط", locationUrl: "https://maps.app.goo.gl/Pa3L9vDccaSvSf4j9?g_st=ic" },
   "brand-96f3dda4f1ea": { key: "hulm", name: "حلم", arabic: "حلم", logo: "hulm-logo", hero: "hulm-hero", headline: "خذ لحظة", emphasis: "وعيش حلم", note: "اختيارات تليق بذوقك وتكمّل لحظتك", signature: "HULM", catalog: "اختيارات من حلم", loyalty: "لحظاتك معنا تقرّب مكافأتك", welcome: "لحظتك الحلوة تبدأ من هنا" },
   "brand-6c954762020f": { key: "arabi", name: "عربي", arabic: "عربي", logo: "arabi-logo", hero: "arabi-hero", headline: "شاي يروّقك", emphasis: "وحلى يونسّك", note: "كرك وقهوة وحلويات تكمّل جلستك", signature: "ARABI", catalog: "وش يحلّي جلستك؟", loyalty: "كل جلسة تقرّب مكافأتك", welcome: "نجهّز لك رشفة وحلى على ذوقك" },
@@ -44,6 +46,8 @@ export function signatureBrand(slug: string): SignatureBrand | null {
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (name.startsWith("dabab-")) return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v1.webp`;
+  if (name.startsWith("et1-")) return `/menu-art/et1/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("damascus-")) return `/menu-art/damascus/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (/^(hulm|arabi|masala|nineteen|rayhan)-(logo|hero)$/.test(name)) return `/menu-art/five-restaurants/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("korma-")) return `/menu-art/korma/${name}${mobile ? "-mobile" : ""}-v1.webp`;
