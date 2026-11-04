@@ -18,6 +18,7 @@ function load(modulePath, stubs = {}, cache = new Map()) {
   const localRequire = id => {
     if (Object.hasOwn(stubs, id)) return stubs[id];
     if (id.endsWith(".css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) };
+    if (id === "@/components/admin/brand-analytics-campaign") return { BrandAnalyticsCampaign: () => null };
     if (id === actionModule) return {};
     if (id.startsWith("@/")) {
       const base = path.resolve(id.slice(2));

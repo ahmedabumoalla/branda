@@ -3,6 +3,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { ArrowDownToLine, Building2, ChevronLeft, ChevronRight, Clock3, CreditCard, Info, RotateCcw, Search, Users, UserRoundCheck, UserRoundX, X } from "lucide-react";
 import { AdminPageShell } from "@/components/ui/design-system";
+import { BrandAnalyticsCampaign } from "@/components/admin/brand-analytics-campaign";
 import { loadBrandCustomerAnalyticsAction, loadBrandAnalyticsDetailAction, loadBrandAnalyticsCustomerAction, loadBrandAnalyticsExportAction } from "@/app/actions/brand-customer-analytics";
 import type { BrandAnalyticsReport, BrandAnalyticsDetail, BrandAnalyticsCustomerDetail, BrandAnalyticsFilters } from "@/lib/analytics/brand-customer-analytics";
 import styles from "./brand-analytics-page.module.css";
@@ -213,6 +214,7 @@ export function BrandAnalyticsPage({ initialReport }: { initialReport: BrandAnal
     </>}
     {selectedBrand ? <section id="brand-analytics-detail" className={styles.detail} aria-label={`تحليلات ${selectedBrand.name}`} aria-busy={detailBusy}>
       <div className={`${styles.panel} ${styles.detailHeader}`}><div className={styles.heading}><div><h2>{selectedBrand.name}</h2><p>سجل العملاء كاملًا والزيارات والذروة لآخر {number(days)} يومًا</p></div><button className={styles.primary} disabled={!detailMatches || busy || detailBusy || exporting} onClick={() => void exportBrand()}><ArrowDownToLine size={18} aria-hidden="true" />{exporting ? "جارٍ تجهيز جميع العملاء" : "تقرير العلامة الكامل PDF"}</button></div><p className={styles.hint}>التقرير بهوية برندا ويضم جميع عملاء العلامة حتى غير الظاهرين في البحث أو الصفحة الحالية</p><div className={styles.tabs} aria-label="أقسام تحليلات العلامة">{([{ id: "customers", label: "تفاصيل العملاء" }, { id: "peak", label: "أوقات الذروة" }, { id: "retention", label: "الاحتفاظ بالعملاء" }] as const).map(item => <button key={item.id} aria-pressed={view === item.id} onClick={() => setView(item.id)}>{item.label}</button>)}</div></div>
+      <BrandAnalyticsCampaign key={`${selectedBrand.id}:${filters.segment}`} brand={selectedBrand} initialSegment={filters.segment === "loyal" ? "loyal" : "inactive"} />
       {exportError && <div className={styles.error} role="alert">{exportError}</div>}
       {detailError && <div className={styles.error} role="alert">{detailError}<button disabled={detailBusy} onClick={() => void loadDetail(filters)}>إعادة المحاولة</button></div>}
       {detailBusy && <div className={`${styles.panel} ${styles.loading}`} role="status"><p>جارٍ تحميل تفاصيل العلامة</p></div>}
