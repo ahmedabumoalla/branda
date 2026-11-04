@@ -6,7 +6,7 @@
 - Each brand has customer/card/wallet counts, successful stamp and redemption dates, inactive customers with phone numbers, repeat-visit cadence, hourly/day peaks and issuance-cohort retention
 - Select a brand and choose تقرير العلامة الكامل PDF to download the complete Branda report, including customers outside the current search/page
 - Filters: 7/30/90/365 calendar days for visits/peaks, customer search, inactivity/regular/returning/new/no-card segments and server pagination
-- Publication: release checks complete; exact production commit and deployment verification recorded after publication
+- Publication: Published 2026-11-04T11:11:18.545Z: GitHub main 46bffd484f32dca947ed90c0c728467dc50d0ea4, Vercel dpl_CGiv5CC1sbvorwpVU9kFfK8jSYxg READY with exact SHA and both production aliases verified; live anonymous analytics route protected, original PDF font/logo bytes verified, new RPCs available with anonymous API access denied
 
 ## Established definitions
 
