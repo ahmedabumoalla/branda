@@ -38,5 +38,5 @@
 - Evidence: `output/dabab/{applied,readback,import-verification,backend-rollback-result,backend-staged-media,loyalty-wallet-activation}.json`
 - Final print PASS: A4 pages and vector QR,300dpi PNGs, no overflow, final PNG QR decoding at1600/794px and PDF renders at120dpi, all six destinations HTTP200 and visual review
 - Dabab two-page PDF SHA256 `bf7665314aff79a6a48e1ad1fd53d6fe5d1702ede648e35deb60e70797bb107b`; merged six-page PDF `d80e39da83231bb2022833085acfc00e8ca7902faca97c998f1acfd74a453a20`; ZIP `9c94a651a300bbbdffcf723761a0eb730fa92ad1e092ed0b19c3e0e74a18c3b9`
-- Release marker: `current-accounts-20261104`; exact production verification recorded after publication
+- Application release 8dfe582a61da9cb5eedb242e1c3ed8ff673b487a published and verified 2026-11-04T00:33:53.990Z: Vercel dpl_6zMb3rAYaF6t7iJHdzDqsZ8oZdAt READY on both production aliases. Live routes confirm Care own salon logo, ET1 96 products/15 categories and corrected title, Dabab102 products/17 categories/2 disabled drafts/36 original photos, actual6/10 loyalty and exact identity assets. Damascus title spacing and existing Korma/19 preserved. Evidence output/care-et1/application-publication.json and production-runtime.json
 - No application browser inspection used
