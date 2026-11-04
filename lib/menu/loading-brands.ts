@@ -20,7 +20,8 @@ const brands: Record<string, LoadingBrand> = {
   "kat-coffe": { name: "Kath Coffee & More", logo: "/menu-logos/kath-transparent-v1.webp", background: "#3b241b", accent: "#e5b572", foreground: "#fbf6ed", greeting: "مزاجك له مكان", detail: "نجهّز لك اختيارات كاث" },
   "shahi-w-hail": { name: "شاهي وهيل", logo: "/menu-logos/shahi-transparent-v2.webp", background: "#20342a", accent: "#bac9a1", foreground: "#fff5df", greeting: "للروقان بداية", detail: "نجهّز لك اختيارات شاهي وهيل" },
   "barber-55": { name: "Barber 55", logo: "/salon/barber-55/logo.webp", background: "#101727", accent: "#ff6b88", foreground: "#e7edf5", greeting: "تفاصيل تصنع إطلالتك", detail: "نجهّز لك الخدمات والحجز", salon: true, blend: true },
-  "brand-7a92e7b3cb30": { name: "Fine Cut", logo: "/salon/fine-cut/logo.webp", background: "#10120f", accent: "#d4b780", foreground: "#faf3e7", greeting: "إطلالتك تستحق العناية", detail: "نجهّز لك الخدمات والحجز", salon: true, blend: true },
+  "brand-04cb352c9f44": { name: "صالون عناية", logo: "/menu-art/care/care-logo-v1.webp", background: "#10120f", accent: "#d4b780", foreground: "#faf3e7", greeting: "عناية تليق بتفاصيلك", detail: "نجهّز لك الخدمات والحجز", salon: true },
+  "brand-7a92e7b3cb30": { name: "Fine Cut", logo: "/salon/fine-cut/logo-transparent-v2.webp", background: "#10120f", accent: "#d4b780", foreground: "#faf3e7", greeting: "إطلالتك تستحق العناية", detail: "نجهّز لك الخدمات والحجز", salon: true },
 };
 
 export function menuLoadingBrand(slug: string | undefined) {

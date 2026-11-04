@@ -78,7 +78,7 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       </div>
     </article>;
   }
-  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ""}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl">
+  return <main className={`${styles.page}${barber55 ? ` ${styles.barber55}` : ` ${styles.editorial}`}${fineCut ? ` ${styles.fineCut}` : ""}`} style={brandStyle} dir="rtl" data-salon-presentation={barber55 ? "barber55" : "editorial"}>
     <a className={styles.skip} href="#services">انتقل إلى الخدمات</a>
     <div className={styles.opening}>
       <header className={styles.header}>
@@ -92,16 +92,17 @@ export function PublicSalon({ menu, announcements, colors }: { menu: StandaloneM
       <section className={styles.hero} aria-labelledby="salon-heading">
         <div className={styles.heroCopy}>
           {fineCut && <div className={styles.fineCutIdentity} dir="ltr"><span className={styles.fineCutWordmark}>FINE <em>CUT</em></span><span className={styles.fineCutSignature}><span />MEN’S GROOMING<span /></span></div>}
-          <p className={styles.eyebrow}><span />{fineCut ? "عناية تحمل توقيعك" : barber55 ? "حضورك يبدأ من هنا" : "تفاصيل صغيرة تصنع الفرق"}</p>
-          <h1 id="salon-heading">{fineCut ? "حضور يُتقن" : barber55 ? "تفاصيل تليق" : "أناقتك تبدأ"}<br /><em>{fineCut ? "بالتفاصيل" : barber55 ? "بحضورك" : "من التفاصيل"}</em></h1>
+          {!barber55 && !fineCut && <div className={styles.salonIdentity}>{menu.logoUrl && <Image unoptimized src={menu.logoUrl} width={320} height={220} alt="" className={styles.salonIdentityLogo} />}<strong dir="auto">{menu.name}</strong><span>العناية بالرجل</span></div>}
+          <p className={styles.eyebrow}><span />{barber55 ? "حضورك يبدأ من هنا" : "عناية تحمل توقيعك"}</p>
+          <h1 id="salon-heading">{barber55 ? "تفاصيل تليق" : "حضور يُتقن"}<br />{" "}<em>{barber55 ? "بحضورك" : "بالتفاصيل"}</em></h1>
           {barber55 && menu.logoUrl && <div className={styles.heroIdentity}><Image unoptimized src={menu.logoUrl} width={360} height={128} alt={menu.name} /></div>}
-          <p className={styles.heroDescription}>{menu.description || (fineCut ? "لحظة لك وإطلالة تليق بك اختر عنايتك واترك لنا التفاصيل" : "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها")}</p>
+          <p className={styles.heroDescription}>{menu.description || (!barber55 ? "لحظة لك وإطلالة تليق بك اختر عنايتك واترك لنا التفاصيل" : "وقت لك وإطلالة تشبهك اختر عنايتك واترك للتفاصيل أثرها")}</p>
           <div className={styles.heroActions}><button className={styles.primary} onClick={() => setBookingOpen(true)}>احجز وقتك <ArrowUpLeft aria-hidden="true" /></button><a className={styles.textLink} href="#services">اكتشف الخدمات <ArrowDown aria-hidden="true" /></a></div>
           <div className={styles.heroNote}><CalendarDays aria-hidden="true" /><span>موعدك على راحتك<small>اختر الوقت وسيصلك التأكيد عبر واتساب</small></span></div>
         </div>
         <div className={styles.heroVisual}>
-          {fineCut && <span className={styles.fineCutEditorial} aria-hidden="true" dir="ltr">THE FINER DETAILS</span>}
-          <div className={styles.artFrame}><Image src={fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/grooming-editorial.webp"} width={barber55 || fineCut ? 1024 : 1400} height={barber55 || fineCut ? 1536 : 933} loading="eager" fetchPriority="high" sizes={barber55 || fineCut ? "(max-width: 720px) 100vw, 50vw" : "(max-width: 720px) 150vh, 50vw"} alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir="ltr">{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : "THE ART OF GROOMING"}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
+          {!barber55 && <span className={styles.fineCutEditorial} aria-hidden="true" dir="ltr">THE FINER DETAILS</span>}
+          <div className={styles.artFrame}><Image src={fineCut ? "/salon/fine-cut/portrait-gold.webp" : barber55 ? "/salon/barber-55/portrait-midnight.webp" : "/salon/editorial-portrait-v1.webp"} width={1024} height={1536} loading="eager" fetchPriority="high" sizes="(max-width: 720px) 100vw, 50vw" alt="" className={styles.heroImage} /><div className={styles.artCaption}><span dir={barber55 || fineCut ? "ltr" : "auto"}>{fineCut ? "FINE CUT / MEN’S GROOMING" : barber55 ? "BARBER 55 — THE FINER DETAILS" : menu.name}</span><strong>العناية فن والتفاصيل توقيع</strong></div></div>
           <div className={styles.seal} aria-hidden="true"><Scissors /><span>على ذوقك</span></div>
           <span className={styles.visualNote} aria-hidden="true" dir="ltr">A MOMENT FOR YOURSELF</span>
         </div>
