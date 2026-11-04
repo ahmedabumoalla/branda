@@ -33,7 +33,7 @@
 
 ## Publication and evidence
 
-- Exact production verification follows publication
+- Published 2026-11-04T13:00:07.057Z: GitHub main 26c6044cc6ac2b555ecc6ae55ef31536820950e0, Vercel dpl_BwbXrtgQP8bYsPNkFxDVPbJw4GWu READY with exact SHA and both production aliases verified; anonymous analytics, service-only audience/create RPCs and worker routes remain protected in live HTTP checks; no real campaign or message sent
 - `output/analytics-campaigns/{local,release,build}-checks.json`: commands, runtimes and input hashes
 - `output/analytics-campaigns/live-application.json`: exact live SQL and authorization evidence
 - `output/analytics-campaign/{server-checks,sender-readiness,worker-source-review}.json`: independent checks
