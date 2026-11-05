@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowDownLeft, ArrowUpLeft, Leaf, Search, Share2, WalletCards } from "lucide-react";
 import type { StandaloneMenu } from "@/lib/menu/standalone-menu";
 import { editorialBrand } from "@/lib/menu/editorial-brand";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import s from "./shahi-majlis.module.css";
 
 function ShahiMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
@@ -46,8 +44,8 @@ export function ShahiHero({ menu, onSearch, onShare }: { menu: StandaloneMenu; o
 }
 
 export function ShahiLoyalty({ menu }: { menu: StandaloneMenu }) {
-  const content = <><span className={s.loyaltySeal} aria-hidden="true"><WalletCards /></span><span className={s.loyaltyCopy}><small>من أهل شاهي وهيل</small><strong>{menu.loyaltyEnabled ? "كل زيارة تقرّبك لمكافأتك" : "الولاء والمكافآت"}</strong><span>{menu.loyaltyEnabled ? "بطاقتك معك ولحظاتك محسوبة" : "بطاقة الولاء غير متاحة حاليًا"}</span></span>{menu.loyaltyEnabled ? <LoyaltyLinkContent className={s.loyaltyAction} /> : null}</>;
-  return <section className={s.membership} aria-label="بطاقة ولاء شاهي وهيل">{menu.loyaltyEnabled ? <Link className={s.membershipLink} href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} aria-label="حمّل بطاقة ولاء شاهي وهيل" onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")} onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}>{content}</Link> : <div className={s.membershipLink}>{content}</div>}</section>;
+  if (menu.loyaltyEnabled) return <BrandLoyaltyEntry slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl || editorialBrand(menu.slug).logo} eyebrow="لأنك من أهل شاهي وهيل" palette={{ background: "var(--shahi-deep)", foreground: "var(--shahi-paper)", muted: "var(--shahi-brass)", cardBackground: "var(--shahi-paper)", cardForeground: "var(--shahi-deep)", cardBack: "var(--shahi-forest)" }} />;
+  return <section className={s.membership} aria-label="بطاقة ولاء شاهي وهيل"><div className={s.membershipLink}><span className={s.loyaltySeal} aria-hidden="true"><WalletCards /></span><span className={s.loyaltyCopy}><small>من أهل شاهي وهيل</small><strong>الولاء والمكافآت</strong><span>بطاقة الولاء غير متاحة حاليًا</span></span></div></section>;
 }
 
 export function ShahiClosing({ menu }: { menu: StandaloneMenu }) {

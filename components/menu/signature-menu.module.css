@@ -23,31 +23,6 @@
 .menu[data-signature="dabab"] .primary { background: var(--brand); color: var(--white); box-shadow: 0 8px 24px #9b3f271c; }
 .menu[data-signature="dabab"] .heroLoyalty { background: var(--white); border-color: var(--edge); color: var(--brand); }
 .menu[data-signature="dabab"] .heroBottom { color: var(--text); background: linear-gradient(180deg,transparent,var(--surface)); }
-.menu[data-signature="dabab"] .loyalty { width: min(1180px,100%); grid-template-columns: minmax(0,1.15fr) minmax(0,.85fr); gap: clamp(32px,5vw,68px); padding-block: clamp(40px,6vw,72px); }
-.menu[data-signature="dabab"] .loyaltyCard { min-width: 0; min-height: 340px; align-content: start; gap: 24px; padding: clamp(28px,3vw,40px); background: var(--brand); border: 1px solid var(--brand); border-radius: 28px; box-shadow: 0 20px 44px #9b3f271a; }
-.menu[data-signature="dabab"] .cardTop { align-items: start; gap: 20px; }
-.menu[data-signature="dabab"] .cardIdentity { display: grid; gap: 8px; min-width: 0; }
-.menu[data-signature="dabab"] .cardTop b { font-size: clamp(24px,3vw,32px); letter-spacing: .12em; }
-.menu[data-signature="dabab"] .cardIdentity > span { font-size: 14px; color: var(--accent); }
-.menu[data-signature="dabab"] .cardTop > svg { width: 32px; height: 32px; color: var(--accent); }
-.menu[data-signature="dabab"] .stamps { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 10px; }
-.menu[data-signature="dabab"] .stamps > span { width: 100%; min-width: 0; max-width: 64px; justify-self: center; border: 1px dashed var(--accent); }
-.menu[data-signature="dabab"] .stamps > span:last-child { border-style: solid; }
-.menu[data-signature="dabab"] .stamps svg { width: 24px; height: 24px; }
-.menu[data-signature="dabab"] .cardProgress { margin-top: -12px; color: var(--accent); font-size: 14px; line-height: 1.7; }
-.menu[data-signature="dabab"] .cardReward { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding-top: 20px; font-size: 14px; line-height: 1.6; }
-.menu[data-signature="dabab"] .cardReward strong { display: block; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; font-size: clamp(22px,2.6vw,30px); line-height: 1.6; color: var(--white); }
-.menu[data-signature="dabab"] .loyaltyCopy { min-width: 0; }
-.menu[data-signature="dabab"] .loyaltyCopy .eyebrow { color: var(--brand); font-size: 13px; gap: 8px; }
-.menu[data-signature="dabab"] .loyaltyCopy h2 { margin: 14px 0; font-size: clamp(28px,3.1vw,40px); line-height: 1.5; }
-.menu[data-signature="dabab"] .loyaltyCopy p { margin-bottom: 20px; font-size: 16px; line-height: 1.9; }
-.menu[data-signature="dabab"] .loyaltyBenefits { display: grid; gap: 12px; margin: 0 0 28px; padding: 0; list-style: none; color: var(--tone); font-size: 14px; line-height: 1.7; }
-.menu[data-signature="dabab"] .loyaltyBenefits li { display: flex; align-items: center; gap: 10px; }
-.menu[data-signature="dabab"] .loyaltyBenefits svg { width: 20px; height: 20px; color: var(--brand); }
-.menu[data-signature="dabab"] .loyaltyAction { width: 100%; min-height: 58px; padding: 16px 24px; border-radius: 16px; font-size: 17px; line-height: 1.5; box-shadow: 0 8px 24px #9b3f271a; }
-.menu[data-signature="dabab"] .loyaltyAction > span { width: 100%; justify-content: space-between; gap: 16px; }
-.menu[data-signature="dabab"] .loyaltyAction svg { width: 24px; height: 24px; }
-.menu[data-signature="dabab"] .loyaltyHint { display: block; margin-top: 12px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .menu[data-signature="dabab"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 14px; }
 .menu[data-signature="dabab"] .categoryTitle h3 { color: var(--brand); }
 .menu[data-signature="dabab"] .productPhoto { background: var(--white); border: 1px solid var(--edge); border-radius: 24px 24px 8px 8px; }
@@ -78,20 +53,6 @@
   .menu[data-signature="dabab"] .heroCenter > p { font-size: 14px; }
   .menu[data-signature="dabab"] .productPhoto { border-radius: 18px 18px 6px 6px; }
 }
-@media (max-width: 850px) {
-  .menu[data-signature="dabab"] .loyalty { grid-template-columns: minmax(0,1fr); gap: 30px; padding: 36px 20px 40px; }
-  .menu[data-signature="dabab"] .loyaltyCard { width: 100%; min-height: 0; padding: 28px; border-radius: 24px; gap: 24px; }
-  .menu[data-signature="dabab"] .stamps { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
-  .menu[data-signature="dabab"] .stamps > span { max-width: 64px; }
-  .menu[data-signature="dabab"] .cardReward strong { font-size: clamp(22px,5.5vw,28px); }
-  .menu[data-signature="dabab"] .loyaltyCopy h2 { font-size: clamp(28px,6.5vw,36px); }
-  .menu[data-signature="dabab"] .loyaltyCopy .eyebrow svg { width: 20px; height: 20px; }
-}
-@media (max-width: 360px) {
-  .menu[data-signature="dabab"] .loyalty { padding-inline: 16px; }
-  .menu[data-signature="dabab"] .loyaltyCard { padding: 24px; }
-  .menu[data-signature="dabab"] .stamps { gap: 12px; }
-}
 @media (max-height: 740px) and (max-width: 700px) {
   .menu[data-signature="dabab"] .heroCenter { padding-top: 14px; padding-bottom: 120px; }
   .menu[data-signature="dabab"] .heroCenter .mark { height: 150px; width: 180px; }
@@ -110,7 +71,6 @@
 .menu[data-signature="sadeem"] .heroCenter h1 em { display: inline; font-size: inherit; }
 .menu[data-signature="sadeem"] .signature { letter-spacing: .3em; margin: 4px 0 20px; }
 .menu[data-signature="sadeem"] .productPhoto { border-radius: 90px 90px 14px 14px; background: #f1e5d7; }
-.menu[data-signature="sadeem"] .loyaltyCard { background: linear-gradient(125deg,#392014,#663718); }
 .menu *, .loading * { box-sizing: border-box; }
 .menu button, .menu input, .menu select { font: inherit; }
 .menu button, .menu a, .menu select { -webkit-tap-highlight-color: transparent; }
@@ -157,21 +117,7 @@
 .heroBottom { position: relative; display: flex; justify-content: space-between; gap: 16px; padding: 22px var(--gutter); font-size: 12px; color: var(--white); z-index: 1; }
 .heroBottom a { display: inline-flex; align-items: center; gap: 9px; color: inherit; min-height: 44px; }
 .heroBottom > span { align-self: center; }
-.loyalty { width: min(1060px,100%); margin: auto; padding: 30px var(--gutter); display: grid; grid-template-columns: .9fr 1.1fr; align-items: center; gap: clamp(22px,5vw,64px); border-bottom: 1px solid var(--edge); }
-.loyaltyCard { display: grid; gap: 18px; color: var(--white); padding: 24px; border-radius: 20px; background: linear-gradient(135deg, var(--brand), color-mix(in srgb,var(--brand) 78%,var(--tone))); box-shadow: 0 12px 20px #00000010; position: relative; overflow: hidden; transition: transform .25s; }
-.loyaltyCard::after { content: ""; position: absolute; width: 250px; height: 250px; border: 1px solid #fff2; border-radius: 50%; top: -160px; left: -70px; pointer-events: none; }
-.loyaltyCard:hover { transform: translateY(-3px); }
-.cardTop, .cardReward { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.cardTop b { font: 700 20px/1.2 "Bistro Sans",sans-serif; }
-.cardReward { padding-top: 12px; border-top: 1px solid #fff3; font-size: 11px; }
-.cardReward strong { font-size: 20px; color: var(--accent); }
-.stamps { display: flex; justify-content: space-between; gap: 6px; }
-.stamps > span { width: 37px; aspect-ratio: 1; border-radius: 50%; border: 1px dashed #fff7; display: grid; place-items: center; }
-.stamps > span:last-child { background: var(--accent); color: var(--brand); border-color: transparent; }
-.stamps svg { width: 16px; height: 16px; }
 .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
-.loyaltyCopy h2 { font: 700 clamp(20px,2.5vw,32px)/1.35 "Bistro Arabic",sans-serif; margin: 8px 0; text-wrap: balance; }
-.loyaltyCopy p { font-size: 13px; color: var(--muted); margin: 0 0 15px; line-height: 1.6; }
 .loyaltyAction { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 44px; padding: 11px 20px; border-radius: 40px; background: var(--brand); color: var(--white); font-size: 13px; border: 0; font-weight: 700; }
 .loyaltyAction > span { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .spotlight, .catalog { max-width: 1380px; margin: auto; padding: var(--space) var(--gutter) 0; scroll-margin-top: 16px; }
@@ -258,11 +204,6 @@
   .heroCenter > p { font-size: 13px; margin: 12px 0 18px; }.signature { font-size: 8px; letter-spacing: .16em; margin: 12px 0 20px; }
   .mark { width: 265px; }.mark[data-mark="black"] { width: min(330px,90vw); height: 210px; }.mark[data-mark="once"] { width: 190px; height: 190px; }.mark[data-mark="box"] { height: 95px; }
   .heroBottom { font-size: 10px; padding: 10px 20px; }.heroBottom a { gap: 6px; }
-  .loyalty { padding: 24px 20px; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .loyaltyCard { padding: 14px 10px; border-radius: 16px; gap: 18px; }.cardTop b { font-size: 14px; }.cardTop > svg { width: 16px; }
-  .stamps { gap: 3px; flex-wrap: wrap; }.stamps > span { width: calc((100% - 15px) / 6); min-width: 18px; }.stamps svg { width: 12px; height: 12px; }
-  .cardReward { font-size: 8px; gap: 4px; }.cardReward strong { font-size: 17px; white-space: nowrap; }
-  .loyaltyCopy .eyebrow { font-size: 10px; gap: 5px; }.loyaltyCopy .eyebrow svg { width: 16px; }.loyaltyCopy h2 { font-size: 18px; margin: 6px 0; }.loyaltyCopy p { font-size: 10px; margin-bottom: 10px; }
   .loyaltyAction { width: 100%; padding: 9px 10px; gap: 6px; font-size: 11px; }.loyaltyAction svg { width: 17px; }
   .heading { margin-bottom: 18px; }.heading h2 { font-size: 29px; }.eyebrow { font-size: 10px; }
   .feature { grid-template-columns: .95fr 1.05fr; min-height: 230px; border-radius: 20px; }.featurePhoto > img { height: 240px; }.featureCopy { padding: 18px 14px; }.featureCopy h3 { font-size: 22px; margin: 10px 0; }.featureCopy p { font-size: 11px; line-height: 1.65; }.featureTag { font-size: 10px; }.featureBottom { padding-top: 15px; }.featureBottom .price bdi { font-size: 20px; }
@@ -270,7 +211,7 @@
   .toolbar { padding: 10px 0; }.categories { gap: 6px; padding-bottom: 10px; }.categories button { padding: 9px 16px; font-size: 12px; }.order select { width: 112px; font-size: 11px; }.filters { gap: 8px; }.search { gap: 8px; padding: 0 10px; }
   .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px 14px; }.category { padding-top: 26px; }.categoryTitle h3 { font-size: 22px; }.productPhoto { border-radius: 14px; }.productInfo { padding-top: 12px; gap: 10px; }.productInfo > strong { font-size: 15px; }.price bdi { font-size: 22px; }.price > span { font-size: 10px; }.footer { padding-top: 32px; }
 }
-@media (max-width: 360px) { .menu { --gutter: 16px; }.loyalty { padding: 20px 16px; gap: 12px; }.loyaltyCopy h2 { font-size: 16px; }.cardTop b { font-size: 11px; }.cardReward { flex-wrap: wrap; }.featureCopy { padding: 15px 10px; }.featureCopy h3 { font-size: 20px; }.featureCopy p { font-size: 10px; }.heroCenter h1 { font-size: 31px; }.heroCenter h1 em { font-size: 40px; } }
+@media (max-width: 360px) { .menu { --gutter: 16px; }.featureCopy { padding: 15px 10px; }.featureCopy h3 { font-size: 20px; }.featureCopy p { font-size: 10px; }.heroCenter h1 { font-size: 31px; }.heroCenter h1 em { font-size: 40px; } }
 @media (max-height: 700px) and (max-width: 640px) { .hero { min-height: 100svh; }.heroCenter { padding-block: 14px; }.heroCenter .mark[data-mark="black"] { height: 125px; }.heroCenter .mark[data-mark="once"] { height: 112px; width: 112px; }.heroCenter .mark[data-mark="rast"] { height: 75px; }.heroCenter .mark[data-mark="box"] { height: 85px; }.signature { margin: 7px 0 12px; }.heroCenter h1 { font-size: 29px; }.heroCenter h1 em { font-size: 38px; }.heroCenter > p { margin: 8px 0 14px; }.heroBottom { padding-block: 4px; } }
 /* Alhadiqa: a navy dining room with warm brass details and uncropped original identity */
 .menu[data-signature="hadiqa"] {
@@ -294,9 +235,6 @@
 .menu[data-signature="hadiqa"] .primary { background: linear-gradient(115deg, #e9be70, #f4dca8); border: 1px solid #ffe5b7; }
 .menu[data-signature="hadiqa"] .heroLoyalty { background: #0a1428ab; }
 .menu[data-signature="hadiqa"] .heroBottom { color: #edddbd; padding-block: 12px; }
-.menu[data-signature="hadiqa"] .loyalty { padding-block: 24px; }
-.menu[data-signature="hadiqa"] .loyaltyCard { background: linear-gradient(130deg, #243652, #111d30 70%); border: 1px solid #d6ad6366; box-shadow: inset 0 1px #ffe3a12b, 0 14px 32px #0002; }
-.menu[data-signature="hadiqa"] .cardTop b { font-family: "Bistro Arabic", sans-serif; color: var(--accent); }
 .menu[data-signature="hadiqa"] .loyaltyAction { color: var(--brand); background: var(--accent); }
 .menu[data-signature="hadiqa"] .feature { border: 1px solid var(--edge); background: linear-gradient(125deg, #283850, #142137); border-radius: 16px; }
 .menu[data-signature="hadiqa"] .featurePhoto { background: #ebe4d8; }
@@ -325,9 +263,6 @@
   .menu[data-signature="hadiqa"] .signature { margin: 4px 0 16px; font-size: 8px; }
   .menu[data-signature="hadiqa"] .heroCenter h1 { font-size: 33px; }
   .menu[data-signature="hadiqa"] .heroCenter > p { font-size: 13px; }
-  .menu[data-signature="hadiqa"] .loyalty { gap: 14px; padding-block: 20px; }
-  .menu[data-signature="hadiqa"] .loyaltyCard { gap: 15px; }
-  .menu[data-signature="hadiqa"] .loyaltyCopy h2 { font-size: 18px; }
   .menu[data-signature="hadiqa"] .product { padding: 5px 5px 14px; border-radius: 15px; }
   .menu[data-signature="hadiqa"] .productInfo { padding-inline: 5px; }
   .menu[data-signature="hadiqa"] .grid { gap: 14px 12px; }
@@ -359,9 +294,6 @@
 .menu[data-signature="korma"] .heroCenter h1 { font-size: clamp(34px, 4.8vw, 66px); }
 .menu[data-signature="korma"] .heroCenter > p { max-width: 360px; text-wrap: balance; }
 .menu[data-signature="korma"] .primary { border-radius: 12px 12px 30px 12px; }
-.menu[data-signature="korma"] .loyaltyCard { background: radial-gradient(ellipse at 100% 0, #32634c, #123d32 75%); border: 1px solid #bc885a70; box-shadow: 0 12px 30px #123d3214; }
-.menu[data-signature="korma"] .cardTop b { letter-spacing: .12em; color: #fff6e6; }
-.menu[data-signature="korma"] .stamps > span { border-color: #f6d6ac80; }
 .menu[data-signature="korma"] .catalog { padding-top: clamp(24px, 4vw, 50px); }
 .menu[data-signature="korma"] .heading h2 { letter-spacing: -.02em; }
 .menu[data-signature="korma"] .categories button[aria-pressed="true"] { color: #fff6e6; background: #123d32; border-color: #123d32; }
@@ -383,8 +315,6 @@
   .menu[data-signature="korma"] .heroCenter h1 { font-size: 36px; }
   .menu[data-signature="korma"] .heroCenter h1 em { font-size: inherit; }
   .menu[data-signature="korma"] .heroCenter > p { font-size: 14px; margin: 12px 0 20px; }
-  .menu[data-signature="korma"] .loyalty { gap: 14px; padding-block: 22px; }
-  .menu[data-signature="korma"] .loyaltyCopy h2 { font-size: 19px; }
   .menu[data-signature="korma"] .product { padding: 5px 5px 14px; border-radius: 17px; }
   .menu[data-signature="korma"] .productInfo { padding-inline: 5px; }
   .menu[data-signature="korma"] .grid { gap: 14px 12px; }
@@ -438,9 +368,6 @@
 .menu[data-signature="rayhan"] .productPhoto { border-radius: 22px; background: #e5eeea; }
 .menu[data-signature="masala"] .primary { border-radius: 8px 8px 26px 26px; }
 .menu[data-signature="nineteen"] :is(.primary,.loyaltyAction) { border-radius: 5px; }
-.menu[data-signature="rayhan"] .loyaltyCard { background: linear-gradient(125deg,#213f50,#3c5539); }
-.menu[data-signature="arabi"] .loyaltyCard { background: linear-gradient(125deg,#354321,#5b6e2f); }
-.menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyalty { padding-block: 24px; }
 .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .product { padding-bottom: 18px; border-bottom: 1px solid var(--edge); }
 .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .productArrow { background: var(--accent); color: var(--brand); border: 1px solid var(--white); }
 .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .footer { background: var(--brand); border-top: 1px solid var(--accent); }
@@ -456,8 +383,6 @@
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter h1 { font-size: clamp(29px,8vw,36px); }
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter h1 em { font-size: inherit; }
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .heroCenter > p { font-size: 13px; margin: 10px 0 18px; }
-  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyalty { gap: 14px; padding-block: 20px; }
-  .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .loyaltyCopy h2 { font-size: 19px; }
   .menu:is([data-signature="hulm"],[data-signature="arabi"],[data-signature="masala"],[data-signature="nineteen"],[data-signature="rayhan"]) .grid { gap: 18px 14px; }
 }
 @media (max-height: 700px) and (max-width: 640px) {
@@ -527,8 +452,6 @@
 .menu[data-signature="et1"] .primary { color: var(--white); background: var(--brand); box-shadow: 0 9px 24px #21508520; }
 .menu[data-signature="et1"] .heroLoyalty { color: var(--brand); background: var(--hero-paper); border-color: #21508540; }
 .menu[data-signature="et1"] .heroBottom { color: var(--text); background: #f8f5edf2; padding-block: 12px; border-top: 1px solid var(--edge); }
-.menu[data-signature="et1"] .loyalty { padding-block: 24px; }
-.menu[data-signature="et1"] .loyaltyCard { background: var(--brand); border-radius: 18px; }
 .menu[data-signature="et1"] .catalog { padding-top: clamp(28px,4vw,52px); }
 .menu[data-signature="et1"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 14px; }
 .menu[data-signature="et1"] .categoryTitle h3 { color: var(--brand); }
@@ -580,9 +503,7 @@
 .menu[data-signature="default"] .primary { background: var(--button-bg); color: var(--button-fg); }
 .menu[data-signature="default"] .heroLoyalty { color: var(--hero-ink); background: var(--hero-paper); border-color: color-mix(in srgb,var(--hero-ink) 24%,transparent); }
 .menu[data-signature="default"] .heroBottom { color: var(--hero-ink); background: color-mix(in srgb,var(--hero-paper) 94%,transparent); }
-.menu[data-signature="default"] .loyaltyCard { background: var(--brand); }
-.menu[data-signature="default"] :is(.cardReward strong,.featureTag,.featureBottom .price) { color: var(--white); }
-.menu[data-signature="default"] .stamps > span:last-child,
+.menu[data-signature="default"] :is(.featureTag,.featureBottom .price) { color: var(--white); }
 .menu[data-signature="default"] .featureBottom .round { color: var(--accent-ink); }
 .menu[data-signature="default"] :is(.search,.order select) { background: var(--surface-raised); color: var(--surface-raised-fg); }
 .menu[data-signature="default"] .search input { color: var(--surface-raised-fg); }
@@ -602,7 +523,6 @@
   .menu[data-signature="default"] .heroCenter { padding: 24px 20px 30px; }
   .mark[data-mark="default"] { width: min(270px,74vw); height: 150px; }
   .menu[data-signature="default"] .heroCenter h1 em { font-size: inherit; }
-  .menu[data-signature="default"] .loyalty { padding-block: 20px; }
 }
 @media (max-height: 700px) and (max-width: 640px) {
   .menu[data-signature="default"] .heroCenter { padding-block: 16px; }

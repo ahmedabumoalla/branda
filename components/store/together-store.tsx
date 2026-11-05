@@ -7,7 +7,7 @@ import { ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpLeft, Check, Gift, Leaf, P
 import { giftOrderInputSchema, type GiftOrderReceipt, type GiftStoreSettings } from "@/lib/commerce/gift-orders";
 import { productMinimumPrice, type GiftCartLine } from "@/lib/commerce/storefront-cart";
 import { matchesMenuSearch, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
+import { BrandLoyaltyEntry } from "@/components/menu/brand-loyalty-entry";
 import { GiftCheckoutDialog, GiftProductDialog, GiftTrackingDialog, StoreMoney, StorePhoto } from "./gift-store-dialogs";
 import s from "./together-store.module.css";
 import { TogetherBrandMark } from "@/components/store/together-brand-mark";
@@ -160,15 +160,8 @@ export function TogetherStore({ menu, settings, loyalty }: Props) {
       <TogetherHero loyaltyEnabled={menu.loyaltyEnabled && Boolean(loyalty)} />
     </div>
     <TogetherRibbon />
-    {menu.loyaltyEnabled && loyalty && <section className={s.loyalty} id="together-loyalty" aria-labelledby="together-loyalty-title" data-loyalty-design="signature-card">
-      <div className={s.loyaltyInvitation}><p className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</p><h2 id="together-loyalty-title">غراس منك <em>ومكافآت لك</em></h2><p>اجمع <strong>{loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام</strong> واحصل على <strong>{loyalty.rewardName}</strong></p></div>
-      <Link className={s.loyaltyCard} href={`/loyalty/${menu.slug}?source=menu`} aria-label="بطاقة ولاء Together Plants">
-        <div><div className={s.memberName}><span dir="ltr">Together Plants</span><small>بطاقة الولاء والمكافآت</small></div><span className={s.memberEmblem}><StorePhoto src="/together/logo.webp" alt="شعار توقذر بلانتس" /></span></div>
-        <div className={s.stampRow} aria-hidden="true">{Array.from({ length: Math.min(10, loyalty.purchasesRequired) }, (_, i) => <span key={i}>{i === loyalty.purchasesRequired - 1 ? <Gift /> : <Leaf />}</span>)}</div>
-        <footer><span>مكافأتك بعد {loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام</span><strong>{loyalty.rewardName}</strong></footer>
-      </Link>
-      <Link className={s.loyaltyLink} href={`/loyalty/${menu.slug}?source=menu`} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}>افتح بطاقة الولاء والمكافآت<ArrowUpLeft aria-hidden="true" /></Link>
-    </section>}
+    {menu.loyaltyEnabled && loyalty && <BrandLoyaltyEntry id="together-loyalty" slug={menu.slug} name={menu.name} logoUrl={brandLogo}
+      palette={{ background: "var(--forest)", foreground: "var(--paper)", muted: "var(--paper)", cardBackground: "var(--paper)", cardForeground: "var(--forest)", cardBack: "var(--lime)" }} />}
     <section className={s.introduction} aria-label="عالم Together"><p className={s.eyebrow}>أشياء صغيرة تصنع فرقًا</p><h2>مساحة تحبّها<br /><span>وحياة تنمو معها</span></h2><p>من نبتة ترافق يومك إلى هدية تعبّر عنك<br />غراس اخترناها لتجد مكانها عندك</p><span className={s.botanicalSeal} aria-hidden="true"><Sprout /><span dir="ltr">TOGETHER, WE GROW</span></span></section>
     {!!collections.length && <nav className={s.collections} aria-label="مجموعات الغراس">{collections.map(({ category: c, product }, i) => <button key={c.id} onClick={() => browse("product", c.id)}><div><StorePhoto src={product.images[0].url} alt={c.name} /></div><span><small>{i === 0 ? "رفاق البيت" : i === 1 ? "عالم صغير" : "لمن تحب"}</small><strong>{c.name}</strong></span><ArrowUpLeft aria-hidden="true" /></button>)}</nav>}
     <section className={s.catalog} id="together-products" aria-labelledby="together-catalog-title">

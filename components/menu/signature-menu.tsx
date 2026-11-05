@@ -4,17 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Flame, Gift, Camera, MapPin, Music2, Pause, Play, Search, Share2, UtensilsCrossed, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Gift, Camera, MapPin, Music2, Pause, Play, Search, Share2 } from "lucide-react";
 import { kormaContacts, signatureAsset, type SignatureBrand } from "@/lib/menu/signature-brands";
 import { DEFAULT_SIGNATURE_HERO } from "@/lib/menu/default-signature";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { menuEntryUrl, startMenuAtTop } from "@/lib/menu/menu-entry-scroll";
 import { ProductDetails } from "./bistro-menu";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import base from "./bistro-menu.module.css";
 import s from "./signature-menu.module.css";
 
@@ -108,9 +107,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const sections = order === "original" ? [...categories.map(c => ({ ...c, items: visible.filter(p => p.categoryId === c.id) })), { id: "other", name: "اختيارات أخرى", items: visible.filter(p => !categories.some(c => c.id === p.categoryId)) }].filter(c => c.items.length) : [{ id: "sorted", name: "اختياراتك", items: visible }].filter(c => c.items.length);
   const selected = menu.products.find(p => p.id === selectedId);
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
-  const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const expandedLoyalty = brand.key === "dabab";
-  const Stamp = brand.key === "box" ? Flame : ["hadiqa", "korma", "masala", "rayhan", "damascus"].includes(brand.key) || (brand.key === "default" && menu.businessCategory === "restaurants") ? UtensilsCrossed : Coffee;
+  const lightLoyaltyLogo = ["arabi", "masala", "damascus", "hadiqa", "korma", "box"].includes(brand.key);
   const hero = brand.key === "default" ? (failedHero === brand.hero ? DEFAULT_SIGNATURE_HERO : brand.hero) : signatureAsset(brand.hero);
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
@@ -130,22 +127,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
       <div className={s.heroCenter}><SignatureMark brand={brand} src={menu.logoUrl} /><span className={s.signature} dir={brand.key === "default" ? "auto" : "ltr"}>{brand.signature}</span><h1 id="signature-title">{brand.headline}{" "}<em>{brand.emphasis}</em></h1><p>{brand.note}</p><a className={s.primary} href="#signature-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && loyalty && <a className={s.heroLoyalty} href="#signature-loyalty"><Gift aria-hidden="true" />كل زيارة تقرّب مكافأتك<ArrowDownLeft aria-hidden="true" /></a>}</div>
       <div className={s.heroBottom}><span>{menu.products.length} اختيارًا على ذوقك</span>{brand.locationUrl && <a href={brand.locationUrl} target="_blank" rel="noopener noreferrer"><MapPin aria-hidden="true" />{brand.key === "dabab" ? "موقع ضباب" : "موقع المطعم"}</a>}{brand.key === "korma" && <nav className={s.brandContacts} aria-label="حسابات كورما وموقع المطعم"><a href={kormaContacts.instagram} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على إنستغرام"><Camera aria-hidden="true" />إنستغرام</a><a href={kormaContacts.tiktok} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على تيك توك"><Music2 aria-hidden="true" />تيك توك</a><a href={kormaContacts.maps} target="_blank" rel="noopener noreferrer" aria-label="موقع مطعم كورما على خرائط قوقل"><MapPin aria-hidden="true" />موقعنا</a></nav>}{offers.length > 0 && <a href="#signature-offers">تستاهل التجربة<ArrowDownLeft aria-hidden="true" /></a>}</div>
     </section>
-    {menu.loyaltyEnabled && loyalty && <section id="signature-loyalty" className={s.loyalty} data-loyalty-layout={expandedLoyalty ? "expanded" : undefined} aria-labelledby="signature-loyalty-title">
-      <Link href={loyaltyHref} className={s.loyaltyCard} aria-label={`بطاقة ولاء ${menu.name}`} aria-describedby={expandedLoyalty ? "dabab-loyalty-reward" : undefined} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}>
-        <span className={s.cardTop}>{expandedLoyalty ? <span className={s.cardIdentity}><b dir="ltr">{brand.name}</b><span>بطاقة الولاء</span></span> : <b dir="ltr">{brand.name}</b>}<WalletCards aria-hidden="true" /></span>
-        <div className={s.stamps} aria-hidden="true">{Array.from({ length: expandedLoyalty ? loyalty.purchasesRequired : Math.min(10, loyalty.purchasesRequired) }, (_, i) => <span key={i} data-loyalty-stamp={expandedLoyalty ? i + 1 : undefined}>{i === loyalty.purchasesRequired - 1 ? <Gift /> : <Stamp />}</span>)}</div>
-        {expandedLoyalty && <span className={s.cardProgress}>{loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام توصلك لمكافأتك</span>}
-        <span className={s.cardReward}><span>مكافأتك القادمة</span><strong id={expandedLoyalty ? "dabab-loyalty-reward" : undefined}>{loyalty.rewardName}</strong></span>
-      </Link>
-      <div className={s.loyaltyCopy}>
-        <span className={s.eyebrow}><Gift aria-hidden="true" />الولاء والمكافآت</span>
-        <h2 id="signature-loyalty-title">{expandedLoyalty ? "كل زيارة تقرّبك للمكافأة" : brand.loyalty}</h2>
-        <p>{expandedLoyalty ? <>اجمع {loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام واستمتع بمكافأتك من ضباب</> : <>اجمع {loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام واحصل على {loyalty.rewardName}</>}</p>
-        {expandedLoyalty && <ul className={s.loyaltyBenefits}><li><Check aria-hidden="true" />تابع أختامك من جوالك</li><li><Gift aria-hidden="true" />مكافأتك مع اكتمال الأختام</li></ul>}
-        <Link href={loyaltyHref} className={s.loyaltyAction} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}><LoyaltyLinkContent label={expandedLoyalty ? "حمّل بطاقة الولاء" : "افتح بطاقة الولاء"} /></Link>
-        {expandedLoyalty && <span className={s.loyaltyHint}>افتح بطاقتك وابدأ جمع الأختام</span>}
-      </div>
-    </section>}
+    {menu.loyaltyEnabled && loyalty && <BrandLoyaltyEntry id="signature-loyalty" slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl || (brand.key === "default" ? null : signatureAsset(brand.logo))} palette={{ background: "var(--brand)", foreground: "var(--white)", muted: "var(--gold)", cardBackground: brand.key === "default" ? "var(--hero-paper)" : lightLoyaltyLogo ? "var(--brand)" : "#fffaf1", cardForeground: brand.key === "default" ? "var(--hero-ink)" : lightLoyaltyLogo ? "var(--white)" : "var(--brand)", cardBack: "var(--tone)", actionBackground: "#fffaf1", actionForeground: "#241610" }} />}
     <Spotlight menu={menu} offers={offers} onSelect={setSelectedId} />
     <section id="signature-catalog" className={s.catalog} aria-labelledby="signature-catalog-title"><div className={s.heading}><div><span className={s.eyebrow}>منيو {brand.arabic}</span><h2 id="signature-catalog-title">{brand.catalog}</h2></div><span className={s.catalogCount}>{menu.products.length}<small>اختيارًا</small></span></div>
       <div className={s.toolbar}><nav className={s.categories} aria-label="تصنيفات المنيو">{[{ id: "all", name: "الكل" }, ...categories].map(c => <button type="button" key={c.id} aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{menuDisplayText(c.name)}</button>)}</nav><div className={s.filters}><label className={s.search}><Search aria-hidden="true" /><input ref={search} type="search" aria-label={`ابحث في منيو ${brand.arabic}`} placeholder="وش خاطرك فيه؟" value={query} onChange={e => setQuery(e.target.value)} /></label><label className={s.order}><span className={base.screenReaderOnly}>ترتيب المنتجات</span><select value={order} onChange={e => setOrder(e.target.value)}><option value="original">ترتيب المنيو</option><option value="low">الأقل سعرًا</option><option value="high">الأعلى سعرًا</option></select></label></div></div>

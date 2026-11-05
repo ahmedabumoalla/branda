@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpLeft, ChevronDown, Coffee, Pause, Play, Search, Share2, Tag, WalletCards } from "lucide-react";
 import type { StandaloneMenu, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { menuDisplayText } from "@/lib/menu/standalone-menu";
 import { kathResponsiveImage } from "@/lib/menu/kath-images";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import s from "./deli-menu.module.css";
 
 const films = ["/deli-cake/background-01.mp4", "/deli-cake/background-02.mp4", "/deli-cake/background-03.mp4"];
@@ -78,13 +76,17 @@ export function DeliBackground() {
   </>;
 }
 
-function DeliMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
+function deliLogo(menu: StandaloneMenu) {
   // The supplied light vector lockup replaces only the known damaged processed logo
   const originalLogo = !menu.logoUrl || menu.logoUrl === "/deli-cake/logo.webp"
     || menu.logoUrl.includes("/processed-logos/v1-229f2465fe74ea4776aa1eccd2e0cdb5be6e60d490f7a6d5c363b9a2632d62f6.webp")
     || menu.logoUrl.includes("/deli-20261015/logo-7c0b3589e4f3.webp");
+  return originalLogo ? "/deli-cake/logo-official-light-v2.svg" : menu.logoUrl!;
+}
+
+function DeliMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={originalLogo ? "/deli-cake/logo-official-light-v2.svg" : menu.logoUrl!} alt={menu.name} width={128} height={200} className={className} decoding="async" />;
+  return <img src={deliLogo(menu)} alt={menu.name} width={128} height={200} className={className} decoding="async" />;
 }
 
 function useVisibleOffers(menu: StandaloneMenu) {
@@ -162,15 +164,7 @@ export function DeliHero({ menu, onShare, onSearch, onSelect }: { menu: Standalo
 
 export function DeliLoyalty({ menu }: { menu: StandaloneMenu }) {
   if (!menu.loyaltyEnabled) return null;
-  return <section className={s.membership} id="deli-membership" aria-label="بطاقتك لدى ديلي كيك">
-    <Link href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} className={s.memberLink}
-      onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}
-      onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}>
-      <span className={s.memberCard} aria-hidden="true"><DeliMark menu={menu} className={s.cardLogo} /><WalletCards /></span>
-      <span className={s.memberCopy}><small>أهلًا بك في ديلي</small><strong>مساحة خاصة لبطاقتك</strong><span>تفاصيل بطاقة الولاء من هنا</span></span>
-      <LoyaltyLinkContent className={s.memberAction} label="اكتشف بطاقتك" />
-    </Link>
-  </section>;
+  return <BrandLoyaltyEntry slug={menu.slug} name={menu.name} logoUrl={deliLogo(menu)} id="deli-membership" eyebrow="لأنك من أهل ديلي كيك" palette={{ background: "var(--deli-wine)", foreground: "var(--deli-cream)", muted: "var(--deli-sage)", cardBackground: "var(--deli-olive)", cardForeground: "var(--deli-cream)", cardBack: "var(--deli-muted)", actionBackground: "var(--deli-cream)", actionForeground: "var(--deli-wine)" }} />;
 }
 
 export function DeliOffers({ menu, onSelect }: { menu: StandaloneMenu; onSelect: (product: StandaloneMenuProduct) => void }) {

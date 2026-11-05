@@ -1,18 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { ArrowDownLeft, ArrowUpLeft, CakeSlice, Check, ChevronDown, Coffee, CupSoda, Flame, Gift, Grid2X2, IceCreamBowl, Search, Share2, Utensils, WalletCards, X } from "lucide-react";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { menuEntryUrl, startMenuAtTop } from "@/lib/menu/menu-entry-scroll";
 import { ProductDetails } from "./bistro-menu";
 import { ProductOfferBadge, ProductOfferDetails } from "./product-offer-details";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import { FrenchSocialIcons } from "./french-social-icons";
 import base from "./bistro-menu.module.css";
 import s from "./french-corner-menu.module.css";
@@ -36,7 +34,7 @@ function FrenchCategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMenu; loyalty?: { purchasesRequired: number; rewardName: string } | null }) {
+export function FrenchCornerMenu({ menu: source }: { menu: StandaloneMenu; loyalty?: { purchasesRequired: number; rewardName: string } | null }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [order, setOrder] = useState("original");
@@ -84,8 +82,6 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
   const sections = categories.map(c => ({ ...c, products: visible.filter(p => (p.categoryId || "uncategorized") === c.id) })).filter(c => c.products.length);
   const selected = menu.products.find(p => p.id === selectedId);
   const browseProducts = selected && !visible.some(p => p.id === selected.id) ? menu.products : sections.flatMap(c => c.products);
-  const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
-  const stampTarget = loyalty && Number.isInteger(loyalty.purchasesRequired) && loyalty.purchasesRequired > 0 && loyalty.purchasesRequired <= 100 ? loyalty.purchasesRequired : null;
   function browse(direction: number) {
     const index = browseProducts.findIndex(p => p.id === selectedId);
     if (browseProducts.length) setSelectedId(browseProducts[(index + direction + browseProducts.length) % browseProducts.length].id);
@@ -106,7 +102,6 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
     if (shareTimer.current) clearTimeout(shareTimer.current);
     shareTimer.current = setTimeout(() => setMessage(""), 4000);
   }
-  const trackLoyalty = () => trackBrandEngagement(menu.slug, "menu_loyalty_click");
   return <main ref={root} className={`${base.menu} ${s.page}`} dir="rtl" data-french-corner="atelier-v3">
     <a href="#french-catalog" className={base.skipLink}>انتقل إلى الأصناف</a>
     <section className={h.opening} id="french-top" aria-labelledby="french-title" data-french-opening="salon">
@@ -126,16 +121,7 @@ export function FrenchCornerMenu({ menu: source, loyalty }: { menu: StandaloneMe
       </div>
       <footer className={h.openingFooter}><FrenchSocialIcons /><span className={h.footerNote}>لك ركن وللحظة مذاق</span></footer>
     </section>
-    {menu.loyaltyEnabled && <section className={s.compactMembership} id="french-membership" aria-labelledby="french-membership-title">
-      <Link className={s.compactMemberLink} href={loyaltyHref} onClick={trackLoyalty} onAuxClick={event => { if (event.button === 1) trackLoyalty(); }}>
-        <div className={s.compactMemberCopy}>
-          <h2 id="french-membership-title"><WalletCards aria-hidden="true" />بطاقة الولاء</h2>
-          <p>{stampTarget ? <>اجمع <strong>{stampTarget.toLocaleString("ar-SA")} أختام</strong><br />ومكافأتك علينا</> : "كل زيارة تقرّبك من مكافأتك"}</p>
-        </div>
-        <span className={s.compactMemberReward}><small>مكافأتك</small><strong>{loyalty?.rewardName || "لحظة أحلى"}</strong></span>
-        <LoyaltyLinkContent className={s.compactMemberAction} label="افتح بطاقة الولاء" />
-      </Link>
-    </section>}
+    {menu.loyaltyEnabled && <BrandLoyaltyEntry id="french-membership" slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl} palette={{ background: "var(--panel)", foreground: "var(--paper)", muted: "var(--muted)", cardBackground: "var(--ink)", cardForeground: "var(--paper)", cardBack: "var(--gold)", actionBackground: "var(--paper)", actionForeground: "var(--ink)" }} />}
     {experienceItems.length > 0 && <section className={h.experience} id="french-offers" aria-labelledby="french-offers-title">
       <div className={h.experienceHeading}><div><p>اختيارات من الركن الفرنسي</p><h2 id="french-offers-title">تستاهل <em>التجربة</em></h2></div><span lang="fr" dir="ltr">À découvrir</span></div>
       <div className={h.offerList}>{experienceItems.map(offer => {

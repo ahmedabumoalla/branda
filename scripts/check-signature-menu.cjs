@@ -37,6 +37,8 @@ const mocks = {
   '@/lib/analytics/public-tracking': { trackBrandEngagement: noop },
   '@/lib/menu/menu-entry-scroll': { startMenuAtTop: noop, menuEntryUrl: (origin, slug) => `${origin}/menu/${slug}` },
 };
+const { BrandLoyaltyEntry } = load('components/menu/brand-loyalty-entry.tsx', mocks);
+mocks['./brand-loyalty-entry'] = { BrandLoyaltyEntry };
 const { signatureBrands, signatureBrand, signatureAsset } = load('lib/menu/signature-brands.ts');
 const { defaultSignatureBrand, usesDefaultSignatureMenu, DEFAULT_SIGNATURE_HERO } = load('lib/menu/default-signature.ts');
 const { getContrastRatio } = load('lib/cafe/color-contrast.ts');
@@ -87,7 +89,7 @@ async function main() {
   equal(signatureAsset(dabab.logo), '/menu-art/dabab/dabab-logo-v2.webp', 'Dabab resolves the actual wheat identity artwork');
   const dababMenu = { ...menu, slug: 'brand-8ad185ee82e3', name: 'ضباب', logoUrl: null, highlights: undefined, products: [product, { ...product, id: 'no-photo', name: 'اختيار بلا صورة', images: [] }] };
   const dababHtml = render({ menu: dababMenu, brand: dabab, loyalty });
-  equal((dababHtml.match(/src="\/menu-art\/dabab\/dabab-logo-v2.webp"/g) || []).length, 3, 'Dabab original mark appears in header, hero and footer');
+  equal((dababHtml.match(/src="\/menu-art\/dabab\/dabab-logo-v2.webp"/g) || []).length, 4, 'Dabab original mark appears in header, hero, compact loyalty illustration and footer');
   check(dababHtml.match(/<header[\s\S]*?<\/header>/)[0].includes(signatureAsset(dabab.logo)), 'Dabab header visibly carries its own mark');
   check(dababHtml.includes('بطعم مختلف') && dababHtml.includes('نكهات منعشة') && dababHtml.includes('اختر نكهة لحظتك'), 'Dabab copy describes its current drinks catalog');
   check(!dababHtml.includes('خالية من الكحول') && !dababHtml.includes('بدون كحول') && !dababHtml.includes('zero-proof'), 'Dabab interface adds no unrequested beverage disclaimer');
@@ -95,24 +97,38 @@ async function main() {
   check(dababLoading.includes(signatureAsset(dabab.logo)) && dababLoading.includes(dabab.welcome), 'Dabab loading uses the same real mark and drinks welcome');
   check(dababHtml.includes('data-brand-placeholder="dabab" aria-hidden="true"') && !dababHtml.includes('الصورة غير متاحة'), 'Intentionally absent Dabab photographs get a decorative branded placeholder');
   check(dababHtml.includes(product.images[0].url) && !dababHtml.includes('data-photo-disclosure'), 'Original Dabab photographs remain original and are not labeled generated');
-  check(dababHtml.includes('٦ أختام') && dababHtml.includes('خصم 10%') && dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab renders the actual reward and its own enrollment URL');
+  check(dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab keeps its own existing loyalty enrollment URL');
   const dababReward = 'كوب آيس تي & كركديه . مجاناً.';
   const dababLoyaltySection = render({ menu: dababMenu, brand: dabab, loyalty: { purchasesRequired: 6, rewardName: dababReward } }).match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
-  check(dababLoyaltySection.includes('data-loyalty-layout="expanded"'), 'Dabab alone receives the expanded loyalty presentation');
-  equal((dababLoyaltySection.match(/data-loyalty-stamp="\d+"/g) || []).length, 6, 'All six actual Dabab stamp positions are rendered');
-  const dababStampSymbols = dababLoyaltySection.match(/<div class="stamps"[^>]*>([\s\S]*?)<\/div>/)[1];
-  equal((dababStampSymbols.match(/lucide-coffee/g) || []).length, 5, 'Five visit slots lead to the configured sixth reward slot');
-  equal((dababStampSymbols.match(/lucide-gift/g) || []).length, 1, 'Only the final actual stamp position carries the reward symbol');
-  equal(dababLoyaltySection.match(/id="dabab-loyalty-reward">([^<]+)<\/strong>/)[1].replace(/&amp;/g, '&'), dababReward, 'Long custom owner reward remains complete and unchanged');
-  check(dababLoyaltySection.includes('aria-describedby="dabab-loyalty-reward"'), 'The clickable card exposes the full reward to assistive technology');
-  check(dababLoyaltySection.includes('حمّل بطاقة الولاء') && dababLoyaltySection.includes('تابع أختامك من جوالك'), 'Dabab explains the benefit and provides a prominent download action');
-  equal([...dababLoyaltySection.matchAll(/<a[^>]+href="([^"]+)"/g)].map(match => match[1]), ['/loyalty/brand-8ad185ee82e3?source=menu', '/loyalty/brand-8ad185ee82e3?source=menu'], 'Card and download action retain the existing Dabab enrollment flow');
-  check(dababLoyaltySection.indexOf('class="loyaltyCard"') < dababLoyaltySection.indexOf('class="loyaltyCopy"'), 'The full card precedes its explanation in mobile and keyboard reading order');
+  check(dababLoyaltySection.includes('data-loyalty-layout="compact"'), 'Dabab uses the requested compact reference composition');
+  check(dababLoyaltySection.includes('class="cardStack" aria-hidden="true"') && dababLoyaltySection.includes('class="cardBack"') && dababLoyaltySection.includes('class="cardFront"'), 'Small stacked cards are decorative and hidden from assistive technology');
+  check(dababLoyaltySection.includes(signatureAsset(dabab.logo)), 'Compact card illustration carries the actual Dabab wheat logo');
+  check(dababLoyaltySection.includes('بطاقتك معك في كل زيارة') && dababLoyaltySection.includes('لأنك من أهل ضباب'), 'Compact banner uses the requested reference heading and a Dabab-specific eyebrow');
+  check(!dababLoyaltySection.includes('data-loyalty-stamp') && !dababLoyaltySection.includes('dabab-loyalty-reward') && !dababLoyaltySection.includes('class="loyaltyBenefits"'), 'Compact promotion has no expanded stamp grid, reward details or tall benefits list');
+  check(dababLoyaltySection.includes('حمّل بطاقتك') && dababLoyaltySection.includes('aria-label="حمّل بطاقة ولاء ضباب"'), 'One clear labeled download action introduces the card');
+  equal([...dababLoyaltySection.matchAll(/<a[^>]+href="([^"]+)"/g)].map(match => match[1]), ['/loyalty/brand-8ad185ee82e3?source=menu'], 'The complete compact banner is one link to the existing Dabab enrollment flow');
   for (const required of [4, 12]) {
     const changedProgram = render({ menu: dababMenu, brand: dabab, loyalty: { purchasesRequired: required, rewardName: 'مكافأة المالك الجديدة' } }).match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
-    equal((changedProgram.match(/data-loyalty-stamp="\d+"/g) || []).length, required, 'Dabab stamp illustration follows the owner count without a decorative cap');
-    check(changedProgram.includes('مكافأة المالك الجديدة') && !changedProgram.includes('خصم 10%') && !changedProgram.includes(dababReward), 'Dabab always displays the current reward without a hardcoded offer');
+    equal(changedProgram, dababLoyaltySection, 'Compact introduction leaves program details on the linked card regardless of owner changes');
   }
+  check(!render({ menu: { ...dababMenu, loyaltyEnabled: false }, brand: dabab, loyalty }).includes('id="signature-loyalty"'), 'Dabab compact banner stays hidden when the brand loyalty feature is disabled');
+  const loyaltyEvents = [];
+  const LoyaltyInteractive = load('components/menu/brand-loyalty-entry.tsx', { ...mocks, '@/lib/analytics/public-tracking': { trackBrandEngagement: (...args) => loyaltyEvents.push(args) } }).BrandLoyaltyEntry;
+  const loyaltyTree = LoyaltyInteractive({ slug: dababMenu.slug, name: dababMenu.name, logoUrl: '/own-logo.webp' });
+  const loyaltyEntry = nodes(loyaltyTree).find(node => node.props?.className === 'entry');
+  loyaltyEntry.props.onClick();
+  loyaltyEntry.props.onAuxClick({ button: 0 });
+  equal(loyaltyEvents, [[dababMenu.slug, 'menu_loyalty_click']], 'Primary click tracks the current brand once without auxiliary left-click duplication');
+  loyaltyEntry.props.onAuxClick({ button: 1 });
+  equal(loyaltyEvents.length, 2, 'Middle-click enrollment retains brand engagement tracking');
+  check(nodes(loyaltyTree).some(node => node.props?.className === 'action' && node.props?.label === 'حمّل بطاقتك'), 'Compact action reuses the existing navigation pending-state component');
+  const salonEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'salon-owner', name: 'صالون المالك', source: 'salon', logoUrl: '/salon-own.webp', palette: { background: '#123456', foreground: '#ffffff', cardBackground: '#fffaf1', cardForeground: '#123456' } }));
+  check(salonEntry.includes('/loyalty/salon-owner?source=salon') && salonEntry.includes('/salon-own.webp'), 'Shared banner preserves salon source attribution and owner artwork');
+  check(salonEntry.includes('--loyalty-entry-background:#123456') && salonEntry.includes('--loyalty-entry-card-background:#fffaf1'), 'Shared banner carries the caller brand palette');
+  const whiteLogoEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'white-logo', name: 'علامة بشعار أبيض', logoUrl: '/white.webp', palette: { cardBackground: '#123456', cardForeground: '#ffffff', actionBackground: '#fffaf1', actionForeground: '#241610' } }));
+  check(whiteLogoEntry.includes('--loyalty-entry-card-background:#123456') && whiteLogoEntry.includes('--loyalty-entry-action-background:#fffaf1') && whiteLogoEntry.includes('--loyalty-entry-action-foreground:#241610'), 'A dark face for a white logo remains independent of the readable cream action');
+  const noLogoEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'new-brand', name: 'علامة جديدة' }));
+  check(noLogoEntry.includes('class="monogram"') && !noLogoEntry.includes('<img') && !noLogoEntry.includes('barndaksa-logo'), 'Brand without a logo receives its own initials rather than another identity');
   check(dababHtml.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86') && dababHtml.includes('موقع ضباب'), 'Dabab links only its verified official location');
   check(!render({ menu: dababMenu, brand: dabab, loyalty: null }).includes('id="signature-loyalty"'), 'Dabab never invents a server loyalty program');
   check(render({ menu: { ...dababMenu, logoUrl: '/owner-dabab.webp' }, brand: dabab }).includes('/owner-dabab.webp'), 'Dabab respects future owner logo uploads');
@@ -124,20 +140,20 @@ async function main() {
   equal(signatureAsset(et1.hero, true), '/menu-art/et1/et1-hero-mobile-v1.webp', 'ET1 has its own mobile hero');
   const et1Menu = { ...menu, slug: 'brand-01a9154f01bc', name: 'ET1', logoUrl: null, products: [{ ...product, description: 'صورة توضيحية وقد يختلف التقديم الفعلي' }, { ...product, id: 'original-et1', name: 'صورة أصلية' }] };
   const et1Html = render({ menu: et1Menu, brand: et1, loyalty });
-  check(!et1Html.includes('data-loyalty-layout="expanded"') && !et1Html.includes('data-loyalty-stamp') && et1Html.includes('افتح بطاقة الولاء'), 'ET1 and the shared non-Dabab loyalty presentation remain unchanged');
+  check(et1Html.includes('data-loyalty-layout="compact"') && et1Html.includes('حمّل بطاقتك'), 'ET1 adopts the same compact loyalty composition');
   for (const slug of ['brand-01a9154f01bc', 'brand-067febfb04db']) {
     const brand = signatureBrand(slug);
     const heading = render({ brand }).match(/<h1[^>]*>([\s\S]*?)<\/h1>/)[1].replace(/<[^>]+>/g, '');
     equal(heading, `${brand.headline} ${brand.emphasis}`, 'Arabic headline parts retain a readable word boundary');
   }
   equal((et1Html.match(/data-photo-disclosure/g) || []).length, 1, 'ET1 discloses generated images while preserving original-photo labeling');
-  check(et1Html.includes('٦ أختام') && et1Html.includes('خصم 10%') && et1Html.includes('/loyalty/brand-01a9154f01bc?source=menu'), 'ET1 displays the actual six-stamp reward and its own enrollment link');
+  check(et1Html.includes('/loyalty/brand-01a9154f01bc?source=menu') && !et1Html.includes('خصم 10%'), 'ET1 retains its enrollment destination and leaves reward rules on the linked card');
   check(!et1Html.includes('maps.app.goo.gl') && !et1Html.includes('موقع المطعم'), 'ET1 does not borrow another brand location');
   check(!render({ menu: et1Menu, brand: et1, loyalty: null }).includes('id="signature-loyalty"'), 'ET1 does not invent a loyalty program when the server returns none');
   check(!render({ menu: { ...et1Menu, loyaltyEnabled: false }, brand: et1, loyalty }).includes('id="signature-loyalty"'), 'ET1 hides loyalty when the package service is disabled');
   const et1Owner = render({ menu: { ...et1Menu, logoUrl: '/later-et1-logo.webp' }, brand: et1, loyalty: { purchasesRequired: 4, rewardName: 'مكافأة معدلة' } });
   check(et1Owner.includes('/later-et1-logo.webp') && !et1Owner.includes(signatureAsset(et1.logo)), 'ET1 preserves a later owner logo upload');
-  check(et1Owner.includes('٤ أختام') && et1Owner.includes('مكافأة معدلة') && !et1Owner.includes('خصم 10%'), 'ET1 renders future real loyalty changes without hardcoding six or ten');
+  check(et1Owner.includes('data-loyalty-layout="compact"') && !et1Owner.includes('مكافأة معدلة') && !et1Owner.includes('خصم 10%'), 'ET1 promotion remains free of hardcoded program rules');
   const damascus = signatureBrand('brand-067febfb04db');
   equal(damascus.key, 'damascus', 'Qalat Damascus selects its user-requested bespoke identity');
   equal(signatureAsset(damascus.logo), '/menu-art/damascus/damascus-logo-v1.webp', 'Corrected citadel and ribbon mark is used');
@@ -165,6 +181,10 @@ async function main() {
     check(html.includes(signatureAsset(brand.hero)) && html.includes(signatureAsset(brand.hero, true)), 'Desktop and mobile artwork belong to selected brand');
     check(html.includes(signatureAsset(brand.logo)), 'Central identity uses the brand original artwork');
     check(html.includes(`/loyalty/${slug}?source=menu`), 'Loyalty destination remains tenant scoped');
+    check(html.includes('data-loyalty-entry="true"') && html.includes('data-loyalty-layout="compact"'), 'Every bespoke signature brand receives the shared compact banner');
+    const lightLogo = ['arabi', 'masala', 'damascus', 'hadiqa', 'korma', 'box'].includes(brand.key);
+    check(html.includes('--loyalty-entry-card-background:' + (lightLogo ? 'var(--brand)' : '#fffaf1')), 'Each original logo receives a contrasting card face');
+    check(html.includes('--loyalty-entry-action-background:#fffaf1') && html.includes('--loyalty-entry-action-foreground:#241610'), 'Every signature banner keeps a cream action with contrasting dark text');
     const loading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
     check(loading.includes(signatureAsset(brand.logo)) && loading.includes('aria-busy="true"') && loading.includes('role="status"'), 'Loading has correct logo and accessible status');
     if (brand.key === 'once' || brand.key === 'black') {
@@ -190,7 +210,7 @@ async function main() {
   const korma = signatureBrand('brand-b042ca7f1a93');
   equal(korma.key, 'korma', 'Korma presentation is scoped to the exact brand');
   const kormaHtml = render({ brand: korma, menu: { ...menu, slug: 'brand-b042ca7f1a93', name: korma.name, logoUrl: null } });
-  check(kormaHtml.includes('lucide-utensils-crossed') && !kormaHtml.includes('lucide-coffee'), 'Korma uses restaurant stamps');
+  check(kormaHtml.includes('data-loyalty-layout="compact"') && kormaHtml.includes('لأنك من أهل KORMA'), 'Korma uses the compact banner with its own name');
   check(kormaHtml.includes('نكهات من قلب الهند') && kormaHtml.includes('سفرتك تبدأ هنا'), 'Korma has restaurant-specific introduction and catalog');
   equal(signatureAsset(korma.hero, true), '/menu-art/korma/korma-hero-mobile-v1.webp', 'Korma mobile artwork is independent');
   const alpha = await require('sharp')(path.join(root, 'public', signatureAsset(korma.logo))).metadata();
@@ -201,8 +221,8 @@ async function main() {
   equal(signatureAsset(garden.logo), '/menu-art/hadiqa/hadiqa-logo-v1.webp', 'Alhadiqa retains its separate original logo asset');
   equal(signatureAsset(garden.hero, true), '/menu-art/hadiqa/hadiqa-hero-mobile-v1.webp', 'Alhadiqa supplies dedicated mobile art');
   const gardenHtml = render({ brand: garden, menu: { ...menu, slug: 'brand-dcf7296f722c', name: garden.name, logoUrl: null } });
-  check(gardenHtml.includes('lucide-utensils-crossed') && !gardenHtml.includes('lucide-coffee'), 'Restaurant loyalty uses dining stamps instead of cafe cups');
-  check(gardenHtml.includes('من مطبخ الحديقة') && gardenHtml.includes('٦ أختام'), 'Restaurant catalog and actual configured loyalty are rendered together');
+  check(gardenHtml.includes('data-loyalty-layout="compact"') && !gardenHtml.includes('lucide-coffee'), 'Restaurant loyalty uses the compact card artwork without imaginary visit stamps');
+  check(gardenHtml.includes('من مطبخ الحديقة') && gardenHtml.includes('/loyalty/brand-dcf7296f722c?source=menu'), 'Restaurant catalog and its existing loyalty destination are rendered together');
   check(!render({ brand: garden, loyalty: null }).includes('id="signature-loyalty"'), 'Alhadiqa does not invent a program when server loyalty is disabled');
   const illustratedProduct = { ...product, description: 'صورة توضيحية للصنف' };
   const illustratedMenu = { ...menu, slug: 'brand-dcf7296f722c', products: [illustratedProduct, { ...product, id: 'original', name: 'صورة أصلية' }] };
@@ -218,10 +238,10 @@ async function main() {
   const catalog = html.slice(html.indexOf('id="signature-catalog"'), html.indexOf('<footer'));
   check(!catalog.includes('FEATURED CHOICE'), 'Promotional presentation is separate from the product grid');
   check(html.indexOf('id="signature-loyalty"') < html.indexOf('id="signature-offers"') && html.indexOf('id="signature-offers"') < html.indexOf('id="signature-catalog"'), 'Compact loyalty and spotlight precede catalog');
-  check(html.includes('٦ أختام') && html.includes('خصم 10%'), 'Six-stamp ten-percent configured program is explained');
+  check(html.includes('data-loyalty-layout="compact"') && !html.includes('خصم 10%'), 'Shared banner invites enrollment without duplicating program rules');
   equal(JSON.stringify(menu), unchanged, 'Rendering never mutates owner catalog data');
   html = render({ loyalty: { purchasesRequired: 4, rewardName: 'مكافأة مختلفة' } });
-  check(html.includes('٤ أختام') && html.includes('مكافأة مختلفة') && !html.includes('خصم 10%'), 'Rewards are taken from actual program props rather than hardcoded');
+  check(html.includes('data-loyalty-layout="compact"') && !html.includes('مكافأة مختلفة') && !html.includes('خصم 10%'), 'Owner program changes do not introduce hardcoded promo rewards');
   for (const state of [{ loyalty: null }, { menu: { ...menu, loyaltyEnabled: false } }]) check(!render(state).includes('id="signature-loyalty"'), 'Disabled loyalty never advertises enrollment');
   html = render({ menu: { ...menu, products: [], highlights: { asOf: now, items: [] } } });
   check(html.includes('اختياراتنا تتجهّز لك'), 'Empty catalog has a clear state');
@@ -336,6 +356,14 @@ async function main() {
   require('lightningcss').transform({ filename: 'signature-menu.module.css', code: Buffer.from(css), cssModules: true });
   const et1Tokens = Object.fromEntries([...css.match(/\.menu\[data-signature="et1"\] \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
   const dababTokens = Object.fromEntries([...css.match(/\.menu\[data-signature="dabab"\] \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
+  const baseTokens = Object.fromEntries([...css.match(/^\.menu \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
+  for (const brand of Object.values(signatureBrands)) {
+    const block = css.match(new RegExp('\\.menu\\[data-signature="'+brand.key+'"\\] \\{([^}]+)\\}'))?.[1] || '';
+    const tokens = { ...baseTokens, ...Object.fromEntries([...block.matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match=>[match[1],match[2]])) };
+    check(getContrastRatio(tokens.white,tokens.brand) >= 4.5, `${brand.key} banner headline is readable on its original brand color`);
+    check(getContrastRatio(tokens.accent,tokens.brand) >= 4.5, `${brand.key} banner supporting copy is readable on its original brand color`);
+  }
+  check(getContrastRatio('#241610','#fffaf1') >= 4.5, 'Shared cream action exceeds normal text contrast requirements');
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(dababTokens[foreground], dababTokens[background]) >= 4.5, `Dabab ${foreground} on ${background} meets readable text contrast`);
   }
@@ -345,13 +373,15 @@ async function main() {
   const dababMarkRules = css.match(/\.mark\[data-mark="dabab"\] img \{([^}]+)\}/)[1];
   check(dababMarkRules.includes('filter: none') && dababMarkRules.includes('mix-blend-mode: normal'), 'Dabab logo retains original color without tinting or blending');
   check(css.includes('.menu[data-signature="dabab"] .footer { background: var(--surface)') && css.includes('.menu[data-signature="dabab"].loading { background: var(--surface)'), 'Footer and loading keep the colored logo on a readable warm surface');
-  const dababRewardRules = css.match(/\.menu\[data-signature="dabab"\] \.cardReward strong \{([^}]+)\}/)[1];
-  check(dababRewardRules.includes('white-space: normal') && dababRewardRules.includes('overflow-wrap: anywhere') && dababRewardRules.includes('min-width: 0'), 'Dabab long reward text wraps and shrinks safely instead of inheriting mobile nowrap');
-  check(!/line-clamp|max-height|text-overflow/.test(dababRewardRules), 'Dabab reward content has no clipping or truncation limit');
-  const dababMobileRules = css.match(/@media \(max-width: 850px\) \{([\s\S]*?)\n\}/)[1];
-  check(dababMobileRules.includes('.menu[data-signature="dabab"] .loyalty { grid-template-columns: minmax(0,1fr)') && dababMobileRules.includes('width: 100%; min-height: 0'), 'Dabab mobile uses one full-width auto-height card before the copy');
-  check(dababMobileRules.includes('grid-template-columns: repeat(3,minmax(0,1fr))'), 'Six Dabab stamps have two generous mobile rows rather than a cramped half-width strip');
-  check(css.match(/\.menu\[data-signature="dabab"\] \.loyaltyAction \{([^}]+)\}/)[1].includes('min-height: 58px'), 'Dabab download action is a large full-width touch target');
+  const entryCss = fs.readFileSync(path.join(root, 'components/menu/brand-loyalty-entry.module.css'), 'utf8');
+  require('lightningcss').transform({ filename: 'brand-loyalty-entry.module.css', code: Buffer.from(entryCss), cssModules: true });
+  const dababMobileRules = entryCss.match(/@media \(max-width: 540px\) \{([\s\S]*?)\n\}/)[1];
+  check(dababMobileRules.includes('grid-template-columns: minmax(0,1fr) 84px') && dababMobileRules.includes('width: 80px; height: 104px'), 'Compact mobile banner matches the reference card scale and side-by-side composition');
+  check(entryCss.match(/\.copy \{([^}]+)\}/)[1].includes('grid-column: 1; grid-row: 1') && entryCss.match(/\.cardStack \{([^}]+)\}/)[1].includes('grid-column: 2; grid-row: 1'), 'RTL layout places the copy on the right and small stacked cards on the left');
+  const compactActionRules = entryCss.match(/\.action \{([^}]+)\}/)[1];
+  check(compactActionRules.includes('grid-column: 1 / -1') && compactActionRules.includes('min-height: 48px') && compactActionRules.includes('background: var(--loyalty-entry-action-background)'), 'Cream download action spans the whole row with a comfortable touch target');
+  check(entryCss.match(/\.entry \{([^}]+)\}/)[1].includes('max-width: 980px'), 'Desktop compact banner has a bounded width');
+  check(!css.includes('.cardIdentity') && !css.includes('.cardProgress') && !css.includes('.loyaltyBenefits') && !css.includes('.loyaltyHint') && !css.includes('min-height: 340px'), 'Unused expanded Dabab card styles are removed');
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['brand', 'hero-paper'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(et1Tokens[foreground], et1Tokens[background]) >= 4.5, `ET1 ${foreground} on ${background} meets readable text contrast`);
   }
@@ -381,7 +411,7 @@ async function checkDefaultPresentation() {
   }
   const owned = { ...fresh, logoUrl: '/owner-new-logo.webp', appearance: { palette: { primary: '#123456' }, heroUrl: 'https://example.test/owner-hero.webp' }, products: [product] };
   const brand = defaultSignatureBrand(owned), html = render({ menu: owned, brand });
-  check(html.includes(owned.logoUrl) && html.includes(owned.appearance.heroUrl) && html.includes('lucide-utensils-crossed'), 'Owner media and restaurant identity reach shared layout');
+  check(html.includes(owned.logoUrl) && html.includes(owned.appearance.heroUrl) && html.includes('data-loyalty-layout="compact"'), 'Owner media and the compact loyalty entry reach the automatic new-brand layout');
   equal(defaultSignatureBrand({ ...fresh, presentation: undefined }), null, 'Legacy DTO cannot opt into new layout accidentally');
   equal(defaultSignatureBrand({ ...fresh, businessCategory: 'gifts_flowers' }), null, 'Gift stores do not inherit food menus');
   const h = hooks(), Dynamic = load('components/menu/signature-menu.tsx', { ...mocks, react: h.api }).SignatureMenu;

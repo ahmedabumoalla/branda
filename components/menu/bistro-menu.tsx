@@ -11,6 +11,7 @@ import { MenuServices } from "./menu-services";
 import { DishMotion } from "./menu-motion";
 import { RastConnect } from "./rast-connect";
 import { RastLoyaltyEntry } from "./rast-loyalty-entry";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
 import { ProductOfferBadge, ProductOfferDetails } from "./product-offer-details";
 import spotlight from "./rast-spotlight.module.css";
@@ -315,11 +316,13 @@ export function BistroMenu({ menu: sourceMenu }: { menu: StandaloneMenu }) {
     </section>}
     {isRast && <RastConnect />}
     {isKath && <RastConnect previewBrand={editorialBrand(menu.slug).name} />}
-    {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry />}
+    {isRast && menu.loyaltyEnabled && <RastLoyaltyEntry menu={menu} />}
     {isKath && <KathLoyaltyEntry menu={menu} />}
     {isShahi && <ShahiLoyalty menu={menu} />}
     {isTaza && <TazaLoyalty menu={menu} />}
     {isDeli && <DeliLoyalty menu={menu} />}
+    {!isEditorial && menu.loyaltyEnabled && <BrandLoyaltyEntry slug={menu.slug} name={displayName} logoUrl={menu.logoUrl}
+      palette={{ background: "var(--ink)", foreground: "var(--paper)", muted: "var(--paper)", cardBackground: "var(--paper)", cardForeground: "var(--ink)", cardBack: "var(--gold)" }} />}
     <div className={`${s.catalog}${isShahi ? ` ${majlis.catalog}` : ""}${isTaza ? ` ${taza.catalog}` : ""}${isDeli ? ` ${deli.catalog}` : ""}`} id="menu-catalog">
       {isDeli && <DeliOffers menu={menu} onSelect={setSelected} />}
       {isEditorial && !isTaza && !isDeli && <RastSpotlight menu={menu} onSelect={setSelected} />}

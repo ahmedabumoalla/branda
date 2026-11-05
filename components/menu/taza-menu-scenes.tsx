@@ -1,14 +1,11 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { ArrowDownLeft, ArrowUpLeft, Coffee, Search, Share2, WalletCards } from "lucide-react";
 import type { StandaloneMenu, StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { kathResponsiveImage } from "@/lib/menu/kath-images";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import s from "./taza-menu.module.css";
-import loyalty from "./rast-loyalty-entry.module.css";
 
 function TazaMark({ menu, className }: { menu: StandaloneMenu; className: string }) {
   // Preserve the owner's current logo and its original colors
@@ -65,26 +62,7 @@ export function TazaHero({ menu, onSearch, onShare, onSelect }: { menu: Standalo
 
 export function TazaLoyalty({ menu }: { menu: StandaloneMenu }) {
   if (!menu.loyaltyEnabled) return null;
-  return <section className={s.membership} id="taza-membership" aria-label="بطاقة ولاء تازا">
-    <Link className={loyalty.entry} href={`/loyalty/${encodeURIComponent(menu.slug)}?source=menu`} aria-label="حمّل بطاقة ولاء تازا"
-      onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")}
-      onAuxClick={event => { if (event.button === 1) trackBrandEngagement(menu.slug, "menu_loyalty_click"); }}>
-      <span className={loyalty.cardIllustration} aria-hidden="true">
-        <span className={loyalty.cardBack} />
-        <span className={loyalty.cardFront}>
-          <span className={loyalty.cardTop}><span dir="ltr">TAZA</span><WalletCards /></span>
-          <span className={loyalty.cardBrand}><TazaMark menu={menu} className={s.cardLogo} /></span>
-          <span className={loyalty.cardCaption}>بطاقة الولاء</span>
-        </span>
-      </span>
-      <span className={loyalty.copy}>
-        <span className={loyalty.eyebrow}>لأنك من أهل تازا</span>
-        <span className={loyalty.title}>بطاقتك معك في كل زيارة</span>
-        <span className={loyalty.description}>حمّل بطاقة الولاء واجمع أختامك مع كل زيارة</span>
-      </span>
-      <LoyaltyLinkContent className={`${loyalty.action} ${s.memberAction}`} />
-    </Link>
-  </section>;
+  return <BrandLoyaltyEntry slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl || "/menu-logos/taza-extracted-20261014.webp"} id="taza-membership" eyebrow="لأنك من أهل تازا" description="حمّل بطاقة الولاء واجمع أختامك مع كل زيارة" palette={{ background: "var(--taza-deep)", foreground: "var(--taza-paper)", muted: "var(--taza-sand)", cardBackground: "var(--taza-paper)", cardForeground: "var(--taza-deep)", cardBack: "var(--taza-blue)" }} />;
 }
 
 export function TazaClosing({ menu }: { menu: StandaloneMenu }) {

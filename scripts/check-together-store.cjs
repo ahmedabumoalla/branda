@@ -36,17 +36,21 @@ assert.equal(previewGiftOrderTotal(84, 'delivery', settings).total, 109);
 assert.equal(previewGiftOrderTotal(84, 'pickup', settings).total, 84);
 assert.deepEqual(previewGiftOrderTotal(115, 'pickup', { ...settings, vatRate: 15 }), { subtotal: 115, deliveryFee: 0, tax: 15, total: 115 });
 const noop = () => {};
-const mocks = { 'next/link': ({ children, ...props }) => React.createElement('a', props, children), 'next/navigation': { useRouter: () => ({ refresh: noop }) }, '@/app/actions/gift-orders': { submitGiftOrderAction: noop, trackGiftOrderAction: async () => ({ ok: false, error: 'غير موجود' }) }, '@/lib/analytics/public-tracking': { trackBrandEngagement: noop } };
+const mocks = { 'next/link': Object.assign(({ children, ...props }) => React.createElement('a', props, children), { useLinkStatus: () => ({ pending: false }) }), 'next/image': ({ unoptimized, ...props }) => React.createElement('img', props), 'next/navigation': { useRouter: () => ({ refresh: noop }) }, '@/app/actions/gift-orders': { submitGiftOrderAction: noop, trackGiftOrderAction: async () => ({ ok: false, error: 'غير موجود' }) }, '@/lib/analytics/public-tracking': { trackBrandEngagement: noop } };
 const { TogetherStore, TogetherHero } = load('components/store/together-store.tsx', mocks);
 const menu = { name: 'Together Plants', slug: 'brand-871ec6e243c0', businessCategory: 'gifts_flowers', products: [product, { ...product, id: '22222222-2222-4222-8222-222222222222', name: 'ورشة الفخار', available: false, catalogKind: 'service' }], categories: [{ id: 'plants', name: 'أصدقاء الظل' }], contacts: {}, logoUrl: null, loyaltyEnabled: true };
 const html = renderToStaticMarkup(React.createElement(TogetherStore, { menu, settings, loyalty: { purchasesRequired: 4, rewardName: 'خصم 10%' } }));
-for (const token of ['immersive-canopy-v6', 'signature-card', 'complete-original', 'غراس وهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'خصم 10%', '/loyalty/brand-871ec6e243c0', 'atelier-desk-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
+for (const token of ['immersive-canopy-v6', 'data-loyalty-layout="compact"', 'complete-original', 'غراس وهدايا', 'أهدِ حبًّا', 'نفد حاليًا', 'ورشة الفخار', 'الخدمات والورش', 'بطاقتك معك في كل زيارة', '/loyalty/brand-871ec6e243c0', 'atelier-desk-mobile.webp', 'تفاصيل غرسة', 'https://linktr.ee/together2000', 'id="together-partners"']) assert(html.includes(token), token);
 const partners = JSON.parse(fs.readFileSync('data/together-partners.json', 'utf8')).partners;
 assert.equal(partners.length, 6);
 for (const partner of partners) { assert(html.includes(partner.path)); assert(fs.existsSync('public' + partner.path)); }
 assert(html.indexOf('id="together-top"') < html.indexOf('id="together-loyalty"'));
 assert(html.indexOf('id="together-loyalty"') < html.indexOf('id="together-products"'), 'Loyalty must follow the hero before the catalog');
 assert(!html.includes('6000'));
+assert.equal((html.match(/data-loyalty-entry/g) || []).length, 1, 'Exactly one shared compact loyalty promotion');
+assert(html.includes('/together/logo.webp'), 'Store identity retained');
+assert(!renderToStaticMarkup(React.createElement(TogetherStore, { menu: { ...menu, loyaltyEnabled: false }, settings, loyalty: { purchasesRequired: 4, rewardName: 'test' } })).includes('data-loyalty-entry'));
+assert(!renderToStaticMarkup(React.createElement(TogetherStore, { menu, settings, loyalty: null })).includes('data-loyalty-entry'));
 // Exercise real form handlers, including validation and server retry idempotency.
 function hooks() { let slots = [], cursor = 0; return { api: { ...React, useEffect: noop, useRef(value) { const i = cursor++; return slots[i] ?? (slots[i] = { current: value }); }, useState(value) { const i = cursor++; if (!(i in slots)) slots[i] = typeof value === 'function' ? value() : value; return [slots[i], next => slots[i] = typeof next === 'function' ? next(slots[i]) : next]; } }, draw(fn, props) { cursor = 0; return fn(props); } }; }
 const nodes = t => !t || typeof t !== 'object' ? [] : Array.isArray(t) ? t.flatMap(nodes) : [t, ...nodes(t.props?.children)];

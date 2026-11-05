@@ -3,15 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Gift, Search, Share2, Sparkles, WalletCards, Pause, Play, Palette, PartyPopper } from "lucide-react";
+import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Coffee, Search, Share2, Sparkles, WalletCards, Pause, Play, Palette, PartyPopper } from "lucide-react";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
 import { getProductOffers, getPublishedOfferPromo } from "@/lib/offers/published-offers";
-import { trackBrandEngagement } from "@/lib/analytics/public-tracking";
 import { menuEntryUrl, startMenuAtTop } from "@/lib/menu/menu-entry-scroll";
 import { ProductDetails } from "./bistro-menu";
 import { MenuServices } from "./menu-services";
-import { LoyaltyLinkContent } from "./loyalty-link-content";
+import { BrandLoyaltyEntry } from "./brand-loyalty-entry";
 import base from "./bistro-menu.module.css";
 import s from "./loco-menu.module.css";
 
@@ -153,7 +152,6 @@ export function LocoMenu({ menu: source, loyalty }: { menu: StandaloneMenu; loya
     if (shareTimer.current) clearTimeout(shareTimer.current);
     shareTimer.current = setTimeout(() => setMessage(""), 4000);
   }
-  const loyaltyHref = `/loyalty/${encodeURIComponent(menu.slug)}?source=menu`;
   const logo = "/loco/logo.svg";
   return <main ref={root} className={`${base.menu} ${s.page}`} dir="rtl" data-loco-menu="editorial-v3" data-branch={drive ? "drive" : "murooj"}>
     <a href="#loco-catalog" className={base.skipLink}>انتقل إلى الأصناف</a>
@@ -170,7 +168,7 @@ export function LocoMenu({ menu: source, loyalty }: { menu: StandaloneMenu; loya
       <div className={s.ribbon} aria-hidden="true"><span>رشفة</span><Sparkles /><span>لقمة</span><Sparkles /><span>لحظة حلوة</span><Sparkles /><span dir="ltr">LOCÓ MOOD</span></div>
     </section>
     <LocoSpotlight key={menu.branch?.id ?? menu.slug} offers={offers} menu={menu} onSelect={setSelectedId} />
-    {menu.loyaltyEnabled && loyalty && <section className={s.membership} id="loco-loyalty" aria-labelledby="loco-loyalty-title"><div className={s.membershipCopy}><p className={s.kicker}>للّي لوكو على باله</p><h2 id="loco-loyalty-title">زيارتك تحلى<br /><span>ومكافأتك تقرّب</span></h2><p>اجمع {loyalty.purchasesRequired.toLocaleString("ar-SA")} أختام واحصل على {loyalty.rewardName}</p><Link href={loyaltyHref} onClick={() => trackBrandEngagement(menu.slug, "menu_loyalty_click")} className={s.primary}><LoyaltyLinkContent label="افتح بطاقة الولاء" /><ArrowUpLeft aria-hidden="true" /></Link></div><Link href={loyaltyHref} className={s.memberCard} aria-label="افتح بطاقة ولاء لوكو"><Photo src={logo} alt="لوكو" /><span>بطاقة الولاء</span><div className={s.stamps} aria-hidden="true">{Array.from({ length: Math.min(loyalty.purchasesRequired, 10) }, (_, i) => <span key={i}>{i === Math.min(loyalty.purchasesRequired, 10) - 1 ? <Gift /> : <Coffee />}</span>)}</div><div className={s.cardBottom}><span>مكافأتك<strong>{loyalty.rewardName}</strong></span><WalletCards aria-hidden="true" /></div></Link></section>}
+    {menu.loyaltyEnabled && loyalty && <BrandLoyaltyEntry id="loco-loyalty" slug={menu.slug} name={menu.name} logoUrl={menu.logoUrl || logo} eyebrow="للّي لوكو على باله" palette={{ background: "var(--loco-ink)", foreground: "var(--loco-cream)", muted: "var(--loco-pink)", cardBackground: "var(--loco-cream)", cardForeground: "var(--loco-ink)", cardBack: "var(--loco-red)" }} />}
     <section className={s.catalog} id="loco-catalog" aria-labelledby="loco-catalog-title"><div className={s.sectionHeading}><div><p className={s.kicker}>منيو لوكو</p><h2 id="loco-catalog-title">اختيارات <em>تفتح النفس</em></h2></div><span dir="ltr">PICK YOUR MOOD</span></div><div className={s.toolbar}><nav className={s.categories} aria-label="أقسام المنيو">{[{ id: "all", name: "الكل" }, ...categories].map(c => <button key={c.id} type="button" aria-pressed={category === c.id} onClick={() => chooseCategory(c.id)}>{menuDisplayText(c.name)}</button>)}</nav><div className={s.tools}><label className={s.search}><Search aria-hidden="true" /><input ref={search} type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="وش خاطرك فيه؟" aria-label="ابحث في منيو لوكو" /></label><label className={s.order}><span>الترتيب</span><select value={order} onChange={e => setOrder(e.target.value)}><option value="original">ترتيب المنيو</option><option value="low">الأقل سعرًا</option><option value="high">الأعلى سعرًا</option></select></label></div></div><p className={query ? s.result : base.screenReaderOnly} role="status">{visible.length} صنفًا{query && " يطابق بحثك"}</p>{sections.map(section => <section key={section.id} className={s.categorySection} aria-labelledby={`loco-${section.id}`}><div className={s.categoryHeading}><h3 id={`loco-${section.id}`}>{menuDisplayText(section.name)}</h3><span>{section.products.length} اختيارات</span></div><div className={s.grid}>{section.products.map(p => <motion.article key={p.id} className={s.product} initial={false} whileInView={reduce ? undefined : { y: [18, 0] }} viewport={{ once: true, amount: .12 }} transition={{ duration: .45 }}><button type="button" className={s.productButton} data-has-photo={p.images.length > 0} onClick={() => setSelectedId(p.id)} aria-label={`تفاصيل ${p.name}`}>{p.images.length > 0 && <span className={s.productPhoto}><Photo src={p.images[0]?.url} alt={p.name} /><span className={s.productOpen}><ArrowUpLeft aria-hidden="true" /></span></span>}<span className={s.productInfo}><span className={s.productCategory}>{menuDisplayText(p.category)}</span><strong>{menuDisplayText(p.name)}</strong><Price product={p} /></span></button></motion.article>)}</div></section>)}{!sections.length && <div className={s.empty}><Search aria-hidden="true" /><h3>{menu.products.length ? "ما لقينا صنف بهذا البحث" : "المنيو يتجهّز لك"}</h3>{menu.products.length > 0 && <button type="button" onClick={() => { setQuery(""); setCategory("all"); setOrder("original"); }}>عرض كل الأصناف</button>}</div>}</section>
     <footer className={s.footer}><Photo src={logo} alt="لوكو" /><p>كل مزاج وله لوكو</p><a href="#loco-top">نرجع للبداية<ArrowUpLeft aria-hidden="true" /></a><Link href="/" className={s.powered}>بواسطة برندة</Link></footer>{message && <div className={base.toast} role="status"><Check aria-hidden="true" />{message}</div>}<AnimatePresence mode="wait">{selected && <ProductDetails key={selected.id} brandSlug={menu.slug} product={selected} products={menu.products} close={() => setSelectedId(null)} browse={browse} position={browseProducts.findIndex(p => p.id === selected.id)} total={browseProducts.length} />}</AnimatePresence>
   </main>;
