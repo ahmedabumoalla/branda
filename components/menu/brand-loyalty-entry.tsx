@@ -12,6 +12,7 @@ export type BrandLoyaltyEntryPalette = {
   background?: string;
   foreground?: string;
   muted?: string;
+  /** Card face, or inner logo surface when logoEmphasis is enabled. */
   cardBackground?: string;
   cardForeground?: string;
   cardBack?: string;
@@ -28,11 +29,12 @@ export type BrandLoyaltyEntryProps = {
   eyebrow?: string;
   description?: string;
   source?: "menu" | "salon";
+  logoEmphasis?: boolean;
   palette?: BrandLoyaltyEntryPalette;
 };
 
 /** Presentation only: callers retain their existing loyalty entitlement gate. */
-export function BrandLoyaltyEntry({ slug, name, logoUrl, id, className, eyebrow, description, source = "menu", palette }: BrandLoyaltyEntryProps) {
+export function BrandLoyaltyEntry({ slug, name, logoUrl, id, className, eyebrow, description, source = "menu", logoEmphasis = false, palette }: BrandLoyaltyEntryProps) {
   const style = {
     "--loyalty-entry-background": palette?.background || "#701e32",
     "--loyalty-entry-foreground": palette?.foreground || "#fffaf1",
@@ -43,13 +45,15 @@ export function BrandLoyaltyEntry({ slug, name, logoUrl, id, className, eyebrow,
     "--loyalty-entry-action-background": palette?.actionBackground || palette?.cardBackground || "#fffaf1",
     "--loyalty-entry-action-foreground": palette?.actionForeground || palette?.cardForeground || "#701e32",
   } as CSSProperties;
-  return <section id={id} className={[s.section, className].filter(Boolean).join(" ")} style={style} data-loyalty-entry data-loyalty-layout="compact" aria-label={`بطاقة ولاء ${name}`}>
+  return <section id={id} className={[s.section, className].filter(Boolean).join(" ")} style={style} data-loyalty-entry data-loyalty-layout="compact" data-logo-emphasis={logoEmphasis || undefined} aria-label={`بطاقة ولاء ${name}`}>
     <Link href={`/loyalty/${encodeURIComponent(slug)}?source=${source}`} className={s.entry} aria-label={`حمّل بطاقة ولاء ${name}`}
       onClick={() => trackBrandEngagement(slug, "menu_loyalty_click")}
       onAuxClick={event => { if (event.button === 1) trackBrandEngagement(slug, "menu_loyalty_click"); }}>
       <span className={s.cardStack} aria-hidden="true"><span className={s.cardBack} /><span className={s.cardFront}>
-        <span className={s.cardTop}><span dir="auto">{name}</span><WalletCards /></span>
-        {logoUrl ? <Image className={s.logo} src={logoUrl} alt="" width={72} height={56} unoptimized /> : <span className={s.monogram}>{Array.from(name.trim()).slice(0, 2).join("")}</span>}
+        {logoEmphasis ? <span className={s.logoPlate}>{logoUrl ? <Image className={s.logo} src={logoUrl} alt="" width={94} height={88} unoptimized /> : <span className={s.monogram}>{Array.from(name.trim()).slice(0, 2).join("")}</span>}</span> : <>
+          <span className={s.cardTop}><span dir="auto">{name}</span><WalletCards /></span>
+          {logoUrl ? <Image className={s.logo} src={logoUrl} alt="" width={72} height={56} unoptimized /> : <span className={s.monogram}>{Array.from(name.trim()).slice(0, 2).join("")}</span>}
+        </>}
         <span className={s.cardCaption}>بطاقة الولاء</span>
       </span></span>
       <span className={s.copy}><span className={s.eyebrow}>{eyebrow || `لأنك من أهل ${name}`}</span><span className={s.title}>بطاقتك معك في كل زيارة</span><span className={s.description}>{description || "حمّل بطاقة الولاء وخلّ لحظاتك معنا أقرب"}</span></span>

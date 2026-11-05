@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import ts from 'typescript';
+import sharp from 'sharp';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 const require=createRequire(import.meta.url),root=process.cwd();
@@ -93,4 +94,18 @@ check('Experience supports general campaigns and events using the French catalog
  assert(r.html.includes('data-french-offer="general"'));assert(r.html.includes('data-french-offer="event"'));assert(r.html.includes('2026-10-24'));assert(r.html.includes('18:00'));assert(!r.html.includes('#rast-menu-items'));assert(!r.html.includes('RAST'));state=[];
 });
 const route=fs.readFileSync('app/menu/[slug]/page.tsx','utf8');assert(route.includes('menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu'));assert(route.includes('if (showcase) return <div inert>{presentation}</div>'));
+const {menuLoadingBrand}=load('lib/menu/loading-brands.ts');
+const {BrandedMenuLoading}=load('components/menu/branded-menu-loading.tsx');
+const loadingBrand=menuLoadingBrand(source.slug),loadingAsset=path.join(root,'public',loadingBrand.logo);
+const [loadingMetadata,loadingStats,originalMetadata]=await Promise.all([sharp(loadingAsset).metadata(),sharp(loadingAsset).stats(),sharp('public/french-corner/official-logo.png').metadata()]);
+check('French loading uses the complete transparent published logo without a black square or color blending',()=>{
+ assert(loadingMetadata.hasAlpha&&!loadingStats.isOpaque);
+ assert.equal(loadingStats.channels[3].min,0);
+ assert.equal(loadingMetadata.width,originalMetadata.width);assert.equal(loadingMetadata.height,originalMetadata.height);
+ assert.equal(loadingBrand.blend,undefined);
+ const loadingHtml=renderToStaticMarkup(React.createElement(BrandedMenuLoading,{brand:loadingBrand}));
+ assert(loadingHtml.includes('src="/french-corner/official-logo-transparent-v1.webp"'));
+ assert(loadingHtml.includes('class="logo"')&&!loadingHtml.includes('blendedLogo'));
+ assert(loadingHtml.includes('aria-busy="true"')&&loadingHtml.includes('role="status"'));
+});
 console.log(`${checks} French Corner behavior groups and tenant/preview routing passed`);

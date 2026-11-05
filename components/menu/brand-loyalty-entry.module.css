@@ -35,3 +35,14 @@
   .description { font-size: 11px; }
   .action { padding: 11px 15px; font-size: 12px; }
 }
+.section[data-logo-emphasis="true"] .entry::before { border-color: color-mix(in srgb,var(--loyalty-entry-action-background) 18%,transparent); }
+.section[data-logo-emphasis="true"] .cardStack { width: 110px; height: 128px; }
+.section[data-logo-emphasis="true"] .cardBack { border-color: color-mix(in srgb,var(--loyalty-entry-action-background) 35%,transparent); }
+.section[data-logo-emphasis="true"] .cardFront { display: grid; grid-template-rows: 88px 14px; gap: 6px; padding: 9px 7px; border: 1px solid color-mix(in srgb,var(--loyalty-entry-action-foreground) 12%,transparent); background: var(--loyalty-entry-action-background); color: var(--loyalty-entry-action-foreground); box-shadow: 0 6px 16px #00000024; }
+.logoPlate { display: grid; place-items: center; width: 100%; min-width: 0; height: 88px; border-radius: 5px; background: var(--loyalty-entry-card-background); color: var(--loyalty-entry-card-foreground); }
+.section[data-logo-emphasis="true"] .logo, .section[data-logo-emphasis="true"] .monogram { width: 94px; max-width: 100%; height: 88px; margin: 0 auto; }
+.section[data-logo-emphasis="true"] .cardCaption { font-size: 10px; font-weight: 600; line-height: 1.4; }
+@media (max-width: 540px) {
+  .section[data-logo-emphasis="true"] .entry { grid-template-columns: minmax(0,1fr) 112px; gap: 16px 12px; padding: 20px 18px; }
+  .section[data-logo-emphasis="true"] .title { font-size: 20px; line-height: 1.6; }
+}

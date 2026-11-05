@@ -103,6 +103,7 @@ async function main() {
   check(dababLoyaltySection.includes('data-loyalty-layout="compact"'), 'Dabab uses the requested compact reference composition');
   check(dababLoyaltySection.includes('class="cardStack" aria-hidden="true"') && dababLoyaltySection.includes('class="cardBack"') && dababLoyaltySection.includes('class="cardFront"'), 'Small stacked cards are decorative and hidden from assistive technology');
   check(dababLoyaltySection.includes(signatureAsset(dabab.logo)), 'Compact card illustration carries the actual Dabab wheat logo');
+  check(!dababLoyaltySection.includes('data-logo-emphasis') && !dababLoyaltySection.includes('class="logoPlate"') && dababLoyaltySection.includes('class="cardTop"'), 'Approved Dabab banner keeps its original card composition');
   check(dababLoyaltySection.includes('بطاقتك معك في كل زيارة') && dababLoyaltySection.includes('لأنك من أهل ضباب'), 'Compact banner uses the requested reference heading and a Dabab-specific eyebrow');
   check(!dababLoyaltySection.includes('data-loyalty-stamp') && !dababLoyaltySection.includes('dabab-loyalty-reward') && !dababLoyaltySection.includes('class="loyaltyBenefits"'), 'Compact promotion has no expanded stamp grid, reward details or tall benefits list');
   check(dababLoyaltySection.includes('حمّل بطاقتك') && dababLoyaltySection.includes('aria-label="حمّل بطاقة ولاء ضباب"'), 'One clear labeled download action introduces the card');
@@ -127,6 +128,16 @@ async function main() {
   check(salonEntry.includes('--loyalty-entry-background:#123456') && salonEntry.includes('--loyalty-entry-card-background:#fffaf1'), 'Shared banner carries the caller brand palette');
   const whiteLogoEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'white-logo', name: 'علامة بشعار أبيض', logoUrl: '/white.webp', palette: { cardBackground: '#123456', cardForeground: '#ffffff', actionBackground: '#fffaf1', actionForeground: '#241610' } }));
   check(whiteLogoEntry.includes('--loyalty-entry-card-background:#123456') && whiteLogoEntry.includes('--loyalty-entry-action-background:#fffaf1') && whiteLogoEntry.includes('--loyalty-entry-action-foreground:#241610'), 'A dark face for a white logo remains independent of the readable cream action');
+  check(whiteLogoEntry.includes('class="cardTop"') && !whiteLogoEntry.includes('data-logo-emphasis'), 'Shared callers preserve the approved original card by default');
+  const emphasizedEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'wide-logo', name: 'علامة بشعار أفقي', logoUrl: '/wide-logo.webp', logoEmphasis: true, palette: { cardBackground: '#123456', actionBackground: '#fffaf1', actionForeground: '#241610' } }));
+  check(emphasizedEntry.includes('data-logo-emphasis="true"') && emphasizedEntry.includes('class="logoPlate"') && !emphasizedEntry.includes('class="cardTop"'), 'Opt-in logo emphasis removes the duplicated tiny name and icon');
+  check(emphasizedEntry.includes('width="94" height="88"') && emphasizedEntry.includes('/wide-logo.webp') && emphasizedEntry.includes('class="cardStack" aria-hidden="true"'), 'Framed card enlarges original artwork without changing or recropping it');
+  equal((emphasizedEntry.match(/class="cardCaption"/g) || []).length, 1, 'Emphasized card keeps only one loyalty caption');
+  check(emphasizedEntry.includes('/loyalty/wide-logo?source=menu') && emphasizedEntry.includes('aria-label="حمّل بطاقة ولاء علامة بشعار أفقي"') && emphasizedEntry.includes('حمّل بطاقتك'), 'Logo emphasis preserves the accessible download destination');
+  const emphasizedTree = LoyaltyInteractive({ slug: 'wide-logo', name: 'علامة بشعار أفقي', logoUrl: '/wide-logo.webp', logoEmphasis: true });
+  nodes(emphasizedTree).find(node => node.props?.className === 'entry').props.onClick();
+  equal(loyaltyEvents.at(-1), ['wide-logo', 'menu_loyalty_click'], 'Emphasized card preserves current-brand click tracking');
+  check(nodes(emphasizedTree).some(node => node.props?.className === 'action' && node.props?.label === 'حمّل بطاقتك'), 'Emphasized card preserves the existing navigation pending state');
   const noLogoEntry = renderToStaticMarkup(React.createElement(BrandLoyaltyEntry, { slug: 'new-brand', name: 'علامة جديدة' }));
   check(noLogoEntry.includes('class="monogram"') && !noLogoEntry.includes('<img') && !noLogoEntry.includes('barndaksa-logo'), 'Brand without a logo receives its own initials rather than another identity');
   check(dababHtml.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86') && dababHtml.includes('موقع ضباب'), 'Dabab links only its verified official location');
@@ -182,8 +193,9 @@ async function main() {
     check(html.includes(signatureAsset(brand.logo)), 'Central identity uses the brand original artwork');
     check(html.includes(`/loyalty/${slug}?source=menu`), 'Loyalty destination remains tenant scoped');
     check(html.includes('data-loyalty-entry="true"') && html.includes('data-loyalty-layout="compact"'), 'Every bespoke signature brand receives the shared compact banner');
-    const lightLogo = ['arabi', 'masala', 'damascus', 'hadiqa', 'korma', 'box'].includes(brand.key);
+    const lightLogo = ['arabi', 'masala', 'damascus', 'hadiqa', 'box'].includes(brand.key);
     check(html.includes('--loyalty-entry-card-background:' + (lightLogo ? 'var(--brand)' : '#fffaf1')), 'Each original logo receives a contrasting card face');
+    equal(html.includes('data-logo-emphasis="true"'), lightLogo || ['korma', 'rast', 'sadeem'].includes(brand.key), 'Only reviewed low-clarity signature logos receive the larger framed card');
     check(html.includes('--loyalty-entry-action-background:#fffaf1') && html.includes('--loyalty-entry-action-foreground:#241610'), 'Every signature banner keeps a cream action with contrasting dark text');
     const loading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
     check(loading.includes(signatureAsset(brand.logo)) && loading.includes('aria-busy="true"') && loading.includes('role="status"'), 'Loading has correct logo and accessible status');
@@ -381,6 +393,13 @@ async function main() {
   const compactActionRules = entryCss.match(/\.action \{([^}]+)\}/)[1];
   check(compactActionRules.includes('grid-column: 1 / -1') && compactActionRules.includes('min-height: 48px') && compactActionRules.includes('background: var(--loyalty-entry-action-background)'), 'Cream download action spans the whole row with a comfortable touch target');
   check(entryCss.match(/\.entry \{([^}]+)\}/)[1].includes('max-width: 980px'), 'Desktop compact banner has a bounded width');
+  const emphasizedFrontRules = entryCss.match(/\.section\[data-logo-emphasis="true"\] \.cardFront \{([^}]+)\}/)[1];
+  const emphasizedLogoRules = entryCss.match(/\.section\[data-logo-emphasis="true"\] \.logo, [^{]+\{([^}]+)\}/)[1];
+  check(emphasizedFrontRules.includes('background: var(--loyalty-entry-action-background)') && emphasizedFrontRules.includes('border: 1px') && emphasizedFrontRules.includes('box-shadow:'), 'Emphasized card has a visible cream frame and separation from dark banners');
+  check(entryCss.match(/\.logoPlate \{([^}]+)\}/)[1].includes('background: var(--loyalty-entry-card-background)'), 'Original light and gold marks retain their contrasting inner logo surface');
+  check(entryCss.includes('.section[data-logo-emphasis="true"] .cardStack { width: 110px; height: 128px; }') && emphasizedLogoRules.includes('width: 94px; max-width: 100%; height: 88px; margin: 0 auto'), 'Only opted-in cards gain a wider 94px logo inside the compact 110px frame');
+  check(entryCss.includes('.section[data-logo-emphasis="true"] .entry { grid-template-columns: minmax(0,1fr) 112px; gap: 16px 12px; padding: 20px 18px; }') && entryCss.includes('.section[data-logo-emphasis="true"] .title { font-size: 20px; line-height: 1.6; }'), 'Emphasized mobile cards leave flexible text space and keep the compact banner composition');
+  check(emphasizedFrontRules.includes('grid-template-rows: 88px 14px; gap: 6px; padding: 9px 7px') && entryCss.includes('.section[data-logo-emphasis="true"] .cardCaption { font-size: 10px; font-weight: 600; line-height: 1.4; }'), 'The emphasized logo and one readable caption fit the card without clipping');
   check(!css.includes('.cardIdentity') && !css.includes('.cardProgress') && !css.includes('.loyaltyBenefits') && !css.includes('.loyaltyHint') && !css.includes('min-height: 340px'), 'Unused expanded Dabab card styles are removed');
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['brand', 'hero-paper'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(et1Tokens[foreground], et1Tokens[background]) >= 4.5, `ET1 ${foreground} on ${background} meets readable text contrast`);
