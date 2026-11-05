@@ -40,4 +40,4 @@
 ## Next action
 
 - Admin sets the intended discount/terms and explicitly confirms a real campaign; no campaign is launched automatically
-- Exact live migration and production commit verification is appended below after publication
+- Published 2026-11-05T08:30:40.824Z: GitHub main 33776399d66d4dde308161121ab6803e88a9726d, Vercel dpl_9inGgvG6VLdzPKt7X95wsw8et3We READY with exact SHA and both production aliases verified; live anonymous analytics/cashier, three service-only coupon RPCs and worker route remain protected; no real coupons or messages issued
