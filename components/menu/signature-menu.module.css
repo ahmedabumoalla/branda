@@ -4,38 +4,59 @@
   --gutter: clamp(20px, 4.5vw, 72px); --space: clamp(32px, 5vw, 72px);
   background: var(--surface); color: var(--text); font-family: "Bistro Arabic", sans-serif; min-height: 100svh; isolation: isolate; overflow: clip;
 }
-.menu[data-signature="dabab"] { --brand: #134b3d; --tone: #376958; --accent: #e5ebd8; --surface: #f6f7f1; --text: #153e34; --muted: #52675d; --edge: #d5dfd6; --white: #ffffff; --panel: #103d33; }
-.menu[data-signature="dabab"] .hero { min-height: 100svh; }
-.menu[data-signature="dabab"] .heroShade { background: linear-gradient(180deg,#082f29e8 0%,#082f29b8 42%,#082f2940 78%,#082f2990); }
+.menu[data-signature="dabab"] { --brand: #9b3f27; --tone: #734d3a; --accent: #f1dab7; --surface: #f6efe2; --text: #2d221d; --muted: #756050; --edge: #dfcfbd; --white: #fffaf2; --panel: #412b22; }
+.menu[data-signature="dabab"] .hero { min-height: 100svh; background: var(--surface); color: var(--text); }
+.menu[data-signature="dabab"] .heroShade { background: linear-gradient(180deg,#f6efe2 0%,#f6efe2f5 30%,#f6efe2dc 52%,#f6efe230 77%,#f6efe2b8 92%,#f6efe2); }
 .menu[data-signature="dabab"] .backdrop img { object-position: center bottom; }
-.menu[data-signature="dabab"] .heroCenter { justify-content: flex-start; padding-top: clamp(24px,5svh,58px); padding-bottom: clamp(150px,24svh,240px); }
-.mark[data-mark="dabab"] { width: clamp(200px,24vw,290px); max-width: 72vw; height: 160px; }
+.menu[data-signature="dabab"] .lightSweep { display: none; }
+.menu[data-signature="dabab"] .header { border-color: var(--edge); background: #f6efe2eb; }
+.menu[data-signature="dabab"] .headerBrand { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.menu[data-signature="dabab"] .header .mark { width: 84px; height: 74px; flex-shrink: 0; }
+.menu[data-signature="dabab"] .header nav > button { color: var(--brand); border-color: var(--edge); background: var(--white); }
+.menu[data-signature="dabab"] .heroCenter { justify-content: flex-start; padding-top: clamp(18px,3svh,34px); padding-bottom: clamp(150px,23svh,230px); }
+.mark[data-mark="dabab"] { width: clamp(210px,24vw,280px); max-width: 72vw; height: clamp(184px,24vw,240px); }
 .mark[data-mark="dabab"] img { filter: none; mix-blend-mode: normal; object-fit: contain; }
-.menu[data-signature="dabab"] .signature { margin: 10px 0 22px; letter-spacing: .22em; }
+.menu[data-signature="dabab"] .signature { color: var(--tone); margin: 8px 0 18px; letter-spacing: .2em; }
 .menu[data-signature="dabab"] .heroCenter h1 { font-size: clamp(30px,4vw,54px); }
-.menu[data-signature="dabab"] .heroCenter > p { max-width: 430px; text-wrap: balance; }
+.menu[data-signature="dabab"] .heroCenter h1 em { color: var(--brand); }
+.menu[data-signature="dabab"] .heroCenter > p { color: var(--text); max-width: 430px; text-wrap: balance; }
+.menu[data-signature="dabab"] .primary { background: var(--brand); color: var(--white); box-shadow: 0 8px 24px #9b3f271c; }
+.menu[data-signature="dabab"] .heroLoyalty { background: var(--white); border-color: var(--edge); color: var(--brand); }
+.menu[data-signature="dabab"] .heroBottom { color: var(--text); background: linear-gradient(180deg,transparent,var(--surface)); }
 .menu[data-signature="dabab"] .loyaltyCard { background: var(--brand); border-radius: 18px; }
 .menu[data-signature="dabab"] .categoryTitle { border-bottom: 1px solid var(--edge); padding-bottom: 14px; }
-.menu[data-signature="dabab"] .productPhoto { background: var(--white); border-radius: 24px 24px 8px 8px; }
-.menu[data-signature="dabab"] .productPhoto > img { object-fit: contain; }
+.menu[data-signature="dabab"] .categoryTitle h3 { color: var(--brand); }
+.menu[data-signature="dabab"] .productPhoto { background: var(--white); border: 1px solid var(--edge); border-radius: 24px 24px 8px 8px; }
+.menu[data-signature="dabab"] .productPhoto > img { object-fit: cover; }
 .menu[data-signature="dabab"] .productArrow { background: var(--white); color: var(--brand); }
+.menu[data-signature="dabab"] .productInfo { padding-inline: 4px; }
+.menu[data-signature="dabab"] .price { color: var(--brand); }
 .brandPlaceholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--white); background: var(--brand); }
 .brandPlaceholder strong { font: 700 clamp(30px,4vw,48px)/1.25 "Bistro Arabic",sans-serif; }
 .brandPlaceholder > span { font: 600 11px/1.6 "Bistro Sans",sans-serif; letter-spacing: .24em; opacity: .8; }
-.menu[data-signature="dabab"] .footer { background: var(--brand); }
-.mark[data-mark="dabab"][data-small="true"] { width: 160px; height: 110px; }
-.menu[data-signature="dabab"].loading { background: var(--brand); }
+.menu[data-signature="dabab"] .footer { background: var(--surface); color: var(--text); border-top: 1px solid var(--edge); margin-top: var(--space); }
+.menu[data-signature="dabab"] .footer a { color: var(--brand); }
+.menu[data-signature="dabab"] .footer .powered { color: var(--muted); opacity: 1; }
+.mark[data-mark="dabab"][data-small="true"] { width: 180px; height: 160px; }
+.menu[data-signature="dabab"].loading { background: var(--surface); color: var(--text); }
+.menu[data-signature="dabab"].loading::before { background: radial-gradient(ellipse at 50% 25%,#dfcfbd70,transparent 70%); }
+.menu[data-signature="dabab"] .loadingCenter p { color: var(--muted); }
+.menu[data-signature="dabab"] .loadingLine { background: var(--edge); }
+.menu[data-signature="dabab"] .loadingLine::after { background: var(--brand); }
 @media (max-width: 700px) {
   .menu[data-signature="dabab"] .header { gap: 12px; padding-inline: 18px; }
-  .menu[data-signature="dabab"] .heroCenter { padding: 24px 20px 160px; }
-  .mark[data-mark="dabab"] { width: 210px; height: 130px; }
+  .menu[data-signature="dabab"] .header .mark { width: 72px; height: 64px; }
+  .menu[data-signature="dabab"] .headerBrand .headerNote { display: none; }
+  .menu[data-signature="dabab"] .heroCenter { padding: 20px 20px 170px; }
+  .mark[data-mark="dabab"] { width: 205px; height: 184px; }
   .menu[data-signature="dabab"] .heroCenter h1 { font-size: clamp(28px,8vw,36px); }
+  .menu[data-signature="dabab"] .heroCenter h1 em { display: inline; margin-inline-start: .25em; font-size: inherit; }
   .menu[data-signature="dabab"] .heroCenter > p { font-size: 14px; }
   .menu[data-signature="dabab"] .productPhoto { border-radius: 18px 18px 6px 6px; }
 }
 @media (max-height: 740px) and (max-width: 700px) {
-  .menu[data-signature="dabab"] .heroCenter { padding-top: 14px; padding-bottom: 100px; }
-  .mark[data-mark="dabab"] { height: 105px; }
+  .menu[data-signature="dabab"] .heroCenter { padding-top: 14px; padding-bottom: 120px; }
+  .menu[data-signature="dabab"] .heroCenter .mark { height: 150px; width: 180px; }
 }
 .menu[data-signature="black"] { --brand: #292726; --tone: #ac927a; --accent: #d4ba9e; --surface: #f6f3ed; --text: #292726; --muted: #6a615b; --edge: #ded7cf; --panel: #36312d; }
 .menu[data-signature="once"] { --brand: #22251f; --tone: #858575; --accent: #d3d4bc; --surface: #f5f5ef; --text: #22251f; --muted: #63645c; --edge: #d9dace; --panel: #30342c; }

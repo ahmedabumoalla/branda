@@ -82,15 +82,25 @@ async function main() {
   equal(Object.keys(signatureBrands).length, 15, 'Fifteen bespoke brand identities are registered alongside the automatic new-account default');
   const dabab = signatureBrand('brand-8ad185ee82e3');
   equal(dabab.key, 'dabab', 'Dabab selects its own confirmed account');
-  equal(signatureAsset(dabab.hero, true), '/menu-art/dabab/dabab-hero-mobile-v1.webp', 'Dabab has its own mobile hero');
+  equal(signatureAsset(dabab.hero, true), '/menu-art/dabab/dabab-hero-mobile-v2.webp', 'Dabab has its own refreshed mobile drinks hero');
+  equal(signatureAsset(dabab.hero), '/menu-art/dabab/dabab-hero-v2.webp', 'Dabab desktop uses the refreshed drinks artwork');
+  equal(signatureAsset(dabab.logo), '/menu-art/dabab/dabab-logo-v2.webp', 'Dabab resolves the actual wheat identity artwork');
   const dababMenu = { ...menu, slug: 'brand-8ad185ee82e3', name: 'ضباب', logoUrl: null, highlights: undefined, products: [product, { ...product, id: 'no-photo', name: 'اختيار بلا صورة', images: [] }] };
   const dababHtml = render({ menu: dababMenu, brand: dabab, loyalty });
+  equal((dababHtml.match(/src="\/menu-art\/dabab\/dabab-logo-v2.webp"/g) || []).length, 3, 'Dabab original mark appears in header, hero and footer');
+  check(dababHtml.match(/<header[\s\S]*?<\/header>/)[0].includes(signatureAsset(dabab.logo)), 'Dabab header visibly carries its own mark');
+  check(dababHtml.includes('بطعم مختلف') && dababHtml.includes('نكهات منعشة') && dababHtml.includes('اختر نكهة لحظتك'), 'Dabab copy describes its current drinks catalog');
+  check(!dababHtml.includes('خالية من الكحول') && !dababHtml.includes('بدون كحول') && !dababHtml.includes('zero-proof'), 'Dabab interface adds no unrequested beverage disclaimer');
+  const dababLoading = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand: dabab }));
+  check(dababLoading.includes(signatureAsset(dabab.logo)) && dababLoading.includes(dabab.welcome), 'Dabab loading uses the same real mark and drinks welcome');
   check(dababHtml.includes('data-brand-placeholder="dabab" aria-hidden="true"') && !dababHtml.includes('الصورة غير متاحة'), 'Intentionally absent Dabab photographs get a decorative branded placeholder');
   check(dababHtml.includes(product.images[0].url) && !dababHtml.includes('data-photo-disclosure'), 'Original Dabab photographs remain original and are not labeled generated');
   check(dababHtml.includes('٦ أختام') && dababHtml.includes('خصم 10%') && dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab renders the actual reward and its own enrollment URL');
   check(dababHtml.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86') && dababHtml.includes('موقع ضباب'), 'Dabab links only its verified official location');
   check(!render({ menu: dababMenu, brand: dabab, loyalty: null }).includes('id="signature-loyalty"'), 'Dabab never invents a server loyalty program');
   check(render({ menu: { ...dababMenu, logoUrl: '/owner-dabab.webp' }, brand: dabab }).includes('/owner-dabab.webp'), 'Dabab respects future owner logo uploads');
+  const dababIllustrated = { ...dababMenu, products: [{ ...product, description: 'صورة توضيحية وقد يختلف التقديم الفعلي' }, { ...product, id: 'dabab-original', name: 'صورة أصلية' }] };
+  equal((render({ menu: dababIllustrated, brand: dabab }).match(/data-photo-disclosure/g) || []).length, 1, 'Only generated Dabab photos carry the illustration disclosure');
   const et1 = signatureBrand('brand-01a9154f01bc');
   equal(et1.key, 'et1', 'ET1 selects only its existing account identity');
   equal(signatureAsset(et1.logo), '/menu-art/et1/et1-logo-v1.webp', 'ET1 uses the supplied original vector logo rendition');
@@ -210,6 +220,11 @@ async function main() {
   disclosureTree = draw({ brand: garden, menu: illustratedMenu });
   equal(nodes(disclosureTree).find(n => n.type === Details).props.imageDisclosure, undefined, 'Switching to an original image clears the dialog disclosure');
   h.reset();
+  disclosureTree = draw({ brand: dabab, menu: dababIllustrated });
+  nodes(disclosureTree).find(n => n.props?.['aria-label'] === 'تفاصيل أمريكانو').props.onClick();
+  disclosureTree = draw({ brand: dabab, menu: dababIllustrated });
+  equal(nodes(disclosureTree).find(n => n.type === Details).props.imageDisclosure, 'صورة توضيحية', 'Generated Dabab image disclosure follows its product into details');
+  h.reset();
   let tree = draw();
   const articles = tree => nodes(tree).filter(n => n.type === 'article' && n.props.className === 'product');
   equal(articles(tree).length, 2, 'Only available product cards rendered');
@@ -306,6 +321,12 @@ async function main() {
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(dababTokens[foreground], dababTokens[background]) >= 4.5, `Dabab ${foreground} on ${background} meets readable text contrast`);
   }
+  for (const foreground of ['brand', 'tone']) check(getContrastRatio(dababTokens[foreground], dababTokens.surface) >= 4.5, `Dabab ${foreground} on warm logo background remains readable`);
+  equal(dababTokens.brand, '#9b3f27', 'Dabab adopts its burnt-rust identity instead of the previous green');
+  equal(dababTokens.surface, '#f6efe2', 'Dabab uses the warm limestone brand background');
+  const dababMarkRules = css.match(/\.mark\[data-mark="dabab"\] img \{([^}]+)\}/)[1];
+  check(dababMarkRules.includes('filter: none') && dababMarkRules.includes('mix-blend-mode: normal'), 'Dabab logo retains original color without tinting or blending');
+  check(css.includes('.menu[data-signature="dabab"] .footer { background: var(--surface)') && css.includes('.menu[data-signature="dabab"].loading { background: var(--surface)'), 'Footer and loading keep the colored logo on a readable warm surface');
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['brand', 'hero-paper'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(et1Tokens[foreground], et1Tokens[background]) >= 4.5, `ET1 ${foreground} on ${background} meets readable text contrast`);
   }

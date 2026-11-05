@@ -1,0 +1,863 @@
+{
+  "sourceFile": "C:\\Users\\pc\\Downloads\\Brown Beige Elegant Minimalist Drink Menu Presentation_20260722_213440_0000.pdf",
+  "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+  "sourcePageCount": 15,
+  "sourceNotes": [
+    "Only this PDF defines the replacement catalog; no products carried over from previous source",
+    "PDF contains no category headings; a single neutral drinks category groups the 28 source entries",
+    "Five items have two prices with no size or option labels; neutral price labels preserve both values",
+    "No calories are present in this PDF",
+    "Identity and loyalty deliberately omitted from source extraction; root handles requested identity update and preserves existing loyalty",
+    "Page 11 two prices confirmed as 25 from PDF text and independent root visual review; all 28 rows are priced"
+  ],
+  "brands": [
+    {
+      "key": "dabab",
+      "cafeId": "3813425d-db13-4d30-8b82-9d41aad12e36",
+      "slug": "brand-8ad185ee82e3",
+      "brandName": "ضباب",
+      "importKey": "dabab-pdf-20261105",
+      "categories": [
+        "المشروبات"
+      ],
+      "products": [
+        {
+          "sourceId": "dabab-pdf-p02-top",
+          "name": "واين ردبول",
+          "nameEn": "Wayne Redboul",
+          "category": "المشروبات",
+          "price": 28,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 2,
+          "sourcePosition": "top",
+          "sourceOrder": 1,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            28
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p02-image01.png",
+            "sha256": "51cc05a9291793feb1398063897580416b5ce32497132c4f91be0db14383e0a4",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 2, xref 40",
+            "visualSubject": "Deep purple-red iced drink in a short cut-crystal tumbler, orange slice and mint garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p02-bottom",
+          "name": "سموذي مانجو",
+          "nameEn": "Mango Smoothie",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 2,
+          "sourcePosition": "bottom",
+          "sourceOrder": 2,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p02-image02.jpeg",
+            "sha256": "9a127fb7de811bcc7de4708db04f993ec8d3379e3325e0fabf3ee0a9420bb8d7",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 2, xref 41",
+            "visualSubject": "Thick golden mango smoothie in a tall straight glass, triangular pineapple wedge garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p03-top",
+          "name": "كوكوناس",
+          "nameEn": "Coconas",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [
+            {
+              "name": "16 ريال",
+              "price": 16
+            },
+            {
+              "name": "29 ريال",
+              "price": 29
+            }
+          ],
+          "image": null,
+          "sourcePage": 3,
+          "sourcePosition": "top",
+          "sourceOrder": 3,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16,
+            29
+          ],
+          "variantLabelsUnspecified": true,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p03-image01.jpeg",
+            "sha256": "08d2bb3b0871822dda27315316a4389a10d2612de550b30a0f283a42a4e8819f",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 3, xref 45",
+            "visualSubject": "Creamy pale ivory iced tropical drink in a short faceted tumbler, light foam and small red garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p03-bottom",
+          "name": "بلو ضباب",
+          "nameEn": "BLUE DABAB",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [
+            {
+              "name": "16 ريال",
+              "price": 16
+            },
+            {
+              "name": "29 ريال",
+              "price": 29
+            }
+          ],
+          "image": null,
+          "sourcePage": 3,
+          "sourcePosition": "bottom",
+          "sourceOrder": 4,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16,
+            29
+          ],
+          "variantLabelsUnspecified": true,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p03-image02.jpeg",
+            "sha256": "0fb57901b31782e624770414c16579f7fb3dc08e794da19d2ff00a0207cb04cc",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 3, xref 46",
+            "visualSubject": "Bright turquoise-blue iced drink in a short cut-crystal tumbler, lime wedge"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p04-top",
+          "name": "باشن مارتيني",
+          "nameEn": "Basion Martini",
+          "category": "المشروبات",
+          "price": 29,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 4,
+          "sourcePosition": "top",
+          "sourceOrder": 5,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            29
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p04-image01.png",
+            "sha256": "14381a6d08057f407cacf6a31785becf67070a09bcbc04af209afeadf92e5aac",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 4, xref 51",
+            "visualSubject": "Golden yellow drink with ice and light foam in a wide coupe glass, orange slice, orange peel and raspberry skewer"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p04-bottom",
+          "name": "اسبرسو مارتيني",
+          "nameEn": "Espresso Martini",
+          "category": "المشروبات",
+          "price": 25,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 4,
+          "sourcePosition": "bottom",
+          "sourceOrder": 6,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            25
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p04-image02.png",
+            "sha256": "e8bfbc9fdf9fbcfd2e66c0f7595979a0ee878b784f2cd724d2d5acc1f5116fa5",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 4, xref 52",
+            "visualSubject": "Dark espresso-colored drink in a wide coupe glass with tan crema and visible ice"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p05-top",
+          "name": "بولفروك",
+          "nameEn": "Bullfroc",
+          "category": "المشروبات",
+          "price": 29,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 5,
+          "sourcePosition": "top",
+          "sourceOrder": 7,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            29
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p05-image01.jpeg",
+            "sha256": "586ef1e7fc416710d18413d661d81b9c19ff0019b16c82987a81c6875aa14ee5",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 5, xref 56",
+            "visualSubject": "Blue-to-green layered iced drink in a tall curved hurricane glass, mint and lemon garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p05-bottom",
+          "name": "توت بري",
+          "nameEn": "Berry",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [
+            {
+              "name": "16 ريال",
+              "price": 16
+            },
+            {
+              "name": "28 ريال",
+              "price": 28
+            }
+          ],
+          "image": null,
+          "sourcePage": 5,
+          "sourcePosition": "bottom",
+          "sourceOrder": 8,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16,
+            28
+          ],
+          "variantLabelsUnspecified": true,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p05-image02.jpeg",
+            "sha256": "954749da797876874d921cc24bac82e2fea27fe705f4186d67645756ae2e9716",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 5, xref 57",
+            "visualSubject": "Deep berry-purple drink with ice in a short faceted tumbler, mint and light foam"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p06-top",
+          "name": "موهيتو",
+          "nameEn": "Mojito",
+          "category": "المشروبات",
+          "price": 18,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [
+            {
+              "name": "18 ريال",
+              "price": 18
+            },
+            {
+              "name": "29 ريال",
+              "price": 29
+            }
+          ],
+          "image": null,
+          "sourcePage": 6,
+          "sourcePosition": "top",
+          "sourceOrder": 9,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            18,
+            29
+          ],
+          "variantLabelsUnspecified": true,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p06-image01.jpeg",
+            "sha256": "bd2d69b56f9cdfc17351404df77b076674fc7e28997241ab99522e5ddf599115",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 6, xref 61",
+            "visualSubject": "Clear pale green sparkling drink with crushed ice in a tall straight glass, lime wheels and mint"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p06-bottom",
+          "name": "كوكتيل بيري ليمون",
+          "nameEn": "Lemon Berry Cocktail",
+          "category": "المشروبات",
+          "price": 18,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [
+            {
+              "name": "18 ريال",
+              "price": 18
+            },
+            {
+              "name": "29 ريال",
+              "price": 29
+            }
+          ],
+          "image": null,
+          "sourcePage": 6,
+          "sourcePosition": "bottom",
+          "sourceOrder": 10,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            18,
+            29
+          ],
+          "variantLabelsUnspecified": true,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p06-image02.jpeg",
+            "sha256": "d4735c77264ed358ece3d7f1f41d5c4fb9dbe31a823acf1a9faa86a53a7b1d34",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 6, xref 62",
+            "visualSubject": "Purple berry layer blending into pale pink in a tall glass with crushed ice, mint and berries"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p07-top",
+          "name": "ضباب كيوي",
+          "nameEn": "DABAB KIWI",
+          "category": "المشروبات",
+          "price": 17,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 7,
+          "sourcePosition": "top",
+          "sourceOrder": 11,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            17
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p07-image01.jpeg",
+            "sha256": "7d66e0b4c868de3c965135766529f6fb41de64d5ba79f00ab00a45d8a1c9eb55",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 7, xref 66",
+            "visualSubject": "Deep blue bottom and green kiwi top in a short tumbler with crushed ice and carved kiwi garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p07-bottom",
+          "name": "ميلك شيك فراولة",
+          "nameEn": "Strawberry Milkshake",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 7,
+          "sourcePosition": "bottom",
+          "sourceOrder": 12,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p07-image02.jpeg",
+            "sha256": "bb2c3583e2ecef625d11b81a6167b276dc7f96eac73cf53ca8d6da50df0e7db3",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 7, xref 67",
+            "visualSubject": "Strawberry-red puree and creamy white milkshake in a curved tall glass, whipped cream topping"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p08-top",
+          "name": "ويسكي ساور خوخ",
+          "nameEn": "Whiskey Saur Peach",
+          "category": "المشروبات",
+          "price": 29,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 8,
+          "sourcePosition": "top",
+          "sourceOrder": 13,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            29
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p08-image01.png",
+            "sha256": "d04ecb0390a6dcd5c110515340a09ac03b1714bfa477e98ed446281073835952",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 8, xref 71",
+            "visualSubject": "Golden peach drink with ice in a short patterned tumbler and red berry garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p08-bottom",
+          "name": "فودكا ساور",
+          "nameEn": "Vodka Saur",
+          "category": "المشروبات",
+          "price": 28,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 8,
+          "sourcePosition": "bottom",
+          "sourceOrder": 14,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            28
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p08-image02.jpeg",
+            "sha256": "8d2da605104e1ef3aff0408889ffe65b3650c1656b9fc7de7473587bb30c6e84",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 8, xref 72",
+            "visualSubject": "Pale yellow iced drink in a short cut-glass tumbler"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p09-top",
+          "name": "ويسكي رد بول",
+          "nameEn": "Red Bull whiskey",
+          "category": "المشروبات",
+          "price": 28,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 9,
+          "sourcePosition": "top",
+          "sourceOrder": 15,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            28
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p09-image01.jpeg",
+            "sha256": "a3f6dd36160cf8e19bbbbb982e1660336b68c7046852ac7439199e36e684a20f",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 9, xref 78",
+            "visualSubject": "Amber-gold iced drink in a short patterned tumbler with lime wheel"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p09-bottom",
+          "name": "ويسكي ساور",
+          "nameEn": "Whiskey Sour",
+          "category": "المشروبات",
+          "price": 28,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 9,
+          "sourcePosition": "bottom",
+          "sourceOrder": 16,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            28
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p09-image03.png",
+            "sha256": "7bfcebf34459491123f75bcdd00993954d8f7c4007f21536d9dd71e896c939e8",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 9, xref 80",
+            "visualSubject": "Golden-orange iced drink in a short patterned tumbler with red berry garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p10-top",
+          "name": "بيره رد بول",
+          "nameEn": "Red Bull beer",
+          "category": "المشروبات",
+          "price": 26,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 10,
+          "sourcePosition": "top",
+          "sourceOrder": 17,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            26
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p10-image01.png",
+            "sha256": "7e5ab9840497645dbadc59b96b760a560f22858f9321a2a3fa06133ee2557ee7",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 10, xref 84",
+            "visualSubject": "Golden foamy iced drink in a large transparent handled glass mug"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p10-bottom",
+          "name": "رد بول",
+          "nameEn": "Red bull",
+          "category": "المشروبات",
+          "price": 24,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 10,
+          "sourcePosition": "bottom",
+          "sourceOrder": 18,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            24
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p10-image02.png",
+            "sha256": "55c1f8212b04c3918e257176cb7afccdd70456e7e9553daf31ef4e7328bff4f0",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 10, xref 85",
+            "visualSubject": "Tall empty crystal glass with lime wedges beside a Red Bull can"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p11-top",
+          "name": "بيره خوخ",
+          "nameEn": "classic beer",
+          "category": "المشروبات",
+          "price": 25,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 11,
+          "sourcePosition": "top",
+          "sourceOrder": 19,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            25
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p11-image01.jpeg",
+            "sha256": "f4a688f5c26a60d516b8869fd5ff7f5dc7007b5a9e0f7666436e224e275b2489",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 11, xref 89",
+            "visualSubject": "Orange-gold peach drink with ice and a thin foam cap in a handled glass mug, peach peel garnish"
+          },
+          "sourceReview": "25 confirmed from PDF text layer and independent root visual review on 2026-11-05"
+        },
+        {
+          "sourceId": "dabab-pdf-p11-bottom",
+          "name": "بيره توت",
+          "nameEn": "beer tout",
+          "category": "المشروبات",
+          "price": 25,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 11,
+          "sourcePosition": "bottom",
+          "sourceOrder": 20,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            25
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p11-image02.jpeg",
+            "sha256": "af22b07a489ef64b9ace65c74034315263318c91aeae1846651d46d3a241bd1e",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 11, xref 90",
+            "visualSubject": "Dark red-purple berry drink with ice in a handled glass mug, pale foam and blackberries"
+          },
+          "sourceReview": "25 confirmed from PDF text layer and independent root visual review on 2026-11-05"
+        },
+        {
+          "sourceId": "dabab-pdf-p12-top",
+          "name": "كركديه",
+          "nameEn": "Rose",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 12,
+          "sourcePosition": "top",
+          "sourceOrder": 21,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p12-image02.jpeg",
+            "sha256": "97fe235094c75e5feb933b38a16f368de15cfbf96c6f7bbf4817444bf5615a79",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 12, xref 328",
+            "visualSubject": "Ruby-red hibiscus iced drink in a tall clear tumbler with a faceted base, lemon slice and mint"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p12-bottom",
+          "name": "سموذي ضباب",
+          "nameEn": "Smoothie DABAB",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 12,
+          "sourcePosition": "bottom",
+          "sourceOrder": 22,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p12-image01.jpeg",
+            "sha256": "1ec8b012856999b6104aa4f25525ce70c57243ed0d88b3de5fbb82689359c9c4",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 12, xref 325",
+            "visualSubject": "Coral-pink smoothie in a tall rounded stemmed glass, pale fruit wedge garnish"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p13-top",
+          "name": "ايس تي توت",
+          "nameEn": "ice tea barey",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 13,
+          "sourcePosition": "top",
+          "sourceOrder": 23,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p13-image01.jpeg",
+            "sha256": "e252dd1a44bd17524a669b04549b1d9840d1a3a70cd5ee3474d16c6604137774",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 13, xref 99",
+            "visualSubject": "Dark berry iced tea in a tall straight glass with lime wheel and a dynamic splash"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p13-bottom",
+          "name": "ايس تي خوخ",
+          "nameEn": "ice tea peach",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 13,
+          "sourcePosition": "bottom",
+          "sourceOrder": 24,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p13-image02.png",
+            "sha256": "ae54630e11ab0a4e8206c3755d2337d57c46de4a7390bc7eea44ef90429e2516",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 13, xref 100",
+            "visualSubject": "Amber-orange peach iced tea in a tall straight glass with lemon slice and a dynamic splash"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p14-top",
+          "name": "بيره مانجو",
+          "nameEn": "Mango beer",
+          "category": "المشروبات",
+          "price": 25,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 14,
+          "sourcePosition": "top",
+          "sourceOrder": 25,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            25
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p14-image01.jpeg",
+            "sha256": "f4a688f5c26a60d516b8869fd5ff7f5dc7007b5a9e0f7666436e224e275b2489",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 14, xref 104",
+            "visualSubject": "Orange-gold mango iced drink in a large handled glass mug with pale foam cap"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p14-bottom",
+          "name": "بيره كلاسيك",
+          "nameEn": "Classic Beer",
+          "category": "المشروبات",
+          "price": 22,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 14,
+          "sourcePosition": "bottom",
+          "sourceOrder": 26,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            22
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p14-image02.jpeg",
+            "sha256": "33719ec8427ee0bac0c24a161165598f3ca6c94bfb9d025a3af9d27df2db4644",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 14, xref 105",
+            "visualSubject": "Golden clear iced drink in a large handled glass mug with a thin white foam cap"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p15-top",
+          "name": "شوت ضباب فودكا",
+          "nameEn": "Vodka Dabab shot",
+          "category": "المشروبات",
+          "price": 16,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 15,
+          "sourcePosition": "top",
+          "sourceOrder": 27,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            16
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p15-image01.png",
+            "sha256": "9e2c4b081ed6b35f415189f0bb9ae9e5764807ed92240c9f9b76506dee67a898",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 15, xref 109",
+            "visualSubject": "Small blue layered drink in a short shot glass with a dynamic clear splash"
+          }
+        },
+        {
+          "sourceId": "dabab-pdf-p15-bottom",
+          "name": "سموك ضباب",
+          "nameEn": "smoke Dabab",
+          "category": "المشروبات",
+          "price": 6,
+          "priceStatus": "visually-verified",
+          "available": true,
+          "description": "",
+          "calories": null,
+          "calorieUnit": null,
+          "variants": [],
+          "image": null,
+          "sourcePage": 15,
+          "sourcePosition": "bottom",
+          "sourceOrder": 28,
+          "sourceSha256": "48403cf37cd5523d0d9efdad19c8e4e240e1a309493e35af481142e22b73eb37",
+          "sourceTextPrice": [
+            6
+          ],
+          "variantLabelsUnspecified": false,
+          "sourceImage": {
+            "localPath": "output/dabab-refresh/source-p15-image02.png",
+            "sha256": "6404ce70bdac11a7ecacff00f3263e19c1eafe12470360e06f1e50e0e8a95daf",
+            "provenance": "Unmodified image extracted from user-supplied PDF page 15, xref 110",
+            "visualSubject": "Beverage smoking accessory kit: wooden round smoke lid, wood chips tins, brass handheld torch and spoon in a presentation box; no invented separate drink"
+          }
+        }
+      ]
+    }
+  ]
+}
