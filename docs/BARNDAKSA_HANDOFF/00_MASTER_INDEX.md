@@ -1,5 +1,7 @@
 # Branda current handoff
 
+- Loyalty logo clarity follow-up:8 opt-in framed logo cards, approved Dabab/Deli/French banners preserved and French transparent loading mark; old and future menus plus salons/store covered. Published b4dadc3932cab06dcfa4b835cabe67194dc3e379, exact Vercel dpl_HUv5kKoDiG67apATGUH45DN3eqv6 verified. See LOYALTY_ENTRY_UNIFICATION_20261105.md and output/unified-loyalty
+
 - All-brand loyalty entry now follows the compact Kawakib design with individual logos/colors; old and future menus plus salons/store covered. Published 350cdf9601898d192dd144b3d6290fb232f58d6f, exact Vercel dpl_9cW5DmknAnXarTADZqKsQsw5AqnZ verified. See LOYALTY_ENTRY_UNIFICATION_20261105.md and output/unified-loyalty
 
 - DABAB refreshed from the new PDF and expanded loyalty preview:28products,realwheatlogo/terracottaidentity,28generatedphotos; currentownerloyalty preserved. Published 02d7eff14b17fb226b73dfb5359eb62c718369a8 and exactVercel dpl_A2caBaxKYYUFygJHewbXzEHvaYiA verified. See DABAB_PDF_REFRESH_20261105.md and output/dabab-refresh evidence
