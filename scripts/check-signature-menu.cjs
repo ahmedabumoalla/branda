@@ -96,6 +96,23 @@ async function main() {
   check(dababHtml.includes('data-brand-placeholder="dabab" aria-hidden="true"') && !dababHtml.includes('الصورة غير متاحة'), 'Intentionally absent Dabab photographs get a decorative branded placeholder');
   check(dababHtml.includes(product.images[0].url) && !dababHtml.includes('data-photo-disclosure'), 'Original Dabab photographs remain original and are not labeled generated');
   check(dababHtml.includes('٦ أختام') && dababHtml.includes('خصم 10%') && dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab renders the actual reward and its own enrollment URL');
+  const dababReward = 'كوب آيس تي & كركديه . مجاناً.';
+  const dababLoyaltySection = render({ menu: dababMenu, brand: dabab, loyalty: { purchasesRequired: 6, rewardName: dababReward } }).match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
+  check(dababLoyaltySection.includes('data-loyalty-layout="expanded"'), 'Dabab alone receives the expanded loyalty presentation');
+  equal((dababLoyaltySection.match(/data-loyalty-stamp="\d+"/g) || []).length, 6, 'All six actual Dabab stamp positions are rendered');
+  const dababStampSymbols = dababLoyaltySection.match(/<div class="stamps"[^>]*>([\s\S]*?)<\/div>/)[1];
+  equal((dababStampSymbols.match(/lucide-coffee/g) || []).length, 5, 'Five visit slots lead to the configured sixth reward slot');
+  equal((dababStampSymbols.match(/lucide-gift/g) || []).length, 1, 'Only the final actual stamp position carries the reward symbol');
+  equal(dababLoyaltySection.match(/id="dabab-loyalty-reward">([^<]+)<\/strong>/)[1].replace(/&amp;/g, '&'), dababReward, 'Long custom owner reward remains complete and unchanged');
+  check(dababLoyaltySection.includes('aria-describedby="dabab-loyalty-reward"'), 'The clickable card exposes the full reward to assistive technology');
+  check(dababLoyaltySection.includes('حمّل بطاقة الولاء') && dababLoyaltySection.includes('تابع أختامك من جوالك'), 'Dabab explains the benefit and provides a prominent download action');
+  equal([...dababLoyaltySection.matchAll(/<a[^>]+href="([^"]+)"/g)].map(match => match[1]), ['/loyalty/brand-8ad185ee82e3?source=menu', '/loyalty/brand-8ad185ee82e3?source=menu'], 'Card and download action retain the existing Dabab enrollment flow');
+  check(dababLoyaltySection.indexOf('class="loyaltyCard"') < dababLoyaltySection.indexOf('class="loyaltyCopy"'), 'The full card precedes its explanation in mobile and keyboard reading order');
+  for (const required of [4, 12]) {
+    const changedProgram = render({ menu: dababMenu, brand: dabab, loyalty: { purchasesRequired: required, rewardName: 'مكافأة المالك الجديدة' } }).match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
+    equal((changedProgram.match(/data-loyalty-stamp="\d+"/g) || []).length, required, 'Dabab stamp illustration follows the owner count without a decorative cap');
+    check(changedProgram.includes('مكافأة المالك الجديدة') && !changedProgram.includes('خصم 10%') && !changedProgram.includes(dababReward), 'Dabab always displays the current reward without a hardcoded offer');
+  }
   check(dababHtml.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86') && dababHtml.includes('موقع ضباب'), 'Dabab links only its verified official location');
   check(!render({ menu: dababMenu, brand: dabab, loyalty: null }).includes('id="signature-loyalty"'), 'Dabab never invents a server loyalty program');
   check(render({ menu: { ...dababMenu, logoUrl: '/owner-dabab.webp' }, brand: dabab }).includes('/owner-dabab.webp'), 'Dabab respects future owner logo uploads');
@@ -107,6 +124,7 @@ async function main() {
   equal(signatureAsset(et1.hero, true), '/menu-art/et1/et1-hero-mobile-v1.webp', 'ET1 has its own mobile hero');
   const et1Menu = { ...menu, slug: 'brand-01a9154f01bc', name: 'ET1', logoUrl: null, products: [{ ...product, description: 'صورة توضيحية وقد يختلف التقديم الفعلي' }, { ...product, id: 'original-et1', name: 'صورة أصلية' }] };
   const et1Html = render({ menu: et1Menu, brand: et1, loyalty });
+  check(!et1Html.includes('data-loyalty-layout="expanded"') && !et1Html.includes('data-loyalty-stamp') && et1Html.includes('افتح بطاقة الولاء'), 'ET1 and the shared non-Dabab loyalty presentation remain unchanged');
   for (const slug of ['brand-01a9154f01bc', 'brand-067febfb04db']) {
     const brand = signatureBrand(slug);
     const heading = render({ brand }).match(/<h1[^>]*>([\s\S]*?)<\/h1>/)[1].replace(/<[^>]+>/g, '');
@@ -327,6 +345,13 @@ async function main() {
   const dababMarkRules = css.match(/\.mark\[data-mark="dabab"\] img \{([^}]+)\}/)[1];
   check(dababMarkRules.includes('filter: none') && dababMarkRules.includes('mix-blend-mode: normal'), 'Dabab logo retains original color without tinting or blending');
   check(css.includes('.menu[data-signature="dabab"] .footer { background: var(--surface)') && css.includes('.menu[data-signature="dabab"].loading { background: var(--surface)'), 'Footer and loading keep the colored logo on a readable warm surface');
+  const dababRewardRules = css.match(/\.menu\[data-signature="dabab"\] \.cardReward strong \{([^}]+)\}/)[1];
+  check(dababRewardRules.includes('white-space: normal') && dababRewardRules.includes('overflow-wrap: anywhere') && dababRewardRules.includes('min-width: 0'), 'Dabab long reward text wraps and shrinks safely instead of inheriting mobile nowrap');
+  check(!/line-clamp|max-height|text-overflow/.test(dababRewardRules), 'Dabab reward content has no clipping or truncation limit');
+  const dababMobileRules = css.match(/@media \(max-width: 850px\) \{([\s\S]*?)\n\}/)[1];
+  check(dababMobileRules.includes('.menu[data-signature="dabab"] .loyalty { grid-template-columns: minmax(0,1fr)') && dababMobileRules.includes('width: 100%; min-height: 0'), 'Dabab mobile uses one full-width auto-height card before the copy');
+  check(dababMobileRules.includes('grid-template-columns: repeat(3,minmax(0,1fr))'), 'Six Dabab stamps have two generous mobile rows rather than a cramped half-width strip');
+  check(css.match(/\.menu\[data-signature="dabab"\] \.loyaltyAction \{([^}]+)\}/)[1].includes('min-height: 58px'), 'Dabab download action is a large full-width touch target');
   for (const [foreground, background] of [['text', 'surface'], ['muted', 'surface'], ['brand', 'hero-paper'], ['white', 'brand'], ['accent', 'brand']]) {
     check(getContrastRatio(et1Tokens[foreground], et1Tokens[background]) >= 4.5, `ET1 ${foreground} on ${background} meets readable text contrast`);
   }
