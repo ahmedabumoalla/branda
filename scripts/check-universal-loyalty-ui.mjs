@@ -16,6 +16,8 @@ const baseStubs = {
   "next/navigation": { useRouter: () => ({ refresh: noMutation }) },
   "@/app/actions/loyalty-experience": new Proxy({}, { get: () => noMutation }),
   "@/app/actions/cashier": { logoutCashierAction: "/test-logout" },
+  "@/app/actions/cashier-loyalty-phone": { lookupCashierLoyaltyPhoneAction: noMutation },
+  "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },
 };
 function load(file, stubs = {}, cache = new Map()) {
   if (cache.has(file)) return cache.get(file);

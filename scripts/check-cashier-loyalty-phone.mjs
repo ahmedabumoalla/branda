@@ -71,6 +71,7 @@ const previewCard = { customerName: "Customer A", stampsInCycle: 2, purchasesReq
 const reward = { sourceType: "loyalty", rewardCode: "REWARD123", canRedeem: true, customerName: "Customer A", rewardTitle: "Coffee" };
 const { RastCashier } = load("components/rast-loyalty/rast-cashier.tsx", {
   react: hooks,
+  "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },
   "@/components/cashier/cashier-language": { useCashierLanguage: () => ({ t: value => typeof value === "string" ? value : value.text, errorText: value => value, locale: "ar", dir: "rtl" }), CashierLanguageSwitch: () => null },
   "@/app/actions/cashier-loyalty-phone": { lookupCashierLoyaltyPhoneAction: () => { calls++; return new Promise(resolve => { resolvePhone = resolve; }); } },
   "@/app/actions/loyalty-experience": { lookupRastCashierCardAction: async code => { inspected.push(code); return previewCard; }, lookupRastCashierRewardAction: async code => { inspected.push(code); return reward; }, scanLoyaltyExperienceAction: async input => { committed.push(input); if (failCommit) throw Error("network"); return { status: input.kind === "stamp" ? "stamped" : "redeemed" }; } },

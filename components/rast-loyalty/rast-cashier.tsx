@@ -14,6 +14,7 @@ import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { loyaltyTheme } from "./loyalty-theme";
 import { RastBrand } from "./rast-brand";
 import { CashierLanguageSwitch, useCashierLanguage } from "@/components/cashier/cashier-language";
+import { AnalyticsCouponRedemption } from "@/components/cashier/analytics-coupon-redemption";
 import { localizedText, type CashierMessage } from "@/lib/cashier/language";
 import layout from "./rast-cashier.module.css";
 
@@ -146,6 +147,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
         </section>
         {!preview && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t("ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p><p>{t("قراءة الرمز لا تسجّل ختمًا راجع بيانات العميل ثم أكّد الشراء من زر التأكيد")} </p><p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p><Link href={`/loyalty/${identity.slug}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link></div></details>}
       </div>
+      <AnalyticsCouponRedemption />
     </div>
   </main>;
 }

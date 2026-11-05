@@ -46,7 +46,7 @@ export const brandAnalyticsDetailSchema = z.object({
 export const brandAnalyticsCustomerDetailSchema = z.object({
   generatedAt: timestamp, customer: brandAnalyticsCustomerSchema,
   events: z.array(z.object({ id: z.string(), at: timestamp,
-    kind: z.enum(["stamp", "redeem", "card_issued", "download", "save_link", "installed", "unregistered"]),
+    kind: z.enum(["stamp", "redeem", "coupon_redeemed", "card_issued", "download", "save_link", "installed", "unregistered"]),
     provider: z.enum(["apple", "google"]).nullable(), origin: z.enum(["live", "historical"]),
     stampsDelta: z.number().int(), rewardName: z.string().nullable() })).max(100),
   total: count, page: z.number().int().positive(), pageSize: z.number().int().min(1).max(100),

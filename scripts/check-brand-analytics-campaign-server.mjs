@@ -48,7 +48,7 @@ function fixture(options = {}) {
     rpc: async (name, args) => {
       calls.push({ name, args });
       if (state.rpcThrows) throw new Error("PRIVATE_DATABASE_NETWORK_DETAIL");
-      assert.ok(["platform_marketing_analytics_audience", "platform_marketing_create_analytics_campaign"].includes(name));
+      assert.ok(["platform_marketing_analytics_audience", "platform_marketing_create_analytics_campaign", "platform_marketing_create_coupon_campaign"].includes(name));
       return { data: name.endsWith("audience") ? state.preview : state.created, error: state.rpcError };
     },
   };
@@ -161,7 +161,30 @@ for (const options of [{ rpcThrows: true }, { created: { campaignId, total: 0 } 
   await rejectCode(() => c.api.createBrandAnalyticsCampaign({ ...draft, phones: ["966500000001"] }), "invalid");
   check(!c.calls.some(row => ["lookup", "sender", "platform_marketing_create_analytics_campaign"].includes(row.name)), "forged recipient list rejected before database mutation checks");
 }
-const files = ["scripts/check-brand-analytics-campaign-server.mjs", "lib/data/brand-analytics-campaign.ts", "lib/analytics/brand-analytics-campaign.ts", "app/actions/brand-analytics-campaign.ts", "lib/data/platform-marketing.ts", "package-lock.json"];
+const coupon = { discountType: "percentage", discountValue: 10, minimumOrderAmount: 20, validityDays: 14, terms: "Synthetic terms" };
+for (const change of [{ coupon }, { contentKind: "coupon" }, { contentKind: "coupon", coupon: { ...coupon, discountValue: 101 } },
+  { contentKind: "coupon", coupon: { ...coupon, discountValue: 0 } }, { contentKind: "coupon", coupon: { ...coupon, discountValue: 1.001 } },
+  { contentKind: "coupon", coupon: { ...coupon, discountType: "fixed", discountValue: 100001 } },
+  { contentKind: "coupon", coupon: { ...coupon, validityDays: 0 } }, { contentKind: "coupon", coupon: { ...coupon, validityDays: 366 } },
+  { contentKind: "coupon", coupon: { ...coupon, minimumOrderAmount: -1 } }, { contentKind: "coupon", coupon: { ...coupon, terms: "x".repeat(401) } },
+  { contentKind: "coupon", coupon: { ...coupon, customerId: id(22) } }, { contentKind: "coupon", coupon, body: "x".repeat(2001) }]) {
+  const c = fixture();
+  const result = await c.actions.createBrandAnalyticsCampaignAction({ ...draft, ...change });
+  check(!result.ok && result.code === "invalid" && !c.calls.some(row => row.name.startsWith("platform_marketing_create")), "unsafe coupon settings cannot create campaign");
+}
+{
+  const c = fixture();
+  const result = await c.actions.createBrandAnalyticsCampaignAction({ ...draft, contentKind: "coupon", coupon });
+  const call = c.calls.find(row => row.name === "platform_marketing_create_coupon_campaign");
+  check(result.ok && call.args.p_coupon.discountValue === 10 && call.args.p_coupon.validityDays === 14, "coupon uses atomic mint-and-enqueue RPC with exact settings");
+  check(!("p_content_kind" in call.args) && !("p_phones" in call.args) && call.args.p_actor === actor, "coupon cannot choose recipients or actor from browser");
+}
+{
+  const c = fixture({ senderReady: false, existing: { id: campaignId } });
+  const result = await c.actions.createBrandAnalyticsCampaignAction({ ...draft, contentKind: "coupon", coupon });
+  check(result.ok && !c.calls.some(row => row.name === "sender"), "coupon unknown-outcome retry reconciles same request while sender disconnected");
+}
+const files = ["scripts/check-brand-analytics-campaign-server.mjs", "lib/data/brand-analytics-campaign.ts", "lib/analytics/brand-analytics-campaign.ts", "lib/analytics/analytics-coupons.ts", "app/actions/brand-analytics-campaign.ts", "lib/data/platform-marketing.ts", "package-lock.json"];
 fs.mkdirSync("output/analytics-campaign", { recursive: true });
 fs.writeFileSync("output/analytics-campaign/server-checks.json", JSON.stringify({ at: new Date().toISOString(), node: process.version,
   command: "node scripts/check-brand-analytics-campaign-server.mjs", result: "PASS", checks, mockedProviderOnly: true,

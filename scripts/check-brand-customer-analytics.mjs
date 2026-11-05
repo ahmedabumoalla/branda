@@ -48,6 +48,9 @@ for (const bad of [{ brandId: "bad" }, { brandId: id(1), days: 31 }, { brandId: 
 }
 check(dto.brandAnalyticsFiltersSchema.parse({ brandId: id(1) }).days === 30, "default period");
 check(dto.brandAnalyticsCustomerSchema.parse(customer(1)).wallet.firstInstalledAt === null, "Google link does not imply installation");
+check(dto.brandAnalyticsCustomerDetailSchema.safeParse({ generatedAt: stamp, customer: customer(1), events: [{
+  id: `coupon:${id(5)}`, at: stamp, kind: "coupon_redeemed", provider: null, origin: "live", stampsDelta: 0, rewardName: "Synthetic personal offer",
+}], total: 1, page: 1, pageSize: 25 }).success, "personal coupon redemption is an accepted visit event without stamp increments");
 let user = { id: id(3) }, profile = { role: "platform_admin", status: "active" }, authError = null, profileError = null;
 let mode = "normal", rpcError = null;
 const calls = [];

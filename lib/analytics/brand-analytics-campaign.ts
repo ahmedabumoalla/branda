@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { analyticsCouponConfigSchema } from "@/lib/analytics/analytics-coupons";
 
 const timestamp = z.string().datetime({ offset: true });
 const count = z.number().int().nonnegative();
@@ -13,8 +14,16 @@ export const brandAnalyticsCampaignAudienceInputSchema = z.object({
 export const brandAnalyticsCampaignInputSchema = z.object({
   ...audienceFields, audienceDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey: z.uuid(),
   title: z.string().trim().min(1).max(100), body: z.string().trim().min(1).max(3000),
-  contentKind: z.enum(["message", "offer"]), scheduledAt: timestamp.optional(),
-}).strict().transform(input => ({ ...input, inactiveDays: input.segment === "absent" ? input.inactiveDays : 10 }));
+  contentKind: z.enum(["message", "offer", "coupon"]), scheduledAt: timestamp.optional(),
+  coupon: analyticsCouponConfigSchema.optional(),
+}).strict().superRefine((input, context) => {
+  if ((input.contentKind === "coupon") !== Boolean(input.coupon)) {
+    context.addIssue({ code: "custom", path: ["coupon"], message: "Coupon settings must match the content kind" });
+  }
+  if (input.contentKind === "coupon" && input.body.length > 2000) {
+    context.addIssue({ code: "custom", path: ["body"], message: "Coupon message body exceeds the limit" });
+  }
+}).transform(input => ({ ...input, inactiveDays: input.segment === "absent" ? input.inactiveDays : 10 }));
 export const brandAnalyticsCampaignAudienceSchema = z.object({
   generatedAt: timestamp, brandId: z.uuid(), segment: brandAnalyticsCampaignSegmentSchema,
   inactiveDays: z.number().int().min(1).max(365), matched: count, total: count, excluded: count,

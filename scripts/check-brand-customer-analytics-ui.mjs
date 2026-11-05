@@ -50,7 +50,10 @@ function detailFor(filters) { return { generatedAt, days: filters.days, brand: b
   heatmap: [{ day: 0, hour: 12, visits: 3 }, { day: 4, hour: 18, visits: 9 }],
   cohorts: [{ month: "2026-10", issued: 25, retention: brands[0].retention }], customers: [{ ...customer, name: filters.page === 2 ? "عميل الصفحة الثانية" : customer.name }], total: 30, page: filters.page || 1, pageSize: 25,
 }; }
-const customerDetails = { generatedAt, customer, events: [{ id: "fixture-event-1", at: customer.lastStampAt, kind: "stamp", provider: null, origin: "live", stampsDelta: 1, rewardName: null }], total: 26, page: 1, pageSize: 25 };
+const customerDetails = { generatedAt, customer, events: [
+  { id: "fixture-event-1", at: customer.lastStampAt, kind: "stamp", provider: null, origin: "live", stampsDelta: 1, rewardName: null },
+  { id: "coupon:fixture-event-2", at: customer.lastVisitAt, kind: "coupon_redeemed", provider: null, origin: "live", stampsDelta: 0, rewardName: "كوبون العودة الخاص" },
+], total: 26, page: 1, pageSize: 25 };
 const { BrandAnalyticsPage } = load(file);
 const html = renderToStaticMarkup(React.createElement(BrandAnalyticsPage, { initialReport: report }));
 check(html.includes("تحليلات العلامات التجارية"), "Arabic page heading");
@@ -127,6 +130,11 @@ equal(opened, 1, "native modal provides focus trap");
 check(nodes(dialog).find(node => node.type === "button" && node.props.autoFocus), "close control receives initial focus");
 const dialogHtml = renderToStaticMarkup(tree);
 for (const label of ["أول ملف بطاقة Apple", "آخر ملف بطاقة Apple", "أول رابط حفظ Google", "آخر رابط حفظ Google", "أول تسجيل على جهاز Apple", "آخر صرف مكافأة", "تسجيل ختم ناجح"]) check(dialogHtml.includes(label), `detailed customer date present: ${label}`);
+const couponEvent = nodes(dialog).find(node => node.type === "li" && text(node).includes("صرف كوبون شخصي"));
+check(Boolean(couponEvent), "coupon redemption has its own timeline label");
+check(text(couponEvent).includes("كوبون العودة الخاص"), "coupon timeline renders the actual coupon title");
+check(!text(couponEvent).includes("أختام") && !text(couponEvent).includes("+"), "coupon redemption does not render a stamp increment");
+check(nodes(dialog).some(node => node.type === "li" && text(node).includes("تسجيل ختم ناجح") && text(node).includes("+١ أختام")), "actual stamp event retains its own increment beside the coupon");
 const timelinePager = nodes(dialog).find(node => typeof node.type === "function" && node.props.label === "صفحات السجل الزمني للعميل");
 timelinePager.props.onPage(2); await settle(); tree = ui.render();
 equal(ui.calls.customer.at(-1)[2], 2, "timeline pagination reaches server");

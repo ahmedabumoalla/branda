@@ -48,6 +48,20 @@ for (const bad of ["", "2026-02-30T12:00", "2026-11-04T15:59", "2027-11-05T16:00
 check(form.analyticsCampaignMessageTemplate(brand.name, "loyal").includes(brand.name), "suggested message identifies brand");
 check(!/\d|٪|%/.test(form.analyticsCampaignMessageTemplate(brand.name, "inactive")), "template invents no discount commitment");
 for (const [title, body] of [["", "hello"], ["x".repeat(101), "hello"], ["title", ""], ["title", "x".repeat(3001)]]) check(Boolean(form.analyticsCampaignDraftError(title, body)), "invalid draft rejected");
+const couponApi = load(path.resolve("lib/analytics/analytics-coupons.ts"));
+const couponDraft = { discountType: "percentage", discountValue: "12.5", minimumOrderAmount: "0", validityDays: "7", terms: "  يسري على الخدمات المحددة  " };
+const expectedCoupon = { discountType: "percentage", discountValue: 12.5, minimumOrderAmount: 0, validityDays: 7, terms: "يسري على الخدمات المحددة" };
+equal(form.analyticsCampaignCouponDraft(couponDraft), { coupon: expectedCoupon, error: null }, "coupon normalizes numbers and trims authored terms");
+for (const patch of [
+  { discountValue: "" }, { discountValue: "0" }, { discountValue: "-1" }, { discountValue: "100.01" }, { discountValue: "1.234" }, { discountValue: "1e2" },
+  { discountType: "fixed", discountValue: "100000.01" }, { minimumOrderAmount: "" }, { minimumOrderAmount: "-1" }, { minimumOrderAmount: "1000000.01" }, { minimumOrderAmount: "2.345" },
+  { validityDays: "" }, { validityDays: "0" }, { validityDays: "366" }, { validityDays: "1.5" }, { terms: "ش".repeat(401) },
+]) check(Boolean(form.analyticsCampaignCouponDraft({ ...couponDraft, ...patch }).error), `invalid coupon input rejected: ${JSON.stringify(patch)}`);
+equal(form.analyticsCampaignCouponDraft({ ...couponDraft, discountValue: "100", validityDays: "365" }).coupon.discountValue, 100, "maximum percent and validity boundaries accepted");
+equal(form.analyticsCampaignCouponDraft({ ...couponDraft, discountType: "fixed", discountValue: "100000", minimumOrderAmount: "1000000" }).coupon.discountValue, 100000, "fixed coupon money boundaries accepted");
+check(Boolean(form.analyticsCampaignDraftError("عنوان", "ش".repeat(2001), "coupon")), "coupon authored body leaves room for generated terms");
+check(!form.analyticsCampaignDraftError("عنوان", "ش".repeat(2000), "coupon"), "2000-character coupon body accepted");
+check(!form.analyticsCampaignDraftError("عنوان", "ش".repeat(3000), "offer"), "legacy message offer length preserved");
 
 const flatten = tree => !tree || typeof tree !== "object" ? [] : Array.isArray(tree) ? tree.flatMap(flatten) : [tree, ...flatten(tree.props?.children)];
 const textOf = tree => tree == null || typeof tree === "boolean" ? "" : Array.isArray(tree) ? tree.map(textOf).join("") : typeof tree === "object" ? textOf(tree.props?.children) : String(tree);
@@ -118,6 +132,35 @@ check(!("phones" in normal.calls.create[0]) && !("page" in normal.calls.create[0
 check(textOf(normal.render()).includes("أُضيفت الحملة إلى قائمة الإرسال"), "success does not claim delivered messages");
 await normal.click("العودة للتحليلات"); check(!normal.dom.open, "modal closes after success");
 
+const coupon = harness();
+await coupon.click("إنشاء رسالة أو عرض"); await coupon.click("كوبون شخصي");
+equal(coupon.field("analytics-coupon-value").props.value, "", "coupon discount requires deliberate value input");
+equal(coupon.field("analytics-coupon-minimum").props.value, "0", "coupon minimum defaults to zero");
+await coupon.click("استخدام رسالة مقترحة");
+check(coupon.button("كوبون شخصي").props["aria-pressed"], "suggested message keeps selected coupon mode");
+await coupon.click("مراجعة الحملة قبل الإرسال");
+check(textOf(coupon.render()).includes("أدخل قيمة خصم"), "missing discount prevents review with actionable message");
+equal(coupon.calls.create.length, 0, "missing coupon never creates a campaign");
+coupon.edit("analytics-campaign-subject", "كوبون محدد"); coupon.edit("analytics-campaign-body", "  عرض لك من علامة تجريبية  ");
+coupon.edit("analytics-coupon-value", "12.5"); coupon.edit("analytics-coupon-terms", couponDraft.terms);
+const expectedPreview = couponApi.buildAnalyticsCouponMessage("عرض لك من علامة تجريبية", expectedCoupon, "كود خاص لكل عميل", generatedAt);
+equal(textOf(coupon.find(node => node.props?.className === "bubble").props.children[0]), expectedPreview, "preview uses exact shared per-recipient coupon formatter");
+check(textOf(coupon.render()).includes("وقت الانتهاء تقديري"), "immediate coupon expiry estimate labeled clearly");
+await coupon.click("مراجعة الحملة قبل الإرسال");
+equal(textOf(coupon.find(node => node.props?.className === "reviewBody")), expectedPreview, "final coupon review shows exact normalized terms and placeholder");
+check(textOf(coupon.render()).includes("كوبون شخصي قابل للصرف") && textOf(coupon.render()).includes("يُصرف مرة واحدة"), "coupon review clarifies redeemable single-use behavior");
+await coupon.click("تأكيد الإرسال إلى ٣٠ عميل");
+equal(coupon.calls.create[0].coupon, expectedCoupon, "confirmation submits structured coupon config exactly as reviewed");
+equal(coupon.calls.create[0].body, "عرض لك من علامة تجريبية", "only authored body submitted while server assigns personal code");
+equal(coupon.calls.create[0].contentKind, "coupon", "coupon creation is explicit mode");
+check(!JSON.stringify(coupon.calls.create[0]).includes("كود خاص لكل عميل"), "preview placeholder never submitted as actual coupon code");
+
+const couponAsMessage = harness();
+await couponAsMessage.click("إنشاء رسالة أو عرض"); await couponAsMessage.click("كوبون شخصي");
+couponAsMessage.edit("analytics-coupon-value", "15"); await couponAsMessage.click("رسالة تواصل");
+await couponAsMessage.click("استخدام رسالة مقترحة"); await couponAsMessage.click("مراجعة الحملة قبل الإرسال"); await couponAsMessage.click("تأكيد الإرسال إلى ٣٠ عميل");
+check(!Object.hasOwn(couponAsMessage.calls.create[0], "coupon"), "switching back to message never submits hidden coupon config");
+
 const offline = harness({ audience: input => ({ ok: true, data: audience(input, { sender: { ready: false, phone: null, status: "disconnected" } }) }) });
 await offline.click("إنشاء رسالة أو عرض"); check(offline.button("مراجعة الحملة قبل الإرسال").props.disabled, "disconnected sender blocks new campaign");
 check(textOf(offline.render()).includes("واتساب غير جاهز"), "sender state visible");
@@ -127,7 +170,9 @@ check(textOf(empty.render()).includes("لا يوجد مستلمون متاحون
 
 let uncertainAttempt = "uncertain";
 const uncertain = harness({ create: () => uncertainAttempt ? { ok: false, code: uncertainAttempt, message: "نتيجة غير مؤكدة" } : { ok: true, data: { campaignId: id(3), total: 30 } } });
-await uncertain.click("إنشاء رسالة أو عرض"); await uncertain.click("استخدام رسالة مقترحة"); await uncertain.click("مراجعة الحملة قبل الإرسال");
+await uncertain.click("إنشاء رسالة أو عرض"); await uncertain.click("كوبون شخصي"); await uncertain.click("استخدام رسالة مقترحة");
+uncertain.edit("analytics-coupon-value", "20"); uncertain.edit("analytics-coupon-minimum", "90"); uncertain.edit("analytics-coupon-terms", "شروط الكوبون ثابتة أثناء إعادة المحاولة");
+await uncertain.click("مراجعة الحملة قبل الإرسال");
 await uncertain.click("تأكيد الإرسال إلى ٣٠ عميل");
 check(uncertain.button("إغلاق إنشاء الحملة").props.disabled, "uncertain attempt cannot abandon review via close");
 check(!flatten(uncertain.render()).some(node => node.type === "button" && textOf(node) === "العودة للتعديل"), "uncertain payload cannot be edited");
@@ -139,6 +184,7 @@ uncertainAttempt = "unavailable"; await uncertain.click("التحقق والمت
 check(uncertain.button("إغلاق إنشاء الحملة").props.disabled, "unavailable retry preserves uncertain lock");
 uncertainAttempt = ""; await uncertain.click("التحقق والمتابعة بنفس الحملة");
 check(uncertain.calls.create.every(call => JSON.stringify(call) === JSON.stringify(uncertain.calls.create[0])), "every retry keeps identical immutable payload and idempotency key");
+equal(uncertain.calls.create.at(-1).coupon, { discountType: "percentage", discountValue: 20, minimumOrderAmount: 90, validityDays: 7, terms: "شروط الكوبون ثابتة أثناء إعادة المحاولة" }, "uncertain retries preserve full structured coupon and terms");
 
 let createResolve;
 const duplicate = harness({ create: () => new Promise(resolve => { createResolve = resolve; }) });
@@ -161,6 +207,23 @@ check(textOf(scheduled.render()).includes("بتوقيت الرياض"), "schedul
 await scheduled.click("تأكيد الجدولة إلى ٣٠ عميل");
 equal(scheduled.calls.create[0].scheduledAt, form.analyticsCampaignSchedule(future).scheduledAt, "scheduled request carries exact Riyadh conversion");
 check(textOf(scheduled.render()).includes("تمت جدولة الحملة"), "scheduled success accurately names queue state");
+
+const scheduledCoupon = harness();
+await scheduledCoupon.click("إنشاء رسالة أو عرض"); await scheduledCoupon.click("كوبون شخصي"); await scheduledCoupon.click("مبلغ ثابت");
+await scheduledCoupon.click("استخدام رسالة مقترحة"); scheduledCoupon.edit("analytics-coupon-value", "25.75");
+scheduledCoupon.edit("analytics-coupon-minimum", "100.5"); scheduledCoupon.edit("analytics-coupon-validity", "14");
+await scheduledCoupon.click("جدولة لوقت لاحق"); scheduledCoupon.edit("analytics-campaign-time", future);
+const fixedCoupon = { discountType: "fixed", discountValue: 25.75, minimumOrderAmount: 100.5, validityDays: 14, terms: "" };
+const fixedExpected = couponApi.buildAnalyticsCouponMessage(scheduledCoupon.field("analytics-campaign-body").props.value, fixedCoupon, "كود خاص لكل عميل", form.analyticsCampaignSchedule(future).scheduledAt);
+await scheduledCoupon.click("مراجعة الحملة قبل الإرسال");
+equal(textOf(scheduledCoupon.find(node => node.props?.className === "reviewBody")), fixedExpected, "scheduled coupon expiry anchored exactly to selected Riyadh send time");
+check(textOf(scheduledCoupon.render()).includes("موعد الإرسال المحدد"), "scheduled coupon review states validity start");
+await scheduledCoupon.click("العودة للتعديل"); scheduledCoupon.edit("analytics-coupon-validity", "21");
+scheduledCoupon.edit("analytics-coupon-terms", "شرط مراجع قبل التأكيد"); await scheduledCoupon.click("مراجعة الحملة قبل الإرسال");
+check(textOf(scheduledCoupon.render()).includes("شرط مراجع قبل التأكيد"), "edited coupon terms require fresh review before send");
+await scheduledCoupon.click("تأكيد الجدولة إلى ٣٠ عميل");
+equal(scheduledCoupon.calls.create[0].coupon, { ...fixedCoupon, validityDays: 21, terms: "شرط مراجع قبل التأكيد" }, "scheduled payload matches revised fixed coupon review");
+equal(scheduledCoupon.calls.create[0].scheduledAt, form.analyticsCampaignSchedule(future).scheduledAt, "coupon schedule survives review edits exactly");
 
 let previews = 0;
 const freshCount = harness({ audience: input => ({ ok: true, data: audience(input, ++previews > 1 ? { total: 29, excluded: 4 } : {}) }) });

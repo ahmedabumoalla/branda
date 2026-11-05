@@ -50,10 +50,11 @@ export async function createBrandAnalyticsCampaign(raw: unknown) {
   if (!existing.data && !(await getBrandaCampaignSender()).ready) {
     throw new BrandAnalyticsCampaignError("واتساب برندة غير متصل أعد ربط الرقم قبل إطلاق الحملة", "sender_unavailable");
   }
-  const result = await db.rpc("platform_marketing_create_analytics_campaign", {
+  const result = await db.rpc(input.contentKind === "coupon" ? "platform_marketing_create_coupon_campaign" : "platform_marketing_create_analytics_campaign", {
     p_actor: userId, p_key: input.idempotencyKey, p_title: input.title, p_body: input.body,
     p_cafe: input.brandId, p_segment: input.segment, p_inactive_days: input.inactiveDays,
-    p_audience_digest: input.audienceDigest, p_scheduled_at: input.scheduledAt ?? null, p_content_kind: input.contentKind,
+    p_audience_digest: input.audienceDigest, p_scheduled_at: input.scheduledAt ?? null,
+    ...(input.contentKind === "coupon" ? { p_coupon: input.coupon } : { p_content_kind: input.contentKind }),
   });
   if (result.error) {
     const message = String(result.error.message ?? "").toUpperCase();
