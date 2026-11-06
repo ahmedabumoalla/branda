@@ -105,6 +105,38 @@ try {
     const before = requests.filter(req => req.action?.action === "qr").length; await tick(5000); h.render(); assert.equal(requests.filter(req => req.action?.action === "qr").length, before);
     await tick(15000); h.render(); assert.equal(requests.filter(req => req.action?.action === "qr").length, before + 1); h.unmount();
   });
+  await check("pairing does not claim scan readiness or request QR without explicit intent", async () => {
+    const before = requests.length; handleRequest = async () => response(pairing);
+    const h = harness(pairing); let tree = h.render(); assert.equal(text(nodes(tree, node => node.props?.className === "badge")[0]), "جاهز لطلب رمز الربط");
+    await tick(15000); tree = h.render(); assert(requests.slice(before).every(req => req.action?.action === "refresh")); assert.equal(nodes(tree, node => node.type === "img").length, 0); h.unmount();
+  });
+  await check("waiting permits a manual QR retry that replaces a delayed quiet request", async () => {
+    let qrRequests = 0, finishQuiet; const before = requests.length;
+    handleRequest = req => {
+      if (req.action.action !== "qr") return Promise.resolve(response(pairing));
+      qrRequests++;
+      if (qrRequests === 1) return Promise.resolve(response(pairing, { qrStatus: "timeout" }));
+      if (qrRequests === 2) return new Promise(resolve => { finishQuiet = resolve; });
+      return Promise.resolve(response(pairing, { qrStatus: "qrCode", qr: png }));
+    };
+    const h = harness(pairing); button(h.render(), "إظهار رمز الربط").props.onClick();
+    let tree = h.render(); assert.equal(button(tree, "إعادة طلب الرمز").props.disabled, true, "A foreground request remains locked");
+    button(tree, "إعادة طلب الرمز").props.onClick(); assert.equal(qrRequests, 1, "Repeated foreground click cannot submit in parallel");
+    await flush(); tree = h.render(); assert.equal(button(tree, "إعادة طلب الرمز").props.disabled, false); assert.equal(text(nodes(tree, node => node.props?.className === "badge")[0]), "جارٍ تجهيز رمز الربط");
+    await tick(); tree = h.render(); const quietSignal = requests.at(-1).signal; assert.equal(qrRequests, 2); assert.equal(button(tree, "إعادة طلب الرمز").props.disabled, false);
+    button(tree, "إعادة طلب الرمز").props.onClick(); assert.equal(quietSignal.aborted, true); await flush(); tree = h.render();
+    assert.equal(qrRequests, 3); assert.equal(nodes(tree, node => node.type === "img")[0].props.src, png); assert.equal(text(nodes(tree, node => node.props?.className === "badge")[0]), "بانتظار مسح الرمز");
+    finishQuiet(response(pairing, { qr: "c3RhbGU=", qrStatus: "qrCode" })); await flush(); assert.equal(nodes(h.render(), node => node.type === "img")[0].props.src, png, "Cancelled quiet response cannot replace the new QR");
+    assert(requests.slice(before).every(req => req.action.action === "qr")); h.unmount();
+  });
+  await check("delayed QR is rejected at five minutes even before the next polling tick", async () => {
+    let finish; handleRequest = () => new Promise(resolve => { finish = resolve; });
+    const h = harness(pairing); button(h.render(), "إظهار رمز الربط").props.onClick(); now += 300000;
+    finish(response(pairing, { qr: png, qrStatus: "qrCode" })); await flush(); let tree = h.render();
+    assert.equal(nodes(tree, node => node.type === "img").length, 0); assert.match(text(tree), /انتهت مهلة الربط/); assert.equal(button(tree, "إظهار رمز الربط").props.disabled, false); assert.equal(text(nodes(tree, node => node.props?.className === "badge")[0]), "جاهز لطلب رمز الربط");
+    const before = requests.length; handleRequest = async () => response(pairing); await tick(10000); h.render(); assert(requests.slice(before).every(req => req.action.action === "refresh"), "Expired intent never restarts QR polling");
+    handleRequest = async () => response(pairing, { qr: png, qrStatus: "qrCode" }); button(h.render(), "إظهار رمز الربط").props.onClick(); await flush(); tree = h.render(); assert.equal(nodes(tree, node => node.type === "img")[0].props.src, png); h.unmount();
+  });
   await check("unsafe QR sources never render and five-minute intent expires", async () => {
     for (const qr of ["https://host.invalid/qr", "data:image/svg+xml;base64,abcd", "a".repeat(300001)]) {
       handleRequest = async () => response(pairing, { qr }); const h = harness(pairing); button(h.render(), "إظهار رمز الربط").props.onClick(); await flush(); assert.equal(nodes(h.render(), node => node.type === "img").length, 0); h.unmount();
@@ -161,7 +193,7 @@ try {
     const other = harness({ ...connected, connection: { ...connected.connection, verifiedPhone: null } }); tree = other.render(); assert.match(text(tree), /جارٍ التحقق من الرقم/); assert.doesNotMatch(text(tree), /رقم لوكو متصل وجاهز/); other.unmount();
   });
   await check("all connection states have honest labels and mismatch recovery", () => {
-    for (const [status, phrase] of [["disconnected", "غير متصل"], ["provisioning", "جارٍ تجهيز الاتصال"], ["pairing", "بانتظار مسح الرمز"], ["mismatch", "الرقم المرتبط مختلف"], ["uncertain", "جارٍ التحقق من الاتصال"], ["error", "تعذر الاتصال"], ["disconnecting", "جارٍ فصل الرقم"]]) { const h = harness({ ...pairing, connection: { ...pairing.connection, status } }); const tree = h.render(); assert(text(tree).includes(phrase)); if (status === "mismatch") assert.match(text(tree), /افصل الاتصال ثم اربط رقم لوكو الصحيح/); h.unmount(); }
+    for (const [status, phrase] of [["disconnected", "غير متصل"], ["provisioning", "جارٍ تجهيز الاتصال"], ["pairing", "جاهز لطلب رمز الربط"], ["mismatch", "الرقم المرتبط مختلف"], ["uncertain", "جارٍ التحقق من الاتصال"], ["error", "تعذر الاتصال"], ["disconnecting", "جارٍ فصل الرقم"]]) { const h = harness({ ...pairing, connection: { ...pairing.connection, status } }); const tree = h.render(); assert(text(tree).includes(phrase)); if (status === "mismatch") assert.match(text(tree), /افصل الاتصال ثم اربط رقم لوكو الصحيح/); h.unmount(); }
   });
   await check("server route rejects other stable brand IDs before reading connection data", async () => {
     let cafe = null, reads = 0, fail403 = false;
