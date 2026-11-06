@@ -39,7 +39,7 @@ const mocks = {
 };
 const { BrandLoyaltyEntry } = load('components/menu/brand-loyalty-entry.tsx', mocks);
 mocks['./brand-loyalty-entry'] = { BrandLoyaltyEntry };
-const { signatureBrands, signatureBrand, signatureAsset } = load('lib/menu/signature-brands.ts');
+const { signatureBrands, signatureBrand, signatureAsset, signatureBranchHref } = load('lib/menu/signature-brands.ts');
 const { defaultSignatureBrand, usesDefaultSignatureMenu, DEFAULT_SIGNATURE_HERO } = load('lib/menu/default-signature.ts');
 const { getContrastRatio } = load('lib/cafe/color-contrast.ts');
 const { SignatureMenu } = load('components/menu/signature-menu.tsx', mocks);
@@ -97,6 +97,40 @@ async function main() {
   check(dababLoading.includes(signatureAsset(dabab.logo)) && dababLoading.includes(dabab.welcome), 'Dabab loading uses the same real mark and drinks welcome');
   check(dababHtml.includes('data-brand-placeholder="dabab" aria-hidden="true"') && !dababHtml.includes('الصورة غير متاحة'), 'Intentionally absent Dabab photographs get a decorative branded placeholder');
   check(dababHtml.includes(product.images[0].url) && !dababHtml.includes('data-photo-disclosure'), 'Original Dabab photographs remain original and are not labeled generated');
+  const dababBranches = [
+    { id: 'dabab-bar', slug: 'bar', name: 'بار ضباب' },
+    { id: 'dabab-coffee', slug: 'coffee', name: 'فرع الكوفي' },
+    { id: 'dabab-hospital', slug: 'hospital', name: 'فرع المستشفى' },
+  ];
+  equal(signatureBrand(dababMenu.slug, 'bar'), dabab, 'Primary bar retains the exact approved Dabab presentation');
+  equal(signatureBrand(dababMenu.slug, 'unknown'), dabab, 'Unknown branch names do not invent a presentation');
+  equal(signatureBrand(menu.slug, 'hospital'), signatureBrand(menu.slug), 'A branch name cannot alter another brand identity');
+  equal(signatureBranchHref(dababMenu.slug, 'coffee', 'showcase=1&q=latte&tag=hot&tag=cold&branch=bar'), `/menu/${dababMenu.slug}?showcase=1&q=latte&tag=hot&tag=cold&branch=coffee`, 'Branch links replace only the branch and preserve showcase, search and repeated query values');
+  check(!dababHtml.includes('aria-label="اختر فرع ضباب"'), 'Unbranched Dabab has no empty branch navigation');
+  const branchQuery = 'showcase=1&q=latte&branch=bar';
+  const barHtml = render({ menu: { ...dababMenu, branch: dababBranches[0], branches: dababBranches }, brand: signatureBrand(dababMenu.slug, 'bar'), loyalty, branchQuery });
+  check(!barHtml.includes('data-signature-variant') && barHtml.includes(signatureAsset(dabab.hero)), 'Branched bar retains its current hero and has no new design variant');
+  for (const selectedBranch of dababBranches.slice(1)) {
+    const branchBrand = signatureBrand(dababMenu.slug, selectedBranch.slug);
+    const branchMenu = { ...dababMenu, branch: selectedBranch, branches: dababBranches, products: [{ ...product, description: '' }] };
+    const html = render({ menu: branchMenu, brand: branchBrand, loyalty, branchQuery });
+    equal(branchBrand.key, 'dabab', `${selectedBranch.slug} keeps the shared Dabab identity`);
+    equal(branchBrand.variant, selectedBranch.slug, `${selectedBranch.slug} selects its scoped presentation`);
+    equal(signatureAsset(branchBrand.hero), `/menu-art/dabab/dabab-${selectedBranch.slug}-hero-v1.webp`, `${selectedBranch.slug} uses its agreed desktop asset name`);
+    equal(signatureAsset(branchBrand.hero, true), `/menu-art/dabab/dabab-${selectedBranch.slug}-hero-mobile-v1.webp`, `${selectedBranch.slug} uses its agreed mobile asset name`);
+    check(html.includes(`data-signature-variant="${selectedBranch.slug}"`) && html.includes(branchBrand.headline) && html.includes(branchBrand.catalog), `${selectedBranch.slug} renders branch-specific heading and catalog copy`);
+    check(html.includes('data-has-branches="true"') && html.includes('aria-label="اختر فرع ضباب"'), `${selectedBranch.slug} exposes branch navigation outside the services dialog`);
+    const nav = html.match(/<nav class="branchNavigation"[\s\S]*?<\/nav>/)[0];
+    equal((nav.match(/aria-current="page"/g) || []).length, 1, `${selectedBranch.slug} identifies exactly one selected branch`);
+    check(nav.includes(`branch=${selectedBranch.slug}" aria-current="page"`) && dababBranches.every(branch => nav.includes(branch.name)), `${selectedBranch.slug} highlights its actual branch among all three choices`);
+    check(nav.includes('showcase=1&amp;q=latte&amp;branch=bar') && nav.includes('branch=coffee') && nav.includes('branch=hospital'), `${selectedBranch.slug} preserves preview/search context in all branch links`);
+    equal(html.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], dababHtml.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], `${selectedBranch.slug} preserves the exact approved compact loyalty entry and shared enrollment`);
+    equal((html.match(/src="\/menu-art\/dabab\/dabab-logo-v2.webp"/g) || []).length, 4, `${selectedBranch.slug} retains the real wheat mark in all four surfaces`);
+    check(!html.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86'), `${selectedBranch.slug} never sends visitors to the unverified bar location`);
+    check(!html.includes('data-photo-disclosure') && !html.includes('صورة توضيحية'), `${selectedBranch.slug} adds no unrequested image approximation copy to blank catalog descriptions`);
+    check(!render({ menu: { ...branchMenu, loyaltyEnabled: false }, brand: branchBrand, loyalty }).includes('id="signature-loyalty"'), `${selectedBranch.slug} preserves the disabled loyalty gate`);
+  }
+  check(!render({ menu: { ...menu, branches: dababBranches, branch: dababBranches[1] } }).includes('aria-label="اختر فرع ضباب"'), 'Dabab branch selector never appears for another brand');
   check(dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab keeps its own existing loyalty enrollment URL');
   const dababReward = 'كوب آيس تي & كركديه . مجاناً.';
   const dababLoyaltySection = render({ menu: dababMenu, brand: dabab, loyalty: { purchasesRequired: 6, rewardName: dababReward } }).match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
@@ -383,6 +417,17 @@ async function main() {
   equal(dababTokens.brand, '#9b3f27', 'Dabab adopts its burnt-rust identity instead of the previous green');
   equal(dababTokens.surface, '#f6efe2', 'Dabab uses the warm limestone brand background');
   const dababMarkRules = css.match(/\.mark\[data-mark="dabab"\] img \{([^}]+)\}/)[1];
+  for (const variant of ['coffee', 'hospital']) {
+    const block = css.match(new RegExp('\\.menu\\[data-signature="dabab"\\]\\[data-signature-variant="' + variant + '"\\] \\{([^}]+)\\}'))[1];
+    const tokens = { ...dababTokens, ...Object.fromEntries([...block.matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]])) };
+    for (const foreground of ['text', 'muted', 'brand']) check(getContrastRatio(tokens[foreground], tokens.surface) >= 4.5, `${variant} ${foreground} text remains readable on its branch surface`);
+    equal(tokens.brand, dababTokens.brand, `${variant} retains the original terracotta loyalty banner background`);
+    equal(tokens.white, dababTokens.white, `${variant} retains the approved loyalty lettering and card surface`);
+  }
+  const branchNavCss = css.match(/\.branchNavigation a \{([^}]+)\}/)[1];
+  check(branchNavCss.includes('min-height: 44px') && branchNavCss.includes('min-width: 0') && branchNavCss.includes('overflow-wrap: anywhere'), 'Branch choices are touch-sized and wrap safely in the 320px layout');
+  check(css.includes('grid-template-columns: repeat(3,minmax(0,1fr))') && css.includes('width: min(660px,calc(100% - 36px))'), 'Three branch choices stay within the available mobile and desktop width');
+  check(css.includes('[data-signature-variant="hospital"] .hero { display: flex; flex-direction: column; min-height: 0; }') && css.includes('[data-signature-variant="hospital"] .backdrop { position: relative; inset: auto; order: 2;'), 'Hospital split hero stacks its separate picture below the copy on mobile without overlaying text');
   check(dababMarkRules.includes('filter: none') && dababMarkRules.includes('mix-blend-mode: normal'), 'Dabab logo retains original color without tinting or blending');
   check(css.includes('.menu[data-signature="dabab"] .footer { background: var(--surface)') && css.includes('.menu[data-signature="dabab"].loading { background: var(--surface)'), 'Footer and loading keep the colored logo on a readable warm surface');
   const entryCss = fs.readFileSync(path.join(root, 'components/menu/brand-loyalty-entry.module.css'), 'utf8');
@@ -462,6 +507,19 @@ async function checkRouteIsolation() {
     equal(view.props.brand.key, signatureBrand(slug).key, 'Route chooses only the current identity');
     equal(view.props.loyalty, { purchasesRequired: 6, rewardName: 'خصم 10%' }, 'Route forwards enabled server program');
   }
+  slug = 'brand-8ad185ee82e3';
+  extraMenu = { branch: { id: 'validated-hospital', name: 'فرع المستشفى', slug: 'hospital' } };
+  let branchTree = await route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ branch: 'coffee', showcase: '1', q: 'latte', tag: ['hot', 'cold'] }) });
+  let branchView = nodes(branchTree).find(n => n.type === Signature && n.props.menu);
+  equal(branchView.props.brand.variant, 'hospital', 'Route chooses the server-validated branch rather than trusting the raw requested branch');
+  equal(branchView.key, `${slug}:validated-hospital`, 'Validated branch ID keys the menu so changing branches resets catalog filters');
+  equal(branchView.props.branchQuery, 'branch=coffee&showcase=1&q=latte&tag=hot&tag=cold', 'Route forwards query context for replacement by branch links');
+  extraMenu = { branch: { id: 'validated-bar', name: 'بار ضباب', slug: 'bar' } };
+  branchTree = await route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ branch: 'hospital' }) });
+  branchView = nodes(branchTree).find(n => n.type === Signature && n.props.menu);
+  equal(branchView.props.brand.variant, undefined, 'An unvalidated hospital query cannot change the approved bar design');
+  equal(branchView.key, `${slug}:validated-bar`, 'Bar route has its own stable state boundary');
+  extraMenu = {};
   slug = 'rast'; let tree = await route.default({ params: Promise.resolve({ slug }) }); check(nodes(tree).some(n => n.type === Bistro), 'Legacy RAST route retains original presentation');
   slug = 'brand-not-in-any-registry'; extraMenu = { presentation: 'signature', businessCategory: 'cafes_coffee' }; tree = await route.default({ params: Promise.resolve({ slug }) });
   const defaultView = nodes(tree).find(n => n.type === Signature && n.props.menu);

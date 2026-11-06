@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowDownLeft, ArrowUpLeft, Check, ChevronLeft, ChevronRight, Gift, Camera, MapPin, Music2, Pause, Play, Search, Share2 } from "lucide-react";
-import { kormaContacts, signatureAsset, type SignatureBrand } from "@/lib/menu/signature-brands";
+import { kormaContacts, signatureAsset, signatureBranchHref, type SignatureBrand } from "@/lib/menu/signature-brands";
 import { DEFAULT_SIGNATURE_HERO } from "@/lib/menu/default-signature";
 import { matchesMenuSearch, menuDisplayText, type StandaloneHighlight, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 import { productFinalPrice } from "@/lib/mock/menu";
@@ -83,7 +83,7 @@ function Spotlight({ offers, menu, onSelect }: { offers: StandaloneHighlight[]; 
   </section>;
 }
 
-export function SignatureMenu({ menu: source, brand, loyalty }: { menu: StandaloneMenu; brand: SignatureBrand; loyalty: Loyalty | null }) {
+export function SignatureMenu({ menu: source, brand, loyalty, branchQuery = "" }: { menu: StandaloneMenu; brand: SignatureBrand; loyalty: Loyalty | null; branchQuery?: string }) {
   const reduce = useReducedMotion();
   const root = useRef<HTMLElement>(null);
   const search = useRef<HTMLInputElement>(null);
@@ -109,6 +109,7 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
   const browsing = selected && !visible.some(p => p.id === selected.id) ? menu.products : visible;
   const lightLoyaltyLogo = ["arabi", "masala", "damascus", "hadiqa", "box"].includes(brand.key);
   const hero = brand.key === "default" ? (failedHero === brand.hero ? DEFAULT_SIGNATURE_HERO : brand.hero) : signatureAsset(brand.hero);
+  const branchNavigation = brand.key === "dabab" && (menu.branches?.length ?? 0) > 1;
   function browse(direction: number) { const index = browsing.findIndex(p => p.id === selectedId); setSelectedId(browsing[(index + direction + browsing.length) % browsing.length]?.id ?? null); }
   function focusSearch() { document.getElementById("signature-catalog")?.scrollIntoView({ behavior: reduce ? "instant" : "smooth" }); search.current?.focus({ preventScroll: true }); }
   async function share() {
@@ -118,12 +119,13 @@ export function SignatureMenu({ menu: source, brand, loyalty }: { menu: Standalo
     try { if (navigator.share) { await navigator.share({ title: menu.name, url }); return; } await navigator.clipboard.writeText(url); setMessage("تم نسخ رابط المنيو"); } catch (error) { if (error instanceof Error && error.name === "AbortError") return; setMessage("يمكنك مشاركة رابط المنيو من شريط العنوان"); }
     if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setMessage(""), 3200);
   }
-  return <main ref={root} className={`${base.menu} ${s.menu}`} style={brand.cssVariables as CSSProperties} data-signature={brand.key} dir="rtl">
+  return <main ref={root} className={`${base.menu} ${s.menu}`} style={brand.cssVariables as CSSProperties} data-signature={brand.key} data-signature-variant={brand.variant} dir="rtl">
     <a href="#signature-catalog" className={base.skipLink}>انتقل إلى المنتجات</a>
-    <section className={s.hero} id="signature-top" aria-labelledby="signature-title">
+    <section className={s.hero} id="signature-top" aria-labelledby="signature-title" data-has-branches={branchNavigation || undefined}>
       <picture className={s.backdrop}>{brand.key !== "default" && <source media="(max-width: 700px)" srcSet={signatureAsset(brand.hero, true)} />}<Image src={hero} alt="" fill unoptimized fetchPriority="high" loading="eager" sizes="100vw" onError={brand.key === "default" ? () => setFailedHero(brand.hero) : undefined} /></picture>
       <div className={s.heroShade} aria-hidden="true" /><div className={s.lightSweep} aria-hidden="true" />
       <header className={s.header}>{brand.key === "dabab" ? <div className={s.headerBrand}><SignatureMark brand={brand} src={menu.logoUrl} small /><span className={s.headerNote}>{brand.arabic}<span>{brand.headerNote}</span></span></div> : <span className={s.headerNote}>{brand.arabic}<span>{brand.headerNote || (brand.key === "korma" ? "نكهات من قلب الهند" : "لحظتك على ذوقك")}</span></span>}<nav aria-label="خدمات المنيو"><MenuServices menu={menu} compact /><button type="button" className={s.round} onClick={share} aria-label="شارك المنيو"><Share2 aria-hidden="true" /></button><button type="button" className={s.round} onClick={focusSearch} aria-label="ابحث في المنيو"><Search aria-hidden="true" /></button></nav></header>
+      {branchNavigation && <nav className={s.branchNavigation} aria-label="اختر فرع ضباب">{menu.branches?.map(branch => <Link key={branch.id} href={signatureBranchHref(menu.slug, branch.slug, branchQuery)} aria-current={menu.branch?.id === branch.id ? "page" : undefined}>{branch.name}</Link>)}</nav>}
       <div className={s.heroCenter}><SignatureMark brand={brand} src={menu.logoUrl} /><span className={s.signature} dir={brand.key === "default" ? "auto" : "ltr"}>{brand.signature}</span><h1 id="signature-title">{brand.headline}{" "}<em>{brand.emphasis}</em></h1><p>{brand.note}</p><a className={s.primary} href="#signature-catalog">اكتشف المنيو<ArrowDownLeft aria-hidden="true" /></a>{menu.loyaltyEnabled && loyalty && <a className={s.heroLoyalty} href="#signature-loyalty"><Gift aria-hidden="true" />كل زيارة تقرّب مكافأتك<ArrowDownLeft aria-hidden="true" /></a>}</div>
       <div className={s.heroBottom}><span>{menu.products.length} اختيارًا على ذوقك</span>{brand.locationUrl && <a href={brand.locationUrl} target="_blank" rel="noopener noreferrer"><MapPin aria-hidden="true" />{brand.key === "dabab" ? "موقع ضباب" : "موقع المطعم"}</a>}{brand.key === "korma" && <nav className={s.brandContacts} aria-label="حسابات كورما وموقع المطعم"><a href={kormaContacts.instagram} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على إنستغرام"><Camera aria-hidden="true" />إنستغرام</a><a href={kormaContacts.tiktok} target="_blank" rel="noopener noreferrer" aria-label="حساب كورما على تيك توك"><Music2 aria-hidden="true" />تيك توك</a><a href={kormaContacts.maps} target="_blank" rel="noopener noreferrer" aria-label="موقع مطعم كورما على خرائط قوقل"><MapPin aria-hidden="true" />موقعنا</a></nav>}{offers.length > 0 && <a href="#signature-offers">تستاهل التجربة<ArrowDownLeft aria-hidden="true" /></a>}</div>
     </section>

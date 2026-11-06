@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 // Share the preview publication check between metadata and page rendering in one request.
 const isPublicShowcase = cache(isPublicHomeMenuSlug);
 
-type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<{ showcase?: string | string[]; branch?: string | string[] }> };
+type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
 export function generateViewport(): Viewport {
   return { themeColor: "#102019", width: "device-width", initialScale: 1 };
@@ -56,13 +56,14 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   if (!menu) notFound();
   if (menu.businessCategory === "hair_salons") redirect(`/salon/${menu.slug}`);
   const giftStore = menu.businessCategory === "gifts_flowers";
-  const signature = signatureBrand(menu.slug) || defaultSignatureBrand(menu);
+  const signature = signatureBrand(menu.slug, menu.branch?.slug) || defaultSignatureBrand(menu);
   const program = (giftStore || signature || menu.slug === "brand-10620d3a586c" || isLocoMenu(menu.slug)) && menu.loyaltyEnabled
     ? await getPublicLoyaltyProgramBySlug(menu.slug).catch(() => null) : null;
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
-  const presentation = signature ? <SignatureMenu menu={menu} brand={signature} loyalty={loyalty} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
+  const branchQuery = new URLSearchParams(Object.entries(query ?? {}).flatMap(([key, value]) => value === undefined ? [] : (Array.isArray(value) ? value : [value]).map(item => [key, item]))).toString();
+  const presentation = signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} branchQuery={branchQuery} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }

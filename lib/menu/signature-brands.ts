@@ -33,6 +33,7 @@ export type SignatureBrand = {
   headerNote?: string;
   locationUrl?: string;
   cssVariables?: Record<string, string>;
+  variant?: "coffee" | "hospital";
 };
 
 /** Accounts and branch location published by Korma's original menu */
@@ -41,11 +42,23 @@ export const kormaContacts = {
   tiktok: "https://www.tiktok.com/@korma.sa",
   maps: "https://maps.app.goo.gl/pPpn69Udneypa52r6",
 } as const;
-export function signatureBrand(slug: string): SignatureBrand | null {
-  return Object.prototype.hasOwnProperty.call(signatureBrands, slug) ? signatureBrands[slug as keyof typeof signatureBrands] : null;
+/** The public route supplies only the branch selected by its tenant-scoped loader */
+export function signatureBrand(slug: string, branchSlug?: string): SignatureBrand | null {
+  const brand = Object.prototype.hasOwnProperty.call(signatureBrands, slug) ? signatureBrands[slug as keyof typeof signatureBrands] : null;
+  if (brand?.key !== "dabab") return brand;
+  if (branchSlug === "coffee") return { ...brand, variant: "coffee", hero: "dabab-coffee-hero", headline: "قهوة على مهل", emphasis: "ومذاق يكمّل يومك", note: "فنجانك المفضل ولقمة تحلّي اللحظة", catalog: "من أول رشفة لآخر لقمة", headerNote: "فرع الكوفي", welcome: "نجهّز لك قهوة ولحظة على ذوقك", locationUrl: undefined };
+  if (branchSlug === "hospital") return { ...brand, variant: "hospital", hero: "dabab-hospital-hero", headline: "لحظة هادئة", emphasis: "تكمّل يومك", note: "قهوة ومخبوزات ووقت صغير لك", catalog: "اختيارك للحظة أهدأ", headerNote: "فرع المستشفى", welcome: "لحظة ونجهّز لك اختيارات ضباب", locationUrl: undefined };
+  return brand;
+}
+
+export function signatureBranchHref(slug: string, branchSlug: string, currentQuery = "") {
+  const query = new URLSearchParams(currentQuery);
+  query.set("branch", branchSlug);
+  return `/menu/${encodeURIComponent(slug)}?${query.toString()}`;
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (name === "dabab-coffee-hero" || name === "dabab-hospital-hero") return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("dabab-")) return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v2.webp`;
   if (name.startsWith("et1-")) return `/menu-art/et1/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("damascus-")) return `/menu-art/damascus/${name}${mobile ? "-mobile" : ""}-v1.webp`;
