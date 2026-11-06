@@ -18,6 +18,7 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@zxing/browser": "0.2.1",
+    "exceljs": "4.4.0",
     "jsbarcode": "3.12.1",
     "jspdf": "4.2.1",
     "jspdf-autotable": "5.0.8",

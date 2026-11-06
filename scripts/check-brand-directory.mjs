@@ -18,6 +18,7 @@ function harness(component, props, input = source, overrides = {}) {
   const stubs = {
     react: { ...React,
       useState(initial) { const slot = cursor++; if (!(slot in state)) state[slot] = initial; return [state[slot], next => { state[slot] = typeof next === "function" ? next(state[slot]) : next; }]; },
+      useRef(initial) { const slot = cursor++; if (!(slot in state)) state[slot] = { current: initial }; return state[slot]; },
       useMemo: compute => compute(), useTransition: () => [false, run => run()],
     },
     "./brand-directory.module.css": { __esModule: true, default: new Proxy({}, { get: (_, name) => name }) },
@@ -117,7 +118,10 @@ await test(() => {
   const parent = fs.readFileSync(new URL("../components/admin/pages/admin-cafes-page.tsx", import.meta.url), "utf8");
   const h = harness("AdminCafesPage", { initialCafes: cafes, initialPlans: [], initialCustomers: [], initialOperations: [] }, parent, {
     "@/components/admin/brand-directory": { BrandDirectory: "brand-directory" },
+    "@/components/admin/brand-deletion-control": { PendingBrandDeletionCleanup: "deletion-cleanup" },
+    "@/components/admin/brand-account-create": { BrandAccountCreate: "brand-create" },
     "@/components/admin/brand-details-dialog": { BrandDetailsDialog: "brand-dialog", BrandFeatureControls: "feature-controls" },
+    "next/navigation": { useRouter: () => ({ refresh() {} }) },
     "@/components/ui/design-system": { BentoCard: "div" },
     "@/app/actions/admin": {}, "@/lib/format": { formatSar: String },
     "@/lib/platform/feature-access": { getPlanIncludedFeatures: () => [], getBrandFeatureOverrides: () => [], getEffectiveBrandFeatureAccess: () => [] },
@@ -138,4 +142,121 @@ await test(() => {
   assert(css.includes(".desktopTable { display: none; }"));
   assert(css.includes(".mobileCards { display: grid;"));
 });
-console.log(`PASS brand directory: ${checks} isolated CSS, SSR, search, filters, sort, pagination, dialog integration and contrast checks; no live mutations`);
+const exportLabel = "تصدير جميع العلامات التجارية إلى إكسل";
+const excelMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const exportReply = (filename = 'attachment; filename="branda-brands-2026-11-06.xlsx"') => new Response(new Uint8Array([80, 75, 3, 4]), {
+  headers: { "content-type": `${excelMime}; charset=binary`, "content-disposition": filename },
+});
+async function downloadHarness(run) {
+  const original = { fetch: globalThis.fetch, document: globalThis.document, setTimeout: globalThis.setTimeout, createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
+  const calls = [], anchors = [], timers = [], revoked = [], blobs = [];
+  let respond = async () => exportReply();
+  globalThis.fetch = (...args) => { calls.push(args); return respond(...args); };
+  globalThis.document = {
+    body: { appendChild(anchor) { anchor.appended = true; } },
+    createElement(tag) { assert.equal(tag, "a"); const anchor = { click() { this.clicked = true; }, remove() { this.removed = true; } }; anchors.push(anchor); return anchor; },
+  };
+  globalThis.setTimeout = (callback, delay) => { timers.push({ callback, delay }); return timers.length; };
+  URL.createObjectURL = blob => { blobs.push(blob); return `blob:test-export-${blobs.length}`; };
+  URL.revokeObjectURL = url => revoked.push(url);
+  try { await run({ calls, anchors, timers, revoked, blobs, setResponse: handler => { respond = handler; } }); }
+  finally {
+    globalThis.fetch = original.fetch;
+    if (original.document === undefined) delete globalThis.document; else globalThis.document = original.document;
+    globalThis.setTimeout = original.setTimeout;
+    URL.createObjectURL = original.createObjectURL;
+    URL.revokeObjectURL = original.revokeObjectURL;
+  }
+}
+
+await test(() => {
+  assert.equal(byLabel(harness("BrandDirectory", { ...props, cafes: [] }), exportLabel).props.disabled, true);
+  assert.equal(byLabel(harness("BrandDirectory", { ...props, configError: "تعذر الاتصال" }), exportLabel), undefined);
+  const h = harness("BrandDirectory", props);
+  assert(byLabel(h, exportLabel).props.title.includes("جميع العلامات"));
+  assert(html(h).includes("تصدير إكسل"));
+  nodes(h.render()).find(node => node.type === "input").props.onChange({ target: { value: "no matching brand" } });
+  assert.equal(rows(h).length, 0);
+  assert.equal(byLabel(h, exportLabel).props.disabled, false, "Empty filtered results must not disable all-brand export");
+});
+await test(() => downloadHarness(async runtime => {
+  let resolve;
+  runtime.setResponse(() => new Promise(done => { resolve = done; }));
+  const h = harness("BrandDirectory", props);
+  byLabel(h, "الصفحة التالية").props.onClick();
+  nodes(h.render()).find(node => node.type === "input").props.onChange({ target: { value: "BR-TEST-24" } });
+  const click = byLabel(h, exportLabel).props.onClick;
+  const pending = click();
+  await click();
+  assert.equal(runtime.calls.length, 1, "Rapid repeat click must not start a duplicate export");
+  assert.deepEqual(runtime.calls[0], ["/api/admin/brands/export", { method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime } }]);
+  assert.equal(byLabel(h, exportLabel).props.disabled, true);
+  assert.equal(byLabel(h, exportLabel).props["aria-busy"], true);
+  assert(html(h).includes("جارٍ تجهيز الملف"));
+  assert.equal(runtime.anchors.length, 0);
+  resolve(exportReply());
+  await pending;
+  assert.equal(runtime.anchors.length, 1);
+  assert.equal(runtime.anchors[0].download, "branda-brands-2026-11-06.xlsx");
+  assert.equal(runtime.anchors[0].href, "blob:test-export-1");
+  assert(runtime.anchors[0].clicked && runtime.anchors[0].appended && runtime.anchors[0].removed);
+  assert.equal(byLabel(h, exportLabel).props.disabled, false);
+  assert.equal(withClass(h, "exportFeedback")[0].props.role, "status");
+  assert(html(h).includes("جميع العلامات وبدء تنزيله"));
+  assert.deepEqual(runtime.revoked, []);
+  assert.equal(runtime.timers.length, 1);
+  assert(runtime.timers[0].delay >= 1000, "Blob must remain alive until download has started");
+  runtime.timers[0].callback();
+  assert.deepEqual(runtime.revoked, ["blob:test-export-1"]);
+}));
+await test(() => downloadHarness(async runtime => {
+  for (const response of [
+    new Response("private provider detail", { status: 401 }),
+    new Response("private provider detail", { status: 403 }),
+    new Response("private provider detail", { status: 500 }),
+    new Response("<html>Sign in</html>", { headers: { "content-type": "text/html" } }),
+    new Response('{"error":"private provider detail"}', { headers: { "content-type": "application/json" } }),
+    new Response(new Uint8Array(), { headers: { "content-type": excelMime } }),
+  ]) {
+    runtime.setResponse(async () => response);
+    const h = harness("BrandDirectory", props);
+    await byLabel(h, exportLabel).props.onClick();
+    assert.equal(withClass(h, "exportFeedback")[0].props.role, "alert");
+    assert.equal(byLabel(h, exportLabel).props.disabled, false);
+    assert(!html(h).includes("private provider detail"));
+    assert(!html(h).includes("Sign in"));
+  }
+  assert.equal(runtime.anchors.length, 0);
+  assert.equal(runtime.blobs.length, 0);
+}));
+await test(() => downloadHarness(async runtime => {
+  const filenames = [
+    ["attachment; filename*=UTF-8''%D8%B9%D9%84%D8%A7%D9%85%D8%A7%D8%AA.xlsx", "علامات.xlsx"],
+    ["attachment; filename=brands.xlsx", "brands.xlsx"],
+    ['attachment; filename="brands report.xlsx"', "brands report.xlsx"],
+    ["attachment; filename*=UTF-8''%broken", "branda-brands.xlsx"],
+    ['attachment; filename="../../secret.xlsx"', "branda-brands.xlsx"],
+    ['attachment; filename="report.html"', "branda-brands.xlsx"],
+    ["attachment", "branda-brands.xlsx"],
+  ];
+  for (const [header, expected] of filenames) {
+    runtime.setResponse(async () => exportReply(header));
+    const h = harness("BrandDirectory", props);
+    await byLabel(h, exportLabel).props.onClick();
+    assert.equal(runtime.anchors.at(-1).download, expected);
+  }
+}));
+await test(() => downloadHarness(async runtime => {
+  runtime.setResponse(async () => { throw new Error("network detail must stay private"); });
+  const h = harness("BrandDirectory", props);
+  await byLabel(h, exportLabel).props.onClick();
+  assert.equal(withClass(h, "exportFeedback")[0].props.role, "alert");
+  assert(!html(h).includes("network detail"));
+  runtime.setResponse(async () => exportReply());
+  const retry = byLabel(h, exportLabel).props.onClick();
+  assert.equal(withClass(h, "exportFeedback").length, 0, "Retry clears prior error immediately");
+  await retry;
+  assert.equal(withClass(h, "exportFeedback")[0].props.role, "status");
+  assert.equal(runtime.anchors.length, 1);
+}));
+console.log(`PASS brand directory: ${checks} isolated CSS, SSR, filters, pagination, dialog, contrast and all-brand Excel download checks; no live mutations`);

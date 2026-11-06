@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Layers3, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowLeft, Building2, Check, ChevronLeft, ChevronRight, CircleDollarSign, Download, Layers3, LoaderCircle, Search, Settings2, ShieldCheck, Plus } from "lucide-react";
 import type { PlatformCafe, PlatformPlan } from "@/lib/platform/admin-data";
 import s from "./brand-directory.module.css";
 
@@ -9,6 +9,19 @@ type Props = { cafes: PlatformCafe[]; plans: PlatformPlan[]; onManage: (cafe: Pl
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const date = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Riyadh" });
 const pageSize = 12;
+const excelMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+function exportFilename(disposition: string | null) {
+  const fallback = "branda-brands.xlsx";
+  const extended = disposition?.match(/(?:^|;)\s*filename\*\s*=\s*UTF-8'[^']*'([^;]+)/i)?.[1];
+  const plain = disposition?.match(/(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i);
+  try {
+    const filename = (extended ? decodeURIComponent(extended.trim()) : plain?.[1] ?? plain?.[2] ?? fallback).trim();
+    return filename.length <= 180 && /^[\p{L}\p{N}][\p{L}\p{N} ._()-]*\.xlsx$/iu.test(filename) ? filename : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function BrandIdentity({ cafe, onManage }: { cafe: PlatformCafe; onManage: Props["onManage"] }) {
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
@@ -53,6 +66,9 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const [subscription, setSubscription] = useState("all");
   const [sort, setSort] = useState("default");
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const exportPending = useRef(false);
   const active = cafes.filter(cafe => cafe.status === "نشط").length;
   const subscribed = cafes.filter(cafe => cafe.hasActivePlan).length;
   const revenue = cafes.reduce((sum, cafe) => sum + cafe.totalRevenue, 0);
@@ -68,6 +84,44 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   const visible = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const hasFilters = Boolean(query || status !== "all" || subscription !== "all");
   const reset = () => { setQuery(""); setStatus("all"); setSubscription("all"); setPage(1); };
+  const exportBrands = async () => {
+    if (exportPending.current || configError || cafes.length === 0) return;
+    exportPending.current = true;
+    setExporting(true);
+    setExportMessage(null);
+    try {
+      const response = await fetch("/api/admin/brands/export", {
+        method: "GET", credentials: "same-origin", cache: "no-store", headers: { Accept: excelMime },
+      });
+      if (response.status === 401 || response.status === 403) {
+        setExportMessage({ kind: "error", text: "تعذر التصدير لعدم توفر صلاحية الإدارة، أعد تسجيل الدخول وحاول مرة أخرى" });
+        return;
+      }
+      if (!response.ok || response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== excelMime) {
+        throw new Error("Invalid export response");
+      }
+      const file = await response.blob();
+      if (!file.size) throw new Error("Empty export response");
+      const objectUrl = URL.createObjectURL(file);
+      const anchor = document.createElement("a");
+      try {
+        anchor.href = objectUrl;
+        anchor.download = exportFilename(response.headers.get("content-disposition"));
+        anchor.hidden = true;
+        document.body.appendChild(anchor);
+        anchor.click();
+      } finally {
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      }
+      setExportMessage({ kind: "success", text: "تم تجهيز ملف جميع العلامات وبدء تنزيله" });
+    } catch {
+      setExportMessage({ kind: "error", text: "تعذر تنزيل ملف العلامات، تحقق من الاتصال ثم حاول مرة أخرى" });
+    } finally {
+      exportPending.current = false;
+      setExporting(false);
+    }
+  };
   const stats = [
     { label: "إجمالي العلامات", value: cafes.length, hint: "علامة مسجلة على المنصة", icon: Building2 },
     { label: "العلامات النشطة", value: active, hint: `${number.format(cafes.length - active)} علامة موقوفة`, icon: Check },
@@ -76,7 +130,8 @@ export function BrandDirectory({ cafes, plans, onManage, onCreate, configError }
   ];
 
   return <div className={s.directory} dir="rtl">
-    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>{onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
+    <header className={s.header}><div><p className={s.eyebrow}><span aria-hidden="true" />إدارة المنصة</p><h1>العلامات التجارية</h1><p className={s.subtitle}>كل علامة بتفاصيلها من الاشتراك إلى الخدمات والصيانة</p></div><div className={s.headerActions}><div className={s.headerNote}><ShieldCheck aria-hidden="true" /><span>إدارة موحدة<br /><strong>لكل علاماتك</strong></span></div>{!configError && <button type="button" className={s.exportButton} onClick={exportBrands} disabled={exporting || cafes.length === 0} aria-busy={exporting} aria-label="تصدير جميع العلامات التجارية إلى إكسل" title="يشمل جميع العلامات دون تطبيق البحث أو التصفية">{exporting ? <LoaderCircle className={s.exportSpinner} aria-hidden="true" /> : <Download aria-hidden="true" />}{exporting ? "جارٍ تجهيز الملف" : "تصدير إكسل"}</button>}{onCreate && !configError && <button type="button" className={s.createButton} onClick={onCreate} aria-haspopup="dialog"><Plus size={19} aria-hidden="true" />إنشاء حساب علامة</button>}</div></header>
+    {!configError && exportMessage && <p className={s.exportFeedback} data-state={exportMessage.kind} role={exportMessage.kind === "error" ? "alert" : "status"}>{exportMessage.text}</p>}
     {configError ? <section className={s.error} role="alert"><Building2 aria-hidden="true" /><h2>تعذر تحميل العلامات التجارية</h2><p>{configError}</p><button type="button" className={s.manage} onClick={() => window.location.reload()}>إعادة المحاولة<ArrowLeft aria-hidden="true" /></button></section> : <>
       <section className={s.stats} aria-label="ملخص العلامات التجارية">{stats.map(({ label, value, hint, icon: Icon, currency }) => <article key={label}><div><span>{label}</span><Icon aria-hidden="true" /></div><strong><bdi>{number.format(value)}</bdi>{currency && <small>ريال</small>}</strong><p>{hint}</p></article>)}</section>
       <section className={s.panel} aria-labelledby="brand-directory-title">
