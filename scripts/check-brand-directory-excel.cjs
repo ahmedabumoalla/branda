@@ -78,6 +78,42 @@ async function main() {
     const rows=[subscription({id:'old-expired',status:'expired'}),subscription({id:'new-cancelled',status:'cancelled',created_at:'2026-11-05T00:00:00Z'})];
     assert.equal(excel.selectExportSubscription(rows,now).id,'new-cancelled');
   });
+  await test('concurrent current deadlines distinguish mixed, shared and indefinite periods', () => {
+    const first=subscription({id:'menu',plan_id:'menu'});
+    const second=overrides=>subscription({id:'loyalty',plan_id:'loyalty',...overrides});
+    const cases=[
+      [[first,second({expires_at:iso(now+day*9)})],'مواعيد مختلفة'],
+      [[first,second({status:'trialing',expires_at:iso(now+day*2)})],'مواعيد مختلفة'],
+      [[first,second({expires_at:null})],'مواعيد مختلفة'],
+      [[first,second({})],5],
+      [[first,second({expires_at:'2026-11-11T15:00:00+03:00'})],5],
+      [[subscription({expires_at:null}),second({expires_at:null})],'بدون تاريخ انتهاء'],
+    ];
+    for(const [rows,expected] of cases){
+      const before=JSON.stringify(rows),result=excel.brandExportCells(brand('multi',rows),now);
+      assert.equal(result.length,5);assert.equal(result[3],'اشتراك فعال');assert.equal(result[4],expected);
+      assert.equal(JSON.stringify(rows),before);
+    }
+    for(const extra of [
+      second({status:'cancelled'}),second({status:'expired'}),second({expires_at:iso(now-1)}),
+      second({started_at:iso(now+day),expires_at:iso(now+day*9)}),
+      second({platform_plans:{active:false},expires_at:iso(now+day*9)}),
+      second({expires_at:'invalid'}),
+      second({status:'trialing',activation_source:'admin_prepared_trial',started_at:null,expires_at:null}),
+    ])assert.equal(excel.brandExportCells(brand('multi',[first,extra]),now)[4],5,'only actually current non-prepared rows can create mixed deadlines');
+  });
+  await test('real XLSX preserves mixed-deadline text alongside sortable shared remaining days', async () => {
+    const first=subscription({id:'menu',plan_id:'menu'});
+    const second=subscription({id:'loyalty',plan_id:'loyalty'});
+    const book=new ExcelJS.Workbook();
+    await book.xlsx.load(await excel.buildBrandDirectoryExcel({exportedAt:iso(now),brands:[
+      brand('mixed',[first,{...second,expires_at:iso(now+day*9)}]),brand('shared',[first,second]),
+    ]}));
+    const result=book.worksheets[0];
+    assert.equal(result.columnCount,5);assert.equal(result.getCell('E6').value,'مواعيد مختلفة');
+    assert.equal(result.getCell('E6').type,ExcelJS.ValueType.String);
+    assert.equal(result.getCell('E7').value,5);assert.equal(result.getCell('E7').type,ExcelJS.ValueType.Number);
+  });
   await test('Riyadh calendar day and invalid joined date', () => {
     assert.equal(excel.brandExportCells(brand('a'),now)[1].toISOString(),'2026-11-06T00:00:00.000Z');
     assert.equal(excel.brandExportCells(brand('a',[],{createdAt:'2026-11-05T20:59:59Z'}),now)[1].toISOString(),'2026-11-05T00:00:00.000Z');

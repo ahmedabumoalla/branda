@@ -84,11 +84,26 @@
 .planCard > span:nth-child(2) { flex: 1; font-size: 12px; color: var(--muted); }
 .planCard strong { display: block; font-size: 22px; color: var(--ink); font-weight: 500; }
 .planEditor { margin-top: 24px; padding-top: 8px; }
-.planEditor > label { font-size: 16px; font-weight: 500; }
+.planEditor > h3 { font-size: 17px; font-weight: 500; margin: 0; }
 .planEditor > p { color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
-.planEditor > div { display: flex; flex-wrap: wrap; gap: 12px; }
+.currentPlans, .planChoices { border: 0; padding: 0; margin: 18px 0; display: grid; gap: 10px; min-width: 0; }
+.currentPlans legend, .planChoices legend { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.planChoice { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px; border: 1px solid #ffffff20; border-radius: 10px; background: var(--surface); cursor: pointer; }
+.planChoice:has(input:checked) { border-color: #e5bd7670; background: #e5bd760a; }
+.planChoice:has(input:disabled), .planChoices:disabled .planChoice { cursor: default; }
+.planChoice input { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.planChoice input:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.planChoice span { min-width: 0; overflow-wrap: anywhere; }
+.planChoice strong { display: block; color: var(--ink); font-size: 14px; font-weight: 500; }
+.planChoice small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.8; }
+.planChoices:disabled { opacity: .65; }
+.planSubmit { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.planSubmit span, .planNote { font-size: 13px; color: var(--muted); }
+.planNotice { margin: 14px 0; padding: 12px 14px; border: 1px solid #e5bd7630; border-radius: 10px; }
+.planNotice p { font-size: 13px; line-height: 1.9; color: #edcc87; margin: 0; }
+.planEditor > .planError { color: #f4b8aa; margin-top: 14px; line-height: 1.9; }
+.planEditor > .planMessage { color: #9addba; margin-top: 14px; line-height: 1.9; }
 .dialog select { appearance: auto; min-height: 44px; padding: 8px 12px; color: var(--ink); border: 1px solid #ffffff20; border-radius: 9px; background: var(--surface); min-width: 0; max-width: 100%; }
-.planEditor select { flex: 1; }
 .primaryButton { border: 1px solid transparent; padding: 10px 18px; border-radius: 10px; min-height: 44px; background: var(--accent); color: #241c11; font-weight: 500 !important; white-space: nowrap; }
 .analyticsGrid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
 .analyticsGrid > div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }

@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   saveCafeFeatureOverridesAction,
-  updateCafePlanAction,
+  addCafePlansAction,
   updateCafeStatusAction,
 } from "@/app/actions/admin";
 import { BentoCard } from "@/components/ui/design-system";
@@ -44,7 +44,8 @@ type FeatureOverrideDraft = Record<string, FeatureOverrideChoice>;
 
 function getBrandFeatureRows(cafe: PlatformCafe | null, plans: PlatformPlan[]) {
   if (!cafe) return [];
-  const planFeatures = getPlanIncludedFeatures(cafe.planId, plans);
+  const planIds = cafe.activePlanIds ?? (cafe.hasActivePlan && cafe.planId ? [cafe.planId] : []);
+  const planFeatures = [...new Set(planIds.flatMap(id => getPlanIncludedFeatures(id, plans)))];
   return getEffectiveBrandFeatureAccess(planFeatures, getBrandFeatureOverrides(cafe));
 }
 
@@ -85,7 +86,6 @@ export function AdminCafesPage({
   const [updatingPlanCafeId, setUpdatingPlanCafeId] = useState<string | null>(null);
   const [featureOverrideDrafts, setFeatureOverrideDrafts] = useState<Record<string, FeatureOverrideDraft>>({});
   const [savingFeatureOverridesCafeId, setSavingFeatureOverridesCafeId] = useState<string | null>(null);
-  const [isPlanUpdatePending, startPlanUpdateTransition] = useTransition();
   const [isFeatureOverridePending, startFeatureOverrideTransition] = useTransition();
 
   function onBrandDeleted(result: BrandDeletionResult) {
@@ -130,43 +130,17 @@ export function AdminCafesPage({
     }
   }
 
-  function updatePlan(id: string, planId: string) {
-    if (!planId) {
-      alert("اختر الباقة الجديدة أولًا");
-      return;
-    }
-
+  async function updatePlan(id: string, planIds: string[], expectedRevision: string) {
     setUpdatingPlanCafeId(id);
-    startPlanUpdateTransition(() => {
-      void (async () => {
-        try {
-          const subscription = await updateCafePlanAction(id, planId);
-          setCafes((prev) =>
-            prev.map((cafe) =>
-              cafe.id === id
-                ? {
-                    ...cafe,
-                    ...subscription,
-                  }
-                : cafe,
-            ),
-          );
-          setModalCafe((current) =>
-            current?.id === id
-              ? {
-                  ...current,
-                  ...subscription,
-                }
-              : current,
-          );
-        } catch (error) {
-          console.error("[AdminCafesPage:updatePlan]", error);
-          alert("تعذر تحديث الباقة الحالية للعلامة التجارية");
-        } finally {
-          setUpdatingPlanCafeId(null);
-        }
-      })();
-    });
+    try {
+      const result = await addCafePlansAction(id, planIds, expectedRevision);
+      if (!result.ok) throw new Error(result.message);
+      const subscription = result.data;
+      setCafes(prev => prev.map(cafe => cafe.id === id ? { ...cafe, ...subscription } : cafe));
+      setModalCafe(current => current?.id === id ? { ...current, ...subscription } : current);
+    } finally {
+      setUpdatingPlanCafeId(null);
+    }
   }
 
   function getFeatureDraft(cafe: PlatformCafe, rows: EffectiveBrandFeatureAccess[]) {
@@ -316,7 +290,7 @@ export function AdminCafesPage({
           </BentoCard>
 </div>}
           toggleStatus={() => toggleCafe(modalCafe.id)}
-          planPending={isPlanUpdatePending && updatingPlanCafeId === modalCafe.id}
+          planPending={updatingPlanCafeId === modalCafe.id}
           updatePlan={updatePlan}
           close={() => setModalCafe(null)}
           onDeleted={onBrandDeleted}

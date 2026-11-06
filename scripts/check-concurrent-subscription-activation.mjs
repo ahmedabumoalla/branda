@@ -6,69 +6,126 @@ const source = ts.transpileModule(fs.readFileSync("lib/payments/subscription-act
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function fixture({ enabled = true, targetStatus = "past_due", targetCafe = "brand", failActivation = false } = {}) {
-  const rows = [
-    { id: "new", cafe_id: targetCafe, plan_id: "menu", status: targetStatus },
-    { id: "old", cafe_id: "brand", plan_id: "menu", status: "active" },
-    { id: "loyalty", cafe_id: "brand", plan_id: "loyalty", status: "active" },
-    { id: "other-brand", cafe_id: "other", plan_id: "menu", status: "active" },
-  ];
-  let writes = 0, mails = 0;
-  const rpcCalls = [];
+function fixture({ enabled = true, activations = [{ activated: true }], activationError = null, invoiceError = null, missingInvoice = false, coupon = "coupon", mailError = null } = {}) {
+  const invoice = { id: "new", cafe_id: "brand", plan_id: "menu", platform_coupon_id: coupon };
+  const calls = [], queries = [], mails = [], logs = [];
+  let clients = 0;
   const admin = {
     from(table) {
       assert.equal(table, "subscriptions");
-      let payload;
-      const predicates = [];
-      const execute = () => {
-        if (failActivation && payload.status === "active") return { data: null, error: new Error("activation failed") };
-        const matches = rows.filter(row => predicates.every(predicate => predicate(row)));
-        for (const row of matches) { Object.assign(row, payload); writes++; }
-        return { data: matches[0] ?? null, error: null };
-      };
+      const query = { table, filters: [], selection: null };
+      queries.push(query);
       const builder = {
-        update(value) { payload = value; return builder; },
-        eq(key, value) { predicates.push(row => row[key] === value); return builder; },
-        neq(key, value) { predicates.push(row => row[key] !== value); return builder; },
-        in(key, values) { predicates.push(row => values.includes(row[key])); return builder; },
-        select() { return builder; },
-        async maybeSingle() { return execute(); },
-        then(resolve, reject) { return Promise.resolve(execute()).then(resolve, reject); },
+        select(value) { query.selection = value; return builder; },
+        eq(key, value) { query.filters.push([key, value]); return builder; },
+        async maybeSingle() {
+          assert.deepEqual(query.filters, [["id", "new"], ["cafe_id", "brand"]], "invoice must be scoped to subscription and brand");
+          return { data: missingInvoice ? null : invoice, error: invoiceError };
+        },
+        update() { assert.fail("subscription writes and cancellations belong inside the atomic RPC"); },
+        insert() { assert.fail("no direct subscription or finance writes"); },
+        delete() { assert.fail("subscription history must be preserved"); },
       };
       return builder;
     },
-    async rpc(name) { rpcCalls.push(name); return { error: null }; },
+    async rpc(name, args) {
+      calls.push({ name, args });
+      if (name === "activate_paid_brand_subscription") return { data: activations.shift() ?? { activated: false }, error: activationError };
+      assert.equal(name, "increment_platform_coupon_redemption", "finance records belong inside the atomic RPC");
+      return { data: null, error: null };
+    },
   };
   const stubs = {
-    "@/lib/supabase/admin": { createAdminClient: () => admin },
+    "@/lib/supabase/admin": { createAdminClient: () => { clients++; return admin; } },
     "@/lib/payments/payment-availability": { areOnlinePaymentsEnabled: () => enabled },
-    "@/lib/email/subscription-invoice": { sendSubscriptionInvoiceEmail: async () => { mails++; } },
+    "@/lib/email/subscription-invoice": { sendSubscriptionInvoiceEmail: async data => { mails.push(data); if (mailError) throw mailError; } },
   };
   const exports = {};
-  new Function("require", "exports", source)(name => {
+  new Function("require", "exports", "console", source)(name => {
     assert.ok(Object.hasOwn(stubs, name), `unexpected dependency ${name}`);
     return stubs[name];
-  }, exports);
-  return { rows, activate: exports.activatePaidSubscription, counts: () => ({ writes, mails, rpcCalls }) };
+  }, exports, { error: (...args) => logs.push(args) });
+  return { invoice, activate: exports.activatePaidSubscription, calls, queries, mails, logs, clients: () => clients };
 }
 
 const input = { cafeId: "brand", subscriptionId: "new" };
-for (const options of [{ enabled: false }, { targetStatus: "active" }, { targetStatus: "cancelled" }, { targetCafe: "other" }]) {
-  const context = fixture(options);
-  assert.equal(await context.activate(input), false);
-  assert.equal(context.counts().writes, 0, "unvalidated/replayed payment never cancels subscriptions");
-  assert.equal(context.counts().mails, 0);
+let passed = 0;
+async function test(label, run) { await run(); passed++; console.log(`PASS ${label}`); }
+function noPostActivation(context) {
+  assert.equal(context.queries.length, 0);
+  assert.equal(context.mails.length, 0);
+  assert(context.calls.every(call => call.name === "activate_paid_brand_subscription"));
 }
-const failed = fixture({ failActivation: true });
-await assert.rejects(failed.activate(input), /activation failed/);
-assert.equal(failed.counts().writes, 0, "activation failure preserves all existing subscriptions");
-const success = fixture();
-assert.equal(await success.activate(input), true);
-assert.equal(success.rows.find(row => row.id === "new").status, "active");
-assert.equal(success.rows.find(row => row.id === "old").status, "cancelled");
-assert.equal(success.rows.find(row => row.id === "loyalty").status, "active");
-assert.equal(success.rows.find(row => row.id === "other-brand").status, "active");
-assert.deepEqual(success.counts(), { writes: 2, mails: 1, rpcCalls: ["record_subscription_finance_distribution"] });
-assert.equal(await success.activate(input), false);
-assert.equal(success.counts().writes, 2, "duplicate callback does not mutate unrelated active subscriptions");
-console.log("PASS payment activation: disabled gateway, invalid/replayed/foreign target, failed activation and same-package-only replacement");
+await test("disabled gateway never acquires a client or invokes RPC", async () => {
+  const context = fixture({ enabled: false });
+  assert.equal(await context.activate(input), false);
+  assert.equal(context.clients(), 0);
+  assert.equal(context.calls.length, 0);
+  noPostActivation(context);
+});
+await test("only literal activated true permits invoice or coupon effects", async () => {
+  // Real SQL tests separately cover past_due, foreign brands and replay under locks.
+  for (const activation of [{ activated: false }, null, {}, { activated: "true" }, { activated: 1 }]) {
+    const context = fixture({ activations: [activation] });
+    assert.equal(await context.activate(input), false);
+    assert.equal(context.calls.length, 1);
+    noPostActivation(context);
+  }
+});
+await test("RPC failure propagates before downstream effects", async () => {
+  const failure = new Error("activation failed"), context = fixture({ activationError: failure });
+  await assert.rejects(context.activate(input), error => error === failure);
+  noPostActivation(context);
+});
+await test("PayPal details reach atomic RPC before scoped invoice and coupon", async () => {
+  const context = fixture();
+  const payment = { captureId: "capture", orderId: "order", amount: 129.5, currency: "SAR", paymentMethodLabel: "PayPal card" };
+  assert.equal(await context.activate({ ...input, ...payment }), true);
+  assert.deepEqual(context.calls, [
+    { name: "activate_paid_brand_subscription", args: { p_cafe_id: "brand", p_subscription_id: "new", p_payment: { provider: "paypal", ...payment, paymobTransactionId: null, paymobOrderId: null } } },
+    { name: "increment_platform_coupon_redemption", args: { p_coupon_id: "coupon" } },
+  ]);
+  assert.equal(context.queries.length, 1);
+  assert(context.queries[0].selection.includes("cafes(name,owner_email,tax_number,commercial_register)"));
+  assert.deepEqual(context.mails, [context.invoice]);
+});
+await test("Paymob identifiers and default label are preserved without PayPal identifiers", async () => {
+  const context = fixture({ coupon: null });
+  assert.equal(await context.activate({ ...input, provider: "paymob", paymobTransactionId: "transaction", paymobOrderId: "paymob-order", amount: 0, currency: "SAR" }), true);
+  assert.deepEqual(context.calls, [{ name: "activate_paid_brand_subscription", args: {
+    p_cafe_id: "brand", p_subscription_id: "new", p_payment: {
+      provider: "paymob", paymentMethodLabel: "Paymob", captureId: null, orderId: null,
+      amount: 0, currency: "SAR", paymobTransactionId: "transaction", paymobOrderId: "paymob-order",
+    },
+  } }]);
+  assert.equal(context.mails.length, 1);
+});
+await test("default PayPal null metadata and RPC replay do not repeat invoice or coupon", async () => {
+  const context = fixture({ activations: [{ activated: true }, { activated: false }] });
+  assert.equal(await context.activate(input), true);
+  assert.deepEqual(context.calls[0].args.p_payment, { provider: "paypal", paymentMethodLabel: "PayPal", captureId: null, orderId: null, amount: null, currency: null, paymobTransactionId: null, paymobOrderId: null });
+  assert.equal(await context.activate(input), false);
+  assert.equal(context.queries.length, 1);
+  assert.equal(context.mails.length, 1);
+  assert.equal(context.calls.filter(call => call.name === "increment_platform_coupon_redemption").length, 1);
+  assert.equal(context.calls.filter(call => call.name === "activate_paid_brand_subscription").length, 2);
+});
+await test("missing or failed invoice read prevents coupon and mail", async () => {
+  for (const missingInvoice of [true, false]) {
+    const failure = missingInvoice ? null : new Error("invoice read failed");
+    const context = fixture({ missingInvoice, invoiceError: failure });
+    if (failure) await assert.rejects(context.activate(input), error => error === failure);
+    else assert.equal(await context.activate(input), false);
+    assert.equal(context.queries.length, 1);
+    assert.equal(context.calls.length, 1);
+    assert.equal(context.mails.length, 0);
+  }
+});
+await test("email failure cannot undo or retry committed activation", async () => {
+  const failure = new Error("mail unavailable"), context = fixture({ coupon: null, mailError: failure });
+  assert.equal(await context.activate(input), true);
+  assert.equal(context.calls.length, 1);
+  assert.equal(context.mails.length, 1);
+  assert.deepEqual(context.logs, [["[activatePaidSubscription:invoice]", failure]]);
+});
+console.log(`Atomic payment activation: ${passed} groups passed`);

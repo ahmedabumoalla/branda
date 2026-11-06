@@ -49,7 +49,12 @@ export function brandExportCells(brand: AdminBrandExportBrand, now: number) {
   const joined = timestamp(brand.createdAt);
   // Excel date cells have no timezone: store the actual Riyadh calendar day
   const joinedDate = joined === null ? "غير متاح" : new Date(`${saudiDate.format(new Date(joined))}T00:00:00Z`);
-  return [cleanText(brand.name), joinedDate, brand.accountStatus === "active" ? "نشط" : "موقوف", ...exportSubscriptionCells(selectExportSubscription(brand.subscriptions, now), now)];
+  const cells = exportSubscriptionCells(selectExportSubscription(brand.subscriptions, now), now);
+  const current = brand.subscriptions.filter(row => !isPrepared(row) && isCurrentSubscription(row, now));
+  if (current.length > 1 && new Set(current.map(row => timestamp(row.expires_at))).size > 1) {
+    cells[1] = "مواعيد مختلفة";
+  }
+  return [cleanText(brand.name), joinedDate, brand.accountStatus === "active" ? "نشط" : "موقوف", ...cells];
 }
 
 export async function buildBrandDirectoryExcel(snapshot: AdminBrandExportSnapshot) {
@@ -72,7 +77,7 @@ export async function buildBrandDirectoryExcel(snapshot: AdminBrandExportSnapsho
   sheet.getCell("A2").value = `تاريخ التصدير ${saudiTimestamp.format(new Date(now))} بتوقيت السعودية | ${snapshot.brands.length} علامة`;
   sheet.getRow(2).height = 28;
   sheet.mergeCells("A3:E3");
-  sheet.getCell("A3").value = "المدة المتبقية وقت التصدير ويحتسب جزء اليوم يومًا كاملًا | عند تعدد الاشتراكات يظهر الاشتراك الحالي الأساسي";
+  sheet.getCell("A3").value = "المدة المتبقية حتى الموعد الموحد ويحتسب جزء اليوم يومًا كاملًا | تظهر مواعيد مختلفة عند وجود باقات سارية لم توحد نهايتها بعد";
   sheet.getRow(3).height = 30;
   sheet.getRow(4).height = 10;
   sheet.addTable({

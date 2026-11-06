@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getAdminCafeSubscriptionSummary } from "@/lib/data/admin";
 import { actionResult } from "@/lib/platform/action-result";
 import { parseSaudiDeadline } from "@/lib/platform/subscription-deadline";
+import { subscriptionMutationError, subscriptionRevisionSchema, summaryFromSubscriptionState } from "@/lib/data/admin-brand-subscriptions";
 
-const inputSchema = z.object({ cafeId: z.string().uuid(), subscriptionId: z.string().uuid(), expectedUpdatedAt: z.string().refine(value => Number.isFinite(Date.parse(value))), localDeadline: z.string() }).strict();
+const inputSchema = z.object({ cafeId: z.string().uuid(), expectedRevision: subscriptionRevisionSchema, localDeadline: z.string() }).strict();
 
 export async function updateSubscriptionDeadlineAction(input: unknown) {
   return actionResult(async () => {
@@ -18,24 +19,17 @@ export async function updateSubscriptionDeadlineAction(input: unknown) {
     const values = result.data;
     const expiresAt = parseSaudiDeadline(values.localDeadline);
     const client = await createClient();
-    const { error } = await client.rpc("admin_update_subscription_deadline", {
-      p_cafe_id: values.cafeId, p_subscription_id: values.subscriptionId,
-      p_expected_updated_at: values.expectedUpdatedAt, p_expires_at: expiresAt,
+    const { data, error } = await client.rpc("admin_update_brand_subscription_deadline", {
+      p_cafe_id: values.cafeId,
+      p_expected_revision: values.expectedRevision, p_expires_at: expiresAt,
     });
-    if (error) {
-      const messages: Record<string, string> = {
-        expiry_conflict: "تغير الاشتراك أثناء التعديل حدّث بياناته ثم حاول مجددًا",
-        expiry_invalid: "يجب أن يكون موعد الانتهاء بعد بداية الاشتراك",
-        expiry_unavailable: "هذا الاشتراك غير متاح لتعديل موعد الانتهاء",
-        expiry_forbidden: "تعديل موعد الانتهاء متاح لمدير المنصة فقط",
-      };
-      throw new Error(messages[error.message] || "تعذر حفظ موعد الانتهاء حدّث بيانات الاشتراك للتحقق ثم حاول مجددًا");
-    }
+    if (error) subscriptionMutationError(error.message);
     revalidatePath("/admin/cafes");
     revalidatePath("/dashboard", "layout");
+    revalidatePath("/c/[slug]", "layout");
     revalidatePath("/menu/[slug]", "page");
     revalidatePath("/loyalty/[slug]", "page");
-    return getAdminCafeSubscriptionSummary(values.cafeId);
+    return summaryFromSubscriptionState(data);
   }, "تعذر حفظ موعد الانتهاء حدّث بيانات الاشتراك للتحقق ثم حاول مجددًا");
 }
 

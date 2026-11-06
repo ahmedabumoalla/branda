@@ -17,7 +17,7 @@ import {
 } from "@/lib/platform/feature-registry";
 import { normalizeAdminPlanFeatures } from "@/lib/platform/feature-access";
 import { getCafeServiceAccess } from "@/lib/data/feature-entitlements";
-import { adminSubscriptionSummary } from "@/lib/platform/admin-subscription-status";
+import { getAdminBrandSubscriptionStates, getAdminBrandSubscriptionSummary } from "@/lib/data/admin-brand-subscriptions";
 import type { BrandFeatureOverride } from "@/lib/platform/feature-access";
 import type { SubscriptionPaymentRequest, SubscriptionRequestPage } from "@/lib/platform/subscription";
 import { BUSINESS_CATEGORIES } from "@/lib/platform/business-categories";
@@ -551,7 +551,6 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
     .select(`
       *,
       cafe_settings(*),
-      subscriptions(*, platform_plans(active)),
       cafe_members(user_id, role, profiles(email, full_name))
     `)
     .is("deleted_at", null)
@@ -569,20 +568,19 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
   if (error) throw error;
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
-  const featureOverridesByCafeId = await getCafeFeatureOverridesByCafeIds(
-    rows.map((row) => String(row.id)).filter(Boolean)
-  );
+  const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
+  const [featureOverridesByCafeId, subscriptionStates] = await Promise.all([
+    getCafeFeatureOverridesByCafeIds(cafeIds),
+    getAdminBrandSubscriptionStates(cafeIds),
+  ]);
 
   return Promise.all(
     rows.map(async (row) => {
       const cafeId = String(row.id);
       const slug = String(row.slug);
       const settings = row.cafe_settings as Record<string, unknown> | null;
-      const subscriptions = Array.isArray(row.subscriptions)
-        ? (row.subscriptions as Record<string, unknown>[])
-        : [];
-
-      const subscription = adminSubscriptionSummary(subscriptions);
+      const subscription = subscriptionStates.get(cafeId);
+      if (!subscription) throw new Error("تعذر قراءة باقات العلامة حدّث الصفحة");
 
       const ownerMember = Array.isArray(row.cafe_members)
         ? (row.cafe_members as Record<string, unknown>[]).find(
@@ -650,8 +648,6 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         experienceRewardsCount,
         loyaltyCardsCount,
         supportTicketsCount,
-        subscriptionsCount: subscriptions.length,
-        renewalsCount: subscriptions.filter((item) => String(item.activation_source ?? "").includes("renew")).length,
         createdAt: String(row.created_at).slice(0, 10),
         publicUrl: `/c/${slug}`,
         customDomain: settings?.custom_domain as string | undefined,
@@ -733,11 +729,5 @@ export async function updateCafeStatus(cafeId: string, active: boolean) {
 }
 
 export async function getAdminCafeSubscriptionSummary(cafeId: string) {
-  await requirePlatformAdmin();
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("subscriptions")
-    .select("id,updated_at,activation_source,plan_id,plan_name_snapshot,status,started_at,expires_at,created_at,platform_plans(active)")
-    .eq("cafe_id", cafeId).order("created_at", { ascending: false });
-  if (error) throw error;
-  return adminSubscriptionSummary((data ?? []) as Record<string, unknown>[]);
+  return getAdminBrandSubscriptionSummary(cafeId);
 }

@@ -15,52 +15,32 @@ export async function activatePaidSubscription(input: {
 }) {
   if (!areOnlinePaymentsEnabled()) return false;
   const admin = createAdminClient();
-  const paidAt = new Date().toISOString();
   const provider = input.provider ?? "paypal";
-
-  const updatePayload: Record<string, unknown> = {
-    status: "active",
-    started_at: paidAt,
-    payment_provider: provider,
-    payment_method_label: input.paymentMethodLabel ?? (provider === "paymob" ? "Paymob" : "PayPal"),
-    paid_at: paidAt,
-  };
-
-  if (provider === "paypal") {
-    updatePayload.paypal_order_id = input.orderId ?? null;
-    updatePayload.paypal_capture_id = input.captureId ?? null;
-    updatePayload.paypal_currency = input.currency ?? null;
-    updatePayload.paypal_amount = input.amount ?? null;
-  }
-
-  if (provider === "paymob") {
-    updatePayload.paymob_transaction_id = input.paymobTransactionId ?? null;
-    updatePayload.paymob_order_id = input.paymobOrderId ?? null;
-  }
-
+  // Payment, renewal periods and the shared deadline commit together. A retry
+  // cannot cancel a paid period or send a second invoice after activation.
+  const { data: activation, error: activationError } = await admin.rpc("activate_paid_brand_subscription", {
+    p_cafe_id: input.cafeId,
+    p_subscription_id: input.subscriptionId,
+    p_payment: {
+      provider,
+      paymentMethodLabel: input.paymentMethodLabel ?? (provider === "paymob" ? "Paymob" : "PayPal"),
+      captureId: input.captureId ?? null, orderId: input.orderId ?? null,
+      amount: input.amount ?? null, currency: input.currency ?? null,
+      paymobTransactionId: input.paymobTransactionId ?? null,
+      paymobOrderId: input.paymobOrderId ?? null,
+    },
+  });
+  if (activationError) throw activationError;
+  if (activation?.activated !== true) return false;
   const { data, error } = await admin
     .from("subscriptions")
-    .update(updatePayload)
+    .select("id,plan_id,platform_coupon_id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,created_at,cafes(name,owner_email,tax_number,commercial_register)")
     .eq("id", input.subscriptionId)
     .eq("cafe_id", input.cafeId)
-    .eq("status", "past_due")
-    .select("id,plan_id,platform_coupon_id,cafe_id,plan_name_snapshot,amount_sar,base_amount_sar,discount_amount_sar,coupon_code_snapshot,created_at,cafes(name,owner_email,tax_number,commercial_register)")
     .maybeSingle();
 
   if (error) throw error;
   if (!data) return false;
-
-  // A validated payment replaces only its own package; independent services remain active.
-  const { error: cancellationError } = await admin
-    .from("subscriptions")
-    .update({ status: "cancelled", cancelled_at: paidAt })
-    .eq("cafe_id", input.cafeId)
-    .eq("plan_id", data.plan_id)
-    .neq("id", input.subscriptionId)
-    .in("status", ["active", "trialing"]);
-  if (cancellationError) throw cancellationError;
-
-  await admin.rpc("record_subscription_finance_distribution", { p_subscription_id: input.subscriptionId });
 
   if (data.platform_coupon_id) {
     await admin.rpc("increment_platform_coupon_redemption", { p_coupon_id: data.platform_coupon_id });
