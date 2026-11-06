@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/design-system";
 import { type CafeSettings } from "@/lib/mock/cafe-settings";
 import { getBusinessCopy } from "@/lib/platform/business-copy";
+import { clearDashboardShellSnapshot } from "@/lib/performance/dashboard-shell-client";
 
 type Props = {
   initialSettings: CafeSettings;
@@ -89,13 +90,17 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
           "logo"
         );
         next.logoAssetId = uploaded.storagePath;
+      }
+
+      const savedSettings = await saveSettingsAction(next);
+      setSettings(savedSettings);
+      if (pendingLogo) {
         setPendingLogo(null);
         revokeObjectUrl(logoPreviewUrl);
         setLogoPreviewUrl(undefined);
       }
-
-      await saveSettingsAction(next);
-      setSettings(next);
+      clearDashboardShellSnapshot();
+      window.dispatchEvent(new Event("barndaksa:settings-updated"));
       showToast({ type: "success", message: `تم حفظ إعدادات ${copy.casualNoun} بنجاح` });
     } catch (err) {
       showToast({
@@ -271,11 +276,12 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 accept="image/*"
                 className="hidden"
                 onChange={pickLogo}
+                disabled={saving || logoUploading}
               />
 
               <PrimaryButton
                 onClick={() => fileRef.current?.click()}
-                disabled={logoUploading}
+                disabled={saving || logoUploading}
                 className="mt-5 inline-flex items-center gap-2"
               >
                 <ImagePlus className="h-5 w-5" />
@@ -285,6 +291,7 @@ export function SettingsPageClient({ initialSettings, configError }: Props) {
                 <button
                   type="button"
                   onClick={() => void removeLogo()}
+                  disabled={saving || logoUploading}
                   className="mt-3 inline-flex rounded-2xl border border-[#E5D8CD] px-5 py-3 text-sm font-black text-[#7A6255] hover:bg-[#F8F4EF]"
                 >
                   حذف اللوجو

@@ -93,10 +93,12 @@ export function DashboardAppLayout({
     const refresh = () => { clearDashboardShellSnapshot(); load(); };
     window.addEventListener("focus", refresh);
     window.addEventListener("barndaksa:subscription-updated", refresh);
+    window.addEventListener("barndaksa:settings-updated", refresh);
     return () => {
       cancelled = true;
       window.removeEventListener("focus", refresh);
       window.removeEventListener("barndaksa:subscription-updated", refresh);
+      window.removeEventListener("barndaksa:settings-updated", refresh);
     };
   }, [pathname, retry]);
 

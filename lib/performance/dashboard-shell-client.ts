@@ -7,6 +7,7 @@ export type DashboardShellSnapshot = Awaited<ReturnType<typeof fetchOwnerDashboa
 const DASHBOARD_SHELL_TTL_MS = 30_000;
 let cachedSnapshot: { at: number; value: DashboardShellSnapshot } | null = null;
 let pendingSnapshot: Promise<DashboardShellSnapshot> | null = null;
+let snapshotGeneration = 0;
 
 function readSessionSnapshot(): DashboardShellSnapshot | null {
   try {
@@ -52,19 +53,22 @@ export function getCachedDashboardShellSnapshot() {
 
   if (pendingSnapshot) return pendingSnapshot;
 
-  pendingSnapshot = fetchOwnerDashboardShellAction()
+  const generation = snapshotGeneration;
+  const request = fetchOwnerDashboardShellAction()
     .then((snapshot) => {
+      if (generation !== snapshotGeneration) return snapshot;
       writeSessionSnapshot(snapshot);
       return redirectUnauthenticatedDashboard(snapshot);
     })
     .finally(() => {
-      pendingSnapshot = null;
+      if (pendingSnapshot === request) pendingSnapshot = null;
     });
-
-  return pendingSnapshot;
+  pendingSnapshot = request;
+  return request;
 }
 
 export function clearDashboardShellSnapshot() {
+  snapshotGeneration++;
   cachedSnapshot = null;
   pendingSnapshot = null;
   try {

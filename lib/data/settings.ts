@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
+import { readMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { mapDbSettingsToCafeSettings } from "@/lib/data/mappers";
 import {
   resolvePublishedStoragePathToUrl,
@@ -62,9 +63,24 @@ export async function getPublicCafeSettings(slug: string): Promise<CafeSettings 
   };
 }
 
-export async function getOwnerCafeSettings(): Promise<CafeSettings> {
-  const cafe = await requireOwnerCafeContext();
+async function requireSettingsContext() {
   const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("سجل دخولك للوصول إلى إعدادات العلامة");
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("role,status").eq("id", user.id).maybeSingle();
+  if (profileError || profile?.status !== "active") throw new Error("هذا الحساب غير مخول لإدارة إعدادات العلامة");
+  const cafe = await requireOwnerCafeContext();
+  if (profile.role === "platform_admin") {
+    const maintenance = await readMaintenanceSessionCookie();
+    if (!maintenance || maintenance.adminUserId !== user.id || maintenance.cafeId !== cafe.id || maintenance.expiresAt <= Date.now()) {
+      throw new Error("افتح حساب العلامة المطلوب من وضع الصيانة قبل تعديل الإعدادات");
+    }
+  }
+  return { cafe, supabase };
+}
+
+export async function getOwnerCafeSettings(): Promise<CafeSettings> {
+  const { cafe, supabase } = await requireSettingsContext();
   const { data, error } = await supabase
     .from("cafe_settings")
     .select("*")
@@ -100,6 +116,7 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
 }
 
 const settingsSchema = z.object({
+  cafeName: z.string().trim().min(1, "أدخل اسم العلامة التجارية").max(160, "اسم العلامة طويل جدًا").refine(value => !/[\u0000-\u001f\u007f]/.test(value), "أدخل اسم علامة صالحًا"),
   ownerName: z.string().optional(),
   ownerEmail: z.string().email().optional().or(z.literal("")),
   ownerPhone: z.string().optional(),
@@ -117,13 +134,12 @@ const settingsSchema = z.object({
   themeId: z.string().optional(),
 });
 
-export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) {
+export async function updateCafeSettings(input: z.infer<typeof settingsSchema>): Promise<CafeSettings> {
   const parsed = settingsSchema.parse(input);
-  const cafe = await requireOwnerCafeContext();
-  const supabase = await createClient();
+  const { cafe, supabase } = await requireSettingsContext();
 
   const payload = {
-    cafe_id: cafe.id,
+    cafe_name: parsed.cafeName,
     owner_name: parsed.ownerName ?? null,
     owner_email: parsed.ownerEmail || null,
     owner_phone: parsed.ownerPhone ?? null,
@@ -142,7 +158,18 @@ export async function updateCafeSettings(input: z.infer<typeof settingsSchema>) 
     theme_id: parsed.themeId,
   };
 
-  const { error } = await supabase.from("cafe_settings").upsert(payload, { onConflict: "cafe_id" });
-  if (error) throw error;
+  const { data, error } = await supabase.rpc("save_owner_cafe_settings", { p_cafe_id: cafe.id, p_settings: payload });
+  if (error) throw new Error(error.code === "42501" ? "ليست لديك صلاحية تعديل إعدادات هذه العلامة" : "تعذر حفظ إعدادات العلامة حاول مرة أخرى");
+  if (!data || data.cafe?.id !== cafe.id || data.settings?.cafe_id !== cafe.id || typeof data.cafe.name !== "string" || typeof data.cafe.slug !== "string") {
+    throw new Error("لم يتم تأكيد حفظ الإعدادات أعد المحاولة");
+  }
+  // Use the transaction's saved rows, not the request-cached cafe context.
+  const saved = mapDbSettingsToCafeSettings(data.cafe.slug, data.settings);
+  saved.cafeName = data.cafe.name;
+  saved.businessCategory = data.cafe.business_category ?? cafe.businessCategory;
+  if (data.settings.logo_storage_path) {
+    saved.logoDataUrl = await resolvePublishedStoragePathToUrl(storageBucketForLogo(), data.settings.logo_storage_path);
+  }
+  return saved;
 }
 
