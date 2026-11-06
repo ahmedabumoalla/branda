@@ -281,5 +281,6 @@ await test("operations diagnostic authenticates before reads and never returns Q
   assert(result.headers.get("cache-control").includes("no-store"));assert(db.calls.every(c=>c.filters.some(([key,value])=>key==="cafe_id"&&value===id(10))));
 });
 inputs.add(path.resolve(import.meta.filename));
-fs.writeFileSync(".git/marketing-backend-checks.json",JSON.stringify({executedAt:new Date().toISOString(),node:process.version,checks,providerMutations:0,liveDatabaseWrites:0,inputs:Object.fromEntries([...inputs].map(file=>[path.relative(process.cwd(),file),createHash("sha256").update(fs.readFileSync(file)).digest("hex")]))},null,2));
+fs.mkdirSync("output/marketing-checks",{recursive:true});
+fs.writeFileSync("output/marketing-checks/backend.json",JSON.stringify({executedAt:new Date().toISOString(),node:process.version,checks,providerMutations:0,liveDatabaseWrites:0,inputs:Object.fromEntries([...inputs].map(file=>[path.relative(process.cwd(),file),createHash("sha256").update(fs.readFileSync(file)).digest("hex")]))},null,2));
 console.log(`Marketing backend: ${checks} grouped checks passed with mocked provider and database`);

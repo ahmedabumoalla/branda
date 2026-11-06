@@ -35,16 +35,20 @@ globalThis.fetch = async () => { throw Error('timeout'); };
 assert.equal((await green.sendGreenApiLoyaltyWelcome({ phone: '966500000000', message: 'Test' })).status, 'unknown');
 await assert.rejects(() => green.sendGreenApiLoyaltyWelcome({ phone: 'bad', message: 'Test' }));
 let ready = false, rpcCalls = [], sends = [], jobs = [], saved = true, outcome = { status: 'queued', providerMessageId: 'ack' };
+const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
+let locoSender = null, locoSends = [];
 const worker = load('lib/wallet/welcome.ts', {
   '@/lib/supabase/admin': { createAdminClient: () => ({ rpc: async (name, args) => {
-    rpcCalls.push({ name, args }); return { data: name === 'claim_wallet_welcome' ? jobs.shift() ?? null : saved, error: null };
+    rpcCalls.push({ name, args }); return { data: name === 'claim_routed_wallet_welcome' ? jobs.shift() ?? null : saved, error: null };
   } }) },
-  '@/lib/whatsapp/green-api': { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async input => { sends.push(input); return outcome; } },
+  '@/lib/whatsapp/green-api': { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async input => { sends.push(input); return outcome; }, sendGreenApiCustomerMessage: async (sender,input) => { locoSends.push({sender,input}); return outcome; } },
+  '@/lib/whatsapp/customer-routing': { selectLocoCustomerSender: async cafeId => { assert.equal(cafeId,loco); return locoSender; } },
+  '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco },
 });
 assert.equal((await worker.dispatchWalletWelcomes()).deferred, true);
 assert.equal(rpcCalls.length, 0, 'disconnected sender cannot consume a claim');
 ready = true;
-const job = { id: 'job', claimToken: 'token', phone: '966500000000', brandName: 'Test Brand', stamps: 6, reward: '10%' };
+const job = { id: 'job', claimToken: 'token', cafeId: 'other-brand', phone: '966500000000', brandName: 'Test Brand', stamps: 6, reward: '10%' };
 jobs = [job];
 assert.equal((await worker.dispatchWalletWelcomes('card')).queued, 1);
 assert.equal(rpcCalls[0].args.p_card_id, 'card');
@@ -59,6 +63,24 @@ jobs = Array(8).fill(job); outcome = { status: 'rejected' };
 assert.equal((await worker.dispatchWalletWelcomes(undefined, 100)).processed, 5, 'bounded cron batch');
 jobs = [job]; saved = false;
 await assert.rejects(() => worker.dispatchWalletWelcomes(), /result_unavailable/);
+saved = true; ready = false; locoSender = { idInstance: 'brand' }; outcome = { status: 'queued', providerMessageId: 'brand-ack' };
+jobs = [{ ...job, cafeId: loco }];
+assert.equal((await worker.dispatchWalletWelcomes()).queued, 1);
+assert.equal(locoSends.length, 1);
+assert.equal(rpcCalls.at(-2).args.p_primary_ready, false);
+assert.equal(rpcCalls.at(-2).args.p_loco_ready, true);
+const oldSendCount = sends.length;
+jobs = [job];
+assert.equal((await worker.dispatchWalletWelcomes()).rejected, 1, 'defense in depth against an unexpected ineligible tenant');
+assert.equal(sends.length, oldSendCount);
+assert.equal(locoSends.length, 1, 'another tenant cannot use LOCO or backup');
+jobs = [{ ...job, cafeId: loco }]; outcome = { status: 'unknown' };
+assert.equal((await worker.dispatchWalletWelcomes()).unknown, 1);
+assert.equal(locoSends.length, 2, 'unknown brand POST attempted once');
+assert.equal((await worker.dispatchWalletWelcomes()).processed, 0);
+assert.equal(locoSends.length, 2);
+ready = true; locoSender = null; jobs = [job]; outcome = { status: 'queued', providerMessageId: 'primary-ack' };
+assert.equal((await worker.dispatchWalletWelcomes()).queued, 1, 'non-LOCO remains primary-only');
 // Execute the real handlers against isolated dependencies: no customer pass or send.
 for (const provider of ['apple', 'google']) {
   let authorized = true, issueFails = false, scheduled = [], welcomed = [];

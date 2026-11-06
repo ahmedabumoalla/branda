@@ -12,15 +12,17 @@ let count = 0;
 async function test(name, run) { await run(); count++; console.log('PASS ' + name); }
 const id = '16b4c203-44a2-4a18-98c5-c63403800a01', lease = '16b4c203-44a2-4a18-98c5-c63403800a02';
 let key = 'isolated-service-test-key', jobs = [], calls = [], sends = [], unavailable = false, admitted = true, sendError = false, releaseSend;
+const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
+let selectedSender = { idInstance: 'isolated-brand' }, routedSends = [], routedStatus = 'queued', selections = 0;
 const admin = { rpc: async (name, args) => {
   calls.push({ name, args });
   if (unavailable) return { error: { code: 'XX000' } };
   if (name === 'enqueue_customer_phone_otp_delivery') {
     if (!admitted) return { error: { code: '42501' } };
-    jobs.push({ id, payload: args.p_payload, lease_token: lease });
+    jobs.push({ id, payload: args.p_payload, lease_token: lease, cafe_id: null, purpose: null });
     return { data: id };
   }
-  if (name === 'claim_customer_phone_otp_delivery') return { data: jobs.splice(0, 1) };
+  if (name === 'claim_customer_phone_otp_delivery_context') return { data: jobs.splice(0, 1).map(job => ({ cafe_id: null, purpose: null, ...job })) };
   if (name === 'finish_customer_phone_otp_delivery') return { data: true };
   throw new Error('unexpected RPC');
 } };
@@ -30,8 +32,13 @@ console.error = (...args) => messages.push(JSON.stringify(args));
 const delivery = load('lib/auth/otp-delivery.ts', {
   'server-only': {}, '@/lib/supabase/admin': { createAdminClient: () => admin },
   '@/lib/barndaksa/env': { getSupabaseServiceRoleKey: () => key },
+  '@/lib/whatsapp/customer-routing': {
+    isLocoCustomerOtp: (cafeId,purpose) => cafeId === loco && ['customer_signup','customer_login'].includes(purpose),
+    selectLocoCustomerSender: async () => { selections++; return selectedSender; },
+  },
   '@/lib/whatsapp/green-api': {
     greenApiProviderInstanceKey: () => 'isolated-provider',
+    sendGreenApiCustomerMessage: async (sender,input,timeoutMs) => { routedSends.push({sender,input,timeoutMs}); return { status: routedStatus }; },
     sendGreenApiSupabaseOtp: async (payload, options) => {
       sends.push({ payload, options });
       if (sendError) throw new Error('private-provider-secret');
@@ -120,6 +127,32 @@ function request(signed = true, raw = JSON.stringify({ user: { phone: '+96650000
     assert.equal(runs, 0);
     assert.equal((await cron.GET(new Request('https://example.test', { headers: { authorization: 'Bearer ' + process.env.CRON_SECRET } }))).status, 200);
     assert.equal(runs, 1);
+  });
+  await test('only trusted LOCO customer jobs use the selected sender', async () => {
+    for (const purpose of ['customer_signup','customer_login']) {
+      const payload = delivery.sealOtpDelivery({phoneNormalized:'966500000001',code:'123456'});
+      jobs = [{id,payload,lease_token:lease,cafe_id:loco,purpose}];
+      const legacy = sends.length; await delivery.deliverQueuedOtp();
+      assert.equal(sends.length,legacy); assert.equal(calls.at(-1).args.p_status,'sent');
+      assert.equal(routedSends.at(-1).timeoutMs,25000);
+    }
+  });
+  await test('staff, other tenants and historical jobs preserve the existing transport', async () => {
+    const before = selections;
+    for (const [cafe_id,purpose] of [[loco,'finance_cashier_login'],['16b4c203-44a2-4a18-98c5-c63403800a99','customer_login'],[null,null]]) {
+      jobs = [{id,payload:delivery.sealOtpDelivery({phoneNormalized:'966500000001',code:'123456'}),lease_token:lease,cafe_id,purpose}];
+      const legacy = sends.length; await delivery.deliverQueuedOtp(); assert.equal(sends.length,legacy+1);
+    }
+    assert.equal(selections,before);
+  });
+  await test('offline LOCO sends nothing and uncertain selected POST never enters legacy fallback', async () => {
+    const legacy = sends.length, routed = routedSends.length;
+    const job = () => ({id,payload:delivery.sealOtpDelivery({phoneNormalized:'966500000001',code:'123456'}),lease_token:lease,cafe_id:loco,purpose:'customer_login'});
+    selectedSender = null; jobs = [job()]; await delivery.deliverQueuedOtp();
+    assert.equal(calls.at(-1).args.p_status,'failed'); assert.equal(routedSends.length,routed);
+    selectedSender = { idInstance:'isolated-brand' }; routedStatus = 'unknown'; jobs = [job()]; await delivery.deliverQueuedOtp();
+    assert.equal(calls.at(-1).args.p_status,'unknown'); assert.equal(routedSends.length,routed+1);
+    assert.equal(sends.length,legacy); assert.equal(await delivery.deliverQueuedOtp(),false);
   });
   await test('no OTP, phone, payload or provider secret appears in logs', () => {
     const output = messages.join('');

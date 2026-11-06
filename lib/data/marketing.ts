@@ -90,19 +90,19 @@ async function audience(context: Context): Promise<MarketingAudienceMember[]> {
   }
   return [...byPhone.values()].sort((a, b) => a.name.localeCompare(b.name, "ar") || a.id.localeCompare(b.id));
 }
-type Connection = { cafe_id: string; requested_phone: string; verified_phone: string | null; status: MarketingConnectionStatus; instance_id: string | null; encrypted_credentials: string | null; generation: string; lease_token: string | null; lease_until: string | null; allow_create?: boolean; last_error: string | null };
-async function connection(context: Context) {
+type Connection = { cafe_id: string; requested_phone: string; verified_phone: string | null; status: MarketingConnectionStatus; instance_id: string | null; encrypted_credentials: string | null; generation: string; lease_token: string | null; lease_until: string | null; allow_create?: boolean; last_error: string | null; transactional_requested_at?: string | null };
+export async function readMarketingConnection(context: Pick<Context, "db" | "cafeId">) {
   const { data, error } = await context.db.from("brand_marketing_connections").select("*").eq("cafe_id", context.cafeId).maybeSingle();
   if (error) throw new MarketingError("تعذر تحميل اتصال واتساب", 503);
   return data as Connection | null;
 }
-function credentials(row: Connection) {
+export function marketingConnectionCredentials(row: Connection) {
   if (!row.encrypted_credentials || !row.instance_id) throw new MarketingError("أكمل ربط رقم واتساب أولًا", 409);
   return decryptMarketingSecret<GreenApiMarketingCredentials>(row.encrypted_credentials, `${row.cafe_id}:${row.instance_id}`);
 }
 async function dashboard(context: Context): Promise<MarketingDashboard> {
   const [row, history, suppressions, members] = await Promise.all([
-    connection(context), context.db.rpc("marketing_campaign_history", { p_cafe: context.cafeId }),
+    readMarketingConnection(context), context.db.rpc("marketing_campaign_history", { p_cafe: context.cafeId }),
     context.db.from("brand_marketing_suppressions").select("phone", { count: "exact", head: true }).eq("cafe_id", context.cafeId),
     audience(context),
   ]);
@@ -117,9 +117,9 @@ async function dashboard(context: Context): Promise<MarketingDashboard> {
 }
 export async function getMarketingDashboard() { return dashboard(await requireMarketingContext()); }
 
-async function refreshConnection(context: Context, row: Connection) {
+export async function refreshMarketingConnection(context: Pick<Context, "db" | "cafeId">, row: Connection) {
   if (["disconnected", "disconnecting", "provisioning"].includes(row.status) || !row.encrypted_credentials) return null;
-  const auth = credentials(row);
+  const auth = marketingConnectionCredentials(row);
   const state = await getGreenApiMarketingState(auth);
   if (state === "blocked" || state === "suspended") throw new MarketingError("اتصال واتساب موقوف تحقق من الحساب ثم أعد المحاولة", 409);
   if (state === "starting" || state === "sleepMode") return state;
@@ -139,15 +139,14 @@ function temporaryProviderFailure(error: unknown) {
   return error instanceof GreenApiProviderError && /^GREEN_API_MARKETING_(REQUEST_FAILED|REQUEST_REJECTED_(408|429|5\d\d))$/.test(error.code);
 }
 
-export async function runMarketingAction(raw: unknown): Promise<MarketingResult> {
-  const parsed = inputSchema.safeParse(raw);
-  if (!parsed.success) throw new MarketingError("راجع بيانات الحملة والأرقام وتأكيد موافقة المستلمين");
-  const input = parsed.data, context = await requireMarketingContext();
-  if (["connect", "createCampaign", "qr"].includes(input.action) && !context.eligible) throw new MarketingError("الحملات غير مشمولة في اشتراك علامتك الحالي", 403);
-  if (!["cancelCampaign", "optOut"].includes(input.action) && !marketingConfigured()) throw new MarketingError("خدمة الربط غير متاحة حاليًا حاول لاحقًا", 503);
+type ConnectionContext = Pick<Context, "db" | "cafeId" | "userId" | "brandName">;
+export type MarketingConnectionAction = { action: "connect"; phone: string } | { action: "refresh" | "qr" | "disconnect" };
+
+/** Caller supplies an authorized server context; this executor never reads audiences or sends messages. */
+export async function runMarketingConnectionAction(context: ConnectionContext, input: MarketingConnectionAction, claimRpc: "marketing_claim_connection" | "loco_claim_whatsapp_connection" = "marketing_claim_connection") {
   let qr: string | undefined, qrStatus: string | undefined;
   if (input.action === "connect") {
-    const claim = await context.db.rpc("marketing_claim_connection", { p_cafe: context.cafeId, p_actor: context.userId, p_phone: input.phone });
+    const claim = await context.db.rpc(claimRpc, { p_cafe: context.cafeId, p_actor: context.userId, p_phone: input.phone });
     if (claim.error || !claim.data) throw new MarketingError("يوجد اتصال أو طلب ربط قيد المعالجة تحقق من حالته أولًا", 409);
     const claimed = claim.data as Connection;
     const webhookToken = randomBytes(32).toString("base64url");
@@ -169,18 +168,18 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
       throw new MarketingError("تعذر تأكيد الربط الآن أعد التحقق وسنستعيد الاتصال الموجود دون إنشاء اتصال مكرر", 503);
     }
   } else if (input.action === "refresh" || input.action === "qr") {
-    const row = await connection(context);
+    const row = await readMarketingConnection(context);
     if (row) {
       try {
-        const state = await refreshConnection(context, row);
+        const state = await refreshMarketingConnection(context, row);
         if (input.action === "qr") {
           if (state === null || state === "starting" || state === "sleepMode") qrStatus = "timeout";
           else {
-            const fresh = await connection(context);
+            const fresh = await readMarketingConnection(context);
             if (state === "authorized" && fresh?.status === "connected") qrStatus = "alreadyLogged";
             else {
               if (!fresh || !["pairing", "error"].includes(fresh.status)) throw new MarketingError("تحقق من حالة الاتصال قبل طلب رمز الربط", 409);
-              const result = await getGreenApiMarketingQr(credentials(fresh));
+              const result = await getGreenApiMarketingQr(marketingConnectionCredentials(fresh));
               qrStatus = result.type;
               if (result.type === "qrCode" && /^[A-Za-z0-9+/=\r\n]+$/.test(result.message) && result.message.length < 300_000) qr = result.message;
             }
@@ -192,7 +191,7 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
       }
     }
   } else if (input.action === "disconnect") {
-    const row = await connection(context);
+    const row = await readMarketingConnection(context);
     if (row && row.status !== "disconnected") {
       if (row.lease_until && Date.parse(row.lease_until) > Date.now()) throw new MarketingError("انتظر اكتمال طلب الاتصال الحالي", 409);
       if (!row.encrypted_credentials) throw new MarketingError("أعد محاولة الربط لاستعادة الاتصال قبل فصله", 409);
@@ -200,7 +199,7 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
       if (locked.error || !locked.data) throw new MarketingError("يوجد طلب آخر قيد المعالجة", 409);
       const generation = String(locked.data);
       try {
-        await deleteGreenApiMarketingInstance(credentials(row));
+        await deleteGreenApiMarketingInstance(marketingConnectionCredentials(row));
         const { error } = await context.db.from("brand_marketing_connections").update({ status: "disconnected", encrypted_credentials: null, instance_id: null, verified_phone: null, webhook_token_hash: null, provision_attempted_at: null, lease_token: null, lease_until: null, last_error: null, updated_at: new Date().toISOString() }).eq("cafe_id", context.cafeId).eq("generation", generation);
         if (error) throw new Error("DISCONNECT_SAVE_FAILED");
       } catch (error) {
@@ -209,6 +208,20 @@ export async function runMarketingAction(raw: unknown): Promise<MarketingResult>
         throw new MarketingError("تعذر تأكيد الفصل أعد المحاولة لاستكمال إيقاف الاتصال", 503);
       }
     }
+  }
+  return { ...(qr ? { qr } : {}), ...(qrStatus ? { qrStatus } : {}) };
+}
+
+export async function runMarketingAction(raw: unknown): Promise<MarketingResult> {
+  const parsed = inputSchema.safeParse(raw);
+  if (!parsed.success) throw new MarketingError("راجع بيانات الحملة والأرقام وتأكيد موافقة المستلمين");
+  const input = parsed.data, context = await requireMarketingContext();
+  if (["connect", "createCampaign", "qr"].includes(input.action) && !context.eligible) throw new MarketingError("الحملات غير مشمولة في اشتراك علامتك الحالي", 403);
+  if (!["cancelCampaign", "optOut"].includes(input.action) && !marketingConfigured()) throw new MarketingError("خدمة الربط غير متاحة حاليًا حاول لاحقًا", 503);
+  let qr: string | undefined, qrStatus: string | undefined;
+  if (input.action === "connect" || input.action === "refresh" || input.action === "qr" || input.action === "disconnect") {
+    const result = await runMarketingConnectionAction(context, input);
+    qr = result.qr; qrStatus = result.qrStatus;
   } else if (input.action === "optOut") {
     const customer = (await audience(context)).find(member => member.id === input.customerId);
     if (!customer) throw new MarketingError("العميل غير متاح ضمن عملاء هذه العلامة", 400);

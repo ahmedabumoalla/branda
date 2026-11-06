@@ -3,14 +3,15 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:cr
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/barndaksa/env";
-import { greenApiProviderInstanceKey, sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
+import { greenApiProviderInstanceKey, sendGreenApiCustomerMessage, sendGreenApiSupabaseOtp } from "@/lib/whatsapp/green-api";
+import { isLocoCustomerOtp, selectLocoCustomerSender } from "@/lib/whatsapp/customer-routing";
 
 const payloadSchema = z.object({
   phoneNormalized: z.string().regex(/^9665\d{8}$/),
   code: z.string().regex(/^\d{6}$/),
 });
 const sealedPayloadSchema = payloadSchema.extend({ providerInstance: z.string().min(1).max(200) });
-const jobSchema = z.object({ id: z.uuid(), payload: z.string().max(4096), lease_token: z.uuid() });
+const jobSchema = z.object({ id: z.uuid(), payload: z.string().max(4096), lease_token: z.uuid(), cafe_id: z.uuid().nullable(), purpose: z.string().nullable() });
 const context = "branda:auth-otp-delivery:v1";
 
 function encryptionKey() {
@@ -55,7 +56,7 @@ export async function enqueueOtpDelivery(input: z.infer<typeof payloadSchema> & 
 export async function deliverQueuedOtp(id?: string) {
   const admin = createAdminClient();
   const providerInstance = greenApiProviderInstanceKey();
-  const claim = await admin.rpc("claim_customer_phone_otp_delivery", { p_provider_instance: providerInstance, p_id: id ?? null });
+  const claim = await admin.rpc("claim_customer_phone_otp_delivery_context", { p_provider_instance: providerInstance, p_id: id ?? null });
   if (claim.error) throw new Error("OTP_QUEUE_UNAVAILABLE");
   if (!Array.isArray(claim.data) || claim.data.length === 0) return false;
   const job = jobSchema.parse(claim.data[0]);
@@ -65,9 +66,20 @@ export async function deliverQueuedOtp(id?: string) {
     if (payload.providerInstance !== providerInstance) throw new Error("OTP_PROVIDER_MISMATCH");
     // The Auth response has already been acknowledged after durable enqueue.
     // A slow provider can now finish without invalidating the user's Auth OTP.
-    status = "unknown";
-    await sendGreenApiSupabaseOtp({ phoneNormalized: payload.phoneNormalized, code: payload.code }, { timeoutMs: 25_000 });
-    status = "sent";
+    if (isLocoCustomerOtp(job.cafe_id, job.purpose)) {
+      const sender = await selectLocoCustomerSender(job.cafe_id!);
+      if (!sender) throw new Error("OTP_SENDERS_UNAVAILABLE");
+      status = "unknown";
+      const outcome = await sendGreenApiCustomerMessage(sender, {
+        phone: payload.phoneNormalized,
+        message: `رمز التحقق في برندة: ${payload.code}\nصالح لمدة 5 دقائق\nلا تشارك الرمز مع أي شخص\nإذا لم تطلبه فتجاهل الرسالة`,
+      }, 25_000);
+      status = outcome.status === "queued" ? "sent" : outcome.status === "rejected" ? "failed" : "unknown";
+    } else {
+      status = "unknown";
+      await sendGreenApiSupabaseOtp({ phoneNormalized: payload.phoneNormalized, code: payload.code }, { timeoutMs: 25_000 });
+      status = "sent";
+    }
   } catch {
     // Neither provider errors nor ciphertext/plaintext belong in logs.
     console.error("[otpDelivery]", { status, jobId: job.id });

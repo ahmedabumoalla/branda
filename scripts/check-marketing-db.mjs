@@ -199,6 +199,7 @@ try {
     check(await value("SELECT count(*) FROM storage.objects WHERE bucket_id='other'")===1,'media isolation preserves unrelated buckets');
     await db.exec('RESET ROLE');
   }
-  await writeFile(".git/marketing-db-checks.json", JSON.stringify({ executedAt: new Date().toISOString(), node: process.version, checks, migrationSha256: createHash("sha256").update(migration).digest("hex"), mediaMigrationSha256:createHash('sha256').update(mediaMigration).digest('hex'),testSha256: createHash("sha256").update(await readFile(import.meta.filename)).digest("hex"), engine: "PGlite isolated PostgreSQL", liveDatabaseWrites: 0 },null,2));
+  await (await import('node:fs/promises')).mkdir("output/marketing-checks",{recursive:true});
+  await writeFile("output/marketing-checks/database.json", JSON.stringify({ executedAt: new Date().toISOString(), node: process.version, checks, migrationSha256: createHash("sha256").update(migration).digest("hex"), mediaMigrationSha256:createHash('sha256').update(mediaMigration).digest('hex'),testSha256: createHash("sha256").update(await readFile(import.meta.filename)).digest("hex"), engine: "PGlite isolated PostgreSQL", liveDatabaseWrites: 0 },null,2));
   console.log(`Marketing SQL: ${checks} authorization, tenant, lease, idempotency, quota, cancellation and receipt checks passed`);
 } finally { await db.close(); }

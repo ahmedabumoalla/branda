@@ -3,7 +3,7 @@
 import { DashboardNavigationLink as Link } from "./dashboard-navigation-link";
 import { FinanceSidebarMenu } from "./finance-sidebar-menu";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Star, WalletCards } from "lucide-react";
+import { ShoppingBag, MapPin, CalendarDays, Scissors, BellRing, ChevronsLeft, ChevronsRight, LockKeyhole, LogOut, Gift, Layers, Megaphone, Package, Settings, Smartphone, Star, WalletCards } from "lucide-react";
 import { SubscriptionCountdown } from "@/components/dashboard/subscription-countdown";
 import type { SubscriptionSummary } from "@/lib/platform/subscription-clock";
 import { CafeLogo } from "@/components/cafe/cafe-logo";
@@ -16,6 +16,7 @@ import type { DashboardShellSnapshot } from "@/lib/performance/dashboard-shell-c
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { AppNotification } from "@/lib/mock/notifications";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
+import { LOCO_BRAND_SLUG } from "@/lib/whatsapp/brand-connection-types";
 
 type SidebarProps = {
   snapshot?: DashboardShellSnapshot;
@@ -127,6 +128,7 @@ export function DashboardSidebar({ snapshot, servicesAvailable = false, collapse
       {isGifts && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/orders" onClick={() => onNavigate?.()} aria-label="الطلبات" title={collapsed ? "الطلبات" : undefined} aria-current={pathname.startsWith("/dashboard/orders") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/orders") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><ShoppingBag className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الطلبات</span>}</Link>}
       {links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/branches" onClick={() => onNavigate?.()} aria-label="الفروع" title={collapsed ? "الفروع" : undefined} aria-current={pathname === "/dashboard/branches" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/branches" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>الفروع</span>}</Link>}
       {isSalon && links.some(({ feature, access }) => feature.id === "menu" && access?.effectiveEnabled) && <Link href="/dashboard/bookings" onClick={() => onNavigate?.()} aria-label="متابعة الحجوزات" title={collapsed ? "متابعة الحجوزات" : undefined} aria-current={pathname.startsWith("/dashboard/bookings") ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname.startsWith("/dashboard/bookings") ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>متابعة الحجوزات</span>}</Link>}
+      {settings.cafeSlug === LOCO_BRAND_SLUG && servicesAvailable && <Link href="/dashboard/brand-phone" onClick={() => onNavigate?.()} aria-label="ربط رقم العلامة التجارية" title={collapsed ? "ربط رقم العلامة التجارية" : undefined} aria-current={pathname === "/dashboard/brand-phone" ? "page" : undefined} className={`flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-white/[0.065] ${collapsed ? "justify-center" : ""} ${pathname === "/dashboard/brand-phone" ? "bg-[#E5B85C]/10 text-[#FFD77E]" : "text-[#D8CEC5]"}`}><Smartphone className="h-4 w-4 shrink-0" aria-hidden="true" />{!collapsed && <span>ربط رقم العلامة التجارية</span>}</Link>}
       {settings.cafeSlug && <Link href="/dashboard/subscription" onClick={() => onNavigate?.()}
         aria-label="الباقات والاشتراكات" title={collapsed ? "الباقات والاشتراكات" : undefined}
         aria-current={pathname.startsWith("/dashboard/subscription") ? "page" : undefined}

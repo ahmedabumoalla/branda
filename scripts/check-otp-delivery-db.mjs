@@ -125,5 +125,78 @@ try {
   equal(await service(()=>scalar('select public.claim_customer_phone_otp_dispatch($1,$2)',[phone,provider])),'isolated-brand','legacy direct consumer still works');
   equal(await service(()=>scalar('select public.claim_customer_phone_otp_dispatch($1,$2)',[phone,provider])),null,'legacy consumer remains single-use');
   equal(await scalar('select count(*)::int from auth.users'),1,'queue creates no Auth identity');
+  // Apply the routing extension after all original queue/admission regressions.
+  const loco = '321fd305-1883-48df-ab69-829cf7d1bc48';
+  await db.exec(`create schema loyalty_audit_private;
+    alter table cafes add column name text default 'Fixture';
+    alter table cafe_loyalty_programs add column purchases_required integer default 6;
+    alter table cafe_loyalty_programs add column reward_name text default 'Existing reward';
+    create table customer_profiles(id uuid primary key,cafe_id uuid,status text default 'active',blocked_at timestamptz,phone_auth_conflict boolean default false,phone_normalized text);
+    create table loyalty_cards(id uuid primary key,cafe_id uuid,customer_profile_id uuid,status text default 'active');
+    create table loyalty_audit_private.wallet_customer_events(card_id uuid,cafe_id uuid,origin text,kind text);`);
+  await db.exec(await readFile('supabase/migrations/20261103090344_wallet_download_welcome.sql','utf8'));
+  await db.exec(await readFile('supabase/migrations/20261106075709_loco_customer_delivery_routing.sql','utf8'));
+  const contextClaim = async id => (await db.query('select * from public.claim_customer_phone_otp_delivery_context($1,$2)',[provider,id])).rows;
+  const welcome = (card = null,primary = true,brand = true) => scalar('select public.claim_routed_wallet_welcome($1,$2,$3)',[card,primary,brand]);
+  for(const role of ['anon','authenticated','unrelated']) {
+    await db.exec(`set role ${role}`);
+    await reject(()=>contextClaim(absent),'untrusted role cannot claim tenant context');
+    await reject(()=>welcome(),'untrusted role cannot forge readiness flags');
+    await db.exec('reset role');
+  }
+  const [legacy] = await service(()=>contextClaim(loyalty));
+  equal(legacy.cafe_id,null,'pre-migration job never inferred from phone');
+  equal(legacy.purpose,null,'pre-migration job retains legacy routing');
+  await db.query(`insert into cafes(id,slug,status,is_public,finance,loyalty) values($1,'brand-9a8c97305195','active',true,true,true)`,[loco]);
+  await db.query('insert into cafe_loyalty_programs(cafe_id,enabled) values($1,true)',[loco]);
+  await db.query('delete from customer_phone_otp_requests where provider_dispatched_at is null');
+  const originalRequest = await seed({purpose:'customer_login'});
+  const newer = await scalar(`insert into customer_phone_otp_requests(cafe_id,phone_normalized,provider_instance,purpose,created_at) values($1,$2,$3,'customer_signup',now()) returning id`,[loco,phone,provider]);
+  const routedId = await service(()=>enqueue('loco-context'));
+  equal(await scalar('select provider_dispatched_at is not null from customer_phone_otp_requests where id=$1',[newer]),true,'exact selected admission consumed');
+  equal(await scalar('select provider_dispatched_at is null from customer_phone_otp_requests where id=$1',[originalRequest]),true,'other tenant admission not consumed by same hook');
+  const otherId = await service(()=>enqueue('other-context'));
+  equal(await service(()=>enqueue('loco-context')),routedId,'retry keeps original context after newer admissions');
+  const [routed] = await service(()=>contextClaim(routedId));
+  equal([routed.cafe_id,routed.purpose],[null,null],'competing latest LOCO admission cannot guess webhook tenant');
+  const [other] = await service(()=>contextClaim(otherId));
+  equal([other.cafe_id,other.purpose],[null,null],'last competing admission remains ambiguous after first is consumed');
+  equal((await service(()=>contextClaim(routedId))).length,0,'routed job still claims once');
+  await seed({purpose:'finance_cashier_login'});
+  const financeId = await service(()=>enqueue('finance-context'));
+  const [finance] = await service(()=>contextClaim(financeId));
+  equal(finance.purpose,'finance_cashier_login','cashier purpose preserved for exclusion');
+  // Reverse order and customer/staff overlap cannot route through a brand sender.
+  for(const newestPurpose of ['customer_login','finance_cashier_login']) {
+    await db.query(`insert into customer_phone_otp_requests(cafe_id,phone_normalized,provider_instance,purpose,created_at) values($1,$2,$3,'customer_signup',now()-interval '1 second')`,[loco,phone,provider]);
+    await seed({purpose:newestPurpose,age:'0 seconds'});
+    for(const suffix of ['first','remaining']) {
+      const ambiguousId = await service(()=>enqueue(`mixed-${newestPurpose}-${suffix}`));
+      const [context] = await service(()=>contextClaim(ambiguousId));
+      equal([context.cafe_id,context.purpose],[null,null],`${newestPurpose} overlap ${suffix} stays on platform`);
+    }
+  }
+  await db.query(`insert into customer_phone_otp_requests(cafe_id,phone_normalized,provider_instance,purpose) values($1,$2,$3,'customer_login')`,[loco,phone,provider]);
+  const uniqueLoco = await service(()=>enqueue('unique-loco'));
+  const [uniqueContext] = await service(()=>contextClaim(uniqueLoco));
+  equal([uniqueContext.cafe_id,uniqueContext.purpose],[loco,'customer_login'],'unambiguous LOCO admission retains exact trusted context');
+  const cards = {};
+  for(const cafe of [tenant,loco]) {
+    const profile = await scalar('insert into customer_profiles(id,cafe_id,phone_normalized) values(gen_random_uuid(),$1,$2) returning id',[cafe,phone]);
+    cards[cafe] = await scalar('insert into loyalty_cards(id,cafe_id,customer_profile_id) values(gen_random_uuid(),$1,$2) returning id',[cafe,profile]);
+    await db.query('insert into loyalty_audit_private.wallet_welcomes(cafe_id,customer_profile_id,card_id) values($1,$2,$3)',[cafe,profile,cards[cafe]]);
+  }
+  equal(await service(()=>welcome(null,false,false)),null,'all offline consumes no welcome');
+  equal(await scalar("select count(*)::int from loyalty_audit_private.wallet_welcomes where status='pending'"),2,'all offline leaves both tenants pending');
+  equal(await service(()=>welcome(cards[tenant],false,true)),null,'LOCO route cannot claim another tenant card');
+  const locoWelcome = await service(()=>welcome(null,false,true));
+  equal(locoWelcome.cafeId,loco,'brand ready primary offline claims LOCO only');
+  equal(locoWelcome.reward,'Existing reward','welcome preserves actual reward');
+  equal(await scalar("select status from loyalty_audit_private.wallet_welcomes where cafe_id=$1",[tenant]),'pending','other brand stays pending');
+  equal(await service(()=>welcome(null,false,true)),null,'dispatching welcome never claimed again');
+  const ordinaryWelcome = await service(()=>welcome(null,true,false));
+  equal(ordinaryWelcome.cafeId,tenant,'primary recovers remaining non-LOCO');
+  equal(await scalar('select public.finish_wallet_welcome($1,$2,$3,$4)',[locoWelcome.id,locoWelcome.claimToken,'unknown',null]),true,'ambiguous welcome terminal');
+  equal(await service(()=>welcome(null,true,true)),null,'unknown welcome not retried');
   console.log(`PASS encrypted OTP delivery SQL: ${checks} assertions (isolated PGlite; no live DB or provider calls)`);
 } finally { await db.close(); }

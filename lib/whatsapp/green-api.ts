@@ -285,6 +285,36 @@ export async function sendGreenApiSupabaseOtp(input: {
 
 type OtpSender = ReturnType<typeof requireGreenApiConfig>;
 
+/** Server-only credentials for customer routing; never serialize to client props or logs. */
+export type GreenApiCustomerSender = OtpSender;
+
+export function getGreenApiCustomerPlatformSenders() {
+  let primary: OtpSender | null = null;
+  try { primary = validateOtpSender(requireGreenApiConfig()); } catch { /* Missing primary does not disable standby. */ }
+  return { primary, backup: backupOtpSender(primary ?? { apiUrl: "", idInstance: "", apiTokenInstance: "" }) };
+}
+
+export async function isGreenApiCustomerSenderReady(sender: GreenApiCustomerSender) {
+  try { return await otpSenderReady(validateOtpSender(sender)); } catch { return false; }
+}
+
+/** Exactly one POST. Selection/failover must finish before calling this function. */
+export async function sendGreenApiCustomerMessage(sender: GreenApiCustomerSender, input: { phone: string; message: string }, timeoutMs = 10_000): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string }> {
+  if (!/^9665\d{8}$/.test(input.phone) || !input.message.trim() || input.message.length > 2000) throw new Error("INVALID_CUSTOMER_MESSAGE");
+  const config = validateOtpSender(sender);
+  try {
+    const response = await fetch(otpEndpoint(config, "sendMessage"), {
+      method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
+      signal: AbortSignal.timeout(Math.max(1000, Math.min(25_000, timeoutMs))),
+      body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
+    });
+    if (!response.ok) return { status: response.status >= 400 && response.status < 500 && response.status !== 408 ? "rejected" : "unknown" };
+    const data = await response.json() as GreenApiSendResponse;
+    return typeof data?.idMessage === "string" && data.idMessage.length > 0 && data.idMessage.length <= 200
+      ? { status: "queued", providerMessageId: data.idMessage } : { status: "unknown" };
+  } catch { return { status: "unknown" }; }
+}
+
 // Prefer the primary again; the explicit backup override remains available during incidents.
 // Campaigns and the durable queue's logical identity are intentionally unaffected.
 function preferBackupForAccess() {
