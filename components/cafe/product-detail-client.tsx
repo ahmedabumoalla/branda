@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Beef,
   CalendarDays,
   Clock,
   Coffee,
@@ -92,7 +93,7 @@ export function ProductDetailClient({ slug, id, initialProduct }: Props) {
   const copy = getBusinessCopy(settings.businessCategory);
   const isEvents = copy.kind === "events";
   const ProductFallbackIcon =
-    copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
+    copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : copy.kind === "butcher" ? Beef : Coffee;
   const menuEnabled = publicFeatureAllows(features, "menu");
   const product = initialProduct?.id === id ? initialProduct : null;
   const productsHref = getCafePath(slug, "products/popular", previewThemeId);

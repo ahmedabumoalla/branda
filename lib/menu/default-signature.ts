@@ -8,12 +8,12 @@ export const SIGNATURE_MENU_ROLLOUT_AT = "2026-11-03T00:00:00+03:00";
 export const DEFAULT_SIGNATURE_HERO = "/menu-art/default/hospitality-hero-v1.webp";
 
 export function usesDefaultSignatureMenu(category: string | null | undefined, createdAt: string | null | undefined) {
-  return ["cafes_coffee", "restaurants"].includes(category ?? "")
+  return ["cafes_coffee", "restaurants", "butcher_shops"].includes(category ?? "")
     && Boolean(createdAt) && Date.parse(createdAt!) >= Date.parse(SIGNATURE_MENU_ROLLOUT_AT);
 }
 
 export function defaultSignatureBrand(menu: StandaloneMenu): SignatureBrand | null {
-  if (menu.presentation !== "signature" || !["cafes_coffee", "restaurants"].includes(menu.businessCategory ?? "")) return null;
+  if (menu.presentation !== "signature" || !["cafes_coffee", "restaurants", "butcher_shops"].includes(menu.businessCategory ?? "")) return null;
   const input = menu.appearance?.palette;
   const color = (key: string, fallback: string) => /^#[a-f\d]{6}$/i.test(input?.[key] ?? "") ? input![key] : fallback;
   const palette = { primary: color("primary", "#354438"), secondary: color("secondary", "#6b7057"), button: color("button", "#354438"), background: color("background", "#f7f3e9"), text: color("text", "#252c25"), accent: color("accent", "#dac49a") };

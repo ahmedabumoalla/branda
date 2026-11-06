@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   BadgePercent,
+  Beef,
   Bell,
   CalendarDays,
   CheckCircle2,
@@ -423,7 +424,7 @@ export function CustomerFastAppClient({ slug }: { slug: string }) {
   const isEvents = copy.kind === "events";
   const menuLabel = isEvents ? "التذاكر" : "المنتجات";
   const itemCountLabel = isEvents ? "تذكرة" : "منتج";
-  const HeroIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : Coffee;
+  const HeroIcon = copy.kind === "events" ? CalendarDays : copy.kind === "restaurant" ? Utensils : copy.kind === "butcher" ? Beef : Coffee;
   const features = payload?.features ?? [];
   const allow = (feature: string) => featureCodesAllow(features, feature);
   const products = useMemo(() => allow("menu") ? payload?.products?.filter((product) => product.available !== false) ?? [] : [], [features, payload?.products]);

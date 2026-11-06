@@ -1,12 +1,13 @@
 import type { BusinessCategoryId } from "@/lib/platform/business-categories";
 
-export type BusinessKind = "cafe" | "restaurant" | "barbershop" | "events" | "gifts";
+export type BusinessKind = "cafe" | "restaurant" | "butcher" | "barbershop" | "events" | "gifts";
 
 export function resolveBusinessKind(
   category?: string | null
 ): BusinessKind {
   if (category === "hair_salons") return "barbershop";
   if (category === "gifts_flowers") return "gifts";
+  if (category === "butcher_shops") return "butcher";
   if (category === "restaurants" || category === "restaurant") {
     return "restaurant";
   }
@@ -71,6 +72,21 @@ const restaurantCopy: BusinessCopy = {
   loyaltyUnitLit: "أطباق مضيئة",
 };
 
+const butcherCopy: BusinessCopy = {
+  kind: "butcher",
+  categoryId: "butcher_shops",
+  brandNoun: "ملحمة",
+  casualNoun: "ملحمة",
+  pageNoun: "صفحة الملحمة",
+  itemSingular: "منتج",
+  itemPlural: "منتجات",
+  menuSearchPlaceholder: "ابحث عن لحم أو منتج",
+  freeRewardName: "مكافأة خاصة",
+  loyaltyUnitSingular: "ختم",
+  loyaltyUnitPlural: "أختام",
+  loyaltyUnitLit: "أختام مكتملة",
+};
+
 const barbershopCopy: BusinessCopy = {
   kind: "barbershop",
   categoryId: "hair_salons",
@@ -104,6 +120,7 @@ const eventsCopy: BusinessCopy = {
 export function getBusinessCopy(category?: string | null): BusinessCopy {
   const kind = resolveBusinessKind(category);
   if (kind === "restaurant") return restaurantCopy;
+  if (kind === "butcher") return butcherCopy;
   if (kind === "barbershop") return barbershopCopy;
   if (kind === "events") return eventsCopy;
   if (kind === "gifts") return {

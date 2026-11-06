@@ -1,6 +1,7 @@
 export type BusinessCategoryId =
   | "cafes_coffee"
   | "restaurants"
+  | "butcher_shops"
   | "massage_centers"
   | "beauty_centers"
   | "hair_salons"
@@ -12,7 +13,7 @@ export type BusinessCategoryId =
   | "furniture"
   | "events_conferences";
 
-export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "hair_salons", "gifts_flowers"] as const;
+export const AVAILABLE_BUSINESS_CATEGORY_IDS = ["cafes_coffee", "restaurants", "butcher_shops", "hair_salons", "gifts_flowers"] as const;
 
 export const BUSINESS_CATEGORIES: {
   id: BusinessCategoryId;
@@ -23,6 +24,7 @@ export const BUSINESS_CATEGORIES: {
 }[] = [
   { id: "cafes_coffee", label: "مقاهي وكوفيهات", available: true, dashboardPath: "/dashboard", icon: "Coffee" },
   { id: "restaurants", label: "مطاعم", available: true, dashboardPath: "/dashboard", icon: "Utensils" },
+  { id: "butcher_shops", label: "ملحمة", available: true, dashboardPath: "/dashboard", icon: "Beef" },
   { id: "massage_centers", label: "مراكز مساج", available: false, dashboardPath: null, icon: "Sparkles" },
   { id: "beauty_centers", label: "مراكز تجميل", available: false, dashboardPath: null, icon: "Scissors" },
   { id: "hair_salons", label: "صالونات الحلاقة الرجالية", available: true, dashboardPath: "/dashboard", icon: "Scissors" },

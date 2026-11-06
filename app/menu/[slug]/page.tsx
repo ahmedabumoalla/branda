@@ -38,8 +38,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const menu = await getStandaloneMenu(slug, showcase, branch);
   if (!menu) return { title: "المنيو غير متاح", robots: { index: false, follow: false } };
   return {
-    title: `${menu.name}${menu.branch ? ` | ${menu.branch.name}` : ""} | ${menu.businessCategory === "gifts_flowers" ? "المنتجات والخدمات" : "المنيو"}`,
-    description: menu.businessCategory === "gifts_flowers" ? `اكتشف منتجات وخدمات ${menu.name} واختر هديتك بتفاصيلها` : `اكتشف منيو ${menu.name} الأصناف والأسعار والمكونات والتفاصيل`,
+    title: `${menu.name}${menu.branch ? ` | ${menu.branch.name}` : ""} | ${menu.businessCategory === "gifts_flowers" ? "المنتجات والخدمات" : menu.businessCategory === "butcher_shops" ? "المنتجات" : "المنيو"}`,
+    description: menu.businessCategory === "gifts_flowers" ? `اكتشف منتجات وخدمات ${menu.name} واختر هديتك بتفاصيلها` : menu.businessCategory === "butcher_shops" ? `اكتشف منتجات ${menu.name} والأصناف والأسعار والتفاصيل` : `اكتشف منيو ${menu.name} الأصناف والأسعار والمكونات والتفاصيل`,
     ...(showcase ? { robots: { index: false, follow: false }, alternates: { canonical: `/menu/${slug}` } } : {}),
   };
 }

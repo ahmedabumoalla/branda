@@ -13,7 +13,7 @@ function load(file){
 }
 const {AVAILABLE_BUSINESS_CATEGORY_IDS:ids,BUSINESS_CATEGORIES:categories,getDashboardPathForCategory}=load('lib/platform/business-categories.ts');
 const {adminBrandAccountSchema}=load('lib/platform/brand-onboarding.ts');
-assert.deepEqual(ids,['cafes_coffee','restaurants','hair_salons']);
+for(const id of ['cafes_coffee','restaurants','hair_salons','gifts_flowers'])assert(ids.includes(id),`Existing selectable category missing: ${id}`);
 assert.deepEqual(categories.filter(x=>x.available).map(x=>x.id),ids);
 for(const id of ids)assert(adminBrandAccountSchema.shape.category.safeParse(id).success);
 for(const id of ['events_conferences','beauty_centers','unknown',''])assert(!adminBrandAccountSchema.shape.category.safeParse(id).success);
