@@ -1,5 +1,6 @@
 "use client";
 import { FinanceShiftMonitor } from "./finance-shift-monitor";
+import { FinanceCashierManagement } from "./finance-cashier-management";
 import { FinancePrinterSettings } from "./finance-printer-settings";
 
 import Link from "next/link";
@@ -123,6 +124,9 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
         {searches}<Panel title="دفتر اليومية" action={<div className={styles.actions}>{addButton({ operation: "journal", title: "ترحيل قيد يدوي متوازن" })}<FinanceJournalExport slug={slug} from={from} to={to} query={query} /></div>}>{!journals.length ? <Empty title="لا توجد قيود مطابقة" /> : <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>التاريخ</th><th>الحساب</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead><tbody>{journals.map((line) => <tr key={line.id}><td>{financeDate(line.created_at)}</td><td>{accountName(line.account_id)}</td><td>{line.memo || "—"}</td><td><Numeric value={line.debit} money /></td><td><Numeric value={line.credit} money /></td></tr>)}</tbody></table></div>}</Panel>
       </>}
       {canFinance(data.role,"reports") && <div hidden={section !== "reports" && section !== "settings"}><FinancePeriodHistory key={`${data.cafe.id}:${data.settings.closed_through}`} slug={slug} visible={section === "reports" || section === "settings"} /></div>}
+      {section === "cashiers" && data.canAdminister && <FinanceCashierManagement staff={data.staff} userId={data.userId} disabled={disabled}
+        onAdd={() => open({ operation: "sales_cashier_create", title: "إضافة موظف كاشير" })}
+        onEdit={cashier => open({ operation: "staff", title: "تعديل الكاشير", values: { userId: cashier.user_id, name: cashier.name, role: cashier.role, active: cashier.active } })} />}
       {section === "settings" && !data.canAdminister && <Panel title="الإعدادات وفريق المالية"><Empty title="إضافة الكاشير متاحة لمالك العلامة">ادخل بحساب مالك العلامة ثم اختر إضافة كاشير مبيعات</Empty></Panel>}
       {section === "settings" && data.canAdminister && <>
         <div className={styles.twoColumns}><Panel title="السياسة المحاسبية" action={<button className={styles.secondary} disabled={disabled} onClick={() => open({ operation: "settings", title: "إعدادات المالية", values: { vatRate: data.settings.vat_rate, closedThrough: data.settings.closed_through ?? "", taxInclusive: data.settings.tax_inclusive } })}>تعديل الإعدادات</button>}><div className={styles.panelBody}><div className={styles.balanceLine}><span>العملة</span><strong>الريال السعودي</strong></div><div className={styles.balanceLine}><span>ضريبة القيمة المضافة</span><strong>{data.settings.vat_rate}%</strong></div><div className={styles.balanceLine}><span>الأسعار</span><strong>{data.settings.tax_inclusive ? "شاملة الضريبة" : "غير شاملة الضريبة"}</strong></div><div className={styles.balanceLine}><span>آخر فترة مقفلة</span><strong>{data.settings.closed_through ?? "لا توجد فترة مقفلة"}</strong></div></div></Panel><Panel title="دخول فريق المالية"><div className={styles.panelBody}><p className={styles.muted}>وزّع العمل بين مدير التشغيل والمحاسب وأمين المستودع والمراجع والكاشير تعيين الأدوار للمالك فقط</p><Link href={`/finance/${data.cafe.slug}/login`} className={styles.secondary}>فتح صفحة دخول المالية<ArrowLeft size={16} /></Link></div></Panel></div>

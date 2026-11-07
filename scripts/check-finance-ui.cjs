@@ -389,6 +389,45 @@ async function main() {
   assert(!nodes(reviewTree).some(node => node.type === 'button' && text(node) === 'اعتماد المرتجع وترحيل المبلغ'), 'Manager cannot approve');
   assert(!nodes(reviewTree).some(node => node.type === 'button' && text(node) === 'رفض الطلب'), 'Manager cannot reject'); groups++;
 
+  {
+    const managementHooks = hooks();
+    let managementSnapshot = base, managementPending = false, managementStale = false;
+    const ManagementWorkspace = load('components/finance/finance-workspace.tsx', {
+      ...shared, react: managementHooks.api,
+      'next/navigation': { useSearchParams: () => new URLSearchParams('section=cashiers') },
+      './use-finance': { useFinance: () => ({ ...uiState, snapshot: managementSnapshot, pending: managementPending, stale: managementStale }) },
+    }).FinanceWorkspace;
+    const renderManagement = () => managementHooks.render(ManagementWorkspace, { initialSnapshot: base });
+    let managementTree = renderManagement();
+    const control = find(managementTree, node => node.type?.name === 'FinanceCashierManagement');
+    control.props.onAdd(); managementTree = renderManagement();
+    let dialog = find(managementTree, node => node.type?.name === 'FinanceOperationForm');
+    assert.equal(dialog.props.form.operation, 'sales_cashier_create', 'Dedicated section opens existing phone account flow');
+    dialog.props.onCancel();
+    control.props.onEdit(base.staff[0]); managementTree = renderManagement();
+    dialog = find(managementTree, node => node.type?.name === 'FinanceOperationForm');
+    assert.equal(dialog.props.form.operation, 'staff');
+    assert.deepEqual(dialog.props.form.values, { userId: 'cashier', name: base.staff[0].name, role: 'cashier', active: true });
+    dialog.props.onCancel();
+    managementPending = true;
+    assert.equal(find(renderManagement(), node => node.type?.name === 'FinanceCashierManagement').props.disabled, true);
+    managementPending = false; managementStale = true;
+    assert.equal(find(renderManagement(), node => node.type?.name === 'FinanceCashierManagement').props.disabled, true);
+    managementStale = false;
+    for (const role of ['manager', 'accountant', 'warehouse', 'auditor', 'cashier']) {
+      managementSnapshot = { ...base, role, canAdminister: false };
+      assert(!nodes(renderManagement()).some(node => node.type?.name === 'FinanceCashierManagement'), 'Staff cannot manage cashiers');
+    }
+    const { FinanceCashierManagement } = load('components/finance/finance-cashier-management.tsx', shared);
+    const sectionProps = { ...control.props, staff: [...base.staff, { user_id: 'manager', name: 'Manager', role: 'manager', active: true }, { user_id: 'paused', name: 'Paused cashier', role: 'cashier', active: false }] };
+    const list = FinanceCashierManagement(sectionProps);
+    assert.equal(nodes(list).filter(node => node.type === 'tbody').flatMap(node => nodes(node).filter(child => child.type === 'tr')).length, 2);
+    assert(!text(list).includes('Manager'), 'Cashier list excludes other finance roles');
+    assert(text(list).includes('موقوف'));
+    assert(nodes(list).some(node => node.props.href === '/cashier/login?type=sales'));
+    assert(nodes(FinanceCashierManagement({ ...sectionProps, staff: [] })).some(node => node.type?.name === 'Empty'));
+    groups++;
+  }
   const settingsHooks = hooks();
   const SettingsWorkspace = load('components/finance/finance-workspace.tsx', { ...shared, react: settingsHooks.api, 'next/navigation': { useSearchParams: () => new URLSearchParams('section=settings') }, './use-finance': { useFinance: () => ({ ...uiState, snapshot: { ...base, role: 'manager', canAdminister: false } }) } }).FinanceWorkspace;
   const settingsTree = settingsHooks.render(SettingsWorkspace, { initialSnapshot: base });

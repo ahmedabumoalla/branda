@@ -1,5 +1,5 @@
 import { canFinance } from "@/lib/finance/permissions";
-import { BookOpen, Boxes, Clock3, Landmark, LayoutDashboard, Printer, ReceiptText, Settings2, ShoppingBag, Users } from "lucide-react";
+import { BookOpen, Boxes, Clock3, Landmark, LayoutDashboard, Printer, ReceiptText, Settings2, ShoppingBag, UserRoundCog, Users } from "lucide-react";
 
 export const financeSections = [
   { id: "overview", label: "نظرة مالية", icon: LayoutDashboard },
@@ -8,6 +8,7 @@ export const financeSections = [
   { id: "parties", label: "العملاء والموردون", icon: Users },
   { id: "inventory", label: "الأصناف والمخزون", icon: Boxes },
   { id: "treasury", label: "الخزينة والأرصدة", icon: Landmark },
+  { id: "cashiers", label: "إدارة الكاشير", icon: UserRoundCog },
   { id: "shifts", label: "الورديات", icon: Clock3 },
   { id: "reports", label: "الدفاتر والتقارير", icon: BookOpen },
   { id: "printer", label: "إعداد الطابعة", icon: Printer },
@@ -17,11 +18,12 @@ export const financeSections = [
 export type FinanceSection = typeof financeSections[number]["id"];
 
 export function resolveFinanceSection(value: string | null, canAdminister: boolean): FinanceSection {
-  return financeSections.find(item => item.id === value && (item.id !== "settings" || canAdminister))?.id ?? "overview";
+  return financeSections.find(item => item.id === value && ((item.id !== "settings" && item.id !== "cashiers") || canAdminister))?.id ?? "overview";
 }
 
 export function financeSectionAllowed(section: FinanceSection, role: string) {
   if (section === "inventory") return canFinance(role,"inventory_read");
+  if (section === "cashiers") return canFinance(role,"staff_manage");
   if (section === "settings") return canFinance(role,"settings_manage");
   if (section === "shifts") return canFinance(role,"shifts_read");
   if (section === "printer") return canFinance(role,"pos");
