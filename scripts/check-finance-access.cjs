@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
 function load(file,mocks={}){const exports={};const compiled=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;new Function('require','exports',compiled)(name=>{if(name in mocks)return mocks[name];if(name==='server-only')return{};if(name.startsWith('@/')){const p=name.slice(2);return load(fs.existsSync(p+'.ts')?p+'.ts':p+'.tsx',mocks);}return require(name);},exports);return exports;}
 async function main(){
+ let maintenanceAllowed=false,maintenanceError=false;const maintenanceCalls=[];
  let role='owner',enabled=true,allowed=true,contextTenant='tenant',authError=false,createError=false,grantError=false,grantThrows=false,cleanupError=false;
  let destinationError=false,destinationCalls=0;
  let salesMemberships=[{cafe_id:'tenant'}],salesCafes=[{id:'tenant',slug:'brand-test',name:'Brand'}],salesContextRole='cashier';
@@ -9,6 +10,7 @@ async function main(){
  process.env.PHONE_OTP_ENABLED='true';process.env.WHATSAPP_PROVIDER='green_api';delete process.env.VERCEL;
  const client={auth:{signInWithPassword:async credentials=>{log.signIn.push(credentials);return{data:{user:authError?null:{id:'actor'}},error:authError?{}:null};},signOut:async opts=>{assert.equal(opts.scope,'local');log.signOut++;return{};}},rpc:async(name,args)=>{if(name==='brand_finance_sales_cashier_destinations'){destinationCalls++;assert.equal(args,undefined,'No caller-selected employee identity');return{error:destinationError?{code:'42501',message:'private detail'}:null,data:allowed&&salesContextRole==='cashier'&&salesMemberships.length&&contextTenant==='tenant'?salesCafes.filter(c=>c.slug!=='expired').map(c=>({...c,id:c.id==='second'?'00000000-0000-4000-8000-000000000002':'00000000-0000-4000-8000-000000000001'})):[]};}log.grant.push({name,args});if(grantThrows)throw Error('Network');return{error:grantError?{}:null,data:{id:'new-staff',changed:linkChanged},...(name==='brand_finance_link_sales_cashier'&&linkError?{error:{}}:{})};}};
  const mocks={
+  "@/lib/data/finance-cashier-maintenance":{getFinanceCashierMaintenance:async cafeId=>{assert.equal(cafeId,"tenant");return maintenanceAllowed?{execute:async(operation,payload)=>{maintenanceCalls.push({operation,payload});return{data:{id:"maintenance-cashier",changed:true},error:maintenanceError?{}:null};}}:null;}},
   'next/headers':{headers:async()=>new Headers({'x-forwarded-for':'untrusted-client'})},
   '@/lib/barndaksa/env':{getSupabaseServiceRoleKey:()=> 'isolated-test-key'},
   '@/lib/whatsapp/green-api':{greenApiProviderInstanceKey:()=> 'isolated-provider',sendGreenApiSalesCashierWelcome:async input=>{welcomes.push(input);if(welcomeFails)throw Error('Provider timeout');return{providerMessageId:'queued'};},sendGreenApiLinkedSalesCashierWelcome:async input=>{linkedWelcomes.push(input);if(welcomeFails)throw Error('Timeout');return{providerMessageId:'queued'};}},
@@ -144,6 +146,11 @@ async function main(){
  let refreshed=0;
  const {proxy}=load('proxy.ts',{'@/lib/supabase/middleware':{updateSession:async()=>{refreshed++;return new Response('refreshed');}},'@/lib/platform/storefront-availability':{isStorefrontEnabled:()=>true,isStorefrontPath:()=>false}});
  const {NextRequest}=require('next/server');await proxy(new NextRequest('https://barndaksa.com/finance/brand-test/pos'));assert.equal(refreshed,1);
+ role='platform_admin';maintenanceAllowed=true;createError=false;contextTenant='tenant';enabled=true;allowed=true;grantError=false;welcomeFails=false;
+ const ownerGrants=log.grant.length;assert((await provisionSalesCashier(salesInput)).ok);assert.equal(log.grant.length,ownerGrants,'Maintenance never uses owner JWT RPC');assert.equal(maintenanceCalls.at(-1).operation,'add');
+ createError={code:'phone_exists'};assert((await provisionSalesCashier(salesInput)).ok);assert.equal(maintenanceCalls.at(-1).operation,'link');createError=false;
+ maintenanceError=true;const beforeCleanup=log.remove.length;await assert.rejects(provisionSalesCashier(salesInput));assert.equal(log.remove.length,beforeCleanup+1,'Expired/revoked session compensates newly created Auth account');maintenanceError=false;
+ maintenanceAllowed=false;const beforeCreate=log.create.length;await assert.rejects(provisionSalesCashier(salesInput));assert.equal(log.create.length,beforeCreate,'Unauthorized maintenance does not provision identities');role='owner';
  console.log('PASS finance access: email/phone login, denied service logout, owner-only staff provisioning, no existing-account reset, new-account compensation, private image tenant/service gate and finance cookie refresh');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

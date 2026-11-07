@@ -38,7 +38,7 @@ export async function createSalesCashierAccountAction(input: { name: string; pho
     }
     if (error instanceof SalesCashierCreationError) {
       const messages = {
-        owner_required: "إضافة كاشير المبيعات متاحة لمالك العلامة فقط",
+        owner_required: "إضافة الكاشير متاحة لمالك العلامة أو مدير المنصة من جلسة صيانة سارية",
         finance_required: "فعّل اشتراك برندة المالية قبل إضافة كاشير المبيعات",
         existing_account_unavailable: "تعذر ربط الحساب الحالي تحقق من أنه حساب عميل نشط ورقمه مؤكد وليس له دور إداري في فريق مالية العلامة",
         password_rejected: "رفضت خدمة الدخول كلمة المرور اختر كلمة أخرى تستوفي الشروط وتجنب كلمات المرور الشائعة",

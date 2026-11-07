@@ -14,7 +14,7 @@ async function main(){
  for(const who of ['cashier','finance-manager','anonymous']){identity=who;await assert.rejects(layout({children:'private'}),/REDIRECT \/login/);}assert.equal(analytics,0);
  for(const who of ['owner','admin']){identity=who;assert(await layout({children:'authorized'}));}assert.equal(analytics,2);
  identity='cashier';
- const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-shift-alerts':{dispatchShiftAlerts:()=>{throw Error('Unexpected alert');}},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}} });
+ const finance=load('lib/data/brand-finance.ts',{...mocks,'@/lib/data/finance-cashier-maintenance':{getFinanceCashierMaintenance:async()=>null},'@/lib/data/cafes':cafes,'@/lib/menu/standalone-menu':{isOwnedMenuAsset:()=>true},'./finance-shift-alerts':{dispatchShiftAlerts:()=>{throw Error('Unexpected alert');}},'./finance-pos-customer-messages':{dispatchFinancePosCustomerMessages:()=>{throw Error('Unexpected message');}} });
  await assert.rejects(finance.getBrandFinanceSnapshot(),/Unauthorized/);assert.equal(rpcCalls,0);
  await assert.rejects(finance.getBrandFinanceSnapshot('other-brand'));assert.equal(rpcCalls,1,'Explicit slug must still pass authenticated RPC authorization');
  let features=['finance'];

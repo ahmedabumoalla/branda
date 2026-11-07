@@ -21,7 +21,7 @@ export type FinanceJournalLine = { id: string; document_id: string; account_id: 
 export type FinanceMovement = { id: string; item_id: string; warehouse_id: string; document_id: string; quantity: number; unit_cost: number; created_at: string };
 export type FinanceSnapshot = {
   units?: import("./inventory-catalog").FinanceInventoryUnit[];
-  cafe: { id: string; name: string; slug: string; businessCategory?: string }; userId: string; canManage: boolean; canAdminister: boolean; role: FinanceRole;
+  cafe: { id: string; name: string; slug: string; businessCategory?: string }; userId: string; canManage: boolean; canAdminister: boolean; canManageCashiers?: boolean; role: FinanceRole;
   settings: { vat_rate: number; tax_inclusive: boolean; currency: "SAR"; closed_through: string | null };
   accounts: FinanceAccount[]; parties: FinanceParty[]; products: FinanceProduct[]; items: FinanceItem[];
   warehouses: FinanceWarehouse[]; stock: FinanceStock[]; documents: FinanceDocument[]; shifts: FinanceShift[];

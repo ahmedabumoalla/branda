@@ -1,4 +1,5 @@
 import "server-only";
+import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { financeStaffRoles } from "@/lib/finance/permissions";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
@@ -168,10 +169,11 @@ export async function resetSalesCashierPassword(phone: string, code: string, pas
 export async function provisionSalesCashier(input: { name: string; phone: string; password: string }) {
   const parsed = salesCashierSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
-  if (cafe.role !== "owner") throw new SalesCashierCreationError("owner_required");
+  const maintenance = cafe.role === "platform_admin" ? await getFinanceCashierMaintenance(cafe.id) : null;
+  if (cafe.role !== "owner" && !maintenance) throw new SalesCashierCreationError("owner_required");
   if (!featureCodesAllow(await getOwnerFeatureCodes(), "finance")) throw new SalesCashierCreationError("finance_required");
   const snapshot = await getBrandFinanceSnapshot(cafe.slug);
-  if (snapshot.cafe.id !== cafe.id || !snapshot.canAdminister) throw new SalesCashierCreationError("owner_required");
+  if (snapshot.cafe.id !== cafe.id || (!snapshot.canAdminister && !maintenance)) throw new SalesCashierCreationError("owner_required");
   const supabase = await createClient();
   const admin = createAdminClient();
   const created = await admin.auth.admin.createUser({
@@ -181,7 +183,7 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   });
   if (created.error || !created.data.user) {
     if (created.error?.code === "phone_exists" || created.error?.code === "user_already_exists") {
-      const linked = await supabase.rpc("brand_finance_link_sales_cashier", { p_cafe_id: cafe.id, p_phone: parsed.phone, p_name: parsed.name });
+      const linked = maintenance ? await maintenance.execute("link", { phone: parsed.phone, name: parsed.name }) : await supabase.rpc("brand_finance_link_sales_cashier", { p_cafe_id: cafe.id, p_phone: parsed.phone, p_name: parsed.name });
       if (linked.error || !linked.data?.id) throw new SalesCashierCreationError("existing_account_unavailable");
       if (!linked.data.changed) return { ok: true as const, delivery: "unchanged" as const, message: "الموظف مضاف بالفعل ككاشير مبيعات لهذه العلامة حساب العميل وكلمة مروره لم يتغيرا" };
       try {
@@ -196,7 +198,7 @@ export async function provisionSalesCashier(input: { name: string; phone: string
   }
   const userId = created.data.user.id;
   try {
-    const grant = await supabase.rpc("brand_finance_add_sales_cashier", {
+    const grant = maintenance ? await maintenance.execute("add", { userId, name: parsed.name }) : await supabase.rpc("brand_finance_add_sales_cashier", {
       p_cafe_id: cafe.id, p_user_id: userId, p_name: parsed.name,
     });
     if (grant.error) throw new Error("Sales cashier grant failed");

@@ -414,6 +414,14 @@ async function main() {
     managementPending = false; managementStale = true;
     assert.equal(find(renderManagement(), node => node.type?.name === 'FinanceCashierManagement').props.disabled, true);
     managementStale = false;
+    managementSnapshot = { ...base, role: 'manager', canAdminister: false, canManageCashiers: true };
+    const maintenanceControl = find(renderManagement(), node => node.type?.name === 'FinanceCashierManagement');
+    maintenanceControl.props.onAdd();
+    const maintenanceForm = find(renderManagement(), node => node.type?.name === 'FinanceOperationForm');
+    assert.equal(maintenanceForm.props.form.operation, 'sales_cashier_create', 'Audited maintenance gets cashier-only management');
+    const MaintenanceForm = load('components/finance/finance-operation-form.tsx', { ...shared, react: hooks().api }).FinanceOperationForm;
+    assert.equal(MaintenanceForm(maintenanceForm.props).type.name, 'SalesCashierForm');
+    maintenanceForm.props.onCancel();
     for (const role of ['manager', 'accountant', 'warehouse', 'auditor', 'cashier']) {
       managementSnapshot = { ...base, role, canAdminister: false };
       assert(!nodes(renderManagement()).some(node => node.type?.name === 'FinanceCashierManagement'), 'Staff cannot manage cashiers');

@@ -17,13 +17,13 @@ export const financeSections = [
 
 export type FinanceSection = typeof financeSections[number]["id"];
 
-export function resolveFinanceSection(value: string | null, canAdminister: boolean): FinanceSection {
-  return financeSections.find(item => item.id === value && ((item.id !== "settings" && item.id !== "cashiers") || canAdminister))?.id ?? "overview";
+export function resolveFinanceSection(value: string | null, canAdminister: boolean, canManageCashiers = canAdminister): FinanceSection {
+  return financeSections.find(item => item.id === value && (item.id !== "settings" || canAdminister) && (item.id !== "cashiers" || canManageCashiers))?.id ?? "overview";
 }
 
-export function financeSectionAllowed(section: FinanceSection, role: string) {
+export function financeSectionAllowed(section: FinanceSection, role: string, canManageCashiers = false) {
   if (section === "inventory") return canFinance(role,"inventory_read");
-  if (section === "cashiers") return canFinance(role,"staff_manage");
+  if (section === "cashiers") return canManageCashiers || canFinance(role,"staff_manage");
   if (section === "settings") return canFinance(role,"settings_manage");
   if (section === "shifts") return canFinance(role,"shifts_read");
   if (section === "printer") return canFinance(role,"pos");

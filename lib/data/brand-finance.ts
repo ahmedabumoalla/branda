@@ -1,4 +1,5 @@
 import "server-only";
+import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { canFinanceOperation, type FinanceRole } from "@/lib/finance/permissions";
 import { after } from "next/server";
 import { dispatchShiftAlerts } from "./finance-shift-alerts";
@@ -40,6 +41,7 @@ export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSna
   const { data, error } = await client.rpc("brand_finance_snapshot", { p_cafe_id: cafe.id });
   if (error) throw new Error("تعذر تحميل المالية حاول مجددا");
   const snapshot = data as FinanceSnapshot;
+  snapshot.canManageCashiers = snapshot.canAdminister || !!(await getFinanceCashierMaintenance(cafe.id));
   snapshot.items = snapshot.items.map(item => ({ ...item, imageUrl: isInventoryImagePath(item.image_path, cafe.id) ? inventoryImageUrl(item.image_path, cafe.slug) : null }));
   const products = snapshot.products as (FinanceProduct & { imageStoragePath?: string | null })[];
   // The authenticated media endpoint refreshes signatures throughout long shifts.
@@ -60,6 +62,14 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
     command.payload.phone = phone;
   }
   const { client, cafe } = await getBrandFinanceContext(slug);
+  if (command.operation === "staff" && cafe.role !== "owner") {
+    const maintenance = await getFinanceCashierMaintenance(cafe.id);
+    if (!maintenance) throw new Error("إدارة الكاشير تتطلب صلاحية المالك أو جلسة صيانة سارية");
+    const payload = z.object({ userId: z.uuid(), name: z.string().trim().min(2).max(100), role: z.literal("cashier"), active: z.boolean() }).parse(command.payload);
+    const result = await maintenance.execute("update", payload);
+    if (result.error || !result.data?.id) throw new Error("تعذر تعديل الكاشير تحقق من جلسة الصيانة وحاول مجددًا");
+    return result.data as FinanceCommandResult;
+  }
   if (!canFinanceOperation(cafe.role, command.operation)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
   const butcherSale = command.operation === "sale" && cafe.businessCategory === "butcher_shops";
   if (butcherSale) {
