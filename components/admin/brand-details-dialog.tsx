@@ -90,6 +90,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
   const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
   const [maintenanceError, setMaintenanceError] = useState("");
+  const [maintenanceLoginRequired, setMaintenanceLoginRequired] = useState(false);
   const maintenanceInFlight = useRef(false);
   const [statusPending, setStatusPending] = useState(false);
   const [deletionPending, setDeletionPending] = useState(false);
@@ -110,6 +111,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
     maintenanceInFlight.current = true;
     setMaintenancePending(true);
     setMaintenanceError("");
+    setMaintenanceLoginRequired(false);
     try {
       const result = await enterMaintenanceModeAction(cafe.maintenanceAccountNumber);
       if (result.ok && result.redirectTo) {
@@ -118,6 +120,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         return;
       }
       setMaintenanceError(result.message);
+      setMaintenanceLoginRequired(result.redirectTo === "/login");
     } catch {
       setMaintenanceError("تعذر الدخول إلى وضع الصيانة حاول مجددًا");
     }
@@ -193,6 +196,7 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
           </div>
         </footer>
         {maintenanceError && <p className={s.maintenanceError} role="alert">{maintenanceError}</p>}
+        {maintenanceLoginRequired && <a href="/login" className={s.primaryButton} onClick={clearDashboardShellSnapshot}>تسجيل الدخول مجددًا</a>}
         <p className={s.liveMessage} role="status">{copyMessage}</p>
       </div>
     </BrandDialog>

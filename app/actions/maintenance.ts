@@ -44,7 +44,26 @@ async function writeMaintenanceAudit(
 
 export async function enterMaintenanceModeAction(input: string) {
   const code = maintenanceCodeSchema.parse(input).toUpperCase();
-  const adminUser = await requirePlatformAdmin();
+  let adminUser;
+  try {
+    adminUser = await requirePlatformAdmin();
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return {
+        ok: false as const,
+        message: "انتهت جلسة تسجيل الدخول سجّل الدخول مجددًا لفتح وضع الصيانة",
+        redirectTo: "/login",
+      };
+    }
+    if (error instanceof Error && error.message === "Forbidden: platform admin required") {
+      return {
+        ok: false as const,
+        message: "فتح وضع الصيانة متاح لمدير المنصة فقط",
+        redirectTo: null,
+      };
+    }
+    throw error;
+  }
   const admin = createAdminClient();
 
   const { data, error } = await admin

@@ -18,6 +18,7 @@ function harness(action = async () => ({ ok: true, redirectTo: "/dashboard" }), 
   const hooks = {
     ...React,
     useEffect() {},
+    useId: () => "maintenance-test",
     useState(initial) {
       const slot = cursor++;
       if (!(slot in state)) state[slot] = initial;
@@ -38,6 +39,12 @@ function harness(action = async () => ({ ok: true, redirectTo: "/dashboard" }), 
     "./standalone-menu-control": { StandaloneMenuControl: () => null },
     "./brand-operations-panel": { BrandOperationsPanel: () => null },
     "./brand-analytics-panel": { BrandAnalyticsPanel: () => null },
+    "@/components/pager/pager-brand-panel": { PagerBrandPanel: () => null },
+    "./brand-deletion-control": { BrandDeletionControl: () => null },
+    "@/lib/ui/page-scroll-lock": { lockPageScroll: () => () => {} },
+    "./brand-owner-welcome": { BrandOwnerWelcome: () => null },
+    "./subscription-deadline-editor": { SubscriptionDeadlineEditor: () => null },
+    "@/lib/platform/subscription-deadline": { formatSaudiDeadline: () => "" },
     "./brand-details.module.css": { __esModule: true, default: new Proxy({}, { get: (_, key) => key }) },
   };
   const exports = {};
@@ -100,5 +107,15 @@ await test(async () => {
   assert.equal(button(h).props.disabled, true);
   await button(h).props.onClick();
   assert.deepEqual(h.calls, []);
+});
+await test(async () => {
+  const h = harness(async () => ({ ok: false, message: "انتهت جلسة تسجيل الدخول", redirectTo: "/login" }));
+  await button(h).props.onClick();
+  assert.equal(error(h).props.children, "انتهت جلسة تسجيل الدخول");
+  const login = nodes(h.render()).find(node => node.type === "a" && node.props.href === "/login");
+  assert(login, "Expired sessions must expose a full-page login link");
+  login.props.onClick();
+  assert.deepEqual(h.calls, [["enter", "BR-TEST-12345678"], ["clearSnapshot"]]);
+  assert.equal(button(h).props.disabled, false);
 });
 console.log(`PASS brand maintenance entry: ${checks} CSS and isolated handler checks; no live maintenance session created`);
