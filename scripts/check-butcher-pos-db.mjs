@@ -1,0 +1,125 @@
+import assert from 'node:assert/strict';
+import {readFile, mkdir, writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const migration='supabase/migrations/20261107002713_butcher_pos_units_optional_shifts.sql';
+let source=await readFile('scripts/check-finance-pos-customer-db.mjs','utf8');
+const anchor=" console.log(JSON.stringify({ok:true,checks,engine:'PGlite'";
+assert(source.includes(anchor));
+const test=String.raw`
+ {
+ await db.exec('RESET ROLE');
+ await db.exec("CREATE SCHEMA IF NOT EXISTS storage; CREATE TABLE storage.objects(bucket_id text,name text,metadata jsonb); ALTER TABLE cafes ADD COLUMN IF NOT EXISTS business_category text DEFAULT 'cafes';");
+ for(const name of [
+ '20261024094856_brand_finance_shift_attachments','20261025161825_brand_finance_treasury_attachments','20261025170503_brand_finance_treasury_attachment_capacity',
+ '20261025223826_brand_finance_offline_sale_contract','20261026194000_brand_finance_multiple_cashier_drawers','20261026201000_brand_finance_cash_quota_lifecycle',
+ '20261026213000_brand_finance_shift_supervision','20261026213943_brand_finance_negative_stock_sales','20261026213958_brand_finance_shift_analytics','20261026214500_brand_finance_supervised_handover_integrity','20261026234500_brand_finance_empty_shift_close',
+ '20261027023500_brand_finance_pos_shift_report','20261027023501_brand_finance_supplier_payout','20261027023502_brand_finance_shift_files_private','20261027040000_brand_finance_job_roles','20261027040100_brand_finance_period_close_preflight','20261027040200_brand_finance_control_reports',
+ '20261027050000_brand_finance_customer_message_receipt','20261027090955_brand_finance_inventory_catalog_components','20261027110155_brand_finance_own_shift_purchase','20261027110759_finance_invoice_message_status','20261027163901_finance_customer_thermal_receipt'
+ ]) { await db.exec(await readFile('supabase/migrations/'+name+'.sql','utf8')); }
+ const fingerprint=()=>scalar("SELECT md5(jsonb_build_object('documents',(SELECT jsonb_agg(to_jsonb(d) ORDER BY id) FROM bf_documents d),'journal',(SELECT jsonb_agg(to_jsonb(j) ORDER BY id) FROM bf_journal j),'shifts',(SELECT jsonb_agg(to_jsonb(s) ORDER BY id) FROM bf_shifts s),'requests',(SELECT jsonb_agg(to_jsonb(r) ORDER BY request_id) FROM bf_requests r),'cards',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM loyalty_cards c))::text)");
+ const unchanged=await fingerprint();
+ await db.exec(await readFile('supabase/migrations/20261107002713_butcher_pos_units_optional_shifts.sql','utf8'));
+ eq(await fingerprint(),unchanged,'butcher migration preserves financial and loyalty records');
+ const butcher=crypto.randomUUID(),meat=crypto.randomUUID(),carcass=crypto.randomUUID();
+ await login(owner);
+ await sql("INSERT INTO cafes(id,slug,name,owner_id,owner_user_id,business_category) VALUES($1,'butcher-fixture','Butcher fixture',$2,$2,'butcher_shops')",[butcher,owner]);
+ await sql("INSERT INTO subscriptions(cafe_id,plan_id,expires_at) VALUES($1,'full',now()+interval '1 month')",[butcher]);
+ const details={meatType:'calf',origin:null,units:[{id:'kg',label:'كيلو',price:75},{id:'g',label:'جرام',price:0.075},{id:'carcass',label:'ذبيحة',price:1500}]};
+ await sql('INSERT INTO menu_products(id,cafe_id,name,price,butcher_details) VALUES($1,$2,$3,0,$4)',[meat,butcher,'Beef',details]);
+ const exec=(op,p,request=crypto.randomUUID())=>run(op,p,request,butcher);
+ let snapB=await scalar('SELECT brand_finance_snapshot($1)',[butcher]);
+ const drawerB=snapB.accounts.find(a=>a.is_cashier_drawer).id,bankB=snapB.accounts.find(a=>a.kind==='bank').id,wh=snapB.warehouses[0].id;
+ eq(snapB.cafe.businessCategory,'butcher_shops','authoritative snapshot category');
+ eq(snapB.products.find(p=>p.id===meat).butcherDetails,details,'metadata roundtrip into POS');
+ eq(snapB.accounts.find(a=>a.id===drawerB).availableWithoutShift,true,'free dedicated drawer eligible');
+ eq((await scalar("SELECT brand_finance_context('butcher-fixture')")).businessCategory,'butcher_shops','context category guards server side effects');
+ const sideEffects=()=>scalar("SELECT jsonb_build_object('customer',(SELECT count(*) FROM bf_sale_customers),'messages',(SELECT count(*) FROM bf_customer_message_jobs),'pager',(SELECT count(*) FROM pager_orders),'loyalty',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM loyalty_cards c),'wallet',(SELECT count(*) FROM wallet_notification_jobs))");
+ const beforeEffects=await sideEffects();
+ const makeSale=(unitId,quantity,unitPrice,extra={},request=crypto.randomUUID())=>exec('sale',{lines:[{productId:meat,unitId,quantity,expectedUnitPrice:unitPrice}],accountId:drawerB,warehouseId:wh,discount:0,expectedTotal:Math.round(quantity*unitPrice*100)/100,...extra},request);
+ const firstB=await makeSale('g',500,0.075,{customerPhone:'invalid',redeemRewardId:crypto.randomUUID(),pagerFeedbackHash:'z'.repeat(64)});
+ eq(await sideEffects(),beforeEffects,'crafted phone reward and pager input create no customer effects');
+ let doc=await scalar('SELECT to_jsonb(d) FROM bf_documents d WHERE id=$1',[firstB.id]);
+ eq([doc.shift_id,doc.customer_phone,Number(doc.total)],[null,null,37.5],'shiftless cash sale records no phone and exact gram total');
+ let lineB=await scalar('SELECT to_jsonb(l) FROM bf_document_lines l WHERE document_id=$1',[firstB.id]);
+ eq([lineB.unit_id,lineB.unit_label,Number(lineB.unit_price),Number(lineB.stock_unit_factor)],['g','جرام',0.075,0.001],'precise gram price and immutable measure retained');
+ eq(await scalar('SELECT count(*) FROM bf_shifts WHERE cafe_id=$1',[butcher]),0,'no hidden or fabricated shift');
+ await rejects(()=>makeSale('missing',1,75),'unknown unit rejected');
+ await rejects(()=>makeSale('kg',1,1),'tampered unit price rejected');
+ await rejects(()=>makeSale('kg',1,75,{shiftId:crypto.randomUUID()}),'unknown supplied shift rejected');
+ await rejects(()=>makeSale('kg',1,75,{accountId:drawer}),'foreign payment account rejected');
+ await rejects(()=>makeSale('kg',1,75,{accountId:snapB.accounts.find(a=>a.code==='1000').id}),'ordinary safe not shiftless cashier drawer');
+ await rejects(()=>makeSale('kg',1,75,{lines:[{productId:product,unitId:'kg',quantity:1,expectedUnitPrice:75}]}),'foreign product rejected');
+ const req=crypto.randomUUID(),local={localReceiptReference:'L-'+req,localCreatedAt:new Date().toISOString(),offlineExpectedVatRate:0,offlineExpectedTaxInclusive:true};
+ const offline=await makeSale('kg',1.25,75,local,req);
+ eq((await makeSale('kg',1.25,75,local,req)).duplicate,true,'same offline request replay acknowledged once');
+ await rejects(()=>makeSale('kg',2,75,local,req),'request quantity mutation rejected');
+ await sql("UPDATE menu_products SET butcher_details=jsonb_set(butcher_details,'{units,0,price}','80') WHERE id=$1",[meat]);
+ eq((await makeSale('kg',1.25,75,local,req)).duplicate,true,'committed replay survives catalog price change');
+ await rejects(()=>makeSale('kg',1.25,75),'unsynced stale price stays conflict');
+ await sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[meat,details]);
+ await rejects(()=>makeSale('kg',1,75,{...local,localReceiptReference:'L-'+crypto.randomUUID(),offlineExpectedVatRate:15}),'offline tax drift rejected');
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[product,details]),'non-butcher metadata rejected');
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[meat,{...details,units:[details.units[0],details.units[0]]}]),'duplicate unit IDs rejected');
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[meat,{...details,units:[{...details.units[0],price:0.0000001}]}]),'excess price precision rejected');
+ await exec('staff',{email:'staff@test.invalid',name:'Butcher cashier',role:'cashier',active:true});
+ await login(staff);const staffSale=await makeSale('kg',1,75);
+ snapB=await scalar('SELECT brand_finance_snapshot($1)',[butcher]);
+ eq(snapB.documents.some(d=>d.id===staffSale.id&&d.created_by===staff),true,'cashier sees own shiftless sale');
+ eq(snapB.documents.some(d=>d.id===firstB.id),false,'cashier cannot see other actor shiftless sale');
+ const staffLine=snapB.documents.find(d=>d.id===staffSale.id).lines[0];
+ const staffReturn=await exec('refund',{documentId:staffSale.id,lines:[{lineId:staffLine.id,quantity:0.25}],expectedTotal:18.75,expectedPaid:18.75,paymentMethod:'cash',accountId:drawerB,note:'Own shiftless return'});
+ eq(staffReturn.status,'pending','butcher cashier can request own cash refund without shift');
+ await login(owner);await exec('refund_approve',{requestId:staffReturn.id});await login(staff);
+ const opened=(await exec('shift_open',{accountId:drawerB,openingCash:0})).id;
+ await rejects(()=>makeSale('kg',1,75),'own active shift cannot be bypassed');
+ await makeSale('kg',1,75,{shiftId:opened});
+ await login(owner);await rejects(()=>makeSale('kg',1,75),'another employee custody cannot be bypassed');
+ const ownerLine=await scalar('SELECT id FROM bf_document_lines WHERE document_id=$1',[firstB.id]);
+ await rejects(()=>exec('refund',{documentId:firstB.id,lines:[{lineId:ownerLine,quantity:100}],expectedTotal:7.5,expectedPaid:7.5,paymentMethod:'cash',accountId:drawerB,note:'No custody identifier'}),'live shift custody cannot be bypassed for cash refund');
+ await login(customer);await rejects(()=>makeSale('kg',1,75),'non-finance customer cannot sell');await login(owner);
+ await makeSale('kg',1,75,{accountId:bankB});
+ await sql("UPDATE bf_shifts SET status='closed',closed_at=now() WHERE id=$1",[opened]);
+ const inventory=(await scalar('SELECT brand_finance_inventory_catalog($1)',[butcher]));
+ const kgUnit=(await scalar('SELECT brand_finance_inventory_unit_save($1,$2,$3)',[butcher,'Kilogram',crypto.randomUUID()])).id;
+ const ingredient=(await exec('item',{name:'Beef stock',unitId:kgUnit,costMode:'full',productLinks:[{productId:meat,quantity:1}]})).id;
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[meat,{...details,units:[details.units[1],details.units[0]]}]),'tracked base unit reorder rejected');
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=NULL WHERE id=$1',[meat]),'tracked base measure removal rejected');
+ await rejects(()=>sql('UPDATE menu_products SET butcher_details=$2 WHERE id=$1',[meat,{...details,units:[details.units[0],{id:'custom_'+crypto.randomUUID(),label:'KILO',price:20},{id:'custom_'+crypto.randomUUID(),label:'kilo',price:20}]}]),'duplicate case-insensitive labels rejected');
+ await exec('stock_adjust',{itemId:ingredient,warehouseId:wh,quantity:10,unitCost:25,note:'Fixture stock'});
+ const weighed=await makeSale('g',500,0.075);
+ eq(Number(await scalar('SELECT quantity FROM bf_stock WHERE cafe_id=$1 AND item_id=$2',[butcher,ingredient])),9.5,'500 grams deduct 0.5kg not500kg');
+ await rejects(()=>makeSale('carcass',1,1500),'tracked carcass cannot invent kilogram conversion');
+ const weighedLine=await scalar('SELECT to_jsonb(l) FROM bf_document_lines l WHERE document_id=$1',[weighed.id]);
+ const refund=(await exec('refund',{documentId:weighed.id,lines:[{lineId:weighedLine.id,quantity:250}],expectedTotal:18.75,expectedPaid:18.75,paymentMethod:'cash',accountId:drawerB,note:'Partial weight return'}));
+ await exec('refund_approve',{requestId:refund.id});
+ eq(Number(await scalar('SELECT quantity FROM bf_stock WHERE cafe_id=$1 AND item_id=$2',[butcher,ingredient])),9.75,'partial gram refund restores exact stock fraction');
+ const returned=await scalar('SELECT to_jsonb(l) FROM bf_document_lines l WHERE reference_line_id=$1',[weighedLine.id]);
+ eq([returned.unit_id,Number(returned.unit_price),Number(returned.stock_unit_factor)],['g',0.075,0.001],'refund retains exact original unit and price');
+ const carcassDetails={meatType:'sheep',origin:'بلدي',units:[{id:'carcass',label:'ذبيحة',price:1200},{id:'half',label:'نصف ذبيحة',price:650},{id:'quarter',label:'ربع ذبيحة',price:350}]};
+ await sql('INSERT INTO menu_products(id,cafe_id,name,price,butcher_details) VALUES($1,$2,$3,0,$4)',[carcass,butcher,'Sheep',carcassDetails]);
+ const sheepStock=(await exec('item',{name:'Sheep stock',unitId:kgUnit,costMode:'full',productLinks:[{productId:carcass,quantity:1}]})).id;
+ await exec('stock_adjust',{itemId:sheepStock,warehouseId:wh,quantity:3,unitCost:600,note:'Fixture carcasses'});
+ await exec('sale',{lines:[{productId:carcass,unitId:'half',quantity:1,expectedUnitPrice:650},{productId:carcass,unitId:'quarter',quantity:1,expectedUnitPrice:350}],accountId:drawerB,warehouseId:wh,discount:0,expectedTotal:1000});
+ eq(Number(await scalar('SELECT quantity FROM bf_stock WHERE cafe_id=$1 AND item_id=$2',[butcher,sheepStock])),2.25,'half and quarter separate lines consume0.75carcass');
+ await login(outsider);await rejects(()=>makeSale('kg',1,75),'unauthorized actor denied');
+ await login(staff);await exec('sale',{lines:[{productId:meat,unitId:'kg',quantity:1,expectedUnitPrice:75}],accountId:drawerB,warehouseId:wh,discount:0,expectedTotal:75});
+ await sql('UPDATE bf_staff SET active=false WHERE cafe_id=$1 AND user_id=$2',[butcher,staff]);
+ await rejects(()=>makeSale('kg',1,75),'revoked staff cannot synchronize');
+ await login(owner);
+ await rejects(()=>run('sale',{lines:[{productId:product,quantity:1,expectedUnitPrice:20}],warehouseId:warehouse,accountId:drawer,expectedTotal:20,discount:0}),'ordinary cafe still requires shift');
+ eq(await scalar('SELECT count(*) FROM (SELECT document_id FROM bf_journal GROUP BY document_id HAVING sum(debit)<>sum(credit)) q'),0,'all new and legacy journals balance');
+ eq(await sideEffects(),beforeEffects,'all butcher sales and returns create zero customer engagement');
+ await db.exec('SET ROLE anon');await rejects(()=>makeSale('kg',1,75),'anonymous denied');await db.exec('RESET ROLE');
+ eq(await scalar("SELECT has_function_privilege('authenticated','brand_finance_private.butcher_stock_factor(text,text)','EXECUTE')"),false,'private conversion not exposed');
+ eq(await scalar("SELECT has_function_privilege('authenticated','brand_finance_private.validate_butcher_product()','EXECUTE')"),false,'trigger helper not exposed');
+ console.log(JSON.stringify({butcherChecks:checks-112,legacyChecks:112,checks,ok:true}));
+ }
+`;
+source=source.replace(anchor,()=>test+anchor);
+const logs=[],originalLog=console.log;
+try{console.log=(...args)=>{logs.push(args.join(' '));originalLog(...args)};await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));}finally{console.log=originalLog;}
+assert(!process.exitCode,'Butcher database checks failed');
+assert(logs.some(s=>s.includes('"butcherChecks"')),'Butcher SQL checks did not execute');
+await mkdir('output/butcher-pos',{recursive:true});
+const hashes={};for(const file of [migration,'scripts/check-butcher-pos-db.mjs','scripts/check-finance-pos-customer-db.mjs'])hashes[file]=createHash('sha256').update(await readFile(file)).digest('hex');
+await writeFile('output/butcher-pos/backend-db-checks.json',JSON.stringify({at:new Date().toISOString(),runtime:process.version,engine:'PGlite with actual finance/loyalty migrations',logs,hashes},null,2));

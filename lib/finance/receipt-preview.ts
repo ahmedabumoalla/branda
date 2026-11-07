@@ -2,7 +2,7 @@ import { previewFinanceTotals, type FinanceDocument, type FinanceProduct, type F
 
 /** Local-only receipt model; never reserves a number or posts a financial operation. */
 export function createFinanceReceiptPreview(input: {
-  lines: { product: FinanceProduct; quantity: number }[];
+  lines: { product: FinanceProduct; quantity: number; unit?: { id: string; label: string }; stockFactor?: number }[];
   settings: FinanceSnapshot["settings"];
   discount: number;
   paymentKind: string;
@@ -18,7 +18,7 @@ export function createFinanceReceiptPreview(input: {
   if (!Number.isFinite(input.discount) || input.discount < 0 || input.discount > totals.subtotal || !Number.isFinite(totals.total)) throw new Error("راجع قيمة الخصم قبل معاينة الإيصال");
   const net = round(totals.total - totals.tax);
   let remainingNet = net, remainingTax = totals.tax;
-  const lines = input.lines.map(({ product, quantity }, index) => {
+  const lines = input.lines.map(({ product, quantity, unit, stockFactor }, index) => {
     // Match the posting transaction's allocation and last-line rounding remainder.
     const share = totals.subtotal ? quantity * product.price / totals.subtotal : 0;
     const last = index === input.lines.length - 1;
@@ -26,7 +26,7 @@ export function createFinanceReceiptPreview(input: {
     const lineTax = last ? remainingTax : Math.min(remainingTax, round(totals.tax * share));
     remainingNet = round(remainingNet - lineNet);
     remainingTax = round(remainingTax - lineTax);
-    return { id: `preview-${index}`, product_id: product.id, item_id: product.itemId, name: product.name, quantity, unit_price: product.price, net: lineNet, tax: lineTax, cost: 0 };
+    return { id: `preview-${index}`, product_id: product.id, item_id: product.itemId, name: product.name, quantity, unit_price: product.price, net: lineNet, tax: lineTax, cost: 0, ...(unit ? { unit_id: unit.id, unit_label: unit.label, stock_unit_factor: stockFactor ?? 1 } : {}) };
   });
   const paid = input.paymentKind === "credit" ? 0 : totals.total;
   return {

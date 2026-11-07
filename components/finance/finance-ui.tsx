@@ -22,8 +22,8 @@ export function financeDate(value: string | null) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-SA", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(date);
 }
-export function Numeric({ value, money = false }: { value: number; money?: boolean }) {
-  return <span className={styles.numeric}>{money ? financeMoney(value) : new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 3 }).format(value)}</span>;
+export function Numeric({ value, money = false, unitPrice = false }: { value: number; money?: boolean; unitPrice?: boolean }) {
+  return <span className={styles.numeric}>{unitPrice ? `${new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(value)} ر س` : money ? financeMoney(value) : new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 3 }).format(value)}</span>;
 }
 export function financeDocumentStatus(document: FinanceDocument) {
   if (document.sync_status === "queued") return "محفوظة على الجهاز";
@@ -72,7 +72,7 @@ export function FinanceReceipt({ document, snapshot, brand, copy = "customer", p
       {refund && <p>مرجع الفاتورة: {original || document.reference_number ? `#${original?.number ?? document.reference_number}` : document.reference_id}</p>}
     </div>
     <table data-receipt-items><thead><tr><th scope="col">الصنف</th><th scope="col">الكمية</th>{!preparation && <th scope="col">الإجمالي</th>}</tr></thead><tbody>
-      {document.lines.map((line) => <tr key={line.id}><td>{line.name}{!preparation && <small>سعر الوحدة <Numeric value={line.unit_price} money /></small>}</td><td><Numeric value={line.quantity} /></td>{!preparation && <td><Numeric value={line.net + line.tax} money /></td>}</tr>)}
+      {document.lines.map((line) => <tr key={line.id}><td>{line.name}{!preparation && <small>سعر الوحدة <Numeric value={line.unit_price} money unitPrice={!!line.unit_id} /></small>}</td><td><Numeric value={line.quantity} /></td>{!preparation && <td><Numeric value={line.net + line.tax} money /></td>}</tr>)}
     </tbody></table>
     {!preparation && <>
       <div data-receipt-row><span>المجموع قبل الخصم</span><Numeric value={document.subtotal} money /></div>

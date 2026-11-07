@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FinanceCommandResult, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { createFinanceReceiptPreview } from "@/lib/finance/receipt-preview";
+import { financeProductSelection, isButcherFinance, validatePosExpectedAmount, validatePosSaleShift } from "@/lib/finance/pos-product-selection";
 import { drainOfflineSales, pendingSales, posScope, projectOfflineSales, type OfflineSale, type PosSyncResponse } from "@/lib/finance/pos-offline";
 import { acknowledgeOfflineSale, flagOfflineConflict, getOfflineSession, listOfflineSales, lockOfflineSession, retryOfflineConflicts, saveOfflineSnapshot, storeOfflineSale, withOfflineSyncLease } from "@/lib/finance/pos-offline-storage";
 import { cachedReceiptBrand, prepareOfflineAssets } from "@/lib/finance/pos-offline-assets";
@@ -84,7 +85,7 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
             localStorage.setItem(key, deviceId.current);
           }
           const local = pendingSales(await listOfflineSales(scope));
-          const shifts = new Set<string>([...body.snapshot.shifts.filter((s: { user_id: string; status: string }) => s.user_id === initialSnapshot.userId && s.status !== "closed").map((s: { id: string }) => s.id), ...local.map(s => String(s.command.payload.shiftId))]);
+          const shifts = new Set<string>([...body.snapshot.shifts.filter((s: { user_id: string; status: string }) => s.user_id === initialSnapshot.userId && s.status !== "closed").map((s: { id: string }) => s.id), ...local.flatMap(s => typeof s.command.payload.shiftId === "string" && s.command.payload.shiftId ? [s.command.payload.shiftId] : [])]);
           await Promise.all([...shifts].map(shiftId => {
             const rows = local.filter(s => s.command.payload.shiftId === shiftId);
             return fetch(endpoint.replace("pos-sync", "shift-heartbeat"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shiftId, deviceId: deviceId.current, pending: rows.length, conflicts: rows.filter(s => s.status === "conflict").length }), signal: AbortSignal.timeout(8000) });
@@ -137,17 +138,19 @@ export function usePosFinance(initialSnapshot: FinanceSnapshot, slug?: string, o
     busy.current = true; setSaving(true); setError(""); setMessage("");
     try {
       const data = current.current.snapshot;
-      const shift = data.shifts.find(row => row.id === payload.shiftId && row.user_id === data.userId);
-      if (!shift || shift.status !== "open") throw new Error("الوردية مقفلة أو غير متاحة حدث الكاشير قبل متابعة البيع");
-      if (shift.supervisor_paused) throw new Error("الوردية موقوفة إداريًا تواصل مع المسؤول لاستئناف البيع");
+      validatePosSaleShift(data, payload.shiftId);
+      const butcher = isButcherFinance(data);
       if (payload.redeemRewardId && !connected) throw new Error("صرف المكافأة يحتاج اتصالًا للتحقق من عدم استخدامها يمكنك حفظ البيع دون صرفها");
-      const lines = (payload.lines as { productId: string; quantity: number }[]).map(line => {
+      const lines = (payload.lines as { productId: string; quantity: number; unitId?: string; expectedUnitPrice: number }[]).map(line => {
         const product = data.products.find(product => product.id === line.productId);
-        if (!product) throw new Error("تعذر العثور على صنف في السلة");
-        return { product, quantity: line.quantity };
+        if (!product?.available) throw new Error("الصنف غير متاح حدّث المنتجات وراجع السلة");
+        const selected = financeProductSelection(product, line.unitId, butcher);
+        validatePosExpectedAmount(line.expectedUnitPrice, selected.product.price, 1_000_000);
+        return { ...selected, quantity: line.quantity };
       });
       const document = createFinanceReceiptPreview({ lines, settings: data.settings, discount: Number(payload.discount), paymentKind: payload.accountId ? data.accounts.find(account => account.id === payload.accountId)?.kind ?? "cash" : "credit", accountId: payload.accountId as string, partyId: payload.partyId as string, customerPhone: payload.customerPhone as string, note: String(payload.note ?? ""), createdAt: new Date().toISOString() });
-      document.shift_id = String(payload.shiftId); document.warehouse_id = String(payload.warehouseId);
+      validatePosExpectedAmount(payload.expectedTotal, document.total, 100);
+      document.shift_id = typeof payload.shiftId === "string" && payload.shiftId ? payload.shiftId : null; document.warehouse_id = String(payload.warehouseId); document.created_by = data.userId;
       const fingerprint = JSON.stringify(payload);
       if (!checkoutRetry.current || checkoutRetry.current.fingerprint !== fingerprint) checkoutRetry.current = { fingerprint, requestId: crypto.randomUUID() };
       const sale = await storeOfflineSale(scope, payload, document, checkoutRetry.current.requestId);

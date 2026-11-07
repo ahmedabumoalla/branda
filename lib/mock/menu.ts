@@ -1,4 +1,5 @@
 import type { CommerceDetails } from "@/lib/commerce/product-details";
+import type { ButcherProductDetails } from "@/lib/menu/butcher-products";
 
 export type MenuCategory = string;
 
@@ -71,6 +72,7 @@ export type MenuProduct = {
   imageVariant: MenuImageVariant;
   price: number;
   priceOptions?: number[];
+  butcherDetails?: ButcherProductDetails;
   calories?: number;
   loyaltyPoints: number;
   catalogKind?: "product" | "service";

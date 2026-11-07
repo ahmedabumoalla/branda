@@ -1,6 +1,7 @@
 import type { CafeSettings } from "@/lib/mock/cafe-settings";
 import type { MenuCategoryRecord } from "@/lib/mock/menu-categories";
 import type { MenuProduct } from "@/lib/mock/menu";
+import { readButcherDetails } from "@/lib/menu/butcher-products";
 import type { CafeOffer } from "@/lib/mock/offers";
 import type { CafeOrder, OrderStatus } from "@/lib/mock/orders";
 import type { CustomIdentityTheme } from "@/lib/mock/custom-identity-theme";
@@ -45,6 +46,7 @@ export type DbMenuProduct = {
   image_variant: string;
   price: number;
   price_options?: number[] | null;
+  butcher_details?: unknown;
   calories: number | null;
   loyalty_points: number;
   catalog_kind?: "product" | "service";
@@ -260,6 +262,7 @@ export function mapDbProductToMenuProduct(row: DbMenuProduct, categoryName?: str
     imageVariant: row.image_variant as MenuProduct["imageVariant"],
     price: Number(row.price),
     priceOptions: row.price_options?.map(Number) ?? [],
+    butcherDetails: readButcherDetails(row.butcher_details),
     calories: row.calories ?? undefined,
     loyaltyPoints: 0,
     catalogKind: row.catalog_kind ?? "product",

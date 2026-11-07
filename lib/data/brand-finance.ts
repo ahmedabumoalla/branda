@@ -32,7 +32,7 @@ export async function getBrandFinanceContext(slug?: string) {
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
-  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole } };
+  return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string } };
 }
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
@@ -61,7 +61,13 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   }
   const { client, cafe } = await getBrandFinanceContext(slug);
   if (!canFinanceOperation(cafe.role, command.operation)) throw new Error("لا تملك صلاحية تنفيذ هذه العملية");
-  if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
+  const butcherSale = command.operation === "sale" && cafe.businessCategory === "butcher_shops";
+  if (butcherSale) {
+    // This category never enrolls, stamps, pages or messages a customer at checkout
+    delete command.payload.customerPhone;
+    delete command.payload.redeemRewardId;
+    delete command.payload.pagerFeedbackHash;
+  } else if (command.operation === "sale") prepareFinancePosCustomerPayload(command.payload, command.requestId);
   const customerDetails = command.operation === "party" && Object.hasOwn(command.payload, "details");
   const { data, error } = customerDetails
     ? await client.rpc("brand_finance_save_customer", { p_cafe_id: cafe.id, p_payload: command.payload, p_request_id: command.requestId })
@@ -83,7 +89,7 @@ export async function executeBrandFinanceCommand(input: unknown, slug?: string):
   if (["shift_open", "shift_close", "shift_handover", "shift_accept"].includes(command.operation)) {
     after(async () => { try { await dispatchShiftAlerts(cafe.id); } catch { /* Persisted outbox remains available to the scheduled worker */ } });
   }
-  if (command.operation === "sale" && command.payload.customerPhone) {
+  if (command.operation === "sale" && !butcherSale && command.payload.customerPhone) {
     after(async () => { try { await dispatchFinancePosCustomerMessages(cafe.id); } catch { /* Committed customer outbox is retried by the scheduled worker */ } });
   }
   return data as FinanceCommandResult;

@@ -35,7 +35,9 @@ export function offlineStockDeductions(snapshot: FinanceSnapshot, document: Fina
     const components = product?.stock_components ?? (legacyItemId ? [{ item_id: legacyItemId, quantity: 1 }] : []);
     for (const component of components) {
       if (!component.item_id || !Number.isFinite(component.quantity) || component.quantity <= 0 || !Number.isFinite(line.quantity) || line.quantity <= 0) continue;
-      const milliUnits = Math.round((line.quantity * component.quantity + Number.EPSILON) * 1000);
+      const factor = line.stock_unit_factor ?? 1;
+      if (!Number.isFinite(factor) || factor <= 0) continue;
+      const milliUnits = Math.round((line.quantity * factor * component.quantity + Number.EPSILON) * 1000);
       deductions.set(component.item_id, (deductions.get(component.item_id) ?? 0) + milliUnits);
     }
   }

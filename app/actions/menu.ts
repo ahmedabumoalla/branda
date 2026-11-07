@@ -35,6 +35,7 @@ export async function saveMenuProductAction(product: MenuProduct) {
     description: product.description,
     price: product.price,
     priceOptions: product.priceOptions,
+    butcherDetails: product.butcherDetails,
     calories: product.calories ?? null,
     loyaltyPoints: 0,
     catalogKind: product.catalogKind,

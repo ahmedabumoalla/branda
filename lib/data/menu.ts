@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { butcherProductDetailsSchema, type ButcherProductDetails } from "@/lib/menu/butcher-products";
 import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -315,6 +316,7 @@ const productSchema = z.object({
   description: z.string().optional().default(""),
   price: z.number().finite().min(0),
   priceOptions: z.array(z.number().finite().min(0)).max(10).optional(),
+  butcherDetails: butcherProductDetailsSchema.optional(),
   calories: z.number().optional().nullable(),
   loyaltyPoints: z.number().int().min(0),
   catalogKind: z.enum(["product", "service"]).optional(),
@@ -376,6 +378,7 @@ const productSchema = z.object({
 
 type MenuProductPayload = {
   price_options?: number[];
+  butcher_details?: ButcherProductDetails;
   branch_id?: string | null;
   cafe_id: string;
   category_id: string | null;
@@ -520,7 +523,17 @@ async function upsertEventTicketSettings(
 export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
   const parsed = productSchema.parse(input);
   const cafe = await requireOwnerCafeContext();
+  if (parsed.butcherDetails && cafe.businessCategory !== "butcher_shops") {
+    throw new Error("مواصفات اللحوم متاحة لحساب الملحمة فقط");
+  }
   const supabase = await createClient();
+  if (cafe.businessCategory === "butcher_shops" && !parsed.butcherDetails) {
+    if (!parsed.id) throw new Error("حدد نوع اللحم ووحدات البيع وأسعارها");
+    const { data: existing, error: existingError } = await supabase.from("menu_products")
+      .select("id").eq("id", parsed.id).eq("cafe_id", cafe.id).is("deleted_at", null).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) throw new Error("حدد نوع اللحم ووحدات البيع وأسعارها");
+  }
   const imageGallery = normalizeProductImageGallery(parsed.imageGallery ?? []);
   const requestedVideoStoragePath = parsed.videoStoragePath?.trim() || undefined;
   const media = normalizeProductMedia([
@@ -553,7 +566,8 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     legacy_category: parsed.category ?? null,
     name: parsed.name,
     description: parsed.description,
-    price: parsed.price,
+    price: parsed.butcherDetails?.units[0].price ?? parsed.price,
+    ...(cafe.businessCategory === "butcher_shops" && parsed.butcherDetails ? { butcher_details: parsed.butcherDetails } : {}),
     ...(parsed.priceOptions !== undefined ? { price_options: parsed.priceOptions.length ? [...new Set([parsed.price, ...parsed.priceOptions])].sort((a,b) => a-b) : [] } : {}),
     calories: parsed.calories ?? null,
     loyalty_points: 0,
@@ -596,6 +610,9 @@ export async function upsertMenuProduct(input: z.infer<typeof productSchema>) {
     }
 
     if (compareCommerce) throw new Error("تغيرت بيانات المنتج أو مخزونه حدث الصفحة وأعد التعديل");
+    if (cafe.businessCategory === "butcher_shops" && !parsed.butcherDetails) {
+      throw new Error("تغير المنتج حدث الصفحة وأعد المحاولة");
+    }
 
     const { data: inserted, error: insertError } = await supabase
       .from("menu_products")

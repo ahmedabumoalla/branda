@@ -90,11 +90,11 @@ const lease = '33333333-3333-4333-8333-333333333333';
   providerStatus='queued';pdfFailuresRemaining=1;const beforeRetry=sent.length, priorPdfCalls=pdfCalls;assert.equal((await worker.dispatchFinancePosCustomerMessages()).queued,1);assert.equal(pdfCalls,priorPdfCalls+2);assert.equal(sent.length,beforeRetry+1,'Pre-send render retry cannot duplicate provider send');
   assert(worker.financePosCustomerMessage({...job,brandName:'B'.repeat(300),receipt:{...receipt,brandName:'B'.repeat(300)},slug:'s'.repeat(120)}).length<=1024,'Provider caption limit even for maximum brand/slug');
 
-  let saleError = null, customerDispatches = 0, financeRpcCalls = [], deferred = [];
+  let saleError = null, customerDispatches = 0, financeRpcCalls = [], deferred = [], businessCategory = 'cafes';
   const finance = load('lib/data/brand-finance.ts', { '@/lib/finance/inventory-catalog':load('lib/finance/inventory-catalog.ts'), '@/lib/finance/permissions':load('lib/finance/permissions.ts'),
     '@/lib/supabase/server': { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id } } }) }, rpc: async (name, args) => {
       financeRpcCalls.push({ name, args });
-      return name === 'brand_finance_context' ? { data: { id, slug: 'brand', role: 'cashier' }, error: null } : { data: { id: orderId, number: 19 }, error: saleError };
+      return name === 'brand_finance_context' ? { data: { id, slug: 'brand', role: 'cashier', businessCategory }, error: null } : { data: { id: orderId, number: 19 }, error: saleError };
     } }) },
     '@/lib/data/cafes': { requireOwnerCafeContext: async () => ({ slug: 'brand' }) }, '@/lib/menu/standalone-menu': {},
     './finance-shifts': { getFinanceMaintenanceActor: async () => null }, 'next/server': { after: callback => deferred.push(callback) },
@@ -108,6 +108,17 @@ const lease = '33333333-3333-4333-8333-333333333333';
   await assert.rejects(() => finance.executeBrandFinanceCommand({ operation: 'sale', requestId: id, payload: { customerPhone: phone } }, 'brand')); assert.equal(deferred.length, 0);
   saleError = null;
   await finance.executeBrandFinanceCommand({ operation: 'sale', requestId: id, payload: {} }, 'brand'); assert.equal(deferred.length, 0, 'Cash sale without phone has no customer side effects');
+  businessCategory = 'butcher_shops';
+  await finance.executeBrandFinanceCommand({ operation: 'sale', requestId: id, payload: { customerPhone: 'invalid', redeemRewardId: 'forged', pagerFeedbackHash: 'forged', lines: [{ productId: id, unitId: 'g', expectedUnitPrice: 0.075, quantity: 500 }] } }, 'brand');
+  const butcherPayload = financeRpcCalls.at(-1).args.p_payload;
+  assert.equal(Object.hasOwn(butcherPayload, 'customerPhone'), false);
+  assert.equal(Object.hasOwn(butcherPayload, 'redeemRewardId'), false);
+  assert.equal(Object.hasOwn(butcherPayload, 'pagerFeedbackHash'), false);
+  assert.equal(butcherPayload.lines[0].expectedUnitPrice, 0.075, 'Server preserves fractional gram price');
+  assert.equal(deferred.length, 0, 'Butcher checkout never schedules customer dispatch');
+  assert.equal(customerDispatches, 1, 'Only earlier ordinary cafe invoice dispatched');
+  businessCategory = 'cafes';
+  await assert.rejects(() => finance.executeBrandFinanceCommand({ operation: 'sale', requestId: id, payload: { customerPhone: 'invalid' } }, 'brand'), 'Ordinary cafe validation preserved');
 
   let shiftCalls = 0, customerCalls = 0; process.env.CRON_SECRET = 'x'.repeat(32);
   let renderCalls=0, renderFailure=false;

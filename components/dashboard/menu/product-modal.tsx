@@ -46,6 +46,8 @@ import { getBusinessCopy } from "@/lib/platform/business-copy";
 import { getProductImageDownload, saveProductImageDownload } from "@/lib/menu/download-product-image";
 import { commerceDetailsSchema, type CommerceDetails } from "@/lib/commerce/product-details";
 import { GiftProductFields } from "@/components/dashboard/menu/gift-product-fields";
+import { ButcherProductFields } from "@/components/dashboard/menu/butcher-product-fields";
+import { createButcherProductDraft, parseButcherProductDraft } from "@/lib/menu/butcher-products";
 
 type Props = {
   open: boolean;
@@ -168,6 +170,9 @@ function MenuProductEditor({
   const isEvents = copy.kind === "events";
   const isSalon = copy.kind === "barbershop";
   const isGifts = copy.kind === "gifts";
+  const isButcher = businessCategory === "butcher_shops";
+  const [butcherDraft, setButcherDraft] = useState(() => createButcherProductDraft(editingProduct?.butcherDetails, editingProduct?.price));
+  const [butcherError, setButcherError] = useState("");
   const [catalogKind, setCatalogKind] = useState<"service" | "product">(editingProduct?.catalogKind ?? (isSalon ? "service" : "product"));
   const [commerceDetails, setCommerceDetails] = useState<CommerceDetails>(() => editingProduct?.commerceDetails ?? {});
   const productNoun = isGifts ? "المنتج أو الخدمة" : isSalon ? "الخدمة أو المنتج" : isEvents ? "التذكرة أو الباقة" : "المنتج";
@@ -409,7 +414,7 @@ function MenuProductEditor({
             : []),
       ],
       imageVariant,
-      price: Number(price) || 0,
+      price: Number(isButcher ? butcherDraft.units[0]?.price : price) || 0,
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
@@ -456,7 +461,15 @@ function MenuProductEditor({
       return;
     }
 
-        if (!price || !Number.isFinite(Number(price)) || Number(price) < 0) {
+    const butcherResult = isButcher ? parseButcherProductDraft(butcherDraft) : undefined;
+    if (butcherResult && !butcherResult.success) {
+      setButcherError(butcherResult.error.issues[0]?.message ?? "تحقق من نوع اللحم ووحداته وأسعاره");
+      requestAnimationFrame(() => document.getElementById("butcher-product-error")?.focus());
+      return;
+    }
+    setButcherError("");
+
+    if (!isButcher && (!price || !Number.isFinite(Number(price)) || Number(price) < 0)) {
       alert("السعر مطلوب");
       return;
     }
@@ -467,7 +480,7 @@ function MenuProductEditor({
     }
 
     const parsedPriceOptions = priceOptions.trim() ? priceOptions.split(/[\/,،]/).map(value => value.trim()) : [];
-    if (parsedPriceOptions.some(value => !value || !Number.isFinite(Number(value)) || Number(value) < 0) || new Set([Number(price), ...parsedPriceOptions.map(Number)]).size > 10) {
+    if (!isButcher && (parsedPriceOptions.some(value => !value || !Number.isFinite(Number(value)) || Number(value) < 0) || new Set([Number(price), ...parsedPriceOptions.map(Number)]).size > 10)) {
       alert("أدخل أسعارًا صحيحة وافصل بينها بشرطة مائلة بحد أقصى عشرة أسعار");
       return;
     }
@@ -584,8 +597,9 @@ function MenuProductEditor({
         mimeType: pendingVideoFile ? videoMimeFromFile(pendingVideoFile) : undefined,
       } : undefined, primaryKey === "video" ? "video" : "image"),
       imageVariant,
-      price: Number(price),
-      priceOptions: priceOptions.trim() ? priceOptions.split(/[/,،]/).map(value => Number(value.trim())) : [],
+      price: butcherResult?.success ? butcherResult.data.units[0].price : Number(price),
+      priceOptions: isButcher ? [] : priceOptions.trim() ? priceOptions.split(/[/,،]/).map(value => Number(value.trim())) : [],
+      ...(butcherResult?.success ? { butcherDetails: butcherResult.data } : {}),
       calories: calories.trim() ? Number(calories) || 0 : undefined,
       loyaltyPoints: 0,
       catalogKind,
@@ -686,7 +700,7 @@ function MenuProductEditor({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={isGifts ? (catalogKind === "service" ? "مثال: تصميم مساحة خضراء" : "مثال: نبتة مونستيرا") : isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
+              placeholder={isButcher ? "مثال: لحم خروف طازج" : isGifts ? (catalogKind === "service" ? "مثال: تصميم مساحة خضراء" : "مثال: نبتة مونستيرا") : isSalon ? (catalogKind === "service" ? "مثال: قص الشعر وتحديد اللحية" : "مثال: زيت العناية باللحية") : isEvents ? "مثال: تذكرة دخول عامة" : "مثال: لاتيه فانيلا"}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             />
           </label>
@@ -828,7 +842,7 @@ function MenuProductEditor({
               </fieldset>
             ) : null}
 
-            {!isSalon && !isGifts && <label className="mt-4 block">
+            {!isSalon && !isGifts && !isButcher && <label className="mt-4 block">
               <span className="text-xs font-black text-[#7A6255]">
                 خلفية احتياطية عند عدم رفع صورة
               </span>
@@ -850,8 +864,9 @@ function MenuProductEditor({
 
           {isGifts && <label className="block text-sm font-bold text-[#3A2117]">نوع العنصر<select className="mt-2 min-h-11 w-full rounded-xl border border-[#E5D8CD] bg-white p-3" value={catalogKind} onChange={e => { const next = e.target.value as "product" | "service"; setCatalogKind(next); if (next === "product") setCommerceDetails(current => ({ ...current, quoteOnly: false })); }}><option value="product">منتج</option><option value="service">خدمة أو ورشة</option></select></label>}
           {isGifts && <GiftProductFields value={commerceDetails} onChange={setCommerceDetails} service={catalogKind === "service"} />}
+          {isButcher && <ButcherProductFields value={butcherDraft} onChange={setButcherDraft} disabled={submitting} error={butcherError} />}
           {isSalon && <label className="block text-sm font-bold">نوع العنصر<select className="mt-2 w-full rounded-xl border p-3" value={catalogKind} onChange={e => setCatalogKind(e.target.value as "service" | "product")}><option value="service">خدمة حلاقة وعناية</option><option value="product">منتج للعناية</option></select></label>}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {!isButcher && <div className="grid gap-4 sm:grid-cols-2">
             <label className={isSalon || isGifts ? "hidden" : "block"}>
               <span className="text-xs font-black text-[#7A6255]">
                 {isEvents ? "السعة التقريبية اختياري" : "السعرات الحرارية اختياري"}
@@ -882,7 +897,8 @@ function MenuProductEditor({
 
           </div>
 
-          {!isSalon && !isGifts && !isEvents && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
+          }
+          {!isSalon && !isGifts && !isEvents && !isButcher && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
