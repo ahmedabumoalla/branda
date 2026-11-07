@@ -32,3 +32,11 @@ Updated 2026-11-07 UTC
 - Local authenticated slowness remains unresolved: an anonymous finance request succeeded at 01:53 UTC, but earlier development logs include slow admin renders and stack overflow errors; this does not prove the user's local hang is fixed
 - Release checkout is `C:/Projects/branda-salon-design-release-20261028`; preserve unrelated dirty root and historical documentation changes
 - Next action: verify the new production commit, then have the user sign in again and retry maintenance; separately investigate local authenticated slowness if it persists
+
+## Unit picker refinement, November 7
+
+- Clear selected-unit background, check indicator, keyboard focus and narrow-screen layout
+- Quantity always opens blank and resets when changing unit; adding requires an explicit valid quantity
+- Existing cart calculations, unit prices, stock rules and offline receipt behavior are preserved
+- Root/release POS14, types, text integrity and scoped lint passed; CSS modules and14.21 selected text contrast verified
+- Build and exact production evidence: `output/butcher-picker/`

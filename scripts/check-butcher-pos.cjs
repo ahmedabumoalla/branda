@@ -95,6 +95,32 @@ function harness(data) {
   return { calls, messageLoads, render() { index = 0; return FinancePOS({ initialSnapshot: data }); } };
 }
 async function main() {
+  const picker = harness(snapshot);
+  const openPicker = () => find(picker.render(), node => node.type === 'button' && node.props?.['aria-label']?.startsWith('إضافة لحم')).props.onClick();
+  const quantityInput = () => find(picker.render(), node => node.type === 'input' && node.props?.['aria-describedby'] === 'butcher-quantity-hint');
+  openPicker();
+  assert.equal(quantityInput().props.value, '');
+  assert.equal(quantityInput().props['aria-invalid'], false);
+  assert.equal(button(picker.render(), 'إضافة إلى الطلب').props.disabled, true);
+  button(picker.render(), 'إضافة إلى الطلب').props.onClick();
+  assert.equal(button(picker.render(), 'تأكيد الاستلام وإصدار إيصال').props.disabled, true);
+  quantityInput().props.onChange({ target: { value: '1.25' } });
+  assert.equal(button(picker.render(), 'إضافة إلى الطلب').props.disabled, false);
+  find(picker.render(), node => node.type === 'button' && node.props?.['aria-pressed'] === false && text(node).startsWith('جرام')).props.onClick();
+  assert.equal(quantityInput().props.value, '', 'Switching units requires a fresh quantity');
+  assert.equal(nodes(picker.render()).filter(node => node.type === 'button' && node.props.className === 'unit' && node.props?.['aria-pressed'] === true).length, 1);
+  assert.ok(nodes(picker.render()).some(node => node.type === 'i' && node.props.className === 'selectionMark' && node.props.children), 'Selected unit has a visible non-color indicator');
+  for (const value of ['0', '-1', '10000', '0.0001']) {
+    quantityInput().props.onChange({ target: { value } });
+    assert.equal(button(picker.render(), 'إضافة إلى الطلب').props.disabled, true);
+  }
+  quantityInput().props.onChange({ target: { value: '250' } });
+  button(picker.render(), 'إضافة إلى الطلب').props.onClick();
+  openPicker(); assert.equal(quantityInput().props.value, '', 'Reopening after adding starts empty');
+  quantityInput().props.onChange({ target: { value: '2' } });
+  find(picker.render(), node => node.type?.name === 'Modal' && node.props.title === product.name).props.onClose();
+  openPicker(); assert.equal(quantityInput().props.value, '', 'Reopening after cancellation starts empty');
+  checks++;
   const h = harness(snapshot); let tree = h.render();
   assert.ok(!nodes(tree).some(node => ['FinancePosCustomerField', 'FinancePosPager'].includes(node.type?.name)));
   assert.ok(h.messageLoads.every(args => !args.visible && args.documentIds.length === 0)); checks++;
@@ -109,6 +135,7 @@ async function main() {
   for (const field of ['shiftId', 'customerPhone', 'redeemRewardId']) assert.ok(!(field in payload)); checks++;
   const changedData = structuredClone(snapshot), priceChange = harness(changedData); tree = priceChange.render();
   find(tree, node => node.type === 'button' && node.props?.['aria-label']?.startsWith('إضافة لحم')).props.onClick(); tree = priceChange.render();
+  find(tree, node => node.type === 'input' && node.props?.['aria-describedby'] === 'butcher-quantity-hint').props.onChange({ target: { value: '1' } }); tree = priceChange.render();
   button(tree, 'إضافة إلى الطلب').props.onClick(); tree = priceChange.render();
   changedData.products[0].butcherDetails.units[0].price = 80;
   tree = priceChange.render(); assert.equal(button(tree, 'تأكيد الاستلام وإصدار إيصال').props.disabled, true);

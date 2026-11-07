@@ -58,7 +58,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [unitProductId, setUnitProductId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState("");
-  const [unitQuantity, setUnitQuantity] = useState("1");
+  const [unitQuantity, setUnitQuantity] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
@@ -127,7 +127,7 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
   }
   function addProduct(product: FinanceProduct) {
     if (butcher && product.butcherDetails?.units.length) {
-      setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity("1"); setLocalError("");
+      setUnitProductId(product.id); setSelectedUnitId(product.butcherDetails.units[0].id); setUnitQuantity(""); setLocalError("");
     } else setQuantity(product.id, (cart.find(line => line.productId === product.id)?.quantity ?? 0) + 1);
   }
   function addSelectedUnit() {
@@ -230,10 +230,10 @@ export function FinancePOS({ initialSnapshot, slug, dashboardHref, offlineEntry 
         {localError && <p className={styles.error} role="alert">{localError}</p>}
         <fieldset className={butcherStyles.units}><legend>اختر وحدة البيع</legend>{unitProduct?.butcherDetails?.units.map(unit => {
           const compatible = !unitProduct.stockTracked || butcherStockFactor(unitProduct.butcherDetails!.units[0].id, unit.id) !== null;
-          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? "هذه الوحدة تحتاج ربط مخزون متوافق" : undefined} onClick={() => setSelectedUnitId(unit.id)}><strong>{unit.label}</strong><span><bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>ر س</span></button>;
+          return <button key={unit.id} type="button" className={butcherStyles.unit} aria-pressed={unit.id === selectedUnitId} disabled={!compatible || disabled} title={!compatible ? "هذه الوحدة تحتاج ربط مخزون متوافق" : undefined} onClick={() => { if (unit.id !== selectedUnitId) setUnitQuantity(""); setSelectedUnitId(unit.id); }}><strong className={butcherStyles.unitName}><i className={butcherStyles.selectionMark} aria-hidden="true">{unit.id === selectedUnitId && <Check size={18} strokeWidth={3} />}</i>{unit.label}</strong><span className={butcherStyles.unitPrice}><bdi>{new Intl.NumberFormat("ar-SA", { maximumFractionDigits: 6 }).format(unit.price)}</bdi>ر س</span></button>;
         })}</fieldset>
-        <div className={butcherStyles.quantity}><Field label={`الكمية${selectedUnit ? ` بالـ${selectedUnit.label}` : ""}`}><input type="number" inputMode="decimal" min="0.001" max="9999" step="0.001" value={unitQuantity} disabled={disabled} aria-invalid={!unitQuantityValid} aria-describedby="butcher-quantity-hint" onChange={event => setUnitQuantity(event.target.value)} /></Field><small id="butcher-quantity-hint" className={styles.muted}>يمكن إدخال أجزاء الوحدة حتى ثلاث خانات عشرية</small></div>
-        {!unitQuantityValid && <p className={styles.error} role="alert">أدخل كمية بين ٠٫٠٠١ و٩٩٩٩ بحد أقصى ثلاث خانات عشرية</p>}
+        <div className={butcherStyles.quantity}><Field label={`الكمية${selectedUnit ? ` بالـ${selectedUnit.label}` : ""}`}><input type="number" inputMode="decimal" min="0.001" max="9999" step="0.001" placeholder="أدخل الكمية" value={unitQuantity} disabled={disabled} aria-invalid={unitQuantity !== "" && !unitQuantityValid} aria-describedby="butcher-quantity-hint" onChange={event => setUnitQuantity(event.target.value)} /></Field><small id="butcher-quantity-hint" className={styles.muted}>يمكن إدخال أجزاء الوحدة حتى ثلاث خانات عشرية</small></div>
+        {unitQuantity !== "" && !unitQuantityValid && <p className={styles.error} role="alert">أدخل كمية بين ٠٫٠٠١ و٩٩٩٩ بحد أقصى ثلاث خانات عشرية</p>}
         <div className={butcherStyles.total}><span>قيمة الصنف</span><Numeric value={unitQuantityValid && selectedUnit ? Math.round((selectedUnit.price * selectedQuantity + Number.EPSILON) * 100) / 100 : 0} money /></div>
       </div>
     </Modal>
