@@ -16,7 +16,7 @@ export const cashierEnglish: Record<string, string> = {
   "كلمة المرور الجديدة": "New password",
   "تأكيد كلمة المرور الجديدة": "Confirm new password",
   "حفظ كلمة المرور والدخول": "Save password and sign in",
-  "٨ خانات على الأقل تتضمن حرفًا إنجليزيًا كبيرًا ورمزًا": "At least 8 characters including an uppercase English letter and a symbol",
+  "من ٨ إلى ١٢٨ خانة ويمكن استخدام الأرقام فقط": "8 to 128 characters, including numbers only",
   "تأكيد كلمة المرور لا يطابق كلمة المرور الجديدة": "The confirmation does not match your new password",
   "تعذر حفظ كلمة المرور اطلب رمزًا جديدًا وحاول بكلمة أخرى تستوفي الشروط": "Could not save your password Request a new code and try another password that meets the requirements",
   "تعذر إكمال تعيين كلمة المرور اطلب رمزًا جديدًا وحاول مجددًا": "Could not complete password setup Request a new code and try again",

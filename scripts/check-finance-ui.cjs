@@ -460,7 +460,7 @@ async function main() {
   const passwordField = find(salesTree, node => node.type === 'input' && node.props.name === 'password');
   assert.equal(passwordField.props.minLength, 8);
   const nativePattern = new RegExp('^(?:' + passwordField.props.pattern + ')$', 'v');
-  assert(nativePattern.test('Abcde!12')); assert(!nativePattern.test('abcdef!1')); assert(!nativePattern.test('Abcdef12'));
+  assert(nativePattern.test('123456789')); assert(nativePattern.test('12345678')); assert(nativePattern.test('abcdef!1')); assert(nativePattern.test('Abcdef12')); assert(!nativePattern.test('1234567')); assert(!nativePattern.test(' '.repeat(8))); assert(!nativePattern.test('1'.repeat(129)));
   await salesTree.props.onSubmit({ preventDefault() {}, currentTarget: new Map([['password', 'weak']]) });
   assert.equal(submissions.length, 0);
   salesTree = salesHooks.render(SalesCashierForm, salesProps);

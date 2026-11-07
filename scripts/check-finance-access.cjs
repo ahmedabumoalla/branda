@@ -39,9 +39,9 @@ async function main(){
  assert((await provisionFinanceStaff(input)).ok);assert.equal(log.grant.at(-1).name,'brand_finance_execute');assert.equal(log.grant.at(-1).args.p_cafe_id,'tenant');assert.equal(log.grant.at(-1).args.p_payload.role,'cashier');
  assert(!('password' in log.grant.at(-1).args.p_payload));assert(!('account_type' in log.create.at(-1).user_metadata));
 
- const salesInput={name:'Sales Cashier',phone:'٠٥٠٠٠٠٠٠٠٠',password:'Abcde!12'};
+ const salesInput={name:'Sales Cashier',phone:'٠٥٠٠٠٠٠٠٠٠',password:'123456789'};
  const createdBeforePolicy=log.create.length;
- for(const password of ['Abcd!12','abcdef!1','Abcdef12','Abcdef 1','كلمةمرور!','Abcd!\n12'])await assert.rejects(provisionSalesCashier({...salesInput,password}));
+ for(const password of ['1234567','', ' '.repeat(8), '1'.repeat(129), 'Abcd!\n12'])await assert.rejects(provisionSalesCashier({...salesInput,password}));
  assert.equal(log.create.length,createdBeforePolicy,'Invalid password cannot create accounts or send credentials');
  for(const phone of ['٠٥٠٠٠٠٠٠٠٠','۰۵۰۰۰۰۰۰۰۰','0500000000','+966500000000','00966500000000','500000000']){
   assert.equal((await signInSalesCashier(phone,'password')).redirectTo,'/finance/brand-test/pos');assert.equal(log.signIn.at(-1).phone,'+966500000000');
@@ -90,7 +90,7 @@ async function main(){
  createError={code:'unexpected_failure'};assert.match((await createSalesCashierAccountAction(salesInput)).message,/خدمة الدخول/);createError=false;
  role='manager';assert.match((await createSalesCashierAccountAction(salesInput)).message,/مالك العلامة/);role='owner';
  enabled=false;assert.match((await createSalesCashierAccountAction(salesInput)).message,/اشتراك/);enabled=true;
- assert.match((await createSalesCashierAccountAction({...salesInput,password:'weak'})).message,/٨ خانات/);
+ assert.match((await createSalesCashierAccountAction({...salesInput,password:'weak'})).message,/٨.*١٢٨/);
  assert.match((await createSalesCashierAccountAction({...salesInput,phone:'123'})).message,/رقم جوال/);
  assert.match((await createSalesCashierAccountAction({...salesInput,name:''})).message,/اسم الكاشير/);
 
