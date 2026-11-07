@@ -924,7 +924,7 @@ function MenuProductEditor({
           }
           {!isSalon && !isGifts && !isEvents && !isButcher && <label className="block"><span className="text-xs font-black text-[#7A6255]">أسعار الخيارات الأخرى إن وجدت</span><input value={priceOptions} onChange={e => setPriceOptions(e.target.value)} placeholder="مثال: 12 / 13" className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-sm text-[#3A2117]" /><span className="mt-2 block text-xs text-[#7A6255]">افصل الأسعار بشرطة مائلة واتركها فارغة للصنف ذي السعر الواحد</span></label>}
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {!isButcher && <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black text-[#7A6255]">
                 {isGifts ? "مدة تجهيز المنتج أو تنفيذ الخدمة بالدقائق اختياري" : isSalon ? "مدة الخدمة (دقيقة) اختياري" : isEvents ? "مدة الدخول أو الجلسة (دقيقة) اختياري" : "وقت التحضير (دقيقة) اختياري"}
@@ -950,7 +950,7 @@ function MenuProductEditor({
                 className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
               />
             </label> : null}
-          </div>
+          </div>}
 
           {isEvents ? <fieldset className="rounded-3xl border border-[#E5D8CD] bg-white p-4">
             <legend className="px-2 text-xs font-black text-[#3A2117]">
@@ -1086,6 +1086,7 @@ function MenuProductEditor({
             </fieldset>
           ) : null}
 
+          {!isButcher && <>
           <div>
             <span className="text-xs font-black text-[#7A6255]">
               {detailsLabel}
@@ -1299,6 +1300,7 @@ function MenuProductEditor({
               </div>
             ) : null}
           </fieldset>
+          </>}
         </div>
 
         <div className="lg:sticky lg:top-0 lg:self-start">
