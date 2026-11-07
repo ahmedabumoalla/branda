@@ -194,7 +194,8 @@ function MenuProductEditor({
     ? "video" : imageKey(initialImages[0] ?? {}));
   const [name, setName] = useState(() => editingProduct?.name ?? "");
   const [categoryId, setCategoryId] = useState(() => editingProduct?.categoryId ?? categories[0]?.id ?? "");
-  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(() => categories.length === 0 && !editingProduct?.categoryId);
+  const newCategoryInputRef = useRef<HTMLInputElement>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [description, setDescription] = useState(() => editingProduct?.description ?? "");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -705,9 +706,26 @@ function MenuProductEditor({
             />
           </label>
 
-          <label className="block">
-            <span className="text-xs font-black text-[#7A6255]">{categoryLabel}</span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="product-category" className="text-xs font-black text-[#7A6255]">{categoryLabel}</label>
+              <button
+                type="button"
+                disabled={submitting || creatingCategory}
+                aria-expanded={creatingCategory}
+                aria-controls="new-product-category"
+                onClick={() => {
+                  setCreatingCategory(true);
+                  requestAnimationFrame(() => newCategoryInputRef.current?.focus());
+                }}
+                className="min-h-11 rounded-xl border border-[#D6C1AD] px-4 text-xs font-black text-[#5B3825] hover:bg-[#F3EADF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B3825] disabled:opacity-50"
+              >
+                تصنيف جديد
+              </button>
+            </div>
             <select
+              id="product-category"
+              disabled={submitting}
               value={creatingCategory ? "__new__" : categoryId}
               onChange={(e) => {
                 if (isSalon && e.target.value.startsWith("__salon__")) {
@@ -722,7 +740,7 @@ function MenuProductEditor({
               }}
               className="mt-2 w-full rounded-2xl border border-[#E5D8CD] bg-white px-4 py-4 text-right text-sm font-bold text-[#3A2117] outline-none focus:ring-2 focus:ring-[#CBB29C]"
             >
-              {isSalon && <option value="">اختر قسم الخدمة أو المنتج</option>}
+              <option value="" disabled={!isSalon}>{isSalon ? "اختر قسم الخدمة أو المنتج" : "اختر تصنيف المنتج"}</option>
               {sortedCategories.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -731,7 +749,7 @@ function MenuProductEditor({
               {isSalon && <optgroup label="أقسام مقترحة للصالون">{["خدمات الشعر", "اللحية والشارب", "العناية بالبشرة", "باقات العناية", "منتجات العناية"].filter(name => !categories.some(c => c.name === name)).map(name => <option key={name} value={`__salon__${name}`}>{name}</option>)}</optgroup>}
               <option value="__new__">+ إنشاء تصنيف جديد</option>
             </select>
-          </label>
+          </div>
 
           {creatingCategory ? (
             <label className="block">
@@ -739,6 +757,11 @@ function MenuProductEditor({
                 اسم التصنيف الجديد
               </span>
               <input
+                id="new-product-category"
+                ref={newCategoryInputRef}
+                required
+                disabled={submitting}
+                aria-describedby="new-product-category-hint"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder={isSalon ? "مثال: خدمات الشعر" : "اكتب اسم التصنيف"}
@@ -746,6 +769,7 @@ function MenuProductEditor({
               />
             </label>
           ) : null}
+          {creatingCategory && <p id="new-product-category-hint" className="text-xs leading-6 text-[#7A6255]">سيُحفظ التصنيف الجديد ويُربط بالمنتج عند الضغط على حفظ المنتج</p>}
 
           <label className="block">
             <span className="text-xs font-black text-[#7A6255]">
