@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { LocoMenuLoading } from "@/components/menu/loco-menu-loading";
 import { TogetherStoreLoading } from "@/components/store/together-store-loading";
 import { isLocoMenu } from "@/lib/menu/loco-brand";
@@ -11,7 +11,8 @@ import { menuLoadingBrand } from "@/lib/menu/loading-brands";
 
 export default function MenuLoading() {
   const { slug } = useParams<{ slug: string }>();
-  const signature = signatureBrand(slug);
+  const branches = useSearchParams().getAll("branch");
+  const signature = signatureBrand(slug, branches.length === 1 ? branches[0] : undefined);
   if (signature) return <SignatureMenuLoading brand={signature} />;
   if (slug === "brand-871ec6e243c0") return <TogetherStoreLoading />;
   if (isLocoMenu(slug)) return <LocoMenuLoading />;

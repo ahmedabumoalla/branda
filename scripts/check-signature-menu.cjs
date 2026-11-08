@@ -39,7 +39,7 @@ const mocks = {
 };
 const { BrandLoyaltyEntry } = load('components/menu/brand-loyalty-entry.tsx', mocks);
 mocks['./brand-loyalty-entry'] = { BrandLoyaltyEntry };
-const { signatureBrands, signatureBrand, signatureAsset, signatureBranchHref } = load('lib/menu/signature-brands.ts');
+const { signatureBrands, signatureBrand, signatureAsset } = load('lib/menu/signature-brands.ts');
 const { defaultSignatureBrand, usesDefaultSignatureMenu, DEFAULT_SIGNATURE_HERO } = load('lib/menu/default-signature.ts');
 const { getContrastRatio } = load('lib/cafe/color-contrast.ts');
 const { SignatureMenu } = load('components/menu/signature-menu.tsx', mocks);
@@ -118,25 +118,24 @@ async function main() {
   equal(signatureBrand(dababMenu.slug, 'bar'), dabab, 'Primary bar retains the exact approved Dabab presentation');
   equal(signatureBrand(dababMenu.slug, 'unknown'), dabab, 'Unknown branch names do not invent a presentation');
   equal(signatureBrand(menu.slug, 'hospital'), signatureBrand(menu.slug), 'A branch name cannot alter another brand identity');
-  equal(signatureBranchHref(dababMenu.slug, 'coffee', 'showcase=1&q=latte&tag=hot&tag=cold&branch=bar'), `/menu/${dababMenu.slug}?showcase=1&q=latte&tag=hot&tag=cold&branch=coffee`, 'Branch links replace only the branch and preserve showcase, search and repeated query values');
   check(!dababHtml.includes('aria-label="اختر فرع ضباب"'), 'Unbranched Dabab has no empty branch navigation');
-  const branchQuery = 'showcase=1&q=latte&branch=bar';
-  const barHtml = render({ menu: { ...dababMenu, branch: dababBranches[0], branches: dababBranches }, brand: signatureBrand(dababMenu.slug, 'bar'), loyalty, branchQuery });
+  const barHtml = render({ menu: { ...dababMenu, branch: dababBranches[0], branches: dababBranches }, brand: signatureBrand(dababMenu.slug, 'bar'), loyalty });
   check(!barHtml.includes('data-signature-variant') && barHtml.includes(signatureAsset(dabab.hero)), 'Branched bar retains its current hero and has no new design variant');
+  check(!barHtml.includes('aria-label="اختر فرع ضباب"') && !barHtml.includes('?branch='), 'Bar menu has no links to the other independent menus');
+  check(barHtml.match(/<header[\s\S]*?<\/header>/)[0].includes(dabab.arabic), 'Bar keeps its adjacent header name');
   for (const selectedBranch of dababBranches.slice(1)) {
     const branchBrand = signatureBrand(dababMenu.slug, selectedBranch.slug);
     const branchMenu = { ...dababMenu, branch: selectedBranch, branches: dababBranches, products: [{ ...product, description: '' }] };
-    const html = render({ menu: branchMenu, brand: branchBrand, loyalty, branchQuery });
+    const html = render({ menu: branchMenu, brand: branchBrand, loyalty });
     equal(branchBrand.key, 'dabab', `${selectedBranch.slug} keeps the shared Dabab identity`);
     equal(branchBrand.variant, selectedBranch.slug, `${selectedBranch.slug} selects its scoped presentation`);
     equal(signatureAsset(branchBrand.hero), `/menu-art/dabab/dabab-${selectedBranch.slug}-hero-v1.webp`, `${selectedBranch.slug} uses its agreed desktop asset name`);
     equal(signatureAsset(branchBrand.hero, true), `/menu-art/dabab/dabab-${selectedBranch.slug}-hero-mobile-v1.webp`, `${selectedBranch.slug} uses its agreed mobile asset name`);
     check(html.includes(`data-signature-variant="${selectedBranch.slug}"`) && html.includes(branchBrand.headline) && html.includes(branchBrand.catalog), `${selectedBranch.slug} renders branch-specific heading and catalog copy`);
-    check(html.includes('data-has-branches="true"') && html.includes('aria-label="اختر فرع ضباب"'), `${selectedBranch.slug} exposes branch navigation outside the services dialog`);
-    const nav = html.match(/<nav class="branchNavigation"[\s\S]*?<\/nav>/)[0];
-    equal((nav.match(/aria-current="page"/g) || []).length, 1, `${selectedBranch.slug} identifies exactly one selected branch`);
-    check(nav.includes(`branch=${selectedBranch.slug}" aria-current="page"`) && dababBranches.every(branch => nav.includes(branch.name)), `${selectedBranch.slug} highlights its actual branch among all three choices`);
-    check(nav.includes('showcase=1&amp;q=latte&amp;branch=bar') && nav.includes('branch=coffee') && nav.includes('branch=hospital'), `${selectedBranch.slug} preserves preview/search context in all branch links`);
+    check(!html.includes('data-has-branches') && !html.includes('aria-label="اختر فرع ضباب"') && !html.includes('?branch='), `${selectedBranch.slug} has no links to the other independent menus`);
+    const header = html.match(/<header[\s\S]*?<\/header>/)[0];
+    if (selectedBranch.slug === 'hospital') check(header.includes(`src="${signatureAsset(branchBrand.logo)}"`) && header.includes(`alt="${branchBrand.name.replaceAll('&', '&amp;')}"`) && !header.includes('ضباب') && !header.includes('فرع المستشفى'), 'Hospital header keeps its accessible original MIND mark without adjacent Dabab or branch text');
+    else check(header.includes(branchBrand.arabic) && header.includes(branchBrand.headerNote), 'Coffee keeps both adjacent header labels');
     const loyaltyHtml = html.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
     equal(loyaltyHtml.replaceAll(signatureAsset(branchBrand.logo), signatureAsset(dabab.logo)), dababHtml.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], `${selectedBranch.slug} preserves the approved compact loyalty entry and shared enrollment with its own mark`);
     equal((html.split(`src="${signatureAsset(branchBrand.logo)}"`).length - 1), 4, `${selectedBranch.slug} uses its approved mark in all four surfaces`);
@@ -144,6 +143,25 @@ async function main() {
     check(!html.includes('data-photo-disclosure') && !html.includes('صورة توضيحية'), `${selectedBranch.slug} adds no unrequested image approximation copy to blank catalog descriptions`);
     check(!render({ menu: { ...branchMenu, loyaltyEnabled: false }, brand: branchBrand, loyalty }).includes('id="signature-loyalty"'), `${selectedBranch.slug} preserves the disabled loyalty gate`);
   }
+  const serviceHooks = hooks();
+  const ScopedSignature = load('components/menu/signature-menu.tsx', { ...mocks, react: serviceHooks.api }).SignatureMenu;
+  for (const branch of dababBranches) {
+    const tree = serviceHooks.draw(ScopedSignature, { menu: { ...dababMenu, branch, branches: dababBranches }, brand: signatureBrand(dababMenu.slug, branch.slug), loyalty });
+    equal(nodes(tree).find(n => n.type === noop && n.props.compact).props.showBranches, false, `${branch.slug} also hides the services branch selector`);
+  }
+  equal(nodes(serviceHooks.draw(ScopedSignature, props)).find(n => n.type === noop && n.props.compact).props.showBranches, true, 'Other brands keep their existing services branch selector');
+  serviceHooks.reset();
+  const { MenuServices } = load('components/menu/menu-services.tsx', { ...mocks, react: serviceHooks.api });
+  const servicesProps = { menu: { ...dababMenu, branches: dababBranches }, compact: true };
+  nodes(serviceHooks.draw(MenuServices, servicesProps)).find(n => n.type === 'button').props.onClick();
+  const branchButton = nodes(serviceHooks.draw(MenuServices, servicesProps)).find(n => n.type === 'button' && words(n).includes('منيو وأسعار كل فرع'));
+  check(!!branchButton, 'Branch services remain enabled by default for other menus');
+  branchButton.props.onClick();
+  check(nodes(serviceHooks.draw(MenuServices, servicesProps)).some(n => n.props['aria-label'] === 'منيوهات الفروع'), 'Existing branch services dialog still opens');
+  const hiddenServices = serviceHooks.draw(MenuServices, { ...servicesProps, showBranches: false });
+  check(!nodes(hiddenServices).some(n => n.props['aria-label'] === 'منيوهات الفروع') && !words(hiddenServices).includes('منيو وأسعار كل فرع'), 'Dabab capability hides both trigger and already-open branch dialog');
+  nodes(hiddenServices).find(n => n.type === 'button').props.onClick();
+  check(!words(serviceHooks.draw(MenuServices, { ...servicesProps, showBranches: false })).includes('منيو وأسعار كل فرع'), 'Dabab about dialog keeps its other services without a branch button');
   const hospitalBrand = signatureBrand(dababMenu.slug, 'hospital');
   const hospitalRangeProduct = { ...product, price: 9, priceOptions: [], priceRange: { min: 9, max: 14 }, description: 'الحصة 250 مل' };
   const hospitalRangeHtml = render({ menu: { ...dababMenu, logoUrl: '/brand-wide-wheat.webp', products: [hospitalRangeProduct] }, brand: hospitalBrand });
@@ -450,9 +468,7 @@ async function main() {
     equal(tokens.brand, dababTokens.brand, `${variant} retains the original terracotta loyalty banner background`);
     equal(tokens.white, dababTokens.white, `${variant} retains the approved loyalty lettering and card surface`);
   }
-  const branchNavCss = css.match(/\.branchNavigation a \{([^}]+)\}/)[1];
-  check(branchNavCss.includes('min-height: 44px') && branchNavCss.includes('min-width: 0') && branchNavCss.includes('overflow-wrap: anywhere'), 'Branch choices are touch-sized and wrap safely in the 320px layout');
-  check(css.includes('grid-template-columns: repeat(3,minmax(0,1fr))') && css.includes('width: min(660px,calc(100% - 36px))'), 'Three branch choices stay within the available mobile and desktop width');
+  check(!css.includes('branchNavigation') && !css.includes('data-has-branches'), 'Removed branch selector leaves no reserved grid row or mobile styles');
   check(css.includes('[data-signature-variant="hospital"] .hero { display: flex; flex-direction: column; min-height: 0; }') && css.includes('[data-signature-variant="hospital"] .backdrop { position: relative; inset: auto; order: 2;'), 'Hospital split hero stacks its separate picture below the copy on mobile without overlaying text');
   check(dababMarkRules.includes('filter: none') && dababMarkRules.includes('mix-blend-mode: normal'), 'Dabab logo retains original color without tinting or blending');
   check(css.includes('.menu[data-signature="dabab"] .footer { background: var(--surface)') && css.includes('.menu[data-signature="dabab"].loading { background: var(--surface)'), 'Footer and loading keep the colored logo on a readable warm surface');
@@ -539,7 +555,6 @@ async function checkRouteIsolation() {
   let branchView = nodes(branchTree).find(n => n.type === Signature && n.props.menu);
   equal(branchView.props.brand.variant, 'hospital', 'Route chooses the server-validated branch rather than trusting the raw requested branch');
   equal(branchView.key, `${slug}:validated-hospital`, 'Validated branch ID keys the menu so changing branches resets catalog filters');
-  equal(branchView.props.branchQuery, 'branch=coffee&showcase=1&q=latte&tag=hot&tag=cold', 'Route forwards query context for replacement by branch links');
   extraMenu = { branch: { id: 'validated-bar', name: 'بار ضباب', slug: 'bar' } };
   branchTree = await route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ branch: 'hospital' }) });
   branchView = nodes(branchTree).find(n => n.type === Signature && n.props.menu);
@@ -554,9 +569,20 @@ async function checkRouteIsolation() {
   extraMenu = {};
   slug = menu.slug; program = { ...program, enabled: false }; tree = await route.default({ params: Promise.resolve({ slug }) }); equal(nodes(tree).find(n => n.type === Signature && n.props.menu).props.loyalty, null, 'Disabled public program does not render reward promise');
   gate = false; const before = menuReads; await assert.rejects(route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ showcase: '1' }) }), /NOT_FOUND/); equal(menuReads, before, 'Unpublished showcase denies before catalog data access');
-  let currentSlug = slug;
-  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }) }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together }, '@/components/menu/branded-menu-loading': { BrandedMenuLoading: Branded } }).default;
+  let currentSlug = slug, loadingQuery = '';
+  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }), useSearchParams: () => new URLSearchParams(loadingQuery) }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together }, '@/components/menu/branded-menu-loading': { BrandedMenuLoading: Branded } }).default;
   for (currentSlug of Object.keys(signatureBrands)) equal(Loading().props.brand.key, signatureBrand(currentSlug).key, 'Loading route follows exact same explicit identity');
+  currentSlug = 'brand-8ad185ee82e3';
+  for (const branch of ['bar', 'coffee', 'hospital']) {
+    loadingQuery = `branch=${branch}`;
+    const brand = Loading().props.brand;
+    equal(brand, signatureBrand(currentSlug, branch), `${branch} loading uses the requested scoped presentation immediately`);
+    const html = renderToStaticMarkup(React.createElement(SignatureMenuLoading, { brand }));
+    const expectedLogo = branch === 'hospital' ? '/menu-art/dabab/dabab-hospital-logo-v1.webp' : signatureAsset(signatureBrand(currentSlug).logo);
+    check(html.includes(`src="${expectedLogo}"`) && html.includes('aria-busy="true"'), `${branch} loading renders its exact original mark`);
+  }
+  for (loadingQuery of ['', 'branch=unknown', 'branch=hospital&branch=coffee']) equal(Loading().props.brand, signatureBrand(currentSlug), 'Absent, invalid or repeated branch queries keep the primary pending identity');
+  currentSlug = menu.slug; loadingQuery = 'branch=hospital'; equal(Loading().props.brand, signatureBrand(currentSlug), 'Hospital loading query cannot alter another brand');
   currentSlug = 'rast'; check(Loading().type !== Signature, 'Legacy RAST does not inherit new loading');
 }
 

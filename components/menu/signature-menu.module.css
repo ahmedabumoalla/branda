@@ -57,11 +57,6 @@
   .menu[data-signature="dabab"] .heroCenter { padding-top: 14px; padding-bottom: 120px; }
   .menu[data-signature="dabab"] .heroCenter .mark { height: 150px; width: 180px; }
 }
-.menu[data-signature="dabab"] .hero[data-has-branches="true"] { grid-template-rows: auto auto 1fr auto; }
-.branchNavigation { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; width: min(660px,calc(100% - 36px)); margin: 14px auto 0; padding: 5px; border: 1px solid var(--edge); border-radius: 18px; background: var(--white); }
-.branchNavigation a { display: flex; justify-content: center; align-items: center; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 12px; color: var(--text); text-align: center; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; transition: background .2s,color .2s; }
-.branchNavigation a:hover { background: var(--surface); }
-.branchNavigation a[aria-current="page"] { background: var(--brand); color: var(--white); font-weight: 700; }
 .menu[data-signature="dabab"][data-signature-variant="coffee"] { --surface: #f3e8d7; --text: #34251f; --muted: #725846; --edge: #d9c8af; }
 .menu[data-signature="dabab"][data-signature-variant="coffee"] .hero { min-height: min(1000px,110svh); }
 .menu[data-signature="dabab"][data-signature-variant="coffee"] .header { background: #f3e8d7f0; }
@@ -72,7 +67,6 @@
 .menu[data-signature="dabab"][data-signature-variant="hospital"] { --surface: #f8f5ee; --text: #2d302a; --muted: #646458; --edge: #d9ddd1; --branch-sage: #e2e6dd; }
 .menu[data-signature="dabab"][data-signature-variant="hospital"] .hero { min-height: 760px; grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
 .menu[data-signature="dabab"][data-signature-variant="hospital"] .header { grid-column: 1 / -1; background: var(--surface); }
-.menu[data-signature="dabab"][data-signature-variant="hospital"] .branchNavigation { grid-column: 1 / -1; }
 .menu[data-signature="dabab"][data-signature-variant="hospital"] .heroShade { display: none; }
 .menu[data-signature="dabab"][data-signature-variant="hospital"] .backdrop { inset: 205px 52% 68px var(--gutter); border-radius: 180px 180px 24px 24px; background: var(--branch-sage); }
 .menu[data-signature="dabab"][data-signature-variant="hospital"] .backdrop img { object-position: center; }
@@ -94,8 +88,6 @@
   .menu[data-signature="dabab"][data-signature-variant="hospital"] .heroBottom { order: 3; }
 }
 @media (max-width: 540px) {
-  .branchNavigation { gap: 4px; }
-  .branchNavigation a { padding: 8px 5px; font-size: 12px; }
   .menu[data-signature="dabab"][data-signature-variant="coffee"] .heroCenter { padding: 18px 20px 190px; }
   .menu[data-signature="dabab"][data-signature-variant="coffee"] .heroCenter h1 { font-size: clamp(28px,7.6vw,36px); }
   .menu[data-signature="dabab"][data-signature-variant="coffee"] .productPhoto { border-radius: 28px 28px 8px 8px; }

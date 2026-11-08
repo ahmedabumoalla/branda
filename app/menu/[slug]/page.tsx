@@ -62,8 +62,7 @@ export default async function StandaloneMenuPage({ params, searchParams }: Props
   const loyalty = program?.enabled ? { purchasesRequired: program.purchasesRequired, rewardName: program.rewardName } : null;
   // Gallery frames are genuine public menus, without visitor/customer tracking or interactions.
   const storeSettings = giftStore ? await getGiftStoreSettings(menu.slug).catch(() => null) : null;
-  const branchQuery = new URLSearchParams(Object.entries(query ?? {}).flatMap(([key, value]) => value === undefined ? [] : (Array.isArray(value) ? value : [value]).map(item => [key, item]))).toString();
-  const presentation = signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} branchQuery={branchQuery} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
+  const presentation = signature ? <SignatureMenu key={`${menu.slug}:${menu.branch?.id ?? "primary"}`} menu={menu} brand={signature} loyalty={loyalty} /> : giftStore && menu.slug === "brand-871ec6e243c0" ? <TogetherStore menu={menu} loyalty={loyalty} settings={storeSettings} /> : isLocoMenu(menu.slug) ? <LocoMenu menu={menu} loyalty={loyalty} /> : menu.slug === "brand-10620d3a586c" ? <FrenchCornerMenu menu={menu} loyalty={loyalty} /> : <BistroMenu menu={menu} />;
   if (showcase) return <div inert>{presentation}</div>;
   return <><PublicPageAnalytics slug={slug} kind="menu_view" /><MenuAutoRefresh slug={menu.slug} />{presentation}</>;
 }

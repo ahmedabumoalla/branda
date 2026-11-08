@@ -73,7 +73,7 @@ function FeedbackForm({ slug }: { slug: string }) {
   </form>;
 }
 
-export function MenuServices({ menu, compact = false, offersTrigger = false }: { menu: StandaloneMenu; compact?: boolean; offersTrigger?: boolean }) {
+export function MenuServices({ menu, compact = false, offersTrigger = false, showBranches = true }: { menu: StandaloneMenu; compact?: boolean; offersTrigger?: boolean; showBranches?: boolean }) {
   const [panel, setPanel] = useState<"about" | "location" | "feedback" | "offers" | "branches" | null>(null);
   const [copied, setCopied] = useState("");
   const [now, setNow] = useState(menu.highlights?.asOf ?? 0);
@@ -94,7 +94,7 @@ export function MenuServices({ menu, compact = false, offersTrigger = false }: {
     {panel === "about" && <ServiceDialog title={menuDisplayText(menu.name)} close={() => setPanel(null)}>
     <p className={s.serviceDescription}>{menuDisplayText(menu.description || "لكل مزاج مذاق يستحق")}</p>
     <nav className={s.serviceDock} aria-label="تواصل مع العلامة">
-      {!!menu.branches?.length && <button type="button" onClick={() => setPanel("branches")}><Store aria-hidden="true" /><span>الفروع<small>منيو وأسعار كل فرع</small></span></button>}
+      {showBranches && !!menu.branches?.length && <button type="button" onClick={() => setPanel("branches")}><Store aria-hidden="true" /><span>الفروع<small>منيو وأسعار كل فرع</small></span></button>}
       {menu.loyaltyEnabled && <Link href={`/loyalty/${encodeURIComponent(menu.slug)}`}><LoyaltyLinkContent service /></Link>}
       {offers.length > 0 && <button type="button" onClick={() => setPanel("offers")}><Tag aria-hidden="true" /><span>العروض<small>اكتشف عروضنا الحالية</small></span></button>}
       {location && <button type="button" onClick={() => { setCopied(""); setPanel("location"); }}><MapPin aria-hidden="true" /><span>ننتظرك هنا<small>موقع الفرع والاتجاهات</small></span></button>}
@@ -103,7 +103,7 @@ export function MenuServices({ menu, compact = false, offersTrigger = false }: {
       {menu.contacts.feedbackEnabled && <button type="button" onClick={() => setPanel("feedback")}><Star aria-hidden="true" /><span>كيف كانت تجربتك<small>رأيك يصل لفريقنا</small></span></button>}
     </nav>
     </ServiceDialog>}
-    {panel === "branches" && <ServiceDialog title="الفروع" close={() => setPanel(null)}><nav className={s.serviceDock} aria-label="منيوهات الفروع">{menu.branches?.map(branch => { const Icon = /drive/.test(branch.slug) ? CarFront : Store; return <a key={branch.id} href={`/menu/${encodeURIComponent(menu.slug)}?branch=${encodeURIComponent(branch.slug)}`} aria-current={menu.branch?.id === branch.id ? "page" : undefined}><Icon aria-hidden="true" /><span>{branch.name}<small>افتح منيو الفرع</small></span></a>; })}</nav></ServiceDialog>}
+    {showBranches && panel === "branches" && <ServiceDialog title="الفروع" close={() => setPanel(null)}><nav className={s.serviceDock} aria-label="منيوهات الفروع">{menu.branches?.map(branch => { const Icon = /drive/.test(branch.slug) ? CarFront : Store; return <a key={branch.id} href={`/menu/${encodeURIComponent(menu.slug)}?branch=${encodeURIComponent(branch.slug)}`} aria-current={menu.branch?.id === branch.id ? "page" : undefined}><Icon aria-hidden="true" /><span>{branch.name}<small>افتح منيو الفرع</small></span></a>; })}</nav></ServiceDialog>}
     {panel === "offers" && <ServiceDialog title="عروضنا الحالية" close={() => setPanel(null)}>
       <div className={s.serviceDock}>
         {offers.map((offer) => <article key={offer.id}>
