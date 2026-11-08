@@ -10,6 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Continuity and execution
 
+- On a Codex account switch, read `docs/BARNDAKSA_HANDOFF/CODEX_ACCOUNT_TRANSFER_20261108.md` before acting. Account transfer does not authorize new implementation, data recovery or resuming cancelled work; preserve the workflow and verification limits recorded there.
+
 - Start with `docs/task-state.md`, then `docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md`. Read historical records only for a relevant unresolved detail.
 - The user prefers fast implementation, premium Arabic design, short updates and concrete results. Complete authorized work and deployment without repeated confirmation or broad exploratory checklists.
 - Check the actual source and `git status`; preserve unrelated local changes. Never publish unfinished local work just because it exists.
