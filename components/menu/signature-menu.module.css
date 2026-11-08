@@ -405,7 +405,7 @@
 .menu[data-signature="masala"] .heroShade { background: linear-gradient(180deg,#310d18c4,#310d188a 44%,#310d1829 78%,#310d18ad); }
 .menu:is([data-signature="nineteen"],[data-signature="rayhan"]) .heroShade { background: linear-gradient(180deg,var(--hero-paper) 0%,var(--hero-paper) 42%,color-mix(in srgb,var(--hero-paper) 96%,transparent) 58%,color-mix(in srgb,var(--hero-paper) 82%,transparent) 74%,color-mix(in srgb,var(--hero-paper) 36%,transparent) 100%); }
 .menu[data-signature="hulm"] .productPhoto { border-radius: 100px 100px 16px 16px; background: var(--panel); }
-.menu[data-signature="hulm"] .product .productPhoto > img { object-fit: cover; transform: scale(var(--hulm-photo-scale, 1)); transform-origin: 50% 65%; }
+.menu[data-signature="hulm"] .product .productPhoto > img { object-fit: cover; transform: scale(var(--hulm-photo-scale, 1)); transform-origin: var(--hulm-photo-origin-x, 50%) var(--hulm-photo-origin-y, 65%); }
 .menu[data-signature="arabi"] .productPhoto { border-radius: 26px 5px 26px 5px; background: #e9eddd; }
 .menu[data-signature="masala"] .productPhoto { border-radius: 70px 70px 12px 12px; background: #f1e2ce; }
 .menu[data-signature="nineteen"] .productPhoto { border-radius: 5px; background: #eae7de; }

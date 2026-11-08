@@ -83,7 +83,7 @@ async function main() {
   const { hulmPhotoFraming, HULM_MENU_SLUG } = load('lib/menu/hulm-framing.ts');
   const farId = '5e17c4d7-2530-416c-883f-822bb536c9c8';
   const farUrl = 'https://example.test/media/five-restaurants-hulm-20261103-88a0bffbbeb0ee5c.webp';
-  equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, farUrl), { '--hulm-photo-scale': 2.4 }, 'Reviewed distant photo has its own close framing');
+  equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, farUrl), { '--hulm-photo-scale': 2.4, '--hulm-photo-origin-x': '43.42%', '--hulm-photo-origin-y': '63.5%' }, 'Reviewed distant photo has its own close framing');
   equal(hulmPhotoFraming('another-brand', farId, farUrl), undefined, 'Framing cannot affect another tenant');
   equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, 'https://example.test/new-owner-photo.webp'), undefined, 'New owner uploads retain their own framing');
   equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, '%bad'), undefined, 'Malformed media URL safely retains default framing');

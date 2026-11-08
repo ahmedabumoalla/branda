@@ -181,7 +181,7 @@
 .detailMedia { position: relative; min-height: 480px; background: var(--panel); overflow: hidden; display: flex; align-items: center; padding: 54px 20px; }
 .detailPhotoFrame { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 16px; border: 1px solid var(--line); }
 .detailPhotoFrame > img, .detailPhotoFrame > video { width: 100%; height: 100%; object-fit: contain; }
-.detailPhotoFrame[data-hulm-frame="true"] > img { object-fit: cover; transform: scale(var(--hulm-photo-scale, 1)); transform-origin: 50% 65%; }
+.detailPhotoFrame[data-hulm-frame="true"] > img { object-fit: cover; transform: scale(var(--hulm-photo-scale, 1)); transform-origin: var(--hulm-photo-origin-x, 50%) var(--hulm-photo-origin-y, 65%); }
 .dishNavigation { position: sticky; bottom: 0; z-index: 4; background: var(--ink); border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 18px; }
 .dishNavigation button { min-height: 44px; display: flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); background: transparent; color: var(--gold); border-radius: 30px; font-size: 12px; }
 .dishNavigation button:last-child { background: var(--gold); color: var(--ink); border-color: var(--gold); }
