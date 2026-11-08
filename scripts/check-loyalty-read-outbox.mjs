@@ -89,6 +89,13 @@ await check("phone in card tab persists phone method and deduplicates across tab
   assert.equal((await queue.save("phone", "14401")).row.method, "code");
   assert.equal((await queue.save("phone", "0123456789123456")).row.method, "code");
 });
+await check("short card numbers coalesce across tabs and Arabic or Persian digits", async () => {
+  const sent = [], queue = make(memoryStore(), { send: async input => { sent.push(input); return { ok: true, operation: operation(input.requestId) }; } });
+  const saved = await queue.save("phone", "١");
+  assert.equal(saved.row.method, "code");
+  for (const value of ["1", "١", "۱"]) assert.equal((await queue.save("code", value)).row.requestId, saved.row.requestId);
+  await queue.sync(); assert.equal(sent.length, 1); assert.equal(sent[0].method, "code");
+});
 await check("different cafe or cashier never uploads another scope", async () => {
   const store = memoryStore(), sent = [];
   await make(store).save("phone", "0501234567");

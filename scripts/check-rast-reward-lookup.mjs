@@ -132,6 +132,16 @@ await test("legacy numeric code remains usable", async ({ state, lookupRastCashi
   state.cards[0].card_code="12345"; state.cards[0].display_number=null;
   assert.equal((await lookup("12345")).rewardCode,"REWARDFIRST");
 });
+for (const [input, number] of [["1", 1], ["٢", 2], ["۳", 3], ["42", 42], ["99999", 99999]]) await test("new sequential card number resolves a brand-scoped earned reward", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.cards[0].display_number = number;
+  assert.equal((await lookup(input)).rewardCode, "REWARDFIRST");
+  assert(state.queries.some(q => q.table === "loyalty_cards" && q.filters.some(([key, value]) => key === "display_number" && value === number)));
+  assert(state.queries.every(q => q.filters.some(([key, value]) => key === "cafe_id" && value === cafeId)));
+});
+await test("number one from another brand never resolves locally", async ({ state, lookupRastCashierReward: lookup }) => {
+  state.cards[0].display_number = 1; state.cards[0].cafe_id = "foreign";
+  await assert.rejects(() => lookup("1")); assert.equal(state.rpcs.length, 0);
+});
 await test("foreign short number is not a valid empty card", async ({ state, lookupRastCashierReward: lookup }) => {
   state.cards[0].cafe_id="foreign"; await assert.rejects(()=>lookup("10000"));
   assert.equal(state.rpcs.length,0);

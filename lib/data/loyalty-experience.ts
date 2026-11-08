@@ -18,6 +18,7 @@ import type { WalletMember } from "@/lib/wallet/types";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
+import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
 export async function getLoyaltyExperience(cafeId: string) {
   const { data, error } = await createAdminClient().from("cafe_loyalty_experience")
@@ -143,7 +144,8 @@ export const saveRastLoyaltySettings = saveBrandLoyaltyProgram;
 
 // The short number is an owner/cashier convenience, never a public credential.
 export async function resolveCashierCardNumber(code: string, cafeId: string) {
-  if (!/^\d{5}$/.test(code)) return code;
+  code = normalizeLoyaltyDigits(code.trim());
+  if (!isLoyaltyDisplayNumber(code)) return code;
   const { data, error } = await createAdminClient().from("loyalty_cards").select("card_code")
     .eq("cafe_id", cafeId).eq("display_number", Number(code)).maybeSingle();
   if (error) throw new Error("تعذر البحث عن البطاقة");
@@ -151,9 +153,9 @@ export async function resolveCashierCardNumber(code: string, cafeId: string) {
 }
 
 export async function lookupRastCashierCard(rawCode: string) {
-  const input = z.string().trim().min(4).max(500).parse(rawCode);
+  const input = normalizeLoyaltyDigits(z.string().trim().min(1).max(500).parse(rawCode));
   const code = parseBarndaksaQrPayload(input, "loyalty-card") ?? input.toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("رمز البطاقة غير صالح");
+  if (!isCashierLoyaltyCode(code)) throw new Error("رمز البطاقة غير صالح");
   const admin = createAdminClient();
   const session = await requireCashierPermission("loyalty", admin);
   const token = session.token;

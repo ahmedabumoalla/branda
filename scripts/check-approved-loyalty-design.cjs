@@ -32,10 +32,10 @@ clearLogoBackdrop(pixels, 7, 7);
 assert.equal(pixels[3], 0); assert.equal(pixels[(2 * 7 + 2) * 4 + 3], 255); assert.equal(pixels[(3 * 7 + 3) * 4 + 3], 255, 'Enclosed white logo details survive');
 const alpha = Uint8Array.from(pixels); clearLogoBackdrop(pixels, 7, 7); assert.deepEqual(pixels, alpha, 'Transparent marks are not recolored or erased');
 
-const uiStubs = { 'next/link': { __esModule: true, default: 'a' }, 'next/image': { __esModule: true, default: ({ unoptimized, ...props }) => React.createElement('img', props) } };
+const uiStubs = { 'next/link': { __esModule: true, default: 'a' }, 'next/image': { __esModule: true, default: ({ unoptimized, priority, ...props }) => React.createElement('img', props) } };
 const { RastStampCard } = load('components/rast-loyalty/rast-stamp-card.tsx', uiStubs);
 const { loyaltyTheme } = load('components/rast-loyalty/loyalty-theme.ts');
-for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand']) for (const stamps of [0, 2, 3]) {
+for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand', 'scissors', 'comb', 'plant']) for (const stamps of [0, 2, 3]) {
   const markup = renderToStaticMarkup(React.createElement(RastStampCard, { identity: { slug: 'test-cafe', name: 'Brand', logoUrl: '/original.png', logoDisplayUrl: '/transparent.png', cardBackground: '#0a1f43' }, stampStyle, stamps, required: 3, rewardName: 'Reward', preview: true }));
   const stampRow = markup.match(/<ol[^>]*>([\s\S]*?)<\/ol>/)[1];
   assert(!stampRow.includes('lucide-gift'), 'The last visit is a stamp, never a gift');
@@ -44,6 +44,18 @@ for (const stampStyle of ['ceramic', 'paper', 'meal', 'brand']) for (const stamp
   if (stampStyle === 'brand') assert.equal((stampRow.match(/src="\/transparent.png"/g) || []).length, 3);
   assert(markup.includes('lucide-gift'), 'Reward keeps its separate gift icon');
 }
+const { HomeProductPreview } = load('components/marketing/home-product-preview.tsx', {
+  ...uiStubs,
+  react: { ...React, useState: () => [1, () => {}] },
+  'motion/react': { AnimatePresence: React.Fragment, useInView: () => false, useMotionValue: () => ({ set() {} }), useSpring: () => 0, motion: new Proxy({}, { get: (_, tag) => ({ initial, animate, exit, transition, style, ...props }) => React.createElement(tag, props) }) },
+});
+const previewMarkup = renderToStaticMarkup(React.createElement(HomeProductPreview, { animate: false }));
+for (const [className, slots] of [['stamps', 6], ['miniStamps', 5]]) {
+  const row = previewMarkup.match(new RegExp(`<div class="${className}"[^>]*>([\\s\\S]*?)<\\/div>`))[1];
+  assert.equal((row.match(/lucide-coffee/g) || []).length, slots, 'Marketing card uses the normal stamp in every slot');
+  assert(!row.includes('lucide-gift'), 'Marketing sample has no gift stamp slot');
+}
+assert(previewMarkup.includes('lucide-gift'), 'Loyalty service and reward heading keep their meaningful gift icons');
 for (const [background, foreground, emptyFilter, filledFilter] of [
   ['#0a1f43', '#ffffff', 'brightness(0) invert(1)', 'brightness(0)'],
   ['#ffffff', '#000000', 'brightness(0)', 'brightness(0) invert(1)'],

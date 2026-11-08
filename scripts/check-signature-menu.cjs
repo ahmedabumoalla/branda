@@ -137,12 +137,24 @@ async function main() {
     equal((nav.match(/aria-current="page"/g) || []).length, 1, `${selectedBranch.slug} identifies exactly one selected branch`);
     check(nav.includes(`branch=${selectedBranch.slug}" aria-current="page"`) && dababBranches.every(branch => nav.includes(branch.name)), `${selectedBranch.slug} highlights its actual branch among all three choices`);
     check(nav.includes('showcase=1&amp;q=latte&amp;branch=bar') && nav.includes('branch=coffee') && nav.includes('branch=hospital'), `${selectedBranch.slug} preserves preview/search context in all branch links`);
-    equal(html.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], dababHtml.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], `${selectedBranch.slug} preserves the exact approved compact loyalty entry and shared enrollment`);
-    equal((html.match(/src="\/menu-art\/dabab\/dabab-logo-v2.webp"/g) || []).length, 4, `${selectedBranch.slug} retains the real wheat mark in all four surfaces`);
+    const loyaltyHtml = html.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0];
+    equal(loyaltyHtml.replaceAll(signatureAsset(branchBrand.logo), signatureAsset(dabab.logo)), dababHtml.match(/<section id="signature-loyalty"[\s\S]*?<\/section>/)[0], `${selectedBranch.slug} preserves the approved compact loyalty entry and shared enrollment with its own mark`);
+    equal((html.split(`src="${signatureAsset(branchBrand.logo)}"`).length - 1), 4, `${selectedBranch.slug} uses its approved mark in all four surfaces`);
     check(!html.includes('maps.app.goo.gl/zC8ws49ka6KNMzY86'), `${selectedBranch.slug} never sends visitors to the unverified bar location`);
     check(!html.includes('data-photo-disclosure') && !html.includes('صورة توضيحية'), `${selectedBranch.slug} adds no unrequested image approximation copy to blank catalog descriptions`);
     check(!render({ menu: { ...branchMenu, loyaltyEnabled: false }, brand: branchBrand, loyalty }).includes('id="signature-loyalty"'), `${selectedBranch.slug} preserves the disabled loyalty gate`);
   }
+  const hospitalBrand = signatureBrand(dababMenu.slug, 'hospital');
+  const hospitalRangeProduct = { ...product, price: 9, priceOptions: [], priceRange: { min: 9, max: 14 }, description: 'الحصة 250 مل' };
+  const hospitalRangeHtml = render({ menu: { ...dababMenu, logoUrl: '/brand-wide-wheat.webp', products: [hospitalRangeProduct] }, brand: hospitalBrand });
+  check(hospitalRangeHtml.includes('9–14') && !hospitalRangeHtml.includes('9 / 14'), 'Hospital card shows the source range rather than invented variant prices');
+  check(hospitalRangeHtml.includes('/menu-art/dabab/dabab-hospital-logo-v1.webp') && !hospitalRangeHtml.includes('/brand-wide-wheat.webp'), 'Hospital source mark overrides only the cafe-wide logo in this branch');
+  equal(signatureAsset(hospitalBrand.logo, true), signatureAsset(hospitalBrand.logo), 'Original hospital mark has no fabricated mobile asset');
+  const weekdays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+  const weekMenu = { ...dababMenu, categories: weekdays.map((name, i) => ({ id: `day-${i}`, name, description: null })), products: weekdays.map((name, i) => ({ ...hospitalRangeProduct, id: `meal-${i}`, categoryId: `day-${i}`, category: name })) };
+  const weekHtml = render({ menu: weekMenu, brand: hospitalBrand });
+  check(weekdays.every(day => weekHtml.includes(day)) && (weekHtml.match(/class="categoryTitle"/g) || []).length === 7, 'All seven supplied days remain available together without calendar gating');
+  check(weekHtml.includes('اختر يومًا للاطلاع على قائمة وجباته'), 'Weekly navigation explains how to find each day');
   check(!render({ menu: { ...menu, branches: dababBranches, branch: dababBranches[1] } }).includes('aria-label="اختر فرع ضباب"'), 'Dabab branch selector never appears for another brand');
   check(dababHtml.includes('/loyalty/brand-8ad185ee82e3?source=menu'), 'Dabab keeps its own existing loyalty enrollment URL');
   const dababReward = 'كوب آيس تي & كركديه . مجاناً.';
@@ -411,6 +423,7 @@ async function main() {
 
   await checkRouteIsolation();
   await checkMediaCacheBoundary();
+  await checkHospitalPriceRangeBoundary();
   const css = fs.readFileSync(path.join(root, 'components/menu/signature-menu.module.css'), 'utf8');
   require('lightningcss').transform({ filename: 'signature-menu.module.css', code: Buffer.from(css), cssModules: true });
   const et1Tokens = Object.fromEntries([...css.match(/\.menu\[data-signature="et1"\] \{([^}]+)\}/)[1].matchAll(/--([a-z-]+):\s*(#[a-f0-9]{6})/gi)].map(match => [match[1], match[2]]));
@@ -586,6 +599,45 @@ async function checkMediaCacheBoundary() {
       if (test === 'no-feature' || test === 'paused-brand') { equal(result, null, 'Current package/status gate denies catalog'); check(!queries.includes('menu_products') && !queries.includes('cafe_custom_identity'), 'Denied brand never reads products or custom identity'); }
     }
   }
+}
+
+async function checkHospitalPriceRangeBoundary() {
+  const { readMenuPriceRange } = load('lib/menu/standalone-menu.ts');
+  equal(readMenuPriceRange({ menuPriceRange: { min: 9, max: 14, ignored: 'private' } }, 9), { min: 9, max: 14 }, 'Range reader exposes only validated endpoints');
+  for (const range of [null, [], { min: '9', max: 14 }, { min: 9, max: Infinity }, { min: NaN, max: 14 }, { min: -1, max: 14 }, { min: 14, max: 9 }, { min: 9, max: 9 }]) equal(readMenuPriceRange({ menuPriceRange: range }, 9), undefined, 'Malformed, non-finite or reversed range is rejected');
+  equal(readMenuPriceRange({ menuPriceRange: { min: 9, max: 14 } }, 12), undefined, 'An owner price edit cannot retain a stale source range');
+  for (const scenario of ['hospital', 'coffee', 'foreign-hospital', 'owner-price', 'owner-options', 'invalid-branch']) {
+    const slug = scenario === 'foreign-hospital' ? 'brand-other-tenant' : 'brand-8ad185ee82e3';
+    const branchSlug = scenario === 'coffee' ? 'coffee' : 'hospital';
+    const fields = [];
+    const tables = {
+      cafes: [{ id: 'hospital-tenant', slug, name: 'Hospital brand', status: 'active', business_category: 'cafes_coffee', deleted_at: null }],
+      branches: [{ id: 'hospital-branch', cafe_id: 'hospital-tenant', menu_slug: branchSlug, name: 'Hospital branch', active: true, is_primary: true, deleted_at: null }],
+      cafe_settings: [],
+      menu_categories: [{ id: 'hospital-category', cafe_id: 'hospital-tenant', branch_id: 'hospital-branch', name: 'Coffee', visible: true, deleted_at: null }],
+      menu_products: [{ id: 'range-product', cafe_id: 'hospital-tenant', branch_id: 'hospital-branch', category_id: 'hospital-category', name: 'Americano', description: '', price: scenario === 'owner-price' ? 12 : 9, price_options: scenario === 'owner-options' ? [11, 15] : [], commerce_details: { menuPriceRange: { min: 9, max: 14 }, privateImportData: 'never-public' }, ingredients: [], image_gallery: [], gallery_storage_paths: [], media: [], available: true, deleted_at: null }],
+    };
+    const client = { from(table) { let rows = [...(tables[table] ?? [])]; const q = { select(columns) { fields.push([table, columns]); return q; }, eq(key, value) { rows = rows.filter(r => r[key] === value); return q; }, is(key, value) { rows = rows.filter(r => (r[key] ?? null) === value); return q; }, not(key, _op, value) { rows = rows.filter(r => (r[key] ?? null) !== value); return q; }, order() { return q; }, range(start, end) { rows = rows.slice(start, end + 1); return q; }, maybeSingle() { return Promise.resolve({ data: rows[0] ?? null, error: null }); }, then(resolve, reject) { return Promise.resolve({ data: rows, error: null }).then(resolve, reject); } }; return q; } };
+    const read = load('lib/data/standalone-menu.ts', {
+      'server-only': {}, react: { cache: fn => fn }, 'next/cache': { unstable_cache: fn => fn },
+      '@/lib/supabase/admin': { createAdminClient: () => client },
+      '@/lib/data/feature-entitlements': { getCafeFeatureCodes: async () => ['menu'] },
+      '@/lib/data/kath-menu-assets': { getKathMenuAssets: async () => [] },
+      '@/lib/data/standalone-highlights': { getStandaloneHighlights: async () => ({ asOf: now, items: [] }) },
+      '@/lib/cafe/published-logo': { publishedMenuLogo: async () => null },
+      '@/lib/menu/contacts': { menuContacts: () => ({ instagramUrl: null, location: null }) },
+      '@/lib/whatsapp/green-api': { isGreenApiConfigured: () => false },
+    }).getStandaloneMenu;
+    const result = await read(slug, false, scenario === 'invalid-branch' ? 'invalid' : branchSlug);
+    if (scenario === 'invalid-branch') { equal(result, null, 'Invalid branch stops before price metadata or catalog access'); check(!fields.some(([table]) => table === 'menu_products'), 'Invalid branch never reads range metadata'); continue; }
+    equal(result.products[0].priceRange, scenario === 'hospital' ? { min: 9, max: 14 } : undefined, `${scenario} has the intended range boundary`);
+    check(!JSON.stringify(result).includes('never-public'), 'Raw commerce metadata never leaks into public menu output');
+    equal(fields.find(([table]) => table === 'menu_products')[1].includes('commerce_details'), !['coffee', 'foreign-hospital'].includes(scenario), 'Price metadata is selected only for the authorized hospital presentation');
+  }
+  const detailMocks = { ...mocks, 'motion/react': { ...mocks['motion/react'], LayoutGroup: React.Fragment, useInView: () => false }, './menu-motion': { DishMotion: noop }, './rast-connect': { RastConnect: noop }, './rast-loyalty-entry': { RastLoyaltyEntry: noop }, './kath-loyalty-entry': { KathLoyaltyEntry: noop }, './product-offer-details': { ProductOfferBadge: noop, ProductOfferDetails: noop }, './shahi-menu-scenes': { ShahiHero: noop, ShahiLoyalty: noop, ShahiClosing: noop }, './taza-menu-scenes': { TazaHero: noop, TazaLoyalty: noop, TazaClosing: noop }, './deli-menu-scenes': { DeliBackground: noop, DeliHero: noop, DeliLoyalty: noop, DeliOffers: noop, DeliOrigins: noop, DeliClosing: noop, DeliProductImage: noop } };
+  const { ProductDetails } = load('components/menu/bistro-menu.tsx', detailMocks);
+  const details = renderToStaticMarkup(React.createElement(ProductDetails, { product: { ...product, price: 9, priceOptions: [], priceRange: { min: 9, max: 14 } }, products: [], close: noop, browse: noop, position: 0, total: 1 }));
+  check(details.includes('9–14') && !details.includes('9 / 14') && details.includes('data-price-range="true"'), 'Actual details dialog preserves the same honest source price range');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

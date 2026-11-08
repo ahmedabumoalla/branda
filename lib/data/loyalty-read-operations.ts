@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
-import { resolveReadMethod } from "@/lib/loyalty/read-identifier";
+import { isCashierLoyaltyCode, normalizeLoyaltyDigits, resolveReadMethod } from "@/lib/loyalty/read-identifier";
 import type { LoyaltyReadFilters, LoyaltyReadInput, LoyaltyReadOperation, LoyaltyReadPage, LoyaltyReadScope } from "@/lib/loyalty/read-operation-types";
 
 export class LoyaltyReadError extends Error {
@@ -52,7 +52,7 @@ async function cashierScope(expected: LoyaltyReadScope) {
 export async function enqueueLoyaltyRead(input: LoyaltyReadInput) {
   const parsed = inputSchema.parse(input), session = await cashierScope(parsed);
   const method = resolveReadMethod(parsed.method, parsed.value);
-  const digits = parsed.value.replace(/[٠-٩۰-۹]/g, x => String(x.charCodeAt(0) - (x >= "۰" ? 1776 : 1632)));
+  const digits = normalizeLoyaltyDigits(parsed.value);
   let value: string;
   if (method === "phone") {
     const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeSaudiPhone(digits) : null;
@@ -60,7 +60,7 @@ export async function enqueueLoyaltyRead(input: LoyaltyReadInput) {
     value = phone;
   } else {
     value = parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.trim().toUpperCase();
-    if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new LoyaltyReadError("invalid_code");
+    if (!isCashierLoyaltyCode(value)) throw new LoyaltyReadError("invalid_code");
   }
   const { data, error } = await createAdminClient().rpc("enqueue_loyalty_read", {
     p_session_token: session.token, p_expected_cafe_id: session.cafeId, p_expected_cashier_id: session.cashierId,

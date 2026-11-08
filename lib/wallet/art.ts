@@ -8,7 +8,7 @@ import { walletBaseUrl } from "./config";
 import { walletColors } from "./payload";
 import type { WalletMember } from "./types";
 
-export const WALLET_ART_VERSION = "2026-10-14-stamp-options-v2";
+export const WALLET_ART_VERSION = "2026-11-08-uniform-stamps-v3";
 
 export function walletArtToken(cardId: string) {
   const secret = process.env.WALLET_AUTH_SECRET;
@@ -30,8 +30,6 @@ export function walletArtUrl(member: WalletMember) {
 // The artwork supplements native, accessible balance fields. Never bake text or
 // a barcode into it: Wallet can crop strip images on smaller devices and watches.
 
-const giftIcon = '<path d="M5 11h14v10H5V11ZM3 7h18v4H3V7Zm9 0v14m0-14C6 7 5 5 6.5 3.5S12 3 12 7Zm0 0c6 0 7-2 5.5-3.5S12 3 12 7Z"/>';
-
 export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false, brandLogoDataUrl?: string) {
   const colors = walletColors(member);
   const required = Math.max(1, Math.min(100, Math.trunc(member.program.purchasesRequired) || 1));
@@ -41,13 +39,16 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
   const icon = (content: string, x: number, y: number, size: number, color: string) => `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${content}</g>`;
   const selected = brandStampStyle(member.cafeSlug, member.program.stampStyle);
   const stampIcon = `<path d="${stampPaths[selected === "brand" ? "ceramic" : selected]}"/>`;
+  const stampAt = (x: number, y: number, size: number, color: string) => selected === "brand" && brandLogoDataUrl
+    ? `<image x="${x}" y="${y}" width="${size}" height="${size}" href="${brandLogoDataUrl}"/>`
+    : icon(stampIcon, x, y, size, color);
   let stamps: string;
 
   if (required > 30) {
     // Large programs use an honest proportional progress ring rather than
     // silently truncating their stamp target or rendering unreadably tiny icons.
     const circumference = 2 * Math.PI * 43;
-    stamps = `<circle cx="187.5" cy="72" r="43" fill="none" stroke="${ink}" stroke-opacity=".14" stroke-width="4"/><circle cx="187.5" cy="72" r="43" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${circumference * earned / required} ${circumference}" transform="rotate(-90 187.5 72)"/>${icon(giftIcon, 165.5, 50, 44, ink)}`;
+    stamps = `<circle cx="187.5" cy="72" r="43" fill="none" stroke="${ink}" stroke-opacity=".14" stroke-width="4"/><circle cx="187.5" cy="72" r="43" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${circumference * earned / required} ${circumference}" transform="rotate(-90 187.5 72)"/>${stampAt(165.5, 50, 44, ink)}`;
   } else {
     const columns = required <= 5 ? required : required <= 10 ? Math.ceil(required / 2) : Math.min(10, Math.ceil(required / 3));
     const rows = Math.ceil(required / columns);
@@ -60,13 +61,10 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
       const x = (375 + rowWidth) / 2 - cell - (index % columns) * (cell + 10);
       const y = top + row * (cell + 10);
       const filled = index < earned;
-      const last = index === required - 1;
       const glyph = Math.min(29, cell * .6);
-      const frame = `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="${Math.min(14, cell * .25)}" fill="${filled ? ink : paper}" stroke="${ink}" stroke-width="${last ? 1.5 : 1}"${filled ? "" : ' stroke-dasharray="2 3"'}/>`;
+      const frame = `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="${Math.min(14, cell * .25)}" fill="${filled ? ink : paper}" stroke="${ink}" stroke-width="1"${filled ? "" : ' stroke-dasharray="2 3"'}/>`;
       const check = filled && cell >= 40 ? `<path d="m${x + cell - 13} ${y + 9} 2 2 4-4" fill="none" stroke="${paper}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>` : "";
-      const stamp = !last && selected === "brand" && brandLogoDataUrl
-        ? `<image x="${x + (cell - glyph) / 2}" y="${y + (cell - glyph) / 2}" width="${glyph}" height="${glyph}" href="${brandLogoDataUrl}"/>`
-        : icon(last ? giftIcon : stampIcon, x + (cell - glyph) / 2, y + (cell - glyph) / 2, glyph, filled ? paper : ink);
+      const stamp = stampAt(x + (cell - glyph) / 2, y + (cell - glyph) / 2, glyph, filled ? paper : ink);
       return frame + stamp + check;
     }).join("");
   }

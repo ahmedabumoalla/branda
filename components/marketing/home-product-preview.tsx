@@ -58,13 +58,13 @@ export function HomeProductPreview({ animate }: { animate: boolean }) {
                 {selected === 0 ? <>
                   <div className={styles.coffeePhoto}><img src="/menu-art/rast-coffee-editorial-v1.webp" width={1536} height={1024} alt="قهوة في معاينة توضيحية للمنيو" fetchPriority="high" /><span>على ذوقك</span></div>
                   <div className={styles.phoneCopy}><small>لحظتك تستاهل</small><h3>قهوة وتفاصيل تحبها</h3><p>منتجات مختارة بطابع علامتك</p><div className={styles.sampleProduct}><Coffee size={24} aria-hidden="true" /><span>قهوة اليوم<small>طازجة في كل مرة</small></span><Plus size={17} aria-hidden="true" /></div></div>
-                </> : selected === 1 ? <div className={styles.loyaltyScreen}><Gift size={32} aria-hidden="true" /><small>لأهل علامتك</small><h3>كل زيارة لها مكافأة</h3><div className={styles.stamps} aria-label="معاينة أختام الولاء">{[0, 1, 2, 3, 4, 5].map(index => <span key={index} data-filled={index < 4}>{index < 4 ? <Coffee size={20} aria-hidden="true" /> : <Gift size={19} aria-hidden="true" />}</span>)}</div><p>بطاقة يحملها عميلك<br />وتجربة يرجع لها</p></div>
+                </> : selected === 1 ? <div className={styles.loyaltyScreen}><Gift size={32} aria-hidden="true" /><small>لأهل علامتك</small><h3>كل زيارة لها مكافأة</h3><div className={styles.stamps} aria-label="معاينة أختام الولاء">{[0, 1, 2, 3, 4, 5].map(index => <span key={index} data-filled={index < 4}><Coffee size={20} aria-hidden="true" /></span>)}</div><p>بطاقة يحملها عميلك<br />وتجربة يرجع لها</p></div>
                   : <div className={styles.offerScreen}><img src="/menu-art/rast-coffee-editorial-v1.webp" width={1536} height={1024} alt="معاينة عرض للقهوة" /><div><small>شيء جديد يستاهل</small><h3>لحظتك المفضلة<br />لها عرض خاص</h3><p>قدّم عروضك بطريقتك</p><span>اكتشف تفاصيل العرض <ArrowUpLeft size={15} aria-hidden="true" /></span></div></div>}
               </motion.div>
             </AnimatePresence>
             <div className={styles.phoneBottom} aria-hidden="true"><span /></div>
           </div>
-          <div className={styles.floatingCard} aria-hidden="true"><div><Sparkles size={20} /><span>علاقة تكبر مع كل زيارة</span></div><strong>ولاء يحمل هويتك</strong><div className={styles.miniStamps}>{[0, 1, 2, 3, 4].map(index => <span key={index}>{index < 3 ? <Coffee size={16} /> : <Gift size={16} />}</span>)}</div><span className={styles.cardSignature}>BARNDA</span></div>
+          <div className={styles.floatingCard} aria-hidden="true"><div><Sparkles size={20} /><span>علاقة تكبر مع كل زيارة</span></div><strong>ولاء يحمل هويتك</strong><div className={styles.miniStamps}>{[0, 1, 2, 3, 4].map(index => <span key={index}><Coffee size={16} /></span>)}</div><span className={styles.cardSignature}>BARNDA</span></div>
           <div className={styles.sceneBadge} aria-hidden="true"><span><Check size={17} /></span><div>علامتك أقرب<small>تجربة واحدة بتفاصيل متكاملة</small></div></div>
         </motion.div>
         <span className={styles.sceneCaption}>معاينة توضيحية لتجربة علامتك</span>

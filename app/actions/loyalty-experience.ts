@@ -1,4 +1,5 @@
 "use server";
+import { isCashierLoyaltyCode, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
 import { z } from "zod";
 import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyProgram, lookupRastCashierCard, resolveCashierCardNumber } from "@/lib/data/loyalty-experience";
@@ -60,7 +61,7 @@ export async function lookupRastCashierCardAction(value: string) {
 }
 
 export async function lookupRastCashierRewardAction(value: string) {
-  const reward = await lookupRastCashierReward(z.string().trim().min(4).max(500).parse(value));
+  const reward = await lookupRastCashierReward(z.string().trim().min(1).max(500).parse(value));
   if (!reward) return null;
   const raw = reward.metadata?.termsSnapshot;
   const terms = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
@@ -69,14 +70,15 @@ export async function lookupRastCashierRewardAction(value: string) {
 }
 
 export async function scanLoyaltyExperienceAction(input: { value: string; requestId: string; kind: "stamp" | "redeem" }) {
-  const parsed = z.object({ value: z.string().trim().min(4).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
+  const parsed = z.object({ value: z.string().trim().min(1).max(500), requestId: z.string().uuid(), kind: z.enum(["stamp", "redeem"]) }).parse(input);
   const session = await requireCashierPermission("loyalty");
   const token = session.token;
   if (!featureCodesAllow(await getPublicCafeFeatureCodesBySlug(session.cafeSlug), "loyalty")) {
     throw new Error("برنامج الولاء غير متاح حاليًا");
   }
-  const value = parseBarndaksaQrPayload(parsed.value, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? parsed.value.toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(value)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
+  const normalized = normalizeLoyaltyDigits(parsed.value);
+  const value = parseBarndaksaQrPayload(normalized, parsed.kind === "stamp" ? "loyalty-card" : "customer-reward") ?? normalized.toUpperCase();
+  if (!(parsed.kind === "stamp" ? isCashierLoyaltyCode(value) : /^[A-Z0-9_-]{4,100}$/.test(value))) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   const { data, error } = await createAdminClient().rpc("execute_loyalty_audited_operation", {
     p_session_token: token, p_code: parsed.kind === "stamp" ? await resolveCashierCardNumber(value, session.cafeId) : value, p_request_id: parsed.requestId, p_operation: parsed.kind,
   });

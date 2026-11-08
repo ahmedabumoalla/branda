@@ -12,6 +12,7 @@ import { getCafeFeatureCodes, getOwnerFeatureCodes } from "@/lib/data/feature-en
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { isStorefrontEnabled } from "@/lib/platform/storefront-availability";
 import { getCurrentMaintenanceSession } from "@/lib/platform/maintenance";
+import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
 export const cashierSessionCookie = "barndaksa_cashier_session";
 
@@ -813,9 +814,11 @@ export async function cashierScanLoyalty(input: {
   invoiceAmount?: number;
   operation?: "stamp" | "redeem";
 }) {
-  const normalizedCardCode =
-    parseBarndaksaQrPayload(input.cardCode, "loyalty-card") ??
-    input.cardCode.trim().toUpperCase();
+  const rawCode = normalizeLoyaltyDigits(input.cardCode.trim());
+  if (rawCode.length > 500) throw new Error("رمز البطاقة غير صالح");
+  let normalizedCardCode =
+    parseBarndaksaQrPayload(rawCode, "loyalty-card") ?? rawCode.toUpperCase();
+  if (!isCashierLoyaltyCode(normalizedCardCode)) throw new Error("رمز البطاقة غير صالح");
 
   const admin = createAdminClient();
   const session = await requireCashierPermission("loyalty", admin);
@@ -827,6 +830,12 @@ export async function cashierScanLoyalty(input: {
 
   await assertRastLoyaltyEntitlement(currentCafeId);
   if (input.operation === "redeem") throw new Error("امسح رمز المكافأة لصرفها");
+  if (isLoyaltyDisplayNumber(normalizedCardCode)) {
+    const { data: card, error: lookupError } = await admin.from("loyalty_cards").select("card_code")
+      .eq("cafe_id", currentCafeId).eq("display_number", Number(normalizedCardCode)).maybeSingle();
+    if (lookupError) throw new Error("تعذر البحث عن البطاقة");
+    if (card) normalizedCardCode = String(card.card_code);
+  }
   const { data, error } = await admin.rpc("execute_loyalty_audited_operation", {
     p_session_token: token, p_code: normalizedCardCode, p_request_id: randomUUID(), p_operation: "stamp",
   });

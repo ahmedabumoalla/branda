@@ -1,6 +1,7 @@
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import { rastRedemptionCode } from "@/lib/loyalty/rast-redemption-code";
+import { isCashierLoyaltyCode, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
 export type RastScanKind = "stamp" | "redeem";
 export type RastCardPreview = { customerName: string; stampsInCycle: number; purchasesRequired: number; availableRewards: number; rewardName: string; catalog?: import("@/lib/cashier/catalog-translation").CashierCatalog };
@@ -16,8 +17,9 @@ type Dependencies = {
 
 function canonicalCode(value: string, kind: RastScanKind) {
   if (kind === "redeem") return rastRedemptionCode(value);
-  const code = parseBarndaksaQrPayload(value, kind === "stamp" ? "loyalty-card" : "customer-reward") ?? value.trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{4,100}$/.test(code)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
+  const input = normalizeLoyaltyDigits(value.trim());
+  const code = parseBarndaksaQrPayload(input, "loyalty-card") ?? input.toUpperCase();
+  if (!isCashierLoyaltyCode(code)) throw new Error("الرمز غير صالح لنوع العملية المحدد");
   return code;
 }
 
@@ -64,7 +66,7 @@ export function createRastScanSession(dependencies: Dependencies) {
       const key = `${kind}:${code}`;
       const previous = uncertainRequests.get(key);
       const targetCode = previous?.targetCode ?? (preview.kind === "redeem" ? preview.reward.rewardCode : code);
-      if (!/^[A-Z0-9_-]{4,100}$/.test(targetCode)) throw new Error("رمز المكافأة غير صالح أعد فحص البطاقة");
+      if (!(kind === "stamp" ? isCashierLoyaltyCode(targetCode) : /^[A-Z0-9_-]{4,100}$/.test(targetCode))) throw new Error("رمز المكافأة غير صالح أعد فحص البطاقة");
       const requestId = previous?.requestId ?? dependencies.createRequestId();
       const confirmedPreview = preview;
       uncertainRequests.set(key, { requestId, targetCode, preview: confirmedPreview });

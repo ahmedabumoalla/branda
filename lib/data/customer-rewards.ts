@@ -6,6 +6,7 @@ import { requireCashierPermission } from "@/lib/data/cashier";
 import { operationEventTypes, recordOperationEvent } from "@/lib/data/operation-events";
 import { getCafeBySlug } from "@/lib/data/cafes";
 import { rastRedemptionCode } from "@/lib/loyalty/rast-redemption-code";
+import { isLoyaltyDisplayNumber } from "@/lib/loyalty/read-identifier";
 import {
   createBarndaksaQrPayload,
   parseBarndaksaQrPayload,
@@ -299,7 +300,7 @@ export async function lookupRastCashierReward(rawCode: string): Promise<CashierR
   const { admin, token, cafeId, cafeSlug } = await getValidCashierSession();
   await assertRastLoyaltyEntitlement(cafeId);
 
-  const shortNumber = /^\d{5}$/.test(code);
+  const shortNumber = isLoyaltyDisplayNumber(code);
   let { data: card, error: cardError } = await admin.from("loyalty_cards")
     .select("id,customer_profile_id,card_code").eq("cafe_id", cafeId)
     .eq(shortNumber ? "display_number" : "card_code", shortNumber ? Number(code) : code).maybeSingle();

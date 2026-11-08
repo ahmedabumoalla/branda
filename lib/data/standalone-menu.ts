@@ -17,7 +17,7 @@ import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mappers";
 import { primaryMediaType } from "@/lib/menu/product-media";
 import { giftProductAvailable } from "@/lib/commerce/storefront-cart";
-import { isOwnedMenuAsset, isStandaloneProductVisible, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
+import { isOwnedMenuAsset, isStandaloneProductVisible, readMenuPriceRange, type StandaloneMenu, type StandaloneMenuProduct } from "@/lib/menu/standalone-menu";
 
 const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description,price,price_options,catalog_kind,calories,preparation_time_minutes,ingredients,available,promo,image_url,image_storage_path,image_gallery,gallery_storage_paths,video_storage_path,media,image_variant,sort_order";
 const PAGE_SIZE = 500;
@@ -71,6 +71,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   const chosenBranch = branchSlug ? branchRows?.find(row => row.menu_slug === branchSlug) : branchRows?.find(row => row.is_primary) ?? branchRows?.[0];
   if (branchSlug && !chosenBranch) return null;
   const branchId = chosenBranch?.id ?? null;
+  const hospitalMenu = slug === "brand-8ad185ee82e3" && chosenBranch?.menu_slug === "hospital";
   const branchDto = (row: NonNullable<typeof branchRows>[number]) => ({ id: String(row.id), name: String(row.name), slug: String(row.menu_slug) });
   const categoryQuery = admin.from("menu_categories").select("id,name,description").eq("cafe_id", cafe.id)
     .eq("visible", true).is("deleted_at", null).order("sort_order").order("id");
@@ -78,7 +79,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   const [categoryResult, settingsResult, rawRows, identityResult] = await Promise.all([
     branchId ? categoryQuery.eq("branch_id", branchId) : categoryQuery.is("branch_id", null),
     admin.from("cafe_settings").select("logo_url,logo_storage_path,description,instagram,whatsapp").eq("cafe_id", cafe.id).maybeSingle(),
-    readMenuProducts(admin, String(cafe.id), branchId, cafe.business_category === "gifts_flowers"),
+    readMenuProducts(admin, String(cafe.id), branchId, cafe.business_category === "gifts_flowers" || hospitalMenu),
     defaultPresentation ? admin.from("cafe_custom_identity").select("palette,logo_storage_path,logo_url,background_storage_path,background_url").eq("cafe_id", cafe.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (categoryResult.error) throw categoryResult.error;
@@ -148,6 +149,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
     return {
       id: product.id, name: product.name, category: product.category, categoryId: product.categoryId,
       description: product.description, price: product.price, priceOptions: product.priceOptions, calories: product.calories,
+      priceRange: hospitalMenu && !product.priceOptions?.length ? readMenuPriceRange(product.commerceSnapshot, product.price) : undefined,
       catalogKind: product.catalogKind,
       commerceDetails: product.commerceDetails,
       preparationTimeMinutes: product.preparationTimeMinutes, ingredients: product.ingredients,

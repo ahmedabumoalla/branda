@@ -1,6 +1,6 @@
 import type { LoyaltyReadOperation } from "./read-operation-types";
 import { parseBarndaksaQrPayload } from "./secure-qr-payload";
-import { resolveReadMethod } from "./read-identifier";
+import { normalizeLoyaltyDigits, resolveReadMethod } from "./read-identifier";
 
 export type ReadScope = { cafeId: string; cashierId: string };
 export type ReadIntent = ReadScope & { requestId: string; method: "code" | "phone"; value: string; clientCreatedAt: string };
@@ -84,7 +84,8 @@ export function createReadOutbox(options: {
     const clean = value.trim();
     method = resolveReadMethod(method, clean);
     if (!clean || clean.length > (method === "phone" ? 30 : 500)) throw new Error("invalid_identifier");
-    let canonical = method === "code" ? parseBarndaksaQrPayload(clean, "loyalty-card") ?? clean.toUpperCase() : clean.replace(/[٠-٩۰-۹]/g, digit => String(digit.charCodeAt(0) - (digit >= "۰" ? 0x6f0 : 0x660))).replace(/\D/g, "");
+    const digits = normalizeLoyaltyDigits(clean);
+    let canonical = method === "code" ? parseBarndaksaQrPayload(digits, "loyalty-card") ?? digits.toUpperCase() : digits.replace(/\D/g, "");
     if (method === "phone") canonical = canonical.replace(/^(?:00966|966|0)/, "");
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${key}:${method}:${canonical}`));
     const identifierKey = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");

@@ -1,0 +1,1200 @@
+{
+  "sourceFile": "Tq.pdf",
+  "sourceSha256": "931b40f40730412df1877c3fb201a114efbc373568df5edff9952c817c16aa8b",
+  "reviewComplete": true,
+  "pricing": "PDF ranges preserved; no invented fixed prices or variants",
+  "scope": "hospital only; only PDF items; weekday distribution preserved",
+  "categories": [
+    {
+      "key": "coffee",
+      "name": "القهوة",
+      "sortOrder": 0
+    },
+    {
+      "key": "croissants",
+      "name": "الكروسان",
+      "sortOrder": 1
+    },
+    {
+      "key": "saturday",
+      "name": "السبت",
+      "sortOrder": 2
+    },
+    {
+      "key": "sunday",
+      "name": "الأحد",
+      "sortOrder": 3
+    },
+    {
+      "key": "monday",
+      "name": "الاثنين",
+      "sortOrder": 4
+    },
+    {
+      "key": "tuesday",
+      "name": "الثلاثاء",
+      "sortOrder": 5
+    },
+    {
+      "key": "wednesday",
+      "name": "الأربعاء",
+      "sortOrder": 6
+    },
+    {
+      "key": "thursday",
+      "name": "الخميس",
+      "sortOrder": 7
+    },
+    {
+      "key": "friday",
+      "name": "الجمعة",
+      "sortOrder": 8
+    }
+  ],
+  "products": [
+    {
+      "sourceId": "coffee-americano",
+      "name": "أمريكانو",
+      "nameEn": "Americano",
+      "categoryKey": "coffee",
+      "priceMin": 9,
+      "priceMax": 14,
+      "portion": "250 مل",
+      "imageKey": "coffee-americano",
+      "reuseSourceId": "dabab-item-61"
+    },
+    {
+      "sourceId": "coffee-espresso-single",
+      "name": "إسبريسو فردي",
+      "nameEn": "Single espresso",
+      "categoryKey": "coffee",
+      "priceMin": 8,
+      "priceMax": 12,
+      "portion": "30 مل",
+      "imageKey": "coffee-espresso-single",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-espresso-double",
+      "name": "إسبريسو دبل",
+      "nameEn": "Double espresso",
+      "categoryKey": "coffee",
+      "priceMin": 10,
+      "priceMax": 15,
+      "portion": "60 مل",
+      "imageKey": "coffee-espresso-double",
+      "reuseSourceId": "dabab-item-62"
+    },
+    {
+      "sourceId": "coffee-latte",
+      "name": "لاتيه",
+      "nameEn": "Latte",
+      "categoryKey": "coffee",
+      "priceMin": 13,
+      "priceMax": 19,
+      "portion": "250 مل",
+      "imageKey": "coffee-latte",
+      "reuseSourceId": "dabab-item-69"
+    },
+    {
+      "sourceId": "coffee-cappuccino",
+      "name": "كابتشينو",
+      "nameEn": "Cappuccino",
+      "categoryKey": "coffee",
+      "priceMin": 13,
+      "priceMax": 18,
+      "portion": "250 مل",
+      "imageKey": "coffee-cappuccino",
+      "reuseSourceId": "dabab-item-68"
+    },
+    {
+      "sourceId": "coffee-flat-white",
+      "name": "فلات وايت",
+      "nameEn": "Flat white",
+      "categoryKey": "coffee",
+      "priceMin": 13,
+      "priceMax": 16,
+      "portion": "200 مل",
+      "imageKey": "coffee-flat-white",
+      "reuseSourceId": "dabab-item-67"
+    },
+    {
+      "sourceId": "coffee-cortado",
+      "name": "كورتادو",
+      "nameEn": "Cortado",
+      "categoryKey": "coffee",
+      "priceMin": 11,
+      "priceMax": 15,
+      "portion": "150 مل",
+      "imageKey": "coffee-cortado",
+      "reuseSourceId": "dabab-item-66"
+    },
+    {
+      "sourceId": "coffee-macchiato",
+      "name": "ميكاتو",
+      "nameEn": "Macchiato",
+      "categoryKey": "coffee",
+      "priceMin": 10,
+      "priceMax": 14,
+      "portion": "120 مل",
+      "imageKey": "coffee-macchiato",
+      "reuseSourceId": "dabab-item-65"
+    },
+    {
+      "sourceId": "coffee-hot-chocolate",
+      "name": "هوت شوكليت",
+      "nameEn": "Hot chocolate",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 مل",
+      "imageKey": "coffee-hot-chocolate",
+      "reuseSourceId": "dabab-item-60"
+    },
+    {
+      "sourceId": "coffee-spanish-latte",
+      "name": "سبانش لاتيه",
+      "nameEn": "Spanish latte",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 مل",
+      "imageKey": "coffee-spanish-latte",
+      "reuseSourceId": "dabab-item-70"
+    },
+    {
+      "sourceId": "coffee-iced-americano",
+      "name": "آيس أمريكانو",
+      "nameEn": "Iced Americano",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-iced-americano",
+      "reuseSourceId": "dabab-item-27"
+    },
+    {
+      "sourceId": "coffee-iced-latte",
+      "name": "آيس لاتيه",
+      "nameEn": "Iced latte",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-iced-latte",
+      "reuseSourceId": "dabab-item-28"
+    },
+    {
+      "sourceId": "coffee-iced-spanish",
+      "name": "آيس سبانش لاتيه",
+      "nameEn": "Iced Spanish latte",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-iced-spanish",
+      "reuseSourceId": "dabab-item-26"
+    },
+    {
+      "sourceId": "coffee-iced-matcha",
+      "name": "آيس ماتشا",
+      "nameEn": "Iced matcha",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-iced-matcha",
+      "reuseSourceId": "dabab-item-29"
+    },
+    {
+      "sourceId": "coffee-iced-matcha-cloud",
+      "name": "آيس ماتشا كلاود",
+      "nameEn": "Iced matcha cloud",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-iced-matcha-cloud",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-daily-hot",
+      "name": "قهوة اليوم حار",
+      "nameEn": "Hot coffee of the day",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 مل",
+      "imageKey": "coffee-daily-hot",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-daily-iced",
+      "name": "قهوة اليوم بارد",
+      "nameEn": "Iced coffee of the day",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "350 مل",
+      "imageKey": "coffee-daily-iced",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-colombia",
+      "name": "V60 كولومبي",
+      "nameEn": "Colombian V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-colombia",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-costa-rica",
+      "name": "V60 كوستاريكا",
+      "nameEn": "Costa Rican V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-costa-rica",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-yemen",
+      "name": "V60 يمني فاخر",
+      "nameEn": "Premium Yemeni V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-yemen",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-ethiopia",
+      "name": "V60 إثيوبي",
+      "nameEn": "Ethiopian V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-ethiopia",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-lychee",
+      "name": "V60 ليتشي",
+      "nameEn": "Lychee V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-lychee",
+      "reuseSourceId": "dabab-item-59"
+    },
+    {
+      "sourceId": "coffee-v60-pineapple",
+      "name": "V60 أناناس فاخر",
+      "nameEn": "Premium pineapple V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-pineapple",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "coffee-v60-kitkat",
+      "name": "V60 كنكات فاخر",
+      "nameEn": "Premium Kankat V60",
+      "categoryKey": "coffee",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "300 مل",
+      "imageKey": "coffee-v60-kitkat",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-almond",
+      "name": "كروسان باللوز",
+      "nameEn": "Almond croissant",
+      "categoryKey": "croissants",
+      "priceMin": 13,
+      "priceMax": 16,
+      "portion": "180 جم",
+      "imageKey": "croissants-almond",
+      "reuseSourceId": "dabab-item-6"
+    },
+    {
+      "sourceId": "croissants-butter",
+      "name": "كروسان بالزبدة",
+      "nameEn": "Butter croissant",
+      "categoryKey": "croissants",
+      "priceMin": 9,
+      "priceMax": 13,
+      "portion": "150 جم",
+      "imageKey": "croissants-butter",
+      "reuseSourceId": "dabab-item-88"
+    },
+    {
+      "sourceId": "croissants-avocado-pastrami",
+      "name": "كروسان أفوكادو وبسطرمة",
+      "nameEn": "Avocado and pastrami croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 22,
+      "portion": "250 جم",
+      "imageKey": "croissants-avocado-pastrami",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-arkan-cheese",
+      "name": "كروسان أركان تشيز",
+      "nameEn": "Arkan cheese croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 22,
+      "portion": "220 جم",
+      "imageKey": "croissants-arkan-cheese",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-turkey",
+      "name": "كروسان ديك رومي",
+      "nameEn": "Turkey croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 20,
+      "portion": "220 جم",
+      "imageKey": "croissants-turkey",
+      "reuseSourceId": "dabab-item-8"
+    },
+    {
+      "sourceId": "croissants-mango",
+      "name": "كروسان مانجو",
+      "nameEn": "Mango croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 22,
+      "portion": "200 جم",
+      "imageKey": "croissants-mango",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-strawberry",
+      "name": "كروسان فراولة",
+      "nameEn": "Strawberry croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 22,
+      "portion": "200 جم",
+      "imageKey": "croissants-strawberry",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-double-chocolate",
+      "name": "كروسان دبل شوكليت",
+      "nameEn": "Double chocolate croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 22,
+      "portion": "220 جم",
+      "imageKey": "croissants-double-chocolate",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-avocado-egg",
+      "name": "كروسان أفوكادو بالبيض",
+      "nameEn": "Avocado and egg croissant",
+      "categoryKey": "croissants",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "croissants-avocado-egg",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "croissants-white-chocolate",
+      "name": "كروسان وايت شوكليت",
+      "nameEn": "White chocolate croissant",
+      "categoryKey": "croissants",
+      "priceMin": 18,
+      "priceMax": 20,
+      "portion": "200 جم",
+      "imageKey": "croissants-white-chocolate",
+      "reuseSourceId": null
+    },
+    {
+      "sourceId": "saturday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "saturday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "saturday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "saturday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "saturday-biryani-rice",
+      "name": "أرز برياني",
+      "nameEn": "Biryani rice",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-biryani-rice"
+    },
+    {
+      "sourceId": "saturday-fried-fish",
+      "name": "سمك فيليه مقلي",
+      "nameEn": "Fried fish fillet",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fried-fish"
+    },
+    {
+      "sourceId": "saturday-bechamel",
+      "name": "بشاميل",
+      "nameEn": "Baked macaroni bechamel",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-bechamel"
+    },
+    {
+      "sourceId": "saturday-mixed-vegetables",
+      "name": "خضار مشكل",
+      "nameEn": "Mixed vegetables",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-mixed-vegetables"
+    },
+    {
+      "sourceId": "saturday-hummus",
+      "name": "حمص",
+      "nameEn": "Hummus",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-hummus"
+    },
+    {
+      "sourceId": "saturday-green-salad",
+      "name": "سلطة خضراء",
+      "nameEn": "Green salad",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-green-salad"
+    },
+    {
+      "sourceId": "saturday-potato-salad",
+      "name": "سلطة بطاطس",
+      "nameEn": "Potato salad",
+      "categoryKey": "saturday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potato-salad"
+    },
+    {
+      "sourceId": "sunday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "sunday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "sunday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "sunday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "sunday-white-rice",
+      "name": "أرز أبيض",
+      "nameEn": "White rice",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-white-rice"
+    },
+    {
+      "sourceId": "sunday-fish-casserole",
+      "name": "طاجن سمك",
+      "nameEn": "Fish casserole",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fish-casserole"
+    },
+    {
+      "sourceId": "sunday-chinese-noodles",
+      "name": "مكرونة صيني",
+      "nameEn": "Chinese noodles",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chinese-noodles"
+    },
+    {
+      "sourceId": "sunday-turkish-moussaka",
+      "name": "مسقعة تركي",
+      "nameEn": "Turkish moussaka",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-turkish-moussaka"
+    },
+    {
+      "sourceId": "sunday-turkish-mutabbal",
+      "name": "متبل تركي",
+      "nameEn": "Turkish roasted eggplant mutabbal",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-turkish-mutabbal"
+    },
+    {
+      "sourceId": "sunday-fattoush",
+      "name": "فتوش",
+      "nameEn": "Fattoush",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fattoush"
+    },
+    {
+      "sourceId": "sunday-green-salad",
+      "name": "سلطة خضراء",
+      "nameEn": "Green salad",
+      "categoryKey": "sunday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-green-salad"
+    },
+    {
+      "sourceId": "monday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "monday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "monday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "monday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "monday-white-rice",
+      "name": "أرز أبيض",
+      "nameEn": "White rice",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-white-rice"
+    },
+    {
+      "sourceId": "monday-fish-potatoes",
+      "name": "سمك وبطاطس",
+      "nameEn": "Fish and potatoes",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fish-potatoes"
+    },
+    {
+      "sourceId": "monday-arrabbiata",
+      "name": "أربيتا",
+      "nameEn": "Arrabbiata pasta",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-arrabbiata"
+    },
+    {
+      "sourceId": "monday-mixed-vegetables",
+      "name": "خضار مشكل",
+      "nameEn": "Mixed vegetables",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-mixed-vegetables"
+    },
+    {
+      "sourceId": "monday-greek-hummus",
+      "name": "حمص يونانية",
+      "nameEn": "Greek style hummus",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-greek-hummus"
+    },
+    {
+      "sourceId": "monday-cabbage",
+      "name": "ملفوف",
+      "nameEn": "Cabbage salad",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-cabbage"
+    },
+    {
+      "sourceId": "monday-potato-salad",
+      "name": "سلطة بطاطس",
+      "nameEn": "Potato salad",
+      "categoryKey": "monday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potato-salad"
+    },
+    {
+      "sourceId": "tuesday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "tuesday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "tuesday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "tuesday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "tuesday-peshawar-rice",
+      "name": "أرز بشاور",
+      "nameEn": "Peshawar rice",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-peshawar-rice"
+    },
+    {
+      "sourceId": "tuesday-fried-fish",
+      "name": "سمك فيليه مقلي",
+      "nameEn": "Fried fish fillet",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fried-fish"
+    },
+    {
+      "sourceId": "tuesday-bechamel",
+      "name": "بشاميل",
+      "nameEn": "Baked macaroni bechamel",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-bechamel"
+    },
+    {
+      "sourceId": "tuesday-turkish-moussaka",
+      "name": "مسقعة تركي",
+      "nameEn": "Turkish moussaka",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-turkish-moussaka"
+    },
+    {
+      "sourceId": "tuesday-turkish-mutabbal",
+      "name": "متبل تركي",
+      "nameEn": "Turkish roasted eggplant mutabbal",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-turkish-mutabbal"
+    },
+    {
+      "sourceId": "tuesday-eastern-salad",
+      "name": "شرقية",
+      "nameEn": "Eastern salad",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-eastern-salad"
+    },
+    {
+      "sourceId": "tuesday-green-salad",
+      "name": "سلطة خضراء",
+      "nameEn": "Green salad",
+      "categoryKey": "tuesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-green-salad"
+    },
+    {
+      "sourceId": "wednesday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "wednesday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "wednesday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "wednesday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "wednesday-biryani-rice",
+      "name": "أرز برياني",
+      "nameEn": "Biryani rice",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-biryani-rice"
+    },
+    {
+      "sourceId": "wednesday-fish-casserole",
+      "name": "طاجن سمك",
+      "nameEn": "Fish casserole",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fish-casserole"
+    },
+    {
+      "sourceId": "wednesday-spaghetti",
+      "name": "سباغيتي",
+      "nameEn": "Spaghetti",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-spaghetti"
+    },
+    {
+      "sourceId": "wednesday-potato-stew",
+      "name": "إيدام بطاطس",
+      "nameEn": "Potato stew",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potato-stew"
+    },
+    {
+      "sourceId": "wednesday-baba-ghanoush",
+      "name": "غنوج",
+      "nameEn": "Baba ghanoush",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-baba-ghanoush"
+    },
+    {
+      "sourceId": "wednesday-caesar",
+      "name": "سيزر",
+      "nameEn": "Caesar salad",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-caesar"
+    },
+    {
+      "sourceId": "wednesday-potatoes",
+      "name": "بطاطس",
+      "nameEn": "Potatoes",
+      "categoryKey": "wednesday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potatoes"
+    },
+    {
+      "sourceId": "thursday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "thursday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "thursday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "thursday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "thursday-white-rice",
+      "name": "أرز أبيض",
+      "nameEn": "White rice",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-white-rice"
+    },
+    {
+      "sourceId": "thursday-grilled-fish",
+      "name": "سمك مشوي",
+      "nameEn": "Grilled fish",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-grilled-fish"
+    },
+    {
+      "sourceId": "thursday-fettuccine",
+      "name": "فتشيني",
+      "nameEn": "Fettuccine",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fettuccine"
+    },
+    {
+      "sourceId": "thursday-okra",
+      "name": "بامية",
+      "nameEn": "Okra stew",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-okra"
+    },
+    {
+      "sourceId": "thursday-hummus",
+      "name": "حمص",
+      "nameEn": "Hummus",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-hummus"
+    },
+    {
+      "sourceId": "thursday-cabbage",
+      "name": "ملفوف",
+      "nameEn": "Cabbage salad",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-cabbage"
+    },
+    {
+      "sourceId": "thursday-fattoush",
+      "name": "فتوش",
+      "nameEn": "Fattoush",
+      "categoryKey": "thursday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fattoush"
+    },
+    {
+      "sourceId": "friday-beef-awsal",
+      "name": "أوصال لحم",
+      "nameEn": "Grilled beef awsal cubes",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-awsal"
+    },
+    {
+      "sourceId": "friday-chicken-awsal",
+      "name": "أوصال دجاج",
+      "nameEn": "Grilled chicken awsal cubes",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-awsal"
+    },
+    {
+      "sourceId": "friday-beef-kebab",
+      "name": "كباب لحم",
+      "nameEn": "Grilled minced beef kebab",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-beef-kebab"
+    },
+    {
+      "sourceId": "friday-chicken-kebab",
+      "name": "كباب دجاج",
+      "nameEn": "Grilled minced chicken kebab",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-chicken-kebab"
+    },
+    {
+      "sourceId": "friday-biryani-rice",
+      "name": "أرز برياني",
+      "nameEn": "Biryani rice",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-biryani-rice"
+    },
+    {
+      "sourceId": "friday-fish-casserole",
+      "name": "طاجن سمك",
+      "nameEn": "Fish casserole",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-fish-casserole"
+    },
+    {
+      "sourceId": "friday-spaghetti",
+      "name": "سباغيتي",
+      "nameEn": "Spaghetti",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-spaghetti"
+    },
+    {
+      "sourceId": "friday-potato-stew",
+      "name": "إيدام بطاطس",
+      "nameEn": "Potato stew",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potato-stew"
+    },
+    {
+      "sourceId": "friday-baba-ghanoush",
+      "name": "غنوج",
+      "nameEn": "Baba ghanoush",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-baba-ghanoush"
+    },
+    {
+      "sourceId": "friday-caesar",
+      "name": "سيزر",
+      "nameEn": "Caesar salad",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-caesar"
+    },
+    {
+      "sourceId": "friday-potatoes",
+      "name": "بطاطس",
+      "nameEn": "Potatoes",
+      "categoryKey": "friday",
+      "priceMin": 14,
+      "priceMax": 18,
+      "portion": "250 جم",
+      "imageKey": "food-potatoes"
+    }
+  ]
+}

@@ -96,9 +96,11 @@ function FoodImage({ src, alt, className = "", priority = false, sizes = "(max-w
 
 function Price({ product }: { product: StandaloneMenuProduct }) {
   const final = productFinalPrice(product.price, product.promo);
-  return <span className={s.price}>
-    {final !== product.price && <del>{product.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</del>}
-    <b dir="ltr">{(product.priceOptions?.length ? product.priceOptions.map(value => productFinalPrice(value, product.promo)) : [final]).map(value => value.toLocaleString("en-US", { maximumFractionDigits: 2 })).join(" / ")}</b><span>ريال</span>
+  const values = product.priceRange ? [product.priceRange.min, product.priceRange.max] : product.priceOptions?.length ? product.priceOptions : [product.price];
+  const separator = product.priceRange ? "–" : " / ";
+  return <span className={s.price} data-price-range={!!product.priceRange || undefined}>
+    {final !== product.price && <del>{(product.priceRange ? values : [product.price]).map(value => value.toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</del>}
+    <b dir="ltr">{values.map(value => productFinalPrice(value, product.promo).toLocaleString("en-US", { maximumFractionDigits: 2 })).join(separator)}</b><span>ريال</span>
   </span>;
 }
 

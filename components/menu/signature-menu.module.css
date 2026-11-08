@@ -193,6 +193,7 @@
 .categories::-webkit-scrollbar { display: none; }
 .categories button { flex: 0 0 auto; min-height: 44px; padding: 10px 20px; border: 1px solid var(--edge); border-radius: 40px; background: transparent; color: var(--text); font-size: 13px; }
 .categories button[aria-pressed="true"] { background: var(--brand); color: var(--white); border-color: var(--brand); }
+.weeklyNote { margin: 0 0 18px; max-width: 620px; color: var(--muted); font-size: 14px; line-height: 1.8; text-wrap: pretty; }
 .filters { display: flex; gap: 10px; }
 .search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0 14px; border: 1px solid var(--edge); border-radius: 10px; background: #ffffff70; }
 .search input { min-width: 0; width: 100%; min-height: 46px; background: transparent; border: 0; color: var(--text); font-size: 16px; outline-offset: 2px; }

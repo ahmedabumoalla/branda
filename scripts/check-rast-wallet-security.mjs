@@ -183,8 +183,8 @@ try {
   const shortObject = payload.buildGoogleObject(shortMember, env.GOOGLE_WALLET_ISSUER_ID);
   assert.equal(shortObject.barcode.alternateText, "10001");
   assert.equal(shortObject.barcode.value, payload.buildGoogleObject(member, env.GOOGLE_WALLET_ISSUER_ID).barcode.value);
-  const { stampPaths } = load("lib/loyalty/stamp-style.ts");
-  for (const stampStyle of ["ceramic", "paper", "meal", "plant"]) {
+  const { stampPaths, stampStyles } = load("lib/loyalty/stamp-style.ts");
+  for (const stampStyle of stampStyles.filter(style => style !== "brand")) {
     const example = { ...member, program: { ...member.program, stampStyle } };
     assert(art.walletStampSvg(example).includes(stampPaths[stampStyle]));
     assert((await art.walletStampArtwork(example)).length > 1000);
@@ -198,6 +198,19 @@ try {
   const branded = { ...member, logoUrl: fixtureLogo, program: { ...member.program, stampStyle: "brand" } };
   assert(art.walletStampSvg(branded, 2, false, fixtureLogo).includes('<image '));
   assert((await art.walletStampArtwork(branded)).length > 1000);
+  const formerGiftPath = 'M5 11h14v10H5V11ZM3 7h18v4H3V7Zm9 0v14m0-14C6 7 5 5 6.5 3.5S12 3 12 7Zm0 0c6 0 7-2 5.5-3.5S12 3 12 7Z';
+  for (const stampStyle of stampStyles) for (const required of [1, 7, 30, 31, 100]) for (const earned of [0, required]) {
+    const example = { ...member, program: { ...member.program, stampStyle, purchasesRequired: required }, card: { ...member.card, stampsInCycle: earned } };
+    for (const dark of [false, true]) {
+      const svg = art.walletStampSvg(example, 2, dark, fixtureLogo);
+      assert(!svg.includes(formerGiftPath), 'Wallet has no final gift substitution or gift in the large-target ring');
+      const expected = required > 30 ? 1 : required;
+      const glyph = stampStyle === 'brand' ? '<image ' : `<path d="${stampPaths[stampStyle]}"`;
+      assert.equal(svg.split(glyph).length - 1, expected, `${stampStyle}: every slot including the last uses the selected stamp`);
+      assert(!svg.includes('stroke-width="1.5"'), 'Last stamp has the same frame weight as the other stamps');
+    }
+  }
+  assert.equal(art.WALLET_ART_VERSION, '2026-11-08-uniform-stamps-v3', 'New art URLs invalidate the prior gift design without changing any balance');
   const luminance = hex => {
     const channels = hex.match(/[0-9a-f]{2}/g).map(channel => parseInt(channel, 16) / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4);
     return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;

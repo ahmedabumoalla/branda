@@ -61,6 +61,19 @@ await check("phone entered in card field uses phone enrollment and card identifi
   }
   await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value: "not a phone 0501234567" }), { code: "invalid_code" });
 });
+await check("sequential brand numbers accept one to five digits in either input tab", async () => {
+  for (const method of ["code", "phone"]) for (const [value, expected] of [["1", "1"], ["٢", "2"], ["۳", "3"], ["42", "42"], ["99999", "99999"]]) {
+    await dal.enqueueLoyaltyRead({ ...input, method, value });
+    assert.equal(calls.at(-1).input.p_method, "code");
+    assert.equal(calls.at(-1).input.p_value, expected);
+    assert.equal(calls.at(-1).input.p_expected_cafe_id, cafeId);
+  }
+  for (const value of ["0", "01", "ABC", "-1", "1.5", "1 OR 1=1"]) {
+    const before = calls.length;
+    await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value }), { code: "invalid_code" });
+    assert.equal(calls.length, before);
+  }
+});
 await check("service failure retryable and request conflict permanent", async () => {
   rpcResult = { error: Error("private database details") };
   await assert.rejects(dal.enqueueLoyaltyRead(input), { code: "unavailable", retryable: true });

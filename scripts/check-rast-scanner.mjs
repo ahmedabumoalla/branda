@@ -50,6 +50,15 @@ const session = createRastScanSession({
 
 await assert.rejects(session.confirm("stamp", "CARD123"));
 assert.equal(writes.length, 0, "Uninspected cards cannot reach the mutation");
+const sequentialReads = [], sequentialWrites = [];
+const sequentialSession = createRastScanSession({ lookupCard: async value => { sequentialReads.push(value); return card; }, lookupReward: async () => reward,
+  commit: async input => { sequentialWrites.push(input); return { status: "stamped" }; }, createRequestId: () => "sequential-request" });
+await sequentialSession.inspect("stamp", "١");
+await sequentialSession.confirm("stamp", "1");
+assert.deepEqual(sequentialReads, ["1"]); assert.equal(sequentialWrites[0].value, "1");
+await sequentialSession.inspect("redeem", "٢");
+await sequentialSession.confirm("redeem", "2");
+assert.equal(sequentialWrites[1].value, "REWARD123", "Short membership number still redeems the exact inspected reward");
 await session.inspect("redeem", "REWARD123");
 assert(session.preview, "A prior reward preview exists before checking a depleted card");
 returnedReward = null;
@@ -254,11 +263,12 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
 {
   const cafeId = "10000000-0000-4000-8000-000000000001";
   let cafeSlug = "rast", sourceType = "loyalty", allowed = false, entitlementError = false, auditDenied = false, linkedOwner = false;
-  const featureReads = [], databaseWrites = [], rpcCalls = [], dataReads = [];
+  const featureReads = [], databaseWrites = [], rpcCalls = [], dataReads = [], rpcPayloads = [], queryFilters = [];
   const db = {
     auth: { getUser: async () => ({ data: { user: null } }) },
-    rpc: async (name) => {
+    rpc: async (name, payload) => {
       rpcCalls.push(name);
+      rpcPayloads.push(payload);
       if (auditDenied) return { data: { ok: false, errorCode: "card_unavailable" }, error: null };
       return { data: name === "preview_loyalty_card"
         ? { ok: true, customerName: "Customer", stampsInCycle: 2, purchasesRequired: 7, availableRewards: 1, rewardName: "Reward" }
@@ -271,11 +281,11 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
           : table === "cafe_cashiers" ? { id: "cashier", active: true, can_use_loyalty: true, full_name: "Test cashier", email: "test@example.test", owner_user_id: linkedOwner ? "owner-id" : null }
           : table === "cafes" ? { id: cafeId, slug: cafeSlug, status: "active", deleted_at: null, owner_user_id: "owner-id" }
           : table === "customer_reward_instances" ? { id: "reward", cafe_id: cafeId, source_type: sourceType, status: "available", loyalty_card_id: "card", reward_title: "Reward", reward_code: "REWARD123", customer_profiles: { full_name: "Customer" }, issued_at: "2030-01-01", expires_at: null }
-            : table === "loyalty_cards" ? { id: "card", cafe_id: cafeId, customer_name: "Customer", stamps_in_cycle: 2, available_rewards: 1 }
+            : table === "loyalty_cards" ? { id: "card", cafe_id: cafeId, card_code: "SECURECARD123", customer_name: "Customer", stamps_in_cycle: 2, available_rewards: 1 }
               : table === "cafe_loyalty_programs" ? { enabled: true, purchases_required: 7, reward_name: "Reward" } : { id: "row" },
       });
       const query = {
-        select() { return query; }, eq() { return query; }, is() { return query; }, gt() { return query; }, or() { return query; },
+        select() { return query; }, eq(column, value) { queryFilters.push({ table, column, value }); return query; }, is() { return query; }, gt() { return query; }, or() { return query; },
         update() { databaseWrites.push(table); return query; }, insert() { databaseWrites.push(table); return query; },
         maybeSingle: async () => result(),
         then: (resolve, reject) => Promise.resolve(result()).then(resolve, reject),
@@ -316,6 +326,17 @@ console.log("PASS: read-only scan previews, duplicate confirmation lock, uncerta
   for (const operation of operations) await operation();
   await assert.rejects(() => ownerData.recordOwnerLoyaltyOperation({ cardCode: "CARD123" }), /شاشة الموظف/);
   assert.deepEqual(rpcCalls, ["execute_loyalty_audited_operation", "preview_loyalty_reward", "execute_loyalty_audited_operation", "preview_loyalty_card"]);
+  await cashierData.cashierScanLoyalty({ cafeId, cardCode: "١" });
+  assert.equal(rpcPayloads.at(-1).p_code, "SECURECARD123", "Legacy cashier resolves Arabic short numbers before audited stamping");
+  assert(queryFilters.some(f => f.table === "loyalty_cards" && f.column === "cafe_id" && f.value === cafeId), "Number lookup is authenticated brand scoped");
+  assert(queryFilters.some(f => f.table === "loyalty_cards" && f.column === "display_number" && f.value === 1));
+  const readsBeforeWrongBrand = dataReads.length;
+  await assert.rejects(() => cashierData.cashierScanLoyalty({ cafeId: "other-brand", cardCode: "1" }), /لا تطابق/);
+  assert(!dataReads.slice(readsBeforeWrongBrand).includes("loyalty_cards"), "Wrong-brand request never resolves a card");
+  const beforeInvalid = rpcCalls.length;
+  await assert.rejects(() => cashierData.cashierScanLoyalty({ cafeId, cardCode: "0" }), /غير صالح/);
+  await assert.rejects(() => cashierData.cashierScanLoyalty({ cafeId, cardCode: "01" }), /غير صالح/);
+  assert.equal(rpcCalls.length, beforeInvalid, "Invalid short number never enters audited mutation");
   auditDenied = true;
   for (const operation of operations) await assert.rejects(operation);
   assert.equal(databaseWrites.length, 0, "Denied audit responses never trigger fallback legacy writes");

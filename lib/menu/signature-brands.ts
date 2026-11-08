@@ -47,7 +47,7 @@ export function signatureBrand(slug: string, branchSlug?: string): SignatureBran
   const brand = Object.prototype.hasOwnProperty.call(signatureBrands, slug) ? signatureBrands[slug as keyof typeof signatureBrands] : null;
   if (brand?.key !== "dabab") return brand;
   if (branchSlug === "coffee") return { ...brand, variant: "coffee", hero: "dabab-coffee-hero", headline: "قهوة على مهل", emphasis: "ومذاق يكمّل يومك", note: "فنجانك المفضل ولقمة تحلّي اللحظة", catalog: "من أول رشفة لآخر لقمة", headerNote: "فرع الكوفي", welcome: "نجهّز لك قهوة ولحظة على ذوقك", locationUrl: undefined };
-  if (branchSlug === "hospital") return { ...brand, variant: "hospital", hero: "dabab-hospital-hero", headline: "لحظة هادئة", emphasis: "تكمّل يومك", note: "قهوة ومخبوزات ووقت صغير لك", catalog: "اختيارك للحظة أهدأ", headerNote: "فرع المستشفى", welcome: "لحظة ونجهّز لك اختيارات ضباب", locationUrl: undefined };
+  if (branchSlug === "hospital") return { ...brand, variant: "hospital", name: "MIND CAFÉ & BAKERY", logo: "dabab-hospital-logo", signature: "MIND CAFÉ & BAKERY", hero: "dabab-hospital-hero", headline: "لحظة هادئة", emphasis: "تكمّل يومك", note: "قهوة وكروسان ووجبات على مدار الأسبوع", catalog: "اختياراتك على مدار الأسبوع", headerNote: "فرع المستشفى", welcome: "لحظة ونجهّز لك منيو المستشفى", locationUrl: undefined };
   return brand;
 }
 
@@ -58,6 +58,7 @@ export function signatureBranchHref(slug: string, branchSlug: string, currentQue
 }
 
 export function signatureAsset(name: string, mobile = false) {
+  if (name === "dabab-hospital-logo") return "/menu-art/dabab/dabab-hospital-logo-v1.webp";
   if (name === "arabi-hero") return `/menu-art/five-restaurants/${name}${mobile ? "-mobile" : ""}-v2.webp`;
   if (name === "dabab-coffee-hero" || name === "dabab-hospital-hero") return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v1.webp`;
   if (name.startsWith("dabab-")) return `/menu-art/dabab/${name}${mobile ? "-mobile" : ""}-v2.webp`;

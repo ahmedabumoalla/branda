@@ -2,6 +2,18 @@ import type { MenuProduct } from "@/lib/mock/menu";
 
 export const STANDALONE_MENU_FEATURE = "standalone_menu";
 
+export type MenuPriceRange = { min: number; max: number };
+
+/** A published range is descriptive, never a pair of purchasable variants. */
+export function readMenuPriceRange(details: unknown, price: number): MenuPriceRange | undefined {
+  if (!details || typeof details !== "object" || Array.isArray(details)) return undefined;
+  const range = (details as Record<string, unknown>).menuPriceRange;
+  if (!range || typeof range !== "object" || Array.isArray(range)) return undefined;
+  const { min, max } = range as Record<string, unknown>;
+  return typeof min === "number" && typeof max === "number" && Number.isFinite(min) && Number.isFinite(max)
+    && min >= 0 && max > min && min === price ? { min, max } : undefined;
+}
+
 /** Presentation only: preserve decimals, numeric separators and stored catalog text. */
 export function menuDisplayText(value: string) {
   return value.replace(/ـ/gu, "").replace(/[،,.…]+(?=\s|$)/gu, "");
@@ -11,6 +23,7 @@ export type StandaloneMenuProduct = Pick<MenuProduct,
   "id" | "name" | "category" | "categoryId" | "description" | "price" | "priceOptions" |
   "calories" | "preparationTimeMinutes" | "ingredients" | "available" | "promo" | "commerceDetails"
 > & {
+  priceRange?: MenuPriceRange;
   catalogKind?: "service" | "product";
   primaryMediaType?: "image" | "video";
   offers?: StandaloneHighlight[];
