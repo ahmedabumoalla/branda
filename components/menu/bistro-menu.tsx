@@ -1,4 +1,5 @@
 "use client";
+import { hulmPhotoFraming } from "@/lib/menu/hulm-framing";
 
 import { ArrowDownLeft, ArrowUpLeft, ArrowRight, CakeSlice, Check, ChevronLeft, ChevronRight, Clock3, Coffee, CookingPot, Flame, GlassWater, LayoutGrid, List, Search, Share2, SlidersHorizontal, Utensils, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -159,7 +160,7 @@ export function ProductDetails({ product, products, close, browse, position, tot
       <div className={s.detailMedia} data-deli-part={brandSlug === "delicake" ? "detail-media" : undefined}>
         <span className={s.dishWatermark} aria-hidden="true">{product.category}</span>
         <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={current?.url ?? product.id} className={s.detailPhotoFrame} data-deli-studio={brandSlug === "delicake" && current?.url.includes("/deli-20261015/dish-") || undefined}
+        <motion.div key={current?.url ?? product.id} className={s.detailPhotoFrame} style={current?.type === "image" ? hulmPhotoFraming(brandSlug, product.id, current.url) : undefined} data-hulm-frame={current?.type === "image" && !!hulmPhotoFraming(brandSlug, product.id, current.url) || undefined} data-deli-studio={brandSlug === "delicake" && current?.url.includes("/deli-20261015/dish-") || undefined}
           initial={{ opacity: 0, scale: reduce ? 1 : menuMotion.scale.photo }} animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }} transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}>
         {current?.type === "video" ? <FoodVideo key={current.url} src={current.url} alt={current.alt} poster={product.images[0]?.url} />

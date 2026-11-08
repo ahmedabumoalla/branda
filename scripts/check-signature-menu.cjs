@@ -80,6 +80,19 @@ function hooks() {
 }
 
 async function main() {
+  const { hulmPhotoFraming, HULM_MENU_SLUG } = load('lib/menu/hulm-framing.ts');
+  const farId = '5e17c4d7-2530-416c-883f-822bb536c9c8';
+  const farUrl = 'https://example.test/media/five-restaurants-hulm-20261103-88a0bffbbeb0ee5c.webp';
+  equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, farUrl), { '--hulm-photo-scale': 2.4 }, 'Reviewed distant photo has its own close framing');
+  equal(hulmPhotoFraming('another-brand', farId, farUrl), undefined, 'Framing cannot affect another tenant');
+  equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, 'https://example.test/new-owner-photo.webp'), undefined, 'New owner uploads retain their own framing');
+  equal(hulmPhotoFraming(HULM_MENU_SLUG, farId, '%bad'), undefined, 'Malformed media URL safely retains default framing');
+  const hulmMenu = { ...menu, slug: HULM_MENU_SLUG, products: [{...product, id: farId, images: [{url: farUrl, alt: product.name}]}] };
+  const hulmRender = renderToStaticMarkup(React.createElement(SignatureMenu, { menu: hulmMenu, brand: signatureBrand(HULM_MENU_SLUG), loyalty }));
+  check(hulmRender.includes('--hulm-photo-scale:2.4'), 'Actual Hulm product card receives reviewed framing');
+  const replacedRender = renderToStaticMarkup(React.createElement(SignatureMenu, {menu:{...hulmMenu,products:[{...hulmMenu.products[0],images:[{url:'https://example.test/new-owner-photo.webp',alt:product.name}]}]},brand:signatureBrand(HULM_MENU_SLUG),loyalty}));
+  check(!replacedRender.includes('--hulm-photo-scale'), 'Actual replacement card is not accidentally zoomed');
+
   await checkDefaultPresentation();
   equal(Object.keys(signatureBrands).length, 15, 'Fifteen bespoke brand identities are registered alongside the automatic new-account default');
   const dabab = signatureBrand('brand-8ad185ee82e3');
