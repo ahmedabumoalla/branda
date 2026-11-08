@@ -31,7 +31,7 @@ function nodes(tree) { return !tree || typeof tree !== 'object' ? [] : Array.isA
 function words(tree) { return tree == null || typeof tree === 'boolean' ? '' : typeof tree !== 'object' ? String(tree) : Array.isArray(tree) ? tree.map(words).join('') : words(tree.props?.children); }
 function hooks() {
   let slots = [], cursor = 0, effects = [];
-  return { api: { ...React, useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => slots[i] = typeof next === 'function' ? next(slots[i]) : next]; }, useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; }, useEffect(effect) { effects.push(effect); } }, draw(Component, props) { cursor = 0; effects = []; return Component(props); }, effects: () => effects, refs: () => slots.filter(item => item && typeof item === 'object' && 'current' in item) };
+  return { api: { ...React, useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => slots[i] = typeof next === 'function' ? next(slots[i]) : next]; }, useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; }, useEffect(effect) { effects.push(effect); } }, draw(Component, props) { cursor = 0; effects = []; return Component(props); }, reset() { slots = []; cursor = 0; effects = []; }, effects: () => effects, refs: () => slots.filter(item => item && typeof item === 'object' && 'current' in item) };
 }
 const categoryNames = ['المشروبات', 'V60', 'الحلا', 'المخبوزات'];
 const product = { id: 'coffee', categoryId: 'drinks', category: categoryNames[0], name: 'قهوة اليوم حار', description: 'صغير 8 ريال | وسط 10 ريال', price: 8, priceOptions: [8, 10], available: true, images: [], videos: [], ingredients: [] };
@@ -45,11 +45,13 @@ async function main() {
   const html = render();
   check(html.includes('data-tea-bakery="true"'), 'Bespoke presentation is explicitly scoped');
   check(html.includes('/menu-art/tea-bakery/logo-v1.png'), 'Original identity is visible');
-  for (const kind of ['hero', 'drinks', 'v60', 'desserts', 'bakery']) check(html.includes(`/menu-art/tea-bakery/${kind}-v1.webp`), `Editorial ${kind} art appears`);
+  check(html.includes('/menu-art/tea-bakery/hero-v1.webp'), 'Identity hero is preserved');
+  for (const kind of ['drinks', 'v60', 'desserts', 'bakery']) check(!html.includes(`/menu-art/tea-bakery/${kind}-v1.webp`), `Large ${kind} category scene is absent from card catalog`);
   equal((html.match(/aria-haspopup="dialog"/g) || []).length, 4, 'Only available products are interactive');
   check(!html.includes('Unavailable item'), 'Unavailable catalog rows stay hidden');
   check(html.includes('8 / 10') && html.includes(product.description) && html.includes('حار 20 ريال | بارد 22 ريال'), 'Exact native variants and explicit labels survive rendering');
-  check(!html.includes('placeholder-food') && !html.includes('data-dish-image'), 'Imageless product rows have no invented product photos');
+  check(!html.includes('placeholder-food'), 'Unknown future products never borrow an unrelated dish photo');
+  checkProductImages();
   check(html.includes('اجمع 6 أختام واحصل على خصم 10%') && html.includes(`/loyalty/${menu.slug}?source=menu`), 'Actual loyalty terms and enrollment entry render');
   check(!render(menu, null).includes(`/loyalty/${menu.slug}`) && !render({ ...menu, loyaltyEnabled: false }).includes(`/loyalty/${menu.slug}`), 'Missing or disabled program hides loyalty entry');
   check(render(menu, { purchasesRequired: 3, rewardName: 'مكافأة أخرى' }).includes('اجمع 3 أختام واحصل على مكافأة أخرى'), 'Program copy follows live data instead of hardcoded six stamps');
@@ -110,12 +112,75 @@ async function main() {
   const compiled = lightning.transform({ filename: 'tea-bakery-menu.module.css', code: Buffer.from(css), minify: true, cssModules: true });
   check(compiled.code.length > 0, 'Scoped CSS compiles successfully');
   check(css.includes('(max-width: 380px)') && css.includes('(max-width: 760px)') && css.includes('prefers-reduced-motion'), 'Narrow screen layouts and reduced motion are explicit');
+  const parsed = require('postcss').parse(css);
+  function gridAt(width) {
+    let result;
+    parsed.walkRules(rule => {
+      if (rule.selector !== '.productList') return;
+      if (rule.parent.type === 'atrule') {
+        const media = rule.parent.params;
+        const min = /min-width:\s*(\d+)px/.exec(media), max = /max-width:\s*(\d+)px/.exec(media);
+        if (min && width < Number(min[1]) || max && width > Number(max[1])) return;
+      }
+      rule.walkDecls('grid-template-columns', decl => { result = decl.value; });
+    });
+    return result;
+  }
+  for (const width of [360, 375, 390, 430, 760]) equal(gridAt(width), 'repeat(2, minmax(0, 1fr))', `${width}px keeps two readable product columns`);
+  equal(gridAt(320), 'minmax(0, 1fr)', 'Very narrow phones get one product column');
+  equal(gridAt(1024), 'repeat(3, minmax(0, 1fr))', 'Tablet/desktop uses three product columns');
+  equal(gridAt(1440), 'repeat(4, minmax(0, 1fr))', 'Wide desktop uses four product columns');
+  check(/\.price > bdi \{[^}]*font-family: var\(--tea-body\)/.test(css), 'Prices use readable body numerals');
+  check(css.includes('height: 180px') && css.includes('container-type: inline-size') && css.includes('14cqw'), 'Compact mobile cover and single-line title sizing are preserved');
   const { getContrastRatio } = load('lib/cafe/color-contrast.ts');
   check(getContrastRatio('#756454', '#f8f1e4') >= 4.5, 'Muted menu text meets normal text contrast');
   check(getContrastRatio('#5b2230', '#f8f1e4') >= 7, 'Wine labels/buttons have strong contrast');
   for (const file of ['logo-v1.png', 'hero-v1.webp', 'drinks-v1.webp', 'v60-v1.webp', 'desserts-v1.webp', 'bakery-v1.webp']) check(fs.statSync(path.join(root, 'public/menu-art/tea-bakery', file)).size > 1000, `${file} exists locally`);
   check(fs.statSync(path.join(root, 'public/fonts/cormorant-garamond-latin.woff2')).size < 50000, 'Editorial font stays a small self-hosted asset');
   console.log(`Tea & Bakery menu: ${checks} assertions passed`);
+}
+function checkProductImages() {
+  const { teaBakeryProductImages: images, teaBakeryProductMedia } = load('lib/menu/tea-bakery-products.ts');
+  equal(Object.keys(images).length, 40, 'All forty imported products have individual art');
+  equal(new Set(Object.values(images)).size, 40, 'No two product IDs reuse the same image');
+  const crypto = require('node:crypto');
+  for (const [id, url] of Object.entries(images)) {
+    const sourceId = url.match(/^\/menu-art\/tea-bakery\/products\/([a-z0-9-]+)-v1\.webp$/)?.[1];
+    check(sourceId, 'Product asset is a safe versioned static URL');
+    let hex = crypto.createHash('sha256').update('tea-bakery-20261109/product/' + sourceId).digest('hex').slice(0, 32);
+    hex = hex.slice(0, 12) + '4' + hex.slice(13, 16) + '8' + hex.slice(17);
+    equal(id, [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-'), 'Artwork key matches canonical deterministic product UUID');
+  }
+  const id = '8cf4f555-cd52-429a-870f-0b8dbb72611a', mapped = { ...product, id };
+  equal(teaBakeryProductMedia(mapped).images, [{ url: images[id], alt: product.name }], 'Missing catalog image gets its own mapped photo');
+  equal(mapped.images, [], 'Client artwork enrichment never mutates source data');
+  const uploaded = { ...mapped, images: [{ url: '/owner-upload.webp', alt: 'Owner photo' }] };
+  equal(teaBakeryProductMedia(uploaded), uploaded, 'Future owner photograph wins over generated art');
+  const video = { ...mapped, videos: [{ url: '/owner-video.mp4', alt: 'Owner video' }] };
+  equal(teaBakeryProductMedia(video), video, 'Owner video remains primary when no image is uploaded');
+  equal(teaBakeryProductMedia(product), product, 'Unknown products are never assigned another product photo');
+  const all = render({ ...menu, products: Object.keys(images).map((key, index) => ({ ...product, id: key, name: `Product ${index}` })) });
+  for (const url of Object.values(images)) check(all.includes(`src="${url}"`), 'Actual card markup includes its mapped product image');
+  equal((all.match(/class="productPhoto"/g) || []).length, 40, 'All forty cards have their own image frame');
+  const ownerHtml = render({ ...menu, products: [uploaded] });
+  check(ownerHtml.includes('/owner-upload.webp') && !ownerHtml.includes(`src="${images[id]}"`), 'Rendered card actually prioritizes owner media');
+  check(render({ ...menu, products: [video] }).includes('src="/owner-video.mp4"'), 'Owner video renders without autoplay');
+  const h = hooks(), Dynamic = load('components/menu/tea-bakery-menu.tsx', { ...mocks, react: h.api }).TeaBakeryMenu;
+  let tree = h.draw(Dynamic, { menu: { ...menu, products: [mapped] }, loyalty });
+  nodes(tree).find(n => n.props?.['aria-haspopup'] === 'dialog').props.onClick();
+  tree = h.draw(Dynamic, { menu: { ...menu, products: [mapped] }, loyalty });
+  equal(nodes(tree).find(n => n.props?.hideEmptyMedia).props.product.images[0].url, images[id], 'Opening details receives the exact card photo');
+  const Photo = nodes(tree).find(n => typeof n.type === 'function' && n.type.name === 'ProductPhoto').type;
+  h.reset();
+  let photo = h.draw(Photo, { product: uploaded });
+  equal(nodes(photo).find(n => n.props?.src).props.src, '/owner-upload.webp', 'Photo initially displays owner upload');
+  nodes(photo).find(n => n.props?.src).props.onError();
+  photo = h.draw(Photo, { product: uploaded });
+  equal(nodes(photo).find(n => n.props?.src).props.src, images[id], 'Failed owner upload falls back to matching original artwork');
+  nodes(photo).find(n => n.props?.src).props.onError();
+  photo = h.draw(Photo, { product: uploaded });
+  check(nodes(photo).some(n => n.props?.src === '/menu-art/tea-bakery/logo-v1.png'), 'Failed art gets a neutral identity mark instead of another food');
+
 }
 async function checkRoute() {
   let current = menu, enabled = true, showcase = true;
