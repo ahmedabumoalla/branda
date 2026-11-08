@@ -54,6 +54,25 @@
 .guide summary { min-height: 44px; padding-block: 10px; font-weight: 700; cursor: pointer; }
 .guide summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; border-radius: 6px; }
 .guideContent { display: grid; gap: 10px; padding-bottom: 6px; }
+.readHistory { margin-block: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 20%, transparent); border-radius: 18px; background: rgb(255 255 255 / 70%); }
+.readHistoryHeader { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+.readHistoryHeader span { font-size: 12px; }
+.readHistoryHelp { margin-block: 8px; font-size: 12px; line-height: 1.8; }
+.readRows { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; list-style: none; padding: 0; margin: 0; }
+.readRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding-block: 12px; border-top: 1px solid color-mix(in srgb, var(--cashier-ink) 12%, transparent); font-size: 13px; overflow-wrap: anywhere; }
+.readRow > div { min-width: 0; }
+.readRow time { display: block; margin-top: 3px; font-size: 11px; }
+.readHint { font-size: 12px; }
+.readState { align-self: start; max-width: 150px; padding: 4px 8px; border-radius: 8px; background: #f1eadc; color: #594316; font-size: 12px; line-height: 1.6; }
+.readRow[data-state="succeeded"] .readState { background: #e6f3ea; color: #165a36; }
+.readRow[data-state="failed"] .readState, .readRow[data-state="needs_review"] .readState, .readAlert { background: #fff0ed; color: #8a291b; }
+.readReward, .readError { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.8; }
+.readReward { display: flex; align-items: start; gap: 6px; font-weight: 700; }
+.readReward svg { flex-shrink: 0; margin-top: 3px; }
+.readAlert { padding: 12px; margin-block: 10px; border-radius: 10px; font-size: 13px; line-height: 1.8; }
+.readAlert a { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px; text-decoration: underline; font-weight: 700; }
+.readAlert a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@container (max-width: 24rem) { .readRow { grid-template-columns: minmax(0, 1fr); } .readState { max-width: none; justify-self: start; } }
 @container (min-width: 48rem) {
   .header { grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin-bottom: 14px; }
   .tools { max-width: 28rem; justify-content: flex-end; }

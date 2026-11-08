@@ -61,8 +61,9 @@ card = goodCard; dbError = true;
 await assert.rejects(() => resolveCashierLoyaltyPhone("0501234567"), error => !error.message.includes('private db detail'));
 
 // Exercise actual component handlers without a browser, including pending lookup races.
-const slots = []; let cursor = 0, resolvePhone, calls = 0, failCommit = false;
+const slots = []; let cursor = 0, resolvePhone, resolveSave, rejectSave, calls = 0, failCommit = false;
 const inspected = [], committed = [];
+const queued = [];
 const hooks = {
   useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], value => { slots[i] = typeof value === 'function' ? value(slots[i]) : value; }]; },
   useRef(initial) { const i = cursor++; if (!(i in slots)) slots[i] = { current: initial }; return slots[i]; }, useEffect() {},
@@ -70,6 +71,7 @@ const hooks = {
 const previewCard = { customerName: "Customer A", stampsInCycle: 2, purchasesRequired: 7, availableRewards: 1, rewardName: "Coffee" };
 const reward = { sourceType: "loyalty", rewardCode: "REWARD123", canRedeem: true, customerName: "Customer A", rewardTitle: "Coffee" };
 const { RastCashier } = load("components/rast-loyalty/rast-cashier.tsx", {
+  "./use-read-outbox": { useReadOutbox: () => ({ rows: [], storageError: false, authPaused: false, save: (method, value) => { queued.push({ method, value }); return new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; }); } }) },
   react: hooks,
   "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },
   "@/components/cashier/cashier-language": { useCashierLanguage: () => ({ t: value => typeof value === "string" ? value : value.text, errorText: value => value, locale: "ar", dir: "rtl" }), CashierLanguageSwitch: () => null },
@@ -87,24 +89,28 @@ function submit() { all().find(n => n.type === 'form' && n.props.onSubmit).props
 const settle = () => new Promise(setImmediate);
 render(); button('رقم الجوال').props.onClick(); render(); input('0501234567');
 assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.type, 'tel');
-submit(); submit(); assert.equal(calls, 1, 'Duplicate clicks cannot race the phone resolver');
+submit(); submit(); assert.equal(queued.length, 1, 'Duplicate clicks cannot enqueue twice while storage is pending');
+assert.equal(calls, 0, 'Stamp entry never waits for the phone resolver');
 render(); assert.equal(button('رقم الجوال').props.disabled, true);
-resolvePhone({ ok: true, cardCode: 'CARD123' }); await settle(); render();
-assert.deepEqual(inspected, ['CARD123']); assert.equal(committed.length, 0, 'Lookup never stamps');
-assert(!all().some(n => n.props?.id === 'rast-scan-code'), 'Customer preview replaces the search form');
-assert(button('بحث جديد'), 'Customer preview has a direct way back');
-failCommit = true; button('تأكيد الشراء وتسجيل ختم واحد ').props.onClick(); await settle(); render();
-failCommit = false; button('تأكيد الشراء وتسجيل ختم واحد ').props.onClick(); await settle(); render();
-assert.equal(committed[0].value, 'CARD123'); assert.equal(committed[0].requestId, committed[1].requestId, 'Uncertain phone confirmation reuses request id');
+assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '0501234567', 'Input remains until durable save confirms');
+resolveSave({ duplicate: false }); await settle(); render();
+assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '', 'Saved stamp releases input without customer preview');
+assert.equal(inspected.length, 0); assert.equal(committed.length, 0, 'Stamp intent never uses synchronous inspection or commit');
+assert(text(tree).includes('تم حفظ القراءة على هذا الجهاز'));
+input('0501234567'); submit(); rejectSave(Error('disk full')); await settle(); render();
+assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '0501234567');
+assert(text(tree).includes('تعذر حفظ القراءة على الجهاز'), 'Failed storage is never reported as saved');
 button('صرف مكافأة').props.onClick(); render(); input('0501234567'); submit(); resolvePhone({ ok: true, cardCode: 'CARD123' }); await settle(); render();
 assert(!all().some(n => n.props?.id === 'rast-scan-code'), 'Reward preview replaces the search form too');
-button('تأكيد تسليم المكافأة وصرفها ').props.onClick(); await settle(); render();
+failCommit = true; button('تأكيد تسليم المكافأة وصرفها ').props.onClick(); await settle(); render();
+failCommit = false; button('تأكيد تسليم المكافأة وصرفها ').props.onClick(); await settle(); render();
+assert.equal(committed[0].requestId, committed[1].requestId, 'Uncertain reward confirmation reuses request id');
 assert.equal(committed.at(-1).value, 'REWARD123', 'Phone redemption pins exact reward');
 input('0501234567'); submit(); resolvePhone({ ok: false, message: 'لا توجد بطاقة ولاء متاحة لهذا الرقم لدى العلامة' }); await settle(); render();
 assert(all().some(n => n.props?.role === 'alert')); assert(!all().some(n => n.props?.id === 'rast-scan-preview'));
 button('البطاقة أو الباركود').props.onClick(); render(); assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '');
-button('تسجيل ختم').props.onClick(); render(); input('CARD123'); const phoneCalls = calls; submit(); await settle(); render();
-assert.equal(calls, phoneCalls); assert(!all().some(n => n.props?.id === 'rast-scan-code'), 'Barcode preview uses the same compact result view');
-button('بحث جديد').props.onClick(); render(); assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '');
+button('تسجيل ختم').props.onClick(); render(); input('CARD123'); const phoneCalls = calls; submit(); resolveSave({ duplicate: false }); await settle(); render();
+assert.equal(calls, phoneCalls); assert.equal(queued.at(-1).value, 'CARD123');
+assert.equal(all().find(n => n.props?.id === 'rast-scan-code').props.value, '');
 assert(!all().some(n => n.props?.id === 'rast-scan-preview'), 'New search discards the previous preview');
-console.log('PASS: phone normalization, tenant/permission gates, inactive/ambiguous/error rejection, read-only lookup, phone UI, duplicate lock, uncertain request retry, exact reward and barcode switching');
+console.log('PASS: phone normalization, tenant/permission gates, inactive/ambiguous/error rejection, immediate stamp queue, storage failure, duplicate lock, unchanged exact reward confirmation/retry and barcode switching');

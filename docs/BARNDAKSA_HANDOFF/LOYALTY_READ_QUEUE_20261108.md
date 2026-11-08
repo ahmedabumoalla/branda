@@ -1,0 +1,16 @@
+# Loyalty cashier background reads
+
+- Scope: `/cashier` loyalty stamping only; existing reward preview/confirmation and redemption are preserved
+- Barcode/card number/phone submissions are durably committed to IndexedDB before clearing the input. The same request UUID survives reloads, lost responses and retries. Scope is the original cafe and cashier; storage failures never claim acceptance
+- Local acceptance means saved, not stamped. Server acceptance creates a private durable operation; Next after processing and a minute cron resolve the customer and use the existing atomic stamp core. Original 30-second duplicate guard remains in effect
+- `/dashboard/read-operations` shows received operations, masked identifiers, result and retry eligibility. Bulk retry requeues eligible failures with their original IDs. Invalid/blocked/expired records are not bypassed
+- Phone submissions create missing loyalty membership/card and the first stamp atomically. Existing memberships, stamps, rewards, Auth accounts and phone-verification state are preserved
+- Branded WhatsApp card links are separate durable jobs. Download/save-link events or Apple device registration suppress invitations; these events do not universally prove installation. At most one invitation per 24 hours while undownloaded; ambiguous provider outcomes are never automatically resent
+- Card links grant only the existing brand-scoped loyalty session for 30 days, check the current profile and phone hash, strip the token on redirect and set HttpOnly cookies. They do not create account login credentials
+- New memberships use the placeholder customer name. Later manual name-and-phone enrollment still requires the stored name; owner name correction or a valid card link may be needed. Public enrollment checks were not relaxed
+- Production migration applied: `20261108180040_loyalty_read_queue.sql`, MD5 `d5ddcd1e998ff46ed3c4e3e64e42ab19`; exact application and preservation evidence in `output/stamp-queue`
+- Validation: root/release Node 24 TypeScript and text integrity; server 10, outbox 12, dashboard interaction, existing phone/scanner regressions and scoped lint pass. Isolated webpack production build passes. Existing layout lint finding remains unchanged and excluded from clean-lint claim
+- DB verification: 89 production rollback assertions, including 501 eligible failed rows requeued together; 15 business tables and 440 existing functions unchanged during application. Eight legacy function bodies match the isolated harness. No persistent test customers, real test stamps or WhatsApp messages
+- Security advisors: 170 existing findings plus two intentional authenticated SECURITY DEFINER owner RPC warnings. Both use existing active-user/owner/manager/admin cafe authorization and loyalty entitlement checks; no other new findings
+- Deployment verification is recorded in `output/stamp-queue/publication.json` and current task record after publication. Local 3019 remains rooted in the original workspace
+- Operational limits: readings still only on the device require that browser to reopen and reconnect; dashboard sees server-received operations. Clearing browser storage before upload loses those local-only entries

@@ -9,6 +9,7 @@ import { logoutCashierAction } from "@/app/actions/cashier";
 import type { CashierConsole } from "@/lib/data/cashier";
 import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import { RastCameraScanner } from "./rast-camera-scanner";
+import { useReadOutbox } from "./use-read-outbox";
 import { createRastScanSession, type RastScanPreview } from "./scan-session";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { loyaltyTheme } from "./loyalty-theme";
@@ -60,11 +61,24 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const focusInputAfterScan = useRef(false);
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
+  const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
   useEffect(() => { if (preview) previewElement.current?.focus(); }, [preview]);
   useEffect(() => { if (error) errorElement.current?.focus(); }, [error]);
-  useEffect(() => { if (!pending && focusInputAfterScan.current) { focusInputAfterScan.current = false; input.current?.focus(); } }, [pending, preview]);
+  useEffect(() => { if (!pending && focusInputAfterScan.current) { focusInputAfterScan.current = false; input.current?.focus(); } }, [pending, preview, value]);
   function updateCode(code: string) { if (processing.current || session.busy) return; resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); }
-  function detectCode(code: string) { if (session.busy) return; updateCode(code); setMessage("تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
+  function detectCode(code: string) { if (session.busy) return; updateCode(code); setMessage(kind === "stamp" ? "تمت قراءة الرمز اضغط تسجيل الختم" : "تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
+  async function queueStamp() {
+    if (processing.current || !value.trim()) return;
+    processing.current = true;
+    setPending(true); setError(""); setMessage("");
+    try {
+      const saved = await reads.save(lookupMethod, value);
+      setMessage(saved.duplicate ? "هذه القراءة محفوظة مسبقًا وتنتظر المزامنة" : "تم حفظ القراءة على هذا الجهاز يمكنك خدمة العميل التالي وتابع النتيجة في سجل القراءة");
+      setValue(""); focusInputAfterScan.current = true;
+    } catch {
+      setError("تعذر حفظ القراءة على الجهاز لم تُرسل العملية احتفظ بالرقم وحاول مجددًا");
+    } finally { processing.current = false; setPending(false); }
+  }
   async function processScan(confirm = false) {
     if (processing.current || session.busy || !value.trim()) return;
     processing.current = true;
@@ -124,14 +138,15 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
             {([{ id: "stamp", title: t("تسجيل ختم"), icon: BadgeCheck }, { id: "redeem", title: t("صرف مكافأة"), icon: Gift }] as const).map((tab) => <button key={tab.id} type="button" aria-pressed={kind === tab.id} disabled={pending} onClick={() => { if (processing.current || session.busy) return; setKind(tab.id); updateCode(""); }} className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-4 ${kind === tab.id ? "bg-[var(--cashier-ink)] text-[var(--cashier-button-text)]" : "border border-[var(--cashier-ink)]/20"}`}><tab.icon size={19} aria-hidden="true" />{tab.title}</button>)}
           </div>
           {!preview && <><h2 id="scan-heading" className={layout.scanTitle}>{kind === "stamp" ? t("اقرأ بطاقة العميل") : t("افحص مكافأة العميل")}</h2>
-          <p id="rast-scan-help" className={layout.scanHelp}>{lookupMethod === "phone" ? t("ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد") : kind === "stamp" ? t("افحص البطاقة وراجع اسم العميل ورصيده بعد التأكد من الشراء أكّد تسجيل ختم واحد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
+          <p id="rast-scan-help" className={layout.scanHelp}>{kind === "stamp" ? t("أدخل البطاقة أو رقم الجوال ثم اضغط تسجيل الختم تُحفظ القراءة فورًا ويبحث النظام عن العميل ويسجل الختم في الخلفية") : lookupMethod === "phone" ? t("ابحث برقم الجوال المسجل في بطاقة الولاء ثم راجع بيانات العميل قبل التأكيد") : t("اقرأ بطاقة العميل أو رمز المكافأة ستظهر المكافأة الأقرب لانتهاء الصلاحية؛ راجع اسم العميل وشروطها قبل تأكيد صرف مكافأة واحدة")}</p>
           <div className={layout.lookupMethods} role="group" aria-label={t("طريقة البحث عن العميل")}>
             {([{ id: "code", label: t("البطاقة أو الباركود"), icon: ScanLine }, { id: "phone", label: t("رقم الجوال"), icon: Phone }] as const).map(method => <button key={method.id} type="button" disabled={pending} aria-pressed={lookupMethod === method.id} onClick={() => { if (processing.current || session.busy) return; updateCode(""); setLookupMethod(method.id); }}><method.icon size={16} aria-hidden="true" />{method.label}</button>)}
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); void processScan(); }} className={layout.scanForm} aria-busy={pending}>
+          {kind === "stamp" && lookupMethod === "phone" && <p className={layout.scanHelp}>{t("رقم الجوال ينشئ بطاقة تلقائيًا للعميل الجديد ويسجل أول ختم")}</p>}
+          <form onSubmit={(event) => { event.preventDefault(); if (kind === "stamp") void queueStamp(); else void processScan(); }} className={layout.scanForm} aria-busy={pending}>
             <label htmlFor="rast-scan-code" className="block text-sm font-bold">{lookupMethod === "phone" ? t("رقم جوال العميل") : kind === "stamp" ? t("رمز بطاقة الولاء") : t("رمز البطاقة أو المكافأة")}</label>
             <input id="rast-scan-code" ref={input} dir="ltr" type={lookupMethod === "phone" ? "tel" : "text"} inputMode={lookupMethod === "phone" ? "tel" : "text"} value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={lookupMethod === "phone" ? 30 : 500} placeholder={lookupMethod === "phone" ? "05xxxxxxxx" : t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
-            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : kind === "stamp" ? t("فحص بطاقة العميل") : t("فحص المكافأة")}</button>
+            <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
           </form>
           {lookupMethod === "code" && <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />}</>}
           {preview && <section ref={previewElement} tabIndex={-1} className={layout.preview} aria-labelledby="rast-scan-preview">
@@ -145,8 +160,28 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
           {error && <p ref={errorElement} tabIndex={-1} role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm leading-7 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-4">{errorText(error)}</p>}
           {message && <p role="status" className="mt-5 rounded-xl bg-emerald-50 p-4 font-bold leading-7 text-emerald-900">{t(message)}</p>}
         </section>
-        {!preview && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t("ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p><p>{t("قراءة الرمز لا تسجّل ختمًا راجع بيانات العميل ثم أكّد الشراء من زر التأكيد")} </p><p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p><Link href={`/loyalty/${identity.slug}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link></div></details>}
+        {!preview && <details className={layout.guide}><summary>{t("ببساطة وبثقة")}</summary><div className={layout.guideContent}><p>{t(kind === "stamp" ? "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يحفظ طلب تسجيل ختم واحد" : "ثبّت المؤشر داخل الحقل ثم امسح بالقارئ زر الإدخال يفحص الرمز ويعرض بيانات العميل")} </p>{kind === "stamp" && <p>{t("الحفظ على الجهاز لا يعني اكتمال الختم انتظر حالة تم تسجيل الختم في السجل ولا تمسح بيانات المتصفح قبل المزامنة")}</p>}<p>{t("المكافأة تُصرف مرة واحدة وتظهر شروطها وصلاحيتها قبل التأكيد")} </p><Link href={`/loyalty/${identity.slug}`} className="inline-flex min-h-12 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4">{t("صفحة عضوية")} {locale === "en" ? identity.nameEn || identity.name : identity.name}</Link></div></details>}
       </div>
+      <section className={layout.readHistory} aria-labelledby="cashier-read-history">
+        <div className={layout.readHistoryHeader}><h2 id="cashier-read-history">{t("سجل القراءة على هذا الجهاز")}</h2><span>{t({ text: "{count} بانتظار المزامنة", values: { count: reads.rows.filter(row => row.value || (row.operation && ["pending", "processing"].includes(row.operation.status))).length } })}</span></div>
+        <p className={layout.readHistoryHelp}>{t("تتحدث النتائج تلقائيًا ويمكن للإدارة مراجعة العمليات الفاشلة وإعادة مزامنتها من لوحة التحكم")}</p>
+        {reads.authPaused && <p role="alert" className={layout.readAlert}>{t("توقفت المزامنة تحقق من صلاحية الحساب والخدمة ثم سجّل الدخول بالحساب نفسه لاستكمال القراءات المحفوظة")} <Link href="/cashier/login">{t("تسجيل الدخول")}</Link></p>}
+        {reads.storageError && <p role="alert" className={layout.readAlert}>{t("تخزين الجهاز غير متاح لا تغلق الصفحة قبل التأكد من حفظ القراءة")}</p>}
+        <ol className={layout.readRows} aria-live="polite" aria-relevant="additions text">
+          {reads.rows.slice(0, 20).map(row => {
+            const operation = row.operation;
+            const state = operation?.status ?? (row.errorCode?.startsWith("rejected:") ? "failed" : "local");
+            const label = state === "succeeded" ? "تم تسجيل الختم" : state === "duplicate" ? "عملية مكررة لم يُضف ختم" : state === "failed" ? "فشلت العملية" : state === "needs_review" ? "تحتاج مراجعة" : state === "local" ? "محفوظ على الجهاز" : "بانتظار المزامنة";
+            return <li key={row.requestId} data-state={state} className={layout.readRow}>
+              <div><strong>{operation?.customerName || t("قراءة العميل")}</strong> <bdi className={layout.readHint}>{row.identifierHint}</bdi><time dateTime={row.createdAt}>{new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(row.createdAt))}</time></div>
+              <strong className={layout.readState}>{t(label)}</strong>
+              {operation?.rewardIssued && <p className={layout.readReward}><Gift size={16} aria-hidden="true" />{t("اكتملت البطاقة واستحق العميل مكافأة يمكنك صرفها من قسم صرف مكافأة")}</p>}
+              {(operation?.errorMessage || row.errorMessage) && <p className={layout.readError}>{errorText(operation?.errorMessage || row.errorMessage || "")}</p>}
+            </li>;
+          })}
+        </ol>
+        {!reads.rows.length && <p className={layout.readHistoryHelp}>{t("ستظهر نتيجة كل قراءة هنا بعد حفظها")}</p>}
+      </section>
       <AnalyticsCouponRedemption />
     </div>
   </main>;
