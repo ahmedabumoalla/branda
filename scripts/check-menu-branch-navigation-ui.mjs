@@ -27,10 +27,17 @@ nodes(renderMenu()).find(n=>n.type===BranchSwitcher).props.onSwitch(branches[1])
 check(()=>{assert.deepEqual(pushed,[['/dashboard/menu?branch=drive',{scroll:false}]]);const html=renderToStaticMarkup(renderMenu());assert(html.includes('جارٍ تحميل منيو الدرايف ثرو'));assert(html.includes('aria-busy="true"'));assert(!html.includes('Old branch product'));assert(nodes(renderMenu()).find(n=>n.type===BranchSwitcher).props.busy)});
 const controls=hookHarness();let response={ok:true,menuEnabled:true,branches};let calls=0;
 const {StandaloneMenuControl}=load('components/admin/standalone-menu-control.tsx',{react:controls.hooks,'next/link':{__esModule:true,default:props=>{const rest={...props};delete rest.prefetch;return React.createElement('a',rest)}},'@/app/actions/admin-menu-branches':{loadAdminMenuBranchesAction:async()=>{calls++;return response}},'@/lib/platform/feature-access':{getBrandFeatureOverrides:()=>[],getPlanIncludedFeatures:()=>[],getEffectiveBrandFeatureAccess:()=>[{feature:{id:'menu'},effectiveEnabled:true}]}});
-const cafe={id:'one',name:'LOCO',slug:'loco',status:'نشط',hasActivePlan:true,planId:'plan'},plans=[{id:'plan',active:true}];
+const cafe={id:'one',name:'LOCO',slug:'loco',status:'نشط',hasActivePlan:true,planId:'plan',subscriptionUpdatedAt:'2026-11-09T00:00:00Z',subscriptionRevision:'cohort-before-cancellation',activePlanIds:['plan','menu-loyalty']},plans=[{id:'plan',active:true}];
 const renderControl=()=>{controls.start();return StandaloneMenuControl({cafe,plans})};
 check(()=>assert(renderToStaticMarkup(renderControl()).includes('جارٍ تحميل منيوهات الفروع')));await controls.effects();
 check(()=>{const html=renderToStaticMarkup(renderControl());assert(html.includes('/menu/loco?branch=murooj'));assert(html.includes('/menu/loco?branch=drive-thru'));assert(html.includes('منيو الفرع'));assert(html.includes('منيو الدرايف ثرو'));assert(!html.includes('href="/menu/loco"'))});
+for(const changedSummary of [{subscriptionRevision:'cohort-after-cancellation'},{activePlanIds:['plan']}]){
+ const originalPrimary={id:cafe.id,planId:cafe.planId,hasActivePlan:cafe.hasActivePlan,subscriptionUpdatedAt:cafe.subscriptionUpdatedAt};
+ const requestsBefore=calls;Object.assign(cafe,changedSummary);response={ok:true,menuEnabled:false,branches:[]};
+ check(()=>{const html=renderToStaticMarkup(renderControl());assert(html.includes('جارٍ تحميل منيوهات الفروع'));assert(!html.includes('?branch='));assert.deepEqual({id:cafe.id,planId:cafe.planId,hasActivePlan:cafe.hasActivePlan,subscriptionUpdatedAt:cafe.subscriptionUpdatedAt},originalPrimary)});
+ await controls.effects();
+ check(()=>{assert.equal(calls,requestsBefore+1);const html=renderToStaticMarkup(renderControl());assert(html.includes('المنيو غير متاح'));assert(!html.includes('?branch='))});
+}
 cafe.id='two';cafe.slug='another';response={ok:true,menuEnabled:true,branches:[]};check(()=>{const html=renderToStaticMarkup(renderControl());assert(!html.includes('murooj'));assert(html.includes('جارٍ تحميل'))});await controls.effects();check(()=>assert(renderToStaticMarkup(renderControl()).includes('href="/menu/another"')));
 cafe.id='three';response={ok:false,error:'Failed'};renderControl();await controls.effects();check(()=>assert(renderToStaticMarkup(renderControl()).includes('إعادة المحاولة')));
 response={ok:true,menuEnabled:true,branches};nodes(renderControl()).find(n=>n.type==='button').props.onClick();renderControl();await controls.effects();check(()=>assert(renderToStaticMarkup(renderControl()).includes('منيو الدرايف ثرو')));

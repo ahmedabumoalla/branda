@@ -89,3 +89,17 @@ export async function addAdminBrandPlans(input: unknown) {
   if (error) subscriptionMutationError(error.message);
   return summaryFromSubscriptionState(data);
 }
+
+export async function removeAdminBrandPlans(input: unknown) {
+  await requirePlatformAdmin();
+  const parsed = addPlansSchema.safeParse(input);
+  if (!parsed.success) throw new Error("اختر الباقات المراد إيقافها وحدّث بيانات الاشتراك ثم حاول مجددًا");
+  const client = await createClient();
+  const { data, error } = await client.rpc("admin_remove_brand_plans", {
+    p_cafe_id: parsed.data.cafeId,
+    p_plan_ids: [...new Set(parsed.data.planIds)],
+    p_expected_revision: parsed.data.expectedRevision,
+  });
+  if (error) subscriptionMutationError(error.message);
+  return summaryFromSubscriptionState(data);
+}

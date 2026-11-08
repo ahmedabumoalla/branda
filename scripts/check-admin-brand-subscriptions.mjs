@@ -34,7 +34,7 @@ function harness(){
 let groups=0;
 async function test(name,run){await run();groups++;console.log('PASS '+name);}
 await test('administrative guard precedes every read or mutation RPC',async()=>{
-  for(const operation of [h=>h.data.getAdminBrandSubscriptionStates([cafeId]),h=>h.data.getAdminBrandSubscriptionSummary(cafeId),h=>h.data.addAdminBrandPlans({cafeId,planIds:['menu'],expectedRevision:revision})]){
+  for(const operation of [h=>h.data.getAdminBrandSubscriptionStates([cafeId]),h=>h.data.getAdminBrandSubscriptionSummary(cafeId),h=>h.data.addAdminBrandPlans({cafeId,planIds:['menu'],expectedRevision:revision}),h=>h.data.removeAdminBrandPlans({cafeId,planIds:['menu'],expectedRevision:revision})]){
     const h=harness();h.guardError='Unauthorized';await assert.rejects(()=>operation(h),/Unauthorized/);assert.equal(h.clients,0);assert.equal(h.calls.length,0);
   }
 });
@@ -57,24 +57,53 @@ await test('add plans deduplicates IDs and sends the entire cohort revision unch
   const h=harness();h.result=state({revision:newRevision});const summary=await h.data.addAdminBrandPlans({cafeId,planIds:['menu','loyalty','menu'],expectedRevision:revision});
   assert.equal(h.calls.length,1);assert.deepEqual(h.calls[0],{name:'admin_add_brand_plans',args:{p_cafe_id:cafeId,p_plan_ids:['menu','loyalty'],p_expected_revision:revision}});assert.equal(summary.subscriptionRevision,newRevision);
 });
+await test('remove plans deduplicates only requested IDs and returns the committed remaining cohort',async()=>{
+  const h=harness();h.result=state({revision:newRevision,currentPlanIds:['loyalty'],subscriptions:[row('loyalty',12)]});
+  const summary=await h.data.removeAdminBrandPlans({cafeId,planIds:['menu','menu'],expectedRevision:revision});
+  assert.deepEqual(h.calls,[{name:'admin_remove_brand_plans',args:{p_cafe_id:cafeId,p_plan_ids:['menu'],p_expected_revision:revision}}]);
+  assert.deepEqual(summary.planIds,['loyalty']);assert.equal(summary.subscriptionRevision,newRevision);assert.equal(h.refetches,0);
+});
+await test('removing the last or all plans accepts the atomic empty cohort without replacing it',async()=>{
+  const h=harness();h.result=state({revision:newRevision,currentPlanIds:[],sharedExpiresAt:null,subscriptions:[]});
+  const summary=await h.data.removeAdminBrandPlans({cafeId,planIds:['menu','loyalty'],expectedRevision:revision});
+  assert.deepEqual(h.calls[0].args.p_plan_ids,['menu','loyalty']);assert.deepEqual(summary.planIds,[]);assert.equal(summary.hasActivePlan,false);assert.equal(summary.subscriptionRevision,newRevision);assert.equal(h.calls.length,1);
+});
 await test('invalid identifiers oversized selections and injected fields never reach persistence',async()=>{
   const h=harness();const valid={cafeId,planIds:['menu'],expectedRevision:revision};
-  for(const patch of [{cafeId:'bad'},{planIds:[]},{planIds:['']},{planIds:['Finance']},{planIds:['menu plan']},{planIds:['x'.repeat(61)]},{planIds:Array.from({length:51},(_,i)=>`plan-${i}`)},{expectedRevision:'bad'},{expiresAt:ends}])await assert.rejects(()=>h.data.addAdminBrandPlans({...valid,...patch}));
-  assert.equal(h.calls.length,0);
+  for(const mutation of ['addAdminBrandPlans','removeAdminBrandPlans'])for(const patch of [{cafeId:'bad'},{planIds:[]},{planIds:['']},{planIds:['Finance']},{planIds:['menu plan']},{planIds:['x'.repeat(61)]},{planIds:Array.from({length:51},(_,i)=>`plan-${i}`)},{expectedRevision:'bad'},{expectedRevision:'A'.repeat(32)},{expiresAt:ends},{subscriptionId:id(8)}])await assert.rejects(()=>h.data[mutation]({...valid,...patch}));
+  assert.equal(h.calls.length,0);assert.equal(h.clients,0);
   await assert.rejects(()=>h.data.getAdminBrandSubscriptionStates([cafeId,'bad']));assert.equal(h.calls.length,0);
 });
 await test('database inactive-admin invalid-plan and conflict denials remain Arabic and do not bypass RPC',async()=>{
-  for(const code of ['brand_subscription_forbidden','brand_subscription_invalid_plan','brand_subscription_conflict']){
-    const h=harness();h.rpcError={message:code};await assert.rejects(()=>h.data.addAdminBrandPlans({cafeId,planIds:['menu'],expectedRevision:revision}),error=>/[\u0600-\u06ff]/.test(error.message)&&!error.message.includes(code));assert.equal(h.calls.length,1);
+  for(const mutation of ['addAdminBrandPlans','removeAdminBrandPlans'])for(const code of ['brand_subscription_forbidden','brand_subscription_invalid_plan','brand_subscription_conflict']){
+    const h=harness();h.rpcError={message:code};await assert.rejects(()=>h.data[mutation]({cafeId,planIds:['menu'],expectedRevision:revision}),error=>/[\u0600-\u06ff]/.test(error.message)&&!error.message.includes(code));assert.equal(h.calls.length,1);
   }
 });
 await test('unexpected database details are never exposed to the action client',async()=>{
-  const h=harness();h.rpcError={message:'SECRET_PRIVATE_DATABASE_CONTEXT'};const result=await h.actions.addCafePlansAction(cafeId,['menu'],revision);
-  assert.equal(result.ok,false);assert(!result.message.includes('SECRET'));assert.equal(h.revalidated.length,0);
+  for(const action of ['addCafePlansAction','removeCafePlansAction']){
+    const h=harness();h.rpcError={message:'SECRET_PRIVATE_DATABASE_CONTEXT'};const result=await h.actions[action](cafeId,['menu'],revision);
+    assert.equal(result.ok,false);assert(!result.message.includes('SECRET'));assert.equal(h.revalidated.length,0);
+  }
 });
 await test('add action returns the same committed snapshot and invalidates all affected public routes',async()=>{
   const h=harness();h.result=state({revision:newRevision});const result=await h.actions.addCafePlansAction(cafeId,['menu','loyalty'],revision);assert.equal(result.ok,true);assert.equal(result.data.subscriptionRevision,newRevision);assert.equal(h.refetches,0);
   assert.deepEqual(h.revalidated,[['/admin/cafes'],['/dashboard','layout'],['/c/[slug]','layout'],['/menu/[slug]','page'],['/loyalty/[slug]','page']]);
+});
+await test('removal action returns the atomic remaining state and invalidates all affected public routes',async()=>{
+  const h=harness();h.result=state({revision:newRevision,currentPlanIds:['loyalty'],subscriptions:[row('loyalty',12)]});
+  const result=await h.actions.removeCafePlansAction(cafeId,['menu'],revision);
+  assert.equal(result.ok,true);assert.deepEqual(result.data.planIds,['loyalty']);assert.equal(result.data.subscriptionRevision,newRevision);assert.equal(h.refetches,0);
+  assert.deepEqual(h.calls,[{name:'admin_remove_brand_plans',args:{p_cafe_id:cafeId,p_plan_ids:['menu'],p_expected_revision:revision}}]);
+  assert.deepEqual(h.revalidated,[['/admin/cafes'],['/dashboard','layout'],['/c/[slug]','layout'],['/menu/[slug]','page'],['/loyalty/[slug]','page']]);
+});
+await test('removal action authorization input conflict and malformed snapshot failures invalidate nothing',async()=>{
+  for(const scenario of ['unauthorized','empty','stale','malformed']){
+    const h=harness();if(scenario==='unauthorized')h.guardError='Unauthorized';if(scenario==='stale')h.rpcError={message:'brand_subscription_conflict'};if(scenario==='malformed')h.result={privateContext:'DO_NOT_LEAK'};
+    const result=await h.actions.removeCafePlansAction(cafeId,scenario==='empty'?[]:['menu'],revision);
+    assert.equal(result.ok,false);assert(!result.message.includes('DO_NOT_LEAK'));assert(!result.message.includes('brand_subscription_conflict'));assert.equal(h.revalidated.length,0);assert.equal(h.refetches,0);
+    assert.equal(h.calls.length,['unauthorized','empty'].includes(scenario)?0:1);
+    if(scenario==='unauthorized')assert.equal(h.clients,0);
+  }
 });
 const deadlineInput={cafeId,expectedRevision:revision,localDeadline:'2028-11-06T12:00'};
 await test('deadline mutation converts Riyadh time and returns its atomic whole-cohort state',async()=>{

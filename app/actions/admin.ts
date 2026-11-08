@@ -22,7 +22,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PlatformPlan } from "@/lib/platform/admin-data";
 import { actionResult } from "@/lib/platform/action-result";
-import { addAdminBrandPlans } from "@/lib/data/admin-brand-subscriptions";
+import { addAdminBrandPlans, removeAdminBrandPlans } from "@/lib/data/admin-brand-subscriptions";
 
 export async function fetchPlatformPlansAction() {
   return getPlatformPlans();
@@ -97,6 +97,18 @@ export async function addCafePlansAction(cafeId: string, planIds: string[], expe
     revalidatePath("/loyalty/[slug]", "page");
     return summary;
   }, "تعذر تفعيل الباقات حدّث بيانات الاشتراك للتحقق ثم حاول مجددًا");
+}
+
+export async function removeCafePlansAction(cafeId: string, planIds: string[], expectedRevision: string) {
+  return actionResult(async () => {
+    const summary = await removeAdminBrandPlans({ cafeId, planIds, expectedRevision });
+    revalidatePath("/admin/cafes");
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/c/[slug]", "layout");
+    revalidatePath("/menu/[slug]", "page");
+    revalidatePath("/loyalty/[slug]", "page");
+    return summary;
+  }, "تعذر إيقاف الباقات حدّث بيانات الاشتراك للتحقق ثم حاول مجددًا");
 }
 
 export async function updateCafeStatusAction(cafeId: string, active: boolean) {

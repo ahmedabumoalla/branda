@@ -81,12 +81,13 @@ type Props = {
   toggleStatus: () => Promise<void>;
   planPending: boolean;
   updatePlan: (id: string, planIds: string[], expectedRevision: string) => Promise<void>;
+  removePlans: (id: string, planIds: string[], expectedRevision: string) => Promise<void>;
   close: () => void;
   onDeleted: (result: BrandDeletionResult) => void;
   onUpdated: (cafe: PlatformCafe) => void;
 };
 
-export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, close, onDeleted, onUpdated }: Props) {
+export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStatus, planPending, updatePlan, removePlans, close, onDeleted, onUpdated }: Props) {
   const router = useRouter();
   const [maintenancePending, setMaintenancePending] = useState(false);
   const [maintenanceError, setMaintenanceError] = useState("");
@@ -99,6 +100,10 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
   const [section, setSection] = useState<Section | null>(null);
   const [planSelection, setPlanSelection] = useState<{ ids: string[]; revision: string | null }>({ ids: [], revision: null });
   const [addingPlans, setAddingPlans] = useState(false);
+  const [removalSelection, setRemovalSelection] = useState<{ ids: string[]; revision: string | null }>({ ids: [], revision: null });
+  const [removingPlans, setRemovingPlans] = useState(false);
+  const [removalError, setRemovalError] = useState("");
+  const [removalMessage, setRemovalMessage] = useState("");
   const [planError, setPlanError] = useState("");
   const [planMessage, setPlanMessage] = useState("");
   const planInFlight = useRef(false);
@@ -139,10 +144,11 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
   const assignedPlans = assignedPlanIds.map((id, index) => ({ id, name: cafe.planNames?.[index] || plans.find(plan => plan.id === id)?.name || cafe.planName || "باقة حالية", disabled: plans.find(plan => plan.id === id)?.active === false }));
   const availablePlans = plans.filter(plan => plan.active && !assignedPlanIds.includes(plan.id));
   const planName = assignedPlans.map(plan => plan.name).join("، ") || "بدون باقة";
-  const planBusy = planPending || addingPlans;
+  const planBusy = planPending || addingPlans || removingPlans;
   const selectionStale = planSelection.ids.length > 0 && (planSelection.revision !== cafe.subscriptionRevision || planSelection.ids.some(id => !availablePlans.some(plan => plan.id === id)));
+  const removalStale = removalSelection.ids.length > 0 && (removalSelection.revision !== cafe.subscriptionRevision || removalSelection.ids.some(id => !assignedPlanIds.includes(id)));
   async function addPlans() {
-    if (planInFlight.current || planBusy || deadlinePending || selectionStale || !cafe.subscriptionRevision || !planSelection.ids.length) return;
+    if (planInFlight.current || planBusy || deadlinePending || removalSelection.ids.length || selectionStale || !cafe.subscriptionRevision || !planSelection.ids.length) return;
     planInFlight.current = true; setAddingPlans(true); setPlanError(""); setPlanMessage("");
     try {
       await updatePlan(cafe.id, planSelection.ids, cafe.subscriptionRevision);
@@ -152,6 +158,18 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
       setPlanError(error instanceof Error && /[\u0600-\u06ff]/.test(error.message) && error.message.length < 400 ? error.message : "تعذر تأكيد تفعيل الباقات حدّث بيانات الاشتراك ثم أعد المحاولة");
     }
     finally { planInFlight.current = false; setAddingPlans(false); }
+  }
+  async function savePlanRemovals() {
+    if (planInFlight.current || planBusy || deadlinePending || planSelection.ids.length || removalStale || !cafe.subscriptionRevision || !removalSelection.ids.length) return;
+    planInFlight.current = true; setRemovingPlans(true); setRemovalError(""); setRemovalMessage(""); setPlanMessage("");
+    try {
+      await removePlans(cafe.id, removalSelection.ids, cafe.subscriptionRevision);
+      setRemovalSelection({ ids: [], revision: null });
+      setRemovalMessage("تم إيقاف الباقات المحددة");
+    } catch (error) {
+      setRemovalError(error instanceof Error && /[\u0600-\u06ff]/.test(error.message) && error.message.length < 400 ? error.message : "تعذر تأكيد إيقاف الباقات حدّث بيانات الاشتراك ثم أعد المحاولة");
+    }
+    finally { planInFlight.current = false; setRemovingPlans(false); }
   }
   const selectedSection = sections.find(item => item.id === section);
   const stats = [
@@ -211,18 +229,29 @@ export function BrandDetailsDialog({ cafe, plans, services, activity, toggleStat
         </>}
         {section === "plan" && <>
           <div className={s.planCard}><CreditCard aria-hidden="true" /><span>الباقات الحالية<strong>{assignedPlans.length ? `${assignedPlans.length} باقة` : "بدون باقة"}</strong></span><span className={cafe.hasActivePlan ? s.active : s.inactive}>{cafe.subscriptionStatus ?? (cafe.hasActivePlan ? "فعال" : "غير فعال")}</span></div>
-          {!!assignedPlans.length && <fieldset className={s.currentPlans}><legend>الباقات المرتبطة بالاشتراك</legend>{assignedPlans.map(plan => <label className={s.planChoice} key={plan.id}><input type="checkbox" checked disabled readOnly /><span><strong>{plan.name}</strong><small>{plan.disabled ? "معطلة على المنصة ومضافة سابقًا لهذه العلامة" : "مضافة إلى الاشتراك الحالي"}</small></span></label>)}</fieldset>}
+          {!!assignedPlans.length && <>
+            <p id={`${planFieldId}-remove-hint`} className={s.planNote}>ألغ تحديد الباقات التي تريد إيقافها ثم احفظ التغييرات</p>
+            <fieldset className={s.currentPlans} disabled={planBusy || deadlinePending || !!planSelection.ids.length || !cafe.subscriptionRevision || removalStale} aria-describedby={`${planFieldId}-remove-hint`}><legend>الباقات المرتبطة بالاشتراك</legend>{assignedPlans.map(plan => <label className={s.planChoice} key={plan.id}><input type="checkbox" value={plan.id} checked={!removalSelection.ids.includes(plan.id)} onChange={event => {
+              const checked = event.target.checked;
+              setRemovalSelection(current => ({ revision: cafe.subscriptionRevision ?? null, ids: checked ? current.ids.filter(id => id !== plan.id) : [...new Set([...current.ids, plan.id])] })); setRemovalError(""); setRemovalMessage(""); setPlanMessage("");
+            }} /><span><strong>{plan.name}</strong><small>{removalSelection.ids.includes(plan.id) ? "سيتم إيقافها عند الحفظ" : plan.disabled ? "معطلة على المنصة ومضافة سابقًا لهذه العلامة" : "مضافة إلى الاشتراك الحالي"}</small></span></label>)}</fieldset>
+          </>}
+          {!!removalSelection.ids.length && <div className={s.planNotice}>
+            <p role="status">{removalStale ? "تغيرت بيانات الاشتراك راجع الباقات الحالية واختر الإلغاء مجددًا" : removalSelection.ids.length === assignedPlanIds.length ? "ستصبح العلامة بدون باقة بعد الحفظ وتتوقف الخدمات المرتبطة بالاشتراك" : "ستتوقف الخدمات الخاصة بالباقات التي ألغيت تحديدها بعد الحفظ"}</p>
+            <div className={s.planSubmit}><button type="button" className={s.primaryButton} disabled={planBusy || deadlinePending || !!planSelection.ids.length || removalStale || !cafe.subscriptionRevision} onClick={savePlanRemovals}>{removingPlans ? "جار إيقاف الباقات" : "حفظ تغييرات الباقات"}</button><button type="button" className={s.textButton} disabled={planBusy || deadlinePending} onClick={() => { setRemovalSelection({ ids: [], revision: null }); setRemovalError(""); }}>{removalStale ? "تحديث اختيار الإلغاء" : "التراجع عن الإلغاء"}</button></div>
+          </div>}
+          {removalError && <p className={s.planError} role="alert">{removalError}</p>}<p className={s.planMessage} role="status">{removalMessage}</p>
           <DataList items={[["تاريخ البداية", cafe.trialAwaitingDelivery ? "بعد إرسال تفاصيل الدخول" : cafe.planStartedAt], ["موعد الانتهاء بتوقيت السعودية", cafe.trialAwaitingDelivery ? "٧ أيام من وقت الإرسال لجميع الباقات" : cafe.subscriptionExpiryMixed ? "توجد مواعيد مختلفة اختر موعدًا موحدًا أدناه" : formatSaudiDeadline(cafe.planExpiresAtExact)], ["المدة المتبقية", cafe.trialAwaitingDelivery ? "العداد لم يبدأ" : cafe.subscriptionExpiryMixed ? "تختلف حسب الباقة" : cafe.planRemainingDays == null ? "غير محددة" : `${cafe.planRemainingDays} يوم`], ["عدد الاشتراكات", cafe.subscriptionsCount ?? 0], ["عدد التجديدات", cafe.renewalsCount ?? 0]]} />
           <SubscriptionDeadlineEditor key={`${cafe.id}:${assignedPlanIds.join(",")}`} cafe={cafe} disabled={planBusy} onUpdated={onUpdated} onBusyChange={setDeadlinePending} />
           <section className={s.planEditor} aria-labelledby={`${planFieldId}-title`} aria-busy={planBusy}>
             <h3 id={`${planFieldId}-title`}>تفعيل باقات إضافية</h3><p id={`${planFieldId}-hint`}>اختر الباقات التي تريد إضافتها إلى الباقات الحالية بموعد انتهاء مشترك</p>
-            {availablePlans.length ? <fieldset className={s.planChoices} disabled={planBusy || deadlinePending || !cafe.subscriptionRevision || selectionStale} aria-describedby={`${planFieldId}-hint`}><legend>الباقات المتاحة للإضافة</legend>{availablePlans.map(plan => <label className={s.planChoice} key={plan.id}><input type="checkbox" value={plan.id} checked={planSelection.ids.includes(plan.id)} onChange={event => {
+            {availablePlans.length ? <fieldset className={s.planChoices} disabled={planBusy || deadlinePending || !!removalSelection.ids.length || !cafe.subscriptionRevision || selectionStale} aria-describedby={`${planFieldId}-hint`}><legend>الباقات المتاحة للإضافة</legend>{availablePlans.map(plan => <label className={s.planChoice} key={plan.id}><input type="checkbox" value={plan.id} checked={planSelection.ids.includes(plan.id)} onChange={event => {
               const checked = event.target.checked;
               setPlanSelection(current => ({ revision: cafe.subscriptionRevision ?? null, ids: checked ? [...current.ids, plan.id] : current.ids.filter(id => id !== plan.id) })); setPlanError(""); setPlanMessage("");
             }} /><span><strong>{plan.name}</strong></span></label>)}</fieldset> : <p className={s.planNote}>لا توجد باقات فعالة أخرى متاحة للإضافة</p>}
             {!cafe.subscriptionRevision && <p className={s.planNote}>حدّث بيانات الاشتراك لإتاحة إضافة الباقات</p>}
             {selectionStale && <div className={s.planNotice}><p role="status">تغيرت بيانات الاشتراك راجع الباقات الحالية واختر الإضافات مجددًا</p><button type="button" className={s.textButton} disabled={planBusy || deadlinePending} onClick={() => { setPlanSelection({ ids: [], revision: null }); setPlanError(""); }}>تحديث الاختيار</button></div>}
-            <div className={s.planSubmit}><button type="button" className={s.primaryButton} disabled={planBusy || deadlinePending || selectionStale || !cafe.subscriptionRevision || !planSelection.ids.length} onClick={addPlans}>{planBusy ? "جار تفعيل الباقات" : "تفعيل الباقات المحددة"}</button><span>{planSelection.ids.length ? `${planSelection.ids.length} باقة محددة` : "اختر باقة واحدة أو أكثر"}</span></div>
+            <div className={s.planSubmit}><button type="button" className={s.primaryButton} disabled={planBusy || deadlinePending || !!removalSelection.ids.length || selectionStale || !cafe.subscriptionRevision || !planSelection.ids.length} onClick={addPlans}>{addingPlans ? "جار تفعيل الباقات" : "تفعيل الباقات المحددة"}</button><span>{planSelection.ids.length ? `${planSelection.ids.length} باقة محددة` : "اختر باقة واحدة أو أكثر"}</span></div>
             {planError && <p className={s.planError} role="alert">{planError}</p>}<p className={s.planMessage} role="status">{planMessage}</p>
           </section>
         </>}

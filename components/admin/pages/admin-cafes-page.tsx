@@ -11,6 +11,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   saveCafeFeatureOverridesAction,
   addCafePlansAction,
+  removeCafePlansAction,
   updateCafeStatusAction,
 } from "@/app/actions/admin";
 import { BentoCard } from "@/components/ui/design-system";
@@ -143,6 +144,19 @@ export function AdminCafesPage({
     }
   }
 
+  async function removePlans(id: string, planIds: string[], expectedRevision: string) {
+    setUpdatingPlanCafeId(id);
+    try {
+      const result = await removeCafePlansAction(id, planIds, expectedRevision);
+      if (!result.ok) throw new Error(result.message);
+      const subscription = result.data;
+      setCafes(prev => prev.map(cafe => cafe.id === id ? { ...cafe, ...subscription } : cafe));
+      setModalCafe(current => current?.id === id ? { ...current, ...subscription } : current);
+    } finally {
+      setUpdatingPlanCafeId(null);
+    }
+  }
+
   function getFeatureDraft(cafe: PlatformCafe, rows: EffectiveBrandFeatureAccess[]) {
     return featureOverrideDrafts[cafe.id] ?? buildFeatureOverrideDraft(rows);
   }
@@ -203,7 +217,7 @@ export function AdminCafesPage({
     const draft = getFeatureDraft(cafe, rows);
     const draftOverrides = draftToOverrides(draft);
     const effectiveRows = getEffectiveBrandFeatureAccess(
-      getPlanIncludedFeatures(cafe.planId, plans),
+      rows.filter(row => row.planIncluded).map(row => row.feature.id),
       draftOverrides,
     );
     const hasDraft = Boolean(featureOverrideDrafts[cafe.id]);
@@ -292,6 +306,7 @@ export function AdminCafesPage({
           toggleStatus={() => toggleCafe(modalCafe.id)}
           planPending={updatingPlanCafeId === modalCafe.id}
           updatePlan={updatePlan}
+          removePlans={removePlans}
           close={() => setModalCafe(null)}
           onDeleted={onBrandDeleted}
           onUpdated={cafe => { setCafes(previous => previous.map(item => item.id === cafe.id ? cafe : item)); setModalCafe(cafe); }}

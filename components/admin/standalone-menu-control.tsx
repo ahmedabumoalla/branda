@@ -11,7 +11,7 @@ export function StandaloneMenuControl({ cafe, plans }: { cafe: PlatformCafe; pla
   const [retry, setRetry] = useState(0);
   // The displayed latest plan is not the union of current service subscriptions
   // Changed summary data invalidates the result, while the server decides access
-  const accessKey = JSON.stringify([cafe.id, cafe.status, cafe.planId, cafe.subscriptionUpdatedAt, cafe.hasActivePlan, cafe.featureOverrides, plans.map(plan => [plan.id, plan.active, plan.features])]);
+  const accessKey = JSON.stringify([cafe.id, cafe.status, cafe.planId, cafe.subscriptionRevision, cafe.activePlanIds, cafe.subscriptionUpdatedAt, cafe.hasActivePlan, cafe.featureOverrides, plans.map(plan => [plan.id, plan.active, plan.features])]);
   useEffect(() => {
     let current = true;
     void loadAdminMenuBranchesAction(cafe.id).then(response => {

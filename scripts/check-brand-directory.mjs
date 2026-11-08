@@ -130,9 +130,58 @@ await test(() => {
   const dialog = nodes(h.render()).find(node => node.type === "brand-dialog");
   assert.equal(dialog.props.cafe.id, "brand-3");
   assert.equal(typeof dialog.props.updatePlan, "function");
+  assert.equal(typeof dialog.props.removePlans, "function");
   assert.equal(typeof dialog.props.toggleStatus, "function");
   dialog.props.close();
   assert(!nodes(h.render()).some(node => node.type === "brand-dialog"));
+});
+await test(async () => {
+  function loadFeatureModule(file) {
+    const exports = {};
+    const code = ts.transpileModule(fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    new Function("require", "exports", code)(name => name.startsWith("@/") ? loadFeatureModule(`${name.slice(2)}.ts`) : require(name), exports);
+    return exports;
+  }
+  const features = loadFeatureModule("lib/platform/feature-access.ts");
+  const parent = fs.readFileSync(new URL("../components/admin/pages/admin-cafes-page.tsx", import.meta.url), "utf8");
+  const brand = { ...cafes[0], planId: "menu", planIds: ["menu", "loyalty"], activePlanIds: ["menu", "loyalty"], subscriptionRevision: "before-removal", featureOverrides: [{ featureId: "menu", enabled: false }] };
+  const availablePlans = [{ id: "menu", name: "المنيو", active: true, features: ["menu"] }, { id: "loyalty", name: "الولاء", active: true, features: ["loyalty"] }];
+  const requests = [];
+  let response = { ok: true, data: { planId: "menu", planIds: ["loyalty"], activePlanIds: ["loyalty"], hasActivePlan: true, subscriptionRevision: "remaining-loyalty" } };
+  const h = harness("AdminCafesPage", { initialCafes: [brand], initialPlans: availablePlans, initialCustomers: [], initialOperations: [] }, parent, {
+    "@/components/admin/brand-directory": { BrandDirectory: "brand-directory" },
+    "@/components/admin/brand-deletion-control": { PendingBrandDeletionCleanup: "deletion-cleanup" },
+    "@/components/admin/brand-account-create": { BrandAccountCreate: "brand-create" },
+    "@/components/admin/brand-details-dialog": { BrandDetailsDialog: "brand-dialog", BrandFeatureControls: "feature-controls" },
+    "next/navigation": { useRouter: () => ({ refresh() {} }) },
+    "@/components/ui/design-system": { BentoCard: "div" },
+    "@/app/actions/admin": { removeCafePlansAction: async (...args) => { requests.push(args); return response; } },
+    "@/lib/format": { formatSar: String },
+    "@/lib/platform/feature-access": features,
+  });
+  nodes(h.render()).find(node => node.type === "brand-directory").props.onManage(brand);
+  const dialog = () => nodes(h.render()).find(node => node.type === "brand-dialog");
+  const serviceRows = () => dialog().props.services.props.rows;
+  const feature = id => serviceRows().find(row => row.feature.id === id);
+  assert.equal(feature("menu").planIncluded, true); assert.equal(feature("menu").effectiveEnabled, false);
+  assert.equal(feature("loyalty").planIncluded, true); assert.equal(feature("loyalty").effectiveEnabled, true);
+  dialog().props.services.props.change("loyalty", "disabled");
+  assert.equal(feature("loyalty").override, "disabled");
+  await dialog().props.removePlans(brand.id, ["menu"], "before-removal");
+  assert.equal(dialog().props.cafe.planId, "menu", "Historical primary remains intentionally present in the regression fixture");
+  assert.deepEqual(dialog().props.cafe.activePlanIds, ["loyalty"]);
+  assert.equal(feature("menu").planIncluded, false); assert.equal(feature("menu").override, "disabled");
+  assert.equal(feature("loyalty").planIncluded, true); assert.equal(feature("loyalty").override, "disabled");
+  assert.equal(feature("loyalty").effectiveEnabled, false, "Existing override draft survives cohort changes");
+  assert.equal(dialog().props.services.props.dirty, true);
+  response = { ok: true, data: { planId: "menu", planIds: [], activePlanIds: [], hasActivePlan: false, subscriptionRevision: "no-active-plans" } };
+  await dialog().props.removePlans(brand.id, ["loyalty"], "remaining-loyalty");
+  assert(serviceRows().every(row => !row.planIncluded && !row.effectiveEnabled));
+  assert.equal(feature("loyalty").override, "disabled");
+  const directoryCafe = nodes(h.render()).find(node => node.type === "brand-directory").props.cafes[0];
+  assert.deepEqual(directoryCafe.activePlanIds, []); assert.equal(directoryCafe.hasActivePlan, false);
+  assert.equal(directoryCafe.subscriptionRevision, "no-active-plans");
+  assert.deepEqual(requests, [[brand.id, ["menu"], "before-removal"], [brand.id, ["loyalty"], "remaining-loyalty"]]);
 });
 await test(() => {
   const lum = hex => { const c = hex.slice(1).match(/../g).map(value => parseInt(value,16)/255).map(value => value <= .04045 ? value/12.92 : ((value+.055)/1.055)**2.4); return c[0]*.2126+c[1]*.7152+c[2]*.0722; };
