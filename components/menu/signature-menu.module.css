@@ -288,7 +288,7 @@
 .menu[data-signature="hadiqa"] .productPhoto { background: #eee7dc; border-radius: 12px; }
 .menu[data-signature="hadiqa"] .productInfo { padding-inline: 8px; }
 .menu[data-signature="hadiqa"] .grid[data-buffet="true"] { grid-template-columns: minmax(0, 1fr); }
-.menu[data-signature="hadiqa"] .grid[data-buffet="true"] .productPhoto { aspect-ratio: 16 / 9; max-height: 420px; }
+.menu[data-signature="hadiqa"] .grid[data-buffet="true"] .productPhoto { width: 100%; aspect-ratio: 16 / 9; max-height: 420px; }
 .menu[data-signature="hadiqa"] .grid[data-buffet="true"] .productPhoto > img { object-fit: cover; }
 .menu[data-signature="hadiqa"] .grid[data-buffet="true"] .productInfo { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .menu[data-signature="hadiqa"] .grid[data-buffet="true"] .productInfo > strong { min-height: 0; }
