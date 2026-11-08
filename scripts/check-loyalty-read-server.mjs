@@ -75,10 +75,11 @@ await check("owner role and entitlement checked before authenticated retry", asy
   entitlement = true; rpcResult = { data: { retried: 3 } };
   assert.deepEqual(await dal.retryOwnerLoyaltyReads(), { retried: 3, cafeId });
 });
-const deferred = [], processed = []; let dispatches = 0;
+const deferred = [], processed = [], walletCalls = []; let dispatches = 0;
 const actions = load("app/actions/loyalty-read-operations.ts", {
   "next/server": { after: fn => deferred.push(fn) },
-  "@/lib/data/loyalty-read-operations": { ...dal, enqueueLoyaltyRead: async () => op, getCashierLoyaltyReads: async () => [op], processLoyaltyReads: async args => processed.push(args), retryOwnerLoyaltyReads: async () => ({ retried: 2, cafeId }) },
+  "@/lib/data/loyalty-read-operations": { ...dal, enqueueLoyaltyRead: async () => op, getCashierLoyaltyReads: async () => [op], processLoyaltyReads: async args => { processed.push(args); return { processed: 1, cardIds: [profileId] }; }, retryOwnerLoyaltyReads: async () => ({ retried: 2, cafeId }) },
+  "@/lib/wallet": { retryWalletNotificationJobs: async (...args) => { walletCalls.push(args); return { processed: 1 }; } },
   "@/lib/loyalty/read-card-links": { dispatchStampCardLinks: async () => dispatches++ },
 });
 await check("accept returns before background processing and worker is tenant-scoped", async () => {
@@ -87,10 +88,11 @@ await check("accept returns before background processing and worker is tenant-sc
   await actions.loadCashierLoyaltyReadsAction([profileId, requestId], { cafeId, cashierId });
   await deferred.shift()(); assert.deepEqual(processed[1].requestIds, [requestId]); assert.equal(processed[1].cafeId, cafeId);
   assert.equal(dispatches, 2);
+  assert.deepEqual(walletCalls, [[5, [profileId]], [5, [profileId]]]);
 });
 const tokenMocks = { "@/lib/barndaksa/env": { getSupabaseServiceRoleKey: () => "isolated-test-key-not-a-real-secret" } };
 const tokens = load("lib/auth/loyalty-session-token.ts", tokenMocks);
-const message = load("lib/loyalty/read-card-links.ts", { ...tokenMocks, "@/lib/supabase/admin": {}, "@/lib/whatsapp/green-api": {}, "@/lib/whatsapp/customer-routing": {}, "@/lib/whatsapp/brand-connection-types": {} }).stampCardLinkMessage;
+const message = load("lib/loyalty/read-card-links.ts", { ...tokenMocks, "@/lib/wallet/google": {}, "@/lib/supabase/admin": {}, "@/lib/whatsapp/green-api": {}, "@/lib/whatsapp/customer-routing": {}, "@/lib/whatsapp/brand-connection-types": {} }).stampCardLinkMessage;
 await check("branded card link signed, tenant bound, expires and distinguishes first stamp", () => {
   const text = message({ brandName: "Test Brand", brandSlug: "test-brand", cafeId, profileId, phone: "966501234567", cardCreated: true });
   assert.ok(text.includes("Test Brand")); assert.ok(text.includes("أول ختم"));
@@ -121,7 +123,7 @@ await check("card-link route strips token and refuses changed phone or blocked m
 });
 await check("cron rejects missing and wrong authorization without processing", async () => {
   let runs = 0; const previous = process.env.CRON_SECRET; process.env.CRON_SECRET = "test-only-secret".repeat(4);
-  const route = load("app/api/loyalty/read-jobs/route.ts", { "@/lib/data/loyalty-read-operations": { processLoyaltyReads: async () => { runs++; return { processed: 0 }; } }, "@/lib/loyalty/read-card-links": { dispatchStampCardLinks: async () => ({ processed: 0 }) } });
+  const route = load("app/api/loyalty/read-jobs/route.ts", { "@/lib/data/loyalty-read-operations": { processLoyaltyReads: async () => { runs++; return { processed: 0, cardIds: [] }; } }, "@/lib/wallet": { retryWalletNotificationJobs: async () => ({ processed: 0 }) }, "@/lib/loyalty/read-card-links": { dispatchStampCardLinks: async () => ({ processed: 0 }) } });
   try {
     assert.equal((await route.GET(new Request("https://example.test"))).status, 401);
     assert.equal((await route.GET(new Request("https://example.test", { headers: { authorization: "Bearer wrong" } }))).status, 401); assert.equal(runs, 0);
@@ -132,12 +134,13 @@ await check("WhatsApp unavailable defers claim and ambiguous send is recorded se
   let ready = false, sends = 0, claimed = false; const recorded = [];
   const dispatcher = load("lib/loyalty/read-card-links.ts", {
     ...tokenMocks,
+    "@/lib/wallet/google": {},
     "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
     "@/lib/whatsapp/customer-routing": { selectLocoCustomerSender: async () => null },
     "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async () => { sends++; throw Error("response lost"); } },
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
       recorded.push({ name, args });
-      if (name === "finish_stamp_card_link") return { data: true };
+      if (name === "finish_stamp_card_link_v2") return { data: true };
       if (claimed) return { data: null }; claimed = true;
       return { data: { id: requestId, claimToken: profileId, cafeId, profileId, brandName: "Test", brandSlug: "test-brand", phone: "966501234567", cardCreated: true } };
     } }) },
@@ -145,7 +148,27 @@ await check("WhatsApp unavailable defers claim and ambiguous send is recorded se
   await dispatcher.dispatchStampCardLinks(2); assert.equal(recorded.length, 0);
   ready = true; const result = await dispatcher.dispatchStampCardLinks(2);
   assert.equal(sends, 1); assert.equal(result.unknown, 1);
-  assert.equal(recorded.find(x => x.name === "finish_stamp_card_link").args.p_status, "unknown");
+  assert.equal(recorded.find(x => x.name === "finish_stamp_card_link_v2").args.p_status, "unknown");
   assert.equal(recorded.some(x => /stamp|process_loyalty/.test(x.name) && !/card_link/.test(x.name)), false);
+});
+await check("card invitation checks actual Google save state and defers unknown before sending", async () => {
+  for (const state of [true, false, "unavailable"]) {
+    let claimed = false, sent = 0; const finished = [];
+    const dispatcher = load("lib/loyalty/read-card-links.ts", {
+      ...tokenMocks,
+      "@/lib/wallet/google": { getGoogleWalletSaveState: async identity => { assert.deepEqual(identity, { cafeId, cardId: requestId }); if (state === "unavailable") throw Error("provider unavailable"); return state; } },
+      "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
+      "@/lib/whatsapp/customer-routing": { selectLocoCustomerSender: async () => null },
+      "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => true, sendGreenApiLoyaltyWelcome: async () => { sent++; return { status: "queued", providerMessageId: "test-message" }; } },
+      "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
+        if (name === "finish_stamp_card_link_v2") { finished.push(args.p_status); return { data: true }; }
+        if (claimed) return { data: null }; claimed = true;
+        return { data: { id: requestId, claimToken: profileId, cafeId, profileId, cardId: requestId, brandName: "Test", brandSlug: "test-brand", phone: "966501234567", cardCreated: false, googleIssued: true } };
+      } }) },
+    });
+    await dispatcher.dispatchStampCardLinks(1);
+    assert.equal(sent, state === false ? 1 : 0);
+    assert.deepEqual(finished, [state === true ? "skipped" : state === false ? "queued" : "deferred"]);
+  }
 });
 console.log(`Loyalty read server: ${checks} checks passed`);

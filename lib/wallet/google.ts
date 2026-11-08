@@ -1,7 +1,7 @@
 import "server-only";
 import { sign } from "node:crypto";
 import { googleConfig } from "./config";
-import { buildGoogleClass, buildGoogleObject, googleClassId } from "./payload";
+import { buildGoogleClass, buildGoogleObject, googleClassId, googleObjectId } from "./payload";
 import type { WalletMember } from "./types";
 import { walletArtUrl } from "./art";
 
@@ -27,6 +27,21 @@ async function accessToken() {
 
 async function request(path: string, method: string, body?: unknown) {
   return fetch(`https://walletobjects.googleapis.com/walletobjects/v1/${path}`, { method, headers: { authorization: `Bearer ${await accessToken()}`, "content-type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}), cache: "no-store", signal: AbortSignal.timeout(15000) });
+}
+
+// Creating a save URL is not evidence that a customer added the pass.
+// Only Google's platform-owned hasUsers field confirms a saved object.
+export async function getGoogleWalletSaveState(identity: { cafeId: string; cardId: string }): Promise<boolean> {
+  if (![identity.cafeId, identity.cardId].every(id => /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id))) throw new Error("wallet_invalid_card_scope");
+  const config = googleConfig();
+  if (process.env.GOOGLE_WALLET_PUBLISHING_APPROVED !== "true") throw new Error("wallet_not_configured");
+  const objectId = googleObjectId(config.issuerId, { card: { cafeId: identity.cafeId.toLowerCase(), id: identity.cardId.toLowerCase() } });
+  const response = await request(`loyaltyObject/${encodeURIComponent(objectId)}`, "GET");
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error(`google_wallet_read_${response.status}`);
+  const value: unknown = await response.json();
+  if (!value || typeof value !== "object" || !("hasUsers" in value) || typeof value.hasUsers !== "boolean") throw new Error("google_wallet_save_state_unknown");
+  return value.hasUsers;
 }
 
 async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: string } & Record<string, unknown>) {

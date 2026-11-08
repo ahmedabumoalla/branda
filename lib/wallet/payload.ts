@@ -10,7 +10,7 @@ export function googleClassId(issuerId: string, cafeId: string) {
   return `${issuerId}.branda_${cafeId.replace(/-/g, "")}`;
 }
 
-export function googleObjectId(issuerId: string, member: WalletMember) {
+export function googleObjectId(issuerId: string, member: { card: Pick<WalletMember["card"], "id" | "cafeId"> }) {
   return `${issuerId}.branda_${member.card.cafeId.replace(/-/g, "")}_${member.card.id.replace(/-/g, "")}`;
 }
 

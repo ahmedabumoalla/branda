@@ -5,6 +5,7 @@ import { getOwnerLoyaltyReads } from "@/lib/data/loyalty-read-operations";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 

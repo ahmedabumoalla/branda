@@ -5,6 +5,7 @@ import { RastCashier } from "@/components/rast-loyalty/rast-cashier";
 import { PublicServiceUnavailable } from "@/components/public-service-unavailable";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 

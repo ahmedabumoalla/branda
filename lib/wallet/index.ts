@@ -203,13 +203,21 @@ async function deliverBrandMessage(cafeId: string, title: string, body: string, 
 }
 
 // Only an authenticated internal scheduler or owner-authorized server action may call this server-only worker.
-export async function retryWalletNotificationJobs(limit = 10) {
+export async function retryWalletNotificationJobs(limit = 10, cardIds?: string[]) {
+  if (!Number.isFinite(limit)) throw new Error("wallet_invalid_queue_limit");
+  const batchSize = Math.min(cardIds ? 5 : 25, Math.max(1, Math.floor(limit)));
+  if (cardIds && (cardIds.length > 100 || cardIds.some(id => !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)))) throw new Error("wallet_invalid_card_scope");
+  const scopedIds = cardIds ? [...new Set(cardIds.map(id => id.toLowerCase()))] : undefined;
+  if (scopedIds?.length === 0) return { processed: 0 };
   const db = createAdminClient();
-  const { data: jobs, error } = await db.rpc("claim_wallet_notification_jobs", { p_limit: Math.min(25, Math.max(1, limit)) });
+  const { data: jobs, error } = scopedIds
+    ? await db.rpc("claim_wallet_notification_jobs_for_cards", { p_card_ids: scopedIds, p_limit: batchSize })
+    : await db.rpc("claim_wallet_notification_jobs", { p_limit: batchSize });
   if (error) throw new Error("wallet_queue_unavailable");
+  if (scopedIds && (jobs ?? []).some((job: { kind: string; card_id: string | null }) => job.kind !== "sync" || !job.card_id || !scopedIds.includes(job.card_id))) throw new Error("wallet_queue_scope_mismatch");
   const { loadWalletMemberByCode } = await import("@/lib/data/loyalty-experience");
   let processed = 0;
-  for (const job of jobs ?? []) {
+  async function processJob(job: NonNullable<typeof jobs>[number]) {
     let result = skipped();
     const state = job.delivery_state && typeof job.delivery_state === "object" ? job.delivery_state as WalletDeliveryResult : undefined;
     try {
@@ -218,11 +226,20 @@ export async function retryWalletNotificationJobs(limit = 10) {
         const { data: card, error: cardError } = await db.from("loyalty_cards").select("card_code").eq("id", job.card_id).eq("cafe_id", job.cafe_id).maybeSingle();
         if (cardError) throw new Error("wallet_card_unavailable");
         const member = card ? await loadWalletMemberByCode(card.card_code) : null;
+        if (member && (member.card.id !== job.card_id || member.card.cafeId !== job.cafe_id)) throw new Error("wallet_card_scope_mismatch");
         if (member) result = await syncMember(member, state);
       }
     } catch { result = { apple: { status: "failed", count: 0 }, google: { status: "failed", count: 0 } }; }
     await finishJob(job.id, result, Number(job.attempts));
     processed++;
+  }
+  // Bound provider concurrency so one slow pass cannot hold every claimed job.
+  // Settle each group before propagating persistence failures; claims retain
+  // their existing lease/retry semantics and provider results are not erased.
+  for (let offset = 0; offset < (jobs?.length ?? 0); offset += 4) {
+    const outcomes = await Promise.allSettled((jobs ?? []).slice(offset, offset + 4).map(processJob));
+    const failed = outcomes.find(outcome => outcome.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
   }
   return { processed };
 }

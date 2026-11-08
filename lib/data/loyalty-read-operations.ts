@@ -106,5 +106,5 @@ export async function retryOwnerLoyaltyReads(requestIds?: string[]) {
 export async function processLoyaltyReads(options: { cafeId?: string; requestIds?: string[]; limit?: number } = {}) {
   const { data, error } = await createAdminClient().rpc("process_loyalty_reads", { p_limit: Math.min(50, Math.max(1, options.limit ?? 10)), p_cafe_id: options.cafeId ?? null, p_request_ids: options.requestIds ?? null });
   if (error) throw new LoyaltyReadError("unavailable", true);
-  return result(data);
+  return z.object({ processed: z.number().int().nonnegative(), cardIds: z.array(z.string().uuid()).max(100).default([]) }).parse(data);
 }

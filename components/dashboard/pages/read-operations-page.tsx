@@ -20,7 +20,7 @@ const statusOrder: ReadStatus[] = ["pending", "processing", "succeeded", "failed
 const invitationLabels: Record<string, string> = {
   queued: "قُبل طلب الإرسال", pending: "بانتظار الإرسال", processing: "جاري الإرسال", dispatching: "جاري الإرسال", expired: "انتهت مهلة الإرسال",
   sent: "تم الإرسال", delivered: "تم التسليم", failed: "تعذر الإرسال", rejected: "تعذر الإرسال",
-  unknown: "لم يتأكد الإرسال", skipped: "لم يُرسل",
+  unknown: "لم يتأكد الإرسال", skipped: "البطاقة محفوظة في المحفظة",
 };
 const dateFormat = new Intl.DateTimeFormat("ar-SA", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Riyadh" });
 

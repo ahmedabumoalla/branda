@@ -167,4 +167,84 @@ const issue = load("lib/wallet/index.ts", { ...baseStubs, "./google": {}, "@/lib
 }) } });
 await issue.issueApplePass(member);
 assert.deepEqual(download, { name: "record_wallet_download", args: { p_card_id: member.card.id, p_provider: "apple" } });
-console.log("PASS: Wallet update-tag precision/legacy URL compatibility, authenticated version ordering, served watermark, installation reconciliation, APNs response validation, bounded device-fetch retries and issuance telemetry.");
+const cafeId = "11111111-1111-4111-8111-111111111111";
+const cardIds = Array.from({ length: 5 }, (_, i) => `22222222-2222-4222-8222-${String(i + 1).padStart(12, "0")}`);
+const claims = [];
+const emptyWorker = load("lib/wallet/index.ts", { ...baseStubs, "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => { claims.push({ name, args }); return { data: [] }; } }) } });
+assert.deepEqual(await emptyWorker.retryWalletNotificationJobs(10, []), { processed: 0 });
+assert.equal(claims.length, 0, "empty scope must never fall back to a global claim");
+await emptyWorker.retryWalletNotificationJobs(100, [cardIds[0], cardIds[0], cardIds[1]]);
+assert.deepEqual(claims.pop(), { name: "claim_wallet_notification_jobs_for_cards", args: { p_card_ids: cardIds.slice(0, 2), p_limit: 5 } });
+await emptyWorker.retryWalletNotificationJobs(100);
+assert.deepEqual(claims.pop(), { name: "claim_wallet_notification_jobs", args: { p_limit: 25 } });
+for (const invalid of [["invalid"], Array(101).fill(cardIds[0])]) await assert.rejects(emptyWorker.retryWalletNotificationJobs(5, invalid), /wallet_invalid_card_scope/);
+await assert.rejects(emptyWorker.retryWalletNotificationJobs(NaN), /wallet_invalid_queue_limit/);
+assert.equal(claims.length, 0);
+
+let activeUpdates = 0, maxUpdates = 0;
+const finished = [];
+const scopedWorker = load("lib/wallet/index.ts", { ...baseStubs,
+  "./config": { getWalletReadiness: () => ({ apple: false, google: true }) },
+  "./google": { updateGooglePass: async current => {
+    activeUpdates++; maxUpdates = Math.max(maxUpdates, activeUpdates);
+    await new Promise(resolve => setImmediate(resolve)); activeUpdates--;
+    if (current.card.id === cardIds[1]) throw new Error("google_wallet_update_429");
+  } },
+  "@/lib/data/loyalty-experience": { loadWalletMemberByCode: async code => ({ ...googleMember, card: { ...googleMember.card, id: code, cafeId } }) },
+  "@/lib/supabase/admin": { createAdminClient: () => ({
+    rpc: async () => ({ data: cardIds.map(id => ({ id, kind: "sync", cafe_id: cafeId, card_id: id, attempts: 5 })) }),
+    from: table => queryFor(state => {
+      if (state.update) { finished.push({ id: state.filters.find(([method, field]) => method === "eq" && field === "id")?.[2], ...state.update }); return {}; }
+      return { data: table === "wallet_passes" ? [{ provider: "google" }] : { card_code: state.filters.find(([method, field]) => method === "eq" && field === "id")?.[2] } };
+    }),
+  }) },
+});
+assert.deepEqual(await scopedWorker.retryWalletNotificationJobs(5, cardIds), { processed: 5 });
+assert.equal(maxUpdates, 4, "provider concurrency is bounded to four jobs");
+assert.equal(finished.filter(job => job.status === "sent").length, 4);
+assert.equal(finished.find(job => job.id === cardIds[1]).status, "failed");
+assert.equal(finished.find(job => job.id === cardIds[1]).delivery_state.google.retryAfterSeconds, 86400, "quota retry semantics are preserved");
+const mismatchedWorker = load("lib/wallet/index.ts", { ...baseStubs, "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async () => ({ data: [{ kind: "sync", card_id: cardIds[1] }] }) }) } });
+await assert.rejects(mismatchedWorker.retryWalletNotificationJobs(1, [cardIds[0]]), /wallet_queue_scope_mismatch/);
+
+const originalFetch = globalThis.fetch;
+const originalApproval = process.env.GOOGLE_WALLET_PUBLISHING_APPROVED;
+try {
+  process.env.GOOGLE_WALLET_PUBLISHING_APPROVED = "true";
+  const identity = { cafeId, cardId: cardIds[0] };
+  const payload = load("lib/wallet/payload.ts", { "@/lib/loyalty/secure-qr-payload": {} });
+  const config = { issuerId: "123456789", email: "test@test.iam.gserviceaccount.com", key: "isolated-test-key", baseUrl: "https://wallet.example.test" };
+  const googleStubs = { "node:crypto": { sign: () => Buffer.from("test-signature") }, "./config": { googleConfig: () => config }, "./payload": payload, "./art": {} };
+  for (const scenario of [true, false, "missing", "wrong-type", "404", "401", "429", "500", "network", "invalid-json"]) {
+    const requests = [];
+    globalThis.fetch = async (url, options) => {
+      requests.push({ url, options });
+      if (String(url).includes("oauth2")) return Response.json({ access_token: "isolated-test-token", expires_in: 3600 });
+      if (scenario === "network") throw new Error("network_unavailable");
+      if (scenario === "invalid-json") return new Response("not json");
+      if (["404", "401", "429", "500"].includes(scenario)) return new Response(null, { status: Number(scenario) });
+      return Response.json(scenario === "missing" ? {} : { hasUsers: scenario === "wrong-type" ? "false" : scenario });
+    };
+    const google = load("lib/wallet/google.ts", googleStubs);
+    if (typeof scenario === "boolean" || scenario === "404") assert.equal(await google.getGoogleWalletSaveState(identity), scenario === true);
+    else await assert.rejects(google.getGoogleWalletSaveState(identity));
+    assert.equal(requests[1].options.method, "GET");
+    assert.equal(requests[1].options.cache, "no-store");
+    assert.equal(requests[1].url, `https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject/${payload.googleObjectId(config.issuerId, { card: { id: identity.cardId, cafeId } })}`);
+    assert.equal(requests.length, 2, "save-state probe never modifies a wallet object");
+  }
+  let unexpectedFetches = 0;
+  globalThis.fetch = async () => { unexpectedFetches++; throw new Error("unexpected_fetch"); };
+  const google = load("lib/wallet/google.ts", googleStubs);
+  await assert.rejects(google.getGoogleWalletSaveState({ ...identity, cardId: "invalid" }), /wallet_invalid_card_scope/);
+  process.env.GOOGLE_WALLET_PUBLISHING_APPROVED = "false";
+  await assert.rejects(google.getGoogleWalletSaveState(identity), /wallet_not_configured/);
+  const unavailableGoogle = load("lib/wallet/google.ts", { ...googleStubs, "./config": { googleConfig: () => { throw new Error("wallet_not_configured"); } } });
+  await assert.rejects(unavailableGoogle.getGoogleWalletSaveState(identity), /wallet_not_configured/);
+  assert.equal(unexpectedFetches, 0);
+} finally {
+  globalThis.fetch = originalFetch;
+  if (originalApproval === undefined) delete process.env.GOOGLE_WALLET_PUBLISHING_APPROVED;
+  else process.env.GOOGLE_WALLET_PUBLISHING_APPROVED = originalApproval;
+}
+console.log("PASS: Wallet update tags, authenticated version ordering, APNs retries, scoped claims, bounded concurrency, provider semantics and read-only Google saved-state true/false/404/unknown/error checks");

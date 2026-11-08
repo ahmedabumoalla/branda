@@ -19,7 +19,7 @@
     },
     {
       "path": "/api/wallet/jobs",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/marketing/jobs",

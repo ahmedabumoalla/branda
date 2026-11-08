@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { ZodError } from "zod";
 import { enqueueLoyaltyRead, getCashierLoyaltyReads, getOwnerLoyaltyReads, retryOwnerLoyaltyReads, processLoyaltyReads, LoyaltyReadError, loyaltyReadErrorMessage } from "@/lib/data/loyalty-read-operations";
 import { dispatchStampCardLinks } from "@/lib/loyalty/read-card-links";
+import { retryWalletNotificationJobs } from "@/lib/wallet";
 import type { LoyaltyReadInput, LoyaltyReadScope, LoyaltyReadFilters, LoyaltyReadFailure } from "@/lib/loyalty/read-operation-types";
 
 function failure(error: unknown): LoyaltyReadFailure {
@@ -16,10 +17,13 @@ function failure(error: unknown): LoyaltyReadFailure {
 }
 function continueReads(options: { requestIds?: string[]; cafeId?: string }) {
   after(async () => {
-    try { await processLoyaltyReads({ ...options, limit: 10 }); }
+    let cardIds: string[] = [];
+    try { cardIds = (await processLoyaltyReads({ ...options, limit: 10 })).cardIds; }
     catch { console.error("loyalty_read_background_failed"); }
-    try { await dispatchStampCardLinks(2); }
-    catch { console.error("loyalty_card_link_background_failed"); }
+    await Promise.all([
+      retryWalletNotificationJobs(5, cardIds).catch(() => console.error("loyalty_read_wallet_background_failed")),
+      dispatchStampCardLinks(2).catch(() => console.error("loyalty_card_link_background_failed")),
+    ]);
   });
 }
 export async function enqueueLoyaltyReadAction(input: LoyaltyReadInput) {

@@ -204,7 +204,7 @@ function cameraFixture() {
   assert.equal(fixture.events.errors, 0, "Unmounted camera never reports a late error");
 }
 
-const { RastCashier, RastCashierRewardDetails, RastCashierEmptyRewards } = load("components/rast-loyalty/rast-cashier.tsx", {
+const { RastCashier, RastCashierRewardDetails, RastCashierEmptyRewards, RastCashierReadSummary } = load("components/rast-loyalty/rast-cashier.tsx", {
   "./use-read-outbox": { useReadOutbox: () => ({ rows: [], save: async () => {}, storageError: false, authPaused: false }) },
   "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },
   "@/app/actions/cashier-loyalty-phone": { lookupCashierLoyaltyPhoneAction: async () => ({ ok: true, cardCode: "CARD123" }) },
@@ -222,11 +222,31 @@ assert(html.includes('aria-describedby="rast-scan-help"'));
 assert(html.includes('aria-pressed="true"'));
 assert(html.includes('type="submit" disabled=""'));
 assert(!html.includes('id="rast-scan-preview"'), "No confirmation preview before a real lookup");
+const summaryRows = [
+  { operation: { status: "succeeded", rewardIssued: true } },
+  {}, { operation: { status: "pending" } }, { operation: { status: "processing" } },
+  { operation: { status: "failed", retryable: true } },
+  { operation: { status: "failed", retryable: false } }, { operation: { status: "needs_review" } },
+  { operation: { status: "duplicate" } }, { errorCode: "rejected:invalid_phone" },
+].map((row, index) => ({ ...row, requestId: `private-request-${index}`, value: "0501234567", identifierHint: "private-identifier", createdAt: "2026-11-08T12:34:00Z", errorMessage: "private-local-error", operation: row.operation ? { ...row.operation, customerName: "private-customer", errorMessage: "private-server-error" } : undefined }));
+const summaryHtml = renderToStaticMarkup(React.createElement(RastCashierReadSummary, { rows: summaryRows }));
+for (const [state, count] of [["succeeded", 1], ["pending", 4], ["failed", 4]]) {
+  assert(summaryHtml.match(new RegExp(`data-state="${state}"[^]*?<strong>${new Intl.NumberFormat("ar").format(count)}</strong>`)), `Honest ${state} count`);
+}
+assert.equal((summaryHtml.match(/data-state=/g) ?? []).length, 3, "Only three counters appear");
+assert(summaryHtml.includes('role="status"') && summaryHtml.includes('aria-live="polite"') && summaryHtml.includes('aria-atomic="true"'));
+assert.equal((summaryHtml.match(/class="sr-only"/g) ?? []).length, 3, "Every icon has an accessible status label");
+assert.equal((summaryHtml.match(/title=/g) ?? []).length, 3, "Every icon explains its meaning");
+assert(!/private-|0501234567|2026-11-08|<ol|<time|<bdi/.test(summaryHtml), "Counters reveal no customer, identifier, time, error or operation rows");
+const emptySummary = renderToStaticMarkup(React.createElement(RastCashierReadSummary, { rows: [] }));
+assert.equal((emptySummary.match(new RegExp(`<strong>${new Intl.NumberFormat("ar").format(0)}</strong>`, "g")) ?? []).length, 3, "Empty state keeps three zero counters");
+assert.equal(cashierText("en", "لم تُسجل"), "Not recorded");
+assert.equal(cashierText("en", "تحتاج مزامنة"), "Needs sync");
 const earnedDetails = renderToStaticMarkup(React.createElement(RastCashierRewardDetails, { reward }));
 assert(earnedDetails.includes("25%") && earnedDetails.includes("Original terms"), "Cashier sees the original earned discount and terms");
 const productDetails = renderToStaticMarkup(React.createElement(RastCashierRewardDetails, { reward: { ...reward, metadata: { termsSnapshot: { rewardKind: "product", rewardProductName: "Original product", terms: "Original terms" } } } }));
 assert(productDetails.includes("Original product") && !productDetails.includes("25%"));
-console.log("PASS: read-only scan previews, duplicate confirmation lock, uncertain-request id reuse, redemption guards, camera late cleanup and one detection, cashier SSR accessibility.");
+console.log("PASS: read-only scan previews, duplicate confirmation lock, uncertain-request id reuse, redemption guards, camera late cleanup and one detection, cashier SSR accessibility, compact private counters across all operation states.");
 }
 
 // Exercise the actual legacy data functions and the shared entitlement guard.
