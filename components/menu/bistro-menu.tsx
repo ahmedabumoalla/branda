@@ -132,7 +132,7 @@ function CategoryIcon({ name, all }: { name: string; all: boolean }) {
   return <Icon aria-hidden="true" />;
 }
 
-export function ProductDetails({ product, products, close, browse, position, total, brandSlug, brandCaption, imageDisclosure }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string; brandCaption?: string; imageDisclosure?: string }) {
+export function ProductDetails({ product, products, close, browse, position, total, brandSlug, brandCaption, imageDisclosure, hideEmptyMedia = false }: { product: StandaloneMenuProduct; products: StandaloneMenuProduct[]; close: () => void; browse: (direction: number) => void; position: number; total: number; brandSlug?: string; brandCaption?: string; imageDisclosure?: string; hideEmptyMedia?: boolean }) {
   const reduce = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [mediaIndex, setMediaIndex] = useState(!product.primaryMediaType && brandSlug === "delicake" && !product.videos.length && product.images.length > 1 && product.images[0].url.includes("/deli-20261015/dish-") ? 1 : 0);
@@ -157,9 +157,9 @@ export function ProductDetails({ product, products, close, browse, position, tot
     animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: reduce ? 0 : menuMotion.distance.small, scale: reduce ? 1 : menuMotion.scale.press }}
     transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}
     onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
-    <div className={s.dialogInner}>
+    <div className={s.dialogInner} data-no-media={hideEmptyMedia && media.length === 0 || undefined}>
       <button type="button" className={s.close} onClick={close} aria-label="إغلاق تفاصيل المنتج" autoFocus><X aria-hidden="true" /></button>
-      <div className={s.detailMedia} data-deli-part={brandSlug === "delicake" ? "detail-media" : undefined}>
+      {(!hideEmptyMedia || media.length > 0) && <div className={s.detailMedia} data-deli-part={brandSlug === "delicake" ? "detail-media" : undefined}>
         <span className={s.dishWatermark} aria-hidden="true">{product.category}</span>
         <AnimatePresence mode="wait" initial={false}>
         <motion.div key={current?.url ?? product.id} className={s.detailPhotoFrame} style={current?.type === "image" ? hulmPhotoFraming(brandSlug, product.id, current.url) : undefined} data-hulm-frame={current?.type === "image" && !!hulmPhotoFraming(brandSlug, product.id, current.url) || undefined} data-deli-studio={brandSlug === "delicake" && current?.url.includes("/deli-20261015/dish-") || undefined}
@@ -175,7 +175,7 @@ export function ProductDetails({ product, products, close, browse, position, tot
           <span aria-live="polite">{mediaIndex + 1} / {media.length}</span>
           <button type="button" aria-label="الصورة التالية" onClick={() => setMediaIndex((index) => (index + 1) % media.length)}><ChevronLeft aria-hidden="true" /></button>
         </div>}
-      </div>
+      </div>}
       <motion.div className={s.detailContent} initial={{ opacity: 0, y: reduce ? 0 : menuMotion.distance.normal }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? menuMotion.duration.fast : menuMotion.duration.normal, ease: menuMotion.easing }}>
         <p className={s.eyebrow}>{menuDisplayText(product.category)}</p>
         <h2 id="dish-title" dir="auto">{menuDisplayText(product.name)}</h2>

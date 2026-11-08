@@ -8,10 +8,12 @@ import { signatureBrand } from "@/lib/menu/signature-brands";
 import { DefaultSignatureMenuLoading, SignatureMenuLoading } from "@/components/menu/signature-menu-loading";
 import { BrandedMenuLoading } from "@/components/menu/branded-menu-loading";
 import { menuLoadingBrand } from "@/lib/menu/loading-brands";
+import { TeaBakeryMenuLoading } from "@/components/menu/tea-bakery-menu-loading";
 
 export default function MenuLoading() {
   const { slug } = useParams<{ slug: string }>();
   const branches = useSearchParams().getAll("branch");
+  if (slug === "brand-9010051467ed") return <TeaBakeryMenuLoading />;
   const signature = signatureBrand(slug, branches.length === 1 ? branches[0] : undefined);
   if (signature) return <SignatureMenuLoading brand={signature} />;
   if (slug === "brand-871ec6e243c0") return <TogetherStoreLoading />;

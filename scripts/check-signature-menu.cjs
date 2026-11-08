@@ -538,7 +538,7 @@ async function checkRouteIsolation() {
     '@/lib/data/loyalty-landing': { getPublicLoyaltyLanding: async () => null },
     '@/lib/data/public-home-catalog': { isPublicHomeMenuSlug: async () => gate },
     '@/lib/data/gift-orders': { getGiftStoreSettings: async () => null },
-    '@/components/menu/signature-menu': { SignatureMenu: Signature }, '@/components/menu/bistro-menu': { BistroMenu: Bistro },
+    '@/components/menu/signature-menu': { SignatureMenu: Signature }, '@/components/menu/bistro-menu': { BistroMenu: Bistro }, '@/components/menu/tea-bakery-menu': { TeaBakeryMenu: noop },
     '@/components/menu/loco-menu': { LocoMenu: Loco }, '@/components/store/together-store': { TogetherStore: Together },
     '@/components/menu/french-corner-menu': { FrenchCornerMenu: French },
     '@/components/analytics/public-page-analytics': { PublicPageAnalytics: noop }, '@/components/menu/menu-auto-refresh': { MenuAutoRefresh: noop },
@@ -570,7 +570,7 @@ async function checkRouteIsolation() {
   slug = menu.slug; program = { ...program, enabled: false }; tree = await route.default({ params: Promise.resolve({ slug }) }); equal(nodes(tree).find(n => n.type === Signature && n.props.menu).props.loyalty, null, 'Disabled public program does not render reward promise');
   gate = false; const before = menuReads; await assert.rejects(route.default({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ showcase: '1' }) }), /NOT_FOUND/); equal(menuReads, before, 'Unpublished showcase denies before catalog data access');
   let currentSlug = slug, loadingQuery = '';
-  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }), useSearchParams: () => new URLSearchParams(loadingQuery) }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together }, '@/components/menu/branded-menu-loading': { BrandedMenuLoading: Branded } }).default;
+  const Loading = load('app/menu/[slug]/loading.tsx', { 'next/navigation': { useParams: () => ({ slug: currentSlug }), useSearchParams: () => new URLSearchParams(loadingQuery) }, '@/components/menu/tea-bakery-menu-loading': { TeaBakeryMenuLoading: noop }, '@/components/menu/signature-menu-loading': { SignatureMenuLoading: Signature }, '@/components/menu/loco-menu-loading': { LocoMenuLoading: Loco }, '@/components/store/together-store-loading': { TogetherStoreLoading: Together }, '@/components/menu/branded-menu-loading': { BrandedMenuLoading: Branded } }).default;
   for (currentSlug of Object.keys(signatureBrands)) equal(Loading().props.brand.key, signatureBrand(currentSlug).key, 'Loading route follows exact same explicit identity');
   currentSlug = 'brand-8ad185ee82e3';
   for (const branch of ['bar', 'coffee', 'hospital']) {

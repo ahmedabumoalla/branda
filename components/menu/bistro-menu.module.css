@@ -177,6 +177,7 @@
 .dialog[open] { animation: rise .3s var(--ease); }
 .dishDialog[open] { animation: none; }
 .dialogInner { display: grid; grid-template-columns: 1fr 1fr; position: relative; min-width: 0; }
+.dialogInner[data-no-media="true"] { grid-template-columns: 1fr; }
 .close { position: absolute; top: 14px; left: 14px; z-index: 3; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--paper); border: 1px solid var(--line); }
 .detailMedia { position: relative; min-height: 480px; background: var(--panel); overflow: hidden; display: flex; align-items: center; padding: 54px 20px; }
 .detailPhotoFrame { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 16px; border: 1px solid var(--line); }
