@@ -80,6 +80,15 @@ await check("pending phone variants and QR/card double scans coalesce", async ()
   await queue.sync();
   assert.equal((await queue.save("code", "CARD123")).row.requestId, card.row.requestId, "Acknowledged pending row still guards rapid duplicates without raw identifiers");
 });
+await check("phone in card tab persists phone method and deduplicates across tabs", async () => {
+  const sent = [], queue = make(memoryStore(), { send: async input => { sent.push(input); return { ok: true, operation: operation(input.requestId) }; } });
+  const saved = await queue.save("code", "٠٥٠١٢٣٤٥٦٧");
+  assert.equal(saved.row.method, "phone");
+  assert.equal((await queue.save("phone", "+966 50 123 4567")).row.requestId, saved.row.requestId);
+  await queue.sync(); assert.equal(sent.length, 1); assert.equal(sent[0].method, "phone");
+  assert.equal((await queue.save("phone", "14401")).row.method, "code");
+  assert.equal((await queue.save("phone", "0123456789123456")).row.method, "code");
+});
 await check("different cafe or cashier never uploads another scope", async () => {
   const store = memoryStore(), sent = [];
   await make(store).save("phone", "0501234567");

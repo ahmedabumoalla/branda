@@ -5,6 +5,8 @@ export type LocalizedText = { ar: string; en: string };
 export type CashierMessage = string | { text: string; values: Record<string, string | number | LocalizedText> };
 export const cashierLanguageCookie = "branda-cashier-language";
 const readEnglish: Record<string, string> = {
+  "رقم البطاقة أو رقم الجوال": "Card number or phone number",
+  "امسح البطاقة أو أدخل رقم البطاقة أو الجوال": "Scan a card or enter the card or phone number",
   "تسجيل الختم": "Record stamp",
   "جاري حفظ القراءة": "Saving scan",
   "تمت قراءة الرمز اضغط تسجيل الختم": "Code scanned Press Record stamp",

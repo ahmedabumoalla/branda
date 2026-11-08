@@ -50,6 +50,17 @@ await check("only loyalty-card QR and bounded valid identifiers accepted", async
   assert.equal(calls.at(-1).input.p_value, "CARD123");
   await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value: createBarndaksaQrPayload("customer-reward", "CARD123") }), { code: "invalid_code" });
 });
+await check("phone entered in card field uses phone enrollment and card identifiers remain codes", async () => {
+  for (const value of ["0501234567", "501234567", "+966 50 123 4567", "00966501234567", "٠٥٠١٢٣٤٥٦٧", "۰۵۰۱۲۳۴۵۶۷"]) {
+    await dal.enqueueLoyaltyRead({ ...input, method: "code", value });
+    assert.equal(calls.at(-1).input.p_method, "phone"); assert.equal(calls.at(-1).input.p_value, "966501234567");
+  }
+  for (const value of ["14401", "0123456789123456", "ABCDEF1234567890"]) {
+    await dal.enqueueLoyaltyRead({ ...input, method: "phone", value });
+    assert.equal(calls.at(-1).input.p_method, "code"); assert.equal(calls.at(-1).input.p_value, value);
+  }
+  await assert.rejects(dal.enqueueLoyaltyRead({ ...input, method: "code", value: "not a phone 0501234567" }), { code: "invalid_code" });
+});
 await check("service failure retryable and request conflict permanent", async () => {
   rpcResult = { error: Error("private database details") };
   await assert.rejects(dal.enqueueLoyaltyRead(input), { code: "unavailable", retryable: true });

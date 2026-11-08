@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { parseBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
+import { resolveReadMethod } from "@/lib/loyalty/read-identifier";
 import type { LoyaltyReadFilters, LoyaltyReadInput, LoyaltyReadOperation, LoyaltyReadPage, LoyaltyReadScope } from "@/lib/loyalty/read-operation-types";
 
 export class LoyaltyReadError extends Error {
@@ -50,9 +51,10 @@ async function cashierScope(expected: LoyaltyReadScope) {
 }
 export async function enqueueLoyaltyRead(input: LoyaltyReadInput) {
   const parsed = inputSchema.parse(input), session = await cashierScope(parsed);
+  const method = resolveReadMethod(parsed.method, parsed.value);
   const digits = parsed.value.replace(/[٠-٩۰-۹]/g, x => String(x.charCodeAt(0) - (x >= "۰" ? 1776 : 1632)));
   let value: string;
-  if (parsed.method === "phone") {
+  if (method === "phone") {
     const phone = /^[+\d\s()-]+$/.test(digits) ? normalizeSaudiPhone(digits) : null;
     if (!phone) throw new LoyaltyReadError("invalid_phone");
     value = phone;
@@ -62,7 +64,7 @@ export async function enqueueLoyaltyRead(input: LoyaltyReadInput) {
   }
   const { data, error } = await createAdminClient().rpc("enqueue_loyalty_read", {
     p_session_token: session.token, p_expected_cafe_id: session.cafeId, p_expected_cashier_id: session.cashierId,
-    p_request_id: parsed.requestId, p_method: parsed.method, p_value: value, p_client_created_at: parsed.clientCreatedAt,
+    p_request_id: parsed.requestId, p_method: method, p_value: value, p_client_created_at: parsed.clientCreatedAt,
   });
   if (error) throw new LoyaltyReadError("unavailable", true);
   const response = result(data);
