@@ -53,6 +53,8 @@ async function main() {
   check(!html.includes('placeholder-food'), 'Unknown future products never borrow an unrelated dish photo');
   checkProductImages();
   check(html.includes('اجمع 6 أختام واحصل على خصم 10%') && html.includes(`/loyalty/${menu.slug}?source=menu`), 'Actual loyalty terms and enrollment entry render');
+  equal((html.match(/data-loyalty-entry=/g) || []).length, 1, 'Shared approved loyalty card renders exactly once');
+  check(html.indexOf('id="tea-loyalty"') > html.indexOf('id="tea-top"') && html.indexOf('id="tea-loyalty"') < html.indexOf('id="tea-catalog"'), 'Approved loyalty card appears after hero and before menu categories');
   check(!render(menu, null).includes(`/loyalty/${menu.slug}`) && !render({ ...menu, loyaltyEnabled: false }).includes(`/loyalty/${menu.slug}`), 'Missing or disabled program hides loyalty entry');
   check(render(menu, { purchasesRequired: 3, rewardName: 'مكافأة أخرى' }).includes('اجمع 3 أختام واحصل على مكافأة أخرى'), 'Program copy follows live data instead of hardcoded six stamps');
   check(html.includes('tel:+966552220972') && html.includes('https://wa.me/966552220972'), 'Custom cake contact links use the confirmed phone');

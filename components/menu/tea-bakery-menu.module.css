@@ -84,7 +84,7 @@
 .empty { text-align: center; padding: 60px 16px 80px; color: var(--tea-muted); }
 .empty h3 { font-size: 25px; color: var(--tea-wine); margin-bottom: 12px; }
 .empty button { padding: 12px 24px; min-height: 48px; margin-top: 20px; border: 1px solid var(--tea-wine); border-radius: var(--tea-radius); background: transparent; color: var(--tea-wine); }
-.loyalty { max-width: 1440px; margin: auto; padding: 50px var(--tea-space) 0; }
+.menu .loyalty { max-width: 1440px; margin: auto; padding: 0 var(--tea-space) 32px; }
 .footer { text-align: center; padding: 70px var(--tea-space) 32px; display: flex; flex-direction: column; align-items: center; }
 .footer > img { object-fit: contain; }
 .footer > p { font: 400 38px/1.2 var(--tea-serif); color: var(--tea-wine); }
@@ -154,7 +154,7 @@
   .price { gap: 4px; }
   .price > bdi { font-size: 22px; }
   .price > span { font-size: 11px; }
-  .loyalty { padding-top: 28px; }
+  .menu .loyalty { padding-bottom: 24px; }
   .footer { padding-top: 46px; }
 }
 @media (max-width: 380px) {
