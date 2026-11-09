@@ -61,7 +61,7 @@
 .customerSummaryHeading span, .customerSummary p { font-size: 12px; line-height: 1.7; }
 .customerSummary p { margin: 0; }
 .customerSummaryStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 8px 0; }
-.customerSummaryStats > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.customerSummaryStats > div { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 4px 8px; }
 .customerSummaryStats dt { font-size: 12px; }
 .customerSummaryStats dd { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; font-variant-numeric: tabular-nums; }
 .customerSummaryStatus { font-weight: 700; }
