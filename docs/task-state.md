@@ -1,5 +1,7 @@
 # Current task state
 
+- FRENCH DAILY STAMP CAP 2026-11-09: French Corner UUID only, max2 positive stamps per customer per Asia/Riyadh calendar day. Shared ledger trigger and private transaction lock cover scanner/phone/POS; POS keeps sale and skips excess stamp; queue rejection permanent and localized. Existing balances, rewards and other brands preserved. Root/release nine focused checks inclSQL34/UI69,outbox/readUI/phone/scanner,types,text,lint and isolatedNode24build PASS; nativePostgreSQL36incl3independent-session concurrency. Live rollback preserved9business tables and private privileges. Evidence output/french-daily-limit. Production application and database verification pending
+
 - CASHIER SUMMARY LOADER 2026-11-09: Replaced optional balance loading/slow/unavailable text with16px currentColor spinner alongside actual stamp status. Localized accessible label and reduced-motion support; not-found/session and stamp error messages preserved. No network/controller or database changes. Release UI65/text/TypeScript/lint PASS; source responsive/state review, no browser needed. Evidence output/cashier-summary-loader. Production build and verification pending
 
 - CASHIER SUMMARY SPACING 2026-11-09: Single CSS alignment change keeps each stamps/rewards count 8px beside its label instead of opposite edges. Existing two shrinkable columns, wrap, colors, typography and RTL/LTR preserved. Release UI53/text/TypeScript PASS; source/diff responsive review, no browser needed. Evidence output/cashier-summary-spacing. Production build and verification pending

@@ -13,7 +13,7 @@ export function CashierCustomerSummary({ state, saved, operation }: {
   const number = (value: number) => new Intl.NumberFormat(locale).format(value);
   const completed = operation?.status === "succeeded";
   const failed = operation && ["failed", "needs_review", "duplicate"].includes(operation.status);
-  const status = completed ? "تم تسجيل الختم" : failed ? operation.status === "duplicate" ? "عملية مكررة لم يُضف ختم" : "لم يتأكد تسجيل الختم راجع عدادات المزامنة" : saved ? "الختم قيد التسجيل" : "الرصيد الحالي";
+  const status = completed ? "تم تسجيل الختم" : operation?.errorCode === "daily_stamp_limit" ? "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا" : failed ? operation.status === "duplicate" ? "عملية مكررة لم يُضف ختم" : "لم يتأكد تسجيل الختم راجع عدادات المزامنة" : saved ? "الختم قيد التسجيل" : "الرصيد الحالي";
   const unavailable = state.status === "unauthorized" ? "تحقق من جلسة الكاشير لعرض الرصيد" : state.status === "not_found" ? "لم تُوجد بطاقة متاحة لهذا الرقم" : null;
   return <section className={styles.customerSummary} role="status" aria-live="polite" aria-atomic="true" aria-label={t("ملخص العميل")} data-customer-summary="fast-v1">
     {state.summary ? <>

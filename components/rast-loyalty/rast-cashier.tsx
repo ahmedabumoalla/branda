@@ -158,6 +158,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
         focusInputAfterScan.current = true; setValue(""); setPreview(null);
       } else {
         const errors: Record<string, string> = { recent_scan: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", cooldown: "تم تسجيل ختم قريبًا لهذه البطاقة انتظر قبل عملية جديدة", already_redeemed: "هذه المكافأة مصروفة سابقًا", expired: "انتهت صلاحية المكافأة", inactive: "البطاقة غير نشطة", invalid: "الرمز غير صالح أو لا يتبع هذه العلامة", duplicate: "هذه العملية مسجلة بالفعل", reward_unavailable: "المكافأة المحددة صُرفت أو لم تعد متاحة أعد فحص البطاقة؛ لم تُصرف مكافأة أخرى", card_unavailable: "البطاقة أو حساب العميل غير نشط", session_invalid: "انتهت جلسة الكاشير سجّل الدخول من جديد", program_disabled: "برنامج الولاء موقوف حاليًا", request_conflict: "بيانات العملية لا تطابق الطلب السابق أعد فحص الرمز", invalid_code: "الرمز غير صالح أعد فحص البطاقة", operation_failed: "لم تُسجل العملية أعد فحص الرمز وحاول مرة أخرى" };
+        errors.daily_stamp_limit = "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا";
         setError(errors[status] ?? "لم تسجل العملية تحقق من البطاقة وصلاحية البرنامج");
       }
     } catch (cause) { if (confirm) setPreview(session.preview); setError(cause instanceof Error && /[\u0600-\u06ff]/.test(cause.message) ? cause.message : "تعذر إتمام العملية يمكنك إعادة المحاولة بأمان"); }

@@ -85,7 +85,7 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   if (error) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة وجلسة الموظف");
   const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
   // An audited rejection means its transaction did not commit. Transport errors remain uncertain.
-  if (result?.ok === false && ["invalid_code", "session_invalid", "request_conflict", "program_disabled", "card_unavailable", "reward_unavailable", "operation_failed"].includes(String(result.errorCode))) {
+  if (result?.ok === false && ["invalid_code", "session_invalid", "request_conflict", "program_disabled", "card_unavailable", "reward_unavailable", "operation_failed", "daily_stamp_limit"].includes(String(result.errorCode))) {
     return { ok: false, status: String(result.errorCode) };
   }
   if (result?.ok !== true) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف");

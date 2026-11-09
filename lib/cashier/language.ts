@@ -8,6 +8,7 @@ const readEnglish: Record<string, string> = {
   "ملخص العميل": "Customer summary",
   "الرصيد الحالي": "Current balance",
   "الختم قيد التسجيل": "Stamp pending",
+  "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا": "The customer has reached the daily limit of two stamps A new stamp can be added tomorrow",
   "جارٍ عرض بيانات العميل": "Loading customer details",
   "تأخر عرض الرصيد يمكنك متابعة تسجيل الختم": "Balance is taking longer You can still record the stamp",
   "تعذر عرض الرصيد الآن يمكنك متابعة تسجيل الختم": "Balance unavailable You can still record the stamp",

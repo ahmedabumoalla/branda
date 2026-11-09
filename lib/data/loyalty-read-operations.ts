@@ -32,6 +32,7 @@ export function loyaltyReadErrorMessage(code: string): string {
     request_conflict: "رقم العملية مرتبط بطلب مختلف وتحتاج العملية إلى مراجعة", card_unavailable: "البطاقة غير متاحة لدى العلامة", customer_unavailable: "حساب العميل غير متاح",
     program_disabled: "برنامج الولاء غير متاح حاليًا", permission_denied: "لا تملك صلاحية تنفيذ العملية", cashier_unavailable: "حساب الكاشير غير متاح",
     recent_scan: "قراءة مكررة لم يُضف ختم جديد", duplicate: "قراءة مكررة لم يُضف ختم جديد", rate_limited: "محاولات كثيرة ستتم إعادة المحاولة لاحقًا",
+    daily_stamp_limit: "بلغ العميل الحد اليومي المسموح وهو ختمان يمكن إضافة ختم جديد غدًا",
     operation_failed: "تعذر تنفيذ الختم ويمكن إعادة المزامنة", unavailable: "تعذر الاتصال بخدمة المزامنة ستبقى العملية محفوظة",
   };
   return messages[code] ?? "تعذر تنفيذ العملية راجع سبب الفشل أو أعد المحاولة";

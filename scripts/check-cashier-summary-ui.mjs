@@ -118,6 +118,9 @@ for(const selectedLocale of ['ar','en']){
   check(!markup.includes('NaN')&&!markup.includes('undefined'),'No fabricated or invalid values');
   const slow=renderToStaticMarkup(React.createElement(CashierCustomerSummary,{state:{id:1,status:'slow',summary:null,confirmed:false},saved:false}));
   check(!slow.includes('<dd'),'Unknown state never displays zero balances');
+  const limited=renderToStaticMarkup(React.createElement(CashierCustomerSummary,{state,saved:true,operation:operation('limited',{status:'failed',errorCode:'daily_stamp_limit',retryable:false})}));
+  check(limited.includes(selectedLocale==='en'?'daily limit of two stamps':'الحد اليومي المسموح وهو ختمان'),'Daily cap is explained without reporting a successful stamp');
+  check(!limited.includes(selectedLocale==='en'?'Stamp recorded':'تم تسجيل الختم'),'Rejected daily cap never claims success');
   for(const status of ['loading','slow','unavailable']){
     const pending=renderToStaticMarkup(React.createElement(CashierCustomerSummary,{state:{id:1,status,summary:null,confirmed:false},saved:true}));
     check(pending.includes('data-summary-loading="compact"')&&pending.includes(selectedLocale==='en'?'Loading customer details':'جارٍ عرض بيانات العميل'),'Compact loader has a localized accessible name');
