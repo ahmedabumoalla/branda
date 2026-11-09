@@ -24,6 +24,7 @@ import { FinanceCashHandovers } from "./finance-cash-handovers";
 import { canFinance, canFinanceOperation, financeRoleLabels } from "@/lib/finance/permissions";
 import { FinanceInventoryReport } from "./finance-inventory-report";
 import { FinanceControlPanel, FinanceJournalExport, FinancePeriodHistory } from "./finance-control-panel";
+import { ledgerPilotEnabled } from "@/lib/finance/ledger";
 import styles from "./finance.module.css";
 
 const salesCashierLabel = "إضافة كاشير مبيعات";
@@ -34,10 +35,10 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
   const { snapshot: data, pending, error, message, stale } = state;
   const params = useSearchParams();
   const canManageCashiers = data.canAdminister || data.canManageCashiers === true;
-  const [localSection, setSection] = useState<Section>("overview");
+  const [localSection, setSection] = useState<Section>(() => resolveFinanceSection(params.get("section"), data.canAdminister, canManageCashiers));
   const requestedSection = slug ? localSection : params.get("section") === "settings" ? "settings" : params.get("section") === "cashiers" ? "cashiers" : resolveFinanceSection(params.get("section"), data.canAdminister, canManageCashiers);
   const section = requestedSection === "cashiers" ? requestedSection : financeSectionAllowed(requestedSection,data.role,canManageCashiers) ? requestedSection : canFinance(data.role,"reports") ? "overview" : "inventory";
-  const allows = (operation: string) => (operation === "sales_cashier_create" || operation === "staff") && canManageCashiers ? true : operation === "staff_create" ? canFinance(data.role,"staff_manage") : canFinanceOperation(data.role,operation);
+  const allows = (operation: string) => operation === "journal" && ledgerPilotEnabled(data.cafe.id) ? false : (operation === "sales_cashier_create" || operation === "staff") && canManageCashiers ? true : operation === "staff_create" ? canFinance(data.role,"staff_manage") : canFinanceOperation(data.role,operation);
   const [query, setQuery] = useState("");
   const [partyKind, setPartyKind] = useState("all");
   const [warehouseId, setWarehouseId] = useState("");
@@ -119,6 +120,7 @@ export function FinanceWorkspace({ initialSnapshot, slug }: { initialSnapshot: F
         {canFinance(data.role,"shifts_read") && <FinanceShiftMonitor snapshot={data} slug={slug} onChanged={() => { void state.refresh(); }} />}
       </>}
       {section === "reports" && <>
+        {ledgerPilotEnabled(data.cafe.id) && <Panel title="دفتر الأستاذ والاعتماد" action={<Link className={styles.secondary} href={slug ? `/finance/${encodeURIComponent(slug)}/ledger` : '/dashboard/finance/ledger'}>فتح دفتر الأستاذ</Link>}><p className={styles.subtitle}>أنشئ مسودة قيد وراجع اعتمادها ثم تابع ترحيلها وأثرها في الحسابات</p></Panel>}
         <div className={styles.metrics}><Metric label="صافي المبيعات" value={data.summary.sales} /><Metric label="المشتريات" value={data.summary.purchases} /><Metric label="المصروفات" value={data.summary.expenses} /><Metric label="الربح الدفتري" value={data.summary.profit} /></div>
         <p className={styles.muted}>ملخص الأرصدة حتى آخر تحديث مرشحات التاريخ أدناه تخص سجل القيود المعروض</p>
         <Panel title="ميزان المراجعة" action={exportButton("branda-trial-balance.csv", [["الحساب", "مدين", "دائن", "الرصيد"], ...data.trialBalance.map((line) => [line.name, line.debit, line.credit, line.balance])])}><FinanceTrialBalance lines={data.trialBalance} onSelectAccount={setSelectedAccountId} /></Panel>
