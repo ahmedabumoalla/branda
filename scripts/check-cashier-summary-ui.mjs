@@ -91,10 +91,10 @@ input('789');advance(150);check(fetches[1].init.signal.aborted,'Previous custome
 result(fetches[1],balance('Old'));await settle();render();equal(controller.getSnapshot().summary,null,'Late previous response cannot reappear');
 result(fetches[2],balance('B',0,0));await settle();render();equal(controller.getSnapshot().summary,balance('B',0,0),'Current zero counts are real values');
 input('321');advance(150);advance(500);render();equal(controller.getSnapshot().status,'slow');
-check(!button('تسجيل الختم').props.disabled,'Slow lookup does not disable stamping');check(summaryHTML().includes('تأخر عرض الرصيد'),'Slow state is explicit');
+check(!button('تسجيل الختم').props.disabled,'Slow lookup does not disable stamping');check(summaryHTML().includes('data-summary-loading="compact"')&&!summaryHTML().includes('تأخر عرض الرصيد'),'Slow state uses the compact loader');
 advance(1300);render();equal(controller.getSnapshot().status,'unavailable');check(!field().props.disabled,'Deadline leaves input enabled');
 input('654');advance(150);fetches.at(-1).reject(Error('offline'));await settle();render();
-check(summaryHTML().includes('يمكنك متابعة تسجيل الختم'),'Offline state preserves action');check(!button('تسجيل الختم').props.disabled,'Offline lookup does not disable stamping');
+check(summaryHTML().includes('data-summary-loading="compact"')&&!summaryHTML().includes('تعذر عرض الرصيد'),'Unavailable balance keeps the compact placeholder');check(!button('تسجيل الختم').props.disabled,'Offline lookup does not disable stamping');
 input('987');advance(150);fetches.at(-1).resolve({ok:false,status:404,json:async()=>({ok:false,code:'not_found'})});await settle();render();
 check(summaryHTML().includes('لم تُوجد بطاقة'),'Unknown card renders safely');check(!button('تسجيل الختم').props.disabled,'Unknown summary does not change stamp admission');
 
@@ -118,6 +118,11 @@ for(const selectedLocale of ['ar','en']){
   check(!markup.includes('NaN')&&!markup.includes('undefined'),'No fabricated or invalid values');
   const slow=renderToStaticMarkup(React.createElement(CashierCustomerSummary,{state:{id:1,status:'slow',summary:null,confirmed:false},saved:false}));
   check(!slow.includes('<dd'),'Unknown state never displays zero balances');
+  for(const status of ['loading','slow','unavailable']){
+    const pending=renderToStaticMarkup(React.createElement(CashierCustomerSummary,{state:{id:1,status,summary:null,confirmed:false},saved:true}));
+    check(pending.includes('data-summary-loading="compact"')&&pending.includes(selectedLocale==='en'?'Loading customer details':'جارٍ عرض بيانات العميل'),'Compact loader has a localized accessible name');
+    check(pending.includes(selectedLocale==='en'?'Stamp pending':'الختم قيد التسجيل'),'Actual stamp status stays visible beside the loader');
+  }
 }
 const css=fs.readFileSync(path.join(root,'components/rast-loyalty/rast-cashier.module.css'),'utf8');
 for(const selector of ['customerSummary','customerSummaryHeading','customerSummaryStats','customerSummaryStatus'])check(css.includes('.'+selector),'Every summary CSS selector exists');

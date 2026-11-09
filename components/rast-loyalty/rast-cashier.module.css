@@ -65,6 +65,10 @@
 .customerSummaryStats dt { font-size: 12px; }
 .customerSummaryStats dd { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; font-variant-numeric: tabular-nums; }
 .customerSummaryStatus { font-weight: 700; }
+.customerSummaryPending { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 20px; }
+.customerSummarySpinner { display: inline-block; flex: 0 0 16px; width: 16px; height: 16px; border: 2px solid color-mix(in srgb, currentColor 20%, transparent); border-top-color: currentColor; border-radius: 50%; animation: customerSummarySpin .8s linear infinite; }
+@keyframes customerSummarySpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .customerSummarySpinner { animation: none; } }
 .readSummary { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 6px; padding: 5px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 18%, transparent); border-radius: 14px; background: rgb(255 255 255 / 70%); }
 .readCounter { display: inline-flex; min-width: 66px; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 6px 10px; border-radius: 9px; background: #f1eadc; color: #594316; }
 .readCounter svg { flex-shrink: 0; }

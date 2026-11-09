@@ -14,7 +14,7 @@ export function CashierCustomerSummary({ state, saved, operation }: {
   const completed = operation?.status === "succeeded";
   const failed = operation && ["failed", "needs_review", "duplicate"].includes(operation.status);
   const status = completed ? "تم تسجيل الختم" : failed ? operation.status === "duplicate" ? "عملية مكررة لم يُضف ختم" : "لم يتأكد تسجيل الختم راجع عدادات المزامنة" : saved ? "الختم قيد التسجيل" : "الرصيد الحالي";
-  const unavailable = state.status === "unauthorized" ? "تحقق من جلسة الكاشير لعرض الرصيد" : state.status === "not_found" ? "لم تُوجد بطاقة متاحة لهذا الرقم" : state.status === "unavailable" ? "تعذر عرض الرصيد الآن يمكنك متابعة تسجيل الختم" : state.status === "slow" ? "تأخر عرض الرصيد يمكنك متابعة تسجيل الختم" : "جارٍ عرض بيانات العميل";
+  const unavailable = state.status === "unauthorized" ? "تحقق من جلسة الكاشير لعرض الرصيد" : state.status === "not_found" ? "لم تُوجد بطاقة متاحة لهذا الرقم" : null;
   return <section className={styles.customerSummary} role="status" aria-live="polite" aria-atomic="true" aria-label={t("ملخص العميل")} data-customer-summary="fast-v1">
     {state.summary ? <>
       <div className={styles.customerSummaryHeading}><strong>{state.summary.customerName}</strong><span>{t(status)}</span></div>
@@ -23,6 +23,9 @@ export function CashierCustomerSummary({ state, saved, operation }: {
         <div><dt>{t("المكافآت المتاحة")}</dt><dd>{number(state.summary.availableRewards)}</dd></div>
       </dl>
       {saved && !state.confirmed && !completed && <p>{t("آخر رصيد مؤكد يتحدث بعد اكتمال التسجيل")}</p>}
-    </> : <><p>{t(unavailable)}</p>{saved && <p className={styles.customerSummaryStatus}>{t(status)}</p>}</>}
+    </> : <div className={styles.customerSummaryPending}>
+      {unavailable ? <p>{t(unavailable)}</p> : <span className={styles.customerSummarySpinner} role="img" aria-label={t("جارٍ عرض بيانات العميل")} data-summary-loading="compact" />}
+      {saved && <p className={styles.customerSummaryStatus}>{t(status)}</p>}
+    </div>}
   </section>;
 }
