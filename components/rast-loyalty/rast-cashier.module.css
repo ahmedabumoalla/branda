@@ -55,6 +55,16 @@
 .guide summary:focus-visible { outline: 2px solid var(--cashier-ink); outline-offset: 2px; border-radius: 6px; }
 .guideContent { display: grid; gap: 10px; padding-bottom: 6px; }
 .readStatus { margin-block: 12px; min-width: 0; }
+.customerSummary { margin-block: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 18%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--cashier-paper) 60%, white); min-width: 0; overflow-wrap: anywhere; }
+.customerSummaryHeading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.customerSummaryHeading strong { font-size: 16px; }
+.customerSummaryHeading span, .customerSummary p { font-size: 12px; line-height: 1.7; }
+.customerSummary p { margin: 0; }
+.customerSummaryStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 8px 0; }
+.customerSummaryStats > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.customerSummaryStats dt { font-size: 12px; }
+.customerSummaryStats dd { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; font-variant-numeric: tabular-nums; }
+.customerSummaryStatus { font-weight: 700; }
 .readSummary { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 6px; padding: 5px; border: 1px solid color-mix(in srgb, var(--cashier-ink) 18%, transparent); border-radius: 14px; background: rgb(255 255 255 / 70%); }
 .readCounter { display: inline-flex; min-width: 66px; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 6px 10px; border-radius: 9px; background: #f1eadc; color: #594316; }
 .readCounter svg { flex-shrink: 0; }

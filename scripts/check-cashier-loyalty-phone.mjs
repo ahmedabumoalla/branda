@@ -71,6 +71,7 @@ const hooks = {
 const previewCard = { customerName: "Customer A", stampsInCycle: 2, purchasesRequired: 7, availableRewards: 1, rewardName: "Coffee" };
 const reward = { sourceType: "loyalty", rewardCode: "REWARD123", canRedeem: true, customerName: "Customer A", rewardTitle: "Coffee" };
 const { RastCashier } = load("components/rast-loyalty/rast-cashier.tsx", {
+  "./use-customer-summary": { useCustomerSummary: () => ({ state: { id: null, status: "idle", summary: null, confirmed: false }, lookup: () => null, clear() {}, confirm() {} }) },
   "./use-read-outbox": { useReadOutbox: () => ({ rows: [], storageError: false, authPaused: false, save: (method, value) => { queued.push({ method, value }); return new Promise((resolve, reject) => { resolveSave = resolve; rejectSave = reject; }); } }) },
   react: hooks,
   "@/components/cashier/analytics-coupon-redemption": { AnalyticsCouponRedemption: () => null },

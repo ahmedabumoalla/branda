@@ -19,6 +19,7 @@ const operationSchema = z.object({
   requestId: z.string().uuid(), status: z.enum(["pending", "processing", "succeeded", "failed", "needs_review", "duplicate"]),
   identifierHint: z.string(), customerName: z.string().nullable().default(null), cashierName: z.string().default(""),
   availableRewards: z.number().nullable().default(null), rewardIssued: z.boolean().default(false),
+  stampsInCycle: z.number().int().nonnegative().nullable().default(null), purchasesRequired: z.number().int().positive().nullable().default(null),
   errorCode: z.string().nullable().default(null), retryable: z.boolean().default(false), attempts: z.number().int().nonnegative(),
   createdAt: z.string(), completedAt: z.string().nullable().default(null), cardCreated: z.boolean().optional(), invitationStatus: z.string().nullable().optional(),
 });

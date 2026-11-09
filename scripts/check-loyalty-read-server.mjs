@@ -31,6 +31,15 @@ const mocks = {
 };
 const dal = load("lib/data/loyalty-read-operations.ts", mocks);
 const input = { cafeId, cashierId, requestId, method: "phone", value: "٠٥٠١٢٣٤٥٦٧", clientCreatedAt: new Date().toISOString() };
+await check("completed read retains exact zero stamp and earned reward balances", async () => {
+  rpcResult = { data: { ok: true, operation: { ...op, status: "succeeded", customerName: "Customer", stampsInCycle: 0, purchasesRequired: 6, availableRewards: 2 } }, error: null };
+  const completed = await dal.enqueueLoyaltyRead(input);
+  assert.equal(completed.stampsInCycle, 0); assert.equal(completed.purchasesRequired, 6); assert.equal(completed.availableRewards, 2);
+  rpcResult = { data: { ok: true, operation: op }, error: null };
+  const legacy = await dal.enqueueLoyaltyRead(input);
+  assert.equal(legacy.stampsInCycle, null); assert.equal(legacy.purchasesRequired, null); assert.equal(legacy.availableRewards, null);
+  calls = [];
+});
 await check("tenant and cashier mismatch reject before service RPC", async () => {
   for (const scope of [{ cafeId: profileId, cashierId }, { cafeId, cashierId: profileId }]) {
     await assert.rejects(dal.enqueueLoyaltyRead({ ...input, ...scope }), { code: "session_scope_changed" });

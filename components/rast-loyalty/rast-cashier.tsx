@@ -11,6 +11,8 @@ import type { CashierRewardPreview } from "@/lib/data/customer-rewards";
 import type { LocalRead } from "@/lib/loyalty/read-outbox";
 import { RastCameraScanner } from "./rast-camera-scanner";
 import { useReadOutbox } from "./use-read-outbox";
+import { useCustomerSummary } from "./use-customer-summary";
+import { CashierCustomerSummary } from "./cashier-customer-summary";
 import { createRastScanSession, type RastScanPreview } from "./scan-session";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
 import { loyaltyTheme } from "./loyalty-theme";
@@ -85,17 +87,37 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
   const previewElement = useRef<HTMLElement>(null);
   const errorElement = useRef<HTMLParagraphElement>(null);
   const reads = useReadOutbox({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const customerSummary = useCustomerSummary({ cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
+  const [summaryRead, setSummaryRead] = useState<{ requestId: string; lookupId: number; cafeId: string; cashierId: string } | null>(null);
+  const selectedRead = summaryRead && summaryRead.cafeId === initialData.cafe.id && summaryRead.cashierId === initialData.cashier.id
+    && summaryRead.lookupId === customerSummary.state.id ? reads.rows.find(row => row.requestId === summaryRead.requestId) : undefined;
+  const confirmedOperation = selectedRead?.operation;
+  const confirmSummary = customerSummary.confirm;
+  useEffect(() => {
+    if (!summaryRead || confirmedOperation?.status !== "succeeded" || !confirmedOperation.customerName
+      || confirmedOperation.stampsInCycle == null || confirmedOperation.purchasesRequired == null || confirmedOperation.availableRewards == null) return;
+    confirmSummary(summaryRead.lookupId, { customerName: confirmedOperation.customerName, stampsInCycle: confirmedOperation.stampsInCycle,
+      purchasesRequired: confirmedOperation.purchasesRequired, availableRewards: confirmedOperation.availableRewards });
+  }, [confirmedOperation, summaryRead, confirmSummary]);
   useEffect(() => { if (preview) previewElement.current?.focus(); }, [preview]);
   useEffect(() => { if (error) errorElement.current?.focus(); }, [error]);
   useEffect(() => { if (!pending && focusInputAfterScan.current) { focusInputAfterScan.current = false; input.current?.focus(); } }, [pending, preview, value]);
-  function updateCode(code: string) { if (processing.current || session.busy) return; resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); }
-  function detectCode(code: string) { if (session.busy) return; updateCode(code); setMessage(kind === "stamp" ? "تمت قراءة الرمز اضغط تسجيل الختم" : "تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
+  function updateCode(code: string, immediate = false) {
+    if (processing.current || session.busy) return;
+    if (summaryRead) customerSummary.clear();
+    resolvedCode.current = ""; session.invalidate(); setValue(code); setPreview(null); setMessage(""); setError(""); setNoRewards(false); setSummaryRead(null);
+    if (kind === "stamp" && code.trim()) customerSummary.lookup(lookupMethod, code, { immediate });
+    else customerSummary.clear();
+  }
+  function detectCode(code: string) { if (session.busy) return; updateCode(code, true); setMessage(kind === "stamp" ? "تمت قراءة الرمز اضغط تسجيل الختم" : "تمت قراءة الرمز اضغط فحص لعرض بيانات العميل قبل التأكيد"); input.current?.focus(); }
   async function queueStamp() {
     if (processing.current || !value.trim()) return;
     processing.current = true;
     setPending(true); setError(""); setMessage("");
+    const lookupId = customerSummary.lookup(lookupMethod, value, { immediate: true });
     try {
       const saved = await reads.save(lookupMethod, value);
+      if (lookupId !== null) setSummaryRead({ requestId: saved.row.requestId, lookupId, cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
       setMessage(saved.duplicate ? "هذه القراءة محفوظة مسبقًا وتنتظر المزامنة" : "تم حفظ القراءة على هذا الجهاز يمكنك خدمة العميل التالي وتابع عدادات المزامنة");
       setValue(""); focusInputAfterScan.current = true;
     } catch {
@@ -171,6 +193,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
             <input id="rast-scan-code" ref={input} dir="ltr" type={lookupMethod === "phone" ? "tel" : "text"} inputMode={lookupMethod === "phone" ? "tel" : "text"} value={value} disabled={pending} onChange={(event) => updateCode(event.target.value)} aria-describedby="rast-scan-help" autoComplete="off" autoCapitalize="off" spellCheck={false} maxLength={lookupMethod === "phone" ? 30 : 500} placeholder={lookupMethod === "phone" ? "05xxxxxxxx" : kind === "stamp" ? t("امسح البطاقة أو أدخل رقم البطاقة أو الجوال") : t("امسح بالقارئ أو أدخل الرمز")} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--cashier-ink)]/30 bg-white px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cashier-ink)]" />
             <button type="submit" disabled={pending || !value.trim()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--cashier-ink)] px-4 font-bold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-4">{kind === "stamp" ? <BadgeCheck size={19} aria-hidden="true" /> : lookupMethod === "phone" ? <Search size={19} aria-hidden="true" /> : <ScanLine size={19} aria-hidden="true" />}{kind === "stamp" ? pending ? t("جاري حفظ القراءة") : t("تسجيل الختم") : pending ? t("جاري التحقق") : lookupMethod === "phone" ? t("البحث عن العميل") : t("فحص المكافأة")}</button>
           </form>
+          {kind === "stamp" && <CashierCustomerSummary state={customerSummary.state} saved={Boolean(selectedRead)} operation={selectedRead?.operation} />}
           {lookupMethod === "code" && <RastCameraScanner key={kind} disabled={pending} onDetected={detectCode} />}</>}
           {preview && <section ref={previewElement} tabIndex={-1} className={layout.preview} aria-labelledby="rast-scan-preview">
             {catalog?.unavailable && <p className="mb-2 text-xs leading-5 opacity-75" role="status">{t("تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا")}</p>}

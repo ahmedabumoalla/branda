@@ -7,6 +7,8 @@ export type LoyaltyReadOperation = {
   customerName: string | null;
   cashierName: string;
   availableRewards: number | null;
+  stampsInCycle?: number | null;
+  purchasesRequired?: number | null;
   rewardIssued: boolean;
   errorCode: string | null;
   errorMessage: string | null;

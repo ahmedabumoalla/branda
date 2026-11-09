@@ -5,6 +5,16 @@ export type LocalizedText = { ar: string; en: string };
 export type CashierMessage = string | { text: string; values: Record<string, string | number | LocalizedText> };
 export const cashierLanguageCookie = "branda-cashier-language";
 const readEnglish: Record<string, string> = {
+  "ملخص العميل": "Customer summary",
+  "الرصيد الحالي": "Current balance",
+  "الختم قيد التسجيل": "Stamp pending",
+  "جارٍ عرض بيانات العميل": "Loading customer details",
+  "تأخر عرض الرصيد يمكنك متابعة تسجيل الختم": "Balance is taking longer You can still record the stamp",
+  "تعذر عرض الرصيد الآن يمكنك متابعة تسجيل الختم": "Balance unavailable You can still record the stamp",
+  "تحقق من جلسة الكاشير لعرض الرصيد": "Check your cashier session to view the balance",
+  "لم تُوجد بطاقة متاحة لهذا الرقم": "No available card found for this number",
+  "آخر رصيد مؤكد يتحدث بعد اكتمال التسجيل": "Last confirmed balance Updates when the stamp completes",
+  "لم يتأكد تسجيل الختم راجع عدادات المزامنة": "Stamp not confirmed Check the sync counters",
   "رقم البطاقة أو رقم الجوال": "Card number or phone number",
   "امسح البطاقة أو أدخل رقم البطاقة أو الجوال": "Scan a card or enter the card or phone number",
   "تسجيل الختم": "Record stamp",
