@@ -114,8 +114,11 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
     if (processing.current || !value.trim()) return;
     processing.current = true;
     setPending(true); setError(""); setMessage("");
-    const lookupId = customerSummary.lookup(lookupMethod, value, { immediate: true });
     try {
+      // The optional read must never prevent durable stamp intake or leave the form locked.
+      let lookupId: number | null = null;
+      try { lookupId = customerSummary.lookup(lookupMethod, value, { immediate: true }); }
+      catch { console.warn("cashier_summary_unavailable"); }
       const saved = await reads.save(lookupMethod, value);
       if (lookupId !== null) setSummaryRead({ requestId: saved.row.requestId, lookupId, cafeId: initialData.cafe.id, cashierId: initialData.cashier.id });
       setMessage(saved.duplicate ? "هذه القراءة محفوظة مسبقًا وتنتظر المزامنة" : "تم حفظ القراءة على هذا الجهاز يمكنك خدمة العميل التالي وتابع عدادات المزامنة");

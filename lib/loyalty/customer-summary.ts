@@ -52,7 +52,12 @@ export function createCustomerSummaryController(options: {
   timers?: { setTimeout: typeof setTimeout; clearTimeout: typeof clearTimeout };
 }) {
   const send = options.fetch ?? fetch;
-  const timers = options.timers ?? { setTimeout, clearTimeout };
+  // Native browser timers require Window as receiver; never copy them as methods
+  // onto an ordinary object (that throws Illegal invocation before lookup starts).
+  const timers = options.timers ?? {
+    setTimeout: (handler: () => void, delay: number) => globalThis.setTimeout(handler, delay),
+    clearTimeout: (id: ReturnType<typeof setTimeout> | undefined) => globalThis.clearTimeout(id),
+  };
   const listeners = new Set<() => void>();
   let state = EMPTY, serial = 0, identifierKey: string | null = null;
   let queued: ReturnType<typeof setTimeout> | undefined;

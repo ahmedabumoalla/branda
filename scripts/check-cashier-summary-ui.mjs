@@ -40,9 +40,9 @@ const hooks={...React,
 };
 const languageStub={useCashierLanguage:()=>({locale,dir:locale==='ar'?'rtl':'ltr',t:v=>language.cashierText(locale,v),errorText:v=>language.cashierError(locale,v)}),CashierLanguageSwitch:()=>null};
 const cache=new Map();
-let rewardLookups=0,commits=[];
+let rewardLookups=0,commits=[],throwSummaryLookup=false;
 const stubs={react:hooks,
-  '@/lib/loyalty/customer-summary':{...summaryModule,createCustomerSummaryController(options){controller=summaryModule.createCustomerSummaryController({...options,timers:fakeTimers,fetch:(url,init)=>{const task=deferred();fetches.push({url,init,...task});return task.promise;}});return controller;}},
+  '@/lib/loyalty/customer-summary':{...summaryModule,createCustomerSummaryController(options){controller=summaryModule.createCustomerSummaryController({...options,timers:fakeTimers,fetch:(url,init)=>{const task=deferred();fetches.push({url,init,...task});return task.promise;}});const lookup=controller.lookup;controller.lookup=(...args)=>{if(throwSummaryLookup)throw new TypeError('Synthetic browser API failure');return lookup(...args);};return controller;}},
   './use-read-outbox':{useReadOutbox:()=>({rows,storageError:false,authPaused:false,save(method,value){const task=deferred();saved.push({method,value,...task});return task.promise;}})},
   '@/components/cashier/cashier-language':languageStub,
   '@/components/cashier/analytics-coupon-redemption':{AnalyticsCouponRedemption:()=>null},
@@ -98,6 +98,12 @@ check(summaryHTML().includes('يمكنك متابعة تسجيل الختم'),'O
 input('987');advance(150);fetches.at(-1).resolve({ok:false,status:404,json:async()=>({ok:false,code:'not_found'})});await settle();render();
 check(summaryHTML().includes('لم تُوجد بطاقة'),'Unknown card renders safely');check(!button('تسجيل الختم').props.disabled,'Unknown summary does not change stamp admission');
 
+input('111');throwSummaryLookup=true;const saveCount=saved.length;
+submit();equal(saved.length,saveCount+1,'Synchronous summary exception cannot prevent durable stamp intake');
+rows=[{requestId:'request-without-summary'}];saved.at(-1).resolve({duplicate:false,row:rows[0]});await settle();render();
+equal(field().props.value,'','Saved input clears even when the optional summary throws');
+check(!field().props.disabled,'Summary exception cannot leave the form locked');
+throwSummaryLookup=false;
 button('صرف مكافأة').props.onClick();render();equal(node(),undefined,'Redemption has no stamp summary');input('CARD123');const before=fetches.length;submit();await settle();render();
 equal(fetches.length,before,'Redemption performs no speculative summary request');equal(rewardLookups,1,'Existing reward preview remains');
 button('تأكيد تسليم المكافأة وصرفها').props.onClick();await settle();render();equal(commits[0].value,'REWARD123','Confirmation keeps exact selected reward code');

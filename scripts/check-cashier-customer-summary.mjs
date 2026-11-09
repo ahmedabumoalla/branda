@@ -43,6 +43,28 @@ function setup() {
 let checks = 0;
 async function check(name, fn) { await fn(); checks++; console.log(`PASS ${name}`); }
 
+await check("default timers preserve the browser WebIDL receiver without injected clock", async () => {
+  const originalSet=globalThis.setTimeout, originalClear=globalThis.clearTimeout;
+  const scheduled=new Map();let serial=0,calls=0;
+  globalThis.setTimeout=function(fn,ms){
+    if(this!==globalThis)throw new TypeError("Illegal invocation");
+    const id=++serial;scheduled.set(id,{fn,ms});return id;
+  };
+  globalThis.clearTimeout=function(id){
+    if(this!==globalThis)throw new TypeError("Illegal invocation");
+    scheduled.delete(id);
+  };
+  try {
+    const c=createCustomerSummaryController({scope,fetch:async()=>{calls++;return {ok:true,status:200,json:async()=>({ok:true,summary})};}});
+    assert.doesNotThrow(()=>c.lookup("phone","0501234567",{immediate:true}));
+    await flush();assert.equal(calls,1);assert.equal(c.getSnapshot().status,"ready");assert.equal(scheduled.size,0);
+    assert.doesNotThrow(()=>c.clear());assert.equal(c.getSnapshot().status,"idle");
+    c.lookup("code","42");const queued=[...scheduled].find(([,t])=>t.ms===150);assert(queued);
+    scheduled.delete(queued[0]);queued[1].fn();await flush();assert.equal(calls,2);assert.equal(c.getSnapshot().status,"ready");
+    c.clear();assert.equal(scheduled.size,0);
+  } finally {globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear;}
+});
+
 await check("complete identifiers and Arabic digits; no partial-phone requests", () => {
   assert.deepEqual(customerSummaryIdentifier("code", "٤٢"), {method:"code", value:"42"});
   assert.deepEqual(customerSummaryIdentifier("code", "0501234567"), {method:"phone", value:"966501234567"});
