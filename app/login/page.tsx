@@ -132,6 +132,7 @@ export default function LoginPage() {
             <span className={styles.loadingStatus} role="status">{loading ? "جارٍ تسجيل الدخول" : ""}</span>
           </form>
           <div className={styles.signup}><span>جديد على برندة؟</span><Link href="/register">أنشئ حساب علامتك <ArrowLeft size={16} aria-hidden="true" /></Link></div>
+          <Link href="/cashier/login" className={styles.cashierEntry}><span>دخول صفحة الكاشير</span><ArrowLeft size={18} aria-hidden="true" /></Link>
         </div>
         <footer className={styles.contentFooter}><ShieldCheck size={17} aria-hidden="true" /><span>مساحتك لإدارة علامتك بثقة</span></footer>
       </section>

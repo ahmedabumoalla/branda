@@ -148,6 +148,9 @@
 .signup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin-top: 28px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: var(--label-size); }
 .signup a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 700; color: var(--ink); }
 .signup a:hover { text-decoration: underline; text-underline-offset: 5px; }
+.cashierEntry { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 48px; margin-top: 16px; padding: 12px 20px; border: 1px solid var(--field-border); border-radius: 10px; background: var(--soft); color: var(--ink); font-size: var(--label-size); font-weight: 700; }
+.cashierEntry:hover { border-color: var(--accent); background: var(--surface); }
+.cashierEntry > svg { flex-shrink: 0; }
 .contentFooter { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 12px; }
 .error { padding: 12px 16px; border-inline-start: 3px solid var(--danger); border-radius: 6px; background: var(--danger-bg); color: var(--danger); font-size: var(--label-size); line-height: 1.8; margin: 0; overflow-wrap: anywhere; }
 .loadingStatus { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
