@@ -37,7 +37,7 @@
 .imageName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--finance-muted,#78675c); }
 @media(max-width:380px) { .imageRow { padding: 12px; gap: 10px; flex-wrap: wrap; } .upload { flex-basis: 160px; } }
 @media(prefers-reduced-motion:reduce) { .meterFill { transition: none; } }
-.linkRows { display: grid; gap: 10px; margin-top: 12px; }
+.linkRows { display: grid; gap: 10px; margin-block: 12px; }
 .linkRow { display: grid; grid-template-columns: minmax(0,1fr) minmax(100px,.45fr) 44px; align-items: end; gap: 10px; }
 .linkRow button { min-height: 44px; }
 .choice { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
