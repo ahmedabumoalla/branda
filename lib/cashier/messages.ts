@@ -207,5 +207,6 @@ export const cashierEnglish: Record<string, string> = {
   "ترجمة تلقائية لتفاصيل المكافأة": "Reward details are automatically translated",
   "تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا": "Some details could not be translated The original text is shown Check again to retry",
   "دخول الإدارة المالية": "Finance management sign in",
+  "دخول الفريق المالي": "Finance team sign in",
   "لا يوجد وصول نشط لكاشير المبيعات في هذه العلامة تواصل مع مالك العلامة": "You do not have active sales cashier access to this brand Contact the brand owner",
 };

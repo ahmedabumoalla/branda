@@ -26,17 +26,18 @@ export function FinanceLogin({ slug }: { slug: string }) {
     finally { locked.current = false; setBusy(false); }
   }
   return <main className={styles.page} dir="rtl">
-    <section className={styles.story}><BarndaksaLogo /><span>برندة المالية</span><h1>كل حركة محسوبة<br /><em>وكل رصيد واضح</em></h1><p>المبيعات والمخزون والورديات في مساحة عمل واحدة</p><div className={styles.rule} /><small>مساحة مالية مستقلة للعلامة وفريقها</small></section>
+    <section className={styles.story}><BarndaksaLogo /><span>برندة المالية</span><h1>كل حركة محسوبة<br /><em>وكل رصيد واضح</em></h1><p>المبيعات والمخزون والورديات في مساحة عمل واحدة</p><div className={styles.rule} /><small>إدارة مالية مرتبطة بعلامتك وصلاحيات فريقك</small></section>
     <section className={styles.panel} aria-labelledby="finance-login-title">
       <div className={styles.mark}><LockKeyhole aria-hidden="true" /></div><p className={styles.kicker}>دخول الفريق المالي</p>
-      <h2 id="finance-login-title">جاهز لبداية الوردية</h2><p className={styles.hint}>استخدم الحساب الذي أضافه مسؤول العلامة إلى المالية</p>
+      <h2 id="finance-login-title">الدخول إلى مساحة العمل</h2><p className={styles.hint}>استخدم الحساب الذي أضافه مسؤول العلامة إلى المالية</p>
       <form onSubmit={submit} aria-busy={busy}>
         <label>البريد الإلكتروني أو رقم الجوال<input name="identity" autoComplete="username" required maxLength={254} dir="ltr" disabled={busy} /></label>
         <label>كلمة المرور<div className={styles.password}><input name="password" autoComplete="current-password" type={visible ? "text" : "password"} required maxLength={128} dir="ltr" disabled={busy} /><button type="button" aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} aria-pressed={visible} onClick={() => setVisible(!visible)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</button></div></label>
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <button className={styles.submit} disabled={busy} type="submit">{busy ? "جار تسجيل الدخول" : "الدخول إلى كاشير المالية"}<ArrowUpLeft aria-hidden="true" /></button>
+        <button className={styles.submit} disabled={busy} type="submit">{busy ? "جار تسجيل الدخول" : "الدخول إلى المالية"}<ArrowUpLeft aria-hidden="true" /></button>
       </form>
       <Link className={styles.switchLink} href={`/finance/${encodeURIComponent(slug)}/login`}>دخول الكاشير بكلمة المرور أو رمز واتساب</Link>
+      <Link className={styles.switchLink} href="/login">دخول صاحب العلامة إلى لوحة التحكم</Link>
       <p className={styles.note}>تحتاج صلاحية دخول؟ تواصل مع مسؤول العلامة</p>
     </section>
   </main>;

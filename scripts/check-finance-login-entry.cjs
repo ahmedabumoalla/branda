@@ -15,14 +15,16 @@ function load(file, mocks) {
 (async () => {
   const Sales = () => null, Management = () => null;
   const page = load('app/finance/[slug]/login/page.tsx', {
-    'next/navigation': { notFound() { throw new Error('NOT_FOUND'); } },
+    'next/navigation': { notFound() { throw new Error('NOT_FOUND'); }, redirect(url) { throw new Error('REDIRECT ' + url); } },
+    '@/lib/supabase/server': { getSessionUser: async () => null },
     '@/components/finance/finance-login': { FinanceLogin: Management },
     '@/components/finance/sales-cashier-login': { SalesCashierLogin: Sales },
   }).default;
   const render = (slug, access) => page({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({ access }) });
   const sales = await render('test-cafe');
   assert.equal(sales.type, Sales); assert.equal(sales.props.slug, 'test-cafe');
-  assert.equal((await render('test-cafe', 'management')).type, Management);
+  await assert.rejects(render('test-cafe', 'management'), /REDIRECT \/login/);
+  assert.equal((await render('test-cafe', 'team')).type, Management);
   assert.equal((await render('test-cafe', 'unknown')).type, Sales);
   await assert.rejects(render('../other'), /NOT_FOUND/);
   const { salesCashierBrandDestination: destination } = load('components/finance/sales-cashier-login.tsx', {});
@@ -32,5 +34,5 @@ function load(file, mocks) {
   assert.equal(destination('test-cafe', { brands: [{ slug: 'another', name: 'Other' }, { slug: 'test-cafe', name: 'Target' }] }), '/finance/test-cafe/pos');
   assert.equal(destination('test-cafe', { brands: [{ slug: 'another', name: 'Other' }] }), null);
   assert.equal(destination('test-cafe', {}), null);
-  console.log('PASS finance login entry: shared WhatsApp/password UI, management fallback, slug validation and authorized target-brand routing');
+  console.log('PASS finance login entry: shared WhatsApp/password UI, owner normal login, explicit staff entry, slug validation and authorized target-brand routing');
 })().catch(error => { console.error(error); process.exitCode = 1; });

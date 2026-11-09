@@ -11,6 +11,7 @@ import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { getBrandFinanceSnapshot } from "@/lib/data/brand-finance";
+import { getFinanceEntryPath } from "@/lib/data/finance-entry";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { getSupabaseServiceRoleKey, requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 import { isSalesCashierPassword, SALES_CASHIER_PASSWORD_HINT } from "@/lib/finance/sales-cashier-password";
@@ -234,7 +235,7 @@ export async function signInFinance(slug: string, identity: string, password: st
   if (error || !data.user) return { ok: false as const, message: "تعذر تسجيل الدخول تحقق من بياناتك" };
   try {
     const snapshot = await getBrandFinanceSnapshot(safeSlug);
-    return { ok: true as const, redirectTo: `/finance/${safeSlug}${["accountant", "warehouse", "auditor"].includes(snapshot.role) ? "" : "/pos"}`, message: "تم تسجيل الدخول" };
+    return { ok: true as const, redirectTo: await getFinanceEntryPath(safeSlug, snapshot), message: "تم تسجيل الدخول" };
   } catch {
     await supabase.auth.signOut({ scope: "local" });
     return { ok: false as const, message: "لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة" };

@@ -33,11 +33,12 @@ async function main(){
  dashboardCafe={id:'brand'};canManage=false;assert.equal((await pos(params)).props.dashboardHref,undefined,'Cashier never gets dashboard return');
 
  let states=[],cursor=0,pathname='/dashboard/finance',search='section=sales',expandedSidebar=0,navigated=0,history=[];
- const menu=load('components/dashboard/finance-sidebar-menu.tsx',{react:{...React,useState:initial=>{const i=cursor++;if(!(i in states))states[i]=initial;return[states[i],v=>states[i]=typeof v==='function'?v(states[i]):v];}},'next/navigation':{usePathname:()=>pathname,useSearchParams:()=>new URLSearchParams(search)},'next/link':{__esModule:true,default:function Link(){}}}).FinanceSidebarMenu;
+ const menu=load('components/dashboard/finance-sidebar-menu.tsx',{react:{...React,useId:()=>`sidebar-${cursor++}`,useState:initial=>{const i=cursor++;if(!(i in states))states[i]=typeof initial==='function'?initial():initial;return[states[i],v=>states[i]=typeof v==='function'?v(states[i]):v];}},'next/navigation':{usePathname:()=>pathname,useSearchParams:()=>new URLSearchParams(search)},'next/link':{__esModule:true,default:function Link(){}}}).FinanceSidebarMenu;
  let collapsed=false;const render=()=>{cursor=0;return menu({slug:'brand-test',collapsed,onExpand:()=>expandedSidebar++,onNavigate:()=>navigated++});};
  let tree=render();let button=nodes(tree).find(n=>n.type==='button');assert.equal(button.props['aria-expanded'],true);assert.equal(nodes(tree).filter(n=>n.props['aria-current']==='page').length,1);
- button.props.onClick();tree=render();assert.equal(nodes(tree).find(n=>n.props.id==='dashboard-finance-sections').props.hidden,true);
- collapsed=true;tree=render();nodes(tree).find(n=>n.type==='button').props.onClick();assert.equal(expandedSidebar,1);collapsed=false;tree=render();assert.equal(nodes(tree).find(n=>n.props.id==='dashboard-finance-sections').props.hidden,false);
+ const panelId=button.props['aria-controls'];
+ button.props.onClick();tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,true);
+ collapsed=true;tree=render();nodes(tree).find(n=>n.type==='button').props.onClick();assert.equal(expandedSidebar,1);collapsed=false;tree=render();assert.equal(nodes(tree).find(n=>n.props.id===panelId).props.hidden,false);
  global.window={history:{pushState:(_s,_t,url)=>history.push(url)}};let prevented=0;
  const sales=nodes(tree).find(n=>n.props.href==='/dashboard/finance?section=sales');assert.equal(sales.props.prefetch,false);sales.props.onClick({button:0,preventDefault:()=>prevented++});assert.equal(prevented,1);assert.deepEqual(history,['/dashboard/finance?section=sales']);
  sales.props.onClick({button:0,ctrlKey:true,preventDefault:()=>prevented++});assert.equal(prevented,1);assert(nodes(tree).some(n=>n.props.href==='/finance/brand-test/pos'));assert(!nodes(tree).some(n=>n.props.href==='/dashboard/finance/pos'));
