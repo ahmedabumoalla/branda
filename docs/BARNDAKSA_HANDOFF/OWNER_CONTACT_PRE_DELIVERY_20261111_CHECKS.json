@@ -1,0 +1,126 @@
+{
+  "at": "2026-11-11T15:50:45.602Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "lib/data/admin-brand-onboarding.ts": "cfe1ed7e30a426b15a14b94db216fad4e4592af3f9c91c4da04ecf3eed1ccee1",
+    "supabase/migrations/20261111154614_admin_owner_contact_pre_delivery.sql": "3c5561973fc6c7ecd03c93722cce511b43348029dd2e7ecb8ff7c208a04cb114",
+    "scripts/check-admin-owner-edit-db.mjs": "e005d14d345b3383710985a33efaad27889ab0384b59934a8e7345f98c0de43c",
+    "scripts/check-admin-owner-edit-server.mjs": "4754d50a089a5cec41e67c2a81df5a11d2563876b4459cf28487ec8651162d55",
+    "scripts/check-brand-owner-welcome-server.mjs": "7b612267fccd44a384e543c0d85c6257d46b58b2a49175531d768a4c4ba3097f",
+    "scripts/check-admin-welcome-current-subscription-db.mjs": "c80592a1dca4ee9ad221cd02a7923269fb84ec60f6b675741f0a179bb94d998e",
+    "supabase/migrations/20261009193000_package_service_boundaries.sql": "421e4250d385cf8f3f3d7c10de980260ef02b6c0ff3928d333df3b33bfeb292e",
+    "supabase/migrations/20261013232802_admin_brand_drafts.sql": "d91564c98fcccb2d5eee9debc571718e5bb84863d0ec809d46fbf7009af2da03",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "database",
+      "args": [
+        "scripts/check-admin-owner-edit-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.132Z",
+      "end": "2026-11-11T15:50:30.539Z",
+      "summary": "PASS 14 owner edit database scenarios, private ACL and unchanged shared service guard\n"
+    },
+    {
+      "name": "server",
+      "args": [
+        "scripts/check-admin-owner-edit-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.138Z",
+      "end": "2026-11-11T15:50:29.419Z",
+      "summary": "PASS 4 owner edit error mappings, cancellation, password preservation and sanitized diagnostics\n"
+    },
+    {
+      "name": "welcome",
+      "args": [
+        "scripts/check-brand-owner-welcome-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.141Z",
+      "end": "2026-11-11T15:50:29.589Z",
+      "summary": "PASS 9 mocked owner handoff authorization, modes, single-send retry and message checks; no live messages\n"
+    },
+    {
+      "name": "subscription",
+      "args": [
+        "scripts/check-admin-welcome-current-subscription-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.145Z",
+      "end": "2026-11-11T15:50:30.565Z",
+      "summary": "Admin welcome current subscription: 35 SQL/security/state checks passed\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.148Z",
+      "end": "2026-11-11T15:50:30.479Z",
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.152Z",
+      "end": "2026-11-11T15:50:45.602Z",
+      "summary": ""
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "lib/data/admin-brand-onboarding.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:50:29.156Z",
+      "end": "2026-11-11T15:50:30.773Z",
+      "summary": ""
+    }
+  ],
+  "database": {
+    "verification": {
+      "anonDenied": true,
+      "at": "2026-11-11T15:51:46.354292+00:00",
+      "authenticatedDenied": true,
+      "installedBodyMatchesHistory": true,
+      "migrationRecorded": true,
+      "onlyOneTriggerConsumer": true,
+      "serviceDenied": true,
+      "settingsTriggerScoped": true
+    },
+    "actualCaseRollback": "PASS before and after installation",
+    "unchanged": [
+      "shared service guard",
+      "Auth owner-edit trigger",
+      "settings/accounts RLS",
+      "target subscriptions",
+      "target cards"
+    ],
+    "concurrentOwnerSaveObserved": {
+      "at": "2026-11-11T15:52:32.557106+00:00",
+      "authUpdatedAt": "2026-11-11T15:51:23.018413+00:00",
+      "contactSynced": true,
+      "handoffState": "ready",
+      "newPhoneSaved": true,
+      "pendingEdit": false,
+      "recentAuthAudit": null
+    },
+    "advisorsBefore": 323,
+    "advisorsAfter": 323,
+    "newAdvisors": 0
+  }
+}

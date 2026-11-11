@@ -86,7 +86,11 @@ export async function updateAdminBrandOwner(input: AdminBrandOwnerInput) {
   if (result.error) {
     // Cancelling a staged proof also makes any late Auth response roll back safely.
     await admin.rpc("admin_cancel_brand_owner_edit", { p_actor: actor.id, p_cafe: cafeId, p_id: requestId });
-    throw new Error("تعذر حفظ بيانات المالك قد يكون الجوال أو البريد مستخدمًا راجع البيانات وحاول مجددًا");
+    if (result.error.code === "phone_exists") accountError("PHONE_EXISTS");
+    if (result.error.code === "email_exists") accountError("EMAIL_EXISTS");
+    if (result.error.code === "weak_password") throw new Error("كلمة المرور لا تحقق متطلبات الأمان اختر كلمة أقوى ثم أعد الحفظ");
+    console.error("admin_brand_owner_update_failed", { code: result.error.code, status: result.error.status });
+    throw new Error("تعذر حفظ بيانات المالك بسبب خطأ في خدمة الحساب حدّث حالة العلامة ثم حاول مجددًا");
   }
   throw new Error("تعذر تأكيد الحفظ حدّث حالة العلامة قبل المحاولة مجددًا");
 }

@@ -1,5 +1,7 @@
 # Branda current handoff
 
+- OWNER CONTACT PRE-DELIVERY FIX 2026-11-11: Auth completion was blocked by settings entitlement before trial start. Applied20261111154614: dedicated settings guard permits only private admin-proven same-owner contact-only nested edits; shared entitlement guard/owner Auth trigger/other columns and services retained. Actual pre/post rollback PASS;14SQL/4server/9handoff/35subscription/types/text/lint PASS;323advisors unchanged. Concurrent owner save observed with new phone synchronized and handoff ready; no task-committed customer edits/messages/trial activation. See [handoff](OWNER_CONTACT_PRE_DELIVERY_20261111.md)
+
 - JAMILA OLIVE CARD 2026-11-11: Default loyalty background #53621c, cream #ffe8c5, lime accent #d5ed60; original logo/six stamps/free drink retained, saved palettes retain precedence. Live identity row absent. Jamila26/types/text PASS. No DB/customer/message changes or installed-wallet push. Generated inline color preview requested. See [handoff](JAMILA_OLIVE_CARD_20261111.md)
 
 - LOCO LOYALTY SENDER 2026-11-11: Wallet welcomes and cashier card links now use only the verified opted-in LOCO sender; unavailable/429/mismatch leaves jobs pending instead of platform fallback. OTP/document fallback and other brands retained.45 routing/15 read-server/23 connection-UI/wallet/SQL delivery/full queue/types/text/scopedlint PASS; live connected matching brand and source of recent messages verified; installed claim filters/ACL checked read-only. No real sends or DB mutations. See [handoff](LOCO_LOYALTY_SENDER_20261111.md)
