@@ -54,6 +54,7 @@ for(const authorized of [true,false]) {
     '@/lib/auth/rast-loyalty-session':{getLoyaltyCustomerProfile:async()=>({id:'profile'})},
     '@/lib/data/settings':{getPublicCafeSettings:async()=>({})},
     '@/lib/data/loyalty-identity':{getLoyaltyBrandAppearance:async()=>({})},
+    '@/lib/data/loyalty-brand-snapshot':{loadPublicLoyaltyBrandSnapshot:async()=> 'session'},
     '@/lib/menu/logo-variants':{standaloneLogoVariant:()=>null},
     '@/lib/loyalty/experience-types':{defaultLoyaltyExperience:{nearbyMessage:'nearby'}},
   });

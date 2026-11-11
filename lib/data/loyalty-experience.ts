@@ -18,6 +18,7 @@ import { resolveBranchGoogleMapsUrl } from "@/lib/maps/resolve-branch-location";
 import type { WalletMember } from "@/lib/wallet/types";
 import { standaloneLogoVariant } from "@/lib/menu/logo-variants";
 import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
+import { loadPublicLoyaltyBrandSnapshot } from "@/lib/data/loyalty-brand-snapshot";
 import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/storage/resolve-storage-url";
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
@@ -43,6 +44,10 @@ export async function getLoyaltyExperience(cafeId: string) {
 
 // Share public identity reads only within this render request, never across sessions.
 export const getLoyaltyBrand = cache(async (slug: string) => {
+  const snapshot = await loadPublicLoyaltyBrandSnapshot(slug);
+  if (snapshot !== "session") return snapshot;
+  // The snapshot exposes no private brand fields. Preserve the existing owner
+  // and maintenance preview through the caller's authenticated RLS visibility.
   const features = await getPublicCafeFeatureCodesBySlug(slug);
   if (!featureCodesAllow(features, "loyalty")) return null;
   const [cafe, program, settings] = await Promise.all([

@@ -155,7 +155,12 @@ function mapCardDesign(value: unknown): LoyaltyCardDesign | null {
 }
 
 async function mapProgram(row: Record<string, unknown> | null | undefined, cafeId: string, slug: string): Promise<LoyaltyCardProgram> {
-  const { colors, businessCategory } = await getLoyaltyBrandAppearance(cafeId, slug);
+  return mapLoyaltyProgramSnapshot(row, slug, await getLoyaltyBrandAppearance(cafeId, slug));
+}
+
+/** Uses the same reviewed mapping for the fresh, server-only joined snapshot. */
+export function mapLoyaltyProgramSnapshot(row: Record<string, unknown> | null | undefined, slug: string, appearance: Awaited<ReturnType<typeof getLoyaltyBrandAppearance>>): LoyaltyCardProgram {
+  const { colors, businessCategory } = appearance;
   const isSalon = businessCategory === "hair_salons";
   const defaults = isSalon ? { ...defaultProgram, rewardName: "خدمة مجانية عند اكتمال البطاقة", stampStyle: "scissors" as const } : defaultProgram;
   const savedStyle = brandStampStyle(slug, (row?.card_design as Record<string, unknown> | null)?.stampStyle);

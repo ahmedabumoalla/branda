@@ -3,6 +3,11 @@ import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { approvedLoyaltyColors } from "@/lib/loyalty/approved-design";
 
+export function mapLoyaltyBrandAppearance(slug: string, businessCategory: unknown, data: Record<string, unknown> | null | undefined) {
+  const palette = data?.palette && typeof data.palette === "object" && !Array.isArray(data.palette) ? data.palette as Record<string, unknown> : null;
+  return { businessCategory: String(businessCategory ?? "cafes_coffee"), colors: approvedLoyaltyColors(slug, palette), logoPath: data?.logo_storage_path as string | null, logoUrl: data?.logo_url as string | null };
+}
+
 /** Call after the existing owner/public loyalty entitlement guard; cache is request-local. */
 export const getLoyaltyBrandAppearance = cache(async (cafeId: string, slug: string) => {
   const [{ data: cafe, error: cafeError }, { data, error }] = await Promise.all([
@@ -11,6 +16,5 @@ export const getLoyaltyBrandAppearance = cache(async (cafeId: string, slug: stri
   ]);
   if (cafeError) throw new Error("تعذر تحميل هوية العلامة");
   if (error) throw new Error("تعذر تحميل هوية العلامة");
-  const palette = data?.palette && typeof data.palette === "object" && !Array.isArray(data.palette) ? data.palette as Record<string, unknown> : null;
-  return { businessCategory: String(cafe?.business_category ?? "cafes_coffee"), colors: approvedLoyaltyColors(slug, palette), logoPath: data?.logo_storage_path as string | null, logoUrl: data?.logo_url as string | null };
+  return mapLoyaltyBrandAppearance(slug, cafe?.business_category, data);
 });

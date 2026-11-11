@@ -1,0 +1,461 @@
+{
+  "at": "2026-11-11T16:48:46.758Z",
+  "runtime": "v24.22.1",
+  "cwd": "C:/Projects/branda-platform/.barndaksa-backups/full-release-20261111",
+  "inputs": {
+    "lib/data/loyalty-cards.ts": "2924332bd89c49a5407feb3e58483045edba0269fa4262c569f009fbd3d53c2e",
+    "lib/data/loyalty-experience.ts": "70edd57ef8d6202295d57b705380962b331f3a4a77c6d29cf99e862c1faa2428",
+    "lib/data/loyalty-identity.ts": "0c1063f5ec383dbbdf9d374a8e0712a0f22b7fce15e269ec459c8b1d8baf37cd",
+    "scripts/check-data-hot-paths.mjs": "09a57d700fad532ba9c8e5bffe880c2edf6098b240a45eb08a86a6a6d2ad6802",
+    "vercel.json": "32cabef3a2d86c0822397b05fa23f23d05e89d7e3e71db6af71a89fb93831706",
+    "lib/data/loyalty-brand-snapshot.ts": "7acb924100912c1e6e41c25172f9149db8a4751971f213b2577a4576249fc371",
+    "scripts/check-loyalty-brand-snapshot-db.mjs": "3149411cef06474dd71663018ad092d3eb0b2a7bc3d4c09a2874220eade53767",
+    "scripts/check-loyalty-brand-snapshot.mjs": "559654d355329a272123eba1e411b59161406bf62e16bb26e71ba01f81d77f80",
+    "supabase/migrations/20261111164314_loyalty_brand_read_snapshot.sql": "6b0a5ef66d40cebfdfa9632da5112c2457293f81f5f0122173f6e6c9e92ed8a0",
+    "scripts/check-universal-loyalty-server.mjs": "bde8efaf7c4d9d1909a6bff560eadfbdcf8e1bd8d7ea8c2eee8b4a66ca5541e1",
+    "scripts/check-loyalty-directory-server.mjs": "6650ba6adc4fbdf1aac69d4bbc76480b0d4fb75c01b0daa303367a5e2fcb462e",
+    "scripts/check-approved-loyalty-design.cjs": "ac62d054e4d5d5536392ff5653386ff21805a059cd6cd84271a956784c8ded92",
+    "scripts/check-rast-wallet-security.mjs": "9faf868240ca70d52f48fdc50d9ba73a31010fd2eb3205b65c277266ea032097",
+    "scripts/check-wallet-performance.mjs": "9990ac651509c667e9bd3a4974d810b5551906c918af4b01484d76f1784e4db3",
+    "scripts/check-wallet-sync.mjs": "c1ac2eb479c2d38eab52a1ea7ecf7ceee03959fd7deaa1180c055c81b00951bb",
+    "scripts/check-wallet-welcome.mjs": "591ae3227cdd061ff0536cd6f16e7618f7c9fbc3e273899913f86c8cb29a1d2c",
+    "scripts/check-wallet-promotion-reporting.mjs": "2b196f97189377d2f3ec4530a9ac5cd257458db2fa3506b050093c3e0597908d",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "next.config.ts": "4e1786dd6216276441dc3a10da6183537e93adbf01be2d6d4325a75b98aab841",
+    "lib/supabase/server.ts": "3c941d80fb28d0f8590736142a2306bed8848868da79bf2c2ec0156d7c8a1471",
+    "lib/supabase/client.ts": "a23341bcf23dab880c723d78b7dfdbdc149bcf9e5e7a8df97bf6168d05d5017c",
+    "lib/data/feature-entitlements.ts": "3e02a5732db9712715d05e7f6d070e31aabcc1cdcecbd2df49e782518c3e6379",
+    "lib/auth/rast-loyalty-session.ts": "8ab0a7bee168d08f5d202616ddf2652827a37e6c5334d3a6cf6bf808f712d5a0",
+    "lib/wallet/index.ts": "3e761e8736f9199645b56a6f7338dfdbe4808f94acb7a2f9c54cf506a39024ed",
+    "lib/wallet/config.ts": "10a6f0e94fe3b8e136609c3ca64b0f4625b4f993e48d835c378d9829dc9492e2",
+    "lib/platform/action-result.ts": "dbe98cf23fd8ce8c8058bb5376469df28ce1086e72649c3db95c5fd8402eb341",
+    "lib/platform/service-subscriptions.ts": "f3bd4bb6a346c71e5a3d86cfcb11c31ce0ef6b0e1bcbf9da465f681a827cbe1e"
+  },
+  "sourceFiles": [
+    "lib/data/loyalty-cards.ts",
+    "lib/data/loyalty-experience.ts",
+    "lib/data/loyalty-identity.ts",
+    "scripts/check-data-hot-paths.mjs",
+    "vercel.json",
+    "lib/data/loyalty-brand-snapshot.ts",
+    "scripts/check-loyalty-brand-snapshot-db.mjs",
+    "scripts/check-loyalty-brand-snapshot.mjs",
+    "supabase/migrations/20261111164314_loyalty_brand_read_snapshot.sql"
+  ],
+  "changedDuringRun": [],
+  "missing": [],
+  "results": [
+    {
+      "name": "check-loyalty-brand-snapshot.mjs",
+      "args": [
+        "scripts/check-loyalty-brand-snapshot.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:29.732Z",
+      "end": "2026-11-11T16:48:30.068Z",
+      "summary": "PASS 18 one-roundtrip public composition, fresh gates, approved palettes, SVG/storage and private-preview behavior checks\n"
+    },
+    {
+      "name": "check-universal-loyalty-server.mjs",
+      "args": [
+        "scripts/check-universal-loyalty-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:29.743Z",
+      "end": "2026-11-11T16:48:30.132Z",
+      "summary": "PASS 25 universal loyalty server authorization and package checks with mocked services\n"
+    },
+    {
+      "name": "check-data-hot-paths.mjs",
+      "args": [
+        "scripts/check-data-hot-paths.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:29.740Z",
+      "end": "2026-11-11T16:48:30.185Z",
+      "summary": "PASS 17 data hot-path batching, authorization, concurrency and minimal owner payload checks\n"
+    },
+    {
+      "name": "check-loyalty-directory-server.mjs",
+      "args": [
+        "scripts/check-loyalty-directory-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.068Z",
+      "end": "2026-11-11T16:48:30.572Z",
+      "summary": "PASS 144 mocked loyalty directory authorization privacy pagination and server-prop checks\n"
+    },
+    {
+      "name": "check-approved-loyalty-design.cjs",
+      "args": [
+        "scripts/check-approved-loyalty-design.cjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.132Z",
+      "end": "2026-11-11T16:48:30.759Z",
+      "summary": "PASS approved brand palettes, contrast, stamp layout, real balances/QR, transparent logo bounds, tenant/package gates and Apple/Google pending/duplicate/return/retry/cleanup behavior\n"
+    },
+    {
+      "name": "check-loyalty-brand-snapshot-db.mjs",
+      "args": [
+        "scripts/check-loyalty-brand-snapshot-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:29.737Z",
+      "end": "2026-11-11T16:48:30.892Z",
+      "summary": "PASS 29 live-style SQL loyalty snapshot visibility, entitlement, private ACL, palettes and tenant isolation checks\n"
+    },
+    {
+      "name": "check-wallet-welcome.mjs",
+      "args": [
+        "scripts/check-wallet-welcome.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.892Z",
+      "end": "2026-11-11T16:48:31.194Z",
+      "summary": "Wallet welcome sender, dedupe worker and Apple/Google route regressions passed (no real messages)\n"
+    },
+    {
+      "name": "check-wallet-performance.mjs",
+      "args": [
+        "scripts/check-wallet-performance.mjs",
+        "--record"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.573Z",
+      "end": "2026-11-11T16:48:31.356Z",
+      "summary": "{\"at\":\"2026-11-11T16:48:31.344Z\",\"runtime\":\"v24.22.1\",\"command\":\"node scripts/check-wallet-performance.mjs --record\",\"checks\":27,\"scope\":\"isolated real PNG rendering + mocked provider requests; no production sends\",\"artworkMs\":{\"cold\":9.371700000000033,\"warmP50\":0.014000000000010004,\"warmP95\":0.02580000000000382,\"warmP99\":0.0969000000000051},\"googleExistingCalls\":{\"previousWarm\":4,\"currentWarm\":1,\"currentColdIncludingToken\":3}}\n"
+    },
+    {
+      "name": "check-wallet-promotion-reporting.mjs",
+      "args": [
+        "scripts/check-wallet-promotion-reporting.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:31.194Z",
+      "end": "2026-11-11T16:48:31.457Z",
+      "summary": "PASS wallet promotion reporting: paginated audience, partial success, failure exclusion, retries and no historical reconstruction; zero external messages\n"
+    },
+    {
+      "name": "check-wallet-sync.mjs",
+      "args": [
+        "scripts/check-wallet-sync.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.759Z",
+      "end": "2026-11-11T16:48:31.510Z",
+      "summary": "PASS: Wallet update tags, authenticated version ordering, APNs retries, scoped claims, bounded concurrency, provider semantics and read-only Google saved-state true/false/404/unknown/error checks\n"
+    },
+    {
+      "name": "check-rast-wallet-security.mjs",
+      "args": [
+        "scripts/check-rast-wallet-security.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:30.185Z",
+      "end": "2026-11-11T16:48:31.703Z",
+      "summary": "PASS: signed Apple bundle/manifest, Google RS256 save link, real balances, no personal payload, tenant and Apple authorization boundaries.\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:31.356Z",
+      "end": "2026-11-11T16:48:32.135Z",
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "lib/data/loyalty-cards.ts",
+        "lib/data/loyalty-experience.ts",
+        "lib/data/loyalty-identity.ts",
+        "lib/data/loyalty-brand-snapshot.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:31.510Z",
+      "end": "2026-11-11T16:48:32.639Z",
+      "summary": "\nC:\\Projects\\branda-platform\\.barndaksa-backups\\full-release-20261111\\lib\\data\\loyalty-cards.ts\n   8:10  warning  'parseBarndaksaQrPayload' is defined but never used  @typescript-eslint/no-unused-vars\n  10:10  warning  'operationEventTypes' is defined but never used      @typescript-eslint/no-unused-vars\n  10:31  warning  'recordOperationEvent' is defined but never used     @typescript-eslint/no-unused-vars\n\n\u00e2\u0153\u2013 3 problems (0 errors, 3 warnings)\n\n"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:48:31.457Z",
+      "end": "2026-11-11T16:48:46.758Z",
+      "summary": ""
+    }
+  ],
+  "database": {
+    "at": "2026-11-11T16:48:06.248595+00:00",
+    "migration": "20261111164314",
+    "sourceSha256": "6b0a5ef66d40cebfdfa9632da5112c2457293f81f5f0122173f6e6c9e92ed8a0",
+    "installedBodyMatches": true,
+    "migrationTextMatchesNormalized": true,
+    "serviceOnlyInvoker": true,
+    "liveParity": [
+      {
+        "result": {
+          "at": "2026-11-11T16:48:06.261444+00:00",
+          "publicBrands": 24,
+          "result": "PASS",
+          "sessionOnlyBrands": 0,
+          "unavailableBrands": 13,
+          "verificationMs": 21.314
+        }
+      },
+      {
+        "result": {
+          "sampleRpcMs": 0.389
+        }
+      }
+    ],
+    "advisorsBefore": 200,
+    "advisorsAfter": 200,
+    "newAdvisors": 0
+  },
+  "placement": {
+    "before": {
+      "status": 200,
+      "resourceConfig": {
+        "fluid": true,
+        "functionDefaultRegions": [
+          "iad1"
+        ],
+        "elasticConcurrencyEnabled": true,
+        "buildMachineType": "turbo",
+        "buildMachineSelection": "fixed"
+      },
+      "framework": "nextjs",
+      "nodeVersion": "24.x"
+    },
+    "database": {
+      "region": "ap-northeast-2",
+      "status": "ACTIVE_HEALTHY"
+    },
+    "configuredRegions": [
+      "icn1"
+    ],
+    "documentation": [
+      "https://vercel.com/docs/functions/configuring-functions/region",
+      "https://vercel.com/docs/regions"
+    ]
+  },
+  "build": {
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "runtime": "v24.22.1",
+    "exitCode": 0,
+    "completedAt": "2026-11-11T16:49:08.603676+00:00",
+    "buildId": "s0r2G_PO8rxzJ9lLn00o1"
+  },
+  "firstDeployment": {
+    "at": "2026-11-11T16:40:10.653Z",
+    "sha": "cb34a31471d48575eeed660a2f787d81a6efe497",
+    "id": "dpl_3KZY8hnpFmqwgQrQqiRLrZpovCfR",
+    "state": "READY",
+    "target": "production",
+    "projectId": "prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow",
+    "githubCommitSha": "cb34a31471d48575eeed660a2f787d81a6efe497",
+    "aliases": [
+      "barndaksa.com",
+      "*.barndaksa.com",
+      "www.barndaksa.com",
+      "branda-2.vercel.app",
+      "branda-2-ahmedabumoallas-projects.vercel.app",
+      "branda-2-git-main-ahmedabumoallas-projects.vercel.app"
+    ],
+    "aliasVerification": [
+      {
+        "host": "barndaksa.com",
+        "deploymentId": "dpl_3KZY8hnpFmqwgQrQqiRLrZpovCfR",
+        "matches": true
+      },
+      {
+        "host": "www.barndaksa.com",
+        "deploymentId": "dpl_3KZY8hnpFmqwgQrQqiRLrZpovCfR",
+        "matches": true
+      }
+    ],
+    "http": [
+      {
+        "host": "barndaksa.com",
+        "path": "/admin/cafes",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": false,
+        "contentBytes": 51077
+      },
+      {
+        "host": "barndaksa.com",
+        "path": "/dashboard/loyalty",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": true,
+        "contentBytes": 24290
+      },
+      {
+        "host": "barndaksa.com",
+        "path": "/loyalty/brand-406bf519a458",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": false,
+        "contentBytes": 29809
+      },
+      {
+        "host": "www.barndaksa.com",
+        "path": "/admin/cafes",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": false,
+        "contentBytes": 51077
+      },
+      {
+        "host": "www.barndaksa.com",
+        "path": "/dashboard/loyalty",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": true,
+        "contentBytes": 24290
+      },
+      {
+        "host": "www.barndaksa.com",
+        "path": "/loyalty/brand-406bf519a458",
+        "status": 200,
+        "location": null,
+        "streamedLoginRedirect": false,
+        "contentBytes": 29809
+      }
+    ]
+  },
+  "initialHttpBefore": {
+    "at": "2026-11-11T16:31:18.831Z",
+    "note": "Anonymous production HTTP small sample, not authenticated UX or provider download latency",
+    "rows": [
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 0,
+        "status": 200,
+        "headersMs": 753,
+        "totalMs": 2409,
+        "bytes": 29637,
+        "cache": "MISS"
+      },
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 1,
+        "status": 200,
+        "headersMs": 420,
+        "totalMs": 1939,
+        "bytes": 29637,
+        "cache": "MISS"
+      },
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 2,
+        "status": 200,
+        "headersMs": 329,
+        "totalMs": 1854,
+        "bytes": 29637,
+        "cache": "MISS"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 0,
+        "status": 200,
+        "headersMs": 3041,
+        "totalMs": 3643,
+        "bytes": 107385,
+        "cache": "MISS"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 1,
+        "status": 200,
+        "headersMs": 302,
+        "totalMs": 455,
+        "bytes": 107385,
+        "cache": "HIT"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 2,
+        "status": 200,
+        "headersMs": 132,
+        "totalMs": 263,
+        "bytes": 107385,
+        "cache": "HIT"
+      }
+    ]
+  },
+  "initialHttpAfter": {
+    "at": "2026-11-11T16:40:42.380Z",
+    "note": "Anonymous production HTTP small sample, not authenticated UX or provider download latency",
+    "rows": [
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 0,
+        "status": 200,
+        "headersMs": 767,
+        "totalMs": 2687,
+        "bytes": 29809,
+        "cache": "MISS"
+      },
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 1,
+        "status": 200,
+        "headersMs": 423,
+        "totalMs": 2393,
+        "bytes": 29809,
+        "cache": "MISS"
+      },
+      {
+        "path": "/loyalty/brand-406bf519a458",
+        "sample": 2,
+        "status": 200,
+        "headersMs": 396,
+        "totalMs": 1873,
+        "bytes": 29809,
+        "cache": "MISS"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 0,
+        "status": 200,
+        "headersMs": 4875,
+        "totalMs": 5457,
+        "bytes": 107385,
+        "cache": "MISS"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 1,
+        "status": 200,
+        "headersMs": 366,
+        "totalMs": 485,
+        "bytes": 107385,
+        "cache": "HIT"
+      },
+      {
+        "path": "/api/wallet/brand/brand-406bf519a458/logo",
+        "sample": 2,
+        "status": 200,
+        "headersMs": 118,
+        "totalMs": 254,
+        "bytes": 107385,
+        "cache": "HIT"
+      }
+    ]
+  },
+  "measurementLimit": "Initial source-only deployment did not establish lower anonymous page latency; region/snapshot follow-up must be measured after deployment. Provider/wallet issuance was not exercised live."
+}
