@@ -15,7 +15,7 @@
 .publicPage :is(a, button, input, summary):focus-visible, .dashboard :is(a, button, input, textarea, select, summary):focus-visible { outline: 3px solid var(--red); outline-offset: 4px; }
 .publicHeader { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 20px; border-bottom: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 18px; }
-.logo { width: 104px; height: 58px; object-fit: contain; }
+.logo { width: 104px; height: 58px; object-fit: contain; background: var(--brand-logo-background, transparent); padding: var(--brand-logo-padding, 0); border-radius: var(--brand-logo-radius, 0); }
 .brand > span { font-size: 11px; border-inline-start: 1px solid var(--border); padding-inline-start: 18px; overflow-wrap: anywhere; }
 .publicHeader, .cardTop { flex-wrap: wrap; }
 .brand { min-width: 0; }
@@ -66,7 +66,7 @@
 .stampCard { position: relative; background: var(--card-background, var(--wine)); color: var(--card-foreground, var(--cream)); font-family: "Rast Loyalty", "Tajawal", sans-serif; line-height: 1.8; border-radius: 20px; padding: clamp(23px, 3vw, 36px); box-shadow: 0 28px 52px -38px #3b142090; overflow: hidden; min-width: 0; isolation: isolate; }
 .stampCard::before { content: ""; position: absolute; width: 290px; height: 290px; border: 1px solid #f8f2e80a; border-radius: 50%; inset-inline-end: -160px; top: 40px; z-index: -1; box-shadow: 0 0 0 40px #f8f2e805, 0 0 0 80px #f8f2e803; }
 .cardTop { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.cardTop .logo { width: 86px; height: 47px; }
+.cardTop .logo { width: var(--card-logo-width, 86px); height: var(--card-logo-height, 47px); }
 .cardTop .brand > span { font-size: 9px; padding-inline-start: 12px; }
 .cardTop .brand { gap: 12px; }
 .cardCaption { color: var(--card-muted, #e2c9c9); font-size: 9px; white-space: nowrap; }

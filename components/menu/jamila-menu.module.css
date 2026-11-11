@@ -1,0 +1,24 @@
+.page { --jamila-gray: #5c5c5c; --jamila-cream: #ffe8c5; --jamila-paper: #fff8ee; --jamila-ink: #292827; --jamila-line: #ffe8c53d; min-height: 100svh; background: var(--jamila-gray); color: var(--jamila-cream); font-family: "Tajawal", sans-serif; padding-inline: clamp(22px, 6vw, 96px); overflow-wrap: anywhere; }
+.header, .footer { max-width: 1200px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 26px; font-size: 12px; }
+.header { border-bottom: 1px solid var(--jamila-line); }
+.header [lang="en"] { letter-spacing: .25em; font-size: 13px; }
+.hero { max-width: 1060px; margin-inline: auto; padding-block: clamp(56px, 9vw, 120px) 60px; text-align: center; }
+.logo { display: block; width: min(100%, 660px); height: auto; margin-inline: auto; }
+.intro { margin-top: clamp(34px, 5vw, 60px); }
+.eyebrow { font-size: 12px; font-weight: 500; }
+.intro h1 { margin: 14px 0; font-size: clamp(32px, 5vw, 58px); line-height: 1.35; font-weight: 500; }
+.intro p, .coming p { margin: 12px 0 0; font-size: 15px; line-height: 1.8; }
+.coming { margin-top: 42px; }
+.rule { display: block; height: 1px; width: 48px; background: var(--jamila-cream); margin: 0 auto 24px; }
+.coming h2 { margin: 0; font-size: 20px; font-weight: 500; }
+.loyalty { max-width: 840px; margin: 64px auto 0; padding: clamp(24px, 4vw, 42px); display: flex; align-items: center; justify-content: space-between; gap: 30px; background: var(--jamila-cream); color: var(--jamila-ink); text-align: start; border-radius: 3px; }
+.loyalty h2 { font-size: clamp(23px, 3vw, 30px); font-weight: 500; margin: 10px 0; line-height: 1.5; }
+.loyalty p, .loyalty strong { display: block; font-size: 14px; line-height: 1.9; margin: 0; }
+.loyalty strong { font-weight: 500; }
+.button { min-height: 48px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: space-between; gap: 28px; padding: 14px 22px; background: var(--jamila-ink); color: var(--jamila-paper); text-decoration: none; font-size: 14px; border-radius: 2px; transition: background .18s ease; }
+.button:hover { background: #41403e; }
+.button:focus-visible { outline: 3px solid var(--jamila-ink); outline-offset: 5px; }
+.footer { border-top: 1px solid var(--jamila-line); font-size: 10px; }
+.footer [lang="en"] { letter-spacing: .18em; }
+@media (max-width: 600px) { .loyalty { flex-direction: column; align-items: stretch; gap: 24px; } .button { width: 100%; box-sizing: border-box; } .footer { flex-wrap: wrap; justify-content: center; text-align: center; gap: 12px; } }
+@media (prefers-reduced-motion: reduce) { .button { transition: none; } }

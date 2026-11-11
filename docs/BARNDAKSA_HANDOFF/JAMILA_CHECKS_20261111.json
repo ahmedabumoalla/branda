@@ -1,0 +1,37 @@
+﻿{
+    "runtime":  "Node24.19.0 Windows",
+    "inputs":  {
+                   "package.json":  "1577901A03161AEF21F84565A369890FFD8950147ADFA06F7C20817EC10AE00C",
+                   "app/menu/[slug]/page.tsx":  "B11C94FC4E8F5115A6FD5D2F2DED3D445E29362BC9DBBB919AF45B669DAEA7F6",
+                   "components/menu/jamila-menu.tsx":  "EA0CC6744FF179523A00C1553360B45A619BE850C36CA03A2798DDD444EB4FCD",
+                   "scripts/check-jamila.cjs":  "F094C42502B4F5B19C6D1418B759CC40A17CFD1DD581A2D3A209D10CD77D2B0A",
+                   "components/menu/jamila-menu.module.css":  "443EDD134DFB23DE058260ACC73E0109F8631E8DE26C05173DB229B9766C730B",
+                   "lib/wallet/logo.ts":  "12D0A695007FD18ED9293EE4C2164A8CD80CAB3AD31774E984A63C2F9B282138",
+                   "lib/loyalty/approved-design.ts":  "28690AF06155FC6BFEA3A7AFC2FF1EEC792A5F51DD84DADFA859216151761A40",
+                   "docs/BARNDAKSA_HANDOFF/00_MASTER_INDEX.md":  "DAEEDF835B39457E639F5C3BAC28A56E598F84687EDE42C5A39BCEAF5CED8B4C",
+                   "components/rast-loyalty/rast-loyalty.module.css":  "D911F78F69EC87A70F7FEB5CC47460157597B60794F05D73169B2D5F3D1ABBDB",
+                   "scripts/check-signature-menu.cjs":  "6C5BC80858617D6B8D3B9D98BEBA6E0BD58DBBBC7581C8C03754E5186E44A6FE",
+                   "scripts/apply-jamila-identity.mjs":  "C1B29F1CA1C26F00205828F680FE500A0FA43A8482011DC2D5EF9ACF1D83D8A9",
+                   "docs/task-state.md":  "340333DC407ED0E7386DFCFD3B644F4405780231CF5BAD4E1971AE62A5513F4A",
+                   "lib/data/loyalty-cards.ts":  "74F8EA1C7D4A327F61EFEF74968D093FDEB8E9D0C7BB7E4C9C642CA432BE6915",
+                   "package-lock.json":  "5F582C3207DA3A51B33EBA3C4CBF60FEAFC98C7313AF6A1B1EE31D877E7D9829",
+                   "docs/BARNDAKSA_HANDOFF/JAMILA_IDENTITY_20261111.md":  "31F692B244B2B9B54851B833E1EF6D4B66C766349066B22F5DBEB0FA708F1E22",
+                   "next.config.ts":  "BB35B96226E7F1CDB11D7999BFF31BF7199121BE3169C7103E4D963DEDE71CA8",
+                   "public/menu-art/jamila/logo-v1.png":  "D2AB9F596E3069B1E8F063AE273F955400B483254C8F8F80F925C64B6E18FBCE",
+                   "scripts/check-text-integrity.mjs":  "A3E392BAFD27F174F91755B66FFE53AB62C4C4309969860B020A2AE5D47CFCCD",
+                   "tsconfig.json":  "E99E8177CD48F74DBB6DFC9C28BEFA32632167D5724A703C68F984EC61959C8E",
+                   "scripts/check-universal-loyalty-ui.mjs":  "8924EB275D93E6CA4D56D51BF1091ABFA6C636A1F6305E284F00127B4B72D343",
+                   "components/rast-loyalty/loyalty-theme.ts":  "BB39C8FC513ACA9D86C630B5F3BD25DCF191B6BE03C613A569C7D146217AC28E"
+               },
+    "checks":  [
+                   "node scripts/check-jamila.cjs:19PASS",
+                   "node scripts/check-signature-menu.cjs:776PASS",
+                   "node scripts/check-universal-loyalty-ui.mjs --cards-only:18PASS",
+                   "node node_modules/typescript/bin/tsc --noEmit --incremental false:PASS",
+                   "node scripts/check-text-integrity.mjs:PASS",
+                   "scoped ESLint:PASS",
+                   "next build --webpack:PASS"
+               ],
+    "baseline":  "546a555b49a220ae8533324cbfcc2ad48e34be05",
+    "checkedAtUtc":  "2026-11-11T10:19:25.3520586Z"
+}

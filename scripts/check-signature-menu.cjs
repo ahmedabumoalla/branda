@@ -539,6 +539,7 @@ async function checkRouteIsolation() {
     '@/lib/data/public-home-catalog': { isPublicHomeMenuSlug: async () => gate },
     '@/lib/data/gift-orders': { getGiftStoreSettings: async () => null },
     '@/components/menu/signature-menu': { SignatureMenu: Signature }, '@/components/menu/bistro-menu': { BistroMenu: Bistro }, '@/components/menu/tea-bakery-menu': { TeaBakeryMenu: noop },
+    '@/components/menu/jamila-menu': { JamilaMenu: noop, JAMILA_SLUG: 'brand-406bf519a458' },
     '@/components/menu/loco-menu': { LocoMenu: Loco }, '@/components/store/together-store': { TogetherStore: Together },
     '@/components/menu/french-corner-menu': { FrenchCornerMenu: French },
     '@/components/analytics/public-page-analytics': { PublicPageAnalytics: noop }, '@/components/menu/menu-auto-refresh': { MenuAutoRefresh: noop },
