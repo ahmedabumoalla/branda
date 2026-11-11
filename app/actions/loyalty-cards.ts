@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import {
   createOwnerCashier,
   updateOwnerCashierPermissions,
@@ -67,6 +68,7 @@ export async function saveLoyaltyCardProgramAction(input: {
 }) {
   await assertOwnerLoyaltyEnabled();
   await saveOwnerLoyaltyProgram(input);
+  revalidatePath("/dashboard/loyalty", "layout");
 }
 
 export async function createLoyaltyCashierAction(input: {
@@ -78,19 +80,24 @@ export async function createLoyaltyCashierAction(input: {
   pagerStation?: string;
 }) {
   await assertOwnerCashierEnabled();
-  return createOwnerCashier(input);
+  const cashier = await createOwnerCashier(input);
+  revalidatePath("/dashboard/cashier");
+  return cashier;
 }
 
 export async function updateCashierPermissionsAction(input: {
   cashierId: string; canUseLoyalty: boolean; canUsePager: boolean; pagerStation: string;
 }) {
   await assertOwnerCashierEnabled();
-  return updateOwnerCashierPermissions(input);
+  const cashier = await updateOwnerCashierPermissions(input);
+  revalidatePath("/dashboard/cashier");
+  return cashier;
 }
 
 export async function setLoyaltyCashierStatusAction(cashierId: string, active: boolean) {
   await assertOwnerCashierEnabled();
   await setOwnerCashierStatus(cashierId, active);
+  revalidatePath("/dashboard/cashier");
 }
 
 export async function recordLoyaltyCardOperationAction(input: {
@@ -107,7 +114,9 @@ export async function issueLoyaltyCardAction(slug: string) {
   if (!(await publicLoyaltyEnabled(slug))) {
     throw new Error("بطاقات الولاء غير مفعلة لهذه العلامة التجارية");
   }
-  return issueCurrentCustomerLoyaltyCard(slug);
+  const card = await issueCurrentCustomerLoyaltyCard(slug);
+  revalidatePath(`/loyalty/${encodeURIComponent(slug)}`);
+  return card;
 }
 
 export async function fetchCustomerLoyaltyCardAction(slug: string) {

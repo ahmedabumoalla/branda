@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DashboardNavigationLink as Link } from "@/components/dashboard/dashboard-navigation-link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BriefcaseBusiness,
@@ -60,8 +60,8 @@ export function AdminSidebar({
   const ToggleIcon = collapsed ? ChevronsLeft : ChevronsRight;
   const toggleLabel = collapsed ? "توسيع القائمة الجانبية" : "طي القائمة الجانبية";
 
-  function handleLogout() {
-    logoutBarndaksaAuth();
+  async function handleLogout() {
+    await logoutBarndaksaAuth();
     router.push("/login");
   }
 

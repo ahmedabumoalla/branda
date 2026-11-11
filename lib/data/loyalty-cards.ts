@@ -1,6 +1,7 @@
 import type { LoyaltyStampStyle } from "@/lib/loyalty/stamp-style";
 import { brandStampStyle } from "@/lib/loyalty/brand-stamp-artwork";
 import { z } from "zod";
+import { cache } from "react";
 import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -198,6 +199,28 @@ function mapCard(row: Record<string, unknown>): LoyaltyBrandCard {
     issuedAt: String(row.issued_at ?? ""),
     updatedAt: String(row.updated_at ?? ""),
   };
+}
+
+/** Settings needs the program, not the customer/cashier/history collections. */
+export async function getOwnerLoyaltyProgramSettings() {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const [{ data, error }] = await Promise.all([
+    supabase.from("cafe_loyalty_programs").select("*, menu_products(name)").eq("cafe_id", cafe.id).maybeSingle(),
+    getLoyaltyBrandAppearance(cafe.id, cafe.slug),
+  ]);
+  if (error) throw error;
+  return { cafeId: cafe.id, cafeSlug: cafe.slug, program: await mapProgram(data, cafe.id, cafe.slug) };
+}
+
+/** Minimal reward selector; no image signing or full menu/category hydration. */
+export async function getOwnerLoyaltyRewardProducts() {
+  const cafe = await requireOwnerCafeContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("menu_products").select("id,name")
+    .eq("cafe_id", cafe.id).is("deleted_at", null).order("name");
+  if (error) throw error;
+  return (data ?? []).map(row => ({ id: String(row.id), name: String(row.name) }));
 }
 
 export async function getOwnerLoyaltyCardsDashboard(): Promise<LoyaltyCardsDashboard> {
@@ -542,13 +565,8 @@ export async function getLoyaltyCardViewByCode(cardCode: string): Promise<Custom
   const cafeName = cafe?.name ? String(cafe.name) : "العلامة التجارية";
   const businessCategory = cafe?.business_category ? String(cafe.business_category) : "cafes_coffee";
 
-  const { data: programRow } = await admin
-    .from("cafe_loyalty_programs")
-    .select("*, menu_products(name)")
-    .eq("cafe_id", String(cardRow.cafe_id))
-    .maybeSingle();
-  const program = await mapProgram(programRow, String(cardRow.cafe_id), cafeSlug);
-  if (programRow && !program.enabled) return null;
+  const program = await getLoyaltyProgramForCafe(String(cardRow.cafe_id), cafeSlug);
+  if (!program.enabled) return null;
 
   return {
     card: mapCard(cardRow),
@@ -585,17 +603,20 @@ export async function getCustomerLoyaltyCardViewForProfile(
   return getLoyaltyCardViewByCode(String(data));
 }
 
+// No persistent cache: edits and access changes are visible on the next request.
+const getLoyaltyProgramForCafe = cache(async (cafeId: string, slug: string) => {
+  const [{ data, error }] = await Promise.all([
+    createAdminClient().from("cafe_loyalty_programs").select("*, menu_products(name)").eq("cafe_id", cafeId).maybeSingle(),
+    getLoyaltyBrandAppearance(cafeId, slug),
+  ]);
+  if (error) throw error;
+  return mapProgram(data, cafeId, slug);
+});
+
 export async function getPublicLoyaltyProgramBySlug(slug: string) {
   const cafe = await getCafeBySlug(slug);
   if (!cafe) return null;
   if (!featureCodesAllow(await getCafeFeatureCodes(cafe.id), "loyalty")) return null;
 
-  const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("cafe_loyalty_programs")
-    .select("*, menu_products(name)")
-    .eq("cafe_id", cafe.id)
-    .maybeSingle();
-
-  return mapProgram(data, cafe.id, cafe.slug);
+  return getLoyaltyProgramForCafe(cafe.id, cafe.slug);
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -22,6 +23,7 @@ export async function saveInvoiceDraftAction(input: unknown, slug: string) {
     });
     if (error?.code === "40001") throw new Error("تغيرت المسودة في جلسة أخرى افتح المسودة المحفوظة قبل تعديلها");
     if (error) throw new Error("تعذر تأكيد حفظ المسودة أعد المحاولة بنفس المسودة");
+    invalidateFinanceViews(slug);
     return data as { id: string; revision: number };
   }, "تعذر حفظ المسودة أعد المحاولة");
 }

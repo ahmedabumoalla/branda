@@ -11,7 +11,7 @@ export type CafeContext = {
   role: "owner" | "manager" | "staff" | "platform_admin";
 };
 
-export async function getCafeBySlug(slug: string) {
+export const getCafeBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
   const normalizedSlug = slug.trim().toLowerCase();
 
@@ -39,7 +39,7 @@ export async function getCafeBySlug(slug: string) {
   // Directory listing privacy and all non-salon lookup rules stay unchanged.
   const salon = await getPublicCafeBySlugAdmin(normalizedSlug);
   return salon?.business_category === "hair_salons" ? salon : null;
-}
+});
 
 export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {
   const supabase = createAdminClient();

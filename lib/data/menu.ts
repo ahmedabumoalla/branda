@@ -29,6 +29,7 @@ function invalidatePublicMenuSurfaces(slug: string) {
   clearServerMemoryCache(`public-product:${normalizedSlug}`);
   clearServerMemoryCache(`public-product-catalog-summary:${normalizedSlug}`);
   clearServerMemoryCache(`public-cafe-fast:${normalizedSlug}`);
+  revalidatePath("/dashboard/menu");
   revalidatePath(`/menu/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}`);
   revalidatePath(`/c/${normalizedSlug}/products/latest`);

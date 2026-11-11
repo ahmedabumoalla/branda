@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { FinanceOfflineSessionGuard } from "@/components/finance/finance-offline-session-guard";
+import { DashboardCacheBoundary } from "@/components/dashboard/dashboard-cache-boundary";
 import "./globals.css";
 
 const BARNDAKSA_APP_ICON = "/brand/barndaksa-app-icon-512.png";
@@ -71,6 +72,7 @@ export default function RootLayout({
         />
         {children}
         <FinanceOfflineSessionGuard />
+        <DashboardCacheBoundary />
       </body>
     </html>
   );

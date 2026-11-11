@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { saveFinanceInventoryItem, saveFinanceInventoryUnit } from "@/lib/data/finance-inventory-catalog";
 import { ZodError } from "zod";
 
@@ -12,6 +13,6 @@ export async function saveFinanceInventoryItemAction(input:unknown,slug?:string)
   catch(error){return {ok:false as const,message:message(error)};}
 }
 export async function saveFinanceInventoryUnitAction(input:unknown,slug?:string) {
-  try {return {ok:true as const,...await saveFinanceInventoryUnit(input,slug)};}
+  try {const result=await saveFinanceInventoryUnit(input,slug);invalidateFinanceViews(slug);return {ok:true as const,...result};}
   catch(error){return {ok:false as const,message:message(error)};}
 }

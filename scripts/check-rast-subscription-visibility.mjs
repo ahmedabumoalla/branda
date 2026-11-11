@@ -11,6 +11,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 // No browser, provider, database or subscription mutation is involved.
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dependency = createRequire(import.meta.url);
+function TestLink(input) {
+  const props = { ...input };
+  delete props.prefetch;
+  delete props.scroll;
+  return React.createElement("a", props);
+}
 function load(relative, stubs = {}, cache = new Map()) {
   relative = relative.replaceAll("\\", "/");
   if (cache.has(relative)) return cache.get(relative);
@@ -41,9 +47,9 @@ for (const planId of planCases) await test(`Navigation fails closed for missing 
   assert.deepEqual(rows, []);
   assert.equal(permissions.cafeHasFeature("loyalty", { planId, plans: [] }), false);
 });
-for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"]]) await test(`Only actual enabled package services are visible: ${features.join(",") || "empty"}`, () => {
+for (const features of [[], ["menu"], ["menu", "offers"], ["loyalty"], ["settings"], ["all"], ["finance"], ["all", "finance"]]) await test(`Only actual enabled package services are visible: ${features.join(",") || "empty"}`, () => {
   const rows = access.getSidebarFeaturesForBrand({ planId: "starter", plans: [{ id: "starter", features }] });
-  const expected = access.getBrandNavigationFeatures().filter(f => features.includes("all") || features.includes(f.id)).map(f => f.id);
+  const expected = access.getBrandNavigationFeatures().filter(f => (features.includes("all") && !f.explicitPackageOnly) || features.includes(f.id)).map(f => f.id);
   assert.deepEqual(rows.map(row => row.feature.id), expected);
   assert(rows.every(row => row.access.effectiveEnabled));
 });
@@ -67,15 +73,15 @@ function serverPage({ slug = "rast", configured = true, missing = false, context
   const SubscriptionPageClient = () => React.createElement("div", { "data-subscription-client": true });
   const reads = (name, value) => async () => { calls.push(name); return value; };
   const stubs = {
-    "next/link": { __esModule: true, default: "a" },
+    "next/link": { __esModule: true, default: TestLink },
     "next/navigation": { redirect: (target) => { const error = new Error("NEXT_REDIRECT"); error.target = target; throw error; } },
     "@/components/dashboard/pages/subscription-page": { SubscriptionPageClient },
     "@/lib/barndaksa/env": { isSupabaseConfigured: () => configured },
     "@/lib/data/cafes": { getOwnerCafeContext: async () => { calls.push("context"); if (contextError) throw new Error("unavailable"); return missing ? null : { id: "cafe", slug }; } },
-    "@/lib/data/admin": { getCafeFeatureOverrides: reads("overrides", []), getOwnerActivePlanId: reads("active-plan", "all-plan") },
+    "@/lib/data/feature-entitlements": { getCafeServiceAccess: reads("service-access", { planId: "all-plan", features: ["all"] }) },
     "@/lib/data/subscription": {
       getAvailablePlans: reads("plans", plans), getOwnerPendingSubscription: reads("pending", pending), getOwnerSubscriptionHistory: reads("history", history),
-      getCurrentOwnerSubscription: reads("current-subscription", null), getBankTransferDetails: reads("bank-details", null), getOwnerSubscriptionRequests: reads("requests", []),
+      getCurrentOwnerSubscriptions: reads("current-subscriptions", []), getBankTransferDetails: reads("bank-details", null), getOwnerSubscriptionRequests: reads("requests", []),
       getSubscriptionReferenceTime: () => Date.UTC(2026, 9, 9),
     },
   };
@@ -94,7 +100,8 @@ await test("other brand subscription page preserves data and client", async () =
   assert.deepEqual(element.props.initialHistory, ctx.history);
   assert.deepEqual(element.props.initialPending, ctx.pending);
   assert.equal(element.props.initialActivePlanId, "all-plan");
-  assert.deepEqual(ctx.calls.sort(), ["context", "plans", "history", "pending", "active-plan", "overrides", "current-subscription", "bank-details", "requests"].sort());
+  assert.deepEqual(element.props.currentSubscriptions, []);
+  assert.deepEqual(ctx.calls.sort(), ["context", "plans", "history", "pending", "service-access", "current-subscriptions", "bank-details", "requests"].sort());
 });
 for (const options of [{ configured: false }, { missing: true }, { contextError: true }]) await test(`missing brand stays neutral: ${JSON.stringify(options)}`, async () => {
   const ctx = serverPage(options);
@@ -106,14 +113,15 @@ for (const options of [{ configured: false }, { missing: true }, { contextError:
 
 function hooks(state) {
   let cursor = 0;
-  return { ...React, useState: () => [state[cursor++], () => {}], useEffect: () => {}, useMemo: (compute) => compute(), useTransition: () => [false, () => {}] };
+  return { ...React, useState: initial => { const slot = cursor++; return [slot in state ? state[slot] : typeof initial === "function" ? initial() : initial, () => {}]; }, useEffect: () => {}, useMemo: (compute) => compute(), useTransition: () => [false, () => {}], useSyncExternalStore: () => false };
 }
 function sidebarElement(slug, props = {}, extraStubs = {}) {
-  const plans = [{ id: "all-plan", features: ["all"], name: "PRIVATE_PLAN_NAME" }];
+  const plans = [{ id: "all-plan", features: ["menu", "offers", "loyalty", "settings"], name: "PRIVATE_PLAN_NAME" }];
+  const snapshot = { planId: "all-plan", plans, featureOverrides: [{ featureId: "loyalty", enabled: false }], settings: { cafeSlug: slug, cafeName: "Brand", businessCategory: "cafes_coffee" }, notifications: [] };
   const stubs = {
-    react: hooks([{ planId: "all-plan", plans, featureOverrides: [{ featureId: "loyalty", enabled: false }], settings: { cafeSlug: slug, cafeName: "Brand", businessCategory: "cafes_coffee" }, notifications: [] }]),
-    "next/link": { __esModule: true, default: "a" },
-    "next/navigation": { usePathname: () => "/dashboard/menu", useRouter: () => ({ push: () => {} }) },
+    react: hooks([]),
+    "next/link": { __esModule: true, default: TestLink },
+    "next/navigation": { usePathname: () => "/dashboard/menu", useRouter: () => ({ push: () => {} }), useSearchParams: () => new URLSearchParams() },
     "@/components/cafe/cafe-logo": { CafeLogo: () => null },
     "@/components/dashboard/notifications-panel": { NotificationsPanel: () => null },
     "@/components/ui/barndaksa-logo": { BarndaksaLogo: () => null },
@@ -123,7 +131,7 @@ function sidebarElement(slug, props = {}, extraStubs = {}) {
     ...extraStubs,
   };
   const { DashboardSidebar } = load("components/dashboard/DashboardSidebar.tsx", stubs);
-  return DashboardSidebar(props);
+  return DashboardSidebar({ snapshot, servicesAvailable: Boolean(slug), ...props });
 }
 function sidebarHtml(slug, collapsed = false) {
   return renderToStaticMarkup(sidebarElement(slug, { collapsed }));
@@ -134,7 +142,7 @@ for (const slug of ["rast", "other", "shahi-w-hail"]) for (const collapsed of [f
   assert(!html.includes("PRIVATE_PLAN_NAME") && !html.includes("249"));
   assert(!html.includes("ترقية"));
   assert(!html.includes('href="/dashboard/loyalty"'), "disabled service is hidden");
-  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings", "/dashboard/subscription"]);
+  assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map(match => match[1]), ["/dashboard/menu", "/dashboard/offers", "/dashboard/settings", "/dashboard/branches", "/dashboard/subscription"]);
   for (const label of ["المنيو والمنتجات", "العروض", "إعدادات كوفي", "تسجيل الخروج"]) assert(html.includes(label));
   assert(html.includes('aria-current="page"'));
   assert(!html.includes("غير مفعلة في الباقة"));
@@ -143,13 +151,24 @@ await test("unresolved sidebar identity does not flash a plan badge", () => {
   const html = sidebarHtml("");
   assert(!html.includes("/dashboard/subscription") && !html.includes("PRIVATE_PLAN_NAME"));
 });
+for (const explicitFinance of [false, true]) await test(`Finance uses its dedicated menu only with explicit inclusion: ${explicitFinance}`, () => {
+  const snapshot = {
+    planId: "full", plans: [{ id: "full", features: explicitFinance ? ["all", "finance"] : ["all"] }],
+    featureOverrides: [], settings: { cafeSlug: "brand-a", cafeName: "Brand", businessCategory: "cafes_coffee" }, notifications: [],
+  };
+  const html = renderToStaticMarkup(sidebarElement("brand-a", { snapshot }));
+  assert.equal(html.includes('aria-label="برندة المالية"'), explicitFinance);
+  assert.equal(html.includes('href="/dashboard/finance?section=overview"'), explicitFinance);
+  assert.equal(html.includes('href="/finance/brand-a/pos"'), explicitFinance);
+  assert(!html.includes('href="/dashboard/finance"'), "dedicated menu replaces the former flat finance link");
+});
 
 function layoutElement(slug, allow = false, props = {}, extraStubs = {}) {
   const guard = { loading: false, cafeSlug: slug, activePlanId: "all-plan", plans: [{ id: "all-plan", features: ["all"] }], featureOverrides: [{ featureId: "loyalty", enabled: allow }] };
   const stubs = {
     react: hooks([guard, false]),
-    "next/link": { __esModule: true, default: "a" },
-    "next/navigation": { usePathname: () => "/dashboard/loyalty" },
+    "next/link": { __esModule: true, default: TestLink },
+    "next/navigation": { usePathname: () => "/dashboard/loyalty", useRouter: () => ({ refresh() {} }) },
     "@/app/actions/maintenance": {},
     "@/components/dashboard/DashboardSidebar": { DashboardSidebar: () => null },
     "@/components/ui/responsive-app-shell": { ResponsiveAppShell: ({ children }) => React.createElement("main", null, children) },

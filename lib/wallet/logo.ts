@@ -5,6 +5,9 @@ import sharp from "sharp";
 import { walletBaseUrl } from "./config";
 import type { WalletMember } from "./types";
 import { clearLogoBackdrop } from "@/lib/loyalty/logo-alpha";
+import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
+
+const cachedLogo = createWalletArtifactCache(8 * 1024 * 1024, 128, 30_000);
 
 async function brandAsset(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
   if (!member.logoUrl) {
@@ -46,6 +49,11 @@ async function brandAsset(member: Pick<WalletMember, "logoUrl" | "cafeName" | "p
 }
 
 export async function walletBrandLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
+  const key = walletArtifactKey(JSON.stringify([walletBaseUrl(), process.env.NEXT_PUBLIC_SUPABASE_URL, member.logoUrl, member.cafeName, member.program.cardBackground]));
+  return cachedLogo(key, () => renderBrandLogo(member));
+}
+
+async function renderBrandLogo(member: Pick<WalletMember, "logoUrl" | "cafeName" | "program">) {
   const { data, info } = await sharp(await brandAsset(member), { limitInputPixels: 16_000_000 })
     .resize(640, 400, { fit: "inside", withoutEnlargement: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   clearLogoBackdrop(data, info.width, info.height);

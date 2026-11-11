@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -38,6 +39,7 @@ export async function issueCompanyInvoiceAction(input: unknown, slug: string) {
       throw new Error(Object.hasOwn(settingErrors, error.message) ? settingErrors[error.message] : /[\u0600-\u06ff]/.test(error.message) ? error.message : error.code === "40001" ? "تغيرت المسودة افتح أحدث نسخة قبل الإصدار" : "تعذر إصدار الفاتورة راجع بيانات البائع والعميل والبنود");
     }
     const invoice = data as IssuedCompanyInvoice;
+    invalidateFinanceViews(slug);
     return { id: invoice.id, number: invoice.number, displayNumber: invoice.displayNumber, deliveryMethod: invoice.deliveryMethod };
   }, "تعذر تأكيد إصدار الفاتورة أعد المحاولة بالمسودة نفسها");
 }
@@ -68,6 +70,7 @@ export async function sendCompanyInvoiceWhatsAppAction(id: string, slug: string)
     catch { outcome = { status: "rejected" }; }
     const { data: finished, error: finishError } = await createAdminClient().rpc("brand_finance_finish_company_delivery", { p_id: claim.id, p_lease_token: claim.leaseToken, p_status: outcome.status, p_provider_message_id: outcome.providerMessageId ?? null });
     if (finishError || finished !== true) throw new Error("تعذر تأكيد حالة الإرسال الفاتورة محفوظة ولن نكرر إرسالها تلقائيًا");
+    invalidateFinanceViews(slug);
     return { status: outcome.status, repeated: false };
   }, "تعذر إرسال الفاتورة عبر الواتساب");
 }
@@ -95,6 +98,7 @@ export async function sendCompanyInvoiceEmailAction(id: string, slug: string) {
     }
     const { data: finished, error: finishError } = await createAdminClient().rpc("brand_finance_finish_company_email", { p_id: claim.id, p_lease_token: claim.leaseToken, p_status: status, p_provider_id: providerId });
     if (finishError || finished !== true) throw new Error("تعذر تأكيد حالة الإرسال الفاتورة محفوظة ولن نكرر إرسالها تلقائيًا");
+    invalidateFinanceViews(slug);
     return { status, repeated: false };
   }, "تعذر إرسال الفاتورة عبر البريد الإلكتروني");
 }

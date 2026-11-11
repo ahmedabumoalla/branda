@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { exitMaintenanceModeAction } from "@/app/actions/maintenance";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
@@ -11,6 +11,7 @@ import { ResponsiveAppShell } from "@/components/ui/responsive-app-shell";
 import {
   clearDashboardShellSnapshot,
   getCachedDashboardShellSnapshot,
+  primeDashboardShellSnapshot,
   type DashboardShellSnapshot,
 } from "@/lib/performance/dashboard-shell-client";
 import { dashboardPlatformFeatures, type PlatformPlan } from "@/lib/platform/admin-data";
@@ -37,6 +38,15 @@ type MaintenanceBannerSession = {
 
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "barndaksa-dashboard-sidebar-collapsed";
 
+function subscribeSidebarPreference(listener: () => void) {
+  window.addEventListener("storage", listener);
+  return () => window.removeEventListener("storage", listener);
+}
+function readSidebarPreference() {
+  try { return localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "true"; }
+  catch { return false; }
+}
+
 function guardForSnapshot(snapshot: DashboardShellSnapshot): GuardState {
   if (snapshot.unauthenticated) return { loading: false, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] };
   const access = getServiceSubscriptionAccess(snapshot.serviceSubscriptions);
@@ -56,17 +66,31 @@ function guardForSnapshot(snapshot: DashboardShellSnapshot): GuardState {
 export function DashboardAppLayout({
   children,
   maintenanceSession,
+  initialSnapshot = null,
 }: {
   children: ReactNode;
   maintenanceSession?: MaintenanceBannerSession | null;
+  initialSnapshot?: DashboardShellSnapshot | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [guard, setGuard] = useState<GuardState>({ loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [guard, setGuard] = useState<GuardState>(() => initialSnapshot ? guardForSnapshot(initialSnapshot) : { loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
+  const [sidebarOverride, setSidebarCollapsed] = useState<boolean | null>(null);
+  const storedSidebarCollapsed = useSyncExternalStore(subscribeSidebarPreference, readSidebarPreference, () => false);
+  const sidebarCollapsed = sidebarOverride ?? storedSidebarCollapsed;
   const [isEndingMaintenance, startEndingMaintenance] = useTransition();
   const [maintenanceError, setMaintenanceError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [snapshotSource, setSnapshotSource] = useState(initialSnapshot);
+
+  if (snapshotSource !== initialSnapshot) {
+    setSnapshotSource(initialSnapshot);
+    setGuard(initialSnapshot ? guardForSnapshot(initialSnapshot) : { loading: true, cafeSlug: "", activePlanId: "", plans: [], featureOverrides: [] });
+  }
+
+  useEffect(() => {
+    primeDashboardShellSnapshot(initialSnapshot);
+  }, [initialSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,16 +115,16 @@ export function DashboardAppLayout({
     }
     load();
     const refresh = () => { clearDashboardShellSnapshot(); load(); };
-    window.addEventListener("focus", refresh);
+    window.addEventListener("focus", load);
     window.addEventListener("barndaksa:subscription-updated", refresh);
     window.addEventListener("barndaksa:settings-updated", refresh);
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", load);
       window.removeEventListener("barndaksa:subscription-updated", refresh);
       window.removeEventListener("barndaksa:settings-updated", refresh);
     };
-  }, [pathname, retry]);
+  }, [pathname, retry, initialSnapshot]);
 
   useEffect(() => {
     if (!guard.expiresAt) return;
@@ -116,14 +140,6 @@ export function DashboardAppLayout({
     }, Math.max(0, Math.min(remaining, 2147483647)));
     return () => window.clearTimeout(timer);
   }, [guard.activePlanId, guard.expiresAt, retry, router]);
-
-  useEffect(() => {
-    try {
-      setSidebarCollapsed(localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "true");
-    } catch {
-      setSidebarCollapsed(false);
-    }
-  }, []);
 
   const currentFeature = useMemo(() => {
     if (pathname === "/dashboard/branches") return dashboardPlatformFeatures.find(feature => feature.id === "menu");

@@ -32,16 +32,26 @@ function RewardDetailsCopy({ reward }: { reward: CustomerRewardInstance }) {
   return <>{discount ? <p className={s.rewardValue}>خصم {discount}%</p> : null}{productName ? <p className={s.rewardValue}>{productName}</p> : null}{reward.rewardDescription ? <p>{reward.rewardDescription}</p> : null}{terms && terms !== reward.rewardDescription ? <p>{terms}</p> : null}</>;
 }
 
-export function RastMemberCard({ identity, member, walletAvailability }: { identity: LoyaltyIdentity; member: RastMembership; walletAvailability: RastWalletAvailability }) {
+export function RastMemberCard({ identity, member, walletAvailability, loadedAt }: { identity: LoyaltyIdentity; member: RastMembership; walletAvailability: RastWalletAvailability; loadedAt: number }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [openReward, setOpenReward] = useState<string | null>(member.rewards[0]?.id ?? null);
   useEffect(() => {
-    function refreshVisible() { if (document.visibilityState === "visible") router.refresh(); }
+    let lastRefresh = loadedAt;
+    function refreshVisible() {
+      const now = Date.now();
+      if (document.visibilityState !== "visible" || (now >= lastRefresh && now - lastRefresh < 5000)) return;
+      lastRefresh = now;
+      startRefresh(() => router.refresh());
+    }
+    // Cached routes remain instant, then reconcile an older balance without
+    // refetching a fresh server render or duplicating focus/visibility events.
+    refreshVisible();
     const timer = window.setInterval(refreshVisible, 30000);
     window.addEventListener("focus", refreshVisible);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", refreshVisible); };
-  }, [router]);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refreshVisible); document.removeEventListener("visibilitychange", refreshVisible); };
+  }, [router, loadedAt]);
   const remaining = Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle);
 
   return <main className={s.publicPage} style={loyaltyTheme(identity)} dir="rtl">

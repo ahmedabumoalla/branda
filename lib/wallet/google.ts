@@ -4,8 +4,12 @@ import { googleConfig } from "./config";
 import { buildGoogleClass, buildGoogleObject, googleClassId, googleObjectId } from "./payload";
 import type { WalletMember } from "./types";
 import { walletArtUrl } from "./art";
+import { walletArtifactKey } from "./artifact-cache";
 
 let cachedToken: { key: string; email: string; token: string; expires: number } | undefined;
+let pendingToken: { identity: string; request: Promise<string> } | undefined;
+type ClassWrite = { fingerprint?: string; expires: number; pending?: Promise<void> };
+const confirmedClasses = new Map<string, ClassWrite>();
 
 function jwt(payload: Record<string, unknown>, key: string) {
   const input = `${Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url")}.${Buffer.from(JSON.stringify(payload)).toString("base64url")}`;
@@ -15,6 +19,16 @@ function jwt(payload: Record<string, unknown>, key: string) {
 async function accessToken() {
   const config = googleConfig();
   if (cachedToken?.email === config.email && cachedToken.key === config.key && cachedToken.expires > Date.now() + 60000) return cachedToken.token;
+  const identity = walletArtifactKey(`${config.email}:${config.key}`);
+  if (pendingToken?.identity === identity) return pendingToken.request;
+  const request = requestAccessToken(config).finally(() => {
+    if (pendingToken?.request === request) pendingToken = undefined;
+  });
+  pendingToken = { identity, request };
+  return request;
+}
+
+async function requestAccessToken(config: ReturnType<typeof googleConfig>) {
   const now = Math.floor(Date.now() / 1000);
   const assertion = jwt({ iss: config.email, scope: "https://www.googleapis.com/auth/wallet_object.issuer", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }, config.key);
   const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }), cache: "no-store", signal: AbortSignal.timeout(15000) });
@@ -46,16 +60,17 @@ export async function getGoogleWalletSaveState(identity: { cafeId: string; cardI
 
 async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: string } & Record<string, unknown>) {
   const path = `${resource}/${encodeURIComponent(body.id)}`;
-  const existing = await request(path, "GET");
-  if (existing.status === 404) {
-    const inserted = await request(resource, "POST", body);
-    if (inserted.ok) return;
-    if (inserted.status !== 409) throw new Error(`google_wallet_insert_${inserted.status}`);
-  } else if (!existing.ok) throw new Error(`google_wallet_read_${existing.status}`);
   // Google requires UNDER_REVIEW on every class write, including approved classes.
   // Omitting it preserves APPROVED in the merged resource and makes PATCH fail.
   const updated = { ...body };
   let response = await request(path, "PATCH", updated);
+  if (response.status === 404) {
+    const inserted = await request(resource, "POST", updated);
+    if (inserted.ok) return;
+    if (inserted.status !== 409) throw new Error(`google_wallet_insert_${inserted.status}`);
+    // Another issuer request can create the resource after our PATCH returned 404.
+    response = await request(path, "PATCH", updated);
+  }
   // Quotas restrict notifications, not the customer's right to see their latest balance.
   if (response.status === 429 && updated.notifyPreference) {
     delete updated.notifyPreference;
@@ -64,10 +79,41 @@ async function upsert(resource: "loyaltyClass" | "loyaltyObject", body: { id: st
   if (!response.ok) throw new Error(`google_wallet_update_${response.status}`);
 }
 
+async function ensureClass(member: WalletMember, config: ReturnType<typeof googleConfig>) {
+  const body = buildGoogleClass(member, config.issuerId, config.baseUrl);
+  const key = `${config.email}:${body.id}`;
+  const fingerprint = walletArtifactKey(JSON.stringify([config.key, body]));
+  let entry = confirmedClasses.get(key);
+  if (!entry) {
+    // Evict only idle entries; concurrent work remains serialized per class.
+    for (const [id, item] of confirmedClasses) {
+      if (confirmedClasses.size < 128) break;
+      if (!item.pending) confirmedClasses.delete(id);
+    }
+    if (confirmedClasses.size >= 128) return upsert("loyaltyClass", body);
+    entry = { expires: 0 };
+    confirmedClasses.set(key, entry);
+  }
+  const state = entry;
+  const write = async () => {
+    if (state.fingerprint === fingerprint && state.expires > Date.now()) return;
+    // Only the latest successful shape for this class is reusable. An A -> B -> A
+    // change must write A again, rather than find an obsolete content-keyed hit.
+    state.fingerprint = undefined;
+    await upsert("loyaltyClass", body);
+    state.fingerprint = fingerprint;
+    state.expires = Date.now() + 60_000;
+  };
+  const work = (state.pending ?? Promise.resolve()).catch(() => {}).then(write);
+  state.pending = work;
+  try { await work; }
+  finally { if (state.pending === work) state.pending = undefined; }
+}
+
 export async function updateGooglePass(member: WalletMember, notify = false) {
   if (!member.program.enabled || !member.program.googleWalletEnabled) throw new Error("wallet_disabled");
   const config = googleConfig();
-  await upsert("loyaltyClass", buildGoogleClass(member, config.issuerId, config.baseUrl));
+  await ensureClass(member, config);
   await upsert("loyaltyObject", { ...buildGoogleObject(member, config.issuerId, walletArtUrl(member)), ...(notify ? { notifyPreference: "NOTIFY_ON_UPDATE" } : {}) });
 }
 

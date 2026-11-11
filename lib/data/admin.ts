@@ -32,43 +32,21 @@ function categoryLabel(category: unknown) {
   return BUSINESS_CATEGORIES.find((item) => item.id === id)?.label ?? id;
 }
 
-function cafeCountQuery(supabase: Awaited<ReturnType<typeof createClient>>, table: string, cafeId: string) {
-  return supabase.from(table).select("id", { count: "exact", head: true }).eq("cafe_id", cafeId);
-}
+type BrandDirectoryMetrics = {
+  cafe_id: string; products_count: number; offers_count: number; branches_count: number;
+  customers_count: number; orders_count: number; experience_submissions_count: number;
+  experience_rewards_count: number; loyalty_cards_count: number; support_tickets_count: number; total_revenue: number;
+};
 
-async function safeCount(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  table: string,
-  cafeId: string,
-  extra?: (query: ReturnType<typeof cafeCountQuery>) => ReturnType<typeof cafeCountQuery>
-) {
-  try {
-    let query = cafeCountQuery(supabase, table, cafeId);
-    if (extra) query = extra(query);
-    const { count, error } = await query;
-    if (error) return 0;
-    return count ?? 0;
-  } catch {
-    return 0;
+async function getBrandDirectoryMetrics(supabase: Awaited<ReturnType<typeof createClient>>, cafeIds: string[]) {
+  const metrics = new Map<string, BrandDirectoryMetrics>();
+  // Bounded batches avoid a request storm as the directory grows.
+  for (let offset = 0; offset < cafeIds.length; offset += 100) {
+    const { data, error } = await supabase.rpc("admin_brand_directory_metrics", { p_cafe_ids: cafeIds.slice(offset, offset + 100) });
+    if (error) throw error;
+    for (const row of (data ?? []) as BrandDirectoryMetrics[]) metrics.set(String(row.cafe_id), row);
   }
-}
-
-async function safeSumOrders(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  cafeId: string
-) {
-  try {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("total,total_amount,final_price")
-      .eq("cafe_id", cafeId);
-    if (error) return 0;
-    return (data ?? []).reduce((sum, row: Record<string, unknown>) => {
-      return sum + Number(row.total ?? row.total_amount ?? row.final_price ?? 0);
-    }, 0);
-  } catch {
-    return 0;
-  }
+  return metrics;
 }
 
 const featureOverrideSchema = z.object({
@@ -569,9 +547,10 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
 
   const rows = (cafes ?? []) as Record<string, unknown>[];
   const cafeIds = rows.map((row) => String(row.id)).filter(Boolean);
-  const [featureOverridesByCafeId, subscriptionStates] = await Promise.all([
+  const [featureOverridesByCafeId, subscriptionStates, metricsByCafeId] = await Promise.all([
     getCafeFeatureOverridesByCafeIds(cafeIds),
     getAdminBrandSubscriptionStates(cafeIds),
+    getBrandDirectoryMetrics(supabase, cafeIds),
   ]);
 
   return Promise.all(
@@ -589,31 +568,18 @@ export async function getAdminCafes(cafeIdFilter?: string): Promise<PlatformCafe
         : null;
       const ownerProfile = ownerMember?.profiles as Record<string, unknown> | null | undefined;
 
-      const [
-        productsCount,
-        offersCount,
-        branchesCount,
-        customersCount,
-        ordersCount,
-        experienceSubmissionsCount,
-        experienceRewardsCount,
-        loyaltyCardsCount,
-        supportTicketsCount,
-        totalRevenue,
-      ] = await Promise.all([
-        safeCount(supabase, "menu_products", cafeId, (q) => q.is("deleted_at", null)),
-        safeCount(supabase, "offers", cafeId, (q) => q.is("deleted_at", null)),
-        safeCount(supabase, "branches", cafeId, (q) => q.is("deleted_at", null)),
-        safeCount(supabase, "customer_profiles", cafeId),
-        safeCount(supabase, "orders", cafeId),
-        safeCount(supabase, "experience_reward_submissions", cafeId),
-        safeCount(supabase, "experience_reward_submissions", cafeId, (q) =>
-          q.in("status", ["approved", "redeemed"])
-        ),
-        safeCount(supabase, "loyalty_cards", cafeId),
-        safeCount(supabase, "brand_support_tickets", cafeId),
-        safeSumOrders(supabase, cafeId),
-      ]);
+      const metrics = metricsByCafeId.get(cafeId);
+      if (!metrics) throw new Error("Brand directory metrics unavailable");
+      const productsCount = Number(metrics.products_count);
+      const offersCount = Number(metrics.offers_count);
+      const branchesCount = Number(metrics.branches_count);
+      const customersCount = Number(metrics.customers_count);
+      const ordersCount = Number(metrics.orders_count);
+      const experienceSubmissionsCount = Number(metrics.experience_submissions_count);
+      const experienceRewardsCount = Number(metrics.experience_rewards_count);
+      const loyaltyCardsCount = Number(metrics.loyalty_cards_count);
+      const supportTicketsCount = Number(metrics.support_tickets_count);
+      const totalRevenue = Number(metrics.total_revenue);
 
       return {
         id: cafeId,

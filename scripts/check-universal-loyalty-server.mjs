@@ -21,6 +21,7 @@ const check=(condition,label)=>{assert.ok(condition,label);checks++;};
 const reject=async(fn)=>{await assert.rejects(fn);checks++;};
 const experienceSource=fs.readFileSync('lib/data/loyalty-experience.ts','utf8');
 const isolatedStubs=Object.fromEntries([...experienceSource.matchAll(/from "(@\/[^\"]+)"/g)].map(match=>[match[1],{}]));
+isolatedStubs['@/lib/loyalty/read-identifier']=load('lib/loyalty/read-identifier.ts',{});
 const lookupFilters=[];
 let lookupCalls=0,lookupResult={data:{card_code:'SECURE-CARD-CODE'},error:null};
 isolatedStubs['@/lib/supabase/admin']={createAdminClient:()=>({from:()=>{lookupCalls++;const query={select:()=>query,eq:(key,value)=>{lookupFilters.push([key,value]);return query;},maybeSingle:async()=>lookupResult};return query;}})};
@@ -58,6 +59,7 @@ const context={id:'10000000-0000-4000-8000-000000000001'};
 const features=async()=>entitled?['loyalty']:[];
 const brand=()=>({identity:{slug,name:'Own cafe',logoUrl:null},program:{enabled}});
 const actions=load('app/actions/loyalty-experience.ts',{
+  'next/server':{after:()=>{}},
   'next/cache':{revalidatePath:(...value)=>paths.push(value)},
   '@/app/actions/auth':{requestCustomerPhoneOtpAction:async(cafe,phone,purpose,source)=>{assert.equal(cafe,slug);assert.equal(source,'loyalty');otp++;return {required:true,ok:true};},completeCustomerPhoneOtpAction:async()=>({ok:true})},
   '@/lib/data/loyalty-experience':{resolveCashierCardNumber:async(code,cafeId)=>{assert.equal(cafeId,context.id);return code;},getLoyaltyBrand:async(value)=>{assert.equal(value,slug);return entitled?brand():null;},saveRastLoyaltySettings:async()=>{},saveBrandLoyaltyProgram:async()=>{},saveOwnerLoyaltyExperience:async()=>{}},

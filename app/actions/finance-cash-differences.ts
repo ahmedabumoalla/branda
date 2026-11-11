@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { actionResult } from "@/lib/platform/action-result";
 import { getFinanceCashDifferences, settleFinanceCashDifference } from "@/lib/data/finance-cash-differences";
 import type { CashDifferenceSettlement } from "@/lib/finance/cash-differences";
@@ -9,5 +10,9 @@ export async function fetchFinanceCashDifferencesAction(offset = 0, slug?: strin
 }
 
 export async function settleFinanceCashDifferenceAction(input: CashDifferenceSettlement, slug?: string) {
-  return actionResult(() => settleFinanceCashDifference(input, slug), "تعذر تأكيد تسوية الفرق أعد المحاولة بنفس الطلب");
+  return actionResult(async () => {
+    const result = await settleFinanceCashDifference(input, slug);
+    invalidateFinanceViews(slug);
+    return result;
+  }, "تعذر تأكيد تسوية الفرق أعد المحاولة بنفس الطلب");
 }

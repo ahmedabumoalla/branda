@@ -18,6 +18,6 @@ export default async function LoyaltyJoinPage({ params, searchParams }: { params
   const membership = brand.program.enabled && profile ? await getLoyaltyMembership(slug) : null;
   const readiness = getWalletReadiness();
   const analytics = brand.program.enabled ? <PublicPageAnalytics slug={slug} kind={loyaltyVisitKind((await searchParams).source)} /> : null;
-  if (membership) return <>{analytics}<RastMemberCard identity={brand.identity} member={membership} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
+  if (membership) return <>{analytics}<RastMemberCard identity={brand.identity} member={membership} loadedAt={membership.loadedAt} walletAvailability={{ apple: readiness.apple && brand.program.appleWalletEnabled, google: readiness.google && brand.program.googleWalletEnabled }} /></>;
   return <>{analytics}<RastEnrollment identity={brand.identity} program={brand.program} authenticated={Boolean(profile)} /></>;
 }

@@ -9,20 +9,10 @@ let cachedSnapshot: { at: number; value: DashboardShellSnapshot } | null = null;
 let pendingSnapshot: Promise<DashboardShellSnapshot> | null = null;
 let snapshotGeneration = 0;
 
-function readSessionSnapshot(): DashboardShellSnapshot | null {
+function removeLegacySessionSnapshot() {
   try {
-    const raw = sessionStorage.getItem("barndaksa_dashboard_shell_snapshot");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { at: number; value: DashboardShellSnapshot };
-    if (Date.now() - parsed.at > DASHBOARD_SHELL_TTL_MS || !Array.isArray(parsed.value?.serviceSubscriptions)) {
-      sessionStorage.removeItem("barndaksa_dashboard_shell_snapshot");
-      return null;
-    }
-    cachedSnapshot = parsed;
-    return parsed.value;
-  } catch {
-    return null;
-  }
+    sessionStorage.removeItem("barndaksa_dashboard_shell_snapshot");
+  } catch { /* Storage may be unavailable. Never persist private account snapshots. */ }
 }
 
 function writeSessionSnapshot(value: DashboardShellSnapshot) {
@@ -31,9 +21,13 @@ function writeSessionSnapshot(value: DashboardShellSnapshot) {
     return;
   }
   cachedSnapshot = { at: Date.now(), value };
-  try {
-    sessionStorage.setItem("barndaksa_dashboard_shell_snapshot", JSON.stringify(cachedSnapshot));
-  } catch {}
+}
+
+// Only the current server-rendered layout may seed its account snapshot.
+// A fresh layout replaces the previous account and invalidates its pending requests.
+export function primeDashboardShellSnapshot(value: DashboardShellSnapshot | null) {
+  clearDashboardShellSnapshot();
+  if (value) writeSessionSnapshot(value);
 }
 
 function redirectUnauthenticatedDashboard(value: DashboardShellSnapshot) {
@@ -48,15 +42,14 @@ export function getCachedDashboardShellSnapshot() {
     return Promise.resolve(cachedSnapshot.value);
   }
 
-  const sessionSnapshot = readSessionSnapshot();
-  if (sessionSnapshot) return Promise.resolve(redirectUnauthenticatedDashboard(sessionSnapshot));
+  removeLegacySessionSnapshot();
 
   if (pendingSnapshot) return pendingSnapshot;
 
   const generation = snapshotGeneration;
   const request = fetchOwnerDashboardShellAction()
     .then((snapshot) => {
-      if (generation !== snapshotGeneration) return snapshot;
+      if (generation !== snapshotGeneration) throw new Error("Dashboard context changed");
       writeSessionSnapshot(snapshot);
       return redirectUnauthenticatedDashboard(snapshot);
     })
@@ -71,7 +64,5 @@ export function clearDashboardShellSnapshot() {
   snapshotGeneration++;
   cachedSnapshot = null;
   pendingSnapshot = null;
-  try {
-    sessionStorage.removeItem("barndaksa_dashboard_shell_snapshot");
-  } catch {}
+  removeLegacySessionSnapshot();
 }

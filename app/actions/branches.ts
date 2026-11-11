@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import { getOwnerBranches, softDeleteBranch, upsertBranch } from "@/lib/data/branches";
@@ -12,7 +13,7 @@ export async function fetchOwnerBranchesAction() {
 
 export async function saveBranchAction(branch: CafeBranch) {
   requireStorefrontEnabled();
-  return upsertBranch({
+  const saved = await upsertBranch({
     id: /^[0-9a-f-]{36}$/i.test(branch.id) ? branch.id : undefined,
     name: branch.name,
     address: branch.address,
@@ -25,9 +26,14 @@ export async function saveBranchAction(branch: CafeBranch) {
     welcomeMessage: branch.welcomeMessage,
     active: branch.active,
   });
+  revalidatePath("/dashboard/branches");
+  revalidatePath("/dashboard/menu");
+  return saved;
 }
 
 export async function deleteBranchAction(branchId: string) {
   requireStorefrontEnabled();
   await softDeleteBranch(branchId);
+  revalidatePath("/dashboard/branches");
+  revalidatePath("/dashboard/menu");
 }

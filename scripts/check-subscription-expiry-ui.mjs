@@ -35,14 +35,14 @@ function withServices(snapshot) {
  if(snapshot.serviceSubscriptions || snapshot.unauthenticated) return snapshot;
  return {...snapshot,serviceSubscriptions:snapshot.subscription ? [{...snapshot.subscription,planId:snapshot.planId,features:snapshot.plans.find(plan=>plan.id===snapshot.planId)?.features??[]}] : []};
 }
-function harness(snapshot,pathname='/dashboard',error=false,readSnapshot){
+function harness(snapshot,pathname='/dashboard',error=false,readSnapshot,initialSnapshot=null){
  snapshot=withServices(snapshot);
  const values=[],effects=[],pending=[],cleanups=[];let index=0;const timers=new Map();let timerId=0;const router={refresh(){router.refreshed=true}};const listeners=new Map();
- const hooks={...React,useState(initial){const slot=index++;if(!(slot in values))values[slot]=typeof initial==='function'?initial():initial;return[values[slot],next=>values[slot]=typeof next==='function'?next(values[slot]):next]},useEffect(fn,deps){const slot=index++;if(!effects[slot]||deps.some((value,i)=>value!==effects[slot][i])){effects[slot]=deps;pending.push(()=>{cleanups[slot]?.();cleanups[slot]=fn()})}},useMemo:fn=>fn(),useTransition:()=>[false,fn=>fn()]};
+ const hooks={...React,useSyncExternalStore:()=>false,useState(initial){const slot=index++;if(!(slot in values))values[slot]=typeof initial==='function'?initial():initial;return[values[slot],next=>values[slot]=typeof next==='function'?next(values[slot]):next]},useEffect(fn,deps){const slot=index++;if(!effects[slot]||deps.some((value,i)=>value!==effects[slot][i])){effects[slot]=deps;pending.push(()=>{cleanups[slot]?.();cleanups[slot]=fn()})}},useMemo:fn=>fn(),useTransition:()=>[false,fn=>fn()]};
  globalThis.window={addEventListener(name,fn){listeners.set(name,fn)},removeEventListener(name){listeners.delete(name)},setTimeout(fn,ms){timers.set(++timerId,{fn,ms});return timerId},clearTimeout(id){timers.delete(id)}};
  globalThis.localStorage={getItem:()=>null};
- const {DashboardAppLayout}=load(path.resolve('components/dashboard/dashboard-app-layout.tsx'),{react:hooks,'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},'@/app/actions/maintenance':{exitMaintenanceModeAction:async()=>{}},'@/components/dashboard/DashboardSidebar':{DashboardSidebar:()=>null},'@/components/dashboard/feature-blocked-state':{DashboardFeatureBlockedState:()=>React.createElement('p',null,'feature blocked')},'@/components/dashboard/subscription-expired-state':{SubscriptionExpiredState:()=>React.createElement('p',null,'subscription expired')},'@/components/ui/responsive-app-shell':{ResponsiveAppShell:({children})=>React.createElement('main',null,children)},'@/lib/performance/dashboard-shell-client':{clearDashboardShellSnapshot(){},getCachedDashboardShellSnapshot:async()=>{if(error)throw new Error('Unauthorized');return readSnapshot ? readSnapshot() : snapshot}}});
- return {timers,router,async renew(next,event='barndaksa:subscription-updated'){snapshot=withServices(next);listeners.get(event)?.();await flush()},render(){index=0;return DashboardAppLayout({children:React.createElement('p',null,'PROTECTED CONTENT')})},async effects(){for(const fn of pending.splice(0))fn();await flush()},cleanup(){for(const fn of cleanups)fn?.()},setPath(value){pathname=value}};
+ const {DashboardAppLayout}=load(path.resolve('components/dashboard/dashboard-app-layout.tsx'),{react:hooks,'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},'@/app/actions/maintenance':{exitMaintenanceModeAction:async()=>{}},'@/components/dashboard/DashboardSidebar':{DashboardSidebar:()=>null},'@/components/dashboard/feature-blocked-state':{DashboardFeatureBlockedState:()=>React.createElement('p',null,'feature blocked')},'@/components/dashboard/subscription-expired-state':{SubscriptionExpiredState:()=>React.createElement('p',null,'subscription expired')},'@/components/ui/responsive-app-shell':{ResponsiveAppShell:({children})=>React.createElement('main',null,children)},'@/lib/performance/dashboard-shell-client':{primeDashboardShellSnapshot(){},clearDashboardShellSnapshot(){},getCachedDashboardShellSnapshot:async()=>{if(error)throw new Error('Unauthorized');return readSnapshot ? readSnapshot() : snapshot}}});
+ return {timers,router,async renew(next,event='barndaksa:subscription-updated'){snapshot=withServices(next);listeners.get(event)?.();await flush()},render(){index=0;return DashboardAppLayout({children:React.createElement('p',null,'PROTECTED CONTENT'),initialSnapshot})},async effects(){for(const fn of pending.splice(0))fn();await flush()},cleanup(){for(const fn of cleanups)fn?.()},setPath(value){pathname=value},setInitial(value){initialSnapshot=withServices(value);snapshot=initialSnapshot}};
 }
 const base={planId:'paid',settings:{cafeSlug:'brand'},plans:[{id:'paid',active:true,features:['menu']}],featureOverrides:[],subscription:{status:'active',expiresAt:new Date(Date.now()+60000).toISOString()}};
 const expired=harness({...base,planId:'',subscription:{status:'trialing',expiresAt:new Date(Date.now()-1).toISOString()}});
@@ -139,9 +139,19 @@ for (const serviceSubscriptions of [undefined, null, {}]) {
  assert.equal(removed,1,'old snapshot is invalidated without changing the storage key');
  assert.ok(renderToStaticMarkup(release.render()).includes('PROTECTED CONTENT'),'old cache must not lock active account or produce a loading error');
  assert.equal(release.render().props.sidebar(()=>{}).props.servicesAvailable,true);
- assert.deepEqual(JSON.parse(stored).value.serviceSubscriptions,fresh.serviceSubscriptions);
+ assert.equal(stored,null,'private account snapshot is never persisted');
  assert.equal(await cache.getCachedDashboardShellSnapshot(),fresh);
  assert.equal(fetches,1,'valid new in-memory snapshot is reused');
  release.cleanup();
 }
 console.log('PASS release compatibility: old/malformed session cache invalidates, fetches fresh and leaves active dashboard usable');
+
+const serverSeed=withServices({...base,subscription:{status:'active',expiresAt:new Date(Date.now()+60000).toISOString()}});
+const seeded=harness(serverSeed,'/dashboard/menu',false,undefined,serverSeed);
+assert.ok(renderToStaticMarkup(seeded.render()).includes('PROTECTED CONTENT'),'authenticated SSR snapshot renders immediately before client effects');
+await seeded.effects();
+seeded.setInitial(withServices({...base,serviceSubscriptions:[],subscription:{status:'expired',expiresAt:new Date(Date.now()-1000).toISOString()}}));
+seeded.render();
+assert.ok(renderToStaticMarkup(seeded.render()).includes('subscription expired'),'new server snapshot replaces the old gate without waiting for client fetch');
+seeded.cleanup();
+console.log('PASS SSR snapshot: first render has authorized page, fresh server revocation replaces retained gate');

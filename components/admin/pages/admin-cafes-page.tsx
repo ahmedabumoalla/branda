@@ -7,7 +7,7 @@ import { PendingBrandDeletionCleanup } from "@/components/admin/brand-deletion-c
 import { BrandAccountCreate } from "@/components/admin/brand-account-create";
 import type { BrandDeletionResult, PendingBrandDeletion } from "@/lib/data/brand-deletion";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type SetStateAction } from "react";
 import {
   saveCafeFeatureOverridesAction,
   addCafePlansAction,
@@ -78,16 +78,33 @@ export function AdminCafesPage({
   const [deletionNotice, setDeletionNotice] = useState("");
   const [localPendingDeletions, setLocalPendingDeletions] = useState<PendingBrandDeletion[]>([]);
   const [finishedDeletionIds, setFinishedDeletionIds] = useState<string[]>([]);
-  const [cafes, setCafes] = useState<PlatformCafe[]>(initialCafes);
-  const [plans] = useState<PlatformPlan[]>(initialPlans);
-  const [customers] = useState<PlatformCustomer[]>(initialCustomers);
-  const [operations] = useState<PlatformOperation[]>(initialOperations);
+  // A router refresh supplies a new server snapshot without remounting this page.
+  // Keep local successful mutations until that snapshot changes, while leaving drafts alone.
+  const [cafeSnapshot, setCafeSnapshot] = useState({ source: initialCafes, value: initialCafes });
+  const cafes = cafeSnapshot.source === initialCafes ? cafeSnapshot.value : initialCafes;
+  const plans = initialPlans;
+  const customers = initialCustomers;
+  const operations = initialOperations;
 
-  const [modalCafe, setModalCafe] = useState<PlatformCafe | null>(null);
+  const [modalCafeId, setModalCafeId] = useState<string | null>(null);
+  const modalCafe = cafes.find(cafe => cafe.id === modalCafeId) ?? null;
   const [updatingPlanCafeId, setUpdatingPlanCafeId] = useState<string | null>(null);
   const [featureOverrideDrafts, setFeatureOverrideDrafts] = useState<Record<string, FeatureOverrideDraft>>({});
   const [savingFeatureOverridesCafeId, setSavingFeatureOverridesCafeId] = useState<string | null>(null);
   const [isFeatureOverridePending, startFeatureOverrideTransition] = useTransition();
+
+  if (cafeSnapshot.source !== initialCafes) {
+    setCafeSnapshot({ source: initialCafes, value: initialCafes });
+    if (modalCafeId && !initialCafes.some(cafe => cafe.id === modalCafeId)) setModalCafeId(null);
+  }
+
+  function setCafes(update: SetStateAction<PlatformCafe[]>) {
+    setCafeSnapshot(current => ({ ...current, value: typeof update === "function" ? update(current.value) : update }));
+  }
+
+  function setModalCafe(cafe: PlatformCafe | null) {
+    setModalCafeId(cafe?.id ?? null);
+  }
 
   function onBrandDeleted(result: BrandDeletionResult) {
     setCafes(previous => previous.filter(cafe => cafe.id !== result.cafeId));
@@ -125,7 +142,6 @@ export function AdminCafesPage({
             : item,
         ),
       );
-      setModalCafe(current => current?.id === id ? { ...current, status: nextActive ? "نشط" : "موقوف" } : current);
     } catch {
       alert("تعذر تحديث حالة العلامة التجارية");
     }
@@ -138,7 +154,6 @@ export function AdminCafesPage({
       if (!result.ok) throw new Error(result.message);
       const subscription = result.data;
       setCafes(prev => prev.map(cafe => cafe.id === id ? { ...cafe, ...subscription } : cafe));
-      setModalCafe(current => current?.id === id ? { ...current, ...subscription } : current);
     } finally {
       setUpdatingPlanCafeId(null);
     }
@@ -151,7 +166,6 @@ export function AdminCafesPage({
       if (!result.ok) throw new Error(result.message);
       const subscription = result.data;
       setCafes(prev => prev.map(cafe => cafe.id === id ? { ...cafe, ...subscription } : cafe));
-      setModalCafe(current => current?.id === id ? { ...current, ...subscription } : current);
     } finally {
       setUpdatingPlanCafeId(null);
     }
@@ -193,9 +207,6 @@ export function AdminCafesPage({
             prev.map((item) =>
               item.id === cafe.id ? { ...item, featureOverrides: saved } : item,
             ),
-          );
-          setModalCafe((current) =>
-            current?.id === cafe.id ? { ...current, featureOverrides: saved } : current,
           );
           setFeatureOverrideDrafts((prev) => {
             const next = { ...prev };

@@ -153,7 +153,7 @@ function scannerFixture() {
   const state = { token: "session-token", active: true, slug: "rast", session: true, features: ["loyalty"],
     featureError: null, sessionError: null, rpcError: null, preview, operation: { ok: true, status: "stamped", cardCode: "CARD123" },
     revokedAt: null, ownerUserId: null, authUser: null, cafeOwnerId: null, profileStatus: "active", cafeStatus: "active", deletedAt: null,
-    calls: [], reads: [], wallet: [], walletError: null };
+    calls: [], reads: [], wallet: [], walletError: null, after: [], afterError: null };
   const db = {
     rpc: async (name, args) => { state.calls.push({ name, args }); return { data: name === "preview_loyalty_card" ? state.preview : state.operation, error: state.rpcError }; },
     from: (table) => {
@@ -166,7 +166,7 @@ function scannerFixture() {
         gt: (...args) => { calls.push(["gt", ...args]); return query; },
         maybeSingle: async () => ({ error: table === "cafe_cashier_sessions" ? state.sessionError : null, data:
           table === "cafe_cashier_sessions" ? state.session ? { cafe_id: cafeId, cashier_id: cashierId, revoked_at: state.revokedAt } : null
-            : table === "cafe_cashiers" ? { id: cashierId, active: state.active, owner_user_id: state.ownerUserId }
+            : table === "cafe_cashiers" ? { id: cashierId, active: state.active, owner_user_id: state.ownerUserId, can_use_loyalty: true, can_use_pager: false }
               : table === "cafes" ? { id: cafeId, slug: state.slug, owner_user_id: state.cafeOwnerId, status: state.cafeStatus, deleted_at: state.deletedAt }
                 : { status: state.profileStatus } }),
       };
@@ -176,6 +176,7 @@ function scannerFixture() {
   const getFeatures = async () => { if (state.featureError) throw state.featureError; return state.features; };
   const stubs = {
     "server-only": {}, "next/cache": { revalidatePath: () => {} },
+    "next/server": { after: callback => { if (state.afterError) throw state.afterError; state.after.push(callback); } },
     "next/headers": { cookies: async () => ({ get: () => state.token ? { value: state.token } : undefined }) },
     "@/app/actions/auth": {}, "@/lib/auth/phone-otp": {}, "@/lib/data/cafes": {},
     "@/lib/data/feature-entitlements": { getPublicCafeFeatureCodesBySlug: getFeatures, getCafeFeatureCodes: getFeatures },
@@ -205,13 +206,19 @@ await test("preview audits normalized signed card and strips extra RPC fields", 
 });
 for (const [name, mutate] of [
   ["no session token", (s) => { s.token = null; }], ["expired session", (s) => { s.session = false; }],
-  ["inactive cashier", (s) => { s.active = false; }], ["other brand", (s) => { s.slug = "other"; }],
+  ["inactive cashier", (s) => { s.active = false; }],
   ["session query error", (s) => { s.sessionError = { message: "private" }; }],
   ["revoked session", (s) => { s.revokedAt = timestamp; }],
   ["disabled entitlement", (s) => { s.features = []; }], ["entitlement query error", (s) => { s.featureError = new Error("private"); }],
 ]) await test(`preview ${name} stops before audited customer RPC`, async () => {
   const ctx = scannerFixture(); mutate(ctx.state);
   await assert.rejects(() => ctx.lookupRastCashierCard("CARD123")); assert.equal(ctx.state.calls.length, 0);
+});
+await test("subscribed non-Rast brand uses its authenticated session and audited preview", async () => {
+  const ctx = scannerFixture(); ctx.state.slug = "other";
+  await ctx.lookupRastCashierCard("CARD123");
+  assert.equal(ctx.state.calls.length, 1);
+  assert.equal(ctx.state.calls[0].args.p_session_token, "session-token");
 });
 for (const [name, mutate] of [
   ["audit write error", (s) => { s.rpcError = { message: "private" }; }],
@@ -227,6 +234,9 @@ for (const kind of ["stamp", "redeem"]) await test(`${kind} invokes audit wrappe
   ctx.state.operation.status = kind === "stamp" ? "stamped" : "redeemed";
   await ctx.scanLoyaltyExperienceAction({ value: `  ${code.toLowerCase()}  `, requestId, kind });
   assert.deepEqual(ctx.state.calls, [{ name: "execute_loyalty_audited_operation", args: { p_session_token: "session-token", p_code: code, p_request_id: requestId, p_operation: kind } }]);
+  assert.deepEqual(ctx.state.wallet, [], "committed scan responds before wallet provider work");
+  assert.equal(ctx.state.after.length, 1);
+  await ctx.state.after[0]();
   assert.deepEqual(ctx.state.wallet, ["CARD123"]);
 });
 for (const [name, mutate] of [
@@ -297,8 +307,18 @@ await test("wallet outage preserves successful committed mutation response", asy
   const originalWarn = console.warn; const warnings = []; console.warn = (message) => warnings.push(message);
   try {
     assert.equal((await ctx.scanLoyaltyExperienceAction({ value: "CARD123", requestId, kind: "stamp" })).status, "stamped");
+    await ctx.state.after[0]();
   } finally { console.warn = originalWarn; }
   assert.deepEqual(warnings, ["[loyalty-wallet-sync] deferred"]);
+});
+
+await test("background scheduling failure preserves committed stamp and durable retry", async () => {
+  const ctx = scannerFixture(); ctx.state.afterError = new Error("host unavailable");
+  const originalWarn = console.warn; console.warn = () => {};
+  try {
+    assert.equal((await ctx.scanLoyaltyExperienceAction({ value: "CARD123", requestId, kind: "stamp" })).status, "stamped");
+    assert.equal(ctx.state.wallet.length, 0);
+  } finally { console.warn = originalWarn; }
 });
 
 const uiPath = "components/loyalty/loyalty-activity-log.tsx";

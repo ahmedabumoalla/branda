@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -42,6 +43,7 @@ export async function saveJournalDescriptionsAction(input: unknown, slug: string
     const { data, error } = await client.rpc("brand_finance_save_journal_descriptions", { p_cafe_id: cafe.id, p_input: parsed.data });
     if (error?.code === "40001") throw new Error("تغير وصف القيد في جلسة أخرى أعد تحميله قبل الحفظ");
     if (error) throw new Error("تعذر تأكيد حفظ الأوصاف أعد المحاولة بنفس الطلب");
+    invalidateFinanceViews(slug);
     return data as { id: string; revision: number; changed: number; duplicate: boolean };
   }, "تعذر حفظ أوصاف القيد");
 }

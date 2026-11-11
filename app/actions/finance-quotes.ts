@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -27,6 +28,7 @@ export async function saveQuoteAction(input: unknown, slug: string) {
     const { client, cafe } = await context(slug);
     const { data, error } = await client.rpc("brand_finance_save_quote", { p_cafe_id: cafe.id, p_id: parsed.data.id, p_revision: parsed.data.revision, p_payload: parsed.data.payload });
     if (error) failure(error);
+    invalidateFinanceViews(slug);
     return quoteRecord(data as QuoteRecord);
   }, "تعذر تأكيد حفظ عرض السعر أعد المحاولة بنفس العرض");
 }
@@ -47,6 +49,7 @@ export async function convertQuoteAction(input: unknown, slug: string) {
     const { client, cafe } = await context(slug);
     const { data, error } = await client.rpc("brand_finance_convert_quote", { p_cafe_id: cafe.id, p_id: parsed.data.id, p_revision: parsed.data.revision });
     if (error) failure(error);
+    invalidateFinanceViews(slug);
     return data as { id: string; revision: number };
   }, "تعذر تأكيد التحويل أعد المحاولة بنفس عرض السعر");
 }

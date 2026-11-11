@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -6,7 +7,7 @@ import { getCafeBySlug, requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getPublicCafeSettings } from "@/lib/data/settings";
 import { getPublicCafeFeatureCodesBySlug, getOwnerFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
-import { getPublicLoyaltyProgramBySlug, getLoyaltyCardViewByCode, getCustomerLoyaltyCardViewForProfile } from "@/lib/data/loyalty-cards";
+import { getPublicLoyaltyProgramBySlug, getLoyaltyCardViewByCode, getCustomerLoyaltyCardViewForProfile, type CustomerLoyaltyCardView } from "@/lib/data/loyalty-cards";
 import { getLoyaltyCustomerProfile } from "@/lib/auth/rast-loyalty-session";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
@@ -21,10 +22,12 @@ import { resolvePublishedStoragePathToUrl, storageBucketForLogo } from "@/lib/st
 import { isCashierLoyaltyCode, isLoyaltyDisplayNumber, normalizeLoyaltyDigits } from "@/lib/loyalty/read-identifier";
 
 export async function getLoyaltyExperience(cafeId: string) {
-  const { data, error } = await createAdminClient().from("cafe_loyalty_experience")
-    .select("reward_validity_days,reward_kind,reward_discount_percent,nearby_message,branch_latitude,branch_longitude,offer_title,offer_body,offer_updated_at,updated_at").eq("cafe_id", cafeId).maybeSingle();
+  const [{ data, error }, { data: category }] = await Promise.all([
+    createAdminClient().from("cafe_loyalty_experience")
+      .select("reward_validity_days,reward_kind,reward_discount_percent,nearby_message,branch_latitude,branch_longitude,offer_title,offer_body,offer_updated_at,updated_at").eq("cafe_id", cafeId).maybeSingle(),
+    createAdminClient().from("cafes").select("business_category").eq("id", cafeId).maybeSingle(),
+  ]);
   if (error) throw new Error("إعدادات تجربة الولاء تحتاج إكمال تهيئة قاعدة البيانات");
-  const { data: category } = await createAdminClient().from("cafes").select("business_category").eq("id", cafeId).maybeSingle();
   const nearbyDefault = category?.business_category === "hair_salons" ? "قريب منّا؟ حان وقت العناية بإطلالتك يسعدنا نشوفك" : defaultLoyaltyExperience.nearbyMessage;
   return data ? {
     rewardValidityDays: Number(data.reward_validity_days), nearbyMessage: String(data.nearby_message === defaultLoyaltyExperience.nearbyMessage ? nearbyDefault : data.nearby_message),
@@ -38,7 +41,8 @@ export async function getLoyaltyExperience(cafeId: string) {
   } : { ...defaultLoyaltyExperience, nearbyMessage: nearbyDefault };
 }
 
-export async function getLoyaltyBrand(slug: string) {
+// Share public identity reads only within this render request, never across sessions.
+export const getLoyaltyBrand = cache(async (slug: string) => {
   const features = await getPublicCafeFeatureCodesBySlug(slug);
   if (!featureCodesAllow(features, "loyalty")) return null;
   const [cafe, program, settings] = await Promise.all([
@@ -52,33 +56,43 @@ export async function getLoyaltyBrand(slug: string) {
     || (appearance.logoPath ? await resolvePublishedStoragePathToUrl(storageBucketForLogo(), appearance.logoPath) : appearance.logoUrl)
     || (slug === "rast" ? "/menu-logos/kawakib-transparent-20261008.png" : null);
   return { cafeId: String(cafe.id), identity: { businessCategory: appearance.businessCategory, slug: String(cafe.slug), name: String(cafe.name), nameEn: String(cafe.name_en ?? ""), logoUrl, logoDisplayUrl: logoUrl ? `/api/wallet/brand/${encodeURIComponent(slug)}/logo?v=brand-stamps-v1` : null, ...(slug === "rast" ? {} : { cardBackground: program.cardBackground, cardForeground: program.cardForeground, cardAccent: program.cardAccent }) }, program };
-}
+});
 
 export async function getLoyaltyMembership(slug: string) {
   const brand = await getLoyaltyBrand(slug);
   if (!brand || !brand.program.enabled) return null;
   const profile = await getLoyaltyCustomerProfile(slug);
   if (!profile) return null;
-  const view = await getCustomerLoyaltyCardViewForProfile(slug, String(profile.id));
+  const [view, rewards] = await Promise.all([
+    getCustomerLoyaltyCardViewForProfile(slug, String(profile.id)),
+    getCustomerRewardInstances(slug, String(profile.id)),
+  ]);
   if (!view) return null;
-  const rewards = await getCustomerRewardInstances(slug, String(profile.id));
   const availableRewards = rewards
     .filter((reward) => reward.sourceType === "loyalty" && reward.status === "available" && (!reward.expiresAt || Date.parse(reward.expiresAt) > Date.now()))
     .map((reward) => ({ ...reward, qrPayload: createBarndaksaQrPayload("customer-reward", reward.rewardCode) }));
-  return { ...view, card: { ...view.card, availableRewards: availableRewards.length }, rewards: availableRewards };
+  return { ...view, card: { ...view.card, availableRewards: availableRewards.length }, rewards: availableRewards, loadedAt: Date.now() };
 }
 
 // Only trusted wallet webservice callers may use this privileged snapshot.
 export async function loadWalletMemberByCode(cardCode: string): Promise<WalletMember | null> {
   const view = await getLoyaltyCardViewByCode(cardCode);
+  return view ? loadWalletMemberFromView(view) : null;
+}
+
+// Internal only: callers must obtain a fresh view and complete their access guard first.
+async function loadWalletMemberFromView(view: CustomerLoyaltyCardView): Promise<WalletMember | null> {
   if (!view || !view.program.enabled) return null;
-  const brand = await getLoyaltyBrand(view.cafeSlug);
+  const [brand, experience, { count, error }] = await Promise.all([
+    getLoyaltyBrand(view.cafeSlug),
+    getLoyaltyExperience(view.card.cafeId),
+    createAdminClient().from("customer_reward_instances").select("id", { count: "exact", head: true })
+      .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+  ]);
   if (!brand) return null;
-  const { count, error } = await createAdminClient().from("customer_reward_instances").select("id", { count: "exact", head: true })
-    .eq("cafe_id", view.card.cafeId).eq("loyalty_card_id", view.card.id).eq("status", "available")
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
   if (error) throw new Error("تعذر تحديث مكافآت البطاقة");
-  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience: await getLoyaltyExperience(view.card.cafeId) };
+  return { ...view, card: { ...view.card, availableRewards: count ?? 0 }, logoUrl: brand.identity.logoUrl, experience };
 }
 
 export async function getAuthorizedWalletMember(cardCode: string) {
@@ -88,9 +102,9 @@ export async function getAuthorizedWalletMember(cardCode: string) {
   const profile = await getLoyaltyCustomerProfile(view.cafeSlug);
   if (!profile) return null;
   const { data, error } = await createAdminClient().from("loyalty_cards").select("id")
-    .eq("id", view.card.id).eq("cafe_id", view.card.cafeId).eq("customer_profile_id", profile.id).maybeSingle();
+    .eq("id", view.card.id).eq("cafe_id", view.card.cafeId).eq("customer_profile_id", profile.id).eq("status", "active").maybeSingle();
   if (error || !data) return null;
-  return loadWalletMemberByCode(code);
+  return loadWalletMemberFromView(view);
 }
 
 const experienceSchema = z.object({

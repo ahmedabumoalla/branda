@@ -1,0 +1,458 @@
+{
+  "at": "2026-11-11T16:36:22.620Z",
+  "runtime": "v24.22.1",
+  "cwd": "C:/Projects/branda-platform/.barndaksa-backups/full-release-20261111",
+  "inputs": {
+    "app/actions/admin.ts": "5e3111b9558a1887726e14f0821c9f43bc255301d1248a06baaa60fcad60cbab",
+    "app/actions/branches.ts": "86f100bcece629d736fa03edd7a44e61383f3d747c6c02b0cf87d6ac8cb75483",
+    "app/actions/finance-access.ts": "0820c6db5f38d5ea893f1d3094d9caa25291ee6ba0aa97c92cddd98076331e29",
+    "app/actions/finance-cash-differences.ts": "2dedcdab09e26d9bf2cf590d8414439ed1af67074bf05d3809ec12f0cc779278",
+    "app/actions/finance-cash-handovers.ts": "da19d2bf9850c353a7d91d798a31e2e86ce7394567efb2fcd482c42fd4506ad6",
+    "app/actions/finance-company-invoices.ts": "88bc080e7ffc5cf08030b80a8fb108881d5cd35119e5e0188774b999ab1e77c7",
+    "app/actions/finance-inventory-catalog.ts": "5d12a954f9c8632cf462e5e918fbae9982c57295d1d8ab8ec8da151a8e2b95e7",
+    "app/actions/finance-invoice-drafts.ts": "0ce86a8b8316580b3e4b9924f3707a64f83c0549833b037347fdb61bec63bbb6",
+    "app/actions/finance-invoice-extensions.ts": "b597bc20c5ee4e425e117ea803b4419493b07ca601ecd7f65e2e3a5f383694f0",
+    "app/actions/finance-invoice-management.ts": "8aee4088f7d8d895a5f405f3c95995d00193a8eb5f90234094aa5798ec7dd26e",
+    "app/actions/finance-invoice-settings.ts": "e5ec597055fa081ea11c1cd9b6f0c59bcd4eded0dd2dbcbfca8898bffbb42c73",
+    "app/actions/finance-journal-detail.ts": "63b41cb789bbcffa8024d2e039fac2d4877ef81afcf556efdabb45f6576b2937",
+    "app/actions/finance-payment-management.ts": "2a1f37917971a2658072b2e1c54eea94e11bf9179262361223b93dfd3afee1b1",
+    "app/actions/finance-quotes.ts": "d4802bdccdc49e2c15a932501ebccf0d83e6f82761d09b84df3499188a01f490",
+    "app/actions/finance-shift-monitor.ts": "38d154950b35680af761b180557b093f7d19a234abb151a598469d6a506cd463",
+    "app/actions/finance-treasury.ts": "55b54bd8e4c17fefcc61e74473700bbb0a85faa0166659a8e9770dcc67d1f8d3",
+    "app/actions/loyalty-cards.ts": "56dd422717aab70afd1341c397258361ef2267a6ae55ba709af879619b7e5400",
+    "app/actions/loyalty-experience.ts": "80c2f8ba9393a9b48eb749ee937e2deb7fedc47f87fa5930a4dbb007f3e857a7",
+    "app/actions/orders.ts": "69980d9e836b6eb247bf00b56c1bcafd9ea8ce7d580102a38ac1a73faaa3c271",
+    "app/dashboard/layout.tsx": "c0ab5445f5e4921e909728c14db7589d4247c3490258b193d86bc8b751fd8816",
+    "app/dashboard/loyalty/page.tsx": "5d0ee6de3e0582b5ba64232db8bc0974d647eb2e997b7b865f75d33fc6b5f402",
+    "app/layout.tsx": "f8e4d9e22f5f4af78df319f38a7fb9812304f57ab63cf944c80bc0c6fa63cc46",
+    "app/loyalty/[slug]/page.tsx": "9aa19c669b5599e7e61ef71b668e85fe785987b4d81d60331bd8df65fd8b52ac",
+    "components/admin/AdminSidebar.tsx": "f4c2a78f038486188269018462049b6499f0a45084ed60974a687f54ca8a0d4a",
+    "components/admin/pages/admin-cafes-page.tsx": "f50d8df471c32b9c862fb00385e38155d17dc2fdfe2baf62e4439c9fa3af97ba",
+    "components/dashboard/dashboard-app-layout.tsx": "56e60e5aa188467078e4deda33ee87ecbdc1a5055ca77cc1b70414679752e7f4",
+    "components/rast-loyalty/rast-member-card.tsx": "5d6736ff4f91b965a54dafdef90d281f30d4320d1e3f0910c32944744b0ffea1",
+    "lib/data/admin.ts": "0ac1b0b01068d69bad0a23d7add3d5b26e6b73873b71c0fa78d56c7dbe43eeb6",
+    "lib/data/cafes.ts": "f4476f2681ca581d3303a3f128a80518733bdca9d76d572e393a8b4cdf3b20e8",
+    "lib/data/loyalty-cards.ts": "b3294a1400783a6dc213a87460cde1b014c40f78771a3e38c6da30442650c274",
+    "lib/data/loyalty-experience.ts": "ca0c86265df8e9c53fb4b62b59e57865abe5c792fb08df652d38cfe1524f0275",
+    "lib/data/loyalty-identity.ts": "51b96e562761452b49b4e1d66fe6e946bc80710099349b3d28d9e42100ef1557",
+    "lib/data/menu.ts": "7f8ee504fb8fb6439881e525e1ecbffe04b0230f16fb6c8d64b19067a385573c",
+    "lib/performance/dashboard-shell-client.ts": "338c5438327d5c4a35d7beb46011d79261f0834ec7b632fe334c43fc5b3497d9",
+    "lib/platform/auth.ts": "350d9e33fbe304206f8c41b728f85a9c8aaebeda79657c313265ec707536f24b",
+    "lib/wallet/apple.ts": "4773ff181d389a84388f0336d8b3a4fefa836b9729a45d4467538cd70d66f7d8",
+    "lib/wallet/art.ts": "adafc7f6edecae3e22faafe063a0fbafdd566fcf82719a1fe98b2f4b312133fd",
+    "lib/wallet/google.ts": "a256060f4c6b0d9070d0aa5f0c669a451fe32b1de2711b1e2fb02ea7cd6a8331",
+    "lib/wallet/logo.ts": "b920ea121ffde367dad1dcacc2e57180d97057413d35b3dea9c0bb118004e9fc",
+    "lib/wallet/payload.ts": "4d2ca5ba7e2c589edcf2aa9e792da4c043ad53b0bfc2cf05cb28bee6e5e8d15a",
+    "next.config.ts": "4e1786dd6216276441dc3a10da6183537e93adbf01be2d6d4325a75b98aab841",
+    "scripts/check-loyalty-activity.mjs": "f723af52a003d6821f7981c59483944e29bff16bf1bc06ae0f9efe10dc08e2ec",
+    "scripts/check-loyalty-directory-server.mjs": "6650ba6adc4fbdf1aac69d4bbc76480b0d4fb75c01b0daa303367a5e2fcb462e",
+    "scripts/check-navigation-performance.mjs": "170ec2ccedd1454601419af7665c31d5d56223db0dd9d3d9ae4a69d07997cd9d",
+    "scripts/check-rast-wallet-security.mjs": "9faf868240ca70d52f48fdc50d9ba73a31010fd2eb3205b65c277266ea032097",
+    "scripts/check-subscription-expiry-ui.mjs": "1ded4e0f65630d0539905a475391e69daf27e2d34eb8f87373a45cf34cb80734",
+    "scripts/check-universal-loyalty-server.mjs": "bde8efaf7c4d9d1909a6bff560eadfbdcf8e1bd8d7ea8c2eee8b4a66ca5541e1",
+    "scripts/check-wallet-sync.mjs": "c1ac2eb479c2d38eab52a1ea7ecf7ceee03959fd7deaa1180c055c81b00951bb",
+    "components/dashboard/dashboard-cache-boundary.tsx": "0943450e1de83cb90e77fb5949ee016a2fe119319bda7c20d78bf172783d5612",
+    "lib/performance/finance-route-invalidation.ts": "d0cd8ab5c5f1507d181b0060d3469181a7ed24dee0849c18ace86e0fa3b75b77",
+    "lib/wallet/artifact-cache.ts": "b5d1edfd5764eacdc204a4cd407b7351aac44c300e5769a04f011c7b1f07a5f8",
+    "scripts/check-admin-cafes-freshness.mjs": "4f50a3ac30f862b0be6d5967d655838805204c658ab6e1a4494272579154dd38",
+    "scripts/check-admin-directory-metrics-db.mjs": "64b1e56ffe5afc08f7427912df97f32a16ce6daaf4db0399d8854ff3c1c8099c",
+    "scripts/check-dashboard-cache-boundary.mjs": "5ffb8854f55976b9582613b50dcac18866fbec7eedc2fedc7f4f94f38904c60c",
+    "scripts/check-data-hot-paths.mjs": "b882d0d6acca470acb0f66f2be4fbfe7f1f0194030560cf3a4173f46a44192ec",
+    "scripts/check-navigation-mutation-freshness.mjs": "39fdee9ab690bbc926b1d815782d8faeecec1bb643355a7933223a1a2885f696",
+    "scripts/check-saved-route-invalidation.mjs": "bfa8eefc4f680e5b84062cce0621e7703619217a7e23075a9b68b7efafc2e4a2",
+    "scripts/check-wallet-performance.mjs": "9990ac651509c667e9bd3a4974d810b5551906c918af4b01484d76f1784e4db3",
+    "supabase/migrations/20261111162104_admin_brand_directory_metrics.sql": "422878b7508c4b72c0ddde0a011b938056ff48b1b8ddb641219dd9f6fd187264",
+    "scripts/check-rast-subscription-visibility.mjs": "7d3c439ac06c63e6ebcff020a8f9ccd415416455ac170a4ae91f412d5fbc30f2",
+    "scripts/check-approved-loyalty-design.cjs": "ac62d054e4d5d5536392ff5653386ff21805a059cd6cd84271a956784c8ded92",
+    "scripts/check-brand-directory.mjs": "7c0349bbe38f138ef98b391909c12515d3a704a7b72d2f7e11b650f707582924",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "lib/supabase/server.ts": "3c941d80fb28d0f8590736142a2306bed8848868da79bf2c2ec0156d7c8a1471",
+    "lib/supabase/client.ts": "a23341bcf23dab880c723d78b7dfdbdc149bcf9e5e7a8df97bf6168d05d5017c",
+    "lib/data/feature-entitlements.ts": "3e02a5732db9712715d05e7f6d070e31aabcc1cdcecbd2df49e782518c3e6379",
+    "lib/auth/rast-loyalty-session.ts": "8ab0a7bee168d08f5d202616ddf2652827a37e6c5334d3a6cf6bf808f712d5a0",
+    "lib/wallet/index.ts": "3e761e8736f9199645b56a6f7338dfdbe4808f94acb7a2f9c54cf506a39024ed",
+    "lib/wallet/config.ts": "10a6f0e94fe3b8e136609c3ca64b0f4625b4f993e48d835c378d9829dc9492e2",
+    "lib/platform/action-result.ts": "dbe98cf23fd8ce8c8058bb5376469df28ce1086e72649c3db95c5fd8402eb341",
+    "lib/platform/service-subscriptions.ts": "f3bd4bb6a346c71e5a3d86cfcb11c31ce0ef6b0e1bcbf9da465f681a827cbe1e",
+    "scripts/check-wallet-welcome.mjs": "591ae3227cdd061ff0536cd6f16e7618f7c9fbc3e273899913f86c8cb29a1d2c",
+    "scripts/check-wallet-promotion-reporting.mjs": "2b196f97189377d2f3ec4530a9ac5cd257458db2fa3506b050093c3e0597908d"
+  },
+  "rerunBecause": [
+    "components/dashboard/dashboard-app-layout.tsx",
+    "scripts/check-subscription-expiry-ui.mjs",
+    "scripts/check-rast-subscription-visibility.mjs"
+  ],
+  "results": [
+    {
+      "name": "check-dashboard-cache-boundary.mjs",
+      "args": [
+        "scripts/check-dashboard-cache-boundary.mjs"
+      ],
+      "start": "2026-11-11T16:35:57.973Z",
+      "end": "2026-11-11T16:35:58.208Z",
+      "code": 0,
+      "summary": "PASS cache: first read, warm read, SSR prime without request, deduplication, account-change pending race, retry and expiry; no private sessionStorage\nPASS boundary: token refresh keeps cache, new login/session clears all routes, logout redirects, focus/online/visibility throttled, hidden/offline suppressed and cleanup\n"
+    },
+    {
+      "name": "check-navigation-performance.mjs",
+      "args": [
+        "scripts/check-navigation-performance.mjs"
+      ],
+      "start": "2026-11-11T16:35:58.208Z",
+      "end": "2026-11-11T16:35:58.530Z",
+      "code": 0,
+      "summary": "PASS Parallel admin loaders authenticate once per request\nPASS Owner layout, permission guard and page share context lookup\nPASS Concurrent accounts and later requests never share permissions or tenants\nPASS Anonymous and non-admin requests still fail closed\nPASS Maintenance tenant selection retains identity and expiry checks\nPASS Public tenant lookup deduplicates only within a request and keeps publication gate\nPASS Dashboard layout renders before slow analytics and passes captured request client\nPASS Deferred analytics uses captured identity and retains deduplication and suspended-user checks\nPASS Global speculative request burst is removed; native links and loading boundaries remain\nPASS Dashboard intent prefetch prepares one complete page without an eager sidebar burst\n{\"groups\":10,\"measurement\":\"deterministic loader calls, not production latency\",\"adminAuthCalls\":{\"before\":6,\"after\":1},\"ownerAuthCalls\":{\"before\":3,\"after\":1}}\n"
+    },
+    {
+      "name": "check-subscription-expiry-ui.mjs",
+      "args": [
+        "scripts/check-subscription-expiry-ui.mjs"
+      ],
+      "start": "2026-11-11T16:35:57.978Z",
+      "end": "2026-11-11T16:35:58.608Z",
+      "code": 0,
+      "summary": "PASS expiry gate: loading, expired trials, stale cache, live deadline, paid home, renewal exception, error state and recovery link\nReceived `false` for a non-boolean attribute `prefetch`.\n\nIf you want to write it to the DOM, pass a string instead: prefetch=\"false\" or prefetch={value.toString()}.\n\nIf you used to conditionally omit it with prefetch={condition && value}, pass prefetch={condition ? value : undefined} instead.\nPASS actual expanded/collapsed sidebar: only subscription navigation after expiry\nPASS shared sidebar snapshot: focus refresh, plan additions/removals, expiry and lost session in expanded/collapsed navigation\nPASS concurrent navigation: independent menu expiry preserves loyalty, final expiry locks dashboard\nPASS release compatibility: old/malformed session cache invalidates, fetches fresh and leaves active dashboard usable\nPASS SSR snapshot: first render has authorized page, fresh server revocation replaces retained gate\n"
+    },
+    {
+      "name": "check-wallet-welcome.mjs",
+      "args": [
+        "scripts/check-wallet-welcome.mjs"
+      ],
+      "start": "2026-11-11T16:35:58.530Z",
+      "end": "2026-11-11T16:35:58.812Z",
+      "code": 0,
+      "summary": "Wallet welcome sender, dedupe worker and Apple/Google route regressions passed (no real messages)\n"
+    },
+    {
+      "name": "check-wallet-promotion-reporting.mjs",
+      "args": [
+        "scripts/check-wallet-promotion-reporting.mjs"
+      ],
+      "start": "2026-11-11T16:35:58.608Z",
+      "end": "2026-11-11T16:35:58.861Z",
+      "code": 0,
+      "summary": "PASS wallet promotion reporting: paginated audience, partial success, failure exclusion, retries and no historical reconstruction; zero external messages\n"
+    },
+    {
+      "name": "check-rast-subscription-visibility.mjs",
+      "args": [
+        "scripts/check-rast-subscription-visibility.mjs"
+      ],
+      "start": "2026-11-11T16:35:57.984Z",
+      "end": "2026-11-11T16:35:58.903Z",
+      "code": 0,
+      "summary": "PASS shared navigation, maintenance exit and subscription visibility: 43 checks; actual server routing, UI handlers and React SSR, no browser.\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "start": "2026-11-11T16:35:58.812Z",
+      "end": "2026-11-11T16:35:59.586Z",
+      "code": 0,
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "app/actions/admin.ts",
+        "app/actions/branches.ts",
+        "app/actions/finance-access.ts",
+        "app/actions/finance-cash-differences.ts",
+        "app/actions/finance-cash-handovers.ts",
+        "app/actions/finance-company-invoices.ts",
+        "app/actions/finance-inventory-catalog.ts",
+        "app/actions/finance-invoice-drafts.ts",
+        "app/actions/finance-invoice-extensions.ts",
+        "app/actions/finance-invoice-management.ts",
+        "app/actions/finance-invoice-settings.ts",
+        "app/actions/finance-journal-detail.ts",
+        "app/actions/finance-payment-management.ts",
+        "app/actions/finance-quotes.ts",
+        "app/actions/finance-shift-monitor.ts",
+        "app/actions/finance-treasury.ts",
+        "app/actions/loyalty-cards.ts",
+        "app/actions/loyalty-experience.ts",
+        "app/actions/orders.ts",
+        "app/dashboard/layout.tsx",
+        "app/dashboard/loyalty/page.tsx",
+        "app/layout.tsx",
+        "app/loyalty/[slug]/page.tsx",
+        "components/admin/AdminSidebar.tsx",
+        "components/admin/pages/admin-cafes-page.tsx",
+        "components/dashboard/dashboard-app-layout.tsx",
+        "components/rast-loyalty/rast-member-card.tsx",
+        "lib/data/admin.ts",
+        "lib/data/cafes.ts",
+        "lib/data/loyalty-cards.ts",
+        "lib/data/loyalty-experience.ts",
+        "lib/data/loyalty-identity.ts",
+        "lib/data/menu.ts",
+        "lib/performance/dashboard-shell-client.ts",
+        "lib/platform/auth.ts",
+        "lib/wallet/apple.ts",
+        "lib/wallet/art.ts",
+        "lib/wallet/google.ts",
+        "lib/wallet/logo.ts",
+        "lib/wallet/payload.ts",
+        "next.config.ts",
+        "components/dashboard/dashboard-cache-boundary.tsx",
+        "lib/performance/finance-route-invalidation.ts",
+        "lib/wallet/artifact-cache.ts"
+      ],
+      "start": "2026-11-11T16:35:58.903Z",
+      "end": "2026-11-11T16:36:00.776Z",
+      "code": 0,
+      "summary": "\nC:\\Projects\\branda-platform\\.barndaksa-backups\\full-release-20261111\\components\\dashboard\\dashboard-app-layout.tsx\n  172:9  warning  Do not use `window.location.assign()` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination\n\nC:\\Projects\\branda-platform\\.barndaksa-backups\\full-release-20261111\\lib\\data\\loyalty-cards.ts\n   8:10  warning  'parseBarndaksaQrPayload' is defined but never used  @typescript-eslint/no-unused-vars\n  10:10  warning  'operationEventTypes' is defined but never used      @typescript-eslint/no-unused-vars\n  10:31  warning  'recordOperationEvent' is defined but never used     @typescript-eslint/no-unused-vars\n\n\u00e2\u0153\u2013 4 problems (0 errors, 4 warnings)\n\n"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "start": "2026-11-11T16:35:58.861Z",
+      "end": "2026-11-11T16:36:22.620Z",
+      "code": 0,
+      "summary": ""
+    }
+  ],
+  "reused": [
+    {
+      "name": "check-admin-cafes-freshness.mjs",
+      "args": [
+        "scripts/check-admin-cafes-freshness.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.457Z",
+      "end": "2026-11-11T16:32:06.703Z",
+      "summary": "PASS admin directory: saved mutation, fresh server collections/dialog, draft retention, late-response merge and deleted selection\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-navigation-mutation-freshness.mjs",
+      "args": [
+        "scripts/check-navigation-mutation-freshness.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.548Z",
+      "end": "2026-11-11T16:32:06.770Z",
+      "summary": "PASS mutation freshness: accept/reject success, refused/failed/disabled operations, and owner/public menu cache invalidation\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-saved-route-invalidation.mjs",
+      "args": [
+        "scripts/check-saved-route-invalidation.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.661Z",
+      "end": "2026-11-11T16:32:06.933Z",
+      "summary": "PASS 52 saved-route invalidation checks: delayed success, unchanged request IDs/results, failed writes and authorization gates; no live writes\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-admin-directory-metrics-db.mjs",
+      "args": [
+        "scripts/check-admin-directory-metrics-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.770Z",
+      "end": "2026-11-11T16:32:08.043Z",
+      "summary": "PASS 23 SQL directory aggregation, full totals beyond API row limit, bounds, active-admin authorization and RLS scenarios\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-universal-loyalty-server.mjs",
+      "args": [
+        "scripts/check-universal-loyalty-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:07.057Z",
+      "end": "2026-11-11T16:32:08.403Z",
+      "summary": "PASS 25 universal loyalty server authorization and package checks with mocked services\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-data-hot-paths.mjs",
+      "args": [
+        "scripts/check-data-hot-paths.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.703Z",
+      "end": "2026-11-11T16:32:08.485Z",
+      "summary": "PASS 17 data hot-path batching, authorization, concurrency and minimal owner payload checks\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-loyalty-directory-server.mjs",
+      "args": [
+        "scripts/check-loyalty-directory-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:06.933Z",
+      "end": "2026-11-11T16:32:08.526Z",
+      "summary": "PASS 144 mocked loyalty directory authorization privacy pagination and server-prop checks\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-approved-loyalty-design.cjs",
+      "args": [
+        "scripts/check-approved-loyalty-design.cjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:08.404Z",
+      "end": "2026-11-11T16:32:10.518Z",
+      "summary": "PASS approved brand palettes, contrast, stamp layout, real balances/QR, transparent logo bounds, tenant/package gates and Apple/Google pending/duplicate/return/retry/cleanup behavior\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-wallet-performance.mjs",
+      "args": [
+        "scripts/check-wallet-performance.mjs",
+        "--record"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:08.485Z",
+      "end": "2026-11-11T16:32:10.573Z",
+      "summary": "{\"at\":\"2026-11-11T16:32:10.551Z\",\"runtime\":\"v24.22.1\",\"command\":\"node scripts/check-wallet-performance.mjs --record\",\"checks\":27,\"scope\":\"isolated real PNG rendering + mocked provider requests; no production sends\",\"artworkMs\":{\"cold\":10.535499999999956,\"warmP50\":0.027700000000095315,\"warmP95\":0.05360000000018772,\"warmP99\":0.20859999999993306},\"googleExistingCalls\":{\"previousWarm\":4,\"currentWarm\":1,\"currentColdIncludingToken\":3}}\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-wallet-sync.mjs",
+      "args": [
+        "scripts/check-wallet-sync.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:10.518Z",
+      "end": "2026-11-11T16:32:11.252Z",
+      "summary": "PASS: Wallet update tags, authenticated version ordering, APNs retries, scoped claims, bounded concurrency, provider semantics and read-only Google saved-state true/false/404/unknown/error checks\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-brand-directory.mjs",
+      "args": [
+        "scripts/check-brand-directory.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:10.573Z",
+      "end": "2026-11-11T16:32:11.601Z",
+      "summary": "PASS brand directory: 16 isolated CSS, SSR, filters, pagination, dialog, contrast and all-brand Excel download checks; no live mutations\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-loyalty-activity.mjs",
+      "args": [
+        "scripts/check-loyalty-activity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:08.043Z",
+      "end": "2026-11-11T16:32:12.079Z",
+      "summary": " }\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\n[cashier-session] {\n  stage: 'load_context',\n  cashierId: '20000000-0000-4000-8000-000000000001',\n  cafeId: '10000000-0000-4000-8000-000000000001',\n  reason: 'missing_cafe'\n}\nLoyalty activity checks: 100 passed, 0 failed.\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    },
+    {
+      "name": "check-rast-wallet-security.mjs",
+      "args": [
+        "scripts/check-rast-wallet-security.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T16:32:08.526Z",
+      "end": "2026-11-11T16:32:13.080Z",
+      "summary": "PASS: signed Apple bundle/manifest, Google RS256 save link, real balances, no personal payload, tenant and Apple authorization boundaries.\n",
+      "evidence": "checks.json",
+      "reuse": "unchanged source/test/dependency/config inputs; only owner shell and fixtures changed"
+    }
+  ],
+  "changedDuringRun": [],
+  "database": {
+    "at": "2026-11-11T16:28:20.096206+00:00",
+    "migration": "20261111162104",
+    "sourceSha256": "422878b7508c4b72c0ddde0a011b938056ff48b1b8ddb641219dd9f6fd187264",
+    "installedBodyMatches": true,
+    "migrationTextMatchesNormalized": true,
+    "aclVerified": true,
+    "securityInvoker": true,
+    "liveMetrics": [
+      {
+        "result": {
+          "at": "2026-11-11T16:28:21.350584+00:00",
+          "brands": 37,
+          "metricComparisons": 370,
+          "result": "PASS",
+          "verificationMs": 1294.069
+        }
+      },
+      {
+        "result": {
+          "brands": 37,
+          "warmRpcMs": 455.22
+        }
+      }
+    ],
+    "durableWalletQueueBound": true,
+    "advisorsBefore": 200,
+    "advisorsAfter": 200,
+    "newAdvisors": 0
+  },
+  "wallet": {
+    "at": "2026-11-11T16:32:10.551Z",
+    "runtime": "v24.22.1",
+    "command": "node scripts/check-wallet-performance.mjs --record",
+    "inputs": {
+      "lib/wallet/artifact-cache.ts": "b5d1edfd5764eacdc204a4cd407b7351aac44c300e5769a04f011c7b1f07a5f8",
+      "lib/wallet/art.ts": "adafc7f6edecae3e22faafe063a0fbafdd566fcf82719a1fe98b2f4b312133fd",
+      "lib/wallet/apple.ts": "4773ff181d389a84388f0336d8b3a4fefa836b9729a45d4467538cd70d66f7d8",
+      "lib/wallet/logo.ts": "b920ea121ffde367dad1dcacc2e57180d97057413d35b3dea9c0bb118004e9fc",
+      "lib/wallet/google.ts": "a256060f4c6b0d9070d0aa5f0c669a451fe32b1de2711b1e2fb02ea7cd6a8331",
+      "lib/wallet/payload.ts": "4d2ca5ba7e2c589edcf2aa9e792da4c043ad53b0bfc2cf05cb28bee6e5e8d15a",
+      "components/rast-loyalty/rast-member-card.tsx": "5d6736ff4f91b965a54dafdef90d281f30d4320d1e3f0910c32944744b0ffea1",
+      "app/loyalty/[slug]/page.tsx": "9aa19c669b5599e7e61ef71b668e85fe785987b4d81d60331bd8df65fd8b52ac",
+      "scripts/check-wallet-performance.mjs": "9990ac651509c667e9bd3a4974d810b5551906c918af4b01484d76f1784e4db3",
+      "scripts/check-rast-wallet-security.mjs": "9faf868240ca70d52f48fdc50d9ba73a31010fd2eb3205b65c277266ea032097",
+      "scripts/check-wallet-sync.mjs": "c1ac2eb479c2d38eab52a1ea7ecf7ceee03959fd7deaa1180c055c81b00951bb",
+      "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+      "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+      "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e"
+    },
+    "checks": 27,
+    "scope": "isolated real PNG rendering + mocked provider requests; no production sends",
+    "artworkMs": {
+      "cold": 10.535499999999956,
+      "warmP50": 0.027700000000095315,
+      "warmP95": 0.05360000000018772,
+      "warmP99": 0.20859999999993306
+    },
+    "googleExistingCalls": {
+      "previousWarm": 4,
+      "currentWarm": 1,
+      "currentColdIncludingToken": 3
+    }
+  },
+  "build": {
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "exitCode": 0,
+    "runtime": "v24.22.1",
+    "completedAt": "2026-11-11T16:36:33.401661+00:00",
+    "buildId": "wl3cv1ji3Cv1Plzyn9nOV",
+    "log": ".barndaksa-backups/performance/build-final.log"
+  }
+}

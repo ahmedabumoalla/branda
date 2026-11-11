@@ -1,5 +1,6 @@
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { WalletMember } from "./types";
+import { walletArtifactKey } from "./artifact-cache";
 
 export function googleClassId(issuerId: string, cafeId: string) {
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
@@ -27,13 +28,14 @@ export function walletLocations(member: WalletMember) {
 }
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
+  const logoVersion = walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
     id: googleClassId(issuerId, member.card.cafeId),
     issuerName: member.cafeName,
     localizedIssuerName: { defaultValue: { language: "ar", value: member.cafeName } },
     programName: member.program.cardTitle,
     localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${encodeURIComponent(member.cafeName)}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
+    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
     reviewStatus: "UNDER_REVIEW",
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,

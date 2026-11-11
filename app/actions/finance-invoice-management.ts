@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -32,6 +33,7 @@ export async function updateInvoiceManagementAction(input: unknown, slug: string
     const { data, error } = await client.rpc("brand_finance_invoice_management", { p_cafe_id: cafe.id, p_input: parsed.data });
     if (error?.code === "22023" && error.message === "Invalid schedule for fully refunded invoice") throw new Error("الفاتورة مرتجعة بالكامل ولا تقبل إنشاء اتفاقية تقسيط أو تعديلها");
     if (error) throw new Error(["22023", "22007", "22008"].includes(error.code) ? "راجع مبلغ الأقساط وتاريخ البداية والعميل المرتبط بالفاتورة" : "تعذر حفظ التغيير أعد تحميل الفاتورة ثم حاول مجددًا");
+    invalidateFinanceViews(slug);
     return data as { changed: number; skipped: number };
   }, "تعذر حفظ بيانات الفواتير");
 }

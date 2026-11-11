@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -48,6 +49,7 @@ export async function saveFinanceInvoiceSettings(slug: string, settings: unknown
     if (error?.code === "42501") throw new Error("لا تملك صلاحية تعديل إعدادات الفواتير");
     if (error?.code === "22023" && error.message.length < 400 && /[\u0600-\u06ff]/.test(error.message)) throw new Error(error.message);
     if (error) throw new Error("تعذر تأكيد حفظ الإعدادات أعد المحاولة بنفس الخيارات");
+    invalidateFinanceViews(slug);
     return state(data);
   }, "تعذر حفظ إعدادات الفواتير");
 }

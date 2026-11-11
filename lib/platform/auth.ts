@@ -47,6 +47,8 @@ export async function getBarndaksaAuthSession() {
 }
 
 export async function logoutBarndaksaAuth() {
+  const { clearDashboardShellSnapshot } = await import("@/lib/performance/dashboard-shell-client");
+  clearDashboardShellSnapshot();
   const { logoutAction } = await import("@/app/actions/auth");
   await logoutAction();
 }

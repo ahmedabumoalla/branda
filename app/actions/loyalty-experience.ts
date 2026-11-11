@@ -6,6 +6,7 @@ import { saveOwnerLoyaltyExperience, saveRastLoyaltySettings, saveBrandLoyaltyPr
 import { enrollLoyaltyCustomer } from "@/lib/data/loyalty-enrollment";
 import type { PhoneOtpRequestResult } from "@/lib/auth/phone-otp";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { requireOwnerCafeContext } from "@/lib/data/cafes";
 import { getOwnerFeatureCodes, getPublicCafeFeatureCodesBySlug } from "@/lib/data/feature-entitlements";
@@ -37,6 +38,7 @@ export async function completeLoyaltyOtpAction(...input: [string, string, string
 
 export async function saveLoyaltyExperienceAction(input: LoyaltyExperienceSettings) {
   await saveOwnerLoyaltyExperience(input);
+  revalidatePath("/dashboard/loyalty");
 }
 
 export async function saveBrandLoyaltyProgramAction(input: Parameters<typeof saveBrandLoyaltyProgram>[0]) {
@@ -90,8 +92,14 @@ export async function scanLoyaltyExperienceAction(input: { value: string; reques
   }
   if (result?.ok !== true) throw new Error("تعذر تسجيل العملية تحقق من صلاحية البطاقة أو المكافأة وجلسة الموظف");
   if (result?.cardCode && ["stamped", "reward_issued", "redeemed"].includes(String(result.status))) {
-    // A provider outage must not turn an already-committed stamp into a failed scan.
-    try { await syncWalletCardByCode(String(result.cardCode)); } catch { console.warn("[loyalty-wallet-sync] deferred"); }
+    // The card-update trigger already persisted a durable sync job in the same
+    // transaction. Return the committed stamp now; providers can finish afterward.
+    const cardCode = String(result.cardCode);
+    try {
+      after(async () => {
+        try { await syncWalletCardByCode(cardCode); } catch { console.warn("[loyalty-wallet-sync] deferred"); }
+      });
+    } catch { console.warn("[loyalty-wallet-sync] deferred"); }
   }
   return result;
 }

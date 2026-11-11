@@ -7,6 +7,9 @@ import sharp from "sharp";
 import { walletBaseUrl } from "./config";
 import { walletColors } from "./payload";
 import type { WalletMember } from "./types";
+import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
+
+const cachedArtwork = createWalletArtifactCache(12 * 1024 * 1024, 256, 300_000);
 
 export const WALLET_ART_VERSION = "2026-11-08-uniform-stamps-v3";
 
@@ -24,7 +27,8 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 }
 
 export function walletArtUrl(member: WalletMember) {
-  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}`)}`;
+  const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName]));
+  return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}:${appearance}`)}`;
 }
 
 // The artwork supplements native, accessible balance fields. Never bake text or
@@ -75,5 +79,6 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
 export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
   const logo = member.program.stampStyle === "brand" && member.logoUrl
     ? `data:image/png;base64,${(await walletBrandLogo(member)).toString("base64")}` : undefined;
-  return sharp(Buffer.from(walletStampSvg(member, scale, dark, logo))).png().toBuffer();
+  const svg = walletStampSvg(member, scale, dark, logo);
+  return cachedArtwork(walletArtifactKey(svg), () => sharp(Buffer.from(svg)).png().toBuffer());
 }

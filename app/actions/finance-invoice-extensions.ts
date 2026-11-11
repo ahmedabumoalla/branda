@@ -1,4 +1,5 @@
 "use server";
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { z } from "zod";
 import { getBrandFinanceContext } from "@/lib/data/brand-finance";
 import { canFinance } from "@/lib/finance/permissions";
@@ -39,6 +40,7 @@ export async function changeCustomerCredit(slug: string, input: unknown) {
     if (error) fail(error);
     const result = z.object({ id: z.uuid() }).safeParse(data);
     if (!result.success) throw new Error("تعذر تأكيد تسجيل الرصيد أعد المحاولة بنفس البيانات");
+    invalidateFinanceViews(slug);
     return result.data;
   }, "تعذر تأكيد عملية الرصيد أعد المحاولة بنفس البيانات");
 }
@@ -67,6 +69,7 @@ export async function changeInvoiceExtensions(slug: string, documentId: string, 
     if (error) fail(error);
     const result = z.object({ id: z.uuid().optional(), revision: z.number().int().nonnegative().optional() }).safeParse(data);
     if (!result.success || (action === "debit" ? !result.data.id : result.data.revision === undefined)) throw new Error("تعذر تأكيد التغيير أعد المحاولة بنفس البيانات");
+    invalidateFinanceViews(slug);
     return result.data;
   }, "تعذر تأكيد التغيير أعد المحاولة بنفس البيانات");
 }

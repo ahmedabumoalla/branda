@@ -51,6 +51,9 @@ export async function fetchAdminOperationsAction() {
 export async function savePlatformPlansAction(plans: PlatformPlan[]) {
   return actionResult(async () => {
     await savePlatformPlans(plans);
+    revalidatePath("/admin/plans");
+    revalidatePath("/admin/cafes");
+    revalidatePath("/dashboard", "layout");
     return getAdminPlatformPlans();
   }, "تعذر حفظ الباقات بقيت تعديلاتك محفوظة في الصفحة؛ حاول مجددًا");
 }
@@ -71,6 +74,10 @@ export async function fetchAdminSubscriptionRequestsAction() {
 export async function approveSubscriptionRequestAction(requestId: string) {
   return actionResult(async () => {
     await approveSubscriptionRequest(requestId);
+    revalidatePath("/admin/subscription-requests");
+    revalidatePath("/admin/cafes");
+    revalidatePath("/admin/finance");
+    revalidatePath("/dashboard", "layout");
     return getAdminSubscriptionRequests();
   }, "تعذر اعتماد الطلب حدّث حالته وتأكد من الإيصال ثم حاول مجددًا");
 }
@@ -78,12 +85,15 @@ export async function approveSubscriptionRequestAction(requestId: string) {
 export async function rejectSubscriptionRequestAction(requestId: string, response: string) {
   return actionResult(async () => {
     await rejectSubscriptionRequest(requestId, response);
+    revalidatePath("/admin/subscription-requests");
     return getAdminSubscriptionRequests();
   }, "تعذر تحديث الطلب حاول مجددًا");
 }
 
 export async function updateCafePlanAction(cafeId: string, planId: string) {
   await updateCafePlan(cafeId, planId);
+  revalidatePath("/admin/cafes");
+  revalidatePath("/dashboard", "layout");
   return getAdminCafeSubscriptionSummary(cafeId);
 }
 
@@ -113,6 +123,8 @@ export async function removeCafePlansAction(cafeId: string, planIds: string[], e
 
 export async function updateCafeStatusAction(cafeId: string, active: boolean) {
   await updateCafeStatus(cafeId, active);
+  revalidatePath("/admin/cafes");
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function saveCafeFeatureOverridesAction(
@@ -142,6 +154,7 @@ export async function savePlatformSettingsAction(
 ) {
   const { savePlatformSettings } = await import("@/lib/data/platform-settings");
   await savePlatformSettings(settings);
+  revalidatePath("/admin/options");
 }
 
 export async function fetchPlatformDiscountCouponsAction() {

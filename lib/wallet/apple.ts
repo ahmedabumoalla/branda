@@ -8,9 +8,12 @@ import { WALLET_ART_VERSION, walletStampArtwork } from "./art";
 import { walletColors, walletLocations } from "./payload";
 import type { WalletMember } from "./types";
 import { walletBrandLogo } from "./logo";
+import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
 export { walletBrandLogo } from "./logo";
 
 export { walletStampArtwork } from "./art";
+
+const cachedBrandImage = createWalletArtifactCache(8 * 1024 * 1024, 192, 300_000);
 
 export function appleAuthToken(serial: string) {
   const { secret, passTypeIdentifier } = appleConfig();
@@ -38,16 +41,19 @@ export async function issueApplePass(member: WalletMember) {
   const config = appleConfig();
   const colors = walletColors(member);
   const asset = await walletBrandLogo(member);
+  const assetKey = walletArtifactKey(asset);
   const image = sharp(asset, { limitInputPixels: 16_000_000 });
   const assets: Record<string, Buffer> = {};
   await Promise.all(([1, 2, 3] as const).map(async scale => {
     const suffix = scale === 1 ? "" : `@${scale}x`;
-    const logoMask = await image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).ensureAlpha().png().toBuffer({ resolveWithObject: true });
     const [icon, logo, strip] = await Promise.all([
-      image.clone().trim().resize(29 * scale, 29 * scale, { fit: "contain", background: colors.foreground }).flatten({ background: colors.foreground }).png().toBuffer(),
+      cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:icon`, () => image.clone().trim().resize(29 * scale, 29 * scale, { fit: "contain", background: colors.foreground }).flatten({ background: colors.foreground }).png().toBuffer()),
       // Preserve the mark's alpha silhouette with light ink on the dark pass.
-      sharp({ create: { width: logoMask.info.width, height: logoMask.info.height, channels: 4, background: colors.foreground } })
-        .composite([{ input: logoMask.data, blend: "dest-in" }]).png().toBuffer(),
+      cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:logo`, async () => {
+        const logoMask = await image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).ensureAlpha().png().toBuffer({ resolveWithObject: true });
+        return sharp({ create: { width: logoMask.info.width, height: logoMask.info.height, channels: 4, background: colors.foreground } })
+          .composite([{ input: logoMask.data, blend: "dest-in" }]).png().toBuffer();
+      }),
       walletStampArtwork(member, scale, true),
     ]);
     assets[`icon${suffix}.png`] = icon;

@@ -80,7 +80,8 @@ try {
   const brandClass = payload.buildGoogleClass(member, env.GOOGLE_WALLET_ISSUER_ID, env.WALLET_PUBLIC_BASE_URL);
   assert.equal(brandClass.localizedIssuerName.defaultValue.value, member.cafeName);
   assert.equal(brandClass.localizedProgramName.defaultValue.value, member.program.cardTitle);
-  assert.equal(new URL(brandClass.programLogo.sourceUri.uri).searchParams.get("v"), member.cafeName);
+  assert.match(new URL(brandClass.programLogo.sourceUri.uri).searchParams.get("v"), /^[a-f0-9]{64}$/);
+  assert.notEqual(payload.buildGoogleClass({ ...member, logoUrl: "/new-logo.png" }, env.GOOGLE_WALLET_ISSUER_ID, env.WALLET_PUBLIC_BASE_URL).programLogo.sourceUri.uri, brandClass.programLogo.sourceUri.uri, "A changed logo invalidates provider image caching immediately");
   const rastId = "3c697864-d371-4190-87ab-48f183cdf2d5";
   const stableObjectId = payload.googleObjectId(env.GOOGLE_WALLET_ISSUER_ID, { ...member, card: { ...member.card, cafeId: rastId } });
   process.env.GOOGLE_WALLET_RAST_CLASS_ID = `${env.GOOGLE_WALLET_ISSUER_ID}.${env.GOOGLE_WALLET_ISSUER_ID}.rast_prepared`;
@@ -233,7 +234,7 @@ try {
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), method: options.method, body: options.body && JSON.parse(options.body instanceof URLSearchParams ? "{}" : options.body) });
     if (String(url).includes("oauth2.googleapis.com")) return Response.json({ access_token: "isolated-test-token", expires_in: 3600 });
-    return options.method === "GET" ? new Response(null, { status: 404 }) : Response.json({});
+    return options.method === "PATCH" || options.method === "GET" ? new Response(null, { status: 404 }) : Response.json({});
   };
   const google = load("lib/wallet/google.ts");
   const saveUrl = await google.issueGoogleSaveUrl(member);
@@ -265,15 +266,17 @@ try {
   assert.equal(updates[1].loyaltyPoints.balance.string, "3 / 7");
   let classPatch;
   globalThis.fetch = async (url, options = {}) => {
+    if (String(url).includes("oauth2.googleapis.com")) return Response.json({ access_token: "isolated-test-token", expires_in: 3600 });
     if (String(url).includes("loyaltyClass/") && options.method === "GET") return Response.json({ reviewStatus: "DRAFT" });
     if (String(url).includes("loyaltyClass/") && options.method === "PATCH") classPatch = JSON.parse(options.body);
     return Response.json({});
   };
-  await google.updateGooglePass(member);
+  await load("lib/wallet/google.ts").updateGooglePass(member);
   assert.equal(classPatch.reviewStatus, "UNDER_REVIEW", "Existing console draft is submitted instead of remaining unusable");
   for (const reviewStatus of ["approved", "APPROVED", "underReview"]) {
     let objectWritten = false;
     globalThis.fetch = async (url, options = {}) => {
+      if (String(url).includes("oauth2.googleapis.com")) return Response.json({ access_token: "isolated-test-token", expires_in: 3600 });
       const isClass = String(url).includes("loyaltyClass/");
       if (isClass && options.method === "GET") return Response.json({ reviewStatus, messages: [{ id: "keep-existing-message" }] });
       if (isClass && options.method === "PATCH") {
@@ -289,7 +292,7 @@ try {
       }
       return Response.json({});
     };
-    const result = await google.issueGoogleSaveUrl(member);
+    const result = await load("lib/wallet/google.ts").issueGoogleSaveUrl(member);
     assert(result.startsWith("https://pay.google.com/gp/v/save/"));
     assert(objectWritten, "An approved class must not block object issuance");
   }
@@ -357,6 +360,7 @@ try {
         let update, filters = {};
         const query = {
           select() { return query; }, update(value) { update = value; return query; },
+          order() { return query; }, range() { return query; },
           eq(key, value) { filters[key] = value; return query; }, neq() { return query; }, limit() { return query; },
           maybeSingle() { return query; },
           then(resolve) {

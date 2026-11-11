@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireStorefrontEnabled } from "@/lib/platform/storefront-availability";
 
 import { getOwnerOrders, updateOrderStatus, createPickupOrder } from "@/lib/data/orders";
@@ -105,7 +106,9 @@ export async function createCafeOrderAction(
 
 export async function acceptPickupOrderAction(orderId: string, cafeSlug?: string) {
   requireStorefrontEnabled();
-  return acceptPickupOrder(orderId, cafeSlug);
+  const result = await acceptPickupOrder(orderId, cafeSlug);
+  if (result.ok) revalidatePath("/dashboard/orders");
+  return result;
 }
 
 export async function rejectPickupOrderAction(
@@ -114,7 +117,9 @@ export async function rejectPickupOrderAction(
   cafeSlug?: string
 ) {
   requireStorefrontEnabled();
-  return rejectPickupOrder(orderId, reason, cafeSlug);
+  const result = await rejectPickupOrder(orderId, reason, cafeSlug);
+  if (result.ok) revalidatePath("/dashboard/orders");
+  return result;
 }
 
 export async function createPickupOrderAction(

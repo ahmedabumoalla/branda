@@ -1,4 +1,5 @@
 "use server";
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { signInFinance, provisionFinanceStaff, signInSalesCashier, provisionSalesCashier, SalesCashierCreationError, requestSalesCashierOtp, verifySalesCashierOtp, resetSalesCashierPassword } from "@/lib/data/finance-access";
 import { createClient } from "@/lib/supabase/server";
 import { ZodError } from "zod";
@@ -30,7 +31,11 @@ export async function resetSalesCashierPasswordAction(phone: string, code: strin
 }
 
 export async function createSalesCashierAccountAction(input: { name: string; phone: string; password: string }) {
-  try { return await provisionSalesCashier(input); }
+  try {
+    const result = await provisionSalesCashier(input);
+    if (result.ok) invalidateFinanceViews();
+    return result;
+  }
   catch (error) {
     if (error instanceof ZodError) {
       const field = error.issues[0]?.path[0];
@@ -57,7 +62,11 @@ export async function loginFinanceAction(slug: string, identity: string, passwor
 }
 
 export async function createFinanceStaffAccountAction(input: { email: string; name: string; password: string; role: "manager" | "cashier" }) {
-  try { return await provisionFinanceStaff(input); }
+  try {
+    const result = await provisionFinanceStaff(input);
+    if (result.ok) invalidateFinanceViews();
+    return result;
+  }
   catch { return { ok: false as const, message: "تعذر إنشاء الحساب تحقق من البيانات أو أضف البريد كحساب موجود" }; }
 }
 

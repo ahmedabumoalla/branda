@@ -119,6 +119,7 @@ await check('Dashboard layout renders before slow analytics and passes captured 
   const slow = new Promise(resolve => { finish = resolve; });
   const module = load(fs.readFileSync('app/dashboard/layout.tsx', 'utf8'), {
     '@/components/dashboard/dashboard-app-layout': { DashboardAppLayout: () => null },
+    '@/app/actions/dashboard-shell': { fetchOwnerDashboardShellAction: async () => ({ planId: 'active', serviceSubscriptions: [] }) },
     '@/lib/data/cafes': { getOwnerCafeContext: async () => ({ id: 'tenant' }) },
     'next/navigation': { redirect: () => { throw Error('Unexpected redirect'); } },
     '@/lib/data/operation-events': { recordCurrentBrandDashboardEntry: (...args) => { calls.push(args); return slow; } },
@@ -161,8 +162,9 @@ await check('Deferred analytics uses captured identity and retains deduplication
 await check('Global speculative request burst is removed; native links and loading boundaries remain', async () => {
   const root = fs.readFileSync('app/layout.tsx', 'utf8');
   assert(!root.includes('RoutePrefetcher')); assert(!fs.existsSync('components/performance/route-prefetcher.tsx'));
-  for (const file of ['app/loading.tsx', 'app/admin/loading.tsx', 'app/dashboard/loading.tsx', 'app/menu/[slug]/loading.tsx']) assert(fs.readFileSync(file, 'utf8').includes('role="status"'));
-  for (const file of ['components/admin/AdminSidebar.tsx', 'components/dashboard/dashboard-navigation-link.tsx']) assert(fs.readFileSync(file, 'utf8').includes('import Link from "next/link"'));
+  for (const file of ['app/loading.tsx', 'app/admin/loading.tsx', 'app/dashboard/loading.tsx', 'components/menu/signature-menu-loading.tsx']) assert(fs.readFileSync(file, 'utf8').includes('role="status"'));
+  assert(fs.readFileSync('components/dashboard/dashboard-navigation-link.tsx', 'utf8').includes('import Link from "next/link"'));
+  assert(fs.readFileSync('components/admin/AdminSidebar.tsx', 'utf8').includes('DashboardNavigationLink as Link'));
 });
 await check('Dashboard intent prefetch prepares one complete page without an eager sidebar burst', async () => {
   let prepared = null, events = 0;

@@ -214,7 +214,7 @@ try {
   const identity = { cafeId, cardId: cardIds[0] };
   const payload = load("lib/wallet/payload.ts", { "@/lib/loyalty/secure-qr-payload": {} });
   const config = { issuerId: "123456789", email: "test@test.iam.gserviceaccount.com", key: "isolated-test-key", baseUrl: "https://wallet.example.test" };
-  const googleStubs = { "node:crypto": { sign: () => Buffer.from("test-signature") }, "./config": { googleConfig: () => config }, "./payload": payload, "./art": {} };
+  const googleStubs = { "node:crypto": { ...dependency("node:crypto"), sign: () => Buffer.from("test-signature") }, "./config": { googleConfig: () => config }, "./payload": payload, "./art": {} };
   for (const scenario of [true, false, "missing", "wrong-type", "404", "401", "429", "500", "network", "invalid-json"]) {
     const requests = [];
     globalThis.fetch = async (url, options) => {

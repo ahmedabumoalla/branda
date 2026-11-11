@@ -36,6 +36,9 @@ const nextConfig = {
   },
   devIndicators: false,
   experimental: {
+    // Reuse recently visited RSC pages in this tab; actions still invalidate their paths.
+    // Keep the same short window for intent-prefetched and visited dynamic pages.
+    staleTimes: { dynamic: 60, static: 60 },
     cpus: 1,
     preloadEntriesOnStart: false,
     webpackMemoryOptimizations: true,

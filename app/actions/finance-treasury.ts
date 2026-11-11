@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateFinanceViews } from "@/lib/performance/finance-route-invalidation";
 import { actionResult } from "@/lib/platform/action-result";
 import { getFinanceTreasury, getFinanceAccountStatement, getFinanceTreasuryHistory, getFinanceTerminalFeeHistory, executeFinanceTreasury, executeFinanceTreasuryCorrection } from "@/lib/data/finance-treasury";
 import type { TreasuryStatementOptions } from "@/lib/finance/treasury";
@@ -17,8 +18,16 @@ export async function fetchFinanceTerminalFeeHistoryAction(accountId: string | n
   return actionResult(() => getFinanceTerminalFeeHistory(accountId, offset, slug), "تعذر تحميل سجل رسوم الشبكة حاول مجددا");
 }
 export async function executeFinanceTreasuryAction(operation: string, payload: Record<string, unknown>, requestId: string, slug?: string) {
-  return actionResult(() => executeFinanceTreasury(operation, payload, requestId, slug), "تعذر تأكيد العملية أعد المحاولة بنفس الطلب لتجنب التكرار");
+  return actionResult(async () => {
+    const result = await executeFinanceTreasury(operation, payload, requestId, slug);
+    invalidateFinanceViews(slug);
+    return result;
+  }, "تعذر تأكيد العملية أعد المحاولة بنفس الطلب لتجنب التكرار");
 }
 export async function executeFinanceTreasuryCorrectionAction(operation: string, payload: Record<string, unknown>, requestId: string, slug?: string) {
-  return actionResult(() => executeFinanceTreasuryCorrection(operation, payload, requestId, slug), "تعذر تنفيذ التصحيح تحقق من جلسة الدخول بالنيابة");
+  return actionResult(async () => {
+    const result = await executeFinanceTreasuryCorrection(operation, payload, requestId, slug);
+    invalidateFinanceViews(slug);
+    return result;
+  }, "تعذر تنفيذ التصحيح تحقق من جلسة الدخول بالنيابة");
 }
