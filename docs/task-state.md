@@ -1,5 +1,7 @@
 # Current task state
 
+- LOYALTY PLACEHOLDER NAME 2026-11-11: LOCO failure traced to cashier-created placeholder conflicting with real enrollment name. Applied20261111134314: one-time name completion requires private same-card cashier provenance and unclaimed active profile; real-name/credential/blocked/card/rate guards preserved.17SQLcases+queue11/fullrollback+direct34/types/text PASS; real-case pre/post installed rollback PASS, body/history/ACL/RLS verified. No retained customer writes or sends. See [handoff](BARNDAKSA_HANDOFF/LOYALTY_PLACEHOLDER_NAME_20261111.md)
+
 - STAFF LOGIN DESIGN 2026-11-11: Light Branda header, simpler entry hierarchy,54pxinputs/submit and secondary system choice inside help; staff-only CSS modifier preserves sales login. Existing OTP/password/cooldown/redirects unchanged. Node24 OTP23/CSS/types/text/lint/webpack PASS. No live OTP/accounts/DB writes or browser. See [handoff](BARNDAKSA_HANDOFF/STAFF_LOGIN_DESIGN_20261111.md)
 
 - PAGER SINGLE PICKUP QUEUE 2026-11-11: Latest user direction removes preparation UI; all active invoices appear directly in one pickup dialog and only explicit Call sends a notification. Bigger invoice and call targets; existing orders/cache/brand colors/auth preserved. 62pager/18workspace/types/text/lint/productionbuild PASS,2existinglintwarnings. No DB/finance/message changes. See [handoff](BARNDAKSA_HANDOFF/PAGER_PICKUP_QUEUE_20261111.md)

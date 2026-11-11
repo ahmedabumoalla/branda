@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-11T13:49:26.839Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "supabase/migrations/20261111134314_loyalty_placeholder_name_completion.sql": "96711224a56c22e86bea3ff59b985de0980265a2b87cab0f2dc4503ad516773a",
+    "supabase/tests/loyalty_placeholder_name_completion_rollback.sql": "0d2bd13a1740f0e4b6d4c0982ed14fac33666011b4fa7d6cee81ad3c06ab9c22",
+    "scripts/check-loyalty-read-queue-db.mjs": "34624e83eb931a5085778b3371474a4d33237c9212675e6a28fca921f2e971c7",
+    "scripts/check-loyalty-direct-enrollment.mjs": "3cb745fdaef2ef5d14ab04b78c01c15601853705b20af29f028d8899381566c6",
+    "lib/data/loyalty-enrollment.ts": "1f942b3ae5e4503ad54c7396b023c02e005d68a0f472d7529a479cd83e05df70",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "database",
+      "args": [
+        "scripts/check-loyalty-read-queue-db.mjs",
+        "--placeholder-name"
+      ],
+      "code": 0,
+      "start": "2026-11-11T13:49:11.549Z",
+      "end": "2026-11-11T13:49:13.263Z"
+    },
+    {
+      "name": "direct",
+      "args": [
+        "scripts/check-loyalty-direct-enrollment.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T13:49:11.555Z",
+      "end": "2026-11-11T13:49:11.864Z"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T13:49:11.559Z",
+      "end": "2026-11-11T13:49:12.513Z"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T13:49:11.562Z",
+      "end": "2026-11-11T13:49:26.839Z"
+    }
+  ],
+  "database": {
+    "anonCannotExecute": true,
+    "at": "2026-11-11T13:50:17.927781+00:00",
+    "authenticatedCannotExecute": true,
+    "installedBodyMatchesHistory": true,
+    "migrationNormalizedMd5": "aac6c6d590459e52dd67f5ea29673c94",
+    "migrationRecorded": true,
+    "privateProvenanceRls": true,
+    "serviceCanExecute": true
+  },
+  "actualCustomerTest": "PASS rollback-only before and after install; original card and profile preserved"
+}

@@ -122,6 +122,13 @@ try {
   await db.exec(await readFile('supabase/migrations/20261014142944_loyalty_card_display_numbers.sql','utf8'));
   await db.exec(await readFile('supabase/migrations/20261108180040_loyalty_read_queue.sql','utf8'));
   await db.exec(await readFile('supabase/tests/loyalty_read_queue_rollback.sql','utf8'));
+  if (process.argv.includes('--placeholder-name')) {
+    await db.exec(`ALTER TABLE customer_profiles ADD COLUMN phone_verified_at timestamptz,
+      ADD COLUMN password_hash text, ADD COLUMN session_token_hash text, ADD COLUMN password_reset_token_hash text;`);
+    await db.exec(await readFile('supabase/migrations/20261111134314_loyalty_placeholder_name_completion.sql','utf8'));
+    await db.exec(await readFile('supabase/tests/loyalty_placeholder_name_completion_rollback.sql','utf8'));
+    console.log('PASS 17 placeholder/identity scenarios plus repeat-claim, card preservation and access grants');
+  }
   console.log(`PASS ${checks} inherited entitlement checks and full loyalty read queue rollback assertions`);
 } catch(error) {
   console.error(JSON.stringify({message:error.message,code:error.code,where:error.where,detail:error.detail}));
