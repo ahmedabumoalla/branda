@@ -1,5 +1,8 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "مساحة فريق العمل": "Team workspace",
+  "أهلًا بعودتك": "Welcome back",
+  "سجّل دخولك للولاء ونداء العملاء": "Sign in to loyalty and customer paging",
   "الخيارات": "Options",
   "الرجوع للولاء": "Back to loyalty",
   "جار تجهيز الشاشة للمرة الأولى": "Preparing this screen for the first time",

@@ -1,0 +1,80 @@
+{
+  "at": "2026-11-11T12:56:56.111Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "components/cashier/cashier-login-form.tsx": "379c86ac94169a89cb30bde62e8cca26960f1c5ffcd96cba61ac8e7c7cb93632",
+    "components/cashier/cashier-login.module.css": "3f8ba6e7171c434a0c2b153501ea90fcfc8189c1b44f20f61525764eb4294e52",
+    "lib/cashier/messages.ts": "e0bb084fcd8c4dfee7b94fa28b654dab3a8b5c87f6da93cd22c47a398b840997",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "next.config.ts": "bb35b96226e7f1cdb11d7999bff31bf7199121be3169c7103e4d963dede71ca8",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "scripts/check-staff-otp.mjs": "19b530306474d43af0363d942ee86ce039919d79e0dcce156cb5308baeef6408",
+    "components/cashier/cashier-system-switch.tsx": "195c17d88e279208324d431a2b53b07ca097224ade404e8ef021a0fca72d2c90"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "otp",
+      "args": [
+        "scripts/check-staff-otp.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.204Z",
+      "end": "2026-11-11T12:56:31.571Z"
+    },
+    {
+      "name": "css",
+      "args": [
+        "-e",
+        "require('lightningcss').transform({filename:'cashier-login.module.css',code:require('fs').readFileSync('components/cashier/cashier-login.module.css')});process.stdout.write('CSS compilation PASS')"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.209Z",
+      "end": "2026-11-11T12:56:31.259Z"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.213Z",
+      "end": "2026-11-11T12:56:32.220Z"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.216Z",
+      "end": "2026-11-11T12:56:47.659Z"
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "components/cashier/cashier-login-form.tsx",
+        "lib/cashier/messages.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.220Z",
+      "end": "2026-11-11T12:56:32.657Z"
+    },
+    {
+      "name": "build",
+      "args": [
+        "node_modules/next/dist/bin/next",
+        "build",
+        "--webpack"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:56:31.224Z",
+      "end": "2026-11-11T12:56:56.110Z"
+    }
+  ]
+}

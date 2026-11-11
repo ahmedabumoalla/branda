@@ -70,12 +70,15 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
   }
 
   return (
-    <main dir={dir} lang={locale} className={styles.page}>
+    <main dir={dir} lang={locale} className={`${styles.page} ${styles.staffLogin}`}>
       <section className={styles.panel} aria-labelledby="loyalty-login-title">
-        <header className={styles.header}><BarndaksaLogo variant="dark" width={112} height={45} className={styles.logo} priority /><CashierLanguageSwitch dark /></header>
+        <header className={styles.header}><BarndaksaLogo variant="brown" width={100} height={40} className={styles.logo} priority /><CashierLanguageSwitch /></header>
         <div className={styles.body}>
-          <CashierSystemSwitch active="loyalty" compact />
-          <h1 id="loyalty-login-title" className={styles.heading}>{t("دخول كاشير الولاء")}</h1>
+          <div className={styles.intro}>
+            <p className={styles.eyebrow}>{t("مساحة فريق العمل")}</p>
+            <h1 id="loyalty-login-title" className={styles.heading}>{t("أهلًا بعودتك")}</h1>
+            <p className={styles.hint}>{t("سجّل دخولك للولاء ونداء العملاء")}</p>
+          </div>
           <div className={styles.loginModes} role="group" aria-label={t("طريقة الدخول")}>
             {(["whatsapp", "password"] as const).map(value => <button key={value} type="button" disabled={loading} aria-pressed={mode === value}
               onClick={() => { setMode(value); setMessage(""); }}>
@@ -110,7 +113,7 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
                 aria-pressed={showPassword}
                 aria-label={showPassword ? t("إخفاء كلمة المرور") : t("إظهار كلمة المرور")}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? <EyeOff aria-hidden="true" className="h-5 w-5" /> : <Eye aria-hidden="true" className="h-5 w-5" />}
               </button>
             </span>
           </label>
@@ -142,12 +145,13 @@ export function CashierLoginForm({ initialMessage = "" }: { initialMessage?: str
             disabled={loading || (mode === "whatsapp" && !codeSent && remaining > 0)}
             className={styles.submit}
           >
-            {loading ? <Loader2 className={styles.spinner} /> : <LogIn className="h-5 w-5" />}
+            {loading ? <Loader2 aria-hidden="true" className={styles.spinner} /> : <LogIn aria-hidden="true" className="h-5 w-5" />}
             {loading ? t("جارٍ التحقق") : mode === "whatsapp" && !codeSent ? t("أرسل رمز واتساب") : t("دخول")}
           </button>
           </form>
           <details className={styles.help}><summary>{t("مساعدة الدخول")}</summary>
             <p className={styles.hint}>{mode === "whatsapp" ? t("للحسابات الجديدة أدخل رقم واتساب المسجل لدى الفرع") : t("الحسابات السابقة تدخل بالبريد وكلمة المرور المعتادة")}</p>
+            <CashierSystemSwitch active="loyalty" compact />
             <div className={styles.helpLinks}><Link href="/cashier/login" className={styles.switchLink}>{t("اختيار نوع الكاشير")}</Link><Link href="/login" className={styles.switchLink}>{t("العودة إلى تسجيل الدخول العام")}</Link></div>
           </details>
         </div>

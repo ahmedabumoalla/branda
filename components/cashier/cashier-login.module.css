@@ -7,3 +7,52 @@
 @media(max-height:700px){.page{padding-block:8px}.header{padding-block:10px}.body{padding-block:12px}.heading{margin-bottom:10px}.loginModes{margin-bottom:10px}.form,.fields{gap:8px}}
 @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
 @media(max-height:600px){.page{padding-block:4px}.body{padding-block:8px}.heading{font-size:20px;margin-bottom:8px}.help{margin-top:6px}.form,.fields{gap:6px}.header{padding-block:8px}}
+
+/* Staff entry is a focused single form, including in the pager companion window */
+.staffLogin {
+  --login-bg: #f6f4f0;
+  --login-paper: #ffffff;
+  --login-line: #e9e3da;
+  --login-soft: #f4f0e9;
+  --login-ink: #38241c;
+  --login-muted: #786b60;
+  padding: 32px 20px;
+}
+.staffLogin .panel { max-width: 440px; border-radius: 24px; box-shadow: 0 8px 32px #38241c08; }
+.staffLogin .header { background: transparent; border-bottom: 1px solid var(--login-line); padding: 22px 24px; gap: 12px; }
+.staffLogin .body { padding: 26px 24px 12px; }
+.intro { margin-bottom: 24px; }
+.eyebrow { margin: 0 0 6px; color: var(--login-muted); font-size: 12px; font-weight: 600; }
+.staffLogin .heading { margin: 0 0 8px; font-size: 30px; line-height: 1.35; }
+.staffLogin .intro .hint { font-size: 14px; line-height: 1.7; }
+.staffLogin .loginModes { padding: 4px; gap: 4px; margin-bottom: 22px; border-radius: 14px; background: var(--login-soft); }
+.staffLogin .loginModes button { min-height: 44px; border-color: transparent; font-size: 13px; border-radius: 10px; }
+.staffLogin .loginModes button[aria-pressed=true] { background: var(--login-paper); box-shadow: 0 2px 6px #38241c0d; border-color: var(--login-line); }
+.staffLogin .form { gap: 14px; }
+.staffLogin .fields { gap: 14px; }
+.staffLogin .field { gap: 8px; font-size: 14px; font-weight: 600; }
+.staffLogin input { min-height: 54px; padding: 14px; border-radius: 12px; font-size: 17px; }
+.staffLogin .password input { padding-left: 52px; }
+.staffLogin .password button { height: 52px; width: 48px; }
+.staffLogin .code { font-size: 24px; letter-spacing: .35em; }
+.staffLogin .submit { min-height: 54px; border-radius: 12px; font-size: 16px; gap: 10px; }
+.staffLogin .notice { border: 1px solid var(--login-line); background: var(--login-soft); padding: 10px 12px; line-height: 1.7; }
+.staffLogin .help { margin-top: 20px; }
+.staffLogin .help summary { min-height: 48px; padding-block: 14px; font-size: 13px; }
+.staffLogin .helpLinks { gap: 8px; }
+@media (max-width: 480px) {
+  .staffLogin { align-items: start; padding: 20px 14px; }
+  .staffLogin .panel { border-radius: 20px; }
+  .staffLogin .header { padding: 18px 20px; }
+  .staffLogin .body { padding: 22px 20px 10px; }
+  .staffLogin .heading { font-size: 28px; }
+}
+@media (max-height: 600px) {
+  .staffLogin { align-items: start; padding-block: 8px; }
+  .staffLogin .header { padding-block: 12px; }
+  .staffLogin .body { padding-block: 16px 8px; }
+  .staffLogin .intro { margin-bottom: 16px; }
+  .staffLogin .heading { font-size: 26px; }
+  .staffLogin .loginModes { margin-bottom: 16px; }
+  .staffLogin .help { margin-top: 14px; }
+}
