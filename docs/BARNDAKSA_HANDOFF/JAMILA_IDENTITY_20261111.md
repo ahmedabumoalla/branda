@@ -1,22 +1,22 @@
-# Jamila identity release
+﻿# Jamila identity release
 
-- Scope: Jamila only, cafe `8f4d6f70-83e9-4a28-98c7-da65ba8b501b`, slug `brand-406bf519a458`
-- Isolated release baseline: production commit `546a555b49a220ae8533324cbfcc2ad48e34be05`, Vercel project `branda-2` (`prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow`), verified against `barndaksa.com`
-- Gray `#5c5c5c` and cream `#ffe8c5` identity, original two-line wordmark cleaned from the supplied image, transparent PNG at `public/menu-art/jamila/logo-v1.png`
-- Empty menu shows the logo, coming-soon copy and the existing loyalty link; no sample categories, products or prices. Normal catalog routing resumes when products are published
-- Shared card renderer retains Jamila logo colors and uses a larger mark, scoped to this slug. Existing six stamps and free-drink reward, member codes, wallet links and other brands remain unchanged
-- Data-only activation uses `scripts/apply-jamila-identity.mjs --apply` with private environment and `JAMILA_EVIDENCE_DIR`. Writes only this account's custom identity and settings logo. No schema or authorization changes, no loyalty-program updates, no finance writes, no messages
-- Management SQL inspection unavailable: stored Supabase access token returns 401. Data API identity reads work but INSERT is denied; account settings logo UPDATE succeeded and readback was verified. Finance tables correctly deny Data API access. No grants were changed. No SQL migration was applied
-- Checks RUN on 2026-11-11, Windows / Node 24.19.0: TypeScript, text integrity, scoped ESLint, Next production webpack build, Jamila 24 behavior checks, signature-menu 776 checks, loyalty `--cards-only` 18 checks. Responsive/focus/contrast/reduced-motion review by source, no browser
-- Earlier full loyalty suite stops at the existing cashier mock's missing `server-only` module; the relevant card-only suite passes. Signature route mock updated for the new Jamila import and full suite passes
-- Local finance preservation: 336 finance-related source/test/migration file hashes compared before/after local Jamila integration; no differences. Release diff excludes all financial implementation files
-- Evidence: private `.barndaksa-backups/jamila-evidence`, build logs and local finance hash manifest. Sanitized release input identities recorded alongside this handoff
-- Published app commit `989e183c61e1cb32e82a864b90071eb7c45dd557`, Vercel `dpl_3fFuXtPwLMRAP9CZSwLrzixGLEgu` READY with production aliases verified. Account settings logo saved via guarded UPDATE; custom identity palette still pending renewed SQL access (20-token account limit). Owner settings now read the stored URL for Jamila, retaining upload priority and maintenance/auth guards. Follow-up deployment and live verification pending
+- Account: Jamila, 8f4d6f70-83e9-4a28-98c7-da65ba8b501b, slug brand-406bf519a458
+- Isolated production baseline: 546a555b49a220ae8533324cbfcc2ad48e34be05; Vercel branda-2 / prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow / barndaksa.com
+- Transparent cream/black two-line logo: public/menu-art/jamila/logo-v1.png. Gray/cream empty menu, coming-soon copy and existing loyalty entry. No categories/products/prices added; normal catalog routing resumes when products are published
+- Logo PERSISTED in this account's cafe_settings.logo_url through guarded UPDATE, verified by readback and public menu/wallet-logo HTTP. Admin directory already consumes this field; Jamila owner settings now also consume it, with later Storage uploads taking priority and existing auth/maintenance guards intact
+- Gray #5c5c5c / cream #ffe8c5 loyalty identity is a version-controlled Jamila default in approvedLoyaltyColors; future saved palettes override it. Larger original-color logo is scoped to Jamila. Existing six stamps/free-drink reward and customer codes retained
+- No custom-identity row inserted or SQL migration applied. Data API grant denied identity INSERT; renewed CLI auth succeeded after user cleared20-token limit, but creation of write login role returned403. No permissions changed/bypassed. Unused mutation helper/migration removed; account verifier is read-only
+- Checks RUN2026-11-11 Windows/Node24.19.0: root/release TypeScript, text integrity, scoped ESLint, Jamila26/signature776/loyaltycards18. Initial release production build and owner-logo deployment passed; final palette production result recorded in private deployment evidence
+- Source RTL/mobile/focus/contrast/reduced-motion and publication/loyalty-gate review. Browser connection attempted only to resolve unavailable account writes; failed to connect, no browser inspection or authenticated visual claim
+- Broad live snapshots detected concurrent program/design/customer/wallet activity. Jamila card_design save at10:34:31Z and experience timestamp preserved; stamp count/reward/business rules match initial account snapshot. No claim that all live customer rows stayed unchanged
+- No messages, wallet refresh jobs, finance writes or finance implementation deployments performed by this task. All336local finance source/test/migration hashes match pre-integration snapshot; production finance source remains at baseline
+- Initial published source989e183c61e1cb32e82a864b90071eb7c45dd557 / deployment dpl_3fFuXtPwLMRAP9CZSwLrzixGLEgu; owner-logo source67f784e45d326e95a42200184a6c14478592afd7 / deployment dpl_EXUpqfjBtFJX8rEwu77T2nLmSkJZ. Final source is main-branch commit containing this handoff; exact commit/deployment/aliases and HTTP results in .barndaksa-backups/jamila-evidence
+- Next product work: user supplies menu items; preserve current rewards and unrelated local finance work
+
+## Evidence
+
+JAMILA_CHECKS_20261111.json records commands/runtime/input hashes. Private account-verification.json, live.json, deployment.json, local build logs and jamila-finance-local-before.json. Earlier full loyalty suite has existing cashier-mock missing server-only failure; relevant --cards-only suite passes. No secrets/customer payloads published
 
 ## Asset provenance
 
-Built-in image generation edit of the user-supplied logo. Prompt: preserve original Jamila cream italic lettering, black shadows and Bakery & CoffeeHouse line; remove gray background and print-shop font/measurement annotations; transparent background, no redesign or new graphics. Generated image visually inspected, copied into the release and root workspace, alpha and dimensions checked
-
-## Finance boundary
-
-The root workspace remains on its existing local branch with unrelated work intact. Only this release's explicit file changes are pushed. Previously published finance behavior stays at the production baseline; newer local invoice/settings work is not included
+Built-in image edit of supplied logo: preserve Jamila cream italic lettering, black shadows and Bakery & CoffeeHouse line; remove gray background and print-shop font/measurement annotations; transparent background, no new graphics. Output and wallet derivative inspected; copied to root/release; alpha/dimensions verified

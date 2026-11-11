@@ -36,6 +36,8 @@ function load(file, stubs = {}) {
   check(!('--brand-logo-background' in loyaltyTheme({slug:'other'})),'Other brands unchanged');
   const {approvedLoyaltyColors}=load('lib/loyalty/approved-design.ts');
   assert.deepEqual(approvedLoyaltyColors(JAMILA_SLUG,{primary:'#5c5c5c',text:'#ffe8c5',secondary:'#ffe8c5'}),{background:'#5c5c5c',foreground:'#ffe8c5',accent:'#ffe8c5'}); checks++;
+  assert.deepEqual(approvedLoyaltyColors(JAMILA_SLUG,null),{background:'#5c5c5c',foreground:'#ffe8c5',accent:'#ffe8c5'});checks++;
+  check(approvedLoyaltyColors(JAMILA_SLUG,{primary:'#112233',text:'#ffffff',secondary:'#dddddd'}).background==='#112233','Future saved identity overrides brand defaults');
   const routeSource=fs.readFileSync(path.join(root,'app/menu/[slug]/page.tsx'),'utf8');
   check(routeSource.includes('menu.slug === JAMILA_SLUG && menu.products.length === 0'),'Published products restore normal catalog');
   check(routeSource.indexOf('if (!menu) notFound()') < routeSource.indexOf('const jamila ='),'Publication guards remain before presentation');
