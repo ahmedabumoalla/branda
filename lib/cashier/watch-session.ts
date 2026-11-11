@@ -1,5 +1,5 @@
 // One in-flight check per tab; a network outage never logs the employee out.
-export function watchCashierSession(target: Window, document: Document) {
+export function watchCashierSession(target: Window, document: Document, workspaceKey?: string) {
   let pending = false;
   let stopped = false;
   let navigating = false;
@@ -8,10 +8,13 @@ export function watchCashierSession(target: Window, document: Document) {
     if (pending || stopped || navigating) return;
     pending = true;
     try {
-      const response = await target.fetch("/api/cashier/session", {
+      const response = await target.fetch(workspaceKey ? `/api/cashier/session?workspace=${encodeURIComponent(workspaceKey)}` : "/api/cashier/session", {
         cache: "no-store", credentials: "same-origin", signal: controller.signal,
       });
-      if (response.status === 401 && !stopped) {
+      if (response.status === 409 && !stopped) {
+        navigating = true;
+        target.location.replace(target.location.pathname === "/pager" ? "/pager" : "/cashier");
+      } else if (response.status === 401 && !stopped) {
         navigating = true;
         target.location.replace("/cashier/session/clear?reason=session");
       }

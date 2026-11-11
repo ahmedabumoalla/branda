@@ -1,0 +1,444 @@
+{
+  "verifiedAt": "2026-11-11T12:07:38.978Z",
+  "runtime": "v24.19.0",
+  "baseCommit": "4251fc78e60064ccf304cccfd55b8e8e6559d334",
+  "inputs": {
+    "app/actions/finance-company-invoices.ts": "b36867126551a4fb61ed02e3bafff90a4dba26cfcc1aa28c1d5ad3cac77ab149",
+    "app/actions/finance-customer-detail.ts": "868a43d9ac17943a1bd7310e62163c0e7e61d9b246a81dcb37b0b4c522387829",
+    "app/actions/finance-customer-prices.ts": "1b57187ed68ab1cdd287275ef13c3b327cca929d3a342535a301cc6176136170",
+    "app/actions/finance-invoice-drafts.ts": "fdd3c9965861f65f4e8ddd6c4efdb4c5e88e4be7466becd717f7f9cf09d3f347",
+    "app/actions/finance-invoice-extensions.ts": "fd3d0ea21fada616515023632d02017349e2fbff5734e90b0f1f8c97745cd121",
+    "app/actions/finance-invoice-files.ts": "e4bee2228b43ea719be8442bec9356ce20bae82841a617bfaf518811537ff570",
+    "app/actions/finance-invoice-management.ts": "c505eb4b4e31ef61805c5fbb82d27adf02eb1dd09b037ad51bb1bff97d4a293d",
+    "app/actions/finance-invoice-settings.ts": "1f19fd346a97c409b4dcad00c639387f16e6dd22a08a9e18c39469699a1381c1",
+    "app/actions/finance-journal-detail.ts": "812ec5e74d7b5c4f7babfea4950b8e0cb4ddfa9c7a1a69c059cd54f358d473e8",
+    "app/actions/finance-payment-management.ts": "6556ef8e2972515d4d3c94a52e973224a68e3350cfc109c1e2e404e7d2401ecb",
+    "app/actions/finance-quotes.ts": "4307a5c6834d331cae5df3c6e2f502f6bf8655efcf47982fe70b00f3cf1b31bc",
+    "app/api/finance/[slug]/company-invoices/[id]/pdf/route.ts": "421d862247dbfe3939823f3eb95ba1201c47c12c2bda1826eb5e1a0dd7920a59",
+    "app/dashboard/finance/ledger/page.tsx": "2ba67987cddafea31302e6835b39d41e0e14a310c6c70520a67625128973e039",
+    "app/finance/[slug]/ledger/page.tsx": "d5d90a0c9f13af9d1341d8cf07d9965e272b5a57f3a29048f1cc84cb036b9e8f",
+    "components/dashboard/finance-sidebar-menu.tsx": "8ebf82f996b838bdf6f369d76622dd1290e571ba37ae7cf9ade103c6d182234a",
+    "components/finance/company-invoice-files.tsx": "177d036692261cc00fa87376b15c72381f5ebeb31614059df2fddacd3385ca4c",
+    "components/finance/company-invoice-lines.module.css": "ec3a62d064246e9e224b2ea2735a11c8686503894a1c3a7a5e1e00e64f9f72e1",
+    "components/finance/company-invoice-lines.tsx": "5a5569f95f61759426d991b386e1c58ac84794eb16b53dfb336c561bfc9178bc",
+    "components/finance/company-invoice-policy.ts": "99f5594688bff0d0a20fd27cbee47f6dc43ef826db936d98e87c923f2bba6ff7",
+    "components/finance/company-invoice-pricing.tsx": "e882cc1b1771338697ab2c716e60ad4c6bb9f18acddde49b61ee411ee8a5ef90",
+    "components/finance/customer-credit-panel.tsx": "52241ef290d60ed481283c39d363e832571bc311b32758a0be7c5c2c2c1a4554",
+    "components/finance/customer-last-sale-price.tsx": "514a132b5db367ebddf59469c66b51fbd3c3093e107fc3f2111a240fb21aff5b",
+    "components/finance/finance-customer-detail.module.css": "85caa1fc99b26666535ac08afdaa87fe792d129f6c04b9dad407364b3b02cbda",
+    "components/finance/finance-customer-detail.tsx": "e4a38ef0437e82a1773680b7a7260cc55b662e9ebfec2bb06badd2246b10a71a",
+    "components/finance/finance-customer-form.module.css": "e39858ac54628e768468c65118ae021fa3e296ca2498081fa020528965258ab0",
+    "components/finance/finance-customer-form.tsx": "eac9ff6be782df6402a61a691d40102ee35d7000723dd474060a258761e8bae4",
+    "components/finance/finance-invoice-detail.module.css": "729cd2c20478427d1fc6b5ccc0c89de2f51df2febc194a0960516c6a88c652dc",
+    "components/finance/finance-invoice-detail.tsx": "e4b364d51a176119ca226b789481dce76d0de1a3c82997ef6576c90d7fbcf3f6",
+    "components/finance/finance-invoice-settings-management.tsx": "5eba4e827b0e8e6150bac2100b8dd471a078a9df67093c4b831b1045ee74c5d2",
+    "components/finance/finance-invoice-settings.module.css": "05aaec2f89eb603fc661d47f462f9b097e7076d77bd0c2a59a56701b0be82f0d",
+    "components/finance/finance-invoice-settings.tsx": "2c86f3795dece2659a05ff2fee0f4c9d52477f25968b325431495b4f112c2e36",
+    "components/finance/finance-invoices.module.css": "666d636a5240239e70314e832c421c04aa648c52d9a249249821aca9c97fd79b",
+    "components/finance/finance-invoices.tsx": "684acb2282ee33ce180c9e77270d5644f02979a8da868153b8ca2782fdc9ed3b",
+    "components/finance/finance-journal-activity.tsx": "ab8535a25d283e2ebf4cf95d246880cf1f24faacd4941404712d59231e9212ef",
+    "components/finance/finance-journal-detail.module.css": "fa9fb68964e61a1a3b2c4c5d9f50f0f4cee23730ee76d286cf2eda006f7baad8",
+    "components/finance/finance-journal-detail.tsx": "d1c528ee5419572ce30d2292448d9fc3c3c0e153e6dd0c640a92041b420f3ae2",
+    "components/finance/finance-journal-editor.tsx": "1135cfc894fa0d994798315f134765da5ad3e51e64b2b36534aef8dd3993351e",
+    "components/finance/finance-journal-operation.tsx": "f429f05179962e543e5608ac6b5a311734cc63a1c5ca8ee0fd419ae312375ad4",
+    "components/finance/finance-navigation.ts": "31fbff2859e7bc455a4cd6db2895e3c9c509a83e40b04c9c6c3dd46f84ae11fd",
+    "components/finance/finance-payment-detail.module.css": "b27ebb0d156b8824cadeace172840a39d26f6cbd79e5724a8b9546cf37bb8ef5",
+    "components/finance/finance-payment-detail.tsx": "54a8ca505e3116d0b570487d3879202ca63c551b4083fffe3c267ff000092e2f",
+    "components/finance/finance-payment-editor.module.css": "5d8171371e0085bccc5c32d36c17c37ab0c4ffaffdea8818d1df266341deabc0",
+    "components/finance/finance-payment-editor.tsx": "28b93445fd5ad8cfd550849b10320efd42ad9ffeb8dffc8e8deb1593934e79a3",
+    "components/finance/finance-quotes.module.css": "1682cdf53fa3edacbcf756ed063ca5b89bf08eba80d2fb78d2b93433174c38d6",
+    "components/finance/finance-quotes.tsx": "f3e3712250ffce6312783c40d4af566dd7e4966188a68db55cd3b9c3aac2a788",
+    "components/finance/finance-receipt-dialog.tsx": "b726b767950cab4d0ab24d2f726d18462da26b838a4b26e8126f5f90c807ba74",
+    "components/finance/finance-sale-form.module.css": "38a3fd9f3ccc1f226cdbc4fcfcafe3920b67adbfb97ac4e0d212493091d7bb17",
+    "components/finance/finance-sale-form.tsx": "1dc7b3d49ff380d1098a064f3e1f469ed41d0a760d6e99d4ca1bd11e20215d85",
+    "components/finance/finance-sales-settings.module.css": "65f54bfdba799ba7b783f404506cd7052c2e07b109b9d822fd4dfda3912a8b1f",
+    "components/finance/finance-sales-settings.tsx": "c5e5333b118b2c23dff4149f2ec29f312b24d0fa7629ddb8faeeb2452c47942e",
+    "components/finance/finance-workspace.tsx": "e6dffc4170697b18719ba11f674167a4487b26dcaf804d300de8ba8ac85688db",
+    "components/finance/finance.module.css": "0d26ac2278ed9e21a4710bfa355e9fe590aec0efa12fe5b78d0e2fe191fb3c6b",
+    "components/finance/invoice-advanced-tools.tsx": "13c95d5ec252ba6c465c8a76dcd03df9c92bfd19aeb575dfabe844c4fdbd516a",
+    "components/finance/invoice-details-view.tsx": "d0df96a3ac7e3a16b7bf46814b859c66a01fb9976f60ba4e608883c09c4bf37e",
+    "components/finance/invoice-installment-editor.module.css": "7b622b5d9a39ff5e19a8026d9126fd2cb6ee3c7307daa4496c83fb11be0d7cf1",
+    "components/finance/invoice-installment-editor.tsx": "75794ecc7cf493765688c23b472ef1367e8d68964f19c8c1f812f632a759ae8b",
+    "components/finance/invoice-payments-view.tsx": "31add0eb58b253b71a0cb94c6c455dadb9d727c5d0ddbf067e063ffb7b417ccd",
+    "components/finance/invoice-stock-installments.tsx": "63f7a621d2932688437cb928d3f8ae21a1115b5a332e9b7014a96166063caeec",
+    "components/finance/ledger-workspace.tsx": "deba92f3c3ea59cc9b2fea66742cd3dda4c7ed8417dda9f6ca77a0d40ae8bb19",
+    "components/finance/payment-receipt-dialog.tsx": "e46ac00fb867927cb5ed3be272802f679c600569b8adcb0ae345dd03b79918de",
+    "components/finance/use-customer-sale-prices.ts": "cad57d6540e3b4020124f6350304a4eb9275cbe476dc3ce3b41b4f40c9b828a3",
+    "lib/data/company-invoices.ts": "dfa0825f6a6c088cf16f8496944d1f9631a8584af46730e8268201f30e60f73c",
+    "lib/email/resend.ts": "8a4422bd229c5e4aa51be3ddc8e009aa7f4353d01b828f036221ac19a7ef89f6",
+    "lib/export/company-invoice-preview-pdf.ts": "14a23c4eb333df8f1a8b237afc9d9a802186ecf81b87795e4e927ba28bff0aca",
+    "lib/export/finance-journal-pdf.ts": "1188b0df42e440fe766c3b86ec01c3e75003a1e694dac10bac89bfeecdd0af88",
+    "lib/export/payment-receipt-pdf.ts": "3d9f155a58f3655266353def1cfd9653f96e6d37d4ea8fb79bd8c702798bc9dd",
+    "lib/finance/brand-finance.ts": "74e425db01e9bc5d7477b97b7c0849682dfbbbdcca94e09b9da5326f11d129f2",
+    "lib/finance/company-invoice-options.ts": "3a35998aac06db25d508fc266ce65eb62ffd6cec24f38d40dc9549332759f105",
+    "lib/finance/company-invoice.ts": "1dfe3ecaecd6bc4890f76bf81102f59a1d6b864195156f9d47a36e2c8a780f7c",
+    "lib/finance/customer-detail.ts": "72cff51965181d6c576e0ab25c3ebea7fef6db9bd97ad2f82a1f90d83fdad8c6",
+    "lib/finance/customer-fields.ts": "f6cff8e2c2299cd3c761aaa9cc757f1e159d62a6f5e89b28f027e381d945c770",
+    "lib/finance/customer-sale-price.ts": "dac8bcffd22ca19edef30aaadc42b436ead026f2f7c9bb6a152c3a02e3fe07a8",
+    "lib/finance/invoice-copy.ts": "c8fd2b3947338e2e5a22e135e257c8649b07c051f7342eb0e5601b1e9ba8202c",
+    "lib/finance/invoice-draft.ts": "49c7f71246941b4f08a79f13890dd419bfa355a291e5ac072756d9836d7b376f",
+    "lib/finance/invoice-extensions.ts": "f0e139c9e9ef7b28135271d3433ab34bf9c3d9ed73a71f8c7e5ee09e687c5b35",
+    "lib/finance/invoice-management.ts": "5275f46ec83b3b8da64bc55bdf89dcc925d54f977a7fd9e1373e0c5828a4f061",
+    "lib/finance/invoice-settings.ts": "56944b0e2a9cec3a6955a8b1e62fc4cd398e725d4303ea75b71f2056a189d358",
+    "lib/finance/journal-detail.ts": "1b1f574c27a5d31b2bf1a1c7a0e536d942066a39de03256ecd1aa73570e023a2",
+    "lib/finance/payment-management.ts": "5243218dbc34fe5573e2845100dbdcd8f5427d6e1e4885dfaafc04377582e4ed",
+    "lib/finance/payment-receipt.ts": "fa01e497cc84c37d10b9957c4a5ff98dc4f8eff927799fa6794a75e57c6033ab",
+    "lib/finance/quotation.ts": "c79f1a49e3d988a8c85c94d719a4787a6c59f175f58dd3eb454090e347a5f964",
+    "lib/whatsapp/company-document.ts": "cb2d65a46895c7916084cf1ac934fa8a852f3a4e6bba5a0e6430c45b4d4b0c5d",
+    "scripts/check-finance-navigation.cjs": "9b5595e774b33d5e81bff84292a7724aecfae49c39890896366cc8f56e3c5aef",
+    "supabase/migrations/20261109211922_enable_company_invoices_and_customer_accounts.sql": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "supabase/migrations/20261109214500_enable_customer_account_fields.sql": "6f5656decdf9794a74b0351982301ba3ae5aabdfe95bdff7c869ecb14c752f0c",
+    "supabase/migrations/20261109220000_company_invoice_drafts.sql": "2cb0884ef22f82c94baa485d7e1d31f0edb04ab1f9a27f84e8940e4894301449",
+    "supabase/migrations/20261109231127_company_invoices_phase_one.sql": "40f8c736cd955a52ba28e336f86116163899806c8a29c3cedf83339a42a073f4",
+    "supabase/migrations/20261109234205_company_invoice_options.sql": "985bcb26455762451b50ca1c716f9c399506b2ab5ee1666d9a1f8e396bd3de8c",
+    "supabase/migrations/20261110002000_customer_sale_prices.sql": "0f20f92a4a28b944d5d73add703322e7d7f7e587c740b4db810c58e71c529406",
+    "supabase/migrations/20261110010000_invoice_management.sql": "4f6a0565fc5d92d2c6410c1539b093024b1e2c057267f6ee547f4749cd14008f",
+    "supabase/migrations/20261110193506_quotation_management.sql": "62d01f15fd51f9cfb176ee36287b0592acaa07a03aa96940adf81f4033cd5d2e",
+    "supabase/migrations/20261110205714_invoice_payment_corrections.sql": "81aa8a6b4ee9e8b4a56c7af9aea2115576184ffb3a3f3f10f9cc22c16a0f2f2f",
+    "supabase/migrations/20261110211757_invoice_anonymous_payment_correction.sql": "d6a65c40524b34d86fc81b722859e2ad9b2b1aed3fb91c7aefa739a9e78339c8",
+    "supabase/migrations/20261110213623_finance_customer_journal_read.sql": "869c5d4a5fd9dbf9a573668d6b2b19cee242f10e527c06a6c1cc7e28f7e9e35e",
+    "supabase/migrations/20261110214808_journal_description_metadata.sql": "024cbc1d240b9a451a7b14c1b25cb5772f08a4cf2d85779d7ff26018a9c1322e",
+    "supabase/migrations/20261110220632_invoice_movement_stock_identity.sql": "75cab28e0be985b6d4ae9844384b3a13c951d1c6af1d2adfe8be87af5e7d6c07",
+    "supabase/migrations/20261110221750_invoice_installment_refund_guard.sql": "b6e168bbf086c5864cf99f0ddc2e23142e0f41818a50f2b895ba9f539641f770",
+    "supabase/migrations/20261110224329_invoice_settings.sql": "cc7166afc6b666a269323202932d1ed7f1845bff92b836b6c9137012720f72e4",
+    "supabase/migrations/20261110230400_invoice_settings_advanced.sql": "7c2a4544b03d3656c8ef938d57b7d1ae264a0811bb1d8d205cfb485972df52b0",
+    "app/actions/pager.ts": "3f7dfe18407babc076eb49935943628801d99d54bc1e14da8187e996fddd82a7",
+    "app/actions/staff-workspace.ts": "59331e38eae80d42e675ed4e93f00656b585f055a75a9694c9ab3c535fa3e962",
+    "app/api/cashier/session/route.ts": "0be9c4ebefae2bd2dbae00b9ca48b0e650418781572533ba88e67ff8ce50eb2f",
+    "app/cashier/layout.tsx": "58eace0733e969fbdf28f0f78f73a59f3522b48dbbb88ff645facd215d18653d",
+    "app/cashier/page.tsx": "c4e5fcb103647371daef354e8030f87e90679d77caf551792563414acfb5312c",
+    "app/dashboard/pager/page.tsx": "21d72faeba9c091b7ab8b727be0c308661884c69926526e7156c348db1ada375",
+    "app/pager/page.tsx": "017291b7154ce72ad96bbcae961d333537575e361458e03894e18c382ed23a28",
+    "components/cashier/cashier-language.tsx": "56e1832abdcbfcc3c7cab8b0b36254b3efa45f8f8cb7ce839fe14c01bea15734",
+    "components/cashier/staff-screen-link.tsx": "933106aab296f08d2af4aebda19f4b4ca94eb1c2e790e079b97239b2672c7a47",
+    "components/cashier/staff-workspace.tsx": "d70750127457a8e3a07e45ddabe565ee5d3e5ac3fb31743261ae4284ee40ee55",
+    "components/pager/pager-console.tsx": "3c9b973f0fc1cdd9ea15e400b447630813b58732331ae33e48a53903296c2a8d",
+    "components/pager/pager-feedback.tsx": "98bc3e0e91c9e3209dcfc896165a1f80dd86f3b4601d795d638afa247702d480",
+    "components/pager/pager-format.ts": "33ef472f8b1f16f5b8b2bd63f3ad3592e3aa82c01f1ec7b9684ddcfd1a48738c",
+    "components/pager/pager-order-card.tsx": "21d158f9b2e6e08a3aad98bca8c6837eea6daae7e92bd62d322647a046bdb82a",
+    "components/pager/pager-pip.ts": "05d75f47badde29844748bd6ecd4aada0d1ca594600ccd7e7a22753032201624",
+    "components/pager/pager-theme.ts": "6c8003007ecb4f02a0d1ad6b24b3140d5dfe9e4f3ce3ad311f71ef562f5c9b60",
+    "components/pager/pager.module.css": "56b200c3c442cce770bc9493591584c68e7fdea37db9b565db88f4da5aff9fc5",
+    "components/rast-loyalty/rast-cashier.tsx": "ffe509723eabf0d5bd1b2efae1e1c5b50f0605de95d304860085ed987704f80d",
+    "components/rast-loyalty/use-customer-summary.ts": "43ff729f7d093cca57d58aceb5febfbb3ce7f7d8c2ace9e1a538a1a9866df5d2",
+    "components/rast-loyalty/use-read-outbox.ts": "b4ea46003c9463870bfac912549cc39c499edf97893cb9392c7d9dc87dba166c",
+    "lib/cashier/messages.ts": "4b02ff9fae655c502fa6cf17be10879ab8fd64ba031f2313ddbc26449cd64d89",
+    "lib/cashier/session-recovery.ts": "0ec190dbb902324276fbf87eb8d7dd2d9db2bec8a5ff34bf72bc4e36e16c3099",
+    "lib/cashier/watch-session.ts": "7601fcefb3edf3996a484af6ec842eb8a0dd1b406b03063fb24e429c438ddb9b",
+    "lib/cashier/workspace-session.ts": "6d679f6723444b2d1e31aaa1d711da8610301e56f6ff7df6999f57b1ec591113",
+    "lib/cashier/workspace-types.ts": "83226ef8579738b4f86030501457a3a0bd31368e0abdfcbc8fd05109945f6045",
+    "lib/data/cashier.ts": "b652acdc7ba626e034efa8a6ac30f6549dbbccda3c410da72da1e67f9cca6772",
+    "lib/data/pager.ts": "51096865b1dcb4b3bf0c74ea071445db275eb82b8378ab6b6c5957927c67962d",
+    "lib/loyalty/approved-design.ts": "7ae20df98d2be6c0662f8814592377a8970351a425c01012b3c1da97aa8a1e9f",
+    "lib/loyalty/customer-summary.ts": "a746a703fa32a7830925c3c472d2eb7fe29be99d058b0196d2d42e6f270b45e8",
+    "lib/pager/types.ts": "204dc8883bae10f2beae84f62467f39f198fb2d16b98ab3199bf344a2b6f2503",
+    "scripts/check-cashier-customer-summary.mjs": "02350ab69733a62e1ae1e6de5c6a28c20db457c1673d890608c60fffaea9619c",
+    "scripts/check-cashier-session-recovery.mjs": "9a75c24fa94b6546f5f1d3f320a6bca6d1b8c970a3f1e29dffd21b6a0c01a19a",
+    "scripts/check-cashier-summary-ui.mjs": "8cbaa8d6851c927fa108d01c32f82026b272ebfcd9adea6f0ce8af8aa105dc0a",
+    "scripts/check-pager-ui.mjs": "d045e7a459e4c42050d7adbc2da1aa4c175b6fa9280ee4458846d238bdbe0c9d",
+    "scripts/check-staff-workspace.mjs": "4032edb58a0bee9df3fa10fe0a909be5d37a95af38b0e9b08d1918cc772c7741",
+    "output/invoice-settings-advanced/root-check.cjs": "f1535f7ae48a3ecdaee3acf04a623d0c46aa1083a3393220c8190413b6eda5ef",
+    "output/invoice-settings-advanced/credit-ui-check.cjs": "cbd3977772afb99649c9c679d16ad9d04a4e7cc09c0413d34e0165a446ad6fc3",
+    "output/invoice-settings/ui-check.cjs": "2e693883cc3e717474fb4928d6ce26d5497fa70a530122397249e3b56104010f",
+    "output/invoice-settings/ui-navigation-check.cjs": "451a2335961c4fde9f23cbef8427a11c2e4c218497fb26fef2f5a76b4086f63a",
+    "output/invoice-settings/advanced-tools-check.cjs": "1296291d73830b788bb919533e87297b7957810acd32750945daa064bf68fc22",
+    "output/invoice-settings/actions-check.cjs": "2503dff8431a2d250eff0adceff49d7e61d23ac08faccbd6f205e61e3f7f6b3d",
+    "output/invoice-reference-list/check.cjs": "c7347289df9674f204518dd1285d4a915b6c1ff5ec7d2d24406234f1c8275b3b",
+    "output/customer-details/check-ui.cjs": "f79ff9dcb01279e6ed13c424fd7dd1cdfb979f6b5ecd21145e72509de11ad555",
+    "output/quotations/check-quotes.cjs": "bd3538d76f92d251f6508e167d6aee0a1355b58635ed3289efc0bafec60b83c0",
+    "output/invoice-details/check.cjs": "99cab763a4956ce7fcd0eadf3322aa0a3ff66f4baeab1a289fcc80b045248762",
+    "output/invoice-settings/check-editor.cjs": "56c5cddac133072ead843e280fcf1cc48c3c206010a36d3dc38972236e9f69b0",
+    "output/company-finance/check-line-layout.cjs": "36830ae3641df6919c3cbc0ccf450bb7426d96895adc5424a2adb09b43684613",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "next.config.ts": "bb35b96226e7f1cdb11d7999bff31bf7199121be3169c7103e4d963dede71ca8",
+    "eslint.config.mjs": "275a07c13fc7c83a652efcfa9fb6a207c451a2f5088e6793415ce44281285720"
+  },
+  "checks": [
+    {
+      "command": [
+        "output/invoice-settings-advanced/root-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:27.724Z",
+      "finishedAt": "2026-11-11T12:07:28.564Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings-advanced/credit-ui-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:27.730Z",
+      "finishedAt": "2026-11-11T12:07:28.007Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings/ui-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:27.734Z",
+      "finishedAt": "2026-11-11T12:07:28.991Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings/ui-navigation-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:27.738Z",
+      "finishedAt": "2026-11-11T12:07:28.049Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings/advanced-tools-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:28.991Z",
+      "finishedAt": "2026-11-11T12:07:29.621Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings/actions-check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:28.996Z",
+      "finishedAt": "2026-11-11T12:07:29.301Z"
+    },
+    {
+      "command": [
+        "output/invoice-reference-list/check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.000Z",
+      "finishedAt": "2026-11-11T12:07:29.350Z"
+    },
+    {
+      "command": [
+        "output/customer-details/check-ui.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.004Z",
+      "finishedAt": "2026-11-11T12:07:29.953Z"
+    },
+    {
+      "command": [
+        "output/quotations/check-quotes.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.953Z",
+      "finishedAt": "2026-11-11T12:07:30.643Z"
+    },
+    {
+      "command": [
+        "output/invoice-details/check.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.957Z",
+      "finishedAt": "2026-11-11T12:07:32.949Z"
+    },
+    {
+      "command": [
+        "output/invoice-settings/check-editor.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.960Z",
+      "finishedAt": "2026-11-11T12:07:32.595Z"
+    },
+    {
+      "command": [
+        "output/company-finance/check-line-layout.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:29.962Z",
+      "finishedAt": "2026-11-11T12:07:30.240Z"
+    },
+    {
+      "command": [
+        "scripts/check-finance-navigation.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:32.949Z",
+      "finishedAt": "2026-11-11T12:07:33.392Z"
+    },
+    {
+      "command": [
+        "scripts/check-staff-workspace.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:32.954Z",
+      "finishedAt": "2026-11-11T12:07:33.245Z"
+    },
+    {
+      "command": [
+        "scripts/check-pager-ui.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:32.959Z",
+      "finishedAt": "2026-11-11T12:07:34.071Z"
+    },
+    {
+      "command": [
+        "scripts/check-cashier-customer-summary.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:32.964Z",
+      "finishedAt": "2026-11-11T12:07:33.232Z"
+    },
+    {
+      "command": [
+        "scripts/check-cashier-summary-ui.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.071Z",
+      "finishedAt": "2026-11-11T12:07:34.498Z"
+    },
+    {
+      "command": [
+        "scripts/check-cashier-session-recovery.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.076Z",
+      "finishedAt": "2026-11-11T12:07:34.344Z"
+    },
+    {
+      "command": [
+        "scripts/check-pager-staff.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.081Z",
+      "finishedAt": "2026-11-11T12:07:34.345Z"
+    },
+    {
+      "command": [
+        "scripts/check-jamila.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.085Z",
+      "finishedAt": "2026-11-11T12:07:34.413Z"
+    },
+    {
+      "command": [
+        "scripts/check-signature-menu.cjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.498Z",
+      "finishedAt": "2026-11-11T12:07:38.962Z"
+    },
+    {
+      "command": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "exitCode": 0,
+      "startedAt": "2026-11-11T12:07:34.503Z",
+      "finishedAt": "2026-11-11T12:07:35.368Z"
+    }
+  ],
+  "typescript": "PASS --noEmit --incremental false",
+  "build": "PASS next build --webpack",
+  "eslint": "PASS 97 changed TS/TSX files; 0 errors, 4 warnings",
+  "securitySourceGate": {
+    "status": "FAILED_PREEXISTING",
+    "unchangedAgainstBase": true,
+    "files": [
+      "supabase/migrations/20260617_104500_contact_request_final_fix.sql",
+      "lib/data/customers.ts",
+      "app/actions/customer-media.ts"
+    ]
+  },
+  "database": {
+    "at": "2026-11-11T12:08:10.657Z",
+    "status": 200,
+    "migrations": [
+      {
+        "file": "supabase/migrations/20261109214500_enable_customer_account_fields.sql",
+        "sha256": "6f5656decdf9794a74b0351982301ba3ae5aabdfe95bdff7c869ecb14c752f0c"
+      },
+      {
+        "file": "supabase/migrations/20261109220000_company_invoice_drafts.sql",
+        "sha256": "2cb0884ef22f82c94baa485d7e1d31f0edb04ab1f9a27f84e8940e4894301449"
+      },
+      {
+        "file": "supabase/migrations/20261109231127_company_invoices_phase_one.sql",
+        "sha256": "40f8c736cd955a52ba28e336f86116163899806c8a29c3cedf83339a42a073f4"
+      },
+      {
+        "file": "supabase/migrations/20261109234205_company_invoice_options.sql",
+        "sha256": "985bcb26455762451b50ca1c716f9c399506b2ab5ee1666d9a1f8e396bd3de8c"
+      },
+      {
+        "file": "supabase/migrations/20261110002000_customer_sale_prices.sql",
+        "sha256": "0f20f92a4a28b944d5d73add703322e7d7f7e587c740b4db810c58e71c529406"
+      },
+      {
+        "file": "supabase/migrations/20261110010000_invoice_management.sql",
+        "sha256": "4f6a0565fc5d92d2c6410c1539b093024b1e2c057267f6ee547f4749cd14008f"
+      },
+      {
+        "file": "supabase/migrations/20261110193506_quotation_management.sql",
+        "sha256": "62d01f15fd51f9cfb176ee36287b0592acaa07a03aa96940adf81f4033cd5d2e"
+      },
+      {
+        "file": "supabase/migrations/20261110205714_invoice_payment_corrections.sql",
+        "sha256": "81aa8a6b4ee9e8b4a56c7af9aea2115576184ffb3a3f3f10f9cc22c16a0f2f2f"
+      },
+      {
+        "file": "supabase/migrations/20261110211757_invoice_anonymous_payment_correction.sql",
+        "sha256": "d6a65c40524b34d86fc81b722859e2ad9b2b1aed3fb91c7aefa739a9e78339c8"
+      },
+      {
+        "file": "supabase/migrations/20261110213623_finance_customer_journal_read.sql",
+        "sha256": "869c5d4a5fd9dbf9a573668d6b2b19cee242f10e527c06a6c1cc7e28f7e9e35e"
+      },
+      {
+        "file": "supabase/migrations/20261110214808_journal_description_metadata.sql",
+        "sha256": "024cbc1d240b9a451a7b14c1b25cb5772f08a4cf2d85779d7ff26018a9c1322e"
+      },
+      {
+        "file": "supabase/migrations/20261110220632_invoice_movement_stock_identity.sql",
+        "sha256": "75cab28e0be985b6d4ae9844384b3a13c951d1c6af1d2adfe8be87af5e7d6c07"
+      },
+      {
+        "file": "supabase/migrations/20261110221750_invoice_installment_refund_guard.sql",
+        "sha256": "b6e168bbf086c5864cf99f0ddc2e23142e0f41818a50f2b895ba9f539641f770"
+      },
+      {
+        "file": "supabase/migrations/20261110224329_invoice_settings.sql",
+        "sha256": "cc7166afc6b666a269323202932d1ed7f1845bff92b836b6c9137012720f72e4"
+      },
+      {
+        "file": "supabase/migrations/20261110230400_invoice_settings_advanced.sql",
+        "sha256": "7c2a4544b03d3656c8ef938d57b7d1ae264a0811bb1d8d205cfb485972df52b0"
+      }
+    ],
+    "publicFunctions": [
+      "brand_finance_save_customer",
+      "brand_finance_save_invoice_draft",
+      "brand_finance_invoice_drafts",
+      "brand_finance_issue_company_invoice",
+      "brand_finance_company_invoice",
+      "brand_finance_claim_company_delivery",
+      "brand_finance_finish_company_delivery",
+      "brand_finance_company_file",
+      "brand_finance_customer_sale_prices",
+      "brand_finance_invoice_detail",
+      "brand_finance_invoice_management",
+      "brand_finance_quotes",
+      "brand_finance_save_quote",
+      "brand_finance_convert_quote",
+      "brand_finance_manage_invoice_payment",
+      "brand_finance_customer_detail",
+      "brand_finance_journal_detail",
+      "brand_finance_save_journal_descriptions",
+      "brand_finance_journal_activity",
+      "brand_finance_invoice_settings",
+      "brand_finance_invoice_context",
+      "brand_finance_customer_credit",
+      "brand_finance_invoice_extensions",
+      "brand_finance_claim_company_email",
+      "brand_finance_finish_company_email"
+    ],
+    "missing": [],
+    "metadataOnly": true,
+    "historyRecheck": "CLI login role denied 403; prior installed migration evidence retained"
+  }
+}

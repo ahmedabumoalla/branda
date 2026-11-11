@@ -584,7 +584,7 @@ async function loadCashierOrders(
   return { orders, dataError: null };
 }
 
-export async function getCashierConsole(): Promise<CashierConsole | null> {
+export async function getCashierConsole({ recordEntry = true }: { recordEntry?: boolean } = {}): Promise<CashierConsole | null> {
   const admin = createAdminClient();
   const verifiedSession = await requireCashierPermission("loyalty", admin).catch((error) => {
     console.warn("[cashier-console]", {
@@ -596,7 +596,7 @@ export async function getCashierConsole(): Promise<CashierConsole | null> {
   if (!verifiedSession) return null;
 
   const { orders, dataError } = await loadCashierOrders(admin, verifiedSession);
-  await recordCashierConsoleEntry({
+  if (recordEntry) await recordCashierConsoleEntry({
     cafeId: verifiedSession.cafeId,
     cafeSlug: verifiedSession.cafeSlug,
     cashierId: verifiedSession.cashierId,

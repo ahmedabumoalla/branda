@@ -1,0 +1,10 @@
+.preview { padding: 24px; display: grid; gap: 20px; min-width: 0; color: var(--finance-ink, #29251e); background: var(--finance-paper, #fffefa); }
+.previewHeader { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; border-block-start: 3px solid var(--finance-accent, #96702e); padding-block-start: 20px; }
+.previewHeader h2, .previewHeader h3 { font-weight: 800; margin-block-end: 12px; }
+.previewHeader p { margin-block: 6px; overflow-wrap: anywhere; }
+.previewTotals { justify-self: end; width: min(100%, 320px); border: 1px solid var(--finance-line, #e8e1d5); }
+.previewTotals p { display: flex; justify-content: space-between; gap: 16px; padding: 12px; }
+.previewTotals p:last-child { background: var(--finance-cream, #f5f2eb); font-weight: 800; }
+.note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pdf { width: 100%; height: 65dvh; border: 1px solid var(--finance-line, #e8e1d5); }
+@media (max-width: 640px) { .preview { padding: 14px; } .previewHeader { flex-direction: column; } }

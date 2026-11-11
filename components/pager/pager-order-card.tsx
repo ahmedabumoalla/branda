@@ -8,14 +8,15 @@ import { useCashierLanguage } from "@/components/cashier/cashier-language";
 
 const statuses = { waiting: "قيد التجهيز", ready: "بانتظار الاستلام", received: "تم الاستلام", cancelled: "ملغي" };
 
-export function PagerOrderCard({ order, busy = false, onChange }: {
+export function PagerOrderCard({ order, busy = false, compact = false, onChange }: {
   order: PagerOrder;
   busy?: boolean;
+  compact?: boolean;
   onChange?: (id: string, status: "ready" | "received" | "cancelled") => void;
 }) {
   const { t, locale } = useCashierLanguage();
   return (
-    <article className={styles.card} data-status={order.status}>
+    <article className={`${styles.card} ${compact ? styles.compactCard : ""}`} data-status={order.status}>
       <div className={styles.cardHead}>
         <div><span className={styles.invoiceLabel}>{t("رقم الفاتورة")} </span><h3 className={styles.invoice}><bdi>{order.invoiceNumber}</bdi></h3></div>
         <span className={styles.badge} data-status={order.status}>{t(statuses[order.status])}</span>
@@ -26,14 +27,15 @@ export function PagerOrderCard({ order, busy = false, onChange }: {
       {order.status === "ready" && <p className={styles.hint}>{t("التذكير كل دقيقة حتى تأكيد الاستلام")} </p>}
       {onChange && (order.status === "waiting" || order.status === "ready") && (
         <div className={styles.cardActions}>
-          {order.status === "waiting" ? <button type="button" className={styles.button} disabled={busy} onClick={() => onChange(order.id, "ready")}><BellRing size={17} aria-hidden="true" />{t("الطلب جاهز")} </button>
-            : <button type="button" className={styles.button} disabled={busy} onClick={() => onChange(order.id, "received")}><CheckCheck size={17} aria-hidden="true" />{t("تم الاستلام")} </button>}
-          <button type="button" className={styles.danger} disabled={busy} onClick={() => onChange(order.id, "cancelled")} aria-label={t({ text: "إلغاء الفاتورة {invoice}", values: { invoice: order.invoiceNumber } })}><X size={16} aria-hidden="true" />{t("إلغاء")} </button>
+          {(order.status === "waiting" || compact) && <button type="button" className={order.status === "waiting" ? styles.button : styles.secondary} disabled={busy} onClick={() => onChange(order.id, "ready")}><BellRing size={17} aria-hidden="true" />{t(compact ? "استدعاء" : "الطلب جاهز")}</button>}
+          {order.status === "ready" && <button type="button" className={styles.button} disabled={busy} onClick={() => onChange(order.id, "received")}><CheckCheck size={17} aria-hidden="true" />{t("تم الاستلام")}</button>}
+          {!compact && <button type="button" className={styles.danger} disabled={busy} onClick={() => onChange(order.id, "cancelled")} aria-label={t({ text: "إلغاء الفاتورة {invoice}", values: { invoice: order.invoiceNumber } })}><X size={16} aria-hidden="true" />{t("إلغاء")}</button>}
         </div>
       )}
       <details className={styles.details}>
         <summary>{t("تفاصيل الطلب والتواصل")} </summary>
         <dl className={styles.timeline}>
+          {compact && <div><dt>{t("وقت الإضافة")}</dt><dd dir="ltr">{pagerDate(order.createdAt, locale)}</dd></div>}
           <div><dt>{t("أضيف بواسطة")} </dt><dd>{order.createdBy || t("إدارة العلامة")}</dd></div>
           <div><dt>{t("مكان الإضافة")} </dt><dd>{order.createdStation || t("غير محدد")}</dd></div>
           <div><dt>{t("استدعاه")} </dt><dd>{order.calledBy || t("لم يتم الاستدعاء")}</dd></div>
@@ -45,6 +47,7 @@ export function PagerOrderCard({ order, busy = false, onChange }: {
           <div><dt><MessageCircle size={12} className="inline" aria-hidden="true" />{t("آخر إرسال")} </dt><dd dir="ltr">{pagerDate(order.lastMessageAt, locale)}</dd></div>
           <div><dt>{t("حالة الرسالة")} </dt><dd>{t(messageLabel(order.messageStatus))}</dd></div>
         </dl>
+        {compact && onChange && (order.status === "waiting" || order.status === "ready") && <button type="button" className={styles.danger} disabled={busy} onClick={() => onChange(order.id, "cancelled")} aria-label={t({ text: "إلغاء الفاتورة {invoice}", values: { invoice: order.invoiceNumber } })}><X size={16} aria-hidden="true" />{t("إلغاء")}</button>}
         {order.rating != null && <div className={styles.review}><span className={styles.rating}><Star size={15} aria-hidden="true" />{order.rating} {t("من ٥")} </span><p>{order.notes || t("بدون ملاحظات")}</p><p className={styles.hint}>{pagerDate(order.ratedAt, locale)}</p></div>}
       </details>
     </article>

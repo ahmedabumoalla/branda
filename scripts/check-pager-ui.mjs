@@ -164,7 +164,7 @@ await button(pip, 'نافذة فوق التطبيقات').props.onClick(); await
 check('unmount closes floating window and removes handlers', () => { assert.equal(closed, 2); assert.equal(Object.keys(childListeners).length, 0); });
 
 const native = consoleHarness({}, {}, { './pager-pip': { isPagerCompanion: () => true, pagerPictureInPicture: () => null } });
-native.render(); native.effects[0]();
+native.render(); native.effects[0](); await tick();
 check('native companion uses compact console without a nested modal or PiP control', () => {
   assert.match(html(native), /root compact/);
   assert.ok(!nodes(native.render()).some(n => n.type === 'dialog'));
@@ -173,6 +173,121 @@ check('native companion uses compact console without a nested modal or PiP contr
 });
 
 const css = fs.readFileSync('components/pager/pager.module.css', 'utf8');
+const { pagerTheme } = load('components/pager/pager-theme.ts');
+const { approvedLoyaltyColors } = load('lib/loyalty/approved-design.ts');
+const customColors = approvedLoyaltyColors('brand-test', { primary: '#51233c', text: '#ffffff', secondary: '#ebd0c0' });
+check('pager buttons use the exact saved brand palette and safe foreground', () => {
+  const theme = pagerTheme(customColors);
+  assert.equal(theme['--pg-primary'], '#51233c'); assert.equal(theme['--pg-primary-text'], '#ffffff'); assert.equal(theme['--pg-accent'], '#ebd0c0');
+  assert.equal(pagerTheme({ background: '#ffffff', foreground: '#ffffff', accent: '#ffffff' })['--pg-primary-text'], '#000000');
+});
+check('Jamila and Kawakib keep their approved colors instead of pager green', () => {
+  assert.equal(pagerTheme(approvedLoyaltyColors('brand-406bf519a458'))['--pg-primary'], '#5c5c5c');
+  assert.equal(pagerTheme(approvedLoyaltyColors('rast'))['--pg-primary'], '#3b1420');
+  assert.equal(pagerTheme()['--pg-primary'], '#4a281d');
+});
+const branded = consoleHarness({}, { context: { ...context, canUseLoyalty: true, colors: customColors } });
+const header = nodes(branded.render()).find(n => n.type === 'header');
+check('loyalty return is visible outside options and uses the staff route', () => {
+  const link = nodes(header).find(n => n.props?.href === '/cashier'); assert.ok(link); assert.equal(text(link), 'الرجوع للولاء');
+  assert.ok(!nodes(nodes(header).find(n=>n.type==='details')).includes(link));
+  assert.match(html(branded), /--pg-primary:#51233c/);
+});
+button(branded, 'عرض مصغر داخل الصفحة').props.onClick();
+check('inline compact view keeps the visible loyalty return and brand colors', () => { assert.match(html(branded), /الرجوع للولاء/); assert.match(html(branded), /--pg-primary:#51233c/); });
+check('owner loyalty return targets the owner loyalty page', () => assert.match(html(consoleHarness({}, { mode: 'owner', context: { ...context, canUseLoyalty: true } })), /href="\/dashboard\/loyalty"/));
+let identityReads = [], allowed = true;
+const identityContext = load('lib/data/pager.ts', {
+  'server-only': {},
+  '@/lib/supabase/admin': { createAdminClient: () => ({ from: () => { const chain = { select:()=>chain, eq:()=>chain, maybeSingle:async()=>({data:{status:'active',deleted_at:null}}) }; return chain; } }) },
+  '@/lib/supabase/server': { createClient: async () => ({auth:{getUser:async()=>({data:{user:{id:'owner'}}})}}) },
+  '@/lib/barndaksa/env': {},
+  '@/lib/data/cafes': { requireOwnerCafeContext: async()=>({id:order.cafeId,slug:'owner-brand',name:'Owner',role:'owner'}) },
+  '@/lib/data/cashier': { requireCashierPermission: async permission=>{assert.equal(permission,'pager');if(!allowed) throw Error('denied');return {cafeId:order.cafeId,cafeSlug:'staff-brand',cafeName:'Staff brand',canUseLoyalty:true};} },
+  '@/lib/data/feature-entitlements': { getCafeFeatureCodes:async()=>['pager'] },
+  '@/lib/auth/phone-utils': {},
+  '@/lib/data/loyalty-identity': { getLoyaltyBrandAppearance:async(...args)=>{identityReads.push(args);return {colors:customColors};} },
+});
+const staffIdentity = await identityContext.getStaffPagerContext();
+const ownerIdentity = await identityContext.getOwnerPagerContext();
+check('identity loader uses only the authorized staff and owner tenant', () => { assert.deepEqual(identityReads, [[order.cafeId,'staff-brand'],[order.cafeId,'owner-brand']]); assert.deepEqual(staffIdentity.colors,customColors); assert.deepEqual(ownerIdentity.colors,customColors); assert.ok(!('actorId' in staffIdentity)); });
+allowed = false;
+await assert.rejects(()=>identityContext.getStaffPagerContext());
+check('failed staff authorization prevents reading brand identity', () => assert.equal(identityReads.length,2));
+// Exercise the ready queue against server-filtered pages, not a slice of waiting orders.
+const readyOrder = { ...order, id: randomUUID(), invoiceNumber: 'READY-61', status: 'ready', readyAt: order.createdAt };
+let readyItems = [readyOrder];
+const ready = consoleHarness({
+  fetchPagerPageAction: async (filter, mode) => {
+    ready.calls.push(['fetch', filter, mode]);
+    return { ...page, orders: filter.status === 'ready' ? readyItems : [order], total: filter.status === 'ready' ? (readyItems.length ? 61 : 0) : 1, metrics: { ...page.metrics, ready: readyItems.length ? 61 : 0 } };
+  },
+  updatePagerOrderAction: async (id, status, mode) => { ready.calls.push(['update', id, status, mode]); if (status === 'received') readyItems = []; return { ok: true, order: { ...readyOrder, status } }; },
+});
+async function fetchCurrent(h) { h.render(); const cleanup = h.effects.at(-1)(); await tick(); cleanup(); }
+const readyTrigger = h => nodes(h.render()).find(n => n.type === 'button' && n.props['aria-haspopup'] === 'dialog');
+const dialogNode = h => nodes(h.render()).find(n => n.type === 'dialog' && n.props['aria-labelledby'] === 'pager-ready-title');
+input(ready, 'invoiceNumber').props.onChange({ target: { value: 'NEXT-9' } });
+readyTrigger(ready).props.onClick();
+await fetchCurrent(ready);
+check('ready popup queries the entire ready queue independently of the preparation page', () => {
+  assert.deepEqual(ready.calls.find(c => c[0] === 'fetch').slice(1), [{ page: 0, status: 'ready', query: '' }, 'staff']);
+  assert.ok(dialogNode(ready)); assert.match(html(ready), /READY-61/); assert.ok(!html(ready).includes('00012-A'));
+  assert.ok(button(ready, 'التالي'));
+});
+button(ready, 'التالي').props.onClick(); await fetchCurrent(ready);
+check('ready popup supports later pages with server status filtering', () => assert.deepEqual(ready.calls.filter(c => c[0] === 'fetch').at(-1)[1], { page: 1, status: 'ready', query: '' }));
+const compactReadyTree = PagerOrderCard({ order: readyOrder, compact: true, onChange: (id, status) => ready.calls.push(['card', id, status]) });
+nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'استدعاء').props.onClick();
+nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'تم الاستلام').props.onClick();
+check('ready card exposes distinct call and collection actions with exact order ID', () => assert.deepEqual(ready.calls.filter(c => c[0] === 'card'), [['card', readyOrder.id, 'ready'], ['card', readyOrder.id, 'received']]));
+nodes(ready.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(readyOrder.id, 'ready'); await tick();
+check('recall preserves the durable reminder schedule without claiming a new message was sent', () => assert.match(html(ready), /الاستدعاء مفعّل والتذكير مستمر/));
+nodes(ready.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(readyOrder.id, 'received'); await tick();
+check('collection removes the order and keeps confirmation inside the open dialog', () => {
+  assert.ok(dialogNode(ready)); assert.ok(!html(ready).includes('READY-61')); assert.match(renderToStaticMarkup(dialogNode(ready)), /تم تأكيد الاستلام/);
+  assert.ok(ready.calls.some(c => c[0] === 'update' && c[1] === readyOrder.id && c[2] === 'received' && c[3] === 'staff'));
+});
+await fetchCurrent(ready);
+check('empty last page recovers to the first page', () => assert.equal(ready.calls.filter(c => c[0] === 'fetch').at(-1)[1].page, 0));
+let readyCancelStopped = false;
+dialogNode(ready).props.onCancel({ preventDefault() {}, stopPropagation() { readyCancelStopped = true; } }); await fetchCurrent(ready);
+check('Escape closes only ready popup and preserves unsaved entry', () => { assert.ok(readyCancelStopped); assert.ok(!dialogNode(ready)); assert.equal(input(ready, 'invoiceNumber').props.value, 'NEXT-9'); });
+const waitingButton = nodes(ready.render()).find(n => n.type === 'button' && n.props['aria-pressed'] === true);
+waitingButton.props.onClick(); await tick();
+check('pressing the current queue refreshes rather than leaving it empty and loading', () => assert.match(html(ready), /00012-A/));
+const deny = consoleHarness({ updatePagerOrderAction: async () => ({ ok: false, error: 'تعذر تنفيذ العملية تحقق من صلاحية الدخول ثم حاول مجددًا' }) });
+nodes(deny.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(order.id, 'ready'); await tick();
+check('failed call keeps waiting order and displays server error without opening ready popup', () => { assert.ok(!dialogNode(deny)); assert.match(html(deny), /role="alert"/); assert.match(html(deny), /00012-A/); });
+const called = consoleHarness();
+nodes(called.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(order.id, 'ready'); await tick();
+check('successful first call opens the ready popup automatically', () => assert.ok(dialogNode(called)));
+let mainTouched = false;
+const ownerWindow = { innerHeight: 420, addEventListener() {}, removeEventListener() {} };
+const ownerDocument = { body: { style: { overflow: 'auto' } }, defaultView: ownerWindow };
+const floatingDialog = { ...dialog, ownerDocument, style: { setProperty(k, v) { if (k === '--pager-viewport-height') assert.equal(v, '420px'); } } };
+const originalBody = document.body;
+Object.defineProperty(document, 'body', { configurable: true, get() { mainTouched = true; return originalBody; } });
+const floatingCleanup = preparePagerDialog(floatingDialog);
+check('ready dialog uses the floating window viewport and scroll lock', () => { assert.equal(ownerDocument.body.style.overflow, 'hidden'); assert.equal(mainTouched, false); });
+floatingCleanup();
+Object.defineProperty(document, 'body', { configurable: true, value: originalBody });
+check('floating modal cleanup restores only its own document', () => assert.equal(ownerDocument.body.style.overflow, 'auto'));
 transform({ filename: 'pager.module.css', code: Buffer.from(css), minify: false });
+let changedInvoice = false;
+const unchanged = consoleHarness({ fetchPagerPageAction: async () => JSON.parse(JSON.stringify(changedInvoice ? { ...page, orders: [{ ...order, invoiceNumber: 'NEW-INVOICE' }] } : page)) });
+const initialOrder = nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order;
+await fetchCurrent(unchanged);
+check('unchanged background results preserve the existing order reference', () => assert.equal(nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order, initialOrder));
+changedInvoice = true; await fetchCurrent(unchanged);
+check('changed background results update the queue without discarding the screen', () => assert.equal(nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order.invoiceNumber, 'NEW-INVOICE'));
+let finishBackground;
+const quiet = consoleHarness({ fetchPagerPageAction: () => new Promise(resolve => { finishBackground = resolve; }) });
+quiet.render(); const stopBackground = quiet.effects.at(-1)(); await tick();
+check('restoring a screen checks in the background without a loading state over existing orders', () => {
+  assert.ok(nodes(quiet.render()).some(n => n.props?.['aria-busy'] === false));
+  assert.match(html(quiet), /00012-A/);
+});
+finishBackground(page); await tick(); stopBackground();
 check('CSS compiles with compact mobile focus and reduced-motion rules', () => { assert.match(css, /max-width: 720px/); assert.match(css, /focus-visible/); assert.match(css, /prefers-reduced-motion/); assert.match(css, /overflow-wrap: anywhere/); });
 console.log(`${checks} pager UI checks passed`);

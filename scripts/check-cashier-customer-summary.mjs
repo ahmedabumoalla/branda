@@ -190,4 +190,20 @@ await check("outbox fast polling is bounded and pauses with offline/auth states"
   navigator.onLine=false;t.wake();await flush();assert.equal(t.nextDelay(),10000);
   navigator.onLine=true;t.outbox.authPaused=true;t.wake();await flush();assert.equal(t.nextDelay(),10000);
 }));
+await check("switching screens retains a resolved summary without another request",async()=>{
+  const t=setup();t.controller.lookup('code','CARD123',{immediate:true});await t.reply(0,{ok:true,summary});
+  const saved=t.controller.getSnapshot();t.controller.pause();t.controller.resume();
+  assert.equal(t.controller.getSnapshot(),saved);assert.equal(t.requests.length,1);assert.equal(t.timers.size,0);
+});
+await check("hidden pending summary aborts and resumes the same lookup identity",async()=>{
+  const t=setup();const id=t.controller.lookup('code','CARD123',{immediate:true});
+  t.controller.pause();assert.equal(t.requests[0].init.signal.aborted,true);assert.equal(t.timers.size,0);
+  await t.reply(0,{ok:true,summary:{...summary,customerName:'stale'}});assert.equal(t.controller.getSnapshot().summary,null);
+  t.controller.resume();assert.equal(t.requests.length,2);assert.equal(t.controller.getSnapshot().id,id);
+  await t.reply(1,{ok:true,summary});assert.equal(t.controller.getSnapshot().summary.customerName,'Customer A');
+});
+await check("clearing a hidden summary discards its pending restart",async()=>{
+  const t=setup();t.controller.lookup('code','CARD123');t.controller.pause();t.controller.clear();t.controller.resume();
+  await t.advance(2000);assert.equal(t.requests.length,0);assert.equal(t.controller.getSnapshot().status,'idle');
+});
 console.log(`Customer summary: ${checks} focused checks passed`);

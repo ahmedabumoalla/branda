@@ -66,6 +66,9 @@ export function FinanceSidebarMenu({ slug, collapsed, onExpand, onNavigate }: {
           <div id={`${id}-${groupId}`} hidden={!open} className="mr-3 border-r border-white/10 pr-1.5">
             {entries.map(entry => {
               const href = financeMenuHref(entry);
+              if (!href) return <div key={entry.id} aria-disabled="true" className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs leading-5 text-[#B8A99C]">
+                <span className="min-w-0 flex-1">{entry.label}</span><span className="shrink-0 rounded border border-white/15 px-1.5 py-0.5 text-[10px]">غير مفعّل</span>
+              </div>;
               const current = inFinance && activeEntry === entry.id;
               return <Link key={entry.id} href={href} scroll={false} prefetch={active ? false : undefined}
                 onClick={event => navigate(event, href)} aria-current={current ? "page" : undefined}

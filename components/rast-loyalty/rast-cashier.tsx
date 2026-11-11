@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { StaffScreenLink } from "@/components/cashier/staff-screen-link";
 import { BadgeCheck, CircleCheck, CircleX, CloudUpload, Gift, LogOut, ScanLine, Search, Phone } from "lucide-react";
 import { lookupCashierLoyaltyPhoneAction } from "@/app/actions/cashier-loyalty-phone";
 import { lookupRastCashierCardAction, lookupRastCashierRewardAction, scanLoyaltyExperienceAction } from "@/app/actions/loyalty-experience";
@@ -176,7 +177,7 @@ export function RastCashier({ initialData, identity: suppliedIdentity }: { initi
         <div className={layout.identity}>{identity.slug === "rast" ? <p className="text-xs tracking-widest" dir="ltr">KAWAKIB · LOYALTY</p> : <RastBrand identity={identity} locale={locale} />}<h1 className="sr-only">{t("كل زيارة تستاهل")}</h1></div>
         <div className={layout.tools}>
         <CashierLanguageSwitch />
-        {initialData.cashier.canUsePager ? <Link href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">{t("نظام البيجر")} </Link> : null}
+        {initialData.cashier.canUsePager ? <StaffScreenLink href="/pager" className="inline-flex min-h-11 items-center rounded-xl border border-current px-4 text-sm font-bold">{t("نظام البيجر")} </StaffScreenLink> : null}
             <form action={logoutCashierAction}><button disabled={pending} aria-label={t("تسجيل الخروج")} title={t("تسجيل الخروج")} className={layout.logout}><LogOut size={18} aria-hidden="true" /><span className={layout.logoutLabel}>{t("تسجيل الخروج")}</span></button></form>
         </div>
       <p className={layout.greeting}>{t({ text: "أهلًا {name} هنا تسجّل الأختام وتصرف المكافآت", values: { name: initialData.cashier.fullName } })}</p>

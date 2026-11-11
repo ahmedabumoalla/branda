@@ -8,6 +8,7 @@ import { requireOwnerCafeContext, requirePlatformAdmin } from "@/lib/data/cafes"
 import { requireCashierPermission } from "@/lib/data/cashier";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
+import { getLoyaltyBrandAppearance } from "@/lib/data/loyalty-identity";
 import type { PagerContext, PagerFeedback, PagerFilter, PagerMessageJob, PagerMode, PagerOrder, PagerPage } from "@/lib/pager/types";
 
 const idSchema = z.string().uuid();
@@ -15,7 +16,7 @@ const filterSchema = z.object({ page: z.number().int().min(0).max(100000).defaul
   status: z.enum(["all", "active", "waiting", "ready", "received", "cancelled"]).default("active"),
   query: z.string().max(120).default("") });
 const tokenSchema = z.string().regex(/^[0-9a-f]{64}$/);
-type ActorContext = PagerContext & { actorId: string | null };
+type ActorContext = PagerContext & { actorId: string | null; cafeSlug: string };
 function tokenForOrder(id: string) {
   return createHmac("sha256", getSupabaseServiceRoleKey()).update(`branda:pager:feedback:v1:${id}`).digest("hex");
 }
@@ -42,19 +43,24 @@ async function actorContext(mode: PagerMode): Promise<ActorContext> {
     await assertPager(cafe.id);
     const { data: { user } } = await (await createClient()).auth.getUser();
     if (!user) throw new Error("سجل الدخول مجددًا");
-    return { cafeId: cafe.id, cafeName: cafe.name, actorName: "إدارة العلامة", station: "الإدارة", kind: "owner", actorId: user.id };
+    return { cafeId: cafe.id, cafeSlug: cafe.slug, cafeName: cafe.name, actorName: "إدارة العلامة", station: "الإدارة", kind: "owner", actorId: user.id };
   }
   if (mode !== "staff") throw new Error("طريقة دخول غير صحيحة");
   const session = await requireCashierPermission("pager");
   await assertPager(session.cafeId);
-  return { cafeId: session.cafeId, cafeName: session.cafeName, actorName: session.cashierName,
+  return { cafeId: session.cafeId, cafeSlug: session.cafeSlug, cafeName: session.cafeName, actorName: session.cashierName,
     station: session.pagerStation || "الاستدعاء", kind: "staff", actorId: session.cashierId, canUseLoyalty: session.canUseLoyalty };
 }
 export async function getOwnerPagerContext(): Promise<PagerContext> {
-  const { actorId: _, ...context } = await actorContext("owner"); return context;
+  return displayContext("owner");
 }
 export async function getStaffPagerContext(): Promise<PagerContext> {
-  const { actorId: _, ...context } = await actorContext("staff"); return context;
+  return displayContext("staff");
+}
+async function displayContext(mode: PagerMode): Promise<PagerContext> {
+  const { actorId: _, cafeSlug, ...context } = await actorContext(mode);
+  const { colors } = await getLoyaltyBrandAppearance(context.cafeId, cafeSlug);
+  return { ...context, colors };
 }
 async function pageForCafe(cafeId: string, input: PagerFilter): Promise<PagerPage> {
   const filter = filterSchema.parse(input);

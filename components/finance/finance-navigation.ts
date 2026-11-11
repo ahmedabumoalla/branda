@@ -22,14 +22,22 @@ export type FinanceMenuEntry = {
   label: string;
   section: FinanceSection;
   party?: "customer" | "supplier";
-  view?: "items" | "movements";
+  view?: "items" | "movements" | "create" | "returns" | "payments" | "sales-settings" | "quotes" | "quote-create";
+  unavailable?: boolean;
 };
 
 // Children open existing workspace views; server authorization remains authoritative.
 export const financeMenuGroups: { id: string; label: string; icon: typeof BookOpen; entries: FinanceMenuEntry[] }[] = [
-  { id: "sales", label: "المبيعات والعملاء", icon: ReceiptText, entries: [
-    { id: "sales", label: "الفواتير والمرتجعات", section: "sales" },
-    { id: "customers", label: "بيانات العملاء وأرصدتهم", section: "parties", party: "customer" },
+  { id: "sales", label: "المبيعات", icon: ReceiptText, entries: [
+    { id: "sales", label: "إدارة الفواتير", section: "sales" },
+    { id: "sales-create", label: "إنشاء فاتورة", section: "sales", view: "create" },
+    { id: "quotes", label: "إدارة عروض الأسعار", section: "sales", view: "quotes" },
+    { id: "quote-create", label: "إنشاء عرض سعر", section: "sales", view: "quote-create" },
+    { id: "credit-notes", label: "إشعارات دائنة", section: "sales", unavailable: true },
+    { id: "sales-returns", label: "الفواتير المرتجعة", section: "sales", view: "returns" },
+    { id: "recurring", label: "الفواتير الدورية", section: "sales", unavailable: true },
+    { id: "sales-payments", label: "مدفوعات العملاء", section: "sales", view: "payments" },
+    { id: "sales-settings", label: "إعدادات المبيعات", section: "sales", view: "sales-settings" },
   ] },
   { id: "purchases", label: "المشتريات والموردون", icon: ShoppingBag, entries: [
     { id: "purchases", label: "فواتير المشتريات", section: "purchases" },
@@ -50,11 +58,13 @@ export const financeMenuGroups: { id: string; label: string; icon: typeof BookOp
   ] },
   { id: "settings", label: "الإعدادات والفريق", icon: Settings2, entries: [
     { id: "settings", label: "السياسة المحاسبية والفريق", section: "settings" },
+    { id: "customers", label: "بيانات العملاء وأرصدتهم", section: "parties", party: "customer" },
     { id: "parties", label: "جميع أطراف التعامل", section: "parties" },
   ] },
 ];
 
 export function financeMenuHref(entry: FinanceMenuEntry) {
+  if (entry.unavailable) return null;
   const params = new URLSearchParams({ section: entry.section });
   if (entry.party) params.set("party", entry.party);
   if (entry.view) params.set("view", entry.view);
@@ -66,6 +76,8 @@ export function resolveFinanceParty(value: string | null) {
 }
 
 export function resolveFinanceMenuEntry(section: FinanceSection, party: string | null, view: string | null) {
+  if (section === "sales" && (view === "quotes" || view === "quote-create")) return view;
+  if (section === "sales") return view === "create" ? "sales-create" : view === "returns" ? "sales-returns" : view === "payments" ? "sales-payments" : view === "sales-settings" ? "sales-settings" : "sales";
   if (section === "parties") return party === "customer" ? "customers" : party === "supplier" ? "suppliers" : "parties";
   if (section === "inventory") return view === "movements" ? "movements" : "inventory";
   return section;

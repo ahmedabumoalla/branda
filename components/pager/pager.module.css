@@ -119,3 +119,90 @@
 @media (max-width: 1050px) { .layout { grid-template-columns: 265px minmax(0, 1fr); gap: 16px; } .queue { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 720px) { .standalone { margin: 0; border-radius: 0; } .layout { display: block; } .entry { position: static; margin-bottom: 22px; } .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metric { padding: 16px; border-bottom: 1px solid var(--pg-line); } .metric:nth-child(2) { border-inline-end: 0; } .metric:nth-child(3) { border-bottom: 0; } .metric strong { font-size: 23px; } .header { gap: 18px; } .search { max-width: none; } .feedback { margin: 20px auto; padding: 24px 18px; } }
 @media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Operator console: compact spacing with readable text and large touch targets */
+.console { display: flex; flex-direction: column; padding: 16px; border-radius: 16px; }
+.console > * { flex-shrink: 0; }
+.console.standalone { max-width: 1120px; margin-block: 12px; height: calc(100dvh - 24px); min-height: 520px; }
+.console .header { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.loyaltyReturn { min-height: 44px; }
+.console[dir="ltr"] .loyaltyReturn svg { transform: rotate(180deg); }
+.console .button { background: var(--pg-primary); color: var(--pg-primary-text); }
+.console .button:hover { background: var(--pg-primary-hover); }
+.console .badge[data-status="ready"], .console .readyButton { background: var(--pg-accent); color: var(--pg-accent-text); border-color: var(--pg-ink); }
+.console .readyButton:hover { background: var(--pg-accent-hover); }
+.console .success, .console .badge[data-status="received"] { background: var(--pg-soft); color: var(--pg-ink); }
+.brandHeading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.console .title { font-size: 22px; }
+.brandHeading .eyebrow { margin: 0; overflow-wrap: anywhere; }
+.options { position: relative; flex-shrink: 0; }
+.options summary { list-style: none; }
+.options summary::-webkit-details-marker { display: none; }
+.optionsPanel { position: absolute; z-index: 5; inset-inline-end: 0; top: calc(100% + 8px); width: min(290px, calc(100vw - 48px)); display: grid; gap: 8px; padding: 14px; background: var(--pg-card); border: 1px solid var(--pg-line); border-radius: 14px; box-shadow: 0 12px 36px #00000026; max-height: 65dvh; overflow: auto; }
+.optionsPanel form > button { width: 100%; }
+.optionsPanel .hint { margin: 0; }
+.console .entry { position: static; padding: 12px; margin: 0 0 12px; border-radius: 14px; }
+.console .entry h2 { margin: 0 0 8px; font-size: 16px; }
+.console .entry form { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto; gap: 8px; align-items: end; }
+.console .entry form > button { grid-column: auto; min-height: 48px; }
+.console .entry .hint { margin: 6px 0 0; }
+.console .label { gap: 5px; }
+.console .input { font-size: 16px; }
+.queueNav { display: flex; align-items: stretch; gap: 8px; margin-bottom: 12px; }
+.queueNav > button { min-height: 48px; }
+.queueNav > .secondary, .readyButton { flex: 1; }
+.readyButton, .historyButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.readyButton { background: #f9eac5; color: #61420f; border: 1px solid #b68b36; }
+.readyButton:hover { background: #f4dfac; }
+.historyButton { background: transparent; border: 1px solid var(--pg-line); color: var(--pg-muted); }
+.queueNav [aria-pressed="true"] { border-color: var(--pg-ink); color: var(--pg-ink); box-shadow: inset 0 -3px 0 var(--pg-ink); }
+.queueNav strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.console .toolbar { gap: 8px; margin-bottom: 8px; }
+.console .search { max-width: none; min-width: 0; }
+.console .queue { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 8px; }
+.queueScroll { max-height: min(52dvh, 560px); overflow: auto; overscroll-behavior: contain; padding: 4px; }
+.console.standalone > .queueScroll, .console.compact > .queueScroll { flex: 1 1 auto; min-height: 120px; max-height: none; }
+.console .empty { padding: 20px 12px; border-radius: 12px; }
+.console .empty svg { margin-bottom: 6px; }
+.console .empty h2 { font-size: 16px; margin: 0; }
+.console .pagination { margin-top: 8px; }
+.console .error, .console .success { margin-bottom: 8px; padding: 8px 12px; }
+.footerHint { color: var(--pg-muted); font-size: 11px; line-height: 1.7; margin: 8px 0 0; text-align: center; }
+.compactCard { padding: 12px; border-radius: 12px; }
+.compactCard .invoice { margin: 0; font-size: 27px; }
+.compactCard .phone { margin: 2px 0 8px; }
+.compactCard > .cardMeta, .compactCard > .hint { display: none; }
+.compactCard .cardActions { padding-top: 8px; }
+.compactCard .cardActions > button { min-height: 48px; font-size: 15px; flex: 1; }
+.compactCard .details { margin-top: 4px; }
+.compactCard .details summary { min-height: 44px; display: flex; align-items: center; }
+.compactCard .details > .danger { margin-top: 12px; }
+.readyDialog { position: fixed; inset: auto 0; top: calc(var(--pager-viewport-top, 0px) + max(12px, env(safe-area-inset-top))); margin: 0 auto; width: min(760px, calc(100% - 24px)); max-width: none; max-height: calc(var(--pager-viewport-height, 100dvh) - 24px - env(safe-area-inset-bottom)); padding: 16px; border: 1px solid var(--pg-line); border-radius: 18px; background: var(--pg-bg); color: var(--pg-ink); font: inherit; overflow: auto; overscroll-behavior: contain; box-shadow: 0 20px 70px #14251c40; }
+.readyDialog::backdrop { background: #00000099; }
+.dialogHeader { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dialogHeader h2 { font-size: 20px; font-weight: 700; margin: 0; }
+.dialogHeader h2 span { color: var(--pg-gold); font-variant-numeric: tabular-nums; }
+.dialogHeader .hint { margin: 4px 0 0; }
+.dialogHeader > button { flex-shrink: 0; min-width: 44px; padding: 10px; }
+.readyDialog .queueScroll { max-height: none; overflow: visible; }
+.console.compact { height: 100dvh; min-height: 0; padding: 12px; border-radius: 0; }
+.compactDialog .console.compact { height: 100%; }
+.console.compact .entry form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.console.compact .loyaltyReturn { flex-basis: 100%; }
+.console.compact .entry form > button { grid-column: 1 / -1; }
+.console.compact .queueNav { flex-wrap: wrap; }
+.console .historyButton { min-height: 48px; }
+@media (max-width: 720px) {
+  .console .loyaltyReturn { flex-basis: 100%; }
+  .console.standalone { margin: 0; height: 100dvh; border-radius: 0; }
+  .console .entry form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .console .entry form > button { grid-column: 1 / -1; }
+  .console .queueNav { flex-wrap: wrap; }
+  .readyDialog { padding: 12px; }
+}
+@media (max-width: 340px) {
+  .console { padding: 10px; }
+  .queueNav > .secondary, .readyButton { font-size: 12px; padding-inline: 8px; gap: 5px; }
+  .readyButton svg { display: none; }
+  .compactCard .cardHead { flex-wrap: wrap; gap: 4px; }
+}

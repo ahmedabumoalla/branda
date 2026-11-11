@@ -4,7 +4,13 @@ type SendBarndaksaEmailInput = {
   html?: string;
   text?: string;
   replyTo?: string;
+  attachments?: { filename: string; content: string }[];
+  idempotencyKey?: string;
 };
+
+export class EmailProviderError extends Error {
+  constructor(readonly status: number) { super("Email provider rejected request"); }
+}
 
 type ResendResponse = {
   id?: string;
@@ -46,6 +52,7 @@ export async function sendBarndaksaEmail(input: SendBarndaksaEmailInput) {
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
     },
     body: JSON.stringify({
       from,
@@ -54,13 +61,15 @@ export async function sendBarndaksaEmail(input: SendBarndaksaEmailInput) {
       html: input.html,
       text,
       reply_to: replyTo,
+      attachments: input.attachments,
     }),
+    ...(input.idempotencyKey ? { signal: AbortSignal.timeout(20_000) } : {}),
   });
 
   const payload = (await response.json().catch(() => ({}))) as ResendResponse;
 
   if (!response.ok) {
-    throw new Error(`Resend failed: ${response.status} ${JSON.stringify(payload)}`);
+    throw new EmailProviderError(response.status);
   }
 
   return payload;

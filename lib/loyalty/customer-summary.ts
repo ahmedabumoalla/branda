@@ -65,13 +65,21 @@ export function createCustomerSummaryController(options: {
   let deadline: ReturnType<typeof setTimeout> | undefined;
   let active: AbortController | null = null;
   let startQueued: (() => void) | null = null;
+  let restart: (() => void) | null = null;
+  let suspended: (() => void) | null = null;
   function publish(next: CustomerSummaryState) { state = next; for (const listener of listeners) listener(); }
   function stop() {
     timers.clearTimeout(queued); timers.clearTimeout(slow); timers.clearTimeout(deadline);
     queued = slow = deadline = undefined; startQueued = null;
+    restart = suspended = null;
     active?.abort(); active = null;
   }
   function clear() { serial++; stop(); identifierKey = null; publish(EMPTY); }
+  function pause() {
+    const resume = state.status === "loading" || state.status === "slow" ? restart : null;
+    stop(); suspended = resume;
+  }
+  function resume() { const start = suspended; suspended = null; start?.(); }
   function lookup(method: "code" | "phone", value: string, settings: { immediate?: boolean } = {}): number | null {
     const identifier = customerSummaryIdentifier(method, value);
     if (!identifier) { clear(); return null; }
@@ -86,6 +94,7 @@ export function createCustomerSummaryController(options: {
     const start = () => {
       startQueued = null; queued = undefined;
       if (state.id !== id) return;
+      restart = start;
       const controller = new AbortController(); active = controller;
       const current = () => state.id === id && active === controller;
       slow = timers.setTimeout(() => { if (current()) publish({ ...state, status: "slow" }); }, 500);
@@ -115,6 +124,7 @@ export function createCustomerSummaryController(options: {
         }
       })();
     };
+    restart = start;
     if (settings.immediate) start();
     else { startQueued = start; queued = timers.setTimeout(start, 150); }
     return id;
@@ -128,6 +138,6 @@ export function createCustomerSummaryController(options: {
       && state.summary.availableRewards === summary.availableRewards) return true;
     stop(); publish({ id, status: "ready", summary, confirmed: true }); return true;
   }
-  return { lookup, clear, confirm, getSnapshot: () => state, getServerSnapshot: () => EMPTY,
+  return { lookup, clear, confirm, pause, resume, getSnapshot: () => state, getServerSnapshot: () => EMPTY,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; } };
 }

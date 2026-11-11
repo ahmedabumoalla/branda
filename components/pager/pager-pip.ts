@@ -18,25 +18,27 @@ export function pagerPictureInPicture(): PagerPictureInPicture | null {
 
 /** Native modal focus handling with bounds that follow the mobile keyboard and rotation. */
 export function preparePagerDialog(dialog: HTMLDialogElement) {
-  const viewport = window.visualViewport;
-  const previousOverflow = document.body.style.overflow;
+  const ownerDocument = dialog.ownerDocument ?? document;
+  const ownerWindow = ownerDocument.defaultView ?? window;
+  const viewport = ownerWindow.visualViewport;
+  const previousOverflow = ownerDocument.body.style.overflow;
   const resize = () => {
-    dialog.style.setProperty("--pager-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+    dialog.style.setProperty("--pager-viewport-height", `${viewport?.height ?? ownerWindow.innerHeight}px`);
     dialog.style.setProperty("--pager-viewport-top", `${viewport?.offsetTop ?? 0}px`);
   };
   resize();
   dialog.showModal();
-  document.body.style.overflow = "hidden";
+  ownerDocument.body.style.overflow = "hidden";
   // Keep the keyboard closed until the operator chooses an input.
-  dialog.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+  (dialog.querySelector<HTMLElement>("[data-pager-initial-focus]") ?? dialog.querySelector<HTMLElement>("summary, button"))?.focus({ preventScroll: true });
   viewport?.addEventListener("resize", resize);
   viewport?.addEventListener("scroll", resize);
-  window.addEventListener("resize", resize);
+  ownerWindow.addEventListener("resize", resize);
   return () => {
     viewport?.removeEventListener("resize", resize);
     viewport?.removeEventListener("scroll", resize);
-    window.removeEventListener("resize", resize);
-    document.body.style.overflow = previousOverflow;
+    ownerWindow.removeEventListener("resize", resize);
+    ownerDocument.body.style.overflow = previousOverflow;
     if (dialog.open) dialog.close();
   };
 }

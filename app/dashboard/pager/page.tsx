@@ -15,6 +15,6 @@ export default async function OwnerPagerPage() {
   if (!features.includes("pager")) return <DashboardFeatureBlockedState title="نظام البيجر" />;
   const cafe = await requireOwnerCafeContext();
   if (cafe.businessCategory === "hair_salons") return <BookingConsole pager initial={await getSalonBookings({ status: "active" }, "owner", true)} brandName={cafe.name} />;
-  const [context, initialPage] = await Promise.all([getOwnerPagerContext(), getPagerPage({ status: "active" }, "owner")]);
-  return <PagerConsole context={context} initialPage={initialPage} mode="owner" />;
+  const [context, initialPage] = await Promise.all([getOwnerPagerContext(), getPagerPage({ status: "waiting" }, "owner")]);
+  return <PagerConsole context={{ ...context, canUseLoyalty: features.includes("loyalty") }} initialPage={initialPage} mode="owner" />;
 }

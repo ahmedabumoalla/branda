@@ -1,12 +1,15 @@
 "use client";
 
 import { Printer } from "lucide-react";
+import { findCompanyInvoiceAction, sendCompanyInvoiceWhatsAppAction } from "@/app/actions/finance-company-invoices";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/dashboard/ui/modal";
 import type { FinanceDocument, FinanceSnapshot } from "@/lib/finance/brand-finance";
 import { FinanceReceipt } from "./finance-ui";
 import { claimAutomaticReceiptPrint, printThermalReceipt, type ReceiptBrand, type ReceiptCopy, type ReceiptPaper, type ReceiptPrintHandler } from "./finance-receipt-print";
 import styles from "./finance-receipt.module.css";
+import { InvoiceFileDownloads } from "./company-invoice-files";
+import type { InvoiceFile } from "@/lib/finance/company-invoice-options";
 
 /** Both the dashboard and the standalone financial cashier use this exact dialog. */
 export function FinanceReceiptDialog({ document, snapshot, onClose, preview = false, autoPrint = false, backgroundAutoPrint = false, autoPrintKey, receiptBrand, onPrint }: { document: FinanceDocument; snapshot: FinanceSnapshot; onClose: () => void; preview?: boolean; autoPrint?: boolean; backgroundAutoPrint?: boolean; autoPrintKey?: string; receiptBrand?: ReceiptBrand | null; onPrint?: ReceiptPrintHandler }) {
@@ -20,6 +23,15 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
   const [printStatus, setPrintStatus] = useState("");
   const [brandWarning, setBrandWarning] = useState("");
   const [automaticFailed, setAutomaticFailed] = useState(false);
+  const [companyInvoice, setCompanyInvoice] = useState<{ id: string; number: number; attachments: InvoiceFile[] } | null>(null);
+  const [companyBusy, setCompanyBusy] = useState(false);
+  const companyLock = useRef(false);
+  useEffect(() => {
+    if (!snapshot.canManage || document.kind !== "sale" || preview) return;
+    let disposed = false;
+    void findCompanyInvoiceAction(document.id, snapshot.cafe.slug).then(result => { if (!disposed && result.ok) setCompanyInvoice(result.data); });
+    return () => { disposed = true; };
+  }, [document.id, document.kind, snapshot.cafe.slug, snapshot.canManage, preview]);
   const busy = useRef(false);
   const receipt = useRef<HTMLDivElement>(null);
   const pairedReceipt = useRef<HTMLDivElement>(null);
@@ -56,6 +68,18 @@ export function FinanceReceiptDialog({ document, snapshot, onClose, preview = fa
     });
     return () => cancelAnimationFrame(frame);
   }, [autoPrint, preview, document.kind, document.id, ready, snapshot.cafe.slug, autoPrintKey, print]);
+  if (companyInvoice) {
+    const url = `/api/finance/${encodeURIComponent(snapshot.cafe.slug)}/company-invoices/${companyInvoice.id}/pdf`;
+    return <Modal open title={`فاتورة ضريبية رقم ${companyInvoice.number}`} onClose={onClose} panelClassName="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-auto rounded-3xl bg-white p-5 shadow-2xl">
+      <div className={styles.controls}><a href={url} target="_blank" rel="noreferrer">فتح الفاتورة للطباعة أو التنزيل</a><button type="button" disabled={companyBusy} onClick={async () => {
+        if (companyLock.current) return; companyLock.current = true; setCompanyBusy(true); setError("");
+        try { const result = await sendCompanyInvoiceWhatsAppAction(companyInvoice.id, snapshot.cafe.slug); if (!result.ok) setError(result.message); else setPrintStatus(result.data.status === "queued" ? "قبل مزود الواتساب طلب إرسال الفاتورة" : "الفاتورة محفوظة وحالة الإرسال تحتاج مراجعة لن نكررها تلقائيًا"); }
+        catch { setError("تعذر تأكيد حالة الإرسال"); } finally { companyLock.current = false; setCompanyBusy(false); }
+      }}>{companyBusy ? "جار الإرسال" : "إرسال بالواتساب"}</button>{printStatus && <p role="status">{printStatus}</p>}{error && <p role="alert">{error}</p>}</div>
+      <InvoiceFileDownloads files={companyInvoice.attachments} slug={snapshot.cafe.slug} />
+      <iframe src={url} title={`فاتورة ضريبية رقم ${companyInvoice.number}`} style={{ width: "100%", height: "65dvh", border: 0 }} />
+    </Modal>;
+  }
   if (backgroundAutoPrint && autoPrint && !preview && document.kind === "sale" && !automaticFailed) {
     return <div hidden aria-hidden="true" ref={pairedReceipt}><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="customer" /><FinanceReceipt document={document} snapshot={snapshot} brand={resolvedBrand ?? undefined} copy="preparation" /></div>;
   }

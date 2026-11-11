@@ -1,5 +1,19 @@
 /** Interface copy; customer-written catalog content is localized separately */
 export const cashierEnglish: Record<string, string> = {
+  "الخيارات": "Options",
+  "الرجوع للولاء": "Back to loyalty",
+  "جار تجهيز الشاشة للمرة الأولى": "Preparing this screen for the first time",
+  "تعذر فتح الشاشة تحقق من الاتصال ثم اضغط الزر مرة أخرى": "Could not open this screen Check your connection and press the button again",
+  "إغلاق": "Close",
+  "جاهز للاستلام": "Ready for pickup",
+  "استدعاء": "Call customer",
+  "وقت الإضافة": "Added at",
+  "لا توجد طلبات جاهزة الآن": "No orders ready yet",
+  "لا توجد طلبات قيد التجهيز": "No orders being prepared",
+  "عند تجهيز الطلب اضغط استدعاء ليظهر هنا": "When the order is ready press Call customer to move it here",
+  "أضف رقم الفاتورة والجوال لبدء الطلب": "Enter the invoice number and phone to start an order",
+  "اضغط تم الاستلام عندما يأخذ العميل طلبه": "Press Collected when the customer takes their order",
+  "الاستدعاء مفعّل والتذكير مستمر كل دقيقة حتى الاستلام": "Calling is active Reminders continue every minute until collection",
   "مساعدة الدخول": "Sign-in help",
   "بحث جديد": "New search",
   "تفاصيل وشروط المكافأة": "Reward details and terms",
@@ -207,6 +221,5 @@ export const cashierEnglish: Record<string, string> = {
   "ترجمة تلقائية لتفاصيل المكافأة": "Reward details are automatically translated",
   "تعذرت ترجمة بعض التفاصيل يُعرض النص الأصلي أعد الفحص للمحاولة مجددًا": "Some details could not be translated The original text is shown Check again to retry",
   "دخول الإدارة المالية": "Finance management sign in",
-  "دخول الفريق المالي": "Finance team sign in",
   "لا يوجد وصول نشط لكاشير المبيعات في هذه العلامة تواصل مع مالك العلامة": "You do not have active sales cashier access to this brand Contact the brand owner",
 };

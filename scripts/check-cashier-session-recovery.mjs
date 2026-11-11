@@ -16,12 +16,18 @@ function load(path, stubs = {}) {
 let row = { expires_at: "2099-01-01T00:00:00Z", revoked_at: null }, error = null, reads = 0;
 const query = { select() { return this; }, eq(key, token) { assert.equal(key, "token"); assert.equal(token, "test-session"); return this; }, async maybeSingle() { reads++; return { data: row, error }; } };
 const { cashierSessionStatus, recoverExpiredCashierAction } = load("lib/cashier/session-recovery.ts", {
+  "./workspace-session": load("lib/cashier/workspace-session.ts"),
   "@/lib/supabase/admin": { createAdminClient: () => ({ from: table => { assert.equal(table, "cafe_cashier_sessions"); return query; } }) },
 });
 const request = (path = "/cashier", token = true, method = "POST", action = true) => new NextRequest(`https://example.test${path}`, {
   method, headers: { ...(token ? { cookie: "barndaksa_cashier_session=test-session" } : {}), ...(action ? { "next-action": "old-action-id" } : {}) },
 });
 assert.equal(await cashierSessionStatus(request()), "valid");
+const { cashierWorkspaceKey } = load("lib/cashier/workspace-session.ts");
+assert.equal(await cashierSessionStatus(request(`/cashier?workspace=${cashierWorkspaceKey('test-session')}`)), "valid");
+const beforeMismatch = reads;
+assert.equal(await cashierSessionStatus(request(`/cashier?workspace=${cashierWorkspaceKey('other-session')}`)), "changed");
+assert.equal(reads, beforeMismatch, "Changed session scope does not read or return the previous session data");
 assert.equal(await recoverExpiredCashierAction(request()), null, "Healthy actions continue unchanged");
 for (const value of [null, { expires_at: "2000-01-01", revoked_at: null }, { expires_at: "2099-01-01", revoked_at: "2026-01-01" }]) {
   row = value;
@@ -64,6 +70,8 @@ assert.deepEqual(healthy.navigations, [], "Offline keeps pending operations inta
 const expired = harness(); await expired.finish(401);
 assert.deepEqual(expired.navigations, ["/cashier/session/clear?reason=session"]);
 expired.document.dispatchEvent(new Event("click")); assert.equal(expired.calls(), 1); expired.stop();
+const changed = harness(); await changed.finish(409);
+assert.deepEqual(changed.navigations, ["/cashier"], "Another login reloads the current session without clearing its cookie"); changed.stop();
 const disposed = harness(); disposed.stop(); await disposed.finish(401);
 assert.deepEqual(disposed.navigations, [], "An unmounted guard never navigates away from login");
 disposed.document.dispatchEvent(new Event("click")); assert.equal(disposed.calls(), 1);

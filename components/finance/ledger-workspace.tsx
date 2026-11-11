@@ -35,11 +35,13 @@ const sections: Record<Section, string> = {
 export function LedgerWorkspace({
   finance,
   slug,
-  initialDocument
+  initialDocument,
+  initialDraft
 }: {
   finance: FinanceSnapshot;
   slug?: string;
   initialDocument?: string;
+  initialDraft?: string;
 }) {
   const [section, setSection] = useState<Section>('journals');
   const [snapshot, setSnapshot] = useState<LedgerSnapshot | null>(null);
@@ -85,12 +87,12 @@ export function LedgerWorkspace({
   useEffect(() => {
     const requests = loadTicket;
     startTransition(async () => {
-      await reload(0);
+      await reload(0, initialDraft);
     });
     return () => {
       requests.current++;
     };
-  }, [reload]);
+  }, [reload, initialDraft]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty.current) {

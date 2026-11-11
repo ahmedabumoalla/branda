@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cashierWorkspaceKey } from "./workspace-session";
 
 export const cashierRecoveryPath = "/cashier/session/clear?reason=session";
 
 // This is an expiry preflight only. Every action still enforces its own permissions.
-export async function cashierSessionStatus(request: NextRequest): Promise<"valid" | "expired" | "unavailable"> {
+export async function cashierSessionStatus(request: NextRequest): Promise<"valid" | "expired" | "changed" | "unavailable"> {
   const token = request.cookies.get("barndaksa_cashier_session")?.value;
   if (!token) return "expired";
+  const workspace = request.nextUrl.searchParams.get("workspace");
+  if (workspace && workspace !== cashierWorkspaceKey(token)) return "changed";
   try {
     const { data, error } = await createAdminClient().from("cafe_cashier_sessions")
       .select("expires_at,revoked_at").eq("token", token).maybeSingle();

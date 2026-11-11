@@ -1,6 +1,7 @@
 export type PagerStatus = "waiting" | "ready" | "received" | "cancelled";
 export type PagerMode = "owner" | "staff";
-export type PagerContext = { cafeId: string; cafeName: string; actorName: string; station: string; kind: PagerMode; canUseLoyalty?: boolean };
+export type PagerBrandColors = { background: string; foreground: string; accent: string };
+export type PagerContext = { cafeId: string; cafeName: string; actorName: string; station: string; kind: PagerMode; canUseLoyalty?: boolean; colors?: PagerBrandColors };
 export type PagerOrder = {
   id: string; cafeId: string; invoiceNumber: string; phone: string; status: PagerStatus;
   createdAt: string; readyAt: string | null; receivedAt: string | null;
