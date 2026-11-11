@@ -1,0 +1,146 @@
+{
+  "at": "2026-11-11T17:06:12.165Z",
+  "runtime": "v24.22.1",
+  "cwd": "C:/Projects/branda-platform/.barndaksa-backups/full-release-20261111",
+  "inputs": {
+    "components/admin/brand-owner-welcome.tsx": "23c5282bc78f2dad20fa913f7cf23b9a0eafb315404d074d3cfaaf002d474185",
+    "lib/data/admin-brand-onboarding.ts": "76d4a2fad5981c595eb237c6659020b41e3a5c805fc59896879c225f5e9a2f00",
+    "scripts/check-brand-owner-welcome-ui.mjs": "d455412d7f37dde372c7fe36e64e9ac8ed2f19be3cbd406719de1aa5215ee254",
+    "scripts/check-shared-subscriptions-db.mjs": "edeeb96a400d5e172256a8347c6d24312d6c398f1d6920234d6562e6eee0f5de",
+    "scripts/check-owner-handoff-selected-plans-db.mjs": "aa81437a7972f3ed2b82b7669d7b2b65ad9c21d738e590f8bb9f973f9b6ea3c2",
+    "supabase/migrations/20261111165826_owner_handoff_selected_plan_trial.sql": "befb0e522bafef08d652dd2a8321655884afb73166b4b37ba24aac52d89de171",
+    "scripts/check-brand-owner-welcome-server.mjs": "7b612267fccd44a384e543c0d85c6257d46b58b2a49175531d768a4c4ba3097f",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "next.config.ts": "4e1786dd6216276441dc3a10da6183537e93adbf01be2d6d4325a75b98aab841",
+    "vercel.json": "32cabef3a2d86c0822397b05fa23f23d05e89d7e3e71db6af71a89fb93831706",
+    "lib/supabase/server.ts": "3c941d80fb28d0f8590736142a2306bed8848868da79bf2c2ec0156d7c8a1471",
+    "lib/supabase/client.ts": "a23341bcf23dab880c723d78b7dfdbdc149bcf9e5e7a8df97bf6168d05d5017c",
+    "lib/data/feature-entitlements.ts": "3e02a5732db9712715d05e7f6d070e31aabcc1cdcecbd2df49e782518c3e6379",
+    "lib/whatsapp/green-api.ts": "606a722767a3c978fe43781bbfa81a83f9c144ae7fd0a638e784be22a4990dc7",
+    "app/actions/admin-brand-onboarding.ts": "37411dd70ac7d1728b96dcbbe2b7a2faf751ef03ae1daa3cfa5160cc092d3194",
+    "lib/platform/action-result.ts": "dbe98cf23fd8ce8c8058bb5376469df28ce1086e72649c3db95c5fd8402eb341",
+    "lib/platform/service-subscriptions.ts": "f3bd4bb6a346c71e5a3d86cfcb11c31ce0ef6b0e1bcbf9da465f681a827cbe1e"
+  },
+  "sourceFiles": [
+    "components/admin/brand-owner-welcome.tsx",
+    "lib/data/admin-brand-onboarding.ts",
+    "scripts/check-brand-owner-welcome-ui.mjs",
+    "scripts/check-shared-subscriptions-db.mjs",
+    "scripts/check-owner-handoff-selected-plans-db.mjs",
+    "supabase/migrations/20261111165826_owner_handoff_selected_plan_trial.sql"
+  ],
+  "changedDuringRun": [],
+  "missing": [],
+  "results": [
+    {
+      "name": "check-brand-owner-welcome-ui.mjs",
+      "args": [
+        "scripts/check-brand-owner-welcome-ui.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.412Z",
+      "end": "2026-11-11T17:05:56.687Z",
+      "summary": "PASS 12 owner handoff current-plan, trial, delivery-state and duplicate-send UI checks\n"
+    },
+    {
+      "name": "check-brand-owner-welcome-server.mjs",
+      "args": [
+        "scripts/check-brand-owner-welcome-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.415Z",
+      "end": "2026-11-11T17:05:56.786Z",
+      "summary": "PASS 9 mocked owner handoff authorization, modes, single-send retry and message checks; no live messages\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.688Z",
+      "end": "2026-11-11T17:05:57.676Z",
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "check-owner-handoff-selected-plans-db.mjs",
+      "args": [
+        "scripts/check-owner-handoff-selected-plans-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.406Z",
+      "end": "2026-11-11T17:05:57.735Z",
+      "summary": "PASS 50 selected-plan handoff SQL authorization, seven-day cohorts, finance, concurrency, receipt and paid-preservation checks\n"
+    },
+    {
+      "name": "check-shared-subscriptions-db.mjs",
+      "args": [
+        "scripts/check-shared-subscriptions-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.418Z",
+      "end": "2026-11-11T17:05:57.826Z",
+      "summary": "Shared subscriptions SQL: 73 checks passed\n"
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "components/admin/brand-owner-welcome.tsx",
+        "lib/data/admin-brand-onboarding.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:57.676Z",
+      "end": "2026-11-11T17:05:58.952Z",
+      "summary": ""
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T17:05:56.786Z",
+      "end": "2026-11-11T17:06:12.165Z",
+      "summary": ""
+    }
+  ],
+  "database": {
+    "at": "2026-11-11T17:06:39.174866+00:00",
+    "migration": "20261111165826",
+    "migrationSourceMatches": true,
+    "functionBodiesMatch": true,
+    "serviceOnlyHandoff": true,
+    "otherGrantsUnchanged": true,
+    "advisorsUnchanged": true,
+    "actualBrandRollback": {
+      "actualBrand": "Forn Altaboon",
+      "at": "2026-11-11T17:06:39.182754+00:00",
+      "cancelledPlanUnchanged": true,
+      "claimDoesNotStartClock": true,
+      "exactSevenDays": true,
+      "messageSent": false,
+      "receiptIdempotent": true,
+      "result": "PASS",
+      "samePlan": true,
+      "selectedPlan": "pro",
+      "transaction": "ROLLBACK"
+    },
+    "sourceSha256": "befb0e522bafef08d652dd2a8321655884afb73166b4b37ba24aac52d89de171",
+    "originalFailureReproduced": true
+  },
+  "build": {
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "runtime": "v24.22.1",
+    "result": "PASS",
+    "buildId": "YRySL_mB0l8Kxrf9GAMwl",
+    "log": ".barndaksa-backups/selected-plan-welcome/build.log",
+    "finishedBefore": "2026-11-11T17:05:00Z"
+  },
+  "limits": "No browser, real messages, retained customer/business writes or concurrent two-connection stress test; send interleavings tested transactionally"
+}

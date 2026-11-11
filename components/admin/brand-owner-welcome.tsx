@@ -15,9 +15,9 @@ export function BrandOwnerWelcome({ cafe, disabled, onBusyChange, onUpdated }: {
   const delivery = cafe.ownerDelivery;
   const deliveryAllowed = cafe.status === "نشط" && Boolean(cafe.trialAwaitingDelivery || cafe.hasActivePlan);
   if (!delivery) return null;
-  async function refresh() {
+  async function refresh(preserveError = false) {
     const result = await refreshAdminBrandAction(cafe.id);
-    if (result.ok) onUpdated(result.data); else setError(result.message);
+    if (result.ok) { onUpdated(result.data); if (!preserveError) setError(""); } else setError(result.message);
   }
   async function send() {
     if (inFlight.current || disabled || delivery?.state === "sent") return;
@@ -25,14 +25,14 @@ export function BrandOwnerWelcome({ cafe, disabled, onBusyChange, onUpdated }: {
     try {
       const result = await sendBrandOwnerWelcomeAction(cafe.id, retryConfirmed);
       if (result.ok) onUpdated(result.data);
-      else { setError(result.message); await refresh(); }
+      else { setError(result.message); await refresh(true); }
     } catch { setError("انقطع الاتصال حدّث حالة الإرسال قبل المحاولة مجددًا"); }
     finally { inFlight.current = false; setPending(false); onBusyChange(false); setRetryConfirmed(false); }
   }
   if (delivery.state === "sent") return <section className={s.welcome} role="status"><h3><Check size={19} aria-hidden="true" />تم قبول إرسال بيانات المالك</h3><p>قبول الرسالة لدى مزود واتساب لا يؤكد وصولها إلى جوال المالك</p>{delivery.sentAt && <time dateTime={delivery.sentAt}>{new Date(delivery.sentAt).toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" })}</time>}</section>;
   return <section className={s.welcome} aria-busy={pending}>
     <h3>تسليم الحساب للمالك</h3>
-    <p>{cafe.trialAwaitingDelivery ? "تقدر تجهّز العلامة الآن تبدأ التجربة لمدة ٧ أيام بعد قبول إرسال بيانات الدخول" : "أرسل بيانات الدخول للمالك مع الحفاظ على الباقة الحالية ومدة اشتراكها"}</p>
+    <p>{cafe.trialAwaitingDelivery ? "الباقات المحددة تبدأ لمدة ٧ أيام من قبول إرسال بيانات الدخول للمالك" : "أرسل بيانات الدخول للمالك مع الحفاظ على الباقة الحالية ومدة اشتراكها"}</p>
     <div className={s.recipient}><span>{cafe.ownerPhone ? "ستصل بيانات الدخول إلى واتساب" : "رقم جوال المالك لم يُضف بعد"}</span>{cafe.ownerPhone && <bdi>{cafe.ownerPhone}</bdi>}</div>
     <p className={s.preview}>رسالة مختصرة تتضمن رابط برندة ورابط الدخول ورقم الجوال وكلمة المرور التي حددتها</p>
     {delivery.state === "uncertain" && <label className={s.retry}><input type="checkbox" checked={retryConfirmed} onChange={event => setRetryConfirmed(event.target.checked)} disabled={pending} /><span>قد تكون الرسالة السابقة وصلت أوافق على إعادة إرسال بيانات الدخول</span></label>}
@@ -42,6 +42,6 @@ export function BrandOwnerWelcome({ cafe, disabled, onBusyChange, onUpdated }: {
     {(delivery.state === "ready" || delivery.state === "editing") && (editing ? <BrandOwnerEditor cafe={cafe} disabled={disabled || pending} onBusyChange={onBusyChange} onSaved={onUpdated} close={() => setEditing(false)} /> : <button type="button" className={s.secondary} style={{ marginBlock: 12 }} disabled={disabled || pending} onClick={() => setEditing(true)}>{delivery.detailsReady ? "تعديل بيانات المالك" : "استكمال بيانات المالك"}</button>)}
     {error && <p role="alert" className={s.error}>{error}</p>}
     <div className={s.actions}><button type="button" className={s.primary} disabled={disabled || pending || editing || !delivery.detailsReady || delivery.state === "editing" || delivery.state === "sending" || (delivery.state === "uncertain" && !retryConfirmed) || !deliveryAllowed} onClick={send}>{pending ? <LoaderCircle className={s.spinner} size={18} aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}{pending ? "جارٍ إرسال تفاصيل الدخول" : "إرسال تفاصيل الدخول للمالك"}</button><button type="button" className={s.secondary} disabled={pending || disabled} onClick={() => { void refresh().catch(() => setError("تعذر تحديث الحالة حاول مجددًا")); }}>تحديث الحالة</button></div>
-    {!deliveryAllowed && <p className={s.error}>فعّل العلامة وباقة سارية قبل إرسال بيانات الدخول</p>}
+    {!deliveryAllowed && <p className={s.error}>{cafe.status !== "نشط" ? "فعّل العلامة قبل إرسال بيانات الدخول" : "اختر باقة للعلامة ثم أرسل بيانات الدخول لتبدأ مدتها من وقت الإرسال"}</p>}
   </section>;
 }
