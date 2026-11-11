@@ -2,7 +2,7 @@
 
 ## Release state
 
-User explicitly authorized publishing the completed local finance update together with pager/loyalty and updating GitHub, Vercel and handoff. This supersedes the earlier finance-local-only restriction. Prepared on production main 4251fc78e60064ccf304cccfd55b8e8e6559d334 in an isolated worktree. Publication verification follows below when the exact deployment is ready
+User explicitly authorized publishing the completed local finance update together with pager/loyalty and updating GitHub, Vercel and handoff. This supersedes the earlier finance-local-only restriction. Prepared on production main 4251fc78e60064ccf304cccfd55b8e8e6559d334 in an isolated worktree. Published application commit 8f08bac0f2c263678ca2ddd362bd62d074066eec; exact production deployment dpl_J2hKpYk6Ndj47GU8J16YSg1pcTxs verified READY at 2026-11-11T12:17:23.884Z, with both public domains assigned. Read-only HTTP checks passed for Jamila logo/menu and unauthenticated cashier, pager and finance access guards on both domains. Deployment evidence: FULL_RELEASE_20261111_DEPLOYMENT.json
 
 ## Delivered scope
 

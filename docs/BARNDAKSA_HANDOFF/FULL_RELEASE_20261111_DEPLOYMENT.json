@@ -1,0 +1,76 @@
+{
+  "at": "2026-11-11T12:17:23.884Z",
+  "sha": "8f08bac0f2c263678ca2ddd362bd62d074066eec",
+  "uid": "dpl_J2hKpYk6Ndj47GU8J16YSg1pcTxs",
+  "url": "branda-2-1yqfu5muj-ahmedabumoallas-projects.vercel.app",
+  "readyState": "READY",
+  "target": "production",
+  "projectId": "prj_kHe6mtiyO05loZn6PgMOSpjlv4Ow",
+  "aliases": [
+    "barndaksa.com",
+    "*.barndaksa.com",
+    "www.barndaksa.com",
+    "branda-2.vercel.app",
+    "branda-2-ahmedabumoallas-projects.vercel.app",
+    "branda-2-git-main-ahmedabumoallas-projects.vercel.app"
+  ],
+  "githubCommitSha": "8f08bac0f2c263678ca2ddd362bd62d074066eec",
+  "http": [
+    {
+      "host": "barndaksa.com",
+      "path": "/menu/brand-406bf519a458",
+      "status": 200,
+      "location": null,
+      "jamilaLogo": true
+    },
+    {
+      "host": "barndaksa.com",
+      "path": "/cashier",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/cashier/login"
+    },
+    {
+      "host": "barndaksa.com",
+      "path": "/pager",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/cashier/login?next=pager"
+    },
+    {
+      "host": "barndaksa.com",
+      "path": "/finance/test-cafe/ledger",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/finance/test-cafe/login?access=team"
+    },
+    {
+      "host": "www.barndaksa.com",
+      "path": "/menu/brand-406bf519a458",
+      "status": 200,
+      "location": null,
+      "jamilaLogo": true
+    },
+    {
+      "host": "www.barndaksa.com",
+      "path": "/cashier",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/cashier/login"
+    },
+    {
+      "host": "www.barndaksa.com",
+      "path": "/pager",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/cashier/login?next=pager"
+    },
+    {
+      "host": "www.barndaksa.com",
+      "path": "/finance/test-cafe/ledger",
+      "status": 200,
+      "location": null,
+      "streamedRedirect": "/finance/test-cafe/login?access=team"
+    }
+  ]
+}
