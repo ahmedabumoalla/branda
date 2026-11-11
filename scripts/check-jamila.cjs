@@ -75,6 +75,25 @@ function load(file, stubs = {}) {
   landing={identity:{slug:JAMILA_SLUG}};
   await assert.rejects(()=>route.default(props),/redirect/);checks++;
   check((await route.generateViewport(props)).themeColor==='#5c5c5c','Jamila browser theme matches identity');
+  let ownerSlug=JAMILA_SLUG, storedPath=null, ownerRole='cafe_owner', authenticated=true;
+  const storedLogo='https://barndaksa.com'+JAMILA_LOGO;
+  const db={auth:{getUser:async()=>({data:{user:authenticated?{id:'owner'}:null}})},from(table){return{select(){return this;},eq(){return this;},async maybeSingle(){return {data:table==='profiles'?{role:ownerRole,status:'active'}:{logo_url:storedLogo,logo_storage_path:storedPath}};}}}};
+  const settings=load('lib/data/settings.ts',{
+    '@/lib/supabase/server':{createClient:async()=>db},
+    '@/lib/data/cafes':{requireOwnerCafeContext:async()=>({id:'jamila-id',slug:ownerSlug,name:'Jamila',businessCategory:'cafes_coffee'})},
+    '@/lib/platform/maintenance':{readMaintenanceSessionCookie:async()=>null},
+    '@/lib/data/mappers':{mapDbSettingsToCafeSettings:()=>({})},
+    '@/lib/storage/resolve-storage-url':{storageBucketForLogo:()=> 'cafe-logos',resolvePublishedStoragePathToUrl:async()=> 'https://storage.example/new-owner-logo.png'},
+  });
+  check((await settings.getOwnerCafeSettings()).logoDataUrl===storedLogo,'Owner sidebar receives stored Jamila logo URL');
+  storedPath='jamila-id/new-logo.png';
+  check((await settings.getOwnerCafeSettings()).logoDataUrl==='https://storage.example/new-owner-logo.png','New owner upload takes priority');
+  storedPath=null;ownerSlug='other';
+  check((await settings.getOwnerCafeSettings()).logoDataUrl===undefined,'Other owner account behavior unchanged');
+  ownerSlug=JAMILA_SLUG;ownerRole='platform_admin';
+  await assert.rejects(()=>settings.getOwnerCafeSettings(),/الصيانة/);checks++;
+  authenticated=false;
+  await assert.rejects(()=>settings.getOwnerCafeSettings(),/سجل دخولك/);checks++;
   const css=fs.readFileSync(path.join(root,'components/menu/jamila-menu.module.css'),'utf8');
   check(css.includes('max-width: 600px') && css.includes(':focus-visible') && css.includes('prefers-reduced-motion'),'Responsive keyboard and reduced-motion styles');
   const image=await sharp(path.join(root,'public/menu-art/jamila/logo-v1.png')).metadata();

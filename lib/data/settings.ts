@@ -105,6 +105,9 @@ export async function getOwnerCafeSettings(): Promise<CafeSettings> {
   const settings = mapDbSettingsToCafeSettings(cafe.slug, data);
   settings.cafeName = cafe.name;
   settings.businessCategory = cafe.businessCategory;
+  if (cafe.slug === "brand-406bf519a458" && !data.logo_storage_path && typeof data.logo_url === "string") {
+    settings.logoDataUrl = data.logo_url;
+  }
   if (data.logo_storage_path) {
     settings.logoAssetId = data.logo_storage_path as string;
     settings.logoDataUrl = await resolvePublishedStoragePathToUrl(
