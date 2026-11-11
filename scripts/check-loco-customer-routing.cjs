@@ -13,7 +13,7 @@ const env = { GREEN_API_API_URL: config('111').apiUrl, GREEN_API_ID_INSTANCE: '1
   GREEN_API_OTP_BACKUP_API_URL: config('222').apiUrl, GREEN_API_OTP_BACKUP_ID_INSTANCE: '222', GREEN_API_OTP_BACKUP_API_TOKEN_INSTANCE: config('222').apiTokenInstance,
   GREEN_API_ACCESS_SENDER: 'backup' };
 let checks = 0;
-async function scenario({ states = {}, linked = { ...config('333'), expectedPhone: '966511111111' }, accountPhone = '966511111111', fault, tenant = loco, getterError = false, configuration = env } = {}) {
+async function scenario({ states = {}, linked = { ...config('333'), expectedPhone: '966511111111' }, accountPhone = '966511111111', fault, tenant = loco, getterError = false, configuration = env, loyaltyOnly = false } = {}) {
   const calls = [], gets = [];
   const fetcher = async (url, init) => {
     const instance = /waInstance(\d+)/.exec(url)[1]; calls.push({ instance, ...init });
@@ -38,11 +38,23 @@ async function scenario({ states = {}, linked = { ...config('333'), expectedPhon
     '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco },
     '@/lib/data/brand-whatsapp': { getLocoCustomerWhatsAppCredentials: async id => { gets.push(id); if (getterError) throw Error('private-token'); return linked; } },
   });
-  const selected = await router.selectLocoCustomerSender(tenant);
+  const selected = await (loyaltyOnly ? router.selectLocoLoyaltySender(tenant) : router.selectLocoCustomerSender(tenant));
   const result = selected ? await green.sendGreenApiCustomerMessage(selected, { phone: '966500000000', message: 'isolated customer test' }) : null;
   return { calls, gets, selected, result, router };
 }
 (async () => {
+  for (const options of [{states:{333:'notAuthorized'}}, {linked:null}, {getterError:true}, {states:{333:'timeout'}}, {accountPhone:'966522222222'}, {linked:{...config('333'),apiUrl:'https://evil.example'}}, {tenant:'another-cafe'}]) {
+    const x = await scenario({...options,loyaltyOnly:true});
+    assert.equal(x.selected,null,'unavailable or unverified loyalty sender must defer');
+    assert.equal(x.calls.filter(c=>c.method==='POST').length,0);
+    assert.ok(x.calls.every(c=>c.instance==='333'),'never even consider platform primary or backup'); checks++;
+  }
+  for (const fault of [undefined,'timeout','json','ack',400,401,403,429,500]) {
+    const x = await scenario({loyaltyOnly:true,fault});
+    assert.equal(x.selected.idInstance,'333');
+    assert.equal(x.calls.filter(c=>c.method==='POST').length,1);
+    assert.ok(x.calls.every(c=>c.instance==='333'),'never switch sender after a brand POST'); checks++;
+  }
   for (const [options, expected] of [[{},'333'], [{states:{333:'notAuthorized'}},'111'], [{linked:null},'111'], [{getterError:true},'111'], [{states:{333:'timeout',111:'notAuthorized'}},'222'], [{states:{333:'notAuthorized',111:'notAuthorized',222:'notAuthorized'}},null]]) {
     const x = await scenario(options); assert.equal(x.selected?.idInstance ?? null, expected); assert.equal(x.calls.filter(c=>c.method==='POST').length, expected ? 1 : 0); checks++;
   }

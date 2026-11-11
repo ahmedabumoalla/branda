@@ -42,7 +42,7 @@ const worker = load('lib/wallet/welcome.ts', {
     rpcCalls.push({ name, args }); return { data: name === 'claim_routed_wallet_welcome' ? jobs.shift() ?? null : saved, error: null };
   } }) },
   '@/lib/whatsapp/green-api': { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async input => { sends.push(input); return outcome; }, sendGreenApiCustomerMessage: async (sender,input) => { locoSends.push({sender,input}); return outcome; } },
-  '@/lib/whatsapp/customer-routing': { selectLocoCustomerSender: async cafeId => { assert.equal(cafeId,loco); return locoSender; } },
+  '@/lib/whatsapp/customer-routing': { selectLocoLoyaltySender: async cafeId => { assert.equal(cafeId,loco); return locoSender; } },
   '@/lib/whatsapp/brand-connection-types': { LOCO_CAFE_ID: loco },
 });
 assert.equal((await worker.dispatchWalletWelcomes()).deferred, true);
@@ -81,6 +81,14 @@ assert.equal((await worker.dispatchWalletWelcomes()).processed, 0);
 assert.equal(locoSends.length, 2);
 ready = true; locoSender = null; jobs = [job]; outcome = { status: 'queued', providerMessageId: 'primary-ack' };
 assert.equal((await worker.dispatchWalletWelcomes()).queued, 1, 'non-LOCO remains primary-only');
+// Even an unexpected LOCO claim cannot fall through to a healthy platform sender.
+jobs = [{ ...job, cafeId: loco }];
+const priorPlatformSends = sends.length, priorBrandSends = locoSends.length;
+assert.equal((await worker.dispatchWalletWelcomes()).rejected, 1);
+assert.equal(rpcCalls.at(-2).args.p_loco_ready, false);
+assert.equal(rpcCalls.at(-2).args.p_primary_ready, true);
+assert.equal(sends.length, priorPlatformSends);
+assert.equal(locoSends.length, priorBrandSends);
 // Execute the real handlers against isolated dependencies: no customer pass or send.
 for (const provider of ['apple', 'google']) {
   let authorized = true, issueFails = false, scheduled = [], welcomed = [];

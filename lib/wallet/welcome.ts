@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
-import { selectLocoCustomerSender } from "@/lib/whatsapp/customer-routing";
+import { selectLocoLoyaltySender } from "@/lib/whatsapp/customer-routing";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 
 type Welcome = { id: string; claimToken: string; cafeId: string; brandName: string; phone: string; stamps: number; reward: string };
@@ -20,7 +20,7 @@ export function walletWelcomeMessage(job: Welcome) {
 /** Atomic DB claims deduplicate Apple/Google requests and concurrent cron workers */
 export async function dispatchWalletWelcomes(cardId?: string, limit = 1) {
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, deferred: false };
-  const [primaryReady, locoSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoCustomerSender(LOCO_CAFE_ID)]);
+  const [primaryReady, locoSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID)]);
   if (!primaryReady && !locoSender) return { ...result, deferred: true };
   const admin = createAdminClient();
   for (let index = 0; index < Math.min(5, Math.max(1, limit)); index++) {

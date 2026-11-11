@@ -1,0 +1,248 @@
+{
+  "at": "2026-11-11T14:06:37.307Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "components/dashboard/pages/brand-phone-page.tsx": "6c7d70c1a65942cda93254d78e6100bcc5cae82a23ecb36e3049621e001208ad",
+    "scripts/check-brand-phone-ui.mjs": "56e8be7f2672bcb1878a469a8812b5c4639153b2bc48d93cb75a74da132eb89e",
+    "lib/whatsapp/customer-routing.ts": "9091d9f33e4c0156e03d957b91434861842f05fb6d46ca0e7988d882dbfd2a6f",
+    "lib/whatsapp/green-api.ts": "606a722767a3c978fe43781bbfa81a83f9c144ae7fd0a638e784be22a4990dc7",
+    "lib/whatsapp/green-api-marketing.ts": "aa935f466c5a5a5df48a50278a648a2b2ef74ad5b556cf44a0d46b8941d75f18",
+    "lib/data/brand-whatsapp.ts": "60d6c28aef6051474fd98295358910248b10c099646256f9d42982648cbfff64",
+    "lib/wallet/welcome.ts": "f2a3a1aa77810556a683a32e9be487962d0fefdc014e8dd68245089c955df141",
+    "lib/loyalty/read-card-links.ts": "36974570fd24f39d423528f32defc1bdf2a4908f161d53d1ea41727319de9945",
+    "scripts/check-loco-customer-routing.cjs": "ca3a416953808e5c15086374ce5390cbf993ab4f055dc2c3c000a22523968dd5",
+    "scripts/check-wallet-welcome.mjs": "591ae3227cdd061ff0536cd6f16e7618f7c9fbc3e273899913f86c8cb29a1d2c",
+    "scripts/check-loyalty-read-server.mjs": "1b7a86dc5603494e0add62a85d569af7be0a017ee69b12cc57a0d840720816dc",
+    "scripts/check-loyalty-read-delivery-db.mjs": "b77325ff9ef644efc933bdd16516b0e9b82296d1a84111843dccda107df85322",
+    "scripts/check-loyalty-read-queue-db.mjs": "34624e83eb931a5085778b3371474a4d33237c9212675e6a28fca921f2e971c7",
+    "supabase/migrations/20261106075709_loco_customer_delivery_routing.sql": "464931f5ed18fffb85bac4a386d7bce882449dd541f079695572e24019257ba8",
+    "supabase/migrations/20261108180040_loyalty_read_queue.sql": "1a5210375afc124fdecef1ad52bfd3941de54bf6e34f2eb4284ffddcda7ad9cf",
+    "supabase/migrations/20261108183724_loyalty_read_delivery.sql": "9b55d36489f6014136bdde2728ceab8cc69f01fdf0618809cdd22d6b0fb13902",
+    "supabase/tests/loyalty_read_delivery_rollback.sql": "f760bc6b50b996a8e670a1dca7cb9a440654be5133275d4eb58a09d324421fb0",
+    "supabase/tests/loyalty_read_queue_rollback.sql": "ef01190aaff1f373a9a4d71ea0eacc090bd7fe83f94d658a6b024286a8b7f876",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "brand-ui",
+      "args": [
+        "scripts/check-brand-phone-ui.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.429Z",
+      "end": "2026-11-11T14:06:21.650Z",
+      "summary": "rted attempt\nPASS foreground refresh replaces an older polling response without stale state\nPASS background and offline tabs do not poll and unmount aborts stale work\nPASS configuration and unverified status never claim readiness\nPASS all connection states have honest labels and mismatch recovery\nPASS server route rejects other stable brand IDs before reading connection data\nPASS sidebar exposes the route only for LOCO and preserves collapsed/mobile behavior\nPASS styles resolve and preserve readable mobile QR keyboard focus and touch targets\nPASS 23 brand phone UI groups; mocked requests only\n"
+    },
+    {
+      "name": "routing",
+      "args": [
+        "scripts/check-loco-customer-routing.cjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.435Z",
+      "end": "2026-11-11T14:06:21.398Z",
+      "summary": "PASS 45 LOCO customer routing cases; mocked provider only, no real messages\n"
+    },
+    {
+      "name": "wallet",
+      "args": [
+        "scripts/check-wallet-welcome.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.438Z",
+      "end": "2026-11-11T14:06:20.752Z",
+      "summary": "Wallet welcome sender, dedupe worker and Apple/Google route regressions passed (no real messages)\n"
+    },
+    {
+      "name": "card-links",
+      "args": [
+        "scripts/check-loyalty-read-server.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.442Z",
+      "end": "2026-11-11T14:06:20.876Z",
+      "summary": "ASS accept returns before background processing and worker is tenant-scoped\nPASS branded card link signed, tenant bound, expires and distinguishes first stamp\nPASS card-link route strips token and refuses changed phone or blocked member\nPASS cron rejects missing and wrong authorization without processing\nPASS WhatsApp unavailable defers claim and ambiguous send is recorded separately\nPASS card invitation checks actual Google save state and defers unknown before sending\nPASS LOCO invitations stay pending offline and resume only on the verified brand sender\nLoyalty read server: 15 checks passed\n"
+    },
+    {
+      "name": "database",
+      "args": [
+        "scripts/check-loyalty-read-delivery-db.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.445Z",
+      "end": "2026-11-11T14:06:22.096Z",
+      "summary": "PASS scoped wallet claims and v2 invitation rollback assertions\nPASS 11 inherited entitlement checks and full loyalty read queue rollback assertions\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.448Z",
+      "end": "2026-11-11T14:06:21.551Z",
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.452Z",
+      "end": "2026-11-11T14:06:37.307Z",
+      "summary": ""
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "lib/whatsapp/customer-routing.ts",
+        "lib/wallet/welcome.ts",
+        "lib/loyalty/read-card-links.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T14:06:20.455Z",
+      "end": "2026-11-11T14:06:21.756Z",
+      "summary": ""
+    }
+  ],
+  "liveClaims": [
+    {
+      "anon_denied": true,
+      "authenticated_denied": true,
+      "brand_health_required": true,
+      "checked_at": "2026-11-11 14:04:10.880298+00",
+      "loco_scoped": true,
+      "other_brand_primary_preserved": true,
+      "proname": "claim_routed_wallet_welcome",
+      "service_allowed": true
+    },
+    {
+      "anon_denied": true,
+      "authenticated_denied": true,
+      "brand_health_required": true,
+      "checked_at": "2026-11-11 14:04:10.880352+00",
+      "loco_scoped": true,
+      "other_brand_primary_preserved": true,
+      "proname": "claim_stamp_card_link_v2",
+      "service_allowed": true
+    }
+  ],
+  "providerReadOnly": {
+    "before": {
+      "at": "2026-11-11T14:02:16.945Z",
+      "connection": {
+        "status": "connected",
+        "requestedPhoneSuffix": "4549",
+        "phonesMatch": true,
+        "optedIn": true,
+        "credentialsPresent": true,
+        "updatedAt": "2026-11-11T13:53:24.898+00:00"
+      },
+      "brandState": "authorized",
+      "accountMatchesRequested": true,
+      "accountPhoneSuffix": "4549",
+      "exactDalCredentialsEligible": true,
+      "selected": "brand",
+      "providerReads": [
+        {
+          "method": "getStateInstance",
+          "status": 200
+        },
+        {
+          "method": "getWaSettings",
+          "status": 200
+        },
+        {
+          "method": "getWaSettings",
+          "status": 200
+        },
+        {
+          "method": "lastOutgoingMessages",
+          "status": 200
+        },
+        {
+          "method": "lastOutgoingMessages",
+          "status": 200
+        }
+      ],
+      "recentLoyaltyMessages": [
+        {
+          "sender": "brand",
+          "available": true,
+          "count": 3,
+          "messages": [
+            {
+              "at": "2026-11-11T14:01:32.000Z",
+              "status": "sent",
+              "api": true,
+              "kind": "brand-text"
+            },
+            {
+              "at": "2026-11-11T13:59:25.000Z",
+              "status": "delivered",
+              "api": true,
+              "kind": "brand-text"
+            },
+            {
+              "at": "2026-11-11T13:58:25.000Z",
+              "status": "delivered",
+              "api": true,
+              "kind": "card-link"
+            }
+          ]
+        },
+        {
+          "sender": "platform-primary",
+          "available": true,
+          "count": 1,
+          "messages": [
+            {
+              "at": "2026-11-11T13:27:34.000Z",
+              "status": "delivered",
+              "api": true,
+              "kind": "brand-text"
+            }
+          ]
+        }
+      ]
+    },
+    "after": {
+      "at": "2026-11-11T14:06:46.034Z",
+      "connection": {
+        "status": "connected",
+        "requestedPhoneSuffix": "4549",
+        "phonesMatch": true,
+        "optedIn": true,
+        "credentialsPresent": true,
+        "updatedAt": "2026-11-11T13:53:24.898+00:00"
+      },
+      "brandState": "authorized",
+      "accountMatchesRequested": true,
+      "accountPhoneSuffix": "4549",
+      "exactDalCredentialsEligible": true,
+      "selected": "none",
+      "providerReads": [
+        {
+          "method": "getStateInstance",
+          "status": 200
+        },
+        {
+          "method": "getWaSettings",
+          "status": 200
+        },
+        {
+          "method": "getWaSettings",
+          "status": 429
+        }
+      ]
+    }
+  }
+}

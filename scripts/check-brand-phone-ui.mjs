@@ -76,7 +76,7 @@ async function check(name, run) { await run(); checks++; assert.equal(intervals.
 try {
   await check("connection-only page explains linking and brand-primary-backup order", () => {
     const h = harness(); const markup = renderToStaticMarkup(h.render());
-    for (const phrase of ["ربط رقم العلامة التجارية", "الإعدادات أو القائمة ثم الأجهزة المرتبطة", "اختر ربط جهاز وامسح الرمز", "من رقم لوكو المرتبط أولًا", "رقم برندة الأساسي ثم الرقم الاحتياطي"]) assert(markup.includes(phrase));
+    for (const phrase of ["ربط رقم العلامة التجارية", "الإعدادات أو القائمة ثم الأجهزة المرتبطة", "اختر ربط جهاز وامسح الرمز", "رسائل الولاء من رقم لوكو فقط", "دون استخدام رقم المنصة"]) assert(markup.includes(phrase));
     assert.doesNotMatch(markup, /campaign-body|createCampaign|مراجعة الحملة|إرسال تجريبي|partnerToken|apiToken/);
     assert.equal(requests.length, 0, "Opening the page does not begin a connection or send anything"); h.unmount();
   });
@@ -156,7 +156,7 @@ try {
   });
   await check("disconnect requires explicit review and describes scheduled-message impact", async () => {
     const before = requests.length; handleRequest = async () => response(base); const h = harness(connected); let tree = h.render();
-    button(tree, "فصل الرقم أو تغييره").props.onClick(); tree = h.render(); assert.match(text(tree), /تتوقف الرسائل المجدولة/); assert.match(text(tree), /رموز التحقق ورسائل الترحيب عبر أرقام برندة/); assert.equal(requests.length, before);
+    button(tree, "فصل الرقم أو تغييره").props.onClick(); tree = h.render(); assert.match(text(tree), /تتوقف الرسائل المجدولة/); assert.match(text(tree), /تنتظر رسائل الولاء إعادة ربطه/); assert.match(text(tree), /رموز التحقق عبر أرقام برندة/); assert.equal(requests.length, before);
     button(tree, "الاحتفاظ بالاتصال").props.onClick(); assert.equal(nodes(h.render(), node => node.props?.id === "disconnect-title").length, 0);
     button(h.render(), "فصل الرقم أو تغييره").props.onClick(); button(h.render(), "تأكيد فصل الرقم").props.onClick(); await flush(); tree = h.render(); assert.equal(requests.at(-1).action.action, "disconnect"); assert(field(tree)); assert.match(text(tree), /تم طلب فصل الرقم/); h.unmount();
   });

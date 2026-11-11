@@ -158,7 +158,7 @@ await check("WhatsApp unavailable defers claim and ambiguous send is recorded se
     ...tokenMocks,
     "@/lib/wallet/google": {},
     "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
-    "@/lib/whatsapp/customer-routing": { selectLocoCustomerSender: async () => null },
+    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null },
     "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => ready, sendGreenApiLoyaltyWelcome: async () => { sends++; throw Error("response lost"); } },
     "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
       recorded.push({ name, args });
@@ -180,7 +180,7 @@ await check("card invitation checks actual Google save state and defers unknown 
       ...tokenMocks,
       "@/lib/wallet/google": { getGoogleWalletSaveState: async identity => { assert.deepEqual(identity, { cafeId, cardId: requestId }); if (state === "unavailable") throw Error("provider unavailable"); return state; } },
       "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: profileId },
-      "@/lib/whatsapp/customer-routing": { selectLocoCustomerSender: async () => null },
+      "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => null },
       "@/lib/whatsapp/green-api": { isGreenApiLoyaltyWelcomeReady: async () => true, sendGreenApiLoyaltyWelcome: async () => { sent++; return { status: "queued", providerMessageId: "test-message" }; } },
       "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
         if (name === "finish_stamp_card_link_v2") { finished.push(args.p_status); return { data: true }; }
@@ -192,5 +192,34 @@ await check("card invitation checks actual Google save state and defers unknown 
     assert.equal(sent, state === false ? 1 : 0);
     assert.deepEqual(finished, [state === true ? "skipped" : state === false ? "queued" : "deferred"]);
   }
+});
+await check("LOCO invitations stay pending offline and resume only on the verified brand sender", async () => {
+  let brandSender = null, pending = true;
+  const sent = [], flags = [];
+  const dispatcher = load("lib/loyalty/read-card-links.ts", {
+    ...tokenMocks,
+    "@/lib/wallet/google": {},
+    "@/lib/whatsapp/brand-connection-types": { LOCO_CAFE_ID: cafeId },
+    "@/lib/whatsapp/customer-routing": { selectLocoLoyaltySender: async () => brandSender },
+    "@/lib/whatsapp/green-api": {
+      isGreenApiLoyaltyWelcomeReady: async () => true,
+      sendGreenApiLoyaltyWelcome: async () => { throw Error("Must never use platform for LOCO"); },
+      sendGreenApiCustomerMessage: async sender => { sent.push(sender); return { status: "queued", providerMessageId: "brand-ack" }; },
+    },
+    "@/lib/supabase/admin": { createAdminClient: () => ({ rpc: async (name, args) => {
+      if (name === "finish_stamp_card_link_v2") return { data: true };
+      flags.push(args);
+      if (!args.p_loco_ready || !pending) return { data: null };
+      pending = false;
+      return { data: { id: requestId, claimToken: profileId, cafeId, profileId, cardId: requestId, brandName: "LOCO", brandSlug: "test-brand", phone: "966501234567", cardCreated: true, googleIssued: false } };
+    } }) },
+  });
+  assert.equal((await dispatcher.dispatchStampCardLinks()).processed, 0);
+  assert.equal(pending, true); assert.equal(sent.length, 0);
+  assert.equal(flags[0].p_primary_ready, true); assert.equal(flags[0].p_loco_ready, false);
+  brandSender = { idInstance: "brand" };
+  assert.equal((await dispatcher.dispatchStampCardLinks()).queued, 1);
+  assert.deepEqual(sent, [brandSender]);
+  assert.equal((await dispatcher.dispatchStampCardLinks()).processed, 0);
 });
 console.log(`Loyalty read server: ${checks} checks passed`);

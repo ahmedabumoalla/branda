@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createLoyaltySessionToken, loyaltyIdentityHash } from "@/lib/auth/loyalty-session-token";
 import { isGreenApiLoyaltyWelcomeReady, sendGreenApiCustomerMessage, sendGreenApiLoyaltyWelcome } from "@/lib/whatsapp/green-api";
-import { selectLocoCustomerSender } from "@/lib/whatsapp/customer-routing";
+import { selectLocoLoyaltySender } from "@/lib/whatsapp/customer-routing";
 import { LOCO_CAFE_ID } from "@/lib/whatsapp/brand-connection-types";
 import { getGoogleWalletSaveState } from "@/lib/wallet/google";
 
@@ -16,7 +16,7 @@ export function stampCardLinkMessage(job: CardLinkJob) {
 }
 export async function dispatchStampCardLinks(limit = 2) {
   const result = { processed: 0, queued: 0, rejected: 0, unknown: 0, skipped: 0, deferred: 0 };
-  const [primaryReady, locoSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoCustomerSender(LOCO_CAFE_ID)]);
+  const [primaryReady, locoSender] = await Promise.all([isGreenApiLoyaltyWelcomeReady(), selectLocoLoyaltySender(LOCO_CAFE_ID)]);
   if (!primaryReady && !locoSender) return result;
   const admin = createAdminClient();
   for (let index = 0; index < Math.min(5, Math.max(1, limit)); index++) {
