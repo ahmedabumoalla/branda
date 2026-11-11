@@ -16,7 +16,7 @@ export function readableBrandForeground(background: string, requested?: unknown)
 /** Brand identity is authoritative; historical card-builder colors are not. */
 export function approvedLoyaltyColors(slug: string, palette?: Record<string, unknown> | null) {
   if (slug === "rast") return { background: "#3b1420", foreground: "#f8f2e8", accent: "#970e29" };
-  if (slug === "brand-406bf519a458") palette = { primary: "#5c5c5c", secondary: "#ffe8c5", text: "#ffe8c5", ...palette };
+  if (slug === "brand-406bf519a458") palette = { primary: "#53621c", secondary: "#d5ed60", text: "#ffe8c5", ...palette };
   const background = validBrandColor(palette?.primary) || DEFAULT_LOYALTY_COLORS.background;
   return { background, foreground: readableBrandForeground(background, palette?.text), accent: validBrandColor(palette?.secondary) || validBrandColor(palette?.accent) || DEFAULT_LOYALTY_COLORS.accent };
 }

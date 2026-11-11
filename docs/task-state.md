@@ -1,5 +1,7 @@
 # Current task state
 
+- JAMILA OLIVE CARD 2026-11-11: Default loyalty background #53621c, cream #ffe8c5, lime accent #d5ed60; original logo/six stamps/free drink retained, saved palettes retain precedence. Live identity row absent. Jamila26/types/text PASS. No DB/customer/message changes or installed-wallet push. Generated inline color preview requested. See [handoff](BARNDAKSA_HANDOFF/JAMILA_OLIVE_CARD_20261111.md)
+
 - LOCO LOYALTY SENDER 2026-11-11: Wallet welcomes and cashier card links now use only the verified opted-in LOCO sender; unavailable/429/mismatch leaves jobs pending instead of platform fallback. OTP/document fallback and other brands retained.45 routing/15 read-server/23 connection-UI/wallet/SQL delivery/full queue/types/text/scopedlint PASS; live connected matching brand and source of recent messages verified; installed claim filters/ACL checked read-only. No real sends or DB mutations. See [handoff](BARNDAKSA_HANDOFF/LOCO_LOYALTY_SENDER_20261111.md)
 
 - LOYALTY PLACEHOLDER NAME 2026-11-11: LOCO failure traced to cashier-created placeholder conflicting with real enrollment name. Applied20261111134314: one-time name completion requires private same-card cashier provenance and unclaimed active profile; real-name/credential/blocked/card/rate guards preserved.17SQLcases+queue11/fullrollback+direct34/types/text PASS; real-case pre/post installed rollback PASS, body/history/ACL/RLS verified. No retained customer writes or sends. See [handoff](BARNDAKSA_HANDOFF/LOYALTY_PLACEHOLDER_NAME_20261111.md)

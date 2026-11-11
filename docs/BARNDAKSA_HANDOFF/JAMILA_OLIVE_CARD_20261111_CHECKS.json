@@ -1,0 +1,49 @@
+{
+  "at": "2026-11-11T15:29:53.077Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "lib/loyalty/approved-design.ts": "899386ced94716d7c6828df29a451148d5465c21a91c6e0aa561cac47eba8d4f",
+    "scripts/check-jamila.cjs": "0482d705e3ae53326a45bc9f6c825657aad11be1ffe72a26cde9de651ba2b832",
+    "components/rast-loyalty/loyalty-theme.ts": "bb39c8fc513aca9d86c630b5f3bd25dcf191b6be03c613a569c7d146217ac28e",
+    "public/menu-art/jamila/logo-v1.png": "d2ab9f596e3069b1e8f063ae273f955400b483254c8f8f80f925c64b6e18fbce",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "jamila",
+      "args": [
+        "scripts/check-jamila.cjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:29:37.584Z",
+      "end": "2026-11-11T15:29:38.669Z",
+      "summary": "Jamila: 26 checks passed\n"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:29:37.590Z",
+      "end": "2026-11-11T15:29:38.544Z",
+      "summary": "Text integrity check passed.\n"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T15:29:37.593Z",
+      "end": "2026-11-11T15:29:53.077Z",
+      "summary": ""
+    }
+  ]
+}
