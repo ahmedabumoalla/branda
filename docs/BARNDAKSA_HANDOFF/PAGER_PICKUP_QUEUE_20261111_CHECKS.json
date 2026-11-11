@@ -1,0 +1,88 @@
+{
+  "at": "2026-11-11T12:39:13.036Z",
+  "runtime": "v24.19.0",
+  "inputs": {
+    "app/actions/staff-workspace.ts": "4e1a79f3864eb8d3da4186d746cb7b2657a16791f513e6908127440850dddc27",
+    "app/dashboard/pager/page.tsx": "f7580b70a292b9680aa867cb8f9351371127cf4622f1d23321745fc6a216f064",
+    "app/pager/page.tsx": "41682a983a91b47af5ab1b2c550c1d7ed4a121056bda3f45b42a67fecca2a437",
+    "components/pager/pager-console.tsx": "b3dc77df76b56c6c8933477527cf01ef018451b43c46124d883923d8b46e5899",
+    "components/pager/pager-order-card.tsx": "a823b22cae152f5325baa6785ae211678cc2244e7cce2ab3ddbad8b973ac4d9f",
+    "components/pager/pager.module.css": "3883b4d3d6c7e75ec2e3c866cc195ace9f8f6321444927140d2659b043fae360",
+    "lib/cashier/messages.ts": "7432208dd3718cadcc6509c3e031d8599b3fd1eecf24dd47fe07b0274f45e6e2",
+    "scripts/check-pager-ui.mjs": "1b4f3657d21203cbb53da5c3b6d3af43dd3866b7cc3fce02b811c7b384e24f98",
+    "scripts/check-staff-workspace.mjs": "87a4813782e5329a649ae4344dd60502eed62629164fc6451e6f1006c5236c2b",
+    "package.json": "1577901a03161aef21f84565a369890ffd8950147adfa06f7c20817ec10ae00c",
+    "package-lock.json": "5f582c3207da3a51b33eba3c4cbf60feafc98c7313af6a1b1ee31d877e7d9829",
+    "next.config.ts": "bb35b96226e7f1cdb11d7999bff31bf7199121be3169c7103e4d963dede71ca8",
+    "tsconfig.json": "e99e8177cd48f74dbb6dfc9c28befa32632167d5724a703c68f984ec61959c8e",
+    "components/pager/pager-pip.ts": "05d75f47badde29844748bd6ecd4aada0d1ca594600ccd7e7a22753032201624"
+  },
+  "changed": [],
+  "results": [
+    {
+      "name": "pager",
+      "args": [
+        "scripts/check-pager-ui.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:42.987Z",
+      "end": "2026-11-11T12:38:44.431Z"
+    },
+    {
+      "name": "workspace",
+      "args": [
+        "scripts/check-staff-workspace.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:42.992Z",
+      "end": "2026-11-11T12:38:43.305Z"
+    },
+    {
+      "name": "text",
+      "args": [
+        "scripts/check-text-integrity.mjs"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:42.996Z",
+      "end": "2026-11-11T12:38:44.015Z"
+    },
+    {
+      "name": "types",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:43.000Z",
+      "end": "2026-11-11T12:38:59.435Z"
+    },
+    {
+      "name": "lint",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "app/actions/staff-workspace.ts",
+        "app/dashboard/pager/page.tsx",
+        "app/pager/page.tsx",
+        "components/pager/pager-console.tsx",
+        "components/pager/pager-order-card.tsx",
+        "lib/cashier/messages.ts"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:43.003Z",
+      "end": "2026-11-11T12:38:44.960Z"
+    },
+    {
+      "name": "build",
+      "args": [
+        "node_modules/next/dist/bin/next",
+        "build",
+        "--webpack"
+      ],
+      "code": 0,
+      "start": "2026-11-11T12:38:43.011Z",
+      "end": "2026-11-11T12:39:13.035Z"
+    }
+  ]
+}

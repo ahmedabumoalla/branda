@@ -19,7 +19,7 @@ export function PagerOrderCard({ order, busy = false, compact = false, onChange 
     <article className={`${styles.card} ${compact ? styles.compactCard : ""}`} data-status={order.status}>
       <div className={styles.cardHead}>
         <div><span className={styles.invoiceLabel}>{t("رقم الفاتورة")} </span><h3 className={styles.invoice}><bdi>{order.invoiceNumber}</bdi></h3></div>
-        <span className={styles.badge} data-status={order.status}>{t(statuses[order.status])}</span>
+        <span className={styles.badge} data-status={order.status}>{t(compact && order.status === "waiting" ? "جاهز للاستلام" : compact && order.status === "ready" ? "تم الاستدعاء" : statuses[order.status])}</span>
       </div>
       <p className={styles.phone}><bdi dir="ltr">{order.phone}</bdi></p>
       <div className={styles.cardMeta}><Clock3 size={14} aria-hidden="true" /><time dateTime={order.createdAt} dir="ltr">{pagerDate(order.createdAt, locale)}</time><span>{order.createdStation || order.createdBy || t("إدارة العلامة")}</span></div>

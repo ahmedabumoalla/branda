@@ -54,7 +54,12 @@ const input = (h, name) => nodes(h.render()).find(n => n.type === 'input' && n.p
 const form = h => nodes(h.render()).find(n => n.type === 'form' && n.props.onSubmit);
 const html = h => renderToStaticMarkup(h.render());
 
+const queueTrigger = (h, label) => nodes(h.render()).find(n => n.type === 'button' && n.props['aria-haspopup'] === 'dialog' && text(n).startsWith(label));
+const openQueue = (h, label = 'جاهز للاستلام') => queueTrigger(h, label).props.onClick({ currentTarget: { focus() {} } });
 const h = consoleHarness();
+check('home keeps the entry and queue buttons without squeezing invoice cards underneath', () => { assert.ok(form(h)); assert.ok(queueTrigger(h, 'جاهز للاستلام')); assert.ok(!nodes(h.render()).some(n => n.type?.name === 'PagerOrderCard' || n.type === 'dialog')); });
+openQueue(h); await tick();
+check('pickup trigger opens a labelled dialog containing the invoice and preserves entry draft', () => { assert.ok(nodes(h.render()).some(n => n.type === 'dialog' && n.props['aria-labelledby'] === 'pager-queue-title')); assert.match(html(h), /00012-A/); });
 check('invoice reference remains text with leading zero and original whitespace', () => { assert.equal(input(h, 'invoiceNumber').props.type, undefined); assert.match(html(h), /00012-A \/ ب/); });
 check('staff without loyalty permission sees no loyalty link', () => assert.ok(!html(h).includes('href="/cashier"')));
 check('permitted staff can switch to loyalty', () => assert.ok(html(consoleHarness({}, { context: { ...context, canUseLoyalty: true } })).includes('href="/cashier"')));
@@ -62,7 +67,7 @@ check('owner has staff management link', () => assert.ok(html(consoleHarness({},
 input(h, 'invoiceNumber').props.onChange({ target: { value: order.invoiceNumber } });
 input(h, 'phone').props.onChange({ target: { value: '0500000001' } });
 await form(h).props.onSubmit({ preventDefault() {} });
-check('create sends exact invoice reference and only explicit phone', () => { const call = h.calls.find(c => c[0] === 'create')[1]; assert.equal(call.invoiceNumber, order.invoiceNumber); assert.equal(call.phone, '0500000001'); assert.match(call.id, /^[0-9a-f-]{36}$/); });
+check('create sends exact invoice reference and only explicit phone without automatically calling the customer', () => { assert.ok(!h.calls.some(c => c[0] === 'update')); assert.ok(!html(h).includes('قيد التجهيز')); const call = h.calls.find(c => c[0] === 'create')[1]; assert.equal(call.invoiceNumber, order.invoiceNumber); assert.equal(call.phone, '0500000001'); assert.match(call.id, /^[0-9a-f-]{36}$/); });
 check('successful create resets both fields and refreshes queue', () => { assert.equal(input(h, 'invoiceNumber').props.value, ''); assert.equal(input(h, 'phone').props.value, ''); assert.ok(h.calls.some(c => c[0] === 'fetch')); });
 
 const attempts = [];
@@ -216,27 +221,31 @@ await assert.rejects(()=>identityContext.getStaffPagerContext());
 check('failed staff authorization prevents reading brand identity', () => assert.equal(identityReads.length,2));
 // Exercise the ready queue against server-filtered pages, not a slice of waiting orders.
 const readyOrder = { ...order, id: randomUUID(), invoiceNumber: 'READY-61', status: 'ready', readyAt: order.createdAt };
+const mixed = consoleHarness({}, { initialPage: { ...page, orders: [order, readyOrder], total: 2, metrics: { ...page.metrics, waiting: 1, ready: 1 } } });
+check('single pickup queue counts both uncalled and called orders', () => { assert.equal(text(queueTrigger(mixed, 'جاهز للاستلام')), 'جاهز للاستلام2'); assert.ok(!html(mixed).includes('قيد التجهيز')); });
+openQueue(mixed);
+check('existing uncalled invoices stay accessible beside called invoices', () => { assert.equal(nodes(mixed.render()).filter(n => n.type?.name === 'PagerOrderCard').length, 2); assert.match(html(mixed), /READY-61/); assert.match(html(mixed), /00012-A/); assert.ok(!html(mixed).includes('قيد التجهيز')); });
 let readyItems = [readyOrder];
 const ready = consoleHarness({
   fetchPagerPageAction: async (filter, mode) => {
     ready.calls.push(['fetch', filter, mode]);
-    return { ...page, orders: filter.status === 'ready' ? readyItems : [order], total: filter.status === 'ready' ? (readyItems.length ? 61 : 0) : 1, metrics: { ...page.metrics, ready: readyItems.length ? 61 : 0 } };
+    return { ...page, orders: filter.status === 'active' ? readyItems : [order], total: filter.status === 'active' ? (readyItems.length ? 61 : 0) : 1, metrics: { ...page.metrics, ready: readyItems.length ? 61 : 0 } };
   },
   updatePagerOrderAction: async (id, status, mode) => { ready.calls.push(['update', id, status, mode]); if (status === 'received') readyItems = []; return { ok: true, order: { ...readyOrder, status } }; },
 });
 async function fetchCurrent(h) { h.render(); const cleanup = h.effects.at(-1)(); await tick(); cleanup(); }
-const readyTrigger = h => nodes(h.render()).find(n => n.type === 'button' && n.props['aria-haspopup'] === 'dialog');
-const dialogNode = h => nodes(h.render()).find(n => n.type === 'dialog' && n.props['aria-labelledby'] === 'pager-ready-title');
+const readyTrigger = h => queueTrigger(h, 'جاهز للاستلام');
+const dialogNode = h => nodes(h.render()).find(n => n.type === 'dialog' && n.props['aria-labelledby'] === 'pager-queue-title');
 input(ready, 'invoiceNumber').props.onChange({ target: { value: 'NEXT-9' } });
-readyTrigger(ready).props.onClick();
+openQueue(ready, 'جاهز للاستلام');
 await fetchCurrent(ready);
-check('ready popup queries the entire ready queue independently of the preparation page', () => {
-  assert.deepEqual(ready.calls.find(c => c[0] === 'fetch').slice(1), [{ page: 0, status: 'ready', query: '' }, 'staff']);
+check('pickup popup queries all active orders with server pagination', () => {
+  assert.deepEqual(ready.calls.find(c => c[0] === 'fetch').slice(1), [{ page: 0, status: 'active', query: '' }, 'staff']);
   assert.ok(dialogNode(ready)); assert.match(html(ready), /READY-61/); assert.ok(!html(ready).includes('00012-A'));
   assert.ok(button(ready, 'التالي'));
 });
 button(ready, 'التالي').props.onClick(); await fetchCurrent(ready);
-check('ready popup supports later pages with server status filtering', () => assert.deepEqual(ready.calls.filter(c => c[0] === 'fetch').at(-1)[1], { page: 1, status: 'ready', query: '' }));
+check('ready popup supports later pages with server status filtering', () => assert.deepEqual(ready.calls.filter(c => c[0] === 'fetch').at(-1)[1], { page: 1, status: 'active', query: '' }));
 const compactReadyTree = PagerOrderCard({ order: readyOrder, compact: true, onChange: (id, status) => ready.calls.push(['card', id, status]) });
 nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'استدعاء').props.onClick();
 nodes(compactReadyTree).find(n => n.type === 'button' && text(n) === 'تم الاستلام').props.onClick();
@@ -253,13 +262,15 @@ check('empty last page recovers to the first page', () => assert.equal(ready.cal
 let readyCancelStopped = false;
 dialogNode(ready).props.onCancel({ preventDefault() {}, stopPropagation() { readyCancelStopped = true; } }); await fetchCurrent(ready);
 check('Escape closes only ready popup and preserves unsaved entry', () => { assert.ok(readyCancelStopped); assert.ok(!dialogNode(ready)); assert.equal(input(ready, 'invoiceNumber').props.value, 'NEXT-9'); });
-const waitingButton = nodes(ready.render()).find(n => n.type === 'button' && n.props['aria-pressed'] === true);
-waitingButton.props.onClick(); await tick();
-check('pressing the current queue refreshes rather than leaving it empty and loading', () => assert.match(html(ready), /00012-A/));
+openQueue(ready); await fetchCurrent(ready);
+openQueue(ready); await tick();
+check('pressing the current queue refreshes rather than leaving it empty and loading', () => { assert.ok(dialogNode(ready)); assert.ok(nodes(ready.render()).some(n => n.props?.['aria-busy'] === false)); });
 const deny = consoleHarness({ updatePagerOrderAction: async () => ({ ok: false, error: 'تعذر تنفيذ العملية تحقق من صلاحية الدخول ثم حاول مجددًا' }) });
+openQueue(deny); await tick();
 nodes(deny.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(order.id, 'ready'); await tick();
-check('failed call keeps waiting order and displays server error without opening ready popup', () => { assert.ok(!dialogNode(deny)); assert.match(html(deny), /role="alert"/); assert.match(html(deny), /00012-A/); });
+check('failed call keeps waiting order and displays server error without opening ready popup', () => { assert.match(text(dialogNode(deny)), /جاهز للاستلام/); assert.match(html(deny), /role="alert"/); assert.match(html(deny), /00012-A/); });
 const called = consoleHarness();
+openQueue(called); await tick();
 nodes(called.render()).find(n => n.type?.name === 'PagerOrderCard').props.onChange(order.id, 'ready'); await tick();
 check('successful first call opens the ready popup automatically', () => assert.ok(dialogNode(called)));
 let mainTouched = false;
@@ -273,9 +284,11 @@ check('ready dialog uses the floating window viewport and scroll lock', () => { 
 floatingCleanup();
 Object.defineProperty(document, 'body', { configurable: true, value: originalBody });
 check('floating modal cleanup restores only its own document', () => assert.equal(ownerDocument.body.style.overflow, 'auto'));
+check('queue dialog reserves its viewport for scrollable invoices with large call targets', () => { assert.match(css, /readyDialog\[open\][^}]*display: flex/); assert.match(css, /readyDialog \.queueScroll[^}]*min-height: 0[^}]*overflow: auto/); assert.match(css, /compactCard \.invoice[^}]*font-size: 42px/); assert.match(css, /compactCard \.cardActions > button[^}]*min-height: 56px/); });
 transform({ filename: 'pager.module.css', code: Buffer.from(css), minify: false });
 let changedInvoice = false;
 const unchanged = consoleHarness({ fetchPagerPageAction: async () => JSON.parse(JSON.stringify(changedInvoice ? { ...page, orders: [{ ...order, invoiceNumber: 'NEW-INVOICE' }] } : page)) });
+openQueue(unchanged); await tick();
 const initialOrder = nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order;
 await fetchCurrent(unchanged);
 check('unchanged background results preserve the existing order reference', () => assert.equal(nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order, initialOrder));
@@ -283,6 +296,7 @@ changedInvoice = true; await fetchCurrent(unchanged);
 check('changed background results update the queue without discarding the screen', () => assert.equal(nodes(unchanged.render()).find(n => n.type?.name === 'PagerOrderCard').props.order.invoiceNumber, 'NEW-INVOICE'));
 let finishBackground;
 const quiet = consoleHarness({ fetchPagerPageAction: () => new Promise(resolve => { finishBackground = resolve; }) });
+openQueue(quiet); finishBackground(page); await tick();
 quiet.render(); const stopBackground = quiet.effects.at(-1)(); await tick();
 check('restoring a screen checks in the background without a loading state over existing orders', () => {
   assert.ok(nodes(quiet.render()).some(n => n.props?.['aria-busy'] === false));

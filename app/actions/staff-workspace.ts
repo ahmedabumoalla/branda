@@ -13,7 +13,7 @@ export async function loadStaffScreenAction(screen: StaffScreen, expectedSession
     if (cashierWorkspaceKey(session.token) !== expectedSession) return { ok: false, reset: true };
     if (session.businessCategory === "hair_salons") return { ok: false };
     if (screen === "pager") {
-      const [context, page] = await Promise.all([getStaffPagerContext(), getPagerPage({ status: "waiting" }, "staff")]);
+      const [context, page] = await Promise.all([getStaffPagerContext(), getPagerPage({ status: "active" }, "staff")]);
       return { ok: true, value: { screen, context, page } };
     }
     const data = await getCashierConsole({ recordEntry: false });

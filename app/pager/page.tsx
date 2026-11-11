@@ -18,6 +18,6 @@ export default async function PagerPage() {
   const context = await getStaffPagerContext().catch(() => null);
   if (!context) return <CashierServiceUnavailable />;
   if (await isSalonCafe(context.cafeId)) return <SalonCashier initial={await getSalonBookings({ status: "active" }, "staff", true)} identity={await getSalonDisplayIdentity(context.cafeId)} canUseLoyalty={context.canUseLoyalty} />;
-  const initialPage = await getPagerPage({ status: "waiting" }, "staff");
+  const initialPage = await getPagerPage({ status: "active" }, "staff");
   return <StaffWorkspace key={cashierWorkspaceKey(token)} sessionKey={cashierWorkspaceKey(token)} initial={{ screen: "pager", context, page: initialPage }} />;
 }

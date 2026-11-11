@@ -169,22 +169,26 @@
 .console .error, .console .success { margin-bottom: 8px; padding: 8px 12px; }
 .footerHint { color: var(--pg-muted); font-size: 11px; line-height: 1.7; margin: 8px 0 0; text-align: center; }
 .compactCard { padding: 12px; border-radius: 12px; }
-.compactCard .invoice { margin: 0; font-size: 27px; }
+.compactCard .invoice { margin: 4px 0; font-size: 42px; line-height: 1.2; }
+.compactCard .cardHead > div { min-width: 0; flex: 1; }
 .compactCard .phone { margin: 2px 0 8px; }
 .compactCard > .cardMeta, .compactCard > .hint { display: none; }
 .compactCard .cardActions { padding-top: 8px; }
-.compactCard .cardActions > button { min-height: 48px; font-size: 15px; flex: 1; }
+.compactCard .cardActions > button { min-height: 56px; font-size: 15px; flex: 1; }
 .compactCard .details { margin-top: 4px; }
 .compactCard .details summary { min-height: 44px; display: flex; align-items: center; }
 .compactCard .details > .danger { margin-top: 12px; }
-.readyDialog { position: fixed; inset: auto 0; top: calc(var(--pager-viewport-top, 0px) + max(12px, env(safe-area-inset-top))); margin: 0 auto; width: min(760px, calc(100% - 24px)); max-width: none; max-height: calc(var(--pager-viewport-height, 100dvh) - 24px - env(safe-area-inset-bottom)); padding: 16px; border: 1px solid var(--pg-line); border-radius: 18px; background: var(--pg-bg); color: var(--pg-ink); font: inherit; overflow: auto; overscroll-behavior: contain; box-shadow: 0 20px 70px #14251c40; }
+.readyDialog { position: fixed; inset: auto 0; top: calc(var(--pager-viewport-top, 0px) + max(12px, env(safe-area-inset-top))); margin: 0 auto; width: min(760px, calc(100% - 24px)); max-width: none; height: calc(var(--pager-viewport-height, 100dvh) - 24px - env(safe-area-inset-bottom)); max-height: 900px; padding: 16px; border: 1px solid var(--pg-line); border-radius: 18px; background: var(--pg-bg); color: var(--pg-ink); font: inherit; overflow: auto; overscroll-behavior: contain; box-shadow: 0 20px 70px #14251c40; }
+.readyDialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.readyDialog > * { flex-shrink: 0; }
 .readyDialog::backdrop { background: #00000099; }
 .dialogHeader { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .dialogHeader h2 { font-size: 20px; font-weight: 700; margin: 0; }
 .dialogHeader h2 span { color: var(--pg-gold); font-variant-numeric: tabular-nums; }
 .dialogHeader .hint { margin: 4px 0 0; }
 .dialogHeader > button { flex-shrink: 0; min-width: 44px; padding: 10px; }
-.readyDialog .queueScroll { max-height: none; overflow: visible; }
+.readyDialog .queueScroll { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; scroll-padding-block: 8px; }
+.readyDialog .queue { align-items: start; }
 .console.compact { height: 100dvh; min-height: 0; padding: 12px; border-radius: 0; }
 .compactDialog .console.compact { height: 100%; }
 .console.compact .entry form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
