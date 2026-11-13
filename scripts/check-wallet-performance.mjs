@@ -128,14 +128,15 @@ assert.notDeepEqual(palette, first); checks++;
 const warm = times.slice(1).sort((a, b) => a - b);
 const previousWindow = globalThis.window, previousDocument = globalThis.document;
 const windowEvents = new Map(), documentEvents = new Map();
-let refreshes = 0, timer, effect, timerCleared = false;
+let refreshes = 0, timer, effect, timerCleared = false, manualTransitions = 0;
+let initialBalanceRef = { current: false };
 const router = { refresh: () => refreshes++ };
 globalThis.window = { addEventListener: (name, cb) => windowEvents.set(name, cb), removeEventListener: name => windowEvents.delete(name), setInterval: cb => { timer = cb; return 1; }, clearInterval: () => { timerCleared = true; } };
 globalThis.document = { visibilityState: "visible", addEventListener: (name, cb) => documentEvents.set(name, cb), removeEventListener: name => documentEvents.delete(name) };
 now = 100_000; Date.now = () => now;
 try {
   const component = load("components/rast-loyalty/rast-member-card.tsx", {
-    react: { useState: value => [value, () => {}], useTransition: () => [false, cb => cb()], useEffect: cb => { effect = cb; } },
+    react: { useRef: () => initialBalanceRef, useState: value => [value, () => {}], useTransition: () => [false, cb => { manualTransitions++; cb(); }], useEffect: cb => { effect = cb; } },
     "react/jsx-runtime": { jsx: () => null, jsxs: () => null },
     "next/navigation": { useRouter: () => router }, "lucide-react": {}, "./rast-brand": {}, "./rast-stamp-card": {}, "./wallet-download-link": {}, "./qr-code": {}, "./rast-loyalty.module.css": {}, "./loyalty-theme": { loyaltyTheme: () => ({}), loyaltyCommunityName: () => "Fixture" },
   });
@@ -150,9 +151,19 @@ try {
   document.visibilityState = "visible"; documentEvents.get("visibilitychange")();
   assert.equal(refreshes, 2); checks++;
   stop(); assert.equal(windowEvents.size + documentEvents.size, 0); assert(timerCleared); checks++;
+  initialBalanceRef = { current: false }; // A newly mounted cached page.
   component.RastMemberCard({ ...props, loadedAt: now - 10000 });
   const stopCached = effect(); assert.equal(refreshes, 3, "returning to an old cached membership reconciles immediately"); checks++;
   stopCached();
+  // Preserve hook state across refreshed server props with an ahead-of-server clock.
+  for (let index = 0; index < 3; index++) {
+    component.RastMemberCard({ ...props, loadedAt: now - 60000 + index });
+    const stopUpdated = effect();
+    assert.equal(refreshes, 3, "server updates must not start an immediate refresh loop"); checks++;
+    if (index === 2) { now += 30000; timer(); assert.equal(refreshes, 4, "scheduled reconciliation remains active"); checks++; }
+    stopUpdated();
+  }
+  assert.equal(manualTransitions, 0, "background reconciliation never starts the manual spinner"); checks++;
 } finally { Date.now = originalNow; globalThis.window = previousWindow; globalThis.document = previousDocument; }
 const inputFiles = ["lib/wallet/artifact-cache.ts", "lib/wallet/art.ts", "lib/wallet/apple.ts", "lib/wallet/logo.ts", "lib/wallet/google.ts", "lib/wallet/payload.ts", "components/rast-loyalty/rast-member-card.tsx", "app/loyalty/[slug]/page.tsx", "scripts/check-wallet-performance.mjs", "scripts/check-rast-wallet-security.mjs", "scripts/check-wallet-sync.mjs", "package.json", "package-lock.json", "tsconfig.json"];
 const inputs = Object.fromEntries(inputFiles.map(file => [file, createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex")]));

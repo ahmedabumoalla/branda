@@ -106,6 +106,8 @@ for (const provider of ['apple', 'google']) {
   function render() { index=0; const node=WalletDownloadLink({ provider, cardCode:'OWN_CARD' }); while(effects.length) { cleanup?.(); cleanup=effects.shift()(); } return node; }
   const event = extra => ({button:0,prevented:false,preventDefault(){this.prevented=true;},...extra});
   let node=render(); assert.equal(node.props.href, `/api/wallet/${provider}/OWN_CARD`);
+  assert.equal(node.props.target, provider === 'apple' ? '_blank' : undefined, 'Apple download opens independently of membership refresh');
+  assert.equal(node.props.rel, provider === 'apple' ? 'noopener' : undefined);
   const modified=event({ctrlKey:true}); node.props.onClick(modified); assert.equal(render().props['aria-busy'],false);
   const first=event(); node.props.onClick(first); assert(!first.prevented,'First click retains native download'); node=render(); assert(node.props['aria-disabled']);
   assert(renderToStaticMarkup(node).includes('جار فتح المحفظة'));

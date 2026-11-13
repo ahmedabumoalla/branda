@@ -26,8 +26,9 @@ export function WalletDownloadLink({ provider, cardCode }: { provider: "apple" |
     // Preserve the browser's native pkpass download / Google redirect.
   }
   return <a className={s.walletButton} href={`/api/wallet/${provider}/${encodeURIComponent(cardCode)}`}
+    target={provider === "apple" ? "_blank" : undefined} rel={provider === "apple" ? "noopener" : undefined}
     onClick={open} aria-disabled={phase === "opening" || undefined} aria-busy={phase === "opening"}>
     {phase === "opening" ? <LoaderCircle className={s.spinner} aria-hidden="true" /> : <Wallet aria-hidden="true" />}
-    <span><small role="status">{phase === "opening" ? "جار فتح المحفظة" : phase === "retry" ? "لم تفتح؟ حاول مجددًا" : "إضافة إلى"}</small><strong dir="ltr">{provider === "apple" ? "Apple Wallet" : "Google Wallet"}</strong></span>
+    <span><small role="status">{phase === "opening" ? "جار فتح المحفظة" : phase === "retry" ? "لم تفتح؟ حاول مجددًا" : "تحميل البطاقة إلى"}</small><strong dir="ltr">{provider === "apple" ? "Apple Wallet" : "Google Wallet"}</strong></span>
   </a>;
 }

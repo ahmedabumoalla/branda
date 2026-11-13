@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Clock3, Gift, RefreshCw, Wallet } from "lucide-react";
 import type { LoyaltyIdentity } from "@/lib/loyalty/experience-types";
@@ -35,6 +35,7 @@ function RewardDetailsCopy({ reward }: { reward: CustomerRewardInstance }) {
 export function RastMemberCard({ identity, member, walletAvailability, loadedAt }: { identity: LoyaltyIdentity; member: RastMembership; walletAvailability: RastWalletAvailability; loadedAt: number }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
+  const initialBalanceChecked = useRef(false);
   const [openReward, setOpenReward] = useState<string | null>(member.rewards[0]?.id ?? null);
   useEffect(() => {
     let lastRefresh = loadedAt;
@@ -42,11 +43,18 @@ export function RastMemberCard({ identity, member, walletAvailability, loadedAt 
       const now = Date.now();
       if (document.visibilityState !== "visible" || (now >= lastRefresh && now - lastRefresh < 5000)) return;
       lastRefresh = now;
-      startRefresh(() => router.refresh());
+      // Background reconciliation must not show the manual refresh spinner or
+      // interfere with a native Wallet download initiated from this page.
+      router.refresh();
     }
     // Cached routes remain instant, then reconcile an older balance without
     // refetching a fresh server render or duplicating focus/visibility events.
-    refreshVisible();
+    // A device clock ahead of the server must not trigger an endless refresh
+    // after every new server render. Reconcile an old initial snapshot once.
+    if (!initialBalanceChecked.current) {
+      initialBalanceChecked.current = true;
+      refreshVisible();
+    }
     const timer = window.setInterval(refreshVisible, 30000);
     window.addEventListener("focus", refreshVisible);
     document.addEventListener("visibilitychange", refreshVisible);
@@ -68,7 +76,7 @@ export function RastMemberCard({ identity, member, walletAvailability, loadedAt 
           </div>
           {!walletAvailability.apple || !walletAvailability.google ? <p className={s.hint} id="wallet-unavailable">الإضافة للمحافظ غير المتاحة لم تُفعّل بعد تقدر تستخدم رمز بطاقتك من هذه الصفحة</p> : null}
         </div>
-        <button type="button" className={s.refreshButton} disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={refreshing ? s.spinner : ""} aria-hidden="true" />{refreshing ? "جاري تحديث بطاقتك…" : "تحديث رصيد الأختام"}</button>
+        <button type="button" className={s.refreshButton} disabled={refreshing} onClick={() => startRefresh(() => router.refresh())}><RefreshCw className={refreshing ? s.spinner : ""} aria-hidden="true" />{refreshing ? "جار تحديث رصيد الأختام" : "تحديث رصيد الأختام"}</button>
         {member.program.terms ? <details className={s.terms}><summary>تفاصيل البرنامج <ChevronDown aria-hidden="true" /></summary><p>{member.program.terms}</p></details> : null}
       </div>
       <div className={s.memberCardColumn}>
