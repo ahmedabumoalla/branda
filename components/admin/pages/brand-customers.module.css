@@ -47,6 +47,15 @@
 .brandLink:hover { border-color: var(--gold); background: var(--raised); }
 .filters { display: grid; grid-template-columns: minmax(180px, 2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 12px; align-items: end; margin-bottom: 20px; }
 .pagerFilters { grid-template-columns: minmax(0,1fr) auto auto; }
+.periodBar { padding: 16px; margin: 0 0 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.periodHeading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 700; }
+.periodHeading svg { width: 17px; height: 17px; color: var(--gold); }
+.periodHeading small { margin-inline-start: auto; color: var(--muted); font-size: 11px; font-weight: 400; }
+.periodOptions { display: flex; flex-wrap: wrap; gap: 7px; }
+.periodOption { display: inline-flex; align-items: center; justify-content: center; flex: 1 0 100px; text-align: center; text-decoration: none; background: var(--bg); }
+.periodOption:hover { border-color: var(--gold); color: var(--text); }
+.periodOption[aria-current="page"] { border-color: var(--gold); background: var(--gold); color: var(--bg); }
+.periodHint { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
 .field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); min-width: 0; }
 .field input, .field select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; }
 .field input::placeholder { color: var(--muted); opacity: .85; }

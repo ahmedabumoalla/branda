@@ -61,5 +61,20 @@ try {
  check(!JSON.stringify(await directory(1,'966500000001')).includes('feedback_hash'),'feedback secret excluded');
  await db.query("INSERT INTO pager_brand_settings(cafe_id,google_review_url) VALUES($1,'https://g.page/r/fixture/review')",[id(1)]);check(await value('SELECT count(*)=1 FROM pager_brand_settings WHERE cafe_id=$1',[id(1)]),'service settings storage');
  check(await value("SELECT count(*)=2 FROM pg_class WHERE relname IN('pager_customers','pager_brand_settings') AND relrowsecurity"),'RLS enabled');
- console.log(`PASS ${checks} pager directory migration, permissions, identity, history, review, trial and pagination checks`);
+ await db.exec('RESET ROLE');
+ await db.exec(await readFile('supabase/migrations/20261113164611_pager_customer_period_filters.sql','utf8'));
+ const from='2020-01-01T21:00:00Z',to='2020-01-02T21:00:00Z';
+ for(const [n,at] of [[10,'2020-01-01T20:59:59.999Z'],[20,from],[21,'2020-01-02T20:59:59.999Z'],[22,from],[100,to]])await db.query('UPDATE pager_orders SET created_at=$2 WHERE id=$1',[id(n),at]);
+ const ranged=(cafe=null,phone=null,q='',page=0,start=from,end=to)=>value('SELECT pager_customer_directory_range($1,$2,$3,$4,$5,$6)',[cafe===null?null:id(cafe),phone,q,page,start,end]);
+ for(const role of ['anon','authenticated']){await db.exec('SET ROLE '+role);await reject(()=>ranged());await db.exec('RESET ROLE');}
+ await db.exec('SET ROLE service_role');
+ result=await ranged(1);check(result.total===1&&result.rows[0].registrations===2,'period filters visits before grouping customers');check(result.rows[0].full_name==='New name','period keeps customer identity');check(Date.parse(result.rows[0].first_seen)===Date.parse(from),'Riyadh midnight inclusive');
+ const history=await ranged(1,'966500000001');check(history.total===2&&history.rows.length===2,'history and counts share period');check(!history.rows.some(row=>row.id===id(10)),'previous day excluded');check(!JSON.stringify(history).includes('feedback_hash'),'filtered history excludes secrets');
+ result=await ranged();check(result.total===2&&result.rows.find(row=>row.id===id(1)).registrations===2,'brand overview uses same period');check((await ranged(null,null,'Alpha')).total===1,'period and brand search compose');check((await ranged(1,null,'New')).total===1&&(await ranged(1,null,'Second tenant')).total===0,'period name search stays tenant scoped');
+ check((await ranged(1,'966500000001','',0,to,'2020-01-03T21:00:00Z')).total===0,'upper boundary excluded');
+ check((await ranged(1,null,'',0,to,'2020-01-03T21:00:00Z')).rows[0].phone==='966500000100','next day includes exact midnight');
+ assert.deepEqual(await ranged(1,null,'',0,null,null),await directory(1));checks++;
+ for(const [start,end]of[[from,null],[null,to],[to,from],['infinity',to],[from,'2022-01-01T00:00:00Z']])await reject(()=>ranged(1,null,'',0,start,end));
+ await reject(()=>ranged(null,'966500000001'));await reject(()=>ranged(1,null,'',-1));
+ console.log(`PASS ${checks} pager directory migration, permissions, identity, history, review, trial, pagination and period-boundary checks`);
 }finally {await db.close();}

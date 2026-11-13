@@ -6,5 +6,5 @@ export const dynamic = "force-dynamic";
 export default async function PagerCustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   try { await requirePlatformAdmin(); } catch { redirect("/login"); }
   const params = await searchParams;
-  redirect(pagerDirectoryUrl("/admin/brand-customers", { view: "pager", brand: scalar(params.brand), phone: scalar(params.phone), query: scalar(params.query), page: scalar(params.page) }));
+  redirect(pagerDirectoryUrl("/admin/brand-customers", { view: "pager", brand: scalar(params.brand), phone: scalar(params.phone), query: scalar(params.query), page: scalar(params.page), period: scalar(params.period) }));
 }

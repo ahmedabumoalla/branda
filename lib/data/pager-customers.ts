@@ -4,18 +4,20 @@ import { requireOwnerCafeContext, requirePlatformAdmin } from "@/lib/data/cafes"
 import { getOwnerPagerContext } from "@/lib/data/pager";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeGoogleReviewLink } from "@/lib/pager/google-review-link";
+import { pagerPeriodRange } from "@/lib/pager/customer-period";
 import type { PagerBrand, PagerCustomer, PagerDirectoryFilters, PagerReview, PagerReviewFilters, PagerSlice, PagerVisit } from "@/lib/pager/customer-types";
 
 const page = z.number().int().min(0).max(100000).default(0);
 const query = z.string().trim().max(120).default("");
-const directorySchema = z.object({ cafeId: z.uuid().optional(), phone: z.string().regex(/^9665[0-9]{8}$/).optional(), query, page });
+const directorySchema = z.object({ cafeId: z.uuid().optional(), phone: z.string().regex(/^9665[0-9]{8}$/).optional(), query, page, period: z.enum(["all", "today", "yesterday", "7d", "30d", "365d"]).default("all") });
 
 export async function getPagerCustomerDirectory(input: PagerDirectoryFilters) {
   await requirePlatformAdmin();
   const filters = directorySchema.parse(input);
   if (filters.phone && !filters.cafeId) throw new Error("العلامة مطلوبة لعرض سجل العميل");
   const db = createAdminClient();
-  const { data, error } = await db.rpc("pager_customer_directory", { p_cafe: filters.cafeId ?? null, p_phone: filters.phone ?? null, p_query: filters.query, p_page: filters.page });
+  const range = pagerPeriodRange(filters.period);
+  const { data, error } = await db.rpc("pager_customer_directory_range", { p_cafe: filters.cafeId ?? null, p_phone: filters.phone ?? null, p_query: filters.query, p_page: filters.page, p_from: range.from, p_to: range.to });
   if (error) throw new Error("تعذر تحميل عملاء البيجر حاول مجددًا");
   let brandName = "";
   if (filters.cafeId) {
