@@ -6,6 +6,7 @@ import { TOGETHER_IMAGE_PATH } from "./lib/menu/together-images";
 const nextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   outputFileTracingIncludes: {
+    "/api/wallet/**": ["./public/mqas77/wallet-emblem-v1.png"],
     "/*": ["./public/fonts/tajawal-regular.ttf", "./public/fonts/tajawal-bold.ttf"],
     // Turbopack cannot infer Chromium's dynamically resolved binary directory.
     "/api/finance/**": ["./node_modules/@sparticuz/chromium/bin/*.br"],

@@ -9,6 +9,8 @@ import { walletColors, walletLocations } from "./payload";
 import type { WalletMember } from "./types";
 import { walletBrandLogo } from "./logo";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
+import { isMqas77Wallet, MQAS77_WALLET_VERSION } from "./mqas77-design";
+import { mqas77Emblem } from "./mqas77-assets";
 export { walletBrandLogo } from "./logo";
 
 export { walletStampArtwork } from "./art";
@@ -40,16 +42,19 @@ export async function issueApplePass(member: WalletMember) {
   if (!member.program.enabled || !member.program.appleWalletEnabled) throw new Error("wallet_disabled");
   const config = appleConfig();
   const colors = walletColors(member);
-  const asset = await walletBrandLogo(member);
+  const mqas77 = isMqas77Wallet(member.cafeSlug);
+  const asset = mqas77 ? await mqas77Emblem() : await walletBrandLogo(member);
+  const iconBackground = mqas77 ? colors.background : colors.foreground;
   const assetKey = walletArtifactKey(asset);
   const image = sharp(asset, { limitInputPixels: 16_000_000 });
   const assets: Record<string, Buffer> = {};
   await Promise.all(([1, 2, 3] as const).map(async scale => {
     const suffix = scale === 1 ? "" : `@${scale}x`;
     const [icon, logo, strip] = await Promise.all([
-      cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:icon`, () => image.clone().trim().resize(29 * scale, 29 * scale, { fit: "contain", background: colors.foreground }).flatten({ background: colors.foreground }).png().toBuffer()),
+      cachedBrandImage(`${assetKey}:${iconBackground}:${scale}:icon`, () => image.clone().trim().resize(29 * scale, 29 * scale, { fit: "contain", background: iconBackground }).flatten({ background: iconBackground }).png().toBuffer()),
       // Preserve the mark's alpha silhouette with light ink on the dark pass.
       cachedBrandImage(`${assetKey}:${colors.foreground}:${scale}:logo`, async () => {
+        if (mqas77) return image.clone().resize(40 * scale, 40 * scale, { fit: "contain", background: "#00000000" }).png().toBuffer();
         const logoMask = await image.clone().trim().resize(136 * scale, 40 * scale, { fit: "inside" }).ensureAlpha().png().toBuffer({ resolveWithObject: true });
         return sharp({ create: { width: logoMask.info.width, height: logoMask.info.height, channels: 4, background: colors.foreground } })
           .composite([{ input: logoMask.data, blend: "dest-in" }]).png().toBuffer();
@@ -64,7 +69,8 @@ export async function issueApplePass(member: WalletMember) {
     formatVersion: 1, passTypeIdentifier: config.passTypeIdentifier, teamIdentifier: config.teamIdentifier,
     serialNumber: member.card.cardCode, organizationName: member.cafeName, description: `${member.cafeName} - ${member.program.cardTitle}`,
     backgroundColor: rgb(colors.background), foregroundColor: rgb(colors.foreground), labelColor: rgb(colors.foreground), sharingProhibited: true, suppressStripShine: true,
-    userInfo: { artworkVersion: `${WALLET_ART_VERSION}:apple-burgundy-v1` },
+    ...(mqas77 ? { logoText: "مقص 77", labelColor: rgb("#fff4df") } : {}),
+    userInfo: { artworkVersion: mqas77 ? MQAS77_WALLET_VERSION : `${WALLET_ART_VERSION}:apple-burgundy-v1` },
     webServiceURL: `${config.baseUrl}/api/wallet/apple`, authenticationToken: appleAuthToken(member.card.cardCode),
   });
   const style = new PassType("storeCard");

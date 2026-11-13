@@ -8,6 +8,8 @@ import { walletBaseUrl } from "./config";
 import { walletColors } from "./payload";
 import type { WalletMember } from "./types";
 import { createWalletArtifactCache, walletArtifactKey } from "./artifact-cache";
+import { isMqas77Wallet, MQAS77_WALLET_VERSION, mqas77StampSvg } from "./mqas77-design";
+import { mqas77Emblem } from "./mqas77-assets";
 
 const cachedArtwork = createWalletArtifactCache(12 * 1024 * 1024, 256, 300_000);
 
@@ -27,7 +29,7 @@ export function verifyWalletArtToken(cardId: string, token: string) {
 }
 
 export function walletArtUrl(member: WalletMember) {
-  const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName]));
+  const appearance = walletArtifactKey(JSON.stringify([walletColors(member), member.program.purchasesRequired, member.logoUrl, member.cafeName, ...(isMqas77Wallet(member.cafeSlug) ? [MQAS77_WALLET_VERSION] : [])]));
   return `${walletBaseUrl()}/api/wallet/art/${encodeURIComponent(member.card.id)}/${walletArtToken(member.card.id)}?v=${encodeURIComponent(`${WALLET_ART_VERSION}:${brandStampStyle(member.cafeSlug, member.program.stampStyle)}:${member.card.updatedAt}:${appearance}`)}`;
 }
 
@@ -77,6 +79,11 @@ export function walletStampSvg(member: WalletMember, scale: 1 | 2 | 3 = 2, dark 
 }
 
 export async function walletStampArtwork(member: WalletMember, scale: 1 | 2 | 3 = 2, dark = false) {
+  if (isMqas77Wallet(member.cafeSlug) && member.program.purchasesRequired <= 10) {
+    const emblem = `data:image/png;base64,${(await mqas77Emblem()).toString("base64")}`;
+    const artwork = mqas77StampSvg(member, emblem, scale, dark);
+    return cachedArtwork(walletArtifactKey(artwork), () => sharp(Buffer.from(artwork)).png().toBuffer());
+  }
   const logo = member.program.stampStyle === "brand" && member.logoUrl
     ? `data:image/png;base64,${(await walletBrandLogo(member)).toString("base64")}` : undefined;
   const svg = walletStampSvg(member, scale, dark, logo);

@@ -1,6 +1,7 @@
 import { createBarndaksaQrPayload } from "@/lib/loyalty/secure-qr-payload";
 import type { WalletMember } from "./types";
 import { walletArtifactKey } from "./artifact-cache";
+import { isMqas77Wallet, MQAS77_WALLET_COLORS, MQAS77_WALLET_VERSION } from "./mqas77-design";
 
 export function googleClassId(issuerId: string, cafeId: string) {
   const override = process.env.GOOGLE_WALLET_RAST_CLASS_ID;
@@ -16,6 +17,7 @@ export function googleObjectId(issuerId: string, member: { card: Pick<WalletMemb
 }
 
 export function walletColors(member: WalletMember) {
+  if (isMqas77Wallet(member.cafeSlug)) return MQAS77_WALLET_COLORS;
   if (member.cafeSlug === "rast") return { background: "#3b1420", foreground: "#f8f2e8", accent: "#d8b67a" };
   const hex = (value: string | undefined, fallback: string) => /^#[\da-f]{6}$/i.test(value ?? "") ? value! : fallback;
   return { background: hex(member.program.cardBackground, "#4a281d"), foreground: hex(member.program.cardForeground, "#fcf8f3"), accent: hex(member.program.cardAccent, "#d9a33f") };
@@ -28,14 +30,15 @@ export function walletLocations(member: WalletMember) {
 }
 
 export function buildGoogleClass(member: WalletMember, issuerId: string, baseUrl: string) {
-  const logoVersion = walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
+  const mqas77 = isMqas77Wallet(member.cafeSlug);
+  const logoVersion = mqas77 ? MQAS77_WALLET_VERSION : walletArtifactKey(JSON.stringify([member.cafeName, member.logoUrl, member.program.cardBackground]));
   return {
     id: googleClassId(issuerId, member.card.cafeId),
     issuerName: member.cafeName,
     localizedIssuerName: { defaultValue: { language: "ar", value: member.cafeName } },
     programName: member.program.cardTitle,
     localizedProgramName: { defaultValue: { language: "ar", value: member.program.cardTitle } },
-    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
+    programLogo: { sourceUri: { uri: `${baseUrl}/api/wallet/brand/${encodeURIComponent(member.cafeSlug)}/logo?v=${logoVersion}${mqas77 ? "&wallet=mqas77" : ""}` }, contentDescription: { defaultValue: { language: "ar", value: member.cafeName } } },
     reviewStatus: "UNDER_REVIEW",
     multipleDevicesAndHoldersAllowedStatus: "ONE_USER_ALL_DEVICES",
     hexBackgroundColor: walletColors(member).background,
@@ -50,8 +53,10 @@ export function buildGoogleObject(member: WalletMember, issuerId: string, artwor
     id: googleObjectId(issuerId, member), classId: googleClassId(issuerId, member.card.cafeId),
     state: member.program.enabled ? "ACTIVE" : "INACTIVE",
     barcode: { type: "QR_CODE", value: createBarndaksaQrPayload("loyalty-card", member.card.cardCode), alternateText: member.card.displayNumber || member.card.cardCode },
-    loyaltyPoints: { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
-    secondaryLoyaltyPoints: { label: "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
+    loyaltyPoints: isMqas77Wallet(member.cafeSlug)
+      ? { label: "أختام للمكافأة", balance: { int: Math.max(0, member.program.purchasesRequired - member.card.stampsInCycle) } }
+      : { label: member.program.stampLabel, balance: { string: `${member.card.stampsInCycle} / ${member.program.purchasesRequired}` } },
+    secondaryLoyaltyPoints: { label: isMqas77Wallet(member.cafeSlug) ? "مكافآت جاهزة" : "المكافآت المتاحة", balance: { int: member.card.availableRewards } },
     merchantLocations: walletLocations(member),
     hexBackgroundColor: walletColors(member).background,
     ...(artworkUrl ? { heroImage: { sourceUri: { uri: artworkUrl }, contentDescription: { defaultValue: { language: "ar", value: member.program.stampLabel } } } } : {}),
