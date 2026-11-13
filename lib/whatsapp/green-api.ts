@@ -403,10 +403,33 @@ export function isGreenApiBackupOnly() {
   return process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true";
 }
 
-async function requireDeliveryConfig(kind: "otp" | "pager" | "other") {
+async function requireDeliveryConfig(kind: "otp" | "pager" | "subscription_reminder" | "other") {
   if (!isGreenApiBackupOnly()) return requireGreenApiConfig();
   if (kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   const sender = backupOtpSender({ apiUrl: "", idInstance: "", apiTokenInstance: "" });
   if (!sender || !await otpSenderReady(sender)) throw new Error("BACKUP_SENDER_UNAVAILABLE");
   return sender;
+}
+
+/** Explicitly authorized renewal notices also use standby during the primary restriction. */
+export async function sendGreenApiSubscriptionReminder(input: { phone: string; message: string }, authorize: () => Promise<boolean>): Promise<{ status: "queued" | "rejected" | "unknown" | "not_sent" | "skipped"; providerMessageId?: string }> {
+  if (!/^9665\d{8}$/.test(input.phone) || !input.message || input.message.length > 2000) throw new Error("INVALID_SUBSCRIPTION_REMINDER");
+  let sender: OtpSender;
+  try {
+    sender = validateOtpSender(await requireDeliveryConfig("subscription_reminder"));
+    if (!await otpSenderReady(sender)) return { status: "not_sent" };
+  } catch { return { status: "not_sent" }; }
+  // Recheck the deadline and recipient after readiness I/O, immediately before POST.
+  if (!await authorize()) return { status: "skipped" };
+  try {
+    const response = await fetch(otpEndpoint(sender, "sendMessage"), {
+      method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", redirect: "error",
+      signal: AbortSignal.timeout(Math.min(10_000, greenApiTimeoutMs())),
+      body: JSON.stringify({ chatId: `${input.phone}@c.us`, linkPreview: false, message: input.message }),
+    });
+    if (!response.ok) return { status: [401, 403, 429, 466].includes(response.status) ? "rejected" : "unknown" };
+    const payload = await response.json() as GreenApiSendResponse;
+    return typeof payload.idMessage === "string" && payload.idMessage.length > 0 && payload.idMessage.length <= 200
+      ? { status: "queued", providerMessageId: payload.idMessage } : { status: "unknown" };
+  } catch { return { status: "unknown" }; }
 }

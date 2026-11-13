@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(path.join(tmpdir(),'branda-loyalty-sql-tests/node_modules/@electric-sql/pglite/dist/index.js')).href);
+const db=new PGlite();let checks=0;
+const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const query=(s,a=[])=>db.query(s,a),value=async(s,a=[])=>Object.values((await query(s,a)).rows[0])[0];
+const check=(v,m)=>{assert.ok(v,m);checks++;};
+const rejects=async fn=>{await assert.rejects(fn);checks++;};
+try {
+ await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;
+ CREATE TABLE auth.users(id uuid PRIMARY KEY,phone text,deleted_at timestamptz,banned_until timestamptz);
+ CREATE TABLE profiles(id uuid PRIMARY KEY,phone text,status text DEFAULT 'active');
+ CREATE TABLE cafes(id uuid PRIMARY KEY,owner_user_id uuid,name text,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TABLE cafe_settings(cafe_id uuid PRIMARY KEY,owner_phone text);
+ CREATE TABLE platform_plans(id text PRIMARY KEY,active boolean DEFAULT true);
+ CREATE TABLE subscriptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),cafe_id uuid,plan_id text,status text DEFAULT 'active',activation_source text,started_at timestamptz,expires_at timestamptz);
+ GRANT USAGE ON SCHEMA public TO service_role;GRANT SELECT ON ALL TABLES IN SCHEMA public TO service_role;
+ INSERT INTO platform_plans(id) VALUES('paid'),('trial');`);
+ const setup=async(n,hours,status='active')=>{await query("INSERT INTO auth.users(id,phone) VALUES($1,'+966500000001')",[id(n)]);await query('INSERT INTO profiles(id) VALUES($1)',[id(n)]);await query("INSERT INTO cafes(id,owner_user_id,name) VALUES($1,$1,'Brand')",[id(n)]);await query("INSERT INTO subscriptions(cafe_id,plan_id,status,started_at,expires_at) VALUES($1,'paid',$2,now()-interval '1 day',now()+$3*interval '1 hour')",[id(n),status,hours]);};
+ await setup(1,24);await setup(2,12,'trialing');await setup(3,25);await setup(4,-1);await setup(5,24);await setup(6,24);await setup(7,24);await setup(8,24);await setup(9,24);await setup(10,24);await setup(11,24);await setup(12,23.4);
+ await query("INSERT INTO subscriptions(cafe_id,plan_id,expires_at) SELECT cafe_id,'trial',expires_at FROM subscriptions WHERE cafe_id=$1",[id(1)]);
+ await query("INSERT INTO subscriptions(cafe_id,plan_id,started_at,expires_at) VALUES($1,'paid',now()+interval '24 hours',now()+interval '31 days')",[id(5)]);
+ await query("INSERT INTO subscriptions(cafe_id,plan_id) VALUES($1,'paid')",[id(6)]);
+ await query("UPDATE profiles SET status='suspended' WHERE id=$1",[id(7)]);
+ await query("UPDATE auth.users SET banned_until=now()+interval '1 day' WHERE id=$1",[id(8)]);
+ await query("UPDATE subscriptions SET activation_source='admin_prepared_trial' WHERE cafe_id=$1",[id(9)]);
+ await query("UPDATE cafes SET status='archived' WHERE id=$1",[id(10)]);
+ await query("UPDATE auth.users SET phone='invalid' WHERE id=$1",[id(11)]);
+ await db.exec(fs.readFileSync('supabase/migrations/20261113160617_subscription_renewal_reminders.sql','utf8'));
+ for(const role of ['anon','authenticated']){await db.exec('SET ROLE '+role);await rejects(()=>query('SELECT * FROM subscription_renewal_reminders'));await rejects(()=>query('SELECT * FROM subscription_reminders_private.deadlines'));await rejects(()=>query('SELECT claim_subscription_renewal_reminders(20)'));await rejects(()=>query('SELECT authorize_subscription_renewal_reminder($1,$2)',[id(1),id(2)]));await rejects(()=>query("SELECT finish_subscription_renewal_reminder($1,$2,'queued','ack')",[id(1),id(2)]));await db.exec('RESET ROLE');}
+ const claim=()=>query('SELECT * FROM claim_subscription_renewal_reminders(20)').then(r=>r.rows),authorize=j=>value('SELECT authorize_subscription_renewal_reminder($1,$2)',[j.id,j.lease_token]),finish=(j,outcome='queued',ack='ack')=>value('SELECT finish_subscription_renewal_reminder($1,$2,$3,$4)',[j.id,j.lease_token,outcome,ack]);
+ await db.exec('SET ROLE service_role');const jobs=await claim();check(jobs.length===2,'only due eligible owners, excludes expired/future/renewed/unlimited/blocked/prepared/archived/no-phone/stale');
+ const first=jobs.find(j=>j.cafe_id===id(1)),second=jobs.find(j=>j.cafe_id===id(2));check(first.hours_before===24&&second.hours_before===12,'paid24 and trial12 thresholds');check(first.phone==='966500000001','owner phone normalized');
+ check((await claim()).length===0,'overlapping cron cannot claim the same lease');check(await authorize(first),'fresh deadline authorized');check(!await authorize(first),'same lease cannot dispatch twice');check(await finish(first),'provider acknowledgement stored');check(!await finish(first),'duplicate completion cannot mutate terminal job');check((await claim()).length===0,'queued message never re-enqueued');
+ await db.exec('RESET ROLE');await query("UPDATE subscriptions SET expires_at=now()+interval '31 days' WHERE cafe_id=$1",[id(2)]);await db.exec('SET ROLE service_role');check(!await authorize(second),'renewal between claim and dispatch cancels stale reminder');
+ await db.exec('RESET ROLE');await setup(13,24);await db.exec('SET ROLE service_role');let j=(await claim())[0];check(await finish(j,'not_sent',null),'offline provider releases unused lease');check(await value('SELECT attempts=0 AND status=\'pending\' FROM subscription_renewal_reminders WHERE id=$1',[j.id]),'readiness failure consumes no send attempt');await query("UPDATE subscription_renewal_reminders SET available_at=now() WHERE id=$1",[j.id]);j=(await claim())[0];await authorize(j);await finish(j,'unknown',null);check((await claim()).length===0,'ambiguous network outcome never retried');
+ await db.exec('RESET ROLE');await setup(14,24);await db.exec('SET ROLE service_role');j=(await claim())[0];await authorize(j);await query("UPDATE subscription_renewal_reminders SET lease_until=now()-interval '1 second' WHERE id=$1",[j.id]);check((await claim()).length===0,'crashed dispatch is not resent');check(await value("SELECT status='unknown' FROM subscription_renewal_reminders WHERE id=$1",[j.id]),'crash stored as unknown');
+ await db.exec('RESET ROLE');await setup(15,24);await db.exec('SET ROLE service_role');j=(await claim())[0];const oldToken=j.lease_token;await query("UPDATE subscription_renewal_reminders SET lease_until=now()-interval '1 second' WHERE id=$1",[j.id]);j=(await claim())[0];check(j.lease_token!==oldToken,'unsubmitted expired lease safely reclaimed');check(!await authorize({...j,lease_token:oldToken}),'stale worker denied');await authorize(j);await finish(j,'rejected',null);check((await claim()).length===0,'explicit rejection observes backoff');
+ await query("UPDATE subscription_renewal_reminders SET available_at=now(),due_at=now()-interval '31 minutes',valid_until=now()-interval '1 second' WHERE id=$1",[j.id]);check((await claim()).length===0,'old notification is cancelled instead of delayed delivery');
+ await db.exec('RESET ROLE');await setup(16,12);await query("INSERT INTO subscription_renewal_reminders(cafe_id,owner_id,expires_at,hours_before,due_at,valid_until,phone,brand_name,status) SELECT cafe_id,cafe_id,expires_at,24,expires_at-interval '24 hours',expires_at-interval '23.5 hours','966500000001','Brand','queued' FROM subscriptions WHERE cafe_id=$1",[id(16)]);await db.exec('SET ROLE service_role');j=(await claim())[0];check(j.hours_before===12,'second stage remains due after first was sent');await authorize(j);await finish(j);check(await value('SELECT count(*)=2 FROM subscription_renewal_reminders WHERE cafe_id=$1',[id(16)]),'exactly two notices per brand deadline');
+ await db.exec('RESET ROLE');await setup(17,24);await db.exec('SET ROLE service_role');j=(await claim())[0];await db.exec('RESET ROLE');await query("UPDATE auth.users SET phone='966500000002' WHERE id=$1",[id(17)]);await db.exec('SET ROLE service_role');check(!await authorize(j),'owner phone change stops claimed recipient');
+ check(await value("SELECT relrowsecurity FROM pg_class WHERE relname='subscription_renewal_reminders'"),'reminder audit RLS enabled');
+ console.log(`PASS ${checks} subscription reminder timing, trials, shared deadline, renewal, recipient, RLS and idempotency checks`);
+}finally{await db.close();}
