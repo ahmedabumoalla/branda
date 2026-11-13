@@ -13,7 +13,7 @@ const keys=['GREEN_API_API_URL','GREEN_API_ID_INSTANCE','GREEN_API_API_TOKEN_INS
 const originalEnv=keys.map(k=>process.env[k]);
 try{
   Object.assign(process.env,{GREEN_API_API_URL:'https://api.green-api.com',GREEN_API_ID_INSTANCE:'1234567890',GREEN_API_API_TOKEN_INSTANCE:'fixture-only-token',NEXT_PUBLIC_SUPABASE_URL:'https://fixture.supabase.co'});
-  const provider=load('lib/whatsapp/green-api-platform-campaigns.ts');
+  const provider=load('lib/whatsapp/green-api-platform-campaigns.ts',{'./green-api':{selectGreenApiPlatformSender:async()=>({apiUrl:process.env.GREEN_API_API_URL,idInstance:process.env.GREEN_API_ID_INSTANCE,apiTokenInstance:process.env.GREEN_API_API_TOKEN_INSTANCE})}});
   const sent=[];
   globalThis.fetch=async(url,init)=>{sent.push({url,init});return new Response(JSON.stringify(init.method==='GET'?{stateInstance:'authorized',phone:'966508333556'}:{idMessage:'receipt-1'}));};
   const sender=await provider.getBrandaCampaignSender();check(sender.ready&&sender.phone==='966508333556','Actual shared sender detected');

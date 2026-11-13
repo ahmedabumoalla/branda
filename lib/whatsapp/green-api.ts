@@ -9,7 +9,7 @@ type GreenApiSendResponse = {
 /** Provider acknowledgement does not claim delivery/read receipt; billing mode comes from the locked handoff claim. */
 export async function sendGreenApiOwnerWelcome(input: { phone: string; brandName: string; password: string; startsTrial: boolean }) {
   if (!/^9665\d{8}$/.test(input.phone)) throw new Error("INVALID_OWNER_RECIPIENT");
-  const primary = await requireDeliveryConfig("other");
+  const primary = await requireDeliveryConfig("owner");
   const backup = backupOtpSender(primary);
   let sender = primary;
   // Choose before submitting credentials so a disconnected primary cannot queue them.
@@ -47,11 +47,11 @@ export function isGreenApiConfigured() {
   return Boolean(process.env.GREEN_API_API_URL?.trim() && process.env.GREEN_API_ID_INSTANCE?.trim() && process.env.GREEN_API_API_TOKEN_INSTANCE?.trim());
 }
 
-/** Customer welcomes stay on the primary sender; standby is reserved for access messages */
+/** Live platform sender selection finishes before submitting any customer message. */
 export async function isGreenApiLoyaltyWelcomeReady() {
   if (isGreenApiBackupOnly()) return false;
   if (!isGreenApiConfigured()) return false;
-  try { return await otpSenderReady(validateOtpSender(requireGreenApiConfig())); }
+  try { await requireDeliveryConfig("other"); return true; }
   catch { return false; }
 }
 
@@ -94,9 +94,10 @@ export function isGreenApiFinanceReceiptConfigured() {
   try { financeReceiptMediaOrigin(); return true; } catch { return false; }
 }
 
-function financeReceiptMediaOrigin() {
+function financeReceiptMediaOrigin(senderId = process.env.GREEN_API_ID_INSTANCE?.trim()) {
   // Use the instance's mediaUrl. A generic host can time out for dedicated instances.
-  const configured = process.env.GREEN_API_MEDIA_URL?.trim();
+  const configured = (senderId === process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE?.trim()
+    ? process.env.GREEN_API_OTP_BACKUP_MEDIA_URL : process.env.GREEN_API_MEDIA_URL)?.trim();
   if (!configured) throw new Error("GREEN_API_MEDIA_CONFIGURATION_MISSING");
   const url = new URL(configured);
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.pathname !== "/" || url.search || url.hash || !/(^|\.)(green-api\.com|greenapi\.com)$/.test(url.hostname)) throw new Error("INVALID_GREEN_MEDIA_HOST");
@@ -106,7 +107,7 @@ function financeReceiptMediaOrigin() {
 export async function sendGreenApiFinanceReceipt(input: { phone: string; message: string; pdf: Uint8Array; invoiceNumber: number }): Promise<{ status: "queued" | "rejected" | "unknown"; providerMessageId?: string; errorCode?: string }> {
   if (!/^9665\d{8}$/.test(input.phone) || !Number.isSafeInteger(input.invoiceNumber) || input.invoiceNumber < 1 || input.message.length > 1024 || !input.pdf.length || input.pdf.length > 8 * 1024 * 1024 || new TextDecoder().decode(input.pdf.slice(0, 5)) !== "%PDF-") throw new Error("INVALID_FINANCE_RECEIPT");
   const { idInstance, apiTokenInstance } = await requireDeliveryConfig("other");
-  const mediaOrigin = financeReceiptMediaOrigin();
+  const mediaOrigin = financeReceiptMediaOrigin(idInstance);
   const body = new FormData();
   const fileName = `invoice-${input.invoiceNumber}.pdf`;
   body.set("chatId", `${input.phone}@c.us`);
@@ -403,12 +404,28 @@ export function isGreenApiBackupOnly() {
   return process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true";
 }
 
-async function requireDeliveryConfig(kind: "otp" | "pager" | "subscription_reminder" | "other") {
-  if (!isGreenApiBackupOnly()) return requireGreenApiConfig();
-  if (kind === "other") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
+async function requireDeliveryConfig(kind: "otp" | "owner" | "pager" | "subscription_reminder" | "other") {
+  if (!isGreenApiBackupOnly()) {
+    const configured = requireGreenApiConfig();
+    // These entry points already perform their own pre-submit selection and
+    // explicit-refusal handling. Keep their incident override semantics intact.
+    if (kind === "otp" || kind === "owner") return configured;
+    const primary = validateOtpSender(configured);
+    if (await otpSenderReady(primary)) return primary;
+    const backup = backupOtpSender(primary);
+    if (backup && await otpSenderReady(backup)) return backup;
+    throw new Error("PLATFORM_SENDERS_UNAVAILABLE");
+  }
+  if (kind === "other" || kind === "owner") throw new Error("MESSAGING_TEMPORARILY_PAUSED");
   const sender = backupOtpSender({ apiUrl: "", idInstance: "", apiTokenInstance: "" });
   if (!sender || !await otpSenderReady(sender)) throw new Error("BACKUP_SENDER_UNAVAILABLE");
   return sender;
+}
+
+/** Server-only platform credentials; never use this for a brand-owned connection.
+ * Exactly one sender is selected before POST; an uncertain send is never replayed. */
+export async function selectGreenApiPlatformSender() {
+  return requireDeliveryConfig("other");
 }
 
 /** Explicitly authorized renewal notices also use standby during the primary restriction. */
@@ -417,7 +434,6 @@ export async function sendGreenApiSubscriptionReminder(input: { phone: string; m
   let sender: OtpSender;
   try {
     sender = validateOtpSender(await requireDeliveryConfig("subscription_reminder"));
-    if (!await otpSenderReady(sender)) return { status: "not_sent" };
   } catch { return { status: "not_sent" }; }
   // Recheck the deadline and recipient after readiness I/O, immediately before POST.
   if (!await authorize()) return { status: "skipped" };

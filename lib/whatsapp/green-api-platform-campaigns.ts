@@ -1,22 +1,24 @@
 import "server-only";
+import { selectGreenApiPlatformSender } from "./green-api";
 
 export class PlatformCampaignProviderError extends Error {
   constructor(public code: string, public uncertain = false) { super(code); }
 }
 
-function configuration() {
+async function configuration() {
   if (process.env.GREEN_API_TEMPORARY_BACKUP_ONLY?.trim() === "true") throw new PlatformCampaignProviderError("MESSAGING_TEMPORARILY_PAUSED");
-  const apiUrl = process.env.GREEN_API_API_URL?.trim().replace(/\/+$/, "");
-  const id = process.env.GREEN_API_ID_INSTANCE?.trim();
-  const token = process.env.GREEN_API_API_TOKEN_INSTANCE?.trim();
-  if (!apiUrl || !id || !token) throw new PlatformCampaignProviderError("SENDER_NOT_CONFIGURED");
+  if (![process.env.GREEN_API_API_URL, process.env.GREEN_API_ID_INSTANCE, process.env.GREEN_API_API_TOKEN_INSTANCE].every(value => value?.trim())) throw new PlatformCampaignProviderError("SENDER_NOT_CONFIGURED");
+  let selected: Awaited<ReturnType<typeof selectGreenApiPlatformSender>>;
+  try { selected = await selectGreenApiPlatformSender(); }
+  catch { throw new PlatformCampaignProviderError("SENDER_NOT_AVAILABLE"); }
+  const { apiUrl, idInstance: id, apiTokenInstance: token } = selected;
   const url = new URL(apiUrl);
   if (url.protocol !== "https:" || !/^(?:api|[0-9]{1,10}\.api)\.green-?api\.com$/.test(url.hostname) || url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || !/^\d{1,16}$/.test(id) || !/^[A-Za-z0-9._-]{8,512}$/.test(token)) throw new PlatformCampaignProviderError("SENDER_CONFIGURATION_INVALID");
   return { origin: url.origin, id, token };
 }
 
 async function request(method: "getWaSettings" | "sendMessage" | "sendFileByUrl", body?: Record<string, unknown>) {
-  const config = configuration();
+  const config = await configuration();
   let response: Response;
   try {
     response = await fetch(`${config.origin}/waInstance${config.id}/${method}/${config.token}`, {

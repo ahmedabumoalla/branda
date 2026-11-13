@@ -82,10 +82,10 @@ async function scenario({ state = 'authorized', backupState = 'authorized', stat
   const invalid = load('lib/whatsapp/green-api.ts', base, () => { throw Error('must not request'); });
   await assert.rejects(() => invalid.sendGreenApiSupabaseOtp({ phoneNormalized: 'bad', code: '123456' }), /OTP_INPUT_INVALID/); checks++;
   const urls = [];
-  const operational = load('lib/whatsapp/green-api.ts', base, async url => { urls.push(url); return Response.json({ idMessage: 'ok' }); });
+  const operational = load('lib/whatsapp/green-api.ts', base, async url => { urls.push(url); return Response.json(url.includes('getStateInstance') ? { stateInstance: 'authorized' } : { idMessage: 'ok' }); });
   await operational.sendGreenApiPagerMessage({ phone: '966500000001', message: 'test' });
   await operational.sendGreenApiFinanceShiftAlert({ phone: '966500000001', message: 'test' });
-  assert.equal(urls.length, 2); assert.ok(urls.every(url => url.includes('waInstance111'))); checks++;
+  assert.equal(urls.length, 4); assert.ok(urls.every(url => url.includes('waInstance111'))); checks++;
   const marketing = fs.readFileSync('lib/whatsapp/green-api-marketing.ts', 'utf8');
   assert.match(marketing, /value.idInstance === process.env.GREEN_API_OTP_BACKUP_ID_INSTANCE/);
   assert.ok(!fs.readFileSync('lib/whatsapp/green-api-platform-campaigns.ts', 'utf8').includes('OTP_BACKUP')); checks++;

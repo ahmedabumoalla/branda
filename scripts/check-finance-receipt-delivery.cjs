@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
 const output={},code=ts.transpileModule(fs.readFileSync('lib/whatsapp/green-api.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 let calls=[],result={ok:true,json:async()=>({idMessage:'accepted'})};
-new Function('require','exports','fetch',code)(n=>n==='server-only'?{}:require(n),output,async(url,options)=>{calls.push({url,options});if(result instanceof Error)throw result;return result;});
-process.env.GREEN_API_API_URL='https://api.green-api.com';process.env.GREEN_API_ID_INSTANCE='test-instance';process.env.GREEN_API_API_TOKEN_INSTANCE='test-secret';delete process.env.GREEN_API_MEDIA_URL;
+new Function('require','exports','fetch',code)(n=>n==='server-only'?{}:require(n),output,async(url,options)=>{if(url.includes('getStateInstance'))return Response.json({stateInstance:'authorized'});calls.push({url,options});if(result instanceof Error)throw result;return result;});
+process.env.GREEN_API_API_URL='https://api.green-api.com';process.env.GREEN_API_ID_INSTANCE='111';process.env.GREEN_API_API_TOKEN_INSTANCE='test-secret';delete process.env.GREEN_API_MEDIA_URL;
 const input={phone:'966500000001',message:'Loyalty caption',invoiceNumber:19,pdf:new TextEncoder().encode('%PDF-1.7\nexample')};
 (async()=>{
  assert.equal(output.isGreenApiFinanceReceiptConfigured(),false);
