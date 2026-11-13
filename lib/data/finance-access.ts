@@ -67,8 +67,8 @@ async function salesCashierDestination(supabase: Awaited<ReturnType<typeof creat
     if (brands.length === 1) return { ok: true as const, redirectTo: `/finance/${brands[0].slug}/pos` };
     if (brands.length > 1) return { ok: true as const, brands };
   } catch { lookupFailed = true; }
-  await supabase.auth.signOut({ scope: "local" });
   if (lookupFailed) return { ok: false as const, message: "تعذر التحقق من صلاحية نقطة البيع مؤقتًا حاول مجددًا" };
+  await supabase.auth.signOut({ scope: "local" });
   return { ok: false as const, message: "لا يوجد وصول نشط لكاشير المبيعات تواصل مع مالك العلامة" };
 }
 
@@ -237,7 +237,6 @@ export async function signInFinance(slug: string, identity: string, password: st
     const snapshot = await getBrandFinanceSnapshot(safeSlug);
     return { ok: true as const, redirectTo: await getFinanceEntryPath(safeSlug, snapshot), message: "تم تسجيل الدخول" };
   } catch {
-    await supabase.auth.signOut({ scope: "local" });
     return { ok: false as const, message: "لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة" };
   }
 }

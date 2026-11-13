@@ -35,7 +35,7 @@ export async function getBarndaksaAuthSession() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile) return null;
+  if (!profile || profile.status !== "active") return null;
 
   return {
     id: user.id,

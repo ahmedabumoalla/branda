@@ -1,3 +1,4 @@
+import { getActiveUser } from "@/lib/auth/active-user";
 import { createClient } from "@/lib/supabase/server";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,9 +62,7 @@ export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {
 // React cache is request-scoped: parallel loaders share a check, never another user's session.
 export const getOwnerCafeContext = cache(async (): Promise<CafeContext | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getActiveUser(supabase);
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -167,9 +166,7 @@ export async function requireOwnerCafeContext(): Promise<CafeContext> {
 /** Admin-only operations (audit, cross-cafe) */
 export const requirePlatformAdmin = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getActiveUser(supabase);
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase

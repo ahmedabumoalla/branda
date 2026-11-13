@@ -1,12 +1,13 @@
 "use server";
 
+import { PERSISTENT_SESSION_EXPIRES_AT } from "@/lib/auth/session-policy";
+
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePlatformAdmin } from "@/lib/data/cafes";
 import {
   clearMaintenanceSessionCookie,
   getCurrentMaintenanceSession,
-  maintenanceSessionMaxAgeSeconds,
   makeMaintenanceAccountNumber,
   setMaintenanceSessionCookie,
 } from "@/lib/platform/maintenance";
@@ -89,7 +90,7 @@ export async function enterMaintenanceModeAction(input: string) {
     String(cafe.id),
     String(cafe.slug)
   );
-  const expiresAt = Date.now() + maintenanceSessionMaxAgeSeconds * 1000;
+  const expiresAt = PERSISTENT_SESSION_EXPIRES_AT;
 
   await setMaintenanceSessionCookie({
     adminUserId: adminUser.id,
@@ -110,7 +111,7 @@ export async function enterMaintenanceModeAction(input: string) {
 
   return {
     ok: true as const,
-    message: "تم تفعيل دخول الصيانة مؤقتًا",
+    message: "تم تفعيل دخول الصيانة",
     redirectTo: "/dashboard",
   };
 }

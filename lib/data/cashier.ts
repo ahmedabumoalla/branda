@@ -1,3 +1,5 @@
+import { getActiveUser } from "@/lib/auth/active-user";
+import { SESSION_COOKIE_SECONDS } from "@/lib/auth/session-policy";
 import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { assertRastLoyaltyEntitlement } from "@/lib/data/rast-loyalty-access";
@@ -336,7 +338,7 @@ export async function startOwnerCashierSession() {
   const { data, error } = await supabase.rpc("start_owner_cashier_session", { p_cafe_id: cafe.id });
   const session = Array.isArray(data) ? data[0] : null;
   if (error || !session?.token || session.cafe_id !== cafe.id) throw new Error("OWNER_CASHIER_SESSION_FAILED");
-  const maxAge = Math.min(8 * 60 * 60, Math.floor((Math.min(Date.parse(session.expires_at), maintenance?.expiresAt ?? Infinity) - Date.now()) / 1000));
+  const maxAge = Math.min(SESSION_COOKIE_SECONDS, Math.floor((Math.min(Date.parse(session.expires_at), maintenance?.expiresAt ?? Infinity) - Date.now()) / 1000));
   if (!Number.isFinite(maxAge) || maxAge <= 0) throw new Error("OWNER_CASHIER_SESSION_EXPIRED");
   const store = await cookies();
   store.set(cashierSessionCookie, session.token, {
@@ -437,8 +439,8 @@ export async function requireCashierSessionContext(
 
   if (cashier.owner_user_id) {
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.id !== cashier.owner_user_id
+    const user = await getActiveUser(supabase);
+    if (!user || user.id !== cashier.owner_user_id
       || cafe.deleted_at || !["active", "published"].includes(cafe.status)) {
       throw new Error("Owner cashier session expired");
     }

@@ -208,10 +208,10 @@ export function DashboardAppLayout({
             <div>
               <p className="text-sm font-black text-amber-800">أنت في وضع الصيانة</p>
               <h2 className="mt-1 text-xl font-black">
-                أنت تدير لوحة {maintenanceSession.cafeName} مؤقتًا كمدير منصة
+                أنت تدير لوحة {maintenanceSession.cafeName} كمدير منصة
               </h2>
               <p className="mt-1 text-xs font-bold text-[#806A5E]">
-                رقم الصيانة: {maintenanceSession.maintenanceAccountNumber} — تنتهي الجلسة عند {new Date(maintenanceSession.expiresAt).toLocaleTimeString("ar-SA", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit" })} بتوقيت السعودية
+                رقم الصيانة: {maintenanceSession.maintenanceAccountNumber} — يستمر الدخول حتى تنهي وضع الصيانة أو تسجل الخروج
               </p>
             </div>
             <button

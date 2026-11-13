@@ -364,7 +364,7 @@ async function verifyLegacySupabaseCustomerPassword(
     password,
   });
 
-  await verifyClient.auth.signOut();
+  await verifyClient.auth.signOut({ scope: "local" });
   return !error && data.user?.id === userId;
 }
 

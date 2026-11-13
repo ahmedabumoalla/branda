@@ -14,6 +14,11 @@ const AUTH_REFRESH_PREFIXES = [
   "/login",
   "/register",
   "/auth",
+  "/cashier",
+  "/pager",
+  "/api/auth/session",
+  "/api/cashier/session",
+  "/api/finance",
 ];
 
 function shouldRefreshSupabaseSession(pathname: string) {
@@ -79,7 +84,7 @@ export async function proxy(request: NextRequest) {
     return refreshCashierCookie(request, NextResponse.next({ request }));
   }
 
-  return updateSession(request);
+  return refreshCashierCookie(request, await updateSession(request));
 }
 
 export const config = {

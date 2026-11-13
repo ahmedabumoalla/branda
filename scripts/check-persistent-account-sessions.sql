@@ -1,0 +1,44 @@
+-- Execute inside a rollback-only transaction after the exact migration DDL.
+DO $$
+DECLARE owner_id uuid; admin_id uuid; cafe_id uuid; token_value text; expiry timestamptz;
+BEGIN
+ SELECT id,owner_user_id INTO cafe_id,owner_id FROM public.cafes WHERE slug='test-cafe' AND deleted_at IS NULL;
+ SELECT id INTO admin_id FROM public.profiles WHERE role='platform_admin' AND status='active' LIMIT 1;
+ IF owner_id IS NULL OR admin_id IS NULL THEN RAISE EXCEPTION 'Missing probe identities'; END IF;
+ IF has_function_privilege('anon','public.current_account_active()','EXECUTE') THEN RAISE EXCEPTION 'Anonymous RPC grant'; END IF;
+ IF NOT has_function_privilege('authenticated','public.current_account_active()','EXECUTE') THEN RAISE EXCEPTION 'Missing authenticated grant'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',owner_id::text,true);
+ PERFORM set_config('request.jwt.claim.role','authenticated',true);
+ SET LOCAL ROLE authenticated;
+ IF NOT public.current_account_active() OR public.is_platform_admin() THEN RAISE EXCEPTION 'Owner identity check'; END IF;
+ SELECT s.token,s.expires_at INTO token_value,expiry FROM public.start_owner_cashier_session(cafe_id) s;
+ IF expiry<'9000-01-01'::timestamptz THEN RAISE EXCEPTION 'Owner deadline retained'; END IF;
+ PERFORM public.logout_cafe_cashier(token_value);
+ RESET ROLE;
+ IF NOT EXISTS(SELECT 1 FROM public.cafe_cashier_sessions WHERE token=token_value AND revoked_at IS NOT NULL) THEN RAISE EXCEPTION 'Manual logout not revoked'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ SET LOCAL ROLE authenticated;
+ IF NOT public.current_account_active() OR NOT public.is_platform_admin() THEN RAISE EXCEPTION 'Admin identity check'; END IF;
+ RESET ROLE;
+ UPDATE auth.users SET banned_until=now()+interval '1 day' WHERE id=admin_id;
+ SET LOCAL ROLE authenticated;
+ IF public.current_account_active() OR public.is_platform_admin() THEN RAISE EXCEPTION 'Banned admin retained access'; END IF;
+ RESET ROLE;
+ UPDATE auth.users SET banned_until=NULL WHERE id=admin_id;
+ UPDATE public.profiles SET status='suspended' WHERE id=owner_id;
+ PERFORM set_config('request.jwt.claim.sub',owner_id::text,true);
+ SET LOCAL ROLE authenticated;
+ IF public.current_account_active() THEN RAISE EXCEPTION 'Suspended owner retained access'; END IF;
+ RESET ROLE;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ UPDATE public.profiles SET status='suspended' WHERE id=admin_id;
+ SET LOCAL ROLE authenticated;
+ IF public.current_account_active() OR public.is_platform_admin() THEN RAISE EXCEPTION 'Suspended admin retained access'; END IF;
+ RESET ROLE;
+ IF EXISTS(SELECT 1 FROM public.cafe_cashier_sessions WHERE token=token_value AND revoked_at IS NULL) THEN RAISE EXCEPTION 'Revoked token revived'; END IF;
+ PERFORM set_config('request.jwt.claim.sub','',true);
+ SET LOCAL ROLE authenticated;
+ IF public.current_account_active() THEN RAISE EXCEPTION 'Missing identity accepted'; END IF;
+ RESET ROLE;
+END $$;
+SELECT jsonb_build_object('ok',true,'checks',12,'writes','rollback-only') AS verification;

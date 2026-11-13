@@ -1,4 +1,5 @@
 import "server-only";
+import { getActiveUser } from "@/lib/auth/active-user";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { canFinanceOperation, type FinanceRole } from "@/lib/finance/permissions";
 import { after } from "next/server";
@@ -27,7 +28,7 @@ function throwIfFinanceUnavailable(error: { code?: string } | null) {
 
 export async function getBrandFinanceContext(slug?: string) {
   const client = await createClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getActiveUser(client);
   if (!user) throw new Error("سجل الدخول للوصول إلى برندة المالية");
   const target = slug ? z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/).parse(slug) : (await requireOwnerCafeContext()).slug;
   const { data, error } = await client.rpc("brand_finance_context", { p_slug: target });

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { SessionKeeper } from "@/components/auth/session-keeper";
 import { FinanceOfflineSessionGuard } from "@/components/finance/finance-offline-session-guard";
 import { DashboardCacheBoundary } from "@/components/dashboard/dashboard-cache-boundary";
 import "./globals.css";
@@ -73,6 +74,7 @@ export default function RootLayout({
         {children}
         <FinanceOfflineSessionGuard />
         <DashboardCacheBoundary />
+        <SessionKeeper />
       </body>
     </html>
   );

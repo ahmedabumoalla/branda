@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { clearMaintenanceSessionCookie } from "@/lib/platform/maintenance";
 import { ownerLoginAliasEmail } from "@/lib/auth/owner-login-alias";
 import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 import {
@@ -184,7 +185,7 @@ export async function loginOwnerAction(
             authData = result.data;
             authError = result.error;
           } else if (result.data.session) {
-            await supabase.auth.signOut();
+            await supabase.auth.signOut({ scope: "local" });
           }
         }
       }
@@ -223,13 +224,14 @@ export async function loginOwnerAction(
       .maybeSingle();
     const profile = profileData as OwnerProfileAccessRow | null;
 
-    if (profileError || !profile) {
-      await supabase.auth.signOut();
+    if (profileError) return { ok: false as const, message: "تعذر التحقق من حالة الحساب مؤقتًا حاول مجددًا", redirectTo: null };
+    if (!profile) {
+      await supabase.auth.signOut({ scope: "local" });
       return { ok: false as const, message: "ملف الحساب غير موجود داخل المنصة", redirectTo: null };
     }
 
-    if (profile.status === "suspended") {
-      await supabase.auth.signOut();
+    if (profile.status !== "active") {
+      await supabase.auth.signOut({ scope: "local" });
       return { ok: false as const, message: "هذا الحساب موقوف", redirectTo: null };
     }
 
@@ -276,7 +278,7 @@ export async function loginOwnerAction(
       };
     }
 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return { ok: false as const, message: "لا تملك صلاحية الدخول لهذه اللوحة", redirectTo: null };
   } catch (error) {
     console.error("[loginOwnerAction]", error);
@@ -487,7 +489,7 @@ export async function changeOwnerPasswordAction(input: {
   if (
     profileError ||
     !profile ||
-    profile.status === "suspended" ||
+    profile.status !== "active" ||
     !["cafe_owner", "cafe_manager", "cafe_staff"].includes(String(profile.role))
   ) {
     if (profileError) logAuthError("[changeOwnerPasswordAction:profile]", profileError);
@@ -515,7 +517,7 @@ export async function changeOwnerPasswordAction(input: {
       : { phone: user.phone!, password: currentPassword },
   );
 
-  await verifyClient.auth.signOut();
+  await verifyClient.auth.signOut({ scope: "local" });
 
   if (verifyError || !verified.user || verified.user.id !== user.id) {
     if (verifyError) logAuthError("[changeOwnerPasswordAction:verifyCurrentPassword]", verifyError);
@@ -546,7 +548,12 @@ export async function changeOwnerPasswordAction(input: {
 
 export async function logoutAction(): Promise<never> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const store = await cookies();
+  const token = store.get("barndaksa_cashier_session")?.value;
+  if (token) await supabase.rpc("logout_cafe_cashier", { p_session_token: token });
+  store.delete("barndaksa_cashier_session");
+  await clearMaintenanceSessionCookie();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }
 

@@ -1,3 +1,4 @@
+import { getActiveUser } from "@/lib/auth/active-user";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
@@ -25,17 +26,13 @@ export async function createClient() {
 
 export async function getSessionUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getActiveUser(supabase);
   return user;
 }
 
 export async function getProfile() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getActiveUser(supabase);
   if (!user) return null;
 
   const { data } = await supabase

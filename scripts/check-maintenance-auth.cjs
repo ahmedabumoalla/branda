@@ -7,6 +7,7 @@ function load(authError) {
   const calls = [];
   const stubs = {
     zod: require('zod'),
+    '@/lib/auth/session-policy': { PERSISTENT_SESSION_EXPIRES_AT: Date.UTC(9999, 11, 31) },
     '@/lib/data/cafes': { requirePlatformAdmin: async () => { if (authError) throw authError; return { id: 'admin' }; } },
     '@/lib/supabase/admin': { createAdminClient() {
       calls.push('admin');
