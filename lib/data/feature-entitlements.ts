@@ -28,24 +28,13 @@ function normalizeFeatures(raw: unknown): string[] {
 
 export const getCafeServiceAccess = cache(async (cafeId: string) => {
   const admin = createAdminClient();
-  const [subscriptionResult, overridesResult] = await Promise.all([
-    admin
-      .from("subscriptions")
-      .select("plan_id, status, started_at, expires_at, platform_plans(name, features, active)")
-      .eq("cafe_id", cafeId)
-      .in("status", ["active", "trialing"])
-      .order("created_at", { ascending: false }),
-    admin
-      .from("brand_feature_overrides")
-      .select("feature_id, enabled")
-      .eq("cafe_id", cafeId),
-  ]);
-
-  const { data, error } = subscriptionResult;
+  const { data: snapshot, error } = await admin.rpc('brand_service_access_snapshot', { p_cafe_id: cafeId });
   if (error) throw error;
-  if (overridesResult.error) throw overridesResult.error;
+  if (!snapshot || typeof snapshot.allowed !== 'boolean' || !Array.isArray(snapshot.subscriptions) || !Array.isArray(snapshot.overrides)) throw new Error('SERVICE_ACCESS_SNAPSHOT_UNAVAILABLE');
+  if (!snapshot.allowed) return { ...getServiceSubscriptionAccess([]), serviceSubscriptions: [] };
+  const data = snapshot.subscriptions as {plan_id: string; status: string; started_at: string | null; expires_at: string | null; platform_plans: {name?: string; features?: unknown; active?: boolean} | null}[];
 
-  const overrides = ((overridesResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
+  const overrides = (snapshot.overrides as Record<string, unknown>[]).map((row) => ({
     featureId: String(row.feature_id) as PlatformFeatureId,
     enabled: Boolean(row.enabled),
   })) satisfies BrandFeatureOverride[];

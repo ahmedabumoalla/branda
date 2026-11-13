@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { getActiveUser } from "@/lib/auth/active-user";
 import { getFinanceCashierMaintenance } from "@/lib/data/finance-cashier-maintenance";
 import { canFinanceOperation, type FinanceRole } from "@/lib/finance/permissions";
@@ -26,7 +27,7 @@ function throwIfFinanceUnavailable(error: { code?: string } | null) {
   }
 }
 
-export async function getBrandFinanceContext(slug?: string) {
+export const getBrandFinanceContext = cache(async (slug?: string) => {
   const client = await createClient();
   const user = await getActiveUser(client);
   if (!user) throw new Error("سجل الدخول للوصول إلى برندة المالية");
@@ -35,7 +36,7 @@ export async function getBrandFinanceContext(slug?: string) {
   throwIfFinanceUnavailable(error);
   if (error) throw new Error("لا تملك صلاحية المالية لهذه العلامة أو أن الباقة غير مفعلة");
   return { client, cafe: data as { id: string; name: string; slug: string; role: FinanceRole; businessCategory?: string } };
-}
+});
 
 export async function getBrandFinanceSnapshot(slug?: string): Promise<FinanceSnapshot> {
   const { client, cafe } = await getBrandFinanceContext(slug);

@@ -37,9 +37,9 @@ const nextConfig = {
   },
   devIndicators: false,
   experimental: {
-    // Reuse recently visited RSC pages in this tab; actions still invalidate their paths.
-    // Keep the same short window for intent-prefetched and visited dynamic pages.
-    staleTimes: { dynamic: 60, static: 60 },
+    // Revisit pages in the current session without a new blocking request.
+    // Server actions still invalidate changed paths; no private CDN cache is used.
+    staleTimes: { dynamic: 300, static: 300 },
     cpus: 1,
     preloadEntriesOnStart: false,
     webpackMemoryOptimizations: true,

@@ -7,7 +7,8 @@ import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
 const requests = new AsyncLocalStorage();
-// Model React's documented request cache boundary; all database/auth code below is real source.
+// Model React's documented request cache boundary around the real context loaders.
+// Authentication-facade behavior is covered by check-request-cache-performance.
 function cache(fn) {
   return (...args) => {
     const request = requests.getStore();
@@ -29,7 +30,7 @@ function load(source, stubs) {
 function query(table, owner) {
   const filters = {};
   const builder = {
-    select() { return builder; }, is() { return builder; }, order() { return builder; }, limit() { return builder; },
+    select() { return builder; }, is() { return builder; }, neq() { return builder; }, order() { return builder; }, limit() { return builder; },
     eq(key, value) { filters[key] = value; return builder; },
     async maybeSingle() {
       owner.counts[table] = (owner.counts[table] ?? 0) + 1;
@@ -51,6 +52,7 @@ function client() {
   };
 }
 const stubs = {
+  '@/lib/auth/active-user': { getActiveUser: async client => (await client.auth.getUser()).data.user },
   react: { cache }, '@/lib/supabase/server': { createClient: async () => client() },
   '@/lib/supabase/admin': { createAdminClient: client },
   '@/lib/platform/maintenance': { readMaintenanceSessionCookie: async () => requests.getStore().maintenance ?? null },
@@ -168,14 +170,16 @@ await check('Global speculative request burst is removed; native links and loadi
 });
 await check('Dashboard intent prefetch prepares one complete page without an eager sidebar burst', async () => {
   let prepared = null, events = 0;
+  const timerRef = { current: null };
   const module = load(fs.readFileSync('components/dashboard/dashboard-navigation-link.tsx','utf8'), {
-    react: { useState: () => [prepared, value => { prepared = value; }] },
+    react: { useState: () => [prepared, value => { prepared = value; }], useRef: () => timerRef, useEffect: () => {} },
     'next/link': { __esModule: true, default: () => null },
   });
   const props = { href: '/dashboard/menu', onFocus: () => events++ };
   const render = extra => module.DashboardNavigationLink({ ...props, ...extra });
   assert.equal(render().props.prefetch, false);
-  render().props.onPointerEnter({}); assert.equal(render().props.prefetch,true);
+  render().props.onPointerEnter({}); assert.equal(render().props.prefetch,false);
+  await new Promise(resolve => setTimeout(resolve, 90)); assert.equal(render().props.prefetch,true);
   prepared = null; render().props.onFocus({}); assert.equal(render().props.prefetch,true); assert.equal(events,1);
   prepared = null; render().props.onTouchStart({}); assert.equal(render().props.prefetch,true);
   assert.equal(render({ href: '/dashboard/offers' }).props.prefetch,false,'Another destination stays cold');

@@ -13,6 +13,7 @@ function loadTs(relative, mocks = {}) {
   const localRequire = (name) => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
     if (name.startsWith("@/")) return loadTs(`${name.slice(2)}.ts`, mocks);
+    if (name.startsWith(".")) return loadTs(path.join(path.dirname(relative), name) + '.ts', mocks);
     return require(name);
   };
   new Function("require", "exports", source)(localRequire, exports);
@@ -70,11 +71,14 @@ function fakeClient({ published = true, status = "active", products = [fixturePr
 }
 
 function loader(client, features = ["menu"]) {
-  return loadTs("lib/data/standalone-menu.ts", {
+  const mocks = {
+    "@/lib/auth/active-user": {}, "@/lib/supabase/server": {}, "@/lib/platform/maintenance": {},
     "next/cache": { unstable_cache: fn => fn },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => features },
     "server-only": {}, react: { cache: (fn) => fn }, "@/lib/supabase/admin": { createAdminClient: () => client },
-  }).getStandaloneMenu;
+  };
+  mocks["@/lib/data/cafes"] = loadTs("lib/data/cafes.ts", mocks);
+  return loadTs("lib/data/standalone-menu.ts", mocks).getStandaloneMenu;
 }
 
 async function run() {

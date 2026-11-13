@@ -48,7 +48,7 @@ export const getPublicCafeBySlugAdmin = cache(async (slug: string) => {
 
   const { data, error } = await supabase
     .from("cafes")
-    .select("id, slug, name, name_en, status, is_public, business_category")
+    .select("id, slug, name, name_en, status, is_public, business_category, created_at")
     .eq("slug", normalizedSlug)
     .is("deleted_at", null)
     .maybeSingle();

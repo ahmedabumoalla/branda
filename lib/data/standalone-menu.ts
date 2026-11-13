@@ -12,6 +12,7 @@ import { publishedMenuLogo } from "@/lib/cafe/published-logo";
 import { normalizeSaudiPhone } from "@/lib/auth/phone-utils";
 import { isGreenApiConfigured } from "@/lib/whatsapp/green-api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getPublicCafeBySlugAdmin } from "@/lib/data/cafes";
 import { getCafeFeatureCodes } from "@/lib/data/feature-entitlements";
 import { featureCodesAllow } from "@/lib/platform/feature-gates";
 import { mapDbProductToMenuProduct, type DbMenuProduct } from "@/lib/data/mappers";
@@ -23,7 +24,7 @@ const PRODUCT_COLUMNS = "id,cafe_id,category_id,legacy_category,name,description
 const PAGE_SIZE = 500;
 const SHOWCASE_LOGO_WINDOW_MS = 20 * 60_000;
 
-// Public preview gates run before this cache. Keys include tenant and the current uploaded path.
+// Live public gates run before this cache. Keys include tenant and the current uploaded path.
 // The logo helper's <=30-minute memory age plus this <=20-minute window stays below its 1-hour URL lifetime.
 const cachedShowcaseLogo = unstable_cache(async (cafeId: string, source: string, window: number) => {
   void window;
@@ -53,12 +54,11 @@ function safeMediaUrl(value: string | null | undefined): string | null {
 }
 
 /** Standalone catalog is a package service; no catalog/media work before authorization. */
-export const getStandaloneMenu = cache(async (slug: string, showcase = false, branchSlug?: string): Promise<StandaloneMenu | null> => {
+export const getStandaloneMenu = cache(async (...[slug, , branchSlug]: [slug: string, showcase?: boolean, branchSlug?: string]): Promise<StandaloneMenu | null> => {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 100) return null;
   const admin = createAdminClient();
-  const { data: cafe, error: cafeError } = await admin.from("cafes")
-    .select("id,slug,name,status,business_category,created_at").eq("slug", slug).is("deleted_at", null).maybeSingle();
-  if (cafeError) throw cafeError;
+  // Landing resolution, metadata and menu rendering share this request's lookup.
+  const cafe = await getPublicCafeBySlugAdmin(slug);
   if (!cafe || !["active", "published"].includes(String(cafe.status))) return null;
   const features = await getCafeFeatureCodes(String(cafe.id));
   if (!featureCodesAllow(features, "menu")) return null;
@@ -103,13 +103,10 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
   const [signed, logoUrl, heroUrl] = await Promise.all([
     (async () => {
       const urls = new Map<string, string>();
-      // Preview navigation reuses stable signatures rather than re-downloading unchanged images.
+      // Every public menu reuses stable signatures for unchanged visible images.
       // Only referenced, visible, tenant-owned assets reach this shared signing cache.
       if (paths.size) {
-        const { data, error } = showcase || defaultPresentation || signatureBrand(slug) || ["kat-coffe", "shahi-w-hail", "taza", "delicake", "brand-871ec6e243c0"].includes(slug)
-          ? { data: await getKathMenuAssets([...paths]), error: null }
-          : await admin.storage.from("menu-products").createSignedUrls([...paths], 3600);
-        if (error) throw error;
+        const data = await getKathMenuAssets([...paths]);
         for (const item of data ?? []) if (item.path && item.signedUrl && !item.error) urls.set(item.path, item.signedUrl);
       }
       return urls;
@@ -120,9 +117,7 @@ export const getStandaloneMenu = cache(async (slug: string, showcase = false, br
       let url = safeMediaUrl(identity?.logo_url) || safeMediaUrl(settings?.logo_url);
       const logoPath = identity?.logo_storage_path || settings?.logo_storage_path;
       if (logoPath && isOwnedMenuAsset(logoPath, cafe.id)) {
-        url = (showcase
-          ? await cachedShowcaseLogo(String(cafe.id), logoPath, Math.floor(Date.now() / SHOWCASE_LOGO_WINDOW_MS))
-          : await publishedMenuLogo(admin, String(cafe.id), logoPath)) || url;
+        url = (await cachedShowcaseLogo(String(cafe.id), logoPath, Math.floor(Date.now() / SHOWCASE_LOGO_WINDOW_MS))) || url;
       }
       return url || (defaultPresentation ? null : "/brand/barndaksa-logo-brown.png");
     })(),

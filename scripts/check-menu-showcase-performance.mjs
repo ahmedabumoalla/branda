@@ -28,6 +28,7 @@ const product = { id: "dish", cafe_id: cafeId, category_id: "category", name: "D
 function fixture({ features = ["menu"], status = "active", variant = null, concurrent = false, rows = [product] } = {}) {
   const trace = [], pendingQueries = new Map(), pendingMedia = new Map();
   const tables = {
+    branches: [],
     cafes: { id: cafeId, slug: "rast", name: "Rast", status },
     menu_categories: [{ id: "category", name: "Drinks" }],
     cafe_settings: { logo_storage_path: `${cafeId}/logo.png` },
@@ -42,11 +43,11 @@ function fixture({ features = ["menu"], status = "active", variant = null, concu
   function result(table) {
     trace.push(table);
     const value = { data: tables[table], error: null };
-    return concurrent && table !== "cafes" ? barrier(pendingQueries, table, 3, value) : Promise.resolve(value);
+    return concurrent && !['cafes','branches'].includes(table) ? barrier(pendingQueries, table, 3, value) : Promise.resolve(value);
   }
   const signedRows = paths => paths.map(item => ({ path: item, signedUrl: `https://media.invalid/${item}` }));
   const admin = { from(table) {
-    const builder = { select() { return builder; }, eq() { return builder; }, is() { return builder; }, order() { return builder; }, range() { return builder; }, maybeSingle() { return result(table); }, then(resolve, reject) { return result(table).then(resolve, reject); } };
+    const builder = { select() { return builder; }, eq() { return builder; }, is() { return builder; }, not() { return builder; }, order() { return builder; }, range() { return builder; }, maybeSingle() { return result(table); }, then(resolve, reject) { return result(table).then(resolve, reject); } };
     return builder;
   }, storage: { from(bucket) { return { async createSignedUrls(paths) { trace.push(`direct:${bucket}`); return { data: signedRows(paths), error: null }; } }; } } };
   const stubs = {
@@ -56,6 +57,7 @@ function fixture({ features = ["menu"], status = "active", variant = null, concu
       return (...args) => { const key = JSON.stringify(args); if (!values.has(key)) values.set(key, fn(...args)); return values.get(key); };
     } },
     "@/lib/supabase/admin": { createAdminClient: () => admin },
+    "@/lib/data/cafes": { getPublicCafeBySlugAdmin: async () => (await result('cafes')).data },
     "@/lib/data/feature-entitlements": { getCafeFeatureCodes: async () => { trace.push("entitlements"); return features; } },
     "@/lib/data/kath-menu-assets": { getKathMenuAssets: async paths => {
       trace.push("stable-media");
@@ -83,7 +85,7 @@ await test(async () => {
     assert.equal(menu.logoUrl, "https://logo.invalid/reviewed.webp");
     assert.equal(menu.products[0].price, 21);
     assert.equal(menu.highlights.items[0].imageUrl, menu.products[0].images[0].url);
-    assert.deepEqual(new Set(db.trace.slice(2, 5)), new Set(["menu_categories", "cafe_settings", "menu_products"]));
+    assert.deepEqual(new Set(db.trace.filter(item => ["menu_categories", "cafe_settings", "menu_products"].includes(item))), new Set(["menu_categories", "cafe_settings", "menu_products"]));
   } finally { clearTimeout(timer); }
 });
 await test(async () => {
@@ -91,8 +93,8 @@ await test(async () => {
   assert.deepEqual(await preview.getStandaloneMenu("rast", true), await regular.getStandaloneMenu("rast"), "Preview keeps the same complete menu design payload");
   assert(preview.trace.includes("stable-media"));
   assert(!preview.trace.includes("direct:menu-products"));
-  assert(regular.trace.includes("direct:menu-products"));
-  assert(!regular.trace.includes("stable-media"));
+  assert(!regular.trace.includes("direct:menu-products"));
+  assert(regular.trace.includes("stable-media"));
 });
 await test(async () => {
   for (const options of [{ features: [] }, { status: "suspended" }]) {
@@ -118,7 +120,7 @@ await test(async () => {
   Date.now = () => time;
   try {
     await db.getStandaloneMenu("rast", true);
-    await db.getStandaloneMenu("rast", true);
+    await db.getStandaloneMenu("rast");
     assert.equal(db.trace.filter(item => item === "logo").length, 1, "Preview reuses the exact processed logo within its safe signing window");
     assert.equal(db.trace.filter(item => item === "entitlements").length, 2, "Cached assets must not cache menu authorization");
     time += 20 * 60_000;
@@ -140,6 +142,14 @@ await test(async () => {
   const page = load("app/menu/[slug]/page.tsx", {
     "next/navigation": { notFound() { throw new Error("NOT_FOUND"); } },
     "@/lib/data/public-home-catalog": { isPublicHomeMenuSlug: async () => true },
+    "@/lib/data/loyalty-landing": { getPublicLoyaltyLanding: async () => null },
+    "@/lib/data/gift-orders": { getGiftStoreSettings: async () => null },
+    "@/lib/menu/default-signature": { defaultSignatureBrand: () => null },
+    "@/components/menu/loco-menu": { LocoMenu: () => null },
+    "@/components/store/together-store": { TogetherStore: () => null },
+    "@/components/menu/signature-menu": { SignatureMenu: () => null },
+    "@/components/menu/tea-bakery-menu": { TeaBakeryMenu: () => null },
+    "@/components/menu/jamila-menu": { JamilaMenu: () => null, JAMILA_SLUG: 'jamila' },
     "@/lib/data/standalone-menu": { getStandaloneMenu: async (...values) => { args.push(values); return { slug: values[0], name: "Menu fixture", loyaltyEnabled: true }; } },
     "@/lib/data/loyalty-cards": { getPublicLoyaltyProgramBySlug: async slug => { loyaltyCalls.push(slug); if (loyaltyFailure) throw new Error("Optional loyalty unavailable"); return { enabled:true, purchasesRequired:6, rewardName:"Reward fixture", privateField:"MUST_NOT_SERIALIZE" }; } },
     "@/components/menu/bistro-menu": { BistroMenu: () => React.createElement("main", null, "menu") },
@@ -155,7 +165,7 @@ await test(async () => {
   const regular = renderToStaticMarkup(await page.default({ params }));
   assert(regular.includes("ANALYTICS"));
   assert(regular.includes("POLLING"));
-  assert.deepEqual(args, [["rast", true], ["rast", false]]);
+  assert.deepEqual(args, [["rast", true, undefined], ["rast", false, undefined]]);
   assert.deepEqual(loyaltyCalls, []);
   const frenchParams = Promise.resolve({ slug: "brand-10620d3a586c" });
   const frenchPreview = renderToStaticMarkup(await page.default({ params: frenchParams, searchParams: Promise.resolve({ showcase: "1" }) }));

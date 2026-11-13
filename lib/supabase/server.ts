@@ -1,9 +1,10 @@
 import { getActiveUser } from "@/lib/auth/active-user";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { requireSupabaseAnonKey, requireSupabaseUrl } from "@/lib/barndaksa/env";
 
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(requireSupabaseUrl(), requireSupabaseAnonKey(), {
@@ -22,7 +23,7 @@ export async function createClient() {
       },
     },
   });
-}
+});
 
 export async function getSessionUser() {
   const supabase = await createClient();
