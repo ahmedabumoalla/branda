@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDownToLine, ArrowUpDown, LogIn, Building2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Info } from "lucide-react";
+import { ArrowDownToLine, MousePointerClick, BadgeCheck, ChevronDown, ChevronLeft, ChevronRight, CreditCard, ListFilter, RotateCcw, Search, SlidersHorizontal, Info } from "lucide-react";
 import { loadOperationsReportAction } from "@/app/actions/operations-report";
 import { AdminPageShell } from "@/components/ui/design-system";
 import { WalletMessageHistory } from "@/components/loyalty/wallet-message-history";
@@ -15,9 +15,9 @@ const featureName = (id: string) => id === "standalone_menu" ? "المنيو ا�
 const featureTone = (id: string) => id === "loyalty" ? styles.purple : id === "standalone_menu" || id === "menu" ? styles.blue : id === "orders" ? styles.green : styles.gold;
 const subscriptionName: Record<string, string> = { active: "نشط", trial: "تجريبي", trialing: "تجريبي", expired: "منتهي", cancelled: "ملغي", canceled: "ملغي", suspended: "موقوف", none: "بدون اشتراك" };
 const statusName: Record<string, string> = { active: "نشطة", suspended: "موقوفة", inactive: "غير نشطة", draft: "مسودة", pending: "قيد الانتظار", archived: "مؤرشفة" };
-const pageSize = 25;
+const pageSize = 10;
 const views: { id: string; label: string; metrics: ReportMetric[] }[] = [
-  { id: "overview", label: "نظرة عامة", metrics: ["dashboardLogins", "cashierLogins", "menuVisits", "loyaltyCards", "stampOperations"] },
+  { id: "overview", label: "نظرة عامة", metrics: ["menuVisits", "loyaltyCards", "stampOperations"] },
   { id: "access", label: "الدخول والوصول", metrics: ["dashboardLogins", "cashierLogins", "menuVisitors", "menuVisits", "appInstallClicks"] },
   { id: "loyalty", label: "الولاء والمكافآت", metrics: ["loyaltyCards", "appleCards", "googleCards", "stampOperations", "rewardOperations"] },
   { id: "campaigns", label: "الحملات والرسائل", metrics: ["campaignLaunched", "campaignTargets", "campaignSent", "campaignPending", "campaignFailed"] },
@@ -33,7 +33,7 @@ function LastVisit({ value }: { value: string | null }) {
 }
 export function OperationsReportPage({ initialReport }: { initialReport: OperationsReport | null }) {
   const [report, setReport] = useState(initialReport);
-  const [period, setPeriod] = useState<ReportPeriod>({ from: "", to: "" });
+  const [period, setPeriod] = useState<ReportPeriod>({ from: initialReport?.from || "", to: initialReport?.to || "" });
   const [filters, setFilters] = useState<ReportFilters>({ ...defaultReportFilters });
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -44,6 +44,8 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
   const [messageBrand, setMessageBrand] = useState<{ id: string; name: string } | null>(null);
   const [campaignBrand, setCampaignBrand] = useState<{ id: string; name: string } | null>(null);
   const request = useRef(0);
+  const [presetId, setPresetId] = useState<string>(initialReport?.from || initialReport?.to ? "custom" : "all");
+  const activeFilterCount = Number(!!filters.brandId) + Number(filters.subscription !== "all") + Number(!!filters.feature) + filters.conditions.length;
   const brands = filterReportBrands(report?.brands || [], filters);
   const totals = totalReportMetrics(brands);
   const selectedBrand = report?.brands.find(brand => brand.id === selectedId);
@@ -69,6 +71,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
     const start = new Date(`${today}T12:00:00Z`);
     if (days) start.setUTCDate(start.getUTCDate() - days + 1);
     const next = days === null ? { from: "", to: "" } : { from: start.toISOString().slice(0, 10), to: today };
+    setPresetId(days === null ? "all" : String(days));
     setPeriod(next); void load(next);
   }
   async function exportPdf() {
@@ -78,29 +81,37 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
     catch { setError("تعذر إنشاء ملف التقرير حاول التصدير مرة أخرى"); }
     finally { setExporting(false); }
   }
-  return <div className={styles.page}><AdminPageShell title="عمليات العلامات" subtitle="صورة كاملة لأداء علاماتك قارن الوصول والولاء وحدّد البيانات التي تهمك"
+  return <div className={styles.page}><AdminPageShell title="عمليات العلامات" subtitle="ملخص واضح للنشاط اختر علامة للاطلاع على تفاصيلها"
     action={<button className={styles.primary} disabled={!report || busy || exporting || dirtyPeriod || !brands.length} onClick={() => void exportPdf()}><ArrowDownToLine size={19} aria-hidden="true" />{exporting ? "جارٍ تجهيز التقرير…" : "تصدير تقرير PDF"}<span className={styles.exportCount}>{number(brands.length)} علامة</span></button>}>
     <div className={styles.root}>
       {report && <div className={styles.summary} aria-live="polite">{[
-        { label: "العلامات المطابقة", value: brands.length, hint: `من أصل ${number(report.brands.length)} علامة`, icon: Building2, tone: styles.gold },
-        { label: "دخول لوحة العلامة", value: totals.dashboardLogins, hint: "دخول مسجل خلال الفترة", icon: LogIn, tone: styles.green },
-        { label: "دخول الكاشير", value: totals.cashierLogins, hint: "جلسات نقطة التشغيل الناجحة", icon: LogIn, tone: styles.blue },
-        { label: "بطاقات الولاء الصادرة", value: totals.loyaltyCards, hint: `${number(totals.loyaltyCustomers)} عميل خلال الفترة`, icon: CreditCard, tone: styles.purple },
+        { label: "زيارات المنيو", value: totals.menuVisits, hint: "عدد الزيارات خلال الفترة المعروضة", icon: MousePointerClick, tone: styles.gold },
+        { label: "بطاقات الولاء", value: totals.loyaltyCards, hint: number(totals.loyaltyCustomers) + " عميل خلال الفترة", icon: CreditCard, tone: styles.blue },
+        { label: "عمليات الختم", value: totals.stampOperations, hint: "عمليات الختم الناجحة خلال الفترة", icon: BadgeCheck, tone: styles.green },
       ].map(({ label, value, hint, icon: Icon, tone }) => <div key={label}><div className={styles.statTop}><span>{label}</span><span className={`${styles.statIcon} ${tone}`}><Icon size={20} aria-hidden="true" /></span></div><strong>{number(value)}</strong><span className={styles.statHint}>{hint}</span></div>)}</div>}
       <section className={styles.panel} aria-label="فلاتر التقرير">
-        <div className={styles.heading}><h2><SlidersHorizontal size={19} aria-hidden="true" />خصّص تقريرك</h2><span>التوقيت المحلي للسعودية · يشمل يوم النهاية</span></div>
-        <form className={styles.period} onSubmit={event => { event.preventDefault(); void load(); }}>
-          <label>من تاريخ<input type="date" value={period.from} onChange={event => setPeriod({ ...period, from: event.target.value })} /></label>
-          <label>إلى تاريخ<input type="date" value={period.to} onChange={event => setPeriod({ ...period, to: event.target.value })} /></label>
-          <button className={styles.primary} disabled={busy} type="submit"><RotateCcw size={16} aria-hidden="true" />{busy ? "جارٍ التحميل…" : "تطبيق الفترة / تحديث"}</button>
-          <div className={styles.presets}>{[[1, "اليوم"], [7, "٧ أيام"], [30, "٣٠ يومًا"], [null, "كل الفترات"]].map(([days, label]) => <button type="button" key={String(label)} disabled={busy} onClick={() => preset(days as number | null)}>{label}</button>)}</div>
-        </form>
-        <div className={styles.filters}>
-          <label>بحث في العلامات والباقات<span className={styles.searchField}><Search size={18} aria-hidden="true" /><input type="search" placeholder="اسم العلامة أو الرابط أو الباقة" value={filters.query} onChange={event => updateFilters({ query: event.target.value })} /></span></label>
-          <label>العلامة<select value={filters.brandId} onChange={event => updateFilters({ brandId: event.target.value })}><option value="">كل العلامات</option>{report?.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
-          <label>الاشتراك الحالي<select value={filters.subscription} onChange={event => updateFilters({ subscription: event.target.value as ReportFilters["subscription"] })}><option value="all">الكل</option><option value="subscribed">المشتركة حاليًا</option><option value="unsubscribed">بدون اشتراك ساري</option></select></label>
-          <label>الميزة المفعّلة<select value={filters.feature} onChange={event => updateFilters({ feature: event.target.value })}><option value="">كل المميزات</option>{features.map(feature => <option key={feature} value={feature}>{featureName(feature)}</option>)}</select></label>
+        <div className={styles.quickFilters}>
+          <label className={styles.searchLabel}><span className={styles.srOnly}>بحث في العلامات والباقات</span><span className={styles.searchField}><Search size={18} aria-hidden="true" /><input type="search" placeholder="ابحث عن علامة تجارية أو باقة" value={filters.query} onChange={event => updateFilters({ query: event.target.value })} /></span></label>
+          <div className={styles.presets} role="group" aria-label="الفترة الزمنية">{[[1, "اليوم"], [7, "٧ أيام"], [30, "٣٠ يومًا"], [null, "كل الفترات"]].map(([days, label]) => <button type="button" key={String(label)} disabled={busy} aria-pressed={presetId === (days === null ? "all" : String(days))} onClick={() => preset(days as number | null)}>{label}</button>)}</div>
+          <button className={styles.refreshButton} disabled={busy} onClick={() => void load()} aria-label="تحديث التقرير"><RotateCcw size={17} aria-hidden="true" />{busy ? "جار التحديث" : "تحديث"}</button>
         </div>
+        <div className={styles.filterOptions}>
+          <details className={styles.customPeriod}><summary><ChevronDown size={15} aria-hidden="true" />فترة مخصصة</summary>
+            <form className={styles.period} onSubmit={event => { event.preventDefault(); void load(); }}>
+              <label>من تاريخ<input type="date" value={period.from} onChange={event => { setPresetId("custom"); setPeriod({ ...period, from: event.target.value }); }} /></label>
+              <label>إلى تاريخ<input type="date" value={period.to} onChange={event => { setPresetId("custom"); setPeriod({ ...period, to: event.target.value }); }} /></label>
+              <button className={styles.primary} disabled={busy} type="submit">تطبيق الفترة</button>
+              <span className={styles.hint}>بتوقيت الرياض وتشمل يوم النهاية</span>
+            </form>
+          </details>
+          <details className={styles.advancedFilters}><summary><SlidersHorizontal size={17} aria-hidden="true" />الفلاتر والترتيب {activeFilterCount > 0 && <span className={styles.resultCount}>{number(activeFilterCount)}</span>}<ChevronDown size={15} aria-hidden="true" /></summary>
+            <div className={styles.filters}>
+              <label>العلامة<select value={filters.brandId} onChange={event => updateFilters({ brandId: event.target.value })}><option value="">كل العلامات</option>{report?.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+              <label>الاشتراك الحالي<select value={filters.subscription} onChange={event => updateFilters({ subscription: event.target.value as ReportFilters["subscription"] })}><option value="all">الكل</option><option value="subscribed">المشتركة حاليًا</option><option value="unsubscribed">بدون اشتراك ساري</option></select></label>
+              <label>الميزة المفعّلة<select value={filters.feature} onChange={event => updateFilters({ feature: event.target.value })}><option value="">كل المميزات</option>{features.map(feature => <option key={feature} value={feature}>{featureName(feature)}</option>)}</select></label>
+              <label>ترتيب حسب<select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label>
+              <label>اتجاه الترتيب<select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label>
+            </div>
         <details className={styles.query}><summary><ListFilter size={17} aria-hidden="true" />استعلام رقمي متقدم {filters.conditions.length ? `· ${number(filters.conditions.length)} شروط` : ""}<ChevronDown size={16} aria-hidden="true" /></summary>
           <p>تظهر العلامات التي تحقق جميع الشروط مثال: زوار المنيو أكثر من ١٠٠ وبطاقات الولاء أقل من ٢٠</p>
           {filters.conditions.map((condition, index) => <div className={styles.condition} key={index}>
@@ -111,19 +122,20 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
           </div>)}
           <button disabled={filters.conditions.length >= 8} onClick={() => updateFilters({ conditions: [...filters.conditions, { metric: "menuVisitors", operator: "gte", value: 0 }] })}>إضافة شرط</button>
         </details>
+          </details>
+          {(activeFilterCount > 0 || filters.query) && <button className={styles.clearFilters} onClick={() => updateFilters({ ...defaultReportFilters })}><RotateCcw size={14} aria-hidden="true" />مسح الفلاتر</button>}
+        </div>
       </section>
       {error && <div className={styles.error} role="alert">{error}</div>}
       {dirtyPeriod && <p className={styles.notice}>الفترة المعدّلة لم تُطبّق بعد الأرقام المعروضة تخص آخر فترة محمّلة؛ طبّق الفترة قبل التصدير</p>}
       {report && <>
         <section className={`${styles.panel} ${styles.results}`} aria-label="بيانات العلامات" aria-busy={busy}>
-          <div className={styles.heading}><div><h2>مقارنة العلامات <span className={styles.resultCount}>{number(brands.length)} / {number(report.brands.length)}</span></h2><p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}<span className={styles.updated}>آخر تحديث: {saudiDate(report.generatedAt)}</span></p></div>
-            <button className={styles.reset} onClick={() => updateFilters({ ...defaultReportFilters })}><RotateCcw size={15} aria-hidden="true" />مسح فلاتر العلامات</button></div>
-          <div className={styles.tableToolbar}><div className={styles.sort}><ArrowUpDown size={17} aria-hidden="true" /><label><span className={styles.srOnly}>ترتيب حسب</span><select value={filters.sort} onChange={event => updateFilters({ sort: event.target.value as ReportFilters["sort"] })}><option value="name">اسم العلامة</option>{reportMetrics.map(metric => <option key={metric} value={metric}>{reportMetricLabels[metric]}</option>)}<option value="lastMenuVisit">آخر زيارة للمنيو</option></select></label><label><span className={styles.srOnly}>الاتجاه</span><select value={filters.direction} onChange={event => updateFilters({ direction: event.target.value as "asc" | "desc" })}><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></div>
-          <p className={styles.hint}>اضغط على اسم العلامة لعرض جميع العمليات والسجلات</p></div>
+          <div className={styles.heading}><div><h2>العلامات التجارية <span className={styles.resultCount}>{number(brands.length)} علامة</span></h2><p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}</p></div><span className={styles.updated}>آخر تحديث {saudiDate(report.generatedAt)}</span></div>
+          <div className={styles.tableToolbar}><div className={styles.viewButtons} role="group" aria-label="نوع العمليات">{views.map(item => <button type="button" key={item.id} aria-pressed={viewId === item.id} onClick={() => setViewId(item.id)}>{item.label}</button>)}</div><p className={styles.hint}>اختر اسم العلامة لعرض التفاصيل</p></div>
           <div className={styles.tableWrap} tabIndex={0} role="region" aria-label="جدول عمليات العلامات قابل للتمرير"><table role="table">
             <caption className={styles.srOnly}>{view.label} خلال الفترة المحمّلة</caption>
             <thead>
-              <tr className={styles.viewRow}><td colSpan={view.metrics.length + 1}><div className={styles.viewButtons} role="group" aria-label="نوع العمليات">{views.map(item => <button type="button" key={item.id} aria-pressed={viewId === item.id} onClick={() => setViewId(item.id)}>{item.label}</button>)}</div></td></tr>
+
               <tr className={styles.columnHeadings} role="row"><th scope="col">العلامة التجارية</th>{view.metrics.map(metric => <th scope="col" key={metric}>{reportMetricLabels[metric]}</th>)}</tr>
             </thead>
             <tbody>{brands.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(brand => <tr key={brand.id} role="row">
@@ -133,7 +145,7 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
             {brands.length > 0 && <tfoot><tr role="row"><th scope="row">إجمالي النتائج<small>{number(brands.length)} علامة</small></th>{view.metrics.map(metric => <td key={metric} data-label={reportMetricLabels[metric]} role="cell">{number(totals[metric])}</td>)}</tr></tfoot>}
           </table></div>
           {!brands.length && <p className={styles.empty}>لا توجد علامات تطابق هذه الفلاتر غيّر الشروط أو امسح فلاتر العلامات</p>}
-          <nav className={styles.pagination} aria-label="صفحات العلامات"><span>التصدير يشمل جميع النتائج المطابقة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
+          <nav className={styles.pagination} aria-label="صفحات العلامات"><span>{number(brands.length ? currentPage * pageSize + 1 : 0)}–{number(Math.min((currentPage + 1) * pageSize, brands.length))} من {number(brands.length)} علامة</span><div><button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight size={17} aria-hidden="true" />السابق</button><span>صفحة <b>{number(currentPage + 1)}</b> من {number(pages)}</span><button disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)}>التالي<ChevronLeft size={17} aria-hidden="true" /></button></div></nav>
         </section>
         {selectedBrand && <dialog className={styles.historyDialog} ref={node => { if (node && !node.open) node.showModal(); }} onClose={() => setSelectedId(null)} aria-label={`تفاصيل ${selectedBrand.name}`}>
           <div className={styles.heading}><div><h2>{selectedBrand.name}</h2><p dir="ltr">{selectedBrand.slug}</p></div><button type="button" autoFocus onClick={event => event.currentTarget.closest("dialog")?.close()}>إغلاق التفاصيل</button></div>
@@ -143,8 +155,8 @@ export function OperationsReportPage({ initialReport }: { initialReport: Operati
             <div className={styles.chips}>{selectedBrand.features.map(feature => <span key={feature} className={`${styles.chip} ${featureTone(feature)}`}>{featureName(feature)}</span>)}</div>
             <p>{report.from || "بداية السجل"} — {report.to || "حتى الآن"}</p>
             <div className={styles.detailActions}><button type="button" aria-label={`سجل رسائل ${selectedBrand.name}`} aria-haspopup="dialog" onClick={() => { setSelectedId(null); setMessageBrand({ id: selectedBrand.id, name: selectedBrand.name }); }}>سجل رسائل الولاء</button><button type="button" aria-label={`سجل حملات ${selectedBrand.name}`} aria-haspopup="dialog" onClick={() => { setSelectedId(null); setCampaignBrand({ id: selectedBrand.id, name: selectedBrand.name }); }}>سجل الحملات التسويقية</button></div>
-            {views.filter(item => item.id !== "overview").map(group => <section key={group.id}><h3>{group.label}</h3><dl>{group.metrics.map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl></section>)}
-            <h3>تفاصيل إضافية للرسائل والعملاء</h3><dl>{reportMetrics.filter(metric => !views.some(item => item.metrics.includes(metric))).map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl>
+            {views.filter(item => item.id !== "overview").map(group => <details className={styles.metricGroup} key={group.id} open={group.id === (viewId === "overview" ? "access" : viewId)}><summary>{group.label}<ChevronDown size={16} aria-hidden="true" /></summary><dl>{group.metrics.map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl></details>)}
+            <details className={styles.metricGroup}><summary>تفاصيل إضافية للرسائل والعملاء<ChevronDown size={16} aria-hidden="true" /></summary><dl>{reportMetrics.filter(metric => !views.some(item => item.metrics.includes(metric))).map(metric => <div key={metric}><dt>{reportMetricLabels[metric]}</dt><dd>{number(selectedBrand.metrics[metric])}</dd></div>)}</dl></details>
             <p>آخر زيارة للمنيو ضمن الفترة: {saudiDate(selectedBrand.periodLastMenuVisit)}</p><p>آخر زيارة عبر كامل السجل</p><LastVisit value={selectedBrand.lastMenuVisit} />
           </div>
         </dialog>}

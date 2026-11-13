@@ -39,12 +39,12 @@ assert.equal(reportPeriodSchema.safeParse({ from: "", to: "", injected: true }).
 const date = "2026-10-09T12:00:00Z";
 const report = { generatedAt: date, from: null, to: null, menuTrackingSince: date, walletTrackingSince: date, promotionTrackingSince: date, brands };
 const html = renderToStaticMarkup(React.createElement(OperationsReportPage, { initialReport: report }));
-assert.equal((html.match(/scope="row"/g) || []).length, 26, "25 brands plus total, independent of export scope");
+assert.equal((html.match(/scope="row"/g) || []).length, 11, "10 brands plus total, independent of export scope");
 assert.ok(html.includes("٣١ علامة"), "export includes all matching brands");
 for (const label of ["دخول لوحة العلامة", "دخول نقطة التشغيل", "بدون اشتراك ساري", "تصدير تقرير PDF", "آخر زيارة للمنيو"]) assert.ok(html.includes(label), label);
-assert.equal((html.match(/scope="col"/g) || []).length, 6, "brand and five metrics fit the table");
-assert.equal((html.match(/aria-label="تفاصيل /g) || []).length, 25);
-assert.equal((html.match(/aria-pressed=/g) || []).length, 5);
+assert.equal((html.match(/scope="col"/g) || []).length, 4, "brand and three overview metrics fit the table");
+assert.equal((html.match(/aria-label="تفاصيل /g) || []).length, 10);
+assert.equal((html.match(/aria-pressed=/g) || []).length, 9);
 assert.ok(html.includes("الحملات المجدولة للمستقبل") && html.includes("ولا تُضاف إلى تعذر الإرسال"));
 assert.ok(!/زوار الفرع|حسابات الفرع|آخر زيارة للفرع/.test(html));
 assert.ok(html.includes('aria-haspopup="dialog"'));
@@ -96,7 +96,7 @@ nodes(tree).find(node => node.type === "dialog").props.onClose(); tree = interac
 assert.ok(!nodes(tree).some(node => node.type === "dialog"));
 nodes(tree).find(node => node.type === "input" && node.props.type === "search").props.onChange({ target: { value: "Brand 03" } }); tree = interactive.render();
 const footerRow = nodes(nodes(tree).find(node => node.type === "tfoot")).find(node => node.type === "tr");
-assert.equal(nodes(footerRow).filter(node => node.type === "td").length, 5);
+assert.equal(nodes(footerRow).filter(node => node.type === "td").length, 3);
 assert(nodes(footerRow).filter(node => node.type === "td").every(node => text(node) === "٣"), "totals follow filtered brands");
 nodes(tree).find(node => node.type === "button" && text(node) === "الطلبات والبيجر").props.onClick();
 tree = interactive.render();
